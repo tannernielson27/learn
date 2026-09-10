@@ -1,0 +1,90 @@
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+import { FIXTURES } from "@/lib/ngn/fixtures";
+import { itemSchema } from "@/lib/ngn/schemas";
+import { ItemPlayer, toPlayerItem } from "./ItemPlayer";
+
+const mc = itemSchema.parse(FIXTURES.multiple_choice.canonical);
+const sata = itemSchema.parse(FIXTURES.multiple_response.canonical);
+const selectN = itemSchema.parse(FIXTURES.multiple_response.edge);
+const unbuilt = itemSchema.parse(FIXTURES.bowtie.canonical);
+
+describe("toPlayerItem", () => {
+  it("strips the answer key outside feedback mode", () => {
+    expect("answerKey" in toPlayerItem(mc, "answer")).toBe(false);
+    expect("answerKey" in toPlayerItem(mc, "review")).toBe(false);
+    expect("answerKey" in toPlayerItem(mc, "feedback")).toBe(true);
+  });
+});
+
+describe("ItemPlayer with multiple choice", () => {
+  it("disables submit until an option is chosen, then scores and shows feedback", async () => {
+    const onSubmitted = vi.fn();
+    render(<ItemPlayer item={mc} onSubmitted={onSubmitted} />);
+    const submit = screen.getByRole("button", { name: "Submit" });
+    expect(submit).toBeDisabled();
+
+    await userEvent.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
+    expect(submit).toBeEnabled();
+    await userEvent.click(submit);
+
+    const score = screen.getByRole("complementary", { name: "Score" });
+    expect(within(score).getByText("1")).toBeInTheDocument();
+    expect(within(score).getByText(/0\/1 scoring/)).toBeInTheDocument();
+    expect(within(score).getByText(/Rapid weight gain/)).toBeInTheDocument();
+    expect(onSubmitted).toHaveBeenCalledWith(
+      { type: "multiple_choice", optionId: "opt_a" },
+      expect.objectContaining({ points: 1, maxPoints: 1 }),
+    );
+    expect(screen.queryByRole("button", { name: "Submit" })).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Auscultate the lungs/ })).toBeDisabled();
+  });
+
+  it("marks a wrong pick incorrect and the key as missed", async () => {
+    render(<ItemPlayer item={mc} />);
+    await userEvent.click(screen.getByRole("radio", { name: /Document the weight/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    expect(screen.getByText("Incorrect")).toBeInTheDocument();
+    expect(screen.getByText("Missed")).toBeInTheDocument();
+  });
+});
+
+describe("ItemPlayer with multiple response", () => {
+  it("toggles checkboxes and applies plus-minus scoring", async () => {
+    render(<ItemPlayer item={sata} />);
+    await userEvent.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /Oxygen saturation 89%/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /Temperature 37.2/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    const score = screen.getByRole("complementary", { name: "Score" });
+    expect(within(score).getByText("1")).toBeInTheDocument();
+    expect(within(score).getByText("/ 3")).toBeInTheDocument();
+    expect(screen.getAllByText("Correct")).toHaveLength(2);
+    expect(screen.getAllByText("Incorrect")).toHaveLength(1);
+    expect(screen.getAllByText("Missed")).toHaveLength(1);
+  });
+
+  it("Select N caps selections and requires exactly N to submit", async () => {
+    render(<ItemPlayer item={selectN} />);
+    const submit = screen.getByRole("button", { name: "Submit" });
+    await userEvent.click(screen.getByRole("checkbox", { name: /blood cultures/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /broad-spectrum antibiotics/ }));
+    expect(submit).toBeDisabled();
+    expect(screen.getByText(/2 of 3 selected/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("checkbox", { name: /fluid resuscitation/ }));
+    expect(submit).toBeEnabled();
+    expect(screen.getByRole("checkbox", { name: /compression devices/ })).toBeDisabled();
+    expect(screen.getByText(/Deselect an option/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("checkbox", { name: /broad-spectrum antibiotics/ }));
+    expect(screen.getByRole("checkbox", { name: /compression devices/ })).toBeEnabled();
+    expect(submit).toBeDisabled();
+  });
+});
+
+describe("ItemPlayer without a renderer", () => {
+  it("shows a placeholder instead of crashing", () => {
+    render(<ItemPlayer item={unbuilt} />);
+    expect(screen.getByText(/No renderer/)).toBeInTheDocument();
+  });
+});
