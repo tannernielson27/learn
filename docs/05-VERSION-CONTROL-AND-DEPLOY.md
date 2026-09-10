@@ -54,8 +54,8 @@ PRs are **squash-merged**, so the PR title becomes the single commit on `main` a
 
 **Branch protection settings on `main`** (set once in GitHub → Settings → Branches):
 
-- Require a pull request before merging; require 1 approval; dismiss stale approvals on new pushes.
-- Require status checks to pass: `ci / check`, `Vercel` (preview deployment).
+- Require a pull request before merging; require 1 approval; dismiss stale approvals on new pushes. **Currently 0 approvals** while the owner is the only member (GitHub never lets authors approve their own PRs); raise it back to 1 the day the collaborator joins.
+- Require status checks to pass: `check` (GitHub Actions) and `Vercel` (preview deployment).
 - Require branches to be up to date before merging.
 - Require conversation resolution.
 - Do not allow bypassing the above (applies to admins too).
@@ -122,9 +122,9 @@ Rules:
 
 ## 9. Sprint 0 checklist for this doc
 
-- [ ] Repo created, `main` protected with the settings in §4
-- [ ] PR template, CODEOWNERS, `.github/workflows/ci.yml` committed
-- [ ] commitlint + lint-staged hooks installed via Husky
-- [ ] Vercel project imported from GitHub; first preview and first production deploy verified
-- [ ] `.env.example` committed
+- [x] Repo created, `main` protected with the settings in §4 (approvals temporarily 0, see §4)
+- [x] PR template, CODEOWNERS, `.github/workflows/ci.yml` committed
+- [x] commitlint + lint-staged hooks installed via Husky
+- [x] Vercel project imported from GitHub; first preview and first production deploy verified
+- [x] `.env.example` committed
 - [ ] Collaborator invited to the GitHub repo (write) and has merged one small PR end to end
