@@ -1,0 +1,51 @@
+{
+  "name": "learn",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.2",
+    "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.1.1",
+    "@vitest/coverage-v8": "^5.0.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.4",
+    "husky": "^9.1.7",
+    "jsdom": "^30.0.1",
+    "lint-staged": "^17.5.0",
+    "prettier": "^3.9.6",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^5.0.0"
+  },
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=22 <23"
+  }
+}
