@@ -1,0 +1,122 @@
+/*
+ * LeaRN design tokens — "Clinical Editorial". See docs/04-DESIGN-DIRECTION.md.
+ * Light is the primary theme. Dark is a deliberate re-lighting of the same hues.
+ * Every color in the app must come from these tokens.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* Surfaces and ink */
+  --surface-0: oklch(98.5% 0.004 85);
+  --surface-1: oklch(100% 0 0);
+  --surface-2: oklch(96% 0.006 85);
+  --ink-1: oklch(20% 0.01 260);
+  --ink-2: oklch(44% 0.012 260);
+  --line: oklch(88% 0.006 85);
+  --line-strong: oklch(72% 0.01 260);
+
+  /* Clinical blue: interaction and selection only */
+  --accent: oklch(44% 0.12 250);
+  --accent-ink: oklch(38% 0.12 250);
+  --accent-soft: oklch(94% 0.03 250);
+  --accent-contrast: oklch(99% 0 0);
+
+  /* Feedback semantics: appear only in feedback mode */
+  --correct: oklch(50% 0.13 150);
+  --correct-soft: oklch(95% 0.04 150);
+  --incorrect: oklch(50% 0.17 25);
+  --incorrect-soft: oklch(95% 0.03 25);
+  --flag: oklch(62% 0.13 75);
+  --flag-soft: oklch(96% 0.05 85);
+
+  /* Type */
+  --ff-ui: var(--font-inter), "Segoe UI", system-ui, sans-serif;
+  --ff-read: var(--font-source-serif), Georgia, "Times New Roman", serif;
+  --ff-mono: var(--font-jetbrains-mono), ui-monospace, Consolas, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+
+  /* Space */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+
+  /* Shape: two radii only */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+
+  /* Motion */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Layout */
+  --tap-min: 44px;
+  --measure: 68ch;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --surface-0: oklch(18% 0.01 260);
+    --surface-1: oklch(22% 0.01 260);
+    --surface-2: oklch(27% 0.012 260);
+    --ink-1: oklch(94% 0.005 85);
+    --ink-2: oklch(72% 0.01 260);
+    --line: oklch(32% 0.012 260);
+    --line-strong: oklch(48% 0.012 260);
+
+    --accent: oklch(76% 0.1 250);
+    --accent-ink: oklch(82% 0.09 250);
+    --accent-soft: oklch(30% 0.05 250);
+    --accent-contrast: oklch(16% 0.02 260);
+
+    --correct: oklch(76% 0.13 150);
+    --correct-soft: oklch(27% 0.04 150);
+    --incorrect: oklch(74% 0.15 25);
+    --incorrect-soft: oklch(28% 0.04 25);
+    --flag: oklch(78% 0.12 80);
+    --flag-soft: oklch(28% 0.04 80);
+  }
+}
+
+:root[data-theme="dark"] {
+  --surface-0: oklch(18% 0.01 260);
+  --surface-1: oklch(22% 0.01 260);
+  --surface-2: oklch(27% 0.012 260);
+  --ink-1: oklch(94% 0.005 85);
+  --ink-2: oklch(72% 0.01 260);
+  --line: oklch(32% 0.012 260);
+  --line-strong: oklch(48% 0.012 260);
+
+  --accent: oklch(76% 0.1 250);
+  --accent-ink: oklch(82% 0.09 250);
+  --accent-soft: oklch(30% 0.05 250);
+  --accent-contrast: oklch(16% 0.02 260);
+
+  --correct: oklch(76% 0.13 150);
+  --correct-soft: oklch(27% 0.04 150);
+  --incorrect: oklch(74% 0.15 25);
+  --incorrect-soft: oklch(28% 0.04 25);
+  --flag: oklch(78% 0.12 80);
+  --flag-soft: oklch(28% 0.04 80);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 80ms;
+    --duration-base: 80ms;
+    --duration-slow: 80ms;
+  }
+}

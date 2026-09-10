@@ -1,0 +1,49 @@
+/**
+ * Shared types for the pure NGN core. No React, Next, or Supabase imports allowed here.
+ */
+
+export type CjmmStep = 1 | 2 | 3 | 4 | 5 | 6;
+
+export const CJMM_STEP_LABELS: Record<CjmmStep, string> = {
+  1: "Recognize Cues",
+  2: "Analyze Cues",
+  3: "Prioritize Hypotheses",
+  4: "Generate Solutions",
+  5: "Take Action",
+  6: "Evaluate Outcomes",
+};
+
+export type ScoringModel = "zero_one" | "plus_minus" | "rationale";
+
+export interface ScoreBreakdownEntry {
+  /** Stable id of the scored element (option, row, blank, slot). */
+  elementId: string;
+  /** Human label for feedback UI, when known. */
+  label?: string;
+  /** Whether this element was answered correctly. */
+  correct: boolean;
+  /** Points contributed by this element (may be negative under +/- before flooring). */
+  delta: number;
+}
+
+export interface ScoreResult {
+  points: number;
+  maxPoints: number;
+  model: ScoringModel;
+  breakdown: ScoreBreakdownEntry[];
+}
+
+export interface ScorableElement {
+  id: string;
+  label?: string;
+  correct: boolean;
+}
+
+export class ScoringError extends Error {
+  readonly code: "type_mismatch" | "invalid_response";
+  constructor(code: ScoringError["code"], message: string) {
+    super(message);
+    this.name = "ScoringError";
+    this.code = code;
+  }
+}

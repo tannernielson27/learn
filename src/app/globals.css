@@ -1,26 +1,122 @@
 @import "tailwindcss";
+@import "../styles/tokens.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/* Map tokens into Tailwind utilities. Use utilities; never hard-code colors. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-*: initial;
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-ink-1: var(--ink-1);
+  --color-ink-2: var(--ink-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-correct: var(--correct);
+  --color-correct-soft: var(--correct-soft);
+  --color-incorrect: var(--incorrect);
+  --color-incorrect-soft: var(--incorrect-soft);
+  --color-flag: var(--flag);
+  --color-flag-soft: var(--flag-soft);
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  --font-ui: var(--ff-ui);
+  --font-read: var(--ff-read);
+  --font-mono: var(--ff-mono);
+
+  --radius-*: initial;
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-full: 9999px;
+
+  --ease-out-expo: var(--ease-out-expo);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@utility duration-fast {
+  transition-duration: var(--duration-fast);
+}
+@utility duration-base {
+  transition-duration: var(--duration-base);
+}
+@utility duration-slow {
+  transition-duration: var(--duration-slow);
+}
+@utility tap-target {
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
+}
+@utility measure {
+  max-width: var(--measure);
+}
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@layer base {
+  html {
+    background: var(--surface-0);
+    color: var(--ink-1);
+    font-family: var(--ff-ui);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--surface-0);
+    color: var(--ink-1);
+    margin: 0;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--accent-soft);
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Player typography roles (docs/04-DESIGN-DIRECTION.md §6) */
+@layer components {
+  .stem {
+    font-size: var(--text-lg);
+    line-height: 1.55;
+    color: var(--ink-1);
+    max-width: var(--measure);
+  }
+  .instructions {
+    font-size: var(--text-sm);
+    font-style: italic;
+    color: var(--ink-2);
+  }
+  .option {
+    font-size: var(--text-base);
+    line-height: 1.5;
+  }
+  .ehr-note {
+    font-family: var(--ff-read);
+    font-size: var(--text-base);
+    line-height: 1.65;
+    max-width: var(--measure);
+  }
+  .ehr-time {
+    font-family: var(--ff-mono);
+    font-size: var(--text-sm);
+    color: var(--ink-2);
+  }
+  .eyebrow {
+    font-family: var(--ff-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
 }
