@@ -1,7 +1,9 @@
 # Sprint 0 — Demo
 
 **Goal:** an empty but production-shaped app, deployed, with the scoring engine tested.
-**Status:** built locally on 2026-09-10; deploy pending Vercel connection.
+**Status:** deployed 2026-09-10.
+**Production:** https://learn-tanner-nielsons-projects.vercel.app
+**Repo:** https://github.com/tannernielson27/learn
 
 ## Demo script (5 steps)
 
@@ -21,8 +23,8 @@
 
 ## Known gaps
 
-- Vercel project not yet connected (needs owner login). No preview URL until then.
-- Branch protection on `main` not yet enabled (needs the workflow-scoped GitHub token and the first push).
+- Vercel Authentication is switched off on the project so phones and the collaborator can open previews without a Vercel login. Re-enable under Project → Settings → Deployment Protection once real class data exists (Sprint 4+).
+- Branch protection requires one approval. Until the collaborator has write access, drop it to zero in GitHub → Settings → Branches, then raise it again.
 - No Playwright yet; screenshots start in Sprint 1.
 - Gallery has no item renderers yet; they arrive in Sprints 1–2.
 
