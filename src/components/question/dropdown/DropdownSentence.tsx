@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useId } from "react";
 import { elementFeedback, type ElementFeedback, type PlayerMode } from "../types";
 
 export type SentenceToken = { kind: "text"; value: string } | { kind: "blank"; blankId: string };
@@ -89,6 +89,7 @@ export function DropdownSentence({
   anchorBlankId,
   onChoose,
 }: DropdownSentenceProps) {
+  const uid = useId();
   const order = blankOrder(tokens);
   const chosen = (id: string) => answers.find((a) => a.blankId === id)?.choiceId;
   const feedbackOf = (id: string) => {
@@ -107,15 +108,19 @@ export function DropdownSentence({
           const n = order.indexOf(blank.id) + 1;
           const pick = chosen(blank.id);
           const feedback = feedbackOf(blank.id);
+          const showAnchor = mode === "feedback" && blank.id === anchorBlankId;
           const selectedClass =
             mode !== "feedback" && pick ? "border-accent bg-accent-soft" : "border-line-strong";
           return (
             <span key={index} className="inline-flex max-w-full items-center gap-1.5 align-middle">
-              {mode === "feedback" && blank.id === anchorBlankId ? (
-                <span className="eyebrow">Anchor</span>
+              {showAnchor ? (
+                <span id={`${uid}-anchor`} className="eyebrow">
+                  Anchor
+                </span>
               ) : null}
               <select
                 aria-label={`Blank ${n} of ${order.length}`}
+                aria-describedby={showAnchor ? `${uid}-anchor` : undefined}
                 value={pick ?? ""}
                 disabled={mode !== "answer"}
                 onChange={(event) => onChoose(blank.id, event.target.value || undefined)}
