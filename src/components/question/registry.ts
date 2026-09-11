@@ -1,4 +1,6 @@
 import type { ItemType } from "@/lib/ngn/schemas";
+import { dragdropClozeModule } from "./dragdrop_cloze/DragdropClozeItem";
+import { dragdropRationaleModule } from "./dragdrop_rationale/DragdropRationaleItem";
 import { dropdownClozeModule } from "./dropdown_cloze/DropdownClozeItem";
 import { dropdownRationaleModule } from "./dropdown_rationale/DropdownRationaleItem";
 import { dropdownTableModule } from "./dropdown_table/DropdownTableItem";
@@ -26,6 +28,8 @@ export const RENDERERS: { [T in ItemType]?: ItemRendererModule<T> } = {
   multiple_response_grouping: multipleResponseGroupingModule,
   highlight_text: highlightTextModule,
   highlight_table: highlightTableModule,
+  dragdrop_cloze: dragdropClozeModule,
+  dragdrop_rationale: dragdropRationaleModule,
 };
 
 export function hasRenderer(type: ItemType): boolean {

@@ -34,9 +34,10 @@ export function withAnswer(
   });
 }
 
+/** Whether every blank has an answer; shared by the drop-down and drag-and-drop sentences. */
 export function allBlanksFilled(
   tokens: readonly SentenceToken[],
-  answers: readonly BlankAnswer[],
+  answers: readonly { blankId: string }[],
 ): boolean {
   return blankOrder(tokens).every((id) => answers.some((a) => a.blankId === id));
 }
