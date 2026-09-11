@@ -152,6 +152,7 @@ function MatrixCards({
   columns,
   kind,
   mode,
+  caption,
   isSelected,
   feedbackFor,
   rowScore,
@@ -160,6 +161,7 @@ function MatrixCards({
   const interactive = mode === "answer";
   return (
     <div className="flex flex-col gap-3 md:hidden">
+      <p className="sr-only">{caption}</p>
       {rows.map((row) => {
         const score = rowScore?.(row.id);
         return (
@@ -182,7 +184,7 @@ function MatrixCards({
                   <label
                     key={column.id}
                     htmlFor={inputId}
-                    className={`option tap-target flex items-center gap-3 border border-transparent px-3 py-2 transition-[background-color,border-color] duration-fast ease-out-expo has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${
+                    className={`option tap-target flex items-center gap-3 border border-transparent px-3 py-2 transition-[background-color,border-color] duration-fast ease-out-expo ${
                       interactive ? "cursor-pointer hover:bg-surface-2" : "cursor-default"
                     } ${stateClasses(checked, feedback, mode)}`}
                   >
