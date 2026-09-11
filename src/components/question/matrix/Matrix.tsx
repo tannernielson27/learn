@@ -44,7 +44,7 @@ function FeedbackText({ state }: { state: ElementFeedback }) {
   return state === "neutral" ? null : <span className="sr-only">{feedbackLabel[state]}</span>;
 }
 
-function RowScoreMark({ score }: { score: RowScore }) {
+export function RowScoreMark({ score }: { score: RowScore }) {
   return (
     <span className="ml-2 font-mono text-xs whitespace-nowrap text-ink-2 tabular">
       <span className="sr-only">Row score </span>
