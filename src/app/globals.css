@@ -121,13 +121,56 @@
   }
 }
 
+/* Motion (docs/04-DESIGN-DIRECTION.md §5): transform and opacity only. Distances come from tokens,
+   so reduced motion leaves a short fade. */
 @keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(var(--motion-shift));
   }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* A feedback mark or a placed choice arriving. */
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: scale(var(--motion-scale));
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* The score number settling into place: a number that settles, not a counter. */
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--motion-shift) / 2));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@layer components {
+  /* Marks arrive in reading order, --stagger-step apart (index set by applyStagger), capped at
+     five steps so the reveal ends within 320ms. */
+  [data-feedback-mark] {
+    display: inline-block;
+    animation: arrive var(--duration-fast) var(--ease-out-expo) both;
+    animation-delay: calc(min(var(--stagger, 0), 5) * var(--stagger-step));
+  }
+  .motion-settle {
+    animation: settle var(--duration-slow) var(--ease-out-expo) both;
+  }
+  .motion-arrive {
+    display: inline-block;
+    animation: arrive var(--duration-base) var(--ease-out-expo) both;
   }
 }
