@@ -8,7 +8,8 @@ export default function GalleryLayout({ children }: LayoutProps<"/gallery">) {
   return (
     <div className="flex min-h-full flex-1 flex-col md:flex-row">
       <aside className="border-b border-line bg-surface-1 md:w-64 md:shrink-0 md:border-r md:border-b-0">
-        <div className="flex items-center justify-between gap-3 px-5 py-4">
+        {/* Wraps in the 256px sidebar so the theme toggle drops under the title instead of overflowing. */}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
           <div>
             <p className="eyebrow">LeaRN</p>
             <p className="text-sm font-semibold">Component gallery</p>

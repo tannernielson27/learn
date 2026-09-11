@@ -1,10 +1,11 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
 import { SCORING_MODEL_LABELS } from "@/lib/ngn/registry";
 import type { RichText } from "@/lib/ngn/schemas";
 import type { ScoreResult } from "@/lib/ngn/types";
+import { applyStagger } from "./motion";
 import type { PlayerMode } from "./types";
 
 export interface QuestionShellProps {
@@ -54,8 +55,19 @@ export function QuestionShell({
   rationale,
   children,
 }: QuestionShellProps) {
+  const root = useRef<HTMLElement>(null);
+  // Before the first feedback frame is painted, give the visible marks their place in the reveal.
+  useLayoutEffect(() => {
+    if (mode === "feedback" && root.current) applyStagger(root.current);
+  }, [mode]);
+
   return (
-    <section aria-label="Question" className="flex min-h-full flex-col pb-24" data-mode={mode}>
+    <section
+      ref={root}
+      aria-label="Question"
+      className="flex min-h-full flex-col pb-24"
+      data-mode={mode}
+    >
       {progress ? (
         <div className="mb-4 flex items-center gap-3">
           <span className="font-mono text-xs text-ink-2">
@@ -112,11 +124,11 @@ function ScorePanel({
   return (
     <aside
       aria-label="Score"
-      className="mt-8 rounded-md border border-line bg-surface-1 p-5 motion-safe:animate-[fade-up_var(--duration-slow)_var(--ease-out-expo)]"
+      className="mt-8 animate-[fade-up_var(--duration-slow)_var(--ease-out-expo)_both] rounded-md border border-line bg-surface-1 p-5"
     >
       <div className="flex items-baseline justify-between gap-4">
         <p className="eyebrow">Score</p>
-        <p className="tabular font-mono text-2xl">
+        <p className="motion-settle tabular font-mono text-2xl">
           {score.points}
           <span className="text-base text-ink-2"> / {score.maxPoints}</span>
         </p>
