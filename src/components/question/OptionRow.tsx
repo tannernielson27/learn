@@ -22,20 +22,26 @@ const feedbackClasses: Record<ElementFeedback, string> = {
   missed: "border-dashed border-correct",
 };
 
-const feedbackLabel: Record<ElementFeedback, string> = {
+export const feedbackLabel: Record<ElementFeedback, string> = {
   neutral: "",
   correct: "Correct",
   incorrect: "Incorrect",
   missed: "Missed",
 };
 
-function FeedbackIcon({ state }: { state: ElementFeedback }) {
+export function FeedbackIcon({
+  state,
+  className = "ml-auto",
+}: {
+  state: ElementFeedback;
+  className?: string;
+}) {
   if (state === "neutral") return null;
   const isCorrect = state === "correct" || state === "missed";
   return (
     <span
       aria-hidden="true"
-      className={`ml-auto shrink-0 font-mono text-xs ${isCorrect ? "text-correct" : "text-incorrect"}`}
+      className={`${className} shrink-0 font-mono text-xs ${isCorrect ? "text-correct" : "text-incorrect"}`}
     >
       {isCorrect ? "✓" : "✕"}
     </span>
