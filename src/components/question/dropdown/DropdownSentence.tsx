@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useId } from "react";
+import { FeedbackIcon, feedbackLabel } from "../OptionRow";
 import { elementFeedback, type ElementFeedback, type PlayerMode } from "../types";
 
 export type SentenceToken = { kind: "text"; value: string } | { kind: "blank"; blankId: string };
@@ -61,16 +62,10 @@ const stateClasses: Record<ElementFeedback, string> = {
 
 function Mark({ state }: { state: ElementFeedback }) {
   if (state === "neutral") return null;
-  const good = state === "correct";
   return (
     <>
-      <span className="sr-only">{good ? "Correct" : "Incorrect"}</span>
-      <span
-        aria-hidden="true"
-        className={`font-mono text-xs ${good ? "text-correct" : "text-incorrect"}`}
-      >
-        {good ? "✓" : "✕"}
-      </span>
+      <span className="sr-only">{feedbackLabel[state]}</span>
+      <FeedbackIcon state={state} className="" />
     </>
   );
 }
