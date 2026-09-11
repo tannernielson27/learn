@@ -2,6 +2,8 @@ import type { ItemType } from "@/lib/ngn/schemas";
 import { dropdownClozeModule } from "./dropdown_cloze/DropdownClozeItem";
 import { dropdownRationaleModule } from "./dropdown_rationale/DropdownRationaleItem";
 import { dropdownTableModule } from "./dropdown_table/DropdownTableItem";
+import { highlightTableModule } from "./highlight_table/HighlightTableItem";
+import { highlightTextModule } from "./highlight_text/HighlightTextItem";
 import { matrixMultipleChoiceModule } from "./matrix_multiple_choice/MatrixMultipleChoiceItem";
 import { matrixMultipleResponseModule } from "./matrix_multiple_response/MatrixMultipleResponseItem";
 import { multipleChoiceModule } from "./multiple_choice/MultipleChoiceItem";
@@ -22,6 +24,8 @@ export const RENDERERS: { [T in ItemType]?: ItemRendererModule<T> } = {
   dropdown_rationale: dropdownRationaleModule,
   dropdown_table: dropdownTableModule,
   multiple_response_grouping: multipleResponseGroupingModule,
+  highlight_text: highlightTextModule,
+  highlight_table: highlightTableModule,
 };
 
 export function hasRenderer(type: ItemType): boolean {
