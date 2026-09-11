@@ -41,6 +41,7 @@ export function FeedbackIcon({
   return (
     <span
       aria-hidden="true"
+      data-feedback-mark=""
       className={`${className} shrink-0 font-mono text-xs ${isCorrect ? "text-correct" : "text-incorrect"}`}
     >
       {isCorrect ? "✓" : "✕"}
