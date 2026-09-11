@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import type { ItemOf, ItemType, ResponseOf } from "@/lib/ngn/schemas";
-import type { ScoreBreakdownEntry } from "@/lib/ngn/types";
+import type { ScoreBreakdownEntry, ScoreResult } from "@/lib/ngn/types";
 
 export type PlayerMode = "answer" | "review" | "feedback";
 
@@ -25,6 +25,8 @@ export interface ItemRendererModule<T extends ItemType> {
   Renderer: ComponentType<ItemRendererProps<T>>;
   /** Whether the response is complete enough to submit (Select N needs exactly N, etc.). */
   isComplete: (item: PlayerItem<T>, response: ResponseOf<T>) => boolean;
+  /** Optional item-specific sentence for the score panel, e.g. naming a triad's anchor. */
+  explainScore?: (item: ItemOf<T>, result: ScoreResult) => string | undefined;
 }
 
 /** Feedback state of a single selectable element, derived from response + answer key. */
