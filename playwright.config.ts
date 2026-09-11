@@ -11,6 +11,9 @@ const baseURL = remote ?? "http://localhost:3100";
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
+  // More parallel headless browsers than this makes full-page captures fail intermittently
+  // ("Unable to capture screenshot") on a busy machine; 2 matches the CI runner's default.
+  workers: 2,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
@@ -43,7 +46,7 @@ export default defineConfig({
     : {
         command: "pnpm build && pnpm start --port 3100",
         url: baseURL,
-        reuseExistingServer: true,
+        reuseExistingServer: !process.env.CI,
         timeout: 240_000,
       },
 });

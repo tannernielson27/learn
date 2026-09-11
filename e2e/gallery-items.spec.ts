@@ -10,7 +10,10 @@ for (const type of ITEM_TYPES) {
   test(`${type}: screenshot and accessibility`, async ({ page }, testInfo) => {
     await page.goto(`/gallery/items/${type}`);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await page.waitForLoadState("networkidle");
+    // Deterministic ready signal: the gallery harness marks itself once React has hydrated.
+    // (Server-rendered markup is visible earlier, and capturing mid-hydration can fail.)
+    await expect(page.locator('[data-hydrated="true"]')).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
 
     await page.screenshot({
       path: `test-results/screenshots/${testInfo.project.name}/${type}.png`,
