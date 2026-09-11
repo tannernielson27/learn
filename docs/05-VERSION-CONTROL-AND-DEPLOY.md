@@ -77,6 +77,15 @@ One workflow, one required job `check`, runs on every PR and on pushes to `main`
 
 From Sprint 1: a second job `e2e` runs Playwright against the Vercel preview URL (using the `deployment_status` event) and uploads screenshots. From Sprint 4: `supabase db lint` and migration dry-run.
 
+**Visual baselines (from Sprint 2).** In CI the `e2e` job also compares each gallery item route with a committed baseline in `e2e/__screenshots__/<viewport>/<type>.png` and fails on more than 0.1% changed pixels; the HTML report in the `gallery-screenshots` artifact shows the expected, actual and diff images. Baselines come only from CI's Linux runner, because fonts render differently on Windows and macOS, so local runs skip the comparison. After a deliberate visual change, regenerate them on your branch and commit the images:
+
+```sh
+gh workflow run e2e-baselines.yml --ref <branch>
+gh run download <run-id> -n gallery-baselines -D e2e/__screenshots__
+```
+
+`e2e` is not a required check, because it runs after Vercel deploys rather than on the PR commit.
+
 Concurrency: one run per branch, newer pushes cancel older runs.
 
 ## 6. Deployment (Vercel)

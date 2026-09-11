@@ -1,0 +1,36 @@
+name: e2e baselines
+
+# Regenerates the gallery's visual-diff baselines on the Linux runner, the only place they match
+# the e2e job. Run it on a branch after a deliberate visual change, then commit the result:
+#   gh workflow run e2e-baselines.yml --ref <branch>
+#   gh run download <run-id> -n gallery-baselines -D e2e/__screenshots__
+on:
+  workflow_dispatch:
+
+# The job only builds and screenshots the app; it never pushes.
+permissions:
+  contents: read
+
+jobs:
+  baselines:
+    name: regenerate gallery baselines
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      # Without PLAYWRIGHT_BASE_URL, Playwright builds and serves this commit itself.
+      - run: pnpm e2e e2e/gallery-items.spec.ts --update-snapshots
+      - uses: actions/upload-artifact@v7
+        with:
+          name: gallery-baselines
+          path: e2e/__screenshots__
+          retention-days: 14
