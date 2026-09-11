@@ -1,4 +1,5 @@
 import type { ItemType } from "@/lib/ngn/schemas";
+import { bowtieModule } from "./bowtie/BowtieItem";
 import { dragdropClozeModule } from "./dragdrop_cloze/DragdropClozeItem";
 import { dragdropRationaleModule } from "./dragdrop_rationale/DragdropRationaleItem";
 import { dropdownClozeModule } from "./dropdown_cloze/DropdownClozeItem";
@@ -32,6 +33,7 @@ export const RENDERERS: { [T in ItemType]?: ItemRendererModule<T> } = {
   dragdrop_cloze: dragdropClozeModule,
   dragdrop_rationale: dragdropRationaleModule,
   ordered_response: orderedResponseModule,
+  bowtie: bowtieModule,
 };
 
 export function hasRenderer(type: ItemType): boolean {

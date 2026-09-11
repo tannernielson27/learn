@@ -1,25 +1,19 @@
 "use client";
 
-import {
-  DndContext,
-  MouseSensor,
-  TouchSensor,
-  useDraggable,
-  useDroppable,
-  useSensor,
-  useSensors,
-  type Announcements,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import { Fragment, useId, useRef, useState, type KeyboardEvent } from "react";
+import { DndContext, type DragEndEvent } from "@dnd-kit/core";
+import { Fragment, useId, useState, type KeyboardEvent } from "react";
 import { blankOrder, type SentenceToken } from "../dropdown/DropdownSentence";
-import { FeedbackIcon, feedbackLabel } from "../OptionRow";
-import { elementFeedback, type ElementFeedback, type PlayerMode } from "../types";
+import { elementFeedback, type PlayerMode } from "../types";
+import {
+  DropSlot,
+  SILENT_ANNOUNCEMENTS,
+  useDragClickGuard,
+  useTapToPlaceSensors,
+  WordChip,
+  type BankToken,
+} from "./tapToPlace";
 
-export interface BankToken {
-  id: string;
-  label: string;
-}
+export type { BankToken } from "./tapToPlace";
 
 export interface TokenAnswer {
   blankId: string;
@@ -39,21 +33,6 @@ export function withToken(
   });
 }
 
-// Placements are announced by this component's own status region, so dnd-kit stays silent.
-const SILENT: Announcements = {
-  onDragStart: () => undefined,
-  onDragOver: () => undefined,
-  onDragEnd: () => undefined,
-  onDragCancel: () => undefined,
-};
-
-const feedbackClasses: Record<ElementFeedback, string> = {
-  neutral: "border-line-strong",
-  correct: "border-correct bg-correct-soft",
-  incorrect: "border-incorrect bg-incorrect-soft",
-  missed: "border-dashed border-correct",
-};
-
 export interface TokenSentenceProps {
   tokens: readonly SentenceToken[];
   bank: readonly BankToken[];
@@ -69,32 +48,21 @@ export interface TokenSentenceProps {
 }
 
 /**
- * A sentence with blanks filled from a word bank (drag-and-drop cloze and rationale). Three ways
- * in, one state: drag with a mouse or a long press (dnd-kit), or tap a word and then a blank,
- * which is also the keyboard path (Space or Enter on each, Escape to cancel).
+ * A sentence with blanks filled from a word bank (drag-and-drop cloze and rationale). Drag with a
+ * mouse or a long press, or tap a word and then a blank, which is also the keyboard path (Space or
+ * Enter on each, Escape to cancel).
  */
 export function TokenSentence(props: TokenSentenceProps) {
   const { tokens, bank, reusable, answers, mode, correctToken, anchorBlankId, onChange } = props;
   const uid = useId();
   const [armed, setArmed] = useState<string | null>(null);
   const [message, setMessage] = useState("");
-  const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 6 } }),
-  );
+  const sensors = useTapToPlaceSensors();
+  const guard = useDragClickGuard();
   const order = blankOrder(tokens);
   const labelOf = (tokenId: string | undefined) => bank.find((t) => t.id === tokenId)?.label;
   const placedIn = (blankId: string) => answers.find((a) => a.blankId === blankId)?.tokenId;
   const blankName = (blankId: string) => `blank ${order.indexOf(blankId) + 1} of ${order.length}`;
-
-  // The dragged word follows the pointer, so releasing a mouse drag also clicks it. That click
-  // must not arm the word again; the flag clears once the release's click has been dispatched.
-  const dragging = useRef(false);
-  const endDrag = () => {
-    setTimeout(() => {
-      dragging.current = false;
-    }, 0);
-  };
 
   const place = (tokenId: string, blankId: string) => {
     onChange(withToken(tokens, answers, blankId, tokenId));
@@ -102,7 +70,7 @@ export function TokenSentence(props: TokenSentenceProps) {
     setMessage(`${labelOf(tokenId)} placed in ${blankName(blankId)}.`);
   };
   const chooseToken = (tokenId: string) => {
-    if (dragging.current) return;
+    if (guard.isDragging()) return;
     const same = armed === tokenId;
     setArmed(same ? null : tokenId);
     setMessage(
@@ -122,7 +90,7 @@ export function TokenSentence(props: TokenSentenceProps) {
     setMessage("Selection cancelled.");
   };
   const onDragEnd = ({ active, over }: DragEndEvent) => {
-    endDrag();
+    guard.end();
     if (over) place(String(active.id), String(over.id));
   };
 
@@ -138,35 +106,40 @@ export function TokenSentence(props: TokenSentenceProps) {
     <DndContext
       id={uid}
       sensors={sensors}
-      onDragStart={() => {
-        dragging.current = true;
-      }}
+      onDragStart={guard.start}
       onDragEnd={onDragEnd}
-      onDragCancel={endDrag}
-      accessibility={{ announcements: SILENT }}
+      onDragCancel={guard.end}
+      accessibility={{ announcements: SILENT_ANNOUNCEMENTS }}
     >
       <p className="option measure text-lg leading-[2.6]">
-        {tokens.map((token, index) =>
-          token.kind === "text" ? (
-            <Fragment key={index}>{token.value}</Fragment>
-          ) : (
-            <BlankSlot
-              key={index}
-              blankId={token.blankId}
-              n={order.indexOf(token.blankId) + 1}
-              of={order.length}
-              label={labelOf(placedIn(token.blankId))}
-              feedback={feedbackOf(token.blankId)}
-              mode={mode}
-              armed={armed !== null}
-              anchorId={
-                mode === "feedback" && token.blankId === anchorBlankId ? `${uid}-anchor` : undefined
-              }
-              onChoose={chooseBlank}
-              onKeyDown={cancelOnEscape}
-            />
-          ),
-        )}
+        {tokens.map((token, index) => {
+          if (token.kind === "text") return <Fragment key={index}>{token.value}</Fragment>;
+          const n = order.indexOf(token.blankId) + 1;
+          const label = labelOf(placedIn(token.blankId));
+          const anchorId =
+            mode === "feedback" && token.blankId === anchorBlankId ? `${uid}-anchor` : undefined;
+          return (
+            <Fragment key={index}>
+              {anchorId ? (
+                <span id={anchorId} className="eyebrow mr-1.5 align-middle">
+                  Anchor
+                </span>
+              ) : null}
+              <DropSlot
+                slotId={token.blankId}
+                name={`Blank ${n} of ${order.length}${label ? `: ${label}` : ", empty"}`}
+                placeholder={`Blank ${n}`}
+                label={label}
+                feedback={feedbackOf(token.blankId)}
+                mode={mode}
+                target={armed !== null}
+                describedBy={anchorId}
+                onChoose={chooseBlank}
+                onKeyDown={cancelOnEscape}
+              />
+            </Fragment>
+          );
+        })}
       </p>
       {mode === "answer" ? (
         <div
@@ -175,7 +148,7 @@ export function TokenSentence(props: TokenSentenceProps) {
           className="mt-6 flex flex-wrap gap-2 rounded-sm border border-line bg-surface-2 p-3"
         >
           {available.map((t) => (
-            <BankChip
+            <WordChip
               key={t.id}
               token={t}
               armed={armed === t.id}
@@ -199,98 +172,5 @@ export function TokenSentence(props: TokenSentenceProps) {
         {message}
       </p>
     </DndContext>
-  );
-}
-
-interface BankChipProps {
-  token: BankToken;
-  armed: boolean;
-  onChoose: (tokenId: string) => void;
-  onKeyDown: (event: KeyboardEvent) => void;
-}
-
-/** A word in the bank. Tap to arm it; drag it onto a blank. dnd-kit supplies pointer drag only. */
-function BankChip({ token, armed, onChoose, onKeyDown }: BankChipProps) {
-  const { listeners, setNodeRef, transform, isDragging } = useDraggable({ id: token.id });
-  // Lift per docs/04-DESIGN-DIRECTION.md §4: the dragged word follows the pointer at 1.02 scale.
-  const style = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(1.02)` }
-    : undefined;
-  return (
-    <button
-      ref={setNodeRef}
-      type="button"
-      aria-pressed={armed}
-      {...listeners}
-      onClick={() => onChoose(token.id)}
-      onKeyDown={onKeyDown}
-      style={style}
-      className={`option tap-target inline-flex touch-manipulation items-center rounded-sm border px-3 text-left transition-[background-color,border-color,box-shadow] duration-fast ease-out-expo ${
-        armed
-          ? "border-accent bg-accent-soft ring-2 ring-accent"
-          : "border-line-strong bg-surface-1 hover:bg-surface-2"
-      } ${isDragging ? "relative z-10 cursor-grabbing shadow-md" : "cursor-grab"}`}
-    >
-      {token.label}
-    </button>
-  );
-}
-
-interface BlankSlotProps {
-  blankId: string;
-  n: number;
-  of: number;
-  label: string | undefined;
-  feedback: ElementFeedback;
-  mode: PlayerMode;
-  /** A word is armed, so every blank is a valid target. */
-  armed: boolean;
-  /** Id of the visible Anchor tag, when this blank anchors a triad in feedback. */
-  anchorId?: string;
-  onChoose: (blankId: string) => void;
-  onKeyDown: (event: KeyboardEvent) => void;
-}
-
-function BlankSlot(props: BlankSlotProps) {
-  const { blankId, n, of, label, feedback, mode, armed, anchorId, onChoose, onKeyDown } = props;
-  const { setNodeRef, isOver } = useDroppable({ id: blankId, disabled: mode !== "answer" });
-  const answerClasses =
-    armed || isOver
-      ? `border-dashed border-accent ${isOver ? "bg-accent-soft" : "bg-surface-1"}`
-      : label
-        ? "border-accent bg-accent-soft"
-        : "border-dashed border-line-strong bg-surface-1";
-  return (
-    <span className="inline-flex max-w-full items-center gap-1.5 align-middle">
-      {anchorId ? (
-        <span id={anchorId} className="eyebrow">
-          Anchor
-        </span>
-      ) : null}
-      <button
-        ref={setNodeRef}
-        type="button"
-        aria-label={`Blank ${n} of ${of}${label ? `: ${label}` : ", empty"}`}
-        aria-describedby={anchorId}
-        disabled={mode !== "answer"}
-        onClick={() => onChoose(blankId)}
-        onKeyDown={onKeyDown}
-        className={`tap-target inline-flex min-w-32 max-w-full items-center justify-center rounded-sm border-2 px-3 text-left text-base leading-snug text-ink-1 transition-[background-color,border-color] duration-fast ease-out-expo disabled:cursor-default ${
-          mode === "feedback" ? feedbackClasses[feedback] : answerClasses
-        }`}
-      >
-        {label ?? (
-          <span aria-hidden="true" className="font-mono text-xs text-ink-2">
-            Blank {n}
-          </span>
-        )}
-      </button>
-      {feedback !== "neutral" ? (
-        <>
-          <span className="sr-only">{feedbackLabel[feedback]}</span>
-          <FeedbackIcon state={feedback} className="" />
-        </>
-      ) : null}
-    </span>
   );
 }

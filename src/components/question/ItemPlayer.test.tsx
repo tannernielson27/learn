@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema } from "@/lib/ngn/schemas";
 import { ItemPlayer, toPlayerItem } from "./ItemPlayer";
+import { RENDERERS } from "./registry";
 
 const mc = itemSchema.parse(FIXTURES.multiple_choice.canonical);
 const sata = itemSchema.parse(FIXTURES.multiple_response.canonical);
@@ -84,7 +85,14 @@ describe("ItemPlayer with multiple response", () => {
 
 describe("ItemPlayer without a renderer", () => {
   it("shows a placeholder instead of crashing", () => {
-    render(<ItemPlayer item={unbuilt} />);
-    expect(screen.getByText(/No renderer/)).toBeInTheDocument();
+    // Every item type has a renderer now, so unregister one to exercise the fallback for new types.
+    const saved = RENDERERS.bowtie;
+    delete RENDERERS.bowtie;
+    try {
+      render(<ItemPlayer item={unbuilt} />);
+      expect(screen.getByText(/No renderer/)).toBeInTheDocument();
+    } finally {
+      RENDERERS.bowtie = saved;
+    }
   });
 });
