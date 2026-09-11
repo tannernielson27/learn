@@ -1,4 +1,5 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+import { drag } from "./drag";
 
 // jsdom cannot drive dnd-kit, so real pointer drag and touch tap-to-place are checked here.
 
@@ -11,18 +12,6 @@ async function openCloze(page: Page) {
 
 const bankWord = (page: Page, label: string) =>
   page.getByRole("group", { name: "Word bank" }).getByRole("button", { name: label });
-
-async function drag(page: Page, from: Locator, to: Locator) {
-  const a = await from.boundingBox();
-  const b = await to.boundingBox();
-  if (!a || !b) throw new Error("word or blank not laid out");
-  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
-  await page.mouse.down();
-  // Move in steps so dnd-kit passes its 6px activation distance and tracks the pointer.
-  await page.mouse.move(a.x + a.width / 2 + 12, a.y + a.height / 2, { steps: 4 });
-  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 12 });
-  await page.mouse.up();
-}
 
 test.describe("mouse drag", () => {
   test.beforeEach(({}, testInfo) => {
