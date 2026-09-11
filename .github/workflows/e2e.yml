@@ -1,0 +1,44 @@
+name: e2e
+
+# Runs after Vercel finishes a preview deployment for a branch or PR, against that preview URL.
+on:
+  deployment_status:
+
+# The job runs the deployed commit's code, so its token can only read the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.event.deployment.sha }}
+  cancel-in-progress: true
+
+jobs:
+  gallery:
+    name: gallery screenshots and axe
+    if: github.event.deployment_status.state == 'success' && github.event.deployment_status.environment == 'Preview'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.deployment.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm e2e
+        timeout-minutes: 10
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gallery-screenshots
+          path: |
+            test-results/screenshots
+            playwright-report
+          retention-days: 14

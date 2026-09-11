@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { hasRenderer } from "@/components/question/registry";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -16,6 +16,15 @@ const VARIANTS = [
 
 type Variant = (typeof VARIANTS)[number]["value"];
 
+const noopSubscribe = () => () => {};
+/** False during server render and hydration, true after; e2e waits for it before screenshots. */
+const useHydrated = () =>
+  useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
+
 /**
  * Gallery-only harness. Scores locally with the answer key in the browser, which is fine here
  * and never acceptable in sessions or assignments.
@@ -23,13 +32,17 @@ type Variant = (typeof VARIANTS)[number]["value"];
 export function ItemPlayground({ type }: { type: ItemType }) {
   const [variant, setVariant] = useState<Variant>("canonical");
   const [attempt, setAttempt] = useState(0);
+  const hydrated = useHydrated();
   const fixture = FIXTURES[type];
   const item = itemSchema.parse(fixture[variant]);
   const model = SCORING_MODEL_LABELS[item.scoring.model];
 
   if (!hasRenderer(type)) {
     return (
-      <div className="mt-6 rounded-md border border-dashed border-line-strong p-6">
+      <div
+        data-hydrated={hydrated}
+        className="mt-6 rounded-md border border-dashed border-line-strong p-6"
+      >
         <p className="text-sm font-medium">Renderer not built yet</p>
         <p className="mt-1 text-sm text-ink-2">
           The schema, scorer and fixtures for this type are in place. The renderer is a Sprint 1 or
@@ -43,7 +56,7 @@ export function ItemPlayground({ type }: { type: ItemType }) {
   }
 
   return (
-    <div className="mt-4">
+    <div data-hydrated={hydrated} className="mt-4">
       <div className="flex flex-wrap items-center gap-3">
         <SegmentedControl
           label="Fixture"

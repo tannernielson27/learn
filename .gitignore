@@ -43,3 +43,6 @@ next-env.d.ts
 
 # test artifacts
 coverage
+/test-results/
+/playwright-report/
+/blob-report/
