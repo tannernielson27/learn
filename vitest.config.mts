@@ -24,6 +24,10 @@ export default defineConfig({
           name: "ui",
           environment: "jsdom",
           globals: true,
+          // Each file gets its own worker, and jsdom's start-up bleeds into the first render when
+          // enough of them come up at once under coverage. The tests themselves run in well under
+          // a second; the default 5s is measuring machine contention, not the component.
+          testTimeout: 15_000,
           setupFiles: ["./vitest.setup.ts"],
           include: [
             "src/components/**/*.{test,spec}.{ts,tsx}",
