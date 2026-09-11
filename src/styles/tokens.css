@@ -61,6 +61,10 @@
   --duration-base: 200ms;
   --duration-slow: 320ms;
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  /* How far things move and how long feedback marks wait for each other; reduced motion zeroes them. */
+  --motion-shift: 8px;
+  --motion-scale: 0.96;
+  --stagger-step: 40ms;
 
   /* Layout */
   --tap-min: 44px;
@@ -118,5 +122,9 @@
     --duration-fast: 80ms;
     --duration-base: 80ms;
     --duration-slow: 80ms;
+    /* Opacity only: nothing moves, scales or waits. */
+    --motion-shift: 0px;
+    --motion-scale: 1;
+    --stagger-step: 0ms;
   }
 }

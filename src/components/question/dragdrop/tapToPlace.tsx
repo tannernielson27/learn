@@ -149,7 +149,12 @@ export function DropSlot(props: DropSlotProps) {
           block ? "h-20 min-w-0 flex-1 justify-start text-sm" : "min-w-32 justify-center text-base"
         } ${mode === "feedback" ? slotFeedbackClasses[feedback] : answerClasses}`}
       >
-        {label ?? (
+        {label ? (
+          // Keyed by the choice, so a newly placed choice eases in (the drop settling).
+          <span key={label} className="motion-arrive">
+            {label}
+          </span>
+        ) : (
           <span aria-hidden="true" className="font-mono text-xs text-ink-2">
             {placeholder}
           </span>
