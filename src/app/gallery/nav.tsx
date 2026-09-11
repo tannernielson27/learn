@@ -12,17 +12,6 @@ const FOUNDATIONS = [
   { href: "/gallery/primitives", label: "Primitives" },
 ] as const;
 
-const SPRINT_ONE = new Set<string>([
-  "multiple_choice",
-  "multiple_response",
-  "multiple_response_grouping",
-  "matrix_multiple_choice",
-  "matrix_multiple_response",
-  "dropdown_cloze",
-  "dropdown_rationale",
-  "dropdown_table",
-]);
-
 export function GalleryNav() {
   const pathname = usePathname();
   return (
@@ -65,12 +54,16 @@ export function GalleryNav() {
                     : "text-ink-2 hover:bg-surface-2 hover:text-ink-1"
                 }`}
               >
-                <span className="whitespace-nowrap">{ITEM_TYPE_LABELS[type]}</span>
-                <span
-                  className={`rounded-sm px-1.5 font-mono text-xs ${ready ? "bg-accent-soft text-accent-ink" : "bg-surface-2"}`}
-                >
-                  {ready ? "ready" : SPRINT_ONE.has(type) ? "S1" : "S2"}
+                {/* One line in the phone's scrolling row; wraps in the sidebar at 768px and up. */}
+                <span className="whitespace-nowrap md:whitespace-normal">
+                  {ITEM_TYPE_LABELS[type]}
                 </span>
+                {/* Every type has a renderer now; the tag only marks a new type still being built. */}
+                {ready ? null : (
+                  <span className="shrink-0 rounded-sm bg-surface-2 px-1.5 font-mono text-xs">
+                    soon
+                  </span>
+                )}
               </Link>
             </li>
           );
