@@ -63,6 +63,9 @@ export function ItemPlayer({
   };
 
   const Renderer = rendererModule.Renderer;
+  const scoreNote = result
+    ? rendererModule.explainScore?.(item as ItemOf<ItemType>, result)
+    : undefined;
 
   return (
     <QuestionShell
@@ -73,6 +76,7 @@ export function ItemPlayer({
       canSubmit={canSubmit}
       onSubmit={submit}
       score={result}
+      scoreNote={scoreNote}
       rationale={item.rationale.general}
     >
       <Renderer

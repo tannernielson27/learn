@@ -18,6 +18,8 @@ export interface QuestionShellProps {
   onSubmit?: () => void;
   /** Present in feedback mode. */
   score?: ScoreResult;
+  /** Item-specific note shown under the scoring rule in feedback mode. */
+  scoreNote?: string;
   rationale?: RichText;
   children: ReactNode;
 }
@@ -48,6 +50,7 @@ export function QuestionShell({
   canSubmit,
   onSubmit,
   score,
+  scoreNote,
   rationale,
   children,
 }: QuestionShellProps) {
@@ -76,7 +79,9 @@ export function QuestionShell({
 
       <div className="mt-6">{children}</div>
 
-      {mode === "feedback" && score ? <ScorePanel score={score} rationale={rationale} /> : null}
+      {mode === "feedback" && score ? (
+        <ScorePanel score={score} note={scoreNote} rationale={rationale} />
+      ) : null}
 
       {mode === "answer" ? (
         <div className="fixed inset-x-0 bottom-0 border-t border-line bg-surface-1/95 px-5 py-3 backdrop-blur-sm [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
@@ -94,7 +99,15 @@ export function QuestionShell({
   );
 }
 
-function ScorePanel({ score, rationale }: { score: ScoreResult; rationale?: RichText }) {
+function ScorePanel({
+  score,
+  note,
+  rationale,
+}: {
+  score: ScoreResult;
+  note?: string;
+  rationale?: RichText;
+}) {
   const model = SCORING_MODEL_LABELS[score.model];
   return (
     <aside
@@ -112,6 +125,7 @@ function ScorePanel({ score, rationale }: { score: ScoreResult; rationale?: Rich
         <span className="font-medium">{model.name}.</span>{" "}
         <span className="text-ink-2">{model.explanation}</span>
       </p>
+      {note ? <p className="mt-2 text-sm text-ink-1">{note}</p> : null}
       {rationale ? (
         <div className="mt-4 border-t border-line pt-4">
           <p className="eyebrow">Rationale</p>

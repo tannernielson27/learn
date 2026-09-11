@@ -35,7 +35,7 @@ export const SCORING_MODEL_LABELS: Record<ScoringModel, { name: string; explanat
   rationale: {
     name: "Rationale scoring",
     explanation:
-      "Cause-and-effect pairs are scored together: both parts must be correct to earn the point.",
+      "Linked blanks are scored together: a pair earns its point only when both are correct, and a triad scores nothing unless its anchor is correct.",
   },
 };
 
