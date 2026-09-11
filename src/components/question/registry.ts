@@ -11,6 +11,7 @@ import { matrixMultipleResponseModule } from "./matrix_multiple_response/MatrixM
 import { multipleChoiceModule } from "./multiple_choice/MultipleChoiceItem";
 import { multipleResponseModule } from "./multiple_response/MultipleResponseItem";
 import { multipleResponseGroupingModule } from "./multiple_response_grouping/MultipleResponseGroupingItem";
+import { orderedResponseModule } from "./ordered_response/OrderedResponseItem";
 import type { ItemRendererModule } from "./types";
 
 /**
@@ -30,6 +31,7 @@ export const RENDERERS: { [T in ItemType]?: ItemRendererModule<T> } = {
   highlight_table: highlightTableModule,
   dragdrop_cloze: dragdropClozeModule,
   dragdrop_rationale: dragdropRationaleModule,
+  ordered_response: orderedResponseModule,
 };
 
 export function hasRenderer(type: ItemType): boolean {

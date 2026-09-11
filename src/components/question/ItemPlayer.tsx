@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { AnyResponse, Item, ItemOf, ItemType, ResponseOf } from "@/lib/ngn/schemas";
-import { emptyResponse, scoreItem } from "@/lib/ngn/scoring";
+import { initialResponse } from "@/lib/ngn/presentation";
+import { scoreItem } from "@/lib/ngn/scoring";
 import type { ScoreResult } from "@/lib/ngn/types";
 import { QuestionShell } from "./QuestionShell";
 import { RENDERERS } from "./registry";
@@ -37,7 +38,7 @@ export function ItemPlayer({
   onSubmitted,
 }: ItemPlayerProps) {
   const [mode, setMode] = useState<PlayerMode>(initialMode);
-  const [response, setResponse] = useState<AnyResponse>(() => emptyResponse(item));
+  const [response, setResponse] = useState<AnyResponse>(() => initialResponse(item));
   const [result, setResult] = useState<ScoreResult | undefined>(undefined);
 
   const rendererModule = RENDERERS[item.type] as ItemRendererModule<ItemType> | undefined;
