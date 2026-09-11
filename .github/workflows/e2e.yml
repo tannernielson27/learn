@@ -38,7 +38,9 @@ jobs:
         if: always()
         with:
           name: gallery-screenshots
+          # e2e/__screenshots__ holds any baseline the run had to write because none was committed.
           path: |
             test-results/screenshots
             playwright-report
+            e2e/__screenshots__
           retention-days: 14

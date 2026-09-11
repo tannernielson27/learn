@@ -20,6 +20,12 @@ for (const type of ITEM_TYPES) {
       fullPage: true,
     });
 
+    // Visual diff against the committed baselines, in CI only: they are generated on the Linux
+    // runner and fonts render differently on other systems (docs/05, "Visual baselines").
+    if (process.env.CI) {
+      await expect(page).toHaveScreenshot(`${type}.png`, { fullPage: true });
+    }
+
     const { violations } = await new AxeBuilder({ page }).analyze();
     const blocking = violations
       .filter((v) => v.impact === "serious" || v.impact === "critical")

@@ -1,0 +1,6 @@
+/* Applied only while Playwright compares screenshots (playwright.config.ts, stylePath).
+   Vercel previews inject a feedback toolbar that local builds do not have; hiding it keeps the
+   preview's captures comparable with baselines generated anywhere. */
+vercel-live-feedback {
+  display: none !important;
+}

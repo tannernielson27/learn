@@ -17,8 +17,21 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
+  // Visual-diff baselines (issue #22) come only from CI's Linux runner, so there is one set per
+  // viewport and no platform suffix. See docs/05 for regenerating them.
+  snapshotPathTemplate: "{testDir}/__screenshots__/{projectName}/{arg}{ext}",
+  expect: {
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0.001,
+      animations: "disabled",
+      // Hides the Vercel toolbar that previews inject, so preview and local captures match.
+      stylePath: "./e2e/screenshot.css",
+    },
+  },
   use: {
     baseURL,
+    // Ask Vercel previews not to inject their toolbar into automated sessions.
+    extraHTTPHeaders: remote ? { "x-vercel-skip-toolbar": "1" } : undefined,
     contextOptions: { reducedMotion: "reduce" },
     trace: "retain-on-failure",
   },
