@@ -31,11 +31,16 @@ export interface ItemPlayerProps {
   onResponseChange?: (response: AnyResponse) => void;
 }
 
-/** Strip the answer key unless the mode is feedback. Renderers never see keys while answering. */
+/**
+ * Strip the answer key, and the rationale with it, unless the mode is feedback. Renderers never
+ * see either while answering: "option C is wrong because…" gives the answer away as surely as the
+ * key does.
+ */
 export function toPlayerItem(item: Item, mode: PlayerMode): PlayerItem<ItemType> {
   if (mode === "feedback") return item;
   const rest: Record<string, unknown> = { ...item };
   delete rest.answerKey;
+  delete rest.rationale;
   return rest as PlayerItem<ItemType>;
 }
 

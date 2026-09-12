@@ -85,8 +85,9 @@ describe("drop-down rationale", () => {
     expect(within(panel).getByText(/Blank 1 is the anchor/)).toBeInTheDocument();
     expect(within(panel).getByText(/supporting blanks earn nothing/)).toBeInTheDocument();
     expect(screen.getByText("Anchor")).toBeInTheDocument();
-    expect(blank(1, 3)).toHaveAccessibleDescription("Anchor");
-    expect(blank(2, 3)).not.toHaveAccessibleDescription();
+    // The anchor tag comes first, then why that blank was what it was.
+    expect(blank(1, 3)).toHaveAccessibleDescription(/^Anchor The anchor\./);
+    expect(blank(2, 3)).toHaveAccessibleDescription(/a uterus not clamping down/);
   });
 
   it("scores a triad with the anchor right as one point per correct supporting blank", async () => {

@@ -39,6 +39,7 @@ export function MultipleResponseItem({
               disabled={capReached && !isSelected}
               mode={mode}
               feedback={elementFeedback(isSelected, correct.has(option.id), mode)}
+              rationale={item.rationale?.perElement?.[option.id]}
               onToggle={() => toggle(option.id)}
             />
           );

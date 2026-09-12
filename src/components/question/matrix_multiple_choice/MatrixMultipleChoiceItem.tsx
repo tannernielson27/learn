@@ -34,6 +34,7 @@ export function MatrixMultipleChoiceItem({
       feedbackFor={(rowId, columnId) =>
         elementFeedback(answers.get(rowId) === columnId, key.get(rowId) === columnId, mode)
       }
+      rowRationale={(rowId) => item.rationale?.perElement?.[rowId]}
       rowScore={
         mode === "feedback" && key.size > 0
           ? (rowId) => ({ points: answers.get(rowId) === key.get(rowId) ? 1 : 0, maxPoints: 1 })

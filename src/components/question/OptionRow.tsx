@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import type { RichText } from "@/lib/ngn/schemas";
+import { ElementRationale } from "./ElementRationale";
 import type { ElementFeedback, PlayerMode } from "./types";
 
 export interface OptionRowProps {
@@ -12,6 +14,8 @@ export interface OptionRowProps {
   disabled?: boolean;
   feedback: ElementFeedback;
   mode: PlayerMode;
+  /** Why this option was right or wrong. Present in feedback mode only. */
+  rationale?: RichText;
   onToggle: () => void;
 }
 
@@ -63,31 +67,37 @@ export function OptionRow({
   disabled = false,
   feedback,
   mode,
+  rationale,
   onToggle,
 }: OptionRowProps) {
   const interactive = mode === "answer" && !disabled;
+  const rationaleId = `${id}-rationale`;
   const selectedClasses =
     checked && mode !== "feedback" ? "border-accent ring-1 ring-accent bg-accent-soft" : "";
   return (
-    <label
-      htmlFor={id}
-      className={`option flex min-h-11 cursor-pointer items-start gap-3 rounded-sm border border-line bg-surface-1 px-4 py-3 transition-[background-color,border-color,box-shadow] duration-fast ease-out-expo ${
-        interactive ? "hover:bg-surface-2" : "cursor-default"
-      } ${selectedClasses} ${feedbackClasses[feedback]} ${disabled && !checked ? "opacity-50" : ""}`}
-    >
-      <input
-        id={id}
-        name={name}
-        type={kind}
-        checked={checked}
-        disabled={!interactive}
-        onChange={onToggle}
-        className="mt-1 size-4 shrink-0 accent-(--accent)"
-      />
-      {marker ? <span className="font-mono text-sm text-ink-2">{marker}</span> : null}
-      <span className="flex-1">{label}</span>
-      {feedback !== "neutral" ? <span className="sr-only">{feedbackLabel[feedback]}</span> : null}
-      <FeedbackIcon state={feedback} />
-    </label>
+    <div>
+      <label
+        htmlFor={id}
+        className={`option flex min-h-11 cursor-pointer items-start gap-3 rounded-sm border border-line bg-surface-1 px-4 py-3 transition-[background-color,border-color,box-shadow] duration-fast ease-out-expo ${
+          interactive ? "hover:bg-surface-2" : "cursor-default"
+        } ${selectedClasses} ${feedbackClasses[feedback]} ${disabled && !checked ? "opacity-50" : ""}`}
+      >
+        <input
+          id={id}
+          name={name}
+          type={kind}
+          checked={checked}
+          disabled={!interactive}
+          onChange={onToggle}
+          aria-describedby={rationale ? rationaleId : undefined}
+          className="mt-1 size-4 shrink-0 accent-(--accent)"
+        />
+        {marker ? <span className="font-mono text-sm text-ink-2">{marker}</span> : null}
+        <span className="flex-1">{label}</span>
+        {feedback !== "neutral" ? <span className="sr-only">{feedbackLabel[feedback]}</span> : null}
+        <FeedbackIcon state={feedback} />
+      </label>
+      <ElementRationale id={rationaleId} text={rationale} className="ml-4" />
+    </div>
   );
 }
