@@ -41,12 +41,17 @@ describe("CaseStudyPlayer", () => {
     expect(screen.getByRole("complementary", { name: "Patient record" })).toBeInTheDocument();
   });
 
-  it("names the step it is on and announces the change", async () => {
+  it("leaves focus alone when it opens, then takes it to each new step", async () => {
     render(<CaseStudyPlayer caseStudy={sixSteps} />);
-    // A polite region, so the reader hears the new step without losing their place.
-    expect(stepLine()).toHaveAttribute("aria-live", "polite");
+    expect(document.activeElement).toBe(document.body);
     await finishStep();
     expect(stepLine()).toHaveTextContent("Step 2 of 6: Analyze Cues");
+    // The button that moved on is gone; the step's own name now says where the student is, so the
+    // line above it is not also a live region reading the same words out twice.
+    expect(document.activeElement).toBe(
+      screen.getByRole("group", { name: "Step 2 of 6: Analyze Cues" }),
+    );
+    expect(stepLine()).not.toHaveAttribute("aria-live");
   });
 
   it("will not move on until the step has been submitted", async () => {
@@ -67,6 +72,7 @@ describe("CaseStudyPlayer", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(stepLine()).toHaveTextContent("Step 1 of 6");
+    expect(document.activeElement).toBe(screen.getByRole("group", { name: /Step 1 of 6/ }));
     expect(wrong()).toBeChecked();
     const score = screen.getByRole("complementary", { name: "Score" });
     expect(within(score).getByText("0")).toBeInTheDocument();
@@ -207,22 +213,14 @@ describe("CaseStudyPlayer", () => {
       expect(correct()).toBeInTheDocument();
     });
 
-    it("does nothing when the student picks the step they are already on", async () => {
+    it("closes the list and returns focus to the step when the student picks the open one", async () => {
       render(<CaseStudyPlayer caseStudy={sixSteps} />);
       await finishStep();
       await openReview();
       await userEvent.click(within(review()).getByRole("button", { name: /Step 2/ }));
       expect(stepLine()).toHaveTextContent("Step 2 of 6");
-
-      // The jump that did not happen must not leave focus owed to anyone: without a guard the
-      // request survives to the next step change and takes focus off whatever moved it.
-      await userEvent.click(correct());
-      await userEvent.click(submit());
-      const nextStep = next()!;
-      nextStep.focus();
-      await userEvent.click(nextStep);
-      expect(stepLine()).toHaveTextContent("Step 3 of 6");
-      expect(document.activeElement).not.toBe(screen.getByRole("group", { name: /Step 3 of 6/ }));
+      // The row that was pressed has gone with the list, so focus cannot be left on it.
+      expect(document.activeElement).toBe(screen.getByRole("group", { name: /Step 2 of 6/ }));
     });
 
     it("offers a way back to the results once they have been reached", async () => {
@@ -234,6 +232,7 @@ describe("CaseStudyPlayer", () => {
       expect(stepLine()).toHaveTextContent("Step 6 of 6");
       await userEvent.click(screen.getByRole("button", { name: "Results" }));
       expect(screen.getByRole("region", { name: "Case study results" })).toBeInTheDocument();
+      expect(document.activeElement).toBe(screen.getByRole("group", { name: "Results" }));
     });
   });
 });

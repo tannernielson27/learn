@@ -42,6 +42,16 @@ describe("ItemPlayer with multiple choice", () => {
     expect(screen.getByRole("radio", { name: /Auscultate the lungs/ })).toBeDisabled();
   });
 
+  it("takes focus to the score on submit, which says what was scored", async () => {
+    render(<ItemPlayer item={mc} />);
+    await userEvent.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    // The submit bar is gone, so focus must go somewhere: the result is where the reader wants it.
+    const score = screen.getByRole("complementary", { name: "Score" });
+    expect(document.activeElement).toBe(score);
+    expect(score).toHaveAccessibleDescription(/1\s*\/\s*1/);
+  });
+
   it("marks a wrong pick incorrect and the key as missed", async () => {
     render(<ItemPlayer item={mc} />);
     await userEvent.click(screen.getByRole("radio", { name: /Document the weight/ }));

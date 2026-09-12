@@ -52,14 +52,22 @@ export function CaseStudyPlayer({
   const [playing, setPlaying] = useState(caseStudy.id);
   const [reviewing, setReviewing] = useState(false);
   const step = useRef<HTMLDivElement>(null);
-  // Set when a jump is made, so focus lands on the step once it has been rendered.
+  // Set by every move the student makes, so focus lands on the step once it has been rendered.
+  // Never set on first render: opening the case study must not take focus from the page.
   const follow = useRef(false);
 
   useEffect(() => {
     if (!follow.current) return;
     follow.current = false;
     step.current?.focus();
-  }, [index]);
+  }, [index, reviewing]);
+
+  // Back, Next step, Results and the review rows all remove or hide the control that was pressed.
+  const goTo = (to: number) => {
+    follow.current = true;
+    setReviewing(false);
+    setIndex(to);
+  };
 
   // A different case study is a different attempt, whether or not the caller remembered to
   // remount us. Adjusting during render beats an effect: no first paint of the old one's state.
@@ -81,7 +89,7 @@ export function CaseStudyPlayer({
 
   const advance = () => {
     const next = index + 1;
-    setIndex(next);
+    goTo(next);
     // Reading the last step again and coming forward is not a second attempt, and onFinished is
     // where a session would write a score down.
     if (next >= total && !finished) {
@@ -97,15 +105,8 @@ export function CaseStudyPlayer({
     flagged: Boolean(steps[i]?.flagged),
   }));
 
-  const jumpTo = (id: string) => {
-    const to = Number(id);
-    setReviewing(false);
-    // Jumping to the step already open changes no index, so the effect never runs and the
-    // request to move focus would survive to steal it at the next step change.
-    if (to === index) return;
-    follow.current = true;
-    setIndex(to);
-  };
+  // Picking the step already open changes no index, but closing the list still runs the effect.
+  const jumpTo = (id: string) => goTo(Number(id));
 
   return (
     <RecordLayout record={caseStudy.ehr}>
@@ -114,12 +115,12 @@ export function CaseStudyPlayer({
           <StepIndicator step={index + 1} total={total} />
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {index > 0 ? (
-              <Button size="sm" variant="ghost" onClick={() => setIndex(index - 1)}>
+              <Button size="sm" variant="ghost" onClick={() => goTo(index - 1)}>
                 Back
               </Button>
             ) : null}
             {finished && !onResults ? (
-              <Button size="sm" variant="ghost" onClick={() => setIndex(total)}>
+              <Button size="sm" variant="ghost" onClick={() => goTo(total)}>
                 Results
               </Button>
             ) : null}

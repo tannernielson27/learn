@@ -14,11 +14,8 @@ export function StepIndicator({ step, total }: StepIndicatorProps) {
   const onResults = step > total;
   return (
     <div>
-      <p
-        aria-live="polite"
-        className="text-sm font-medium"
-        data-step-indicator={onResults ? "results" : step}
-      >
+      {/* Not a live region: each step change moves focus to the step, whose name says this. */}
+      <p className="text-sm font-medium" data-step-indicator={onResults ? "results" : step}>
         {onResults ? "Results" : `Step ${step} of ${total}: ${CJMM_STEP_LABELS[step as CjmmStep]}`}
       </p>
       <ol aria-hidden="true" className="mt-2 flex gap-1">
