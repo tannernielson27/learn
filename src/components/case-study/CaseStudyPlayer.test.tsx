@@ -170,6 +170,7 @@ describe("CaseStudyPlayer", () => {
       await finishStep();
       await openReview();
 
+      expect(within(review()).getByRole("heading", { name: "Review" })).toBeInTheDocument();
       const rows = within(review()).getAllByRole("button");
       expect(rows[0]).toHaveTextContent("Step 1: Recognize CuesAnswered, flagged for review");
       expect(rows[1]).toHaveTextContent("Step 2: Analyze CuesNot answered");

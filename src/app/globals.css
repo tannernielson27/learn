@@ -72,6 +72,8 @@
     font-size: 16px;
     line-height: 1.6;
     -webkit-text-size-adjust: 100%;
+    /* Keeps a control scrolled into view by Tab clear of the fixed submit bar (about 5rem). */
+    scroll-padding-bottom: 6rem;
   }
   body {
     background: var(--surface-0);

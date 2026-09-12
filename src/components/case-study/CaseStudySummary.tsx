@@ -14,7 +14,7 @@ export function CaseStudySummary({ results }: CaseStudySummaryProps) {
   const total = totalScore(results);
   return (
     <section aria-label="Case study results" className="rounded-md border border-line p-5 sm:p-6">
-      <p className="eyebrow">Total</p>
+      <h2 className="eyebrow">Total</h2>
       <p className="motion-settle tabular mt-1 font-mono text-2xl">
         {total.points} of {total.maxPoints} points
       </p>

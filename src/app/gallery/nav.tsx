@@ -24,7 +24,7 @@ export function GalleryNav() {
   return (
     <nav aria-label="Gallery" className="px-3 pb-4 md:pb-8">
       <p className="eyebrow px-2 pt-2 pb-1">Foundations</p>
-      <ul className="flex gap-1 overflow-x-auto md:flex-col">
+      <ul className="-m-1 flex gap-1 overflow-x-auto p-1 md:flex-col">
         {FOUNDATIONS.map((item) => {
           const active = pathname === item.href;
           return (
@@ -45,7 +45,7 @@ export function GalleryNav() {
         })}
       </ul>
       <p className="eyebrow px-2 pt-5 pb-1">Composites</p>
-      <ul className="flex gap-1 overflow-x-auto md:flex-col">
+      <ul className="-m-1 flex gap-1 overflow-x-auto p-1 md:flex-col">
         {COMPOSITES.map((entry) => {
           const active = pathname === entry.href;
           return (
@@ -67,7 +67,7 @@ export function GalleryNav() {
       </ul>
 
       <p className="eyebrow px-2 pt-5 pb-1">Item types</p>
-      <ul className="flex gap-1 overflow-x-auto md:flex-col">
+      <ul className="-m-1 flex gap-1 overflow-x-auto p-1 md:flex-col">
         {ITEM_TYPES.map((type) => {
           const href = `/gallery/items/${type}`;
           const active = pathname === href;

@@ -50,6 +50,9 @@ describe("ItemPlayer with multiple choice", () => {
     const score = screen.getByRole("complementary", { name: "Score" });
     expect(document.activeElement).toBe(score);
     expect(score).toHaveAccessibleDescription(/1\s*\/\s*1/);
+    // Headings, so a reader can move between the parts of the feedback rather than through it.
+    expect(within(score).getByRole("heading", { name: "Score" })).toBeInTheDocument();
+    expect(within(score).getByRole("heading", { name: "Rationale" })).toBeInTheDocument();
   });
 
   it("marks a wrong pick incorrect and the key as missed", async () => {

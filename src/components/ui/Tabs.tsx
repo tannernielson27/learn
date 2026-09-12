@@ -130,7 +130,8 @@ export function Tabs({
           role="tablist"
           aria-label={label}
           onKeyDown={onKeyDown}
-          className="no-scrollbar flex min-w-0 flex-1 snap-x snap-mandatory gap-1 overflow-x-auto"
+          // Vertical padding, cancelled by the margin, keeps the focus ring inside the scroll box.
+          className="no-scrollbar -my-1 flex min-w-0 flex-1 snap-x snap-mandatory gap-1 overflow-x-auto px-0.5 py-1"
         >
           {tabs.map((tab) => {
             const isSelected = tab.id === selected;

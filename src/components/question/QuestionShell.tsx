@@ -155,7 +155,7 @@ function ScorePanel({
       className="mt-8 animate-[fade-up_var(--duration-slow)_var(--ease-out-expo)_both] rounded-md border border-line bg-surface-1 p-5"
     >
       <div className="flex items-baseline justify-between gap-4">
-        <p className="eyebrow">Score</p>
+        <h2 className="eyebrow">Score</h2>
         <p id={pointsId} className="motion-settle tabular font-mono text-2xl">
           {score.points}
           <span className="text-base text-ink-2"> / {score.maxPoints}</span>
@@ -168,7 +168,7 @@ function ScorePanel({
       {note ? <p className="mt-2 text-sm text-ink-1">{note}</p> : null}
       {rationale ? (
         <div className="mt-4 border-t border-line pt-4">
-          <p className="eyebrow">Rationale</p>
+          <h3 className="eyebrow">Rationale</h3>
           <RichTextView text={rationale} className="mt-2 text-ink-1" />
         </div>
       ) : null}
@@ -191,9 +191,9 @@ function ScoreBreakdown({ score }: { score: ScoreResult }) {
       aria-labelledby={headingId}
       className="mt-4 animate-[fade-up_var(--duration-slow)_var(--ease-out-expo)_both] rounded-md border border-line bg-surface-1 p-5"
     >
-      <p id={headingId} className="eyebrow">
+      <h2 id={headingId} className="eyebrow">
         Breakdown
-      </p>
+      </h2>
       <ul className="mt-2 text-sm">
         {score.breakdown.map((entry) => (
           <li

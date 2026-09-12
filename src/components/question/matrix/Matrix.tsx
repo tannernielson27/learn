@@ -87,7 +87,8 @@ function MatrixGrid({
 }: MatrixProps & { uid: string }) {
   const interactive = mode === "answer";
   return (
-    <div className="hidden overflow-x-auto md:block">
+    // Padding cancelled by the margin, so the scroll box does not clip a control's focus ring.
+    <div className="-m-1 hidden overflow-x-auto p-1 md:block">
       <table className="w-full border-collapse text-left">
         <caption className="sr-only">{caption}</caption>
         <thead>

@@ -76,7 +76,8 @@ export function EhrContent({
           <SegmentedControl
             label="Time"
             size="sm"
-            className="max-w-full overflow-x-auto"
+            // The padding, cancelled by the margin, leaves room for the focus ring the scroll clips.
+            className="-m-1 max-w-full overflow-x-auto p-1"
             options={record.timePoints.map((point) => ({
               value: point.id,
               label: point.label,

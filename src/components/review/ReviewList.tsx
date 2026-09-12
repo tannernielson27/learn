@@ -29,7 +29,7 @@ const stateOf = (entry: ReviewEntry): string[] => [
 export function ReviewList({ label, entries, currentId, onJump }: ReviewListProps) {
   return (
     <section aria-label={label} className="rounded-md border border-line p-5 sm:p-6">
-      <p className="eyebrow">Review</p>
+      <h2 className="eyebrow">Review</h2>
       <ul className="mt-3 flex flex-col">
         {entries.map((entry) => {
           const current = entry.id === currentId;
