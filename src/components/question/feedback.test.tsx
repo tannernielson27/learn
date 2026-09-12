@@ -8,11 +8,12 @@ import { ItemPlayer, toPlayerItem } from "./ItemPlayer";
 const mc = itemSchema.parse(FIXTURES.multiple_choice.canonical);
 const sata = itemSchema.parse(FIXTURES.multiple_response.canonical);
 const matrix = itemSchema.parse(FIXTURES.matrix_multiple_choice.canonical);
+const matrixMr = itemSchema.parse(FIXTURES.matrix_multiple_response.canonical);
 const rationale = itemSchema.parse(FIXTURES.dropdown_rationale.canonical);
 const noPerElement = itemSchema.parse(FIXTURES.multiple_choice.edge);
 
 const submit = () => screen.getByRole("button", { name: "Submit" });
-const breakdown = () => screen.getByRole("list", { name: "Score breakdown" });
+const breakdown = () => screen.getByRole("complementary", { name: "Breakdown" });
 
 describe("the answer key and its explanations", () => {
   it("keeps the rationale away from the renderer until feedback", () => {
@@ -94,6 +95,24 @@ describe("per-element rationale", () => {
     const grid = screen.getByRole("table");
     const fat = within(grid).getByRole("rowheader", { name: /high-fat diet/ });
     expect(within(fat).getByText(/Fat is the strongest stimulus/)).toBeInTheDocument();
+    // The row's controls must carry it too, or a reader never meets it.
+    expect(
+      within(grid).getByRole("radio", { name: /high-fat diet.*Contraindicated/ }),
+    ).toHaveAccessibleDescription(/Fat is the strongest stimulus/);
+  });
+
+  it("reaches a matrix that takes several answers per row", async () => {
+    render(<ItemPlayer item={matrixMr} />);
+    const grid = () => screen.getByRole("table");
+    for (const row of ["Unilateral weakness", "Slurred speech", "Blood glucose 48 mg/dL"]) {
+      await userEvent.click(
+        within(grid()).getByRole("checkbox", { name: `${row} Ischemic stroke` }),
+      );
+    }
+    await userEvent.click(submit());
+    expect(
+      within(grid()).getByRole("checkbox", { name: /Blood glucose 48 mg\/dL Ischemic stroke/ }),
+    ).toHaveAccessibleDescription(/belongs to hypoglycemia alone/);
   });
 
   it("explains each blank of a rationale sentence", async () => {

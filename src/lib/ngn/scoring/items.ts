@@ -80,13 +80,15 @@ type BlankKey = { blankId: string; correctChoiceId?: string; correctTokenId?: st
 type BlankResponse = { blankId: string; choiceId?: string; tokenId?: string };
 
 const blankCorrectness = (keys: readonly BlankKey[], responses: readonly BlankResponse[]) =>
-  keys.map((k) => {
+  keys.map((k, index) => {
     const answered = responses.find((r) => r.blankId === k.blankId);
     const expected = k.correctChoiceId ?? k.correctTokenId;
     const actual = answered?.choiceId ?? answered?.tokenId;
     return {
       id: k.blankId,
       blankId: k.blankId,
+      // What the sentence calls it. Without this the breakdown names blanks by their ids.
+      label: `Blank ${index + 1}`,
       correct: actual !== undefined && actual === expected,
     };
   });

@@ -108,6 +108,7 @@ function MatrixGrid({
         <tbody>
           {rows.map((row) => {
             const score = rowScore?.(row.id);
+            const whyId = rowRationale?.(row.id) ? `${uid}-grid-why-${row.id}` : undefined;
             return (
               <tr key={row.id} className="border-b border-line">
                 <th scope="row" className="option py-2 pr-4 text-left align-middle font-normal">
@@ -138,6 +139,7 @@ function MatrixGrid({
                           disabled={!interactive}
                           onChange={() => onToggle(row.id, column.id)}
                           aria-labelledby={`${uid}-row-${row.id} ${uid}-col-${column.id}`}
+                          aria-describedby={whyId}
                           className="size-4 accent-(--accent)"
                         />
                         <FeedbackText state={feedback} />
@@ -174,6 +176,7 @@ function MatrixCards({
       <p className="sr-only">{caption}</p>
       {rows.map((row) => {
         const score = rowScore?.(row.id);
+        const whyId = rowRationale?.(row.id) ? `${uid}-card-why-${row.id}` : undefined;
         return (
           <fieldset
             key={row.id}
@@ -210,6 +213,7 @@ function MatrixCards({
                       checked={checked}
                       disabled={!interactive}
                       onChange={() => onToggle(row.id, column.id)}
+                      aria-describedby={whyId}
                       className="size-4 shrink-0 accent-(--accent)"
                     />
                     <span className="flex-1">{column.label}</span>

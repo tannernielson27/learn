@@ -80,11 +80,22 @@ export function scoreRationale(
 
   if (blanks.length === 2) {
     const both = blanks.every((b) => b.correct);
-    const breakdown = blanks.map((b, index) => ({
-      ...base(b),
-      delta: both && index === 0 ? 1 : 0,
-    }));
-    return { model: "rationale", maxPoints: 1, points: both ? 1 : 0, breakdown };
+    // The pair earns the point together, so the pair is the scored element. Split across the two
+    // blanks, a breakdown shows a blank that was answered correctly sitting at zero.
+    const labels = blanks.map((b) => b.label).filter((label) => label !== undefined);
+    return {
+      model: "rationale",
+      maxPoints: 1,
+      points: both ? 1 : 0,
+      breakdown: [
+        {
+          elementId: blanks.map((b) => b.blankId).join("+"),
+          label: labels.length === blanks.length ? labels.join(" and ") : undefined,
+          correct: both,
+          delta: both ? 1 : 0,
+        },
+      ],
+    };
   }
 
   const anchorId = anchorBlankId ?? blanks[0].blankId;

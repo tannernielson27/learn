@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { useId, useLayoutEffect, useRef, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
 import { SCORING_MODEL_LABELS } from "@/lib/ngn/registry";
 import type { RichText } from "@/lib/ngn/schemas";
@@ -157,14 +157,19 @@ function ScorePanel({
  * total there stays the one number in it.
  */
 function ScoreBreakdown({ score }: { score: ScoreResult }) {
+  const headingId = useId();
   if (score.breakdown.length === 0) return null;
   return (
+    // Named "Breakdown", not "Score breakdown": Playwright matches accessible names by substring,
+    // so the latter would also answer to every query for the score panel beside it.
     <aside
-      aria-label="Score breakdown"
+      aria-labelledby={headingId}
       className="mt-4 animate-[fade-up_var(--duration-slow)_var(--ease-out-expo)_both] rounded-md border border-line bg-surface-1 p-5"
     >
-      <p className="eyebrow">Breakdown</p>
-      <ul aria-label="Score breakdown" className="mt-2 text-sm">
+      <p id={headingId} className="eyebrow">
+        Breakdown
+      </p>
+      <ul className="mt-2 text-sm">
         {score.breakdown.map((entry) => (
           <li
             key={entry.elementId}

@@ -15,9 +15,10 @@ export interface ElementRationaleProps {
 export function ElementRationale({ id, text, className = "" }: ElementRationaleProps) {
   if (!text) return null;
   return (
+    // No data-feedback-mark: that hook staggers the small correct and incorrect glyphs, and a
+    // paragraph of prose scaling into place alongside them reads as noise, not as clarification.
     <p
       id={id}
-      data-feedback-mark=""
       className={`mt-2 border-l-2 border-line pl-3 text-sm text-ink-2 ${className}`.trim()}
     >
       {text.value}

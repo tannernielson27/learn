@@ -423,6 +423,15 @@ export const matrixMultipleResponseFixture: ItemFixture<"matrix_multiple_respons
       general: md(
         "Focal deficits occur in stroke, hypoglycemia, and migraine with aura. A glucose of 48 mg/dL points to hypoglycemia, which must be corrected before stroke treatment decisions.",
       ),
+      perElement: {
+        row_weak: md(
+          "One-sided weakness fits a stroke, and hypoglycemia mimics one closely enough to be mistaken for it.",
+        ),
+        row_speech: md("Slurred speech has the same two explanations here, and the same urgency."),
+        row_glucose: md(
+          "A glucose of 48 belongs to hypoglycemia alone, and it is the one of the three that can be corrected in minutes.",
+        ),
+      },
     },
   },
   edge: {

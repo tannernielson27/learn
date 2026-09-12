@@ -22,7 +22,7 @@ test("feedback explains each choice where it was made", async ({ page }, testInf
   await expect(page.getByText(/barely raised and expected with pneumonia/)).toBeVisible();
   await expect(wrong).toHaveAccessibleDescription(/barely raised and expected/);
 
-  const breakdown = page.getByRole("list", { name: "Score breakdown" });
+  const breakdown = page.getByRole("complementary", { name: "Breakdown" });
   await expect(breakdown.getByRole("listitem")).toHaveCount(4);
   await expect(breakdown).toContainText("+1");
   await expect(breakdown).toContainText("-1");
