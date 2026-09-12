@@ -1,4 +1,4 @@
-import type { AnyResponse, Item, ItemOf, ItemType, ResponseOf } from "../schemas";
+import type { AnyResponse, CaseStudy, Item, ItemOf, ItemType, ResponseOf } from "../schemas";
 import { ScoringError, type ScoreResult } from "../types";
 import { SCORERS } from "./items";
 
@@ -53,4 +53,23 @@ export function emptyResponse(item: Item): AnyResponse {
 /** Maximum points an item can award, derived from the scoring rules rather than trusted from metadata. */
 export function maxPoints(item: Item): number {
   return scoreItem(item, emptyResponse(item)).maxPoints;
+}
+
+/** The running total across a case study's steps. Empty until the first step is scored. */
+export function totalScore(results: readonly ScoreResult[]): {
+  points: number;
+  maxPoints: number;
+} {
+  return results.reduce(
+    (sum, result) => ({
+      points: sum.points + result.points,
+      maxPoints: sum.maxPoints + result.maxPoints,
+    }),
+    { points: 0, maxPoints: 0 },
+  );
+}
+
+/** What a whole case study can award, derived from the scoring rules rather than its metadata. */
+export function caseStudyMaxPoints(caseStudy: CaseStudy): number {
+  return caseStudy.items.reduce((sum, item) => sum + maxPoints(item), 0);
 }

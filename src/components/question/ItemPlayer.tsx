@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { AnyResponse, Item, ItemOf, ItemType, ResponseOf } from "@/lib/ngn/schemas";
-import { initialResponse } from "@/lib/ngn/presentation";
+import { initialResponse as firstResponse } from "@/lib/ngn/presentation";
 import { scoreItem } from "@/lib/ngn/scoring";
 import type { ScoreResult } from "@/lib/ngn/types";
 import { QuestionShell } from "./QuestionShell";
@@ -20,6 +20,15 @@ export interface ItemPlayerProps {
    */
   score?: (item: Item, response: AnyResponse) => ScoreResult;
   onSubmitted?: (response: AnyResponse, result: ScoreResult) => void;
+  /** Response to open with, e.g. what a case-study step was left holding. */
+  initialResponse?: AnyResponse;
+  /**
+   * Score to open with, so a step already submitted reopens in feedback with its own marks.
+   * Supplying one implies feedback mode: a scored item is never open for answering again.
+   */
+  initialResult?: ScoreResult;
+  /** Every change, so a caller that unmounts the player can hand the response back later. */
+  onResponseChange?: (response: AnyResponse) => void;
 }
 
 /** Strip the answer key unless the mode is feedback. Renderers never see keys while answering. */
@@ -36,10 +45,15 @@ export function ItemPlayer({
   progress,
   score = scoreItem,
   onSubmitted,
+  initialResponse,
+  initialResult,
+  onResponseChange,
 }: ItemPlayerProps) {
-  const [mode, setMode] = useState<PlayerMode>(initialMode);
-  const [response, setResponse] = useState<AnyResponse>(() => initialResponse(item));
-  const [result, setResult] = useState<ScoreResult | undefined>(undefined);
+  const [mode, setMode] = useState<PlayerMode>(initialResult ? "feedback" : initialMode);
+  const [response, setResponse] = useState<AnyResponse>(
+    () => initialResponse ?? firstResponse(item),
+  );
+  const [result, setResult] = useState<ScoreResult | undefined>(initialResult);
 
   const rendererModule = RENDERERS[item.type] as ItemRendererModule<ItemType> | undefined;
   if (!rendererModule) {
@@ -85,7 +99,10 @@ export function ItemPlayer({
         response={response as ResponseOf<ItemType>}
         mode={mode}
         breakdown={result?.breakdown}
-        onChange={(next) => setResponse(next)}
+        onChange={(next) => {
+          setResponse(next);
+          onResponseChange?.(next);
+        }}
       />
     </QuestionShell>
   );
