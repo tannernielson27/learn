@@ -11,6 +11,7 @@ export function DropdownClozeItem({
 }: ItemRendererProps<"dropdown_cloze">) {
   return (
     <DropdownSentence
+      blankRationale={(blankId) => item.rationale?.perElement?.[blankId]}
       tokens={item.content.tokens}
       blanks={item.content.blanks}
       answers={response.blanks}

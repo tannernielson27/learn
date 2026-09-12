@@ -31,11 +31,16 @@ export interface ItemPlayerProps {
   onResponseChange?: (response: AnyResponse) => void;
 }
 
-/** Strip the answer key unless the mode is feedback. Renderers never see keys while answering. */
+/**
+ * Strip the answer key, and the rationale with it, unless the mode is feedback. Renderers never
+ * see either while answering: "option C is wrong because…" gives the answer away as surely as the
+ * key does.
+ */
 export function toPlayerItem(item: Item, mode: PlayerMode): PlayerItem<ItemType> {
   if (mode === "feedback") return item;
   const rest: Record<string, unknown> = { ...item };
   delete rest.answerKey;
+  delete rest.rationale;
   return rest as PlayerItem<ItemType>;
 }
 
@@ -64,7 +69,12 @@ export function ItemPlayer({
     );
   }
 
-  const playerItem = toPlayerItem(item, mode) as PlayerItem<typeof item.type>;
+  // Feedback mode is not itself the reveal: a caller can open in it with nothing scored yet, and
+  // until there is a score there is nothing to explain and nothing to hand over.
+  const revealed = mode === "feedback" && result !== undefined;
+  const playerItem = toPlayerItem(item, revealed ? "feedback" : "answer") as PlayerItem<
+    typeof item.type
+  >;
   const canSubmit = rendererModule.isComplete(
     playerItem as PlayerItem<ItemType>,
     response as ResponseOf<ItemType>,

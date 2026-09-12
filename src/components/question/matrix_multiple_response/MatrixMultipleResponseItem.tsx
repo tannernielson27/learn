@@ -47,6 +47,7 @@ export function MatrixMultipleResponseItem({
           mode,
         )
       }
+      rowRationale={(rowId) => item.rationale?.perElement?.[rowId]}
       rowScore={
         mode === "feedback" && key.size > 0
           ? (rowId) => {

@@ -1,6 +1,8 @@
 "use client";
 
 import { useId } from "react";
+import type { RichText } from "@/lib/ngn/schemas";
+import { ElementRationale } from "../ElementRationale";
 import { FeedbackIcon, feedbackLabel } from "../OptionRow";
 import type { ElementFeedback, PlayerMode } from "../types";
 
@@ -25,6 +27,8 @@ export interface MatrixProps {
   feedbackFor: (rowId: string, columnId: string) => ElementFeedback;
   /** Per-row points, shown only when provided (feedback mode). */
   rowScore?: (rowId: string) => RowScore | undefined;
+  /** Why the row scored as it did. Feedback mode only; the row is the scored element here. */
+  rowRationale?: (rowId: string) => RichText | undefined;
   onToggle: (rowId: string, columnId: string) => void;
 }
 
@@ -78,6 +82,7 @@ function MatrixGrid({
   isSelected,
   feedbackFor,
   rowScore,
+  rowRationale,
   onToggle,
 }: MatrixProps & { uid: string }) {
   const interactive = mode === "answer";
@@ -103,11 +108,16 @@ function MatrixGrid({
         <tbody>
           {rows.map((row) => {
             const score = rowScore?.(row.id);
+            const whyId = rowRationale?.(row.id) ? `${uid}-grid-why-${row.id}` : undefined;
             return (
               <tr key={row.id} className="border-b border-line">
                 <th scope="row" className="option py-2 pr-4 text-left align-middle font-normal">
                   <span id={`${uid}-row-${row.id}`}>{row.label}</span>
                   {score ? <RowScoreMark score={score} /> : null}
+                  <ElementRationale
+                    id={`${uid}-grid-why-${row.id}`}
+                    text={rowRationale?.(row.id)}
+                  />
                 </th>
                 {columns.map((column) => {
                   const inputId = `${uid}-grid-${row.id}-${column.id}`;
@@ -129,6 +139,7 @@ function MatrixGrid({
                           disabled={!interactive}
                           onChange={() => onToggle(row.id, column.id)}
                           aria-labelledby={`${uid}-row-${row.id} ${uid}-col-${column.id}`}
+                          aria-describedby={whyId}
                           className="size-4 accent-(--accent)"
                         />
                         <FeedbackText state={feedback} />
@@ -156,6 +167,7 @@ function MatrixCards({
   isSelected,
   feedbackFor,
   rowScore,
+  rowRationale,
   onToggle,
 }: MatrixProps & { uid: string }) {
   const interactive = mode === "answer";
@@ -164,6 +176,7 @@ function MatrixCards({
       <p className="sr-only">{caption}</p>
       {rows.map((row) => {
         const score = rowScore?.(row.id);
+        const whyId = rowRationale?.(row.id) ? `${uid}-card-why-${row.id}` : undefined;
         return (
           <fieldset
             key={row.id}
@@ -175,6 +188,11 @@ function MatrixCards({
                 <RowScoreMark score={score} />
               </p>
             ) : null}
+            <ElementRationale
+              id={`${uid}-card-why-${row.id}`}
+              text={rowRationale?.(row.id)}
+              className="clear-left mb-3"
+            />
             <div className="clear-left flex flex-col divide-y divide-line overflow-hidden rounded-sm border border-line">
               {columns.map((column) => {
                 const inputId = `${uid}-card-${row.id}-${column.id}`;
@@ -195,6 +213,7 @@ function MatrixCards({
                       checked={checked}
                       disabled={!interactive}
                       onChange={() => onToggle(row.id, column.id)}
+                      aria-describedby={whyId}
                       className="size-4 shrink-0 accent-(--accent)"
                     />
                     <span className="flex-1">{column.label}</span>

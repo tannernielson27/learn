@@ -24,6 +24,16 @@ export const multipleChoiceFixture: ItemFixture<"multiple_choice"> = {
       general: md(
         "Rapid weight gain with orthopnea suggests fluid overload. Assessment of respiratory status comes before teaching, documentation, or fluid changes.",
       ),
+      perElement: {
+        opt_a: md(
+          "Assessment comes first: lung sounds and saturation say how far the overload has gone and how urgently it must be treated.",
+        ),
+        opt_b: md("More fluid worsens an already overloaded circulation."),
+        opt_c: md(
+          "Documenting without assessing leaves a deteriorating client unattended for a day.",
+        ),
+        opt_d: md("Teaching matters, but not before the client can breathe lying down."),
+      },
     },
   },
   edge: {
@@ -83,6 +93,16 @@ export const multipleResponseFixture: ItemFixture<"multiple_response"> = {
       general: md(
         "Tachypnea, hypoxemia, and new confusion indicate worsening gas exchange and possible sepsis. Low-grade temperature, productive cough, and a normal blood pressure are expected findings.",
       ),
+      perElement: {
+        opt_a: md("A rate of 28 is the body working harder to hold its gas exchange together."),
+        opt_b: md("89% on room air is hypoxemia and needs oxygen now."),
+        opt_c: md("37.2 °C is barely raised and expected with pneumonia."),
+        opt_d: md("New confusion in an older adult is often the first sign of sepsis, not of age."),
+        opt_e: md(
+          "A productive cough is what pneumonia does; on its own it is not a deterioration.",
+        ),
+        opt_f: md("118/74 is a normal pressure and reassuring here."),
+      },
     },
   },
   edge: {
@@ -297,6 +317,17 @@ export const matrixMultipleChoiceFixture: ItemFixture<"matrix_multiple_choice"> 
       general: md(
         "Resting the pancreas, controlling pain, and comfort positioning are indicated. Dietary fat stimulates pancreatic secretion and is contraindicated during the acute phase.",
       ),
+      perElement: {
+        row_npo: md("Nothing by mouth rests the pancreas, which is the whole aim of early care."),
+        row_morphine: md(
+          "Pancreatic pain is severe and is treated; withholding opioids on old sphincter-of-Oddi reasoning is no longer supported.",
+        ),
+        row_diet: md(
+          "Fat is the strongest stimulus to pancreatic secretion, which is exactly what must be avoided.",
+        ),
+        row_position: md("Drawing the knees up relieves the pull on an inflamed pancreas."),
+        row_ambulate: md("Not harmful, but it treats nothing here."),
+      },
     },
   },
   edge: {
@@ -392,6 +423,15 @@ export const matrixMultipleResponseFixture: ItemFixture<"matrix_multiple_respons
       general: md(
         "Focal deficits occur in stroke, hypoglycemia, and migraine with aura. A glucose of 48 mg/dL points to hypoglycemia, which must be corrected before stroke treatment decisions.",
       ),
+      perElement: {
+        row_weak: md(
+          "One-sided weakness fits a stroke, and hypoglycemia mimics one closely enough to be mistaken for it.",
+        ),
+        row_speech: md("Slurred speech has the same two explanations here, and the same urgency."),
+        row_glucose: md(
+          "A glucose of 48 belongs to hypoglycemia alone, and it is the one of the three that can be corrected in minutes.",
+        ),
+      },
     },
   },
   edge: {

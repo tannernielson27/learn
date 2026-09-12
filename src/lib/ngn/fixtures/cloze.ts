@@ -157,6 +157,15 @@ export const dropdownRationaleFixture: ItemFixture<"dropdown_rationale"> = {
       general: md(
         "Uterine atony (boggy fundus) with heavy bleeding is the leading cause of early postpartum hemorrhage.",
       ),
+      perElement: {
+        cond: md(
+          "The anchor. Infection and embolism are real risks after birth, but neither explains a boggy fundus with brisk bleeding.",
+        ),
+        ev_1: md(
+          "A fundus that is soft and riding high is a uterus not clamping down on its own vessels.",
+        ),
+        ev_2: md("Saturating a pad in 15 minutes is the rate that turns bleeding into hemorrhage."),
+      },
     },
   },
   edge: {

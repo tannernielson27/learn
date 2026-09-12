@@ -1,6 +1,8 @@
 "use client";
 
 import { Fragment, useId } from "react";
+import type { RichText } from "@/lib/ngn/schemas";
+import { ElementRationale } from "../ElementRationale";
 import { FeedbackIcon, feedbackLabel } from "../OptionRow";
 import { elementFeedback, type ElementFeedback, type PlayerMode } from "../types";
 
@@ -51,6 +53,8 @@ export interface DropdownSentenceProps {
   correctChoice: (blankId: string) => string | undefined;
   /** Triad anchor, tagged in feedback mode. */
   anchorBlankId?: string;
+  /** Why each blank scored as it did. Feedback mode only; the blank is the scored element here. */
+  blankRationale?: (blankId: string) => RichText | undefined;
   onChoose: (blankId: string, choiceId: string | undefined) => void;
 }
 
@@ -83,6 +87,7 @@ export function DropdownSentence({
   mode,
   correctChoice,
   anchorBlankId,
+  blankRationale,
   onChoose,
 }: DropdownSentenceProps) {
   const uid = useId();
@@ -105,6 +110,12 @@ export function DropdownSentence({
           const pick = chosen(blank.id);
           const feedback = feedbackOf(blank.id);
           const showAnchor = mode === "feedback" && blank.id === anchorBlankId;
+          const why = blankRationale?.(blank.id);
+          // A blank can be described by both its anchor tag and its explanation, in that order.
+          const describedBy =
+            [showAnchor ? `${uid}-anchor` : null, why ? `${uid}-why-${blank.id}` : null]
+              .filter(Boolean)
+              .join(" ") || undefined;
           const selectedClass =
             mode !== "feedback" && pick ? "border-accent bg-accent-soft" : "border-line-strong";
           return (
@@ -116,7 +127,7 @@ export function DropdownSentence({
               ) : null}
               <select
                 aria-label={`Blank ${n} of ${order.length}`}
-                aria-describedby={showAnchor ? `${uid}-anchor` : undefined}
+                aria-describedby={describedBy}
                 value={pick ?? ""}
                 disabled={mode !== "answer"}
                 onChange={(event) => onChoose(blank.id, event.target.value || undefined)}
@@ -136,6 +147,20 @@ export function DropdownSentence({
           );
         })}
       </p>
+      {mode === "feedback" && blankRationale ? (
+        <div className="mt-5 flex flex-col gap-4">
+          {order.map((id, index) => {
+            const why = blankRationale(id);
+            if (!why) return null;
+            return (
+              <div key={id}>
+                <p className="font-mono text-xs text-ink-2">Blank {index + 1}</p>
+                <ElementRationale id={`${uid}-why-${id}`} text={why} className="mt-1" />
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
       {wrong.length > 0 ? (
         <ul className="mt-4 flex flex-col gap-1 text-sm text-ink-2">
           {wrong.map((id) => {

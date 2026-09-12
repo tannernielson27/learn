@@ -18,6 +18,7 @@ export function DropdownRationaleItem({
   const isTriad = blankOrder(item.content.tokens).length === 3;
   return (
     <DropdownSentence
+      blankRationale={(blankId) => item.rationale?.perElement?.[blankId]}
       tokens={item.content.tokens}
       blanks={item.content.blanks}
       answers={response.blanks}

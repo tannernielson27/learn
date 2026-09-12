@@ -27,6 +27,7 @@ export function MultipleChoiceItem({
             checked={selected}
             mode={mode}
             feedback={elementFeedback(selected, option.id === correctId, mode)}
+            rationale={item.rationale?.perElement?.[option.id]}
             onToggle={() => onChange({ type: "multiple_choice", optionId: option.id })}
           />
         );

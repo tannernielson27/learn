@@ -8,8 +8,9 @@ export type PlayerMode = "answer" | "review" | "feedback";
  * What a renderer receives. In `answer` and `review` modes the answer key is absent;
  * in `feedback` mode it is present so the renderer can mark correct, incorrect and missed elements.
  */
-export type PlayerItem<T extends ItemType> = Omit<ItemOf<T>, "answerKey"> & {
+export type PlayerItem<T extends ItemType> = Omit<ItemOf<T>, "answerKey" | "rationale"> & {
   answerKey?: ItemOf<T>["answerKey"];
+  rationale?: ItemOf<T>["rationale"];
 };
 
 export interface ItemRendererProps<T extends ItemType> {

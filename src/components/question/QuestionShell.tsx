@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { useId, useLayoutEffect, useRef, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
 import { SCORING_MODEL_LABELS } from "@/lib/ngn/registry";
 import type { RichText } from "@/lib/ngn/schemas";
@@ -92,7 +92,10 @@ export function QuestionShell({
       <div className="mt-6">{children}</div>
 
       {mode === "feedback" && score ? (
-        <ScorePanel score={score} note={scoreNote} rationale={rationale} />
+        <>
+          <ScorePanel score={score} note={scoreNote} rationale={rationale} />
+          <ScoreBreakdown score={score} />
+        </>
       ) : null}
 
       {mode === "answer" ? (
@@ -144,6 +147,42 @@ function ScorePanel({
           <RichTextView text={rationale} className="mt-2 text-ink-1" />
         </div>
       ) : null}
+    </aside>
+  );
+}
+
+/**
+ * How the score was arrived at, element by element, straight from the engine's breakdown: the
+ * player computes none of it. It is its own region rather than part of the score panel, so the
+ * total there stays the one number in it.
+ */
+function ScoreBreakdown({ score }: { score: ScoreResult }) {
+  const headingId = useId();
+  if (score.breakdown.length === 0) return null;
+  return (
+    // Named "Breakdown", not "Score breakdown": Playwright matches accessible names by substring,
+    // so the latter would also answer to every query for the score panel beside it.
+    <aside
+      aria-labelledby={headingId}
+      className="mt-4 animate-[fade-up_var(--duration-slow)_var(--ease-out-expo)_both] rounded-md border border-line bg-surface-1 p-5"
+    >
+      <p id={headingId} className="eyebrow">
+        Breakdown
+      </p>
+      <ul className="mt-2 text-sm">
+        {score.breakdown.map((entry) => (
+          <li
+            key={entry.elementId}
+            className="flex items-baseline justify-between gap-4 border-b border-line py-2 last:border-b-0"
+          >
+            <span>{entry.label ?? entry.elementId}</span>
+            {/* The element itself already says correct or incorrect; this is the arithmetic. */}
+            <span className="tabular w-8 shrink-0 text-right font-mono text-ink-2">
+              {entry.delta > 0 ? `+${entry.delta}` : entry.delta}
+            </span>
+          </li>
+        ))}
+      </ul>
     </aside>
   );
 }
