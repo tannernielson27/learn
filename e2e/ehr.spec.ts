@@ -84,3 +84,30 @@ test("an item points the reader at a charted section", async ({ page }, testInfo
     await expect(page).toHaveScreenshot("ehr-panel-labs.png", { fullPage: true });
   }
 });
+
+test("the chart tabs page with an arrow rather than a scrollbar", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "phone-375", "chips are swiped at this width, not paged");
+  await ready(page);
+
+  if (testInfo.project.name === "tablet-768") {
+    await page.getByRole("button", { name: "Patient record" }).click();
+  }
+  const strip = page.getByRole("tablist", { name: "Patient record sections" });
+  const forward = page.locator('[data-strip-arrow="end"]').first();
+  await expect(forward).toBeVisible();
+  // Nothing to go back to until the strip has moved.
+  await expect(page.locator('[data-strip-arrow="start"]').first()).toBeDisabled();
+
+  const before = await strip.evaluate((el) => el.scrollLeft);
+  await forward.click();
+  await expect.poll(() => strip.evaluate((el) => el.scrollLeft)).toBeGreaterThan(before);
+  await expect(page.locator('[data-strip-arrow="start"]').first()).toBeEnabled();
+
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/ehr-panel-paged.png`,
+    fullPage: true,
+  });
+  if (process.env.CI) {
+    await expect(page).toHaveScreenshot("ehr-panel-paged.png", { fullPage: true });
+  }
+});

@@ -55,6 +55,14 @@
 @utility tabular {
   font-variant-numeric: tabular-nums;
 }
+/* For strips that carry their own paging control, so the bar is not a second, uglier one. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
 
 @layer base {
   html {
