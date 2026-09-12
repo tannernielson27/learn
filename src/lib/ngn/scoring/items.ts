@@ -1,5 +1,5 @@
 import type { ItemOf, ItemType, ResponseOf } from "../schemas";
-import { spanIdsOf } from "../schemas/structured";
+import { spanIdsOf } from "../spans";
 import type { ScoreResult } from "../types";
 import { scorePlusMinus, scoreRationale, scoreZeroOne, sumResults } from "./models";
 

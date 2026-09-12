@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { hasRenderer } from "@/components/question/registry";
-import { ITEM_TYPE_LABELS, ITEM_TYPES } from "@/lib/ngn/registry";
+import { ITEM_TYPE_LABELS, ITEM_TYPES } from "@/lib/ngn/labels";
 
 const FOUNDATIONS = [
   { href: "/gallery", label: "Overview" },

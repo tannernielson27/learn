@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, type ReactNode, type RefObject } from "react";
 import { Button } from "@/components/ui/Button";
-import { SCORING_MODEL_LABELS } from "@/lib/ngn/registry";
+import { SCORING_MODEL_LABELS } from "@/lib/ngn/labels";
 import type { RichText } from "@/lib/ngn/schemas";
 import type { ScoreResult } from "@/lib/ngn/types";
 import { applyStagger } from "./motion";

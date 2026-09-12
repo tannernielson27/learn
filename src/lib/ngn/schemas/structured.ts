@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { spanIdsOf } from "../spans";
 import { envelopeFields, idSchema, labeledSchema, subsetOf, uniqueIds } from "./common";
 
 // ---------------------------------------------------------------------------
@@ -11,8 +12,8 @@ export const highlightTokenSchema = z.discriminatedUnion("kind", [
 ]);
 export type HighlightToken = z.infer<typeof highlightTokenSchema>;
 
-export const spanIdsOf = (tokens: readonly HighlightToken[]): string[] =>
-  tokens.flatMap((t) => (t.kind === "span" ? [t.spanId] : []));
+// Defined without zod so scoring can use it in the browser; re-exported for existing callers.
+export { spanIdsOf };
 
 export const highlightTextContentSchema = z.object({
   passage: z.array(highlightTokenSchema).min(1),

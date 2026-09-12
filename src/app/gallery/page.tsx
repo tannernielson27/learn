@@ -1,4 +1,4 @@
-import { ITEM_TYPES } from "@/lib/ngn/registry";
+import { ITEM_TYPES } from "@/lib/ngn/labels";
 
 export default function GalleryOverviewPage() {
   return (

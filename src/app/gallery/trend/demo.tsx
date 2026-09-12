@@ -4,8 +4,7 @@ import { useState, useSyncExternalStore } from "react";
 import { RecordLayout } from "@/components/ehr/RecordLayout";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { Button } from "@/components/ui/Button";
-import { sampleTrendItem } from "@/lib/ngn/fixtures";
-import { itemSchema } from "@/lib/ngn/schemas";
+import type { Item } from "@/lib/ngn/schemas";
 
 const noopSubscribe = () => () => {};
 /** False during server render and hydration, true after; e2e waits for it before screenshots. */
@@ -16,14 +15,12 @@ const useHydrated = () =>
     () => false,
   );
 
-const item = itemSchema.parse(sampleTrendItem);
-const times = item.ehr?.timePoints.length ?? 0;
-
 /**
  * Gallery-only harness. Scores locally with the answer key in the browser, which is fine here
  * and never acceptable in sessions or assignments.
  */
-export function TrendDemo() {
+export function TrendDemo({ item }: { item: Item }) {
+  const times = item.ehr?.timePoints.length ?? 0;
   const [attempt, setAttempt] = useState(0);
   const hydrated = useHydrated();
 

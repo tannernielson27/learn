@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ITEM_TYPES, type ItemType } from "../labels";
 import { ehrRecordSchema, idSchema } from "./common";
 import {
   dragdropClozeItemSchema,
@@ -40,23 +41,8 @@ export * from "./selection";
 export * from "./cloze";
 export * from "./structured";
 
-export const ITEM_TYPES = [
-  "multiple_choice",
-  "multiple_response",
-  "multiple_response_grouping",
-  "matrix_multiple_choice",
-  "matrix_multiple_response",
-  "dropdown_cloze",
-  "dropdown_rationale",
-  "dropdown_table",
-  "highlight_text",
-  "highlight_table",
-  "dragdrop_cloze",
-  "dragdrop_rationale",
-  "ordered_response",
-  "bowtie",
-] as const;
-export type ItemType = (typeof ITEM_TYPES)[number];
+// Defined in the zod-free labels module so client code can list types without the schemas.
+export { ITEM_TYPES, type ItemType };
 
 /**
  * Item schemas carry refinements, so they cannot be members of a discriminated union.
