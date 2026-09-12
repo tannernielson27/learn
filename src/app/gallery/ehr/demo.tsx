@@ -2,7 +2,6 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { EhrPanel } from "@/components/ehr/EhrPanel";
-import { tabLabels } from "@/components/ehr/EhrContent";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { sampleEhr } from "@/lib/ngn/fixtures";
 
@@ -15,7 +14,7 @@ const useHydrated = () =>
     () => false,
   );
 
-const LABELS = tabLabels(sampleEhr);
+const TITLES = Object.fromEntries(sampleEhr.tabs.map((tab) => [tab.id, tab.title]));
 const POINTERS = [
   { value: "tab_hp", label: "History" },
   { value: "tab_notes_1400", label: "1400 note" },
@@ -41,7 +40,7 @@ export function EhrPanelDemo() {
           value={openTabId}
           onChange={setOpenTabId}
         />
-        <span className="font-mono text-xs text-ink-2">{LABELS[openTabId]}</span>
+        <span className="font-mono text-xs text-ink-2">{TITLES[openTabId]}</span>
       </div>
 
       <div className="mt-6 overflow-hidden rounded-md border border-line lg:flex lg:items-start">

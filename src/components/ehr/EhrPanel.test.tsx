@@ -27,11 +27,12 @@ describe("EhrPanel", () => {
     );
   });
 
-  it("opens the tab an item points at", () => {
+  it("opens the tab an item points at, at the time it was charted", () => {
     render(<EhrPanel record={sampleEhr} openTabId="tab_labs" />);
-    expect(within(pane()).getByRole("tab", { selected: true })).toHaveAccessibleName(
-      "Lab Results · Day 1, 1400",
-    );
+    const shown = within(pane());
+    expect(shown.getByRole("tab", { selected: true })).toHaveAccessibleName("Lab Results");
+    // Labs were only drawn at 1400, so pointing at them moves the clock too.
+    expect(shown.getByRole("radio", { name: "Day 1, 1400" })).toBeChecked();
   });
 
   it("keeps one open tab across the pane and the sheet", async () => {
@@ -124,5 +125,45 @@ describe("EhrPanel", () => {
     rerender(<EhrPanel record={sampleEhr} />);
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(document.body.querySelector("[inert]")).toBeNull();
+  });
+
+  describe("time points", () => {
+    it("stays on the same section when the time changes", async () => {
+      render(<EhrPanel record={sampleEhr} />);
+      const shown = () => within(pane());
+      await userEvent.click(shown().getByRole("tab", { name: "Nurses' Notes" }));
+      await userEvent.click(shown().getByRole("radio", { name: "Day 1, 1400" }));
+      // The point of a trend is reading one section across times, not losing your place.
+      expect(shown().getByRole("tab", { selected: true })).toHaveAccessibleName("Nurses' Notes");
+      expect(shown().getByText(/sudden shortness of breath/)).toBeInTheDocument();
+    });
+
+    it("falls back to the first section when the open one was not charted then", async () => {
+      render(<EhrPanel record={sampleEhr} openTabId="tab_labs" />);
+      const shown = () => within(pane());
+      await userEvent.click(shown().getByRole("radio", { name: "Day 1, 0800" }));
+      expect(shown().queryByRole("tab", { name: "Lab Results" })).toBeNull();
+      expect(shown().getByRole("tab", { selected: true })).toHaveAccessibleName(
+        "History & Physical",
+      );
+    });
+
+    it("keeps the chosen time when the sheet is closed and opened again", async () => {
+      render(<EhrPanel record={sampleEhr} />);
+      await userEvent.click(chip());
+      await userEvent.click(within(sheet()).getByRole("radio", { name: "Day 1, 1400" }));
+      await userEvent.keyboard("{Escape}");
+      await userEvent.click(chip());
+      expect(within(sheet()).getByRole("radio", { name: "Day 1, 1400" })).toBeChecked();
+    });
+  });
+
+  it("leaves the clock alone when an item points at a section charted at every time", async () => {
+    const { rerender } = render(<EhrPanel record={sampleEhr} openTabId="tab_labs" />);
+    expect(within(pane()).getByRole("radio", { name: "Day 1, 1400" })).toBeChecked();
+    rerender(<EhrPanel record={sampleEhr} openTabId="tab_orders" />);
+    // Orders are there at every time, so there is no reason to rewind the reader to 0800.
+    expect(within(pane()).getByRole("radio", { name: "Day 1, 1400" })).toBeChecked();
+    expect(within(pane()).getByRole("tab", { selected: true })).toHaveAccessibleName("Orders");
   });
 });

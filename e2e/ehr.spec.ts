@@ -68,8 +68,10 @@ test("an item points the reader at a charted section", async ({ page }, testInfo
   await ready(page);
 
   await page.getByRole("radio", { name: "Labs" }).click();
-  const tab = page.getByRole("tab", { name: "Lab Results · Day 1, 1400" });
+  const tab = page.getByRole("tab", { name: "Lab Results" });
   await expect(tab).toHaveAttribute("aria-selected", "true");
+  // Labs were only drawn at 1400, so pointing at them moves the clock to that time as well.
+  await expect(page.getByRole("radio", { name: "Day 1, 1400" })).toBeChecked();
   // The strip scrolls sideways, so the section an item points at has to be brought into view.
   await expect(tab).toBeInViewport();
   // Abnormal values are tagged, never only coloured (docs/04-DESIGN-DIRECTION.md §6).

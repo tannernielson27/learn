@@ -3,7 +3,7 @@ import { EhrPanelDemo } from "./demo";
 export default function EhrPanelPage() {
   return (
     <article className="max-w-5xl">
-      <p className="eyebrow">Foundations</p>
+      <p className="eyebrow">Composites</p>
       <h1 className="mt-2 text-2xl font-semibold">EHR panel</h1>
       <p className="mt-2 max-w-prose text-ink-2">
         The patient record a case study is read from: a patient header, one tab per charted section,
