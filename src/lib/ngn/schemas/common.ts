@@ -79,6 +79,8 @@ export const ehrTabSchema = z.object({
   timePointId: idSchema.optional(),
 });
 
+export type EhrTab = z.infer<typeof ehrTabSchema>;
+
 export const ehrRecordSchema = z.object({
   patientHeader: z.object({
     name: z.string().optional(),

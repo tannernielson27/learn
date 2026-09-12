@@ -1,28 +1,30 @@
 "use client";
 
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Tabs } from "@/components/ui/Tabs";
-import type { EhrRecord } from "@/lib/ngn/schemas";
+import type { EhrRecord, EhrTab } from "@/lib/ngn/schemas";
 import { EhrBlocks } from "./blocks";
 
 export interface EhrContentProps {
   record: EhrRecord;
   selectedTabId: string;
   onSelectTab: (id: string) => void;
+  selectedTimeId: string;
+  onSelectTime: (id: string) => void;
 }
 
+/** A section charted more than once is one section, not several: group by what it is. */
+export const sectionOf = (tab: EhrTab) => `${tab.kind}:${tab.title}`;
+
 /**
- * Tab names, keyed by tab id. A record charted at several time points repeats titles — two nurses'
- * notes, labs drawn twice — so the time point disambiguates them. A single-time-point record gains
- * nothing from the suffix and keeps the plain title.
+ * The record as it stood at one time: sections with no time on them throughout, and one variant
+ * of each repeated section — the one charted then. A section that was not charted at that time is
+ * absent rather than empty, because labs not yet drawn are a finding in themselves.
  */
-export function tabLabels(record: EhrRecord): Record<string, string> {
-  const times = new Map(record.timePoints.map((point) => [point.id, point.label]));
-  const showTime = record.timePoints.length > 1;
-  return Object.fromEntries(
-    record.tabs.map((tab) => {
-      const time = tab.timePointId ? times.get(tab.timePointId) : undefined;
-      return [tab.id, showTime && time ? `${tab.title} · ${time}` : tab.title];
-    }),
+export function tabsAtTime(record: EhrRecord, timePointId: string): EhrTab[] {
+  const timed = new Set(record.tabs.filter((tab) => tab.timePointId !== undefined).map(sectionOf));
+  return record.tabs.filter((tab) =>
+    timed.has(sectionOf(tab)) ? tab.timePointId === timePointId : true,
   );
 }
 
@@ -43,19 +45,49 @@ function PatientHeader({ header }: { header: EhrRecord["patientHeader"] }) {
 }
 
 /**
- * The record itself: who the client is, then one tab per charted section. The caller owns the open
- * tab so a pane and a sheet showing the same record stay on the same section.
+ * The record itself: who the client is, when it is being read at, and the sections charted then.
+ * The caller owns the open tab and the chosen time, so a pane and a sheet showing the same record
+ * stay on the same section at the same hour.
  */
-export function EhrContent({ record, selectedTabId, onSelectTab }: EhrContentProps) {
-  const labels = tabLabels(record);
-  const tabs = record.tabs.map((tab) => ({
+export function EhrContent({
+  record,
+  selectedTabId,
+  onSelectTab,
+  selectedTimeId,
+  onSelectTime,
+}: EhrContentProps) {
+  const charted = record.timePoints.length > 1;
+  const time = record.timePoints.find((point) => point.id === selectedTimeId);
+  const tabs = tabsAtTime(record, selectedTimeId).map((tab) => ({
     id: tab.id,
-    label: labels[tab.id]!,
+    label: tab.title,
     content: <EhrBlocks blocks={tab.blocks} />,
   }));
+
   return (
     <div className="flex min-h-0 flex-col">
       <PatientHeader header={record.patientHeader} />
+
+      {charted ? (
+        <div className="pb-3">
+          <SegmentedControl
+            label="Time"
+            size="sm"
+            className="max-w-full overflow-x-auto"
+            options={record.timePoints.map((point) => ({
+              value: point.id,
+              label: point.label,
+            }))}
+            value={selectedTimeId}
+            onChange={onSelectTime}
+          />
+          {/* The segments announce themselves on focus; this is for a change made any other way. */}
+          <p role="status" className="sr-only">
+            {time ? `Showing ${time.label}` : ""}
+          </p>
+        </div>
+      ) : null}
+
       <Tabs
         label="Patient record sections"
         tabs={tabs}

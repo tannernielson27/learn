@@ -10,8 +10,13 @@ const FOUNDATIONS = [
   { href: "/gallery/tokens", label: "Tokens" },
   { href: "/gallery/typography", label: "Typography" },
   { href: "/gallery/primitives", label: "Primitives" },
+] as const;
+
+/** Whole screens rather than parts: a record, a case study, an item that spans time points. */
+const COMPOSITES = [
   { href: "/gallery/ehr", label: "EHR panel" },
   { href: "/gallery/case-study", label: "Case study" },
+  { href: "/gallery/trend", label: "Trend item" },
 ] as const;
 
 export function GalleryNav() {
@@ -39,6 +44,28 @@ export function GalleryNav() {
           );
         })}
       </ul>
+      <p className="eyebrow px-2 pt-5 pb-1">Composites</p>
+      <ul className="flex gap-1 overflow-x-auto md:flex-col">
+        {COMPOSITES.map((entry) => {
+          const active = pathname === entry.href;
+          return (
+            <li key={entry.href} className="shrink-0">
+              <Link
+                href={entry.href}
+                aria-current={active ? "page" : undefined}
+                className={`tap-target flex items-center rounded-sm px-2 text-sm whitespace-nowrap transition-colors duration-fast ${
+                  active
+                    ? "bg-accent-soft font-medium text-accent-ink"
+                    : "text-ink-2 hover:bg-surface-2 hover:text-ink-1"
+                }`}
+              >
+                {entry.label}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+
       <p className="eyebrow px-2 pt-5 pb-1">Item types</p>
       <ul className="flex gap-1 overflow-x-auto md:flex-col">
         {ITEM_TYPES.map((type) => {

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useMediaQuery } from "@/components/ui/useMediaQuery";
 import type { EhrRecord } from "@/lib/ngn/schemas";
-import { EhrContent } from "./EhrContent";
+import { EhrContent, sectionOf, tabsAtTime } from "./EhrContent";
 import { EhrSheet } from "./EhrSheet";
 
 const LABEL = "Patient record";
@@ -30,7 +30,14 @@ export interface EhrPanelProps {
  * changes underneath them.
  */
 export function EhrPanel({ record, openTabId, className = "" }: EhrPanelProps) {
-  const [selectedTabId, setSelectedTabId] = useState(openTabId ?? record.tabs[0]!.id);
+  // Pointing at a section also sets the clock: a section charted once is only there at its time.
+  const timeOf = (tabId: string | undefined) =>
+    record.tabs.find((tab) => tab.id === tabId)?.timePointId ?? record.timePoints[0]!.id;
+
+  const [selectedTimeId, setSelectedTimeId] = useState(() => timeOf(openTabId));
+  const [selectedTabId, setSelectedTabId] = useState(
+    () => openTabId ?? tabsAtTime(record, timeOf(openTabId))[0]?.id ?? record.tabs[0]!.id,
+  );
   const [pointedAt, setPointedAt] = useState(openTabId);
   const [open, setOpen] = useState(false);
   const chip = useRef<HTMLButtonElement>(null);
@@ -42,6 +49,7 @@ export function EhrPanel({ record, openTabId, className = "" }: EhrPanelProps) {
   if (openTabId !== undefined && openTabId !== pointedAt) {
     setPointedAt(openTabId);
     setSelectedTabId(openTabId);
+    setSelectedTimeId(timeOf(openTabId));
   }
   // Widening the window into the two-pane layout closes the overlay rather than leaving it, and
   // its hold on the rest of the page, behind a chip that is no longer there.
@@ -57,8 +65,24 @@ export function EhrPanel({ record, openTabId, className = "" }: EhrPanelProps) {
 
   const close = () => setOpen(false);
 
+  // Changing the time holds the reader on the section they were reading, which is the whole
+  // point of a trend; only a section that was not charted then sends them back to the first.
+  const selectTime = (timeId: string) => {
+    setSelectedTimeId(timeId);
+    const open = record.tabs.find((tab) => tab.id === selectedTabId);
+    const available = tabsAtTime(record, timeId);
+    const sameSection = open && available.find((tab) => sectionOf(tab) === sectionOf(open));
+    setSelectedTabId((sameSection ?? available[0])?.id ?? selectedTabId);
+  };
+
   const content = (
-    <EhrContent record={record} selectedTabId={selectedTabId} onSelectTab={setSelectedTabId} />
+    <EhrContent
+      record={record}
+      selectedTabId={selectedTabId}
+      onSelectTab={setSelectedTabId}
+      selectedTimeId={selectedTimeId}
+      onSelectTime={selectTime}
+    />
   );
 
   // The drawer sits in the page rather than over it, so it has no focus trap to close it. Escape

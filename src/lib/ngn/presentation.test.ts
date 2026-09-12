@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { FIXTURES, allFixtures } from "./fixtures";
-import { initialResponse, presentationOrder } from "./presentation";
+import { FIXTURES, allFixtures, sampleTrendEhr, sampleTrendItem } from "./fixtures";
+import { initialResponse, isTrendItem, presentationOrder } from "./presentation";
 import { itemSchema } from "./schemas";
 import { emptyResponse } from "./scoring";
 
@@ -56,5 +56,23 @@ describe("initialResponse", () => {
       if (item.type === "ordered_response") continue;
       expect(initialResponse(item)).toEqual(emptyResponse(item));
     }
+  });
+});
+
+describe("isTrendItem", () => {
+  const plain = itemSchema.parse(FIXTURES.matrix_multiple_choice.canonical);
+  const trend = itemSchema.parse(sampleTrendItem);
+
+  it("is true only when the attached record is charted more than once", () => {
+    expect(isTrendItem(trend)).toBe(true);
+    expect(isTrendItem(plain)).toBe(false);
+  });
+
+  it("is false for a record charted once, which needs no time selector", () => {
+    const single = itemSchema.parse({
+      ...sampleTrendItem,
+      ehr: { ...sampleTrendEhr, timePoints: [{ id: "tp_0800", label: "0800" }] },
+    });
+    expect(isTrendItem(single)).toBe(false);
   });
 });

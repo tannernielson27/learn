@@ -20,10 +20,11 @@ import {
   highlightTextFixture,
   orderedResponseFixture,
 } from "./structured";
+import { sampleTrendEhr, sampleTrendItem } from "./trend";
 import type { ItemFixture } from "./types";
 
 export * from "./types";
-export { sampleCaseStudy, sampleEhr };
+export { sampleCaseStudy, sampleEhr, sampleTrendEhr, sampleTrendItem };
 
 export const FIXTURES: { [T in ItemType]: ItemFixture<T> } = {
   multiple_choice: multipleChoiceFixture,

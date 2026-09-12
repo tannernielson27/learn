@@ -57,3 +57,12 @@ export function initialResponse(item: Item): AnyResponse {
   }
   return emptyResponse(item);
 }
+
+/**
+ * Whether an item is a Trend item: one whose attached record is charted at more than one time,
+ * so the panel offers a time selector (docs/01-NGN-ITEM-SPEC.md section 4.2). Trend is a shape an
+ * item takes rather than a fifteenth format, so any of the fourteen can be one.
+ */
+export function isTrendItem(item: Item): boolean {
+  return (item.ehr?.timePoints.length ?? 0) > 1;
+}

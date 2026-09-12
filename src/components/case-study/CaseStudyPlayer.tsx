@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { EhrPanel } from "@/components/ehr/EhrPanel";
+import { RecordLayout } from "@/components/ehr/RecordLayout";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { Button } from "@/components/ui/Button";
 import { scoreItem } from "@/lib/ngn/scoring";
@@ -76,10 +76,8 @@ export function CaseStudyPlayer({
   };
 
   return (
-    <div className="flex min-h-full flex-col lg:flex-row lg:items-start">
-      <EhrPanel record={caseStudy.ehr} />
-
-      <div className="min-w-0 flex-1 px-5 py-5 sm:px-8">
+    <RecordLayout record={caseStudy.ehr}>
+      <div>
         <header className="mb-6 flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <StepIndicator step={index + 1} total={total} />
@@ -124,6 +122,6 @@ export function CaseStudyPlayer({
           </div>
         </div>
       ) : null}
-    </div>
+    </RecordLayout>
   );
 }
