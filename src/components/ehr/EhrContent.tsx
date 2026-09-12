@@ -17,14 +17,13 @@ export interface EhrContentProps {
 export const sectionOf = (tab: EhrTab) => `${tab.kind}:${tab.title}`;
 
 /**
- * The record as it stood at one time: sections with no time on them throughout, and one variant
- * of each repeated section — the one charted then. A section that was not charted at that time is
- * absent rather than empty, because labs not yet drawn are a finding in themselves.
+ * The record as it stood at one time: every section with no time on it, plus the sections charted
+ * then. A section that was not charted at that time is absent rather than empty, because labs not
+ * yet drawn are a finding in themselves.
  */
 export function tabsAtTime(record: EhrRecord, timePointId: string): EhrTab[] {
-  const timed = new Set(record.tabs.filter((tab) => tab.timePointId !== undefined).map(sectionOf));
-  return record.tabs.filter((tab) =>
-    timed.has(sectionOf(tab)) ? tab.timePointId === timePointId : true,
+  return record.tabs.filter(
+    (tab) => tab.timePointId === undefined || tab.timePointId === timePointId,
   );
 }
 
@@ -58,11 +57,15 @@ export function EhrContent({
 }: EhrContentProps) {
   const charted = record.timePoints.length > 1;
   const time = record.timePoints.find((point) => point.id === selectedTimeId);
-  const tabs = tabsAtTime(record, selectedTimeId).map((tab) => ({
+  const shown = tabsAtTime(record, selectedTimeId);
+  const tabs = shown.map((tab) => ({
     id: tab.id,
     label: tab.title,
     content: <EhrBlocks blocks={tab.blocks} />,
   }));
+  // A selection Tabs has no tab for would leave nothing open and nothing in the tab order, so the
+  // first charted section stands in until the caller catches up.
+  const open = shown.some((tab) => tab.id === selectedTabId) ? selectedTabId : shown[0]?.id;
 
   return (
     <div className="flex min-h-0 flex-col">
@@ -88,13 +91,19 @@ export function EhrContent({
         </div>
       ) : null}
 
-      <Tabs
-        label="Patient record sections"
-        tabs={tabs}
-        value={selectedTabId}
-        onChange={onSelectTab}
-        tablistClassName="sticky top-0 z-10 bg-surface-1"
-      />
+      {open === undefined ? (
+        <p className="border-t border-line pt-4 text-sm text-ink-2">
+          Nothing was charted at this time.
+        </p>
+      ) : (
+        <Tabs
+          label="Patient record sections"
+          tabs={tabs}
+          value={open}
+          onChange={onSelectTab}
+          tablistClassName="sticky top-0 z-10 bg-surface-1"
+        />
+      )}
     </div>
   );
 }

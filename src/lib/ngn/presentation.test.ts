@@ -71,7 +71,13 @@ describe("isTrendItem", () => {
   it("is false for a record charted once, which needs no time selector", () => {
     const single = itemSchema.parse({
       ...sampleTrendItem,
-      ehr: { ...sampleTrendEhr, timePoints: [{ id: "tp_0800", label: "0800" }] },
+      ehr: {
+        ...sampleTrendEhr,
+        timePoints: [{ id: "tp_0800", label: "0800" }],
+        tabs: sampleTrendEhr.tabs.filter(
+          (tab) => tab.timePointId === undefined || tab.timePointId === "tp_0800",
+        ),
+      },
     });
     expect(isTrendItem(single)).toBe(false);
   });

@@ -81,17 +81,32 @@ export const ehrTabSchema = z.object({
 
 export type EhrTab = z.infer<typeof ehrTabSchema>;
 
-export const ehrRecordSchema = z.object({
-  patientHeader: z.object({
-    name: z.string().optional(),
-    age: z.number().int().min(0).max(120),
-    sex: z.enum(["female", "male", "other"]),
-    setting: z.string().min(1),
-    admissionDate: z.string().optional(),
-  }),
-  timePoints: z.array(labeledSchema).min(1),
-  tabs: z.array(ehrTabSchema).min(1),
-});
+export const ehrRecordSchema = z
+  .object({
+    patientHeader: z.object({
+      name: z.string().optional(),
+      age: z.number().int().min(0).max(120),
+      sex: z.enum(["female", "male", "other"]),
+      setting: z.string().min(1),
+      admissionDate: z.string().optional(),
+    }),
+    timePoints: z.array(labeledSchema).min(1),
+    tabs: z.array(ehrTabSchema).min(1),
+  })
+  .superRefine((record, ctx) => {
+    // A section charted at a time the record does not have would be unreachable from the time
+    // selector, and so invisible at every time. That is a typo, not a finding.
+    const times = new Set(record.timePoints.map((point) => point.id));
+    record.tabs.forEach((tab, index) => {
+      if (tab.timePointId !== undefined && !times.has(tab.timePointId)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `tab "${tab.id}" names a time point the record does not have`,
+          path: ["tabs", index, "timePointId"],
+        });
+      }
+    });
+  });
 export type EhrRecord = z.infer<typeof ehrRecordSchema>;
 
 // ---------------------------------------------------------------------------

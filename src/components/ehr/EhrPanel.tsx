@@ -30,13 +30,16 @@ export interface EhrPanelProps {
  * changes underneath them.
  */
 export function EhrPanel({ record, openTabId, className = "" }: EhrPanelProps) {
-  // Pointing at a section also sets the clock: a section charted once is only there at its time.
+  // Pointing at a section charted once also sets the clock, since it is only there at its own
+  // time. A section charted at every time gives no reason to move it.
   const timeOf = (tabId: string | undefined) =>
-    record.tabs.find((tab) => tab.id === tabId)?.timePointId ?? record.timePoints[0]!.id;
+    record.tabs.find((tab) => tab.id === tabId)?.timePointId;
 
-  const [selectedTimeId, setSelectedTimeId] = useState(() => timeOf(openTabId));
+  const firstTime = record.timePoints[0]!.id;
+  const [selectedTimeId, setSelectedTimeId] = useState(() => timeOf(openTabId) ?? firstTime);
   const [selectedTabId, setSelectedTabId] = useState(
-    () => openTabId ?? tabsAtTime(record, timeOf(openTabId))[0]?.id ?? record.tabs[0]!.id,
+    () =>
+      openTabId ?? tabsAtTime(record, timeOf(openTabId) ?? firstTime)[0]?.id ?? record.tabs[0]!.id,
   );
   const [pointedAt, setPointedAt] = useState(openTabId);
   const [open, setOpen] = useState(false);
@@ -49,7 +52,8 @@ export function EhrPanel({ record, openTabId, className = "" }: EhrPanelProps) {
   if (openTabId !== undefined && openTabId !== pointedAt) {
     setPointedAt(openTabId);
     setSelectedTabId(openTabId);
-    setSelectedTimeId(timeOf(openTabId));
+    const pointedTime = timeOf(openTabId);
+    if (pointedTime !== undefined) setSelectedTimeId(pointedTime);
   }
   // Widening the window into the two-pane layout closes the overlay rather than leaving it, and
   // its hold on the rest of the page, behind a chip that is no longer there.

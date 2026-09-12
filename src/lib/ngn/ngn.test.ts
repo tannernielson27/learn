@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { allFixtures, FIXTURES, sampleCaseStudy } from "./fixtures";
-import { ITEM_TYPES, caseStudySchema, itemSchema, responseSchema, type Item } from "./schemas";
+import { allFixtures, FIXTURES, sampleCaseStudy, sampleTrendEhr } from "./fixtures";
+import {
+  ITEM_TYPES,
+  caseStudySchema,
+  ehrRecordSchema,
+  itemSchema,
+  responseSchema,
+  type Item,
+} from "./schemas";
 import { emptyResponse, maxPoints, scoreItem } from "./scoring";
 import { ITEM_TYPE_LABELS, NGN_REGISTRY, SCORING_MODEL_LABELS } from "./registry";
 import { ScoringError } from "./types";
@@ -297,5 +304,25 @@ describe("registry", () => {
       expect(NGN_REGISTRY[type].fixture.type).toBe(type);
     }
     expect(Object.keys(SCORING_MODEL_LABELS)).toEqual(["zero_one", "plus_minus", "rationale"]);
+  });
+});
+
+describe("ehr record", () => {
+  it("accepts a record charted at several times", () => {
+    expect(ehrRecordSchema.safeParse(sampleTrendEhr).success).toBe(true);
+  });
+
+  it("rejects a section charted at a time the record does not have", () => {
+    // A renamed or deleted time point would otherwise leave the section unreachable at every time.
+    const broken = {
+      ...sampleTrendEhr,
+      tabs: sampleTrendEhr.tabs.map((tab, i) =>
+        i === 1 ? { ...tab, timePointId: "tp_missing" } : tab,
+      ),
+    };
+    const result = ehrRecordSchema.safeParse(broken);
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toMatch(/time point/);
+    expect(result.error?.issues[0]?.path).toEqual(["tabs", 1, "timePointId"]);
   });
 });

@@ -62,6 +62,20 @@ describe("tabsAtTime", () => {
     expect(tabsAtTime(sampleEhr, "tp_1400").map((t) => t.id)).toContain("tab_labs");
   });
 
+  it("keeps a section with no time on it, even where a timed one shares its name", () => {
+    // An author converting a record to a trend can easily leave one variant untagged; it must
+    // not disappear from every time as a result.
+    const mixed: EhrRecord = {
+      ...sampleEhr,
+      tabs: [
+        { ...sampleEhr.tabs[1]!, id: "tab_notes_any", timePointId: undefined },
+        ...sampleEhr.tabs,
+      ],
+    };
+    expect(tabsAtTime(mixed, "tp_0800").map((t) => t.id)).toContain("tab_notes_any");
+    expect(tabsAtTime(mixed, "tp_1400").map((t) => t.id)).toContain("tab_notes_any");
+  });
+
   it("keeps the record's own tab order", () => {
     expect(tabsAtTime(sampleEhr, "tp_1400").map((t) => t.id)).toEqual([
       "tab_hp",
@@ -132,5 +146,40 @@ describe("EhrContent", () => {
     expect(announcement).toHaveTextContent("Day 1, 0800");
     await userEvent.click(screen.getByRole("radio", { name: "Day 1, 1400" }));
     expect(announcement).toHaveTextContent("Day 1, 1400");
+  });
+
+  it("opens the first charted section when the one it is given is not there", () => {
+    render(
+      <EhrContent
+        record={sampleEhr}
+        selectedTabId="tab_labs"
+        onSelectTab={() => {}}
+        selectedTimeId="tp_0800"
+        onSelectTime={() => {}}
+      />,
+    );
+    // Labs were not drawn at 0800. Something must still be open, and reachable by keyboard.
+    const selected = screen.getByRole("tab", { selected: true });
+    expect(selected).toHaveAccessibleName("History & Physical");
+    expect(selected).toHaveAttribute("tabindex", "0");
+  });
+
+  it("says so rather than going blank when nothing was charted at a time", () => {
+    const nothingYet: EhrRecord = {
+      ...sampleEhr,
+      timePoints: [...sampleEhr.timePoints, { id: "tp_2200", label: "Day 1, 2200" }],
+      // Every section is charted at a time, and none of them at 2200.
+      tabs: sampleEhr.tabs.filter((tab) => tab.timePointId !== undefined),
+    };
+    render(
+      <EhrContent
+        record={nothingYet}
+        selectedTabId="tab_notes_0800"
+        onSelectTab={() => {}}
+        selectedTimeId="tp_2200"
+        onSelectTime={() => {}}
+      />,
+    );
+    expect(screen.getByText(/Nothing was charted/)).toBeInTheDocument();
   });
 });

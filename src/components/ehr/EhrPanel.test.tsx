@@ -157,4 +157,13 @@ describe("EhrPanel", () => {
       expect(within(sheet()).getByRole("radio", { name: "Day 1, 1400" })).toBeChecked();
     });
   });
+
+  it("leaves the clock alone when an item points at a section charted at every time", async () => {
+    const { rerender } = render(<EhrPanel record={sampleEhr} openTabId="tab_labs" />);
+    expect(within(pane()).getByRole("radio", { name: "Day 1, 1400" })).toBeChecked();
+    rerender(<EhrPanel record={sampleEhr} openTabId="tab_orders" />);
+    // Orders are there at every time, so there is no reason to rewind the reader to 0800.
+    expect(within(pane()).getByRole("radio", { name: "Day 1, 1400" })).toBeChecked();
+    expect(within(pane()).getByRole("tab", { selected: true })).toHaveAccessibleName("Orders");
+  });
 });
