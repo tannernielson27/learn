@@ -9,9 +9,9 @@ const pane = () => screen.getByRole("complementary", { name: "Patient record" })
 const sheet = () => screen.getByRole("dialog", { name: "Patient record" });
 
 /** jsdom ships no matchMedia, so the panel falls back to the phone sheet unless one is stubbed. */
-const stubViewport = (matches: boolean) =>
+const stubViewport = (width: number) =>
   vi.stubGlobal("matchMedia", (media: string) => ({
-    matches,
+    matches: width >= Number(/min-width:\s*(\d+)px/.exec(media)?.[1] ?? 0),
     media,
     addEventListener: () => {},
     removeEventListener: () => {},
@@ -69,6 +69,15 @@ describe("EhrPanel", () => {
       expect(chip()).toHaveFocus();
     });
 
+    it("puts the page behind it out of reach, not just out of the tab order", async () => {
+      render(<EhrPanel record={sampleEhr} />);
+      await userEvent.click(chip());
+      // A reader moving by virtual cursor would otherwise walk straight past the scrim.
+      expect(pane().closest("[inert]")).not.toBeNull();
+      await userEvent.keyboard("{Escape}");
+      expect(document.body.querySelector("[inert]")).toBeNull();
+    });
+
     it("traps Tab inside itself while open", async () => {
       render(<EhrPanel record={sampleEhr} />);
       await userEvent.click(chip());
@@ -85,7 +94,7 @@ describe("EhrPanel", () => {
 
   describe("the tablet drawer", () => {
     it("opens in the page rather than over it, and the chip closes it again", async () => {
-      stubViewport(true);
+      stubViewport(768);
       render(<EhrPanel record={sampleEhr} />);
       await userEvent.click(chip());
       // A drawer, not a sheet: nothing is modal and nothing traps focus.
@@ -96,12 +105,24 @@ describe("EhrPanel", () => {
     });
 
     it("closes on Escape from the chip and leaves focus there", async () => {
-      stubViewport(true);
+      stubViewport(768);
       render(<EhrPanel record={sampleEhr} />);
       await userEvent.click(chip());
       await userEvent.keyboard("{Escape}");
       expect(screen.getAllByRole("tablist", { name: "Patient record sections" })).toHaveLength(1);
       expect(chip()).toHaveFocus();
     });
+  });
+
+  it("closes an open record when the window grows into the two-pane layout", async () => {
+    stubViewport(375);
+    const { rerender } = render(<EhrPanel record={sampleEhr} />);
+    await userEvent.click(chip());
+    expect(sheet()).toBeInTheDocument();
+    // Its hold on the rest of the page must not outlive the chip that opened it.
+    stubViewport(1280);
+    rerender(<EhrPanel record={sampleEhr} />);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.body.querySelector("[inert]")).toBeNull();
   });
 });

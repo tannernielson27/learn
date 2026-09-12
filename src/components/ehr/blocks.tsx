@@ -96,27 +96,29 @@ function TableBlock({ columns, rows }: Extract<EhrBlock, { kind: "table" }>) {
  */
 function VitalsBlock({ rows }: Extract<EhrBlock, { kind: "vitals" }>) {
   return (
-    <table className="tabular w-full border-collapse text-left text-sm">
-      <tbody>
-        {rows.map((row, index) => (
-          <tr key={index} className="border-b border-line last:border-b-0">
-            <th scope="row" className="py-2 pr-4 align-top font-normal">
-              {row.label}
-            </th>
-            <td className="py-2 text-right align-top font-mono">{row.value}</td>
-            <td className="py-2 pl-2 align-top text-ink-2">{row.unit ?? ""}</td>
-            <td className="w-8 py-2 pl-2 align-top">
-              {row.flag ? (
-                <span className="inline-flex items-center rounded-sm border border-line-strong px-1 font-mono text-xs text-ink-2">
-                  <span aria-hidden="true">{row.flag}</span>
-                  <span className="sr-only">{row.flag === "H" ? "high" : "low"}</span>
-                </span>
-              ) : null}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div className="overflow-x-auto">
+      <table className="tabular w-full border-collapse text-left text-sm">
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={index} className="border-b border-line last:border-b-0">
+              <th scope="row" className="py-2 pr-4 align-top font-normal">
+                {row.label}
+              </th>
+              <td className="py-2 text-right align-top font-mono">{row.value}</td>
+              <td className="py-2 pl-2 align-top whitespace-nowrap text-ink-2">{row.unit ?? ""}</td>
+              <td className="w-8 py-2 pl-2 align-top">
+                {row.flag ? (
+                  <span className="inline-flex items-center rounded-sm border border-line-strong px-1 font-mono text-xs text-ink-2">
+                    <span aria-hidden="true">{row.flag}</span>
+                    <span className="sr-only">{row.flag === "H" ? "high" : "low"}</span>
+                  </span>
+                ) : null}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

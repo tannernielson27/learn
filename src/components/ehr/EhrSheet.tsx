@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 const FOCUSABLE =
   "a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]";
@@ -19,21 +20,38 @@ export interface EhrSheetProps {
 }
 
 /**
- * The phone presentation of the record: a modal sheet off the bottom edge. It takes focus, keeps
- * Tab inside itself, closes on Escape or a tap outside, and the caller returns focus to the chip.
+ * The phone presentation of the record: a modal sheet off the bottom edge.
+ *
+ * It renders into its own element on `body` rather than in place, so everything else on the page
+ * can be marked `inert` while it is up. `aria-modal` alone is not enough: a reader moving by
+ * virtual cursor rather than by Tab would otherwise walk straight past the scrim into the page
+ * behind it. Tab is held inside by hand, because jsdom has no `showModal` to lean on.
  */
 export function EhrSheet({ label, onClose, children }: EhrSheetProps) {
   const dialog = useRef<HTMLDivElement>(null);
+  const [host] = useState(() =>
+    typeof document === "undefined" ? null : document.createElement("div"),
+  );
 
   useEffect(() => {
+    if (!host) return;
+    document.body.appendChild(host);
+    const behind = Array.from(document.body.children).filter(
+      (el) => el !== host && !el.hasAttribute("inert"),
+    );
+    for (const el of behind) el.setAttribute("inert", "");
     dialog.current?.focus();
+
     const root = document.documentElement;
-    const previous = root.style.overflow;
+    const previousOverflow = root.style.overflow;
     root.style.overflow = "hidden";
+
     return () => {
-      root.style.overflow = previous;
+      for (const el of behind) el.removeAttribute("inert");
+      root.style.overflow = previousOverflow;
+      host.remove();
     };
-  }, []);
+  }, [host]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") {
@@ -56,7 +74,9 @@ export function EhrSheet({ label, onClose, children }: EhrSheetProps) {
     stops[next]!.focus();
   };
 
-  return (
+  if (!host) return null;
+
+  return createPortal(
     <div className="fixed inset-0 z-50">
       {/* Tapping the scrim closes the sheet; it is decoration, so the keyboard route out is Escape. */}
       <button
@@ -86,6 +106,7 @@ export function EhrSheet({ label, onClose, children }: EhrSheetProps) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    host,
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useMediaQuery } from "@/components/ui/useMediaQuery";
 import type { EhrRecord } from "@/lib/ngn/schemas";
 import { EhrContent } from "./EhrContent";
@@ -9,6 +9,8 @@ import { EhrSheet } from "./EhrSheet";
 const LABEL = "Patient record";
 /** Below this the record is a modal sheet; from here to the two-pane breakpoint it is a drawer. */
 const DRAWER_QUERY = "(min-width: 768px)";
+/** At and above this the record is always open in the pane, so there is nothing to disclose. */
+const PANE_QUERY = "(min-width: 1024px)";
 
 export interface EhrPanelProps {
   record: EhrRecord;
@@ -33,6 +35,7 @@ export function EhrPanel({ record, openTabId, className = "" }: EhrPanelProps) {
   const [open, setOpen] = useState(false);
   const chip = useRef<HTMLButtonElement>(null);
   const isDrawer = useMediaQuery(DRAWER_QUERY);
+  const isPane = useMediaQuery(PANE_QUERY);
 
   // The reader can move between sections freely, so the pointed-at tab only wins when the item
   // changes which one it points at. Adjusting during render beats an effect: no wasted paint.
@@ -40,11 +43,19 @@ export function EhrPanel({ record, openTabId, className = "" }: EhrPanelProps) {
     setPointedAt(openTabId);
     setSelectedTabId(openTabId);
   }
+  // Widening the window into the two-pane layout closes the overlay rather than leaving it, and
+  // its hold on the rest of the page, behind a chip that is no longer there.
+  if (isPane && open) setOpen(false);
 
-  const close = useCallback(() => {
-    setOpen(false);
-    chip.current?.focus();
-  }, []);
+  // Focus goes back to the chip after the commit, not during the handler: while the sheet is up
+  // the chip sits under an inert subtree, where focus() would be ignored.
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (wasOpen.current && !open) chip.current?.focus();
+    wasOpen.current = open;
+  }, [open]);
+
+  const close = () => setOpen(false);
 
   const content = (
     <EhrContent record={record} selectedTabId={selectedTabId} onSelectTab={setSelectedTabId} />
