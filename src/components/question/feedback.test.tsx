@@ -139,3 +139,23 @@ describe("per-element rationale", () => {
     expect(breakdown()).toBeInTheDocument();
   });
 });
+
+describe("review mode", () => {
+  it("replays a response read-only, with no key and nothing to submit", () => {
+    render(
+      <ItemPlayer
+        item={mc}
+        initialMode="review"
+        initialResponse={{ type: "multiple_choice", optionId: "opt_c" }}
+      />,
+    );
+    const chosen = screen.getByRole("radio", { name: /Document the weight/ });
+    expect(chosen).toBeChecked();
+    expect(chosen).toBeDisabled();
+    // No marks, no score, no way to change it or to see what was right.
+    expect(screen.queryByText("Correct")).toBeNull();
+    expect(screen.queryByText("Missed")).toBeNull();
+    expect(screen.queryByRole("complementary", { name: "Score" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
+  });
+});
