@@ -206,5 +206,34 @@ describe("CaseStudyPlayer", () => {
       expect(screen.queryByRole("region", { name: "Review this case study" })).toBeNull();
       expect(correct()).toBeInTheDocument();
     });
+
+    it("does nothing when the student picks the step they are already on", async () => {
+      render(<CaseStudyPlayer caseStudy={sixSteps} />);
+      await finishStep();
+      await openReview();
+      await userEvent.click(within(review()).getByRole("button", { name: /Step 2/ }));
+      expect(stepLine()).toHaveTextContent("Step 2 of 6");
+
+      // The jump that did not happen must not leave focus owed to anyone: without a guard the
+      // request survives to the next step change and takes focus off whatever moved it.
+      await userEvent.click(correct());
+      await userEvent.click(submit());
+      const nextStep = next()!;
+      nextStep.focus();
+      await userEvent.click(nextStep);
+      expect(stepLine()).toHaveTextContent("Step 3 of 6");
+      expect(document.activeElement).not.toBe(screen.getByRole("group", { name: /Step 3 of 6/ }));
+    });
+
+    it("offers a way back to the results once they have been reached", async () => {
+      render(<CaseStudyPlayer caseStudy={sixSteps} />);
+      for (let step = 1; step <= 6; step++) await finishStep();
+      expect(screen.getByRole("region", { name: "Case study results" })).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: "Back" }));
+      expect(stepLine()).toHaveTextContent("Step 6 of 6");
+      await userEvent.click(screen.getByRole("button", { name: "Results" }));
+      expect(screen.getByRole("region", { name: "Case study results" })).toBeInTheDocument();
+    });
   });
 });
