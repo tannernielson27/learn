@@ -153,4 +153,58 @@ describe("CaseStudyPlayer", () => {
     expect(stepLine()).toHaveTextContent("Step 1 of 6: Recognize Cues");
     expect(next()).toBeNull();
   });
+
+  describe("flag and return", () => {
+    const review = () => screen.getByRole("region", { name: "Review this case study" });
+    const openReview = () => userEvent.click(screen.getByRole("button", { name: "Review" }));
+
+    it("says what every step is, answered or not, and which are flagged", async () => {
+      render(<CaseStudyPlayer caseStudy={sixSteps} />);
+      await userEvent.click(screen.getByRole("button", { name: "Flag step 1" }));
+      await finishStep();
+      await openReview();
+
+      const rows = within(review()).getAllByRole("button");
+      expect(rows[0]).toHaveTextContent("Step 1: Recognize CuesAnswered, flagged for review");
+      expect(rows[1]).toHaveTextContent("Step 2: Analyze CuesNot answered");
+      expect(rows[1]).toHaveAttribute("aria-current", "true");
+    });
+
+    it("keeps a flag on the step it was put on", async () => {
+      render(<CaseStudyPlayer caseStudy={sixSteps} />);
+      await userEvent.click(screen.getByRole("button", { name: "Flag step 1" }));
+      await finishStep();
+      expect(screen.getByRole("button", { name: "Flag step 2" })).toHaveAttribute(
+        "aria-pressed",
+        "false",
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Back" }));
+      expect(screen.getByRole("button", { name: "Flag step 1" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+    });
+
+    it("goes to the step the student picks, and puts focus there", async () => {
+      render(<CaseStudyPlayer caseStudy={sixSteps} />);
+      await finishStep();
+      await finishStep();
+      expect(stepLine()).toHaveTextContent("Step 3 of 6");
+
+      await openReview();
+      await userEvent.click(within(review()).getByRole("button", { name: /Step 1/ }));
+      expect(stepLine()).toHaveTextContent("Step 1 of 6");
+      // Focus follows, or a keyboard user is left where the list used to be.
+      expect(document.activeElement).toBe(screen.getByRole("group", { name: /Step 1 of 6/ }));
+    });
+
+    it("closes the list when a step is chosen, so the student is back in the work", async () => {
+      render(<CaseStudyPlayer caseStudy={sixSteps} />);
+      await finishStep();
+      await openReview();
+      await userEvent.click(within(review()).getByRole("button", { name: /Step 1/ }));
+      expect(screen.queryByRole("region", { name: "Review this case study" })).toBeNull();
+      expect(correct()).toBeInTheDocument();
+    });
+  });
 });

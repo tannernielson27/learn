@@ -7,7 +7,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Button } from "@/components/ui/Button";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { SCORING_MODEL_LABELS } from "@/lib/ngn/registry";
-import { itemSchema, type ItemType } from "@/lib/ngn/schemas";
+import { itemSchema, type AnyResponse, type ItemType } from "@/lib/ngn/schemas";
 
 const VARIANTS = [
   { value: "canonical", label: "Canonical" },
@@ -15,6 +15,14 @@ const VARIANTS = [
 ] as const;
 
 type Variant = (typeof VARIANTS)[number]["value"];
+
+/** Feedback is reached by submitting, so it is not one of the modes you can switch into here. */
+const MODES = [
+  { value: "answer", label: "Answer" },
+  { value: "review", label: "Review" },
+] as const;
+
+type Mode = (typeof MODES)[number]["value"];
 
 const noopSubscribe = () => () => {};
 /** False during server render and hydration, true after; e2e waits for it before screenshots. */
@@ -32,6 +40,9 @@ const useHydrated = () =>
 export function ItemPlayground({ type }: { type: ItemType }) {
   const [variant, setVariant] = useState<Variant>("canonical");
   const [attempt, setAttempt] = useState(0);
+  const [mode, setMode] = useState<Mode>("answer");
+  // Held here so review mode can replay it: the player itself is remounted to change mode.
+  const [response, setResponse] = useState<AnyResponse | undefined>(undefined);
   const hydrated = useHydrated();
   const fixture = FIXTURES[type];
   const item = itemSchema.parse(fixture[variant]);
@@ -65,10 +76,21 @@ export function ItemPlayground({ type }: { type: ItemType }) {
           value={variant}
           onChange={(next) => {
             setVariant(next);
+            setResponse(undefined);
+            setMode("answer");
             setAttempt((n) => n + 1);
           }}
         />
-        <Button size="sm" variant="ghost" onClick={() => setAttempt((n) => n + 1)}>
+        <SegmentedControl label="Mode" size="sm" options={MODES} value={mode} onChange={setMode} />
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            setResponse(undefined);
+            setMode("answer");
+            setAttempt((n) => n + 1);
+          }}
+        >
           Reset
         </Button>
         <span className="ml-auto font-mono text-xs text-ink-2">
@@ -76,7 +98,13 @@ export function ItemPlayground({ type }: { type: ItemType }) {
         </span>
       </div>
       <div className="mt-6 rounded-md border border-line bg-surface-1 p-5 sm:p-6">
-        <ItemPlayer key={`${type}-${variant}-${attempt}`} item={item} />
+        <ItemPlayer
+          key={`${type}-${variant}-${attempt}-${mode}`}
+          item={item}
+          initialMode={mode}
+          initialResponse={response}
+          onResponseChange={setResponse}
+        />
       </div>
     </div>
   );

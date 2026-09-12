@@ -28,7 +28,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       # Without PLAYWRIGHT_BASE_URL, Playwright builds and serves this commit itself.
-      - run: pnpm e2e e2e/gallery-items.spec.ts e2e/ehr.spec.ts e2e/case-study.spec.ts e2e/trend.spec.ts e2e/feedback.spec.ts --update-snapshots
+      - run: pnpm e2e e2e/gallery-items.spec.ts e2e/ehr.spec.ts e2e/case-study.spec.ts e2e/trend.spec.ts e2e/feedback.spec.ts e2e/review.spec.ts --update-snapshots
       - uses: actions/upload-artifact@v7
         with:
           name: gallery-baselines
