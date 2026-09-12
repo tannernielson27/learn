@@ -117,10 +117,10 @@ describe("ordered response renderer", () => {
   it("gives a point per correct position when the item scores by position", async () => {
     render(<ItemPlayer item={byPosition} />);
     await arrange([
-      "Verify the order and client identity",
-      "Select and cleanse the site",
-      "Perform hand hygiene and gather supplies",
-      "Inject and withdraw the needle",
+      "Verify the prescription against the MAR",
+      "Identify the client using two identifiers",
+      "Perform hand hygiene and prepare the medication",
+      "Cleanse the site and inject",
     ]);
     await userEvent.click(submit());
 

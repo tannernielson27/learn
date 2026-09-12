@@ -71,6 +71,11 @@ export const dropdownClozeFixture: ItemFixture<"dropdown_cloze"> = {
     },
     answerKey: { blanks: [{ blankId: "b1", correctChoiceId: "c_b" }] },
     scoring: { model: "zero_one", maxPoints: 1 },
+    rationale: {
+      general: md(
+        "Acetylcysteine replaces the glutathione the liver runs out of. Naloxone reverses opioids and flumazenil reverses benzodiazepines.",
+      ),
+    },
   },
   cases: [
     { name: "empty", response: { type: "dropdown_cloze", blanks: [] }, expectedPoints: 0 },
@@ -106,10 +111,12 @@ export const dropdownRationaleFixture: ItemFixture<"dropdown_rationale"> = {
     type: "dropdown_rationale",
     cjmmStep: 3,
     tags: [SAMPLE_TAG, "obstetric"],
-    stem: md("Complete the following sentence by choosing from the lists of options."),
+    stem: md(
+      "A client gave birth vaginally one hour ago. The fundus is boggy and 2 cm above the umbilicus, a perineal pad was saturated in 15 minutes, the temperature is 37.6 °C, and both calves are nontender. Complete the following sentence by choosing from the lists of options.",
+    ),
     content: {
       tokens: [
-        text("The client is at highest risk for "),
+        text("The client is most likely experiencing "),
         blank("cond"),
         text(" as evidenced by "),
         blank("ev_1"),
@@ -172,7 +179,9 @@ export const dropdownRationaleFixture: ItemFixture<"dropdown_rationale"> = {
     id: "ddr_sample_dyad",
     type: "dropdown_rationale",
     tags: [SAMPLE_TAG],
-    stem: md("Complete the sentence."),
+    stem: md(
+      "After two days of vomiting, a client is dizzy on standing. Blood pressure is 128/78 mm Hg lying and 102/64 mm Hg standing; heart rate rises from 88 to 112 beats/min. Complete the sentence.",
+    ),
     content: {
       tokens: [
         text("The client is experiencing "),
@@ -207,6 +216,11 @@ export const dropdownRationaleFixture: ItemFixture<"dropdown_rationale"> = {
       ],
     },
     scoring: { model: "rationale", maxPoints: 1 },
+    rationale: {
+      general: md(
+        "A systolic drop of 20 mm Hg or more on standing, with a rising heart rate after fluid loss, is orthostatic hypotension from volume depletion. Caffeine raises the pressure, and vagal stimulation would slow the heart rather than speed it.",
+      ),
+    },
   },
   cases: [
     { name: "empty", response: { type: "dropdown_rationale", blanks: [] }, expectedPoints: 0 },
@@ -338,6 +352,11 @@ export const dropdownTableFixture: ItemFixture<"dropdown_table"> = {
       ],
     },
     scoring: { model: "zero_one", maxPoints: 2 },
+    rationale: {
+      general: md(
+        "A potassium of 2.9 mEq/L sits below its reference range and a sodium of 149 mEq/L above its own. Both are read before they are acted on.",
+      ),
+    },
   },
   cases: [
     { name: "empty", response: { type: "dropdown_table", rows: [] }, expectedPoints: 0 },
@@ -435,6 +454,11 @@ export const dragdropClozeFixture: ItemFixture<"dragdrop_cloze"> = {
       ],
     },
     scoring: { model: "zero_one", maxPoints: 2 },
+    rationale: {
+      general: md(
+        "60 to 100 beats per minute is the normal adult resting range. Below it is bradycardia and above it tachycardia.",
+      ),
+    },
   },
   cases: [
     { name: "empty", response: { type: "dragdrop_cloze", blanks: [] }, expectedPoints: 0 },
@@ -470,7 +494,9 @@ export const dragdropRationaleFixture: ItemFixture<"dragdrop_rationale"> = {
     type: "dragdrop_rationale",
     cjmmStep: 3,
     tags: [SAMPLE_TAG, "surgical"],
-    stem: md("Drag words from the choices below to fill in each blank in the following sentence."),
+    stem: md(
+      "Two days after abdominal surgery, a client has a temperature of 37.9 °C, diminished breath sounds at both bases, and splints the incision when breathing. Drag words from the choices below to fill in each blank in the following sentence.",
+    ),
     content: {
       tokens: [
         text("The client who is two days post-operative is most likely experiencing "),
@@ -507,7 +533,7 @@ export const dragdropRationaleFixture: ItemFixture<"dragdrop_rationale"> = {
     stem: md("Fill in each blank."),
     content: {
       tokens: [
-        text("The client is at risk for "),
+        text("The client is most likely developing "),
         blank("cond"),
         text(" as evidenced by "),
         blank("ev1"),
@@ -533,6 +559,11 @@ export const dragdropRationaleFixture: ItemFixture<"dragdrop_rationale"> = {
       ],
     },
     scoring: { model: "rationale", maxPoints: 2 },
+    rationale: {
+      general: md(
+        "Immobility and a calf swollen on one side are the two findings that make a clot the first thing to rule out. Fever and wheezing point elsewhere.",
+      ),
+    },
   },
   cases: [
     { name: "empty", response: { type: "dragdrop_rationale", blanks: [] }, expectedPoints: 0 },

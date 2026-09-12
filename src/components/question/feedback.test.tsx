@@ -83,8 +83,8 @@ describe("per-element rationale", () => {
       "Keep the client NPO initially",
       "Administer prescribed IV opioid analgesia",
       "Offer a high-fat diet to stimulate appetite",
-      "Position the client in a knee-chest or side-lying position",
-      "Encourage ambulation four times daily",
+      "Position the client side-lying with knees flexed, or sitting and leaning forward",
+      "Teach about a low-sodium diet",
     ]) {
       await userEvent.click(
         within(screen.getByRole("table")).getByRole("radio", { name: `${row} Indicated` }),

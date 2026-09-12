@@ -48,11 +48,16 @@ export const multipleChoiceFixture: ItemFixture<"multiple_choice"> = {
         { id: "opt_c", label: "Polyuria" },
         { id: "opt_d", label: "Kussmaul respirations" },
         { id: "opt_e", label: "Warm, flushed skin" },
-        { id: "opt_f", label: "Deep, slow breathing" },
+        { id: "opt_f", label: "Excessive thirst" },
       ],
     },
     answerKey: { correctOptionId: "opt_b" },
     scoring: { model: "zero_one", maxPoints: 1 },
+    rationale: {
+      general: md(
+        "Diaphoresis and tremor are the adrenergic response to a falling glucose. Fruity breath, Kussmaul respirations, polyuria, excessive thirst and warm flushed skin all belong to hyperglycemia.",
+      ),
+    },
   },
   cases: [
     { name: "empty", response: { type: "multiple_choice" }, expectedPoints: 0 },
@@ -124,6 +129,11 @@ export const multipleResponseFixture: ItemFixture<"multiple_response"> = {
     },
     answerKey: { correctOptionIds: ["opt_a", "opt_b", "opt_c"] },
     scoring: { model: "plus_minus", maxPoints: 3 },
+    rationale: {
+      general: md(
+        "Cultures before antibiotics, antibiotics without delay, and fluid for the pressure are the first hour of sepsis care. Compression devices and diet matter later.",
+      ),
+    },
   },
   cases: [
     { name: "empty", response: { type: "multiple_response", optionIds: [] }, expectedPoints: 0 },
@@ -216,8 +226,8 @@ export const multipleResponseGroupingFixture: ItemFixture<"multiple_response_gro
           id: "r1",
           label: "Vital signs",
           options: [
-            { id: "r1_a", label: "Heart rate 132" },
-            { id: "r1_b", label: "Blood pressure 84/50" },
+            { id: "r1_a", label: "Heart rate 132 beats/min" },
+            { id: "r1_b", label: "Blood pressure 84/50 mm Hg" },
           ],
         },
         {
@@ -237,6 +247,11 @@ export const multipleResponseGroupingFixture: ItemFixture<"multiple_response_gro
       ],
     },
     scoring: { model: "plus_minus", maxPoints: 3 },
+    rationale: {
+      general: md(
+        "Compensating for lost volume raises the heart rate, drops the pressure, and shunts blood away from the skin, leaving it cool and clammy. Warm, flushed skin belongs to distributive shock.",
+      ),
+    },
   },
   cases: [
     {
@@ -294,8 +309,11 @@ export const matrixMultipleChoiceFixture: ItemFixture<"matrix_multiple_choice"> 
         { id: "row_npo", label: "Keep the client NPO initially" },
         { id: "row_morphine", label: "Administer prescribed IV opioid analgesia" },
         { id: "row_diet", label: "Offer a high-fat diet to stimulate appetite" },
-        { id: "row_position", label: "Position the client in a knee-chest or side-lying position" },
-        { id: "row_ambulate", label: "Encourage ambulation four times daily" },
+        {
+          id: "row_position",
+          label: "Position the client side-lying with knees flexed, or sitting and leaning forward",
+        },
+        { id: "row_sodium", label: "Teach about a low-sodium diet" },
       ],
       columns: [
         { id: "col_ind", label: "Indicated" },
@@ -309,7 +327,7 @@ export const matrixMultipleChoiceFixture: ItemFixture<"matrix_multiple_choice"> 
         { rowId: "row_morphine", correctColumnId: "col_ind" },
         { rowId: "row_diet", correctColumnId: "col_contra" },
         { rowId: "row_position", correctColumnId: "col_ind" },
-        { rowId: "row_ambulate", correctColumnId: "col_non" },
+        { rowId: "row_sodium", correctColumnId: "col_non" },
       ],
     },
     scoring: { model: "zero_one", maxPoints: 5 },
@@ -325,8 +343,12 @@ export const matrixMultipleChoiceFixture: ItemFixture<"matrix_multiple_choice"> 
         row_diet: md(
           "Fat is the strongest stimulus to pancreatic secretion, which is exactly what must be avoided.",
         ),
-        row_position: md("Drawing the knees up relieves the pull on an inflamed pancreas."),
-        row_ambulate: md("Not harmful, but it treats nothing here."),
+        row_position: md(
+          "Flexing the knees or leaning forward eases the stretch on an inflamed pancreas.",
+        ),
+        row_sodium: md(
+          "Not harmful, but sodium is not the concern in pancreatitis; fat is, and diet teaching waits until the client eats again.",
+        ),
       },
     },
   },
@@ -336,7 +358,7 @@ export const matrixMultipleChoiceFixture: ItemFixture<"matrix_multiple_choice"> 
     tags: [SAMPLE_TAG],
     cjmmStep: 6,
     stem: md(
-      "For each finding, indicate whether the client's condition has improved or declined after treatment.",
+      "Before treatment the client's oxygen saturation was 89% on room air and the respiratory rate 24 breaths/min. For each finding, indicate whether the client's condition has improved or declined after treatment.",
     ),
     content: {
       rows: [
@@ -355,6 +377,11 @@ export const matrixMultipleChoiceFixture: ItemFixture<"matrix_multiple_choice"> 
       ],
     },
     scoring: { model: "zero_one", maxPoints: 2 },
+    rationale: {
+      general: md(
+        "A saturation of 96% on room air is a recovery. A respiratory rate of 32 is work the client is still having to do to hold it.",
+      ),
+    },
   },
   cases: [
     { name: "empty", response: { type: "matrix_multiple_choice", rows: [] }, expectedPoints: 0 },
@@ -367,7 +394,7 @@ export const matrixMultipleChoiceFixture: ItemFixture<"matrix_multiple_choice"> 
           { rowId: "row_morphine", columnId: "col_ind" },
           { rowId: "row_diet", columnId: "col_contra" },
           { rowId: "row_position", columnId: "col_ind" },
-          { rowId: "row_ambulate", columnId: "col_non" },
+          { rowId: "row_sodium", columnId: "col_non" },
         ],
       },
       expectedPoints: 5,
@@ -414,20 +441,22 @@ export const matrixMultipleResponseFixture: ItemFixture<"matrix_multiple_respons
     answerKey: {
       rows: [
         { rowId: "row_weak", correctColumnIds: ["col_stroke", "col_hypo", "col_migraine"] },
-        { rowId: "row_speech", correctColumnIds: ["col_stroke", "col_hypo"] },
+        { rowId: "row_speech", correctColumnIds: ["col_stroke", "col_hypo", "col_migraine"] },
         { rowId: "row_glucose", correctColumnIds: ["col_hypo"] },
       ],
     },
-    scoring: { model: "plus_minus", maxPoints: 6 },
+    scoring: { model: "plus_minus", maxPoints: 7 },
     rationale: {
       general: md(
         "Focal deficits occur in stroke, hypoglycemia, and migraine with aura. A glucose of 48 mg/dL points to hypoglycemia, which must be corrected before stroke treatment decisions.",
       ),
       perElement: {
         row_weak: md(
-          "One-sided weakness fits a stroke, and hypoglycemia mimics one closely enough to be mistaken for it.",
+          "One-sided weakness fits a stroke, hypoglycemia mimics one closely enough to be mistaken for it, and a migraine aura can cause it too.",
         ),
-        row_speech: md("Slurred speech has the same two explanations here, and the same urgency."),
+        row_speech: md(
+          "Slurred speech has the same three explanations: stroke, hypoglycemia, or a migraine aura. A stroke has to be ruled out first.",
+        ),
         row_glucose: md(
           "A glucose of 48 belongs to hypoglycemia alone, and it is the one of the three that can be corrected in minutes.",
         ),
@@ -458,6 +487,11 @@ export const matrixMultipleResponseFixture: ItemFixture<"matrix_multiple_respons
       ],
     },
     scoring: { model: "plus_minus", maxPoints: 4 },
+    rationale: {
+      general: md(
+        "Warfarin is followed by the INR and by looking for bleeding. Furosemide takes potassium with the water it removes, so potassium and daily weight follow it.",
+      ),
+    },
   },
   cases: [
     { name: "empty", response: { type: "matrix_multiple_response", rows: [] }, expectedPoints: 0 },
@@ -467,11 +501,11 @@ export const matrixMultipleResponseFixture: ItemFixture<"matrix_multiple_respons
         type: "matrix_multiple_response",
         rows: [
           { rowId: "row_weak", columnIds: ["col_stroke", "col_hypo", "col_migraine"] },
-          { rowId: "row_speech", columnIds: ["col_stroke", "col_hypo"] },
+          { rowId: "row_speech", columnIds: ["col_stroke", "col_hypo", "col_migraine"] },
           { rowId: "row_glucose", columnIds: ["col_hypo"] },
         ],
       },
-      expectedPoints: 6,
+      expectedPoints: 7,
     },
     {
       name: "wrong extra in one row subtracts within that row",
@@ -480,10 +514,10 @@ export const matrixMultipleResponseFixture: ItemFixture<"matrix_multiple_respons
         rows: [
           { rowId: "row_weak", columnIds: ["col_stroke", "col_hypo", "col_migraine"] },
           { rowId: "row_speech", columnIds: ["col_stroke", "col_hypo", "col_migraine"] },
-          { rowId: "row_glucose", columnIds: ["col_stroke"] },
+          { rowId: "row_glucose", columnIds: ["col_hypo", "col_stroke"] },
         ],
       },
-      expectedPoints: 4,
+      expectedPoints: 6,
     },
   ],
 };

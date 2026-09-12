@@ -46,6 +46,11 @@ export const highlightTextFixture: ItemFixture<"highlight_text"> = {
     },
     answerKey: { correctSpanIds: ["a"] },
     scoring: { model: "plus_minus", maxPoints: 1 },
+    rationale: {
+      general: md(
+        "39.4 °C is a fever. Respirations of 16 are within the normal adult range and need no follow-up.",
+      ),
+    },
   },
   cases: [
     { name: "empty", response: { type: "highlight_text", spanIds: [] }, expectedPoints: 0 },
@@ -77,7 +82,9 @@ export const highlightTableFixture: ItemFixture<"highlight_table"> = {
     type: "highlight_table",
     cjmmStep: 1,
     tags: [SAMPLE_TAG, "pediatric"],
-    stem: md("Click to highlight the assessment findings that indicate the child is dehydrated."),
+    stem: md(
+      "A 9-month-old has had vomiting and diarrhea for two days. Click to highlight the assessment findings that indicate the child is dehydrated.",
+    ),
     content: {
       columns: ["Body system", "Findings"],
       scorePerRow: true,
@@ -106,7 +113,7 @@ export const highlightTableFixture: ItemFixture<"highlight_table"> = {
           id: "row_renal",
           cells: [
             [t("Renal")],
-            [s("r1", "Two wet diapers in 24 hours"), t("; "), s("r2", "urine pale yellow")],
+            [s("r1", "Two wet diapers in 24 hours"), t("; "), s("r2", "no blood in the urine")],
           ],
         },
       ],
@@ -131,7 +138,13 @@ export const highlightTableFixture: ItemFixture<"highlight_table"> = {
           id: "r1",
           cells: [
             [t("Vital signs")],
-            [s("a", "Heart rate 52"), t("; "), s("b", "temperature 35.9 °C")],
+            [
+              s("a", "Heart rate 52"),
+              t("; "),
+              s("b", "temperature 35.9 °C"),
+              t("; "),
+              s("e", "blood pressure 118/76"),
+            ],
           ],
         },
         {
@@ -145,6 +158,11 @@ export const highlightTableFixture: ItemFixture<"highlight_table"> = {
     },
     answerKey: { correctSpanIds: ["a", "b", "d"] },
     scoring: { model: "plus_minus", maxPoints: 3 },
+    rationale: {
+      general: md(
+        "Hypothyroidism slows the body: the heart rate falls, the temperature falls, and the hair coarsens and thins. Warm, moist skin and a normal blood pressure are not part of it.",
+      ),
+    },
   },
   cases: [
     { name: "empty", response: { type: "highlight_table", spanIds: [] }, expectedPoints: 0 },
@@ -196,14 +214,19 @@ export const orderedResponseFixture: ItemFixture<"ordered_response"> = {
     content: {
       partial: "position",
       items: [
-        { id: "s1", label: "Verify the order and client identity" },
-        { id: "s2", label: "Perform hand hygiene and gather supplies" },
-        { id: "s3", label: "Select and cleanse the site" },
-        { id: "s4", label: "Inject and withdraw the needle" },
+        { id: "s1", label: "Verify the prescription against the MAR" },
+        { id: "s2", label: "Perform hand hygiene and prepare the medication" },
+        { id: "s3", label: "Identify the client using two identifiers" },
+        { id: "s4", label: "Cleanse the site and inject" },
       ],
     },
     answerKey: { orderedIds: ["s1", "s2", "s3", "s4"] },
     scoring: { model: "zero_one", maxPoints: 4 },
+    rationale: {
+      general: md(
+        "The prescription is checked against the MAR first, the medication is prepared with clean hands, and the client is identified with two identifiers at the bedside, just before the site is cleansed and the injection given.",
+      ),
+    },
   },
   cases: [
     { name: "empty", response: { type: "ordered_response", orderedIds: [] }, expectedPoints: 0 },
@@ -278,7 +301,7 @@ export const bowtieFixture: ItemFixture<"bowtie"> = {
       actions: [
         { id: "a1", label: "Perform a neurologic assessment" },
         { id: "a2", label: "Keep the head of the bed elevated 30 degrees" },
-        { id: "a3", label: "Administer an oral laxative" },
+        { id: "a3", label: "Place the client flat in a supine position" },
         { id: "a4", label: "Encourage coughing exercises" },
         { id: "a5", label: "Apply warm compresses to the neck" },
       ],
@@ -303,6 +326,11 @@ export const bowtieFixture: ItemFixture<"bowtie"> = {
     },
     answerKey: { actionIds: ["a1", "a2"], conditionId: "c1", parameterIds: ["p1", "p2"] },
     scoring: { model: "zero_one", maxPoints: 5 },
+    rationale: {
+      general: md(
+        "A sudden severe headache with neck stiffness is a bleed until it is proved otherwise. Assess the neurologic state, keep the head raised to help venous drainage, and watch consciousness and blood pressure. Lying flat, coughing and warm compresses either raise intracranial pressure or treat the wrong thing.",
+      ),
+    },
   },
   cases: [
     {

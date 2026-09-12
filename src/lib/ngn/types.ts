@@ -13,6 +13,9 @@ export const CJMM_STEP_LABELS: Record<CjmmStep, string> = {
   6: "Evaluate Outcomes",
 };
 
+/** Tag on demo content written for this repo; the player labels such items "Sample". */
+export const SAMPLE_TAG = "sample";
+
 export type ScoringModel = "zero_one" | "plus_minus" | "rationale";
 
 export interface ScoreBreakdownEntry {
