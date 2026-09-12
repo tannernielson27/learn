@@ -22,6 +22,8 @@ export interface QuestionShellProps {
   /** Item-specific note shown under the scoring rule in feedback mode. */
   scoreNote?: string;
   rationale?: RichText;
+  /** Demo content written for this repo, labelled so it is never taken for a real item. */
+  sample?: boolean;
   children: ReactNode;
 }
 
@@ -53,6 +55,7 @@ export function QuestionShell({
   score,
   scoreNote,
   rationale,
+  sample = false,
   children,
 }: QuestionShellProps) {
   const root = useRef<HTMLElement>(null);
@@ -86,6 +89,7 @@ export function QuestionShell({
         </div>
       ) : null}
 
+      {sample ? <p className="eyebrow mb-2">Sample</p> : null}
       <RichTextView text={stem} className="stem" />
       {instructions ? <p className="instructions mt-2">{instructions}</p> : null}
 

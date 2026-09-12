@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { AnyResponse, Item, ItemOf, ItemType, ResponseOf } from "@/lib/ngn/schemas";
 import { initialResponse as firstResponse } from "@/lib/ngn/presentation";
 import { scoreItem } from "@/lib/ngn/scoring";
-import type { ScoreResult } from "@/lib/ngn/types";
+import { SAMPLE_TAG, type ScoreResult } from "@/lib/ngn/types";
 import { QuestionShell } from "./QuestionShell";
 import { RENDERERS } from "./registry";
 import type { ItemRendererModule, PlayerItem, PlayerMode } from "./types";
@@ -103,6 +103,7 @@ export function ItemPlayer({
       score={result}
       scoreNote={scoreNote}
       rationale={item.rationale.general}
+      sample={item.tags.includes(SAMPLE_TAG)}
     >
       <Renderer
         item={playerItem as PlayerItem<ItemType> & ItemOf<ItemType>}

@@ -34,7 +34,7 @@ export const sampleTrendEhr: EhrRecord = {
         {
           kind: "markdown",
           value:
-            "0800: Alert and oriented to person, place and time. Productive cough with thick yellow sputum. Tolerating a full liquid diet. Ambulated to the bathroom with one assist. Voided 250 mL of clear yellow urine overnight.",
+            "0800: Alert and oriented to person, place and time. Productive cough with thick yellow sputum. Tolerating a full liquid diet. Skin warm and dry; capillary refill under three seconds. Ambulated to the bathroom with one assist. Voided 600 mL of clear yellow urine overnight.",
         },
       ],
     },
@@ -47,7 +47,7 @@ export const sampleTrendEhr: EhrRecord = {
         {
           kind: "markdown",
           value:
-            "1200: Oriented to person and place, slow to answer questions. Reports feeling cold; skin warm and flushed. Declined lunch. Has not voided since 0800. Cough now weak and non-productive.",
+            "1200: Oriented to person and place, slow to answer questions. Reports feeling cold; skin warm and flushed. Declined lunch. Has not voided since 0800. Cough now weak and non-productive. Provider notified of the change.",
         },
       ],
     },
@@ -95,7 +95,7 @@ export const sampleTrendEhr: EhrRecord = {
             { label: "Heart rate", value: "118", unit: "beats/min", flag: "H" },
             { label: "Respiratory rate", value: "26", unit: "breaths/min", flag: "H" },
             { label: "Blood pressure", value: "104/58", unit: "mm Hg", flag: "L" },
-            { label: "SpO2", value: "91", unit: "% on 2 L nasal cannula" },
+            { label: "SpO2", value: "91", unit: "% on 2 L nasal cannula", flag: "L" },
           ],
         },
       ],
@@ -109,7 +109,7 @@ export const sampleTrendEhr: EhrRecord = {
         {
           kind: "vitals",
           rows: [
-            { label: "Temperature", value: "38.6", unit: "°C", flag: "H" },
+            { label: "Temperature", value: "37.8", unit: "°C" },
             { label: "Heart rate", value: "132", unit: "beats/min", flag: "H" },
             { label: "Respiratory rate", value: "32", unit: "breaths/min", flag: "H" },
             { label: "Blood pressure", value: "86/44", unit: "mm Hg", flag: "L" },

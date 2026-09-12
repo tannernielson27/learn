@@ -16,5 +16,5 @@ export interface ItemFixture<T extends ItemType> {
   cases: ScoreCase<T>[];
 }
 
-export const SAMPLE_TAG = "sample";
+export { SAMPLE_TAG } from "../types";
 export const md = (value: string) => ({ kind: "markdown" as const, value });

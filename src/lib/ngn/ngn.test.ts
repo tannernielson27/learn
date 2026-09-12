@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { allFixtures, FIXTURES, sampleCaseStudy, sampleTrendEhr } from "./fixtures";
+import {
+  allFixtures,
+  FIXTURES,
+  SAMPLE_TAG,
+  sampleCaseStudy,
+  sampleTrendEhr,
+  sampleTrendItem,
+} from "./fixtures";
 import {
   ITEM_TYPES,
   caseStudySchema,
@@ -232,7 +239,8 @@ describe("validateItem warnings", () => {
   });
 
   it("warns when rationale is missing", () => {
-    const r = validateItem(FIXTURES.multiple_choice.edge);
+    // Built here rather than taken from a fixture: everything this repo ships is publishable.
+    const r = validateItem({ ...FIXTURES.multiple_choice.canonical, rationale: undefined });
     expect(r.ok && r.warnings.some((w) => w.includes("rationale"))).toBe(true);
   });
 
@@ -324,5 +332,44 @@ describe("ehr record", () => {
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.message).toMatch(/time point/);
     expect(result.error?.issues[0]?.path).toEqual(["tabs", 1, "timePointId"]);
+  });
+});
+
+describe("sample content", () => {
+  const shipped = [
+    ...allFixtures.flatMap((fixture) => [fixture.canonical, fixture.edge]),
+    sampleTrendItem,
+  ];
+
+  it("is publishable: every item validates with no warnings at all", () => {
+    const complaints = shipped.flatMap((item) => {
+      const result = validateItem(item);
+      const id = (item as { id: string }).id;
+      return result.ok
+        ? result.warnings.map((warning) => `${id}: ${warning}`)
+        : result.errors.map((error) => `${id}: ${error}`);
+    });
+    expect(complaints).toEqual([]);
+  });
+
+  it("holds no patient data, because there is no patient", () => {
+    // Everything here is written for this repo. These are the shapes real records leak through.
+    const forbidden: [RegExp, string][] = [
+      [/\d{3}-\d{2}-\d{4}/, "a social security number"],
+      [/MRN|medical record number/i, "a medical record number"],
+      [/DOB|date of birth/i, "a date of birth"],
+      [/\d{1,2}\/\d{1,2}\/\d{2,4}/, "a calendar date"],
+      [/\(?\d{3}\)?[ .-]\d{3}[ .-]\d{4}/, "a telephone number"],
+    ];
+    const text = JSON.stringify([...shipped, sampleCaseStudy]);
+    const found = forbidden.filter(([pattern]) => pattern.test(text)).map(([, what]) => what);
+    expect(found).toEqual([]);
+  });
+
+  it("marks every item as sample, so nothing can be shown as if it were real", () => {
+    const untagged = shipped
+      .filter((item) => !(item as { tags?: string[] }).tags?.includes(SAMPLE_TAG))
+      .map((item) => (item as { id: string }).id);
+    expect(untagged).toEqual([]);
   });
 });

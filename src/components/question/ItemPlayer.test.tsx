@@ -83,6 +83,19 @@ describe("ItemPlayer with multiple response", () => {
   });
 });
 
+describe("ItemPlayer with sample content", () => {
+  it("labels an item tagged sample, so it is never shown as if it were real", () => {
+    render(<ItemPlayer item={mc} />);
+    const question = screen.getByRole("region", { name: "Question" });
+    expect(within(question).getByText("Sample")).toBeInTheDocument();
+  });
+
+  it("leaves an untagged item unlabelled", () => {
+    render(<ItemPlayer item={{ ...mc, tags: ["cardiac"] }} />);
+    expect(screen.queryByText("Sample")).not.toBeInTheDocument();
+  });
+});
+
 describe("ItemPlayer without a renderer", () => {
   it("shows a placeholder instead of crashing", () => {
     // Every item type has a renderer now, so unregister one to exercise the fallback for new types.

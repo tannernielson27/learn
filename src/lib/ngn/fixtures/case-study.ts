@@ -49,7 +49,7 @@ export const sampleEhr: EhrRecord = {
         {
           kind: "markdown",
           value:
-            "1400: Client reports sudden shortness of breath and sharp right-sided chest pain that worsens with inspiration, onset 10 minutes ago. Appears anxious. Right calf mildly swollen and tender to touch compared with the left. Oxygen saturation 88% on room air; oxygen applied at 2 L via nasal cannula.",
+            "1400: Client reports sudden shortness of breath and sharp right-sided chest pain that worsens with inspiration, onset 10 minutes ago. Alert and oriented. Right calf mildly swollen and tender to touch compared with the left. Oxygen saturation 88% on room air; oxygen applied at 2 L via nasal cannula.",
         },
       ],
     },
@@ -78,6 +78,7 @@ export const sampleEhr: EhrRecord = {
       title: "Lab Results",
       timePointId: "tp_1400",
       blocks: [
+        { kind: "markdown", value: "Drawn 1410, resulted 1450." },
         {
           kind: "vitals",
           rows: [
@@ -128,7 +129,7 @@ export const sampleCaseStudy: CaseStudyInput = {
           t(", "),
           s("sp_onset", "onset 10 minutes ago"),
           t(". "),
-          s("sp_anx", "Appears anxious"),
+          s("sp_alert", "Alert and oriented"),
           t(". "),
           s("sp_calf", "Right calf mildly swollen and tender"),
           t(" compared with the left. "),
@@ -156,7 +157,7 @@ export const sampleCaseStudy: CaseStudyInput = {
         rows: [
           { id: "r_pain", label: "Pleuritic chest pain" },
           { id: "r_calf", label: "Unilateral calf swelling" },
-          { id: "r_ddimer", label: "D-dimer 3.8 µg/mL" },
+          { id: "r_ddimer", label: "D-dimer 3.8 µg/mL FEU" },
         ],
         columns: [
           { id: "c_pe", label: "Pulmonary embolism" },
@@ -174,7 +175,7 @@ export const sampleCaseStudy: CaseStudyInput = {
       scoring: { model: "plus_minus", maxPoints: 4 },
       rationale: {
         general: md(
-          "Pleuritic pain occurs with PE and pneumonia; calf swelling and an elevated D-dimer in a post-operative client point specifically toward PE.",
+          "Pleuritic pain occurs with PE and pneumonia, and unilateral calf swelling points toward a clot. An elevated D-dimer is nonspecific and rises after any surgery; it supports PE only alongside the calf and respiratory findings.",
         ),
       },
     },
@@ -232,7 +233,7 @@ export const sampleCaseStudy: CaseStudyInput = {
       scoring: { model: "rationale", maxPoints: 2 },
       rationale: {
         general: md(
-          "Troponin is normal, arguing against MI; the missed prophylaxis, immobility, and calf findings make PE the leading hypothesis.",
+          "Pleuritic pain, hypoxemia and a swollen calf on the operative side, after immobility and a missed dose of prophylaxis, make PE most likely. A single normal troponin does not exclude MI, but the pain pattern does not fit it.",
         ),
       },
     },
@@ -258,7 +259,7 @@ export const sampleCaseStudy: CaseStudyInput = {
       scoring: { model: "plus_minus", maxPoints: 4 },
       rationale: {
         general: md(
-          "Support oxygenation, confirm the diagnosis, and anticipate anticoagulation. Massage and ambulation risk dislodging thrombus.",
+          "Support oxygenation, confirm the diagnosis, and anticipate anticoagulation. Raising the head of the bed eases the work of breathing. Massage and ambulation risk dislodging thrombus.",
         ),
       },
     },
@@ -270,14 +271,16 @@ export const sampleCaseStudy: CaseStudyInput = {
       stem: md("Place the nurse's immediate actions in priority order."),
       content: {
         items: [
-          { id: "a_o2", label: "Increase supplemental oxygen and reassess saturation" },
-          { id: "a_hob", label: "Elevate the head of the bed" },
+          {
+            id: "a_o2",
+            label: "Elevate the head of the bed and increase supplemental oxygen",
+          },
           { id: "a_notify", label: "Notify the provider using SBAR" },
           { id: "a_iv", label: "Confirm patent IV access" },
           { id: "a_doc", label: "Document the event" },
         ],
       },
-      answerKey: { orderedIds: ["a_o2", "a_hob", "a_notify", "a_iv", "a_doc"] },
+      answerKey: { orderedIds: ["a_o2", "a_notify", "a_iv", "a_doc"] },
       scoring: { model: "zero_one", maxPoints: 1 },
       rationale: {
         general: md(
@@ -298,7 +301,7 @@ export const sampleCaseStudy: CaseStudyInput = {
           { id: "f_sat", label: "SpO2 95% on 2 L nasal cannula" },
           { id: "f_rr", label: "Respiratory rate 20 breaths/min" },
           { id: "f_hr", label: "Heart rate 124 beats/min" },
-          { id: "f_pain", label: "Chest pain 6/10 with inspiration" },
+          { id: "f_pain", label: "Chest pain 8/10 with inspiration" },
         ],
         columns: [
           { id: "improving", label: "Improving" },
