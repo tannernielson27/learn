@@ -98,9 +98,13 @@ export function CaseStudyPlayer({
   }));
 
   const jumpTo = (id: string) => {
-    follow.current = true;
+    const to = Number(id);
     setReviewing(false);
-    setIndex(Number(id));
+    // Jumping to the step already open changes no index, so the effect never runs and the
+    // request to move focus would survive to steal it at the next step change.
+    if (to === index) return;
+    follow.current = true;
+    setIndex(to);
   };
 
   return (
@@ -112,6 +116,11 @@ export function CaseStudyPlayer({
             {index > 0 ? (
               <Button size="sm" variant="ghost" onClick={() => setIndex(index - 1)}>
                 Back
+              </Button>
+            ) : null}
+            {finished && !onResults ? (
+              <Button size="sm" variant="ghost" onClick={() => setIndex(total)}>
+                Results
               </Button>
             ) : null}
             {!onResults ? (
@@ -140,11 +149,13 @@ export function CaseStudyPlayer({
           tabIndex={-1}
           role="group"
           aria-label={
-            onResults
-              ? "Results"
-              : `Step ${index + 1} of ${total}: ${CJMM_STEP_LABELS[(index + 1) as CjmmStep]}`
+            reviewing
+              ? undefined
+              : onResults
+                ? "Results"
+                : `Step ${index + 1} of ${total}: ${CJMM_STEP_LABELS[(index + 1) as CjmmStep]}`
           }
-          className="animate-[fade-up_var(--duration-base)_var(--ease-out-expo)_both] focus:outline-none"
+          className="animate-[fade-up_var(--duration-base)_var(--ease-out-expo)_both]"
         >
           {reviewing ? (
             <ReviewList
