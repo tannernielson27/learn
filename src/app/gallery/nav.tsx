@@ -11,6 +11,7 @@ const FOUNDATIONS = [
   { href: "/gallery/typography", label: "Typography" },
   { href: "/gallery/primitives", label: "Primitives" },
   { href: "/gallery/ehr", label: "EHR panel" },
+  { href: "/gallery/case-study", label: "Case study" },
 ] as const;
 
 export function GalleryNav() {
