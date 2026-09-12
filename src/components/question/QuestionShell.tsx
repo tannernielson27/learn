@@ -1,8 +1,8 @@
 "use client";
 
-import { useId, useLayoutEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, type ReactNode, type RefObject } from "react";
 import { Button } from "@/components/ui/Button";
-import { SCORING_MODEL_LABELS } from "@/lib/ngn/registry";
+import { SCORING_MODEL_LABELS } from "@/lib/ngn/labels";
 import type { RichText } from "@/lib/ngn/schemas";
 import type { ScoreResult } from "@/lib/ngn/types";
 import { applyStagger } from "./motion";
@@ -59,10 +59,25 @@ export function QuestionShell({
   children,
 }: QuestionShellProps) {
   const root = useRef<HTMLElement>(null);
+  const scorePanel = useRef<HTMLElement>(null);
+  // Set only by a submit made here, so a step reopened already scored does not take focus.
+  const focusScore = useRef(false);
   // Before the first feedback frame is painted, give the visible marks their place in the reveal.
   useLayoutEffect(() => {
     if (mode === "feedback" && root.current) applyStagger(root.current);
   }, [mode]);
+
+  // Submitting removes the button that was pressed, so focus moves to the result it produced.
+  useEffect(() => {
+    if (!score || !focusScore.current) return;
+    focusScore.current = false;
+    scorePanel.current?.focus();
+  }, [score]);
+
+  const submit = () => {
+    focusScore.current = true;
+    onSubmit?.();
+  };
 
   return (
     <section
@@ -97,7 +112,7 @@ export function QuestionShell({
 
       {mode === "feedback" && score ? (
         <>
-          <ScorePanel score={score} note={scoreNote} rationale={rationale} />
+          <ScorePanel panel={scorePanel} score={score} note={scoreNote} rationale={rationale} />
           <ScoreBreakdown score={score} />
         </>
       ) : null}
@@ -108,7 +123,7 @@ export function QuestionShell({
             {!canSubmit ? (
               <span className="text-sm text-ink-2">Complete the item to submit.</span>
             ) : null}
-            <Button variant="primary" disabled={!canSubmit} onClick={onSubmit}>
+            <Button variant="primary" disabled={!canSubmit} onClick={submit}>
               Submit
             </Button>
           </div>
@@ -119,23 +134,29 @@ export function QuestionShell({
 }
 
 function ScorePanel({
+  panel,
   score,
   note,
   rationale,
 }: {
+  panel: RefObject<HTMLElement | null>;
   score: ScoreResult;
   note?: string;
   rationale?: RichText;
 }) {
   const model = SCORING_MODEL_LABELS[score.model];
+  const pointsId = useId();
   return (
     <aside
+      ref={panel}
+      tabIndex={-1}
       aria-label="Score"
+      aria-describedby={pointsId}
       className="mt-8 animate-[fade-up_var(--duration-slow)_var(--ease-out-expo)_both] rounded-md border border-line bg-surface-1 p-5"
     >
       <div className="flex items-baseline justify-between gap-4">
-        <p className="eyebrow">Score</p>
-        <p className="motion-settle tabular font-mono text-2xl">
+        <h2 className="eyebrow">Score</h2>
+        <p id={pointsId} className="motion-settle tabular font-mono text-2xl">
           {score.points}
           <span className="text-base text-ink-2"> / {score.maxPoints}</span>
         </p>
@@ -147,7 +168,7 @@ function ScorePanel({
       {note ? <p className="mt-2 text-sm text-ink-1">{note}</p> : null}
       {rationale ? (
         <div className="mt-4 border-t border-line pt-4">
-          <p className="eyebrow">Rationale</p>
+          <h3 className="eyebrow">Rationale</h3>
           <RichTextView text={rationale} className="mt-2 text-ink-1" />
         </div>
       ) : null}
@@ -170,9 +191,9 @@ function ScoreBreakdown({ score }: { score: ScoreResult }) {
       aria-labelledby={headingId}
       className="mt-4 animate-[fade-up_var(--duration-slow)_var(--ease-out-expo)_both] rounded-md border border-line bg-surface-1 p-5"
     >
-      <p id={headingId} className="eyebrow">
+      <h2 id={headingId} className="eyebrow">
         Breakdown
-      </p>
+      </h2>
       <ul className="mt-2 text-sm">
         {score.breakdown.map((entry) => (
           <li

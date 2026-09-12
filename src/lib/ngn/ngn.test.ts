@@ -366,6 +366,17 @@ describe("sample content", () => {
     expect(found).toEqual([]);
   });
 
+  it("names the row in a matrix breakdown, since a column alone repeats on every row", () => {
+    const item = itemSchema.parse(FIXTURES.matrix_multiple_response.canonical);
+    const result = scoreItem(item, {
+      type: "matrix_multiple_response",
+      rows: [{ rowId: "row_weak", columnIds: ["col_stroke"] }],
+    });
+    const labels = result.breakdown.map((entry) => entry.label);
+    expect(labels).toContain("Unilateral weakness: Ischemic stroke");
+    expect(labels).toContain("Blood glucose 48 mg/dL: Hypoglycemia");
+  });
+
   it("marks every item as sample, so nothing can be shown as if it were real", () => {
     const untagged = shipped
       .filter((item) => !(item as { tags?: string[] }).tags?.includes(SAMPLE_TAG))

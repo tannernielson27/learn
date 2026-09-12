@@ -57,6 +57,22 @@ describe("highlight text", () => {
     expect(span(BP)).toHaveAttribute("aria-pressed", "false");
   });
 
+  it("puts each span's feedback in its name, where a reader moving span to span hears it", async () => {
+    render(<ItemPlayer item={text} />);
+    await userEvent.click(span(HR));
+    await userEvent.click(span(BP));
+    await userEvent.click(submit());
+    expect(
+      screen.getByRole("button", { name: /^Heart rate 54 and irregular, Correct$/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^Blood pressure 128\/78, Incorrect$/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^Oxygen saturation 91%.*, Missed$/ }),
+    ).toBeInTheDocument();
+  });
+
   it("scores plus-minus and marks correct, incorrect and missed spans", async () => {
     render(<ItemPlayer item={text} />);
     for (const name of [HR, SAT, BP]) await userEvent.click(span(name));
@@ -64,10 +80,14 @@ describe("highlight text", () => {
 
     expect(within(scorePanel()).getByText("1")).toBeInTheDocument();
     expect(within(scorePanel()).getByText("/ 3")).toBeInTheDocument();
-    expect(screen.getAllByText("Correct")).toHaveLength(2);
-    expect(screen.getAllByText("Incorrect")).toHaveLength(1);
-    expect(screen.getAllByText("Missed")).toHaveLength(1);
-    expect(span(HR)).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getAllByText(", Correct")).toHaveLength(2);
+    expect(screen.getAllByText(", Incorrect")).toHaveLength(1);
+    expect(screen.getAllByText(", Missed")).toHaveLength(1);
+    // Feedback now forms part of the name, so match its start.
+    expect(screen.getByRole("button", { name: /^Heart rate 54 and irregular/ })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
   });
 });
 

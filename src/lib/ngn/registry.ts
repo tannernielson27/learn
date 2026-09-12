@@ -1,43 +1,11 @@
 import { FIXTURES } from "./fixtures";
-import { ITEM_SCHEMAS, ITEM_TYPES, type ItemType } from "./schemas";
+import { ITEM_TYPE_LABELS, ITEM_TYPES, SCORING_MODEL_LABELS, type ItemType } from "./labels";
+import { ITEM_SCHEMAS } from "./schemas";
 import { SCORERS } from "./scoring/items";
-import type { ScoringModel } from "./types";
 
-export { ITEM_TYPES };
-
-export const ITEM_TYPE_LABELS: Record<ItemType, string> = {
-  multiple_choice: "Multiple Choice",
-  multiple_response: "Extended Multiple Response",
-  multiple_response_grouping: "Multiple Response Grouping",
-  matrix_multiple_choice: "Matrix Multiple Choice",
-  matrix_multiple_response: "Matrix Multiple Response",
-  dropdown_cloze: "Drop-Down Cloze",
-  dropdown_rationale: "Drop-Down Rationale",
-  dropdown_table: "Drop-Down Table",
-  highlight_text: "Highlight Text",
-  highlight_table: "Highlight Table",
-  dragdrop_cloze: "Drag-and-Drop Cloze",
-  dragdrop_rationale: "Drag-and-Drop Rationale",
-  ordered_response: "Ordered Response",
-  bowtie: "Bowtie",
-};
-
-export const SCORING_MODEL_LABELS: Record<ScoringModel, { name: string; explanation: string }> = {
-  zero_one: {
-    name: "0/1 scoring",
-    explanation: "Each part earns one point when correct and zero when incorrect.",
-  },
-  plus_minus: {
-    name: "+/- scoring",
-    explanation:
-      "Each correct selection earns one point and each incorrect selection removes one; the item score cannot go below zero.",
-  },
-  rationale: {
-    name: "Rationale scoring",
-    explanation:
-      "Linked blanks are scored together: a pair earns its point only when both are correct, and a triad scores nothing unless its anchor is correct.",
-  },
-};
+// The labels live in ./labels, which client components import directly: this module pulls in
+// every schema, scorer and fixture, and belongs on the server or in tests.
+export { ITEM_TYPE_LABELS, ITEM_TYPES, SCORING_MODEL_LABELS };
 
 export const NGN_REGISTRY = Object.fromEntries(
   ITEM_TYPES.map((type) => [

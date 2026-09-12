@@ -39,7 +39,8 @@ const headerClasses = (tokens: readonly HighlightToken[]) =>
 /** A table at 768px and wider, one card per row below; both render from one response. */
 function HighlightGrid({ columns, rows, cell, rowScore }: LayoutProps) {
   return (
-    <div className="hidden overflow-x-auto md:block">
+    // Padding cancelled by the margin, so the scroll box does not clip a span's focus ring.
+    <div className="-m-1 hidden overflow-x-auto p-1 md:block">
       <table className="w-full border-collapse text-left">
         <caption className="sr-only">{CAPTION}</caption>
         <thead>

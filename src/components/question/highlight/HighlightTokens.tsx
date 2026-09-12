@@ -87,13 +87,12 @@ export function HighlightTokens({
               className={`${base} ${stateClasses(isSelected, feedback, mode)}`}
             >
               {token.value}
+              {/* Inside the span, so it is part of the name a reader hears on reaching it. */}
+              {feedback !== "neutral" ? (
+                <span className="sr-only">{`, ${feedbackLabel[feedback]}`}</span>
+              ) : null}
             </span>
-            {feedback !== "neutral" ? (
-              <>
-                <span className="sr-only"> {feedbackLabel[feedback]}</span>
-                <FeedbackIcon state={feedback} className="ml-1" />
-              </>
-            ) : null}
+            {feedback !== "neutral" ? <FeedbackIcon state={feedback} className="ml-1" /> : null}
           </Fragment>
         );
       })}

@@ -1,5 +1,5 @@
 import type { ItemOf, ItemType, ResponseOf } from "../schemas";
-import { spanIdsOf } from "../schemas/structured";
+import { spanIdsOf } from "../spans";
 import type { ScoreResult } from "../types";
 import { scorePlusMinus, scoreRationale, scoreZeroOne, sumResults } from "./models";
 
@@ -53,6 +53,7 @@ const matrixMultipleChoice: Scorer<"matrix_multiple_choice"> = (item, response) 
 
 const matrixMultipleResponse: Scorer<"matrix_multiple_response"> = (item, response) => {
   const colLabels = labelsOf(item.content.columns);
+  const rowLabels = labelsOf(item.content.rows);
   return sumResults(
     "plus_minus",
     item.answerKey.rows.map((keyRow) => {
@@ -62,12 +63,15 @@ const matrixMultipleResponse: Scorer<"matrix_multiple_response"> = (item, respon
         correct: keyRow.correctColumnIds,
         labels: colLabels,
       });
-      // Namespace column ids by row so breakdown entries stay unique across rows.
+      // Namespace column ids by row so breakdown entries stay unique across rows, and name the row
+      // in the label: a column alone ("Pulmonary embolism") repeats once per row.
+      const rowLabel = rowLabels[keyRow.rowId];
       return {
         ...result,
         breakdown: result.breakdown.map((b) => ({
           ...b,
           elementId: `${keyRow.rowId}:${b.elementId}`,
+          label: rowLabel && b.label ? `${rowLabel}: ${b.label}` : b.label,
         })),
       };
     }),

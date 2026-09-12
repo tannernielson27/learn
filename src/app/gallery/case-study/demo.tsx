@@ -3,9 +3,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { CaseStudyPlayer } from "@/components/case-study/CaseStudyPlayer";
 import { Button } from "@/components/ui/Button";
-import { sampleCaseStudy } from "@/lib/ngn/fixtures";
-import { caseStudySchema } from "@/lib/ngn/schemas";
-import { caseStudyMaxPoints } from "@/lib/ngn/scoring";
+import type { CaseStudy } from "@/lib/ngn/schemas";
 
 const noopSubscribe = () => () => {};
 /** False during server render and hydration, true after; e2e waits for it before screenshots. */
@@ -16,14 +14,17 @@ const useHydrated = () =>
     () => false,
   );
 
-const sample = caseStudySchema.parse(sampleCaseStudy);
-const MAX = caseStudyMaxPoints(sample);
-
 /**
  * Gallery-only harness. Scores locally with the answer key in the browser, which is fine here
  * and never acceptable in sessions or assignments.
  */
-export function CaseStudyDemo() {
+export function CaseStudyDemo({
+  caseStudy,
+  maxPoints,
+}: {
+  caseStudy: CaseStudy;
+  maxPoints: number;
+}) {
   const [attempt, setAttempt] = useState(0);
   const hydrated = useHydrated();
 
@@ -33,10 +34,12 @@ export function CaseStudyDemo() {
         <Button size="sm" variant="ghost" onClick={() => setAttempt((n) => n + 1)}>
           Start again
         </Button>
-        <span className="ml-auto font-mono text-xs text-ink-2">6 steps · max {MAX} points</span>
+        <span className="ml-auto font-mono text-xs text-ink-2">
+          6 steps · max {maxPoints} points
+        </span>
       </div>
       <div className="mt-6 overflow-hidden rounded-md border border-line">
-        <CaseStudyPlayer key={attempt} caseStudy={sample} />
+        <CaseStudyPlayer key={attempt} caseStudy={caseStudy} />
       </div>
     </div>
   );

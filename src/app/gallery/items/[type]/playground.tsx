@@ -5,9 +5,8 @@ import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { hasRenderer } from "@/components/question/registry";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Button } from "@/components/ui/Button";
-import { FIXTURES } from "@/lib/ngn/fixtures";
-import { SCORING_MODEL_LABELS } from "@/lib/ngn/registry";
-import { itemSchema, type AnyResponse, type ItemType } from "@/lib/ngn/schemas";
+import { SCORING_MODEL_LABELS } from "@/lib/ngn/labels";
+import type { AnyResponse, Item, ItemType } from "@/lib/ngn/schemas";
 
 const VARIANTS = [
   { value: "canonical", label: "Canonical" },
@@ -37,15 +36,21 @@ const useHydrated = () =>
  * Gallery-only harness. Scores locally with the answer key in the browser, which is fine here
  * and never acceptable in sessions or assignments.
  */
-export function ItemPlayground({ type }: { type: ItemType }) {
+export function ItemPlayground({
+  type,
+  items,
+}: {
+  type: ItemType;
+  /** Already parsed by the server page, which keeps fixtures and zod out of this bundle. */
+  items: Record<Variant, Item>;
+}) {
   const [variant, setVariant] = useState<Variant>("canonical");
   const [attempt, setAttempt] = useState(0);
   const [mode, setMode] = useState<Mode>("answer");
   // Held here so review mode can replay it: the player itself is remounted to change mode.
   const [response, setResponse] = useState<AnyResponse | undefined>(undefined);
   const hydrated = useHydrated();
-  const fixture = FIXTURES[type];
-  const item = itemSchema.parse(fixture[variant]);
+  const item = items[variant];
   const model = SCORING_MODEL_LABELS[item.scoring.model];
 
   if (!hasRenderer(type)) {
