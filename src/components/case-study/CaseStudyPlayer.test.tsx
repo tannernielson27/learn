@@ -130,4 +130,27 @@ describe("CaseStudyPlayer", () => {
     // The sample opens on a highlight item, which ItemPlayer renders unchanged.
     expect(screen.getByRole("button", { name: /sudden shortness of breath/ })).toBeInTheDocument();
   });
+
+  it("reports the finish once, however often the student walks back into it", async () => {
+    const onFinished = vi.fn();
+    render(<CaseStudyPlayer caseStudy={sixSteps} onFinished={onFinished} />);
+    for (let step = 1; step <= 6; step++) await finishStep();
+    expect(onFinished).toHaveBeenCalledTimes(1);
+
+    // Re-reading the last step and coming forward again is not a second attempt.
+    await userEvent.click(screen.getByRole("button", { name: "Back" }));
+    await userEvent.click(next()!);
+    expect(screen.getByRole("region", { name: "Case study results" })).toBeInTheDocument();
+    expect(onFinished).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts over when it is handed a different case study", async () => {
+    const { rerender } = render(<CaseStudyPlayer caseStudy={sixSteps} />);
+    await finishStep();
+    expect(stepLine()).toHaveTextContent("Step 2 of 6");
+
+    rerender(<CaseStudyPlayer caseStudy={sample} />);
+    expect(stepLine()).toHaveTextContent("Step 1 of 6: Recognize Cues");
+    expect(next()).toBeNull();
+  });
 });

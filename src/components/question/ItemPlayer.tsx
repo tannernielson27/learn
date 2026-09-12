@@ -22,7 +22,10 @@ export interface ItemPlayerProps {
   onSubmitted?: (response: AnyResponse, result: ScoreResult) => void;
   /** Response to open with, e.g. what a case-study step was left holding. */
   initialResponse?: AnyResponse;
-  /** Score to open with, so a step already submitted reopens in feedback with its own marks. */
+  /**
+   * Score to open with, so a step already submitted reopens in feedback with its own marks.
+   * Supplying one implies feedback mode: a scored item is never open for answering again.
+   */
   initialResult?: ScoreResult;
   /** Every change, so a caller that unmounts the player can hand the response back later. */
   onResponseChange?: (response: AnyResponse) => void;
@@ -46,7 +49,7 @@ export function ItemPlayer({
   initialResult,
   onResponseChange,
 }: ItemPlayerProps) {
-  const [mode, setMode] = useState<PlayerMode>(initialMode);
+  const [mode, setMode] = useState<PlayerMode>(initialResult ? "feedback" : initialMode);
   const [response, setResponse] = useState<AnyResponse>(
     () => initialResponse ?? firstResponse(item),
   );

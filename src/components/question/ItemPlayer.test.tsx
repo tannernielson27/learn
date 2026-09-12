@@ -96,3 +96,25 @@ describe("ItemPlayer without a renderer", () => {
     }
   });
 });
+
+describe("ItemPlayer reopening a step someone has already answered", () => {
+  const chosen = { type: "multiple_choice", optionId: "opt_c" } as const;
+  const scored = { points: 0, maxPoints: 1, model: "zero_one" as const, breakdown: [] };
+
+  it("opens in feedback with the given answer and score, without scoring again", () => {
+    const score = vi.fn();
+    render(<ItemPlayer item={mc} initialResponse={chosen} initialResult={scored} score={score} />);
+    expect(screen.getByRole("radio", { name: /Document the weight/ })).toBeChecked();
+    const panel = screen.getByRole("complementary", { name: "Score" });
+    expect(within(panel).getByText("0")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Submit" })).not.toBeInTheDocument();
+    expect(score).not.toHaveBeenCalled();
+  });
+
+  it("reports every change, so a caller that unmounts it can hand the answer back", async () => {
+    const onResponseChange = vi.fn();
+    render(<ItemPlayer item={mc} onResponseChange={onResponseChange} />);
+    await userEvent.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
+    expect(onResponseChange).toHaveBeenCalledWith({ type: "multiple_choice", optionId: "opt_a" });
+  });
+});

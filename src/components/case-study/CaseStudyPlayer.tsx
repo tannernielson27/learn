@@ -44,6 +44,17 @@ export function CaseStudyPlayer({
   // 0 to total - 1 while working; `total` once the student has reached the results.
   const [index, setIndex] = useState(0);
   const [steps, setSteps] = useState<StepState[]>(() => caseStudy.items.map(() => ({})));
+  const [finished, setFinished] = useState(false);
+  const [playing, setPlaying] = useState(caseStudy.id);
+
+  // A different case study is a different attempt, whether or not the caller remembered to
+  // remount us. Adjusting during render beats an effect: no first paint of the old one's state.
+  if (caseStudy.id !== playing) {
+    setPlaying(caseStudy.id);
+    setIndex(0);
+    setSteps(caseStudy.items.map(() => ({})));
+    setFinished(false);
+  }
 
   const onResults = index >= total;
   const item = caseStudy.items[index];
@@ -56,7 +67,10 @@ export function CaseStudyPlayer({
   const advance = () => {
     const next = index + 1;
     setIndex(next);
-    if (next >= total) {
+    // Reading the last step again and coming forward is not a second attempt, and onFinished is
+    // where a session would write a score down.
+    if (next >= total && !finished) {
+      setFinished(true);
       onFinished?.(steps.map((step) => step.result).filter((r): r is ScoreResult => Boolean(r)));
     }
   };
@@ -91,7 +105,6 @@ export function CaseStudyPlayer({
               key={item.id}
               item={item}
               score={score}
-              initialMode={current?.result ? "feedback" : "answer"}
               initialResponse={current?.response}
               initialResult={current?.result}
               onResponseChange={(response) => update(index, { response })}
