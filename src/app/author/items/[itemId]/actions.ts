@@ -5,6 +5,8 @@ import type { SaveResult } from "@/components/authoring/EditorShell";
 import { fromDropdownClozeForm, fromDropdownRationaleForm } from "@/lib/authoring/forms/cloze";
 import { parseClozeDraft } from "@/lib/authoring/forms/clozeDraft";
 import type { DraftParseResult } from "@/lib/authoring/forms/draft";
+import { fromDragdropClozeForm, fromDragdropRationaleForm } from "@/lib/authoring/forms/dragdrop";
+import { parseDragDropDraft } from "@/lib/authoring/forms/dragdropDraft";
 import { fromDropdownTableForm } from "@/lib/authoring/forms/dropdownTable";
 import { parseDropdownTableDraft } from "@/lib/authoring/forms/dropdownTableDraft";
 import { fromHighlightTableForm, fromHighlightTextForm } from "@/lib/authoring/forms/highlight";
@@ -313,4 +315,32 @@ export async function saveHighlightTableDraft(
 
 export async function publishHighlightTable(itemId: string, input: unknown): Promise<SaveResult> {
   return publish(itemId, "highlight_table", input);
+}
+
+export async function saveDragdropClozeDraft(itemId: string, values: unknown): Promise<SaveResult> {
+  return saveDraft(itemId, "dragdrop_cloze", values, parseDragDropDraft, fromDragdropClozeForm);
+}
+
+export async function publishDragdropCloze(itemId: string, input: unknown): Promise<SaveResult> {
+  return publish(itemId, "dragdrop_cloze", input);
+}
+
+export async function saveDragdropRationaleDraft(
+  itemId: string,
+  values: unknown,
+): Promise<SaveResult> {
+  return saveDraft(
+    itemId,
+    "dragdrop_rationale",
+    values,
+    parseDragDropDraft,
+    fromDragdropRationaleForm,
+  );
+}
+
+export async function publishDragdropRationale(
+  itemId: string,
+  input: unknown,
+): Promise<SaveResult> {
+  return publish(itemId, "dragdrop_rationale", input);
 }

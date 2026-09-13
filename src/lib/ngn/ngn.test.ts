@@ -175,6 +175,36 @@ describe("schema validation errors", () => {
     ).toBe(false);
   });
 
+  it("rejects a single-use bank that keys the same token for two blanks", () => {
+    const base = FIXTURES.dragdrop_cloze.canonical;
+    expect(
+      validateItem({
+        ...base,
+        answerKey: {
+          blanks: [
+            { blankId: "blank_1", correctTokenId: "tok_saba" },
+            { blankId: "blank_2", correctTokenId: "tok_saba" },
+          ],
+        },
+      }).ok,
+    ).toBe(false);
+  });
+
+  it("allows a reusable bank to key the same token for two blanks", () => {
+    const base = FIXTURES.dragdrop_cloze.edge;
+    expect(
+      validateItem({
+        ...base,
+        answerKey: {
+          blanks: [
+            { blankId: "b1", correctTokenId: "t60" },
+            { blankId: "b2", correctTokenId: "t60" },
+          ],
+        },
+      }).ok,
+    ).toBe(true);
+  });
+
   it("rejects highlight keys that reference unknown spans", () => {
     const base = FIXTURES.highlight_text.canonical;
     expect(validateItem({ ...base, answerKey: { correctSpanIds: ["nope"] } }).ok).toBe(false);

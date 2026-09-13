@@ -301,6 +301,78 @@ test("an author writes a highlight item, marks phrases, publishes, and plays it"
   });
 });
 
+test("an author writes a drag-and-drop rationale item from a word bank, publishes, and plays it", async ({
+  page,
+  request,
+}, testInfo) => {
+  await signInAsNewAuthor(page, request, testInfo.project.name);
+  await page
+    .getByRole("textbox", { name: "Bank name" })
+    .fill(`Drag ${testInfo.project.name} ${Date.now()}`);
+  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("button", { name: "Drag-and-Drop Rationale", exact: true }).click();
+  await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
+
+  const problems = page.getByRole("region", { name: "Problems to fix" });
+  await expect(problems.getByRole("button", { name: "Word 1 needs text." })).toBeVisible();
+
+  const stem = "An older adult started a new diuretic and uses a walker for the first time.";
+  await page.getByRole("textbox", { name: "Question stem" }).fill(stem);
+  const sentence = page.getByRole("textbox", { name: "Sentence" });
+  await sentence.fill("The client is at risk for {{blank_1}} as evidenced by ");
+  await sentence.evaluate((element: HTMLTextAreaElement) =>
+    element.setSelectionRange(element.value.length, element.value.length),
+  );
+  await page.getByRole("button", { name: "Insert blank" }).click();
+  await expect(sentence).toHaveValue(
+    "The client is at risk for {{blank_1}} as evidenced by {{blank_2}}",
+  );
+
+  const words = ["falls", "a new walker", "infection", "a rash"];
+  for (const [index, word] of words.entries()) {
+    await page.getByRole("textbox", { name: `Word ${index + 1}`, exact: true }).fill(word);
+  }
+  await page
+    .getByRole("combobox", { name: "Correct word for blank 1" })
+    .selectOption({ label: "falls" });
+  await page
+    .getByRole("combobox", { name: "Correct word for blank 2" })
+    .selectOption({ label: "a new walker" });
+
+  const preview = page.getByRole("region", { name: "Preview" });
+  await expect(
+    preview.getByRole("group", { name: "Word bank" }).getByRole("button", { name: "falls" }),
+  ).toBeVisible();
+  await expect(problems).toHaveCount(0);
+  await expectNoAxeViolations(page);
+
+  await page.getByRole("button", { name: "Publish" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
+
+  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: `Play ${stem}` }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Play item" })).toBeVisible();
+  expect(await page.content()).not.toContain("correctTokenId");
+
+  // Tap to place: choose a word, then the blank it fills.
+  const bank = page.getByRole("group", { name: "Word bank" });
+  await bank.getByRole("button", { name: "falls" }).click();
+  await page.getByRole("button", { name: "Blank 1 of 2, empty" }).click();
+  await bank.getByRole("button", { name: "a new walker" }).click();
+  await page.getByRole("button", { name: "Blank 2 of 2, empty" }).click();
+  await page.getByRole("button", { name: "Submit" }).click();
+
+  const score = page.getByRole("complementary", { name: "Score" });
+  await expect(score).toContainText("1");
+  await expect(score).toBeFocused();
+  await expectNoAxeViolations(page);
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/dragdrop-from-bank-scored.png`,
+    fullPage: true,
+  });
+});
+
 test("an unknown bank is a not-found page, not an error", async ({ page, request }, testInfo) => {
   await signInAsNewAuthor(page, request, testInfo.project.name);
   const response = await page.goto("/author/banks/00000000-0000-4000-8000-00000000dead");

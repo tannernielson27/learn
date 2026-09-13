@@ -20,8 +20,10 @@ export const ITEM_TYPE_GROUPS: readonly ItemTypeGroup[] = [
   },
 ];
 
-/** Types with a shipped editor (#69 to #71, #82); the rest arrive later in Sprint 5. */
+/** Types with a shipped editor (#69 to #71, #82, #83); the rest arrive later in Sprint 5. */
 export const EDITOR_READY_TYPES: ReadonlySet<ItemType> = new Set<ItemType>([
+  "dragdrop_cloze",
+  "dragdrop_rationale",
   "highlight_text",
   "highlight_table",
   "multiple_choice",

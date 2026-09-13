@@ -208,8 +208,13 @@ const dragDropContent = {
 const tokenKeySchema = z.object({ blankId: idSchema, correctTokenId: idSchema });
 const tokenResponseSchema = z.object({ blankId: idSchema, tokenId: idSchema });
 
+// A single-use bank that keys one token to two blanks can never score full marks: once placed,
+// the token is gone from the bank.
 function refineBank(
-  i: { content: { bank: { id: string }[] }; answerKey: { blanks: { correctTokenId: string }[] } },
+  i: {
+    content: { bank: { id: string }[]; reusable: boolean };
+    answerKey: { blanks: { correctTokenId: string }[] };
+  },
   ctx: z.RefinementCtx,
 ) {
   const bankIds = i.content.bank.map((b) => b.id);
@@ -226,6 +231,18 @@ function refineBank(
       path: ["answerKey"],
     });
   }
+  if (i.content.reusable) return;
+  const keyed = new Set<string>();
+  i.answerKey.blanks.forEach((b, index) => {
+    if (keyed.has(b.correctTokenId)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "a single-use bank needs a different correct token for each blank",
+        path: ["answerKey", "blanks", index, "correctTokenId"],
+      });
+    }
+    keyed.add(b.correctTokenId);
+  });
 }
 
 export const dragdropClozeContentSchema = z.object(dragDropContent);
