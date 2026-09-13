@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import type { KeylessItem } from "@/lib/authoring/play";
+import type { ScoreReveal } from "@/lib/authoring/scoreRequest";
 import type { AnyResponse, Item, ItemOf, ItemType, ResponseOf } from "@/lib/ngn/schemas";
 import { initialResponse as firstResponse } from "@/lib/ngn/presentation";
 import { scoreItem } from "@/lib/ngn/scoring";
@@ -10,15 +12,24 @@ import { RENDERERS } from "./registry";
 import type { ItemRendererModule, PlayerItem, PlayerMode } from "./types";
 
 export interface ItemPlayerProps {
-  item: Item;
+  /**
+   * The item to play. With local scoring it must be a full item. With `submitResponse` it may be
+   * keyless: the key and rationale arrive only with the server's score.
+   */
+  item: Item | KeylessItem;
   /** Starting mode. The player moves itself from answer to feedback on submit. */
   initialMode?: PlayerMode;
   progress?: { index: number; total: number };
   /**
-   * Scores a response. Defaults to local scoring, which is only acceptable in the gallery;
-   * sessions and assignments pass a server-backed function instead.
+   * Scores a response locally. Defaults to the engine, which is only acceptable in the gallery and
+   * the authoring preview.
    */
   score?: (item: Item, response: AnyResponse) => ScoreResult;
+  /**
+   * Scores on the server instead. Resolves with the score and the key and rationale to reveal;
+   * rejects when the answer could not be checked.
+   */
+  submitResponse?: (response: AnyResponse) => Promise<ScoreReveal>;
   onSubmitted?: (response: AnyResponse, result: ScoreResult) => void;
   /** Response to open with, e.g. what a case-study step was left holding. */
   initialResponse?: AnyResponse;
@@ -30,6 +41,8 @@ export interface ItemPlayerProps {
   /** Every change, so a caller that unmounts the player can hand the response back later. */
   onResponseChange?: (response: AnyResponse) => void;
 }
+
+const CHECK_FAILED = "Your answer could not be checked. Try again.";
 
 /**
  * Strip the answer key, and the rationale with it, unless the mode is feedback. Renderers never
@@ -49,6 +62,7 @@ export function ItemPlayer({
   initialMode = "answer",
   progress,
   score = scoreItem,
+  submitResponse,
   onSubmitted,
   initialResponse,
   initialResult,
@@ -56,9 +70,15 @@ export function ItemPlayer({
 }: ItemPlayerProps) {
   const [mode, setMode] = useState<PlayerMode>(initialResult ? "feedback" : initialMode);
   const [response, setResponse] = useState<AnyResponse>(
-    () => initialResponse ?? firstResponse(item),
+    // Building a first response reads only the item's content, never its key.
+    () => initialResponse ?? firstResponse(item as Item),
   );
   const [result, setResult] = useState<ScoreResult | undefined>(initialResult);
+  const [reveal, setReveal] = useState<Pick<Item, "answerKey" | "rationale"> | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | undefined>(undefined);
+  // A ref, not state: a second tap in the same frame must not send a second request.
+  const pending = useRef(false);
 
   const rendererModule = RENDERERS[item.type] as ItemRendererModule<ItemType> | undefined;
   if (!rendererModule) {
@@ -69,10 +89,15 @@ export function ItemPlayer({
     );
   }
 
+  // The item with its key and rationale once the server has revealed them. A keyless item has
+  // neither before then, and nothing below reads them until there is a score.
+  const fullItem = (reveal ? { ...item, ...reveal } : item) as Item;
+  const rationale = "rationale" in fullItem ? fullItem.rationale?.general : undefined;
+
   // Feedback mode is not itself the reveal: a caller can open in it with nothing scored yet, and
   // until there is a score there is nothing to explain and nothing to hand over.
   const revealed = mode === "feedback" && result !== undefined;
-  const playerItem = toPlayerItem(item, revealed ? "feedback" : "answer") as PlayerItem<
+  const playerItem = toPlayerItem(fullItem, revealed ? "feedback" : "answer") as PlayerItem<
     typeof item.type
   >;
   const canSubmit = rendererModule.isComplete(
@@ -80,16 +105,38 @@ export function ItemPlayer({
     response as ResponseOf<ItemType>,
   );
 
-  const submit = () => {
-    const next = score(item, response);
+  const finish = (next: ScoreResult) => {
     setResult(next);
     setMode("feedback");
     onSubmitted?.(response, next);
   };
 
+  const submit = () => {
+    if (!submitResponse) {
+      finish(score(fullItem, response));
+      return;
+    }
+    if (pending.current) return;
+    pending.current = true;
+    setSubmitting(true);
+    setSubmitError(undefined);
+    submitResponse(response)
+      .then(
+        (checked) => {
+          setReveal({ answerKey: checked.answerKey, rationale: checked.rationale });
+          finish(checked.score);
+        },
+        () => setSubmitError(CHECK_FAILED),
+      )
+      .finally(() => {
+        pending.current = false;
+        setSubmitting(false);
+      });
+  };
+
   const Renderer = rendererModule.Renderer;
   const scoreNote = result
-    ? rendererModule.explainScore?.(item as ItemOf<ItemType>, result)
+    ? rendererModule.explainScore?.(fullItem as ItemOf<ItemType>, result)
     : undefined;
 
   return (
@@ -100,9 +147,11 @@ export function ItemPlayer({
       progress={progress}
       canSubmit={canSubmit}
       onSubmit={submit}
+      submitting={submitting}
+      submitError={submitError}
       score={result}
       scoreNote={scoreNote}
-      rationale={item.rationale.general}
+      rationale={rationale}
       sample={item.tags.includes(SAMPLE_TAG)}
     >
       <Renderer
@@ -111,6 +160,9 @@ export function ItemPlayer({
         mode={mode}
         breakdown={result?.breakdown}
         onChange={(next) => {
+          // Hold the answer that was sent while it is scored, so the feedback shows that answer.
+          if (pending.current) return;
+          setSubmitError(undefined);
           setResponse(next);
           onResponseChange?.(next);
         }}

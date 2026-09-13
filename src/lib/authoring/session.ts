@@ -10,16 +10,19 @@ export interface AuthorSession {
   orgId: string;
 }
 
+export type RouteAuthor =
+  ({ status: "ok" } & AuthorSession) | { status: "signed_out" } | { status: "forbidden" };
+
 /**
- * The real access check for authoring pages and Server Functions (the proxy's redirect is only
- * optimistic). Verifies the session token, then the profile: an author is an instructor or admin
- * with an org. RLS still decides every row.
+ * The real access check (the proxy's redirect is only optimistic). Verifies the session token,
+ * then the profile: an author is an instructor or admin with an org. RLS still decides every row.
+ * Route handlers use this directly, since they answer with a status code rather than a redirect.
  */
-export async function requireAuthor(returnTo: string): Promise<AuthorSession> {
+export async function authorForRoute(): Promise<RouteAuthor> {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.auth.getClaims();
   const userId = data?.claims?.sub;
-  if (!userId) redirect(`/sign-in?next=${encodeURIComponent(returnTo)}`);
+  if (!userId) return { status: "signed_out" };
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -27,9 +30,18 @@ export async function requireAuthor(returnTo: string): Promise<AuthorSession> {
     .eq("id", userId)
     .maybeSingle();
   if (!profile?.org_id || (profile.role !== "instructor" && profile.role !== "admin")) {
-    redirect("/author/no-access");
+    return { status: "forbidden" };
   }
 
   const email = typeof data.claims.email === "string" ? data.claims.email : "";
-  return { supabase, userId, email, orgId: profile.org_id };
+  return { status: "ok", supabase, userId, email, orgId: profile.org_id };
+}
+
+/** The same check for authoring pages and Server Functions, as redirects. */
+export async function requireAuthor(returnTo: string): Promise<AuthorSession> {
+  const author = await authorForRoute();
+  if (author.status === "signed_out") redirect(`/sign-in?next=${encodeURIComponent(returnTo)}`);
+  if (author.status === "forbidden") redirect("/author/no-access");
+  const { supabase, userId, email, orgId } = author;
+  return { supabase, userId, email, orgId };
 }

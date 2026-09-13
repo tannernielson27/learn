@@ -27,10 +27,10 @@ export function ItemList({ items }: ItemListProps) {
   return (
     <ul aria-label="Items" className="flex flex-col divide-y divide-line border-y border-line">
       {items.map((item) => (
-        <li key={item.id}>
+        <li key={item.id} className="flex items-stretch">
           <Link
             href={`/author/items/${item.id}`}
-            className="tap-target flex flex-col gap-1 px-2 py-3 transition-colors duration-fast hover:bg-surface-2"
+            className="tap-target flex min-w-0 flex-1 flex-col gap-1 px-2 py-3 transition-colors duration-fast hover:bg-surface-2"
           >
             <span className={item.stemExcerpt ? "text-ink-1" : "text-ink-2 italic"}>
               {item.stemExcerpt || "Untitled item"}
@@ -41,6 +41,16 @@ export function ItemList({ items }: ItemListProps) {
               <span>{formatEdited(item.updatedAt)}</span>
             </span>
           </Link>
+          {/* Only a published item has a version to play, and the scorer only accepts those. */}
+          {item.status === "published" ? (
+            <Link
+              href={`/author/items/${item.id}/play`}
+              aria-label={`Play ${item.stemExcerpt || "Untitled item"}`}
+              className="tap-target flex shrink-0 items-center px-4 text-sm font-medium text-accent-ink transition-colors duration-fast hover:bg-surface-2"
+            >
+              Play
+            </Link>
+          ) : null}
         </li>
       ))}
     </ul>

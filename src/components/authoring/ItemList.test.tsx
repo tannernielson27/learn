@@ -31,9 +31,19 @@ describe("ItemList", () => {
 
   it("names an item with no stem yet", () => {
     render(<ItemList items={items} />);
-    const second = screen.getByRole("link", { name: /Untitled item/ });
+    // Anchored: the published item's Play link is named "Play Untitled item".
+    const second = screen.getByRole("link", { name: /^Untitled item/ });
     expect(within(second).getByText("Matrix Multiple Choice")).toBeInTheDocument();
     expect(within(second).getByText("Published")).toBeInTheDocument();
+  });
+
+  it("offers Play for a published item only, named for the item", () => {
+    render(<ItemList items={items} />);
+    expect(screen.getByRole("link", { name: "Play Untitled item" })).toHaveAttribute(
+      "href",
+      "/author/items/i2/play",
+    );
+    expect(screen.queryByRole("link", { name: /^Play Which findings/ })).not.toBeInTheDocument();
   });
 
   it("falls back to the raw type for an unknown one rather than crashing", () => {
