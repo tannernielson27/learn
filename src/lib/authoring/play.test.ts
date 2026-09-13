@@ -5,7 +5,7 @@ import { FIXTURES } from "@/lib/ngn/fixtures";
 import { ITEM_SCHEMAS, type Item } from "@/lib/ngn/schemas";
 import { toKeylessPlayItem } from "./play";
 
-// The Sprint 1 types, which are the ones an author can build and play this sprint.
+// Every type an author can build, and so publish and play from a bank.
 const sprintOneSamples = [...EDITOR_READY_TYPES].flatMap((type) => {
   const fixture = FIXTURES[type];
   return [
@@ -15,8 +15,10 @@ const sprintOneSamples = [...EDITOR_READY_TYPES].flatMap((type) => {
 });
 
 describe("toKeylessPlayItem", () => {
-  it("covers all eight Sprint 1 types", () => {
-    expect(new Set(sprintOneSamples.map(([, item]) => item.type)).size).toBe(8);
+  it("covers every type with an editor", () => {
+    expect(new Set(sprintOneSamples.map(([, item]) => item.type))).toEqual(
+      new Set(EDITOR_READY_TYPES),
+    );
   });
 
   it.each(sprintOneSamples)("never includes the answer key or rationale: %s", (_name, item) => {

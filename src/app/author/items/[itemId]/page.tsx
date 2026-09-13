@@ -7,6 +7,10 @@ import {
 } from "@/components/authoring/ItemEditorLoader";
 import { clozeFormFromStored } from "@/lib/authoring/forms/cloze";
 import { dropdownTableFormFromStored } from "@/lib/authoring/forms/dropdownTable";
+import {
+  highlightTableFormFromStored,
+  highlightTextFormFromStored,
+} from "@/lib/authoring/forms/highlight";
 import { matrixFormFromStored } from "@/lib/authoring/forms/matrix";
 import { multipleChoiceFormFromStored } from "@/lib/authoring/forms/multipleChoice";
 import { multipleResponseFormFromStored } from "@/lib/authoring/forms/multipleResponse";
@@ -37,7 +41,11 @@ function editorFor(rowId: string, type: string, stored: unknown): ItemEditorLoad
     case "dropdown_cloze":
     case "dropdown_rationale":
       return { itemId: rowId, type, initialValues: clozeFormFromStored(stored, rowId) };
-    // Highlight, drag-and-drop, ordered response and bowtie editors arrive in Sprint 5.
+    case "highlight_text":
+      return { itemId: rowId, type, initialValues: highlightTextFormFromStored(stored, rowId) };
+    case "highlight_table":
+      return { itemId: rowId, type, initialValues: highlightTableFormFromStored(stored, rowId) };
+    // Drag-and-drop, ordered response and bowtie editors arrive later in Sprint 5.
     default:
       return null;
   }

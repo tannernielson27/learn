@@ -22,12 +22,14 @@ describe("ITEM_TYPE_GROUPS", () => {
 });
 
 describe("isEditorReady", () => {
-  it("enables exactly the Sprint 1 item types this sprint", () => {
+  it("enables exactly the types with a shipped editor", () => {
     expect([...EDITOR_READY_TYPES].sort()).toEqual(
       [
         "dropdown_cloze",
         "dropdown_rationale",
         "dropdown_table",
+        "highlight_table",
+        "highlight_text",
         "matrix_multiple_choice",
         "matrix_multiple_response",
         "multiple_choice",
@@ -37,8 +39,8 @@ describe("isEditorReady", () => {
     );
   });
 
-  it.each([["bowtie"], ["highlight_text"], ["dragdrop_cloze"], ["ordered_response"]] as const)(
-    "keeps %s for Sprint 5",
+  it.each([["bowtie"], ["dragdrop_rationale"], ["dragdrop_cloze"], ["ordered_response"]] as const)(
+    "keeps %s for a later Sprint 5 story",
     (type) => {
       expect(isEditorReady(type)).toBe(false);
     },

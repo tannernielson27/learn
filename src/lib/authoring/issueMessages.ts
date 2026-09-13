@@ -268,7 +268,50 @@ const describeCloze: Describer = (issue, path) => {
   return undefined;
 };
 
+const SPANS_NEEDED = "Mark at least two selectable phrases, each with its own id.";
+
+/** Wording both highlight types share; `spansField` is where the phrases are written. */
+function describeHighlight(issue: SchemaIssue, path: string[], spansField: string) {
+  const at = path.join(".");
+  if (at === "content" && issue.code === "custom")
+    return { field: spansField, message: SPANS_NEEDED };
+  if (at === "answerKey.correctSpanIds") {
+    return { field: "correctSpanIds", message: "Mark at least one phrase as correct." };
+  }
+  if (path[0] === "answerKey") {
+    return {
+      field: "correctSpanIds",
+      message: "A phrase marked correct is no longer selectable. Untick it or mark it again.",
+    };
+  }
+  return undefined;
+}
+
+const describeHighlightText: Describer = (issue, path) => {
+  if (path.join(".") === "content.passage") {
+    return { field: "passage", message: "Write the passage." };
+  }
+  return describeHighlight(issue, path, "passage");
+};
+
+const describeHighlightTable: Describer = (issue, path) => {
+  const at = path.join(".");
+  if (at === "content.columns") {
+    return { field: "columns", message: "Use 2 to 4 columns." };
+  }
+  if (path[0] === "content" && path[1] === "columns" && path[2] !== undefined) {
+    const index = Number(path[2]);
+    return { field: `columns.${index}.label`, message: `Column ${index + 1} needs a heading.` };
+  }
+  if (at === "content.rows") {
+    return { field: "rows", message: "Use 1 to 8 rows." };
+  }
+  return describeHighlight(issue, path, "rows");
+};
+
 const DESCRIBERS: Partial<Record<ItemType, Describer>> = {
+  highlight_text: describeHighlightText,
+  highlight_table: describeHighlightTable,
   multiple_choice: describeMultipleChoice,
   multiple_response: describeMultipleResponse,
   multiple_response_grouping: describeGrouping,

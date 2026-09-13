@@ -6,6 +6,8 @@ import {
   publishDropdownRationale,
   publishDropdownTable,
   publishGrouping,
+  publishHighlightTable,
+  publishHighlightText,
   publishMatrixMultipleChoice,
   publishMatrixMultipleResponse,
   publishMultipleChoice,
@@ -14,6 +16,8 @@ import {
   saveDropdownRationaleDraft,
   saveDropdownTableDraft,
   saveGroupingDraft,
+  saveHighlightTableDraft,
+  saveHighlightTextDraft,
   saveMatrixMultipleChoiceDraft,
   saveMatrixMultipleResponseDraft,
   saveMultipleChoiceDraft,
@@ -21,6 +25,10 @@ import {
 } from "@/app/author/items/[itemId]/actions";
 import type { ClozeFormValues } from "@/lib/authoring/forms/cloze";
 import type { DropdownTableFormValues } from "@/lib/authoring/forms/dropdownTable";
+import type {
+  HighlightTableFormValues,
+  HighlightTextFormValues,
+} from "@/lib/authoring/forms/highlight";
 import type { MatrixFormValues } from "@/lib/authoring/forms/matrix";
 import type { MultipleChoiceFormValues } from "@/lib/authoring/forms/multipleChoice";
 import type { MultipleResponseFormValues } from "@/lib/authoring/forms/multipleResponse";
@@ -53,6 +61,14 @@ const ClozeEditor = dynamic(() => import("./ClozeEditor").then((module) => modul
   ssr: false,
   loading,
 });
+const HighlightTextEditor = dynamic(
+  () => import("./HighlightTextEditor").then((module) => module.HighlightTextEditor),
+  { ssr: false, loading },
+);
+const HighlightTableEditor = dynamic(
+  () => import("./HighlightTableEditor").then((module) => module.HighlightTableEditor),
+  { ssr: false, loading },
+);
 
 export type ItemEditorLoaderProps =
   | { itemId: string; type: "multiple_choice"; initialValues: MultipleChoiceFormValues }
@@ -62,7 +78,9 @@ export type ItemEditorLoaderProps =
   | { itemId: string; type: "matrix_multiple_response"; initialValues: MatrixFormValues }
   | { itemId: string; type: "dropdown_table"; initialValues: DropdownTableFormValues }
   | { itemId: string; type: "dropdown_cloze"; initialValues: ClozeFormValues }
-  | { itemId: string; type: "dropdown_rationale"; initialValues: ClozeFormValues };
+  | { itemId: string; type: "dropdown_rationale"; initialValues: ClozeFormValues }
+  | { itemId: string; type: "highlight_text"; initialValues: HighlightTextFormValues }
+  | { itemId: string; type: "highlight_table"; initialValues: HighlightTableFormValues };
 
 export function ItemEditorLoader(props: ItemEditorLoaderProps) {
   const { itemId } = props;
@@ -133,6 +151,22 @@ export function ItemEditorLoader(props: ItemEditorLoaderProps) {
           initialValues={props.initialValues}
           onSaveDraft={(values) => saveDropdownRationaleDraft(itemId, values)}
           onPublish={(item) => publishDropdownRationale(itemId, item)}
+        />
+      );
+    case "highlight_text":
+      return (
+        <HighlightTextEditor
+          initialValues={props.initialValues}
+          onSaveDraft={(values) => saveHighlightTextDraft(itemId, values)}
+          onPublish={(item) => publishHighlightText(itemId, item)}
+        />
+      );
+    case "highlight_table":
+      return (
+        <HighlightTableEditor
+          initialValues={props.initialValues}
+          onSaveDraft={(values) => saveHighlightTableDraft(itemId, values)}
+          onPublish={(item) => publishHighlightTable(itemId, item)}
         />
       );
   }

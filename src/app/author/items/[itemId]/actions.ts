@@ -7,6 +7,11 @@ import { parseClozeDraft } from "@/lib/authoring/forms/clozeDraft";
 import type { DraftParseResult } from "@/lib/authoring/forms/draft";
 import { fromDropdownTableForm } from "@/lib/authoring/forms/dropdownTable";
 import { parseDropdownTableDraft } from "@/lib/authoring/forms/dropdownTableDraft";
+import { fromHighlightTableForm, fromHighlightTextForm } from "@/lib/authoring/forms/highlight";
+import {
+  parseHighlightTableDraft,
+  parseHighlightTextDraft,
+} from "@/lib/authoring/forms/highlightDraft";
 import {
   fromMatrixMultipleChoiceForm,
   fromMatrixMultipleResponseForm,
@@ -277,4 +282,35 @@ export async function publishDropdownRationale(
   input: unknown,
 ): Promise<SaveResult> {
   return publish(itemId, "dropdown_rationale", input);
+}
+
+export async function saveHighlightTextDraft(itemId: string, values: unknown): Promise<SaveResult> {
+  return saveDraft(
+    itemId,
+    "highlight_text",
+    values,
+    parseHighlightTextDraft,
+    fromHighlightTextForm,
+  );
+}
+
+export async function publishHighlightText(itemId: string, input: unknown): Promise<SaveResult> {
+  return publish(itemId, "highlight_text", input);
+}
+
+export async function saveHighlightTableDraft(
+  itemId: string,
+  values: unknown,
+): Promise<SaveResult> {
+  return saveDraft(
+    itemId,
+    "highlight_table",
+    values,
+    parseHighlightTableDraft,
+    fromHighlightTableForm,
+  );
+}
+
+export async function publishHighlightTable(itemId: string, input: unknown): Promise<SaveResult> {
+  return publish(itemId, "highlight_table", input);
 }
