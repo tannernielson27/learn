@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MultipleChoiceEditorLoader } from "@/components/authoring/MultipleChoiceEditorLoader";
+import {
+  ItemEditorLoader,
+  type ItemEditorLoaderProps,
+} from "@/components/authoring/ItemEditorLoader";
 import { multipleChoiceFormFromStored } from "@/lib/authoring/forms/multipleChoice";
+import { multipleResponseFormFromStored } from "@/lib/authoring/forms/multipleResponse";
+import { groupingFormFromStored } from "@/lib/authoring/forms/multipleResponseGrouping";
+import { isRecord } from "@/lib/authoring/forms/storedValues";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { ITEM_TYPE_LABELS, ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
@@ -10,6 +16,20 @@ import { ITEM_TYPE_LABELS, ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 export const metadata: Metadata = { title: "Edit item" };
 
 const STATUS_LABELS = { draft: "Draft", published: "Published", archived: "Archived" } as const;
+
+/** Chooses the editor for a stored row, or null when this type's editor has not shipped yet. */
+function editorFor(rowId: string, type: string, stored: unknown): ItemEditorLoaderProps | null {
+  switch (type) {
+    case "multiple_choice":
+      return { itemId: rowId, type, initialValues: multipleChoiceFormFromStored(stored, rowId) };
+    case "multiple_response":
+      return { itemId: rowId, type, initialValues: multipleResponseFormFromStored(stored, rowId) };
+    case "multiple_response_grouping":
+      return { itemId: rowId, type, initialValues: groupingFormFromStored(stored, rowId) };
+    default:
+      return null;
+  }
+}
 
 export default async function EditItemPage({ params }: PageProps<"/author/items/[itemId]">) {
   const { itemId } = await params;
@@ -30,7 +50,19 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
     ? ITEM_TYPE_LABELS[row.type as ItemType]
     : row.type;
 
-  const header = (
+  const stored = {
+    ...(isRecord(row.content) ? row.content : {}),
+    type: row.type,
+    cjmmStep: row.cjmm_step ?? undefined,
+    tags: row.tags,
+    version: row.version,
+    answerKey: row.answer_key,
+    rationale: row.rationale,
+    scoring: row.scoring,
+  };
+  const editor = editorFor(row.id, row.type, stored);
+
+  return (
     <>
       <p className="mb-2 text-sm">
         <Link
@@ -45,42 +77,13 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
         <h1 className="font-read text-3xl text-ink-1">Edit item</h1>
         <p className="text-sm text-ink-2">{STATUS_LABELS[row.status]}</p>
       </div>
-    </>
-  );
-
-  if (row.type !== "multiple_choice") {
-    return (
-      <>
-        {header}
+      {editor ? (
+        <ItemEditorLoader {...editor} />
+      ) : (
         <p className="text-ink-2">
           The editor for this item type arrives in a later story this sprint.
         </p>
-      </>
-    );
-  }
-
-  const content =
-    row.content && typeof row.content === "object" && !Array.isArray(row.content)
-      ? row.content
-      : {};
-  const stored = {
-    ...content,
-    type: row.type,
-    cjmmStep: row.cjmm_step ?? undefined,
-    tags: row.tags,
-    version: row.version,
-    answerKey: row.answer_key,
-    rationale: row.rationale,
-    scoring: row.scoring,
-  };
-
-  return (
-    <>
-      {header}
-      <MultipleChoiceEditorLoader
-        itemId={row.id}
-        initialValues={multipleChoiceFormFromStored(stored, row.id)}
-      />
+      )}
     </>
   );
 }
