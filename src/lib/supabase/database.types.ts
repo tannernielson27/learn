@@ -1,14 +1,304 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5";
-  };
   public: {
     Tables: {
-      [_ in never]: never;
+      case_studies: {
+        Row: {
+          bank_id: string;
+          created_at: string;
+          created_by: string | null;
+          ehr: Json;
+          id: string;
+          org_id: string;
+          status: Database["public"]["Enums"]["content_status"];
+          tags: string[];
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          bank_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          ehr: Json;
+          id?: string;
+          org_id: string;
+          status?: Database["public"]["Enums"]["content_status"];
+          tags?: string[];
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          bank_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          ehr?: Json;
+          id?: string;
+          org_id?: string;
+          status?: Database["public"]["Enums"]["content_status"];
+          tags?: string[];
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "case_studies_bank_org_fkey";
+            columns: ["bank_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "item_banks";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "case_studies_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      case_study_items: {
+        Row: {
+          case_study_id: string;
+          item_id: string;
+          org_id: string;
+          position: number;
+        };
+        Insert: {
+          case_study_id: string;
+          item_id: string;
+          org_id: string;
+          position: number;
+        };
+        Update: {
+          case_study_id?: string;
+          item_id?: string;
+          org_id?: string;
+          position?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "case_study_items_case_org_fkey";
+            columns: ["case_study_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "case_studies";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "case_study_items_item_org_fkey";
+            columns: ["item_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "items";
+            referencedColumns: ["id", "org_id"];
+          },
+        ];
+      };
+      item_banks: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          folder_path: string;
+          id: string;
+          name: string;
+          org_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          folder_path?: string;
+          id?: string;
+          name: string;
+          org_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          folder_path?: string;
+          id?: string;
+          name?: string;
+          org_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "item_banks_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "item_banks_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "orgs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      item_versions: {
+        Row: {
+          created_at: string;
+          item_id: string;
+          org_id: string;
+          snapshot: Json;
+          version: number;
+        };
+        Insert: {
+          created_at?: string;
+          item_id: string;
+          org_id: string;
+          snapshot: Json;
+          version: number;
+        };
+        Update: {
+          created_at?: string;
+          item_id?: string;
+          org_id?: string;
+          snapshot?: Json;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "item_versions_item_org_fkey";
+            columns: ["item_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "items";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "item_versions_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "orgs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      items: {
+        Row: {
+          answer_key: Json;
+          bank_id: string;
+          cjmm_step: number | null;
+          content: Json;
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          org_id: string;
+          rationale: Json;
+          scoring: Json;
+          status: Database["public"]["Enums"]["content_status"];
+          tags: string[];
+          type: string;
+          updated_at: string;
+          version: number;
+        };
+        Insert: {
+          answer_key: Json;
+          bank_id: string;
+          cjmm_step?: number | null;
+          content: Json;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          org_id: string;
+          rationale?: Json;
+          scoring: Json;
+          status?: Database["public"]["Enums"]["content_status"];
+          tags?: string[];
+          type: string;
+          updated_at?: string;
+          version?: number;
+        };
+        Update: {
+          answer_key?: Json;
+          bank_id?: string;
+          cjmm_step?: number | null;
+          content?: Json;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          org_id?: string;
+          rationale?: Json;
+          scoring?: Json;
+          status?: Database["public"]["Enums"]["content_status"];
+          tags?: string[];
+          type?: string;
+          updated_at?: string;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "items_bank_org_fkey";
+            columns: ["bank_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "item_banks";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "items_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      orgs: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          name?: string;
+        };
+        Relationships: [];
+      };
+      profiles: {
+        Row: {
+          created_at: string;
+          display_name: string | null;
+          id: string;
+          org_id: string | null;
+          role: Database["public"]["Enums"]["org_role"] | null;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          display_name?: string | null;
+          id: string;
+          org_id?: string | null;
+          role?: Database["public"]["Enums"]["org_role"] | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          display_name?: string | null;
+          id?: string;
+          org_id?: string | null;
+          role?: Database["public"]["Enums"]["org_role"] | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "profiles_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "orgs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -17,7 +307,8 @@ export type Database = {
       [_ in never]: never;
     };
     Enums: {
-      [_ in never]: never;
+      content_status: "draft" | "published" | "archived";
+      org_role: "instructor" | "student" | "admin";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -138,6 +429,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      content_status: ["draft", "published", "archived"],
+      org_role: ["instructor", "student", "admin"],
+    },
   },
 } as const;

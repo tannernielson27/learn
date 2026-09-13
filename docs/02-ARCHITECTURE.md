@@ -2,7 +2,7 @@
 
 ## 1. Stack (recommended)
 
-Versions reflect what is installed on the dev machine on 2026-09-10: Node 22.21, pnpm 11.9, git 2.52, gh 2.95, Vercel CLI 50.4. Supabase CLI is not installed yet (`pnpm add -D supabase` or `scoop install supabase`).
+Versions reflect what is installed on the dev machine on 2026-09-10: Node 22.21, pnpm 11.9, git 2.52, gh 2.95, Vercel CLI 50.4. The Supabase CLI is a devDependency since Sprint 4 (`pnpm exec supabase`).
 
 | Layer             | Choice                                                                    | Why                                                                                                                                                                           |
 | ----------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -94,6 +94,7 @@ Design notes:
 - Item JSON is validated by the same Zod schemas at the API boundary (Edge Function / route handler) before insert.
 - `sessions.set` snapshots the items at session start so edits during a live session do not change what students see.
 - Everything is org-scoped for RLS from day one, even when there is one org.
+- **As built in Sprint 4 (#65):** `items`, `case_studies` and `case_study_items` carry `org_id`, held equal to their bank's by composite foreign keys, so policies filter on a column instead of a join. RLS helpers live in a `private` schema the Data API does not expose. `item_versions` is append-only. `items.content` holds the item without `answerKey`, `rationale`, `scoring` and the fields stored as columns; `src/lib/supabase/itemRows.ts` splits and re-validates. By owner decision (2026-09-12), every new account joins the single org as an instructor; revisit before Sprint 7.
 
 ## 4. Live session design
 
@@ -116,11 +117,11 @@ interface LiveSessionTransport {
 
 ## 5. Environments & deployment
 
-| Env       | Where                                                                           | Data                                                 |
-| --------- | ------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| Local     | `pnpm dev` + Supabase local (Docker) or a dedicated free "dev" Supabase project | seed.sql                                             |
-| Preview   | Vercel preview per PR                                                           | shared dev Supabase project, `preview_` prefixed org |
-| Demo/Prod | Vercel production from `main`                                                   | prod Supabase project                                |
+| Env       | Where                                                                   | Data                                                      |
+| --------- | ----------------------------------------------------------------------- | --------------------------------------------------------- |
+| Local     | `pnpm dev` + Supabase local (Docker, ports 553xx) or the hosted project | seed.sql                                                  |
+| Preview   | Vercel preview per PR                                                   | hosted `learn` project, shared with production (ADR 0005) |
+| Demo/Prod | Vercel production from `main`                                           | hosted `learn` project until the split before Sprint 7    |
 
 CI on every PR: typecheck, lint, unit + coverage, Playwright smoke against the preview URL, axe on gallery pages, screenshot diff on item types.
 
