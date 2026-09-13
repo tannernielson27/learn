@@ -57,6 +57,11 @@ export default async function CaseStudyPage({
         <h1 className="font-read text-3xl text-ink-1">{row.title}</h1>
         <p className="text-sm text-ink-2">{STATUS_LABELS[row.status]}</p>
       </div>
+      <p className="mb-4 text-sm">
+        <Link href={`/author/case-studies/${row.id}/record`} className={linkClass}>
+          Edit patient record
+        </Link>
+      </p>
       <p className="mb-4 text-ink-1">{stepsReadyLabel(steps)}</p>
       {blockers.length > 0 ? (
         <section aria-labelledby="blockers-heading" className="rounded-sm border border-line p-4">

@@ -493,6 +493,75 @@ test("an author starts a case study in a bank and finds it listed as a draft", a
   await expectNoAxeViolations(page);
 });
 
+test("an author writes a case study's patient record and reads it at two times", async ({
+  page,
+  request,
+}, testInfo) => {
+  await signInAsNewAuthor(page, request, testInfo.project.name);
+  await page
+    .getByRole("textbox", { name: "Bank name" })
+    .fill(`Records ${testInfo.project.name} ${Date.now()}`);
+  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Case study title" }).fill("Pneumonia turning septic");
+  await page.getByRole("button", { name: "New case study" }).click();
+  await expect(page).toHaveURL(/\/author\/case-studies\/[0-9a-f-]{36}$/);
+
+  await page.getByRole("link", { name: "Edit patient record" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Patient record" })).toBeVisible();
+  await expect(page.getByText(/never enter real patient information/i)).toBeVisible();
+
+  const textbox = (name: string) => page.getByRole("textbox", { name, exact: true });
+  const select = (name: string) => page.getByRole("combobox", { name, exact: true });
+
+  await textbox("Age in years").fill("68");
+  await select("Sex").selectOption("male");
+  await textbox("Care setting").fill("Medical unit");
+  await textbox("Time point 1, Label").fill("0800");
+  await page.getByRole("button", { name: "Add time point" }).click();
+  await textbox("Time point 2, Label").fill("1200");
+
+  await select("New section kind").selectOption("history_physical");
+  await page.getByRole("button", { name: "Add section", exact: true }).click();
+  await textbox("Section 1, block 1, Text").fill("Admitted with community-acquired pneumonia.");
+
+  // A new case study's first time point is t1; the one just added is t2.
+  for (const [section, time, rate] of [
+    [2, "t1", "96"],
+    [3, "t2", "118"],
+  ] as const) {
+    await select("New section kind").selectOption("vital_signs");
+    await page.getByRole("button", { name: "Add section", exact: true }).click();
+    await select(`Section ${section}, Time`).selectOption(time);
+    const row = `Section ${section}, block 1, row 1`;
+    await textbox(`${row}, Measure`).fill("Heart rate");
+    await textbox(`${row}, Value`).fill(rate);
+    await textbox(`${row}, Unit`).fill("beats/min");
+  }
+  await select("Section 3, block 1, row 1, Flag").selectOption("H");
+
+  await expect(page.getByRole("region", { name: "Problems to fix" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Save record" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Record saved." })).toBeVisible();
+
+  const preview = page.getByRole("region", { name: "Preview" });
+  await expect(preview.getByRole("heading", { name: "68-year-old male" })).toBeVisible();
+  await preview.getByRole("tab", { name: "Vital Signs" }).click();
+  await expect(preview.getByText("96", { exact: true })).toBeVisible();
+  await preview.getByRole("radio", { name: "1200" }).click();
+  await expect(preview.getByText("118", { exact: true })).toBeVisible();
+  await expectNoAxeViolations(page);
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/record-editor.png`,
+    fullPage: true,
+  });
+
+  // The saved record reopens as it was written.
+  await page.reload();
+  await expect(textbox("Section 3, block 1, row 1, Value")).toHaveValue("118");
+  await page.getByRole("link", { name: "Back to case study" }).click();
+  await expect(page.getByRole("link", { name: "Edit patient record" })).toBeVisible();
+});
+
 test("an unknown bank is a not-found page, not an error", async ({ page, request }, testInfo) => {
   await signInAsNewAuthor(page, request, testInfo.project.name);
   const response = await page.goto("/author/banks/00000000-0000-4000-8000-00000000dead");

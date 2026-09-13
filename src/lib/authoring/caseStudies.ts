@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { caseStudyBlockers, type CaseStudyStepState } from "@/lib/authoring/caseStudyReadiness";
+import { fromEhrForm } from "@/lib/authoring/forms/ehr";
+import { parseEhrDraft } from "@/lib/authoring/forms/ehrDraft";
 import { withinItemSizeLimit } from "@/lib/authoring/payloadSize";
 import type { CjmmStep } from "@/lib/ngn/types";
 import { validateCaseStudy } from "@/lib/ngn/validate";
@@ -23,12 +25,12 @@ export const CASE_STUDY_ERRORS = {
 
 /**
  * A new draft's record: one time point and no tabs yet. Valid to store, not to publish. The
- * patient's sex is left out rather than guessed ("female" | "male" | "other" is the author's
- * choice for a fictional patient), so the record editor (#87) must open a header without it.
+ * patient's age and sex are left out rather than guessed (an age of 0 would read as a newborn),
+ * so the record editor (#87) opens a header without them.
  */
 export function emptyRecord(): Json {
   return {
-    patientHeader: { age: 0, setting: "" },
+    patientHeader: { setting: "" },
     timePoints: [{ id: "t1", label: "Admission" }],
     tabs: [],
   };
@@ -70,6 +72,21 @@ export async function saveRecord(
   if (error) return { ok: false, error: CASE_STUDY_ERRORS.failed };
   if (data.length === 0) return { ok: false, error: CASE_STUDY_ERRORS.gone };
   return { ok: true, value: undefined };
+}
+
+/**
+ * The record editor's Save: the request's size first, then the form's strict draft shape, then the
+ * record it describes, stored as a draft. An unfinished record saves; publishing checks it whole.
+ */
+export async function saveRecordForm(
+  client: Client,
+  caseStudyId: string,
+  values: unknown,
+): Promise<CaseStudyResult> {
+  if (!withinItemSizeLimit(values)) return { ok: false, error: CASE_STUDY_ERRORS.tooLarge };
+  const draft = parseEhrDraft(values);
+  if (!draft.ok) return { ok: false, error: draft.error };
+  return saveRecord(client, caseStudyId, fromEhrForm(draft.values));
 }
 
 /**
