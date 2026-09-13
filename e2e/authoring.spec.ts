@@ -168,9 +168,15 @@ test("an author writes a select-all-that-apply item, marks three answers, and pu
     const letter = "ABCDE"[index];
     await page.getByRole("textbox", { name: `Option ${letter}`, exact: true }).fill(text);
   }
-  for (const letter of ["A", "B", "D"]) {
+  // The summary asks for answers until one is marked, then follows every mark.
+  const scoring = page.getByRole("region", { name: "Scoring", exact: true });
+  await expect(scoring).toContainText("Finish the item to see its score.");
+  for (const letter of ["A", "B"]) {
     await page.getByRole("checkbox", { name: `Option ${letter} is correct` }).check();
   }
+  await expect(scoring).toContainText("Worth 2 points. +/- scoring.");
+  await page.getByRole("checkbox", { name: "Option D is correct" }).check();
+  await expect(scoring).toContainText("Worth 3 points. +/- scoring.");
 
   const preview = page.getByRole("region", { name: "Preview" });
   await expect(preview.getByText("Oxygen saturation 89%").first()).toBeVisible();
@@ -181,9 +187,9 @@ test("an author writes a select-all-that-apply item, marks three answers, and pu
   await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
 
   await page.getByRole("link", { name: "Back to bank" }).click();
-  await expect(
-    page.getByRole("link", { name: /^Which findings require immediate follow-up\?/ }),
-  ).toContainText("Published");
+  const listed = page.getByRole("link", { name: /^Which findings require immediate follow-up\?/ });
+  await expect(listed).toContainText("Published");
+  await expect(listed).toContainText("3 points");
 });
 
 test("an author writes a matrix item, marks one column per row, and publishes", async ({

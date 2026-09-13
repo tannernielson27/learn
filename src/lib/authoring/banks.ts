@@ -20,6 +20,8 @@ export interface ItemSummary {
   status: Database["public"]["Enums"]["content_status"];
   /** First line of the stem, for the list. Never the key or rationale. */
   stemExcerpt: string;
+  /** The item's maximum score, or null while a draft's scoring is not set. */
+  maxPoints: number | null;
   updatedAt: string;
 }
 
@@ -46,10 +48,11 @@ export async function listBanks(client: Client): Promise<BankSummary[]> {
 }
 
 export async function listItems(client: Client, bankId: string): Promise<ItemSummary[]> {
-  // Selects content only for the stem; answer_key and rationale are never read here.
+  // Selects content only for the stem and scoring only for its maximum; answer_key and rationale
+  // are never read here.
   const { data, error } = await client
     .from("items")
-    .select("id, type, status, updated_at, content->stem")
+    .select("id, type, status, updated_at, content->stem, scoring->maxPoints")
     .eq("bank_id", bankId)
     .order("updated_at", { ascending: false })
     .limit(ITEM_LIST_LIMIT);
@@ -60,7 +63,13 @@ export async function listItems(client: Client, bankId: string): Promise<ItemSum
     status: item.status,
     updatedAt: item.updated_at,
     stemExcerpt: stemExcerpt(item.stem),
+    maxPoints: storedMaxPoints(item.maxPoints),
   }));
+}
+
+/** A stored maximum score, or null when it is missing or not a whole number of at least one. */
+export function storedMaxPoints(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 ? value : null;
 }
 
 export function stemExcerpt(stem: unknown, max = 140): string {

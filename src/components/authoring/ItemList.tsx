@@ -37,6 +37,9 @@ export function ItemList({ items }: ItemListProps) {
             </span>
             <span className="flex flex-wrap gap-x-3 text-sm text-ink-2">
               <span>{typeLabel(item.type)}</span>
+              {item.maxPoints !== null ? (
+                <span>{item.maxPoints === 1 ? "1 point" : `${item.maxPoints} points`}</span>
+              ) : null}
               <span>{STATUS_LABELS[item.status]}</span>
               <span>{formatEdited(item.updatedAt)}</span>
             </span>

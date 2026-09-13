@@ -7,7 +7,9 @@ import { useEffect, useState, type ReactNode } from "react";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { Button } from "@/components/ui/Button";
 import type { EditorIssue } from "@/lib/authoring/issueMessages";
+import { scoringSummary } from "@/lib/authoring/scoringSummary";
 import type { Item } from "@/lib/ngn/schemas";
+import type { ScoringModel } from "@/lib/ngn/types";
 
 export interface SaveResult {
   ok: boolean;
@@ -20,7 +22,12 @@ type Status =
   | { kind: "done"; message: string }
   | { kind: "error"; message: string };
 
-export interface EditorShellProps<Values, Input> {
+/** Every editor's item input carries the scoring its form derives. */
+export interface ScoredInput {
+  scoring?: { model: ScoringModel; maxPoints: number };
+}
+
+export interface EditorShellProps<Values, Input extends ScoredInput> {
   /** The form as it stands right now (re-read on every render by the caller). */
   values: Values;
   initialValues: Values;
@@ -44,7 +51,7 @@ export function issueMessageId(prefix: string, field: string): string {
   return `${prefix}-issue-${field.replace(/\./g, "-")}`;
 }
 
-export function EditorShell<Values, Input>({
+export function EditorShell<Values, Input extends ScoredInput>({
   values,
   initialValues,
   input,
@@ -63,6 +70,8 @@ export function EditorShell<Values, Input>({
   const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(initialValues));
   const isDirty = JSON.stringify(values) !== savedSnapshot;
   const busy = status.kind === "busy";
+  // Only a valid item has a final maximum; scoringSummary says so instead of guessing.
+  const scoring = scoringSummary(input.scoring, valid);
 
   useEffect(() => {
     if (!isDirty) return;
@@ -98,6 +107,15 @@ export function EditorShell<Values, Input>({
   return (
     <div className="grid gap-8 lg:grid-cols-2">
       <form className="flex flex-col gap-6" onSubmit={(event) => event.preventDefault()} noValidate>
+        {/* Not a live region: it changes with every answer marked, and would repeat itself. */}
+        <section
+          aria-label="Scoring"
+          className="rounded-sm border border-line bg-surface-1 px-4 py-3"
+        >
+          <p className="text-sm font-medium text-ink-1">{scoring.headline}</p>
+          {scoring.rule ? <p className="mt-1 text-sm text-ink-2">{scoring.rule}</p> : null}
+        </section>
+
         {children}
 
         {issues.length > 0 ? (

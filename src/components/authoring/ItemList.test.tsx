@@ -8,6 +8,7 @@ const items = [
     type: "multiple_response",
     status: "draft" as const,
     stemExcerpt: "Which findings need follow-up?",
+    maxPoints: 3,
     updatedAt: "2026-09-12T15:00:00Z",
   },
   {
@@ -15,6 +16,7 @@ const items = [
     type: "matrix_multiple_choice",
     status: "published" as const,
     stemExcerpt: "",
+    maxPoints: null,
     updatedAt: "2026-09-11T08:00:00Z",
   },
 ];
@@ -44,6 +46,15 @@ describe("ItemList", () => {
       "/author/items/i2/play",
     );
     expect(screen.queryByRole("link", { name: /^Play Which findings/ })).not.toBeInTheDocument();
+  });
+
+  it("shows each item's points, and none while scoring is not set", () => {
+    render(<ItemList items={[...items, { ...items[0], id: "i3", maxPoints: 1 }]} />);
+    const [first, , third] = screen.getAllByRole("link", { name: /^(Which findings|Untitled)/ });
+    expect(within(first).getByText("3 points")).toBeInTheDocument();
+    expect(within(third).getByText("1 point")).toBeInTheDocument();
+    const untitled = screen.getByRole("link", { name: /^Untitled item/ });
+    expect(within(untitled).queryByText(/point/)).not.toBeInTheDocument();
   });
 
   it("falls back to the raw type for an unknown one rather than crashing", () => {
