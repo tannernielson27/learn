@@ -12,6 +12,7 @@ Every NGN item has an answer key and a scoring rule (0/1, plus-minus, dyad/triad
 - The scoring engine in `src/lib/ngn/scoring` is pure and runs anywhere, but in production it is only called on the server (route handler or Postgres/Edge function) that reads the key and writes `responses.score`.
 - Items have separate `content` and `answer_key` columns. RLS stops students from selecting `answer_key`. The key and rationale reach students only through a host-only reveal RPC.
 - Client-side scoring is allowed only in the gallery and fixture modes, which have no real students. `ItemPlayer` already strips the key outside feedback mode.
+- **Amended 2026-09-13 (#88):** authoring pages are a third exception. An author (instructor or admin) may read their own org's keys, since the editors cannot work without them, and **Preview case study** in the builder scores in the author's browser. These routes sit behind `requireAuthor` and org RLS, so no student reaches them. The keyless play route (`/author/items/[id]/play`) and every student-facing payload keep the rule above, and must not reuse the builder's preview data.
 
 ## Consequences
 

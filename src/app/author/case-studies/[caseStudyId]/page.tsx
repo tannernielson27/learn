@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { publishCaseStudyAction } from "@/app/author/case-studies/[caseStudyId]/actions";
+import { assembleCaseStudy } from "@/lib/authoring/caseStudies";
 import {
   CaseStudyBuilder,
   type BuilderStep,
@@ -40,7 +42,7 @@ export default async function CaseStudyPage({
   const { data: row } = await supabase
     .from("case_studies")
     .select(
-      "id, bank_id, title, status, ehr, case_study_items!case_study_items_case_org_fkey (position, item_id, items!case_study_items_item_org_fkey (id, type, cjmm_step, tags, version, status, content, answer_key, rationale, scoring))",
+      "id, bank_id, title, tags, status, ehr, case_study_items!case_study_items_case_org_fkey (position, item_id, items!case_study_items_item_org_fkey (id, type, cjmm_step, tags, version, status, content, answer_key, rationale, scoring))",
     )
     .eq("id", caseStudyId)
     .maybeSingle();
@@ -115,6 +117,8 @@ export default async function CaseStudyPage({
         steps={steps}
         readyLabel={stepsReadyLabel(stepStates)}
         recordPreview={previewRecord(recordForm)}
+        preview={assembleCaseStudy(row, "preview")}
+        publish={publishCaseStudyAction.bind(null, row.id)}
       >
         <p className="eyebrow mb-1">Case study</p>
         <div className="mb-6 flex flex-wrap items-baseline gap-3">

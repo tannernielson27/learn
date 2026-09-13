@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import type { SaveResult } from "@/components/authoring/EditorShell";
-import { CASE_STUDY_ERRORS, saveRecordForm, startStep } from "@/lib/authoring/caseStudies";
+import {
+  CASE_STUDY_ERRORS,
+  publishCaseStudy,
+  saveRecordForm,
+  startStep,
+} from "@/lib/authoring/caseStudies";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
@@ -58,4 +63,21 @@ export async function startStepItem(
 
   revalidateCaseStudy(caseStudyId);
   return { error: "" };
+}
+
+export type PublishCaseStudyResult =
+  { ok: true } | { ok: false; error: string; blockers?: string[] };
+
+/**
+ * Publishes the case study when the whole of it validates, naming every blocker when it does not.
+ * Each step item is published from its own step first; this publishes the case study itself.
+ */
+export async function publishCaseStudyAction(caseStudyId: string): Promise<PublishCaseStudyResult> {
+  if (!isUuid(caseStudyId)) return { ok: false, error: CASE_STUDY_ERRORS.gone };
+  const { supabase } = await requireAuthor(`/author/case-studies/${caseStudyId}`);
+  const result = await publishCaseStudy(supabase, caseStudyId);
+  if (!result.ok) return { ok: false, error: result.error, blockers: result.blockers };
+
+  revalidateCaseStudy(caseStudyId);
+  return { ok: true };
 }
