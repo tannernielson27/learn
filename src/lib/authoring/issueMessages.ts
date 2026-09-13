@@ -1,4 +1,5 @@
 import type { ItemType } from "@/lib/ngn/labels";
+import { describeEhrIssue } from "./ehrIssues";
 
 /** What the editor shows for one problem: which form field, and what to do about it. */
 export interface EditorIssue {
@@ -427,7 +428,11 @@ export function describeIssues(
   const byField = new Map<string, EditorIssue>();
   for (const issue of issues) {
     const path = issue.path.map(String);
-    const described = specific?.(issue, path, context) ??
+    // A standalone item's record reads as the record editor words it, under the record's fields.
+    const record =
+      path[0] === "ehr" ? describeEhrIssue({ ...issue, path: issue.path.slice(1) }) : undefined;
+    const described = (record && { field: `ehr.${record.field}`, message: record.message }) ??
+      specific?.(issue, path, context) ??
       describeShared(issue, path, context) ?? { field: path[0] ?? "item", message: FALLBACK };
     // A field keeps its first message: the schema reports the most basic problem first.
     if (!byField.has(described.field)) byField.set(described.field, described);

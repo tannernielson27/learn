@@ -1,3 +1,4 @@
+import { recordFormOf, recordInputOf, storedRecordFormOf, type EhrFormValues } from "./ehr";
 import {
   multipleResponseItemSchema,
   type ItemInputOf,
@@ -31,7 +32,7 @@ export interface MultipleResponseFormValues {
   tags: string[];
   cjmmStep?: MultipleResponseItem["cjmmStep"];
   difficulty?: MultipleResponseItem["difficulty"];
-  ehr?: MultipleResponseItem["ehr"];
+  ehr?: EhrFormValues;
   meta: MultipleResponseItem["meta"];
   stem: string;
   instructions: string;
@@ -56,7 +57,7 @@ export function toMultipleResponseForm(item: MultipleResponseItem): MultipleResp
     tags: [...item.tags],
     cjmmStep: item.cjmmStep,
     difficulty: item.difficulty,
-    ehr: item.ehr,
+    ...recordFormOf(item.ehr),
     meta: { ...item.meta },
     stem: item.stem.value,
     instructions: item.instructions ?? "",
@@ -95,7 +96,7 @@ export function fromMultipleResponseForm(
     tags: [...values.tags],
     ...(values.cjmmStep !== undefined ? { cjmmStep: values.cjmmStep } : {}),
     ...(values.difficulty !== undefined ? { difficulty: values.difficulty } : {}),
-    ...(values.ehr !== undefined ? { ehr: values.ehr } : {}),
+    ...recordInputOf(values.ehr),
     stem: markdown(values.stem),
     ...(blank(values.instructions) ? {} : { instructions: values.instructions }),
     content: {
@@ -169,6 +170,7 @@ export function multipleResponseFormFromStored(
     ...blankForm,
     id: storedId(stored.id, rowId),
     version: storedVersion(stored.version),
+    ...storedRecordFormOf(stored),
     tags: storedStrings(stored.tags),
     stem: markdownText(stored.stem),
     instructions: storedString(stored.instructions, blankForm.instructions),

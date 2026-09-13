@@ -1,3 +1,4 @@
+import { recordFormOf, recordInputOf, storedRecordFormOf, type EhrFormValues } from "./ehr";
 import {
   orderedResponseItemSchema,
   type ItemInputOf,
@@ -29,7 +30,7 @@ export interface OrderedResponseFormValues {
   tags: string[];
   cjmmStep?: OrderedItem["cjmmStep"];
   difficulty?: OrderedItem["difficulty"];
-  ehr?: OrderedItem["ehr"];
+  ehr?: EhrFormValues;
   meta: OrderedItem["meta"];
   stem: string;
   instructions: string;
@@ -52,7 +53,7 @@ export function toOrderedResponseForm(item: OrderedItem): OrderedResponseFormVal
     tags: [...item.tags],
     cjmmStep: item.cjmmStep,
     difficulty: item.difficulty,
-    ehr: item.ehr,
+    ...recordFormOf(item.ehr),
     meta: { ...item.meta },
     stem: item.stem.value,
     instructions: item.instructions ?? "",
@@ -84,7 +85,7 @@ export function fromOrderedResponseForm(
     tags: [...values.tags],
     ...(values.cjmmStep !== undefined ? { cjmmStep: values.cjmmStep } : {}),
     ...(values.difficulty !== undefined ? { difficulty: values.difficulty } : {}),
-    ...(values.ehr !== undefined ? { ehr: values.ehr } : {}),
+    ...recordInputOf(values.ehr),
     type: "ordered_response",
     stem: markdown(values.stem),
     ...(blank(values.instructions) ? {} : { instructions: values.instructions }),
@@ -166,6 +167,7 @@ export function orderedResponseFormFromStored(
     ...blankForm,
     id: storedId(stored.id, rowId),
     version: storedVersion(stored.version),
+    ...storedRecordFormOf(stored),
     tags: storedStrings(stored.tags),
     stem: markdownText(stored.stem),
     instructions: storedString(stored.instructions),

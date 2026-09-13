@@ -1,3 +1,4 @@
+import { recordFormOf, recordInputOf, storedRecordFormOf, type EhrFormValues } from "./ehr";
 import {
   dropdownTableItemSchema,
   rationaleSchema,
@@ -37,7 +38,7 @@ export interface DropdownTableFormValues {
   tags: string[];
   cjmmStep?: DropdownTableItem["cjmmStep"];
   difficulty?: DropdownTableItem["difficulty"];
-  ehr?: DropdownTableItem["ehr"];
+  ehr?: EhrFormValues;
   meta: DropdownTableItem["meta"];
   /** Carried through untouched; per-row rationale in the table editor arrives with #49. */
   rationale: DropdownTableItem["rationale"];
@@ -61,7 +62,7 @@ export function toDropdownTableForm(item: DropdownTableItem): DropdownTableFormV
     tags: [...item.tags],
     cjmmStep: item.cjmmStep,
     difficulty: item.difficulty,
-    ehr: item.ehr,
+    ...recordFormOf(item.ehr),
     meta: { ...item.meta },
     rationale: item.rationale,
     stem: item.stem.value,
@@ -91,7 +92,7 @@ export function fromDropdownTableForm(
     tags: [...values.tags],
     ...(values.cjmmStep !== undefined ? { cjmmStep: values.cjmmStep } : {}),
     ...(values.difficulty !== undefined ? { difficulty: values.difficulty } : {}),
-    ...(values.ehr !== undefined ? { ehr: values.ehr } : {}),
+    ...recordInputOf(values.ehr),
     stem: markdown(values.stem),
     ...(blank(values.instructions) ? {} : { instructions: values.instructions }),
     content: {
@@ -184,6 +185,7 @@ export function dropdownTableFormFromStored(
     ...blankForm,
     id: storedId(stored.id, rowId),
     version: storedVersion(stored.version),
+    ...storedRecordFormOf(stored),
     tags: storedStrings(stored.tags),
     rationale: rationale.success ? rationale.data : blankForm.rationale,
     stem: markdownText(stored.stem),

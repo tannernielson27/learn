@@ -27,8 +27,11 @@ const blockDraftSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
-/** What Save accepts for a record: every field typed and size-limited, nothing extra. */
-const ehrDraftSchema = z.strictObject({
+/**
+ * What Save accepts for a record: every field typed and size-limited, nothing extra. Item draft
+ * schemas use it too, for a record on a standalone item.
+ */
+export const ehrFormDraftSchema = z.strictObject({
   patient: z.strictObject({
     name: text(200),
     age: text(10),
@@ -54,7 +57,7 @@ const ehrDraftSchema = z.strictObject({
 });
 
 export function parseEhrDraft(input: unknown): DraftParseResult<EhrFormValues> {
-  const parsed = ehrDraftSchema.safeParse(input);
+  const parsed = ehrFormDraftSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: DRAFT_ERROR };
   return { ok: true, values: parsed.data as EhrFormValues };
 }

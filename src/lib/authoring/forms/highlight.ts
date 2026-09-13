@@ -1,3 +1,4 @@
+import { recordFormOf, recordInputOf, storedRecordFormOf, type EhrFormValues } from "./ehr";
 import {
   highlightTableItemSchema,
   highlightTextItemSchema,
@@ -27,7 +28,7 @@ interface HighlightFormBase {
   tags: string[];
   cjmmStep?: HighlightItem["cjmmStep"];
   difficulty?: HighlightItem["difficulty"];
-  ehr?: HighlightItem["ehr"];
+  ehr?: EhrFormValues;
   meta: HighlightItem["meta"];
   stem: string;
   instructions: string;
@@ -168,7 +169,7 @@ function baseForm(item: HighlightItem): HighlightFormBase {
     tags: [...item.tags],
     cjmmStep: item.cjmmStep,
     difficulty: item.difficulty,
-    ehr: item.ehr,
+    ...recordFormOf(item.ehr),
     meta: { ...item.meta },
     stem: item.stem.value,
     instructions: item.instructions ?? "",
@@ -211,7 +212,7 @@ function envelope(values: HighlightFormBase, spans: readonly MarkedSpan[]) {
     tags: [...values.tags],
     ...(values.cjmmStep !== undefined ? { cjmmStep: values.cjmmStep } : {}),
     ...(values.difficulty !== undefined ? { difficulty: values.difficulty } : {}),
-    ...(values.ehr !== undefined ? { ehr: values.ehr } : {}),
+    ...recordInputOf(values.ehr),
     stem: markdown(values.stem),
     ...(blank(values.instructions) ? {} : { instructions: values.instructions }),
     answerKey: { correctSpanIds },
@@ -311,6 +312,7 @@ function storedBase(stored: Record<string, unknown>, rowId: string): HighlightFo
   return {
     ...emptyBase(storedId(stored.id, rowId)),
     version: storedVersion(stored.version),
+    ...storedRecordFormOf(stored),
     tags: storedStrings(stored.tags),
     stem: markdownText(stored.stem),
     instructions: storedString(stored.instructions),

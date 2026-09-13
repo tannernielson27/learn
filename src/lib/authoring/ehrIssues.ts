@@ -5,7 +5,7 @@ const FALLBACK = "Something in this record needs attention. Check each section."
 const place = (index: string) => Number(index) + 1;
 
 /** One `ehrRecordSchema` issue in the record editor's words, pointing at the field to fix. */
-function describe(issue: SchemaIssue): EditorIssue {
+export function describeEhrIssue(issue: SchemaIssue): EditorIssue {
   const [area, first, part, blockIndex, blockPart, rowIndex, rowPart] = issue.path.map(String);
 
   if (area === "patientHeader") {
@@ -79,7 +79,7 @@ export function describeEhrIssues(issues: readonly SchemaIssue[]): EditorIssue[]
   const seen = new Set<string>();
   const described: EditorIssue[] = [];
   for (const issue of issues) {
-    const entry = describe(issue);
+    const entry = describeEhrIssue(issue);
     if (seen.has(entry.field)) continue;
     seen.add(entry.field);
     described.push(entry);

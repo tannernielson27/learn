@@ -160,7 +160,7 @@ function GroupFields({
 }
 
 export function GroupingEditor({ initialValues, onSaveDraft, onPublish }: GroupingEditorProps) {
-  const { register, control, getValues, setFocus } = useForm<GroupingFormValues>({
+  const { register, control, getValues, setValue, setFocus } = useForm<GroupingFormValues>({
     defaultValues: initialValues,
   });
   const { fields, append, remove } = useFieldArray({ control, name: "rows", keyName: "fieldKey" });
@@ -202,6 +202,7 @@ export function GroupingEditor({ initialValues, onSaveDraft, onPublish }: Groupi
       toInput={fromGroupingForm}
       onSaveDraft={onSaveDraft}
       onPublish={onPublish}
+      onRecordChange={(record) => setValue("ehr", record, { shouldDirty: true })}
     >
       <div className="flex flex-col gap-2">
         <label htmlFor={`${ids}-stem`} className="text-sm font-medium text-ink-1">

@@ -190,6 +190,30 @@ export function emptyEhrForm(): EhrFormValues {
 }
 
 // ---------------------------------------------------------------------------
+// A record on a standalone item (#89)
+// ---------------------------------------------------------------------------
+
+/** An item's record as its form holds it: in the record editor's shape, or not at all. */
+export function recordFormOf(ehr: EhrRecord | undefined): { ehr?: EhrFormValues } {
+  return ehr ? { ehr: toEhrForm(ehr) } : {};
+}
+
+/**
+ * The record an item form describes, or none. It may be unfinished; the item's schema checks it
+ * with the rest of the item, so the cast only names the shape it is checked against.
+ */
+export function recordInputOf(ehr: EhrFormValues | undefined): { ehr?: EhrRecord } {
+  return ehr ? { ehr: fromEhrForm(ehr) as EhrRecord } : {};
+}
+
+/** A stored draft item's record, reopened however far the author got; none when there is none. */
+export function storedRecordFormOf(stored: Record<string, unknown>): { ehr?: EhrFormValues } {
+  return stored.ehr === undefined || stored.ehr === null
+    ? {}
+    : { ehr: ehrFormFromStored(stored.ehr) };
+}
+
+// ---------------------------------------------------------------------------
 // Time points and sections
 // ---------------------------------------------------------------------------
 
