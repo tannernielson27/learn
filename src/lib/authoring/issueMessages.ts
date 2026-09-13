@@ -309,7 +309,39 @@ const describeHighlightTable: Describer = (issue, path) => {
   return describeHighlight(issue, path, "rows");
 };
 
+/** Word-bank wording first; the sentence, blank count and anchor read as they do for cloze. */
+const describeDragDrop: Describer = (issue, path, context) => {
+  const at = path.join(".");
+  if (at === "content.bank") {
+    return issue.code === "too_big"
+      ? { field: "bank", message: "The word bank can hold at most 8 words." }
+      : { field: "bank", message: "Add at least 4 words to the word bank." };
+  }
+  if (path[0] === "content" && path[1] === "bank" && path[2] !== undefined) {
+    const index = Number(path[2]);
+    return { field: `bank.${index}.label`, message: `Word ${index + 1} needs text.` };
+  }
+  if (path[0] === "answerKey" && path[1] === "blanks" && path[2] !== undefined) {
+    const blankNumber = Number(path[2]) + 1;
+    return issue.code === "custom"
+      ? {
+          field: `blanks.${path[2]}.correct`,
+          message: `Blank ${blankNumber} uses the same word as another blank. Choose a different word, or let words be reused.`,
+        }
+      : {
+          field: `blanks.${path[2]}.correct`,
+          message: `Choose the correct word for blank ${blankNumber}.`,
+        };
+  }
+  if (at === "answerKey") {
+    return { field: "blanks", message: "Every blank needs its correct word from the bank." };
+  }
+  return describeCloze(issue, path, context);
+};
+
 const DESCRIBERS: Partial<Record<ItemType, Describer>> = {
+  dragdrop_cloze: describeDragDrop,
+  dragdrop_rationale: describeDragDrop,
   highlight_text: describeHighlightText,
   highlight_table: describeHighlightTable,
   multiple_choice: describeMultipleChoice,

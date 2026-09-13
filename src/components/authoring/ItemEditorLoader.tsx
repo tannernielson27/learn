@@ -2,6 +2,8 @@
 
 import dynamic from "next/dynamic";
 import {
+  publishDragdropCloze,
+  publishDragdropRationale,
   publishDropdownCloze,
   publishDropdownRationale,
   publishDropdownTable,
@@ -12,6 +14,8 @@ import {
   publishMatrixMultipleResponse,
   publishMultipleChoice,
   publishMultipleResponse,
+  saveDragdropClozeDraft,
+  saveDragdropRationaleDraft,
   saveDropdownClozeDraft,
   saveDropdownRationaleDraft,
   saveDropdownTableDraft,
@@ -24,6 +28,7 @@ import {
   saveMultipleResponseDraft,
 } from "@/app/author/items/[itemId]/actions";
 import type { ClozeFormValues } from "@/lib/authoring/forms/cloze";
+import type { DragDropFormValues } from "@/lib/authoring/forms/dragdrop";
 import type { DropdownTableFormValues } from "@/lib/authoring/forms/dropdownTable";
 import type {
   HighlightTableFormValues,
@@ -69,6 +74,10 @@ const HighlightTableEditor = dynamic(
   () => import("./HighlightTableEditor").then((module) => module.HighlightTableEditor),
   { ssr: false, loading },
 );
+const DragDropEditor = dynamic(
+  () => import("./DragDropEditor").then((module) => module.DragDropEditor),
+  { ssr: false, loading },
+);
 
 export type ItemEditorLoaderProps =
   | { itemId: string; type: "multiple_choice"; initialValues: MultipleChoiceFormValues }
@@ -80,7 +89,9 @@ export type ItemEditorLoaderProps =
   | { itemId: string; type: "dropdown_cloze"; initialValues: ClozeFormValues }
   | { itemId: string; type: "dropdown_rationale"; initialValues: ClozeFormValues }
   | { itemId: string; type: "highlight_text"; initialValues: HighlightTextFormValues }
-  | { itemId: string; type: "highlight_table"; initialValues: HighlightTableFormValues };
+  | { itemId: string; type: "highlight_table"; initialValues: HighlightTableFormValues }
+  | { itemId: string; type: "dragdrop_cloze"; initialValues: DragDropFormValues }
+  | { itemId: string; type: "dragdrop_rationale"; initialValues: DragDropFormValues };
 
 export function ItemEditorLoader(props: ItemEditorLoaderProps) {
   const { itemId } = props;
@@ -167,6 +178,24 @@ export function ItemEditorLoader(props: ItemEditorLoaderProps) {
           initialValues={props.initialValues}
           onSaveDraft={(values) => saveHighlightTableDraft(itemId, values)}
           onPublish={(item) => publishHighlightTable(itemId, item)}
+        />
+      );
+    case "dragdrop_cloze":
+      return (
+        <DragDropEditor
+          type="dragdrop_cloze"
+          initialValues={props.initialValues}
+          onSaveDraft={(values) => saveDragdropClozeDraft(itemId, values)}
+          onPublish={(item) => publishDragdropCloze(itemId, item)}
+        />
+      );
+    case "dragdrop_rationale":
+      return (
+        <DragDropEditor
+          type="dragdrop_rationale"
+          initialValues={props.initialValues}
+          onSaveDraft={(values) => saveDragdropRationaleDraft(itemId, values)}
+          onPublish={(item) => publishDragdropRationale(itemId, item)}
         />
       );
   }

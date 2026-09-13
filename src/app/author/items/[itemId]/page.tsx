@@ -6,6 +6,7 @@ import {
   type ItemEditorLoaderProps,
 } from "@/components/authoring/ItemEditorLoader";
 import { clozeFormFromStored } from "@/lib/authoring/forms/cloze";
+import { dragDropFormFromStored } from "@/lib/authoring/forms/dragdrop";
 import { dropdownTableFormFromStored } from "@/lib/authoring/forms/dropdownTable";
 import {
   highlightTableFormFromStored,
@@ -45,7 +46,10 @@ function editorFor(rowId: string, type: string, stored: unknown): ItemEditorLoad
       return { itemId: rowId, type, initialValues: highlightTextFormFromStored(stored, rowId) };
     case "highlight_table":
       return { itemId: rowId, type, initialValues: highlightTableFormFromStored(stored, rowId) };
-    // Drag-and-drop, ordered response and bowtie editors arrive later in Sprint 5.
+    case "dragdrop_cloze":
+    case "dragdrop_rationale":
+      return { itemId: rowId, type, initialValues: dragDropFormFromStored(stored, rowId) };
+    // Ordered response and bowtie editors arrive later in Sprint 5.
     default:
       return null;
   }

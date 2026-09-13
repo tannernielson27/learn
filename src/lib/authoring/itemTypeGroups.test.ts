@@ -25,6 +25,8 @@ describe("isEditorReady", () => {
   it("enables exactly the types with a shipped editor", () => {
     expect([...EDITOR_READY_TYPES].sort()).toEqual(
       [
+        "dragdrop_cloze",
+        "dragdrop_rationale",
         "dropdown_cloze",
         "dropdown_rationale",
         "dropdown_table",
@@ -39,7 +41,7 @@ describe("isEditorReady", () => {
     );
   });
 
-  it.each([["bowtie"], ["dragdrop_rationale"], ["dragdrop_cloze"], ["ordered_response"]] as const)(
+  it.each([["bowtie"], ["ordered_response"]] as const)(
     "keeps %s for a later Sprint 5 story",
     (type) => {
       expect(isEditorReady(type)).toBe(false);
