@@ -97,16 +97,43 @@ test("an author writes a multiple choice item beside its preview, saves a draft,
   await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
 
   await page.getByRole("link", { name: "Back to bank" }).click();
-  await expect(
-    page.getByRole("link", { name: /Which action should the nurse take first\?/ }),
-  ).toContainText("Published");
+  // Anchored: a published item also has a link named "Play <stem>".
+  const editLink = page.getByRole("link", { name: /^Which action should the nurse take first\?/ });
+  await expect(editLink).toContainText("Published");
 
   // A reload opens exactly what was published.
-  await page.getByRole("link", { name: /Which action should the nurse take first\?/ }).click();
+  await editLink.click();
   await expect(page.getByRole("textbox", { name: "Option C", exact: true })).toHaveValue(
     "Document the finding",
   );
   await expect(page.getByRole("radio", { name: "Option A is correct" })).toBeChecked();
+
+  // Play it from the bank: the page carries no key, and the server scores the answer.
+  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Play Which action should the nurse take first?" }).click();
+  await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}\/play$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Play item" })).toBeVisible();
+  const html = await page.content();
+  expect(html).not.toContain("correctOptionId");
+  expect(html).not.toContain("answerKey");
+  await expectNoAxeViolations(page);
+
+  const scored = page.waitForResponse(
+    (response) => response.url().endsWith("/play/score") && response.request().method() === "POST",
+  );
+  await page.getByRole("radio", { name: /Assess the airway/ }).check();
+  await page.getByRole("button", { name: "Submit" }).click();
+  expect((await scored).status()).toBe(200);
+  const score = page.getByRole("complementary", { name: "Score" });
+  await expect(score).toBeVisible();
+  await expect(score).toContainText("1");
+  await expect(score).toBeFocused();
+  await expectNoAxeViolations(page);
+
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/play-from-bank-scored.png`,
+    fullPage: true,
+  });
 });
 
 test("an author writes a select-all-that-apply item, marks three answers, and publishes", async ({
@@ -155,7 +182,7 @@ test("an author writes a select-all-that-apply item, marks three answers, and pu
 
   await page.getByRole("link", { name: "Back to bank" }).click();
   await expect(
-    page.getByRole("link", { name: /Which findings require immediate follow-up\?/ }),
+    page.getByRole("link", { name: /^Which findings require immediate follow-up\?/ }),
   ).toContainText("Published");
 });
 
@@ -210,7 +237,7 @@ test("an author writes a matrix item, marks one column per row, and publishes", 
 
   await page.getByRole("link", { name: "Back to bank" }).click();
   await expect(
-    page.getByRole("link", { name: /For each finding, indicate whether/ }),
+    page.getByRole("link", { name: /^For each finding, indicate whether/ }),
   ).toContainText("Published");
 });
 

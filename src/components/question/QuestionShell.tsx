@@ -17,6 +17,10 @@ export interface QuestionShellProps {
   /** Whether the current response is complete enough to submit. */
   canSubmit: boolean;
   onSubmit?: () => void;
+  /** A server is checking the answer: Submit stays in place, says so, and ignores presses. */
+  submitting?: boolean;
+  /** Why the last check failed, shown beside Submit. */
+  submitError?: string;
   /** Present in feedback mode. */
   score?: ScoreResult;
   /** Item-specific note shown under the scoring rule in feedback mode. */
@@ -52,6 +56,8 @@ export function QuestionShell({
   progress,
   canSubmit,
   onSubmit,
+  submitting = false,
+  submitError,
   score,
   scoreNote,
   rationale,
@@ -75,6 +81,7 @@ export function QuestionShell({
   }, [score]);
 
   const submit = () => {
+    if (submitting) return;
     focusScore.current = true;
     onSubmit?.();
   };
@@ -120,11 +127,21 @@ export function QuestionShell({
       {mode === "answer" ? (
         <div className="fixed inset-x-0 bottom-0 border-t border-line bg-surface-1/95 px-5 py-3 backdrop-blur-sm [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
           <div className="mx-auto flex max-w-3xl items-center justify-end gap-3">
-            {!canSubmit ? (
+            {submitError ? (
+              <p role="alert" className="text-sm text-incorrect">
+                {submitError}
+              </p>
+            ) : !canSubmit ? (
               <span className="text-sm text-ink-2">Complete the item to submit.</span>
             ) : null}
-            <Button variant="primary" disabled={!canSubmit} onClick={submit}>
-              Submit
+            <Button
+              variant="primary"
+              disabled={!canSubmit}
+              // aria-disabled, not disabled, while checking: the button keeps focus and its name.
+              aria-disabled={submitting ? true : undefined}
+              onClick={submit}
+            >
+              {submitting ? "Checking your answer" : "Submit"}
             </Button>
           </div>
         </div>
