@@ -9,8 +9,10 @@ import {
   placeStep,
   publishCaseStudy,
   reorderSteps,
+  pinnedStepFor,
   saveRecord,
   saveRecordForm,
+  startStep,
 } from "./caseStudies";
 import { DRAFT_ERROR } from "./forms/draft";
 import { toEhrForm } from "./forms/ehr";
@@ -28,7 +30,7 @@ function fakeClient(queue: Record<string, Result[]> = {}, rpcResult: Result = { 
   const from = vi.fn((table: string) => {
     const result = next(table);
     const chain: Record<string, unknown> = {};
-    for (const method of ["insert", "update", "select", "eq", "order", "limit"]) {
+    for (const method of ["insert", "update", "delete", "select", "eq", "order", "limit"]) {
       chain[method] = (...args: unknown[]) => {
         calls.push({ table, method, args });
         return chain;
@@ -102,6 +104,115 @@ describe("createCaseStudy", () => {
     // Neither is guessed: an age of 0 would read as a newborn in the record editor (#87).
     expect((emptyRecord() as { patientHeader: object }).patientHeader).not.toHaveProperty("sex");
     expect((emptyRecord() as { patientHeader: object }).patientHeader).not.toHaveProperty("age");
+  });
+});
+
+describe("pinnedStepFor", () => {
+  it("is the item's position in its case study", async () => {
+    const fake = fakeClient({ case_study_items: [{ data: { position: 4 }, error: null }] });
+    expect(await pinnedStepFor(fake.client, "item-1")).toBe(4);
+    expect(fake.calls).toContainEqual({
+      table: "case_study_items",
+      method: "eq",
+      args: ["item_id", "item-1"],
+    });
+  });
+
+  it("is null for an item that is not a step, or when the read fails", async () => {
+    const none = fakeClient({ case_study_items: [{ data: null, error: null }] });
+    expect(await pinnedStepFor(none.client, "item-2")).toBeNull();
+    const failed = fakeClient({ case_study_items: [{ data: null, error: { message: "x" } }] });
+    expect(await pinnedStepFor(failed.client, "item-3")).toBeNull();
+  });
+});
+
+describe("startStep", () => {
+  const args = {
+    caseStudyId: CASE_ID,
+    position: 2 as const,
+    type: "multiple_choice" as const,
+    userId: "user-1",
+  };
+  const caseStudyRow = { data: { bank_id: BANK_ID, org_id: ORG_ID }, error: null };
+
+  it("says the case study is gone when it cannot be read", async () => {
+    const fake = fakeClient({ case_studies: [{ data: null, error: null }] });
+    expect(await startStep(fake.client, args)).toEqual({
+      ok: false,
+      error: CASE_STUDY_ERRORS.gone,
+    });
+    expect(fake.rpc).not.toHaveBeenCalled();
+  });
+
+  it("starts a draft of the type in the case study's bank, pinned to the step, and places it", async () => {
+    const fake = fakeClient({
+      case_studies: [caseStudyRow],
+      case_study_items: [{ data: null, error: null }],
+      items: [{ data: { id: "new-item" }, error: null }],
+    });
+    expect(await startStep(fake.client, args)).toEqual({ ok: true, value: { itemId: "new-item" } });
+    const insert = fake.calls.find((call) => call.table === "items" && call.method === "insert");
+    expect(insert?.args[0]).toMatchObject({
+      bank_id: BANK_ID,
+      org_id: ORG_ID,
+      type: "multiple_choice",
+      status: "draft",
+      cjmm_step: 2,
+      created_by: "user-1",
+    });
+    expect(fake.rpc).toHaveBeenCalledWith("place_case_study_step", {
+      target: CASE_ID,
+      step_position: 2,
+      step_item: "new-item",
+    });
+    expect(fake.calls.some((call) => call.method === "delete")).toBe(false);
+    // A published case study with a new, unfinished step is not ready any more.
+    expect(fake.calls).toContainEqual({
+      table: "case_studies",
+      method: "update",
+      args: [{ status: "draft" }],
+    });
+  });
+
+  it("removes the new item again when it cannot be placed", async () => {
+    const fake = fakeClient(
+      {
+        case_studies: [caseStudyRow],
+        case_study_items: [{ data: null, error: null }],
+        items: [{ data: { id: "new-item" }, error: null }],
+      },
+      { error: { code: "23505" } },
+    );
+    expect(await startStep(fake.client, args)).toEqual({
+      ok: false,
+      error: CASE_STUDY_ERRORS.alreadyStep,
+    });
+    expect(fake.calls).toContainEqual({ table: "items", method: "delete", args: [] });
+    expect(fake.calls).toContainEqual({ table: "items", method: "eq", args: ["id", "new-item"] });
+  });
+
+  it("changing a step's type replaces its item and removes the old one only if it is a draft", async () => {
+    const fake = fakeClient({
+      case_studies: [caseStudyRow],
+      case_study_items: [{ data: { item_id: "old-item" }, error: null }],
+      items: [{ data: { id: "new-item" }, error: null }],
+    });
+    expect(await startStep(fake.client, args)).toEqual({ ok: true, value: { itemId: "new-item" } });
+    expect(fake.calls).toContainEqual({ table: "items", method: "eq", args: ["id", "old-item"] });
+    expect(fake.calls).toContainEqual({ table: "items", method: "eq", args: ["status", "draft"] });
+  });
+
+  it("says it failed, and places nothing, when the item cannot be created", async () => {
+    const fake = fakeClient({
+      case_studies: [caseStudyRow],
+      case_study_items: [{ data: null, error: null }],
+      items: [{ data: null, error: { message: "denied" } }],
+    });
+    expect(await startStep(fake.client, args)).toEqual({
+      ok: false,
+      error: CASE_STUDY_ERRORS.failed,
+    });
+    expect(fake.rpc).not.toHaveBeenCalled();
   });
 });
 

@@ -14,6 +14,7 @@ import type { ScoringModel } from "@/lib/ngn/types";
 import { EhrPreview } from "./EhrPreview";
 import { EhrRecordFields, focusRecordField, recordFieldId } from "./EhrRecordFields";
 import { issueMessageId } from "./issueIds";
+import { useItemEditorHost, useReportDirty } from "./ItemEditorHost";
 
 export { issueMessageId };
 
@@ -86,7 +87,18 @@ export function EditorShell<Values, Input extends ScoredInput>({
   // Only a valid item has a final maximum; scoringSummary says so instead of guessing.
   const scoring = scoringSummary(input.scoring, valid);
 
+  const host = useItemEditorHost();
+  useReportDirty(isDirty);
   const record = (values as WithRecord).ehr;
+  // Inside a case study the case study owns the record: the item offers none, and its preview
+  // shows the case study's.
+  const offersRecord = Boolean(onRecordChange) && !host.inCaseStudy;
+  const previewedRecord = host.inCaseStudy
+    ? (host.record ?? null)
+    : record
+      ? previewRecord(record)
+      : null;
+  const showsRecordPreview = host.inCaseStudy ? Boolean(host.record) : Boolean(record);
   const recordIds = `${issueIdPrefix}-record`;
   const recordIssues = issues
     .filter((issue) => issue.field.startsWith(RECORD_PREFIX))
@@ -160,7 +172,7 @@ export function EditorShell<Values, Input extends ScoredInput>({
 
         {children}
 
-        {onRecordChange ? (
+        {offersRecord && onRecordChange ? (
           <section
             aria-labelledby={`${recordIds}-heading`}
             className="flex flex-col gap-4 border-t border-line pt-6"
@@ -250,9 +262,16 @@ export function EditorShell<Values, Input extends ScoredInput>({
             aria-label="Problems to fix"
             className="rounded-sm border border-line bg-surface-1 p-4"
           >
-            <h2 className="mb-2 text-sm font-medium text-ink-1">
-              Before this item can be published
-            </h2>
+            {/* Inside a case study the step's own heading is the h2 above this. */}
+            {host.inCaseStudy ? (
+              <h3 className="mb-2 text-sm font-medium text-ink-1">
+                Before this item can be published
+              </h3>
+            ) : (
+              <h2 className="mb-2 text-sm font-medium text-ink-1">
+                Before this item can be published
+              </h2>
+            )}
             <ul className="flex flex-col gap-1">
               {issues.map((issue) => (
                 <li key={issue.field}>
@@ -317,9 +336,9 @@ export function EditorShell<Values, Input extends ScoredInput>({
           style={{ transform: "translateZ(0)" }}
         >
           {/* A record reads first, as it does above the question on a phone. */}
-          {record ? (
+          {showsRecordPreview ? (
             <div className="mb-6 border-b border-line pb-6">
-              <EhrPreview record={previewRecord(record)} />
+              <EhrPreview record={previewedRecord} />
             </div>
           ) : null}
           {/* The same player students use, unkeyed so it updates in place. */}

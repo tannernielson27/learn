@@ -1,3 +1,4 @@
+import { storedCjmmStepOf } from "./storedValues";
 import { recordFormOf, recordInputOf, storedRecordFormOf, type EhrFormValues } from "./ehr";
 import {
   orderedResponseItemSchema,
@@ -168,6 +169,7 @@ export function orderedResponseFormFromStored(
     id: storedId(stored.id, rowId),
     version: storedVersion(stored.version),
     ...storedRecordFormOf(stored),
+    ...storedCjmmStepOf(stored),
     tags: storedStrings(stored.tags),
     stem: markdownText(stored.stem),
     instructions: storedString(stored.instructions),

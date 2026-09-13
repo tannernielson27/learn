@@ -1,3 +1,4 @@
+import { storedCjmmStepOf } from "./storedValues";
 import { recordFormOf, recordInputOf, storedRecordFormOf, type EhrFormValues } from "./ehr";
 import {
   multipleResponseGroupingItemSchema,
@@ -184,6 +185,7 @@ export function groupingFormFromStored(stored: unknown, rowId: string): Grouping
     id: storedId(stored.id, rowId),
     version: storedVersion(stored.version),
     ...storedRecordFormOf(stored),
+    ...storedCjmmStepOf(stored),
     tags: storedStrings(stored.tags),
     rationale: rationale.success ? rationale.data : blankForm.rationale,
     stem: markdownText(stored.stem),

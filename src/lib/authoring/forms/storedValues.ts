@@ -30,6 +30,16 @@ export function storedStrings(value: unknown): string[] {
     : [];
 }
 
+/** A stored item's clinical judgment step when it is one of 1 to 6; otherwise none. */
+export function storedCjmmStepOf(stored: Record<string, unknown>): {
+  cjmmStep?: 1 | 2 | 3 | 4 | 5 | 6;
+} {
+  const step = stored.cjmmStep;
+  return typeof step === "number" && Number.isInteger(step) && step >= 1 && step <= 6
+    ? { cjmmStep: step as 1 | 2 | 3 | 4 | 5 | 6 }
+    : {};
+}
+
 /** Records from an array that carry a string `id`, capped at `max`. */
 export function storedRecordsWithId(
   value: unknown,

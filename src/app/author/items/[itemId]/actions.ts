@@ -29,6 +29,7 @@ import { fromMultipleResponseForm } from "@/lib/authoring/forms/multipleResponse
 import { parseMultipleResponseDraft } from "@/lib/authoring/forms/multipleResponseDraft";
 import { fromGroupingForm } from "@/lib/authoring/forms/multipleResponseGrouping";
 import { parseGroupingDraft } from "@/lib/authoring/forms/multipleResponseGroupingDraft";
+import { pinnedStepFor } from "@/lib/authoring/caseStudies";
 import { isUuid } from "@/lib/authoring/ids";
 import { withinItemSizeLimit } from "@/lib/authoring/payloadSize";
 import { requireAuthor } from "@/lib/authoring/session";
@@ -57,6 +58,8 @@ const PUBLISH_FAILED: SaveResult = {
 function revalidateItem(itemId: string) {
   revalidatePath(`/author/items/${itemId}`);
   revalidatePath("/author/banks/[bankId]", "page");
+  // A step item saved inside the case study builder changes that case study's rail.
+  revalidatePath("/author/case-studies/[caseStudyId]", "page");
 }
 
 /**
@@ -78,6 +81,8 @@ async function saveDraft<Values>(
   if (!draft.ok) return { ok: false, error: draft.error };
 
   const { supabase } = await requireAuthor(`/author/items/${itemId}`);
+  // A case study step's position decides its clinical judgment step, not the submitted form.
+  const pinned = await pinnedStepFor(supabase, itemId);
   const row = toItemRow(toInput(draft.values) as Item);
   const { data, error } = await supabase
     .from("items")
@@ -87,7 +92,7 @@ async function saveDraft<Values>(
       rationale: row.rationale,
       scoring: row.scoring,
       tags: row.tags,
-      cjmm_step: row.cjmm_step,
+      cjmm_step: pinned ?? row.cjmm_step,
       status: "draft",
     })
     .eq("id", itemId)
@@ -122,7 +127,9 @@ async function publish(itemId: string, type: ItemType, input: unknown): Promise<
   if (latestError) return PUBLISH_FAILED;
 
   const version = nextPublishedVersion(latest?.version ?? null);
-  const item = { ...result.value, id: itemId, version };
+  // A case study step's position decides its clinical judgment step, in the row and the snapshot.
+  const pinned = await pinnedStepFor(supabase, itemId);
+  const item = { ...result.value, id: itemId, version, ...(pinned ? { cjmmStep: pinned } : {}) };
   const row = toItemRow(item);
 
   const { data, error } = await supabase
