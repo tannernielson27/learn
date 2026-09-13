@@ -88,9 +88,11 @@ select throws_ok(
   '23503', null,
   'a version cannot attach to another org''s item'
 );
+-- bank_id is the case study's own bank (#86), so the org key is what refuses the other org's item.
 select throws_ok(
-  $$ insert into public.case_study_items (case_study_id, org_id, position, item_id)
-     select '00000000-0000-0000-0000-0000000000c1', org_a, 1, '00000000-0000-0000-0000-0000000000e3' from ids $$,
+  $$ insert into public.case_study_items (case_study_id, org_id, bank_id, position, item_id)
+     select '00000000-0000-0000-0000-0000000000c1', org_a, '00000000-0000-0000-0000-0000000000b1',
+            1, '00000000-0000-0000-0000-0000000000e3' from ids $$,
   '23503', null,
   'a case study cannot slot in another org''s item'
 );

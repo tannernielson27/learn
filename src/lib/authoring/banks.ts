@@ -6,6 +6,7 @@ type Client = SupabaseClient<Database>;
 /** Caps so no list is unbounded; paging arrives with bank management in Sprint 6. */
 export const BANK_LIST_LIMIT = 100;
 export const ITEM_LIST_LIMIT = 200;
+export const CASE_STUDY_LIST_LIMIT = 100;
 
 export interface BankSummary {
   id: string;
@@ -64,6 +65,34 @@ export async function listItems(client: Client, bankId: string): Promise<ItemSum
     updatedAt: item.updated_at,
     stemExcerpt: stemExcerpt(item.stem),
     maxPoints: storedMaxPoints(item.maxPoints),
+  }));
+}
+
+export interface CaseStudySummary {
+  id: string;
+  title: string;
+  status: Database["public"]["Enums"]["content_status"];
+  /** How many of the six positions hold an item. */
+  stepCount: number;
+  updatedAt: string;
+}
+
+export async function listCaseStudies(client: Client, bankId: string): Promise<CaseStudySummary[]> {
+  // Only a count of steps: neither the record nor any step's key is read for the list. The key is
+  // named because the case study steps migration adds a second key pair (bank) between these tables.
+  const { data, error } = await client
+    .from("case_studies")
+    .select("id, title, status, updated_at, case_study_items!case_study_items_case_org_fkey(count)")
+    .eq("bank_id", bankId)
+    .order("updated_at", { ascending: false })
+    .limit(CASE_STUDY_LIST_LIMIT);
+  if (error) throw new AuthoringDataError("Case studies could not be loaded.");
+  return data.map((row) => ({
+    id: row.id,
+    title: row.title,
+    status: row.status,
+    updatedAt: row.updated_at,
+    stepCount: row.case_study_items[0]?.count ?? 0,
   }));
 }
 
