@@ -241,6 +241,66 @@ test("an author writes a matrix item, marks one column per row, and publishes", 
   ).toContainText("Published");
 });
 
+test("an author writes a highlight item, marks phrases, publishes, and plays it", async ({
+  page,
+  request,
+}, testInfo) => {
+  await signInAsNewAuthor(page, request, testInfo.project.name);
+  await page
+    .getByRole("textbox", { name: "Bank name" })
+    .fill(`Highlight ${testInfo.project.name} ${Date.now()}`);
+  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("button", { name: "Highlight Text", exact: true }).click();
+  await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
+
+  const problems = page.getByRole("region", { name: "Problems to fix" });
+  await expect(problems.getByRole("button", { name: "Write the passage." })).toBeVisible();
+
+  // Mark span wraps a real selection in the passage.
+  const passage = page.getByRole("textbox", { name: "Passage" });
+  await passage.fill("Pulse 120 today");
+  await passage.evaluate((element: HTMLTextAreaElement) => element.setSelectionRange(6, 9));
+  await page.getByRole("button", { name: "Mark span" }).click();
+  await expect(passage).toHaveValue("Pulse [[120|span_1]] today");
+
+  const stem = "Highlight the findings that need follow-up.";
+  await page.getByRole("textbox", { name: "Question stem" }).fill(stem);
+  await passage.fill(
+    "0800: [[Heart rate 118|hr]]; [[skin warm and dry|skin]]; client reports [[new confusion|conf]].",
+  );
+  await page.getByRole("checkbox", { name: "Heart rate 118 is correct" }).check();
+  await page.getByRole("checkbox", { name: "new confusion is correct" }).check();
+
+  const preview = page.getByRole("region", { name: "Preview" });
+  await expect(preview.getByRole("button", { name: "Heart rate 118" })).toBeVisible();
+  await expect(problems).toHaveCount(0);
+  await expectNoAxeViolations(page);
+
+  await page.getByRole("button", { name: "Publish" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
+
+  await page.getByRole("link", { name: "Back to bank" }).click();
+  await expect(page.getByRole("link", { name: /^Highlight the findings that need/ })).toContainText(
+    "Published",
+  );
+  await page.getByRole("link", { name: `Play ${stem}` }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Play item" })).toBeVisible();
+  expect(await page.content()).not.toContain("correctSpanIds");
+
+  await page.getByRole("button", { name: "Heart rate 118" }).click();
+  await page.getByRole("button", { name: "new confusion" }).click();
+  await page.getByRole("button", { name: "Submit" }).click();
+  const score = page.getByRole("complementary", { name: "Score" });
+  await expect(score).toContainText("2");
+  await expect(score).toBeFocused();
+  await expectNoAxeViolations(page);
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/highlight-from-bank-scored.png`,
+    fullPage: true,
+  });
+});
+
 test("an unknown bank is a not-found page, not an error", async ({ page, request }, testInfo) => {
   await signInAsNewAuthor(page, request, testInfo.project.name);
   const response = await page.goto("/author/banks/00000000-0000-4000-8000-00000000dead");
