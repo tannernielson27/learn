@@ -5,6 +5,9 @@ import {
   ItemEditorLoader,
   type ItemEditorLoaderProps,
 } from "@/components/authoring/ItemEditorLoader";
+import { clozeFormFromStored } from "@/lib/authoring/forms/cloze";
+import { dropdownTableFormFromStored } from "@/lib/authoring/forms/dropdownTable";
+import { matrixFormFromStored } from "@/lib/authoring/forms/matrix";
 import { multipleChoiceFormFromStored } from "@/lib/authoring/forms/multipleChoice";
 import { multipleResponseFormFromStored } from "@/lib/authoring/forms/multipleResponse";
 import { groupingFormFromStored } from "@/lib/authoring/forms/multipleResponseGrouping";
@@ -26,6 +29,15 @@ function editorFor(rowId: string, type: string, stored: unknown): ItemEditorLoad
       return { itemId: rowId, type, initialValues: multipleResponseFormFromStored(stored, rowId) };
     case "multiple_response_grouping":
       return { itemId: rowId, type, initialValues: groupingFormFromStored(stored, rowId) };
+    case "matrix_multiple_choice":
+    case "matrix_multiple_response":
+      return { itemId: rowId, type, initialValues: matrixFormFromStored(stored, rowId) };
+    case "dropdown_table":
+      return { itemId: rowId, type, initialValues: dropdownTableFormFromStored(stored, rowId) };
+    case "dropdown_cloze":
+    case "dropdown_rationale":
+      return { itemId: rowId, type, initialValues: clozeFormFromStored(stored, rowId) };
+    // Highlight, drag-and-drop, ordered response and bowtie editors arrive in Sprint 5.
     default:
       return null;
   }
