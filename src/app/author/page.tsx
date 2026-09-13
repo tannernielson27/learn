@@ -1,38 +1,26 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/Button";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { signOut } from "./actions";
+import { BankList } from "@/components/authoring/BankList";
+import { CreateBankForm } from "@/components/authoring/CreateBankForm";
+import { listBanks } from "@/lib/authoring/banks";
+import { requireAuthor } from "@/lib/authoring/session";
+import { createBank } from "./actions";
 
 export const metadata: Metadata = { title: "Item banks" };
 
-// Placeholder home for signed-in authors; the bank list arrives with #68.
 export default async function AuthorHomePage() {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.auth.getClaims();
-  // The proxy already redirects signed-out visits; this is the real check (docs: Data Security).
-  if (!data?.claims?.sub) redirect("/sign-in?next=/author");
-  const email = typeof data.claims.email === "string" ? data.claims.email : "";
+  const { supabase } = await requireAuthor("/author");
+  const banks = await listBanks(supabase);
 
   return (
-    <div className="flex flex-1 flex-col">
-      <header className="flex items-center justify-between gap-4 border-b border-line px-4 py-3">
-        <p className="font-mono text-sm tracking-wide text-ink-2 uppercase">LeaRN</p>
-        <div className="flex min-w-0 items-center gap-3">
-          <p className="truncate text-sm text-ink-2" data-testid="signed-in-email">
-            {email}
-          </p>
-          <form action={signOut}>
-            <Button type="submit" variant="ghost" size="sm">
-              Sign out
-            </Button>
-          </form>
-        </div>
-      </header>
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
-        <h1 className="mb-2 font-read text-3xl text-ink-1">Item banks</h1>
-        <p className="text-ink-2">Your banks will appear here.</p>
-      </main>
-    </div>
+    <>
+      <h1 className="mb-6 font-read text-3xl text-ink-1">Item banks</h1>
+      <BankList banks={banks} />
+      <section aria-labelledby="new-bank-heading" className="mt-10 border-t border-line pt-6">
+        <h2 id="new-bank-heading" className="mb-3 text-lg font-medium text-ink-1">
+          New bank
+        </h2>
+        <CreateBankForm action={createBank} />
+      </section>
+    </>
   );
 }

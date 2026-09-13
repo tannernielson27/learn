@@ -76,8 +76,8 @@ jobs:
           pnpm exec supabase status -o env \
             | sed -n 's/^API_URL=/NEXT_PUBLIC_SUPABASE_URL=/p; s/^PUBLISHABLE_KEY=/NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=/p' \
             | tr -d '"' >> "$GITHUB_ENV"
-      - name: Sign in from an emailed link
-        run: pnpm e2e e2e/auth.spec.ts
+      - name: Sign in, then author banks and items
+        run: pnpm e2e e2e/auth.spec.ts e2e/authoring.spec.ts
         env:
           E2E_AUTH: "1"
       - uses: actions/upload-artifact@v7

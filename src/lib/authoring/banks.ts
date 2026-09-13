@@ -1,0 +1,76 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/database.types";
+
+type Client = SupabaseClient<Database>;
+
+/** Caps so no list is unbounded; paging arrives with bank management in Sprint 6. */
+export const BANK_LIST_LIMIT = 100;
+export const ITEM_LIST_LIMIT = 200;
+
+export interface BankSummary {
+  id: string;
+  name: string;
+  itemCount: number;
+  updatedAt: string;
+}
+
+export interface ItemSummary {
+  id: string;
+  type: string;
+  status: Database["public"]["Enums"]["content_status"];
+  /** First line of the stem, for the list. Never the key or rationale. */
+  stemExcerpt: string;
+  updatedAt: string;
+}
+
+export class AuthoringDataError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AuthoringDataError";
+  }
+}
+
+export async function listBanks(client: Client): Promise<BankSummary[]> {
+  const { data, error } = await client
+    .from("item_banks")
+    .select("id, name, updated_at, items(count)")
+    .order("updated_at", { ascending: false })
+    .limit(BANK_LIST_LIMIT);
+  if (error) throw new AuthoringDataError("Item banks could not be loaded.");
+  return data.map((bank) => ({
+    id: bank.id,
+    name: bank.name,
+    updatedAt: bank.updated_at,
+    itemCount: bank.items[0]?.count ?? 0,
+  }));
+}
+
+export async function listItems(client: Client, bankId: string): Promise<ItemSummary[]> {
+  // Selects content only for the stem; answer_key and rationale are never read here.
+  const { data, error } = await client
+    .from("items")
+    .select("id, type, status, updated_at, content->stem")
+    .eq("bank_id", bankId)
+    .order("updated_at", { ascending: false })
+    .limit(ITEM_LIST_LIMIT);
+  if (error) throw new AuthoringDataError("Items could not be loaded.");
+  return data.map((item) => ({
+    id: item.id,
+    type: item.type,
+    status: item.status,
+    updatedAt: item.updated_at,
+    stemExcerpt: stemExcerpt(item.stem),
+  }));
+}
+
+export function stemExcerpt(stem: unknown, max = 140): string {
+  const value =
+    stem && typeof stem === "object" && "value" in stem && typeof stem.value === "string"
+      ? stem.value
+      : "";
+  const plain = value
+    .replace(/[*_`#>[\]()!]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return plain.length > max ? `${plain.slice(0, max - 1).trimEnd()}…` : plain;
+}
