@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import type { SaveResult } from "@/components/authoring/EditorShell";
 import { fromDropdownClozeForm, fromDropdownRationaleForm } from "@/lib/authoring/forms/cloze";
+import { fromBowtieForm } from "@/lib/authoring/forms/bowtie";
+import { parseBowtieDraft } from "@/lib/authoring/forms/bowtieDraft";
 import { parseClozeDraft } from "@/lib/authoring/forms/clozeDraft";
 import type { DraftParseResult } from "@/lib/authoring/forms/draft";
 import { fromDragdropClozeForm, fromDragdropRationaleForm } from "@/lib/authoring/forms/dragdrop";
@@ -14,6 +16,8 @@ import {
   parseHighlightTableDraft,
   parseHighlightTextDraft,
 } from "@/lib/authoring/forms/highlightDraft";
+import { fromOrderedResponseForm } from "@/lib/authoring/forms/orderedResponse";
+import { parseOrderedResponseDraft } from "@/lib/authoring/forms/orderedResponseDraft";
 import {
   fromMatrixMultipleChoiceForm,
   fromMatrixMultipleResponseForm,
@@ -343,4 +347,29 @@ export async function publishDragdropRationale(
   input: unknown,
 ): Promise<SaveResult> {
   return publish(itemId, "dragdrop_rationale", input);
+}
+
+export async function saveOrderedResponseDraft(
+  itemId: string,
+  values: unknown,
+): Promise<SaveResult> {
+  return saveDraft(
+    itemId,
+    "ordered_response",
+    values,
+    parseOrderedResponseDraft,
+    fromOrderedResponseForm,
+  );
+}
+
+export async function publishOrderedResponse(itemId: string, input: unknown): Promise<SaveResult> {
+  return publish(itemId, "ordered_response", input);
+}
+
+export async function saveBowtieDraft(itemId: string, values: unknown): Promise<SaveResult> {
+  return saveDraft(itemId, "bowtie", values, parseBowtieDraft, fromBowtieForm);
+}
+
+export async function publishBowtie(itemId: string, input: unknown): Promise<SaveResult> {
+  return publish(itemId, "bowtie", input);
 }

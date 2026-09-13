@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import {
+  publishBowtie,
   publishDragdropCloze,
   publishDragdropRationale,
   publishDropdownCloze,
@@ -14,6 +15,8 @@ import {
   publishMatrixMultipleResponse,
   publishMultipleChoice,
   publishMultipleResponse,
+  publishOrderedResponse,
+  saveBowtieDraft,
   saveDragdropClozeDraft,
   saveDragdropRationaleDraft,
   saveDropdownClozeDraft,
@@ -26,7 +29,9 @@ import {
   saveMatrixMultipleResponseDraft,
   saveMultipleChoiceDraft,
   saveMultipleResponseDraft,
+  saveOrderedResponseDraft,
 } from "@/app/author/items/[itemId]/actions";
+import type { BowtieFormValues } from "@/lib/authoring/forms/bowtie";
 import type { ClozeFormValues } from "@/lib/authoring/forms/cloze";
 import type { DragDropFormValues } from "@/lib/authoring/forms/dragdrop";
 import type { DropdownTableFormValues } from "@/lib/authoring/forms/dropdownTable";
@@ -38,6 +43,7 @@ import type { MatrixFormValues } from "@/lib/authoring/forms/matrix";
 import type { MultipleChoiceFormValues } from "@/lib/authoring/forms/multipleChoice";
 import type { MultipleResponseFormValues } from "@/lib/authoring/forms/multipleResponse";
 import type { GroupingFormValues } from "@/lib/authoring/forms/multipleResponseGrouping";
+import type { OrderedResponseFormValues } from "@/lib/authoring/forms/orderedResponse";
 
 // Each editor, its form library and the schemas load only on the item page, never on the player.
 const loading = () => <p className="text-ink-2">Loading the editor…</p>;
@@ -78,6 +84,14 @@ const DragDropEditor = dynamic(
   () => import("./DragDropEditor").then((module) => module.DragDropEditor),
   { ssr: false, loading },
 );
+const OrderedResponseEditor = dynamic(
+  () => import("./OrderedResponseEditor").then((module) => module.OrderedResponseEditor),
+  { ssr: false, loading },
+);
+const BowtieEditor = dynamic(() => import("./BowtieEditor").then((module) => module.BowtieEditor), {
+  ssr: false,
+  loading,
+});
 
 export type ItemEditorLoaderProps =
   | { itemId: string; type: "multiple_choice"; initialValues: MultipleChoiceFormValues }
@@ -91,7 +105,9 @@ export type ItemEditorLoaderProps =
   | { itemId: string; type: "highlight_text"; initialValues: HighlightTextFormValues }
   | { itemId: string; type: "highlight_table"; initialValues: HighlightTableFormValues }
   | { itemId: string; type: "dragdrop_cloze"; initialValues: DragDropFormValues }
-  | { itemId: string; type: "dragdrop_rationale"; initialValues: DragDropFormValues };
+  | { itemId: string; type: "dragdrop_rationale"; initialValues: DragDropFormValues }
+  | { itemId: string; type: "ordered_response"; initialValues: OrderedResponseFormValues }
+  | { itemId: string; type: "bowtie"; initialValues: BowtieFormValues };
 
 export function ItemEditorLoader(props: ItemEditorLoaderProps) {
   const { itemId } = props;
@@ -196,6 +212,22 @@ export function ItemEditorLoader(props: ItemEditorLoaderProps) {
           initialValues={props.initialValues}
           onSaveDraft={(values) => saveDragdropRationaleDraft(itemId, values)}
           onPublish={(item) => publishDragdropRationale(itemId, item)}
+        />
+      );
+    case "ordered_response":
+      return (
+        <OrderedResponseEditor
+          initialValues={props.initialValues}
+          onSaveDraft={(values) => saveOrderedResponseDraft(itemId, values)}
+          onPublish={(item) => publishOrderedResponse(itemId, item)}
+        />
+      );
+    case "bowtie":
+      return (
+        <BowtieEditor
+          initialValues={props.initialValues}
+          onSaveDraft={(values) => saveBowtieDraft(itemId, values)}
+          onPublish={(item) => publishBowtie(itemId, item)}
         />
       );
   }

@@ -30,7 +30,7 @@ test("an author creates a bank, starts an item by type, and finds the draft in t
 
   await page.getByRole("link", { name: "New item" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "New item" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Bowtie" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "Bowtie" })).not.toHaveAttribute(
     "aria-disabled",
     "true",
   );
@@ -369,6 +369,88 @@ test("an author writes a drag-and-drop rationale item from a word bank, publishe
   await expectNoAxeViolations(page);
   await page.screenshot({
     path: `test-results/screenshots/${testInfo.project.name}/dragdrop-from-bank-scored.png`,
+    fullPage: true,
+  });
+});
+
+test("an author writes a bowtie, marks the correct choices, publishes, and plays it", async ({
+  page,
+  request,
+}, testInfo) => {
+  await signInAsNewAuthor(page, request, testInfo.project.name);
+  await page
+    .getByRole("textbox", { name: "Bank name" })
+    .fill(`Bowtie ${testInfo.project.name} ${Date.now()}`);
+  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("button", { name: "Bowtie", exact: true }).click();
+  await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
+
+  const problems = page.getByRole("region", { name: "Problems to fix" });
+  await expect(problems.getByRole("button", { name: "Action 1 needs text." })).toBeVisible();
+
+  const stem = "A client has sudden severe headache and neck stiffness. Complete the diagram.";
+  await page.getByRole("textbox", { name: "Question stem" }).fill(stem);
+  const columns = {
+    Action: [
+      "Perform a neurologic assessment",
+      "Elevate the head of the bed",
+      "Place flat",
+      "Encourage coughing",
+      "Apply warm compresses",
+    ],
+    Condition: ["Subarachnoid hemorrhage", "Tension headache", "Sinusitis", "Cervical strain"],
+    Parameter: [
+      "Level of consciousness",
+      "Blood pressure",
+      "Bowel pattern",
+      "Skin turgor",
+      "Appetite",
+    ],
+  };
+  for (const [noun, labels] of Object.entries(columns)) {
+    for (const [index, label] of labels.entries()) {
+      await page.getByRole("textbox", { name: `${noun} ${index + 1}`, exact: true }).fill(label);
+    }
+  }
+  for (const name of [
+    "Action 1 is correct",
+    "Action 2 is correct",
+    "Parameter 1 is correct",
+    "Parameter 2 is correct",
+  ]) {
+    await page.getByRole("checkbox", { name }).check();
+  }
+  await page.getByRole("radio", { name: "Condition 1 is correct" }).check();
+
+  await expect(problems).toHaveCount(0);
+  await expectNoAxeViolations(page);
+  await page.getByRole("button", { name: "Publish" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
+
+  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: `Play ${stem}` }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Play item" })).toBeVisible();
+  expect(await page.content()).not.toContain("actionIds");
+
+  // Tap a choice, then its slot.
+  const place = async (choice: string, slot: string) => {
+    await page.getByRole("button", { name: choice, exact: true }).click();
+    await page.getByRole("button", { name: slot }).click();
+  };
+  await place("Perform a neurologic assessment", "Actions to Take 1 of 2, empty");
+  await place("Elevate the head of the bed", "Actions to Take 2 of 2, empty");
+  await place("Subarachnoid hemorrhage", "Potential Condition, empty");
+  await place("Level of consciousness", "Parameters to Monitor 1 of 2, empty");
+  await place("Blood pressure", "Parameters to Monitor 2 of 2, empty");
+  await page.getByRole("button", { name: "Submit" }).click();
+
+  const score = page.getByRole("complementary", { name: "Score" });
+  await expect(score).toContainText("5");
+  await expect(score).toBeFocused();
+  await expectNoAxeViolations(page);
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/bowtie-from-bank-scored.png`,
     fullPage: true,
   });
 });
