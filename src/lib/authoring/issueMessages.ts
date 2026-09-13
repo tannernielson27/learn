@@ -131,10 +131,152 @@ const describeGrouping: Describer = (issue, path) => {
   return undefined;
 };
 
+/** "Add at least N …" or "Use at most N …", from the counts zod reports. */
+const countMessage = (
+  issue: SchemaIssue,
+  field: string,
+  noun: string,
+  fallbackMin: number,
+): EditorIssue =>
+  issue.code === "too_big"
+    ? { field, message: `Use at most ${issue.maximum} ${noun}.` }
+    : { field, message: `Add at least ${issue.minimum ?? fallbackMin} ${noun}.` };
+
+const describeMatrix: Describer = (issue, path) => {
+  const at = path.join(".");
+  if (at === "content.rows") return countMessage(issue, "rows", "rows", 2);
+  if (at === "content.columns") return countMessage(issue, "columns", "columns", 2);
+  if (path[0] === "content" && path[1] === "rows" && path[3] === "label") {
+    return { field: `rows.${path[2]}.label`, message: `Row ${Number(path[2]) + 1} needs text.` };
+  }
+  if (path[0] === "content" && path[1] === "columns" && path[3] === "label") {
+    return {
+      field: `columns.${path[2]}.label`,
+      message: `Column ${Number(path[2]) + 1} needs a heading.`,
+    };
+  }
+  if (path[0] === "answerKey" && path[1] === "rows" && path[2] !== undefined) {
+    const row = Number(path[2]) + 1;
+    // Matrix multiple response reports an empty list; matrix multiple choice a missing id.
+    return path[3] === "correctColumnIds"
+      ? {
+          field: `rows.${path[2]}.correct`,
+          message: `Mark at least one correct column for row ${row}.`,
+        }
+      : { field: `rows.${path[2]}.correct`, message: `Choose the correct column for row ${row}.` };
+  }
+  if (path[0] === "answerKey") {
+    return { field: "rows", message: "Every row needs its correct answer marked." };
+  }
+  return undefined;
+};
+
+const describeDropdownTable: Describer = (issue, path) => {
+  const at = path.join(".");
+  if (at === "content.columns.label") {
+    return { field: "columnLabel", message: "Name the row heading." };
+  }
+  if (at === "content.columns.dropdown") {
+    return { field: "dropdownLabel", message: "Name the drop-down heading." };
+  }
+  if (at === "content.rows") return countMessage(issue, "rows", "rows", 2);
+  if (path[0] === "content" && path[1] === "rows") {
+    const row = Number(path[2]) + 1;
+    if (path[3] === "label") {
+      return { field: `rows.${path[2]}.label`, message: `Row ${row} needs text.` };
+    }
+    if (path[3] === "choices" && path.length === 4) {
+      return issue.code === "too_big"
+        ? {
+            field: `rows.${path[2]}.choices`,
+            message: `Row ${row} can have at most ${issue.maximum} choices.`,
+          }
+        : {
+            field: `rows.${path[2]}.choices`,
+            message: `Row ${row} needs at least ${issue.minimum ?? 2} choices.`,
+          };
+    }
+    if (path[3] === "choices" && path[5] === "label") {
+      return {
+        field: `rows.${path[2]}.choices.${path[4]}.label`,
+        message: `Row ${row}, choice ${letter(Number(path[4]))} needs text.`,
+      };
+    }
+  }
+  if (path[0] === "answerKey" && path[1] === "rows" && path[2] !== undefined) {
+    return {
+      field: `rows.${path[2]}.correct`,
+      message: `Choose the correct choice for row ${Number(path[2]) + 1}.`,
+    };
+  }
+  if (path[0] === "answerKey") {
+    return { field: "rows", message: "Every row needs its correct choice." };
+  }
+  return undefined;
+};
+
+const describeCloze: Describer = (issue, path) => {
+  const at = path.join(".");
+  if (at === "content.tokens") {
+    if (issue.code === "too_small") return { field: "sentence", message: "Write the sentence." };
+    const range = /expected (\d+)\D+(\d+) blanks/.exec(issue.message);
+    return {
+      field: "sentence",
+      message: range
+        ? `Put ${range[1]} to ${range[2]} blanks in the sentence.`
+        : "Check the blanks in the sentence.",
+    };
+  }
+  if (at === "content.blanks") {
+    if (issue.code === "custom") {
+      return { field: "sentence", message: "Each blank must appear in the sentence exactly once." };
+    }
+    return countMessage(issue, "blanks", "blanks", 1);
+  }
+  if (path[0] === "content" && path[1] === "blanks") {
+    const blankNumber = Number(path[2]) + 1;
+    if (path[3] === "choices" && path.length === 4) {
+      return issue.code === "too_big"
+        ? {
+            field: `blanks.${path[2]}.choices`,
+            message: `Blank ${blankNumber} can have at most ${issue.maximum} choices.`,
+          }
+        : {
+            field: `blanks.${path[2]}.choices`,
+            message: `Blank ${blankNumber} needs at least ${issue.minimum ?? 3} choices.`,
+          };
+    }
+    if (path[3] === "choices" && path[5] === "label") {
+      return {
+        field: `blanks.${path[2]}.choices.${path[4]}.label`,
+        message: `Blank ${blankNumber}, choice ${letter(Number(path[4]))} needs text.`,
+      };
+    }
+  }
+  if (at === "answerKey.anchorBlankId") {
+    return { field: "anchorBlankId", message: "Choose which blank is the anchor." };
+  }
+  if (path[0] === "answerKey" && path[1] === "blanks" && path[2] !== undefined) {
+    return {
+      field: `blanks.${path[2]}.correct`,
+      message: `Choose the correct choice for blank ${Number(path[2]) + 1}.`,
+    };
+  }
+  if (path[0] === "answerKey") {
+    return { field: "blanks", message: "Every blank needs its correct choice." };
+  }
+  return undefined;
+};
+
 const DESCRIBERS: Partial<Record<ItemType, Describer>> = {
   multiple_choice: describeMultipleChoice,
   multiple_response: describeMultipleResponse,
   multiple_response_grouping: describeGrouping,
+  matrix_multiple_choice: describeMatrix,
+  matrix_multiple_response: describeMatrix,
+  dropdown_table: describeDropdownTable,
+  dropdown_cloze: describeCloze,
+  dropdown_rationale: describeCloze,
 };
 
 /**

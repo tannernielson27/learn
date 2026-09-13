@@ -159,6 +159,61 @@ test("an author writes a select-all-that-apply item, marks three answers, and pu
   ).toContainText("Published");
 });
 
+test("an author writes a matrix item, marks one column per row, and publishes", async ({
+  page,
+  request,
+}, testInfo) => {
+  await signInAsNewAuthor(page, request, testInfo.project.name);
+  await page
+    .getByRole("textbox", { name: "Bank name" })
+    .fill(`Matrix ${testInfo.project.name} ${Date.now()}`);
+  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("button", { name: "Matrix Multiple Choice", exact: true }).click();
+  await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
+
+  const problems = page.getByRole("region", { name: "Problems to fix" });
+  await expect(
+    problems.getByRole("button", { name: "Choose the correct column for row 1." }),
+  ).toBeVisible();
+
+  await page
+    .getByRole("textbox", { name: "Question stem" })
+    .fill("For each finding, indicate whether the client's condition has improved or declined.");
+  await page.getByRole("textbox", { name: "Column 1", exact: true }).fill("Improved");
+  await page.getByRole("textbox", { name: "Column 2", exact: true }).fill("Declined");
+
+  const findings = [
+    { text: "Oxygen saturation 96% on room air", answer: "Improved" },
+    { text: "Respiratory rate 32 breaths/min", answer: "Declined" },
+  ];
+  for (const [index, finding] of findings.entries()) {
+    const row = page.getByRole("group", { name: `Row ${index + 1}`, exact: true });
+    await row.getByRole("textbox", { name: "Row text" }).fill(finding.text);
+    await row
+      .getByRole("radiogroup", { name: `Correct column for row ${index + 1}` })
+      .getByRole("radio", { name: finding.answer })
+      .check();
+  }
+
+  const preview = page.getByRole("region", { name: "Preview" });
+  // The matrix player renders both a grid (hidden on phones) and row cards (hidden on wider
+  // screens), so check a visible copy rather than whichever comes first.
+  await expect(
+    preview.getByText("Oxygen saturation 96% on room air").filter({ visible: true }).first(),
+  ).toBeVisible();
+  await expect(problems).toHaveCount(0);
+  await expectNoAxeViolations(page);
+
+  await page.getByRole("button", { name: "Publish" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
+
+  await page.getByRole("link", { name: "Back to bank" }).click();
+  await expect(
+    page.getByRole("link", { name: /For each finding, indicate whether/ }),
+  ).toContainText("Published");
+});
+
 test("an unknown bank is a not-found page, not an error", async ({ page, request }, testInfo) => {
   await signInAsNewAuthor(page, request, testInfo.project.name);
   const response = await page.goto("/author/banks/00000000-0000-4000-8000-00000000dead");

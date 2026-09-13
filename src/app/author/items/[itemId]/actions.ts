@@ -2,7 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import type { SaveResult } from "@/components/authoring/EditorShell";
+import { fromDropdownClozeForm, fromDropdownRationaleForm } from "@/lib/authoring/forms/cloze";
+import { parseClozeDraft } from "@/lib/authoring/forms/clozeDraft";
 import type { DraftParseResult } from "@/lib/authoring/forms/draft";
+import { fromDropdownTableForm } from "@/lib/authoring/forms/dropdownTable";
+import { parseDropdownTableDraft } from "@/lib/authoring/forms/dropdownTableDraft";
+import {
+  fromMatrixMultipleChoiceForm,
+  fromMatrixMultipleResponseForm,
+} from "@/lib/authoring/forms/matrix";
+import { parseMatrixDraft } from "@/lib/authoring/forms/matrixDraft";
 import { fromMultipleChoiceForm } from "@/lib/authoring/forms/multipleChoice";
 import { parseMultipleChoiceDraft } from "@/lib/authoring/forms/multipleChoiceDraft";
 import { fromMultipleResponseForm } from "@/lib/authoring/forms/multipleResponse";
@@ -186,4 +195,86 @@ export async function saveGroupingDraft(itemId: string, values: unknown): Promis
 
 export async function publishGrouping(itemId: string, input: unknown): Promise<SaveResult> {
   return publish(itemId, "multiple_response_grouping", input);
+}
+
+export async function saveMatrixMultipleChoiceDraft(
+  itemId: string,
+  values: unknown,
+): Promise<SaveResult> {
+  return saveDraft(
+    itemId,
+    "matrix_multiple_choice",
+    values,
+    parseMatrixDraft,
+    fromMatrixMultipleChoiceForm,
+  );
+}
+
+export async function publishMatrixMultipleChoice(
+  itemId: string,
+  input: unknown,
+): Promise<SaveResult> {
+  return publish(itemId, "matrix_multiple_choice", input);
+}
+
+export async function saveMatrixMultipleResponseDraft(
+  itemId: string,
+  values: unknown,
+): Promise<SaveResult> {
+  return saveDraft(
+    itemId,
+    "matrix_multiple_response",
+    values,
+    parseMatrixDraft,
+    fromMatrixMultipleResponseForm,
+  );
+}
+
+export async function publishMatrixMultipleResponse(
+  itemId: string,
+  input: unknown,
+): Promise<SaveResult> {
+  return publish(itemId, "matrix_multiple_response", input);
+}
+
+export async function saveDropdownTableDraft(itemId: string, values: unknown): Promise<SaveResult> {
+  return saveDraft(
+    itemId,
+    "dropdown_table",
+    values,
+    parseDropdownTableDraft,
+    fromDropdownTableForm,
+  );
+}
+
+export async function publishDropdownTable(itemId: string, input: unknown): Promise<SaveResult> {
+  return publish(itemId, "dropdown_table", input);
+}
+
+export async function saveDropdownClozeDraft(itemId: string, values: unknown): Promise<SaveResult> {
+  return saveDraft(itemId, "dropdown_cloze", values, parseClozeDraft, fromDropdownClozeForm);
+}
+
+export async function publishDropdownCloze(itemId: string, input: unknown): Promise<SaveResult> {
+  return publish(itemId, "dropdown_cloze", input);
+}
+
+export async function saveDropdownRationaleDraft(
+  itemId: string,
+  values: unknown,
+): Promise<SaveResult> {
+  return saveDraft(
+    itemId,
+    "dropdown_rationale",
+    values,
+    parseClozeDraft,
+    fromDropdownRationaleForm,
+  );
+}
+
+export async function publishDropdownRationale(
+  itemId: string,
+  input: unknown,
+): Promise<SaveResult> {
+  return publish(itemId, "dropdown_rationale", input);
 }
