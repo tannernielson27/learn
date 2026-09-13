@@ -59,18 +59,21 @@ export type Database = {
       };
       case_study_items: {
         Row: {
+          bank_id: string;
           case_study_id: string;
           item_id: string;
           org_id: string;
           position: number;
         };
         Insert: {
+          bank_id: string;
           case_study_id: string;
           item_id: string;
           org_id: string;
           position: number;
         };
         Update: {
+          bank_id?: string;
           case_study_id?: string;
           item_id?: string;
           org_id?: string;
@@ -78,11 +81,25 @@ export type Database = {
         };
         Relationships: [
           {
+            foreignKeyName: "case_study_items_case_bank_fkey";
+            columns: ["case_study_id", "bank_id"];
+            isOneToOne: false;
+            referencedRelation: "case_studies";
+            referencedColumns: ["id", "bank_id"];
+          },
+          {
             foreignKeyName: "case_study_items_case_org_fkey";
             columns: ["case_study_id", "org_id"];
             isOneToOne: false;
             referencedRelation: "case_studies";
             referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "case_study_items_item_bank_fkey";
+            columns: ["item_id", "bank_id"];
+            isOneToOne: false;
+            referencedRelation: "items";
+            referencedColumns: ["id", "bank_id"];
           },
           {
             foreignKeyName: "case_study_items_item_org_fkey";
@@ -304,7 +321,14 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      place_case_study_step: {
+        Args: { step_item: string; step_position: number; target: string };
+        Returns: undefined;
+      };
+      reorder_case_study_steps: {
+        Args: { item_ids: string[]; target: string };
+        Returns: undefined;
+      };
     };
     Enums: {
       content_status: "draft" | "published" | "archived";

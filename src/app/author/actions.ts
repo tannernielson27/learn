@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { BankFormState } from "@/components/authoring/CreateBankForm";
+import type { CaseStudyFormState } from "@/components/authoring/CreateCaseStudyForm";
 import { parseBankForm } from "@/lib/authoring/bankForm";
+import { createCaseStudy } from "@/lib/authoring/caseStudies";
+import { parseCaseStudyTitle } from "@/lib/authoring/caseStudyForm";
 import { isUuid } from "@/lib/authoring/ids";
 import { isEditorReady } from "@/lib/authoring/itemTypeGroups";
 import { requireAuthor } from "@/lib/authoring/session";
@@ -57,6 +60,29 @@ export async function renameBank(
   revalidatePath("/author");
   revalidatePath(`/author/banks/${bankId}`);
   return { status: "saved" };
+}
+
+/** Starts a draft case study in a bank and opens it. Bound to the bank on the bank page. */
+export async function createCaseStudyInBank(
+  bankId: string,
+  _previous: CaseStudyFormState,
+  formData: FormData,
+): Promise<CaseStudyFormState> {
+  if (!isUuid(bankId)) return { status: "error", error: "That bank no longer exists." };
+  const parsed = parseCaseStudyTitle(formData);
+  if (!parsed.ok) return { status: "error", error: parsed.error };
+
+  const { supabase, orgId, userId } = await requireAuthor(`/author/banks/${bankId}`);
+  const created = await createCaseStudy(supabase, {
+    bankId,
+    orgId,
+    userId,
+    title: parsed.title,
+  });
+  if (!created.ok) return { status: "error", error: created.error };
+
+  revalidatePath(`/author/banks/${bankId}`);
+  redirect(`/author/case-studies/${created.value.id}`);
 }
 
 export interface CreateItemResult {

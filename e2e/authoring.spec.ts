@@ -461,6 +461,38 @@ test("an author writes a bowtie, marks the correct choices, publishes, and plays
   });
 });
 
+test("an author starts a case study in a bank and finds it listed as a draft", async ({
+  page,
+  request,
+}, testInfo) => {
+  await signInAsNewAuthor(page, request, testInfo.project.name);
+  await page
+    .getByRole("textbox", { name: "Bank name" })
+    .fill(`Cases ${testInfo.project.name} ${Date.now()}`);
+  await page.getByRole("button", { name: "Create bank" }).click();
+
+  await expect(page.getByText("No case studies in this bank yet.")).toBeVisible();
+  await page.getByRole("textbox", { name: "Case study title" }).fill("Post-operative day two");
+  await page.getByRole("button", { name: "New case study" }).click();
+
+  // A new case study opens with nothing placed, and says what publishing still needs.
+  await expect(page).toHaveURL(/\/author\/case-studies\/[0-9a-f-]{36}$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Post-operative day two" }),
+  ).toBeVisible();
+  await expect(page.getByText("0 of 6 steps ready")).toBeVisible();
+  await expect(page.getByText("Step 1 (Recognize Cues) has no item yet.")).toBeVisible();
+  await expectNoAxeViolations(page);
+
+  await page.getByRole("link", { name: "Back to bank" }).click();
+  const listed = page
+    .getByRole("list", { name: "Case studies" })
+    .getByRole("link", { name: /^Post-operative day two/ });
+  await expect(listed).toContainText("Draft");
+  await expect(listed).toContainText("0 of 6 steps");
+  await expectNoAxeViolations(page);
+});
+
 test("an unknown bank is a not-found page, not an error", async ({ page, request }, testInfo) => {
   await signInAsNewAuthor(page, request, testInfo.project.name);
   const response = await page.goto("/author/banks/00000000-0000-4000-8000-00000000dead");

@@ -47,10 +47,13 @@ export function buildSampleSeedSql(): string {
     `  ${textArray(caseStudy.tags)}, 'published'`,
     ");",
     "",
-    "insert into public.case_study_items (case_study_id, org_id, position, item_id)",
+    "insert into public.case_study_items (case_study_id, org_id, bank_id, position, item_id)",
     "values",
     caseStudyItemIds
-      .map((id, i) => `  (${sql(CASE_STUDY_ID)}, ${sql(ORG_ID)}, ${i + 1}, ${sql(id)})`)
+      .map(
+        (id, i) =>
+          `  (${sql(CASE_STUDY_ID)}, ${sql(ORG_ID)}, ${sql(BANK_ID)}, ${i + 1}, ${sql(id)})`,
+      )
       .join(",\n") + ";",
     "",
   ].join("\n");

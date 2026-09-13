@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CaseStudyList } from "@/components/authoring/CaseStudyList";
 import { CreateBankForm } from "@/components/authoring/CreateBankForm";
+import { CreateCaseStudyForm } from "@/components/authoring/CreateCaseStudyForm";
 import { ItemList } from "@/components/authoring/ItemList";
-import { listItems } from "@/lib/authoring/banks";
+import { listCaseStudies, listItems } from "@/lib/authoring/banks";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
-import { renameBank } from "../../actions";
+import { createCaseStudyInBank, renameBank } from "../../actions";
 
 export const metadata: Metadata = { title: "Item bank" };
 
@@ -22,7 +24,10 @@ export default async function BankPage({ params }: PageProps<"/author/banks/[ban
     .maybeSingle();
   if (!bank) notFound();
 
-  const items = await listItems(supabase, bank.id);
+  const [items, caseStudies] = await Promise.all([
+    listItems(supabase, bank.id),
+    listCaseStudies(supabase, bank.id),
+  ]);
 
   return (
     <>
@@ -41,6 +46,13 @@ export default async function BankPage({ params }: PageProps<"/author/banks/[ban
         </Link>
       </div>
       <ItemList items={items} />
+      <section aria-labelledby="case-studies-heading" className="mt-10 flex flex-col gap-4">
+        <h2 id="case-studies-heading" className="font-read text-2xl text-ink-1">
+          Case studies
+        </h2>
+        <CaseStudyList caseStudies={caseStudies} />
+        <CreateCaseStudyForm action={createCaseStudyInBank.bind(null, bank.id)} />
+      </section>
       <details className="mt-10 border-t border-line pt-6">
         <summary className="tap-target flex cursor-pointer items-center text-sm font-medium text-ink-2">
           Rename bank
