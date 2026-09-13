@@ -55,3 +55,36 @@ jobs:
           pnpm exec supabase gen types typescript --local --schema public > "$RUNNER_TEMP/raw.ts"
           pnpm exec prettier --stdin-filepath src/lib/supabase/database.types.ts < "$RUNNER_TEMP/raw.ts" > "$RUNNER_TEMP/database.types.ts"
           diff -u src/lib/supabase/database.types.ts "$RUNNER_TEMP/database.types.ts" || { echo "::error::database.types.ts is stale. Run pnpm db:types and commit."; exit 1; }
+
+  auth-e2e:
+    name: auth e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      # Postgres, auth, the API gateway and the test mailbox; nothing sign-in does not use.
+      - run: pnpm exec supabase start -x studio,storage-api,imgproxy,edge-runtime,logflare,vector,supavisor,realtime,postgres-meta
+      - name: Point the build at the local stack
+        run: |
+          pnpm exec supabase status -o env \
+            | sed -n 's/^API_URL=/NEXT_PUBLIC_SUPABASE_URL=/p; s/^PUBLISHABLE_KEY=/NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=/p' \
+            | tr -d '"' >> "$GITHUB_ENV"
+      - name: Sign in from an emailed link
+        run: pnpm e2e e2e/auth.spec.ts
+        env:
+          E2E_AUTH: "1"
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: auth-e2e-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
