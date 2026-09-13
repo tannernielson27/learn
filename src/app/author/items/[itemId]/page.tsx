@@ -6,10 +6,12 @@ import { ItemEditorLoader } from "@/components/authoring/ItemEditorLoader";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { ITEM_TYPE_LABELS, ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
+import { fromItemRow } from "@/lib/supabase/itemRows";
 
 export const metadata: Metadata = { title: "Edit item" };
 
 const STATUS_LABELS = { draft: "Draft", published: "Published", archived: "Archived" } as const;
+const linkClass = "text-accent-ink underline-offset-4 hover:underline";
 
 export default async function EditItemPage({ params }: PageProps<"/author/items/[itemId]">) {
   const { itemId } = await params;
@@ -30,16 +32,20 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
     ? ITEM_TYPE_LABELS[row.type as ItemType]
     : row.type;
   const editor = editorFor(row.id, row.type, storedItemOf(row));
+  // Only a valid saved item exports (docs/transfer-format.md).
+  const exportable = fromItemRow(row).ok;
 
   return (
     <>
-      <p className="mb-2 text-sm">
-        <Link
-          href={`/author/banks/${row.bank_id}`}
-          className="text-accent-ink underline-offset-4 hover:underline"
-        >
+      <p className="mb-2 flex flex-wrap gap-4 text-sm">
+        <Link href={`/author/banks/${row.bank_id}`} className={linkClass}>
           Back to bank
         </Link>
+        {exportable ? (
+          <a href={`/author/items/${row.id}/export`} download className={linkClass}>
+            Export JSON
+          </a>
+        ) : null}
       </p>
       <p className="eyebrow mb-1">{label}</p>
       <div className="mb-6 flex flex-wrap items-baseline gap-3">

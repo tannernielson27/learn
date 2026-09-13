@@ -321,6 +321,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      import_bank_content: {
+        Args: { new_case_study: Json; new_items: Json; target_bank: string };
+        Returns: Json;
+      };
       place_case_study_step: {
         Args: { step_item: string; step_position: number; target: string };
         Returns: undefined;
