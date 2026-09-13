@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { NewItemChooser, type NewItemChooserProps } from "./NewItemChooser";
@@ -22,7 +22,8 @@ describe("NewItemChooser", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "The item could not be created. Try again.",
     );
-    expect(choice).not.toHaveAttribute("aria-disabled", "true");
+    // The alert renders as soon as the error is set; the transition ends a moment later.
+    await waitFor(() => expect(choice).not.toHaveAttribute("aria-disabled", "true"));
     await userEvent.click(screen.getByRole("button", { name: /^Multiple Choice/ }));
     expect(create).toHaveBeenCalledTimes(2);
   });
