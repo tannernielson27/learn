@@ -1,3 +1,4 @@
+import { recordFormOf, recordInputOf, storedRecordFormOf, type EhrFormValues } from "./ehr";
 import {
   multipleChoiceItemSchema,
   type ItemInputOf,
@@ -24,7 +25,7 @@ export interface MultipleChoiceFormValues {
   tags: string[];
   cjmmStep?: MultipleChoiceItem["cjmmStep"];
   difficulty?: MultipleChoiceItem["difficulty"];
-  ehr?: MultipleChoiceItem["ehr"];
+  ehr?: EhrFormValues;
   meta: MultipleChoiceItem["meta"];
   stem: string;
   instructions: string;
@@ -44,7 +45,7 @@ export function toMultipleChoiceForm(item: MultipleChoiceItem): MultipleChoiceFo
     tags: [...item.tags],
     cjmmStep: item.cjmmStep,
     difficulty: item.difficulty,
-    ehr: item.ehr,
+    ...recordFormOf(item.ehr),
     meta: { ...item.meta },
     stem: item.stem.value,
     instructions: item.instructions ?? "",
@@ -75,7 +76,7 @@ export function fromMultipleChoiceForm(
     tags: [...values.tags],
     ...(values.cjmmStep !== undefined ? { cjmmStep: values.cjmmStep } : {}),
     ...(values.difficulty !== undefined ? { difficulty: values.difficulty } : {}),
-    ...(values.ehr !== undefined ? { ehr: values.ehr } : {}),
+    ...recordInputOf(values.ehr),
     stem: markdown(values.stem),
     ...(blank(values.instructions) ? {} : { instructions: values.instructions }),
     content: { options: values.options.map(({ id, label }) => ({ id, label })) },
@@ -150,6 +151,7 @@ export function multipleChoiceFormFromStored(
 
   return {
     ...blankForm,
+    ...storedRecordFormOf(stored),
     id: typeof stored.id === "string" && stored.id.length > 0 ? stored.id : rowId,
     version:
       typeof stored.version === "number" && Number.isInteger(stored.version) && stored.version >= 1

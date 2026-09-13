@@ -1,3 +1,4 @@
+import { recordFormOf, recordInputOf, storedRecordFormOf, type EhrFormValues } from "./ehr";
 import { bowtieItemSchema, type ItemInputOf, type ItemOf, type RichText } from "@/lib/ngn/schemas";
 import {
   isRecord,
@@ -24,7 +25,7 @@ export interface BowtieFormValues {
   tags: string[];
   cjmmStep?: BowtieItem["cjmmStep"];
   difficulty?: BowtieItem["difficulty"];
-  ehr?: BowtieItem["ehr"];
+  ehr?: EhrFormValues;
   meta: BowtieItem["meta"];
   stem: string;
   instructions: string;
@@ -57,7 +58,7 @@ export function toBowtieForm(item: BowtieItem): BowtieFormValues {
     tags: [...item.tags],
     cjmmStep: item.cjmmStep,
     difficulty: item.difficulty,
-    ehr: item.ehr,
+    ...recordFormOf(item.ehr),
     meta: { ...item.meta },
     stem: item.stem.value,
     instructions: item.instructions ?? "",
@@ -88,7 +89,7 @@ export function fromBowtieForm(values: BowtieFormValues): ItemInputOf<"bowtie"> 
     tags: [...values.tags],
     ...(values.cjmmStep !== undefined ? { cjmmStep: values.cjmmStep } : {}),
     ...(values.difficulty !== undefined ? { difficulty: values.difficulty } : {}),
-    ...(values.ehr !== undefined ? { ehr: values.ehr } : {}),
+    ...recordInputOf(values.ehr),
     type: "bowtie",
     stem: markdown(values.stem),
     ...(blank(values.instructions) ? {} : { instructions: values.instructions }),
@@ -207,6 +208,7 @@ export function bowtieFormFromStored(stored: unknown, rowId: string): BowtieForm
     ...blankForm,
     id: storedId(stored.id, rowId),
     version: storedVersion(stored.version),
+    ...storedRecordFormOf(stored),
     tags: storedStrings(stored.tags),
     stem: markdownText(stored.stem),
     instructions: storedString(stored.instructions),

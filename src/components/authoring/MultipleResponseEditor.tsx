@@ -37,7 +37,7 @@ export function MultipleResponseEditor({
   onSaveDraft,
   onPublish,
 }: MultipleResponseEditorProps) {
-  const { register, control, getValues, setFocus } = useForm<MultipleResponseFormValues>({
+  const { register, control, getValues, setValue, setFocus } = useForm<MultipleResponseFormValues>({
     defaultValues: initialValues,
   });
   const { fields, append, remove } = useFieldArray({
@@ -78,6 +78,7 @@ export function MultipleResponseEditor({
       toInput={fromMultipleResponseForm}
       onSaveDraft={onSaveDraft}
       onPublish={onPublish}
+      onRecordChange={(record) => setValue("ehr", record, { shouldDirty: true })}
     >
       <div className="flex flex-col gap-2">
         <label htmlFor={`${ids}-stem`} className="text-sm font-medium text-ink-1">

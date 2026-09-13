@@ -42,7 +42,7 @@ export function MultipleChoiceEditor({
   onSaveDraft,
   onPublish,
 }: MultipleChoiceEditorProps) {
-  const { register, control, getValues, setFocus } = useForm<MultipleChoiceFormValues>({
+  const { register, control, getValues, setValue, setFocus } = useForm<MultipleChoiceFormValues>({
     defaultValues: initialValues,
   });
   // keyName keeps RHF's row key from overwriting each option's own `id`.
@@ -81,6 +81,7 @@ export function MultipleChoiceEditor({
       toInput={fromMultipleChoiceForm}
       onSaveDraft={onSaveDraft}
       onPublish={onPublish}
+      onRecordChange={(record) => setValue("ehr", record, { shouldDirty: true })}
     >
       <div className="flex flex-col gap-2">
         <label htmlFor={`${ids}-stem`} className="text-sm font-medium text-ink-1">

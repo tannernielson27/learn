@@ -1,3 +1,4 @@
+import { recordFormOf, recordInputOf, storedRecordFormOf, type EhrFormValues } from "./ehr";
 import {
   dropdownClozeItemSchema,
   dropdownRationaleItemSchema,
@@ -41,7 +42,7 @@ export interface ClozeFormValues {
   tags: string[];
   cjmmStep?: ClozeItem["cjmmStep"];
   difficulty?: ClozeItem["difficulty"];
-  ehr?: ClozeItem["ehr"];
+  ehr?: EhrFormValues;
   meta: ClozeItem["meta"];
   stem: string;
   instructions: string;
@@ -90,7 +91,7 @@ export function toClozeForm(item: ClozeItem): ClozeFormValues {
     tags: [...item.tags],
     cjmmStep: item.cjmmStep,
     difficulty: item.difficulty,
-    ehr: item.ehr,
+    ...recordFormOf(item.ehr),
     meta: { ...item.meta },
     stem: item.stem.value,
     instructions: item.instructions ?? "",
@@ -119,7 +120,7 @@ function envelope(values: ClozeFormValues) {
     tags: [...values.tags],
     ...(values.cjmmStep !== undefined ? { cjmmStep: values.cjmmStep } : {}),
     ...(values.difficulty !== undefined ? { difficulty: values.difficulty } : {}),
-    ...(values.ehr !== undefined ? { ehr: values.ehr } : {}),
+    ...recordInputOf(values.ehr),
     stem: markdown(values.stem),
     ...(blank(values.instructions) ? {} : { instructions: values.instructions }),
     content: {
@@ -257,6 +258,7 @@ export function clozeFormFromStored(stored: unknown, rowId: string): ClozeFormVa
     ...blankForm,
     id: storedId(stored.id, rowId),
     version: storedVersion(stored.version),
+    ...storedRecordFormOf(stored),
     tags: storedStrings(stored.tags),
     stem: markdownText(stored.stem),
     instructions: storedString(stored.instructions),

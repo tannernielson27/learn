@@ -123,6 +123,7 @@ export function OrderedResponseEditor({
       toInput={fromOrderedResponseForm}
       onSaveDraft={onSaveDraft}
       onPublish={onPublish}
+      onRecordChange={(record) => setValue("ehr", record, { shouldDirty: true })}
     >
       <div className="flex flex-col gap-2">
         <label htmlFor={`${ids}-stem`} className="text-sm font-medium text-ink-1">

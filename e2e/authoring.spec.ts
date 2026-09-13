@@ -562,6 +562,95 @@ test("an author writes a case study's patient record and reads it at two times",
   await expect(page.getByRole("link", { name: "Edit patient record" })).toBeVisible();
 });
 
+test("an author gives a matrix item a record at two times, publishes it, and plays it with the record", async ({
+  page,
+  request,
+}, testInfo) => {
+  await signInAsNewAuthor(page, request, testInfo.project.name);
+  await page
+    .getByRole("textbox", { name: "Bank name" })
+    .fill(`Trend ${testInfo.project.name} ${Date.now()}`);
+  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("button", { name: "Matrix Multiple Choice", exact: true }).click();
+  await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
+
+  const textbox = (name: string) => page.getByRole("textbox", { name, exact: true });
+  const select = (name: string) => page.getByRole("combobox", { name, exact: true });
+
+  const stem = "Over the shift, has each finding improved or declined?";
+  await textbox("Question stem").fill(stem);
+  await textbox("Column 1").fill("Improved");
+  await textbox("Column 2").fill("Declined");
+  for (const [index, [finding, answer]] of [
+    ["Heart rate", "Declined"],
+    ["Temperature", "Improved"],
+  ].entries()) {
+    const row = page.getByRole("group", { name: `Row ${index + 1}`, exact: true });
+    await row.getByRole("textbox", { name: "Row text" }).fill(finding!);
+    await row
+      .getByRole("radiogroup", { name: `Correct column for row ${index + 1}` })
+      .getByRole("radio", { name: answer })
+      .check();
+  }
+
+  // The record opens with focus on its first field.
+  await page.getByRole("button", { name: "Add patient record" }).click();
+  await expect(textbox("Age in years")).toBeFocused();
+  await expect(page.getByText(/never enter real patient information/i)).toBeVisible();
+  await textbox("Age in years").fill("68");
+  await select("Sex").selectOption("male");
+  await textbox("Care setting").fill("Medical unit");
+  await textbox("Time point 1, Label").fill("0800");
+  await page.getByRole("button", { name: "Add time point" }).click();
+  await textbox("Time point 2, Label").fill("1200");
+
+  for (const [section, time, rate] of [
+    [1, "t1", "96"],
+    [2, "t2", "118"],
+  ] as const) {
+    await select("New section kind").selectOption("vital_signs");
+    await page.getByRole("button", { name: "Add section", exact: true }).click();
+    await select(`Section ${section}, Time`).selectOption(time);
+    const row = `Section ${section}, block 1, row 1`;
+    await textbox(`${row}, Measure`).fill("Heart rate");
+    await textbox(`${row}, Value`).fill(rate);
+  }
+  await select("Section 2, block 1, row 1, Flag").selectOption("H");
+  await expect(page.getByRole("region", { name: "Problems to fix" })).toHaveCount(0);
+
+  const preview = page.getByRole("region", { name: "Preview" });
+  await expect(preview.getByRole("heading", { name: "68-year-old male" })).toBeVisible();
+  await expect(preview.getByText("96", { exact: true })).toBeVisible();
+  await preview.getByRole("radio", { name: "1200" }).click();
+  await expect(preview.getByText("118", { exact: true })).toBeVisible();
+  await expectNoAxeViolations(page);
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/item-record-editor.png`,
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: "Publish" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
+
+  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: `Play ${stem}` }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Play item" })).toBeVisible();
+  expect(await page.content()).not.toContain("correctColumnId");
+
+  // Below 1024px the record sits behind the Patient record chip; wider, it is always open.
+  const chip = page.getByRole("button", { name: "Patient record" });
+  if (await chip.isVisible()) await chip.click();
+  const time = page.getByRole("radiogroup", { name: "Time" }).filter({ visible: true });
+  await time.getByRole("radio", { name: "1200" }).click();
+  await expect(page.getByText("118", { exact: true }).filter({ visible: true })).toBeVisible();
+  await expectNoAxeViolations(page);
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/item-record-play.png`,
+    fullPage: true,
+  });
+});
+
 test("an unknown bank is a not-found page, not an error", async ({ page, request }, testInfo) => {
   await signInAsNewAuthor(page, request, testInfo.project.name);
   const response = await page.goto("/author/banks/00000000-0000-4000-8000-00000000dead");

@@ -1,3 +1,4 @@
+import { recordFormOf, recordInputOf, storedRecordFormOf, type EhrFormValues } from "./ehr";
 import {
   multipleResponseGroupingItemSchema,
   rationaleSchema,
@@ -37,7 +38,7 @@ export interface GroupingFormValues {
   tags: string[];
   cjmmStep?: GroupingItem["cjmmStep"];
   difficulty?: GroupingItem["difficulty"];
-  ehr?: GroupingItem["ehr"];
+  ehr?: EhrFormValues;
   meta: GroupingItem["meta"];
   /** Rationale is carried through untouched; per-element rationale for groups arrives with #49. */
   rationale: GroupingItem["rationale"];
@@ -59,7 +60,7 @@ export function toGroupingForm(item: GroupingItem): GroupingFormValues {
     tags: [...item.tags],
     cjmmStep: item.cjmmStep,
     difficulty: item.difficulty,
-    ehr: item.ehr,
+    ...recordFormOf(item.ehr),
     meta: { ...item.meta },
     rationale: item.rationale,
     stem: item.stem.value,
@@ -97,7 +98,7 @@ export function fromGroupingForm(
     tags: [...values.tags],
     ...(values.cjmmStep !== undefined ? { cjmmStep: values.cjmmStep } : {}),
     ...(values.difficulty !== undefined ? { difficulty: values.difficulty } : {}),
-    ...(values.ehr !== undefined ? { ehr: values.ehr } : {}),
+    ...recordInputOf(values.ehr),
     stem: markdown(values.stem),
     ...(blank(values.instructions) ? {} : { instructions: values.instructions }),
     content: {
@@ -182,6 +183,7 @@ export function groupingFormFromStored(stored: unknown, rowId: string): Grouping
     ...blankForm,
     id: storedId(stored.id, rowId),
     version: storedVersion(stored.version),
+    ...storedRecordFormOf(stored),
     tags: storedStrings(stored.tags),
     rationale: rationale.success ? rationale.data : blankForm.rationale,
     stem: markdownText(stored.stem),

@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { cjmmStepSchema, ehrRecordSchema, idSchema, itemMetaSchema } from "@/lib/ngn/schemas";
+import { ehrFormDraftSchema } from "./ehrDraft";
+import { cjmmStepSchema, idSchema, itemMetaSchema } from "@/lib/ngn/schemas";
 import { DRAFT_ERROR, type DraftParseResult } from "./draft";
 import type { OrderedResponseFormValues } from "./orderedResponse";
 
@@ -13,7 +14,7 @@ const draftSchema = z.strictObject({
   tags: z.array(z.string().max(60)).max(30),
   cjmmStep: cjmmStepSchema.optional(),
   difficulty: z.enum(["easy", "medium", "hard"]).optional(),
-  ehr: ehrRecordSchema.optional(),
+  ehr: ehrFormDraftSchema.optional(),
   meta: itemMetaSchema,
   stem: z.string().max(20_000),
   instructions: z.string().max(2_000),
