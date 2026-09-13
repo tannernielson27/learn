@@ -109,6 +109,56 @@ test("an author writes a multiple choice item beside its preview, saves a draft,
   await expect(page.getByRole("radio", { name: "Option A is correct" })).toBeChecked();
 });
 
+test("an author writes a select-all-that-apply item, marks three answers, and publishes", async ({
+  page,
+  request,
+}, testInfo) => {
+  await signInAsNewAuthor(page, request, testInfo.project.name);
+  await page
+    .getByRole("textbox", { name: "Bank name" })
+    .fill(`SATA ${testInfo.project.name} ${Date.now()}`);
+  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("button", { name: "Extended Multiple Response", exact: true }).click();
+  await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
+
+  const problems = page.getByRole("region", { name: "Problems to fix" });
+  await expect(
+    problems.getByRole("button", { name: "Mark at least one option as correct." }),
+  ).toBeVisible();
+
+  await page
+    .getByRole("textbox", { name: "Question stem" })
+    .fill("Which findings require immediate follow-up?");
+  const findings = [
+    "Respiratory rate 28",
+    "Oxygen saturation 89%",
+    "Temperature 37.2 °C",
+    "New confusion",
+    "Productive cough",
+  ];
+  for (const [index, text] of findings.entries()) {
+    const letter = "ABCDE"[index];
+    await page.getByRole("textbox", { name: `Option ${letter}`, exact: true }).fill(text);
+  }
+  for (const letter of ["A", "B", "D"]) {
+    await page.getByRole("checkbox", { name: `Option ${letter} is correct` }).check();
+  }
+
+  const preview = page.getByRole("region", { name: "Preview" });
+  await expect(preview.getByText("Oxygen saturation 89%").first()).toBeVisible();
+  await expect(problems).toHaveCount(0);
+  await expectNoAxeViolations(page);
+
+  await page.getByRole("button", { name: "Publish" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
+
+  await page.getByRole("link", { name: "Back to bank" }).click();
+  await expect(
+    page.getByRole("link", { name: /Which findings require immediate follow-up\?/ }),
+  ).toContainText("Published");
+});
+
 test("an unknown bank is a not-found page, not an error", async ({ page, request }, testInfo) => {
   await signInAsNewAuthor(page, request, testInfo.project.name);
   const response = await page.goto("/author/banks/00000000-0000-4000-8000-00000000dead");
