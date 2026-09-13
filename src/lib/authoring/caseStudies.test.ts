@@ -10,7 +10,11 @@ import {
   publishCaseStudy,
   reorderSteps,
   saveRecord,
+  saveRecordForm,
 } from "./caseStudies";
+import { DRAFT_ERROR } from "./forms/draft";
+import { toEhrForm } from "./forms/ehr";
+import { sampleEhr } from "@/lib/ngn/fixtures/case-study";
 
 type Result = { data?: unknown; error?: { code?: string; message?: string } | null };
 
@@ -94,8 +98,34 @@ describe("createCaseStudy", () => {
   });
 
   it("leaves the fictional patient's sex for the author to choose", () => {
-    expect(emptyRecord()).toMatchObject({ patientHeader: { age: 0, setting: "" }, tabs: [] });
+    expect(emptyRecord()).toMatchObject({ patientHeader: { setting: "" }, tabs: [] });
+    // Neither is guessed: an age of 0 would read as a newborn in the record editor (#87).
     expect((emptyRecord() as { patientHeader: object }).patientHeader).not.toHaveProperty("sex");
+    expect((emptyRecord() as { patientHeader: object }).patientHeader).not.toHaveProperty("age");
+  });
+});
+
+describe("saveRecordForm", () => {
+  it("refuses an oversized request before parsing or writing anything", async () => {
+    const fake = fakeClient();
+    const result = await saveRecordForm(fake.client, CASE_ID, { junk: "x".repeat(250_000) });
+    expect(result).toEqual({ ok: false, error: CASE_STUDY_ERRORS.tooLarge });
+    expect(fake.from).not.toHaveBeenCalled();
+  });
+
+  it("refuses anything that is not the record form, before writing anything", async () => {
+    const fake = fakeClient();
+    const result = await saveRecordForm(fake.client, CASE_ID, { patient: "x" });
+    expect(result).toEqual({ ok: false, error: DRAFT_ERROR });
+    expect(fake.from).not.toHaveBeenCalled();
+  });
+
+  it("stores the record the form describes", async () => {
+    const fake = fakeClient({ case_studies: [{ data: [{ id: CASE_ID }], error: null }] });
+    const result = await saveRecordForm(fake.client, CASE_ID, toEhrForm(sampleEhr));
+    expect(result).toEqual({ ok: true, value: undefined });
+    const update = fake.calls.find((call) => call.method === "update");
+    expect(update?.args[0]).toMatchObject({ ehr: sampleEhr });
   });
 });
 
