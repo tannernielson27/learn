@@ -100,6 +100,9 @@ export default async function CaseStudyPage({
     };
   });
 
+  // Assembled once: it drives both Preview case study and whether Export JSON is offered.
+  const preview = assembleCaseStudy(row, "preview");
+
   const blockers = caseStudyBlockers({
     titleWritten: row.title.trim().length > 0,
     recordTabCount: recordForm.tabs.length,
@@ -117,13 +120,23 @@ export default async function CaseStudyPage({
         steps={steps}
         readyLabel={stepsReadyLabel(stepStates)}
         recordPreview={previewRecord(recordForm)}
-        preview={assembleCaseStudy(row, "preview")}
+        preview={preview}
         publish={publishCaseStudyAction.bind(null, row.id)}
       >
         <p className="eyebrow mb-1">Case study</p>
         <div className="mb-6 flex flex-wrap items-baseline gap-3">
           <h1 className="font-read text-3xl text-ink-1">{row.title}</h1>
           <p className="text-sm text-ink-2">{STATUS_LABELS[row.status]}</p>
+          {/* Only a case study with its record and six finished steps exports. */}
+          {preview.ok ? (
+            <a
+              href={`/author/case-studies/${row.id}/export`}
+              download
+              className="text-sm text-accent-ink underline-offset-4 hover:underline"
+            >
+              Export JSON
+            </a>
+          ) : null}
         </div>
       </CaseStudyBuilder>
 

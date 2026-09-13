@@ -4,11 +4,12 @@ import { notFound } from "next/navigation";
 import { CaseStudyList } from "@/components/authoring/CaseStudyList";
 import { CreateBankForm } from "@/components/authoring/CreateBankForm";
 import { CreateCaseStudyForm } from "@/components/authoring/CreateCaseStudyForm";
+import { ImportJsonForm } from "@/components/authoring/ImportJsonForm";
 import { ItemList } from "@/components/authoring/ItemList";
 import { listCaseStudies, listItems } from "@/lib/authoring/banks";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
-import { createCaseStudyInBank, renameBank } from "../../actions";
+import { createCaseStudyInBank, importIntoBank, renameBank } from "../../actions";
 
 export const metadata: Metadata = { title: "Item bank" };
 
@@ -52,6 +53,12 @@ export default async function BankPage({ params }: PageProps<"/author/banks/[ban
         </h2>
         <CaseStudyList caseStudies={caseStudies} />
         <CreateCaseStudyForm action={createCaseStudyInBank.bind(null, bank.id)} />
+      </section>
+      <section aria-labelledby="import-heading" className="mt-10 flex flex-col gap-4">
+        <h2 id="import-heading" className="font-read text-2xl text-ink-1">
+          Import JSON
+        </h2>
+        <ImportJsonForm action={importIntoBank.bind(null, bank.id)} />
       </section>
       <details className="mt-10 border-t border-line pt-6">
         <summary className="tap-target flex cursor-pointer items-center text-sm font-medium text-ink-2">

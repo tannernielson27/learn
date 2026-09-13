@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { BankFormState } from "@/components/authoring/CreateBankForm";
 import type { CaseStudyFormState } from "@/components/authoring/CreateCaseStudyForm";
+import type { ImportFormState } from "@/components/authoring/ImportJsonForm";
+import { importIntoBank as writeImport } from "@/lib/authoring/importExport";
+import { readImportText } from "@/lib/authoring/importForm";
+import { importRowsFor, importSummary, parseImport } from "@/lib/authoring/transfer";
 import { parseBankForm } from "@/lib/authoring/bankForm";
 import { createCaseStudy } from "@/lib/authoring/caseStudies";
 import { parseCaseStudyTitle } from "@/lib/authoring/caseStudyForm";
@@ -83,6 +87,30 @@ export async function createCaseStudyInBank(
 
   revalidatePath(`/author/banks/${bankId}`);
   redirect(`/author/case-studies/${created.value.id}`);
+}
+
+/**
+ * Imports a learn.v1 export into a bank as new drafts. The text is bounded and validated before
+ * anything is written, then written in one database call, so a refused import writes nothing.
+ */
+export async function importIntoBank(
+  bankId: string,
+  _previous: ImportFormState,
+  formData: FormData,
+): Promise<ImportFormState> {
+  if (!isUuid(bankId)) return { status: "error", errors: ["That bank no longer exists."] };
+  const { supabase } = await requireAuthor(`/author/banks/${bankId}`);
+
+  const read = await readImportText(formData);
+  if (!read.ok) return { status: "error", errors: [read.error] };
+  const parsed = parseImport(read.text);
+  if (!parsed.ok) return { status: "error", errors: parsed.errors };
+
+  const written = await writeImport(supabase, bankId, importRowsFor(parsed));
+  if (!written.ok) return { status: "error", errors: [written.error] };
+
+  revalidatePath(`/author/banks/${bankId}`);
+  return { status: "done", message: importSummary(parsed) };
 }
 
 export interface CreateItemResult {
