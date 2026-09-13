@@ -16,14 +16,19 @@
     "check": "pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build",
     "prepare": "husky",
     "e2e": "playwright test",
-    "e2e:install": "playwright install chromium"
+    "e2e:install": "playwright install chromium",
+    "db:types": "node scripts/db-types.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
+    "@hookform/resolvers": "^5.9.1",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.116.0",
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "react-hook-form": "^7.88.0",
     "zod": "^4.5.4"
   },
   "devDependencies": {
@@ -46,6 +51,7 @@
     "jsdom": "^30.0.1",
     "lint-staged": "^17.5.0",
     "prettier": "^3.9.6",
+    "supabase": "^2.117.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^5.0.0"

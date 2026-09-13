@@ -45,6 +45,7 @@ export default defineConfig({
         "src/app/**",
         "src/**/*.d.ts",
         "src/lib/ngn/fixtures/**",
+        "src/lib/supabase/database.types.ts",
       ],
       thresholds: {
         lines: 80,
