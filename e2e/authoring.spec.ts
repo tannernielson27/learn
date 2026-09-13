@@ -506,8 +506,8 @@ test("an author writes a case study's patient record and reads it at two times",
   await page.getByRole("button", { name: "New case study" }).click();
   await expect(page).toHaveURL(/\/author\/case-studies\/[0-9a-f-]{36}$/);
 
-  await page.getByRole("link", { name: "Edit patient record" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Patient record" })).toBeVisible();
+  // The record is the builder's first step, open when the case study opens.
+  await expect(page.getByRole("region", { name: "Record", exact: true })).toBeVisible();
   await expect(page.getByText(/never enter real patient information/i)).toBeVisible();
 
   const textbox = (name: string) => page.getByRole("textbox", { name, exact: true });
@@ -558,8 +558,8 @@ test("an author writes a case study's patient record and reads it at two times",
   // The saved record reopens as it was written.
   await page.reload();
   await expect(textbox("Section 3, block 1, row 1, Value")).toHaveValue("118");
-  await page.getByRole("link", { name: "Back to case study" }).click();
-  await expect(page.getByRole("link", { name: "Edit patient record" })).toBeVisible();
+  const rail = page.getByRole("navigation", { name: "Case study steps" });
+  await expect(rail.getByRole("button", { name: /^Record/ })).toContainText("Ready");
 });
 
 test("an author gives a matrix item a record at two times, publishes it, and plays it with the record", async ({
@@ -647,6 +647,74 @@ test("an author gives a matrix item a record at two times, publishes it, and pla
   await expectNoAxeViolations(page);
   await page.screenshot({
     path: `test-results/screenshots/${testInfo.project.name}/item-record-play.png`,
+    fullPage: true,
+  });
+});
+
+test("an author starts case study steps by type, edits them in place, and is asked before losing work", async ({
+  page,
+  request,
+}, testInfo) => {
+  await signInAsNewAuthor(page, request, testInfo.project.name);
+  await page
+    .getByRole("textbox", { name: "Bank name" })
+    .fill(`Builder ${testInfo.project.name} ${Date.now()}`);
+  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Case study title" }).fill("Heart failure, day one");
+  await page.getByRole("button", { name: "New case study" }).click();
+  await expect(page).toHaveURL(/\/author\/case-studies\/[0-9a-f-]{36}$/);
+
+  // The record opens first.
+  const rail = page.getByRole("navigation", { name: "Case study steps" });
+  await expect(rail.getByRole("button", { name: /^Record/ })).toHaveAttribute(
+    "aria-current",
+    "step",
+  );
+  await expect(page.getByRole("textbox", { name: "Age in years", exact: true })).toBeVisible();
+  await expectNoAxeViolations(page);
+
+  // A step starts from its type, and its editor opens in place, with no record of its own.
+  await rail.getByRole("button", { name: /^Step 1: Recognize Cues/ }).click();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Step 1: Recognize Cues" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Multiple Choice", exact: true }).click();
+  const stem = page.getByRole("textbox", { name: "Question stem" });
+  await expect(stem).toBeVisible();
+  await expect(rail.getByRole("button", { name: /^Step 1/ })).toContainText("Draft");
+  await expect(page.getByRole("button", { name: "Add patient record" })).toHaveCount(0);
+
+  // Leaving with unsaved changes asks first.
+  await stem.fill("Which finding needs follow-up first?");
+  await rail.getByRole("button", { name: /^Step 2: Analyze Cues/ }).click();
+  const ask = page.getByRole("alertdialog", { name: "Step 1 has unsaved changes" });
+  await expect(ask).toBeVisible();
+  await ask.getByRole("button", { name: "Stay on this step" }).click();
+  await expect(stem).toHaveValue("Which finding needs follow-up first?");
+  await page.getByRole("button", { name: "Save draft" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Draft saved." })).toBeVisible();
+
+  await rail.getByRole("button", { name: /^Step 2: Analyze Cues/ }).click();
+  await expect(ask).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 2, name: "Step 2: Analyze Cues" })).toBeVisible();
+  await expectNoAxeViolations(page);
+
+  // The saved draft reopens, and changing its type warns before anything is lost.
+  await rail.getByRole("button", { name: /^Step 1: Recognize Cues/ }).click();
+  await expect(stem).toHaveValue("Which finding needs follow-up first?");
+  await page.getByRole("button", { name: "Change type" }).click();
+  await expect(
+    page.getByText(
+      "Changing the type starts a new item for this step. Its question and answers will be lost.",
+    ),
+  ).toBeVisible();
+  await expectNoAxeViolations(page);
+  await page.getByRole("button", { name: "Choose another type" }).click();
+  await page.getByRole("button", { name: "Ordered Response", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Change type" })).toBeVisible();
+  await expect(stem).toHaveValue("");
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/case-study-builder.png`,
     fullPage: true,
   });
 });

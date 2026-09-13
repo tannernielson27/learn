@@ -220,6 +220,13 @@ describe("a patient record on a standalone item", () => {
     expect(kit.draft({ ...form, ehr: { ...emptyEhrForm(), script: "x" } }).ok).toBe(false);
   });
 
+  it.each(TYPES)("%s: reopening a draft keeps its clinical judgment step", (type) => {
+    const kit = KITS[type];
+    const draft = { ...FIXTURES[type].canonical, stem: { kind: "markdown", value: "" } };
+    expect(kit.stored({ ...draft, cjmmStep: 3 }, "row_id")).toMatchObject({ cjmmStep: 3 });
+    expect(kit.stored({ ...draft, cjmmStep: 9 }, "row_id")).not.toHaveProperty("cjmmStep");
+  });
+
   it("does not publish an item whose record is unfinished, and says it is the record", () => {
     const form = toMatrixForm(valid(sampleTrendItem) as never);
     const result = validateItem(fromMatrixMultipleChoiceForm({ ...form, ehr: emptyEhrForm() }));

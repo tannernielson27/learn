@@ -9,6 +9,7 @@ import type { SaveResult } from "./EditorShell";
 import { EhrPreview } from "./EhrPreview";
 import { EhrRecordFields, focusRecordField } from "./EhrRecordFields";
 import { issueMessageId } from "./issueIds";
+import { useItemEditorHost, useReportDirty } from "./ItemEditorHost";
 
 export interface EhrEditorProps {
   initialValues: EhrFormValues;
@@ -35,6 +36,9 @@ export function EhrEditor({ initialValues, onSave }: EhrEditorProps) {
   // Compared rather than reset, so text typed while a save is in flight stays unsaved.
   const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(initialValues));
   const isDirty = JSON.stringify(values) !== savedSnapshot;
+  useReportDirty(isDirty);
+  // In the case study builder the record sits under its step's heading.
+  const { inCaseStudy } = useItemEditorHost();
   const busy = status.kind === "busy";
 
   const parsed = ehrRecordSchema.safeParse(fromEhrForm(values));
@@ -78,6 +82,7 @@ export function EhrEditor({ initialValues, onSave }: EhrEditorProps) {
           issues={issues}
           idPrefix={ids}
           issueIdPrefix={ids}
+          sectionsHeading={inCaseStudy ? "h3" : "h2"}
         />
 
         {issues.length > 0 ? (

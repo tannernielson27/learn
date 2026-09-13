@@ -1,3 +1,4 @@
+import { storedCjmmStepOf } from "./storedValues";
 import { recordFormOf, recordInputOf, storedRecordFormOf, type EhrFormValues } from "./ehr";
 import {
   multipleChoiceItemSchema,
@@ -152,6 +153,7 @@ export function multipleChoiceFormFromStored(
   return {
     ...blankForm,
     ...storedRecordFormOf(stored),
+    ...storedCjmmStepOf(stored),
     id: typeof stored.id === "string" && stored.id.length > 0 ? stored.id : rowId,
     version:
       typeof stored.version === "number" && Number.isInteger(stored.version) && stored.version >= 1

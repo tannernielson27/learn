@@ -3,6 +3,7 @@ import { caseStudyBlockers, type CaseStudyStepState } from "@/lib/authoring/case
 import { fromEhrForm } from "@/lib/authoring/forms/ehr";
 import { parseEhrDraft } from "@/lib/authoring/forms/ehrDraft";
 import { withinItemSizeLimit } from "@/lib/authoring/payloadSize";
+import type { ItemType } from "@/lib/ngn/labels";
 import type { CjmmStep } from "@/lib/ngn/types";
 import { validateCaseStudy } from "@/lib/ngn/validate";
 import type { Database, Json } from "@/lib/supabase/database.types";
@@ -87,6 +88,82 @@ export async function saveRecordForm(
   const draft = parseEhrDraft(values);
   if (!draft.ok) return { ok: false, error: draft.error };
   return saveRecord(client, caseStudyId, fromEhrForm(draft.values));
+}
+
+/**
+ * The clinical judgment step an item is pinned to by its place in a case study, or null when it
+ * is not a step. Saving and publishing an item write this rather than whatever the form carries,
+ * so a draft saved from a half-written form can never unpin a step.
+ */
+export async function pinnedStepFor(client: Client, itemId: string): Promise<CjmmStep | null> {
+  const { data, error } = await client
+    .from("case_study_items")
+    .select("position")
+    .eq("item_id", itemId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data.position as CjmmStep;
+}
+
+/**
+ * Starts a step: a new draft item of the chosen type in the case study's own bank, pinned to the
+ * step and placed at it. When the step already had an item (the author changed its type), the old
+ * item is removed if it is still a draft; a published one stays in the bank. If placing fails, the
+ * new item is removed again, so no orphan draft is left behind.
+ */
+export async function startStep(
+  client: Client,
+  args: { caseStudyId: string; position: CjmmStep; type: ItemType; userId: string },
+): Promise<CaseStudyResult<{ itemId: string }>> {
+  const { data: caseStudy } = await client
+    .from("case_studies")
+    .select("bank_id, org_id")
+    .eq("id", args.caseStudyId)
+    .maybeSingle();
+  if (!caseStudy) return { ok: false, error: CASE_STUDY_ERRORS.gone };
+
+  const { data: previous } = await client
+    .from("case_study_items")
+    .select("item_id")
+    .eq("case_study_id", args.caseStudyId)
+    .eq("position", args.position)
+    .maybeSingle();
+
+  const { data: created, error: createError } = await client
+    .from("items")
+    .insert({
+      bank_id: caseStudy.bank_id,
+      org_id: caseStudy.org_id,
+      type: args.type,
+      status: "draft",
+      content: { stem: { kind: "markdown", value: "" } },
+      answer_key: {},
+      scoring: {},
+      cjmm_step: args.position,
+      created_by: args.userId,
+    })
+    .select("id")
+    .single();
+  if (createError || !created) return { ok: false, error: CASE_STUDY_ERRORS.failed };
+
+  const placed = await placeStep(client, {
+    caseStudyId: args.caseStudyId,
+    position: args.position,
+    itemId: created.id,
+  });
+  if (!placed.ok) {
+    await client.from("items").delete().eq("id", created.id);
+    return { ok: false, error: placed.error };
+  }
+
+  // A new step starts unfinished, so a published case study is a draft again until republished.
+  await client.from("case_studies").update({ status: "draft" }).eq("id", args.caseStudyId);
+
+  if (previous?.item_id) {
+    // Best effort: a published item, or one the database still refuses to delete, simply stays.
+    await client.from("items").delete().eq("id", previous.item_id).eq("status", "draft");
+  }
+  return { ok: true, value: { itemId: created.id } };
 }
 
 /**
