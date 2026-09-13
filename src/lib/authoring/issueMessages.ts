@@ -19,6 +19,8 @@ export interface SchemaIssue {
 /** Values from the form that some messages quote, such as the Select N count. */
 export interface IssueContext {
   n?: number;
+  /** Bowtie only: how many actions and parameters are marked correct right now. */
+  bowtieMarked?: { actions: number; parameters: number };
 }
 
 type Describer = (
@@ -339,7 +341,65 @@ const describeDragDrop: Describer = (issue, path, context) => {
   return describeCloze(issue, path, context);
 };
 
+const describeOrderedResponse: Describer = (_issue, path) => {
+  const at = path.join(".");
+  if (at === "content.items") return { field: "steps", message: "Use 4 to 6 steps." };
+  if (path[0] === "content" && path[1] === "items" && path[2] !== undefined) {
+    const index = Number(path[2]);
+    return { field: `steps.${index}.label`, message: `Step ${index + 1} needs text.` };
+  }
+  if (path[0] === "answerKey") {
+    return { field: "steps", message: "Two steps share an id. Remove one and add it again." };
+  }
+  return undefined;
+};
+
+const BOWTIE_COLUMNS = {
+  actions: { noun: "Action", field: "actions" },
+  conditions: { noun: "Condition", field: "conditions" },
+  parameters: { noun: "Parameter", field: "parameters" },
+} as const;
+
+/** "(N marked)" when the editor passed the count, so the author knows how far off they are. */
+const markedNote = (count: number | undefined) => (count === undefined ? "" : ` (${count} marked)`);
+
+const describeBowtie: Describer = (_issue, path, context) => {
+  const at = path.join(".");
+  const column = BOWTIE_COLUMNS[path[1] as keyof typeof BOWTIE_COLUMNS];
+  if (path[0] === "content" && column && path[2] !== undefined) {
+    const index = Number(path[2]);
+    return {
+      field: `${column.field}.${index}.label`,
+      message: `${column.noun} ${index + 1} needs text.`,
+    };
+  }
+  if (at === "content") {
+    return {
+      field: "actions",
+      message: "Two choices share an id. Reload the editor and try again.",
+    };
+  }
+  if (at === "answerKey.actionIds") {
+    return {
+      field: "actions",
+      message: `Mark exactly 2 actions to take${markedNote(context.bowtieMarked?.actions)}.`,
+    };
+  }
+  if (at === "answerKey.parameterIds") {
+    return {
+      field: "parameters",
+      message: `Mark exactly 2 parameters to monitor${markedNote(context.bowtieMarked?.parameters)}.`,
+    };
+  }
+  if (at === "answerKey.conditionId") {
+    return { field: "conditionId", message: "Choose the potential condition." };
+  }
+  return undefined;
+};
+
 const DESCRIBERS: Partial<Record<ItemType, Describer>> = {
+  ordered_response: describeOrderedResponse,
+  bowtie: describeBowtie,
   dragdrop_cloze: describeDragDrop,
   dragdrop_rationale: describeDragDrop,
   highlight_text: describeHighlightText,

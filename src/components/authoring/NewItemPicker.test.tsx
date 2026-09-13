@@ -19,18 +19,18 @@ describe("NewItemPicker", () => {
     expect(onChoose).toHaveBeenCalledWith("multiple_response");
   });
 
-  it("keeps later formats visible but unavailable, and says when they arrive", async () => {
+  it("offers every format, with none held back for a later sprint", async () => {
     const onChoose = vi.fn();
     render(<NewItemPicker onChoose={onChoose} />);
+    for (const button of screen.getAllByRole("button")) {
+      expect(button).not.toHaveAttribute("aria-disabled", "true");
+    }
+    expect(screen.queryByText("Editor coming in Sprint 5")).not.toBeInTheDocument();
     const bowtie = within(screen.getByRole("group", { name: "Drag and drop" })).getByRole(
       "button",
-      {
-        name: /Bowtie/,
-      },
+      { name: /Bowtie/ },
     );
-    expect(bowtie).toHaveAttribute("aria-disabled", "true");
-    expect(bowtie).toHaveAccessibleDescription("Editor coming in Sprint 5");
     await userEvent.click(bowtie);
-    expect(onChoose).not.toHaveBeenCalled();
+    expect(onChoose).toHaveBeenCalledWith("bowtie");
   });
 });

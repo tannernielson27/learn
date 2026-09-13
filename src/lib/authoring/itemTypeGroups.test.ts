@@ -22,29 +22,8 @@ describe("ITEM_TYPE_GROUPS", () => {
 });
 
 describe("isEditorReady", () => {
-  it("enables exactly the types with a shipped editor", () => {
-    expect([...EDITOR_READY_TYPES].sort()).toEqual(
-      [
-        "dragdrop_cloze",
-        "dragdrop_rationale",
-        "dropdown_cloze",
-        "dropdown_rationale",
-        "dropdown_table",
-        "highlight_table",
-        "highlight_text",
-        "matrix_multiple_choice",
-        "matrix_multiple_response",
-        "multiple_choice",
-        "multiple_response",
-        "multiple_response_grouping",
-      ].sort(),
-    );
+  it("enables every item type, now that each has an editor", () => {
+    expect([...EDITOR_READY_TYPES].sort()).toEqual([...ITEM_TYPES].sort());
+    for (const type of ITEM_TYPES) expect(isEditorReady(type)).toBe(true);
   });
-
-  it.each([["bowtie"], ["ordered_response"]] as const)(
-    "keeps %s for a later Sprint 5 story",
-    (type) => {
-      expect(isEditorReady(type)).toBe(false);
-    },
-  );
 });

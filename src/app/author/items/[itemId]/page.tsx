@@ -5,6 +5,7 @@ import {
   ItemEditorLoader,
   type ItemEditorLoaderProps,
 } from "@/components/authoring/ItemEditorLoader";
+import { bowtieFormFromStored } from "@/lib/authoring/forms/bowtie";
 import { clozeFormFromStored } from "@/lib/authoring/forms/cloze";
 import { dragDropFormFromStored } from "@/lib/authoring/forms/dragdrop";
 import { dropdownTableFormFromStored } from "@/lib/authoring/forms/dropdownTable";
@@ -16,6 +17,7 @@ import { matrixFormFromStored } from "@/lib/authoring/forms/matrix";
 import { multipleChoiceFormFromStored } from "@/lib/authoring/forms/multipleChoice";
 import { multipleResponseFormFromStored } from "@/lib/authoring/forms/multipleResponse";
 import { groupingFormFromStored } from "@/lib/authoring/forms/multipleResponseGrouping";
+import { orderedResponseFormFromStored } from "@/lib/authoring/forms/orderedResponse";
 import { isRecord } from "@/lib/authoring/forms/storedValues";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
@@ -49,7 +51,11 @@ function editorFor(rowId: string, type: string, stored: unknown): ItemEditorLoad
     case "dragdrop_cloze":
     case "dragdrop_rationale":
       return { itemId: rowId, type, initialValues: dragDropFormFromStored(stored, rowId) };
-    // Ordered response and bowtie editors arrive later in Sprint 5.
+    case "ordered_response":
+      return { itemId: rowId, type, initialValues: orderedResponseFormFromStored(stored, rowId) };
+    case "bowtie":
+      return { itemId: rowId, type, initialValues: bowtieFormFromStored(stored, rowId) };
+    // Only a stored type outside the catalogue reaches here.
     default:
       return null;
   }

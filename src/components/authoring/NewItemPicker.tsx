@@ -14,11 +14,17 @@ const COMING_LATER = "Editor coming in Sprint 5";
 
 export function NewItemPicker({ onChoose, busy = false }: NewItemPickerProps) {
   const laterId = useId();
+  // Only while some format still lacks an editor; every type has one today.
+  const anyLater = ITEM_TYPE_GROUPS.some((group) =>
+    group.types.some((type) => !isEditorReady(type)),
+  );
   return (
     <div className="flex flex-col gap-6">
-      <p id={laterId} hidden>
-        {COMING_LATER}
-      </p>
+      {anyLater ? (
+        <p id={laterId} hidden>
+          {COMING_LATER}
+        </p>
+      ) : null}
       {ITEM_TYPE_GROUPS.map((group) => (
         <fieldset key={group.label} className="flex flex-col gap-2">
           <legend className="eyebrow mb-1">{group.label}</legend>

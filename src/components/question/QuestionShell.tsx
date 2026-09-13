@@ -65,6 +65,7 @@ export function QuestionShell({
   children,
 }: QuestionShellProps) {
   const root = useRef<HTMLElement>(null);
+  const headingId = useId();
   const scorePanel = useRef<HTMLElement>(null);
   // Set only by a submit made here, so a step reopened already scored does not take focus.
   const focusScore = useRef(false);
@@ -89,10 +90,15 @@ export function QuestionShell({
   return (
     <section
       ref={root}
-      aria-label="Question"
+      aria-labelledby={headingId}
       className="flex min-h-full flex-col pb-24"
       data-mode={mode}
     >
+      {/* A level-2 heading in every context (gallery, case study, preview, play), so a renderer's
+          own level-3 headings, like the bowtie's columns, never skip a level after the page h1. */}
+      <h2 id={headingId} className="sr-only">
+        Question
+      </h2>
       {progress ? (
         <div className="mb-4 flex items-center gap-3">
           <span className="font-mono text-xs text-ink-2">

@@ -1,4 +1,4 @@
-import type { ItemType } from "@/lib/ngn/labels";
+import { ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 
 export interface ItemTypeGroup {
   label: string;
@@ -20,21 +20,11 @@ export const ITEM_TYPE_GROUPS: readonly ItemTypeGroup[] = [
   },
 ];
 
-/** Types with a shipped editor (#69 to #71, #82, #83); the rest arrive later in Sprint 5. */
-export const EDITOR_READY_TYPES: ReadonlySet<ItemType> = new Set<ItemType>([
-  "dragdrop_cloze",
-  "dragdrop_rationale",
-  "highlight_text",
-  "highlight_table",
-  "multiple_choice",
-  "multiple_response",
-  "multiple_response_grouping",
-  "matrix_multiple_choice",
-  "matrix_multiple_response",
-  "dropdown_cloze",
-  "dropdown_rationale",
-  "dropdown_table",
-]);
+/**
+ * Types with a shipped editor. Since #84 that is every type; the set stays so a future type can
+ * be added to the catalogue before its editor ships.
+ */
+export const EDITOR_READY_TYPES: ReadonlySet<ItemType> = new Set<ItemType>(ITEM_TYPES);
 
 export function isEditorReady(type: ItemType): boolean {
   return EDITOR_READY_TYPES.has(type);
