@@ -47,6 +47,68 @@ test("an author creates a bank, starts an item by type, and finds the draft in t
   await expect(page.getByRole("link", { name: new RegExp(bankName) })).toContainText("1 item");
 });
 
+test("an author writes a multiple choice item beside its preview, saves a draft, then publishes", async ({
+  page,
+  request,
+}, testInfo) => {
+  await signInAsNewAuthor(page, request, testInfo.project.name);
+  await page
+    .getByRole("textbox", { name: "Bank name" })
+    .fill(`Editor ${testInfo.project.name} ${Date.now()}`);
+  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("button", { name: "Multiple Choice", exact: true }).click();
+  await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
+
+  const problems = page.getByRole("region", { name: "Problems to fix" });
+  await expect(problems.getByRole("button", { name: "Write the question stem." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Publish" })).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
+
+  await page
+    .getByRole("textbox", { name: "Question stem" })
+    .fill("Which action should the nurse take first?");
+  await page.getByRole("button", { name: "Save draft" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Draft saved." })).toBeVisible();
+
+  const preview = page.getByRole("region", { name: "Preview" });
+  const answers = [
+    "Assess the airway",
+    "Call the provider",
+    "Document the finding",
+    "Reassess in an hour",
+  ];
+  for (const [index, text] of answers.entries()) {
+    // Exact: Playwright matches names by substring, and "Why option A is right or wrong" contains
+    // "option A".
+    await page.getByRole("textbox", { name: `Option ${"ABCD"[index]}`, exact: true }).fill(text);
+  }
+  await page.getByRole("radio", { name: "Option A is correct" }).check();
+  await expect(preview.getByText("Which action should the nurse take first?")).toBeVisible();
+  await expect(preview.getByText("Assess the airway")).toBeVisible();
+  await expect(problems).toHaveCount(0);
+
+  const axe = await new AxeBuilder({ page }).analyze();
+  expect(axe.violations).toEqual([]);
+
+  await page.getByRole("button", { name: "Publish" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
+
+  await page.getByRole("link", { name: "Back to bank" }).click();
+  await expect(
+    page.getByRole("link", { name: /Which action should the nurse take first\?/ }),
+  ).toContainText("Published");
+
+  // A reload opens exactly what was published.
+  await page.getByRole("link", { name: /Which action should the nurse take first\?/ }).click();
+  await expect(page.getByRole("textbox", { name: "Option C", exact: true })).toHaveValue(
+    "Document the finding",
+  );
+  await expect(page.getByRole("radio", { name: "Option A is correct" })).toBeChecked();
+});
+
 test("an unknown bank is a not-found page, not an error", async ({ page, request }, testInfo) => {
   await signInAsNewAuthor(page, request, testInfo.project.name);
   const response = await page.goto("/author/banks/00000000-0000-4000-8000-00000000dead");

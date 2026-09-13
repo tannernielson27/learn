@@ -1,43 +1,86 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MultipleChoiceEditorLoader } from "@/components/authoring/MultipleChoiceEditorLoader";
+import { multipleChoiceFormFromStored } from "@/lib/authoring/forms/multipleChoice";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { ITEM_TYPE_LABELS, ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 
 export const metadata: Metadata = { title: "Edit item" };
 
-// Placeholder: the split-pane editor with live preview replaces this in #69.
+const STATUS_LABELS = { draft: "Draft", published: "Published", archived: "Archived" } as const;
+
 export default async function EditItemPage({ params }: PageProps<"/author/items/[itemId]">) {
   const { itemId } = await params;
   if (!isUuid(itemId)) notFound();
 
   const { supabase } = await requireAuthor(`/author/items/${itemId}`);
-  // Reads only what the heading needs; the key stays in the database.
-  const { data: item } = await supabase
+  // Authors may read their own org's keys (ADR 0003); RLS limits this row to the author's org.
+  const { data: row } = await supabase
     .from("items")
-    .select("id, type, bank_id")
+    .select(
+      "id, bank_id, type, cjmm_step, tags, version, status, content, answer_key, rationale, scoring",
+    )
     .eq("id", itemId)
     .maybeSingle();
-  if (!item) notFound();
+  if (!row) notFound();
 
-  const label = (ITEM_TYPES as readonly string[]).includes(item.type)
-    ? ITEM_TYPE_LABELS[item.type as ItemType]
-    : item.type;
+  const label = (ITEM_TYPES as readonly string[]).includes(row.type)
+    ? ITEM_TYPE_LABELS[row.type as ItemType]
+    : row.type;
 
-  return (
+  const header = (
     <>
       <p className="mb-2 text-sm">
         <Link
-          href={`/author/banks/${item.bank_id}`}
+          href={`/author/banks/${row.bank_id}`}
           className="text-accent-ink underline-offset-4 hover:underline"
         >
           Back to bank
         </Link>
       </p>
       <p className="eyebrow mb-1">{label}</p>
-      <h1 className="mb-2 font-read text-3xl text-ink-1">Untitled item</h1>
-      <p className="text-ink-2">The editor for this item arrives in the next story.</p>
+      <div className="mb-6 flex flex-wrap items-baseline gap-3">
+        <h1 className="font-read text-3xl text-ink-1">Edit item</h1>
+        <p className="text-sm text-ink-2">{STATUS_LABELS[row.status]}</p>
+      </div>
+    </>
+  );
+
+  if (row.type !== "multiple_choice") {
+    return (
+      <>
+        {header}
+        <p className="text-ink-2">
+          The editor for this item type arrives in a later story this sprint.
+        </p>
+      </>
+    );
+  }
+
+  const content =
+    row.content && typeof row.content === "object" && !Array.isArray(row.content)
+      ? row.content
+      : {};
+  const stored = {
+    ...content,
+    type: row.type,
+    cjmmStep: row.cjmm_step ?? undefined,
+    tags: row.tags,
+    version: row.version,
+    answerKey: row.answer_key,
+    rationale: row.rationale,
+    scoring: row.scoring,
+  };
+
+  return (
+    <>
+      {header}
+      <MultipleChoiceEditorLoader
+        itemId={row.id}
+        initialValues={multipleChoiceFormFromStored(stored, row.id)}
+      />
     </>
   );
 }
