@@ -9,6 +9,7 @@ import {
   placeStep,
   publishCaseStudy,
   reorderSteps,
+  assembleCaseStudy,
   pinnedStepFor,
   saveRecord,
   saveRecordForm,
@@ -213,6 +214,46 @@ describe("startStep", () => {
       error: CASE_STUDY_ERRORS.failed,
     });
     expect(fake.rpc).not.toHaveBeenCalled();
+  });
+});
+
+describe("assembleCaseStudy", () => {
+  it("assembles a preview from finished steps whose items are still drafts", () => {
+    const row = storedCaseStudy();
+    const drafts = {
+      ...row,
+      case_study_items: row.case_study_items.map((step) => ({
+        ...step,
+        items: { ...step.items, status: "draft" },
+      })),
+    };
+    const result = assembleCaseStudy(drafts, "preview");
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.caseStudy.items.map((item) => item.cjmmStep)).toEqual([
+      1, 2, 3, 4, 5, 6,
+    ]);
+  });
+
+  it("names what a preview still needs", () => {
+    expect(assembleCaseStudy(storedCaseStudy(5), "preview")).toEqual({
+      ok: false,
+      blockers: ["Step 6 (Evaluate Outcomes) has no item yet."],
+    });
+  });
+
+  it("for publishing, still requires every step item to be published", () => {
+    const row = storedCaseStudy();
+    const firstDraft = {
+      ...row,
+      case_study_items: row.case_study_items.map((step, index) =>
+        index === 0 ? { ...step, items: { ...step.items, status: "draft" } } : step,
+      ),
+    };
+    expect(assembleCaseStudy(firstDraft, "publish")).toEqual({
+      ok: false,
+      blockers: ["Step 1 (Recognize Cues) needs its item finished and published."],
+    });
+    expect(assembleCaseStudy(row, "publish").ok).toBe(true);
   });
 });
 

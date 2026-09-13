@@ -200,6 +200,68 @@ export async function reorderSteps(
   return { ok: true, value: undefined };
 }
 
+/** A step item as the builder reads it: its stored columns and whether it is published. */
+type StoredStepItem = Parameters<typeof fromItemRow>[0] & { status: string };
+
+/** A case study row with its steps, as the builder page and publish both read it. */
+export interface StoredCaseStudyRow {
+  id: string;
+  title: string;
+  tags: string[];
+  ehr: unknown;
+  case_study_items: readonly { position: number; item_id: string; items: StoredStepItem | null }[];
+}
+
+type AssembledCaseStudy = Extract<ReturnType<typeof validateCaseStudy>, { ok: true }>["value"];
+
+/**
+ * The stored case study put back together as the player reads it, checked against the whole case
+ * study schema. For a preview, every step's item must be finished; for publishing, each must also
+ * be published. Otherwise, the plain reasons from `caseStudyBlockers`.
+ */
+export function assembleCaseStudy(
+  row: StoredCaseStudyRow,
+  purpose: NonNullable<Parameters<typeof caseStudyBlockers>[1]>,
+): { ok: true; caseStudy: AssembledCaseStudy } | { ok: false; blockers: string[] } {
+  const record = row.ehr as { tabs?: unknown[] } | null;
+  const steps: CaseStudyStepState[] = row.case_study_items.map((step) => {
+    const stored = step.items ? fromItemRow(step.items) : null;
+    return {
+      position: step.position as CjmmStep,
+      itemId: step.item_id,
+      itemReady: Boolean(
+        stored?.ok && (purpose === "preview" || step.items?.status === "published"),
+      ),
+      // Caught here with its own reason, instead of failing validateCaseStudy's step check vaguely.
+      wrongStep: Boolean(step.items && step.items.cjmm_step !== step.position),
+    };
+  });
+  const blockers = caseStudyBlockers(
+    {
+      titleWritten: row.title.trim().length > 0,
+      recordTabCount: Array.isArray(record?.tabs) ? record.tabs.length : 0,
+      steps,
+    },
+    purpose,
+  );
+  if (blockers.length > 0) return { ok: false, blockers };
+
+  const items = [...row.case_study_items]
+    .sort((a, b) => a.position - b.position)
+    .map((step) => (step.items ? fromItemRow(step.items) : null))
+    .map((stored) => (stored?.ok ? stored.value : null));
+  const validated = validateCaseStudy({
+    id: row.id,
+    title: row.title,
+    tags: row.tags,
+    ehr: row.ehr,
+    items,
+  });
+  return validated.ok
+    ? { ok: true, caseStudy: validated.value }
+    : { ok: false, blockers: ["Check each step and the record, then try again."] };
+}
+
 /**
  * Publishes only a case study whose record, title and six steps are all ready, validated against
  * the whole case study schema. Returns the builder's plain reasons when it is not ready.
@@ -220,41 +282,9 @@ export async function publishCaseStudy(
   if (error) return { ok: false, error: CASE_STUDY_ERRORS.failed };
   if (!row) return { ok: false, error: CASE_STUDY_ERRORS.gone };
 
-  const record = row.ehr as { tabs?: unknown[] } | null;
-  const steps: CaseStudyStepState[] = row.case_study_items.map((step) => {
-    const stored = step.items ? fromItemRow(step.items) : null;
-    return {
-      position: step.position as CjmmStep,
-      itemId: step.item_id,
-      itemReady: Boolean(stored?.ok && step.items?.status === "published"),
-      // Caught here with its own reason, instead of failing validateCaseStudy's step check vaguely.
-      wrongStep: Boolean(step.items && step.items.cjmm_step !== step.position),
-    };
-  });
-  const blockers = caseStudyBlockers({
-    titleWritten: row.title.trim().length > 0,
-    recordTabCount: Array.isArray(record?.tabs) ? record.tabs.length : 0,
-    steps,
-  });
-  if (blockers.length > 0) return { ok: false, error: CASE_STUDY_ERRORS.notReady, blockers };
-
-  const items = [...row.case_study_items]
-    .sort((a, b) => a.position - b.position)
-    .map((step) => (step.items ? fromItemRow(step.items) : null))
-    .map((stored) => (stored?.ok ? stored.value : null));
-  const validated = validateCaseStudy({
-    id: row.id,
-    title: row.title,
-    tags: row.tags,
-    ehr: row.ehr,
-    items,
-  });
-  if (!validated.ok) {
-    return {
-      ok: false,
-      error: CASE_STUDY_ERRORS.notReady,
-      blockers: ["Check each step and the record, then try again."],
-    };
+  const assembled = assembleCaseStudy(row, "publish");
+  if (!assembled.ok) {
+    return { ok: false, error: CASE_STUDY_ERRORS.notReady, blockers: assembled.blockers };
   }
 
   const { error: publishError } = await client
