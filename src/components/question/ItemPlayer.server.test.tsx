@@ -22,10 +22,20 @@ async function answerCorrectly(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("ItemPlayer with server scoring", () => {
-  it("plays an item that carries no answer key or rationale", () => {
+  it("plays an item that carries no answer key, rationale or scoring", () => {
+    expect(keyless).not.toHaveProperty("scoring");
     setup(vi.fn<(response: AnyResponse) => Promise<ScoreReveal>>());
     expect(screen.getByRole("radio", { name: /Auscultate the lungs/ })).toBeInTheDocument();
     expect(screen.queryByRole("complementary", { name: "Score" })).not.toBeInTheDocument();
+  });
+
+  it("shows the model's rule and the points once the server has scored the answer", async () => {
+    const user = setup(async (response) => scoreForReveal(item, response));
+    await answerCorrectly(user);
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    const score = await screen.findByRole("complementary", { name: "Score" });
+    expect(score).toHaveTextContent(`/ ${item.scoring.maxPoints}`);
+    expect(score).toHaveTextContent(/0\/1 scoring/);
   });
 
   it("sends the response once, and shows Submit as busy while the server scores it", async () => {

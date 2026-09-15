@@ -116,6 +116,8 @@ test("an author writes a multiple choice item beside its preview, saves a draft,
   const html = await page.content();
   expect(html).not.toContain("correctOptionId");
   expect(html).not.toContain("answerKey");
+  // maxPoints would tell a student how many answers a +/- item wants (#94).
+  expect(html).not.toContain("maxPoints");
   await expectNoAxeViolations(page);
 
   const scored = page.waitForResponse(

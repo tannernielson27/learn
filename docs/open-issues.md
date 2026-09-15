@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-13 (Sprint 6 started).
+Last updated: 2026-09-14 (#94 in review).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -12,7 +12,7 @@ Demo 6: organize a 50-item bank, find items by tag, fix warnings.
 
 | #                                                           | Title                                                                          | Gates             | Status                                                               |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------ | ----------------- | -------------------------------------------------------------------- |
-| [#94](https://github.com/tannernielson27/learn/issues/94)   | fix(authoring): keep maxPoints out of the play page until the answer is scored | security          | To do                                                                |
+| [#94](https://github.com/tannernielson27/learn/issues/94)   | fix(authoring): keep maxPoints out of the play page until the answer is scored | security          | In review: keyless play item drops `scoring`; the score returns it   |
 | [#103](https://github.com/tannernielson27/learn/issues/103) | feat(authoring): sort a bank into folders                                      | db, e2e           | To do                                                                |
 | [#104](https://github.com/tannernielson27/learn/issues/104) | feat(authoring): tag items and filter a bank by tag                            | db, e2e           | To do                                                                |
 | [#105](https://github.com/tannernielson27/learn/issues/105) | feat(authoring): search a bank                                                 | security, db, e2e | To do                                                                |

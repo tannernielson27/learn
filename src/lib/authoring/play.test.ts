@@ -21,17 +21,24 @@ describe("toKeylessPlayItem", () => {
     );
   });
 
-  it.each(sprintOneSamples)("never includes the answer key or rationale: %s", (_name, item) => {
-    const payload = toKeylessPlayItem(item);
-    expect(payload).not.toHaveProperty("answerKey");
-    expect(payload).not.toHaveProperty("rationale");
-    // Serialized too, so nothing nested carries them either. Keys only: "rationale" is also the
-    // name of a scoring model, which the player needs.
-    const json = JSON.stringify(payload);
-    expect(json).not.toContain('"answerKey":');
-    expect(json).not.toContain('"rationale":');
-    expect(json).not.toMatch(/"correct[A-Za-z]*":/);
-  });
+  it.each(sprintOneSamples)(
+    "never includes the answer key, rationale or scoring: %s",
+    (_name, item) => {
+      const payload = toKeylessPlayItem(item);
+      expect(payload).not.toHaveProperty("answerKey");
+      expect(payload).not.toHaveProperty("rationale");
+      // For +/- items maxPoints is the number of correct answers, so it tells a student how many
+      // to pick (#94). The model and points arrive with the score instead.
+      expect(payload).not.toHaveProperty("scoring");
+      // Serialized too, so nothing nested carries them either.
+      const json = JSON.stringify(payload);
+      expect(json).not.toContain('"answerKey":');
+      expect(json).not.toContain('"rationale":');
+      expect(json).not.toContain('"scoring":');
+      expect(json).not.toContain("maxPoints");
+      expect(json).not.toMatch(/"correct[A-Za-z]*":/);
+    },
+  );
 
   it.each(sprintOneSamples)("keeps what the player needs to render: %s", (_name, item) => {
     const payload = toKeylessPlayItem(item);
@@ -40,7 +47,6 @@ describe("toKeylessPlayItem", () => {
       type: item.type,
       stem: item.stem,
       content: item.content,
-      scoring: item.scoring,
     });
   });
 
