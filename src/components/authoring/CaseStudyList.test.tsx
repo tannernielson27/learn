@@ -40,4 +40,20 @@ describe("CaseStudyList", () => {
     render(<CaseStudyList caseStudies={[]} />);
     expect(screen.getByText("No case studies in this bank yet.")).toBeInTheDocument();
   });
+
+  it("says so when a folder holds no case studies", () => {
+    render(<CaseStudyList caseStudies={[]} emptyMessage="No case studies in this folder." />);
+    expect(screen.getByText("No case studies in this folder.")).toBeInTheDocument();
+  });
+
+  it("lets each case study be selected for a move, outside its link, only with a move form", () => {
+    const { rerender } = render(<CaseStudyList caseStudies={caseStudies} />);
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    rerender(<CaseStudyList caseStudies={caseStudies} moveFormId="move-form" />);
+    const sepsis = screen.getByRole("checkbox", { name: "Select Sepsis" });
+    expect(sepsis).toHaveAttribute("form", "move-form");
+    expect(sepsis).toHaveAttribute("name", "caseStudy");
+    expect(sepsis).toHaveAttribute("value", "c2");
+    expect(sepsis.closest("a")).toBeNull();
+  });
 });
