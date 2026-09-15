@@ -2,9 +2,14 @@ import Link from "next/link";
 import type { ItemSummary } from "@/lib/authoring/banks";
 import { formatEdited } from "@/lib/authoring/format";
 import { ITEM_TYPE_LABELS, ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
+import { SelectForMove } from "./SelectForMove";
 
 export interface ItemListProps {
   items: readonly ItemSummary[];
+  /** Shown when there are no items; defaults to the empty-bank hint. */
+  emptyMessage?: string;
+  /** The id of a move form: each item gets a checkbox that joins it. Without one, no selection. */
+  moveFormId?: string;
 }
 
 const STATUS_LABELS: Record<ItemSummary["status"], string> = {
@@ -19,15 +24,27 @@ function typeLabel(type: string): string {
     : type;
 }
 
-export function ItemList({ items }: ItemListProps) {
+export function ItemList({
+  items,
+  emptyMessage = "No items in this bank yet. Choose New item to write one.",
+  moveFormId,
+}: ItemListProps) {
   if (items.length === 0) {
-    return <p className="text-ink-2">No items in this bank yet. Choose New item to write one.</p>;
+    return <p className="text-ink-2">{emptyMessage}</p>;
   }
 
   return (
     <ul aria-label="Items" className="flex flex-col divide-y divide-line border-y border-line">
       {items.map((item) => (
         <li key={item.id} className="flex items-stretch">
+          {moveFormId ? (
+            <SelectForMove
+              formId={moveFormId}
+              name="item"
+              value={item.id}
+              label={`Select ${item.stemExcerpt || "Untitled item"}`}
+            />
+          ) : null}
           <Link
             href={`/author/items/${item.id}`}
             className="tap-target flex min-w-0 flex-1 flex-col gap-1 px-2 py-3 transition-colors duration-fast hover:bg-surface-2"

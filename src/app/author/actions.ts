@@ -4,7 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { BankFormState } from "@/components/authoring/CreateBankForm";
 import type { CaseStudyFormState } from "@/components/authoring/CreateCaseStudyForm";
+import type { FolderFormState } from "@/components/authoring/FolderNameForm";
 import type { ImportFormState } from "@/components/authoring/ImportJsonForm";
+import { createFolder, deleteFolder, moveToFolder, renameFolder } from "@/lib/authoring/folderData";
+import { parseFolderName, parseMoveForm } from "@/lib/authoring/folders";
 import { importIntoBank as writeImport } from "@/lib/authoring/importExport";
 import { readImportText } from "@/lib/authoring/importForm";
 import { importRowsFor, importSummary, parseImport } from "@/lib/authoring/transfer";
@@ -111,6 +114,89 @@ export async function importIntoBank(
 
   revalidatePath(`/author/banks/${bankId}`);
   return { status: "done", message: importSummary(parsed) };
+}
+
+const FOLDER_GONE: FolderFormState = { status: "error", error: "That folder no longer exists." };
+
+/** Creates a folder at the top of a bank, or inside `parentId`. Bound on the bank page. */
+export async function createFolderInBank(
+  bankId: string,
+  parentId: string | null,
+  _previous: FolderFormState,
+  formData: FormData,
+): Promise<FolderFormState> {
+  if (!isUuid(bankId)) return { status: "error", error: "That bank no longer exists." };
+  if (parentId !== null && !isUuid(parentId)) return FOLDER_GONE;
+  const parsed = parseFolderName(formData);
+  if (!parsed.ok) return { status: "error", error: parsed.error };
+
+  const { supabase, orgId, userId } = await requireAuthor(`/author/banks/${bankId}`);
+  const created = await createFolder(supabase, {
+    bankId,
+    orgId,
+    userId,
+    parentId,
+    name: parsed.name,
+  });
+  if (!created.ok) return { status: "error", error: created.error };
+
+  revalidatePath(`/author/banks/${bankId}`);
+  return { status: "done", message: `Created "${parsed.name}".` };
+}
+
+export async function renameFolderInBank(
+  bankId: string,
+  folderId: string,
+  _previous: FolderFormState,
+  formData: FormData,
+): Promise<FolderFormState> {
+  if (!isUuid(bankId) || !isUuid(folderId)) return FOLDER_GONE;
+  const parsed = parseFolderName(formData);
+  if (!parsed.ok) return { status: "error", error: parsed.error };
+
+  const { supabase } = await requireAuthor(`/author/banks/${bankId}?folder=${folderId}`);
+  const renamed = await renameFolder(supabase, bankId, folderId, parsed.name);
+  if (!renamed.ok) return { status: "error", error: renamed.error };
+
+  revalidatePath(`/author/banks/${bankId}`);
+  return { status: "done", message: `Renamed to "${parsed.name}".` };
+}
+
+/**
+ * Deletes an empty folder, then opens its parent (or the bank). A folder with content says what is
+ * inside. Bound to the bank and folder; the form's state and data carry nothing it needs.
+ */
+export async function deleteFolderInBank(
+  bankId: string,
+  folderId: string,
+): Promise<FolderFormState> {
+  if (!isUuid(bankId) || !isUuid(folderId)) return FOLDER_GONE;
+
+  const { supabase } = await requireAuthor(`/author/banks/${bankId}?folder=${folderId}`);
+  const deleted = await deleteFolder(supabase, bankId, folderId);
+  if (!deleted.ok) return { status: "error", error: deleted.error };
+
+  revalidatePath(`/author/banks/${bankId}`);
+  const { parentId } = deleted.value;
+  redirect(parentId ? `/author/banks/${bankId}?folder=${parentId}` : `/author/banks/${bankId}`);
+}
+
+/** Moves the selected items and case studies to a folder in the same bank, or to Unfiled. */
+export async function moveToFolderInBank(
+  bankId: string,
+  _previous: FolderFormState,
+  formData: FormData,
+): Promise<FolderFormState> {
+  if (!isUuid(bankId)) return { status: "error", error: "That bank no longer exists." };
+  const parsed = parseMoveForm(formData);
+  if (!parsed.ok) return { status: "error", error: parsed.error };
+
+  const { supabase } = await requireAuthor(`/author/banks/${bankId}`);
+  const moved = await moveToFolder(supabase, bankId, parsed);
+  if (!moved.ok) return { status: "error", error: moved.error };
+
+  revalidatePath(`/author/banks/${bankId}`);
+  return { status: "done", message: moved.value.message };
 }
 
 export interface CreateItemResult {

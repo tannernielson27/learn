@@ -68,4 +68,27 @@ describe("ItemList", () => {
       screen.getByText("No items in this bank yet. Choose New item to write one."),
     ).toBeInTheDocument();
   });
+
+  it("says so when a folder holds no items", () => {
+    render(<ItemList items={[]} emptyMessage="No items in this folder." />);
+    expect(screen.getByText("No items in this folder.")).toBeInTheDocument();
+  });
+
+  it("offers no selection unless there is a move form to join", () => {
+    render(<ItemList items={items} />);
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it("lets each item be selected for a move, outside its link, named for the item", () => {
+    render(<ItemList items={items} moveFormId="move-form" />);
+    const first = screen.getByRole("checkbox", { name: "Select Which findings need follow-up?" });
+    expect(first).toHaveAttribute("form", "move-form");
+    expect(first).toHaveAttribute("name", "item");
+    expect(first).toHaveAttribute("value", "i1");
+    expect(first.closest("a")).toBeNull();
+    expect(screen.getByRole("checkbox", { name: "Select Untitled item" })).toHaveAttribute(
+      "value",
+      "i2",
+    );
+  });
 });

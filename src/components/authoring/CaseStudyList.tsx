@@ -1,9 +1,14 @@
 import Link from "next/link";
 import type { CaseStudySummary } from "@/lib/authoring/banks";
 import { formatEdited } from "@/lib/authoring/format";
+import { SelectForMove } from "./SelectForMove";
 
 export interface CaseStudyListProps {
   caseStudies: readonly CaseStudySummary[];
+  /** Shown when there are no case studies; defaults to the empty-bank hint. */
+  emptyMessage?: string;
+  /** The id of a move form: each case study gets a checkbox that joins it. */
+  moveFormId?: string;
 }
 
 const STATUS_LABELS: Record<CaseStudySummary["status"], string> = {
@@ -13,9 +18,13 @@ const STATUS_LABELS: Record<CaseStudySummary["status"], string> = {
 };
 
 /** A bank's case studies, each linking to its page, with how many of its six steps are placed. */
-export function CaseStudyList({ caseStudies }: CaseStudyListProps) {
+export function CaseStudyList({
+  caseStudies,
+  emptyMessage = "No case studies in this bank yet.",
+  moveFormId,
+}: CaseStudyListProps) {
   if (caseStudies.length === 0) {
-    return <p className="text-ink-2">No case studies in this bank yet.</p>;
+    return <p className="text-ink-2">{emptyMessage}</p>;
   }
   return (
     <ul
@@ -23,10 +32,18 @@ export function CaseStudyList({ caseStudies }: CaseStudyListProps) {
       className="flex flex-col divide-y divide-line border-y border-line"
     >
       {caseStudies.map((caseStudy) => (
-        <li key={caseStudy.id}>
+        <li key={caseStudy.id} className="flex items-stretch">
+          {moveFormId ? (
+            <SelectForMove
+              formId={moveFormId}
+              name="caseStudy"
+              value={caseStudy.id}
+              label={`Select ${caseStudy.title}`}
+            />
+          ) : null}
           <Link
             href={`/author/case-studies/${caseStudy.id}`}
-            className="tap-target flex flex-col gap-1 px-2 py-3 transition-colors duration-fast hover:bg-surface-2"
+            className="tap-target flex min-w-0 flex-1 flex-col gap-1 px-2 py-3 transition-colors duration-fast hover:bg-surface-2"
           >
             <span className="text-ink-1">{caseStudy.title}</span>
             <span className="flex flex-wrap gap-x-3 text-sm text-ink-2">

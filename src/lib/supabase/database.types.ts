@@ -3,12 +3,68 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      bank_folders: {
+        Row: {
+          bank_id: string;
+          created_at: string;
+          created_by: string | null;
+          depth: number;
+          id: string;
+          name: string;
+          org_id: string;
+          parent_id: string | null;
+        };
+        Insert: {
+          bank_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          depth?: number;
+          id?: string;
+          name: string;
+          org_id: string;
+          parent_id?: string | null;
+        };
+        Update: {
+          bank_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          depth?: number;
+          id?: string;
+          name?: string;
+          org_id?: string;
+          parent_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "bank_folders_bank_org_fkey";
+            columns: ["bank_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "item_banks";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "bank_folders_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "bank_folders_parent_fkey";
+            columns: ["parent_id", "bank_id"];
+            isOneToOne: false;
+            referencedRelation: "bank_folders";
+            referencedColumns: ["id", "bank_id"];
+          },
+        ];
+      };
       case_studies: {
         Row: {
           bank_id: string;
           created_at: string;
           created_by: string | null;
           ehr: Json;
+          folder_id: string | null;
           id: string;
           org_id: string;
           status: Database["public"]["Enums"]["content_status"];
@@ -21,6 +77,7 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           ehr: Json;
+          folder_id?: string | null;
           id?: string;
           org_id: string;
           status?: Database["public"]["Enums"]["content_status"];
@@ -33,6 +90,7 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           ehr?: Json;
+          folder_id?: string | null;
           id?: string;
           org_id?: string;
           status?: Database["public"]["Enums"]["content_status"];
@@ -54,6 +112,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "case_studies_folder_bank_fkey";
+            columns: ["folder_id", "bank_id"];
+            isOneToOne: false;
+            referencedRelation: "bank_folders";
+            referencedColumns: ["id", "bank_id"];
           },
         ];
       };
@@ -202,6 +267,7 @@ export type Database = {
           content: Json;
           created_at: string;
           created_by: string | null;
+          folder_id: string | null;
           id: string;
           org_id: string;
           rationale: Json;
@@ -219,6 +285,7 @@ export type Database = {
           content: Json;
           created_at?: string;
           created_by?: string | null;
+          folder_id?: string | null;
           id?: string;
           org_id: string;
           rationale?: Json;
@@ -236,6 +303,7 @@ export type Database = {
           content?: Json;
           created_at?: string;
           created_by?: string | null;
+          folder_id?: string | null;
           id?: string;
           org_id?: string;
           rationale?: Json;
@@ -260,6 +328,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "items_folder_bank_fkey";
+            columns: ["folder_id", "bank_id"];
+            isOneToOne: false;
+            referencedRelation: "bank_folders";
+            referencedColumns: ["id", "bank_id"];
           },
         ];
       };
@@ -323,6 +398,15 @@ export type Database = {
     Functions: {
       import_bank_content: {
         Args: { new_case_study: Json; new_items: Json; target_bank: string };
+        Returns: Json;
+      };
+      move_to_folder: {
+        Args: {
+          case_study_ids: string[];
+          item_ids: string[];
+          target_bank: string;
+          target_folder?: string;
+        };
         Returns: Json;
       };
       place_case_study_step: {

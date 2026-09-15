@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import type { FolderView } from "./folders";
 
 type Client = SupabaseClient<Database>;
 
@@ -48,13 +49,18 @@ export async function listBanks(client: Client): Promise<BankSummary[]> {
   }));
 }
 
-export async function listItems(client: Client, bankId: string): Promise<ItemSummary[]> {
+export async function listItems(
+  client: Client,
+  bankId: string,
+  view: FolderView = { kind: "all" },
+): Promise<ItemSummary[]> {
   // Selects content only for the stem and scoring only for its maximum; answer_key and rationale
   // are never read here.
-  const { data, error } = await client
+  const query = client
     .from("items")
     .select("id, type, status, updated_at, content->stem, scoring->maxPoints")
-    .eq("bank_id", bankId)
+    .eq("bank_id", bankId);
+  const { data, error } = await inView(query, view)
     .order("updated_at", { ascending: false })
     .limit(ITEM_LIST_LIMIT);
   if (error) throw new AuthoringDataError("Items could not be loaded.");
@@ -77,13 +83,18 @@ export interface CaseStudySummary {
   updatedAt: string;
 }
 
-export async function listCaseStudies(client: Client, bankId: string): Promise<CaseStudySummary[]> {
+export async function listCaseStudies(
+  client: Client,
+  bankId: string,
+  view: FolderView = { kind: "all" },
+): Promise<CaseStudySummary[]> {
   // Only a count of steps: neither the record nor any step's key is read for the list. The key is
   // named because the case study steps migration adds a second key pair (bank) between these tables.
-  const { data, error } = await client
+  const query = client
     .from("case_studies")
     .select("id, title, status, updated_at, case_study_items!case_study_items_case_org_fkey(count)")
-    .eq("bank_id", bankId)
+    .eq("bank_id", bankId);
+  const { data, error } = await inView(query, view)
     .order("updated_at", { ascending: false })
     .limit(CASE_STUDY_LIST_LIMIT);
   if (error) throw new AuthoringDataError("Case studies could not be loaded.");
@@ -94,6 +105,18 @@ export async function listCaseStudies(client: Client, bankId: string): Promise<C
     updatedAt: row.updated_at,
     stepCount: row.case_study_items[0]?.count ?? 0,
   }));
+}
+
+interface FolderFilterable<Q> {
+  is(column: "folder_id", value: null): Q;
+  eq(column: "folder_id", value: string): Q;
+}
+
+/** Narrows a bank's list to the open view: everything, unfiled content, or one folder's own. */
+function inView<Q extends FolderFilterable<Q>>(query: Q, view: FolderView): Q {
+  if (view.kind === "unfiled") return query.is("folder_id", null);
+  if (view.kind === "folder") return query.eq("folder_id", view.id);
+  return query;
 }
 
 /** A stored maximum score, or null when it is missing or not a whole number of at least one. */
