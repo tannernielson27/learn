@@ -71,11 +71,13 @@ describe("scoreForReveal", () => {
     expect(reveal.score).toEqual(scoreItem(item, response));
   });
 
-  it("reveals the key and rationale only alongside a score", () => {
-    const item = parsed("multiple_choice");
-    const reveal = scoreForReveal(item, { type: "multiple_choice", optionId: "opt_a" });
+  it("reveals the key, rationale and scoring only alongside a score", () => {
+    const item = parsed("multiple_response");
+    const reveal = scoreForReveal(item, { type: "multiple_response", optionIds: [] });
     expect(reveal.answerKey).toEqual(item.answerKey);
     expect(reveal.rationale).toEqual(item.rationale);
-    expect(Object.keys(reveal).sort()).toEqual(["answerKey", "rationale", "score"]);
+    expect(reveal.scoring).toEqual(item.scoring);
+    expect(reveal.score).toMatchObject(item.scoring);
+    expect(Object.keys(reveal).sort()).toEqual(["answerKey", "rationale", "score", "scoring"]);
   });
 });

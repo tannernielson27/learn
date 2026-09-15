@@ -45,7 +45,7 @@ beforeEach(() => {
 });
 
 describe("scoreResponse", () => {
-  it("scores a published item and reveals its key and rationale with the score", async () => {
+  it("scores a published item and reveals its key, rationale and scoring with the score", async () => {
     const response = await post(correct);
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
@@ -53,6 +53,11 @@ describe("scoreResponse", () => {
     expect(body.score.points).toBe(1);
     expect(body.answerKey).toEqual(item.answerKey);
     expect(body.rationale).toEqual(item.rationale);
+    expect(body.scoring).toEqual(item.scoring);
+    expect(body.score).toMatchObject({
+      model: item.scoring.model,
+      maxPoints: item.scoring.maxPoints,
+    });
   });
 
   it("is not found for an id that is not a uuid", async () => {

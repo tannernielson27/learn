@@ -74,7 +74,9 @@ export function ItemPlayer({
     () => initialResponse ?? firstResponse(item as Item),
   );
   const [result, setResult] = useState<ScoreResult | undefined>(initialResult);
-  const [reveal, setReveal] = useState<Pick<Item, "answerKey" | "rationale"> | null>(null);
+  const [reveal, setReveal] = useState<Pick<Item, "answerKey" | "rationale" | "scoring"> | null>(
+    null,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | undefined>(undefined);
   // A ref, not state: a second tap in the same frame must not send a second request.
@@ -89,8 +91,8 @@ export function ItemPlayer({
     );
   }
 
-  // The item with its key and rationale once the server has revealed them. A keyless item has
-  // neither before then, and nothing below reads them until there is a score.
+  // The item with its key, rationale and scoring once the server has revealed them. A keyless item
+  // has none of them before then, and nothing below reads them until there is a score.
   const fullItem = (reveal ? { ...item, ...reveal } : item) as Item;
   const rationale = "rationale" in fullItem ? fullItem.rationale?.general : undefined;
 
@@ -123,7 +125,11 @@ export function ItemPlayer({
     submitResponse(response)
       .then(
         (checked) => {
-          setReveal({ answerKey: checked.answerKey, rationale: checked.rationale });
+          setReveal({
+            answerKey: checked.answerKey,
+            rationale: checked.rationale,
+            scoring: checked.scoring,
+          });
           finish(checked.score);
         },
         () => setSubmitError(CHECK_FAILED),

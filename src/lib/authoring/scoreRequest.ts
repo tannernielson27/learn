@@ -12,11 +12,12 @@ export const SCORE_REQUEST_ERRORS = {
 export type ScoreRequestResult =
   { ok: true; response: AnyResponse } | { ok: false; status: 400; error: string };
 
-/** What the score route returns: the score, and only now the key and rationale to explain it. */
+/** What the score route returns: the score, and only now the key, rationale and scoring to explain it. */
 export interface ScoreReveal {
   score: ScoreResult;
   answerKey: Item["answerKey"];
   rationale: Item["rationale"];
+  scoring: Item["scoring"];
 }
 
 // The body is `{ response }` and nothing else.
@@ -48,7 +49,12 @@ export function parseScoreRequest(body: unknown, itemType: ItemType): ScoreReque
   return { ok: true, response: parsed.data };
 }
 
-/** Scores with the same engine as the gallery, then reveals the key and rationale beside it. */
+/** Scores with the same engine as the gallery, then reveals the key, rationale and scoring beside it. */
 export function scoreForReveal(item: Item, response: AnyResponse): ScoreReveal {
-  return { score: scoreItem(item, response), answerKey: item.answerKey, rationale: item.rationale };
+  return {
+    score: scoreItem(item, response),
+    answerKey: item.answerKey,
+    rationale: item.rationale,
+    scoring: item.scoring,
+  };
 }
