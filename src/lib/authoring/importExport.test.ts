@@ -8,6 +8,7 @@ import {
   readCaseStudyExport,
   readItemExport,
 } from "./importExport";
+import { CASE_STUDY_WITH_STEPS } from "./caseStudies";
 import { importRowsFor, parseImport } from "./transfer";
 
 type Result = { data?: unknown; error?: { code?: string; message?: string } | null };
@@ -149,6 +150,12 @@ describe("readCaseStudyExport", () => {
     expect(await readCaseStudyExport(fake.client, "case-1")).toEqual({
       ok: true,
       envelope: { format: "learn.v1", caseStudy: validCaseStudy() },
+    });
+    // The same select as the builder page and publish, so the three never drift apart.
+    expect(fake.calls).toContainEqual({
+      table: "case_studies",
+      method: "select",
+      args: [CASE_STUDY_WITH_STEPS],
     });
   });
 

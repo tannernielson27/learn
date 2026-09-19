@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-19 (#104 tags merged, #118; #115 demo account merged, #116; #108 version history in review, #117).
+Last updated: 2026-09-19 (#104 tags, #115 demo account and #108 version history merged; #111 polish in review, #119).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -18,10 +18,10 @@ Demo 6: organize a 50-item bank, find items by tag, fix warnings.
 | [#105](https://github.com/tannernielson27/learn/issues/105) | feat(authoring): search a bank                                                 | security, db, e2e | To do                                                                |
 | [#106](https://github.com/tannernielson27/learn/issues/106) | feat(authoring): duplicate an item or a case study                             | db, e2e           | To do                                                                |
 | [#107](https://github.com/tannernielson27/learn/issues/107) | feat(authoring): archive and restore items and case studies                    | e2e               | To do                                                                |
-| [#108](https://github.com/tannernielson27/learn/issues/108) | feat(authoring): see an item's version history and restore a version           | e2e               | In review (#117)                                                     |
+| [#108](https://github.com/tannernielson27/learn/issues/108) | feat(authoring): see an item's version history and restore a version           | e2e               | Merged (#117)                                                        |
 | [#109](https://github.com/tannernielson27/learn/issues/109) | feat(authoring): import many files and large sets at once                      | security, e2e     | To do                                                                |
 | [#110](https://github.com/tannernielson27/learn/issues/110) | feat(authoring): show quality warnings in the editor and the bank              | e2e               | To do; needs an owner decision on the rationale.general publish rule |
-| [#111](https://github.com/tannernielson27/learn/issues/111) | chore(authoring): polish carried from Sprint 5                                 | security, db      | To do                                                                |
+| [#111](https://github.com/tannernielson27/learn/issues/111) | chore(authoring): polish carried from Sprint 5                                 | security, db      | In review (#119); apply its migration to hosted after merge          |
 
 Suggested order: #94, folders (#103), tags (#104), search (#105), then duplicate, archive and history, then bulk import (#109, uses folders) and warnings (#110), with #111 alongside.
 
@@ -50,5 +50,5 @@ These block the live site rather than a single issue:
 - Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` to Vercel (Production and Preview), then redeploy.
 - Supabase Authentication, URL Configuration: Site URL and redirect URLs for production, previews and localhost.
 - Supabase magic-link template: paste `supabase/templates/magic_link.html`. Email sign-in still needs it; the demo account (#115) works without it.
-- Demo account (#115): create the hosted demo user (Authentication, Users, Add user, auto-confirm) and set `DEMO_ACCOUNT_EMAIL` and `DEMO_ACCOUNT_PASSWORD` in Vercel. Remove them before real students use the site. Known gap: the demo action has no rate limit of its own (neither has the email one), so heavy use can trip Supabase's per-IP auth limit for everyone signing in through Vercel.
+- Demo account (#115): create the hosted demo user (Authentication, Users, Add user, auto-confirm) and set `DEMO_ACCOUNT_EMAIL` and `DEMO_ACCOUNT_PASSWORD` in Vercel. Remove them before real students use the site. Known gap: the demo action has no rate limit of its own (neither has the email one), so heavy use can trip Supabase's per-IP auth limit for everyone signing in through Vercel. #111's per-user limit covers authoring actions only; sign-in needs a per-IP limit.
 - Before Sprint 7: split production into its own Supabase project (ADR 0005).

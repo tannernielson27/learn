@@ -417,6 +417,11 @@ export type Database = {
         Args: { item_ids: string[]; target: string };
         Returns: undefined;
       };
+      start_case_study_step: {
+        Args: { step_position: number; step_type: string; target: string };
+        Returns: string;
+      };
+      take_rate_limit: { Args: { action_name: string }; Returns: boolean };
     };
     Enums: {
       content_status: "draft" | "published" | "archived";

@@ -10,6 +10,8 @@ import {
   publishCaseStudy,
   reorderSteps,
   assembleCaseStudy,
+  CASE_STUDY_WITH_STEPS,
+  caseStudyStepStates,
   pinnedStepFor,
   saveRecord,
   saveRecordForm,
@@ -134,86 +136,81 @@ describe("startStep", () => {
     type: "multiple_choice" as const,
     userId: "user-1",
   };
-  const caseStudyRow = { data: { bank_id: BANK_ID, org_id: ORG_ID }, error: null };
 
-  it("says the case study is gone when it cannot be read", async () => {
-    const fake = fakeClient({ case_studies: [{ data: null, error: null }] });
+  it("starts the step in one locked database call, writing nothing else itself", async () => {
+    const fake = fakeClient({}, { data: "new-item", error: null });
+    expect(await startStep(fake.client, args)).toEqual({ ok: true, value: { itemId: "new-item" } });
+    // Creating the draft, placing it, marking the case study a draft and removing the old draft all
+    // happen inside the function, so two tabs changing the same step cannot orphan a draft.
+    expect(fake.rpc).toHaveBeenCalledWith("start_case_study_step", {
+      target: CASE_ID,
+      step_position: 2,
+      step_type: "multiple_choice",
+    });
+    expect(fake.from).not.toHaveBeenCalled();
+  });
+
+  it("says the case study is gone when the function cannot see it", async () => {
+    const fake = fakeClient({}, { data: null, error: { code: "P0002" } });
     expect(await startStep(fake.client, args)).toEqual({
       ok: false,
       error: CASE_STUDY_ERRORS.gone,
     });
-    expect(fake.rpc).not.toHaveBeenCalled();
   });
 
-  it("starts a draft of the type in the case study's bank, pinned to the step, and places it", async () => {
-    const fake = fakeClient({
-      case_studies: [caseStudyRow],
-      case_study_items: [{ data: null, error: null }],
-      items: [{ data: { id: "new-item" }, error: null }],
-    });
-    expect(await startStep(fake.client, args)).toEqual({ ok: true, value: { itemId: "new-item" } });
-    const insert = fake.calls.find((call) => call.table === "items" && call.method === "insert");
-    expect(insert?.args[0]).toMatchObject({
-      bank_id: BANK_ID,
-      org_id: ORG_ID,
-      type: "multiple_choice",
-      status: "draft",
-      cjmm_step: 2,
-      created_by: "user-1",
-    });
-    expect(fake.rpc).toHaveBeenCalledWith("place_case_study_step", {
-      target: CASE_ID,
-      step_position: 2,
-      step_item: "new-item",
-    });
-    expect(fake.calls.some((call) => call.method === "delete")).toBe(false);
-    // A published case study with a new, unfinished step is not ready any more.
-    expect(fake.calls).toContainEqual({
-      table: "case_studies",
-      method: "update",
-      args: [{ status: "draft" }],
-    });
-  });
-
-  it("removes the new item again when it cannot be placed", async () => {
-    const fake = fakeClient(
-      {
-        case_studies: [caseStudyRow],
-        case_study_items: [{ data: null, error: null }],
-        items: [{ data: { id: "new-item" }, error: null }],
-      },
-      { error: { code: "23505" } },
-    );
-    expect(await startStep(fake.client, args)).toEqual({
-      ok: false,
-      error: CASE_STUDY_ERRORS.alreadyStep,
-    });
-    expect(fake.calls).toContainEqual({ table: "items", method: "delete", args: [] });
-    expect(fake.calls).toContainEqual({ table: "items", method: "eq", args: ["id", "new-item"] });
-  });
-
-  it("changing a step's type replaces its item and removes the old one only if it is a draft", async () => {
-    const fake = fakeClient({
-      case_studies: [caseStudyRow],
-      case_study_items: [{ data: { item_id: "old-item" }, error: null }],
-      items: [{ data: { id: "new-item" }, error: null }],
-    });
-    expect(await startStep(fake.client, args)).toEqual({ ok: true, value: { itemId: "new-item" } });
-    expect(fake.calls).toContainEqual({ table: "items", method: "eq", args: ["id", "old-item"] });
-    expect(fake.calls).toContainEqual({ table: "items", method: "eq", args: ["status", "draft"] });
-  });
-
-  it("says it failed, and places nothing, when the item cannot be created", async () => {
-    const fake = fakeClient({
-      case_studies: [caseStudyRow],
-      case_study_items: [{ data: null, error: null }],
-      items: [{ data: null, error: { message: "denied" } }],
-    });
+  it("gives the plain failure for anything else", async () => {
+    const fake = fakeClient({}, { data: null, error: { code: "42501" } });
     expect(await startStep(fake.client, args)).toEqual({
       ok: false,
       error: CASE_STUDY_ERRORS.failed,
     });
-    expect(fake.rpc).not.toHaveBeenCalled();
+  });
+
+  it("gives the plain failure when the function returns no item", async () => {
+    const fake = fakeClient({}, { data: null, error: null });
+    expect(await startStep(fake.client, args)).toEqual({
+      ok: false,
+      error: CASE_STUDY_ERRORS.failed,
+    });
+  });
+});
+
+describe("caseStudyStepStates", () => {
+  it("marks a finished step ready for a preview, but for publishing only once it is published", () => {
+    const row = storedCaseStudy(2);
+    const firstDraft = {
+      ...row,
+      case_study_items: row.case_study_items.map((step, index) =>
+        index === 0 ? { ...step, items: { ...step.items, status: "draft" } } : step,
+      ),
+    };
+    expect(caseStudyStepStates(firstDraft, "preview")).toEqual([
+      { position: 1, itemId: "item_1", itemReady: true, wrongStep: false },
+      { position: 2, itemId: "item_2", itemReady: true, wrongStep: false },
+    ]);
+    expect(caseStudyStepStates(firstDraft, "publish").map((step) => step.itemReady)).toEqual([
+      false,
+      true,
+    ]);
+  });
+
+  it("flags a step whose item is pinned to another clinical judgment step", () => {
+    const row = storedCaseStudy(1);
+    const moved = {
+      ...row,
+      case_study_items: [{ ...row.case_study_items[0], position: 3 }],
+    };
+    expect(caseStudyStepStates(moved, "publish")).toEqual([
+      { position: 3, itemId: "item_1", itemReady: true, wrongStep: true },
+    ]);
+  });
+
+  it("is not ready for a step whose item cannot be read", () => {
+    const row = storedCaseStudy(1);
+    const hidden = { ...row, case_study_items: [{ ...row.case_study_items[0], items: null }] };
+    expect(caseStudyStepStates(hidden, "preview")).toEqual([
+      { position: 1, itemId: "item_1", itemReady: false, wrongStep: false },
+    ]);
   });
 });
 
@@ -402,6 +399,12 @@ describe("publishCaseStudy", () => {
       ],
     });
     expect(await publishCaseStudy(fake.client, CASE_ID)).toEqual({ ok: true, value: undefined });
+    // The builder page, the export and publish read the case study through one select.
+    expect(fake.calls).toContainEqual({
+      table: "case_studies",
+      method: "select",
+      args: [CASE_STUDY_WITH_STEPS],
+    });
     const update = fake.calls.find((call) => call.method === "update");
     expect(update?.args[0]).toEqual({ status: "published" });
   });

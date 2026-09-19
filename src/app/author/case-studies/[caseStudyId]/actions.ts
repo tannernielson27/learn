@@ -9,6 +9,7 @@ import {
   startStep,
 } from "@/lib/authoring/caseStudies";
 import { isUuid } from "@/lib/authoring/ids";
+import { checkRateLimit } from "@/lib/authoring/rateLimit";
 import { requireAuthor } from "@/lib/authoring/session";
 import { ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 import type { CjmmStep } from "@/lib/ngn/types";
@@ -28,6 +29,8 @@ export async function saveCaseStudyRecord(
 ): Promise<SaveResult> {
   if (!isUuid(caseStudyId)) return { ok: false, error: CASE_STUDY_ERRORS.gone };
   const { supabase } = await requireAuthor(`/author/case-studies/${caseStudyId}`);
+  const limit = await checkRateLimit(supabase, "save");
+  if (!limit.ok) return limit;
   const result = await saveRecordForm(supabase, caseStudyId, values);
   if (!result.ok) return { ok: false, error: result.error };
 
@@ -52,12 +55,13 @@ export async function startStepItem(
     return { error: "That item type cannot be authored yet." };
   }
 
-  const { supabase, userId } = await requireAuthor(`/author/case-studies/${caseStudyId}`);
+  const { supabase } = await requireAuthor(`/author/case-studies/${caseStudyId}`);
+  const limit = await checkRateLimit(supabase, "step");
+  if (!limit.ok) return { error: limit.error };
   const result = await startStep(supabase, {
     caseStudyId,
     position: position as CjmmStep,
     type: type as ItemType,
-    userId,
   });
   if (!result.ok) return { error: result.error };
 
@@ -75,6 +79,8 @@ export type PublishCaseStudyResult =
 export async function publishCaseStudyAction(caseStudyId: string): Promise<PublishCaseStudyResult> {
   if (!isUuid(caseStudyId)) return { ok: false, error: CASE_STUDY_ERRORS.gone };
   const { supabase } = await requireAuthor(`/author/case-studies/${caseStudyId}`);
+  const limit = await checkRateLimit(supabase, "publish");
+  if (!limit.ok) return limit;
   const result = await publishCaseStudy(supabase, caseStudyId);
   if (!result.ok) return { ok: false, error: result.error, blockers: result.blockers };
 

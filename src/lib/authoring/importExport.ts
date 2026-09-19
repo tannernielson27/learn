@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import { fromItemRow } from "@/lib/supabase/itemRows";
-import { assembleCaseStudy } from "./caseStudies";
+import { assembleCaseStudy, CASE_STUDY_WITH_STEPS } from "./caseStudies";
 import {
   caseStudyEnvelope,
   itemsEnvelope,
@@ -79,10 +79,7 @@ export async function readCaseStudyExport(
 ): Promise<ExportResult<CaseStudyEnvelope>> {
   const { data: row, error } = await client
     .from("case_studies")
-    // The org keys are named, since the steps migration adds a second key pair between these.
-    .select(
-      "id, title, tags, ehr, case_study_items!case_study_items_case_org_fkey (position, item_id, items!case_study_items_item_org_fkey (id, type, cjmm_step, tags, version, status, content, answer_key, rationale, scoring))",
-    )
+    .select(CASE_STUDY_WITH_STEPS)
     .eq("id", caseStudyId)
     .maybeSingle();
   if (error || !row) return { ok: false, status: 404, error: TRANSFER_ERRORS.notFound };

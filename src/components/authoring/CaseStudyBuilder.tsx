@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import type { CaseStudy } from "@/lib/ngn/schemas";
 import { CJMM_STEP_LABELS, type CjmmStep } from "@/lib/ngn/types";
 import { ItemEditorHostContext, type ItemEditorHost } from "./ItemEditorHost";
+import { useLeaveGuard, type LeaveGuard } from "./LeaveGuard";
 
 export type StepStatus = "empty" | "draft" | "attention" | "ready";
 
@@ -150,13 +151,17 @@ export function CaseStudyBuilder({
     setActive(key);
   }
 
+  // One guard for every way out by link: Back to bank here, and the site header's links.
+  const guardLeave = useCallback<LeaveGuard>((href) => {
+    if (!dirty.current) return false;
+    setPending({ href });
+    return true;
+  }, []);
+  useLeaveGuard(guardLeave);
+
   function leave(event: MouseEvent<HTMLAnchorElement>) {
     event.preventDefault();
-    if (dirty.current) {
-      setPending({ href: back.href });
-      return;
-    }
-    router.push(back.href);
+    if (!guardLeave(back.href)) router.push(back.href);
   }
 
   function startPreview() {
