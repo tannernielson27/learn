@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { publishCaseStudyAction } from "@/app/author/case-studies/[caseStudyId]/actions";
-import { assembleCaseStudy } from "@/lib/authoring/caseStudies";
+import {
+  assembleCaseStudy,
+  CASE_STUDY_WITH_STEPS,
+  caseStudyStepStates,
+} from "@/lib/authoring/caseStudies";
 import {
   CaseStudyBuilder,
   type BuilderStep,
@@ -12,18 +16,13 @@ import { editorFor, storedItemOf } from "@/components/authoring/editorFor";
 import { ItemEditorLoader } from "@/components/authoring/ItemEditorLoader";
 import { StepItemPanel } from "@/components/authoring/StepItemPanel";
 import { StepTypeChooser } from "@/components/authoring/StepTypeChooser";
-import {
-  caseStudyBlockers,
-  stepsReadyLabel,
-  type CaseStudyStepState,
-} from "@/lib/authoring/caseStudyReadiness";
+import { caseStudyBlockers, stepsReadyLabel } from "@/lib/authoring/caseStudyReadiness";
 import { ehrFormFromStored, previewRecord } from "@/lib/authoring/forms/ehr";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { ITEM_TYPE_LABELS, ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 import { ehrRecordSchema } from "@/lib/ngn/schemas";
 import type { CjmmStep } from "@/lib/ngn/types";
-import { fromItemRow } from "@/lib/supabase/itemRows";
 
 export const metadata: Metadata = { title: "Case study" };
 
@@ -37,25 +36,16 @@ export default async function CaseStudyPage({
   if (!isUuid(caseStudyId)) notFound();
 
   const { supabase } = await requireAuthor(`/author/case-studies/${caseStudyId}`);
-  // Authors may read their own org's keys (ADR 0003): each step's editor needs them. The embed
-  // names the org keys, since the steps migration adds a second key pair.
+  // Authors may read their own org's keys (ADR 0003): each step's editor needs them.
   const { data: row } = await supabase
     .from("case_studies")
-    .select(
-      "id, bank_id, title, tags, status, ehr, case_study_items!case_study_items_case_org_fkey (position, item_id, items!case_study_items_item_org_fkey (id, type, cjmm_step, tags, version, status, content, answer_key, rationale, scoring))",
-    )
+    .select(CASE_STUDY_WITH_STEPS)
     .eq("id", caseStudyId)
     .maybeSingle();
   if (!row) notFound();
 
-  const stepStates: CaseStudyStepState[] = row.case_study_items.map((step) => ({
-    position: step.position as CjmmStep,
-    itemId: step.item_id,
-    itemReady: Boolean(
-      step.items && step.items.status === "published" && fromItemRow(step.items).ok,
-    ),
-    wrongStep: Boolean(step.items && step.items.cjmm_step !== step.position),
-  }));
+  // The rail and the blockers describe publishing, so a step is ready once it is published.
+  const stepStates = caseStudyStepStates(row, "publish");
 
   const recordForm = ehrFormFromStored(row.ehr);
   const recordValid = ehrRecordSchema.safeParse(row.ehr).success;

@@ -16,6 +16,7 @@ import { createCaseStudy } from "@/lib/authoring/caseStudies";
 import { parseCaseStudyTitle } from "@/lib/authoring/caseStudyForm";
 import { isUuid } from "@/lib/authoring/ids";
 import { isEditorReady } from "@/lib/authoring/itemTypeGroups";
+import { checkRateLimit } from "@/lib/authoring/rateLimit";
 import { requireAuthor } from "@/lib/authoring/session";
 import { ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -103,6 +104,9 @@ export async function importIntoBank(
 ): Promise<ImportFormState> {
   if (!isUuid(bankId)) return { status: "error", errors: ["That bank no longer exists."] };
   const { supabase } = await requireAuthor(`/author/banks/${bankId}`);
+  // Counted before the file is read, since reading and checking a large file is the costly part.
+  const limit = await checkRateLimit(supabase, "import");
+  if (!limit.ok) return { status: "error", errors: [limit.error] };
 
   const read = await readImportText(formData);
   if (!read.ok) return { status: "error", errors: [read.error] };

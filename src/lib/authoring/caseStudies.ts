@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { caseStudyBlockers, type CaseStudyStepState } from "@/lib/authoring/caseStudyReadiness";
+import {
+  caseStudyBlockers,
+  type CaseStudyStepState,
+  type ReadinessPurpose,
+} from "@/lib/authoring/caseStudyReadiness";
 import { fromEhrForm } from "@/lib/authoring/forms/ehr";
 import { parseEhrDraft } from "@/lib/authoring/forms/ehrDraft";
 import { withinItemSizeLimit } from "@/lib/authoring/payloadSize";
@@ -108,62 +112,23 @@ export async function pinnedStepFor(client: Client, itemId: string): Promise<Cjm
 /**
  * Starts a step: a new draft item of the chosen type in the case study's own bank, pinned to the
  * step and placed at it. When the step already had an item (the author changed its type), the old
- * item is removed if it is still a draft; a published one stays in the bank. If placing fails, the
- * new item is removed again, so no orphan draft is left behind.
+ * item is removed if it is still a draft; a published one stays in the bank. It is one database
+ * call that locks the case study first, so two tabs changing the same step take turns and neither
+ * leaves an orphan draft behind; a failure anywhere in it writes nothing.
  */
 export async function startStep(
   client: Client,
-  args: { caseStudyId: string; position: CjmmStep; type: ItemType; userId: string },
+  args: { caseStudyId: string; position: CjmmStep; type: ItemType },
 ): Promise<CaseStudyResult<{ itemId: string }>> {
-  const { data: caseStudy } = await client
-    .from("case_studies")
-    .select("bank_id, org_id")
-    .eq("id", args.caseStudyId)
-    .maybeSingle();
-  if (!caseStudy) return { ok: false, error: CASE_STUDY_ERRORS.gone };
-
-  const { data: previous } = await client
-    .from("case_study_items")
-    .select("item_id")
-    .eq("case_study_id", args.caseStudyId)
-    .eq("position", args.position)
-    .maybeSingle();
-
-  const { data: created, error: createError } = await client
-    .from("items")
-    .insert({
-      bank_id: caseStudy.bank_id,
-      org_id: caseStudy.org_id,
-      type: args.type,
-      status: "draft",
-      content: { stem: { kind: "markdown", value: "" } },
-      answer_key: {},
-      scoring: {},
-      cjmm_step: args.position,
-      created_by: args.userId,
-    })
-    .select("id")
-    .single();
-  if (createError || !created) return { ok: false, error: CASE_STUDY_ERRORS.failed };
-
-  const placed = await placeStep(client, {
-    caseStudyId: args.caseStudyId,
-    position: args.position,
-    itemId: created.id,
+  const { data, error } = await client.rpc("start_case_study_step", {
+    target: args.caseStudyId,
+    step_position: args.position,
+    step_type: args.type,
   });
-  if (!placed.ok) {
-    await client.from("items").delete().eq("id", created.id);
-    return { ok: false, error: placed.error };
-  }
-
-  // A new step starts unfinished, so a published case study is a draft again until republished.
-  await client.from("case_studies").update({ status: "draft" }).eq("id", args.caseStudyId);
-
-  if (previous?.item_id) {
-    // Best effort: a published item, or one the database still refuses to delete, simply stays.
-    await client.from("items").delete().eq("id", previous.item_id).eq("status", "draft");
-  }
-  return { ok: true, value: { itemId: created.id } };
+  // P0002: the function could not see the case study (gone, or another org's).
+  if (error?.code === "P0002") return { ok: false, error: CASE_STUDY_ERRORS.gone };
+  if (error || !data) return { ok: false, error: CASE_STUDY_ERRORS.failed };
+  return { ok: true, value: { itemId: data } };
 }
 
 /**
@@ -200,6 +165,15 @@ export async function reorderSteps(
   return { ok: true, value: undefined };
 }
 
+/**
+ * A case study with its steps and each step's item, keys included (authors may read their own
+ * org's keys, ADR 0003). The builder page, the export and publish all read it through this one
+ * select. The embeds name the org keys: the steps migration adds a second key pair between these
+ * tables, so PostgREST refuses an unnamed embed as ambiguous.
+ */
+export const CASE_STUDY_WITH_STEPS =
+  "id, bank_id, title, tags, status, ehr, case_study_items!case_study_items_case_org_fkey (position, item_id, items!case_study_items_item_org_fkey (id, type, cjmm_step, tags, version, status, content, answer_key, rationale, scoring))" as const;
+
 /** A step item as the builder reads it: its stored columns and whether it is published. */
 type StoredStepItem = Parameters<typeof fromItemRow>[0] & { status: string };
 
@@ -215,16 +189,15 @@ export interface StoredCaseStudyRow {
 type AssembledCaseStudy = Extract<ReturnType<typeof validateCaseStudy>, { ok: true }>["value"];
 
 /**
- * The stored case study put back together as the player reads it, checked against the whole case
- * study schema. For a preview, every step's item must be finished; for publishing, each must also
- * be published. Otherwise, the plain reasons from `caseStudyBlockers`.
+ * Where each placed step stands. For a preview, a step is ready once its item is finished; for
+ * publishing, the item must also be published. A step whose item is pinned to another clinical
+ * judgment step is flagged, so it gets its own reason instead of failing validation vaguely.
  */
-export function assembleCaseStudy(
-  row: StoredCaseStudyRow,
-  purpose: NonNullable<Parameters<typeof caseStudyBlockers>[1]>,
-): { ok: true; caseStudy: AssembledCaseStudy } | { ok: false; blockers: string[] } {
-  const record = row.ehr as { tabs?: unknown[] } | null;
-  const steps: CaseStudyStepState[] = row.case_study_items.map((step) => {
+export function caseStudyStepStates(
+  row: Pick<StoredCaseStudyRow, "case_study_items">,
+  purpose: ReadinessPurpose,
+): CaseStudyStepState[] {
+  return row.case_study_items.map((step) => {
     const stored = step.items ? fromItemRow(step.items) : null;
     return {
       position: step.position as CjmmStep,
@@ -232,10 +205,22 @@ export function assembleCaseStudy(
       itemReady: Boolean(
         stored?.ok && (purpose === "preview" || step.items?.status === "published"),
       ),
-      // Caught here with its own reason, instead of failing validateCaseStudy's step check vaguely.
       wrongStep: Boolean(step.items && step.items.cjmm_step !== step.position),
     };
   });
+}
+
+/**
+ * The stored case study put back together as the player reads it, checked against the whole case
+ * study schema. For a preview, every step's item must be finished; for publishing, each must also
+ * be published. Otherwise, the plain reasons from `caseStudyBlockers`.
+ */
+export function assembleCaseStudy(
+  row: StoredCaseStudyRow,
+  purpose: ReadinessPurpose,
+): { ok: true; caseStudy: AssembledCaseStudy } | { ok: false; blockers: string[] } {
+  const record = row.ehr as { tabs?: unknown[] } | null;
+  const steps = caseStudyStepStates(row, purpose);
   const blockers = caseStudyBlockers(
     {
       titleWritten: row.title.trim().length > 0,
@@ -272,11 +257,7 @@ export async function publishCaseStudy(
 ): Promise<CaseStudyResult> {
   const { data: row, error } = await client
     .from("case_studies")
-    // After the migration there are two keys between these tables (org and bank), so PostgREST
-    // refuses an unnamed embed as ambiguous; name the org keys, which every step row has.
-    .select(
-      "id, title, tags, ehr, case_study_items!case_study_items_case_org_fkey (position, item_id, items!case_study_items_item_org_fkey (id, type, cjmm_step, tags, version, status, content, answer_key, rationale, scoring))",
-    )
+    .select(CASE_STUDY_WITH_STEPS)
     .eq("id", caseStudyId)
     .maybeSingle();
   if (error) return { ok: false, error: CASE_STUDY_ERRORS.failed };

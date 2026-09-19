@@ -19,6 +19,33 @@ async function expectNoAxeViolations(page: Page) {
 
 const MINUTES = 60_000;
 
+test("the site header asks before leaving unsaved work in the builder, as Back to bank does", async ({
+  page,
+  request,
+}, testInfo) => {
+  await signInAsNewAuthor(page, request, testInfo.project.name);
+  await page
+    .getByRole("textbox", { name: "Bank name" })
+    .fill(`Guard ${testInfo.project.name} ${Date.now()}`);
+  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Case study title" }).fill("Unsaved record");
+  await page.getByRole("button", { name: "New case study" }).click();
+  await expect(page).toHaveURL(/\/author\/case-studies\/[0-9a-f-]{36}$/);
+  const builderUrl = page.url();
+
+  await page.getByRole("textbox", { name: "Age in years", exact: true }).fill("72");
+  await page.getByRole("banner").getByRole("link", { name: "LeaRN" }).click();
+  const ask = page.getByRole("alertdialog", { name: "The record has unsaved changes" });
+  await expect(ask).toBeVisible();
+  await ask.getByRole("button", { name: "Stay on this step" }).click();
+  expect(page.url()).toBe(builderUrl);
+  await expect(page.getByRole("textbox", { name: "Age in years", exact: true })).toHaveValue("72");
+
+  await page.getByRole("banner").getByRole("link", { name: "LeaRN" }).click();
+  await ask.getByRole("button", { name: "Discard changes" }).click();
+  await expect(page).toHaveURL(/\/author$/);
+});
+
 test("an author builds a complete case study from an empty bank, previews it, and publishes it in under ten minutes", async ({
   page,
   request,

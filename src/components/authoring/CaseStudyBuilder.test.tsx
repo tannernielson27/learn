@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useEffect, useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useItemEditorHost } from "./ItemEditorHost";
+import { GuardedLink, LeaveGuardProvider } from "./LeaveGuard";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -46,12 +47,16 @@ const steps: BuilderStep[] = [
 
 function setup() {
   render(
-    <CaseStudyBuilder
-      back={{ href: "/author/banks/bank-1", label: "Back to bank" }}
-      record={{ status: "ready", panel: <FakeEditor label="Record field" /> }}
-      steps={steps}
-      readyLabel="1 of 6 steps ready"
-    />,
+    // The site header's link sits outside the builder, as the author layout places it.
+    <LeaveGuardProvider>
+      <GuardedLink href="/author">LeaRN</GuardedLink>
+      <CaseStudyBuilder
+        back={{ href: "/author/banks/bank-1", label: "Back to bank" }}
+        record={{ status: "ready", panel: <FakeEditor label="Record field" /> }}
+        steps={steps}
+        readyLabel="1 of 6 steps ready"
+      />
+    </LeaveGuardProvider>,
   );
   return userEvent.setup();
 }
@@ -67,6 +72,18 @@ describe("CaseStudyBuilder, leaving and starting", () => {
     );
     await user.click(leave.getByRole("button", { name: "Discard changes" }));
     expect(push).toHaveBeenCalledWith("/author/banks/bank-1");
+  });
+
+  it("asks before a site header link leaves unsaved changes, as Back to bank does", async () => {
+    const user = setup();
+    await user.type(screen.getByLabelText("Record field"), "typed");
+    await user.click(screen.getByRole("link", { name: "LeaRN" }));
+    const leave = within(
+      screen.getByRole("alertdialog", { name: "The record has unsaved changes" }),
+    );
+    expect(leave.getByText(/discard them and leave this case study/)).toBeInTheDocument();
+    await user.click(leave.getByRole("button", { name: "Discard changes" }));
+    expect(push).toHaveBeenCalledWith("/author");
   });
 
   it("leaves without asking when nothing is unsaved", async () => {

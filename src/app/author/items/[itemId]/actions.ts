@@ -32,6 +32,7 @@ import { parseGroupingDraft } from "@/lib/authoring/forms/multipleResponseGroupi
 import { pinnedStepFor } from "@/lib/authoring/caseStudies";
 import { isUuid } from "@/lib/authoring/ids";
 import { withinItemSizeLimit } from "@/lib/authoring/payloadSize";
+import { checkRateLimit } from "@/lib/authoring/rateLimit";
 import { requireAuthor } from "@/lib/authoring/session";
 import { nextPublishedVersion } from "@/lib/authoring/versions";
 import type { ItemType } from "@/lib/ngn/labels";
@@ -81,6 +82,8 @@ async function saveDraft<Values>(
   if (!draft.ok) return { ok: false, error: draft.error };
 
   const { supabase } = await requireAuthor(`/author/items/${itemId}`);
+  const limit = await checkRateLimit(supabase, "save");
+  if (!limit.ok) return limit;
   // A case study step's position decides its clinical judgment step, not the submitted form.
   const pinned = await pinnedStepFor(supabase, itemId);
   const row = toItemRow(toInput(draft.values) as Item);
@@ -117,6 +120,8 @@ async function publish(itemId: string, type: ItemType, input: unknown): Promise<
   if (!result.ok || result.value.type !== type) return INCOMPLETE;
 
   const { supabase, orgId } = await requireAuthor(`/author/items/${itemId}`);
+  const limit = await checkRateLimit(supabase, "publish");
+  if (!limit.ok) return limit;
   const { data: latest, error: latestError } = await supabase
     .from("item_versions")
     .select("version")
