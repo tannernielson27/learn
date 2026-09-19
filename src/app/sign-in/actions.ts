@@ -1,7 +1,10 @@
 "use server";
 
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import type { DemoSignInState } from "@/components/auth/DemoSignIn";
 import type { SignInState } from "@/components/auth/SignInForm";
+import { readDemoAccount, signInToDemo } from "@/lib/auth/demoAccount";
 import { parseSignInForm } from "@/lib/auth/signInForm";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -32,6 +35,22 @@ export async function requestSignInLink(
     return { status: "error", error: error.status === 429 ? RATE_LIMITED : SEND_FAILED };
   }
   return { status: "sent", email: parsed.email };
+}
+
+/**
+ * Signs in to the shared demo account with its server-only password, then follows the safe
+ * `next`. Refuses when the demo is not configured, even if the button was forged.
+ */
+export async function signInAsDemo(
+  _previous: DemoSignInState,
+  formData: FormData,
+): Promise<DemoSignInState> {
+  const supabase = await createSupabaseServerClient();
+  const result = await signInToDemo(readDemoAccount(), formData.get("next"), (credentials) =>
+    supabase.auth.signInWithPassword(credentials),
+  );
+  if (!result.ok) return { status: "error", error: result.error };
+  redirect(result.next);
 }
 
 async function siteOrigin(): Promise<string> {

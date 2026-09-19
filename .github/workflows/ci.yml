@@ -80,6 +80,9 @@ jobs:
         run: pnpm e2e e2e/auth.spec.ts e2e/authoring.spec.ts e2e/caseStudyBuilder.spec.ts e2e/transfer.spec.ts e2e/folders.spec.ts
         env:
           E2E_AUTH: "1"
+          # The local-only demo account from supabase/seed-demo.sql, not a secret.
+          DEMO_ACCOUNT_EMAIL: demo@learn.test
+          DEMO_ACCOUNT_PASSWORD: learn-demo-local
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
