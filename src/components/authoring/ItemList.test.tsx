@@ -13,6 +13,7 @@ const items = [
     cjmmStep: 3,
     tags: ["sepsis", "Physiological Adaptation"],
     match: null,
+    warningCount: 2,
   },
   {
     id: "i2",
@@ -24,6 +25,7 @@ const items = [
     cjmmStep: null,
     tags: [],
     match: null,
+    warningCount: 0,
   },
 ];
 
@@ -51,6 +53,16 @@ describe("ItemList", () => {
     ).toEqual(["Step 3: Prioritize Hypotheses", "Physiological Adaptation", "sepsis"]);
     const untitled = screen.getByRole("link", { name: /^Untitled item/ });
     expect(within(untitled).queryByRole("list", { name: "Tags" })).not.toBeInTheDocument();
+  });
+
+  it("says how many quality warnings an item has, and nothing when it has none", () => {
+    render(<ItemList items={[...items, { ...items[0], id: "i3", warningCount: 1 }]} />);
+    const [first, second, third] = screen.getAllByRole("link", {
+      name: /^(Which findings|Untitled)/,
+    });
+    expect(first).toHaveAccessibleName(/2 warnings/);
+    expect(within(third).getByText("1 warning")).toBeInTheDocument();
+    expect(within(second).queryByText(/warning/)).not.toBeInTheDocument();
   });
 
   it("names an item with no stem yet", () => {

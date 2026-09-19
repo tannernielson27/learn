@@ -32,12 +32,12 @@ import { parseGroupingDraft } from "@/lib/authoring/forms/multipleResponseGroupi
 import { pinnedStepFor } from "@/lib/authoring/caseStudies";
 import { isUuid } from "@/lib/authoring/ids";
 import { withinItemSizeLimit } from "@/lib/authoring/payloadSize";
+import { checkPublishable } from "@/lib/authoring/publishCheck";
 import { checkRateLimit } from "@/lib/authoring/rateLimit";
 import { requireAuthor } from "@/lib/authoring/session";
 import { nextPublishedVersion } from "@/lib/authoring/versions";
 import type { ItemType } from "@/lib/ngn/labels";
 import type { Item } from "@/lib/ngn/schemas";
-import { validateItem } from "@/lib/ngn/validate";
 import type { Json } from "@/lib/supabase/database.types";
 import { toItemRow } from "@/lib/supabase/itemRows";
 
@@ -47,10 +47,6 @@ const TOO_LARGE: SaveResult = {
   error: "This item is too large to save. Shorten the longest text, or split it into two items.",
 };
 const SAVE_FAILED: SaveResult = { ok: false, error: "The draft could not be saved. Try again." };
-const INCOMPLETE: SaveResult = {
-  ok: false,
-  error: "The item is not complete yet. Fix the problems listed, then publish.",
-};
 const PUBLISH_FAILED: SaveResult = {
   ok: false,
   error: "The item could not be published. Try again.",
@@ -109,15 +105,15 @@ async function saveDraft<Values>(
 }
 
 /**
- * Publishes only a schema-valid item of the row's own type, within the size limit, and appends a
- * snapshot to its version history. The server sets the version (from stored history) and the id
- * (from the route); neither is taken from the submitted item.
+ * Publishes only a schema-valid item of the row's own type with a general rationale (spec §6),
+ * within the size limit, and appends a snapshot to its version history. The server sets the version
+ * (from stored history) and the id (from the route); neither is taken from the submitted item.
  */
 async function publish(itemId: string, type: ItemType, input: unknown): Promise<SaveResult> {
   if (!isUuid(itemId)) return GONE;
   if (!withinItemSizeLimit(input)) return TOO_LARGE;
-  const result = validateItem(input);
-  if (!result.ok || result.value.type !== type) return INCOMPLETE;
+  const checked = checkPublishable(input, type);
+  if (!checked.ok) return { ok: false, error: checked.error };
 
   const { supabase, orgId } = await requireAuthor(`/author/items/${itemId}`);
   const limit = await checkRateLimit(supabase, "publish");
@@ -134,7 +130,7 @@ async function publish(itemId: string, type: ItemType, input: unknown): Promise<
   const version = nextPublishedVersion(latest?.version ?? null);
   // A case study step's position decides its clinical judgment step, in the row and the snapshot.
   const pinned = await pinnedStepFor(supabase, itemId);
-  const item = { ...result.value, id: itemId, version, ...(pinned ? { cjmmStep: pinned } : {}) };
+  const item = { ...checked.item, id: itemId, version, ...(pinned ? { cjmmStep: pinned } : {}) };
   const row = toItemRow(item);
 
   const { data, error } = await supabase

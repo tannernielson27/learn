@@ -4,12 +4,14 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import type { UseFormRegisterReturn } from "react-hook-form";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { Button } from "@/components/ui/Button";
 import { emptyEhrForm, previewRecord, type EhrFormValues } from "@/lib/authoring/forms/ehr";
 import type { EditorIssue } from "@/lib/authoring/issueMessages";
 import { scoringSummary } from "@/lib/authoring/scoringSummary";
-import type { Item } from "@/lib/ngn/schemas";
+import { editorWarnings, RATIONALE_FIELD, rationaleProblem } from "@/lib/authoring/warningMessages";
+import { itemSchema, type Item } from "@/lib/ngn/schemas";
 import type { CjmmStep, ScoringModel } from "@/lib/ngn/types";
 import { EhrPreview } from "./EhrPreview";
 import { EhrRecordFields, focusRecordField, recordFieldId } from "./EhrRecordFields";
@@ -30,9 +32,10 @@ type Status =
   | { kind: "done"; message: string }
   | { kind: "error"; message: string };
 
-/** Every editor's item input carries the scoring its form derives. */
+/** Every editor's item input carries the scoring its form derives and its rationale. */
 export interface ScoredInput {
   scoring?: { model: ScoringModel; maxPoints: number };
+  rationale?: { general?: { value: string } };
 }
 
 /** Every item form may hold a patient record, in the record editor's shape. */
@@ -47,6 +50,9 @@ interface WithTags {
 }
 
 const RECORD_PREFIX = "ehr.";
+const OPTION_RATIONALE = /^options\.(\d+)\.rationale$/;
+const fieldClass =
+  "w-full rounded-sm border border-line bg-surface-1 px-3 py-2 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect";
 
 export interface EditorShellProps<Values, Input extends ScoredInput> {
   /** The form as it stands right now (re-read on every render by the caller). */
@@ -70,6 +76,8 @@ export interface EditorShellProps<Values, Input extends ScoredInput> {
   onTagsChange?: (tags: string[]) => void;
   /** Sets or clears the item's CJMM step; never offered inside a case study, whose place sets it. */
   onStepChange?: (step: CjmmStep | undefined) => void;
+  /** The form's general rationale field, which the shell lays out and checks before publishing. */
+  rationaleField: UseFormRegisterReturn<"rationaleGeneral">;
   /** The type's own fields. */
   children: ReactNode;
 }
@@ -89,6 +97,7 @@ export function EditorShell<Values, Input extends ScoredInput>({
   onRecordChange,
   onTagsChange,
   onStepChange,
+  rationaleField,
   children,
 }: EditorShellProps<Values, Input>) {
   const host = useItemEditorHost();
@@ -103,6 +112,14 @@ export function EditorShell<Values, Input extends ScoredInput>({
   const busy = status.kind === "busy";
   // Only a valid item has a final maximum; scoringSummary says so instead of guessing.
   const scoring = scoringSummary(input.scoring, valid);
+  // A missing rationale blocks publishing (spec §6), so it reads as one more problem to fix.
+  const missingRationale = rationaleProblem(input.rationale);
+  const problems = missingRationale ? [...issues, missingRationale] : issues;
+  const canPublish = valid && !missingRationale;
+  // Advice needs a whole item to judge, so it waits until the item is valid.
+  const parsed = valid ? itemSchema.safeParse(input) : null;
+  const warnings = parsed?.success ? editorWarnings(parsed.data) : [];
+  const rationaleId = `${issueIdPrefix}-rationale`;
 
   useReportDirty(isDirty);
   const { onBusyChange } = host;
@@ -147,7 +164,12 @@ export function EditorShell<Values, Input extends ScoredInput>({
   }
 
   function focusProblem(field: string) {
-    if (field.startsWith(RECORD_PREFIX)) {
+    const optionRationale = OPTION_RATIONALE.exec(field);
+    if (field === RATIONALE_FIELD) {
+      document.getElementById(rationaleId)?.focus();
+    } else if (optionRationale) {
+      document.getElementById(`${issueIdPrefix}-why-${optionRationale[1]}`)?.focus();
+    } else if (field.startsWith(RECORD_PREFIX)) {
       focusRecordField(recordIds, field.slice(RECORD_PREFIX.length));
     } else {
       focusField(field);
@@ -191,6 +213,22 @@ export function EditorShell<Values, Input extends ScoredInput>({
         </section>
 
         {children}
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor={rationaleId} className="text-sm font-medium text-ink-1">
+            Rationale
+          </label>
+          <textarea
+            id={rationaleId}
+            rows={3}
+            className={fieldClass}
+            aria-invalid={missingRationale ? true : undefined}
+            aria-describedby={
+              missingRationale ? issueMessageId(issueIdPrefix, RATIONALE_FIELD) : undefined
+            }
+            {...rationaleField}
+          />
+        </div>
 
         {onTagsChange ? (
           <TagFields
@@ -288,7 +326,7 @@ export function EditorShell<Values, Input extends ScoredInput>({
           </section>
         ) : null}
 
-        {issues.length > 0 ? (
+        {problems.length > 0 ? (
           <section
             aria-label="Problems to fix"
             className="rounded-sm border border-line bg-surface-1 p-4"
@@ -304,7 +342,7 @@ export function EditorShell<Values, Input extends ScoredInput>({
               </h2>
             )}
             <ul className="flex flex-col gap-1">
-              {issues.map((issue) => (
+              {problems.map((issue) => (
                 <li key={issue.field}>
                   <button
                     type="button"
@@ -313,6 +351,33 @@ export function EditorShell<Values, Input extends ScoredInput>({
                     className="tap-target text-left text-sm text-accent-ink underline-offset-4 hover:underline"
                   >
                     {issue.message}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {warnings.length > 0 ? (
+          <section
+            aria-label="Quality warnings"
+            className="rounded-sm border border-line bg-surface-1 p-4"
+          >
+            {host.inCaseStudy ? (
+              <h3 className="text-sm font-medium text-ink-1">Worth a second look</h3>
+            ) : (
+              <h2 className="text-sm font-medium text-ink-1">Worth a second look</h2>
+            )}
+            <p className="mb-2 text-sm text-ink-2">These do not stop you publishing.</p>
+            <ul className="flex flex-col gap-1">
+              {warnings.map((warning) => (
+                <li key={warning.field}>
+                  <button
+                    type="button"
+                    onClick={() => focusProblem(warning.field)}
+                    className="tap-target text-left text-sm text-accent-ink underline-offset-4 hover:underline"
+                  >
+                    {warning.message}
                   </button>
                 </li>
               ))}
@@ -333,9 +398,9 @@ export function EditorShell<Values, Input extends ScoredInput>({
           <Button
             type="button"
             variant="primary"
-            aria-disabled={!valid || busy}
+            aria-disabled={!canPublish || busy}
             onClick={() => {
-              if (!valid || busy) return;
+              if (!canPublish || busy) return;
               void run(
                 (current) => onPublish(toInput(current)),
                 "Published.",

@@ -12,6 +12,7 @@ import {
 } from "./bankSearch";
 import type { FolderView } from "./folders";
 import { hasMatch, splitHighlight, type Segment } from "./highlight";
+import { storedWarningCount } from "./storedWarnings";
 import type { TaggedRow } from "./tagFilter";
 
 type Client = SupabaseClient<Database>;
@@ -42,6 +43,8 @@ export interface ItemSummary {
   tags: string[];
   /** Where a search matched, or null without a search. */
   match: ItemMatch | null;
+  /** How many quality warnings the item has, counted on the server. Never the warnings' fields. */
+  warningCount: number;
 }
 
 /** Where a search matched an item: marked stem or item text segments, or only its rationale. */
@@ -61,6 +64,19 @@ export interface ItemPage {
   page: number;
   pageCount: number;
 }
+
+/**
+ * The columns a warning count is worked out from: the whole item, key and rationale included. They
+ * are read on the server only, and only the count leaves this module.
+ */
+const ITEM_ROW_COLUMNS =
+  "id, type, cjmm_step, tags, version, content, answer_key, rationale, scoring";
+
+/**
+ * How far Has warnings looks down a filtered list. Warnings cannot be asked of the database, so the
+ * filter counts them here; this is `list_bank_items`'s own page cap, so it stays one round trip.
+ */
+export const WARNING_SCAN_LIMIT = 200;
 
 export class AuthoringDataError extends Error {
   constructor(message: string) {
@@ -97,6 +113,10 @@ export async function listItems(
   filter: BankFilter = NO_BANK_FILTER,
   page = 1,
 ): Promise<ItemPage> {
+  // Has warnings cannot be asked of the database, so that one filter reads a wider slice of the
+  // same ranked list and narrows it here, after counting each item's warnings on the server.
+  const scanning = filter.warnings === true;
+  const offset = pageOffset(page, ITEM_PAGE_SIZE);
   const { data, error } = await client.rpc("list_bank_items", {
     target_bank: bankId,
     ...(filter.query ? { search: filter.query } : {}),
@@ -106,27 +126,48 @@ export async function listItems(
     unfiled_only: view.kind === "unfiled",
     with_tags: [...filter.tags],
     ...(filter.step !== null ? { with_step: filter.step } : {}),
-    page_size: ITEM_PAGE_SIZE,
-    page_offset: pageOffset(page, ITEM_PAGE_SIZE),
+    page_size: scanning ? WARNING_SCAN_LIMIT : ITEM_PAGE_SIZE,
+    page_offset: scanning ? 0 : offset,
   });
   if (error) throw new AuthoringDataError("Items could not be loaded.");
-  const total = data[0]?.total_count ?? 0;
+  const counts = await warningCounts(
+    client,
+    data.map((item) => item.id),
+  );
+  const rows = data.map((item): ItemSummary => ({
+    id: item.id,
+    type: item.type,
+    status: item.status,
+    updatedAt: item.updated_at,
+    stemExcerpt: stemExcerpt(item.stem),
+    maxPoints: storedMaxPoints(item.max_points),
+    cjmmStep: item.cjmm_step,
+    tags: storedTags(item.tags),
+    match: filter.query ? itemMatch(item) : null,
+    warningCount: counts.get(item.id) ?? 0,
+  }));
+  if (!scanning) {
+    const total = data[0]?.total_count ?? 0;
+    return { items: rows, total, page, pageCount: pageCount(total, ITEM_PAGE_SIZE) };
+  }
+  const warned = rows.filter((item) => item.warningCount > 0);
   return {
-    items: data.map((item) => ({
-      id: item.id,
-      type: item.type,
-      status: item.status,
-      updatedAt: item.updated_at,
-      stemExcerpt: stemExcerpt(item.stem),
-      maxPoints: storedMaxPoints(item.max_points),
-      cjmmStep: item.cjmm_step,
-      tags: storedTags(item.tags),
-      match: filter.query ? itemMatch(item) : null,
-    })),
-    total,
+    items: warned.slice(offset, offset + ITEM_PAGE_SIZE),
+    total: warned.length,
     page,
-    pageCount: pageCount(total, ITEM_PAGE_SIZE),
+    pageCount: pageCount(warned.length, ITEM_PAGE_SIZE),
   };
+}
+
+/**
+ * Each listed item's quality warning count, worked out here on the server from whole rows under
+ * RLS. The rows, key and rationale included, never leave this function; only the counts do.
+ */
+async function warningCounts(client: Client, ids: string[]): Promise<Map<string, number>> {
+  if (ids.length === 0) return new Map();
+  const { data, error } = await client.from("items").select(ITEM_ROW_COLUMNS).in("id", ids);
+  if (error) throw new AuthoringDataError("Items could not be loaded.");
+  return new Map(data.map((row) => [row.id, storedWarningCount(row)]));
 }
 
 function marked(value: string | null): Segment[] | null {
@@ -147,7 +188,10 @@ function itemMatch(row: {
   };
 }
 
-/** The tags and CJMM step of every item in a view, for the filter's counts. Nothing else is read. */
+/**
+ * The tags, CJMM step and whether it has warnings, for every item in a view, for the filter's
+ * counts. Whole rows are read to judge warnings; only these three facts leave this function.
+ */
 export async function listTaggedRows(
   client: Client,
   bankId: string,
@@ -155,12 +199,24 @@ export async function listTaggedRows(
   search: ItemSearch = NO_SEARCH,
 ): Promise<TaggedRow[]> {
   // Within the search too, so the counts describe the list below them.
-  const query = client.from("items").select("cjmm_step, tags").eq("bank_id", bankId);
-  const searched = withStatus(matching(inView(query, view), "search_vector", search), search);
-  const typed = search.type ? searched.eq("type", search.type) : searched;
-  const { data, error } = await typed.limit(TAG_COUNT_LIMIT);
+  const tags = client.from("items").select("id, cjmm_step, tags").eq("bank_id", bankId);
+  const { data, error } = await narrowItems(tags, view, search).limit(TAG_COUNT_LIMIT);
   if (error) throw new AuthoringDataError("Tags could not be loaded.");
-  return data.map((row) => ({ cjmmStep: row.cjmm_step, tags: storedTags(row.tags) }));
+  // Whole rows are read only to judge warnings, and only for the slice Has warnings lists, so the
+  // chip's count matches what it opens. Nothing of the key or the rationale leaves this function.
+  const whole = client.from("items").select(ITEM_ROW_COLUMNS).eq("bank_id", bankId);
+  const warned = await narrowItems(whole, view, search)
+    .order("updated_at", { ascending: false })
+    .limit(WARNING_SCAN_LIMIT);
+  if (warned.error) throw new AuthoringDataError("Tags could not be loaded.");
+  const warnedIds = new Set(
+    warned.data.filter((row) => storedWarningCount(row) > 0).map((row) => row.id),
+  );
+  return data.map((row) => ({
+    cjmmStep: row.cjmm_step,
+    tags: storedTags(row.tags),
+    hasWarnings: warnedIds.has(row.id),
+  }));
 }
 
 export interface CaseStudySummary {
@@ -238,6 +294,18 @@ interface StatusFilterable<Q> {
 
 function withStatus<Q extends StatusFilterable<Q>>(query: Q, search: ItemSearch): Q {
   return search.status ? query.eq("status", search.status) : query;
+}
+
+interface TypeFilterable<Q> {
+  eq(column: "type", value: string): Q;
+}
+
+/** An items query narrowed to the open folder view and the search's words, type and status. */
+function narrowItems<
+  Q extends FolderFilterable<Q> & TextSearchable<Q> & StatusFilterable<Q> & TypeFilterable<Q>,
+>(query: Q, view: FolderView, search: ItemSearch): Q {
+  const searched = withStatus(matching(inView(query, view), "search_vector", search), search);
+  return search.type ? searched.eq("type", search.type) : searched;
 }
 
 /** A stored tag list's strings; anything else reads as no tags. */

@@ -99,6 +99,51 @@ describe("TagFilterBar", () => {
     expect(bar).toHaveTextContent("2 items have all of: Step 1: Recognize Cues.");
   });
 
+  it("offers Has warnings with its count, kept in the URL with the tags", () => {
+    const warned: TaggedRow[] = [
+      { tags: ["sepsis"], cjmmStep: null, hasWarnings: true },
+      { tags: ["sepsis"], cjmmStep: null, hasWarnings: false },
+    ];
+    const filter = { tags: ["sepsis"], step: null };
+    render(
+      <TagFilterBar
+        bankId={BANK}
+        view={{ kind: "all" }}
+        filter={filter}
+        facets={tagFacets(warned, filter)}
+      />,
+    );
+    const quality = screen.getByRole("group", { name: "Quality" });
+    expect(within(quality).getByRole("link")).toHaveAccessibleName("Has warnings, 1 item");
+    expect(within(quality).getByRole("link")).toHaveAttribute(
+      "href",
+      `${base}?tag=sepsis&warnings=1`,
+    );
+  });
+
+  it("marks Has warnings chosen, names it among the filters, and removes it", () => {
+    const warned: TaggedRow[] = [{ tags: [], cjmmStep: null, hasWarnings: true }];
+    const filter = { tags: [], step: null, warnings: true as const };
+    render(
+      <TagFilterBar
+        bankId={BANK}
+        view={{ kind: "all" }}
+        filter={filter}
+        facets={tagFacets(warned, filter)}
+      />,
+    );
+    const bar = screen.getByRole("region", { name: "Filter by tag" });
+    expect(bar).toHaveTextContent("1 item has all of: Has warnings.");
+    const chip = within(bar).getByRole("link", { name: "Remove filter Has warnings, 1 item" });
+    expect(chip).toHaveAttribute("href", base);
+    expect(chip).toHaveAttribute("aria-current", "true");
+  });
+
+  it("offers no Has warnings chip when nothing in view has warnings", () => {
+    setup(NO_FILTER);
+    expect(screen.queryByRole("group", { name: "Quality" })).not.toBeInTheDocument();
+  });
+
   it("shows nothing when no item in view has a tag or step", () => {
     const { container } = render(
       <TagFilterBar

@@ -3,20 +3,24 @@ import { CJMM_STEP_LABELS, type CjmmStep } from "@/lib/ngn/types";
 import { UNFILED, type FolderView } from "./folders";
 
 /**
- * The bank page's tag filter, kept in the URL as `tag` (repeated) and `step`: an item is listed
- * only when it carries every chosen tag and, with a step chosen, has that CJMM step.
+ * The bank page's filter, kept in the URL as `tag` (repeated), `step` and `warnings=1`: an item is
+ * listed only when it carries every chosen tag, has the chosen CJMM step if one is chosen, and has
+ * quality warnings when Has warnings is on.
  */
 export interface TagFilter {
   tags: string[];
   step: CjmmStep | null;
+  /** Has warnings: only items with quality warnings. Present only when on. */
+  warnings?: true;
 }
 
 export const NO_FILTER: TagFilter = Object.freeze({ tags: [], step: null }) as TagFilter;
 
-/** An item as the facet counts see it: its tags and CJMM step only. */
+/** An item as the facet counts see it: its tags, CJMM step and whether it has warnings. */
 export interface TaggedRow {
   tags: readonly string[];
   cjmmStep: number | null;
+  hasWarnings?: boolean;
 }
 
 export interface TagFacet {
@@ -36,6 +40,8 @@ export interface StepFacet {
 export interface TagFacets {
   /** Items in the view the filter lists. */
   matching: number;
+  /** Items the tags and step would list that have quality warnings. */
+  withWarnings: number;
   steps: StepFacet[];
   clientNeeds: TagFacet[];
   topics: TagFacet[];
@@ -47,7 +53,7 @@ const asList = (value: Param): string[] =>
   value === undefined ? [] : Array.isArray(value) ? value : [value];
 
 /** Reads the filter from search parameters. Anything unreadable or past the limits is dropped. */
-export function parseTagFilter(tag: Param, step: Param): TagFilter {
+export function parseTagFilter(tag: Param, step: Param, warnings?: Param): TagFilter {
   const tags = [
     ...new Set(
       asList(tag)
@@ -58,11 +64,12 @@ export function parseTagFilter(tag: Param, step: Param): TagFilter {
   ].slice(0, TAG_LIMITS.count);
   const rawStep = asList(step)[0];
   const parsedStep = rawStep !== undefined && /^[1-6]$/.test(rawStep) ? Number(rawStep) : null;
-  return { tags, step: parsedStep as CjmmStep | null };
+  const hasWarnings = asList(warnings)[0] === "1";
+  return { tags, step: parsedStep as CjmmStep | null, ...(hasWarnings ? { warnings: true } : {}) };
 }
 
 export function isFiltering(filter: TagFilter): boolean {
-  return filter.tags.length > 0 || filter.step !== null;
+  return filter.tags.length > 0 || filter.step !== null || filter.warnings === true;
 }
 
 /** Adds a tag, or takes it away when chosen. Anything else the filter holds (a search) is kept. */
@@ -77,9 +84,14 @@ export function toggleStep<F extends TagFilter>(filter: F, step: CjmmStep): F {
   return { ...filter, step: filter.step === step ? null : step };
 }
 
-/** The filter with no tags and no step, keeping anything else it holds. */
+/** Turns Has warnings on, or off when it is on. Anything else the filter holds is kept. */
+export function toggleWarnings<F extends TagFilter>(filter: F): F {
+  return { ...filter, warnings: filter.warnings ? undefined : true };
+}
+
+/** The filter with no tags, no step and no warnings, keeping anything else it holds. */
 export function withoutTags<F extends TagFilter>(filter: F): F {
-  return { ...filter, tags: [], step: null };
+  return { ...filter, tags: [], step: null, warnings: undefined };
 }
 
 /** The search fields of the bank page's URL (see bankSearch.ts), each optional here. */
@@ -91,7 +103,7 @@ interface SearchParams {
 
 /**
  * The bank page for a folder view, a filter and a page, all kept in the URL: `folder`, `tag`
- * (repeated), `step`, `q`, `type`, `status` and `page`, each only when set.
+ * (repeated), `step`, `warnings`, `q`, `type`, `status` and `page`, each only when set.
  */
 export function bankViewHref(
   bankId: string,
@@ -104,6 +116,7 @@ export function bankViewHref(
   if (view.kind === "folder") params.set("folder", view.id);
   for (const tag of filter.tags) params.append("tag", tag);
   if (filter.step !== null) params.set("step", String(filter.step));
+  if (filter.warnings) params.set("warnings", "1");
   if (filter.query) params.set("q", filter.query);
   if (filter.type) params.set("type", filter.type);
   if (filter.status) params.set("status", filter.status);
@@ -126,6 +139,7 @@ export function tagLabels(cjmmStep: number | null, tags: readonly string[]): str
 
 const matches = (row: TaggedRow, filter: TagFilter): boolean =>
   (filter.step === null || row.cjmmStep === filter.step) &&
+  (!filter.warnings || row.hasWarnings === true) &&
   filter.tags.every((tag) => row.tags.includes(tag));
 
 /**
@@ -161,5 +175,9 @@ export function tagFacets(rows: readonly TaggedRow[], filter: TagFilter): TagFac
     }))
     .filter((facet) => facet.count > 0 || facet.selected);
 
-  return { matching: listed.length, steps, clientNeeds, topics };
+  const withWarnings = rows.filter(
+    (row) => row.hasWarnings === true && matches(row, { ...filter, warnings: undefined }),
+  ).length;
+
+  return { matching: listed.length, withWarnings, steps, clientNeeds, topics };
 }

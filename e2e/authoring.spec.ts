@@ -88,6 +88,10 @@ test("an author writes a multiple choice item beside its preview, saves a draft,
   await page.getByRole("radio", { name: "Option A is correct" }).check();
   await expect(preview.getByText("Which action should the nurse take first?")).toBeVisible();
   await expect(preview.getByText("Assess the airway")).toBeVisible();
+  // Publishing needs a rationale (spec §6).
+  await page
+    .getByRole("textbox", { name: "Rationale", exact: true })
+    .fill("Why the answer is right.");
   await expect(problems).toHaveCount(0);
 
   const axe = await new AxeBuilder({ page }).analyze();
@@ -182,6 +186,10 @@ test("an author writes a select-all-that-apply item, marks three answers, and pu
 
   const preview = page.getByRole("region", { name: "Preview" });
   await expect(preview.getByText("Oxygen saturation 89%").first()).toBeVisible();
+  // Publishing needs a rationale (spec §6).
+  await page
+    .getByRole("textbox", { name: "Rationale", exact: true })
+    .fill("Why the answer is right.");
   await expect(problems).toHaveCount(0);
   await expectNoAxeViolations(page);
 
@@ -237,6 +245,10 @@ test("an author writes a matrix item, marks one column per row, and publishes", 
   await expect(
     preview.getByText("Oxygen saturation 96% on room air").filter({ visible: true }).first(),
   ).toBeVisible();
+  // Publishing needs a rationale (spec §6).
+  await page
+    .getByRole("textbox", { name: "Rationale", exact: true })
+    .fill("Why the answer is right.");
   await expect(problems).toHaveCount(0);
   await expectNoAxeViolations(page);
 
@@ -282,6 +294,10 @@ test("an author writes a highlight item, marks phrases, publishes, and plays it"
 
   const preview = page.getByRole("region", { name: "Preview" });
   await expect(preview.getByRole("button", { name: "Heart rate 118" })).toBeVisible();
+  // Publishing needs a rationale (spec §6).
+  await page
+    .getByRole("textbox", { name: "Rationale", exact: true })
+    .fill("Why the answer is right.");
   await expect(problems).toHaveCount(0);
   await expectNoAxeViolations(page);
 
@@ -352,6 +368,10 @@ test("an author writes a drag-and-drop rationale item from a word bank, publishe
   await expect(
     preview.getByRole("group", { name: "Word bank" }).getByRole("button", { name: "falls" }),
   ).toBeVisible();
+  // Publishing needs a rationale (spec §6).
+  await page
+    .getByRole("textbox", { name: "Rationale", exact: true })
+    .fill("Why the answer is right.");
   await expect(problems).toHaveCount(0);
   await expectNoAxeViolations(page);
 
@@ -431,6 +451,10 @@ test("an author writes a bowtie, marks the correct choices, publishes, and plays
   }
   await page.getByRole("radio", { name: "Condition 1 is correct" }).check();
 
+  // Publishing needs a rationale (spec §6).
+  await page
+    .getByRole("textbox", { name: "Rationale", exact: true })
+    .fill("Why the answer is right.");
   await expect(problems).toHaveCount(0);
   await expectNoAxeViolations(page);
   await page.getByRole("button", { name: "Publish" }).click();
@@ -619,6 +643,10 @@ test("an author gives a matrix item a record at two times, publishes it, and pla
     await textbox(`${row}, Value`).fill(rate);
   }
   await select("Section 2, block 1, row 1, Flag").selectOption("H");
+  // Publishing needs a rationale (spec §6).
+  await page
+    .getByRole("textbox", { name: "Rationale", exact: true })
+    .fill("Why the answer is right.");
   await expect(page.getByRole("region", { name: "Problems to fix" })).toHaveCount(0);
 
   const preview = page.getByRole("region", { name: "Preview" });

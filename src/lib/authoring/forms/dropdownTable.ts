@@ -41,8 +41,10 @@ export interface DropdownTableFormValues {
   difficulty?: DropdownTableItem["difficulty"];
   ehr?: EhrFormValues;
   meta: DropdownTableItem["meta"];
-  /** Carried through untouched; per-row rationale in the table editor arrives with #49. */
+  /** Per-element rationale, carried through untouched until this editor edits it (#49). */
   rationale: DropdownTableItem["rationale"];
+  /** The general rationale; publishing needs one. */
+  rationaleGeneral: string;
   stem: string;
   instructions: string;
   /** Heading over the row labels, e.g. "Medication". */
@@ -54,6 +56,10 @@ export interface DropdownTableFormValues {
 
 const markdown = (value: string): RichText => ({ kind: "markdown", value });
 const blank = (value: string) => value.trim().length === 0;
+const perElementOnly = (
+  rationale: DropdownTableItem["rationale"],
+): DropdownTableItem["rationale"] =>
+  rationale.perElement ? { perElement: rationale.perElement } : {};
 
 export function toDropdownTableForm(item: DropdownTableItem): DropdownTableFormValues {
   const correctByRow = new Map(item.answerKey.rows.map((row) => [row.rowId, row.correctChoiceId]));
@@ -65,7 +71,8 @@ export function toDropdownTableForm(item: DropdownTableItem): DropdownTableFormV
     difficulty: item.difficulty,
     ...recordFormOf(item.ehr),
     meta: { ...item.meta },
-    rationale: item.rationale,
+    rationale: perElementOnly(item.rationale),
+    rationaleGeneral: item.rationale.general?.value ?? "",
     stem: item.stem.value,
     instructions: item.instructions ?? "",
     columnLabel: item.content.columns.label,
@@ -108,7 +115,10 @@ export function fromDropdownTableForm(
       rows: values.rows.map((row) => ({ rowId: row.id, correctChoiceId: row.correctChoiceId })),
     },
     scoring: { model: "zero_one", maxPoints: Math.max(1, values.rows.length) },
-    rationale: values.rationale,
+    rationale: {
+      ...perElementOnly(values.rationale),
+      ...(blank(values.rationaleGeneral) ? {} : { general: markdown(values.rationaleGeneral) }),
+    },
     meta: { ...values.meta },
   };
 }
@@ -127,6 +137,7 @@ export function emptyDropdownTableForm(id: string): DropdownTableFormValues {
     tags: [],
     meta: {},
     rationale: {},
+    rationaleGeneral: "",
     stem: "",
     instructions: "",
     columnLabel: "",
@@ -189,7 +200,10 @@ export function dropdownTableFormFromStored(
     ...storedRecordFormOf(stored),
     ...storedCjmmStepOf(stored),
     tags: storedStrings(stored.tags),
-    rationale: rationale.success ? rationale.data : blankForm.rationale,
+    rationale: rationale.success ? perElementOnly(rationale.data) : blankForm.rationale,
+    rationaleGeneral: markdownText(
+      isRecord(stored.rationale) ? stored.rationale.general : undefined,
+    ),
     stem: markdownText(stored.stem),
     instructions: storedString(stored.instructions),
     columnLabel: storedString(headings.label),

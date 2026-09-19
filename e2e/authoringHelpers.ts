@@ -5,6 +5,11 @@ import { expect, type Page } from "@playwright/test";
 const textbox = (page: Page, name: string) => page.getByRole("textbox", { name, exact: true });
 const letter = (index: number) => "ABCDEFGHIJ"[index]!;
 
+/** Writes the general rationale, which publishing needs (spec §6). */
+export async function writeRationale(page: Page, text = "Why the answer is right.") {
+  await textbox(page, "Rationale").fill(text);
+}
+
 export async function fillMultipleChoice(page: Page, stem: string, options: string[], correct = 0) {
   await textbox(page, "Question stem").fill(stem);
   for (const [index, text] of options.entries()) {
@@ -12,6 +17,7 @@ export async function fillMultipleChoice(page: Page, stem: string, options: stri
     await textbox(page, `Option ${letter(index)}`).fill(text);
   }
   await page.getByRole("radio", { name: `Option ${letter(correct)} is correct` }).check();
+  await writeRationale(page);
 }
 
 export async function fillMultipleResponse(
@@ -27,6 +33,7 @@ export async function fillMultipleResponse(
   for (const index of correct) {
     await page.getByRole("checkbox", { name: `Option ${letter(index)} is correct` }).check();
   }
+  await writeRationale(page);
 }
 
 export async function fillMatrixMultipleChoice(
@@ -47,6 +54,7 @@ export async function fillMatrixMultipleChoice(
       .getByRole("radio", { name: row.answer, exact: true })
       .check();
   }
+  await writeRationale(page);
 }
 
 /**
@@ -62,6 +70,7 @@ export async function fillOrderedResponse(page: Page, stem: string, steps: strin
     }
     await field.fill(text);
   }
+  await writeRationale(page);
 }
 
 /** Publishes the open editor and waits for it to say so. */

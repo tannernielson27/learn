@@ -7,6 +7,7 @@ import {
   stepTagLabel,
   toggleStep,
   toggleTag,
+  toggleWarnings,
   withoutTags,
   type TagFacets,
   type TagFilter,
@@ -73,14 +74,19 @@ function ChipGroup({ id, name, chips }: { id: string; name: string; chips: Chip[
   );
 }
 
+const HAS_WARNINGS = "Has warnings";
+
 /**
- * Filter chips for the bank page: each is a link to the same view with that tag or step added or
- * removed, so the filter lives in the URL, combines with the open folder and works without script.
+ * Filter chips for the bank page: each is a link to the same view with that tag, step or Has
+ * warnings added or removed, so the filter lives in the URL, combines with the open folder and
+ * works without script.
  */
 export function TagFilterBar({ bankId, view, filter, facets }: TagFilterBarProps) {
   const filtering = isFiltering(filter);
   const empty =
-    facets.steps.length + facets.clientNeeds.length + facets.topics.length === 0 && !filtering;
+    facets.steps.length + facets.clientNeeds.length + facets.topics.length === 0 &&
+    facets.withWarnings === 0 &&
+    !filtering;
   if (empty) return null;
 
   const tagChip = (facet: TagFacets["topics"][number]): Chip => ({
@@ -97,7 +103,24 @@ export function TagFilterBar({ bankId, view, filter, facets }: TagFilterBarProps
     selected: facet.selected,
     href: bankViewHref(bankId, view, toggleStep(filter, facet.step)),
   }));
-  const chosen = [...(filter.step === null ? [] : [stepTagLabel(filter.step)]), ...filter.tags];
+  // Warnings are counted on the server; a chosen chip stays, with its count, so it can be removed.
+  const quality: Chip[] =
+    facets.withWarnings > 0 || filter.warnings
+      ? [
+          {
+            key: "warnings",
+            label: HAS_WARNINGS,
+            count: facets.withWarnings,
+            selected: filter.warnings === true,
+            href: bankViewHref(bankId, view, toggleWarnings(filter)),
+          },
+        ]
+      : [];
+  const chosen = [
+    ...(filter.step === null ? [] : [stepTagLabel(filter.step)]),
+    ...filter.tags,
+    ...(filter.warnings ? [HAS_WARNINGS] : []),
+  ];
 
   return (
     <section
@@ -128,6 +151,7 @@ export function TagFilterBar({ bankId, view, filter, facets }: TagFilterBarProps
         chips={facets.clientNeeds.map(tagChip)}
       />
       <ChipGroup id="tag-filter-topics" name="Topics" chips={facets.topics.map(tagChip)} />
+      <ChipGroup id="tag-filter-quality" name="Quality" chips={quality} />
     </section>
   );
 }

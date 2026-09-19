@@ -29,6 +29,7 @@ const withPassage = (text: string, correctSpanIds: string[] = []) => ({
   stem: "Highlight the findings that need follow-up.",
   passage: text,
   correctSpanIds,
+  rationaleGeneral: "Fever and cough both point to infection.",
 });
 
 describe("HighlightTextEditor", () => {

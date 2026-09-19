@@ -182,6 +182,9 @@ Item {
 - Bowtie: 5 actions, 4 conditions, 5 parameters; keys sized 2/1/2.
 - Every item: non-empty stem, `rationale.general` present (warning if missing, error for publish).
 - Case study: exactly 6 items, steps 1..6 in order, EHR has ≥1 tab.
+- Quality warnings (advice only, never block): every SATA option correct; a SATA option with no per-option rationale; more than 60% of highlight spans correct; a stem that neither asks a question nor says what to do; two options (or rows, columns, choices, words, steps, bowtie choices) in one list with the same text. `itemQualityWarnings` in `src/lib/ngn/quality.ts` returns each with a plain message and the path it points at.
+
+> **Decision, 2026-09-19 (owner, #110):** a missing `rationale.general` blocks publishing, as this section says. A draft still saves without one. The publish action refuses it on the server (`checkPublishable`), the editor lists it under the problems to fix and keeps Publish unavailable, and a case study treats a step item without one as not yet published. Items published before this rule keep their status until they are next published; the bank's warning count and Has warnings filter find them. All sample fixtures and seed items carry one.
 
 ## 7. Fixtures
 

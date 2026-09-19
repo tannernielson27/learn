@@ -261,6 +261,18 @@ export const sampleCaseStudy: CaseStudyInput = {
         general: md(
           "Support oxygenation, confirm the diagnosis, and anticipate anticoagulation. Raising the head of the bed eases the work of breathing. Massage and ambulation risk dislodging thrombus.",
         ),
+        perElement: {
+          o_o2: md("Hypoxemia is the immediate threat; titrated oxygen supports gas exchange."),
+          o_ct: md("CT pulmonary angiography confirms a suspected pulmonary embolism."),
+          o_antico: md(
+            "Anticoagulation stops the clot from growing while the body breaks it down.",
+          ),
+          o_massage: md("Massaging a calf with a suspected clot can dislodge it."),
+          o_ambulate: md(
+            "Walking raises oxygen demand and can dislodge a clot; keep the client in bed.",
+          ),
+          o_hob: md("Sitting upright eases the work of breathing."),
+        },
       },
     },
     {

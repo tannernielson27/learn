@@ -90,6 +90,12 @@ export function ItemList({
               ) : null}
               <span>{STATUS_LABELS[item.status]}</span>
               <span>{formatEdited(item.updatedAt)}</span>
+              {/* Counted on the server; the list never carries what the warnings are about. */}
+              {item.warningCount > 0 ? (
+                <span className="font-medium text-ink-1">
+                  {item.warningCount === 1 ? "1 warning" : `${item.warningCount} warnings`}
+                </span>
+              ) : null}
             </span>
             <TagChips labels={tagLabels(item.cjmmStep, item.tags)} />
           </Link>

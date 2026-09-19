@@ -16,6 +16,7 @@ import {
   saveRecord,
   saveRecordForm,
   startStep,
+  stepItemPublishable,
 } from "./caseStudies";
 import { DRAFT_ERROR } from "./forms/draft";
 import { toEhrForm } from "./forms/ehr";
@@ -251,6 +252,25 @@ describe("assembleCaseStudy", () => {
       blockers: ["Step 1 (Recognize Cues) needs its item finished and published."],
     });
     expect(assembleCaseStudy(row, "publish").ok).toBe(true);
+  });
+
+  it("for publishing, refuses a step item published before a rationale was required", () => {
+    const row = storedCaseStudy();
+    const noRationale = {
+      ...row,
+      case_study_items: row.case_study_items.map((step, index) =>
+        index === 2 ? { ...step, items: { ...step.items, rationale: {} } } : step,
+      ),
+    };
+    expect(stepItemPublishable(noRationale.case_study_items[2].items)).toBe(false);
+    expect(stepItemPublishable(row.case_study_items[2].items)).toBe(true);
+    expect(stepItemPublishable(null)).toBe(false);
+    expect(assembleCaseStudy(noRationale, "publish")).toEqual({
+      ok: false,
+      blockers: ["Step 3 (Prioritize Hypotheses) needs its item finished and published."],
+    });
+    // A preview does not need one.
+    expect(assembleCaseStudy(noRationale, "preview").ok).toBe(true);
   });
 });
 

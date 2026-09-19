@@ -9,6 +9,7 @@ import {
   tagLabels,
   toggleStep,
   toggleTag,
+  toggleWarnings,
   withoutTags,
   type TaggedRow,
 } from "./tagFilter";
@@ -190,6 +191,52 @@ describe("tagFacets", () => {
     expect(facets.steps).toEqual([
       { step: 1, label: "Step 1: Recognize Cues", count: 1, selected: true },
       { step: 3, label: "Step 3: Prioritize Hypotheses", count: 2, selected: false },
+    ]);
+  });
+});
+
+describe("the Has warnings filter", () => {
+  it("reads warnings=1 from the URL, and nothing else, as on", () => {
+    expect(parseTagFilter(undefined, undefined, "1")).toEqual({
+      tags: [],
+      step: null,
+      warnings: true,
+    });
+    expect(parseTagFilter(undefined, undefined, ["1", "0"]).warnings).toBe(true);
+    for (const off of [undefined, "0", "true", ""]) {
+      expect(parseTagFilter(undefined, undefined, off).warnings).toBeUndefined();
+    }
+  });
+
+  it("counts as filtering, toggles, and stays in the URL with the folder and tags", () => {
+    const on = toggleWarnings(NO_FILTER);
+    expect(on).toEqual({ tags: [], step: null, warnings: true });
+    expect(isFiltering(on)).toBe(true);
+    expect(toggleWarnings(on)).toEqual(NO_FILTER);
+    expect(bankViewHref(BANK, { kind: "folder", id: FOLDER }, { ...on, tags: ["sepsis"] })).toBe(
+      `/author/banks/${BANK}?folder=${FOLDER}&tag=sepsis&warnings=1`,
+    );
+  });
+
+  it("narrows the counts to items with warnings, and counts those that have them", () => {
+    const rows: TaggedRow[] = [
+      { tags: ["sepsis"], cjmmStep: 1, hasWarnings: true },
+      { tags: ["sepsis", "renal"], cjmmStep: 2, hasWarnings: false },
+      { tags: ["renal"], cjmmStep: 2, hasWarnings: true },
+    ];
+    expect(tagFacets(rows, NO_FILTER).withWarnings).toBe(2);
+    expect(tagFacets(rows, { tags: ["sepsis"], step: null }).withWarnings).toBe(1);
+
+    const facets = tagFacets(rows, { tags: [], step: null, warnings: true });
+    expect(facets.matching).toBe(2);
+    expect(facets.withWarnings).toBe(2);
+    expect(facets.topics).toEqual([
+      { tag: "renal", count: 1, selected: false },
+      { tag: "sepsis", count: 1, selected: false },
+    ]);
+    expect(facets.steps.map((step) => [step.step, step.count])).toEqual([
+      [1, 1],
+      [2, 1],
     ]);
   });
 });

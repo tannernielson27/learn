@@ -77,7 +77,7 @@ jobs:
             | sed -n 's/^API_URL=/NEXT_PUBLIC_SUPABASE_URL=/p; s/^PUBLISHABLE_KEY=/NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=/p' \
             | tr -d '"' >> "$GITHUB_ENV"
       - name: Sign in, then author banks and items
-        run: pnpm e2e e2e/auth.spec.ts e2e/authoring.spec.ts e2e/caseStudyBuilder.spec.ts e2e/transfer.spec.ts e2e/folders.spec.ts e2e/tags.spec.ts e2e/history.spec.ts e2e/duplicate.spec.ts e2e/search.spec.ts e2e/bulk-import.spec.ts
+        run: pnpm e2e e2e/auth.spec.ts e2e/authoring.spec.ts e2e/caseStudyBuilder.spec.ts e2e/transfer.spec.ts e2e/folders.spec.ts e2e/tags.spec.ts e2e/history.spec.ts e2e/duplicate.spec.ts e2e/search.spec.ts e2e/bulk-import.spec.ts e2e/warnings.spec.ts
         env:
           E2E_AUTH: "1"
           # The local-only demo account from supabase/seed-demo.sql, not a secret.
