@@ -91,17 +91,24 @@ export function EditorShell<Values, Input extends ScoredInput>({
   onStepChange,
   children,
 }: EditorShellProps<Values, Input>) {
+  const host = useItemEditorHost();
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   // Compared rather than reset, so text typed while a save is in flight is kept and stays unsaved.
-  const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(initialValues));
+  // A restored version opens against the saved draft instead, so it starts out unsaved.
+  const [savedSnapshot, setSavedSnapshot] = useState(() =>
+    JSON.stringify(host.savedValues ?? initialValues),
+  );
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const isDirty = JSON.stringify(values) !== savedSnapshot;
   const busy = status.kind === "busy";
   // Only a valid item has a final maximum; scoringSummary says so instead of guessing.
   const scoring = scoringSummary(input.scoring, valid);
 
-  const host = useItemEditorHost();
   useReportDirty(isDirty);
+  const { onBusyChange } = host;
+  useEffect(() => {
+    onBusyChange?.(busy);
+  }, [busy, onBusyChange]);
   const record = (values as WithRecord).ehr;
   // Inside a case study the case study owns the record: the item offers none, and its preview
   // shows the case study's.
