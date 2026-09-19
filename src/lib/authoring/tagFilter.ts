@@ -65,35 +65,51 @@ export function isFiltering(filter: TagFilter): boolean {
   return filter.tags.length > 0 || filter.step !== null;
 }
 
-export function toggleTag(filter: TagFilter, tag: string): TagFilter {
+/** Adds a tag, or takes it away when chosen. Anything else the filter holds (a search) is kept. */
+export function toggleTag<F extends TagFilter>(filter: F, tag: string): F {
   const tags = filter.tags.includes(tag)
     ? filter.tags.filter((chosen) => chosen !== tag)
     : [...filter.tags, tag];
   return { ...filter, tags };
 }
 
-export function toggleStep(filter: TagFilter, step: CjmmStep): TagFilter {
+export function toggleStep<F extends TagFilter>(filter: F, step: CjmmStep): F {
   return { ...filter, step: filter.step === step ? null : step };
 }
 
-/** The bank page for a folder view and a filter, with both kept in the URL. */
-export function bankViewHref(bankId: string, view: FolderView, filter: TagFilter): string {
+/** The filter with no tags and no step, keeping anything else it holds. */
+export function withoutTags<F extends TagFilter>(filter: F): F {
+  return { ...filter, tags: [], step: null };
+}
+
+/** The search fields of the bank page's URL (see bankSearch.ts), each optional here. */
+interface SearchParams {
+  query?: string;
+  type?: string | null;
+  status?: string | null;
+}
+
+/**
+ * The bank page for a folder view, a filter and a page, all kept in the URL: `folder`, `tag`
+ * (repeated), `step`, `q`, `type`, `status` and `page`, each only when set.
+ */
+export function bankViewHref(
+  bankId: string,
+  view: FolderView,
+  filter: TagFilter & SearchParams,
+  page = 1,
+): string {
   const params = new URLSearchParams();
   if (view.kind === "unfiled") params.set("folder", UNFILED);
   if (view.kind === "folder") params.set("folder", view.id);
   for (const tag of filter.tags) params.append("tag", tag);
   if (filter.step !== null) params.set("step", String(filter.step));
+  if (filter.query) params.set("q", filter.query);
+  if (filter.type) params.set("type", filter.type);
+  if (filter.status) params.set("status", filter.status);
+  if (page > 1) params.set("page", String(page));
   const query = params.toString();
   return `/author/banks/${bankId}${query ? `?${query}` : ""}`;
-}
-
-/**
- * Tags as a quoted Postgres array literal for `contains`. supabase-js joins a plain array with bare
- * commas, which would split a tag holding a comma and break on a brace or quote.
- */
-export function tagArrayLiteral(tags: readonly string[]): string {
-  const quoted = tags.map((tag) => `"${tag.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`);
-  return `{${quoted.join(",")}}`;
 }
 
 const isStep = (value: number | null): value is CjmmStep =>

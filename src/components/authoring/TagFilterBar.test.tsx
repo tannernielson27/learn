@@ -68,18 +68,29 @@ describe("TagFilterBar", () => {
     expect(within(bar).getByRole("link", { name: "Clear filters" })).toHaveAttribute("href", base);
   });
 
-  it("says when the list shows fewer items than the filter matches", () => {
+  it("keeps a search on every chip and when clearing the tags", () => {
+    const searching = {
+      tags: ["sepsis"],
+      step: null,
+      query: "lactate",
+      type: null,
+      status: "published" as const,
+    };
     render(
       <TagFilterBar
         bankId={BANK}
         view={{ kind: "all" }}
-        filter={{ tags: ["sepsis"], step: null }}
-        facets={tagFacets(rows, { tags: ["sepsis"], step: null })}
-        listLimit={1}
+        filter={searching}
+        facets={tagFacets(rows, searching)}
       />,
     );
-    expect(screen.getByRole("region", { name: "Filter by tag" })).toHaveTextContent(
-      "The list shows the 1 most recently edited.",
+    const bar = screen.getByRole("region", { name: "Filter by tag" });
+    expect(
+      within(bar).getByRole("link", { name: "Remove filter sepsis, 2 items" }),
+    ).toHaveAttribute("href", `${base}?q=lactate&status=published`);
+    expect(within(bar).getByRole("link", { name: "Clear filters" })).toHaveAttribute(
+      "href",
+      `${base}?q=lactate&status=published`,
     );
   });
 

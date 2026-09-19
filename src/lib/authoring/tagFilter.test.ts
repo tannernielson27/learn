@@ -5,11 +5,11 @@ import {
   isFiltering,
   NO_FILTER,
   parseTagFilter,
-  tagArrayLiteral,
   tagFacets,
   tagLabels,
   toggleStep,
   toggleTag,
+  withoutTags,
   type TaggedRow,
 } from "./tagFilter";
 
@@ -67,6 +67,19 @@ describe("toggleTag and toggleStep", () => {
     expect(toggleStep({ tags: [], step: 2 }, 5).step).toBe(5);
     expect(toggleStep({ tags: [], step: 2 }, 2).step).toBeNull();
   });
+
+  it("keep whatever else the filter holds, such as a search", () => {
+    const searching = { tags: [], step: null, query: "lactate", type: null, status: "draft" };
+    expect(toggleTag(searching, "sepsis")).toEqual({ ...searching, tags: ["sepsis"] });
+    expect(toggleStep(searching, 1)).toEqual({ ...searching, step: 1 });
+  });
+});
+
+describe("withoutTags", () => {
+  it("clears the tags and step and keeps the rest", () => {
+    const filter = { tags: ["sepsis"], step: 2 as const, query: "lactate" };
+    expect(withoutTags(filter)).toEqual({ tags: [], step: null, query: "lactate" });
+  });
 });
 
 describe("bankViewHref", () => {
@@ -86,15 +99,26 @@ describe("bankViewHref", () => {
       `/author/banks/${BANK}?folder=unfiled&tag=a%26b`,
     );
   });
-});
 
-describe("tagArrayLiteral", () => {
-  it("quotes every tag, so commas, braces, quotes and backslashes stay inside one tag", () => {
-    expect(tagArrayLiteral(["Physiological Adaptation", "sepsis"])).toBe(
-      '{"Physiological Adaptation","sepsis"}',
+  it("keeps a search, its type and status, and a page past the first", () => {
+    expect(
+      bankViewHref(
+        BANK,
+        { kind: "unfiled" },
+        {
+          tags: ["sepsis"],
+          step: null,
+          query: "serum lactate",
+          type: "matrix_multiple_choice",
+          status: "published",
+        },
+        3,
+      ),
+    ).toBe(
+      `/author/banks/${BANK}?folder=unfiled&tag=sepsis&q=serum+lactate&type=matrix_multiple_choice&status=published&page=3`,
     );
-    expect(tagArrayLiteral(["a,b", "{c}", 'say "hi"', "back\\slash"])).toBe(
-      '{"a,b","{c}","say \\"hi\\"","back\\\\slash"}',
+    expect(bankViewHref(BANK, { kind: "all" }, { ...NO_FILTER, query: "" }, 1)).toBe(
+      `/author/banks/${BANK}`,
     );
   });
 });

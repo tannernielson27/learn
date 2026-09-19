@@ -12,6 +12,7 @@ const items = [
     updatedAt: "2026-09-12T15:00:00Z",
     cjmmStep: 3,
     tags: ["sepsis", "Physiological Adaptation"],
+    match: null,
   },
   {
     id: "i2",
@@ -22,8 +23,12 @@ const items = [
     updatedAt: "2026-09-11T08:00:00Z",
     cjmmStep: null,
     tags: [],
+    match: null,
   },
 ];
+
+const base = items[0]!;
+const seg = (text: string, match = false) => ({ text, match });
 
 describe("ItemList", () => {
   it("links each item to its editor by stem, with type, status and last edit", () => {
@@ -106,6 +111,58 @@ describe("ItemList", () => {
     expect(screen.getByRole("checkbox", { name: "Select Untitled item" })).toHaveAttribute(
       "value",
       "i2",
+    );
+  });
+
+  it("marks the matched words of a stem, and renders item text as text, never as HTML", () => {
+    const { container } = render(
+      <ItemList
+        items={[
+          {
+            ...base,
+            stemExcerpt: "A rising lactate <img src=x onerror=boom>",
+            match: {
+              stem: [seg("A rising "), seg("lactate", true), seg(" <img src=x onerror=boom>")],
+              text: null,
+              rationale: false,
+            },
+          },
+        ]}
+      />,
+    );
+    const link = screen.getByRole("link", { name: /A rising lactate/ });
+    const marks = link.querySelectorAll("mark");
+    expect([...marks].map((mark) => mark.textContent)).toEqual(["lactate"]);
+    // The list drops markdown marks such as ">", as the plain excerpt does; the rest is text.
+    expect(link).toHaveTextContent("A rising lactate <img src=x onerror=boom");
+    expect(container.querySelector("img")).toBeNull();
+  });
+
+  it("shows a snippet of the rest of the item when only it matched", () => {
+    render(
+      <ItemList
+        items={[
+          {
+            ...base,
+            stemExcerpt: "Which action comes first?",
+            match: {
+              stem: null,
+              text: [seg("Recheck the serum "), seg("lactate", true)],
+              rationale: false,
+            },
+          },
+        ]}
+      />,
+    );
+    const link = screen.getByRole("link", { name: /Which action comes first\?/ });
+    expect(link).toHaveTextContent("In the item: Recheck the serum lactate");
+    expect(link.querySelector("mark")).toHaveTextContent("lactate");
+  });
+
+  it("says when only the rationale matched, without showing it", () => {
+    render(<ItemList items={[{ ...base, match: { stem: null, text: null, rationale: true } }]} />);
+    expect(screen.getByRole("link", { name: /Which findings need follow-up\?/ })).toHaveTextContent(
+      "Matched in the rationale",
     );
   });
 });

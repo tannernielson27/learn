@@ -272,6 +272,7 @@ export type Database = {
           org_id: string;
           rationale: Json;
           scoring: Json;
+          search_vector: unknown;
           status: Database["public"]["Enums"]["content_status"];
           tags: string[];
           type: string;
@@ -290,6 +291,7 @@ export type Database = {
           org_id: string;
           rationale?: Json;
           scoring: Json;
+          search_vector?: unknown;
           status?: Database["public"]["Enums"]["content_status"];
           tags?: string[];
           type: string;
@@ -308,6 +310,7 @@ export type Database = {
           org_id?: string;
           rationale?: Json;
           scoring?: Json;
+          search_vector?: unknown;
           status?: Database["public"]["Enums"]["content_status"];
           tags?: string[];
           type?: string;
@@ -404,6 +407,34 @@ export type Database = {
       import_bank_content: {
         Args: { new_case_study: Json; new_items: Json; target_bank: string };
         Returns: Json;
+      };
+      list_bank_items: {
+        Args: {
+          in_folder?: string;
+          item_status?: Database["public"]["Enums"]["content_status"];
+          item_type?: string;
+          page_offset?: number;
+          page_size?: number;
+          search?: string;
+          target_bank: string;
+          unfiled_only?: boolean;
+          with_step?: number;
+          with_tags?: string[];
+        };
+        Returns: {
+          cjmm_step: number;
+          id: string;
+          max_points: Json;
+          rationale_match: boolean;
+          status: Database["public"]["Enums"]["content_status"];
+          stem: Json;
+          stem_match: string;
+          tags: string[];
+          text_match: string;
+          total_count: number;
+          type: string;
+          updated_at: string;
+        }[];
       };
       move_to_folder: {
         Args: {

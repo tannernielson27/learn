@@ -6,14 +6,15 @@ import {
   type FolderRow,
   type FolderView,
 } from "@/lib/authoring/folders";
+import type { ItemSearch } from "@/lib/authoring/bankSearch";
 import { bankViewHref, NO_FILTER, type TagFilter } from "@/lib/authoring/tagFilter";
 
 export interface FolderTreeProps {
   bankId: string;
   folders: readonly FolderRow[];
   view: FolderView;
-  /** The bank page's tag filter, kept by every link. */
-  filter?: TagFilter;
+  /** The bank page's tag filter and any search, kept by every link. */
+  filter?: TagFilter & Partial<ItemSearch>;
 }
 
 const linkClass =
@@ -67,7 +68,7 @@ function Branch({
  * Enter, and the open view is marked as the current page.
  */
 export function FolderTree({ bankId, folders, view, filter = NO_FILTER }: FolderTreeProps) {
-  // Opening another folder keeps the tag filter, so the two combine.
+  // Opening another folder keeps the tag filter and search, so they combine.
   const hrefFor = (target: FolderView) => bankViewHref(bankId, target, filter);
   const tree = buildFolderTree(folders);
   return (
