@@ -13,6 +13,11 @@ export interface ItemEditorHost {
   onDirtyChange?: (dirty: boolean) => void;
   /** Told when a step has just been started, so focus can stay with the step it replaced. */
   onStepStarted?: () => void;
+  /**
+   * The saved draft, when the editor opens on something else (a restored version), so what it
+   * opened with counts as unsaved changes. Read once, when the editor mounts.
+   */
+  savedValues?: unknown;
 }
 
 const STANDALONE: ItemEditorHost = { inCaseStudy: false };
