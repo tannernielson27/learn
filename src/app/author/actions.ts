@@ -103,9 +103,9 @@ export async function importIntoBank(
   formData: FormData,
 ): Promise<FileImportResult> {
   if (!isUuid(bankId)) return { status: "error", errors: [TRANSFER_ERRORS.bankGone] };
+  const { supabase } = await requireAuthor(`/author/banks/${bankId}`);
   const folder = readImportFolder(formData);
   if (!folder.ok) return { status: "error", errors: [folder.error] };
-  const { supabase } = await requireAuthor(`/author/banks/${bankId}`);
   // Counted before the file is read, since reading and checking a large file is the costly part.
   const limit = await checkRateLimit(supabase, "import");
   if (!limit.ok) return { status: "error", errors: [limit.error] };

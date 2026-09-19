@@ -4,6 +4,7 @@ import { useId, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import {
   BULK_IMPORT_ERRORS,
+  IMPORT_MAX_FILES,
   planImport,
   reportSummary,
   type FileImportResult,
@@ -50,8 +51,13 @@ export function ImportJsonForm({ action, folders, defaultFolderId }: ImportJsonF
   ): Promise<FileImportResult> {
     if (step.kind === "refused") return { status: "error", errors: step.errors };
     const data = new FormData();
-    if (step.kind === "file") data.set("file", files[step.index]!);
-    else data.set("json", json);
+    if (step.kind === "file") {
+      const file = files[step.index];
+      if (!file) return { status: "error", errors: [BULK_IMPORT_ERRORS.unsent] };
+      data.set("file", file);
+    } else {
+      data.set("json", json);
+    }
     data.set("folder", folder);
     try {
       return await action(data);
@@ -141,9 +147,9 @@ export function ImportJsonForm({ action, folders, defaultFolderId }: ImportJsonF
         </select>
       </div>
       <p id={`${id}-hint`} className="text-sm text-ink-2">
-        Items and case studies arrive as new drafts. Nothing already in this bank is changed. Each
-        file imports whole or not at all: up to {IMPORT_MAX_ITEMS} items or one case study, at most
-        800 KB.
+        Items and case studies arrive as new drafts. Nothing already in this bank is changed. Choose
+        up to {IMPORT_MAX_FILES} files. Each file imports whole or not at all: up to{" "}
+        {IMPORT_MAX_ITEMS} items or one case study, at most 800 KB.
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={running !== null}>
@@ -170,7 +176,7 @@ export function ImportJsonForm({ action, folders, defaultFolderId }: ImportJsonF
               className="flex list-disc flex-col gap-1 pl-5 text-ink-2"
             >
               {imported.map((file, index) => (
-                <li key={index}>
+                <li key={`${file.label}-${index}`}>
                   <span className="font-medium break-words text-ink-1">{file.label}</span>:{" "}
                   {file.status === "done" ? file.message : null}
                 </li>
@@ -183,7 +189,7 @@ export function ImportJsonForm({ action, folders, defaultFolderId }: ImportJsonF
         <div role="alert" className="rounded-sm border border-line bg-surface-1 p-4 text-sm">
           <ul aria-label="Refused files" className="flex flex-col gap-3">
             {refused.map((file, index) => (
-              <li key={index}>
+              <li key={`${file.label}-${index}`}>
                 <p className="font-medium text-incorrect">
                   <span className="break-words">{file.label}</span>: Nothing was imported.
                 </p>
