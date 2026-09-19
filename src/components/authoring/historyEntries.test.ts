@@ -56,7 +56,7 @@ describe("historyEntries", () => {
     });
   });
 
-  it("offers nothing to restore for a type without an editor", () => {
+  it("opens a snapshot of an unknown type read-only", () => {
     const row = { ...draftRow(), type: "future_type" };
     const [entry] = historyEntries(row, [
       {

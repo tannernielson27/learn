@@ -33,6 +33,7 @@ export function ItemEditorWithHistory({
   loadFailed = false,
 }: ItemEditorWithHistoryProps) {
   const [dirty, setDirty] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [restored, setRestored] = useState<Restored | null>(null);
   // Each restore mounts a fresh editor, even when the same version is restored twice.
   const [restoreCount, setRestoreCount] = useState(0);
@@ -43,6 +44,7 @@ export function ItemEditorWithHistory({
     () => ({
       inCaseStudy: false,
       onDirtyChange: setDirty,
+      onBusyChange: setBusy,
       ...(restored ? { savedValues: savedDraft } : {}),
     }),
     [restored, savedDraft],
@@ -69,6 +71,7 @@ export function ItemEditorWithHistory({
         truncated={truncated}
         loadFailed={loadFailed}
         dirty={dirty}
+        busy={busy}
         onRestore={restore}
       />
       {restored ? (

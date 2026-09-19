@@ -11,6 +11,8 @@ export interface ItemEditorHost {
   record?: EhrRecord | null;
   /** Told whenever the editor gains or loses unsaved changes, so leaving can ask first. */
   onDirtyChange?: (dirty: boolean) => void;
+  /** Told whenever a save or publish starts or ends, so nothing replaces the editor mid-request. */
+  onBusyChange?: (busy: boolean) => void;
   /** Told when a step has just been started, so focus can stay with the step it replaced. */
   onStepStarted?: () => void;
   /**

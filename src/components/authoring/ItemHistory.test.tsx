@@ -163,6 +163,18 @@ describe("ItemHistory", () => {
     expect(screen.queryByText(/Nothing published yet/)).not.toBeInTheDocument();
   });
 
+  it("holds off restoring while a save or publish is in flight", async () => {
+    const { user, onRestore } = renderHistory({ busy: true });
+    await openVersion(user, 1);
+    expect(screen.getByRole("button", { name: "Restore as draft" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(screen.getByText("Wait for the save to finish, then restore.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Restore as draft" }));
+    expect(onRestore).not.toHaveBeenCalled();
+  });
+
   it("says when older versions are not listed", async () => {
     const { user } = renderHistory({ truncated: true });
     await user.click(screen.getByRole("button", { name: "History" }));

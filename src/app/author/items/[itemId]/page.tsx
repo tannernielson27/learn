@@ -30,20 +30,24 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
     .maybeSingle();
   if (!row) notFound();
 
+  const editor = editorFor(row.id, row.type, storedItemOf(row));
+
   // Published snapshots, newest first. They hold answer keys, so they are read only here, for the
   // item's author; RLS limits them to the author's org. One extra row says whether there are more.
-  const { data: versionRows, error: versionsError } = await supabase
-    .from("item_versions")
-    .select("version, created_at, snapshot")
-    .eq("item_id", itemId)
-    .order("version", { ascending: false })
-    .limit(HISTORY_LIMIT + 1);
+  // A type with no editor yet has nowhere to show them, so they are not read at all.
+  const { data: versionRows, error: versionsError } = editor
+    ? await supabase
+        .from("item_versions")
+        .select("version, created_at, snapshot")
+        .eq("item_id", itemId)
+        .order("version", { ascending: false })
+        .limit(HISTORY_LIMIT + 1)
+    : { data: [], error: null };
   const versions = versionRows ?? [];
 
   const label = (ITEM_TYPES as readonly string[]).includes(row.type)
     ? ITEM_TYPE_LABELS[row.type as ItemType]
     : row.type;
-  const editor = editorFor(row.id, row.type, storedItemOf(row));
   // Only a valid saved item exports (docs/transfer-format.md).
   const exportable = fromItemRow(row).ok;
 

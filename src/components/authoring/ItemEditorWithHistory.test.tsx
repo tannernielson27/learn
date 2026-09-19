@@ -6,6 +6,7 @@ import { multipleChoiceItemSchema } from "@/lib/ngn/schemas";
 import { toItemRow } from "@/lib/supabase/itemRows";
 import { editorFor, storedItemOf } from "./editorFor";
 import { historyEntries } from "./historyEntries";
+import { useEffect } from "react";
 import { useItemEditorHost, useReportDirty } from "./ItemEditorHost";
 import type { ItemEditorLoaderProps } from "./ItemEditorLoader";
 import { ItemEditorWithHistory } from "./ItemEditorWithHistory";
@@ -18,6 +19,10 @@ vi.mock("./ItemEditorLoader", () => ({
     const values = props.initialValues as { correctOptionId: string };
     const saved = host.savedValues as { correctOptionId: string } | undefined;
     useReportDirty(saved !== undefined && saved.correctOptionId !== values.correctOptionId);
+    // The draft's editor can be made to report a save in flight; a restored one never does.
+    const { onBusyChange } = host;
+    const busy = values.correctOptionId === "opt_b" && busyDraft.current;
+    useEffect(() => onBusyChange?.(busy), [busy, onBusyChange]);
     return (
       <p>
         Editing with {values.correctOptionId}
@@ -26,6 +31,8 @@ vi.mock("./ItemEditorLoader", () => ({
     );
   },
 }));
+
+const busyDraft = { current: false };
 
 const ITEM_ID = "3f0c9a52-8d4e-4f6b-9a41-6c2d7e8f9012";
 const item = multipleChoiceItemSchema.parse({ ...FIXTURES.multiple_choice.canonical, id: ITEM_ID });
@@ -79,6 +86,20 @@ describe("ItemEditorWithHistory", () => {
     await user.click(screen.getByRole("button", { name: /^Version 2\b/ }));
     await user.click(screen.getByRole("button", { name: "Restore as draft" }));
     expect(screen.getByRole("status")).toHaveTextContent("Version 2 matches the saved draft.");
+  });
+
+  it("holds off restoring while the editor is saving", async () => {
+    busyDraft.current = true;
+    try {
+      const user = userEvent.setup({ delay: null });
+      render(<ItemEditorWithHistory editor={editor} entries={entries} truncated={false} />);
+      await user.click(screen.getByRole("button", { name: "History" }));
+      await user.click(screen.getByRole("button", { name: /^Version 1 / }));
+      await user.click(screen.getByRole("button", { name: "Restore as draft" }));
+      expect(screen.getByText("Editing with opt_b")).toBeInTheDocument();
+    } finally {
+      busyDraft.current = false;
+    }
   });
 
   it("asks before a second restore replaces the unsaved first one", async () => {

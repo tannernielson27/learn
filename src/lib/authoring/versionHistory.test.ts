@@ -83,6 +83,12 @@ describe("summarizeChanges", () => {
     ).toEqual(["The scoring changed."]);
   });
 
+  it("reads tags as a set, so reordering them is no change", () => {
+    const draft = item();
+    draft.tags = [...(draft.tags as string[])].reverse();
+    expect(summarizeChanges(item(), draft)).toEqual([]);
+  });
+
   it("reads anything that is not an object as empty", () => {
     expect(summarizeChanges(null, "draft")).toEqual([]);
   });

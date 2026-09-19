@@ -105,6 +105,10 @@ export function EditorShell<Values, Input extends ScoredInput>({
   const scoring = scoringSummary(input.scoring, valid);
 
   useReportDirty(isDirty);
+  const { onBusyChange } = host;
+  useEffect(() => {
+    onBusyChange?.(busy);
+  }, [busy, onBusyChange]);
   const record = (values as WithRecord).ehr;
   // Inside a case study the case study owns the record: the item offers none, and its preview
   // shows the case study's.

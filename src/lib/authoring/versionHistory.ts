@@ -74,6 +74,12 @@ const PARTS: readonly { key: string; label: string }[] = [
   { key: "tags", label: "tags" },
 ];
 
+// Tags are a set: the same tags in another order are no change.
+function comparable(key: string, value: unknown): unknown {
+  if (key !== "tags" || !Array.isArray(value)) return value;
+  return value.map(String).sort();
+}
+
 const points = (count: number) => `${count} ${count === 1 ? "point" : "points"}`;
 
 function describeScoring(value: unknown): string | null {
@@ -98,9 +104,9 @@ function scoringChange(version: unknown, draft: unknown): string {
 export function summarizeChanges(version: unknown, draft: unknown): string[] {
   const then = isRecord(version) ? version : {};
   const now = isRecord(draft) ? draft : {};
-  const changes = PARTS.filter(({ key }) => !sameJson(then[key], now[key])).map(
-    ({ label }) => `The ${label} changed.`,
-  );
+  const changes = PARTS.filter(
+    ({ key }) => !sameJson(comparable(key, then[key]), comparable(key, now[key])),
+  ).map(({ label }) => `The ${label} changed.`);
   // Scoring reads best last, after the parts that decide it.
   if (!sameJson(then.scoring, now.scoring)) changes.push(scoringChange(then.scoring, now.scoring));
   return changes;

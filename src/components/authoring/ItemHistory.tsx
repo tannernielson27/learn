@@ -17,6 +17,8 @@ export interface ItemHistoryProps {
   loadFailed?: boolean;
   /** The editor has unsaved changes, which restoring would replace. */
   dirty: boolean;
+  /** A save or publish is in flight; restoring now would hide how it ended. */
+  busy?: boolean;
   /** Loads a version into the editor as unsaved changes. Never writes anything. */
   onRestore: (entry: RestorableEntry) => void;
 }
@@ -31,6 +33,7 @@ export function ItemHistory({
   truncated,
   loadFailed = false,
   dirty,
+  busy = false,
   onRestore,
 }: ItemHistoryProps) {
   const ids = useId();
@@ -147,7 +150,14 @@ export function ItemHistory({
                         Your unsaved changes will be replaced by version {entry.version}.
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        <Button size="sm" variant="primary" onClick={() => restore(entry)}>
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          aria-disabled={busy}
+                          onClick={() => {
+                            if (!busy) restore(entry);
+                          }}
+                        >
                           Replace my changes
                         </Button>
                         <Button
@@ -167,10 +177,21 @@ export function ItemHistory({
                       <Button
                         id={`${ids}-restore`}
                         size="sm"
-                        onClick={() => (dirty ? setConfirming(true) : restore(entry))}
+                        aria-disabled={busy}
+                        aria-describedby={busy ? `${ids}-busy` : undefined}
+                        onClick={() => {
+                          if (busy) return;
+                          if (dirty) setConfirming(true);
+                          else restore(entry);
+                        }}
                       >
                         Restore as draft
                       </Button>
+                      {busy ? (
+                        <p id={`${ids}-busy`} className="mt-2 text-sm text-ink-2">
+                          Wait for the save to finish, then restore.
+                        </p>
+                      ) : null}
                     </div>
                   )}
                 </>

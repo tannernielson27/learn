@@ -40,6 +40,28 @@ describe("an editor opened on a restored version", () => {
     expect(screen.queryByText("Unsaved changes")).not.toBeInTheDocument();
   });
 
+  it("tells its host while a save is in flight", async () => {
+    let finish: (result: { ok: boolean }) => void = () => {};
+    const onBusyChange = vi.fn<(busy: boolean) => void>();
+    render(
+      <ItemEditorHostContext.Provider value={{ inCaseStudy: false, onBusyChange }}>
+        <MultipleChoiceEditor
+          initialValues={saved()}
+          onSaveDraft={() => new Promise((resolve) => (finish = resolve))}
+          onPublish={vi.fn(async () => ({ ok: true }))}
+        />
+      </ItemEditorHostContext.Provider>,
+    );
+    expect(onBusyChange).toHaveBeenLastCalledWith(false);
+    await userEvent
+      .setup({ delay: null })
+      .click(screen.getByRole("button", { name: "Save draft" }));
+    expect(onBusyChange).toHaveBeenLastCalledWith(true);
+    finish({ ok: true });
+    expect(await screen.findByText("Draft saved.")).toBeInTheDocument();
+    expect(onBusyChange).toHaveBeenLastCalledWith(false);
+  });
+
   it("is clean when the saved draft is what it opened with", () => {
     render(
       <ItemEditorHostContext.Provider value={{ inCaseStudy: false, savedValues: saved() }}>
