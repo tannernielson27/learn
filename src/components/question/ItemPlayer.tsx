@@ -40,6 +40,8 @@ export interface ItemPlayerProps {
   initialResult?: ScoreResult;
   /** Every change, so a caller that unmounts the player can hand the response back later. */
   onResponseChange?: (response: AnyResponse) => void;
+  /** Names the question region when more than one player is on the page. */
+  label?: string;
 }
 
 const CHECK_FAILED = "Your answer could not be checked. Try again.";
@@ -67,6 +69,7 @@ export function ItemPlayer({
   initialResponse,
   initialResult,
   onResponseChange,
+  label,
 }: ItemPlayerProps) {
   const [mode, setMode] = useState<PlayerMode>(initialResult ? "feedback" : initialMode);
   const [response, setResponse] = useState<AnyResponse>(
@@ -159,6 +162,7 @@ export function ItemPlayer({
       scoreNote={scoreNote}
       rationale={rationale}
       sample={item.tags.includes(SAMPLE_TAG)}
+      label={label}
     >
       <Renderer
         item={playerItem as PlayerItem<ItemType> & ItemOf<ItemType>}

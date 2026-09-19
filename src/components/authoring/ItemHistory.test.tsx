@@ -91,6 +91,8 @@ describe("ItemHistory", () => {
     ).toEqual(["The stem changed.", "The answer key changed."]);
     const preview = within(panel).getByRole("region", { name: "Version 1 preview" });
     expect(within(preview).getByText("The first stem")).toBeInTheDocument();
+    // Named apart from the editor's own preview, so the page has no two "Question" landmarks.
+    expect(within(preview).getByRole("region", { name: "Version 1 question" })).toBeInTheDocument();
     // Read-only: nothing to answer and nothing to submit.
     for (const radio of within(preview).getAllByRole("radio")) expect(radio).toBeDisabled();
     expect(within(preview).queryByRole("button", { name: /submit/i })).not.toBeInTheDocument();

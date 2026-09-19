@@ -141,7 +141,12 @@ export function ItemHistory({
                     className="min-w-0 rounded-sm border border-line bg-surface-0 p-4"
                   >
                     {/* Review mode: the question as a student reads it, with nothing to answer. */}
-                    <ItemPlayer key={entry.version} item={entry.item} initialMode="review" />
+                    <ItemPlayer
+                      key={entry.version}
+                      item={entry.item}
+                      initialMode="review"
+                      label={`Version ${entry.version} question`}
+                    />
                   </section>
 
                   {confirming ? (

@@ -28,6 +28,8 @@ export interface QuestionShellProps {
   rationale?: RichText;
   /** Demo content written for this repo, labelled so it is never taken for a real item. */
   sample?: boolean;
+  /** The region's name. Two players on one page need different names, e.g. "Version 1 question". */
+  label?: string;
   children: ReactNode;
 }
 
@@ -62,6 +64,7 @@ export function QuestionShell({
   scoreNote,
   rationale,
   sample = false,
+  label = "Question",
   children,
 }: QuestionShellProps) {
   const root = useRef<HTMLElement>(null);
@@ -97,7 +100,7 @@ export function QuestionShell({
       {/* A level-2 heading in every context (gallery, case study, preview, play), so a renderer's
           own level-3 headings, like the bowtie's columns, never skip a level after the page h1. */}
       <h2 id={headingId} className="sr-only">
-        Question
+        {label}
       </h2>
       {progress ? (
         <div className="mb-4 flex items-center gap-3">
