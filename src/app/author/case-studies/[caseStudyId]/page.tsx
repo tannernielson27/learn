@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { publishCaseStudyAction } from "@/app/author/case-studies/[caseStudyId]/actions";
+import { duplicateCaseStudyAction } from "@/app/author/duplicateActions";
 import {
   assembleCaseStudy,
   CASE_STUDY_WITH_STEPS,
@@ -11,6 +12,7 @@ import {
   type BuilderStep,
   type StepStatus,
 } from "@/components/authoring/CaseStudyBuilder";
+import { DuplicateButton } from "@/components/authoring/DuplicateButton";
 import { EhrEditorLoader } from "@/components/authoring/EhrEditorLoader";
 import { editorFor, storedItemOf } from "@/components/authoring/editorFor";
 import { ItemEditorLoader } from "@/components/authoring/ItemEditorLoader";
@@ -127,6 +129,10 @@ export default async function CaseStudyPage({
               Export JSON
             </a>
           ) : null}
+          <DuplicateButton
+            action={duplicateCaseStudyAction.bind(null, row.id)}
+            label="Duplicate case study"
+          />
         </div>
       </CaseStudyBuilder>
 

@@ -166,8 +166,10 @@ export function stemExcerpt(stem: unknown, max = 140): string {
     stem && typeof stem === "object" && "value" in stem && typeof stem.value === "string"
       ? stem.value
       : "";
+  // A link or image shows its text alone; other parentheses are text, like a copy's "(copy)".
   const plain = value
-    .replace(/[*_`#>[\]()!]/g, "")
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/[*_`#>[\]!]/g, "")
     .replace(/\s+/g, " ")
     .trim();
   return plain.length > max ? `${plain.slice(0, max - 1).trimEnd()}…` : plain;
