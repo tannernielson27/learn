@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { ITEM_PAGE_SIZE } from "../src/lib/authoring/bankSearch";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
 import { signInAsNewAuthor } from "./signIn";
 
@@ -80,11 +81,19 @@ test("an author imports three files of 120 items into Cardiac; the broken file i
   });
 
   // The two good files landed whole in Cardiac, as drafts; nothing from the broken one did.
+  // 80 items span two pages, because the bank list pages at ITEM_PAGE_SIZE (#105).
   await folders.getByRole("link", { name: "Cardiac", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Cardiac" })).toBeVisible();
-  await expect(itemLinks(page)).toHaveCount(2 * ITEMS_PER_FILE);
+  const pages = page.getByRole("navigation", { name: "Pages" });
+  await expect(pages).toContainText("Page 1 of 2");
+  await expect(itemLinks(page)).toHaveCount(ITEM_PAGE_SIZE);
   await expect(itemLinks(page).filter({ hasText: "Cardiac bulk 2." })).toHaveCount(0);
-  await expect(itemLinks(page).filter({ hasText: "Cardiac bulk 3.40" })).toContainText("Draft");
+  await expect(itemLinks(page).filter({ hasNotText: "Draft" })).toHaveCount(0);
+  await pages.getByRole("link", { name: "Next page" }).click();
+  await expect(pages).toContainText("Page 2 of 2");
+  await expect(itemLinks(page)).toHaveCount(2 * ITEMS_PER_FILE - ITEM_PAGE_SIZE);
+  await expect(itemLinks(page).filter({ hasText: "Cardiac bulk 2." })).toHaveCount(0);
+  await expect(itemLinks(page).filter({ hasNotText: "Draft" })).toHaveCount(0);
   await folders.getByRole("link", { name: "Unfiled", exact: true }).click();
   await expect(page.getByText("No items in this folder.")).toBeVisible();
   await expectNoAxeViolations(page);
