@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { duplicateItemAction } from "@/app/author/duplicateActions";
+import { DuplicateButton } from "@/components/authoring/DuplicateButton";
 import { editorFor, storedItemOf } from "@/components/authoring/editorFor";
 import { historyEntries } from "@/components/authoring/historyEntries";
 import { ItemEditorWithHistory } from "@/components/authoring/ItemEditorWithHistory";
@@ -67,6 +69,7 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
       <div className="mb-6 flex flex-wrap items-baseline gap-3">
         <h1 className="font-read text-3xl text-ink-1">Edit item</h1>
         <p className="text-sm text-ink-2">{STATUS_LABELS[row.status]}</p>
+        <DuplicateButton action={duplicateItemAction.bind(null, row.id)} label="Duplicate item" />
       </div>
       {editor ? (
         <ItemEditorWithHistory

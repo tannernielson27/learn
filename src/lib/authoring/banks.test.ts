@@ -35,6 +35,21 @@ describe("stemExcerpt", () => {
     ).toBe("Which findings need follow-up?");
   });
 
+  it("keeps parentheses in text, so a copy's (copy) marker shows in the list", () => {
+    expect(stemExcerpt({ kind: "markdown", value: "(copy) Gained 2.3 kg (5 lb)?" })).toBe(
+      "(copy) Gained 2.3 kg (5 lb)?",
+    );
+  });
+
+  it("shows a link's text without its address", () => {
+    expect(
+      stemExcerpt({ kind: "markdown", value: "See [the chart](https://x.test/a) first" }),
+    ).toBe("See the chart first");
+    expect(
+      stemExcerpt({ kind: "markdown", value: "See [the chart](https://x.test/a(b)) first" }),
+    ).toBe("See the chart first");
+  });
+
   it("shortens a long stem on a word boundary with an ellipsis", () => {
     const excerpt = stemExcerpt({ kind: "markdown", value: "word ".repeat(60) }, 20);
     expect(excerpt.length).toBeLessThanOrEqual(20);
