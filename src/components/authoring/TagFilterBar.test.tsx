@@ -68,6 +68,21 @@ describe("TagFilterBar", () => {
     expect(within(bar).getByRole("link", { name: "Clear filters" })).toHaveAttribute("href", base);
   });
 
+  it("says when the list shows fewer items than the filter matches", () => {
+    render(
+      <TagFilterBar
+        bankId={BANK}
+        view={{ kind: "all" }}
+        filter={{ tags: ["sepsis"], step: null }}
+        facets={tagFacets(rows, { tags: ["sepsis"], step: null })}
+        listLimit={1}
+      />,
+    );
+    expect(screen.getByRole("region", { name: "Filter by tag" })).toHaveTextContent(
+      "The list shows the 1 most recently edited.",
+    );
+  });
+
   it("names the step among what the items have", () => {
     const bar = setup({ tags: [], step: 1 });
     expect(bar).toHaveTextContent("2 items have all of: Step 1: Recognize Cues.");

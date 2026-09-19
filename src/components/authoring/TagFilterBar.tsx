@@ -16,6 +16,8 @@ export interface TagFilterBarProps {
   view: FolderView;
   filter: TagFilter;
   facets: TagFacets;
+  /** How many items the list below shows at most; past it, the bar says so. */
+  listLimit?: number;
 }
 
 interface Chip {
@@ -75,7 +77,7 @@ function ChipGroup({ id, name, chips }: { id: string; name: string; chips: Chip[
  * Filter chips for the bank page: each is a link to the same view with that tag or step added or
  * removed, so the filter lives in the URL, combines with the open folder and works without script.
  */
-export function TagFilterBar({ bankId, view, filter, facets }: TagFilterBarProps) {
+export function TagFilterBar({ bankId, view, filter, facets, listLimit }: TagFilterBarProps) {
   const filtering = isFiltering(filter);
   const empty =
     facets.steps.length + facets.clientNeeds.length + facets.topics.length === 0 && !filtering;
@@ -110,6 +112,9 @@ export function TagFilterBar({ bankId, view, filter, facets }: TagFilterBarProps
           <p className="text-ink-1">
             {itemCount(facets.matching)} {facets.matching === 1 ? "has" : "have"} all of:{" "}
             {chosen.join(", ")}.
+            {listLimit !== undefined && facets.matching > listLimit
+              ? ` The list shows the ${listLimit} most recently edited.`
+              : null}
           </p>
           <Link
             href={bankViewHref(bankId, view, NO_FILTER)}

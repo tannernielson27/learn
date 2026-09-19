@@ -87,6 +87,15 @@ export function bankViewHref(bankId: string, view: FolderView, filter: TagFilter
   return `/author/banks/${bankId}${query ? `?${query}` : ""}`;
 }
 
+/**
+ * Tags as a quoted Postgres array literal for `contains`. supabase-js joins a plain array with bare
+ * commas, which would split a tag holding a comma and break on a brace or quote.
+ */
+export function tagArrayLiteral(tags: readonly string[]): string {
+  const quoted = tags.map((tag) => `"${tag.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`);
+  return `{${quoted.join(",")}}`;
+}
+
 const isStep = (value: number | null): value is CjmmStep =>
   value !== null && Number.isInteger(value) && value >= 1 && value <= 6;
 

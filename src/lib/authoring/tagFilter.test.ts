@@ -5,6 +5,7 @@ import {
   isFiltering,
   NO_FILTER,
   parseTagFilter,
+  tagArrayLiteral,
   tagFacets,
   tagLabels,
   toggleStep,
@@ -83,6 +84,17 @@ describe("bankViewHref", () => {
     ).toBe(`/author/banks/${BANK}?folder=${FOLDER}&tag=Physiological+Adaptation&tag=sepsis&step=3`);
     expect(bankViewHref(BANK, { kind: "unfiled" }, { tags: ["a&b"], step: null })).toBe(
       `/author/banks/${BANK}?folder=unfiled&tag=a%26b`,
+    );
+  });
+});
+
+describe("tagArrayLiteral", () => {
+  it("quotes every tag, so commas, braces, quotes and backslashes stay inside one tag", () => {
+    expect(tagArrayLiteral(["Physiological Adaptation", "sepsis"])).toBe(
+      '{"Physiological Adaptation","sepsis"}',
+    );
+    expect(tagArrayLiteral(["a,b", "{c}", 'say "hi"', "back\\slash"])).toBe(
+      '{"a,b","{c}","say \\"hi\\"","back\\\\slash"}',
     );
   });
 });

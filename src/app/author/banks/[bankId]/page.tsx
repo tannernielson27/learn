@@ -12,7 +12,7 @@ import { ImportJsonForm } from "@/components/authoring/ImportJsonForm";
 import { ItemList } from "@/components/authoring/ItemList";
 import { MoveToFolderForm } from "@/components/authoring/MoveToFolderForm";
 import { TagFilterBar } from "@/components/authoring/TagFilterBar";
-import { listCaseStudies, listItems, listTaggedRows } from "@/lib/authoring/banks";
+import { ITEM_LIST_LIMIT, listCaseStudies, listItems, listTaggedRows } from "@/lib/authoring/banks";
 import { listFolders } from "@/lib/authoring/folderData";
 import { folderTrail, MAX_FOLDER_DEPTH, parseFolderView } from "@/lib/authoring/folders";
 import { isUuid } from "@/lib/authoring/ids";
@@ -124,7 +124,13 @@ export default async function BankPage({
             <h2 id="items-heading" className="font-read text-2xl text-ink-1">
               Items
             </h2>
-            <TagFilterBar bankId={bank.id} view={view} filter={filter} facets={facets} />
+            <TagFilterBar
+              bankId={bank.id}
+              view={view}
+              filter={filter}
+              facets={facets}
+              listLimit={ITEM_LIST_LIMIT}
+            />
             {hasContent ? (
               <MoveToFolderForm
                 key={`move-${folder?.id ?? view.kind}`}

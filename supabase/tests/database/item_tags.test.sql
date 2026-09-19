@@ -2,7 +2,7 @@
 -- Runs with `pnpm exec supabase test db`. Uses its own fixture ids so it never counts the seed's rows.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(15);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures, as the superuser
@@ -129,9 +129,16 @@ select is(
   'tags match exactly; the app stores and asks for one spelling'
 );
 select lives_ok(
-  $$ update public.items set tags = array['Physiological Adaptation', 'sepsis', 'cardiac']
+  $$ update public.items set tags = array['Physiological Adaptation', 'fluids, electrolytes', 'say "hi"']
      where id = '00000000-0000-0000-0000-0000000004e4' $$,
   'A can retag an item in their org'
+);
+select results_eq(
+  $$ select id from public.items
+     where bank_id = '00000000-0000-0000-0000-0000000004b1'
+       and tags @> '{"fluids, electrolytes","say \"hi\""}'::text[] $$,
+  $$ values ('00000000-0000-0000-0000-0000000004e4'::uuid) $$,
+  'a quoted array literal, as the app sends, keeps a comma or quote inside one tag'
 );
 
 -- ---------------------------------------------------------------------------

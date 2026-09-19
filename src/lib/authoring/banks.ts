@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import type { FolderView } from "./folders";
-import { NO_FILTER, type TagFilter, type TaggedRow } from "./tagFilter";
+import { NO_FILTER, tagArrayLiteral, type TagFilter, type TaggedRow } from "./tagFilter";
 
 type Client = SupabaseClient<Database>;
 
@@ -140,13 +140,14 @@ function inView<Q extends FolderFilterable<Q>>(query: Q, view: FolderView): Q {
 }
 
 interface TagFilterable<Q> {
-  contains(column: "tags", value: string[]): Q;
+  contains(column: "tags", value: string): Q;
   eq(column: "cjmm_step", value: number): Q;
 }
 
 /** Narrows items to those carrying every chosen tag (served by items_tags_idx) and the chosen step. */
 function withTags<Q extends TagFilterable<Q>>(query: Q, filter: TagFilter): Q {
-  const tagged = filter.tags.length > 0 ? query.contains("tags", filter.tags) : query;
+  const tagged =
+    filter.tags.length > 0 ? query.contains("tags", tagArrayLiteral(filter.tags)) : query;
   return filter.step === null ? tagged : tagged.eq("cjmm_step", filter.step);
 }
 
