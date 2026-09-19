@@ -1,12 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import type { FolderView } from "./folders";
+import { NO_FILTER, type TagFilter, type TaggedRow } from "./tagFilter";
 
 type Client = SupabaseClient<Database>;
 
 /** Caps so no list is unbounded; paging arrives with bank management in Sprint 6. */
 export const BANK_LIST_LIMIT = 100;
 export const ITEM_LIST_LIMIT = 200;
+/** How many items' tags the filter counts are read from; two columns each, so cheap. */
+export const TAG_COUNT_LIMIT = 2000;
 export const CASE_STUDY_LIST_LIMIT = 100;
 
 export interface BankSummary {
@@ -25,6 +28,8 @@ export interface ItemSummary {
   /** The item's maximum score, or null while a draft's scoring is not set. */
   maxPoints: number | null;
   updatedAt: string;
+  cjmmStep: number | null;
+  tags: string[];
 }
 
 export class AuthoringDataError extends Error {
@@ -53,14 +58,15 @@ export async function listItems(
   client: Client,
   bankId: string,
   view: FolderView = { kind: "all" },
+  filter: TagFilter = NO_FILTER,
 ): Promise<ItemSummary[]> {
   // Selects content only for the stem and scoring only for its maximum; answer_key and rationale
   // are never read here.
   const query = client
     .from("items")
-    .select("id, type, status, updated_at, content->stem, scoring->maxPoints")
+    .select("id, type, status, updated_at, cjmm_step, tags, content->stem, scoring->maxPoints")
     .eq("bank_id", bankId);
-  const { data, error } = await inView(query, view)
+  const { data, error } = await withTags(inView(query, view), filter)
     .order("updated_at", { ascending: false })
     .limit(ITEM_LIST_LIMIT);
   if (error) throw new AuthoringDataError("Items could not be loaded.");
@@ -71,7 +77,21 @@ export async function listItems(
     updatedAt: item.updated_at,
     stemExcerpt: stemExcerpt(item.stem),
     maxPoints: storedMaxPoints(item.maxPoints),
+    cjmmStep: item.cjmm_step,
+    tags: storedTags(item.tags),
   }));
+}
+
+/** The tags and CJMM step of every item in a view, for the filter's counts. Nothing else is read. */
+export async function listTaggedRows(
+  client: Client,
+  bankId: string,
+  view: FolderView = { kind: "all" },
+): Promise<TaggedRow[]> {
+  const query = client.from("items").select("cjmm_step, tags").eq("bank_id", bankId);
+  const { data, error } = await inView(query, view).limit(TAG_COUNT_LIMIT);
+  if (error) throw new AuthoringDataError("Tags could not be loaded.");
+  return data.map((row) => ({ cjmmStep: row.cjmm_step, tags: storedTags(row.tags) }));
 }
 
 export interface CaseStudySummary {
@@ -117,6 +137,22 @@ function inView<Q extends FolderFilterable<Q>>(query: Q, view: FolderView): Q {
   if (view.kind === "unfiled") return query.is("folder_id", null);
   if (view.kind === "folder") return query.eq("folder_id", view.id);
   return query;
+}
+
+interface TagFilterable<Q> {
+  contains(column: "tags", value: string[]): Q;
+  eq(column: "cjmm_step", value: number): Q;
+}
+
+/** Narrows items to those carrying every chosen tag (served by items_tags_idx) and the chosen step. */
+function withTags<Q extends TagFilterable<Q>>(query: Q, filter: TagFilter): Q {
+  const tagged = filter.tags.length > 0 ? query.contains("tags", filter.tags) : query;
+  return filter.step === null ? tagged : tagged.eq("cjmm_step", filter.step);
+}
+
+/** A stored tag list's strings; anything else reads as no tags. */
+export function storedTags(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((tag): tag is string => typeof tag === "string") : [];
 }
 
 /** A stored maximum score, or null when it is missing or not a whole number of at least one. */

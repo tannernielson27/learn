@@ -45,6 +45,12 @@ describe("toItemRow", () => {
     expect(row.version).toBe(1);
     expect(row.content).not.toHaveProperty("tags");
   });
+
+  it("stores tags normalized, so a draft saved unparsed is filtered like a published item", () => {
+    const item = parsed(allFixtures[0].canonical);
+    const row = toItemRow({ ...item, tags: [" Sepsis", "sepsis", "physiological adaptation"] });
+    expect(row.tags).toEqual(["sepsis", "Physiological Adaptation"]);
+  });
 });
 
 describe("fromItemRow", () => {

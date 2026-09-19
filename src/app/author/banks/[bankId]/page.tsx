@@ -11,11 +11,13 @@ import { FolderTree } from "@/components/authoring/FolderTree";
 import { ImportJsonForm } from "@/components/authoring/ImportJsonForm";
 import { ItemList } from "@/components/authoring/ItemList";
 import { MoveToFolderForm } from "@/components/authoring/MoveToFolderForm";
-import { listCaseStudies, listItems } from "@/lib/authoring/banks";
+import { TagFilterBar } from "@/components/authoring/TagFilterBar";
+import { listCaseStudies, listItems, listTaggedRows } from "@/lib/authoring/banks";
 import { listFolders } from "@/lib/authoring/folderData";
 import { folderTrail, MAX_FOLDER_DEPTH, parseFolderView } from "@/lib/authoring/folders";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
+import { isFiltering, parseTagFilter, tagFacets } from "@/lib/authoring/tagFilter";
 import {
   createCaseStudyInBank,
   createFolderInBank,
@@ -36,7 +38,10 @@ export default async function BankPage({
 }: PageProps<"/author/banks/[bankId]">) {
   const { bankId } = await params;
   if (!isUuid(bankId)) notFound();
-  const view = parseFolderView((await searchParams).folder);
+  const query = await searchParams;
+  const view = parseFolderView(query.folder);
+  const filter = parseTagFilter(query.tag, query.step);
+  const tagFiltered = isFiltering(filter);
 
   const { supabase } = await requireAuthor(`/author/banks/${bankId}`);
   const { data: bank } = await supabase
@@ -46,11 +51,15 @@ export default async function BankPage({
     .maybeSingle();
   if (!bank) notFound();
 
-  const [folders, items, caseStudies] = await Promise.all([
+  // The filter runs in the query, under RLS; the counts come from the view's tags alone.
+  const [folders, items, caseStudies, taggedRows] = await Promise.all([
     listFolders(supabase, bank.id),
-    listItems(supabase, bank.id, view),
-    listCaseStudies(supabase, bank.id, view),
+    listItems(supabase, bank.id, view, filter),
+    // Case studies carry no item tags, so a tag filter lists none of them.
+    tagFiltered ? Promise.resolve([]) : listCaseStudies(supabase, bank.id, view),
+    listTaggedRows(supabase, bank.id, view),
   ]);
+  const facets = tagFacets(taggedRows, filter);
   const trail = view.kind === "folder" ? folderTrail(folders, view.id) : [];
   // A folder id that is not one of this bank's folders reads as not found.
   if (view.kind === "folder" && trail.length === 0) notFound();
@@ -74,7 +83,7 @@ export default async function BankPage({
 
       <div className="grid gap-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
         <aside className="flex min-w-0 flex-col gap-6">
-          <FolderTree bankId={bank.id} folders={folders} view={view} />
+          <FolderTree bankId={bank.id} folders={folders} view={view} filter={filter} />
           {trail.length < MAX_FOLDER_DEPTH ? (
             <FolderNameForm
               // Keyed by the open folder, so a half-typed name never carries into another folder.
@@ -115,6 +124,7 @@ export default async function BankPage({
             <h2 id="items-heading" className="font-read text-2xl text-ink-1">
               Items
             </h2>
+            <TagFilterBar bankId={bank.id} view={view} filter={filter} facets={facets} />
             {hasContent ? (
               <MoveToFolderForm
                 key={`move-${folder?.id ?? view.kind}`}
@@ -126,18 +136,30 @@ export default async function BankPage({
             <ItemList
               items={items}
               moveFormId={hasContent ? MOVE_FORM_ID : undefined}
-              emptyMessage={filtered ? "No items in this folder." : undefined}
+              emptyMessage={
+                tagFiltered
+                  ? "No items here carry every chosen tag."
+                  : filtered
+                    ? "No items in this folder."
+                    : undefined
+              }
             />
           </section>
           <section aria-labelledby="case-studies-heading" className="flex flex-col gap-4">
             <h2 id="case-studies-heading" className="font-read text-2xl text-ink-1">
               Case studies
             </h2>
-            <CaseStudyList
-              caseStudies={caseStudies}
-              moveFormId={hasContent ? MOVE_FORM_ID : undefined}
-              emptyMessage={filtered ? "No case studies in this folder." : undefined}
-            />
+            {tagFiltered ? (
+              <p className="text-ink-2">
+                Tag filters list items only. Clear the filters to see case studies.
+              </p>
+            ) : (
+              <CaseStudyList
+                caseStudies={caseStudies}
+                moveFormId={hasContent ? MOVE_FORM_ID : undefined}
+                emptyMessage={filtered ? "No case studies in this folder." : undefined}
+              />
+            )}
             <CreateCaseStudyForm action={createCaseStudyInBank.bind(null, bank.id)} />
           </section>
           <section aria-labelledby="import-heading" className="flex flex-col gap-4">
