@@ -1,13 +1,23 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import {
+  ITEM_PAGE_SIZE,
+  NO_BANK_FILTER,
+  NO_SEARCH,
+  pageCount,
+  pageOffset,
+  type BankFilter,
+  type ContentStatus,
+  type ItemSearch,
+} from "./bankSearch";
 import type { FolderView } from "./folders";
-import { NO_FILTER, tagArrayLiteral, type TagFilter, type TaggedRow } from "./tagFilter";
+import { hasMatch, splitHighlight, type Segment } from "./highlight";
+import type { TaggedRow } from "./tagFilter";
 
 type Client = SupabaseClient<Database>;
 
-/** Caps so no list is unbounded; paging arrives with bank management in Sprint 6. */
+/** Caps so no list is unbounded; the item list pages instead (ITEM_PAGE_SIZE). */
 export const BANK_LIST_LIMIT = 100;
-export const ITEM_LIST_LIMIT = 200;
 /** How many items' tags the filter counts are read from; two columns each, so cheap. */
 export const TAG_COUNT_LIMIT = 2000;
 export const CASE_STUDY_LIST_LIMIT = 100;
@@ -30,6 +40,26 @@ export interface ItemSummary {
   updatedAt: string;
   cjmmStep: number | null;
   tags: string[];
+  /** Where a search matched, or null without a search. */
+  match: ItemMatch | null;
+}
+
+/** Where a search matched an item: marked stem or item text segments, or only its rationale. */
+export interface ItemMatch {
+  /** The whole stem with matched words marked, when a word of the search is in it. */
+  stem: Segment[] | null;
+  /** A snippet of the rest of the item (options and the like), when the stem shows no match. */
+  text: Segment[] | null;
+  /** Matched only in the rationale; its text is never read for the list. */
+  rationale: boolean;
+}
+
+/** One page of a bank's items. `total` counts every item the filter lists, on any page. */
+export interface ItemPage {
+  items: ItemSummary[];
+  total: number;
+  page: number;
+  pageCount: number;
 }
 
 export class AuthoringDataError extends Error {
@@ -54,32 +84,67 @@ export async function listBanks(client: Client): Promise<BankSummary[]> {
   }));
 }
 
+/**
+ * One page of a bank's items in a folder view, through `list_bank_items` under RLS: the tag filter,
+ * a full-text search with its type and status, ranked by relevance when searching and by last edit
+ * otherwise. The function reads content only for the stem and scoring only for its maximum;
+ * answer_key and rationale text are never returned.
+ */
 export async function listItems(
   client: Client,
   bankId: string,
   view: FolderView = { kind: "all" },
-  filter: TagFilter = NO_FILTER,
-): Promise<ItemSummary[]> {
-  // Selects content only for the stem and scoring only for its maximum; answer_key and rationale
-  // are never read here.
-  const query = client
-    .from("items")
-    .select("id, type, status, updated_at, cjmm_step, tags, content->stem, scoring->maxPoints")
-    .eq("bank_id", bankId);
-  const { data, error } = await withTags(inView(query, view), filter)
-    .order("updated_at", { ascending: false })
-    .limit(ITEM_LIST_LIMIT);
+  filter: BankFilter = NO_BANK_FILTER,
+  page = 1,
+): Promise<ItemPage> {
+  const { data, error } = await client.rpc("list_bank_items", {
+    target_bank: bankId,
+    ...(filter.query ? { search: filter.query } : {}),
+    ...(filter.type ? { item_type: filter.type } : {}),
+    ...(filter.status ? { item_status: filter.status } : {}),
+    ...(view.kind === "folder" ? { in_folder: view.id } : {}),
+    unfiled_only: view.kind === "unfiled",
+    with_tags: [...filter.tags],
+    ...(filter.step !== null ? { with_step: filter.step } : {}),
+    page_size: ITEM_PAGE_SIZE,
+    page_offset: pageOffset(page, ITEM_PAGE_SIZE),
+  });
   if (error) throw new AuthoringDataError("Items could not be loaded.");
-  return data.map((item) => ({
-    id: item.id,
-    type: item.type,
-    status: item.status,
-    updatedAt: item.updated_at,
-    stemExcerpt: stemExcerpt(item.stem),
-    maxPoints: storedMaxPoints(item.maxPoints),
-    cjmmStep: item.cjmm_step,
-    tags: storedTags(item.tags),
-  }));
+  const total = data[0]?.total_count ?? 0;
+  return {
+    items: data.map((item) => ({
+      id: item.id,
+      type: item.type,
+      status: item.status,
+      updatedAt: item.updated_at,
+      stemExcerpt: stemExcerpt(item.stem),
+      maxPoints: storedMaxPoints(item.max_points),
+      cjmmStep: item.cjmm_step,
+      tags: storedTags(item.tags),
+      match: filter.query ? itemMatch(item) : null,
+    })),
+    total,
+    page,
+    pageCount: pageCount(total, ITEM_PAGE_SIZE),
+  };
+}
+
+function marked(value: string | null): Segment[] | null {
+  if (typeof value !== "string") return null;
+  const segments = splitHighlight(value);
+  return hasMatch(segments) ? segments : null;
+}
+
+function itemMatch(row: {
+  stem_match: string | null;
+  text_match: string | null;
+  rationale_match: boolean | null;
+}): ItemMatch {
+  return {
+    stem: marked(row.stem_match),
+    text: marked(row.text_match),
+    rationale: row.rationale_match === true,
+  };
 }
 
 /** The tags and CJMM step of every item in a view, for the filter's counts. Nothing else is read. */
@@ -87,9 +152,13 @@ export async function listTaggedRows(
   client: Client,
   bankId: string,
   view: FolderView = { kind: "all" },
+  search: ItemSearch = NO_SEARCH,
 ): Promise<TaggedRow[]> {
+  // Within the search too, so the counts describe the list below them.
   const query = client.from("items").select("cjmm_step, tags").eq("bank_id", bankId);
-  const { data, error } = await inView(query, view).limit(TAG_COUNT_LIMIT);
+  const searched = withStatus(matching(inView(query, view), "search_vector", search), search);
+  const typed = search.type ? searched.eq("type", search.type) : searched;
+  const { data, error } = await typed.limit(TAG_COUNT_LIMIT);
   if (error) throw new AuthoringDataError("Tags could not be loaded.");
   return data.map((row) => ({ cjmmStep: row.cjmm_step, tags: storedTags(row.tags) }));
 }
@@ -103,10 +172,12 @@ export interface CaseStudySummary {
   updatedAt: string;
 }
 
+/** A bank's case studies in a folder view. A search matches titles only, and a status narrows. */
 export async function listCaseStudies(
   client: Client,
   bankId: string,
   view: FolderView = { kind: "all" },
+  search: ItemSearch = NO_SEARCH,
 ): Promise<CaseStudySummary[]> {
   // Only a count of steps: neither the record nor any step's key is read for the list. The key is
   // named because the case study steps migration adds a second key pair (bank) between these tables.
@@ -114,7 +185,7 @@ export async function listCaseStudies(
     .from("case_studies")
     .select("id, title, status, updated_at, case_study_items!case_study_items_case_org_fkey(count)")
     .eq("bank_id", bankId);
-  const { data, error } = await inView(query, view)
+  const { data, error } = await withStatus(matching(inView(query, view), "title", search), search)
     .order("updated_at", { ascending: false })
     .limit(CASE_STUDY_LIST_LIMIT);
   if (error) throw new AuthoringDataError("Case studies could not be loaded.");
@@ -139,16 +210,34 @@ function inView<Q extends FolderFilterable<Q>>(query: Q, view: FolderView): Q {
   return query;
 }
 
-interface TagFilterable<Q> {
-  contains(column: "tags", value: string): Q;
-  eq(column: "cjmm_step", value: number): Q;
+/** The two columns a bank's lists search: an item's search vector, a case study's title. */
+type SearchColumn = "search_vector" | "title";
+
+interface TextSearchable<Q> {
+  textSearch(
+    column: SearchColumn,
+    query: string,
+    options: { config: string; type: "websearch" },
+  ): Q;
 }
 
-/** Narrows items to those carrying every chosen tag (served by items_tags_idx) and the chosen step. */
-function withTags<Q extends TagFilterable<Q>>(query: Q, filter: TagFilter): Q {
-  const tagged =
-    filter.tags.length > 0 ? query.contains("tags", tagArrayLiteral(filter.tags)) : query;
-  return filter.step === null ? tagged : tagged.eq("cjmm_step", filter.step);
+/** English full-text search with web search syntax on `column`, as the list function runs it. */
+function matching<Q extends TextSearchable<Q>>(
+  query: Q,
+  column: SearchColumn,
+  search: ItemSearch,
+): Q {
+  return search.query
+    ? query.textSearch(column, search.query, { config: "english", type: "websearch" })
+    : query;
+}
+
+interface StatusFilterable<Q> {
+  eq(column: "status", value: ContentStatus): Q;
+}
+
+function withStatus<Q extends StatusFilterable<Q>>(query: Q, search: ItemSearch): Q {
+  return search.status ? query.eq("status", search.status) : query;
 }
 
 /** A stored tag list's strings; anything else reads as no tags. */

@@ -1,8 +1,10 @@
 import Link from "next/link";
 import type { ItemSummary } from "@/lib/authoring/banks";
 import { formatEdited } from "@/lib/authoring/format";
+import { excerptSegments } from "@/lib/authoring/highlight";
 import { tagLabels } from "@/lib/authoring/tagFilter";
 import { ITEM_TYPE_LABELS, ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
+import { Highlighted } from "./Highlighted";
 import { SelectForMove } from "./SelectForMove";
 
 export interface ItemListProps {
@@ -67,8 +69,20 @@ export function ItemList({
             className="tap-target flex min-w-0 flex-1 flex-col gap-1 px-2 py-3 transition-colors duration-fast hover:bg-surface-2"
           >
             <span className={item.stemExcerpt ? "text-ink-1" : "text-ink-2 italic"}>
-              {item.stemExcerpt || "Untitled item"}
+              {item.match?.stem ? (
+                <Highlighted segments={excerptSegments(item.match.stem)} />
+              ) : (
+                item.stemExcerpt || "Untitled item"
+              )}
             </span>
+            {item.match?.text ? (
+              <span className="text-sm break-words text-ink-2">
+                In the item: <Highlighted segments={item.match.text} />
+              </span>
+            ) : null}
+            {item.match?.rationale ? (
+              <span className="text-sm text-ink-2">Matched in the rationale</span>
+            ) : null}
             <span className="flex flex-wrap gap-x-3 text-sm text-ink-2">
               <span>{typeLabel(item.type)}</span>
               {item.maxPoints !== null ? (
