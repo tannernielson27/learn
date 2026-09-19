@@ -26,6 +26,26 @@ describe("FolderTree", () => {
     expect(names).toEqual(["All content", "Unfiled", "Cardiac", "Heart failure", "Respiratory"]);
   });
 
+  it("keeps a tag filter when another folder is opened", () => {
+    render(
+      <FolderTree
+        bankId={BANK}
+        folders={folders}
+        view={{ kind: "all" }}
+        filter={{ tags: ["sepsis"], step: 2 }}
+      />,
+    );
+    expect(link("All content")).toHaveAttribute("href", "/author/banks/b1?tag=sepsis&step=2");
+    expect(link("Unfiled")).toHaveAttribute(
+      "href",
+      "/author/banks/b1?folder=unfiled&tag=sepsis&step=2",
+    );
+    expect(link("Heart failure")).toHaveAttribute(
+      "href",
+      "/author/banks/b1?folder=f3&tag=sepsis&step=2",
+    );
+  });
+
   it("nests a folder inside its parent's list entry", () => {
     render(<FolderTree bankId={BANK} folders={folders} view={{ kind: "all" }} />);
     const cardiac = link("Cardiac").closest("li");

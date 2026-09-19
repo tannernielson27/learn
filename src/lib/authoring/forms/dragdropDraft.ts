@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ehrFormDraftSchema } from "./ehrDraft";
 import { cjmmStepSchema, idSchema, itemMetaSchema } from "@/lib/ngn/schemas";
+import { draftTagsSchema } from "./draftTags";
 import type { DragDropFormValues } from "./dragdrop";
 import { DRAFT_ERROR, type DraftParseResult } from "./draft";
 
@@ -14,7 +15,7 @@ const uniqueIds = (entries: readonly { id: string }[]) =>
 const draftSchema = z.strictObject({
   id: idSchema,
   version: z.number().int().min(1),
-  tags: z.array(z.string().max(60)).max(30),
+  tags: draftTagsSchema,
   cjmmStep: cjmmStepSchema.optional(),
   difficulty: z.enum(["easy", "medium", "hard"]).optional(),
   ehr: ehrFormDraftSchema.optional(),

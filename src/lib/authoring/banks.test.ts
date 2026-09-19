@@ -1,5 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { stemExcerpt, storedMaxPoints } from "./banks";
+import { stemExcerpt, storedMaxPoints, storedTags } from "./banks";
+
+describe("storedTags", () => {
+  it("keeps the strings of a stored tag list", () => {
+    expect(storedTags(["sepsis", 3, "Physiological Adaptation"])).toEqual([
+      "sepsis",
+      "Physiological Adaptation",
+    ]);
+  });
+
+  it.each([[null], [undefined], ["sepsis"], [{}]])("reads %j as no tags", (value) => {
+    expect(storedTags(value)).toEqual([]);
+  });
+});
 
 describe("storedMaxPoints", () => {
   it("reads a whole number of points of at least one", () => {

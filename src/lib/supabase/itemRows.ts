@@ -1,4 +1,5 @@
 import type { CaseStudy, Item } from "@/lib/ngn/schemas";
+import { normalizeTags } from "@/lib/ngn/tags";
 import { validateItem, type ValidationResult } from "@/lib/ngn/validate";
 import type { Json } from "./database.types";
 
@@ -32,7 +33,8 @@ export function toItemRow(item: Item): ItemRow {
   return {
     type,
     cjmm_step: cjmmStep ?? null,
-    tags: [...tags],
+    // A draft reaches here unparsed, so tags are normalized here too (docs/transfer-format.md).
+    tags: normalizeTags(tags),
     version,
     content: toJson(content),
     answer_key: toJson(answerKey),

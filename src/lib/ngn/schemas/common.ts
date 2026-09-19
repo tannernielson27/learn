@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeTags, TAG_LIMITS } from "../tags";
 
 /** Stable identifier: letters, digits, underscore, hyphen. */
 export const idSchema = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/, "invalid id");
@@ -130,11 +131,18 @@ export const itemMetaSchema = z.object({
   sourceNote: z.string().optional(),
 });
 
+/** An item's tags (../tags.ts): normalized first, so the limits measure what is stored. */
+export const itemTagsSchema = z
+  .array(z.string())
+  .default([])
+  .transform(normalizeTags)
+  .pipe(z.array(z.string().max(TAG_LIMITS.length)).max(TAG_LIMITS.count));
+
 export const envelopeFields = {
   id: idSchema,
   version: z.number().int().min(1).default(1),
   cjmmStep: cjmmStepSchema.optional(),
-  tags: z.array(z.string()).default([]),
+  tags: itemTagsSchema,
   difficulty: z.enum(["easy", "medium", "hard"]).optional(),
   stem: richTextSchema,
   instructions: z.string().optional(),

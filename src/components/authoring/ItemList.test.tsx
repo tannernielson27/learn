@@ -10,6 +10,8 @@ const items = [
     stemExcerpt: "Which findings need follow-up?",
     maxPoints: 3,
     updatedAt: "2026-09-12T15:00:00Z",
+    cjmmStep: 3,
+    tags: ["sepsis", "Physiological Adaptation"],
   },
   {
     id: "i2",
@@ -18,6 +20,8 @@ const items = [
     stemExcerpt: "",
     maxPoints: null,
     updatedAt: "2026-09-11T08:00:00Z",
+    cjmmStep: null,
+    tags: [],
   },
 ];
 
@@ -29,6 +33,19 @@ describe("ItemList", () => {
     expect(within(first).getByText("Extended Multiple Response")).toBeInTheDocument();
     expect(within(first).getByText("Draft")).toBeInTheDocument();
     expect(within(first).getByText("Edited Sep 12, 2026")).toBeInTheDocument();
+  });
+
+  it("shows an item's CJMM step as a tag, then its client needs, then its topics", () => {
+    render(<ItemList items={items} />);
+    const first = screen.getByRole("link", { name: /Which findings need follow-up\?/ });
+    const tags = within(first).getByRole("list", { name: "Tags" });
+    expect(
+      within(tags)
+        .getAllByRole("listitem")
+        .map((tag) => tag.textContent),
+    ).toEqual(["Step 3: Prioritize Hypotheses", "Physiological Adaptation", "sepsis"]);
+    const untitled = screen.getByRole("link", { name: /^Untitled item/ });
+    expect(within(untitled).queryByRole("list", { name: "Tags" })).not.toBeInTheDocument();
   });
 
   it("names an item with no stem yet", () => {

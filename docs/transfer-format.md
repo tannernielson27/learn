@@ -18,6 +18,7 @@ or
 An envelope holds either `items` or `caseStudy`, never both. Anything else is refused.
 
 - **Items** are in the shape of `itemSchema` (docs/01-NGN-ITEM-SPEC.md §4.4), including `answerKey`, `rationale` and `scoring`. A standalone item may carry an `ehr` record (§4.2, §4.3).
+- **Item tags** (`tags`) hold the NCLEX client needs categories and free topic tags; the CJMM step stays in `cjmmStep`. On import, and whenever an item is saved, tags are trimmed with whitespace closed up, a client needs category is spelled the one fixed way (`src/lib/ngn/tags.ts`, for example `"Physiological Adaptation"`), a topic is lower-cased, and repeats are dropped. An item may carry at most 20 tags of at most 50 characters each; more refuses the import (`Item 1: "tags" is not valid.`). A case study's own `tags` are kept as written and are not yet filtered by; its six step items' tags follow the item rules.
 - **A case study** is in the shape of `caseStudySchema` (§4.1): `id`, `title`, `tags`, `ehr`, and exactly six `items` in clinical judgment order, each with `cjmmStep` equal to its position.
 
 ## Export

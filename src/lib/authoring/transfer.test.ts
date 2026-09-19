@@ -49,6 +49,43 @@ describe("export then import", () => {
     expect(back.ok && back.value).toEqual({ ...original, id: NEW_ID, version: 1 });
   });
 
+  it("keeps an item's client needs, topic tags and CJMM step, normalized on the way in", () => {
+    const original = item({
+      ...FIXTURES.multiple_choice.canonical,
+      cjmmStep: 3,
+      tags: ["Physiological Adaptation", "sepsis"],
+    });
+    const parsed = parseImport(JSON.stringify(itemsEnvelope([original])));
+    if (!parsed.ok || parsed.kind !== "items") throw new Error("the export should import");
+    const [row] = importRowsFor(parsed).items;
+    expect(row!.tags).toEqual(["Physiological Adaptation", "sepsis"]);
+    expect(row!.cjmm_step).toBe(3);
+
+    const handWritten = JSON.stringify({
+      format: "learn.v1",
+      items: [
+        {
+          ...FIXTURES.multiple_choice.canonical,
+          tags: [" Sepsis ", "SEPSIS", "physiological adaptation"],
+        },
+      ],
+    });
+    const typed = parseImport(handWritten);
+    if (!typed.ok || typed.kind !== "items") throw new Error("the file should import");
+    expect(importRowsFor(typed).items[0]!.tags).toEqual(["sepsis", "Physiological Adaptation"]);
+  });
+
+  it("refuses an item with more tags than an item may have", () => {
+    const tags = Array.from({ length: 21 }, (_, i) => `topic ${i}`);
+    const parsed = parseImport(
+      JSON.stringify({
+        format: "learn.v1",
+        items: [{ ...FIXTURES.multiple_choice.canonical, tags }],
+      }),
+    );
+    expect(parsed).toEqual({ ok: false, errors: ['Item 1: "tags" is not valid.'] });
+  });
+
   it("a case study survives with its record and six steps, in order", () => {
     const original = sample();
     const parsed = parseImport(JSON.stringify(caseStudyEnvelope(original)));

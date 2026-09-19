@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ItemSummary } from "@/lib/authoring/banks";
 import { formatEdited } from "@/lib/authoring/format";
+import { tagLabels } from "@/lib/authoring/tagFilter";
 import { ITEM_TYPE_LABELS, ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 import { SelectForMove } from "./SelectForMove";
 
@@ -22,6 +23,22 @@ function typeLabel(type: string): string {
   return (ITEM_TYPES as readonly string[]).includes(type)
     ? ITEM_TYPE_LABELS[type as ItemType]
     : type;
+}
+
+function TagChips({ labels }: { labels: readonly string[] }) {
+  if (labels.length === 0) return null;
+  return (
+    <ul aria-label="Tags" className="flex flex-wrap gap-1.5">
+      {labels.map((label) => (
+        <li
+          key={label}
+          className="rounded-sm border border-line bg-surface-1 px-1.5 py-0.5 text-xs text-ink-2"
+        >
+          {label}
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 export function ItemList({
@@ -60,6 +77,7 @@ export function ItemList({
               <span>{STATUS_LABELS[item.status]}</span>
               <span>{formatEdited(item.updatedAt)}</span>
             </span>
+            <TagChips labels={tagLabels(item.cjmmStep, item.tags)} />
           </Link>
           {/* Only a published item has a version to play, and the scorer only accepts those. */}
           {item.status === "published" ? (

@@ -10,11 +10,12 @@ import { emptyEhrForm, previewRecord, type EhrFormValues } from "@/lib/authoring
 import type { EditorIssue } from "@/lib/authoring/issueMessages";
 import { scoringSummary } from "@/lib/authoring/scoringSummary";
 import type { Item } from "@/lib/ngn/schemas";
-import type { ScoringModel } from "@/lib/ngn/types";
+import type { CjmmStep, ScoringModel } from "@/lib/ngn/types";
 import { EhrPreview } from "./EhrPreview";
 import { EhrRecordFields, focusRecordField, recordFieldId } from "./EhrRecordFields";
 import { issueMessageId } from "./issueIds";
 import { useItemEditorHost, useReportDirty } from "./ItemEditorHost";
+import { TagFields } from "./TagFields";
 
 export { issueMessageId };
 
@@ -39,6 +40,12 @@ interface WithRecord {
   ehr?: EhrFormValues;
 }
 
+/** Every item form carries its tags and CJMM step. */
+interface WithTags {
+  tags?: string[];
+  cjmmStep?: CjmmStep;
+}
+
 const RECORD_PREFIX = "ehr.";
 
 export interface EditorShellProps<Values, Input extends ScoredInput> {
@@ -59,6 +66,10 @@ export interface EditorShellProps<Values, Input extends ScoredInput> {
   onPublish: (input: Input) => Promise<SaveResult>;
   /** Sets or clears the item's patient record. Without it, the editor offers no record. */
   onRecordChange?: (record: EhrFormValues | undefined) => void;
+  /** Sets the item's tags. Without it, the editor offers no tags. */
+  onTagsChange?: (tags: string[]) => void;
+  /** Sets or clears the item's CJMM step; never offered inside a case study, whose place sets it. */
+  onStepChange?: (step: CjmmStep | undefined) => void;
   /** The type's own fields. */
   children: ReactNode;
 }
@@ -76,6 +87,8 @@ export function EditorShell<Values, Input extends ScoredInput>({
   onSaveDraft,
   onPublish,
   onRecordChange,
+  onTagsChange,
+  onStepChange,
   children,
 }: EditorShellProps<Values, Input>) {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
@@ -171,6 +184,17 @@ export function EditorShell<Values, Input extends ScoredInput>({
         </section>
 
         {children}
+
+        {onTagsChange ? (
+          <TagFields
+            idPrefix={issueIdPrefix}
+            tags={(values as WithTags).tags ?? []}
+            cjmmStep={(values as WithTags).cjmmStep}
+            onTagsChange={onTagsChange}
+            onStepChange={host.inCaseStudy ? undefined : onStepChange}
+            headingLevel={host.inCaseStudy ? "h3" : "h2"}
+          />
+        ) : null}
 
         {offersRecord && onRecordChange ? (
           <section
