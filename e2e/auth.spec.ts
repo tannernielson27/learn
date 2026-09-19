@@ -47,6 +47,28 @@ test("an author signs in from an emailed link, lands where they were going, then
   await expect(page).toHaveURL(/\/sign-in\?next=%2Fauthor$/);
 });
 
+test("the demo account signs in without an email and lands where the person was going", async ({
+  page,
+}) => {
+  test.skip(!process.env.DEMO_ACCOUNT_EMAIL, "set DEMO_ACCOUNT_EMAIL and DEMO_ACCOUNT_PASSWORD");
+
+  await page.goto("/author");
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fauthor$/);
+  await expect(page.getByRole("heading", { level: 2, name: "Try the demo" })).toBeVisible();
+  const axe = await new AxeBuilder({ page }).analyze();
+  expect(axe.violations).toEqual([]);
+
+  await page.getByRole("button", { name: "Use the demo account" }).click();
+  await expect(page).toHaveURL(/\/author$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Item banks" })).toBeVisible();
+  await expect(page.getByTestId("signed-in-email")).toHaveText(
+    process.env.DEMO_ACCOUNT_EMAIL!.trim().toLowerCase(),
+  );
+
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/sign-in$/);
+});
+
 test("a link that was already used sends the person back with a reason", async ({
   page,
   request,
