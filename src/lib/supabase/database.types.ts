@@ -400,10 +400,7 @@ export type Database = {
         Args: { source_case_study: string };
         Returns: string;
       };
-      duplicate_item: {
-        Args: { source_item: string };
-        Returns: string;
-      };
+      duplicate_item: { Args: { source_item: string }; Returns: string };
       import_bank_content: {
         Args: { new_case_study: Json; new_items: Json; target_bank: string };
         Returns: Json;
