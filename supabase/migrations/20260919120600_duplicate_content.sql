@@ -53,12 +53,17 @@ declare
   step record;
   created uuid;
 begin
-  -- Locked, and its steps below in position order (as reorder_case_study_steps does), so a save or
-  -- reorder in between cannot leave the copy half old and half new.
+  -- The case study, then its steps in position order (the lock order of reorder_case_study_steps and
+  -- place_case_study_step), are locked before anything is copied, so no save, reorder or placement
+  -- can land in between and leave the copy half old and half new.
   select cs.* into source from public.case_studies cs where cs.id = source_case_study for share;
   if not found then
     raise exception 'that case study does not exist' using errcode = '22023';
   end if;
+  perform 1 from public.case_study_items
+    where case_study_id = source_case_study
+    order by position
+    for share;
 
   -- A title is at most 200 characters; the longest keeps room for the marker.
   insert into public.case_studies (bank_id, org_id, folder_id, title, ehr, tags, status, created_by)
@@ -74,7 +79,6 @@ begin
       join public.items i on i.id = csi.item_id
      where csi.case_study_id = source_case_study
      order by csi.position
-       for share of csi
   loop
     created := gen_random_uuid();
     insert into public.items (

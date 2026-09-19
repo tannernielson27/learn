@@ -4,7 +4,7 @@
 -- Runs with `pnpm exec supabase test db`. Uses its own fixture ids so it never counts the seed's rows.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(25);
+select plan(26);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures, as the superuser
@@ -251,6 +251,12 @@ select throws_ok(
   $$ select public.duplicate_item('00000000-0000-0000-0000-000000000601') $$,
   '22023', null,
   'a student cannot duplicate an item, which reads as not found'
+);
+
+select throws_ok(
+  $$ select public.duplicate_case_study('00000000-0000-0000-0000-0000000006c1') $$,
+  '22023', null,
+  'a student cannot duplicate a case study, which reads as not found'
 );
 
 -- ---------------------------------------------------------------------------

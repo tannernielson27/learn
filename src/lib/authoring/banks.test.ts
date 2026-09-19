@@ -45,6 +45,9 @@ describe("stemExcerpt", () => {
     expect(
       stemExcerpt({ kind: "markdown", value: "See [the chart](https://x.test/a) first" }),
     ).toBe("See the chart first");
+    expect(
+      stemExcerpt({ kind: "markdown", value: "See [the chart](https://x.test/a(b)) first" }),
+    ).toBe("See the chart first");
   });
 
   it("shortens a long stem on a word boundary with an ellipsis", () => {

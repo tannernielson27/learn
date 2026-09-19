@@ -168,7 +168,7 @@ export function stemExcerpt(stem: unknown, max = 140): string {
       : "";
   // A link or image shows its text alone; other parentheses are text, like a copy's "(copy)".
   const plain = value
-    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/!?\[([^\]]*)\]\((?:[^()]|\([^()]*\))*\)/g, "$1")
     .replace(/[*_`#>[\]!]/g, "")
     .replace(/\s+/g, " ")
     .trim();
