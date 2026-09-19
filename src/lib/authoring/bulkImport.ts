@@ -6,7 +6,8 @@ import { IMPORT_ERRORS, IMPORT_MAX_BYTES } from "./transfer";
  * file never blocks the others, and no request carries more than one file (800 KB, under the 1 MB
  * Server Action body limit). A larger set is several files. Pure, so the browser and tests share it.
  */
-export const IMPORT_MAX_FILES = 20;
+/** The same as the import rate limit (10 a minute, `private.take_rate_limit`): one call per file. */
+export const IMPORT_MAX_FILES = 10;
 export const PASTED_LABEL = "Pasted JSON";
 
 const MAX_LABEL = 80;

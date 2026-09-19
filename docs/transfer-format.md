@@ -31,7 +31,7 @@ An envelope holds either `items` or `caseStudy`, never both. Anything else is re
 
 ## Import
 
-**Import JSON** on a bank takes up to 20 files at once, pasted text, or both, and optionally a folder of the bank to file everything in (**Import into**; it starts on the open folder, otherwise Unfiled).
+**Import JSON** on a bank takes up to 10 files at once (the import rate limit is 10 a minute, and each file is one import), pasted text, or both, and optionally a folder of the bank to file everything in (**Import into**; it starts on the open folder, otherwise Unfiled).
 
 Each file (and the pasted text) is its own import, with the rules below. The page sends one file per request, one after another, so no request carries more than one 800 KB file and every request stays under the 1 MB Server Action body limit. Each file is written in its own single database call, so **a file lands whole or not at all, and a refused file never blocks the others.** A set larger than 50 items is several files: a file over 50 items is refused whole rather than split, because a file split across calls could land in part.
 
