@@ -20,7 +20,7 @@ export const IMPORT_ERRORS = {
   notJson: "This is not valid JSON.",
   notLearn: 'This is not a LeaRN export. It needs "format": "learn.v1".',
   eitherOr: "A LeaRN export holds either items or one case study.",
-  itemCount: `Include between 1 and ${IMPORT_MAX_ITEMS} items.`,
+  itemCount: `Include between 1 and ${IMPORT_MAX_ITEMS} items. Split a larger set into several files.`,
 } as const;
 
 export interface ItemsEnvelope {

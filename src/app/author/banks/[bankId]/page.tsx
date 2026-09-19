@@ -207,7 +207,11 @@ export default async function BankPage({
             <h2 id="import-heading" className="font-read text-2xl text-ink-1">
               Import JSON
             </h2>
-            <ImportJsonForm action={importIntoBank.bind(null, bank.id)} />
+            <ImportJsonForm
+              action={importIntoBank.bind(null, bank.id)}
+              folders={folders}
+              defaultFolderId={folder?.id}
+            />
           </section>
           <details className="border-t border-line pt-6">
             <summary className="tap-target flex cursor-pointer items-center text-sm font-medium text-ink-2">

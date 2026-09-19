@@ -35,6 +35,7 @@ function fakeClient(queue: Record<string, Result[]> = {}, rpcResult: Result = { 
 
 const BANK_ID = "00000000-0000-4000-8000-000000000002";
 const ITEM_ID = "00000000-0000-4000-8000-000000000010";
+const FOLDER_ID = "00000000-0000-4000-8000-000000000020";
 
 const validItem = () => {
   const result = validateItem(FIXTURES.multiple_choice.canonical);
@@ -78,6 +79,39 @@ describe("importIntoBank", () => {
     expect(await importIntoBank(fake.client, BANK_ID, rows())).toEqual({
       ok: false,
       error: TRANSFER_ERRORS.bankGone,
+    });
+  });
+
+  it("files everything in a target folder in the same call", async () => {
+    const fake = fakeClient(
+      {},
+      { data: { item_ids: [ITEM_ID], case_study_id: null }, error: null },
+    );
+    const importRows = rows();
+    await importIntoBank(fake.client, BANK_ID, importRows, FOLDER_ID);
+    expect(fake.rpc).toHaveBeenCalledTimes(1);
+    expect(fake.rpc).toHaveBeenCalledWith("import_bank_content", {
+      target_bank: BANK_ID,
+      new_items: importRows.items,
+      new_case_study: null,
+      target_folder: FOLDER_ID,
+    });
+  });
+
+  it("sends no folder when the import goes to Unfiled", async () => {
+    const fake = fakeClient(
+      {},
+      { data: { item_ids: [ITEM_ID], case_study_id: null }, error: null },
+    );
+    await importIntoBank(fake.client, BANK_ID, rows(), null);
+    expect((fake.rpc.mock.calls[0] as unknown[])[1]).not.toHaveProperty("target_folder");
+  });
+
+  it("says the folder is gone when it is not one of the bank's folders", async () => {
+    const fake = fakeClient({}, { data: null, error: { code: "23503" } });
+    expect(await importIntoBank(fake.client, BANK_ID, rows(), FOLDER_ID)).toEqual({
+      ok: false,
+      error: TRANSFER_ERRORS.folderGone,
     });
   });
 

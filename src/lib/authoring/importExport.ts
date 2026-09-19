@@ -14,6 +14,7 @@ type Client = SupabaseClient<Database>;
 
 export const TRANSFER_ERRORS = {
   bankGone: "That bank no longer exists.",
+  folderGone: "That folder no longer exists.",
   importFailed: "The import could not be saved, so nothing was imported. Try again.",
   notFound: "That no longer exists.",
   unfinishedItem: "Finish this item before exporting it. Only a valid item can be exported.",
@@ -27,12 +28,14 @@ export type ExportResult<Envelope> =
 /**
  * Writes a whole import through one database function, so either everything lands or nothing
  * does. The function runs as the caller: RLS decides which bank it may write, and every item gets
- * a new id and draft status there.
+ * a new id and draft status there. With `folderId`, everything is filed in that folder of the bank
+ * in the same call; without it, the import is Unfiled.
  */
 export async function importIntoBank(
   client: Client,
   bankId: string,
   rows: ImportRows,
+  folderId: string | null = null,
 ): Promise<
   | { ok: true; value: { itemIds: string[]; caseStudyId: string | null } }
   | { ok: false; error: string }
@@ -41,19 +44,24 @@ export async function importIntoBank(
     target_bank: bankId,
     new_items: (rows.items.length > 0 ? rows.items : null) as unknown as Json,
     new_case_study: rows.caseStudy as unknown as Json,
+    ...(folderId ? { target_folder: folderId } : {}),
   });
-  if (error) {
-    // 22023: the bank is not one the caller can see (or the payload is malformed).
-    return {
-      ok: false,
-      error: error.code === "22023" ? TRANSFER_ERRORS.bankGone : TRANSFER_ERRORS.importFailed,
-    };
-  }
+  if (error) return { ok: false, error: importError(error.code) };
   const result = (data ?? {}) as { item_ids?: string[]; case_study_id?: string | null };
   return {
     ok: true,
     value: { itemIds: result.item_ids ?? [], caseStudyId: result.case_study_id ?? null },
   };
+}
+
+/**
+ * 22023: the bank is not one the caller can see (or the payload is malformed). 23503: the folder is
+ * not one of the bank's folders the caller can see.
+ */
+function importError(code: string | undefined): string {
+  if (code === "22023") return TRANSFER_ERRORS.bankGone;
+  if (code === "23503") return TRANSFER_ERRORS.folderGone;
+  return TRANSFER_ERRORS.importFailed;
 }
 
 /** An item as learn.v1, with its key and rationale: only a valid item exports. */
