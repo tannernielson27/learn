@@ -291,7 +291,7 @@ export type Database = {
           org_id: string;
           rationale?: Json;
           scoring: Json;
-          search_vector?: never;
+          search_vector?: unknown;
           status?: Database["public"]["Enums"]["content_status"];
           tags?: string[];
           type: string;
@@ -310,7 +310,7 @@ export type Database = {
           org_id?: string;
           rationale?: Json;
           scoring?: Json;
-          search_vector?: never;
+          search_vector?: unknown;
           status?: Database["public"]["Enums"]["content_status"];
           tags?: string[];
           type?: string;
