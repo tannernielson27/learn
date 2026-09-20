@@ -32,6 +32,12 @@ export const LIVE_REFUSALS = {
   already_answered: "You have already answered this item.",
   no_name: "Enter a name so the class can see who answered.",
   name_too_long: "That name is too long. Use 60 characters or fewer.",
+  /**
+   * An adapter with a network boundary has to cap how often one person may answer, or `submit` is
+   * unbounded scoring work (see `transport.ts`). #131's Postgres counter says no with this. The
+   * in-memory adapter never raises it: its whole room is garbage collected with the test.
+   */
+  rate_limited: "Too many answers from this device. Wait a moment and try again.",
   /** Reuses the submit seam's own wording (#56) rather than inventing a second sentence. */
   malformed: SUBMIT_ERRORS.malformed,
   wrong_type: SUBMIT_ERRORS.wrongType,

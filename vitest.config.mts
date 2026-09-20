@@ -48,6 +48,10 @@ export default defineConfig({
         "src/**/*.d.ts",
         "src/lib/ngn/fixtures/**",
         "src/lib/supabase/database.types.ts",
+        // Test doubles, not product code: `src/lib/liveSupabase/testing` stands Postgres and the
+        // Realtime server up in process so the shared conformance suite (#131) can drive the real
+        // adapter. What it stands in for is covered by pgTAP, not by these numbers.
+        "src/**/testing/**",
       ],
       thresholds: {
         lines: 80,

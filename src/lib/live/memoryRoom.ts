@@ -173,10 +173,15 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
       else noMarks += 1;
     }
     const responded = given?.size ?? 0;
-    // Everyone this tally is over: the room as it stands, plus anyone who answered and has since
-    // left. Counting the roster alone would let `present` fall below `responded` — a phone locking
-    // after its owner answered would read "1 of 0 answered".
-    const present = new Set([...roster.keys(), ...(given?.keys() ?? [])]).size;
+    // Everyone this tally is over: the room as it stands, or the number who answered it, whichever
+    // is larger. Counting the roster alone would let `present` fall below `responded` — a phone
+    // locking after its owner answered would read "1 of 0 answered".
+    //
+    // `max`, and not the union of the two sets, because a tally carries no participant ids and an
+    // adapter with a network boundary has no union to take: #131's host is told how many answered,
+    // never who. Saying it the same way in both adapters is what lets one conformance suite hold
+    // them to the same number (ADR 0002).
+    const present = Math.max(roster.size, responded);
     return {
       itemId: item.id,
       position,
