@@ -1,5 +1,11 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
+import {
+  expect,
+  test,
+  type Browser,
+  type BrowserContextOptions,
+  type Page,
+} from "@playwright/test";
 import { fillMultipleResponse, publishOpenItem } from "./authoringHelpers";
 import { signInAsNewAuthor } from "./signIn";
 
@@ -13,23 +19,45 @@ async function expectNoAxeViolations(page: Page) {
 }
 
 const STEM = "Which findings require immediate follow-up?";
+/**
+ * Five, not four. The Extended Multiple Response editor opens with five blank option fields and
+ * every label is required, so filling fewer leaves the item invalid and `publishOpenItem`
+ * refuses — the thing that failed CI on #128, one option further along.
+ */
 const OPTIONS = [
   "Respiratory rate 28 breaths per minute",
   "Oxygen saturation 89 percent on room air",
   "Temperature 37.2 degrees Celsius",
   "New confusion per family",
+  "Productive cough with yellow sputum",
 ];
 /** A select-all-that-apply key: the first two are right, the last two are not. */
 const CORRECT = [0, 1];
 const RATIONALE = "Why the answer is right.";
 
-/** Joins the open session as `name` and lands on the play page. */
-async function join(host: Page, name: string): Promise<Page> {
-  const code = (await host.getByTestId("join-code").innerText()).replace(/\s/g, "");
-  const phone = await host.context().newPage();
+/**
+ * Joins the open session as `name`, in a browser of its own.
+ *
+ * A context of its own and not another tab, because the participant cookie is one cookie per
+ * browser: a second tab sharing it would come back as the *same* participant, which is what
+ * join.spec.ts proves on purpose. Three phones are three browsers.
+ */
+async function join(
+  browser: Browser,
+  origin: string,
+  viewport: BrowserContextOptions,
+  code: string,
+  name: string,
+): Promise<Page> {
+  const context = await browser.newContext({
+    ...viewport,
+    baseURL: origin,
+    reducedMotion: "reduce",
+  });
+  const phone = await context.newPage();
   await phone.goto(`/join/${code}`);
   await phone.getByRole("textbox", { name: "Display name" }).fill(name);
-  // Exact: "Join" is a substring of nothing else here today, and has bitten this repo twice.
+  // Exact on a short button name: it has bitten this repo twice.
   await phone.getByRole("button", { name: "Join", exact: true }).click();
   await expect(phone).toHaveURL(/\/play\/[0-9a-f-]{36}$/);
   return phone;
@@ -53,6 +81,7 @@ async function answer(phone: Page, picks: number[]) {
  * two identity schemes ever drift apart again, the first submit below is what fails.
  */
 test("three phones answer a live SATA, and the reveal shows the key on all of them", async ({
+  browser,
   page,
   request,
 }, testInfo) => {
@@ -67,8 +96,6 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
 
   await page.getByRole("link", { name: "New item" }).click();
   await page.getByRole("button", { name: "Extended Multiple Response", exact: true }).click();
-  // Four blank option fields, every label required: filling fewer leaves the item invalid and
-  // publishOpenItem refuses (the thing that failed CI on #128).
   await fillMultipleResponse(page, STEM, OPTIONS, CORRECT);
   await publishOpenItem(page);
   await page.getByRole("link", { name: "Back to bank" }).click();
@@ -77,9 +104,15 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
   await page.getByRole("button", { name: "Start a live session", exact: true }).click();
   await expect(page).toHaveURL(/\/live\/[0-9a-f-]{36}$/);
 
-  const phones = [await join(page, "Ada Brennan"), await join(page, "Bo Ntuli")];
-  const third = await join(page, "Chidi Okeke");
-  phones.push(third);
+  const code = (await page.getByTestId("join-code").innerText()).replace(/\s/g, "");
+  const origin = new URL(page.url()).origin;
+  const { viewport, isMobile, hasTouch } = testInfo.project.use;
+  const shape: BrowserContextOptions = { viewport, isMobile, hasTouch };
+
+  const phones: Page[] = [];
+  for (const name of ["Ada Brennan", "Bo Ntuli", "Chidi Okeke"]) {
+    phones.push(await join(browser, origin, shape, code, name));
+  }
   await expect(page.getByTestId("present-count")).toHaveText("3 phones connected", {
     timeout: 15_000,
   });
@@ -143,6 +176,6 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
   await page.getByRole("button", { name: "End session", exact: true }).click();
   for (const phone of phones) {
     await expect(phone.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
-    await phone.close();
+    await phone.context().close();
   }
 });

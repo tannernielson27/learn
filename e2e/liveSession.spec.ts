@@ -82,8 +82,10 @@ test("an instructor starts a session from a bank, sees a six-character code, and
 
   // Starting the room moves the phone. The bank holds one item, so this is also the last one.
   await page.getByRole("button", { name: "Start session", exact: true }).click();
-  await expect(student.getByText("Item 1 of 1")).toBeVisible({ timeout: 15_000 });
-  await expect(student.getByText("The session is under way.")).toBeVisible();
+  // Since #133 the phone shows the item itself rather than a waiting screen. Answering it is
+  // liveAnswer.spec.ts; what matters here is that the room's move reached the phone.
+  await expect(student.getByText("Which finding is expected?")).toBeVisible({ timeout: 15_000 });
+  await expect(student.getByRole("radio", { name: "Bradycardia" })).toBeVisible();
   await expectNoAxeViolations(student);
   await expectNoAxeViolations(page);
   // Nothing to advance to, and the console says so by greying the button rather than by refusing.

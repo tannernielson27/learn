@@ -153,6 +153,22 @@ describe("StudentRoom: waiting", () => {
     expect(screen.getByText("Item 4 of 12")).toBeInTheDocument();
   });
 
+  it("takes the item off the screen while the room is paused, because no answer is taken", () => {
+    const room = setup();
+    room.push({ state: running({ status: "paused" }), item: KEYLESS });
+    // A Submit that `canSubmit` is certain to refuse is worse than a screen that says why.
+    expect(screen.getByText("The session is paused.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
+  });
+
+  it("offers no Submit in the moment between the key going up and this phone fetching it", () => {
+    const room = setup();
+    // The state message travels on its own; the reveal behind it takes a request.
+    room.push({ state: running({ reveal: true }), item: KEYLESS, revealed: null });
+    expect(screen.getByText("The answer is showing.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
+  });
+
   it("counts the phones in the room while there is nothing to answer", () => {
     const room = setup();
     room.roster([

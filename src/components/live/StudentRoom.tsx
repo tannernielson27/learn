@@ -155,9 +155,24 @@ export function StudentRoom({
     };
   }, [dial, router, me]);
 
-  const onAnItem = item !== null && (state.status === "running" || state.status === "paused");
-  const showing = onAnItem && revealed !== null && revealed.itemId === item.id;
-  const sent = onAnItem && answered !== null && answered.itemId === item.id;
+  /**
+   * Whether the item is on this phone at all.
+   *
+   * `running` only, so a paused room takes the waiting screen and its own sentence. That is not a
+   * cosmetic choice: `canSubmit` refuses an answer while a room is paused, and a Submit button
+   * that is certain to be refused is worse than a screen that says what is happening. Everything
+   * a paused, ended or not-yet-started room says is `waitingCopy`'s, unchanged from #132.
+   */
+  const onAnItem = item !== null && state.status === "running";
+  const showing = onAnItem && state.reveal && revealed !== null && revealed.itemId === item.id;
+  /**
+   * The key is up but the phone has not fetched it yet — the state message travels on its own and
+   * the reveal behind it takes a request. `answering` excludes that moment on purpose: a Submit
+   * button offered over an answer that is already on the board would be refused if it were
+   * pressed, so the waiting screen says "The answer is showing" for the moment in between.
+   */
+  const answering = onAnItem && !state.reveal;
+  const sent = answered !== null && item !== null && answered.itemId === item.id;
   const progress =
     state.position === null || state.itemCount === 0
       ? undefined
@@ -209,7 +224,7 @@ export function StudentRoom({
         </p>
       ) : null}
 
-      {onAnItem && showing && revealed !== null ? (
+      {showing && revealed !== null ? (
         <RevealedItem
           item={item}
           answered={answered}
@@ -217,7 +232,7 @@ export function StudentRoom({
           progress={progress}
           copy={copy}
         />
-      ) : onAnItem && sent && answered !== null ? (
+      ) : answering && sent && answered !== null ? (
         <section aria-label="Your answer" className="mt-8">
           <p role="status" data-testid="answer-sent" className="measure mb-4 text-sm text-ink-2">
             {SENT}
@@ -235,7 +250,7 @@ export function StudentRoom({
             label="Your answer"
           />
         </section>
-      ) : onAnItem ? (
+      ) : answering ? (
         <div className="mt-8">
           <ItemPlayer
             key={`${item.id}:answer`}
