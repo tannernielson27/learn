@@ -17,8 +17,15 @@ export { createSupabaseHost, type HostTransportOptions } from "./hostTransport";
 export {
   createSupabaseParticipant,
   type ParticipantTransportOptions,
-  type PresenceEntry,
 } from "./participantTransport";
+export { rosterFrom, type PresenceEntry } from "./presence";
+export {
+  createParticipantRoom,
+  publicStateFrom,
+  type ParticipantRoom,
+  type ParticipantRoomOptions,
+  type RoomConnection,
+} from "./participantRoom";
 export {
   PARTICIPANT_TOKEN_TTL_MS,
   bearerToken,

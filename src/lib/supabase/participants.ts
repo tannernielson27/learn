@@ -31,6 +31,11 @@ export type JoinSessionResult =
 export interface ResumedParticipant {
   participantId: string;
   displayName: string;
+  /**
+   * Epoch milliseconds, from the database's clock. The roster at the front of the class orders by
+   * it (#132), which is why it comes from the row rather than from the phone.
+   */
+  joinedAt: number;
   sessionStatus: SessionStatus;
   mode: SessionMode;
   title: string;
@@ -89,9 +94,13 @@ export async function resumeParticipant(
 
   const row = data?.[0];
   if (!row) return null;
+  // A timestamptz arrives as a string. An unparseable one would poison the roster's ordering with
+  // a NaN, so it falls back to the epoch: the earliest possible seat, and never a crash.
+  const joinedAt = Date.parse(row.participant_joined_at);
   return {
     participantId: row.participant_id,
     displayName: row.participant_name,
+    joinedAt: Number.isNaN(joinedAt) ? 0 : joinedAt,
     sessionStatus: row.session_status,
     mode: row.session_mode,
     title: row.session_title,

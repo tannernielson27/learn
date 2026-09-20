@@ -60,9 +60,47 @@ test("an instructor starts a session from a bank, sees a six-character code, and
   // The three Playwright projects are 375, 768 and 1280, so this runs at each breakpoint; the code
   // has to be visible and whole at every one.
   await expect(code).toBeVisible();
+  // An empty lobby says so, and offers only the move an empty lobby can make.
+  await expect(page.getByText("Nobody has joined yet.")).toBeVisible();
+  await expect(page.getByTestId("present-count")).toHaveText("0 phones connected");
+  await expect(page.getByRole("button", { name: "Start session", exact: true })).toBeEnabled();
   await expectNoAxeViolations(page);
 
+  // A phone joins. From here the two pages are a room: nothing below reloads either of them.
+  const student = await page.context().newPage();
+  await student.goto(`/join/${(await code.innerText()).replace(/\s/g, "")}`);
+  await student.getByRole("textbox", { name: "Display name" }).fill("Ada Brennan");
+  await student.getByRole("button", { name: "Join", exact: true }).click();
+  await expect(student).toHaveURL(/\/play\/[0-9a-f-]{36}$/);
+  await expect(student.getByText("You are in.")).toBeVisible();
+  await expectNoAxeViolations(student);
+
+  // Presence, not a reload and not a database read: the name and the count arrive on the host's
+  // screen while it is sitting there.
+  await expect(page.getByText("Ada Brennan")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId("present-count")).toHaveText("1 phone connected");
+
+  // Starting the room moves the phone. The bank holds one item, so this is also the last one.
+  await page.getByRole("button", { name: "Start session", exact: true }).click();
+  await expect(student.getByText("Item 1 of 1")).toBeVisible({ timeout: 15_000 });
+  await expect(student.getByText("The session is under way.")).toBeVisible();
+  await expectNoAxeViolations(student);
+  await expectNoAxeViolations(page);
+  // Nothing to advance to, and the console says so by greying the button rather than by refusing.
+  await expect(page.getByRole("button", { name: "Next item", exact: true })).toBeDisabled();
+
+  await page.getByRole("button", { name: "Show answer", exact: true }).click();
+  await expect(student.getByText("The answer is showing.")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("button", { name: "Show answer", exact: true })).toBeDisabled();
+
+  await page.getByRole("button", { name: "Pause", exact: true }).click();
+  await expect(student.getByText("The session is paused.")).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Resume", exact: true }).click();
+
   await page.getByRole("button", { name: "End session", exact: true }).click();
+  await expect(student.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
+  await student.close();
+
   await expect(page.getByText("This session has ended.")).toBeVisible();
   await expect(page.getByRole("button", { name: "End session", exact: true })).toHaveCount(0);
   await expectNoAxeViolations(page);

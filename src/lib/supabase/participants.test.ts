@@ -72,6 +72,7 @@ describe("resumeParticipant", () => {
         {
           participant_id: PARTICIPANT,
           participant_name: "Sam Okafor",
+          participant_joined_at: "2026-09-20T09:15:00.000Z",
           session_status: "lobby",
           session_mode: "instructor_paced",
           session_title: "Cardiac bank",
@@ -83,6 +84,7 @@ describe("resumeParticipant", () => {
     expect(await resumeParticipant(fake.client, TOKEN)).toEqual({
       participantId: PARTICIPANT,
       displayName: "Sam Okafor",
+      joinedAt: Date.parse("2026-09-20T09:15:00.000Z"),
       sessionStatus: "lobby",
       mode: "instructor_paced",
       title: "Cardiac bank",
@@ -104,12 +106,30 @@ describe("resumeParticipant", () => {
     expect(await resumeParticipant(fake.client, TOKEN)).toBeNull();
   });
 
+  it("never lets an unreadable join time poison the roster's order with a NaN", async () => {
+    const fake = fakeRpc({
+      data: [
+        {
+          participant_id: PARTICIPANT,
+          participant_name: "Sam Okafor",
+          participant_joined_at: "not a time",
+          session_status: "lobby",
+          session_mode: "instructor_paced",
+          session_title: "Cardiac bank",
+        },
+      ],
+      error: null,
+    });
+    expect(await resumeParticipant(fake.client, TOKEN)).toMatchObject({ joinedAt: 0 });
+  });
+
   it("returns a name and a session, and never an item, a set or a key (ADR 0003)", async () => {
     const fake = fakeRpc({
       data: [
         {
           participant_id: PARTICIPANT,
           participant_name: "Sam",
+          participant_joined_at: "2026-09-20T09:15:00.000Z",
           session_status: "running",
           session_mode: "student_paced",
           session_title: "Cardiac bank",
@@ -121,6 +141,7 @@ describe("resumeParticipant", () => {
     const resumed = await resumeParticipant(fake.client, TOKEN);
     expect(Object.keys(resumed ?? {}).sort()).toEqual([
       "displayName",
+      "joinedAt",
       "mode",
       "participantId",
       "sessionStatus",

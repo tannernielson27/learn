@@ -38,6 +38,8 @@ export {
   type SubmitAck,
   type Unsubscribe,
 } from "./transport";
+export { countPresent, mergeRoster, type RosterEntry } from "./roster";
+export { waitingCopy, type WaitingCopy } from "./waiting";
 export { createInMemoryRoom, type InMemoryRoom, type InMemoryRoomOptions } from "./memoryRoom";
 export {
   answerAll,

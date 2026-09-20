@@ -7,7 +7,7 @@
 -- the filter would have dropped, and `join_session` leaves a participant behind each time it runs.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(37);
+select plan(38);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures, as the superuser
@@ -161,6 +161,19 @@ select is(
      (select secret from fixture where label = 'sam'))),
   1,
   'and exactly one row, however many participants share a name'
+);
+
+-- #132: the roster at the front of the class is ordered by this, so it has to be the row's own
+-- join time rather than anything a browser could offer.
+select is(
+  (select r.participant_joined_at
+     from public.resume_participant(
+       (select id from fixture where label = 'sam'),
+       (select id from fixture where label = 'room'),
+       (select secret from fixture where label = 'sam')) r),
+  (select joined_at from public.participants
+    where id = (select id from fixture where label = 'sam')),
+  'and the join time a presence roster orders by'
 );
 
 -- `now()` is the transaction's clock, so a row written and touched inside one transaction carries

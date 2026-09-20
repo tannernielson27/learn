@@ -183,4 +183,10 @@
     display: inline-block;
     animation: arrive var(--duration-base) var(--ease-out-expo) both;
   }
+  /* A row arriving in a list that is filling up — a live-session roster (#132). Unlike
+     .motion-arrive it leaves `display` alone, because the row it is on is a flex container.
+     Opacity and an 8px lift, both of which reduced motion collapses through the tokens. */
+  .motion-enter {
+    animation: fade-up var(--duration-base) var(--ease-out-expo) both;
+  }
 }

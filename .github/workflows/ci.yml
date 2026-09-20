@@ -69,8 +69,10 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
-      # Postgres, auth, the API gateway and the test mailbox; nothing sign-in does not use.
-      - run: pnpm exec supabase start -x studio,storage-api,imgproxy,edge-runtime,logflare,vector,supavisor,realtime,postgres-meta
+      # Postgres, auth, the API gateway, the test mailbox and Realtime. Realtime joined the list
+      # with #132: a lobby's roster is presence and a student's screen moves on a `postgres_changes`
+      # message, so without it there is no way to test the half of a live session that is live.
+      - run: pnpm exec supabase start -x studio,storage-api,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta
       - name: Point the build at the local stack
         run: |
           pnpm exec supabase status -o env \
