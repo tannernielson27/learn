@@ -46,7 +46,8 @@ export default async function CaseStudyPage({
     .maybeSingle();
   if (!row) notFound();
 
-  // The rail and the blockers describe publishing, so a step is ready once it is published.
+  // The rail and the blockers describe publishing, so a step is ready once it is published and
+  // carries the rationale publishing now needs.
   const stepStates = caseStudyStepStates(row, "publish");
 
   const recordForm = ehrFormFromStored(row.ehr);

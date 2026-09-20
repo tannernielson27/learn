@@ -162,6 +162,7 @@ export function DragDropEditor<T extends DragDropType>({
       onRecordChange={(record) => setValue("ehr", record, { shouldDirty: true })}
       onTagsChange={(tags) => setValue("tags", tags, { shouldDirty: true })}
       onStepChange={(step) => setValue("cjmmStep", step, { shouldDirty: true })}
+      rationaleField={register("rationaleGeneral")}
     >
       <div className="flex flex-col gap-2">
         <label htmlFor={`${ids}-stem`} className="text-sm font-medium text-ink-1">
@@ -326,18 +327,6 @@ export function DragDropEditor<T extends DragDropType>({
             </fieldset>
           );
         })}
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label htmlFor={`${ids}-rationale`} className="text-sm font-medium text-ink-1">
-          Rationale
-        </label>
-        <textarea
-          id={`${ids}-rationale`}
-          rows={3}
-          className={fieldClass}
-          {...register("rationaleGeneral")}
-        />
       </div>
     </EditorShell>
   );

@@ -280,7 +280,7 @@ describe("validateItem warnings", () => {
       ...base,
       answerKey: { correctOptionIds: base.content.options.map((o) => o.id) },
     });
-    expect(r.ok && r.warnings.some((w) => w.includes("SATA"))).toBe(true);
+    expect(r.ok && r.warnings.some((w) => w.includes("Every option is marked correct"))).toBe(true);
   });
 
   it("warns when most highlight spans are correct", () => {

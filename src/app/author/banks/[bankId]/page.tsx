@@ -50,7 +50,10 @@ export default async function BankPage({
   const query = await searchParams;
   const view = parseFolderView(query.folder);
   const search = parseItemSearch(query);
-  const filter: BankFilter = { ...parseTagFilter(query.tag, query.step), ...search };
+  const filter: BankFilter = {
+    ...parseTagFilter(query.tag, query.step, query.warnings),
+    ...search,
+  };
   const page = parsePage(query.page);
   const tagFiltered = isFiltering(filter);
   const searching = isSearching(search);
@@ -164,7 +167,9 @@ export default async function BankPage({
                   : searching
                     ? "No items here match the search."
                     : tagFiltered
-                      ? "No items here carry every chosen tag."
+                      ? filter.warnings
+                        ? "No items here match every chosen filter."
+                        : "No items here carry every chosen tag."
                       : filtered
                         ? "No items in this folder."
                         : undefined

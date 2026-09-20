@@ -41,8 +41,10 @@ export interface GroupingFormValues {
   difficulty?: GroupingItem["difficulty"];
   ehr?: EhrFormValues;
   meta: GroupingItem["meta"];
-  /** Rationale is carried through untouched; per-element rationale for groups arrives with #49. */
+  /** Per-element rationale, carried through untouched until this editor edits it (#49). */
   rationale: GroupingItem["rationale"];
+  /** The general rationale; publishing needs one. */
+  rationaleGeneral: string;
   stem: string;
   instructions: string;
   rows: GroupingRowForm[];
@@ -50,6 +52,8 @@ export interface GroupingFormValues {
 
 const markdown = (value: string): RichText => ({ kind: "markdown", value });
 const blank = (value: string) => value.trim().length === 0;
+const perElementOnly = (rationale: GroupingItem["rationale"]): GroupingItem["rationale"] =>
+  rationale.perElement ? { perElement: rationale.perElement } : {};
 
 export function toGroupingForm(item: GroupingItem): GroupingFormValues {
   const correctByRow = new Map(
@@ -63,7 +67,8 @@ export function toGroupingForm(item: GroupingItem): GroupingFormValues {
     difficulty: item.difficulty,
     ...recordFormOf(item.ehr),
     meta: { ...item.meta },
-    rationale: item.rationale,
+    rationale: perElementOnly(item.rationale),
+    rationaleGeneral: item.rationale.general?.value ?? "",
     stem: item.stem.value,
     instructions: item.instructions ?? "",
     rows: item.content.rows.map((row) => ({
@@ -111,7 +116,10 @@ export function fromGroupingForm(
     },
     answerKey: { rows: keyRows },
     scoring: { model: "plus_minus", maxPoints: Math.max(1, correctCount) },
-    rationale: values.rationale,
+    rationale: {
+      ...perElementOnly(values.rationale),
+      ...(blank(values.rationaleGeneral) ? {} : { general: markdown(values.rationaleGeneral) }),
+    },
     meta: { ...values.meta },
   };
 }
@@ -133,6 +141,7 @@ export function emptyGroupingForm(id: string): GroupingFormValues {
     tags: [],
     meta: {},
     rationale: {},
+    rationaleGeneral: "",
     stem: "",
     instructions: "",
     rows: [row(0), row(1)],
@@ -187,7 +196,10 @@ export function groupingFormFromStored(stored: unknown, rowId: string): Grouping
     ...storedRecordFormOf(stored),
     ...storedCjmmStepOf(stored),
     tags: storedStrings(stored.tags),
-    rationale: rationale.success ? rationale.data : blankForm.rationale,
+    rationale: rationale.success ? perElementOnly(rationale.data) : blankForm.rationale,
+    rationaleGeneral: markdownText(
+      isRecord(stored.rationale) ? stored.rationale.general : undefined,
+    ),
     stem: markdownText(stored.stem),
     instructions: storedString(stored.instructions),
     rows: rows.length > 0 ? rows : blankForm.rows,

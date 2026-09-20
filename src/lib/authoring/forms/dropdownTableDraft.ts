@@ -19,6 +19,7 @@ const draftSchema = z.strictObject({
   ehr: ehrFormDraftSchema.optional(),
   meta: itemMetaSchema,
   rationale: rationaleSchema,
+  rationaleGeneral: z.string().max(10_000),
   stem: z.string().max(20_000),
   instructions: z.string().max(2_000),
   columnLabel: z.string().max(2_000),

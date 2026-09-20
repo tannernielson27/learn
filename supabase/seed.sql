@@ -232,7 +232,7 @@ $json${"id":"cs_hip_4","stem":{"kind":"markdown","value":"Which interventions sh
   -- answer_key
 $json${"correctOptionIds":["o_o2","o_ct","o_antico","o_hob"]}$json$::jsonb,
   -- rationale
-$json${"general":{"kind":"markdown","value":"Support oxygenation, confirm the diagnosis, and anticipate anticoagulation. Raising the head of the bed eases the work of breathing. Massage and ambulation risk dislodging thrombus."}}$json$::jsonb,
+$json${"general":{"kind":"markdown","value":"Support oxygenation, confirm the diagnosis, and anticipate anticoagulation. Raising the head of the bed eases the work of breathing. Massage and ambulation risk dislodging thrombus."},"perElement":{"o_o2":{"kind":"markdown","value":"Hypoxemia is the immediate threat; titrated oxygen supports gas exchange."},"o_ct":{"kind":"markdown","value":"CT pulmonary angiography confirms a suspected pulmonary embolism."},"o_antico":{"kind":"markdown","value":"Anticoagulation stops the clot from growing while the body breaks it down."},"o_massage":{"kind":"markdown","value":"Massaging a calf with a suspected clot can dislodge it."},"o_ambulate":{"kind":"markdown","value":"Walking raises oxygen demand and can dislodge a clot; keep the client in bed."},"o_hob":{"kind":"markdown","value":"Sitting upright eases the work of breathing."}}}$json$::jsonb,
   -- scoring
 $json${"model":"plus_minus","maxPoints":4}$json$::jsonb
 ),

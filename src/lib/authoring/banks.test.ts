@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import { FIXTURES } from "@/lib/ngn/fixtures";
+import { itemSchema } from "@/lib/ngn/schemas";
+import { toItemRow } from "@/lib/supabase/itemRows";
 import {
   AuthoringDataError,
   listCaseStudies,
@@ -7,6 +10,7 @@ import {
   stemExcerpt,
   storedMaxPoints,
   storedTags,
+  WARNING_SCAN_LIMIT,
 } from "./banks";
 import { ITEM_PAGE_SIZE, NO_BANK_FILTER } from "./bankSearch";
 
@@ -75,18 +79,27 @@ describe("stemExcerpt", () => {
 
 type Result = { data?: unknown; error?: { message?: string } | null };
 
-/** A chainable stand-in for the Supabase client that records every call and returns one result. */
-function fakeClient(result: Result = { data: [], error: null }) {
+/**
+ * A chainable stand-in for the Supabase client that records every call. `result` answers the list
+ * function; each `tableResults` entry answers one `from()` query in order, the last one repeating,
+ * so a caller that reads tags and then whole rows can answer each with its own rows.
+ */
+function fakeClient(result: Result = { data: [], error: null }, ...tableResults: Result[]) {
   const calls: { method: string; args: unknown[] }[] = [];
+  let queries = 0;
   const chain: Record<string, unknown> = {};
-  for (const method of ["select", "eq", "is", "contains", "textSearch", "order", "limit"]) {
+  for (const method of ["select", "eq", "is", "in", "contains", "textSearch", "order", "limit"]) {
     chain[method] = (...args: unknown[]) => {
       calls.push({ method, args });
       return chain;
     };
   }
-  chain.then = (resolve: (value: Result) => unknown) => resolve(result);
-  const from = vi.fn(() => chain);
+  chain.then = (resolve: (value: Result) => unknown) =>
+    resolve(tableResults[Math.min(queries - 1, tableResults.length - 1)] ?? result);
+  const from = vi.fn(() => {
+    queries += 1;
+    return chain;
+  });
   const rpc = vi.fn(async () => result);
   return { client: { from, rpc } as never, from, rpc, calls };
 }
@@ -168,6 +181,7 @@ describe("listItems", () => {
           cjmmStep: 1,
           tags: ["sepsis"],
           match: null,
+          warningCount: 0,
         },
       ],
       total: 120,
@@ -216,6 +230,49 @@ describe("listItems", () => {
     ]);
   });
 
+  it("counts each listed item's warnings from whole rows, and carries nothing else of them", async () => {
+    const item = FIXTURES.multiple_choice.canonical;
+    const fake = fakeClient(
+      { data: [row({ id: "i1" })], error: null },
+      { data: [{ ...toItemRow(itemSchema.parse({ ...item, rationale: {} })), id: "i1" }] },
+    );
+    const { items } = await listItems(fake.client, BANK);
+    expect(items[0]!.warningCount).toBe(1);
+    const text = JSON.stringify(items[0]);
+    expect(text).not.toContain(item.answerKey.correctOptionId);
+    expect(text).not.toMatch(/answerKey|answer_key|rationale/i);
+  });
+
+  it("lists only items with warnings under Has warnings, paging the narrowed list", async () => {
+    const withWarning = itemSchema.parse({ ...FIXTURES.multiple_choice.canonical, rationale: {} });
+    const clean = itemSchema.parse(FIXTURES.multiple_choice.canonical);
+    const fake = fakeClient(
+      { data: [row({ id: "warned" }), row({ id: "clean" })], error: null },
+      {
+        data: [
+          { ...toItemRow(withWarning), id: "warned" },
+          { ...toItemRow(clean), id: "clean" },
+        ],
+      },
+    );
+    const page = await listItems(
+      fake.client,
+      BANK,
+      { kind: "all" },
+      {
+        ...NO_BANK_FILTER,
+        warnings: true,
+      },
+    );
+    // The wider slice of the same ranked list, narrowed here to the items that warn.
+    expect(fake.rpc).toHaveBeenCalledWith(
+      "list_bank_items",
+      expect.objectContaining({ page_size: WARNING_SCAN_LIMIT, page_offset: 0 }),
+    );
+    expect(page.items.map((listed) => listed.id)).toEqual(["warned"]);
+    expect(page.total).toBe(1);
+  });
+
   it("reads an empty page as no items and no total", async () => {
     const fake = fakeClient({ data: [], error: null });
     const page = await listItems(fake.client, BANK, { kind: "all" }, NO_BANK_FILTER, 4);
@@ -243,7 +300,7 @@ describe("listTaggedRows", () => {
         status: "draft",
       },
     );
-    expect(rows).toEqual([{ cjmmStep: 2, tags: ["renal"] }]);
+    expect(rows).toEqual([{ cjmmStep: 2, tags: ["renal"], hasWarnings: false }]);
     expect(fake.calls).toContainEqual({
       method: "textSearch",
       args: ["search_vector", "lactate", { config: "english", type: "websearch" }],
@@ -255,7 +312,39 @@ describe("listTaggedRows", () => {
   it("adds nothing without a search", async () => {
     const fake = fakeClient({ data: [], error: null });
     await listTaggedRows(fake.client, BANK);
+    // The cheap tag read alone: an empty scan asks for no whole rows.
     expect(fake.calls.map((call) => call.method)).toEqual(["select", "eq", "limit"]);
+  });
+
+  it("marks the rows that warn, from the same window Has warnings lists", async () => {
+    const warned = itemSchema.parse({ ...FIXTURES.multiple_choice.canonical, rationale: {} });
+    const clean = itemSchema.parse(FIXTURES.multiple_choice.canonical);
+    const fake = fakeClient(
+      // The list function answers the scan; then the tag read, then the whole-row read behind it.
+      { data: [row({ id: "warned" }), row({ id: "clean" })], error: null },
+      {
+        data: [
+          { id: "warned", cjmm_step: 1, tags: ["sepsis"] },
+          { id: "clean", cjmm_step: 2, tags: ["renal"] },
+        ],
+      },
+      {
+        data: [
+          { ...toItemRow(warned), id: "warned" },
+          { ...toItemRow(clean), id: "clean" },
+        ],
+      },
+    );
+    const rows = await listTaggedRows(fake.client, BANK);
+    expect(rows).toEqual([
+      { cjmmStep: 1, tags: ["sepsis"], hasWarnings: true },
+      { cjmmStep: 2, tags: ["renal"], hasWarnings: false },
+    ]);
+    // The same list function, the same cap and offset the Has warnings list reads.
+    expect(fake.rpc).toHaveBeenCalledWith(
+      "list_bank_items",
+      expect.objectContaining({ page_size: WARNING_SCAN_LIMIT, page_offset: 0, with_tags: [] }),
+    );
   });
 });
 

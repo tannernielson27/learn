@@ -8,6 +8,7 @@ import { fromEhrForm } from "@/lib/authoring/forms/ehr";
 import { parseEhrDraft } from "@/lib/authoring/forms/ehrDraft";
 import { withinItemSizeLimit } from "@/lib/authoring/payloadSize";
 import type { ItemType } from "@/lib/ngn/labels";
+import { publishBlockers } from "@/lib/ngn/quality";
 import type { CjmmStep } from "@/lib/ngn/types";
 import { validateCaseStudy } from "@/lib/ngn/validate";
 import type { Database, Json } from "@/lib/supabase/database.types";
@@ -186,6 +187,16 @@ export interface StoredCaseStudyRow {
   case_study_items: readonly { position: number; item_id: string; items: StoredStepItem | null }[];
 }
 
+/**
+ * Whether a step's item counts as published for the case study: published, still valid, and with
+ * the general rationale publishing now needs, since an item published before that rule may lack one.
+ */
+export function stepItemPublishable(item: StoredStepItem | null): boolean {
+  if (!item || item.status !== "published") return false;
+  const stored = fromItemRow(item);
+  return stored.ok && publishBlockers(stored.value).length === 0;
+}
+
 type AssembledCaseStudy = Extract<ReturnType<typeof validateCaseStudy>, { ok: true }>["value"];
 
 /**
@@ -202,9 +213,8 @@ export function caseStudyStepStates(
     return {
       position: step.position as CjmmStep,
       itemId: step.item_id,
-      itemReady: Boolean(
-        stored?.ok && (purpose === "preview" || step.items?.status === "published"),
-      ),
+      // For publishing, stepItemPublishable also wants the rationale publishing now needs.
+      itemReady: purpose === "preview" ? Boolean(stored?.ok) : stepItemPublishable(step.items),
       wrongStep: Boolean(step.items && step.items.cjmm_step !== step.position),
     };
   });

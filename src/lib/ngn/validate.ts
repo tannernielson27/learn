@@ -1,4 +1,5 @@
-import { caseStudySchema, itemSchema, spanIdsOf, type CaseStudy, type Item } from "./schemas";
+import { itemQualityWarnings } from "./quality";
+import { caseStudySchema, itemSchema, type CaseStudy, type Item } from "./schemas";
 
 export type ValidationResult<T> =
   { ok: true; value: T; warnings: string[] } | { ok: false; errors: string[] };
@@ -6,30 +7,9 @@ export type ValidationResult<T> =
 const formatIssue = (issue: { path: PropertyKey[]; message: string }): string =>
   issue.path.length ? `${issue.path.map(String).join(".")}: ${issue.message}` : issue.message;
 
-/** Warning-level authoring rules (spec §6). Errors live in the schemas. */
+/** Warning-level authoring rules (spec §6), as plain messages. Errors live in the schemas. */
 export function itemWarnings(item: Item): string[] {
-  const warnings: string[] = [];
-  if (!item.rationale.general) {
-    warnings.push("rationale.general is missing; required before publishing");
-  }
-  if (item.type === "multiple_response" && item.content.variant === "sata") {
-    if (item.answerKey.correctOptionIds.length === item.content.options.length) {
-      warnings.push("every SATA option is marked correct");
-    }
-  }
-  if (item.type === "highlight_text" || item.type === "highlight_table") {
-    const spanCount =
-      item.type === "highlight_text"
-        ? spanIdsOf(item.content.passage).length
-        : item.content.rows.reduce(
-            (n, r) => n + r.cells.reduce((m, c) => m + spanIdsOf(c).length, 0),
-            0,
-          );
-    if (item.answerKey.correctSpanIds.length > spanCount * 0.6) {
-      warnings.push("more than 60% of highlightable spans are correct");
-    }
-  }
-  return warnings;
+  return itemQualityWarnings(item).map((warning) => warning.message);
 }
 
 export function validateItem(input: unknown): ValidationResult<Item> {
