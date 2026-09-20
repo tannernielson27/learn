@@ -88,7 +88,8 @@ function fakeClient(result: Result = { data: [], error: null }, ...tableResults:
   const calls: { method: string; args: unknown[] }[] = [];
   let queries = 0;
   const chain: Record<string, unknown> = {};
-  for (const method of ["select", "eq", "is", "in", "contains", "textSearch", "order", "limit"]) {
+  const methods = ["select", "eq", "neq", "is", "in", "contains", "textSearch", "order", "limit"];
+  for (const method of methods) {
     chain[method] = (...args: unknown[]) => {
       calls.push({ method, args });
       return chain;
@@ -309,11 +310,12 @@ describe("listTaggedRows", () => {
     expect(fake.calls).toContainEqual({ method: "eq", args: ["status", "draft"] });
   });
 
-  it("adds nothing without a search", async () => {
+  it("adds nothing without a search but the archived items it always leaves out", async () => {
     const fake = fakeClient({ data: [], error: null });
     await listTaggedRows(fake.client, BANK);
     // The cheap tag read alone: an empty scan asks for no whole rows.
-    expect(fake.calls.map((call) => call.method)).toEqual(["select", "eq", "limit"]);
+    expect(fake.calls.map((call) => call.method)).toEqual(["select", "eq", "neq", "limit"]);
+    expect(fake.calls).toContainEqual({ method: "neq", args: ["status", "archived"] });
   });
 
   it("marks the rows that warn, from the same window Has warnings lists", async () => {

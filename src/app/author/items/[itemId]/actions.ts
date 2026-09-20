@@ -29,6 +29,7 @@ import { fromMultipleResponseForm } from "@/lib/authoring/forms/multipleResponse
 import { parseMultipleResponseDraft } from "@/lib/authoring/forms/multipleResponseDraft";
 import { fromGroupingForm } from "@/lib/authoring/forms/multipleResponseGrouping";
 import { parseGroupingDraft } from "@/lib/authoring/forms/multipleResponseGroupingDraft";
+import { ARCHIVE_ERRORS, isArchivedError } from "@/lib/authoring/archive";
 import { pinnedStepFor } from "@/lib/authoring/caseStudies";
 import { isUuid } from "@/lib/authoring/ids";
 import { withinItemSizeLimit } from "@/lib/authoring/payloadSize";
@@ -51,6 +52,8 @@ const PUBLISH_FAILED: SaveResult = {
   ok: false,
   error: "The item could not be published. Try again.",
 };
+/** The database refuses to change archived content (see the archive migration). */
+const ARCHIVED: SaveResult = { ok: false, error: ARCHIVE_ERRORS.itemArchived };
 
 function revalidateItem(itemId: string) {
   revalidatePath(`/author/items/${itemId}`);
@@ -97,6 +100,7 @@ async function saveDraft<Values>(
     .eq("id", itemId)
     .eq("type", type)
     .select("id");
+  if (isArchivedError(error)) return ARCHIVED;
   if (error) return SAVE_FAILED;
   if (data.length === 0) return GONE;
 
@@ -148,6 +152,7 @@ async function publish(itemId: string, type: ItemType, input: unknown): Promise<
     .eq("id", itemId)
     .eq("type", type)
     .select("id");
+  if (isArchivedError(error)) return ARCHIVED;
   if (error) return PUBLISH_FAILED;
   if (data.length === 0) return GONE;
 

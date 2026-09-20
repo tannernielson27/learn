@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { restoreCaseStudyAction, restoreItemAction } from "@/app/author/archiveActions";
+import { ArchiveViewSwitch } from "@/components/authoring/ArchiveViewSwitch";
 import { BankSearchForm } from "@/components/authoring/BankSearchForm";
 import { CaseStudyList } from "@/components/authoring/CaseStudyList";
 import { CreateBankForm } from "@/components/authoring/CreateBankForm";
@@ -57,6 +59,8 @@ export default async function BankPage({
   const page = parsePage(query.page);
   const tagFiltered = isFiltering(filter);
   const searching = isSearching(search);
+  // The Archived view is the status filter set to archived; every other list leaves archived out.
+  const archived = search.status === "archived";
 
   const { supabase } = await requireAuthor(`/author/banks/${bankId}`);
   const { data: bank } = await supabase
@@ -86,12 +90,38 @@ export default async function BankPage({
   const heading = folder?.name ?? (view.kind === "unfiled" ? "Unfiled" : bank.name);
   const filtered = view.kind !== "all";
   const hasContent = items.length > 0 || caseStudies.length > 0;
+  // The Archived view speaks for itself; a search or a filter within it says so instead.
+  const onlyArchived = archived && !search.query && !search.type;
+  const noItems =
+    page > 1
+      ? "No items on this page."
+      : tagFiltered
+        ? filter.warnings
+          ? "No items here match every chosen filter."
+          : "No items here carry every chosen tag."
+        : onlyArchived
+          ? "No archived items here."
+          : searching
+            ? "No items here match the search."
+            : filtered
+              ? "No items in this folder."
+              : undefined;
+  const noCaseStudies = search.query
+    ? "No case study titles match the search."
+    : onlyArchived
+      ? "No archived case studies here."
+      : searching
+        ? "No case studies here have that status."
+        : filtered
+          ? "No case studies in this folder."
+          : undefined;
 
   return (
     <>
       <FolderBreadcrumbs bankId={bank.id} bankName={bank.name} trail={trail} view={view} />
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <h1 className="min-w-0 font-read text-3xl break-words text-ink-1">{heading}</h1>
+        <ArchiveViewSwitch bankId={bank.id} view={view} filter={filter} />
         <Link
           href={`/author/banks/${bank.id}/new`}
           className="tap-target inline-flex items-center rounded-sm border border-accent bg-accent px-4 font-medium text-accent-contrast hover:bg-accent-ink"
@@ -141,7 +171,7 @@ export default async function BankPage({
         <div className="flex min-w-0 flex-col gap-10">
           <section aria-labelledby="items-heading" className="flex flex-col gap-4">
             <h2 id="items-heading" className="font-read text-2xl text-ink-1">
-              Items
+              {archived ? "Archived items" : "Items"}
             </h2>
             <BankSearchForm bankId={bank.id} view={view} filter={filter} />
             <TagFilterBar bankId={bank.id} view={view} filter={filter} facets={facets} />
@@ -161,19 +191,8 @@ export default async function BankPage({
             <ItemList
               items={items}
               moveFormId={hasContent ? MOVE_FORM_ID : undefined}
-              emptyMessage={
-                page > 1
-                  ? "No items on this page."
-                  : searching
-                    ? "No items here match the search."
-                    : tagFiltered
-                      ? filter.warnings
-                        ? "No items here match every chosen filter."
-                        : "No items here carry every chosen tag."
-                      : filtered
-                        ? "No items in this folder."
-                        : undefined
-              }
+              restoreAction={archived ? (id) => restoreItemAction.bind(null, id) : undefined}
+              emptyMessage={noItems}
             />
             <Pager
               page={page}
@@ -183,7 +202,7 @@ export default async function BankPage({
           </section>
           <section aria-labelledby="case-studies-heading" className="flex flex-col gap-4">
             <h2 id="case-studies-heading" className="font-read text-2xl text-ink-1">
-              Case studies
+              {archived ? "Archived case studies" : "Case studies"}
             </h2>
             {tagFiltered || search.type ? (
               <p className="text-ink-2">
@@ -195,15 +214,8 @@ export default async function BankPage({
               <CaseStudyList
                 caseStudies={caseStudies}
                 moveFormId={hasContent ? MOVE_FORM_ID : undefined}
-                emptyMessage={
-                  search.query
-                    ? "No case study titles match the search."
-                    : searching
-                      ? "No case studies here have that status."
-                      : filtered
-                        ? "No case studies in this folder."
-                        : undefined
-                }
+                restoreAction={archived ? (id) => restoreCaseStudyAction.bind(null, id) : undefined}
+                emptyMessage={noCaseStudies}
               />
             )}
             <CreateCaseStudyForm action={createCaseStudyInBank.bind(null, bank.id)} />

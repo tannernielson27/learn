@@ -193,6 +193,7 @@ function itemMatch(row: {
 /**
  * The tags, CJMM step and whether it has warnings, for every item in a view, for the filter's
  * counts. Whole rows are read to judge warnings; only these three facts leave this function.
+ * Archived items are left out unless the Archived view asked for them (see `withStatus`).
  */
 export async function listTaggedRows(
   client: Client,
@@ -239,7 +240,10 @@ export interface CaseStudySummary {
   updatedAt: string;
 }
 
-/** A bank's case studies in a folder view. A search matches titles only, and a status narrows. */
+/**
+ * A bank's case studies in a folder view. A search matches titles only, and a status narrows;
+ * without a status the Archived ones are left out, as they are for items.
+ */
 export async function listCaseStudies(
   client: Client,
   bankId: string,
@@ -301,10 +305,16 @@ function matching<Q extends TextSearchable<Q>>(
 
 interface StatusFilterable<Q> {
   eq(column: "status", value: ContentStatus): Q;
+  neq(column: "status", value: ContentStatus): Q;
 }
 
+/**
+ * The chosen status, or — with none chosen — current content alone: archived content is out of the
+ * bank's default lists and shows only in the Archived view, which asks for it by name. The item
+ * list holds the same rule inside `list_bank_items` (see the archive migration).
+ */
 function withStatus<Q extends StatusFilterable<Q>>(query: Q, search: ItemSearch): Q {
-  return search.status ? query.eq("status", search.status) : query;
+  return search.status ? query.eq("status", search.status) : query.neq("status", "archived");
 }
 
 interface TypeFilterable<Q> {

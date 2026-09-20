@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { ARCHIVE_ERRORS, isArchivedError } from "@/lib/authoring/archive";
 import {
   caseStudyBlockers,
   type CaseStudyStepState,
@@ -75,6 +76,7 @@ export async function saveRecord(
     .update({ ehr: record as Json, status: "draft" })
     .eq("id", caseStudyId)
     .select("id");
+  if (isArchivedError(error)) return { ok: false, error: ARCHIVE_ERRORS.caseStudyArchived };
   if (error) return { ok: false, error: CASE_STUDY_ERRORS.failed };
   if (data.length === 0) return { ok: false, error: CASE_STUDY_ERRORS.gone };
   return { ok: true, value: undefined };
@@ -146,6 +148,8 @@ export async function placeStep(
     step_item: args.itemId,
   });
   if (!error) return { ok: true, value: undefined };
+  // 55000: the item or the case study is archived; the rest is the placement itself.
+  if (isArchivedError(error)) return { ok: false, error: ARCHIVE_ERRORS.stepArchived };
   // 23503: the item is in another bank (or org). 23505: it is already another step here.
   if (error.code === "23503") return { ok: false, error: CASE_STUDY_ERRORS.wrongBank };
   if (error.code === "23505") return { ok: false, error: CASE_STUDY_ERRORS.alreadyStep };
@@ -162,6 +166,7 @@ export async function reorderSteps(
     target: caseStudyId,
     item_ids: [...itemIds],
   });
+  if (isArchivedError(error)) return { ok: false, error: ARCHIVE_ERRORS.caseStudyArchived };
   if (error) return { ok: false, error: CASE_STUDY_ERRORS.badOrder };
   return { ok: true, value: undefined };
 }
@@ -282,6 +287,9 @@ export async function publishCaseStudy(
     .from("case_studies")
     .update({ status: "published" })
     .eq("id", caseStudyId);
+  if (isArchivedError(publishError)) {
+    return { ok: false, error: ARCHIVE_ERRORS.caseStudyArchived };
+  }
   if (publishError) return { ok: false, error: CASE_STUDY_ERRORS.failed };
   return { ok: true, value: undefined };
 }

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { sampleCaseStudy } from "@/lib/ngn/fixtures";
 import { validateCaseStudy } from "@/lib/ngn/validate";
 import { toCaseStudyRow } from "@/lib/supabase/itemRows";
+import { ARCHIVE_ERRORS } from "./archive";
 import {
   CASE_STUDY_ERRORS,
   createCaseStudy,
@@ -386,6 +387,14 @@ describe("reorderSteps", () => {
       error: CASE_STUDY_ERRORS.badOrder,
     });
   });
+
+  it("says an archived case study must be restored before its steps move", async () => {
+    const fake = fakeClient({}, { error: { code: "55000" } });
+    expect(await reorderSteps(fake.client, CASE_ID, ["a", "b"])).toEqual({
+      ok: false,
+      error: ARCHIVE_ERRORS.caseStudyArchived,
+    });
+  });
 });
 
 describe("publishCaseStudy", () => {
@@ -427,5 +436,18 @@ describe("publishCaseStudy", () => {
     });
     const update = fake.calls.find((call) => call.method === "update");
     expect(update?.args[0]).toEqual({ status: "published" });
+  });
+
+  it("says an archived case study must be restored before it is published again", async () => {
+    const fake = fakeClient({
+      case_studies: [
+        { data: storedCaseStudy(6), error: null },
+        { data: null, error: { code: "55000" } },
+      ],
+    });
+    expect(await publishCaseStudy(fake.client, CASE_ID)).toEqual({
+      ok: false,
+      error: ARCHIVE_ERRORS.caseStudyArchived,
+    });
   });
 });

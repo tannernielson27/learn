@@ -1,5 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CaseStudyList } from "./CaseStudyList";
 
 const caseStudies = [
@@ -55,5 +55,23 @@ describe("CaseStudyList", () => {
     expect(sepsis).toHaveAttribute("name", "caseStudy");
     expect(sepsis).toHaveAttribute("value", "c2");
     expect(sepsis.closest("a")).toBeNull();
+  });
+
+  it("offers Restore on each archived case study, named for it, outside its link", () => {
+    const archived = caseStudies.map((caseStudy) => ({
+      ...caseStudy,
+      status: "archived" as const,
+    }));
+    const restoreAction = vi.fn((id: string) => async () => {
+      void id;
+      return { status: "idle" as const };
+    });
+    render(<CaseStudyList caseStudies={archived} restoreAction={restoreAction} />);
+    const restore = screen.getByRole("button", { name: "Restore Sepsis" });
+    expect(restore.closest("a")).toBeNull();
+    expect(
+      within(screen.getByRole("link", { name: /Sepsis/ })).getByText("Archived"),
+    ).toBeInTheDocument();
+    expect(restoreAction).toHaveBeenCalledWith("c2");
   });
 });

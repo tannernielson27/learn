@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { publishCaseStudyAction } from "@/app/author/case-studies/[caseStudyId]/actions";
+import { archiveCaseStudyAction, restoreCaseStudyAction } from "@/app/author/archiveActions";
 import { duplicateCaseStudyAction } from "@/app/author/duplicateActions";
 import {
   assembleCaseStudy,
@@ -12,6 +13,7 @@ import {
   type BuilderStep,
   type StepStatus,
 } from "@/components/authoring/CaseStudyBuilder";
+import { ArchiveButton } from "@/components/authoring/ArchiveButton";
 import { DuplicateButton } from "@/components/authoring/DuplicateButton";
 import { EhrEditorLoader } from "@/components/authoring/EhrEditorLoader";
 import { editorFor, storedItemOf } from "@/components/authoring/editorFor";
@@ -134,7 +136,24 @@ export default async function CaseStudyPage({
             action={duplicateCaseStudyAction.bind(null, row.id)}
             label="Duplicate case study"
           />
+          {row.status === "archived" ? (
+            <ArchiveButton
+              action={restoreCaseStudyAction.bind(null, row.id)}
+              label="Restore case study"
+            />
+          ) : (
+            <ArchiveButton
+              action={archiveCaseStudyAction.bind(null, row.id)}
+              label="Archive case study"
+            />
+          )}
         </div>
+        {row.status === "archived" ? (
+          <p className="mb-6 max-w-prose rounded-sm border border-line bg-surface-2 p-3 text-ink-1">
+            This case study is archived. It is out of the bank&apos;s list, and its record, its
+            steps and their order cannot change until it is restored.
+          </p>
+        ) : null}
       </CaseStudyBuilder>
 
       {blockers.length > 0 ? (
