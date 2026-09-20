@@ -365,6 +365,54 @@ export type Database = {
         };
         Relationships: [];
       };
+      participants: {
+        Row: {
+          display_name: string;
+          id: string;
+          joined_at: string;
+          last_seen_at: string;
+          org_id: string;
+          profile_id: string | null;
+          rejoin_hash: string;
+          session_id: string;
+        };
+        Insert: {
+          display_name: string;
+          id?: string;
+          joined_at?: string;
+          last_seen_at?: string;
+          org_id: string;
+          profile_id?: string | null;
+          rejoin_hash: string;
+          session_id: string;
+        };
+        Update: {
+          display_name?: string;
+          id?: string;
+          joined_at?: string;
+          last_seen_at?: string;
+          org_id?: string;
+          profile_id?: string | null;
+          rejoin_hash?: string;
+          session_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "participants_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "participants_session_org_fkey";
+            columns: ["session_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "sessions";
+            referencedColumns: ["id", "org_id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           created_at: string;
@@ -638,6 +686,13 @@ export type Database = {
         };
         Returns: Json;
       };
+      join_session: {
+        Args: { chosen_name: string; target_session: string };
+        Returns: {
+          participant_id: string;
+          rejoin_secret: string;
+        }[];
+      };
       list_bank_items: {
         Args: {
           in_folder?: string;
@@ -712,6 +767,20 @@ export type Database = {
       };
       restore_case_study: { Args: { target: string }; Returns: undefined };
       restore_item: { Args: { target: string }; Returns: undefined };
+      resume_participant: {
+        Args: {
+          presented_secret: string;
+          target_participant: string;
+          target_session: string;
+        };
+        Returns: {
+          participant_id: string;
+          participant_name: string;
+          session_mode: Database["public"]["Enums"]["session_mode"];
+          session_status: Database["public"]["Enums"]["session_status"];
+          session_title: string;
+        }[];
+      };
       start_case_study_step: {
         Args: { step_position: number; step_type: string; target: string };
         Returns: string;

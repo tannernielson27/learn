@@ -30,6 +30,14 @@
   --flag: oklch(62% 0.13 75);
   --flag-soft: oklch(96% 0.05 85);
 
+  /*
+   * A QR code is read by a camera, not by a person, so it is the one mark in the system that does
+   * not re-light for dark mode: most scanners refuse a code whose reflectance is reversed. These
+   * two stay as they are in both themes, which is why they are not restated below.
+   */
+  --qr-dark: oklch(20% 0 0);
+  --qr-light: oklch(100% 0 0);
+
   /* Type */
   --ff-ui: var(--font-inter), "Segoe UI", system-ui, sans-serif;
   --ff-read: var(--font-source-serif), Georgia, "Times New Roman", serif;
