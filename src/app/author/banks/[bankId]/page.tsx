@@ -16,6 +16,8 @@ import { ItemList } from "@/components/authoring/ItemList";
 import { MoveToFolderForm } from "@/components/authoring/MoveToFolderForm";
 import { Pager } from "@/components/authoring/Pager";
 import { TagFilterBar } from "@/components/authoring/TagFilterBar";
+import { Button } from "@/components/ui/Button";
+import { startLiveSession } from "@/app/live/actions";
 import {
   isSearching,
   parseItemSearch,
@@ -42,6 +44,15 @@ import {
 export const metadata: Metadata = { title: "Item bank" };
 
 const MOVE_FORM_ID = "move-to-folder";
+
+/** Why a live session could not start, carried back on the query string by startLiveSession. */
+function liveStartMessage(value: string | string[] | undefined): string | undefined {
+  const reason = Array.isArray(value) ? value[0] : value;
+  if (reason === undefined) return undefined;
+  if (reason === "empty") return "Publish an item in this bank before starting a live session.";
+  if (reason === "gone") return "That bank no longer exists.";
+  return "The session could not be started. Try again.";
+}
 
 export default async function BankPage({
   params,
@@ -106,6 +117,7 @@ export default async function BankPage({
             : filtered
               ? "No items in this folder."
               : undefined;
+  const liveRefusal = liveStartMessage(query.live);
   const noCaseStudies = search.query
     ? "No case study titles match the search."
     : onlyArchived
@@ -122,6 +134,11 @@ export default async function BankPage({
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <h1 className="min-w-0 font-read text-3xl break-words text-ink-1">{heading}</h1>
         <ArchiveViewSwitch bankId={bank.id} view={view} filter={filter} />
+        <form action={startLiveSession.bind(null, bank.id)}>
+          <Button type="submit" variant="secondary">
+            Start a live session
+          </Button>
+        </form>
         <Link
           href={`/author/banks/${bank.id}/new`}
           className="tap-target inline-flex items-center rounded-sm border border-accent bg-accent px-4 font-medium text-accent-contrast hover:bg-accent-ink"
@@ -129,6 +146,11 @@ export default async function BankPage({
           New item
         </Link>
       </div>
+      {liveRefusal ? (
+        <p role="alert" className="mb-6 text-sm text-incorrect">
+          {liveRefusal}
+        </p>
+      ) : null}
 
       <div className="grid gap-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
         <aside className="flex min-w-0 flex-col gap-6">
