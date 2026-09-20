@@ -139,7 +139,10 @@ describe("refusing an import", () => {
   });
 
   it("refuses an empty item list, or more items than one import takes", () => {
-    const expected = { ok: false, errors: ["Include between 1 and 50 items."] };
+    const expected = {
+      ok: false,
+      errors: ["Include between 1 and 50 items. Split a larger set into several files."],
+    };
     expect(parseImport(JSON.stringify({ format: "learn.v1", items: [] }))).toEqual(expected);
     const many = Array.from({ length: 51 }, () => good());
     expect(parseImport(JSON.stringify({ format: "learn.v1", items: many }))).toEqual(expected);

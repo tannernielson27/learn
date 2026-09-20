@@ -405,7 +405,12 @@ export type Database = {
       };
       duplicate_item: { Args: { source_item: string }; Returns: string };
       import_bank_content: {
-        Args: { new_case_study: Json; new_items: Json; target_bank: string };
+        Args: {
+          new_case_study: Json;
+          new_items: Json;
+          target_bank: string;
+          target_folder?: string;
+        };
         Returns: Json;
       };
       list_bank_items: {

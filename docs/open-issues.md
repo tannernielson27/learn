@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-19 (#104 tags, #115 demo account, #108 version history, #111 polish and #106 duplicate merged; #105 search in review, #121).
+Last updated: 2026-09-19 (#104 tags, #115 demo account, #108 version history, #111 polish, #106 duplicate and #105 search merged; #109 bulk import in review, #122).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -15,11 +15,11 @@ Demo 6: organize a 50-item bank, find items by tag, fix warnings.
 | [#94](https://github.com/tannernielson27/learn/issues/94)   | fix(authoring): keep maxPoints out of the play page until the answer is scored | security          | Merged (#113)                                                              |
 | [#103](https://github.com/tannernielson27/learn/issues/103) | feat(authoring): sort a bank into folders                                      | db, e2e           | Merged (#114); confirm `bank_folders` is applied to hosted                 |
 | [#104](https://github.com/tannernielson27/learn/issues/104) | feat(authoring): tag items and filter a bank by tag                            | db, e2e           | Merged (#118); apply `20260919000000_item_tags` to hosted                  |
-| [#105](https://github.com/tannernielson27/learn/issues/105) | feat(authoring): search a bank                                                 | security, db, e2e | In review (#121); apply `20260919130000_item_search` to hosted             |
+| [#105](https://github.com/tannernielson27/learn/issues/105) | feat(authoring): search a bank                                                 | security, db, e2e | Merged (#121); apply `20260919130000_item_search` to hosted                |
 | [#106](https://github.com/tannernielson27/learn/issues/106) | feat(authoring): duplicate an item or a case study                             | db, e2e           | Merged (#120)                                                              |
 | [#107](https://github.com/tannernielson27/learn/issues/107) | feat(authoring): archive and restore items and case studies                    | e2e               | To do                                                                      |
 | [#108](https://github.com/tannernielson27/learn/issues/108) | feat(authoring): see an item's version history and restore a version           | e2e               | Merged (#117)                                                              |
-| [#109](https://github.com/tannernielson27/learn/issues/109) | feat(authoring): import many files and large sets at once                      | security, e2e     | To do                                                                      |
+| [#109](https://github.com/tannernielson27/learn/issues/109) | feat(authoring): import many files and large sets at once                      | security, e2e     | In review (#122)                                                           |
 | [#110](https://github.com/tannernielson27/learn/issues/110) | feat(authoring): show quality warnings in the editor and the bank              | e2e               | To do; needs an owner decision on the rationale.general publish rule       |
 | [#111](https://github.com/tannernielson27/learn/issues/111) | chore(authoring): polish carried from Sprint 5                                 | security, db      | Merged (#119); apply `20260919110000_start_step_and_rate_limits` to hosted |
 
