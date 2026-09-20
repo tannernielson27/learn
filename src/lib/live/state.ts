@@ -41,7 +41,12 @@ export type HostCommand = (typeof HOST_COMMANDS)[number];
 export type TransitionResult =
   { ok: true; state: LiveSessionState } | { ok: false; refusal: LiveRefusal; message: string };
 
-export type GuardResult = { ok: true } | { ok: false; refusal: LiveRefusal; message: string };
+/**
+ * Whether an answer may be taken. The accepted branch carries the narrowed `position`, so the
+ * caller reaches the item without asserting past the compiler that it is not null.
+ */
+export type GuardResult =
+  { ok: true; position: number } | { ok: false; refusal: LiveRefusal; message: string };
 
 const refuse = (refusal: LiveRefusal): { ok: false; refusal: LiveRefusal; message: string } => ({
   ok: false,
@@ -128,7 +133,7 @@ export function canSubmit(
   if (state.reveal) return refuse("already_revealed");
   // `position` counts from 1, the array from 0.
   if (itemIds[state.position - 1] !== itemId) return refuse("wrong_item");
-  return { ok: true };
+  return { ok: true, position: state.position };
 }
 
 /** The item the room is on, or null when it is not on one. Counts from 1, like `position`. */

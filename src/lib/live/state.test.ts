@@ -173,7 +173,12 @@ describe("canSubmit", () => {
   const ids = ["a", "b", "c"];
 
   it("accepts an answer to the item the room is on", () => {
-    expect(canSubmit(drive(lobby(), ["start"]), "a", ids)).toEqual({ ok: true });
+    // The accepted branch carries the position it checked, so the caller needs no cast.
+    expect(canSubmit(drive(lobby(), ["start"]), "a", ids)).toEqual({ ok: true, position: 1 });
+    expect(canSubmit(drive(lobby(), ["start", "advance"]), "b", ids)).toEqual({
+      ok: true,
+      position: 2,
+    });
   });
 
   it("refuses an answer after the session ends", () => {

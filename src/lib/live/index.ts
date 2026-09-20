@@ -32,6 +32,7 @@ export {
   type LiveSessionTransport,
   type Participant,
   type ParticipantIdentity,
+  type ParticipantItem,
   type ParticipantSnapshot,
   type SessionView,
   type SubmitAck,

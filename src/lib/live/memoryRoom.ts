@@ -13,13 +13,7 @@
  */
 import { maxPoints } from "@/lib/ngn/scoring";
 import type { AnyResponse, Item } from "@/lib/ngn/schemas";
-import {
-  parseSubmission,
-  scoreSubmission,
-  toKeylessItem,
-  SUBMIT_ERRORS,
-  type KeylessItem,
-} from "@/lib/ngn/submit";
+import { parseSubmission, scoreSubmission, toKeylessItem, SUBMIT_ERRORS } from "@/lib/ngn/submit";
 import type { ScoreResult } from "@/lib/ngn/types";
 import { LiveSessionError } from "./errors";
 import {
@@ -38,6 +32,7 @@ import type {
   LiveSessionTransport,
   Participant,
   ParticipantIdentity,
+  ParticipantItem,
   ParticipantSnapshot,
   HostSnapshot,
   SessionView,
@@ -82,7 +77,7 @@ interface StoredAnswer {
 
 interface ParticipantConnection {
   participantId: string | null;
-  views: Set<(view: SessionView<KeylessItem>) => void>;
+  views: Set<(view: SessionView<ParticipantItem>) => void>;
   presence: Set<(roster: Participant[]) => void>;
   reveals: Set<(revealed: ItemReveal) => void>;
 }
@@ -114,7 +109,7 @@ function subscribe<T>(listeners: Set<T>, listener: T): Unsubscribe {
 export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
   const items: Item[] = [...options.items];
   /** Built once, so no request path ever reaches for `toKeylessItem` under time pressure. */
-  const keylessItems: KeylessItem[] = items.map(toKeylessItem);
+  const keylessItems: ParticipantItem[] = items.map(toKeylessItem);
   const itemIds = items.map((item) => item.id);
   const sessionId = options.sessionId ?? "in-memory-session";
   const code = options.code ?? DEFAULT_CODE;
@@ -135,7 +130,7 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
       (a, b) => a.joinedAt - b.joinedAt || a.participantId.localeCompare(b.participantId),
     );
 
-  const participantView = (): SessionView<KeylessItem> => ({
+  const participantView = (): SessionView<ParticipantItem> => ({
     state,
     item: itemAt(keylessItems, state),
   });
@@ -178,10 +173,14 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
       else noMarks += 1;
     }
     const responded = given?.size ?? 0;
+    // Everyone this tally is over: the room as it stands, plus anyone who answered and has since
+    // left. Counting the roster alone would let `present` fall below `responded` — a phone locking
+    // after its owner answered would read "1 of 0 answered".
+    const present = new Set([...roster.keys(), ...(given?.keys() ?? [])]).size;
     return {
       itemId: item.id,
       position,
-      present: roster.size,
+      present,
       responded,
       fullMarks,
       partialMarks,
@@ -308,9 +307,9 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
         const guard = canSubmit(state, itemId, itemIds);
         if (!guard.ok) throw new LiveSessionError(guard.refusal);
 
-        // `canSubmit` has already established both.
-        const position = state.position as number;
-        const item = items[position - 1] as Item;
+        // The accepted branch carries the position it checked, so there is nothing to assert here.
+        const position = guard.position;
+        const item = items[position - 1];
 
         const given = answers.get(position) ?? new Map<string, StoredAnswer>();
         if (given.has(participantId)) throw new LiveSessionError("already_answered");

@@ -24,10 +24,15 @@ const FORBIDDEN: { pattern: RegExp; why: string }[] = [
   { pattern: /^@\/app(\/|$)/, why: "route code" },
 ];
 
-/** Every module specifier a file imports from, `import type` included. */
+/**
+ * Every module specifier a file imports from: `import … from "x"`, bare `import "x"`, `export …
+ * from "x"`, and `import("x")` / `require("x")`. The dynamic forms matter most — this test is the
+ * only thing enforcing the rule until the ESLint override lands, and `await import("…")` is exactly
+ * how a static check gets walked around by accident.
+ */
 function importsOf(source: string): string[] {
   const specifiers: string[] = [];
-  const pattern = /(?:from|import)\s*["']([^"']+)["']/g;
+  const pattern = /(?:\bfrom|\bimport|\brequire)\s*\(?\s*["']([^"']+)["']/g;
   let match = pattern.exec(source);
   while (match !== null) {
     specifiers.push(match[1] as string);
@@ -43,6 +48,17 @@ const sources = readdirSync(LIVE_DIR)
 describe("src/lib/live is pure TypeScript", () => {
   it("has files to check", () => {
     expect(sources.length).toBeGreaterThan(0);
+  });
+
+  it("reads dynamic imports and re-exports, not only static ones", () => {
+    const sample = [
+      'import one from "static";',
+      'import "bare";',
+      'export { two } from "re-exported";',
+      'const three = await import("dynamic");',
+      'const four = require("required");',
+    ].join("\n");
+    expect(importsOf(sample)).toEqual(["static", "bare", "re-exported", "dynamic", "required"]);
   });
 
   it.each(sources.map(({ name }) => name))("%s imports nothing forbidden", (name) => {

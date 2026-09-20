@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createInMemoryRoom,
+  initialSessionState,
   isLiveSessionError,
   toScoreReveal,
   type InMemoryRoom,
@@ -10,10 +11,12 @@ import {
   type LiveRefusal,
   type LiveSessionTransport,
   type Participant,
+  type ParticipantItem,
   type SessionView,
 } from "@/lib/live";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema, type AnyResponse, type Item } from "@/lib/ngn/schemas";
+import { toKeylessItem } from "@/lib/ngn/submit";
 
 const first = itemSchema.parse(FIXTURES.multiple_choice.canonical);
 const second = itemSchema.parse(FIXTURES.multiple_choice.edge);
@@ -179,6 +182,19 @@ describe("what a participant is given", () => {
     expect(item).not.toHaveProperty("scoring");
     // The option ids are content and belong there; the key that names one of them does not.
     expect(JSON.stringify(item)).not.toContain("correctOptionId");
+  });
+
+  it("will not compile if a host's view is put on a participant's channel", () => {
+    const participantListener = (view: SessionView<ParticipantItem>) => view.item;
+    const hostView: SessionView<Item> = { state: initialSessionState(1), item: first };
+    // @ts-expect-error an item that still has an answerKey is not a ParticipantItem (ADR 0003).
+    participantListener(hostView);
+    // The keyless one is, so the branding refuses only what it should.
+    const accepted = participantListener({
+      state: initialSessionState(1),
+      item: toKeylessItem(first),
+    });
+    expect(accepted).toMatchObject({ id: first.id });
   });
 
   it("gives the host the whole item, keys included", async () => {
@@ -421,6 +437,18 @@ describe("aggregates", () => {
     expect(seen).toEqual([expect.objectContaining({ position: 1, responded: 1 })]);
     await host.end();
     expect(seen.at(-1)).toMatchObject({ position: 2, responded: 0, meanPoints: 0 });
+  });
+
+  it("never report more answers than people, when someone answers and then drops out", async () => {
+    const room = makeRoom();
+    const { host, seen } = await aggregatesOf(room);
+    await host.start();
+    const ada = await joined(room, "Ada");
+    await ada.submit(first.id, CORRECT);
+    // A phone locks, a tab reloads: the answer stays, the person goes.
+    await ada.leave();
+    await host.reveal();
+    expect(seen[0]).toMatchObject({ present: 1, responded: 1 });
   });
 
   it("say nothing when the room never reached an item", async () => {

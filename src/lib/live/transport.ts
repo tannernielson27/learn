@@ -13,6 +13,15 @@
  * comment, so a student's page cannot be handed something that can reveal a key or read the room's
  * tallies. Everything a participant can reach is on `LiveSessionTransport`.
  *
+ * **What an adapter owes that is not expressed here.** This interface describes what a room does,
+ * not how often anyone may ask. An adapter with a network boundary — #131's — has to add a
+ * participant cap and a rate limit on `join` and `submit` of its own: uncapped, they are unbounded
+ * roster growth and unbounded scoring work. #128 already does exactly this for resolving a join
+ * code (`private.code_lookups`, 150 lookups and 60 misses per address per five minutes) and #134
+ * for signing in; a session's own calls need the same treatment. The in-memory adapter below
+ * deliberately has neither, because its whole room is garbage collected with the test or the
+ * component that owns it and there is no address to count against.
+ *
  * Pure TypeScript: no React, Next or Supabase.
  */
 import type { AnyResponse, Item } from "@/lib/ngn/schemas";
@@ -38,21 +47,37 @@ export interface Participant {
 }
 
 /**
+ * An item as a participant channel may carry it.
+ *
+ * `KeylessItem` on its own is not enough to make that a type rule. It is `Item` with three fields
+ * removed, so `Item` has everything it has and more, and ordinary width subtyping makes
+ * `SessionView<Item>` assignable to `SessionView<KeylessItem>` — a mis-wired emit inside an adapter
+ * would compile and ship a key to every participant. The three optional `never`s close that: an
+ * object that still has an `answerKey` is not one of these, so the compiler, and not only the
+ * tests, refuses to put a host's view on a participant's channel.
+ */
+export type ParticipantItem = KeylessItem & {
+  readonly answerKey?: never;
+  readonly rationale?: never;
+  readonly scoring?: never;
+};
+
+/**
  * What the room is on, as one side sees it. Generic in the item, which is the point: a participant
- * channel is typed `SessionView<KeylessItem>` and so cannot carry an answer key at all, while the
- * host's is `SessionView<Item>` because the host is the one who reveals it (ADR 0003).
+ * channel is typed `SessionView<ParticipantItem>` and so cannot carry an answer key at all, while
+ * the host's is `SessionView<Item>` because the host is the one who reveals it (ADR 0003).
  *
  * The sketch's `onSessionState` comment reads "status, current item, timer, reveal flag"; status,
  * reveal and the timer live on `state`, and the current item is here beside it.
  */
-export interface SessionView<T extends PlayableItem = KeylessItem> {
+export interface SessionView<T extends PlayableItem = ParticipantItem> {
   state: LiveSessionState;
   /** The item the room is on. Null in the lobby and once the session has ended. */
   item: T | null;
 }
 
 /** What `join` answers with: the view, plus the facts about the session that never change. */
-export interface ParticipantSnapshot extends SessionView<KeylessItem> {
+export interface ParticipantSnapshot extends SessionView<ParticipantItem> {
   sessionId: string;
   code: string;
   mode: SessionMode;
@@ -131,7 +156,7 @@ export interface LiveSessionTransport {
   join(code: string, identity: ParticipantIdentity): Promise<ParticipantSnapshot>;
   /** Leaves the room. Idempotent, so a component's cleanup can call it without checking. */
   leave(): Promise<void>;
-  onSessionState(listener: (view: SessionView<KeylessItem>) => void): Unsubscribe;
+  onSessionState(listener: (view: SessionView<ParticipantItem>) => void): Unsubscribe;
   onPresence(listener: (roster: Participant[]) => void): Unsubscribe;
   /** Fires once per item the host reveals, carrying this participant's own marks. */
   onReveal(listener: (revealed: ItemReveal) => void): Unsubscribe;

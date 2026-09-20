@@ -17,10 +17,10 @@ import {
   type ItemReveal,
   type LiveSessionState,
   type Participant,
+  type ParticipantItem,
   type SimulatedParticipant,
 } from "@/lib/live";
 import type { AnyResponse, Item } from "@/lib/ngn/schemas";
-import type { KeylessItem } from "@/lib/ngn/submit";
 
 export interface RoomEntry {
   item: Item;
@@ -58,6 +58,9 @@ const useHydrated = () =>
 /** Two groups of three, the way a host reads a code out. */
 const spacedCode = (code: string) => `${code.slice(0, 3)} ${code.slice(3)}`;
 
+/** The three ways an item's marks fall. A union, so a typo cannot render an unstyled bar. */
+type BarTone = "bg-correct" | "bg-flag" | "bg-incorrect";
+
 function Bar({
   label,
   count,
@@ -67,7 +70,7 @@ function Bar({
   label: string;
   count: number;
   of: number;
-  tone: string;
+  tone: BarTone;
 }) {
   const fraction = of === 0 ? 0 : count / of;
   return (
@@ -99,13 +102,19 @@ export function FakeRoom({ set }: { set: RoomEntry[] }) {
 
   const [state, setState] = useState<LiveSessionState>(() => room.currentState());
   const [roster, setRoster] = useState<Participant[]>([]);
-  const [studentItem, setStudentItem] = useState<KeylessItem | null>(null);
+  const [studentItem, setStudentItem] = useState<ParticipantItem | null>(null);
   const [aggregates, setAggregates] = useState<Record<string, ItemAggregate>>({});
   const [reveals, setReveals] = useState<Record<string, ItemReveal>>({});
   const [answeredBy, setAnsweredBy] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
 
+  const [seedError, setSeedError] = useState<string | null>(null);
+
   const crowd = useRef<SimulatedParticipant[]>([]);
+  /**
+   * Never reset in the effect's cleanup. React 19 StrictMode mounts, cleans up and mounts again in
+   * development; resetting it there would join "You" and the whole class a second time.
+   */
   const seeded = useRef(false);
 
   useEffect(() => {
@@ -122,8 +131,15 @@ export function FakeRoom({ set }: { set: RoomEntry[] }) {
     if (!seeded.current) {
       seeded.current = true;
       void (async () => {
-        await me.join(room.code, { displayName: "You" });
-        crowd.current = await joinSimulated(room, CLASS);
+        try {
+          await me.join(room.code, { displayName: "You" });
+          crowd.current = await joinSimulated(room, CLASS);
+        } catch (error) {
+          // A page that quietly showed an empty room would be a worse demo than one that says why.
+          setSeedError(
+            isLiveSessionError(error) ? error.message : "The fake room could not be set up.",
+          );
+        }
       })();
     }
 
@@ -319,6 +335,11 @@ export function FakeRoom({ set }: { set: RoomEntry[] }) {
 
         <Surface padding="md">
           <h2 className="eyebrow">In the room ({roster.length})</h2>
+          {seedError === null ? null : (
+            <p role="alert" className="mt-2 text-sm text-ink-2">
+              {seedError}
+            </p>
+          )}
           <ul className="mt-2 flex flex-wrap gap-1.5">
             {roster.map((participant) => (
               <li
