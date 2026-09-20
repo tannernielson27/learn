@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { CaseStudySummary } from "@/lib/authoring/banks";
 import { formatEdited } from "@/lib/authoring/format";
+import { ArchiveButton, type ArchiveButtonProps } from "./ArchiveButton";
 import { SelectForMove } from "./SelectForMove";
 
 export interface CaseStudyListProps {
@@ -9,6 +10,8 @@ export interface CaseStudyListProps {
   emptyMessage?: string;
   /** The id of a move form: each case study gets a checkbox that joins it. */
   moveFormId?: string;
+  /** In the Archived view: the restore action for a case study, so each row offers Restore. */
+  restoreAction?: (caseStudyId: string) => ArchiveButtonProps["action"];
 }
 
 const STATUS_LABELS: Record<CaseStudySummary["status"], string> = {
@@ -22,6 +25,7 @@ export function CaseStudyList({
   caseStudies,
   emptyMessage = "No case studies in this bank yet.",
   moveFormId,
+  restoreAction,
 }: CaseStudyListProps) {
   if (caseStudies.length === 0) {
     return <p className="text-ink-2">{emptyMessage}</p>;
@@ -52,6 +56,15 @@ export function CaseStudyList({
               <span>{formatEdited(caseStudy.updatedAt)}</span>
             </span>
           </Link>
+          {restoreAction ? (
+            <div className="flex shrink-0 items-center px-2">
+              <ArchiveButton
+                action={restoreAction(caseStudy.id)}
+                label="Restore"
+                accessibleName={`Restore ${caseStudy.title}`}
+              />
+            </div>
+          ) : null}
         </li>
       ))}
     </ul>

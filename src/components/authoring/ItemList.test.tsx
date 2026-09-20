@@ -1,5 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ItemList } from "./ItemList";
 
 const items = [
@@ -176,5 +176,26 @@ describe("ItemList", () => {
     expect(screen.getByRole("link", { name: /Which findings need follow-up\?/ })).toHaveTextContent(
       "Matched in the rationale",
     );
+  });
+
+  it("offers Restore on each archived item, named for the item, outside its link", () => {
+    const archived = items.map((item) => ({ ...item, status: "archived" as const }));
+    const restoreAction = vi.fn((id: string) => async () => {
+      void id;
+      return { status: "idle" as const };
+    });
+    render(<ItemList items={archived} restoreAction={restoreAction} />);
+    const restore = screen.getByRole("button", { name: "Restore Which findings need follow-up?" });
+    expect(restore).toHaveTextContent("Restore");
+    expect(restore.closest("a")).toBeNull();
+    expect(screen.getByRole("button", { name: "Restore Untitled item" })).toBeInTheDocument();
+    expect(restoreAction).toHaveBeenCalledWith("i1");
+    expect(restoreAction).toHaveBeenCalledWith("i2");
+    expect(screen.queryByRole("link", { name: /^Play/ })).not.toBeInTheDocument();
+  });
+
+  it("offers no Restore without a restore action", () => {
+    render(<ItemList items={items} />);
+    expect(screen.queryByRole("button", { name: /^Restore/ })).not.toBeInTheDocument();
   });
 });

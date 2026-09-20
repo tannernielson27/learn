@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { archiveItemAction, restoreItemAction } from "@/app/author/archiveActions";
 import { duplicateItemAction } from "@/app/author/duplicateActions";
+import { ArchiveButton } from "@/components/authoring/ArchiveButton";
 import { DuplicateButton } from "@/components/authoring/DuplicateButton";
 import { editorFor, storedItemOf } from "@/components/authoring/editorFor";
 import { historyEntries } from "@/components/authoring/historyEntries";
@@ -52,6 +54,7 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
     : row.type;
   // Only a valid saved item exports (docs/transfer-format.md).
   const exportable = fromItemRow(row).ok;
+  const archived = row.status === "archived";
 
   return (
     <>
@@ -70,7 +73,18 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
         <h1 className="font-read text-3xl text-ink-1">Edit item</h1>
         <p className="text-sm text-ink-2">{STATUS_LABELS[row.status]}</p>
         <DuplicateButton action={duplicateItemAction.bind(null, row.id)} label="Duplicate item" />
+        {archived ? (
+          <ArchiveButton action={restoreItemAction.bind(null, row.id)} label="Restore item" />
+        ) : (
+          <ArchiveButton action={archiveItemAction.bind(null, row.id)} label="Archive item" />
+        )}
       </div>
+      {archived ? (
+        <p className="mb-6 max-w-prose rounded-sm border border-line bg-surface-2 p-3 text-ink-1">
+          This item is archived. It is out of the bank&apos;s list and cannot be played, edited or
+          placed as a case study step until it is restored.
+        </p>
+      ) : null}
       {editor ? (
         <ItemEditorWithHistory
           editor={editor}

@@ -60,6 +60,7 @@ export type Database = {
       };
       case_studies: {
         Row: {
+          archived_from: Database["public"]["Enums"]["content_status"] | null;
           bank_id: string;
           created_at: string;
           created_by: string | null;
@@ -73,6 +74,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          archived_from?: Database["public"]["Enums"]["content_status"] | null;
           bank_id: string;
           created_at?: string;
           created_by?: string | null;
@@ -86,6 +88,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          archived_from?: Database["public"]["Enums"]["content_status"] | null;
           bank_id?: string;
           created_at?: string;
           created_by?: string | null;
@@ -262,6 +265,7 @@ export type Database = {
       items: {
         Row: {
           answer_key: Json;
+          archived_from: Database["public"]["Enums"]["content_status"] | null;
           bank_id: string;
           cjmm_step: number | null;
           content: Json;
@@ -281,6 +285,7 @@ export type Database = {
         };
         Insert: {
           answer_key: Json;
+          archived_from?: Database["public"]["Enums"]["content_status"] | null;
           bank_id: string;
           cjmm_step?: number | null;
           content: Json;
@@ -300,6 +305,7 @@ export type Database = {
         };
         Update: {
           answer_key?: Json;
+          archived_from?: Database["public"]["Enums"]["content_status"] | null;
           bank_id?: string;
           cjmm_step?: number | null;
           content?: Json;
@@ -399,6 +405,8 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      archive_case_study: { Args: { target: string }; Returns: undefined };
+      archive_item: { Args: { target: string }; Returns: undefined };
       duplicate_case_study: {
         Args: { source_case_study: string };
         Returns: string;
@@ -458,6 +466,8 @@ export type Database = {
         Args: { item_ids: string[]; target: string };
         Returns: undefined;
       };
+      restore_case_study: { Args: { target: string }; Returns: undefined };
+      restore_item: { Args: { target: string }; Returns: undefined };
       start_case_study_step: {
         Args: { step_position: number; step_type: string; target: string };
         Returns: string;

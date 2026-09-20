@@ -4,6 +4,7 @@ import { formatEdited } from "@/lib/authoring/format";
 import { excerptSegments } from "@/lib/authoring/highlight";
 import { tagLabels } from "@/lib/authoring/tagFilter";
 import { ITEM_TYPE_LABELS, ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
+import { ArchiveButton, type ArchiveButtonProps } from "./ArchiveButton";
 import { Highlighted } from "./Highlighted";
 import { SelectForMove } from "./SelectForMove";
 
@@ -13,6 +14,8 @@ export interface ItemListProps {
   emptyMessage?: string;
   /** The id of a move form: each item gets a checkbox that joins it. Without one, no selection. */
   moveFormId?: string;
+  /** In the Archived view: the restore action for an item, so each row offers Restore. */
+  restoreAction?: (itemId: string) => ArchiveButtonProps["action"];
 }
 
 const STATUS_LABELS: Record<ItemSummary["status"], string> = {
@@ -47,6 +50,7 @@ export function ItemList({
   items,
   emptyMessage = "No items in this bank yet. Choose New item to write one.",
   moveFormId,
+  restoreAction,
 }: ItemListProps) {
   if (items.length === 0) {
     return <p className="text-ink-2">{emptyMessage}</p>;
@@ -108,6 +112,15 @@ export function ItemList({
             >
               Play
             </Link>
+          ) : null}
+          {restoreAction ? (
+            <div className="flex shrink-0 items-center px-2">
+              <ArchiveButton
+                action={restoreAction(item.id)}
+                label="Restore"
+                accessibleName={`Restore ${item.stemExcerpt || "Untitled item"}`}
+              />
+            </div>
           ) : null}
         </li>
       ))}
