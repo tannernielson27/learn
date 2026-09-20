@@ -119,7 +119,8 @@ toKeylessItem(item): KeylessItem                       // the only payload a stu
 toKeylessCaseStudy(caseStudy): KeylessCaseStudy        // ...and the only case-study one (#46)
 parseSubmission(body, itemType): ParsedSubmission      // validate an incoming answer
 scoreSubmission(item, response): ScoreReveal           // the scoring entry point; server-side
-type Reveal = Omit<ScoreReveal, "score">                 // the key, rationale and scoring
+interface Reveal { answerKey, rationale, scoring }       // what a score reveals beside itself
+interface ScoreReveal extends Reveal { score }           // ...and the score it came with
 type SubmitHandler = (response) => Promise<ScoreReveal>  // what ItemPlayer calls
 type SubmitHandlerFor<T> = (item: T) => SubmitHandler    // what CaseStudyPlayer calls per step
 scoreInProcess(item): SubmitHandler                    // gallery and authoring preview only

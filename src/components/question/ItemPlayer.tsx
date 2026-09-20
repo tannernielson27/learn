@@ -14,6 +14,9 @@ export interface ItemPlayerProps {
    * The item to play. Normally keyless: the key, rationale and scoring arrive only with the score
    * (ADR 0003). The gallery and the authoring preview pass a full item, because the handler they
    * pass scores it in the same browser.
+   *
+   * A caller that plays more than one item remounts rather than re-props: `item`, `initialResponse`
+   * and `initialReveal` are read once, at mount. `CaseStudyPlayer` keys this by the step's item id.
    */
   item: Item | KeylessItem;
   /** Starting mode. The player moves itself from answer to feedback on submit. */
