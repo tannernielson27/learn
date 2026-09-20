@@ -117,11 +117,13 @@ interface LiveSessionTransport {
 
 ## 5. Environments & deployment
 
-| Env       | Where                                                                   | Data                                                      |
-| --------- | ----------------------------------------------------------------------- | --------------------------------------------------------- |
-| Local     | `pnpm dev` + Supabase local (Docker, ports 553xx) or the hosted project | seed.sql                                                  |
-| Preview   | Vercel preview per PR                                                   | hosted `learn` project, shared with production (ADR 0005) |
-| Demo/Prod | Vercel production from `main`                                           | hosted `learn` project until the split before Sprint 7    |
+| Env       | Where                                                                    | Data                                                                    |
+| --------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| Local     | `pnpm dev` + Supabase local (Docker, ports 553xx) or the preview project | seed.sql                                                                |
+| Preview   | Vercel preview per PR                                                    | hosted `learn` project, ref `vauokqoyvewtzubqajgh` (ADR 0006)           |
+| Demo/Prod | Vercel production from `main`                                            | its own hosted project, replayed from `supabase/migrations/` (ADR 0006) |
+
+`/api/health` reports the project ref it reached, so the two can be told apart from the outside. Which project each environment uses, and how to stand one up, is in [05-VERSION-CONTROL-AND-DEPLOY.md §7](05-VERSION-CONTROL-AND-DEPLOY.md).
 
 CI on every PR: typecheck, lint, unit + coverage, Playwright smoke against the preview URL, axe on gallery pages, screenshot diff on item types.
 

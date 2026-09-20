@@ -1,6 +1,6 @@
 # ADR 0005 — One hosted Supabase project for previews and production, for now
 
-- **Status:** Accepted, 2026-09-12
+- **Status:** Superseded by [ADR 0006](0006-production-supabase-project.md), 2026-09-19. Accepted 2026-09-12.
 - **Deciders:** product owner, Claude (TPM)
 
 ## Context

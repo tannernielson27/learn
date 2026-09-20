@@ -107,19 +107,117 @@ Concurrency: one run per branch, newer pushes cancel older runs.
 | Preview    | any PR push     | per-deploy URL in PR comment | Vercel "Preview" scope                                |
 | Production | merge to `main` | production URL               | Vercel "Production" scope                             |
 
+Which Supabase project each one talks to is in [§7.1](#71-which-supabase-project-each-environment-uses).
+
 Rules:
 
 - `.env.example` is committed and lists every variable with a comment. Real values live only in Vercel project settings and each dev's `.env.local`. Adding a variable = update `.env.example` in the same PR and tell the other human to add it in Vercel.
 - Public variables are prefixed `NEXT_PUBLIC_`; everything else is server-only.
-- Preview and production point at **different** Supabase projects from Sprint 4 onward (dev/preview project and prod project), so a bad migration on a branch can never touch real class data.
+- Preview and production point at **different** Supabase projects (ADR 0006), so a bad migration on a branch can never touch real class data. See §7.1.
 
 **Rollback:** Vercel → Deployments → previous production deployment → "Promote to Production". Then open a `fix/*` PR. Never force-push `main`.
 
-## 7. Database changes (from Sprint 4)
+## 7. Database (Supabase)
 
 - Schema changes are SQL migrations in `supabase/migrations/`, created with `supabase migration new <name>`, committed in the PR that needs them.
 - CI runs the migrations against a throwaway local Supabase (Docker) to verify they apply cleanly.
-- Migrations are applied to the **dev/preview** Supabase project when the PR merges (GitHub Action with the Supabase access token), and to **prod** by the same action on `main`. Every migration must be backward compatible with the currently deployed app (add columns, don't rename; drop only in a later PR).
+- Every migration must be backward compatible with the currently deployed app (add columns, don't rename; drop only in a later PR), because a merge to `main` reaches production immediately.
+- Nothing is ever changed by hand in the dashboard. The schema exists only in `supabase/migrations/`, which is what makes standing up a new project a replay rather than a rewrite.
+
+### 7.1 Which Supabase project each environment uses
+
+| Env            | Supabase project                                                | How it is wired                                                                        | Demo account                                       | Sample content                             |
+| -------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------ |
+| **Local**      | local stack, or the preview project                             | `.env.local`; local stack is `http://127.0.0.1:55321` after `pnpm exec supabase start` | `supabase/seed-demo.sql` (`demo@learn.test`)       | `supabase/seed.sql` via `db reset`         |
+| **Preview**    | `learn` — ref `vauokqoyvewtzubqajgh`                            | Vercel "Preview" scope                                                                 | none — clear `DEMO_ACCOUNT_*` in the Preview scope | whatever the two of us have authored there |
+| **Production** | its own project — ref `<prod-ref>` _(owner to create; see 7.3)_ | Vercel "Production" scope                                                              | one shared instructor account, created by hand     | loaded once from `supabase/seed.sql`       |
+
+`/api/health` says which one a deployment actually reached:
+
+```json
+{ "supabase": "ok", "project": "vauokqoyvewtzubqajgh" }
+```
+
+`project` is the ref parsed out of `NEXT_PUBLIC_SUPABASE_URL`, or `local` for the local stack, or `unknown` when the variable is absent or is not a project URL. The ref is the public part of the URL; no key, URL or error text is ever echoed. **The demo step for the split is to open `/api/health` on the production URL and on a preview URL and see two different refs.**
+
+### 7.2 Migrations in order
+
+Everything in `supabase/migrations/` today, in filename order — this is the replay list, and a new project must end with all ten:
+
+| #   | Migration                                   | What it adds                                                        | On `vauokqoyvewtzubqajgh`? |
+| --- | ------------------------------------------- | ------------------------------------------------------------------- | -------------------------- |
+| 1   | `20260913000000_authoring_schema`           | orgs, profiles, item banks, items, versions, case studies, RLS      | applied                    |
+| 2   | `20260914000000_case_study_steps`           | step items live in the case study's bank; atomic reorder            | applied                    |
+| 3   | `20260915000000_import_bank_content`        | one-call JSON import                                                | applied                    |
+| 4   | `20260916000000_bank_folders`               | nested folders per bank                                             | **confirm**                |
+| 5   | `20260919000000_item_tags`                  | tag filtering on the bank page                                      | **not applied**            |
+| 6   | `20260919110000_start_step_and_rate_limits` | `start_case_study_step`, per-user rate limit on authoring mutations | **not applied**            |
+| 7   | `20260919120600_duplicate_content`          | duplicate an item or a case study                                   | **not applied**            |
+| 8   | `20260919130000_item_search`                | full-text search over a bank                                        | **not applied**            |
+| 9   | `20260919150000_import_into_folder`         | import straight into a folder                                       | **not applied**            |
+| 10  | `20260919160000_archive_content`            | archive and restore                                                 | **not applied**            |
+
+> **Standing drift (Sprint 6).** Rows 4–10 are merged to `main` but not applied to the existing hosted project. **Until `20260919110000_start_step_and_rate_limits` is applied, that project refuses every save, publish and import** — the app calls functions that are not there. Apply rows 4–10 to `vauokqoyvewtzubqajgh` with §7.4 at the same time as the production project is stood up, so the two projects do not start out different.
+
+### 7.3 Standing up a fresh project (the production split)
+
+Run from the repo root, on a machine with the repo checked out. Steps 1–2 and 6 are dashboard work; the rest is copy-pasteable.
+
+1. **Create the project.** Supabase dashboard → New project. Region `us-east-1` (same as `learn`). Either a paid plan on the existing organization or a second organization on the free tier — the free tier allows two active projects per organization and one is already taken. Name it `learn-prod`. Save the database password; it is shown once.
+2. **Copy the ref.** Project Settings → General → Reference ID. It is the `<prod-ref>` below and the first label of the project URL, `https://<prod-ref>.supabase.co`.
+3. **Replay every migration, in filename order.** `db push` applies exactly the files in `supabase/migrations/`, oldest first, and records each one; it never edits anything by hand.
+
+   ```sh
+   git switch main && git pull
+   pnpm install --frozen-lockfile
+   pnpm exec supabase login                       # opens a browser once
+   pnpm exec supabase link --project-ref <prod-ref>
+   pnpm exec supabase db push                     # prompts with the list before applying
+   pnpm exec supabase migration list              # every row in 7.2 present, local and remote
+   ```
+
+4. **Load the sample content, then create the demo user — in that order.** `seed.sql` creates the org that the sign-up trigger puts the first user into, so a user created before it would land in an org of its own.
+
+   ```sh
+   # Connection string: dashboard > Project Settings > Database > Connection string > URI.
+   # Paste the database password from step 1. Do not commit it or leave it in shell history.
+   psql "postgresql://postgres:<password>@db.<prod-ref>.supabase.co:5432/postgres" \
+     -v ON_ERROR_STOP=1 -f supabase/seed.sql
+   ```
+
+   `seed.sql` is generated from the fixtures and is safe to run once on an empty project. It inserts one org, one published "Samples" bank, every canonical item, the Trend item and the sample case study. Running it twice fails on the fixed ids, which is the point.
+
+5. **Create the demo account — production only.** Dashboard → Authentication → Users → Add user. Email `demo@learn.app` (any address you control), a long random password, **Auto Confirm User on**. The trigger files it into the seeded org as an instructor. Never run `supabase/seed-demo.sql` against a hosted project: its password is public and local-only.
+6. **Point Vercel Production at it.** Vercel → project → Settings → Environment Variables, **Production scope only**:
+   - `NEXT_PUBLIC_SUPABASE_URL` = `https://<prod-ref>.supabase.co`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` = the `sb_publishable_…` key from Project Settings → API Keys (never the `sb_secret_…` one)
+   - `DEMO_ACCOUNT_EMAIL` / `DEMO_ACCOUNT_PASSWORD` = the user from step 5
+     Leave the Preview scope pointing at `vauokqoyvewtzubqajgh`, with `DEMO_ACCOUNT_*` empty there.
+7. **Redeploy and check.** Vercel → Deployments → latest production → Redeploy (env vars only apply to a new build). Then open `/api/health` on the production URL and on any preview URL: two different `project` refs, both `"supabase": "ok"`.
+
+### 7.4 Catching an existing project up
+
+Same `db push`, against the project that is behind. It applies only what is missing, in filename order.
+
+```sh
+pnpm exec supabase link --project-ref vauokqoyvewtzubqajgh
+pnpm exec supabase migration list    # shows local-only rows: the drift in 7.2
+pnpm exec supabase db push
+pnpm exec supabase migration list    # local and remote now agree
+```
+
+If `migration list` disagrees about a migration that is genuinely already applied (row 4 above is the likely one), `supabase migration repair --status applied <version>` records it without re-running it. Never hand-edit the schema to make the list agree.
+
+### 7.5 Verifying a replay before it touches anything hosted
+
+A clean replay onto an empty database is a one-liner locally, and it is how any change to the list in §7.2 gets checked:
+
+```sh
+pnpm exec supabase start        # Docker Desktop must be running
+pnpm exec supabase db reset     # drops, recreates, applies all migrations in order, then seeds
+```
+
+`db reset` prints each migration as it applies it and stops at the first failure. It also runs `seed.sql` and `seed-demo.sql`, so a green run proves the sample content and the local demo account still load against the current schema. Afterwards `pnpm db:types` regenerates `src/lib/supabase/database.types.ts`; CI fails if the committed file differs.
 
 ## 8. Working together day to day
 
