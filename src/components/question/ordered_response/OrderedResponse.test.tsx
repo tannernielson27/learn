@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema } from "@/lib/ngn/schemas";
+import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer } from "../ItemPlayer";
 import { hasRenderer } from "../registry";
 import { orderedResponseModule } from "./OrderedResponseItem";
@@ -43,7 +44,7 @@ describe("ordered response renderer", () => {
   });
 
   it("starts in an order other than the authored one, ready to submit", () => {
-    render(<ItemPlayer item={wholeItem} />);
+    render(<ItemPlayer item={wholeItem} submit={scoreInProcess(wholeItem)} />);
     const start = order();
     expect([...start].sort()).toEqual([...KEY].sort());
     expect(start).not.toEqual(KEY);
@@ -69,7 +70,7 @@ describe("ordered response renderer", () => {
   });
 
   it("moves a step with the buttons and announces its new position", async () => {
-    render(<ItemPlayer item={wholeItem} />);
+    render(<ItemPlayer item={wholeItem} submit={scoreInProcess(wholeItem)} />);
     const first = order()[0]!;
     await userEvent.click(down(first));
     expect(order()[1]).toBe(first);
@@ -77,7 +78,7 @@ describe("ordered response renderer", () => {
   });
 
   it("keeps focus on the moved step", async () => {
-    render(<ItemPlayer item={wholeItem} />);
+    render(<ItemPlayer item={wholeItem} submit={scoreInProcess(wholeItem)} />);
     const third = order()[2]!;
     up(third).focus();
     await userEvent.keyboard("{Enter}");
@@ -91,7 +92,7 @@ describe("ordered response renderer", () => {
   });
 
   it("scores the whole order and shows where each misplaced step belongs", async () => {
-    render(<ItemPlayer item={wholeItem} />);
+    render(<ItemPlayer item={wholeItem} submit={scoreInProcess(wholeItem)} />);
     await arrange([KEY[1]!, KEY[0]!, KEY[2]!, KEY[3]!, KEY[4]!]);
     await userEvent.click(submit());
 
@@ -107,7 +108,7 @@ describe("ordered response renderer", () => {
   });
 
   it("earns the point for the exact order", async () => {
-    render(<ItemPlayer item={wholeItem} />);
+    render(<ItemPlayer item={wholeItem} submit={scoreInProcess(wholeItem)} />);
     await arrange(KEY);
     await userEvent.click(submit());
     expect(within(scorePanel()).getByText("1")).toBeInTheDocument();
@@ -115,7 +116,7 @@ describe("ordered response renderer", () => {
   });
 
   it("gives a point per correct position when the item scores by position", async () => {
-    render(<ItemPlayer item={byPosition} />);
+    render(<ItemPlayer item={byPosition} submit={scoreInProcess(byPosition)} />);
     await arrange([
       "Verify the prescription against the MAR",
       "Identify the client using two identifiers",

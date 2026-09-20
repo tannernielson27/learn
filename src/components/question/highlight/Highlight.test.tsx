@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema } from "@/lib/ngn/schemas";
+import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer } from "../ItemPlayer";
 import { hasRenderer } from "../registry";
 
@@ -31,7 +32,7 @@ describe("highlight renderers", () => {
 
 describe("highlight text", () => {
   it("makes only the author's spans selectable, with nothing marked before submit", () => {
-    render(<ItemPlayer item={text} />);
+    render(<ItemPlayer item={text} submit={scoreInProcess(text)} />);
     expect(screen.getAllByRole("button", { pressed: false })).toHaveLength(5);
     expect(span(HR)).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByText(/71-year-old client admitted overnight/)).toBeInTheDocument();
@@ -40,7 +41,7 @@ describe("highlight text", () => {
   });
 
   it("toggles a span by click, Space and Enter, and needs one before submit", async () => {
-    render(<ItemPlayer item={text} />);
+    render(<ItemPlayer item={text} submit={scoreInProcess(text)} />);
     expect(submit()).toBeDisabled();
 
     await userEvent.click(span(HR));
@@ -58,7 +59,7 @@ describe("highlight text", () => {
   });
 
   it("puts each span's feedback in its name, where a reader moving span to span hears it", async () => {
-    render(<ItemPlayer item={text} />);
+    render(<ItemPlayer item={text} submit={scoreInProcess(text)} />);
     await userEvent.click(span(HR));
     await userEvent.click(span(BP));
     await userEvent.click(submit());
@@ -74,7 +75,7 @@ describe("highlight text", () => {
   });
 
   it("scores plus-minus and marks correct, incorrect and missed spans", async () => {
-    render(<ItemPlayer item={text} />);
+    render(<ItemPlayer item={text} submit={scoreInProcess(text)} />);
     for (const name of [HR, SAT, BP]) await userEvent.click(span(name));
     await userEvent.click(submit());
 
@@ -93,7 +94,7 @@ describe("highlight text", () => {
 
 describe("highlight table", () => {
   it("lays spans out under the column headers", () => {
-    render(<ItemPlayer item={perRow} />);
+    render(<ItemPlayer item={perRow} submit={scoreInProcess(perRow)} />);
     const table = grid();
     expect(within(table).getByRole("columnheader", { name: "Body system" })).toBeInTheDocument();
     expect(within(table).getByRole("columnheader", { name: "Findings" })).toBeInTheDocument();
@@ -102,7 +103,7 @@ describe("highlight table", () => {
   });
 
   it("keeps the grid and the row cards on one response", async () => {
-    render(<ItemPlayer item={perRow} />);
+    render(<ItemPlayer item={perRow} submit={scoreInProcess(perRow)} />);
     await userEvent.click(within(grid()).getByRole("button", { name: "afebrile" }));
     expect(within(card("General")).getByRole("button", { name: "afebrile" })).toHaveAttribute(
       "aria-pressed",
@@ -111,7 +112,7 @@ describe("highlight table", () => {
   });
 
   it("scores each row on its own when scorePerRow is set", async () => {
-    render(<ItemPlayer item={perRow} />);
+    render(<ItemPlayer item={perRow} submit={scoreInProcess(perRow)} />);
     for (const name of [
       "Lethargic, difficult to arouse",
       "afebrile",
@@ -132,7 +133,7 @@ describe("highlight table", () => {
   });
 
   it("scores the whole item at once without scorePerRow", async () => {
-    render(<ItemPlayer item={wholeItem} />);
+    render(<ItemPlayer item={wholeItem} submit={scoreInProcess(wholeItem)} />);
     await userEvent.click(within(grid()).getByRole("button", { name: "Heart rate 52" }));
     await userEvent.click(within(grid()).getByRole("button", { name: "Warm, moist skin" }));
     await userEvent.click(submit());

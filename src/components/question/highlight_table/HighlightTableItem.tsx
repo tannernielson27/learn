@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { scorePlusMinus } from "@/lib/ngn/scoring";
 import {
   HighlightTokens,
   spanOrder,
@@ -9,7 +8,8 @@ import {
   type HighlightToken,
 } from "../highlight/HighlightTokens";
 import { RowScoreMark, type RowScore } from "../matrix/Matrix";
-import type { ItemRendererModule, ItemRendererProps, PlayerMode } from "../types";
+import { rowScorer } from "../rowScore";
+import type { ItemRendererModule, ItemRendererProps } from "../types";
 
 interface HighlightRow {
   id: string;
@@ -117,32 +117,14 @@ function HighlightCards({ columns, rows, cell, rowScore }: LayoutProps) {
   );
 }
 
-function rowScorer(
-  rows: readonly HighlightRow[],
-  selected: ReadonlySet<string>,
-  correct: ReadonlySet<string>,
-  mode: PlayerMode,
-  enabled: boolean,
-): LayoutProps["rowScore"] {
-  if (mode !== "feedback" || !enabled || correct.size === 0) return undefined;
-  // Mirrors the engine's per-row scoring so each row shows the points it earned.
-  return (rowId) => {
-    const spans = rows.find((r) => r.id === rowId)?.cells.flatMap((c) => spanOrder(c)) ?? [];
-    const result = scorePlusMinus({
-      selected: spans.filter((id) => selected.has(id)),
-      correct: spans.filter((id) => correct.has(id)),
-    });
-    return { points: result.points, maxPoints: result.maxPoints };
-  };
-}
-
 export function HighlightTableItem({
   item,
   response,
   mode,
+  score,
   onChange,
 }: ItemRendererProps<"highlight_table">) {
-  const { columns, rows, scorePerRow } = item.content;
+  const { columns, rows } = item.content;
   const order = rows.flatMap((r) => r.cells.flatMap((c) => spanOrder(c)));
   const selected = new Set(response.spanIds);
   const correct = new Set(item.answerKey?.correctSpanIds ?? []);
@@ -161,7 +143,9 @@ export function HighlightTableItem({
     columns,
     rows,
     cell,
-    rowScore: rowScorer(rows, selected, correct, mode, scorePerRow),
+    // Per-row marks appear only when the item scores per row, which is exactly when the score
+    // carries per-row subtotals.
+    rowScore: rowScorer(mode, score),
   };
   return (
     <div>

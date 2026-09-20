@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scorePlusMinus, scoreRationale, scoreZeroOne, sumResults } from "./models";
+import { scorePlusMinus, scoreRationale, scoreZeroOne, sumGrouped, sumResults } from "./models";
 
 describe("scoreZeroOne", () => {
   it("sums one point per correct element", () => {
@@ -129,5 +129,48 @@ describe("sumResults", () => {
     const sum = sumResults("zero_one", [a, b]);
     expect(sum).toMatchObject({ points: 1, maxPoints: 2 });
     expect(sum.breakdown.map((x) => x.elementId)).toEqual(["r1", "r2"]);
+  });
+
+  it("leaves groups off an item that does not score by row", () => {
+    expect(
+      sumResults("zero_one", [scoreZeroOne([{ id: "r1", correct: true }])]).groups,
+    ).toBeUndefined();
+  });
+});
+
+describe("sumGrouped", () => {
+  const correct = ["a", "b"];
+
+  it("names each row's subtotal beside the total", () => {
+    const sum = sumGrouped("plus_minus", [
+      { groupId: "row_1", result: scorePlusMinus({ selected: ["a", "b"], correct }) },
+      { groupId: "row_2", result: scorePlusMinus({ selected: ["a"], correct }) },
+    ]);
+    expect(sum).toMatchObject({ model: "plus_minus", points: 3, maxPoints: 4 });
+    expect(sum.groups).toEqual([
+      { groupId: "row_1", points: 2, maxPoints: 2 },
+      { groupId: "row_2", points: 1, maxPoints: 2 },
+    ]);
+  });
+
+  it("reports a floored row at zero, which its breakdown deltas do not add up to", () => {
+    // The whole reason a renderer cannot derive a row's points from the breakdown (#56).
+    const result = scorePlusMinus({ selected: ["x", "y", "z"], correct });
+    const sum = sumGrouped("plus_minus", [{ groupId: "row_1", result }]);
+    expect(result.breakdown.reduce((n, b) => n + b.delta, 0)).toBe(-3);
+    expect(sum.groups).toEqual([{ groupId: "row_1", points: 0, maxPoints: 2 }]);
+    expect(sum.points).toBe(0);
+  });
+
+  it("keeps the concatenated breakdown that sumResults produces", () => {
+    const sum = sumGrouped("zero_one", [
+      { groupId: "row_1", result: scoreZeroOne([{ id: "r1", correct: true }]) },
+      { groupId: "row_2", result: scoreZeroOne([{ id: "r2", correct: false }]) },
+    ]);
+    expect(sum.breakdown.map((x) => x.elementId)).toEqual(["r1", "r2"]);
+  });
+
+  it("handles no groups", () => {
+    expect(sumGrouped("plus_minus", [])).toMatchObject({ points: 0, maxPoints: 0, groups: [] });
   });
 });

@@ -12,6 +12,7 @@ import type { EditorIssue } from "@/lib/authoring/issueMessages";
 import { scoringSummary } from "@/lib/authoring/scoringSummary";
 import { editorWarnings, RATIONALE_FIELD, rationaleProblem } from "@/lib/authoring/warningMessages";
 import { itemSchema, type Item } from "@/lib/ngn/schemas";
+import { scoreInProcess } from "@/lib/ngn/submit";
 import type { CjmmStep, ScoringModel } from "@/lib/ngn/types";
 import { EhrPreview } from "./EhrPreview";
 import { EhrRecordFields, focusRecordField, recordFieldId } from "./EhrRecordFields";
@@ -437,8 +438,13 @@ export function EditorShell<Values, Input extends ScoredInput>({
               <EhrPreview record={previewedRecord} />
             </div>
           ) : null}
-          {/* The same player students use, unkeyed so it updates in place. */}
-          <ItemPlayer item={input as unknown as Item} />
+          {/* The same player students use, unkeyed so it updates in place. The author's own
+              browser scores the preview (ADR 0003, amended 2026-09-13): they may read their own
+              org's keys, and this route sits behind requireAuthor. */}
+          <ItemPlayer
+            item={input as unknown as Item}
+            submit={scoreInProcess(input as unknown as Item)}
+          />
         </div>
       </section>
     </div>

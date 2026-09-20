@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema } from "@/lib/ngn/schemas";
+import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer, toPlayerItem } from "./ItemPlayer";
 
 const mc = itemSchema.parse(FIXTURES.multiple_choice.canonical);
@@ -24,7 +25,7 @@ describe("the answer key and its explanations", () => {
   });
 
   it("shows no per-element rationale while the item is still being answered", async () => {
-    render(<ItemPlayer item={mc} />);
+    render(<ItemPlayer item={mc} submit={scoreInProcess(mc)} />);
     expect(screen.queryByText(/Assessment comes first/)).toBeNull();
     await userEvent.click(screen.getByRole("radio", { name: /Encourage the client/ }));
     expect(screen.queryByText(/More fluid worsens/)).toBeNull();
@@ -33,7 +34,7 @@ describe("the answer key and its explanations", () => {
 
 describe("score breakdown", () => {
   it("lists every scored element with its points, from the engine's breakdown", async () => {
-    render(<ItemPlayer item={sata} />);
+    render(<ItemPlayer item={sata} submit={scoreInProcess(sata)} />);
     await userEvent.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
     await userEvent.click(screen.getByRole("checkbox", { name: /Temperature 37.2/ }));
     await userEvent.click(submit());
@@ -53,7 +54,7 @@ describe("score breakdown", () => {
   });
 
   it("says what each element was worth, and leaves right-or-wrong to the element itself", async () => {
-    render(<ItemPlayer item={mc} />);
+    render(<ItemPlayer item={mc} submit={scoreInProcess(mc)} />);
     await userEvent.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
     await userEvent.click(submit());
     const rows = within(breakdown()).getAllByRole("listitem");
@@ -67,7 +68,7 @@ describe("score breakdown", () => {
 
 describe("per-element rationale", () => {
   it("sits with the option it explains and describes it", async () => {
-    render(<ItemPlayer item={mc} />);
+    render(<ItemPlayer item={mc} submit={scoreInProcess(mc)} />);
     await userEvent.click(screen.getByRole("radio", { name: /Encourage the client/ }));
     await userEvent.click(submit());
 
@@ -78,7 +79,7 @@ describe("per-element rationale", () => {
   });
 
   it("sits with the matrix row it explains", async () => {
-    render(<ItemPlayer item={matrix} />);
+    render(<ItemPlayer item={matrix} submit={scoreInProcess(matrix)} />);
     for (const row of [
       "Keep the client NPO initially",
       "Administer prescribed IV opioid analgesia",
@@ -102,7 +103,7 @@ describe("per-element rationale", () => {
   });
 
   it("reaches a matrix that takes several answers per row", async () => {
-    render(<ItemPlayer item={matrixMr} />);
+    render(<ItemPlayer item={matrixMr} submit={scoreInProcess(matrixMr)} />);
     const grid = () => screen.getByRole("table");
     for (const row of ["Unilateral weakness", "Slurred speech", "Blood glucose 48 mg/dL"]) {
       await userEvent.click(
@@ -116,7 +117,7 @@ describe("per-element rationale", () => {
   });
 
   it("explains each blank of a rationale sentence", async () => {
-    render(<ItemPlayer item={rationale} />);
+    render(<ItemPlayer item={rationale} submit={scoreInProcess(rationale)} />);
     const blanks = screen.getAllByRole("combobox");
     await userEvent.selectOptions(blanks[0]!, "cond_a");
     await userEvent.selectOptions(blanks[1]!, "ev1_b");
@@ -129,7 +130,7 @@ describe("per-element rationale", () => {
   });
 
   it("leaves an item with no per-element rationale exactly as it was", async () => {
-    render(<ItemPlayer item={noPerElement} />);
+    render(<ItemPlayer item={noPerElement} submit={scoreInProcess(noPerElement)} />);
     await userEvent.click(screen.getByRole("radio", { name: /Diaphoresis and tremor/ }));
     await userEvent.click(submit());
     expect(
@@ -145,6 +146,7 @@ describe("review mode", () => {
     render(
       <ItemPlayer
         item={mc}
+        submit={scoreInProcess(mc)}
         initialMode="review"
         initialResponse={{ type: "multiple_choice", optionId: "opt_c" }}
       />,

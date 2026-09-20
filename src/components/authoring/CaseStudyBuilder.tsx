@@ -14,6 +14,7 @@ import {
 import { CaseStudyPlayer } from "@/components/case-study/CaseStudyPlayer";
 import { Button } from "@/components/ui/Button";
 import type { CaseStudy } from "@/lib/ngn/schemas";
+import { scoreInProcess } from "@/lib/ngn/submit";
 import { CJMM_STEP_LABELS, type CjmmStep } from "@/lib/ngn/types";
 import { ItemEditorHostContext, type ItemEditorHost } from "./ItemEditorHost";
 import { useLeaveGuard, type LeaveGuard } from "./LeaveGuard";
@@ -264,7 +265,8 @@ export function CaseStudyBuilder({
           tabIndex={-1}
           className="overflow-hidden rounded-md border border-line outline-none"
         >
-          <CaseStudyPlayer caseStudy={preview.caseStudy} />
+          {/* The author's own browser scores the preview (ADR 0003, amended 2026-09-13). */}
+          <CaseStudyPlayer caseStudy={preview.caseStudy} submitFor={scoreInProcess} />
         </div>
       </>
     );

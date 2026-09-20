@@ -3,9 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PlayItem } from "@/components/authoring/PlayItem";
 import { isUuid } from "@/lib/authoring/ids";
-import { toKeylessPlayItem } from "@/lib/authoring/play";
 import { requireAuthor } from "@/lib/authoring/session";
 import { ITEM_TYPE_LABELS } from "@/lib/ngn/labels";
+import { toKeylessItem } from "@/lib/ngn/submit";
 import { fromItemRow } from "@/lib/supabase/itemRows";
 
 export const metadata: Metadata = { title: "Play item" };
@@ -44,7 +44,7 @@ export default async function PlayItemPage({ params }: PageProps<"/author/items/
           <p className="eyebrow mb-1">{ITEM_TYPE_LABELS[stored.value.type]}</p>
           <h1 className="mb-6 font-read text-3xl text-ink-1">Play item</h1>
           {/* The only item data that reaches the browser: no key, no rationale (ADR 0003). */}
-          <PlayItem itemId={row.id} item={toKeylessPlayItem(stored.value)} />
+          <PlayItem itemId={row.id} item={toKeylessItem(stored.value)} />
         </>
       ) : (
         <>

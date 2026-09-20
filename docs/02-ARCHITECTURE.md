@@ -110,7 +110,21 @@ interface LiveSessionTransport {
 }
 ```
 
-- **Supabase adapter:** session state and aggregates via Postgres changes on `sessions` and a `session_item_aggregates` table maintained by a trigger; presence via Realtime Presence; submissions via a route handler (validates, scores server-side, upserts response, updates aggregate).
+**The submit seam** (`src/lib/ngn/submit.ts`, #56). One shape for "a candidate answered an item", shared by the authoring play route, the gallery and any live-session transport:
+
+```ts
+type KeylessItem = Omit<Item, "answerKey" | "rationale" | "scoring">
+toKeylessItem(item): KeylessItem                       // the only payload a student's browser gets
+parseSubmission(body, itemType): ParsedSubmission      // validate an incoming answer
+scoreSubmission(item, response): ScoreReveal           // the scoring entry point; server-side
+type SubmitHandler = (response) => Promise<ScoreReveal>  // what ItemPlayer calls
+type SubmitHandlerFor = (item) => SubmitHandler          // what CaseStudyPlayer calls per step
+scoreInProcess(item): SubmitHandler                    // gallery and authoring preview only
+```
+
+`ItemPlayer` and `CaseStudyPlayer` hold no scoring code: they take a handler and render the `ScoreResult` they are given, including its per-row `groups`. A transport supplies the handler; it never lives inside `lib/ngn`.
+
+- **Supabase adapter:** session state and aggregates via Postgres changes on `sessions` and a `session_item_aggregates` table maintained by a trigger; presence via Realtime Presence; submissions via a route handler that calls `parseSubmission` then `scoreSubmission`, upserts the response and updates the aggregate.
 - **In-memory adapter:** drives tests and the gallery's "fake room" demo; also makes Sprint 7 demos possible before the DB adapter is complete.
 - Free-tier budget: 200 concurrent Realtime connections and 2M messages/month. A class of 60 with 20 items is well inside that; aggregates are pushed as one message per item change, not one per submission.
 - Student clients never receive `answer_key` until the host sets `reveal` for that item; reveal payload comes from a host-only RPC that returns the key + rationale.

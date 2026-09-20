@@ -7,6 +7,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Button } from "@/components/ui/Button";
 import { SCORING_MODEL_LABELS } from "@/lib/ngn/labels";
 import type { AnyResponse, Item, ItemType } from "@/lib/ngn/schemas";
+import { scoreInProcess } from "@/lib/ngn/submit";
 
 const VARIANTS = [
   { value: "canonical", label: "Canonical" },
@@ -33,8 +34,9 @@ const useHydrated = () =>
   );
 
 /**
- * Gallery-only harness. Scores locally with the answer key in the browser, which is fine here
- * and never acceptable in sessions or assignments.
+ * Gallery-only harness. `scoreInProcess` scores with the answer key in this browser, which ADR
+ * 0003 allows here and nowhere a student can reach. Because the engine is imported here and not by
+ * the player, it ships in this route's bundle only.
  */
 export function ItemPlayground({
   type,
@@ -106,6 +108,7 @@ export function ItemPlayground({
         <ItemPlayer
           key={`${type}-${variant}-${attempt}-${mode}`}
           item={item}
+          submit={scoreInProcess(item)}
           initialMode={mode}
           initialResponse={response}
           onResponseChange={setResponse}

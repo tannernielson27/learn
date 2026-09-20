@@ -5,6 +5,7 @@ import { RecordLayout } from "@/components/ehr/RecordLayout";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { Button } from "@/components/ui/Button";
 import type { Item } from "@/lib/ngn/schemas";
+import { scoreInProcess } from "@/lib/ngn/submit";
 
 const noopSubscribe = () => () => {};
 /** False during server render and hydration, true after; e2e waits for it before screenshots. */
@@ -16,8 +17,8 @@ const useHydrated = () =>
   );
 
 /**
- * Gallery-only harness. Scores locally with the answer key in the browser, which is fine here
- * and never acceptable in sessions or assignments.
+ * Gallery-only harness. `scoreInProcess` scores with the answer key in this browser, which ADR
+ * 0003 allows here and nowhere a student can reach.
  */
 export function TrendDemo({ item }: { item: Item }) {
   const times = item.ehr?.timePoints.length ?? 0;
@@ -36,7 +37,7 @@ export function TrendDemo({ item }: { item: Item }) {
       </div>
       <div className="mt-6 overflow-hidden rounded-md border border-line">
         <RecordLayout record={item.ehr!}>
-          <ItemPlayer key={attempt} item={item} />
+          <ItemPlayer key={attempt} item={item} submit={scoreInProcess(item)} />
         </RecordLayout>
       </div>
     </div>

@@ -1,11 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import type { KeylessItem } from "@/lib/authoring/play";
-import type { ScoreReveal } from "@/lib/authoring/scoreRequest";
 import type { AnyResponse, Item, ItemOf, ItemType, ResponseOf } from "@/lib/ngn/schemas";
 import { initialResponse as firstResponse } from "@/lib/ngn/presentation";
-import { scoreItem } from "@/lib/ngn/scoring";
+import type { KeylessItem, SubmitHandler } from "@/lib/ngn/submit";
 import { SAMPLE_TAG, type ScoreResult } from "@/lib/ngn/types";
 import { QuestionShell } from "./QuestionShell";
 import { RENDERERS } from "./registry";
@@ -13,23 +11,21 @@ import type { ItemRendererModule, PlayerItem, PlayerMode } from "./types";
 
 export interface ItemPlayerProps {
   /**
-   * The item to play. With local scoring it must be a full item. With `submitResponse` it may be
-   * keyless: the key and rationale arrive only with the server's score.
+   * The item to play. Normally keyless: the key, rationale and scoring arrive only with the score
+   * (ADR 0003). The gallery and the authoring preview pass a full item, because the handler they
+   * pass scores it in the same browser.
    */
   item: Item | KeylessItem;
   /** Starting mode. The player moves itself from answer to feedback on submit. */
   initialMode?: PlayerMode;
   progress?: { index: number; total: number };
   /**
-   * Scores a response locally. Defaults to the engine, which is only acceptable in the gallery and
-   * the authoring preview.
+   * Has the answer checked (#56). The player holds no scoring code of its own, so this is the only
+   * way an answer is ever scored: resolve with the score and what to reveal beside it, or reject
+   * when the answer could not be checked. Student-facing callers pass a handler that goes to the
+   * server; the gallery and the authoring preview pass `scoreInProcess(item)`.
    */
-  score?: (item: Item, response: AnyResponse) => ScoreResult;
-  /**
-   * Scores on the server instead. Resolves with the score and the key and rationale to reveal;
-   * rejects when the answer could not be checked.
-   */
-  submitResponse?: (response: AnyResponse) => Promise<ScoreReveal>;
+  submit: SubmitHandler;
   onSubmitted?: (response: AnyResponse, result: ScoreResult) => void;
   /** Response to open with, e.g. what a case-study step was left holding. */
   initialResponse?: AnyResponse;
@@ -63,8 +59,7 @@ export function ItemPlayer({
   item,
   initialMode = "answer",
   progress,
-  score = scoreItem,
-  submitResponse,
+  submit: submitResponse,
   onSubmitted,
   initialResponse,
   initialResult,
@@ -117,10 +112,6 @@ export function ItemPlayer({
   };
 
   const submit = () => {
-    if (!submitResponse) {
-      finish(score(fullItem, response));
-      return;
-    }
     if (pending.current) return;
     pending.current = true;
     setSubmitting(true);
@@ -168,7 +159,7 @@ export function ItemPlayer({
         item={playerItem as PlayerItem<ItemType> & ItemOf<ItemType>}
         response={response as ResponseOf<ItemType>}
         mode={mode}
-        breakdown={result?.breakdown}
+        score={result}
         onChange={(next) => {
           // Hold the answer that was sent while it is scored, so the feedback shows that answer.
           if (pending.current) return;

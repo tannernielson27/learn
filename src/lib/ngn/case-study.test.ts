@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { sampleCaseStudy } from "./fixtures";
+import { totalScore } from "./results";
 import { caseStudySchema } from "./schemas";
-import { caseStudyMaxPoints, maxPoints, totalScore } from "./scoring";
+import { caseStudyMaxPoints, maxPoints } from "./scoring";
 import type { ScoreResult } from "./types";
 
 const result = (points: number, max: number): ScoreResult => ({

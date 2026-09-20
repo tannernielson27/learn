@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema } from "@/lib/ngn/schemas";
+import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer, toPlayerItem } from "./ItemPlayer";
 import { RENDERERS } from "./registry";
 
@@ -22,7 +23,7 @@ describe("toPlayerItem", () => {
 describe("ItemPlayer with multiple choice", () => {
   it("disables submit until an option is chosen, then scores and shows feedback", async () => {
     const onSubmitted = vi.fn();
-    render(<ItemPlayer item={mc} onSubmitted={onSubmitted} />);
+    render(<ItemPlayer item={mc} submit={scoreInProcess(mc)} onSubmitted={onSubmitted} />);
     const submit = screen.getByRole("button", { name: "Submit" });
     expect(submit).toBeDisabled();
 
@@ -43,7 +44,7 @@ describe("ItemPlayer with multiple choice", () => {
   });
 
   it("takes focus to the score on submit, which says what was scored", async () => {
-    render(<ItemPlayer item={mc} />);
+    render(<ItemPlayer item={mc} submit={scoreInProcess(mc)} />);
     await userEvent.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
     // The submit bar is gone, so focus must go somewhere: the result is where the reader wants it.
@@ -56,7 +57,7 @@ describe("ItemPlayer with multiple choice", () => {
   });
 
   it("marks a wrong pick incorrect and the key as missed", async () => {
-    render(<ItemPlayer item={mc} />);
+    render(<ItemPlayer item={mc} submit={scoreInProcess(mc)} />);
     await userEvent.click(screen.getByRole("radio", { name: /Document the weight/ }));
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
     expect(screen.getByText("Incorrect")).toBeInTheDocument();
@@ -66,7 +67,7 @@ describe("ItemPlayer with multiple choice", () => {
 
 describe("ItemPlayer with multiple response", () => {
   it("toggles checkboxes and applies plus-minus scoring", async () => {
-    render(<ItemPlayer item={sata} />);
+    render(<ItemPlayer item={sata} submit={scoreInProcess(sata)} />);
     await userEvent.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
     await userEvent.click(screen.getByRole("checkbox", { name: /Oxygen saturation 89%/ }));
     await userEvent.click(screen.getByRole("checkbox", { name: /Temperature 37.2/ }));
@@ -80,7 +81,7 @@ describe("ItemPlayer with multiple response", () => {
   });
 
   it("Select N caps selections and requires exactly N to submit", async () => {
-    render(<ItemPlayer item={selectN} />);
+    render(<ItemPlayer item={selectN} submit={scoreInProcess(selectN)} />);
     const submit = screen.getByRole("button", { name: "Submit" });
     await userEvent.click(screen.getByRole("checkbox", { name: /blood cultures/ }));
     await userEvent.click(screen.getByRole("checkbox", { name: /broad-spectrum antibiotics/ }));
@@ -98,13 +99,14 @@ describe("ItemPlayer with multiple response", () => {
 
 describe("ItemPlayer with sample content", () => {
   it("labels an item tagged sample, so it is never shown as if it were real", () => {
-    render(<ItemPlayer item={mc} />);
+    render(<ItemPlayer item={mc} submit={scoreInProcess(mc)} />);
     const question = screen.getByRole("region", { name: "Question" });
     expect(within(question).getByText("Sample")).toBeInTheDocument();
   });
 
   it("leaves an untagged item unlabelled", () => {
-    render(<ItemPlayer item={{ ...mc, tags: ["cardiac"] }} />);
+    const untagged = { ...mc, tags: ["cardiac"] };
+    render(<ItemPlayer item={untagged} submit={scoreInProcess(untagged)} />);
     expect(screen.queryByText("Sample")).not.toBeInTheDocument();
   });
 });
@@ -115,7 +117,7 @@ describe("ItemPlayer without a renderer", () => {
     const saved = RENDERERS.bowtie;
     delete RENDERERS.bowtie;
     try {
-      render(<ItemPlayer item={unbuilt} />);
+      render(<ItemPlayer item={unbuilt} submit={scoreInProcess(unbuilt)} />);
       expect(screen.getByText(/No renderer/)).toBeInTheDocument();
     } finally {
       RENDERERS.bowtie = saved;
@@ -128,18 +130,22 @@ describe("ItemPlayer reopening a step someone has already answered", () => {
   const scored = { points: 0, maxPoints: 1, model: "zero_one" as const, breakdown: [] };
 
   it("opens in feedback with the given answer and score, without scoring again", () => {
-    const score = vi.fn();
-    render(<ItemPlayer item={mc} initialResponse={chosen} initialResult={scored} score={score} />);
+    const submit = vi.fn(scoreInProcess(mc));
+    render(
+      <ItemPlayer item={mc} submit={submit} initialResponse={chosen} initialResult={scored} />,
+    );
     expect(screen.getByRole("radio", { name: /Document the weight/ })).toBeChecked();
     const panel = screen.getByRole("complementary", { name: "Score" });
     expect(within(panel).getByText("0")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Submit" })).not.toBeInTheDocument();
-    expect(score).not.toHaveBeenCalled();
+    expect(submit).not.toHaveBeenCalled();
   });
 
   it("reports every change, so a caller that unmounts it can hand the answer back", async () => {
     const onResponseChange = vi.fn();
-    render(<ItemPlayer item={mc} onResponseChange={onResponseChange} />);
+    render(
+      <ItemPlayer item={mc} submit={scoreInProcess(mc)} onResponseChange={onResponseChange} />,
+    );
     await userEvent.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
     expect(onResponseChange).toHaveBeenCalledWith({ type: "multiple_choice", optionId: "opt_a" });
   });
