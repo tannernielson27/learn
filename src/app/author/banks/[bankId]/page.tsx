@@ -117,6 +117,7 @@ export default async function BankPage({
             : filtered
               ? "No items in this folder."
               : undefined;
+  const liveRefusal = liveStartMessage(query.live);
   const noCaseStudies = search.query
     ? "No case study titles match the search."
     : onlyArchived
@@ -145,9 +146,9 @@ export default async function BankPage({
           New item
         </Link>
       </div>
-      {liveStartMessage(query.live) ? (
+      {liveRefusal ? (
         <p role="alert" className="mb-6 text-sm text-incorrect">
-          {liveStartMessage(query.live)}
+          {liveRefusal}
         </p>
       ) : null}
 

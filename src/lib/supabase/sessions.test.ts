@@ -9,9 +9,16 @@ import {
 
 type Reply = { data?: unknown; error?: { code?: string; message?: string } | null };
 
+/**
+ * `as unknown as Client` rather than `as never`: a partial mock cannot satisfy the whole
+ * SupabaseClient shape, but this way the cast is to the type the function actually takes, so a
+ * change in that parameter's type still fails here.
+ */
+type Client = Parameters<typeof startSession>[0];
+
 function fakeRpc(reply: Reply) {
   const rpc = vi.fn(async () => reply);
-  return { client: { rpc } as never, rpc };
+  return { client: { rpc } as unknown as Client, rpc };
 }
 
 function fakeRow(reply: Reply) {
@@ -21,7 +28,7 @@ function fakeRow(reply: Reply) {
   }));
   const select = vi.fn<(columns: string) => { eq: typeof eq }>(() => ({ eq }));
   const from = vi.fn<(table: string) => { select: typeof select }>(() => ({ select }));
-  return { client: { from } as never, from, select, eq };
+  return { client: { from } as unknown as Client, from, select, eq };
 }
 
 const BANK = "00000000-0000-4000-8000-0000000000b1";

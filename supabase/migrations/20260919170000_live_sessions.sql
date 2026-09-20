@@ -5,6 +5,11 @@
 -- What is deliberately NOT here: participants and presence (#129, #132), submissions and scoring
 -- (#133), aggregates for the dashboard. This migration is the table those build on.
 
+-- The join code is drawn from pgcrypto. Supabase installs it into `extensions` on every project,
+-- but this is the first migration in the repo to depend on it, so it says so rather than inheriting
+-- the assumption from the platform.
+create extension if not exists pgcrypto with schema extensions;
+
 -- ---------------------------------------------------------------------------
 -- The session
 -- ---------------------------------------------------------------------------
@@ -42,15 +47,30 @@ create table public.sessions (
   closed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint sessions_one_source check (num_nonnulls(bank_id, case_study_id) = 1),
+  -- At most one source, and `start_session` requires exactly one when it creates the row. "At
+  -- most" rather than "exactly" because a session outlives its source: see the keys below.
+  constraint sessions_one_source check (num_nonnulls(bank_id, case_study_id) <= 1),
+  -- SET NULL on the source column only, not CASCADE. A session is the record of a class that
+  -- happened, and deleting a bank is ordinary authoring housekeeping — a cascade would quietly
+  -- take every class ever run from that bank with it (and, once #133 lands, their responses),
+  -- which is the opposite of what the DELETE revoke below is for. Naming the column keeps org_id,
+  -- which is NOT NULL; the composite key is then satisfied because one of its columns is null.
   constraint sessions_bank_org_fkey foreign key (bank_id, org_id)
-    references public.item_banks (id, org_id) on delete cascade,
+    references public.item_banks (id, org_id) on delete set null (bank_id),
   constraint sessions_case_org_fkey foreign key (case_study_id, org_id)
-    references public.case_studies (id, org_id) on delete cascade,
+    references public.case_studies (id, org_id) on delete set null (case_study_id),
   -- A session is closed exactly when it has ended; neither can be set without the other.
   constraint sessions_closed_with_ended check ((status = 'ended') = (closed_at is not null)),
-  -- Nothing can be revealed before the room is on an item.
-  constraint sessions_reveal_needs_item check (not reveal or current_position is not null),
+  -- Nothing can be revealed before the room is on an item and actually under way. A check, not a
+  -- trigger rule, so it holds on INSERT too — an author has table-wide INSERT (start_session is
+  -- security invoker and needs it), so a row written straight at the Data API meets this as well.
+  constraint sessions_reveal_needs_running_item check (
+    not reveal or (current_position is not null and status in ('running', 'paused'))
+  ),
+  -- The room can never be moved past the end of its own set, for the same reason.
+  constraint sessions_position_within_set check (
+    current_position is null or current_position <= jsonb_array_length(item_set)
+  ),
   -- Lets later tables (participants, responses) require a session in their own org.
   constraint sessions_id_org_key unique (id, org_id)
 );
@@ -123,6 +143,20 @@ begin
     return new;
   end if;
 
+  -- The one update that may touch any session, ended or not: a foreign key clearing a source
+  -- pointer because the bank or case study was deleted (ON DELETE SET NULL above). The class still
+  -- happened and its record stays; only the pointer goes. Allowed exactly when nothing else about
+  -- the row differs and neither source column is being set to anything but null — and reachable
+  -- only by the referential action itself, since `authenticated` has no column privilege on either
+  -- source column.
+  if to_jsonb(new) - 'bank_id' - 'case_study_id' = to_jsonb(old) - 'bank_id' - 'case_study_id'
+     and (new.bank_id is not distinct from old.bank_id or new.bank_id is null)
+     and (new.case_study_id is not distinct from old.case_study_id or new.case_study_id is null)
+     and (new.bank_id is distinct from old.bank_id
+          or new.case_study_id is distinct from old.case_study_id) then
+    return new;
+  end if;
+
   if old.status = 'ended' then
     raise exception 'that session has ended' using errcode = '22023';
   end if;
@@ -146,11 +180,6 @@ begin
      ) then
     raise exception 'a session cannot go from % to %', old.status, new.status
       using errcode = '22023';
-  end if;
-
-  if new.current_position is not null
-     and new.current_position > jsonb_array_length(new.item_set) then
-    raise exception 'that item is past the end of the session''s set' using errcode = '22023';
   end if;
 
   if new.status = 'ended' then
@@ -218,10 +247,30 @@ begin
      where i.bank_id = source_bank and i.status = 'published';
   else
     select c.org_id, c.title into source_org, source_title
-      from public.case_studies c where c.id = source_case_study;
+      from public.case_studies c
+     where c.id = source_case_study and c.status = 'published';
     if not found then
+      -- An unpublished case study is not "gone", but a room must not be shown one, and the two
+      -- answers are told apart below rather than here so the P0002 branch keeps meaning one thing.
+      if exists (select 1 from public.case_studies c where c.id = source_case_study) then
+        raise exception 'that case study is not published' using errcode = '22023';
+      end if;
       raise exception 'that case study does not exist' using errcode = 'P0002';
     end if;
+
+    -- Every step, in order, and every one of them published. A case study is a sequence: silently
+    -- dropping a half-written step would run the room through a different case study from the one
+    -- the instructor chose, so this refuses instead. (#111's start_case_study_step puts a fresh
+    -- draft item at a step and marks the case study a draft again, so this is reachable whenever a
+    -- published case study is edited and republished with a step left unfinished.)
+    if exists (
+      select 1 from public.case_study_items csi
+        join public.items i on i.id = csi.item_id
+       where csi.case_study_id = source_case_study and i.status <> 'published'
+    ) then
+      raise exception 'that case study has a step that is not published' using errcode = '22023';
+    end if;
+
     select coalesce(jsonb_agg(csi.item_id order by csi.position), '[]'::jsonb) into chosen
       from public.case_study_items csi
      where csi.case_study_id = source_case_study;
@@ -273,16 +322,23 @@ as $$
 declare
   closed timestamptz;
 begin
-  select s.closed_at into closed from public.sessions s where s.id = target;
-  if not found then
-    raise exception 'that session does not exist' using errcode = 'P0002';
-  end if;
+  -- Guarded in the UPDATE itself rather than by reading first and then writing. Under READ
+  -- COMMITTED, two calls racing on the same row (a double-tapped button, a retried request) can
+  -- both pass a separate "has it closed?" read before either commits; the second would then reach
+  -- the guard trigger with an already-ended row and raise, telling a host the session could not be
+  -- ended when it just had been. With the status in the UPDATE's own predicate, the loser matches
+  -- no row and falls through to read the winner's answer.
+  update public.sessions set status = 'ended'
+   where id = target and status <> 'ended'
+   returning closed_at into closed;
   if closed is not null then
     return closed;
   end if;
 
-  update public.sessions set status = 'ended' where id = target
-    returning closed_at into closed;
+  select s.closed_at into closed from public.sessions s where s.id = target;
+  if not found then
+    raise exception 'that session does not exist' using errcode = 'P0002';
+  end if;
   return closed;
 end;
 $$;
@@ -294,8 +350,23 @@ grant execute on function public.end_session(uuid) to authenticated;
 -- Resolving a code, rate limited per address
 -- ---------------------------------------------------------------------------
 
--- A fixed-window counter per caller and bucket, the same shape as private.rate_limits (#111) but
--- keyed by address rather than user, because the person resolving a code has not signed in.
+-- A fixed-window counter per address, the same shape as private.rate_limits (#111) but keyed by
+-- address rather than user, because the person resolving a code has not signed in.
+--
+-- It counts ONLY lookups that found nothing. That is the whole design, and it is deliberate:
+--
+--   * Wrong guesses are the only thing enumeration is made of. A class types one correct code; a
+--     script types nothing but wrong ones. Limiting misses bounds the attack exactly.
+--   * A correct code is never refused, however much anyone on the same address has abused it.
+--     This matters because the key is an address and a school or campus NAT puts a whole class
+--     behind one. A budget spent on every lookup — right or wrong — would let one unauthenticated
+--     script spend it in under a second and lock the room out of its own class for the rest of the
+--     window, again and again. There is no version of that trade worth making: a per-address
+--     ceiling on SUCCESSFUL lookups buys nothing (you need a valid code to make one) and costs
+--     the availability of the product.
+--
+-- So a person who mistypes on a busy address may be told to wait instead of being told the code is
+-- wrong, which is a worse message but not a locked door; the code they were given still works.
 --
 -- Unlike #111's table, this one is not bounded by the number of accounts, so rows are swept: the
 -- counter drops rows whose window closed long ago, on a small fraction of calls. The sweep cannot
@@ -303,51 +374,40 @@ grant execute on function public.end_session(uuid) to authenticated;
 -- budget.
 create table private.code_lookups (
   client_key text not null check (length(client_key) between 1 and 64),
-  bucket text not null check (bucket in ('attempt', 'miss')),
   window_start timestamptz not null,
   calls integer not null check (calls >= 1),
-  primary key (client_key, bucket)
+  primary key (client_key)
 );
 
 alter table private.code_lookups enable row level security;
-revoke all on private.code_lookups from public, anon, authenticated;
+revoke all on private.code_lookups from public, anon, authenticated, service_role;
 create index code_lookups_window_start_idx on private.code_lookups (window_start);
 
--- Two budgets per address, both over five minutes (the window #134 chose for sign-in, for the same
--- reason: it is the window Supabase's own auth limit uses, so nothing this refuses is still inside
--- another limiter's window when it retries).
+-- Sixty wrong guesses per address per five minutes. The window is the one #134 chose for sign-in,
+-- for the same reason: it is the window Supabase's own auth limit uses, so nothing this refuses is
+-- still inside another limiter's window when it retries.
 --
---   attempt 150 — every lookup, right or wrong. A class of sixty behind one school NAT shares one
---                 address and arrives at once; sixty joins plus a retype each fits with room over.
---   miss     60 — lookups that found nothing. This is the one that stops enumeration, because a
---                 class produces almost no misses (everyone types the same correct code) while a
---                 script produces nothing else. Sixty is high enough that a roomful of typos does
---                 not spend it.
---
--- At 150 lookups per address per five minutes, one address gets 43,200 guesses a day against
--- 1.07e9 codes; with the miss budget in force it gets 17,280. Either number is noise. The limits
--- live here, not in the caller's arguments, so no caller can widen its own.
-create function private.take_code_lookup(lookup_key text, lookup_bucket text)
+-- Sixty is well above a roomful of typos and far below anything useful to a script: 17,280 wrong
+-- guesses a day against 1,073,741,824 codes, so even with fifty sessions open at once an address
+-- guessing flat out all day has under a tenth of a percent chance of landing on one. The limit
+-- lives here, not in the caller's arguments, so no caller can widen its own.
+create function private.take_failed_lookup(lookup_key text)
 returns boolean
 language plpgsql security definer set search_path = ''
 as $$
 declare
   window_length constant interval := interval '5 minutes';
-  limit_calls integer := case lookup_bucket when 'attempt' then 150 when 'miss' then 60 end;
+  limit_calls constant integer := 60;
   used integer;
 begin
-  if limit_calls is null then
-    raise exception 'that lookup has no rate limit' using errcode = '22023';
-  end if;
-
   if random() < 0.005 then
     delete from private.code_lookups
      where window_start < now() - (window_length * 12);
   end if;
 
-  insert into private.code_lookups as l (client_key, bucket, window_start, calls)
-  values (lookup_key, lookup_bucket, now(), 1)
-  on conflict (client_key, bucket) do update
+  insert into private.code_lookups as l (client_key, window_start, calls)
+  values (lookup_key, now(), 1)
+  on conflict (client_key) do update
     set window_start = case
           when l.window_start <= now() - window_length then now()
           else l.window_start
@@ -364,7 +424,8 @@ begin
 end;
 $$;
 
-revoke all on function private.take_code_lookup(text, text) from public, anon, authenticated;
+revoke all on function private.take_failed_lookup(text)
+  from public, anon, authenticated, service_role;
 
 -- Turns a typed code into a session id, and nothing else. It returns no answer key, no item set
 -- and no host: it is the seam #129's join path calls before it creates a participant.
@@ -381,6 +442,8 @@ revoke all on function private.take_code_lookup(text, text) from public, anon, a
 -- A code that does not exist and a session that has ended are the same answer: zero rows. Nothing
 -- in the reply distinguishes "never was" from "is over", so a script cannot harvest live codes by
 -- watching which refusals differ.
+--
+-- Fails closed, which costs nothing: a database that cannot answer has no session to join either.
 create function public.resolve_session_code(session_code text, client_key text default null)
 returns table (
   session_id uuid,
@@ -403,19 +466,17 @@ declare
   normalized text := upper(regexp_replace(coalesce(session_code, ''), '[^0-9A-Za-z]', '', 'g'));
   hit uuid;
 begin
-  if not private.take_code_lookup(bucket_key, 'attempt') then
-    raise exception 'too many join attempts from this network' using errcode = 'PT429';
-  end if;
-
+  -- The lookup comes first, and a hit costs nothing. Charging before looking would mean one
+  -- script could spend a shared address's budget and lock a whole class out of its own session;
+  -- see the counter's comment above. The lookup itself is one indexed equality on the partial
+  -- unique index, so there is nothing here worth rationing.
   select s.id into hit
     from public.sessions s
    where s.code = normalized and s.status <> 'ended';
 
   if hit is null then
-    -- A miss costs the tighter budget. Note what this does NOT do: once the miss budget is spent,
-    -- a correct code still resolves. One person mistyping on a shared address cannot shut the
-    -- class out; only wrong guesses are refused.
-    if not private.take_code_lookup(bucket_key, 'miss') then
+    -- Only wrong guesses are counted, and only wrong guesses are ever refused.
+    if not private.take_failed_lookup(bucket_key) then
       raise exception 'too many join attempts from this network' using errcode = 'PT429';
     end if;
     return;
