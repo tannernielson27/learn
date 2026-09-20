@@ -6,9 +6,9 @@ import type { DemoSignInState } from "@/components/auth/DemoSignIn";
 import type { SignInState } from "@/components/auth/SignInForm";
 import { readDemoAccount, signInToDemo } from "@/lib/auth/demoAccount";
 import { parseSignInForm } from "@/lib/auth/signInForm";
+import { SIGN_IN_RATE_LIMITED, takeSignInAttempt } from "@/lib/auth/signInRateLimit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-const RATE_LIMITED = "Too many sign-in emails were asked for. Wait a minute, then try again.";
 const SEND_FAILED = "The email could not be sent just now. Try again in a moment.";
 
 /**
@@ -22,7 +22,13 @@ export async function requestSignInLink(
   const parsed = parseSignInForm(formData);
   if (!parsed.ok) return { status: "error", error: parsed.error };
 
-  const confirmUrl = new URL("/auth/confirm", await siteOrigin());
+  // Counted here, where the request is about to reach Supabase; an address that never gets past
+  // the form spends nothing.
+  const requestHeaders = await headers();
+  const limit = takeSignInAttempt(requestHeaders, "email");
+  if (!limit.ok) return { status: "error", error: limit.error };
+
+  const confirmUrl = new URL("/auth/confirm", siteOrigin(requestHeaders));
   confirmUrl.searchParams.set("next", parsed.next);
 
   const supabase = await createSupabaseServerClient();
@@ -31,8 +37,10 @@ export async function requestSignInLink(
     options: { emailRedirectTo: confirmUrl.toString(), shouldCreateUser: true },
   });
 
+  // Supabase's own limit counts this server's address, so its 429 can arrive without this
+  // caller having reached the limit above. One sentence for both, so neither says which.
   if (error) {
-    return { status: "error", error: error.status === 429 ? RATE_LIMITED : SEND_FAILED };
+    return { status: "error", error: error.status === 429 ? SIGN_IN_RATE_LIMITED : SEND_FAILED };
   }
   return { status: "sent", email: parsed.email };
 }
@@ -45,6 +53,11 @@ export async function signInAsDemo(
   _previous: DemoSignInState,
   formData: FormData,
 ): Promise<DemoSignInState> {
+  // Before the demo account is even read: a deployment with the demo turned off should not
+  // answer a scripted post any differently from one with it turned on.
+  const limit = takeSignInAttempt(await headers(), "demo");
+  if (!limit.ok) return { status: "error", error: limit.error };
+
   const supabase = await createSupabaseServerClient();
   const result = await signInToDemo(readDemoAccount(), formData.get("next"), (credentials) =>
     supabase.auth.signInWithPassword(credentials),
@@ -53,8 +66,7 @@ export async function signInAsDemo(
   redirect(result.next);
 }
 
-async function siteOrigin(): Promise<string> {
-  const requestHeaders = await headers();
+function siteOrigin(requestHeaders: Headers): string {
   const origin = requestHeaders.get("origin");
   if (origin) return origin;
   const host =
