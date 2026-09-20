@@ -8,8 +8,9 @@ import {
   takeSignInAttempt,
 } from "./signInRateLimit";
 
+/** A request that came through Vercel, which is the only place the address headers are read. */
 function request(headers: Record<string, string>): Headers {
-  return new Headers(headers);
+  return new Headers({ "x-vercel-id": "iad1::abc123", ...headers });
 }
 
 afterEach(() => {
@@ -23,50 +24,59 @@ describe("clientIp", () => {
       "x-real-ip": "198.51.100.4",
       "x-forwarded-for": "198.51.100.4",
     });
-    expect(clientIp(headers, true)).toBe("203.0.113.7");
+    expect(clientIp(headers)).toBe("203.0.113.7");
   });
 
   it("falls back to x-real-ip, then to x-forwarded-for", () => {
-    expect(clientIp(request({ "x-real-ip": "198.51.100.4" }), true)).toBe("198.51.100.4");
-    expect(clientIp(request({ "x-forwarded-for": "198.51.100.5" }), true)).toBe("198.51.100.5");
+    expect(clientIp(request({ "x-real-ip": "198.51.100.4" }))).toBe("198.51.100.4");
+    expect(clientIp(request({ "x-forwarded-for": "198.51.100.5" }))).toBe("198.51.100.5");
   });
 
   it("takes the first hop of a multi-hop list", () => {
     const headers = request({ "x-forwarded-for": "203.0.113.7, 70.41.3.18, 150.172.238.178" });
-    expect(clientIp(headers, true)).toBe("203.0.113.7");
+    expect(clientIp(headers)).toBe("203.0.113.7");
   });
 
   it("keeps an IPv6 address whole and lower-cased", () => {
     const headers = request({ "x-forwarded-for": "2001:DB8::8A2E:370:7334" });
-    expect(clientIp(headers, true)).toBe("2001:db8::8a2e:370:7334");
+    expect(clientIp(headers)).toBe("2001:db8::8a2e:370:7334");
   });
 
-  it("caps an absurdly long value so one caller cannot grow the key", () => {
-    const headers = request({ "x-forwarded-for": "9".repeat(500) });
-    expect(clientIp(headers, true)).toHaveLength(64);
+  it("refuses to make a bucket out of anything that is not an address", () => {
+    // No caller gets to invent a key, however the header reached us.
+    for (const junk of ["9".repeat(500), "not-an-ip", "203.0.113.7:8080", "  ,  ", ""]) {
+      expect(clientIp(request({ "x-forwarded-for": junk }))).toBe(UNIDENTIFIED_CALLER);
+    }
   });
 
-  it("buckets a deployed request with no IP header under one shared key", () => {
-    expect(clientIp(request({}), true)).toBe(UNIDENTIFIED_CALLER);
-    expect(clientIp(request({ "x-forwarded-for": "  ,  " }), true)).toBe(UNIDENTIFIED_CALLER);
-  });
-
-  it("reports no IP off the platform, where nothing in front identifies the caller", () => {
-    expect(clientIp(request({}), false)).toBeNull();
-  });
-
-  it("decides deployed-or-not from VERCEL when it is not told", () => {
-    vi.stubEnv("VERCEL", "");
-    expect(clientIp(request({}))).toBeNull();
-    vi.stubEnv("VERCEL", "1");
+  it("buckets a Vercel request with no address header under one shared key", () => {
     expect(clientIp(request({}))).toBe(UNIDENTIFIED_CALLER);
+  });
+
+  it("reads no address at all off the platform, however the headers look", () => {
+    // Next's own server fills x-forwarded-for from the socket, so `next start` and the Playwright
+    // auth run always carry one. Believing it would let the suite lock itself out, and off the
+    // platform it would also let any caller name its own bucket.
+    const headers = new Headers({ "x-forwarded-for": "203.0.113.7", "x-real-ip": "::1" });
+    expect(clientIp(headers, false)).toBeNull();
+    expect(clientIp(headers)).toBeNull();
+  });
+
+  it("treats the request as deployed when VERCEL is set, or when Vercel stamped it", () => {
+    vi.stubEnv("VERCEL", "");
+    expect(clientIp(new Headers({ "x-forwarded-for": "203.0.113.7" }))).toBeNull();
+    expect(
+      clientIp(new Headers({ "x-vercel-id": "iad1::abc", "x-forwarded-for": "203.0.113.7" })),
+    ).toBe("203.0.113.7");
+    vi.stubEnv("VERCEL", "1");
+    expect(clientIp(new Headers({ "x-forwarded-for": "203.0.113.7" }))).toBe("203.0.113.7");
   });
 });
 
 describe("createSignInRateLimiter", () => {
   const ip = "203.0.113.7";
 
-  it("lets a normal sign-in through", () => {
+  it("lets a normal sign-in through on both paths", () => {
     const limiter = createSignInRateLimiter();
     expect(limiter.take(ip, "email", 0)).toEqual({ ok: true });
     expect(limiter.take(ip, "demo", 0)).toEqual({ ok: true });
@@ -78,10 +88,7 @@ describe("createSignInRateLimiter", () => {
     for (let call = 0; call < attempts; call += 1) {
       expect(limiter.take(ip, "email", call)).toEqual({ ok: true });
     }
-    expect(limiter.take(ip, "email", attempts)).toEqual({
-      ok: false,
-      error: SIGN_IN_RATE_LIMITED,
-    });
+    expect(limiter.take(ip, "email", attempts)).toEqual({ ok: false, error: SIGN_IN_RATE_LIMITED });
   });
 
   it("allows exactly the demo limit in a window, then refuses", () => {
@@ -144,35 +151,76 @@ describe("createSignInRateLimiter", () => {
     }
   });
 
-  it("forgets finished windows instead of growing without bound", () => {
+  it("forgets windows that have run out", () => {
     const limiter = createSignInRateLimiter();
-    for (let caller = 0; caller < 12_000; caller += 1) limiter.take(`10.0.${caller}`, "email", 0);
+    for (let caller = 0; caller < 10_000; caller += 1) {
+      limiter.take(`198.51.${Math.floor(caller / 250)}.${caller % 250}`, "email", 0);
+    }
+    expect(limiter.size()).toBe(10_000);
+    // One more call after they have all run out sweeps them and leaves only the new one.
+    limiter.take("203.0.113.7", "email", SIGN_IN_LIMITS.email.windowMs);
+    expect(limiter.size()).toBe(1);
+  });
+
+  it("stays bounded under a flood, without handing anyone a clean slate", () => {
+    const limiter = createSignInRateLimiter();
+    const flood = (from: number, to: number, now: number) => {
+      for (let caller = from; caller < to; caller += 1) {
+        limiter.take(`198.51.${Math.floor(caller / 250)}.${caller % 250}`, "email", now);
+      }
+    };
+
+    flood(0, 11_000, 0);
+    // Someone reaches their limit while the flood is running.
+    for (let call = 0; call <= SIGN_IN_LIMITS.demo.attempts; call += 1) {
+      limiter.take("203.0.113.7", "demo", 1);
+    }
+    flood(11_000, 13_000, 2);
+
     expect(limiter.size()).toBeLessThanOrEqual(10_000);
+    // Eviction takes the windows nearest their end first, so a live counter survives and the
+    // flood buys nobody a fresh budget.
+    expect(limiter.take("203.0.113.7", "demo", 3)).toEqual({
+      ok: false,
+      error: SIGN_IN_RATE_LIMITED,
+    });
   });
 });
 
 describe("takeSignInAttempt", () => {
   it("counts the attempt against the address the request came from", () => {
+    const limiter = createSignInRateLimiter();
     const headers = request({ "x-forwarded-for": "203.0.113.77" });
     for (let call = 0; call < SIGN_IN_LIMITS.demo.attempts; call += 1) {
-      expect(takeSignInAttempt(headers, "demo")).toEqual({ ok: true });
+      expect(takeSignInAttempt(headers, "demo", limiter)).toEqual({ ok: true });
     }
-    expect(takeSignInAttempt(headers, "demo")).toEqual({
+    expect(takeSignInAttempt(headers, "demo", limiter)).toEqual({
       ok: false,
       error: SIGN_IN_RATE_LIMITED,
     });
     // The email path still has its own budget, and another address is untouched.
-    expect(takeSignInAttempt(headers, "email")).toEqual({ ok: true });
-    expect(takeSignInAttempt(request({ "x-forwarded-for": "198.51.100.9" }), "demo")).toEqual({
-      ok: true,
-    });
+    expect(takeSignInAttempt(headers, "email", limiter)).toEqual({ ok: true });
+    expect(
+      takeSignInAttempt(request({ "x-forwarded-for": "198.51.100.9" }), "demo", limiter),
+    ).toEqual({ ok: true });
+  });
+
+  it("does not limit the same request off the platform", () => {
+    const limiter = createSignInRateLimiter();
+    const headers = new Headers({ "x-forwarded-for": "203.0.113.77" });
+    for (let call = 0; call < SIGN_IN_LIMITS.demo.attempts + 10; call += 1) {
+      expect(takeSignInAttempt(headers, "demo", limiter)).toEqual({ ok: true });
+    }
   });
 });
 
 describe("the chosen limits", () => {
-  it("fits both paths inside Supabase's own 30 sign-ins per 5 minutes per IP", () => {
+  it("run in Supabase's own five-minute window", () => {
     expect(SIGN_IN_LIMITS.email.windowMs).toBe(5 * 60_000);
     expect(SIGN_IN_LIMITS.demo.windowMs).toBe(5 * 60_000);
-    expect(SIGN_IN_LIMITS.email.attempts + SIGN_IN_LIMITS.demo.attempts).toBeLessThanOrEqual(30);
+  });
+
+  it("keeps the shared demo account tighter than the emailed link", () => {
+    expect(SIGN_IN_LIMITS.demo.attempts).toBeLessThan(SIGN_IN_LIMITS.email.attempts);
   });
 });

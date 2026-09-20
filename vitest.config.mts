@@ -14,7 +14,9 @@ export default defineConfig({
         test: {
           name: "core",
           environment: "node",
-          include: ["src/lib/**/*.{test,spec}.ts"],
+          // src/app holds the Server Functions. Only their wiring is tested here — the work
+          // itself lives in src/lib — so they stay out of the coverage numbers below.
+          include: ["src/lib/**/*.{test,spec}.ts", "src/app/**/*.{test,spec}.ts"],
         },
       },
       {
