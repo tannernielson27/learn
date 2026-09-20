@@ -1,44 +1,72 @@
 /**
  * A whole live session standing on the fake stack: seeded rows, the two real route handlers behind
- * a `fetch`, a stand-in for #129's join path, and the real participant and host transports.
+ * a `fetch`, a stand-in for #129's join *action*, and the real participant and host transports.
  *
  * This is what `describeRoomConformance` is handed, so the suite that drives the in-memory adapter
  * drives this one unchanged.
  *
- * **Where the stand-in stops.** Only one thing here pretends to be product code: `joinSession`,
- * because #129 owns the join route, `public.participants` and the token. It does exactly what that
- * route will do — look the code up among sessions that have not ended, mint a participant id, sign
- * a token — and nothing more, so what the conformance suite exercises is this adapter's own
- * behaviour: that it validates the name before spending a round trip, that joining twice is one
- * join, that it presents the token on every later call, and that the two refusals which really are
- * the server's are passed through as refusals.
+ * **What is real here.** Since #133, the thing that says who is speaking is real: `deps.verify` is
+ * `participantFromCookie`, the same verifier `liveRouteDeps()` builds in production, reading the
+ * same cookie and calling the same `resume_participant`. The stand-in is only the *action* around
+ * it — resolving a typed code and writing the cookie into this browser's jar — because that is a
+ * Server Function in `src/app/join/actions.ts` and not something this folder owns.
+ *
+ * **Why each participant has a cookie jar.** The transport no longer presents a credential of any
+ * kind: the participant cookie is httpOnly, so in a browser it is the browser that attaches it.
+ * The jar below is that browser, and nothing else models it — a shared `fetch` would let one
+ * student answer as another, which is exactly the property the payload and refusal tests lean on.
  */
-import { LiveSessionError, type LiveSessionState, type LiveSessionTransport } from "@/lib/live";
+import {
+  LiveSessionError,
+  type LiveSessionState,
+  type LiveSessionTransport,
+  type SessionMode,
+} from "@/lib/live";
+import {
+  PARTICIPANT_COOKIE,
+  formatParticipantToken,
+  type ParticipantToken,
+} from "@/lib/live/participantToken";
 import { normalizeSessionCode } from "@/lib/live/sessionCode";
 import type { ConformanceRoom, ConformanceRoomOptions } from "@/lib/live/roomConformance";
 import type { Item } from "@/lib/ngn/schemas";
 import { toItemRow } from "@/lib/supabase/itemRows";
 import { createSupabaseHost } from "../hostTransport";
-import { createSupabaseParticipant } from "../participantTransport";
-import { bearerToken, signParticipantToken, verifyParticipantToken } from "../participantToken";
-import type { LiveRouteDeps } from "../routeDeps";
+import {
+  createSupabaseParticipant,
+  type ResumedIdentity,
+  type SupabaseParticipant,
+} from "../participantTransport";
+import { participantFromCookie, type LiveRouteDeps } from "../routeDeps";
 import { submitSessionResponse } from "../submitRoute";
 import { readParticipantView } from "../viewRoute";
-import { LIVE_ROUTES, type JoinSession } from "../wire";
+import { LIVE_ROUTES, type JoinSession, type ParticipantCredentials } from "../wire";
 import { FakeSupabase, createFakeClient, type FakeSessionRow } from "./fakeSupabase";
 
-const TEST_SECRET = "a-test-only-signing-secret-of-ample-length";
 const ORG_ID = "00000000-0000-0000-0000-0000000131aa";
 const HOST_ID = "00000000-0000-0000-0000-0000000131bb";
 const ORIGIN = "http://live.test";
 
+/** One browser's cookie store, holding the one cookie a participant ever has. */
+interface CookieJar {
+  token: ParticipantToken | null;
+}
+
 export interface FakeRoom extends ConformanceRoom {
   readonly stack: FakeSupabase;
   readonly orgId: string;
-  /** The stand-in for #129's join path, so a test can wrap it — slow it down, make it fail. */
-  readonly joinSession: JoinSession;
-  /** A participant whose join path is the caller's, for the races a conformance test cannot pose. */
-  participantWith(join: JoinSession): LiveSessionTransport;
+  /**
+   * A participant whose join path is wrapped, for the races a conformance test cannot pose:
+   * `wrap` is handed the real stand-in and returns the one this connection should use.
+   */
+  participantWith(wrap: (join: JoinSession) => JoinSession): LiveSessionTransport;
+  /**
+   * A phone that is already in the room — a reload, a reconnect, a `router.refresh()`. It has the
+   * cookie the join left behind and no code at all, which is the case `resume` exists for.
+   */
+  resuming(id: string): SupabaseParticipant;
+  /** Who a participant is, as their page's server render would have established it. */
+  identityOf(id: string): ResumedIdentity;
 }
 
 /** A row id for `public.items`, which is a uuid and is never the id the item calls itself. */
@@ -81,17 +109,18 @@ export function createFakeRoom(options: ConformanceRoomOptions): FakeRoom {
   });
 
   const service = createFakeClient(stack, { role: "service" });
-  const deps: LiveRouteDeps = {
-    verify: (request) => verifyParticipantToken(bearerToken(request), { secret: TEST_SECRET }),
-    service,
-  };
+  const deps: LiveRouteDeps = { verify: participantFromCookie(service), service };
 
   /** The two real route handlers, behind a real `Request` and a real `Response`. */
-  const call: typeof globalThis.fetch = async (input, init) => {
+  const call = async (path: string, init: RequestInit, jar: CookieJar): Promise<Response> => {
     stack.touch();
-    const url = typeof input === "string" ? input : String(input);
-    const request = new Request(url, init);
-    const path = new URL(url).pathname;
+    const headers = new Headers(init.headers);
+    // The browser attaching an httpOnly cookie to a same-origin request. Nothing in the transport
+    // put it here, and nothing in the transport could: it cannot read it.
+    if (jar.token !== null) {
+      headers.set("cookie", `${PARTICIPANT_COOKIE}=${formatParticipantToken(jar.token)}`);
+    }
+    const request = new Request(`${ORIGIN}${path}`, { ...init, headers });
     const response =
       path === LIVE_ROUTES.view
         ? await readParticipantView(request, deps)
@@ -103,46 +132,89 @@ export function createFakeRoom(options: ConformanceRoomOptions): FakeRoom {
     return response;
   };
 
-  let nextParticipant = 0;
-  const joinSession: JoinSession = async (code, identity) => {
-    const typed = normalizeSessionCode(code);
-    const match = stack.sessions.find((row) => row.code === typed);
-    if (!match) throw new LiveSessionError("unknown_code");
-    if (match.status === "ended") throw new LiveSessionError("not_open");
-    nextParticipant += 1;
-    const participantId = `00000000-0000-0000-0000-${String(nextParticipant).padStart(12, "9")}`;
-    return {
-      sessionId: match.id,
-      participantId,
-      code: match.code,
-      mode: match.mode,
-      displayName: identity.displayName,
-      joinedAt: nextParticipant,
-      token: await signParticipantToken(
-        { sessionId: match.id, participantId },
-        {
-          secret: TEST_SECRET,
-        },
-      ),
-    };
-  };
+  const fetchFor =
+    (jar: CookieJar): typeof globalThis.fetch =>
+    async (input, init) =>
+      call(new URL(String(input)).pathname, init ?? {}, jar);
 
-  const participantWith = (join: JoinSession): LiveSessionTransport =>
-    createSupabaseParticipant({
+  /**
+   * The stand-in for `joinLiveSession`: resolve the code, call `join_session`, and put the cookie
+   * in this browser's jar. Everything it calls is real; the Server Function around it is not.
+   */
+  const joinInto =
+    (jar: CookieJar): JoinSession =>
+    async (code, identity): Promise<ParticipantCredentials> => {
+      const typed = normalizeSessionCode(code);
+      const match = stack.sessions.find((row) => row.code === typed);
+      if (!match) throw new LiveSessionError("unknown_code");
+      if (match.status === "ended") throw new LiveSessionError("not_open");
+
+      const { data, error } = await service.rpc("join_session", {
+        target_session: match.id,
+        chosen_name: identity.displayName,
+      });
+      const row = data?.[0];
+      if (error || !row) throw new LiveSessionError("not_open");
+      jar.token = {
+        sessionId: match.id,
+        participantId: row.participant_id,
+        secret: row.rejoin_secret,
+      };
+      const held = stack.participants.find((person) => person.id === row.participant_id);
+      return {
+        sessionId: match.id,
+        participantId: row.participant_id,
+        code: match.code,
+        mode: match.mode,
+        displayName: held?.display_name ?? identity.displayName,
+        joinedAt: Date.parse(held?.joined_at ?? ""),
+      };
+    };
+
+  const participantWith = (wrap: (join: JoinSession) => JoinSession): SupabaseParticipant => {
+    const jar: CookieJar = { token: null };
+    return createSupabaseParticipant({
       client: createFakeClient(stack, { role: "anon" }),
-      join,
-      fetch: call,
+      join: wrap(joinInto(jar)),
+      fetch: fetchFor(jar),
       baseUrl: ORIGIN,
     });
+  };
+
+  const identityOf = (id: string): ResumedIdentity => {
+    const held = stack.participants.find((person) => person.id === id);
+    if (!held) throw new Error(`no participant ${id} in this room`);
+    return {
+      sessionId: held.session_id,
+      participantId: held.id,
+      displayName: held.display_name,
+      joinedAt: Date.parse(held.joined_at),
+    };
+  };
 
   return {
     stack,
     orgId: ORG_ID,
-    joinSession,
     participantWith,
+    identityOf,
+
+    /** The same browser, opening the page again: the cookie is still in the jar, the code is not. */
+    resuming(id: string): SupabaseParticipant {
+      const held = stack.participants.find((person) => person.id === id);
+      if (!held) throw new Error(`no participant ${id} in this room`);
+      const jar: CookieJar = {
+        token: { sessionId: held.session_id, participantId: held.id, secret: held.rejoin_secret },
+      };
+      return createSupabaseParticipant({
+        client: createFakeClient(stack, { role: "anon" }),
+        fetch: fetchFor(jar),
+        baseUrl: ORIGIN,
+      });
+    },
+
     sessionId: session.id,
     code: session.code,
-    mode: session.mode,
+    mode: session.mode as SessionMode,
 
     async currentState(): Promise<LiveSessionState> {
       const held = stack.sessions.find((row) => row.id === session.id) as FakeSessionRow;
@@ -154,7 +226,7 @@ export function createFakeRoom(options: ConformanceRoomOptions): FakeRoom {
       };
     },
 
-    participant: () => participantWith(joinSession),
+    participant: () => participantWith((join) => join),
 
     host: () =>
       createSupabaseHost({

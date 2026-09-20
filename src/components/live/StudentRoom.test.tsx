@@ -1,12 +1,35 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { act } from "react";
 import { describe, expect, it, vi } from "vitest";
-import type { LiveSessionState, Participant } from "@/lib/live";
-import type { ParticipantRoom, RoomConnection } from "@/lib/liveSupabase";
-import { StudentRoom, type RoomHandlers } from "./StudentRoom";
+import type {
+  ItemReveal,
+  LiveSessionState,
+  Participant,
+  ParticipantItem,
+  SubmitAck,
+} from "@/lib/live";
+import { LiveSessionError } from "@/lib/live";
+import type {
+  AnsweredPayload,
+  RoomConnection,
+  StudentView,
+  SupabaseParticipant,
+} from "@/lib/liveSupabase";
+import { FIXTURES } from "@/lib/ngn/fixtures";
+import { itemSchema, type AnyResponse } from "@/lib/ngn/schemas";
+import { toKeylessItem } from "@/lib/ngn/submit";
+import { StudentRoom } from "./StudentRoom";
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+
+const SATA = itemSchema.parse(FIXTURES.multiple_response.canonical);
+const KEYLESS = toKeylessItem(SATA) as ParticipantItem;
+const CORRECT: AnyResponse = {
+  type: "multiple_response",
+  optionIds: ["opt_a", "opt_b", "opt_d"],
+};
 
 const state = (over: Partial<LiveSessionState> = {}): LiveSessionState => ({
   status: "lobby",
@@ -16,41 +39,94 @@ const state = (over: Partial<LiveSessionState> = {}): LiveSessionState => ({
   ...over,
 });
 
-function setup(initial: LiveSessionState = state()) {
-  refresh.mockClear();
-  let handlers: RoomHandlers | null = null;
-  const leave = vi.fn(async () => {});
-  const connect = (given: RoomHandlers): ParticipantRoom => {
-    handlers = given;
-    return { leave };
-  };
+const running = (over: Partial<LiveSessionState> = {}) =>
+  state({ status: "running", position: 1, itemCount: 3, ...over });
 
+const answeredWith = (response: AnyResponse = CORRECT): AnsweredPayload => ({
+  itemId: SATA.id,
+  submittedAt: 1_700_000_000_000,
+  response,
+});
+
+const revealFor = (score: ItemReveal["score"]): ItemReveal => ({
+  itemId: SATA.id,
+  position: 1,
+  reveal: { answerKey: SATA.answerKey, rationale: SATA.rationale, scoring: SATA.scoring },
+  score,
+});
+
+/** A participant transport a test drives, with no socket and no server behind it. */
+function fakeTransport(submit: (itemId: string, response: AnyResponse) => Promise<SubmitAck>) {
+  const viewListeners = new Set<(view: StudentView) => void>();
+  const presenceListeners = new Set<(roster: Participant[]) => void>();
+  const connectionListeners = new Set<(status: RoomConnection, rejoined: boolean) => void>();
+  const leave = vi.fn(async () => {});
+
+  const transport = {
+    resume: vi.fn(async () => ({ state: state(), item: null, answered: null, revealed: null })),
+    join: vi.fn(),
+    leave,
+    onStudentView: (listener: (view: StudentView) => void) => {
+      viewListeners.add(listener);
+      return () => viewListeners.delete(listener);
+    },
+    onSessionState: () => () => {},
+    onPresence: (listener: (roster: Participant[]) => void) => {
+      presenceListeners.add(listener);
+      return () => presenceListeners.delete(listener);
+    },
+    onReveal: () => () => {},
+    onConnection: (listener: (status: RoomConnection, rejoined: boolean) => void) => {
+      connectionListeners.add(listener);
+      return () => connectionListeners.delete(listener);
+    },
+    submit: vi.fn(submit),
+  } as unknown as SupabaseParticipant;
+
+  return {
+    transport,
+    leave,
+    push: (view: Partial<StudentView>) =>
+      act(() => {
+        for (const listener of viewListeners) {
+          listener({ state: state(), item: null, answered: null, revealed: null, ...view });
+        }
+      }),
+    roster: (people: Participant[]) =>
+      act(() => {
+        for (const listener of presenceListeners) listener(people);
+      }),
+    connection: (status: RoomConnection, rejoined = false) =>
+      act(() => {
+        for (const listener of connectionListeners) listener(status, rejoined);
+      }),
+  };
+}
+
+function setup(
+  initial: LiveSessionState = state(),
+  submit: (itemId: string, response: AnyResponse) => Promise<SubmitAck> = async (itemId) => ({
+    itemId,
+    submittedAt: 1_700_000_000_000,
+  }),
+) {
+  refresh.mockClear();
+  const room = fakeTransport(submit);
   const view = render(
     <StudentRoom
       sessionId="00000000-0000-4000-8000-0000000132aa"
       title="Cardiac basics"
       displayName="Sam Okafor"
-      participantId="p-1"
+      participantId="00000000-0000-4000-8000-0000000132bb"
       joinedAt={1000}
       initial={initial}
-      connect={connect}
+      connect={() => room.transport}
     />,
   );
-
-  // Set synchronously by `connect` during the first render, so it is never null by the time a
-  // test reaches for it. Asserted rather than checked so a miswired test fails loudly.
-  const held = () => handlers as RoomHandlers;
-  return {
-    view,
-    leave,
-    push: (next: LiveSessionState) => act(() => held().onState(next)),
-    roster: (people: Participant[]) => act(() => held().onRoster(people)),
-    connection: (status: RoomConnection, rejoined = false) =>
-      act(() => held().onConnection(status, rejoined)),
-  };
+  return { ...room, view };
 }
 
-describe("StudentRoom", () => {
+describe("StudentRoom: waiting", () => {
   it("says who this phone joined as, and what the room is called", () => {
     setup();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Cardiac basics");
@@ -63,36 +139,21 @@ describe("StudentRoom", () => {
     expect(screen.getByText(/your instructor starts the session/)).toBeInTheDocument();
   });
 
-  it("moves to the item the host went to, with no reload", async () => {
+  it("says when the session has ended, and shows no item", () => {
     const room = setup();
-    room.push(state({ status: "running", position: 1 }));
-    expect(await screen.findByText("Item 1 of 12")).toBeInTheDocument();
-    expect(screen.getByText("The session is under way.")).toBeInTheDocument();
-
-    room.push(state({ status: "running", position: 2 }));
-    await waitFor(() => expect(screen.getByText("Item 2 of 12")).toBeInTheDocument());
-  });
-
-  it("says when the answer is showing at the front", () => {
-    const room = setup();
-    room.push(state({ status: "running", position: 2, reveal: true }));
-    expect(screen.getByText("The answer is showing.")).toBeInTheDocument();
+    room.push({ state: state({ status: "ended", position: 4 }), item: KEYLESS });
+    expect(screen.getByText("This session has ended.")).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Options" })).toBeNull();
   });
 
   it("says when the room is paused, without losing the place", () => {
     const room = setup();
-    room.push(state({ status: "paused", position: 4 }));
+    room.push({ state: state({ status: "paused", position: 4 }), item: null });
     expect(screen.getByText("The session is paused.")).toBeInTheDocument();
     expect(screen.getByText("Item 4 of 12")).toBeInTheDocument();
   });
 
-  it("says when the session has ended", () => {
-    const room = setup();
-    room.push(state({ status: "ended", position: 4 }));
-    expect(screen.getByText("This session has ended.")).toBeInTheDocument();
-  });
-
-  it("counts the phones in the room", () => {
+  it("counts the phones in the room while there is nothing to answer", () => {
     const room = setup();
     room.roster([
       { participantId: "p-1", displayName: "Sam Okafor", joinedAt: 1000 },
@@ -109,7 +170,7 @@ describe("StudentRoom", () => {
     expect(screen.queryByRole("status")).toBeNull();
   });
 
-  it("re-reads the room from the server when the socket comes back, and not on the first join", () => {
+  it("re-reads the page from the server when the socket comes back, and not on the first join", () => {
     const room = setup();
     room.connection("live", false);
     expect(refresh).not.toHaveBeenCalled();
@@ -123,5 +184,121 @@ describe("StudentRoom", () => {
     const room = setup();
     room.view.unmount();
     expect(room.leave).toHaveBeenCalled();
+  });
+});
+
+describe("StudentRoom: answering the item", () => {
+  it("renders the item the room is on, with no answer key anywhere in the markup", () => {
+    const room = setup();
+    room.push({ state: running(), item: KEYLESS });
+
+    expect(screen.getByRole("group", { name: "Options" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Submit$/ })).toBeInTheDocument();
+    // The key, the rationale and the per-option rationale are not on this phone at all.
+    expect(document.body.textContent).not.toContain("Tachypnea, hypoxemia");
+    expect(document.body.textContent).not.toContain("89% on room air is hypoxemia");
+  });
+
+  it("sends the answer once, and moves to the sent state without a score", async () => {
+    const user = userEvent.setup();
+    const room = setup();
+    room.push({ state: running(), item: KEYLESS });
+
+    await user.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
+    await user.click(screen.getByRole("button", { name: /^Submit$/ }));
+
+    await waitFor(() => expect(screen.getByTestId("answer-sent")).toBeInTheDocument());
+    expect(room.transport.submit).toHaveBeenCalledWith(SATA.id, {
+      type: "multiple_response",
+      optionIds: ["opt_a"],
+    });
+    // No Submit to press a second time, and no marks: the host has not revealed.
+    expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
+    expect(screen.queryByRole("complementary", { name: "Score" })).toBeNull();
+  });
+
+  it("takes a double submit the server refused as the answer already being in", async () => {
+    const user = userEvent.setup();
+    const room = setup(state(), async () => {
+      throw new LiveSessionError("already_answered");
+    });
+    room.push({ state: running(), item: KEYLESS });
+
+    await user.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
+    await user.click(screen.getByRole("button", { name: /^Submit$/ }));
+
+    // Not an error on the screen: it means what the sent state means.
+    await waitFor(() => expect(screen.getByTestId("answer-sent")).toBeInTheDocument());
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("lets the student try again when the room refused the answer for another reason", async () => {
+    const user = userEvent.setup();
+    const room = setup(state(), async () => {
+      throw new LiveSessionError("rate_limited");
+    });
+    room.push({ state: running(), item: KEYLESS });
+
+    await user.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
+    await user.click(screen.getByRole("button", { name: /^Submit$/ }));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+    expect(screen.queryByTestId("answer-sent")).toBeNull();
+    expect(screen.getByRole("button", { name: /^Submit$/ })).toBeInTheDocument();
+  });
+
+  it("comes back to the answer it sent when the page is opened again mid-item", () => {
+    const room = setup();
+    // What `/api/live/view` tells a reloaded phone: the item, and what this phone already sent.
+    room.push({ state: running(), item: KEYLESS, answered: answeredWith() });
+
+    expect(screen.getByTestId("answer-sent")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeChecked();
+    expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
+  });
+
+  it("opens a fresh item when the room moves on, rather than keeping the last answer", () => {
+    const room = setup();
+    room.push({ state: running(), item: KEYLESS, answered: answeredWith() });
+    expect(screen.getByTestId("answer-sent")).toBeInTheDocument();
+
+    const next = { ...KEYLESS, id: "mr_sample_2" } as ParticipantItem;
+    room.push({ state: running({ position: 2 }), item: next, answered: null });
+    expect(screen.queryByTestId("answer-sent")).toBeNull();
+    expect(screen.getByRole("button", { name: /^Submit$/ })).toBeInTheDocument();
+  });
+});
+
+describe("StudentRoom: the reveal", () => {
+  it("shows the key, the rationale and this phone's own marks", () => {
+    const room = setup();
+    room.push({
+      state: running({ reveal: true }),
+      item: KEYLESS,
+      answered: answeredWith(),
+      revealed: revealFor({ points: 3, maxPoints: 3, model: "plus_minus", breakdown: [] }),
+    });
+
+    expect(screen.getByRole("complementary", { name: "Score" })).toHaveTextContent("3");
+    expect(screen.getByText(/Tachypnea, hypoxemia/)).toBeInTheDocument();
+    // The answer this phone gave, marked against the key that has just arrived.
+    expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeChecked();
+    expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
+  });
+
+  it("tells a phone that did not answer that the answer is showing, and shows it no key", () => {
+    const room = setup();
+    // Sprint 7 cut: marking a key needs an answer to mark it against. Sprint 8's result view is
+    // what shows the key to a phone that stayed quiet.
+    room.push({
+      state: running({ reveal: true }),
+      item: KEYLESS,
+      answered: null,
+      revealed: revealFor(null),
+    });
+
+    expect(screen.getByText("The answer is showing.")).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("Tachypnea, hypoxemia");
   });
 });

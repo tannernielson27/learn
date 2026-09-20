@@ -3,8 +3,9 @@
  * conformance suite as the in-memory one (#131).
  *
  * **What is real here and what is not.** Real: the participant transport, the host transport, both
- * route handlers, the participant token, `parseSubmission`, `scoreSubmission`, `toKeylessItem`,
- * `fromItemRow`, `applyHostCommand`, the `Request` and `Response` objects and the JSON that goes
+ * route handlers, the cookie verifier `liveRouteDeps()` itself builds (#133), `parseSubmission`,
+ * `scoreSubmission`, `toKeylessItem`, `fromItemRow`, `applyHostCommand`, the `Request` and
+ * `Response` objects and the JSON that goes
  * over them. Not real: the database and the Realtime server. Those are stood in for here, and the
  * SQL they stand in for — the aggregate trigger, the state machine, the row level security — is
  * covered where it actually lives, by `supabase/tests/database/*.test.sql` under pgTAP.
@@ -50,6 +51,24 @@ export interface FakeItemRow {
   answer_key: Json;
   rationale: Json;
   scoring: Json;
+}
+
+/**
+ * `public.participants` (#129), as far as this stack needs it: enough for `join_session` and
+ * `resume_participant`, which since #133 are what every authenticated live-session request is
+ * checked against.
+ *
+ * The secret is held in the clear here where Postgres holds only its SHA-256. The fake is not
+ * where that property is tested — `supabase/tests/database/*.test.sql` is — and hashing in
+ * process would only make this file harder to read.
+ */
+export interface FakeParticipantRow {
+  id: string;
+  session_id: string;
+  org_id: string;
+  display_name: string;
+  rejoin_secret: string;
+  joined_at: string;
 }
 
 export interface FakeResponseRow {
@@ -128,6 +147,7 @@ const REALTIME_TABLES = new Set(["session_public_state", "session_item_aggregate
 
 export class FakeSupabase {
   readonly sessions: FakeSessionRow[] = [];
+  readonly participants: FakeParticipantRow[] = [];
   readonly items: FakeItemRow[] = [];
   readonly responses: FakeResponseRow[] = [];
   readonly publicState: FakePublicStateRow[] = [];
@@ -548,11 +568,76 @@ class FakeUpdate implements PromiseLike<{ data: null; error: { message: string }
   }
 }
 
+/** A participant uuid, and a 24-byte secret hex-encoded, exactly as `join_session` returns them. */
+function participantId(index: number): string {
+  return `00000000-0000-4000-8000-${String(index).padStart(12, "9")}`;
+}
+
+function participantSecret(index: number): string {
+  return `${String(index).padStart(6, "0")}${"ab".repeat(21)}`;
+}
+
 function runRpc(
   stack: FakeSupabase,
   name: string,
   args: Record<string, unknown>,
 ): { data: unknown; error: { message: string; code?: string } | null } {
+  // #129's two functions. They are here rather than stood in for by the room harness because
+  // since #133 `resume_participant` is what every request to the two route handlers is checked
+  // against: the production verifier itself is what the conformance suite drives.
+  if (name === "join_session") {
+    const session = stack.sessions.find((row) => row.id === String(args.target_session));
+    if (!session) return { data: null, error: { message: "gone", code: "P0002" } };
+    if (session.status === "ended")
+      return { data: null, error: { message: "ended", code: "22023" } };
+    const cleaned = String(args.chosen_name ?? "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 32);
+    if (cleaned === "") return { data: null, error: { message: "no name", code: "22023" } };
+
+    const index = stack.participants.length + 1;
+    stack.participants.push({
+      id: participantId(index),
+      session_id: session.id,
+      org_id: session.org_id,
+      display_name: cleaned,
+      rejoin_secret: participantSecret(index),
+      joined_at: stack.now(),
+    });
+    return {
+      data: [{ participant_id: participantId(index), rejoin_secret: participantSecret(index) }],
+      error: null,
+    };
+  }
+
+  if (name === "resume_participant") {
+    const held = stack.participants.find(
+      (row) =>
+        row.id === String(args.target_participant) &&
+        row.session_id === String(args.target_session) &&
+        // A wrong secret takes the same path as a missing one: no rows, and a caller that cannot
+        // tell the two apart.
+        row.rejoin_secret === String(args.presented_secret ?? ""),
+    );
+    if (!held) return { data: [], error: null };
+    const session = stack.sessions.find((row) => row.id === held.session_id);
+    if (!session) return { data: [], error: null };
+    return {
+      data: [
+        {
+          participant_id: held.id,
+          participant_name: held.display_name,
+          participant_joined_at: held.joined_at,
+          session_status: session.status,
+          session_mode: session.mode,
+          session_title: session.title,
+        },
+      ],
+      error: null,
+    };
+  }
+
   if (name === "end_session") {
     const target = String(args.target);
     const session = stack.sessions.find((row) => row.id === target);

@@ -9,6 +9,7 @@ import {
   isLiveSessionError,
   mergeRoster,
   type HostCommand,
+  type ItemAggregate,
   type LiveHostTransport,
   type LiveSessionState,
   type RosterEntry,
@@ -27,7 +28,23 @@ export interface HostLobbyProps {
   initial: LiveSessionState;
   /** Injectable so this can be driven without Supabase. The page passes nothing. */
   connect?: () => LiveHostTransport;
+  /**
+   * How often the console asks how many have answered, in milliseconds. Only a test passes it;
+   * see `TALLY_INTERVAL_MS`.
+   */
+  tallyIntervalMs?: number;
 }
+
+/**
+ * How often the console asks for the tally while an item is open (#133).
+ *
+ * A pull, because ADR 0002 forbids a push per submission: nothing goes out over the channel while
+ * a class answers, so the count a host watches has to be asked for. Three seconds is under the
+ * time it takes to notice a number is stale and far above the cost — one indexed read on the
+ * host's own connection, and no Realtime message at all. It runs only while the room is on an
+ * item, so a lobby, a paused-and-forgotten room and an ended one ask for nothing.
+ */
+export const TALLY_INTERVAL_MS = 3_000;
 
 /** The moves, in the order a host reaches for them, with the word each button says. */
 const LABELS: Record<HostCommand, string> = {
@@ -77,9 +94,11 @@ export function HostLobby({
   studentUrl,
   initial,
   connect,
+  tallyIntervalMs = TALLY_INTERVAL_MS,
 }: HostLobbyProps) {
   const [state, setState] = useState<LiveSessionState>(initial);
   const [roster, setRoster] = useState<RosterEntry[]>([]);
+  const [tally, setTally] = useState<ItemAggregate | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<HostCommand | null>(null);
 
@@ -104,12 +123,18 @@ export function HostLobby({
     const offPresence = console_.onPresence((people) => {
       if (watching) setRoster((held) => mergeRoster(held, people));
     });
+    // Pushed once per item change, never once per submission (ADR 0002). The count that moves
+    // while the class answers is the poll below.
+    const offAggregate = console_.onAggregate((aggregate) => {
+      if (watching) setTally(aggregate);
+    });
 
     const open = console_.open().then(
       (snapshot) => {
         if (!watching) return;
         setState(snapshot.state);
         setRoster((held) => mergeRoster(held, snapshot.roster));
+        setTally(snapshot.aggregate);
       },
       () => {
         // The room itself is fine — it lives in Postgres. What has failed is this screen's
@@ -123,11 +148,43 @@ export function HostLobby({
       watching = false;
       offState();
       offPresence();
+      offAggregate();
       // A cleanup cannot await, and a socket that has already dropped must not turn leaving the
       // console into an unhandled rejection.
       void console_.close().catch(() => {});
     };
   }, [dial]);
+
+  /**
+   * How many answers are in for the item the room is on.
+   *
+   * Asked for rather than waited for, because nothing is pushed while an item is being answered
+   * (ADR 0002) and "three of three answered" is exactly what a host wants before they reveal. It
+   * runs only while the room is on an item — a lobby and an ended session ask for nothing — and
+   * an ask that fails is simply not repeated until the next tick: a count that stops moving for
+   * three seconds is not worth an error on a projector.
+   */
+  const onAnItem = state.position !== null && state.status !== "lobby" && state.status !== "ended";
+  useEffect(() => {
+    if (!onAnItem) return;
+    let watching = true;
+    const ask = () => {
+      const console_ = transport.current;
+      if (console_ === null) return;
+      void console_
+        .aggregate()
+        .then((aggregate) => {
+          if (watching && aggregate !== null) setTally(aggregate);
+        })
+        .catch(() => {});
+    };
+    ask();
+    const timer = setInterval(ask, tallyIntervalMs);
+    return () => {
+      watching = false;
+      clearInterval(timer);
+    };
+  }, [onAnItem, state.position, state.reveal, tallyIntervalMs]);
 
   const run = useCallback(async (command: HostCommand) => {
     const console_ = transport.current;
@@ -147,6 +204,12 @@ export function HostLobby({
   }, []);
 
   const ended = state.status === "ended";
+  /**
+   * The tally, but only while it is about the item on the screen. A tally for the item the room
+   * has just left is still in hand when `advance` lands, and "5 of 5 answered" above a question
+   * nobody has seen yet is worse than showing nothing for a beat.
+   */
+  const answersOn = tally !== null && tally.position === state.position ? tally : null;
   const position =
     state.position !== null && state.itemCount > 0
       ? `Item ${state.position} of ${state.itemCount}`
@@ -160,6 +223,16 @@ export function HostLobby({
         {position === null ? null : <> · {position}</>}
         {state.reveal ? <> · answer showing</> : null}
       </p>
+
+      {onAnItem && answersOn !== null ? (
+        <p
+          data-testid="answer-count"
+          aria-live="polite"
+          className="tabular mt-3 text-sm text-ink-1"
+        >
+          {answersOn.responded} of {answersOn.present} answered
+        </p>
+      ) : null}
 
       <section
         aria-labelledby="code-heading"

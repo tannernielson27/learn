@@ -377,6 +377,17 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
       onPresence: (listener) => subscribe(connection.presence, listener),
       onAggregate: (listener) => subscribe(connection.aggregates, listener),
 
+      /**
+       * Counted from the answers on record, which is the same count `open()` reports.
+       *
+       * Null whenever the room is on no item — including an ended one, which keeps the position
+       * it stopped at. `itemAt` is what decides that, here and in the Supabase adapter, so both
+       * answer the same question rather than two similar ones.
+       */
+      async aggregate() {
+        return itemAt(items, state) === null ? null : aggregateAt(state.position);
+      },
+
       async start() {
         return runCommand("start");
       },

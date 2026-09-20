@@ -9,10 +9,16 @@ import { describe, expect, it } from "vitest";
 const SRC = path.resolve(import.meta.dirname, "..", "..");
 const ENGINE_DIR = path.join(SRC, "lib", "ngn", "scoring");
 
-/** The players a student can be put in front of. */
+/**
+ * The players a student can be put in front of, and — since #133 — the live-session screen that
+ * mounts one. That screen is the first place outside the gallery where a real student answers a
+ * real item, so it is held to the same rule: the scoring engine is the server's, and a phone that
+ * cannot score cannot be made to leak how an item is scored.
+ */
 const ENTRY_POINTS = [
   path.join(SRC, "components", "question", "ItemPlayer.tsx"),
   path.join(SRC, "components", "case-study", "CaseStudyPlayer.tsx"),
+  path.join(SRC, "components", "live", "StudentRoom.tsx"),
 ];
 
 // `import ... from "x"` and `export ... from "x"`, capturing whether the statement is type-only.

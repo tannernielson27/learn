@@ -108,3 +108,36 @@ export function parseParticipantToken(value: string | undefined | null): Partici
   if (!UUID.test(sessionId) || !UUID.test(participantId) || !SECRET.test(secret)) return null;
   return { sessionId, participantId, secret };
 }
+
+/**
+ * Reads this app's participant cookie out of a raw `Cookie` header, or null.
+ *
+ * A route handler is handed a Web `Request`, not a Next `cookies()` store, and the two live
+ * session routes are driven straight from a `Request` by their tests — so the header is read
+ * here, in the pure module that already owns what the cookie is called and what its value looks
+ * like, rather than in the adapter that happens to need it.
+ *
+ * Only the first entry with this name is taken. Cookie values are not decoded unless they have to
+ * be: a token is `<uuid>.<uuid>.<hex>`, which no writer percent-encodes, and a value that has been
+ * encoded anyway still comes back right. Whatever comes out is a *candidate* — it is
+ * `parseParticipantToken` that decides whether it is even shaped like a token, and
+ * `resume_participant` that decides whether it is real.
+ */
+export function readParticipantCookie(header: string | null | undefined): string | null {
+  if (!header) return null;
+  for (const part of header.split(";")) {
+    const separator = part.indexOf("=");
+    if (separator === -1) continue;
+    if (part.slice(0, separator).trim() !== PARTICIPANT_COOKIE) continue;
+    const raw = part.slice(separator + 1).trim();
+    if (raw === "") return null;
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      // A value that is not valid percent-encoding is not one this app wrote. Hand it on as it
+      // came rather than throwing inside a request: the shape check below it will refuse it.
+      return raw;
+    }
+  }
+  return null;
+}

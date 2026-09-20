@@ -9,16 +9,27 @@
  * `sessions.reveal` is true for the item the room is on, which the host sets and the browser
  * cannot.
  *
+ * It also answers the one question a phone cannot answer for itself after a reload: **have I
+ * already answered this?** `answered` is that, and it is this participant's own response read
+ * back to them — not a mark. The distinction is the whole of ADR 0003 here: what they sent is
+ * theirs, what it earned is the host's until the reveal.
+ *
  * POST, not GET, for one reason: a GET route handler can be prerendered or cached, and nothing
  * that may carry an answer key is allowed anywhere near a cache. Every answer also carries
  * `Cache-Control: no-store`.
  */
 import { itemAt, type LiveSessionState, type ParticipantItem } from "@/lib/live";
-import { toKeylessItem, type Reveal } from "@/lib/ngn/submit";
+import type { Item } from "@/lib/ngn/schemas";
+import { parseSubmission, toKeylessItem, type Reveal } from "@/lib/ngn/submit";
 import type { ScoreResult } from "@/lib/ngn/types";
 import { fromItemRow } from "@/lib/supabase/itemRows";
 import { LIVE_ROUTE_ERRORS, fail, type LiveRouteDeps } from "./routeDeps";
-import { NO_STORE_HEADERS, type ParticipantViewPayload, type RevealedPayload } from "./wire";
+import {
+  NO_STORE_HEADERS,
+  type AnsweredPayload,
+  type ParticipantViewPayload,
+  type RevealedPayload,
+} from "./wire";
 
 const ITEM_COLUMNS = "type, cjmm_step, tags, version, content, answer_key, rationale, scoring";
 
@@ -52,7 +63,7 @@ export async function readParticipantView(
 
   const currentItemId = itemAt(itemSet, state);
   if (typeof currentItemId !== "string") {
-    const payload: ParticipantViewPayload = { state, item: null, revealed: null };
+    const payload: ParticipantViewPayload = { state, item: null, answered: null, revealed: null };
     return Response.json(payload, { headers: NO_STORE_HEADERS });
   }
 
@@ -70,10 +81,14 @@ export async function readParticipantView(
   if (!stored.ok) return fail(409, LIVE_ROUTE_ERRORS.unplayable);
 
   const item: ParticipantItem = toKeylessItem(stored.value);
+  // `itemAt` only answers with an id while the room is on an item, which is exactly when
+  // `position` is not null. The cast is that fact, not an assumption about the row.
+  const position = state.position as number;
+  const answered = await answerFor(deps, participant, position, stored.value);
   const revealed = state.reveal
     ? await revealFor(deps, participant.sessionId, participant.participantId, {
         itemId: stored.value.id,
-        position: state.position as number,
+        position,
         reveal: {
           answerKey: stored.value.answerKey,
           rationale: stored.value.rationale,
@@ -82,8 +97,47 @@ export async function readParticipantView(
       })
     : null;
 
-  const payload: ParticipantViewPayload = { state, item, revealed };
+  const payload: ParticipantViewPayload = { state, item, answered, revealed };
   return Response.json(payload, { headers: NO_STORE_HEADERS });
+}
+
+/**
+ * Whether this participant has already answered the item the room is on, and what they said.
+ *
+ * Theirs and nobody else's: the read is keyed on the participant id the cookie was checked
+ * against, so there is no query string to change. Two columns are selected and two are all that
+ * could be: `points`, `max_points`, `model`, `breakdown` and `groups` are marks, and marks belong
+ * to `revealFor` below, which runs only once the host has revealed (ADR 0003).
+ *
+ * The stored response is read back through `parseSubmission` rather than trusted. It was
+ * validated on the way in, but stored JSON is external input every time it is read — the same
+ * rule the item above it is held to — and an item edited under a running session could leave a
+ * response that no longer matches its schema. An unreadable one reads as "not answered here":
+ * the server still knows they answered and will still refuse a second answer, and the phone
+ * simply opens the item fresh instead of being handed something a renderer cannot draw.
+ */
+async function answerFor(
+  deps: LiveRouteDeps,
+  participant: { sessionId: string; participantId: string },
+  position: number,
+  item: Item,
+): Promise<AnsweredPayload | null> {
+  const { data } = await deps.service
+    .from("session_responses")
+    .select("response, submitted_at")
+    .eq("session_id", participant.sessionId)
+    .eq("participant_id", participant.participantId)
+    .eq("item_position", position)
+    .maybeSingle();
+  if (!data?.submitted_at) return null;
+
+  const parsed = parseSubmission({ response: data.response }, item.type);
+  if (!parsed.ok) return null;
+  return {
+    itemId: item.id,
+    submittedAt: Date.parse(data.submitted_at),
+    response: parsed.response,
+  };
 }
 
 /**

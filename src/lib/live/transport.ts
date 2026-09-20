@@ -183,6 +183,16 @@ export interface LiveHostTransport {
   onSessionState(listener: (view: SessionView<Item>) => void): Unsubscribe;
   onPresence(listener: (roster: Participant[]) => void): Unsubscribe;
   onAggregate(listener: (aggregate: ItemAggregate) => void): Unsubscribe;
+  /**
+   * The tally for the item the room is on, counted **now**. Null when the room is on no item.
+   *
+   * A pull, and deliberately not a push. ADR 0002's rule — once per item change, never once per
+   * submission — is what keeps a class of sixty answering twenty items inside the free tier, and
+   * it means nothing at all goes out while an item is being answered. But "three of three have
+   * answered" is precisely what a host wants *before* they decide to reveal, so the console asks
+   * for it instead of the room telling everyone. One indexed read per ask, and no message.
+   */
+  aggregate(): Promise<ItemAggregate | null>;
   /** Each rejects `LiveSessionError` when the state machine refuses the move. */
   start(): Promise<LiveSessionState>;
   advance(): Promise<LiveSessionState>;

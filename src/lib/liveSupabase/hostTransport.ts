@@ -343,6 +343,16 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     onPresence: (listener) => subscribe(presence, listener),
     onAggregate: (listener) => subscribe(aggregates, listener),
 
+    /**
+     * The same live count `open()` reports, asked for on its own. One indexed read on the host's
+     * own connection, under their org's row level security, and no Realtime message at all —
+     * which is what lets a console show answers arriving without breaking ADR 0002's budget.
+     */
+    async aggregate(): Promise<ItemAggregate | null> {
+      if (closed) return null;
+      return readAggregate();
+    },
+
     start: () => run("start"),
     advance: () => run("advance"),
     reveal: () => run("reveal"),

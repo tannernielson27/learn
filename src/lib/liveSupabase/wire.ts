@@ -16,6 +16,7 @@
 import type { LiveRefusal } from "@/lib/live";
 import type { SessionMode, SessionStatus } from "@/lib/live";
 import type { ParticipantItem } from "@/lib/live";
+import type { AnyResponse } from "@/lib/ngn/schemas";
 import type { Reveal } from "@/lib/ngn/submit";
 import type { ScoreResult } from "@/lib/ngn/types";
 
@@ -26,12 +27,15 @@ export const LIVE_ROUTES = {
 } as const;
 
 /**
- * What #129's join path has to hand back, and the whole of what #131 needs from it.
+ * What a join has to hand back, and the whole of what this adapter needs from it.
  *
- * This is written as a contract rather than an import because the two stories were built in
- * parallel: #129 owns `public.participants`, the join route and the token. `token` is opaque here
- * — this adapter never reads it, it only presents it — so #129 may make it a signed string, a row
- * id or a cookie the browser sends by itself, and nothing below changes.
+ * There is no credential in here any more. #131 carried a `token` that every later call presented
+ * as `Authorization: Bearer <token>`; #133 deleted that scheme in favour of #129's httpOnly
+ * cookie, which the browser attaches to these same-origin requests by itself and which no script
+ * on the page can read. So the adapter holds nothing secret at all: what is below is who this
+ * person is and what room they are in, all of it already on their screen.
+ *
+ * See `routeDeps.ts` for why the two schemes became one and why it is this one.
  */
 export interface ParticipantCredentials {
   sessionId: string;
@@ -43,8 +47,6 @@ export interface ParticipantCredentials {
   displayName: string;
   /** Epoch milliseconds, from the server's clock. */
   joinedAt: number;
-  /** Presented as `Authorization: Bearer <token>` on every later call. Never inspected here. */
-  token: string;
 }
 
 /**
@@ -76,10 +78,28 @@ export interface RevealedPayload {
   score: ScoreResult | null;
 }
 
+/**
+ * This participant's own answer to the item the room is on, once they have given one.
+ *
+ * It is what makes a reload mid-answer land on the answer rather than on a blank form: the phone
+ * asks the server what it already sent, instead of remembering it. The response is the one they
+ * posted, read back to them and to nobody else — the route keys the read on the participant id
+ * the cookie was checked against — and it is not a mark: no points, no maximum, no breakdown, and
+ * no key. Those are `revealed`'s, and only once the host has revealed (ADR 0003).
+ */
+export interface AnsweredPayload {
+  itemId: string;
+  /** Epoch milliseconds, from the session's clock. */
+  submittedAt: number;
+  /** Their own response, validated against the item's own schema before it is sent back. */
+  response: AnyResponse;
+}
+
 /** The body of a successful `POST /api/live/view`. */
 export interface ParticipantViewPayload {
   state: PublicStatePayload;
   item: ParticipantItem | null;
+  answered: AnsweredPayload | null;
   revealed: RevealedPayload | null;
 }
 

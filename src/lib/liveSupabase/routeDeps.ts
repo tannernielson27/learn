@@ -2,18 +2,47 @@
  * What the two live-session route handlers need, and how they get it in production.
  *
  * Injected rather than imported so the conformance suite can drive the real handlers against a
- * stand-in database, and so #129 can swap the one thing it owns — how a request is turned into a
- * participant — without touching either handler.
+ * stand-in database, and so how a request becomes a participant can be changed without touching
+ * either handler.
+ *
+ * ## One identity, not two (#133)
+ *
+ * #129 and #131 were built in parallel and shipped two answers to "who is speaking?". #129's join
+ * mints an opaque secret in an httpOnly cookie and checks it with `resume_participant`; #131's
+ * default verifier expected an HMAC bearer token this server signed with a
+ * `LIVE_PARTICIPANT_SECRET`. A student who joined therefore carried a credential the answering
+ * routes would not accept, and nothing converted one into the other — so a session could be
+ * joined, watched and ended, but never answered.
+ *
+ * There is now one scheme and it is #129's. The bearer token, its module and its environment
+ * variable are **deleted** rather than left standing beside the cookie: two ways to be a
+ * participant is two places for "may this person answer?" to be decided, and an attacker picks
+ * the weaker. #129 wrote down why the cookie is the stronger of the two — the secret is drawn by
+ * Postgres, only its SHA-256 is stored, deleting the row revokes it, it names one participant in
+ * one session, and there is no signing key whose leak would mint any participant in any room. It
+ * also needs nothing set in any environment, which is why `LIVE_PARTICIPANT_SECRET` is gone from
+ * `.env.example` and no owner has to set it.
+ *
+ * The cost is one round trip per authenticated call where a signed token would have been free.
+ * That is not a real cost here: both handlers read from the database anyway, and
+ * `resume_participant` doubles as the `last_seen_at` touch the roster already wanted.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { LiveRefusal } from "@/lib/live";
 import { LIVE_REFUSALS } from "@/lib/live";
+import { parseParticipantToken, readParticipantCookie } from "@/lib/live/participantToken";
 import type { Database } from "@/lib/supabase/database.types";
+import { resumeParticipant } from "@/lib/supabase/participants";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
-import { participantFromRequest, type VerifiedParticipant } from "./participantToken";
 import { NO_STORE_HEADERS, type RefusalPayload } from "./wire";
 
-/** Turns a request into the participant making it, or null. See `participantToken.ts`. */
+/** Who a checked request says is speaking: one participant, in one session, and nothing else. */
+export interface VerifiedParticipant {
+  sessionId: string;
+  participantId: string;
+}
+
+/** Turns a request into the participant making it, or null. */
 export type ParticipantVerifier = (request: Request) => Promise<VerifiedParticipant | null>;
 
 export interface LiveRouteDeps {
@@ -26,8 +55,36 @@ export interface LiveRouteDeps {
   service: SupabaseClient<Database>;
 }
 
+/**
+ * The verifier both routes run in production: the participant cookie, checked against the
+ * database on every call.
+ *
+ * Nothing the request asserts is believed. The cookie's shape is checked here — which saves a
+ * round trip for every piece of rubbish anyone posts, and decides nothing else — and then
+ * `resume_participant` matches its secret against the stored hash. A tampered secret, a token for
+ * a participant that no longer exists and a token for a deleted session all come back null,
+ * because the answer to all three is the same: you are not in this room.
+ *
+ * The session id is the token's, not the resumed row's. They are the same id — the function
+ * matches on it — and using the one that was checked keeps both handlers reading from the token
+ * they verified rather than from anything derived after it.
+ *
+ * Fails closed: a database that cannot answer is not a reason to let someone answer a question.
+ */
+export function participantFromCookie(service: SupabaseClient<Database>): ParticipantVerifier {
+  return async (request: Request): Promise<VerifiedParticipant | null> => {
+    const token = parseParticipantToken(readParticipantCookie(request.headers.get("cookie")));
+    if (token === null) return null;
+    const resumed = await resumeParticipant(service, token);
+    if (resumed === null) return null;
+    return { sessionId: token.sessionId, participantId: resumed.participantId };
+  };
+}
+
 export function liveRouteDeps(): LiveRouteDeps {
-  return { verify: participantFromRequest, service: createSupabaseServiceClient() };
+  // One client for both, so a request opens one connection rather than two.
+  const service = createSupabaseServiceClient();
+  return { verify: participantFromCookie(service), service };
 }
 
 export const LIVE_ROUTE_ERRORS = {
