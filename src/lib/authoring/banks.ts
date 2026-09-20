@@ -19,7 +19,7 @@ type Client = SupabaseClient<Database>;
 
 /** Caps so no list is unbounded; the item list pages instead (ITEM_PAGE_SIZE). */
 export const BANK_LIST_LIMIT = 100;
-/** How many items' tags the filter counts are read from; two columns each, so cheap. */
+/** How many items' tags the filter counts are read from; three columns each, so cheap. */
 export const TAG_COUNT_LIMIT = 2000;
 export const CASE_STUDY_LIST_LIMIT = 100;
 
@@ -75,6 +75,8 @@ const ITEM_ROW_COLUMNS =
 /**
  * How far Has warnings looks down a filtered list. Warnings cannot be asked of the database, so the
  * filter counts them here; this is `list_bank_items`'s own page cap, so it stays one round trip.
+ * Past it the count is a lower bound: a view of more than this many items is scanned this far only.
+ * The chip and the list it opens read the same window, so they always agree with each other.
  */
 export const WARNING_SCAN_LIMIT = 200;
 
@@ -198,24 +200,33 @@ export async function listTaggedRows(
   view: FolderView = { kind: "all" },
   search: ItemSearch = NO_SEARCH,
 ): Promise<TaggedRow[]> {
-  // Within the search too, so the counts describe the list below them.
+  // Within the search too, so the counts describe the list below them. Which of them warn comes
+  // from the same list function, in the same order and under the same cap that Has warnings lists
+  // under, so the chip's count and the list it opens see one window. Neither read needs the other.
   const tags = client.from("items").select("id, cjmm_step, tags").eq("bank_id", bankId);
-  const { data, error } = await narrowItems(tags, view, search).limit(TAG_COUNT_LIMIT);
-  if (error) throw new AuthoringDataError("Tags could not be loaded.");
-  // Whole rows are read only to judge warnings, and only for the slice Has warnings lists, so the
-  // chip's count matches what it opens. Nothing of the key or the rationale leaves this function.
-  const whole = client.from("items").select(ITEM_ROW_COLUMNS).eq("bank_id", bankId);
-  const warned = await narrowItems(whole, view, search)
-    .order("updated_at", { ascending: false })
-    .limit(WARNING_SCAN_LIMIT);
-  if (warned.error) throw new AuthoringDataError("Tags could not be loaded.");
-  const warnedIds = new Set(
-    warned.data.filter((row) => storedWarningCount(row) > 0).map((row) => row.id),
+  const [{ data, error }, scan] = await Promise.all([
+    narrowItems(tags, view, search).limit(TAG_COUNT_LIMIT),
+    client.rpc("list_bank_items", {
+      target_bank: bankId,
+      ...(search.query ? { search: search.query } : {}),
+      ...(search.type ? { item_type: search.type } : {}),
+      ...(search.status ? { item_status: search.status } : {}),
+      ...(view.kind === "folder" ? { in_folder: view.id } : {}),
+      unfiled_only: view.kind === "unfiled",
+      with_tags: [],
+      page_size: WARNING_SCAN_LIMIT,
+      page_offset: 0,
+    }),
+  ]);
+  if (error || scan.error) throw new AuthoringDataError("Tags could not be loaded.");
+  const counts = await warningCounts(
+    client,
+    scan.data.map((item) => item.id),
   );
   return data.map((row) => ({
     cjmmStep: row.cjmm_step,
     tags: storedTags(row.tags),
-    hasWarnings: warnedIds.has(row.id),
+    hasWarnings: (counts.get(row.id) ?? 0) > 0,
   }));
 }
 

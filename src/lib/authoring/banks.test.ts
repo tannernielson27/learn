@@ -81,10 +81,12 @@ type Result = { data?: unknown; error?: { message?: string } | null };
 
 /**
  * A chainable stand-in for the Supabase client that records every call. `result` answers the list
- * function; `tableResult` answers the whole-row reads the warning counts are worked out from.
+ * function; each `tableResults` entry answers one `from()` query in order, the last one repeating,
+ * so a caller that reads tags and then whole rows can answer each with its own rows.
  */
-function fakeClient(result: Result = { data: [], error: null }, tableResult: Result = result) {
+function fakeClient(result: Result = { data: [], error: null }, ...tableResults: Result[]) {
   const calls: { method: string; args: unknown[] }[] = [];
+  let queries = 0;
   const chain: Record<string, unknown> = {};
   for (const method of ["select", "eq", "is", "in", "contains", "textSearch", "order", "limit"]) {
     chain[method] = (...args: unknown[]) => {
@@ -92,8 +94,12 @@ function fakeClient(result: Result = { data: [], error: null }, tableResult: Res
       return chain;
     };
   }
-  chain.then = (resolve: (value: Result) => unknown) => resolve(tableResult);
-  const from = vi.fn(() => chain);
+  chain.then = (resolve: (value: Result) => unknown) =>
+    resolve(tableResults[Math.min(queries - 1, tableResults.length - 1)] ?? result);
+  const from = vi.fn(() => {
+    queries += 1;
+    return chain;
+  });
   const rpc = vi.fn(async () => result);
   return { client: { from, rpc } as never, from, rpc, calls };
 }
@@ -306,16 +312,39 @@ describe("listTaggedRows", () => {
   it("adds nothing without a search", async () => {
     const fake = fakeClient({ data: [], error: null });
     await listTaggedRows(fake.client, BANK);
-    // The cheap tag read, then the capped whole-row read the warning counts come from.
-    expect(fake.calls.map((call) => call.method)).toEqual([
-      "select",
-      "eq",
-      "limit",
-      "select",
-      "eq",
-      "order",
-      "limit",
+    // The cheap tag read alone: an empty scan asks for no whole rows.
+    expect(fake.calls.map((call) => call.method)).toEqual(["select", "eq", "limit"]);
+  });
+
+  it("marks the rows that warn, from the same window Has warnings lists", async () => {
+    const warned = itemSchema.parse({ ...FIXTURES.multiple_choice.canonical, rationale: {} });
+    const clean = itemSchema.parse(FIXTURES.multiple_choice.canonical);
+    const fake = fakeClient(
+      // The list function answers the scan; then the tag read, then the whole-row read behind it.
+      { data: [row({ id: "warned" }), row({ id: "clean" })], error: null },
+      {
+        data: [
+          { id: "warned", cjmm_step: 1, tags: ["sepsis"] },
+          { id: "clean", cjmm_step: 2, tags: ["renal"] },
+        ],
+      },
+      {
+        data: [
+          { ...toItemRow(warned), id: "warned" },
+          { ...toItemRow(clean), id: "clean" },
+        ],
+      },
+    );
+    const rows = await listTaggedRows(fake.client, BANK);
+    expect(rows).toEqual([
+      { cjmmStep: 1, tags: ["sepsis"], hasWarnings: true },
+      { cjmmStep: 2, tags: ["renal"], hasWarnings: false },
     ]);
+    // The same list function, the same cap and offset the Has warnings list reads.
+    expect(fake.rpc).toHaveBeenCalledWith(
+      "list_bank_items",
+      expect.objectContaining({ page_size: WARNING_SCAN_LIMIT, page_offset: 0, with_tags: [] }),
+    );
   });
 });
 
