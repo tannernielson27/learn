@@ -88,6 +88,7 @@ describe("POST /api/live/view", () => {
     expect(await response.json()).toEqual({
       state: { status: "lobby", position: null, itemCount: 2, reveal: false },
       item: null,
+      answered: null,
       revealed: null,
     });
   });

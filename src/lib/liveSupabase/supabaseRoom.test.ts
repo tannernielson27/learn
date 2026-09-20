@@ -116,6 +116,118 @@ describe("what actually reaches a student's browser", () => {
   });
 });
 
+describe("answering an item from a phone (#133)", () => {
+  /** A started room with one phone in it, holding the phone's own participant id. */
+  async function answering() {
+    const live = room();
+    const host = live.host();
+    await host.open();
+    await host.start();
+    await live.settle();
+    const ada = live.participant();
+    const { participantId } = await ada.join(live.code, { displayName: "Ada" });
+    await live.settle();
+    return { live, host, ada, participantId };
+  }
+
+  it("refuses a second answer to the same item, and says which refusal it is", async () => {
+    const { live, ada } = await answering();
+    await ada.submit(FIRST.id, CONFORMANCE_CORRECT);
+    await live.settle();
+
+    await expect(ada.submit(FIRST.id, CONFORMANCE_CORRECT)).rejects.toMatchObject({
+      code: "already_answered",
+    });
+    // One answer on record, whatever the phone did.
+    expect(live.stack.responses).toHaveLength(1);
+  });
+
+  it("refuses an answer that arrives after the host has moved the room on", async () => {
+    const { live, host, ada } = await answering();
+    await host.advance();
+    await live.settle();
+    // The phone was still holding item one when the tap landed.
+    await expect(ada.submit(FIRST.id, CONFORMANCE_CORRECT)).rejects.toMatchObject({
+      code: "wrong_item",
+    });
+    expect(live.stack.responses).toHaveLength(0);
+  });
+
+  it("refuses an answer to an item whose key is already showing", async () => {
+    const { live, host, ada } = await answering();
+    await host.reveal();
+    await live.settle();
+    await expect(ada.submit(FIRST.id, CONFORMANCE_CORRECT)).rejects.toMatchObject({
+      code: "already_revealed",
+    });
+  });
+
+  it("gives a reloaded phone back the answer it sent, and no marks with it", async () => {
+    const { live, ada, participantId } = await answering();
+    await ada.submit(FIRST.id, CONFORMANCE_CORRECT);
+    await live.settle();
+
+    // The page is opened again: the same cookie, no code, and nothing kept in the old tab.
+    const reloaded = live.resuming(participantId);
+    const view = await reloaded.resume(live.identityOf(participantId));
+    await live.settle();
+
+    expect(view.answered).toMatchObject({
+      itemId: FIRST.id,
+      response: CONFORMANCE_CORRECT,
+    });
+    // Answered, and still not scored as far as this phone is concerned (ADR 0003).
+    expect(view.revealed).toBeNull();
+    expect(JSON.stringify(view)).not.toContain("answerKey");
+    expect(JSON.stringify(view)).not.toContain("points");
+    await reloaded.leave();
+  });
+
+  it("says nothing about an answer a phone has not given", async () => {
+    const { live, ada, participantId } = await answering();
+    const reloaded = live.resuming(participantId);
+    expect((await reloaded.resume(live.identityOf(participantId))).answered).toBeNull();
+    await reloaded.leave();
+    await ada.leave();
+  });
+
+  it("hands the key, the rationale and this phone's own marks over at the reveal", async () => {
+    const { live, host, ada } = await answering();
+    const revealed: unknown[] = [];
+    ada.onReveal((entry) => revealed.push(entry));
+    await ada.submit(FIRST.id, CONFORMANCE_CORRECT);
+    await live.settle();
+    expect(revealed).toHaveLength(0);
+
+    await host.reveal();
+    await live.settle();
+    expect(revealed).toHaveLength(1);
+    expect(revealed[0]).toMatchObject({
+      itemId: FIRST.id,
+      position: 1,
+      score: { points: 1, maxPoints: 1 },
+    });
+  });
+
+  it("carries a keyless item to a phone that never answered, and the key at the reveal", async () => {
+    const { live, host, ada, participantId } = await answering();
+    const views: { item: unknown; answered: unknown }[] = [];
+    // The same connection a student's screen holds: the item, their own answer, the reveal.
+    const watcher = live.resuming(participantId);
+    watcher.onStudentView((view) => views.push({ item: view.item, answered: view.answered }));
+    const opened = await watcher.resume(live.identityOf(participantId));
+    expect(opened.item).toMatchObject({ id: FIRST.id });
+    expect(opened.item).not.toHaveProperty("answerKey");
+    expect(opened.item).not.toHaveProperty("rationale");
+
+    await host.reveal();
+    await live.settle();
+    expect(views.at(-1)?.item).not.toHaveProperty("answerKey");
+    await watcher.leave();
+    await ada.leave();
+  });
+});
+
 describe("a connection whose caller changes its mind", () => {
   it("does not rejoin a room the caller has already left", async () => {
     const live = room();
@@ -124,9 +236,9 @@ describe("a connection whose caller changes its mind", () => {
       release = resolve;
     });
     // A join that is still in flight when the component unmounts — a tab closing, a route change.
-    const ada = live.participantWith(async (code, identity) => {
+    const ada = live.participantWith((join) => async (code, identity) => {
       await gate;
-      return live.joinSession(code, identity);
+      return join(code, identity);
     });
 
     const joining = ada.join(live.code, { displayName: "Ada" });

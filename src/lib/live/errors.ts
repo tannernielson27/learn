@@ -5,7 +5,10 @@
  * machine, the transport interface and every adapter, so a refusal reads the same whether it came
  * from this process, from a route handler or — once #131 lands — from a Postgres trigger.
  */
-import { SUBMIT_ERRORS } from "@/lib/ngn/submit";
+// Not from `@/lib/ngn/submit`: that module value-imports the scoring engine, and this one is on
+// the path from a student's phone to its own screen. Two sentences should not carry an engine for
+// fourteen item types into a phone's bundle (ADR 0003, `noClientScoring.test.ts`).
+import { SUBMIT_ERRORS } from "@/lib/ngn/submitErrors";
 
 /**
  * The refusal codes, each with the sentence a person should be shown. Messages never name

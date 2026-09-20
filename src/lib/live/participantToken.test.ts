@@ -5,6 +5,7 @@ import {
   PARTICIPANT_COOKIE_MAX_AGE_SECONDS,
   participantCookieOptions,
   parseParticipantToken,
+  readParticipantCookie,
   type ParticipantToken,
 } from "./participantToken";
 
@@ -90,5 +91,36 @@ describe("participantCookieOptions", () => {
 describe("PARTICIPANT_COOKIE", () => {
   it("is one cookie, so joining a new room replaces the old one", () => {
     expect(PARTICIPANT_COOKIE).toBe("learn_participant");
+  });
+});
+
+describe("readParticipantCookie", () => {
+  const token = `${SESSION}.${PARTICIPANT}.${"a".repeat(48)}`;
+
+  it("finds this app's cookie among the others a browser sends", () => {
+    expect(
+      readParticipantCookie(`sb-access-token=x; ${PARTICIPANT_COOKIE}=${token}; theme=dark`),
+    ).toBe(token);
+  });
+
+  it("is null when there is no cookie header, and when this cookie is not in it", () => {
+    expect(readParticipantCookie(null)).toBeNull();
+    expect(readParticipantCookie("")).toBeNull();
+    expect(readParticipantCookie("theme=dark; sb-access-token=x")).toBeNull();
+  });
+
+  it("does not answer to a cookie whose name merely ends with this one's", () => {
+    expect(readParticipantCookie(`not_${PARTICIPANT_COOKIE}=${token}`)).toBeNull();
+  });
+
+  it("is null for the cookie present but empty, which is how a browser carries a cleared one", () => {
+    expect(readParticipantCookie(`${PARTICIPANT_COOKIE}=`)).toBeNull();
+  });
+
+  it("hands back rubbish rather than throwing, and leaves the shape check to decide", () => {
+    expect(readParticipantCookie(`${PARTICIPANT_COOKIE}=%E0%A4%A`)).toBe("%E0%A4%A");
+    expect(
+      parseParticipantToken(readParticipantCookie(`${PARTICIPANT_COOKIE}=nonsense`)),
+    ).toBeNull();
   });
 });

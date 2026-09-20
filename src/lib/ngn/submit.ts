@@ -14,6 +14,7 @@ import { z } from "zod";
 import type { ItemType } from "./labels";
 import { responseSchema, type AnyResponse, type CaseStudy, type Item } from "./schemas";
 import { scoreItem } from "./scoring";
+import { SUBMIT_ERRORS } from "./submitErrors";
 import type { ScoreResult } from "./types";
 
 /**
@@ -120,10 +121,8 @@ export function scoreSubmission(item: Item, response: AnyResponse): ScoreReveal 
 export const scoreInProcess: SubmitHandlerFor = (item) => async (response) =>
   scoreSubmission(item, response);
 
-export const SUBMIT_ERRORS = {
-  malformed: "That answer could not be read. Reload the page and try again.",
-  wrongType: "That answer does not match this item. Reload the page and try again.",
-} as const;
+/** Re-exported, so every call site keeps importing it from the seam. See `submitErrors.ts`. */
+export { SUBMIT_ERRORS };
 
 export type ParsedSubmission =
   { ok: true; response: AnyResponse } | { ok: false; status: 400; error: string };

@@ -16,36 +16,28 @@
 export { createSupabaseHost, type HostTransportOptions } from "./hostTransport";
 export {
   createSupabaseParticipant,
+  publicStateFrom,
   type ParticipantTransportOptions,
+  type ResumedIdentity,
+  type RoomConnection,
+  type StudentView,
+  type SupabaseParticipant,
 } from "./participantTransport";
 export { rosterFrom, type PresenceEntry } from "./presence";
 export {
-  createParticipantRoom,
-  publicStateFrom,
-  type ParticipantRoom,
-  type ParticipantRoomOptions,
-  type RoomConnection,
-} from "./participantRoom";
-export {
-  PARTICIPANT_TOKEN_TTL_MS,
-  bearerToken,
-  participantFromRequest,
-  readParticipantSecret,
-  signParticipantToken,
-  verifyParticipantToken,
-  type VerifiedParticipant,
-} from "./participantToken";
-export {
   LIVE_ROUTE_ERRORS,
   liveRouteDeps,
+  participantFromCookie,
   type LiveRouteDeps,
   type ParticipantVerifier,
+  type VerifiedParticipant,
 } from "./routeDeps";
 export { submitSessionResponse } from "./submitRoute";
 export { readParticipantView } from "./viewRoute";
 export {
   LIVE_ROUTES,
   liveTopic,
+  type AnsweredPayload,
   type JoinSession,
   type ParticipantCredentials,
   type ParticipantViewPayload,

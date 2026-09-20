@@ -93,7 +93,14 @@ export function describeRoomConformance(adapter: string, createRoom: Conformance
   const open: ConformanceRoom[] = [];
 
   async function makeRoom(items: readonly Item[] = CONFORMANCE_ITEMS): Promise<ConformanceRoom> {
-    const room = await createRoom({ items, code: "LEARN7", sessionId: "s1" });
+    // A uuid, because an adapter over a real schema has uuid session ids and #129's participant
+    // cookie is `<session uuid>.<participant uuid>.<secret>` — a made-up "s1" would be refused by
+    // the shape check before any adapter was asked anything.
+    const room = await createRoom({
+      items,
+      code: "LEARN7",
+      sessionId: "00000000-0000-4000-8000-000000000001",
+    });
     open.push(room);
     return room;
   }
@@ -564,6 +571,38 @@ export function describeRoomConformance(adapter: string, createRoom: Conformance
         meanPoints: 0.5,
         maxPoints: 1,
       });
+    });
+
+    it("can be asked for while an item is open, without anything being pushed", async () => {
+      const room = await makeRoom();
+      const { host, seen } = await aggregatesOf(room);
+      await host.start();
+      await room.settle();
+      expect(await host.aggregate()).toMatchObject({ position: 1, responded: 0 });
+
+      const ada = await joined(room, "Ada");
+      const grace = await joined(room, "Grace");
+      await ada.submit(FIRST.id, CONFORMANCE_CORRECT);
+      await room.settle();
+      // The count a host watches while the class answers. Asking is a read, not a message.
+      expect(await host.aggregate()).toMatchObject({ position: 1, present: 2, responded: 1 });
+      await grace.submit(FIRST.id, CONFORMANCE_WRONG);
+      await room.settle();
+      expect(await host.aggregate()).toMatchObject({ present: 2, responded: 2 });
+      // Two answers and three asks, and the dashboard has still been pushed nothing (ADR 0002).
+      expect(seen).toHaveLength(0);
+    });
+
+    it("are null when the room is on no item, however it got there", async () => {
+      const room = await makeRoom();
+      const host = await openHost(room);
+      expect(await host.aggregate()).toBeNull();
+      await host.start();
+      await room.settle();
+      expect(await host.aggregate()).not.toBeNull();
+      await host.end();
+      await room.settle();
+      expect(await host.aggregate()).toBeNull();
     });
 
     it("say nothing when the room never reached an item", async () => {

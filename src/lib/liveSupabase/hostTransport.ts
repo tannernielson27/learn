@@ -343,6 +343,32 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     onPresence: (listener) => subscribe(presence, listener),
     onAggregate: (listener) => subscribe(aggregates, listener),
 
+    /**
+     * The same live count `open()` reports, asked for on its own. One indexed read on the host's
+     * own connection, under their org's row level security, and no Realtime message at all —
+     * which is what lets a console show answers arriving without breaking ADR 0002's budget.
+     *
+     * It fetches the item first when it does not have one. A tally names the item it is about and
+     * takes its maximum from it, and `current` is otherwise only ever set by `open()` and by a
+     * channel message — so a console that opened on a lobby and then started the room itself has
+     * moved the room without yet being told about it. Waiting for the echo would mean the count a
+     * host watches depends on `postgres_changes` reaching their own screen; this way it depends on
+     * nothing but the read it was going to make anyway.
+     */
+    async aggregate(): Promise<ItemAggregate | null> {
+      if (closed) return null;
+      if (current === null && state.position !== null) {
+        try {
+          await readSession();
+        } catch {
+          return null;
+        }
+        current = await loadItem();
+        if (closed) return null;
+      }
+      return readAggregate();
+    },
+
     start: () => run("start"),
     advance: () => run("advance"),
     reveal: () => run("reveal"),

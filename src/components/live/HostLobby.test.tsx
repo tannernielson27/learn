@@ -6,6 +6,7 @@ import {
   applyHostCommand,
   type HostCommand,
   type HostSnapshot,
+  type ItemAggregate,
   type LiveHostTransport,
   type LiveSessionState,
   type Participant,
@@ -38,9 +39,11 @@ const person = (id: string, name: string, joinedAt: number): Participant => ({
 function fakeTransport(initial: LiveSessionState, refusal?: LiveSessionError) {
   let held = initial;
   let roster: Participant[] = [];
+  let tally: ItemAggregate | null = null;
   const views = new Set<(view: SessionView<Item>) => void>();
   const presence = new Set<(roster: Participant[]) => void>();
   const ran: HostCommand[] = [];
+  let asked = 0;
   let resolveOpen: (() => void) | null = null;
   const opened = new Promise<void>((resolve) => {
     resolveOpen = resolve;
@@ -79,6 +82,10 @@ function fakeTransport(initial: LiveSessionState, refusal?: LiveSessionError) {
       return () => presence.delete(listener);
     },
     onAggregate: () => () => {},
+    async aggregate(): Promise<ItemAggregate | null> {
+      asked += 1;
+      return tally;
+    },
     start: () => run("start"),
     advance: () => run("advance"),
     reveal: () => run("reveal"),
@@ -91,12 +98,29 @@ function fakeTransport(initial: LiveSessionState, refusal?: LiveSessionError) {
     transport,
     ran,
     letOpen: () => resolveOpen?.(),
+    asks: () => asked,
+    /** What the next ask for the tally will answer with. */
+    answersIn: (next: ItemAggregate | null) => {
+      tally = next;
+    },
     sync: (people: Participant[]) => {
       roster = people;
       for (const listener of [...presence]) listener(people);
     },
   };
 }
+
+const tallyOf = (responded: number, present: number, position = 1): ItemAggregate => ({
+  itemId: "mc_sample_1",
+  position,
+  present,
+  responded,
+  fullMarks: responded,
+  partialMarks: 0,
+  noMarks: 0,
+  meanPoints: 1,
+  maxPoints: 1,
+});
 
 function setup(initial: LiveSessionState = state(), refusal?: LiveSessionError) {
   const fake = fakeTransport(initial, refusal);
@@ -108,6 +132,7 @@ function setup(initial: LiveSessionState = state(), refusal?: LiveSessionError) 
       studentUrl={`https://learn.test/join/${CODE}`}
       initial={initial}
       connect={() => fake.transport}
+      tallyIntervalMs={20}
     />,
   );
   fake.letOpen();
@@ -253,5 +278,55 @@ describe("HostLobby", () => {
     );
     view.unmount();
     expect(fake.transport.close).toHaveBeenCalled();
+  });
+});
+
+describe("HostLobby: how many have answered (#133)", () => {
+  it("says nothing about answers while the room is still in the lobby", async () => {
+    const fake = setup();
+    fake.answersIn(tallyOf(0, 3));
+    await waitFor(() => expect(screen.getByTestId("join-code")).toBeInTheDocument());
+    expect(screen.queryByTestId("answer-count")).toBeNull();
+    // Nothing is asked for either: a lobby has no item to have answers to.
+    expect(fake.asks()).toBe(0);
+  });
+
+  it("counts the answers in for the item the room is on, and keeps counting", async () => {
+    const fake = setup(state({ status: "running", position: 1 }));
+    fake.answersIn(tallyOf(1, 3));
+    await waitFor(() =>
+      expect(screen.getByTestId("answer-count")).toHaveTextContent("1 of 3 answered"),
+    );
+
+    // ADR 0002 pushes nothing per submission, so the console asks again rather than waiting.
+    fake.answersIn(tallyOf(3, 3));
+    await waitFor(() =>
+      expect(screen.getByTestId("answer-count")).toHaveTextContent("3 of 3 answered"),
+    );
+  });
+
+  it("drops a count that is about the item the room has just left", async () => {
+    const fake = setup(state({ status: "running", position: 1 }));
+    fake.answersIn(tallyOf(3, 3, 1));
+    await waitFor(() =>
+      expect(screen.getByTestId("answer-count")).toHaveTextContent("3 of 3 answered"),
+    );
+
+    // "3 of 3 answered" over a question nobody has seen yet is worse than showing nothing.
+    fake.answersIn(null);
+    await fake.user.click(button("Next item"));
+    await waitFor(() => expect(screen.queryByTestId("answer-count")).toBeNull());
+  });
+
+  it("stops asking once the session has ended", async () => {
+    const fake = setup(state({ status: "running", position: 1 }));
+    fake.answersIn(tallyOf(2, 2));
+    await waitFor(() => expect(fake.asks()).toBeGreaterThan(0));
+    await fake.user.click(button("End session"));
+    await waitFor(() => expect(screen.queryByTestId("answer-count")).toBeNull());
+
+    const settled = fake.asks();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(fake.asks()).toBe(settled);
   });
 });
