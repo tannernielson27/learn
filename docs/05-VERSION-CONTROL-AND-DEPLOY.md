@@ -179,10 +179,11 @@ Run from the repo root, on a machine with the repo checked out. Steps 1–2 and 
 4. **Load the sample content, then create the demo user — in that order.** `seed.sql` creates the org that the sign-up trigger puts the first user into, so a user created before it would land in an org of its own.
 
    ```sh
-   # Connection string: dashboard > Project Settings > Database > Connection string > URI.
-   # Paste the database password from step 1. Do not commit it or leave it in shell history.
-   psql "postgresql://postgres:<password>@db.<prod-ref>.supabase.co:5432/postgres" \
-     -v ON_ERROR_STOP=1 -f supabase/seed.sql
+   # <db-uri>: dashboard > Project Settings > Database > Connection string. Take the direct
+   # connection or the SESSION pooler (port 5432), not the transaction pooler (6543) — seed.sql
+   # is one multi-statement file. Paste the password from step 1; never commit it, and keep it
+   # out of shell history (a leading space, or read it from an environment variable).
+   psql "<db-uri>" -v ON_ERROR_STOP=1 -f supabase/seed.sql
    ```
 
    `seed.sql` is generated from the fixtures and is safe to run once on an empty project. It inserts one org, one published "Samples" bank, every canonical item, the Trend item and the sample case study. Running it twice fails on the fixed ids, which is the point.

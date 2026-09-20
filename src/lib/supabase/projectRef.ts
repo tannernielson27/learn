@@ -1,8 +1,14 @@
-/** Loopback hosts, which mean the local Supabase stack rather than a hosted project. */
-const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
+/**
+ * Loopback hosts, which mean the local Supabase stack rather than a hosted project. `URL` always
+ * serializes an IPv6 literal with its brackets, so `[::1]` is the form that can actually arrive.
+ *
+ * Deliberately not shared with `LOCAL_HOSTS` in env.ts: that one decides which hosts may use
+ * plain http, a security choice that should stay narrow, while this one only picks a label.
+ */
+const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
 
-/** The domains Supabase serves project URLs from. */
-const HOSTED_DOMAINS = ["supabase.co", "supabase.in"];
+/** The domain Supabase serves project URLs from, and the only one this project has ever used. */
+const HOSTED_DOMAINS = ["supabase.co"];
 
 /** A project ref is a fixed-length run of lowercase letters and digits, e.g. `vauokqoyvewtzubqajgh`. */
 const REF_PATTERN = /^[a-z0-9]{20}$/;

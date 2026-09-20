@@ -14,10 +14,9 @@ describe("supabaseProjectRef", () => {
     );
   });
 
-  it("reads the ref from the other hosted domain", () => {
-    expect(supabaseProjectRef("https://abcdefghijklmnopqrst.supabase.in")).toBe(
-      "abcdefghijklmnopqrst",
-    );
+  it("says unknown for a host on any other domain, Supabase-looking or not", () => {
+    expect(supabaseProjectRef("https://abcdefghijklmnopqrst.supabase.in")).toBe("unknown");
+    expect(supabaseProjectRef("https://abcdefghijklmnopqrst.supabase.com")).toBe("unknown");
   });
 
   it("calls the local stack local rather than inventing a ref", () => {
