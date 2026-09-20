@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { AnyResponse, Item, ItemOf, ItemType, ResponseOf } from "@/lib/ngn/schemas";
 import { initialResponse as firstResponse } from "@/lib/ngn/presentation";
-import type { KeylessItem, SubmitHandler } from "@/lib/ngn/submit";
+import type { KeylessItem, Reveal, ScoreReveal, SubmitHandler } from "@/lib/ngn/submit";
 import { SAMPLE_TAG, type ScoreResult } from "@/lib/ngn/types";
 import { QuestionShell } from "./QuestionShell";
 import { RENDERERS } from "./registry";
@@ -14,6 +14,9 @@ export interface ItemPlayerProps {
    * The item to play. Normally keyless: the key, rationale and scoring arrive only with the score
    * (ADR 0003). The gallery and the authoring preview pass a full item, because the handler they
    * pass scores it in the same browser.
+   *
+   * A caller that plays more than one item remounts rather than re-props: `item`, `initialResponse`
+   * and `initialReveal` are read once, at mount. `CaseStudyPlayer` keys this by the step's item id.
    */
   item: Item | KeylessItem;
   /** Starting mode. The player moves itself from answer to feedback on submit. */
@@ -26,14 +29,17 @@ export interface ItemPlayerProps {
    * server; the gallery and the authoring preview pass `scoreInProcess(item)`.
    */
   submit: SubmitHandler;
-  onSubmitted?: (response: AnyResponse, result: ScoreResult) => void;
+  /** The whole reveal, so a caller can hand it back with `initialReveal` when the step reopens. */
+  onSubmitted?: (response: AnyResponse, checked: ScoreReveal) => void;
   /** Response to open with, e.g. what a case-study step was left holding. */
   initialResponse?: AnyResponse;
   /**
-   * Score to open with, so a step already submitted reopens in feedback with its own marks.
-   * Supplying one implies feedback mode: a scored item is never open for answering again.
+   * What a previous submit produced, so a step already answered reopens in feedback with its own
+   * marks. Supplying one implies feedback mode: a scored item is never open for answering again.
+   * It carries the key as well as the score, because a keyless item has no key of its own to mark
+   * the answer against.
    */
-  initialResult?: ScoreResult;
+  initialReveal?: ScoreReveal;
   /** Every change, so a caller that unmounts the player can hand the response back later. */
   onResponseChange?: (response: AnyResponse) => void;
   /** Names the question region when more than one player is on the page. */
@@ -55,6 +61,12 @@ export function toPlayerItem(item: Item, mode: PlayerMode): PlayerItem<ItemType>
   return rest as PlayerItem<ItemType>;
 }
 
+/** Just the three fields a score reveals, so the score itself is never merged onto the item. */
+const toReveal = (checked: ScoreReveal | undefined): Reveal | null =>
+  checked
+    ? { answerKey: checked.answerKey, rationale: checked.rationale, scoring: checked.scoring }
+    : null;
+
 export function ItemPlayer({
   item,
   initialMode = "answer",
@@ -62,19 +74,18 @@ export function ItemPlayer({
   submit: submitResponse,
   onSubmitted,
   initialResponse,
-  initialResult,
+  initialReveal,
   onResponseChange,
   label,
 }: ItemPlayerProps) {
-  const [mode, setMode] = useState<PlayerMode>(initialResult ? "feedback" : initialMode);
+  const [mode, setMode] = useState<PlayerMode>(initialReveal ? "feedback" : initialMode);
   const [response, setResponse] = useState<AnyResponse>(
     // Building a first response reads only the item's content, never its key.
     () => initialResponse ?? firstResponse(item as Item),
   );
-  const [result, setResult] = useState<ScoreResult | undefined>(initialResult);
-  const [reveal, setReveal] = useState<Pick<Item, "answerKey" | "rationale" | "scoring"> | null>(
-    null,
-  );
+  const [result, setResult] = useState<ScoreResult | undefined>(initialReveal?.score);
+  // The score is held separately above, so only the three revealed fields are merged onto the item.
+  const [reveal, setReveal] = useState<Reveal | null>(() => toReveal(initialReveal));
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | undefined>(undefined);
   // A ref, not state: a second tap in the same frame must not send a second request.
@@ -115,10 +126,11 @@ export function ItemPlayer({
     response as ResponseOf<ItemType>,
   );
 
-  const finish = (next: ScoreResult) => {
-    setResult(next);
+  const finish = (checked: ScoreReveal) => {
+    setReveal(toReveal(checked));
+    setResult(checked.score);
     setMode("feedback");
-    onSubmitted?.(response, next);
+    onSubmitted?.(response, checked);
   };
 
   const submit = () => {
@@ -130,12 +142,7 @@ export function ItemPlayer({
       .then(
         (checked) => {
           if (!live.current) return;
-          setReveal({
-            answerKey: checked.answerKey,
-            rationale: checked.rationale,
-            scoring: checked.scoring,
-          });
-          finish(checked.score);
+          finish(checked);
         },
         () => {
           if (!live.current) return;

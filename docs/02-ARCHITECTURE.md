@@ -114,15 +114,21 @@ interface LiveSessionTransport {
 
 ```ts
 type KeylessItem = Omit<Item, "answerKey" | "rationale" | "scoring">
+type KeylessCaseStudy = Omit<CaseStudy, "items"> & { items: KeylessItem[] }
 toKeylessItem(item): KeylessItem                       // the only payload a student's browser gets
+toKeylessCaseStudy(caseStudy): KeylessCaseStudy        // ...and the only case-study one (#46)
 parseSubmission(body, itemType): ParsedSubmission      // validate an incoming answer
 scoreSubmission(item, response): ScoreReveal           // the scoring entry point; server-side
+interface Reveal { answerKey, rationale, scoring }       // what a score reveals beside itself
+interface ScoreReveal extends Reveal { score }           // ...and the score it came with
 type SubmitHandler = (response) => Promise<ScoreReveal>  // what ItemPlayer calls
-type SubmitHandlerFor = (item) => SubmitHandler          // what CaseStudyPlayer calls per step
+type SubmitHandlerFor<T> = (item: T) => SubmitHandler    // what CaseStudyPlayer calls per step
 scoreInProcess(item): SubmitHandler                    // gallery and authoring preview only
 ```
 
 `ItemPlayer` and `CaseStudyPlayer` hold no scoring code: they take a handler and render the `ScoreResult` they are given, including its per-row `groups`. A transport supplies the handler; it never lives inside `lib/ngn`.
+
+**Keys arrive per step, at reveal** (#46). `CaseStudyPlayer` is generic in its items: the gallery and the authoring preview pass a parsed `CaseStudy` with `scoreInProcess`, while a session or assignment passes a `KeylessCaseStudy`, so no step's key is in the page at all. A step's key reaches the browser only in the `ScoreReveal` its own submit returns; the player keeps that reveal with the step and hands it back as `initialReveal` when the student walks into the step again, which is the only way a keyless step can mark an answer.
 
 - **Supabase adapter:** session state and aggregates via Postgres changes on `sessions` and a `session_item_aggregates` table maintained by a trigger; presence via Realtime Presence; submissions via a route handler that calls `parseSubmission` then `scoreSubmission`, upserts the response and updates the aggregate.
 - **In-memory adapter:** drives tests and the gallery's "fake room" demo; also makes Sprint 7 demos possible before the DB adapter is complete.

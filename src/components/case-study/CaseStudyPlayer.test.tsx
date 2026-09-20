@@ -3,7 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { FIXTURES, sampleCaseStudy, sampleEhr } from "@/lib/ngn/fixtures";
 import { caseStudySchema } from "@/lib/ngn/schemas";
-import { scoreInProcess } from "@/lib/ngn/submit";
+import {
+  scoreInProcess,
+  scoreSubmission,
+  toKeylessCaseStudy,
+  type KeylessItem,
+  type SubmitHandlerFor,
+} from "@/lib/ngn/submit";
 import { CaseStudyPlayer } from "./CaseStudyPlayer";
 
 /**
@@ -162,6 +168,76 @@ describe("CaseStudyPlayer", () => {
     rerender(<CaseStudyPlayer caseStudy={sample} submitFor={scoreInProcess} />);
     expect(stepLine()).toHaveTextContent("Step 1 of 6: Recognize Cues");
     expect(next()).toBeNull();
+  });
+
+  describe("played from a keyless case study, as a student is sent one (#46)", () => {
+    const keyless = toKeylessCaseStudy(sixSteps);
+
+    /** Stands in for the server: it holds the case study with its keys, the browser does not. */
+    const serverScores: SubmitHandlerFor<KeylessItem> = (item) => async (response) => {
+      const full = sixSteps.items.find((step) => step.id === item.id);
+      if (!full) throw new Error(`no such step: ${item.id}`);
+      return scoreSubmission(full, response);
+    };
+
+    it("plays six steps whose items carry no answer key", () => {
+      expect(keyless.items).toHaveLength(6);
+      for (const item of keyless.items) expect(item).not.toHaveProperty("answerKey");
+      render(<CaseStudyPlayer caseStudy={keyless} submitFor={serverScores} />);
+      expect(stepLine()).toHaveTextContent("Step 1 of 6: Recognize Cues");
+      expect(correct()).toBeInTheDocument();
+      // Nothing is marked before the step has been answered.
+      expect(screen.queryByText("Missed")).toBeNull();
+    });
+
+    it("hands the renderer the key that came back with that step's score", async () => {
+      render(<CaseStudyPlayer caseStudy={keyless} submitFor={serverScores} />);
+      await userEvent.click(wrong());
+      await userEvent.click(submit());
+      // Marks a keyless item could not produce on its own: they came back with the score.
+      expect(screen.getByText("Incorrect")).toBeInTheDocument();
+      expect(screen.getByText("Missed")).toBeInTheDocument();
+    });
+
+    it("asks the handler only for the step the student is on", async () => {
+      const submitFor = vi.fn(serverScores);
+      render(<CaseStudyPlayer caseStudy={keyless} submitFor={submitFor} />);
+      await userEvent.click(correct());
+      await userEvent.click(submit());
+      // Every item the handler is built for is keyless: no key is in the page for any step.
+      for (const [item] of submitFor.mock.calls) expect(item).not.toHaveProperty("answerKey");
+      expect(new Set(submitFor.mock.calls.map(([item]) => item.id))).toEqual(new Set(["step_1"]));
+    });
+
+    it("still shows a step's marks when the student walks back into it", async () => {
+      render(<CaseStudyPlayer caseStudy={keyless} submitFor={serverScores} />);
+      await userEvent.click(wrong());
+      await userEvent.click(submit());
+      await userEvent.click(next()!);
+      expect(stepLine()).toHaveTextContent("Step 2 of 6");
+
+      await userEvent.click(screen.getByRole("button", { name: "Back" }));
+      expect(stepLine()).toHaveTextContent("Step 1 of 6");
+      expect(wrong()).toBeChecked();
+      // The reveal was kept with the step, so the marks survive the remount.
+      expect(screen.getByText("Incorrect")).toBeInTheDocument();
+      expect(screen.getByText("Missed")).toBeInTheDocument();
+      const score = screen.getByRole("complementary", { name: "Score" });
+      expect(within(score).getByText("0")).toBeInTheDocument();
+    });
+
+    it("totals the six scores the server sent back", async () => {
+      const onFinished = vi.fn();
+      render(
+        <CaseStudyPlayer caseStudy={keyless} submitFor={serverScores} onFinished={onFinished} />,
+      );
+      for (let step = 1; step <= 6; step++) await finishStep();
+      const results = screen.getByRole("region", { name: "Case study results" });
+      expect(within(results).getByText(/6 of 6 points/)).toBeInTheDocument();
+      expect(onFinished).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.objectContaining({ points: 1, maxPoints: 1 })]),
+      );
+    });
   });
 
   describe("flag and return", () => {
