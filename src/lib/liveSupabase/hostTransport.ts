@@ -35,7 +35,8 @@ import { maxPoints } from "@/lib/ngn/scoring";
 import type { Item } from "@/lib/ngn/schemas";
 import type { Database } from "@/lib/supabase/database.types";
 import { fromItemRow } from "@/lib/supabase/itemRows";
-import type { PresenceEntry } from "./participantTransport";
+import { endSession } from "@/lib/supabase/sessions";
+import { rosterFrom, type PresenceEntry } from "./presence";
 import { LIVE_SCHEMA, liveTopic } from "./wire";
 
 const ITEM_COLUMNS = "type, cjmm_step, tags, version, content, answer_key, rationale, scoring";
@@ -77,6 +78,8 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
   let mode: SessionMode = "instructor_paced";
   let current: Item | null = null;
   let closed = false;
+  /** Whether the channel has been up before, so a rejoin can be told from the first subscribe. */
+  let subscribed = false;
 
   /**
    * Registered as soon as the console exists rather than at `open()`: a component subscribes on
@@ -121,28 +124,35 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     for (const listener of [...presence]) listener(roster);
   });
 
+  /**
+   * Settles when the channel has come up — **or when it has failed to**, which is the point.
+   *
+   * `open()` awaits this, and a console that hangs because a socket never opened is a console that
+   * shows a host nothing and lets them move nothing, on a projector, in front of a class. A
+   * refused or timed-out channel resolves it too: the snapshot is then read from the Data API,
+   * which is a separate connection, and the roster starts empty and fills on the first sync
+   * whenever the socket does come up. Rejecting would be worse — it would turn a lost socket into
+   * a console that cannot open at all.
+   */
   const ready = new Promise<void>((resolve) => {
     channel.subscribe((status) => {
-      if (status === "SUBSCRIBED") resolve();
+      if (status === "SUBSCRIBED") {
+        resolve();
+        // A rejoin has missed every change made while the socket was down, and Realtime replays
+        // nothing. Re-reading is one indexed query and is what keeps a reconnected console from
+        // showing a room that has moved on. Skipped on the first subscribe, where `open()` is
+        // about to read anyway.
+        if (subscribed) void onStateChanged();
+        subscribed = true;
+        return;
+      }
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") resolve();
     });
   });
 
+  /** A host watches the roster and is never in it, so nothing of its own is folded in. */
   function rosterNow(): Participant[] {
-    const tracked = channel.presenceState<PresenceEntry>();
-    const people = new Map<string, Participant>();
-    for (const entries of Object.values(tracked)) {
-      for (const entry of entries) {
-        if (typeof entry.participantId !== "string") continue;
-        people.set(entry.participantId, {
-          participantId: entry.participantId,
-          displayName: entry.displayName,
-          joinedAt: entry.joinedAt,
-        });
-      }
-    }
-    return [...people.values()].sort(
-      (a, b) => a.joinedAt - b.joinedAt || a.participantId.localeCompare(b.participantId),
-    );
+    return rosterFrom(channel.presenceState<PresenceEntry>());
   }
 
   /**
@@ -280,9 +290,11 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     if (!result.ok) throw new LiveSessionError(result.refusal);
 
     if (command === "end") {
-      // Idempotent in the database (#128), so a double-tapped button is not an error.
-      const { error } = await client.rpc("end_session", { target: sessionId });
-      if (error) throw new LiveSessionError("not_open");
+      // Idempotent in the database (#128), so a double-tapped button is not an error. Through the
+      // same wrapper the rest of the app ends a session with, rather than a second call site for
+      // the same function: #132 made this the only way a room is ended.
+      const ended = await endSession(client, sessionId);
+      if (!ended.ok) throw new LiveSessionError("not_open");
     } else {
       const { error } = await client
         .from("sessions")

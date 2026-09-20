@@ -1,10 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
-import { endSession, startSession } from "@/lib/supabase/sessions";
+import { startSession } from "@/lib/supabase/sessions";
 
 /**
  * Starts a live session from a bank and opens its console. Every check that matters is the
@@ -22,13 +21,9 @@ export async function startLiveSession(bankId: string): Promise<never> {
   redirect(`/live/${started.sessionId}`);
 }
 
-/** Ends a session, after which its code resolves for nobody and it cannot be reopened. */
-export async function endLiveSession(sessionId: string): Promise<void> {
-  if (!isUuid(sessionId)) redirect("/author");
-  const { supabase } = await requireAuthor(`/live/${sessionId}`);
-
-  const ended = await endSession(supabase, sessionId);
-  if (!ended.ok) redirect(`/live/${sessionId}?ended=${ended.reason}`);
-
-  revalidatePath(`/live/${sessionId}`);
-}
+/**
+ * Ending a session is no longer a Server Function. #132 made the console a live connection, and
+ * `LiveHostTransport.end()` is the move it makes — the same path `start`, `advance`, `reveal` and
+ * `pause` take, guarded once by `applyHostCommand` and once by #128's trigger. A second way to end
+ * a room would be a second place for the two to disagree. See `src/components/live/HostLobby.tsx`.
+ */

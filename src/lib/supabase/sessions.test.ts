@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   endSession,
   readHostSession,
+  readPublicSessionState,
   resolveSessionCode,
   startSession,
   type ResolvedCode,
@@ -117,6 +118,8 @@ describe("readHostSession", () => {
         status: "running",
         mode: "instructor_paced",
         item_set: ["a", "b", "c"],
+        current_position: 2,
+        reveal: true,
         opened_at: "2026-09-19T09:00:00Z",
         closed_at: null,
       },
@@ -129,6 +132,8 @@ describe("readHostSession", () => {
       status: "running",
       mode: "instructor_paced",
       itemCount: 3,
+      position: 2,
+      reveal: true,
       openedAt: "2026-09-19T09:00:00Z",
       closedAt: null,
     });
@@ -145,6 +150,8 @@ describe("readHostSession", () => {
         status: "lobby",
         mode: "student_paced",
         item_set: null,
+        current_position: null,
+        reveal: false,
         opened_at: "2026-09-19T09:00:00Z",
         closed_at: null,
       },
@@ -156,6 +163,47 @@ describe("readHostSession", () => {
   it("is null when row level security hides the row, and when the read errors", async () => {
     expect(await readHostSession(fakeRow({ data: null, error: null }).client, SESSION)).toBeNull();
     expect(await readHostSession(fakeRow({ error: { code: "42501" } }).client, SESSION)).toBeNull();
+  });
+});
+
+describe("readPublicSessionState", () => {
+  it("returns the four facts a participant may know, and selects nothing else", async () => {
+    const fake = fakeRow({
+      data: { status: "running", current_position: 2, item_set: ["a", "b"], reveal: false },
+      error: null,
+    });
+    expect(await readPublicSessionState(fake.client, SESSION)).toEqual({
+      status: "running",
+      position: 2,
+      itemCount: 2,
+      reveal: false,
+    });
+    // The columns are named one by one; a student's first paint must not carry the org, the host,
+    // the code, the title or the item ids.
+    expect(fake.select).toHaveBeenCalledWith("status, current_position, item_set, reveal");
+    expect(fake.eq).toHaveBeenCalledWith("id", SESSION);
+  });
+
+  it("counts nothing when the set is not an array", async () => {
+    const fake = fakeRow({
+      data: { status: "lobby", current_position: null, item_set: null, reveal: false },
+      error: null,
+    });
+    expect(await readPublicSessionState(fake.client, SESSION)).toEqual({
+      status: "lobby",
+      position: null,
+      itemCount: 0,
+      reveal: false,
+    });
+  });
+
+  it("fails closed when the session is gone or the read errors", async () => {
+    expect(
+      await readPublicSessionState(fakeRow({ data: null, error: null }).client, SESSION),
+    ).toBeNull();
+    expect(
+      await readPublicSessionState(fakeRow({ error: { code: "42501" } }).client, SESSION),
+    ).toBeNull();
   });
 });
 

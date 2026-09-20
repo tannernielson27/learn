@@ -33,6 +33,7 @@ import {
   type Unsubscribe,
 } from "@/lib/live";
 import { isSessionCode, normalizeSessionCode } from "@/lib/live/sessionCode";
+import { rosterFrom, type PresenceEntry } from "./presence";
 import type { Database } from "@/lib/supabase/database.types";
 import {
   LIVE_ROUTES,
@@ -46,13 +47,6 @@ import {
 } from "./wire";
 
 const DISPLAY_NAME_MAX = 60;
-
-/** One person's presence entry. Names only: a roster is not a list of who answered what. */
-export interface PresenceEntry {
-  participantId: string;
-  displayName: string;
-  joinedAt: number;
-}
 
 export interface ParticipantTransportOptions {
   /** The browser client, holding the publishable key. Used for its channel and nothing else. */
@@ -106,31 +100,17 @@ export function createSupabaseParticipant(
   let announcedReveal: number | null = null;
 
   function rosterNow(): Participant[] {
-    const tracked = channel?.presenceState<PresenceEntry>() ?? {};
-    const people = new Map<string, Participant>();
-    for (const entries of Object.values(tracked)) {
-      for (const entry of entries) {
-        if (typeof entry.participantId !== "string") continue;
-        people.set(entry.participantId, {
-          participantId: entry.participantId,
-          displayName: entry.displayName,
-          joinedAt: entry.joinedAt,
-        });
-      }
-    }
-    // Presence can lag a fraction behind a successful `track`, and `join` has to answer with a
-    // roster this person is already in — an empty room with yourself missing from it reads as a
-    // failure to join.
-    if (credentials !== null && !people.has(credentials.participantId)) {
-      people.set(credentials.participantId, {
-        participantId: credentials.participantId,
-        displayName: credentials.displayName,
-        joinedAt: credentials.joinedAt,
-      });
-    }
-    return [...people.values()].sort(
-      (a, b) => a.joinedAt - b.joinedAt || a.participantId.localeCompare(b.participantId),
-    );
+    // `join` has to answer with a roster this person is already in, so this connection's own
+    // entry is folded in when a sync has not carried it back yet. See `rosterFrom`.
+    const self =
+      credentials === null
+        ? null
+        : {
+            participantId: credentials.participantId,
+            displayName: credentials.displayName,
+            joinedAt: credentials.joinedAt,
+          };
+    return rosterFrom(channel?.presenceState<PresenceEntry>() ?? {}, self);
   }
 
   async function requestView(): Promise<ParticipantViewPayload> {

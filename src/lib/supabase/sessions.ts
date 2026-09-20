@@ -1,4 +1,5 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import type { LiveSessionState } from "@/lib/live/state";
 import { isSessionCode, normalizeSessionCode } from "@/lib/live/sessionCode";
 import type { Database } from "./database.types";
 
@@ -15,6 +16,10 @@ export interface HostSession {
   status: SessionStatus;
   mode: SessionMode;
   itemCount: number;
+  /** Which item the room is on, counting from 1, or null in the lobby. */
+  position: number | null;
+  /** Whether the current item's key is showing (ADR 0003). */
+  reveal: boolean;
   openedAt: string;
   closedAt: string | null;
 }
@@ -82,7 +87,9 @@ export async function readHostSession(
 ): Promise<HostSession | null> {
   const { data, error } = await supabase
     .from("sessions")
-    .select("id, title, code, status, mode, item_set, opened_at, closed_at")
+    .select(
+      "id, title, code, status, mode, item_set, current_position, reveal, opened_at, closed_at",
+    )
     .eq("id", sessionId)
     .maybeSingle();
   if (error || !data) return null;
@@ -93,8 +100,51 @@ export async function readHostSession(
     status: data.status,
     mode: data.mode,
     itemCount: Array.isArray(data.item_set) ? data.item_set.length : 0,
+    position: data.current_position,
+    reveal: data.reveal,
     openedAt: data.opened_at,
     closedAt: data.closed_at,
+  };
+}
+
+/**
+ * The four facts a participant may know about a room, for the first paint of their phone (#132).
+ *
+ * **Why the service-role client, and why this is safe.** `live.session_public_state` is the table
+ * that holds exactly these four columns, and it is deliberately unreachable over the Data API —
+ * not listed in `[api] schemas`, so PostgREST has no route to it at all, and `revoke all` takes it
+ * from `service_role` besides (#131's migration explains why). Realtime can read it and nothing
+ * else can, which is right for *changes* and useless for the first render: a student who opens
+ * their phone into a room that is already on item four would sit on "connecting" until the host
+ * happened to move, because Realtime replays nothing.
+ *
+ * So the same four facts are read from the source row instead. This is the one exception to the
+ * rule on `createSupabaseServiceClient` that a student's request is never given a table read, and
+ * it is a narrow one: four columns named one by one, and nothing else on the row — no org, no
+ * host, no code, no title — even selected. Three of the four are about to be on that student's
+ * screen anyway. The fourth, `item_set`, is the exception to the exception: it is a list of item
+ * ids, it is read to be counted and **its length is the only thing that leaves this function**.
+ * The array itself must never be put on the returned object, or a student's page would carry the
+ * ids of every item in the room (ADR 0003).
+ *
+ * The caller must have resumed the participant against their token first; this function does no
+ * checking of its own and must never be reached before that.
+ */
+export async function readPublicSessionState(
+  client: Client,
+  sessionId: string,
+): Promise<LiveSessionState | null> {
+  const { data, error } = await client
+    .from("sessions")
+    .select("status, current_position, item_set, reveal")
+    .eq("id", sessionId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return {
+    status: data.status,
+    position: data.current_position,
+    itemCount: Array.isArray(data.item_set) ? data.item_set.length : 0,
+    reveal: data.reveal,
   };
 }
 

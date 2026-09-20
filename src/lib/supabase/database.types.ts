@@ -775,6 +775,7 @@ export type Database = {
         };
         Returns: {
           participant_id: string;
+          participant_joined_at: string;
           participant_name: string;
           session_mode: Database["public"]["Enums"]["session_mode"];
           session_status: Database["public"]["Enums"]["session_status"];
