@@ -34,7 +34,8 @@ learn/
 │  │  ├─ (marketing)/          # landing
 │  │  ├─ (auth)/               # sign in
 │  │  ├─ gallery/              # internal component gallery (Phase 1 demos)
-│  │  ├─ play/                 # student player: /play/[sessionCode], /play/assignment/[id]
+│  │  ├─ join/                 # student join: /join, /join/[code] (the QR code's target)
+│  │  ├─ play/                 # student player: /play/[sessionId], /play/assignment/[id]
 │  │  ├─ author/               # item bank, editors, case study builder
 │  │  ├─ live/                 # instructor console: /live/[sessionId]
 │  │  └─ api/                  # route handlers (session join, submit, reports)
@@ -94,6 +95,7 @@ Design notes:
 - Item JSON is validated by the same Zod schemas at the API boundary (Edge Function / route handler) before insert.
 - `sessions.set` snapshots the items at session start so edits during a live session do not change what students see.
 - Everything is org-scoped for RLS from day one, even when there is one org.
+- **As built in Sprint 7 (#129):** `participants` carries `org_id` (held equal to its session's by a composite key) and `rejoin_hash`, the SHA-256 of a participant token's secret half. A student has no account, so nothing writes the table under RLS: `join_session` and `resume_participant` are security definer and granted to `service_role` alone, like `resolve_session_code`. Authors read their org's rosters; `rejoin_hash` is granted to nobody.
 - **As built in Sprint 4 (#65):** `items`, `case_studies` and `case_study_items` carry `org_id`, held equal to their bank's by composite foreign keys, so policies filter on a column instead of a join. RLS helpers live in a `private` schema the Data API does not expose. `item_versions` is append-only. `items.content` holds the item without `answerKey`, `rationale`, `scoring` and the fields stored as columns; `src/lib/supabase/itemRows.ts` splits and re-validates. By owner decision (2026-09-12), every new account joins the single org as an instructor; revisit before Sprint 7.
 
 ## 4. Live session design

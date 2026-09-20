@@ -7,6 +7,7 @@ import type { SignInState } from "@/components/auth/SignInForm";
 import { readDemoAccount, signInToDemo } from "@/lib/auth/demoAccount";
 import { parseSignInForm } from "@/lib/auth/signInForm";
 import { SIGN_IN_RATE_LIMITED, takeSignInAttempt } from "@/lib/auth/signInRateLimit";
+import { siteOrigin } from "@/lib/http/siteOrigin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const SEND_FAILED = "The email could not be sent just now. Try again in a moment.";
@@ -64,13 +65,4 @@ export async function signInAsDemo(
   );
   if (!result.ok) return { status: "error", error: result.error };
   redirect(result.next);
-}
-
-function siteOrigin(requestHeaders: Headers): string {
-  const origin = requestHeaders.get("origin");
-  if (origin) return origin;
-  const host =
-    requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "localhost:3000";
-  const protocol = requestHeaders.get("x-forwarded-proto") ?? "http";
-  return `${protocol}://${host}`;
 }
