@@ -400,6 +400,98 @@ export type Database = {
           },
         ];
       };
+      sessions: {
+        Row: {
+          bank_id: string | null;
+          case_study_id: string | null;
+          closed_at: string | null;
+          code: string;
+          created_at: string;
+          current_position: number | null;
+          host_id: string;
+          id: string;
+          item_ends_at: string | null;
+          item_set: Json;
+          mode: Database["public"]["Enums"]["session_mode"];
+          opened_at: string;
+          org_id: string;
+          reveal: boolean;
+          status: Database["public"]["Enums"]["session_status"];
+          timer_seconds: number | null;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          bank_id?: string | null;
+          case_study_id?: string | null;
+          closed_at?: string | null;
+          code: string;
+          created_at?: string;
+          current_position?: number | null;
+          host_id: string;
+          id?: string;
+          item_ends_at?: string | null;
+          item_set?: Json;
+          mode?: Database["public"]["Enums"]["session_mode"];
+          opened_at?: string;
+          org_id: string;
+          reveal?: boolean;
+          status?: Database["public"]["Enums"]["session_status"];
+          timer_seconds?: number | null;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          bank_id?: string | null;
+          case_study_id?: string | null;
+          closed_at?: string | null;
+          code?: string;
+          created_at?: string;
+          current_position?: number | null;
+          host_id?: string;
+          id?: string;
+          item_ends_at?: string | null;
+          item_set?: Json;
+          mode?: Database["public"]["Enums"]["session_mode"];
+          opened_at?: string;
+          org_id?: string;
+          reveal?: boolean;
+          status?: Database["public"]["Enums"]["session_status"];
+          timer_seconds?: number | null;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "sessions_bank_org_fkey";
+            columns: ["bank_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "item_banks";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "sessions_case_org_fkey";
+            columns: ["case_study_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "case_studies";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "sessions_host_id_fkey";
+            columns: ["host_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "sessions_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "orgs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -412,6 +504,7 @@ export type Database = {
         Returns: string;
       };
       duplicate_item: { Args: { source_item: string }; Returns: string };
+      end_session: { Args: { target: string }; Returns: string };
       import_bank_content: {
         Args: {
           new_case_study: Json;
@@ -466,10 +559,28 @@ export type Database = {
         Args: { item_ids: string[]; target: string };
         Returns: undefined;
       };
+      resolve_session_code: {
+        Args: { client_key?: string; session_code: string };
+        Returns: {
+          session_id: string;
+          session_mode: Database["public"]["Enums"]["session_mode"];
+          session_status: Database["public"]["Enums"]["session_status"];
+          session_title: string;
+        }[];
+      };
       restore_case_study: { Args: { target: string }; Returns: undefined };
       restore_item: { Args: { target: string }; Returns: undefined };
       start_case_study_step: {
         Args: { step_position: number; step_type: string; target: string };
+        Returns: string;
+      };
+      start_session: {
+        Args: {
+          item_timer_seconds?: number;
+          paced?: Database["public"]["Enums"]["session_mode"];
+          source_bank?: string;
+          source_case_study?: string;
+        };
         Returns: string;
       };
       take_rate_limit: { Args: { action_name: string }; Returns: boolean };
@@ -477,6 +588,8 @@ export type Database = {
     Enums: {
       content_status: "draft" | "published" | "archived";
       org_role: "instructor" | "student" | "admin";
+      session_mode: "instructor_paced" | "student_paced";
+      session_status: "lobby" | "running" | "paused" | "ended";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -600,6 +713,8 @@ export const Constants = {
     Enums: {
       content_status: ["draft", "published", "archived"],
       org_role: ["instructor", "student", "admin"],
+      session_mode: ["instructor_paced", "student_paced"],
+      session_status: ["lobby", "running", "paused", "ended"],
     },
   },
 } as const;
