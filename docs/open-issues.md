@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-19 (Sprint 6 closed: every S6 story merged. Demo and retro in docs/sprints/S6-demo.md).
+Last updated: 2026-09-19 (Sprint 6 closed, demo and retro in docs/sprints/S6-demo.md; Sprint 7 filed, #127-#134 plus #46 and #56).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -25,6 +25,27 @@ Demo 6: organize a 50-item bank, find items by tag, fix warnings.
 
 Suggested order: #94, folders (#103), tags (#104), search (#105), then duplicate, archive and history, then bulk import (#109, uses folders) and warnings (#110), with #111 alongside.
 
+## S7: Session core (milestone 7)
+
+Demo 7: three phones join a room from a QR code and answer a live SATA; the instructor screen updates in real time.
+
+| #                                                           | Title                                                                   | Gates                       | Status                                                 |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------- | --------------------------- | ------------------------------------------------------ |
+| [#127](https://github.com/tannernielson27/learn/issues/127) | chore(infra): split production onto its own Supabase project            | infra, db, security         | To do; **owner creates the project**; ADR 0005 -> 0006 |
+| [#56](https://github.com/tannernielson27/learn/issues/56)   | chore(architecture): move scoring off the client                        | player, security            | To do; settles the submit shape                        |
+| [#46](https://github.com/tannernielson27/learn/issues/46)   | chore(architecture): deliver case study answer keys per step, at reveal | player, security            | To do; before the live player                          |
+| [#128](https://github.com/tannernielson27/learn/issues/128) | feat(live): a session model with a six-character join code              | live, db, security          | To do                                                  |
+| [#130](https://github.com/tannernielson27/learn/issues/130) | feat(live): a LiveSessionTransport interface with an in-memory adapter  | live                        | To do; ADR 0002 review belongs in this PR              |
+| [#129](https://github.com/tannernielson27/learn/issues/129) | feat(live): join a session with a display name and no account           | live, security, e2e         | To do; needs #128                                      |
+| [#131](https://github.com/tannernielson27/learn/issues/131) | feat(live): the Supabase Realtime adapter                               | live, db, security          | To do; needs #128, #130, #56                           |
+| [#132](https://github.com/tannernielson27/learn/issues/132) | feat(live): lobby with presence and instructor-paced mode               | live, e2e                   | To do; needs #129, #131                                |
+| [#133](https://github.com/tannernielson27/learn/issues/133) | feat(live): answer a live item from a phone                             | live, player, security, e2e | To do; needs #132, #56                                 |
+| [#134](https://github.com/tannernielson27/learn/issues/134) | fix(auth): rate limit sign-in per IP                                    | auth, security              | To do; carries the S6 gap                              |
+
+Suggested order: #127 prod split, then #56 and #46 (serial, same scoring path), then #128 session model, #130 transport and #134 sign-in limit in parallel, then #129 join and #131 adapter in parallel, then #132 lobby and #133 live answer one at a time.
+
+Parallelization: #132 and #133 both edit the host and student screens — never build them at once. Sprint 6 showed that two agents on one page is where the damage comes from.
+
 ## No milestone
 
 | #                                                           | Title                                                                           | Area           | Status                                            |
@@ -32,8 +53,6 @@ Suggested order: #94, folders (#103), tags (#104), search (#105), then duplicate
 | [#115](https://github.com/tannernielson27/learn/issues/115) | feat(auth): sign in to a shared demo account without email                      | auth, security | Merged (#116); owner creates the hosted demo user |
 | [#123](https://github.com/tannernielson27/learn/issues/123) | fix(authoring): enforce the authoring rate limit where the write happens        | authoring, db  | To do; found on #109                              |
 | [#67](https://github.com/tannernielson27/learn/issues/67)   | feat(auth): sign in with Google                                                 | auth, security | Blocked: owner creates the Google OAuth client    |
-| [#46](https://github.com/tannernielson27/learn/issues/46)   | chore(architecture): deliver case study answer keys per step, at reveal         | player         | To do; lands with live sessions                   |
-| [#56](https://github.com/tannernielson27/learn/issues/56)   | chore(architecture): move scoring off the client                                | player         | To do; lands with live sessions                   |
 | [#49](https://github.com/tannernielson27/learn/issues/49)   | feat(player): place per-element rationale inline in the pointer-heavy renderers | player         | To do                                             |
 | [#50](https://github.com/tannernielson27/learn/issues/50)   | chore(types): stop casting away the optionality of answerKey and rationale      | player         | To do                                             |
 | [#54](https://github.com/tannernielson27/learn/issues/54)   | perf(player): load item renderers per type                                      | player         | To do                                             |
