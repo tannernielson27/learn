@@ -12,7 +12,7 @@
  */
 import { z } from "zod";
 import type { ItemType } from "./labels";
-import { responseSchema, type AnyResponse, type Item } from "./schemas";
+import { responseSchema, type AnyResponse, type CaseStudy, type Item } from "./schemas";
 import { scoreItem } from "./scoring";
 import type { ScoreResult } from "./types";
 
@@ -42,12 +42,44 @@ export function toKeylessItem(item: Item): KeylessItem {
   return copy as KeylessItem;
 }
 
-/** What checking an answer produces: the score, and only now the key, rationale and scoring. */
-export interface ScoreReveal {
-  score: ScoreResult;
+/** An item as a player may hold it: with its key where there is no student, without where there is. */
+export type PlayableItem = Item | KeylessItem;
+
+/**
+ * A case study as a browser may hold it. Generic in its items so one player serves both cases:
+ * `PlayableCaseStudy<Item>` where the same process does the scoring, `KeylessCaseStudy` wherever a
+ * student plays. Everything but the items — the title and the patient's record — is the same either
+ * way, because none of it is an answer.
+ */
+export type PlayableCaseStudy<T extends PlayableItem = PlayableItem> = Omit<CaseStudy, "items"> & {
+  items: T[];
+};
+
+/**
+ * The only case-study payload a student-facing page sends to the browser (ADR 0003): six items
+ * carrying `content` and no `answerKey`. A step's key arrives with that step's own score and no
+ * sooner, so the keys for steps the student has not reached are never loaded at all.
+ */
+export type KeylessCaseStudy = PlayableCaseStudy<KeylessItem>;
+
+/**
+ * Strips every step's key, rationale and scoring. Each item is a deep copy, so the case study it
+ * is given is never changed; the patient's record is shared by reference, since it holds no answer.
+ */
+export function toKeylessCaseStudy(caseStudy: CaseStudy): KeylessCaseStudy {
+  return { ...caseStudy, items: caseStudy.items.map(toKeylessItem) };
+}
+
+/** What a score reveals beside itself, once and only once there is a score. */
+export interface Reveal {
   answerKey: Item["answerKey"];
   rationale: Item["rationale"];
   scoring: Item["scoring"];
+}
+
+/** What checking an answer produces: the score, and only now the key, rationale and scoring. */
+export interface ScoreReveal extends Reveal {
+  score: ScoreResult;
 }
 
 /**
@@ -57,8 +89,12 @@ export interface ScoreReveal {
  */
 export type SubmitHandler = (response: AnyResponse) => Promise<ScoreReveal>;
 
-/** Builds the handler for one item, so a case study can make one per step. */
-export type SubmitHandlerFor = (item: Item) => SubmitHandler;
+/**
+ * Builds the handler for one item, so a case study can make one per step. Generic in the item it is
+ * handed: a session's handler is given a `KeylessItem` and only the server ever sees the key, while
+ * `scoreInProcess` needs the whole `Item` — which is why it cannot be passed a keyless case study.
+ */
+export type SubmitHandlerFor<T extends PlayableItem = Item> = (item: T) => SubmitHandler;
 
 /**
  * Scores a response and reveals the key beside it. **The scoring entry point**: every server that

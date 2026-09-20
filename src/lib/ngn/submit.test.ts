@@ -1,18 +1,42 @@
 // The submit seam (#56). ADR 0003: every student-facing payload builder ships with a test that it
 // never includes the key, and one item scores the same however it was submitted.
 import { describe, expect, it } from "vitest";
-import { FIXTURES } from "./fixtures";
+import { FIXTURES, sampleCaseStudy } from "./fixtures";
 import { ITEM_TYPES, type ItemType } from "./labels";
-import { ITEM_SCHEMAS, multipleChoiceItemSchema, type AnyResponse, type Item } from "./schemas";
+import {
+  caseStudySchema,
+  ITEM_SCHEMAS,
+  multipleChoiceItemSchema,
+  type AnyResponse,
+  type Item,
+} from "./schemas";
 import { scoreItem } from "./scoring";
 import {
   parseSubmission,
   scoreInProcess,
   scoreSubmission,
   SUBMIT_ERRORS,
+  toKeylessCaseStudy,
   toKeylessItem,
   type KeylessItem,
 } from "./submit";
+
+/** Every property name anywhere in a value, however deeply nested, as "a.b[0].c" paths. */
+function propertyPaths(value: unknown, at = ""): string[] {
+  if (Array.isArray(value)) return value.flatMap((entry, i) => propertyPaths(entry, `${at}[${i}]`));
+  if (typeof value !== "object" || value === null) return [];
+  return Object.entries(value).flatMap(([key, child]) => {
+    const path = at ? `${at}.${key}` : key;
+    return [path, ...propertyPaths(child, path)];
+  });
+}
+
+/** The three fields ADR 0003 keeps on the server until a score comes back with them. */
+const SECRETS = ["answerKey", "rationale", "scoring"];
+
+/** Walks the real object rather than its JSON, so a key hidden under any name is still found. */
+const secretsIn = (payload: unknown) =>
+  propertyPaths(payload).filter((path) => SECRETS.includes(path.split(".").pop() as string));
 
 const parsed = (type: ItemType) => ITEM_SCHEMAS[type].parse(FIXTURES[type].canonical) as Item;
 
@@ -75,12 +99,50 @@ describe("toKeylessItem", () => {
     expect(JSON.stringify(item)).toBe(before);
   });
 
+  it.each(samples)("carries no secret under any name, walked in full: %s", (_name, item) => {
+    // The structural check ADR 0003 asks for: the object itself, not a string search of its JSON.
+    expect(secretsIn(toKeylessItem(item))).toEqual([]);
+    // The same walk over the item it came from finds them, so the walk is doing something.
+    expect(secretsIn(item).length).toBeGreaterThan(0);
+  });
+
   it("keeps the item types apart, so type still says which content this is", () => {
     // A compile-time check as much as a runtime one: a plain `Omit` over the item union collapses
     // it, and `keyless.content.options` below would not type. KeylessItem distributes instead.
     const keyless: KeylessItem = toKeylessItem(parsed("multiple_choice"));
     if (keyless.type !== "multiple_choice") throw new Error("fixture changed type");
     expect(keyless.content.options.length).toBeGreaterThan(0);
+  });
+});
+
+describe("toKeylessCaseStudy", () => {
+  const caseStudy = caseStudySchema.parse(sampleCaseStudy);
+
+  it("carries no step's key, rationale or scoring, walked in full", () => {
+    const payload = toKeylessCaseStudy(caseStudy);
+    expect(secretsIn(payload)).toEqual([]);
+    // Every one of the six steps was stripped, not just the one the student opens on.
+    expect(payload.items).toHaveLength(6);
+    expect(secretsIn(caseStudy).length).toBeGreaterThanOrEqual(18);
+  });
+
+  it("keeps the record and everything a student needs to answer each step", () => {
+    const payload = toKeylessCaseStudy(caseStudy);
+    expect(payload).toMatchObject({
+      id: caseStudy.id,
+      title: caseStudy.title,
+      ehr: caseStudy.ehr,
+    });
+    expect(payload.items.map((item) => [item.id, item.type, item.cjmmStep])).toEqual(
+      caseStudy.items.map((item) => [item.id, item.type, item.cjmmStep]),
+    );
+    payload.items.forEach((item, i) => expect(item.content).toEqual(caseStudy.items[i]?.content));
+  });
+
+  it("does not change the case study it is given", () => {
+    const before = JSON.stringify(caseStudy);
+    toKeylessCaseStudy(caseStudy);
+    expect(JSON.stringify(caseStudy)).toBe(before);
   });
 });
 

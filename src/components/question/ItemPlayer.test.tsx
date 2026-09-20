@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema } from "@/lib/ngn/schemas";
-import { scoreInProcess } from "@/lib/ngn/submit";
+import { scoreInProcess, toKeylessItem } from "@/lib/ngn/submit";
 import { ItemPlayer, toPlayerItem } from "./ItemPlayer";
 import { RENDERERS } from "./registry";
 
@@ -37,7 +37,11 @@ describe("ItemPlayer with multiple choice", () => {
     expect(within(score).getByText(/Rapid weight gain/)).toBeInTheDocument();
     expect(onSubmitted).toHaveBeenCalledWith(
       { type: "multiple_choice", optionId: "opt_a" },
-      expect.objectContaining({ points: 1, maxPoints: 1 }),
+      // The whole reveal, so the caller can hand the key back when the item reopens (#46).
+      expect.objectContaining({
+        score: expect.objectContaining({ points: 1, maxPoints: 1 }),
+        answerKey: mc.answerKey,
+      }),
     );
     expect(screen.queryByRole("button", { name: "Submit" })).not.toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /Auscultate the lungs/ })).toBeDisabled();
@@ -128,17 +132,39 @@ describe("ItemPlayer without a renderer", () => {
 describe("ItemPlayer reopening a step someone has already answered", () => {
   const chosen = { type: "multiple_choice", optionId: "opt_c" } as const;
   const scored = { points: 0, maxPoints: 1, model: "zero_one" as const, breakdown: [] };
+  // What a previous submit sent back: the score and, with it, this step's key (#46).
+  const reveal = {
+    score: scored,
+    answerKey: mc.answerKey,
+    rationale: mc.rationale,
+    scoring: mc.scoring,
+  };
 
   it("opens in feedback with the given answer and score, without scoring again", () => {
     const submit = vi.fn(scoreInProcess(mc));
     render(
-      <ItemPlayer item={mc} submit={submit} initialResponse={chosen} initialResult={scored} />,
+      <ItemPlayer item={mc} submit={submit} initialResponse={chosen} initialReveal={reveal} />,
     );
     expect(screen.getByRole("radio", { name: /Document the weight/ })).toBeChecked();
     const panel = screen.getByRole("complementary", { name: "Score" });
     expect(within(panel).getByText("0")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Submit" })).not.toBeInTheDocument();
     expect(submit).not.toHaveBeenCalled();
+  });
+
+  it("marks the answer from the key it is handed back, not from the item it is playing", () => {
+    // The point of #46: a keyless step reopens with its marks because the reveal came back with it.
+    const keyless = toKeylessItem(mc);
+    render(
+      <ItemPlayer
+        item={keyless}
+        submit={scoreInProcess(mc)}
+        initialResponse={chosen}
+        initialReveal={reveal}
+      />,
+    );
+    expect(screen.getByText("Incorrect")).toBeInTheDocument();
+    expect(screen.getByText("Missed")).toBeInTheDocument();
   });
 
   it("reports every change, so a caller that unmounts it can hand the answer back", async () => {
