@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
 import { isUuid } from "@/lib/authoring/ids";
 import { MAX_ITEM_PAYLOAD_BYTES, withinItemSizeLimit } from "@/lib/authoring/payloadSize";
-import {
-  parseScoreRequest,
-  SCORE_REQUEST_ERRORS,
-  scoreForReveal,
-} from "@/lib/authoring/scoreRequest";
 import { authorForRoute } from "@/lib/authoring/session";
+import { parseSubmission, scoreSubmission, SUBMIT_ERRORS } from "@/lib/ngn/submit";
 import { fromItemRow } from "@/lib/supabase/itemRows";
 
 const NO_STORE = { "Cache-Control": "no-store" };
@@ -34,7 +30,7 @@ export async function scoreResponse(request: Request, itemId: string): Promise<R
 
   // JSON only: a cross-site form post (text/plain, urlencoded) cannot reach the scorer.
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
-    return fail(415, SCORE_REQUEST_ERRORS.malformed);
+    return fail(415, SUBMIT_ERRORS.malformed);
   }
 
   const author = await authorForRoute();
@@ -50,7 +46,7 @@ export async function scoreResponse(request: Request, itemId: string): Promise<R
   try {
     body = await request.json();
   } catch {
-    return fail(400, SCORE_REQUEST_ERRORS.malformed);
+    return fail(400, SUBMIT_ERRORS.malformed);
   }
   if (!withinItemSizeLimit(body)) return fail(413, SCORE_ROUTE_ERRORS.tooLarge);
 
@@ -66,8 +62,8 @@ export async function scoreResponse(request: Request, itemId: string): Promise<R
   const stored = fromItemRow(row);
   if (!stored.ok) return fail(409, SCORE_ROUTE_ERRORS.unplayable);
 
-  const parsed = parseScoreRequest(body, stored.value.type);
+  const parsed = parseSubmission(body, stored.value.type);
   if (!parsed.ok) return fail(parsed.status, parsed.error);
 
-  return NextResponse.json(scoreForReveal(stored.value, parsed.response), { headers: NO_STORE });
+  return NextResponse.json(scoreSubmission(stored.value, parsed.response), { headers: NO_STORE });
 }

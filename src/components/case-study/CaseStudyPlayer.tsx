@@ -6,8 +6,8 @@ import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { FlagToggle } from "@/components/review/FlagToggle";
 import { ReviewList } from "@/components/review/ReviewList";
 import { Button } from "@/components/ui/Button";
-import { scoreItem } from "@/lib/ngn/scoring";
-import type { AnyResponse, CaseStudy, Item } from "@/lib/ngn/schemas";
+import type { AnyResponse, CaseStudy } from "@/lib/ngn/schemas";
+import type { SubmitHandlerFor } from "@/lib/ngn/submit";
 import { CJMM_STEP_LABELS, type CjmmStep, type ScoreResult } from "@/lib/ngn/types";
 import { CaseStudySummary } from "./CaseStudySummary";
 import { StepIndicator } from "./StepIndicator";
@@ -24,10 +24,11 @@ interface StepState {
 export interface CaseStudyPlayerProps {
   caseStudy: CaseStudy;
   /**
-   * Scores a response. Defaults to local scoring, which is only acceptable in the gallery;
-   * sessions and assignments pass a server-backed function instead.
+   * Builds the submit handler for a step, since each step is its own item (#56). Sessions and
+   * assignments pass one that goes to the server; the gallery and the authoring preview pass
+   * `scoreInProcess`.
    */
-  score?: (item: Item, response: AnyResponse) => ScoreResult;
+  submitFor: SubmitHandlerFor;
   onFinished?: (results: ScoreResult[]) => void;
 }
 
@@ -39,11 +40,7 @@ export interface CaseStudyPlayerProps {
  * mounted at a time — a student should not be able to read ahead — so what they have chosen is
  * held here and handed back when they return to it, submitted or not.
  */
-export function CaseStudyPlayer({
-  caseStudy,
-  score = scoreItem,
-  onFinished,
-}: CaseStudyPlayerProps) {
+export function CaseStudyPlayer({ caseStudy, submitFor, onFinished }: CaseStudyPlayerProps) {
   const total = caseStudy.items.length;
   // 0 to total - 1 while working; `total` once the student has reached the results.
   const [index, setIndex] = useState(0);
@@ -173,7 +170,7 @@ export function CaseStudyPlayer({
             <ItemPlayer
               key={item.id}
               item={item}
-              score={score}
+              submit={submitFor(item)}
               initialResponse={current?.response}
               initialResult={current?.result}
               onResponseChange={(response) => update(index, { response })}

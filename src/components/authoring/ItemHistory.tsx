@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { Button } from "@/components/ui/Button";
 import { HISTORY_LIMIT, NO_CHANGES } from "@/lib/authoring/versionHistory";
+import { scoreInProcess } from "@/lib/ngn/submit";
 import type { HistoryEntry } from "./historyEntries";
 
 export type RestorableEntry = Extract<HistoryEntry, { ok: true }>;
@@ -144,6 +145,9 @@ export function ItemHistory({
                     <ItemPlayer
                       key={entry.version}
                       item={entry.item}
+                      // Review mode has nothing to submit; the author's browser would score it
+                      // if it ever did (ADR 0003, amended 2026-09-13).
+                      submit={scoreInProcess(entry.item)}
                       initialMode="review"
                       label={`Version ${entry.version} question`}
                     />

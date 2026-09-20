@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema } from "@/lib/ngn/schemas";
+import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer } from "../ItemPlayer";
 import { hasRenderer } from "../registry";
 
@@ -35,7 +36,7 @@ describe("row-table renderers", () => {
 
 describe("drop-down table", () => {
   it("renders a two-column table whose drop-downs are named by row and column", () => {
-    render(<ItemPlayer item={table} />);
+    render(<ItemPlayer item={table} submit={scoreInProcess(table)} />);
     const t = grid();
     expect(within(t).getByRole("columnheader", { name: "Medication" })).toBeInTheDocument();
     expect(within(t).getByRole("columnheader", { name: "Nursing action" })).toBeInTheDocument();
@@ -46,7 +47,7 @@ describe("drop-down table", () => {
   });
 
   it("keeps the grid and the row cards on one response", async () => {
-    render(<ItemPlayer item={table} />);
+    render(<ItemPlayer item={table} submit={scoreInProcess(table)} />);
     await userEvent.selectOptions(
       within(grid()).getByRole("combobox", { name: `${DIGOXIN} Nursing action` }),
       "Check apical pulse for one full minute",
@@ -57,7 +58,7 @@ describe("drop-down table", () => {
   });
 
   it("enables submit only when every row has a choice, then scores 0/1 per row", async () => {
-    render(<ItemPlayer item={table} />);
+    render(<ItemPlayer item={table} submit={scoreInProcess(table)} />);
     const pick = (row: string, label: string) =>
       userEvent.selectOptions(
         within(grid()).getByRole("combobox", { name: `${row} Nursing action` }),
@@ -88,7 +89,7 @@ describe("drop-down table", () => {
 
 describe("multiple response grouping", () => {
   it("groups each row's checkboxes under the row name and shares state with the cards", async () => {
-    render(<ItemPlayer item={grouping} />);
+    render(<ItemPlayer item={grouping} submit={scoreInProcess(grouping)} />);
     const t = grid();
     expect(within(t).getByRole("rowheader", { name: "Respiratory" })).toBeInTheDocument();
     const respiratory = within(t).getByRole("group", { name: "Respiratory" });
@@ -103,7 +104,7 @@ describe("multiple response grouping", () => {
   });
 
   it("needs a selection in every row before submit", async () => {
-    render(<ItemPlayer item={grouping} />);
+    render(<ItemPlayer item={grouping} submit={scoreInProcess(grouping)} />);
     await userEvent.click(within(grid()).getByRole("checkbox", { name: "Drowsiness" }));
     await userEvent.click(within(grid()).getByRole("checkbox", { name: "Fruity breath odor" }));
     expect(submit()).toBeDisabled();
@@ -112,7 +113,7 @@ describe("multiple response grouping", () => {
   });
 
   it("floors a row at zero without taking points from other rows", async () => {
-    render(<ItemPlayer item={grouping} />);
+    render(<ItemPlayer item={grouping} submit={scoreInProcess(grouping)} />);
     const t = grid();
     for (const name of [
       "Bilateral wheezes",

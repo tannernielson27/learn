@@ -1,4 +1,10 @@
-import type { ScorableElement, ScoreBreakdownEntry, ScoreResult } from "../types";
+import type {
+  ScorableElement,
+  ScoreBreakdownEntry,
+  ScoreGroup,
+  ScoreResult,
+  ScoringModel,
+} from "../types";
 
 /**
  * 0/1 scoring: each element earns 1 if correct, else 0. Score = sum.
@@ -126,5 +132,31 @@ export function sumResults(
     maxPoints: parts.reduce((s, p) => s + p.maxPoints, 0),
     points: parts.reduce((s, p) => s + p.points, 0),
     breakdown: parts.flatMap((p) => p.breakdown),
+  };
+}
+
+/** A row's own result, named by the row it came from. */
+export interface GroupedPart {
+  groupId: string;
+  result: ScoreResult;
+}
+
+/**
+ * Combine per-row results and keep each row's subtotal beside the total. +/- floors at zero a row
+ * at a time, so a row's points cannot be recovered by adding up the breakdown's deltas; the
+ * renderer is handed the subtotal instead of computing one (#56).
+ */
+export function sumGrouped(model: ScoringModel, parts: readonly GroupedPart[]): ScoreResult {
+  const groups: ScoreGroup[] = parts.map(({ groupId, result }) => ({
+    groupId,
+    points: result.points,
+    maxPoints: result.maxPoints,
+  }));
+  return {
+    ...sumResults(
+      model,
+      parts.map((p) => p.result),
+    ),
+    groups,
   };
 }

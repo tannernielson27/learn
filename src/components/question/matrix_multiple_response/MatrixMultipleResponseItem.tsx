@@ -1,13 +1,14 @@
 "use client";
 
-import { scorePlusMinus } from "@/lib/ngn/scoring";
 import { Matrix } from "../matrix/Matrix";
+import { rowScorer } from "../rowScore";
 import { elementFeedback, type ItemRendererModule, type ItemRendererProps } from "../types";
 
 export function MatrixMultipleResponseItem({
   item,
   response,
   mode,
+  score,
   onChange,
 }: ItemRendererProps<"matrix_multiple_response">) {
   const selected = new Map(response.rows.map((r) => [r.rowId, new Set(r.columnIds)]));
@@ -48,17 +49,7 @@ export function MatrixMultipleResponseItem({
         )
       }
       rowRationale={(rowId) => item.rationale?.perElement?.[rowId]}
-      rowScore={
-        mode === "feedback" && key.size > 0
-          ? (rowId) => {
-              const result = scorePlusMinus({
-                selected: [...(selected.get(rowId) ?? [])],
-                correct: key.get(rowId) ?? [],
-              });
-              return { points: result.points, maxPoints: result.maxPoints };
-            }
-          : undefined
-      }
+      rowScore={rowScorer(mode, score)}
       onToggle={toggle}
     />
   );

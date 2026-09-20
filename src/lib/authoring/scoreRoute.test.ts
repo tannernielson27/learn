@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { SCORE_REQUEST_ERRORS } from "@/lib/authoring/scoreRequest";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { multipleChoiceItemSchema } from "@/lib/ngn/schemas";
+import { SUBMIT_ERRORS } from "@/lib/ngn/submit";
 import { toItemRow } from "@/lib/supabase/itemRows";
 
 const ITEM_ID = "3f8a2b1c-4d5e-4f60-8a7b-9c0d1e2f3a4b";
@@ -72,7 +72,7 @@ describe("scoreResponse", () => {
     await expectFailure(
       await post("response=opt_a", { contentType: "text/plain" }),
       415,
-      SCORE_REQUEST_ERRORS.malformed,
+      SUBMIT_ERRORS.malformed,
     );
   });
 
@@ -87,7 +87,7 @@ describe("scoreResponse", () => {
   });
 
   it("refuses a body that is not JSON", async () => {
-    await expectFailure(await post("{not json"), 400, SCORE_REQUEST_ERRORS.malformed);
+    await expectFailure(await post("{not json"), 400, SUBMIT_ERRORS.malformed);
   });
 
   it("refuses an answer too large to check", async () => {
@@ -122,7 +122,7 @@ describe("scoreResponse", () => {
 
   it("refuses an answer written for a different item type", async () => {
     const wrong = answer({ type: "multiple_response", optionIds: ["opt_a"] });
-    await expectFailure(await post(wrong), 400, SCORE_REQUEST_ERRORS.wrongType);
+    await expectFailure(await post(wrong), 400, SUBMIT_ERRORS.wrongType);
   });
 
   it("hides database errors behind a safe message", async () => {

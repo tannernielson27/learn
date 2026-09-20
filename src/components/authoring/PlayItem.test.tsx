@@ -1,15 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { toKeylessPlayItem } from "@/lib/authoring/play";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { sampleTrendItem } from "@/lib/ngn/fixtures/trend";
+import { toKeylessItem } from "@/lib/ngn/submit";
 import { validateItem } from "@/lib/ngn/validate";
 import { PlayItem } from "./PlayItem";
 
 function keyless(input: unknown) {
   const result = validateItem(input);
   if (!result.ok) throw new Error("fixture should be valid");
-  return toKeylessPlayItem(result.value);
+  return toKeylessItem(result.value);
 }
 
 describe("PlayItem", () => {

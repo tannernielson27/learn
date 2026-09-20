@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import type { ItemOf, ItemType, ResponseOf } from "@/lib/ngn/schemas";
-import type { ScoreBreakdownEntry, ScoreResult } from "@/lib/ngn/types";
+import type { ScoreResult } from "@/lib/ngn/types";
 
 export type PlayerMode = "answer" | "review" | "feedback";
 
@@ -17,8 +17,12 @@ export interface ItemRendererProps<T extends ItemType> {
   item: PlayerItem<T>;
   response: ResponseOf<T>;
   mode: PlayerMode;
-  /** Present in feedback mode; produced by the scoring engine. */
-  breakdown?: readonly ScoreBreakdownEntry[];
+  /**
+   * The checked answer, present in feedback mode once it has been scored. Renderers read points
+   * out of it — `score.groups` carries a row's own subtotal — and never score anything themselves,
+   * so no scoring code reaches a student's bundle (#56, ADR 0003).
+   */
+  score?: ScoreResult;
   onChange: (response: ResponseOf<T>) => void;
 }
 

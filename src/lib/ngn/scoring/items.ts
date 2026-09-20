@@ -1,7 +1,7 @@
 import type { ItemOf, ItemType, ResponseOf } from "../schemas";
 import { spanIdsOf } from "../spans";
 import type { ScoreResult } from "../types";
-import { scorePlusMinus, scoreRationale, scoreZeroOne, sumResults } from "./models";
+import { scorePlusMinus, scoreRationale, scoreZeroOne, sumGrouped } from "./models";
 
 type Scorer<T extends ItemType> = (item: ItemOf<T>, response: ResponseOf<T>) => ScoreResult;
 
@@ -24,16 +24,19 @@ const multipleResponse: Scorer<"multiple_response"> = (item, response) =>
   });
 
 const multipleResponseGrouping: Scorer<"multiple_response_grouping"> = (item, response) =>
-  sumResults(
+  sumGrouped(
     "plus_minus",
     item.answerKey.rows.map((keyRow) => {
       const row = item.content.rows.find((r) => r.id === keyRow.rowId);
       const answered = response.rows.find((r) => r.rowId === keyRow.rowId);
-      return scorePlusMinus({
-        selected: answered?.optionIds ?? [],
-        correct: keyRow.correctOptionIds,
-        labels: row ? labelsOf(row.options) : {},
-      });
+      return {
+        groupId: keyRow.rowId,
+        result: scorePlusMinus({
+          selected: answered?.optionIds ?? [],
+          correct: keyRow.correctOptionIds,
+          labels: row ? labelsOf(row.options) : {},
+        }),
+      };
     }),
   );
 
@@ -54,7 +57,7 @@ const matrixMultipleChoice: Scorer<"matrix_multiple_choice"> = (item, response) 
 const matrixMultipleResponse: Scorer<"matrix_multiple_response"> = (item, response) => {
   const colLabels = labelsOf(item.content.columns);
   const rowLabels = labelsOf(item.content.rows);
-  return sumResults(
+  return sumGrouped(
     "plus_minus",
     item.answerKey.rows.map((keyRow) => {
       const answered = response.rows.find((r) => r.rowId === keyRow.rowId);
@@ -67,12 +70,15 @@ const matrixMultipleResponse: Scorer<"matrix_multiple_response"> = (item, respon
       // in the label: a column alone ("Pulmonary embolism") repeats once per row.
       const rowLabel = rowLabels[keyRow.rowId];
       return {
-        ...result,
-        breakdown: result.breakdown.map((b) => ({
-          ...b,
-          elementId: `${keyRow.rowId}:${b.elementId}`,
-          label: rowLabel && b.label ? `${rowLabel}: ${b.label}` : b.label,
-        })),
+        groupId: keyRow.rowId,
+        result: {
+          ...result,
+          breakdown: result.breakdown.map((b) => ({
+            ...b,
+            elementId: `${keyRow.rowId}:${b.elementId}`,
+            label: rowLabel && b.label ? `${rowLabel}: ${b.label}` : b.label,
+          })),
+        },
       };
     }),
   );
@@ -160,15 +166,18 @@ const highlightTable: Scorer<"highlight_table"> = (item, response) => {
   }
   const selected = new Set(response.spanIds);
   const correct = new Set(item.answerKey.correctSpanIds);
-  return sumResults(
+  return sumGrouped(
     "plus_minus",
     item.content.rows.map((row) => {
       const rowSpans = row.cells.flatMap((c) => spanIdsOf(c));
-      return scorePlusMinus({
-        selected: rowSpans.filter((id) => selected.has(id)),
-        correct: rowSpans.filter((id) => correct.has(id)),
-        labels,
-      });
+      return {
+        groupId: row.id,
+        result: scorePlusMinus({
+          selected: rowSpans.filter((id) => selected.has(id)),
+          correct: rowSpans.filter((id) => correct.has(id)),
+          labels,
+        }),
+      };
     }),
   );
 };

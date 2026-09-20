@@ -1,5 +1,5 @@
+import { emptyResponse } from "./results";
 import type { AnyResponse, Item } from "./schemas";
-import { emptyResponse } from "./scoring";
 
 /** FNV-1a hash of a string, used to seed the shuffle. */
 function hash(seed: string): number {

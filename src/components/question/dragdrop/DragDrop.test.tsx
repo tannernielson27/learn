@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema } from "@/lib/ngn/schemas";
+import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer } from "../ItemPlayer";
 import { hasRenderer } from "../registry";
 
@@ -38,7 +39,7 @@ describe("drag-and-drop renderers", () => {
 
 describe("drag-and-drop cloze", () => {
   it("renders the sentence with empty blanks and the word bank", () => {
-    render(<ItemPlayer item={cloze} />);
+    render(<ItemPlayer item={cloze} submit={scoreInProcess(cloze)} />);
     expect(screen.getByText(/acute asthma exacerbation/)).toBeInTheDocument();
     expect(blank(1, 2)).toHaveAccessibleName("Blank 1 of 2, empty");
     expect(blank(2, 2)).toHaveAccessibleName("Blank 2 of 2, empty");
@@ -48,7 +49,7 @@ describe("drag-and-drop cloze", () => {
   });
 
   it("places a word by tapping it, then tapping a blank", async () => {
-    render(<ItemPlayer item={cloze} />);
+    render(<ItemPlayer item={cloze} submit={scoreInProcess(cloze)} />);
     await userEvent.click(token(SABA));
     expect(token(SABA)).toHaveAttribute("aria-pressed", "true");
     expect(status()).toHaveTextContent(`${SABA} selected. Choose a blank.`);
@@ -61,7 +62,7 @@ describe("drag-and-drop cloze", () => {
   });
 
   it("guides a tap on an empty blank and deselects a word tapped twice", async () => {
-    render(<ItemPlayer item={cloze} />);
+    render(<ItemPlayer item={cloze} submit={scoreInProcess(cloze)} />);
     await userEvent.click(blank(1, 2));
     expect(status()).toHaveTextContent("Select a word first, then choose a blank.");
     expect(blank(1, 2)).toHaveAccessibleName("Blank 1 of 2, empty");
@@ -73,7 +74,7 @@ describe("drag-and-drop cloze", () => {
   });
 
   it("works from the keyboard and cancels with Escape", async () => {
-    render(<ItemPlayer item={cloze} />);
+    render(<ItemPlayer item={cloze} submit={scoreInProcess(cloze)} />);
     token(FOWLER).focus();
     await userEvent.keyboard(" ");
     expect(token(FOWLER)).toHaveAttribute("aria-pressed", "true");
@@ -88,7 +89,7 @@ describe("drag-and-drop cloze", () => {
   });
 
   it("swaps a filled blank, and clears it when tapped with nothing selected", async () => {
-    render(<ItemPlayer item={cloze} />);
+    render(<ItemPlayer item={cloze} submit={scoreInProcess(cloze)} />);
     await place(FOWLER, 2, 2);
     await place(SUPINE, 2, 2);
     expect(blank(2, 2)).toHaveAccessibleName(`Blank 2 of 2: ${SUPINE}`);
@@ -101,7 +102,7 @@ describe("drag-and-drop cloze", () => {
   });
 
   it("enables submit only when every blank is filled, then scores 0/1 per blank", async () => {
-    render(<ItemPlayer item={cloze} />);
+    render(<ItemPlayer item={cloze} submit={scoreInProcess(cloze)} />);
     expect(submit()).toBeDisabled();
     await place(SABA, 1, 2);
     expect(submit()).toBeDisabled();
@@ -119,7 +120,7 @@ describe("drag-and-drop cloze", () => {
   });
 
   it("keeps reusable words in the bank", async () => {
-    render(<ItemPlayer item={reusable} />);
+    render(<ItemPlayer item={reusable} submit={scoreInProcess(reusable)} />);
     await place("60", 1, 2);
     await place("60", 2, 2);
     expect(blank(1, 2)).toHaveAccessibleName("Blank 1 of 2: 60");
@@ -130,7 +131,7 @@ describe("drag-and-drop cloze", () => {
 
 describe("drag-and-drop rationale", () => {
   it("explains that a dyad needs both blanks correct", async () => {
-    render(<ItemPlayer item={dyad} />);
+    render(<ItemPlayer item={dyad} submit={scoreInProcess(dyad)} />);
     await place("atelectasis", 1, 2);
     await place("prolonged immobility", 2, 2);
     await userEvent.click(submit());
@@ -143,7 +144,7 @@ describe("drag-and-drop rationale", () => {
   });
 
   it("scores a triad with the anchor wrong as zero and tags the anchor", async () => {
-    render(<ItemPlayer item={triad} />);
+    render(<ItemPlayer item={triad} submit={scoreInProcess(triad)} />);
     await place("high fever", 1, 3);
     await place("unilateral calf swelling", 2, 3);
     await place("immobility", 3, 3);

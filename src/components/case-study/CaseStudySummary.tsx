@@ -1,4 +1,4 @@
-import { totalScore } from "@/lib/ngn/scoring";
+import { totalScore } from "@/lib/ngn/results";
 import { CJMM_STEP_LABELS, type CjmmStep, type ScoreResult } from "@/lib/ngn/types";
 
 export interface CaseStudySummaryProps {

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema } from "@/lib/ngn/schemas";
+import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer } from "../ItemPlayer";
 import { hasRenderer } from "../registry";
 
@@ -28,7 +29,7 @@ describe("matrix renderers", () => {
 
 describe("matrix multiple choice", () => {
   it("renders a table whose cells are named by their row and column headers", () => {
-    render(<ItemPlayer item={mmc} />);
+    render(<ItemPlayer item={mmc} submit={scoreInProcess(mmc)} />);
     const table = grid();
     for (const column of ["Indicated", "Contraindicated", "Non-essential"]) {
       expect(within(table).getByRole("columnheader", { name: column })).toBeInTheDocument();
@@ -43,7 +44,7 @@ describe("matrix multiple choice", () => {
   });
 
   it("keeps the grid and the row cards on one response", async () => {
-    render(<ItemPlayer item={mmcEdge} />);
+    render(<ItemPlayer item={mmcEdge} submit={scoreInProcess(mmcEdge)} />);
     await userEvent.click(within(grid()).getByRole("radio", { name: `${O2} Improved` }));
     expect(within(card(O2)).getByRole("radio", { name: "Improved" })).toBeChecked();
 
@@ -53,7 +54,7 @@ describe("matrix multiple choice", () => {
   });
 
   it("moves along a row with the arrow keys", async () => {
-    render(<ItemPlayer item={mmcEdge} />);
+    render(<ItemPlayer item={mmcEdge} submit={scoreInProcess(mmcEdge)} />);
     await userEvent.click(within(grid()).getByRole("radio", { name: `${O2} Improved` }));
     await userEvent.keyboard("{ArrowRight}");
     expect(within(grid()).getByRole("radio", { name: `${O2} Declined` })).toBeChecked();
@@ -61,7 +62,7 @@ describe("matrix multiple choice", () => {
   });
 
   it("enables submit only when every row is answered, then scores 0/1 per row", async () => {
-    render(<ItemPlayer item={mmcEdge} />);
+    render(<ItemPlayer item={mmcEdge} submit={scoreInProcess(mmcEdge)} />);
     expect(submit()).toBeDisabled();
     await userEvent.click(within(grid()).getByRole("radio", { name: `${O2} Improved` }));
     expect(submit()).toBeDisabled();
@@ -86,7 +87,7 @@ describe("matrix multiple choice", () => {
 
 describe("matrix multiple response", () => {
   it("allows several selections per row and needs one in every row", async () => {
-    render(<ItemPlayer item={mmrEdge} />);
+    render(<ItemPlayer item={mmrEdge} submit={scoreInProcess(mmrEdge)} />);
     await userEvent.click(within(grid()).getByRole("checkbox", { name: "Warfarin INR" }));
     await userEvent.click(
       within(grid()).getByRole("checkbox", { name: "Warfarin Signs of bleeding" }),
@@ -106,7 +107,7 @@ describe("matrix multiple response", () => {
   });
 
   it("scores plus-minus within each row and shows each row's points", async () => {
-    render(<ItemPlayer item={mmrEdge} />);
+    render(<ItemPlayer item={mmrEdge} submit={scoreInProcess(mmrEdge)} />);
     const table = grid();
     for (const name of [
       "Warfarin INR",

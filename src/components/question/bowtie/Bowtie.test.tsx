@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema } from "@/lib/ngn/schemas";
+import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer } from "../ItemPlayer";
 import { hasRenderer } from "../registry";
 
@@ -44,7 +45,7 @@ describe("bowtie renderer", () => {
   });
 
   it("shows five empty slots and the three lists of choices", () => {
-    render(<ItemPlayer item={bowtie} />);
+    render(<ItemPlayer item={bowtie} submit={scoreInProcess(bowtie)} />);
     expect(actionSlot(1)).toHaveAccessibleName(`${ACTIONS} 1 of 2, empty`);
     expect(actionSlot(2)).toHaveAccessibleName(`${ACTIONS} 2 of 2, empty`);
     expect(conditionSlot()).toHaveAccessibleName(`${CONDITION}, empty`);
@@ -56,7 +57,7 @@ describe("bowtie renderer", () => {
   });
 
   it("places a choice by tapping it, then a slot in its column", async () => {
-    render(<ItemPlayer item={bowtie} />);
+    render(<ItemPlayer item={bowtie} submit={scoreInProcess(bowtie)} />);
     await userEvent.click(choice(ACTIONS, ECG));
     expect(choice(ACTIONS, ECG)).toHaveAttribute("aria-pressed", "true");
     expect(status()).toHaveTextContent(`${ECG} selected. Choose a slot in ${ACTIONS}.`);
@@ -68,7 +69,7 @@ describe("bowtie renderer", () => {
   });
 
   it("refuses a slot in another column and says why", async () => {
-    render(<ItemPlayer item={bowtie} />);
+    render(<ItemPlayer item={bowtie} submit={scoreInProcess(bowtie)} />);
     await userEvent.click(choice(ACTIONS, ECG));
     await userEvent.click(conditionSlot());
     expect(conditionSlot()).toHaveAccessibleName(`${CONDITION}, empty`);
@@ -77,7 +78,7 @@ describe("bowtie renderer", () => {
   });
 
   it("explains a full column, then swaps a filled slot", async () => {
-    render(<ItemPlayer item={bowtie} />);
+    render(<ItemPlayer item={bowtie} submit={scoreInProcess(bowtie)} />);
     await place(ACTIONS, ECG, actionSlot(1));
     await place(ACTIONS, ASPIRIN, actionSlot(2));
     await userEvent.click(choice(ACTIONS, WALK));
@@ -91,7 +92,7 @@ describe("bowtie renderer", () => {
   });
 
   it("clears a filled slot tapped with nothing selected, and cancels with Escape", async () => {
-    render(<ItemPlayer item={bowtie} />);
+    render(<ItemPlayer item={bowtie} submit={scoreInProcess(bowtie)} />);
     await place(CONDITION, MI, conditionSlot());
     await userEvent.click(conditionSlot());
     expect(conditionSlot()).toHaveAccessibleName(`${CONDITION}, empty`);
@@ -105,7 +106,7 @@ describe("bowtie renderer", () => {
   });
 
   it("needs all five slots, then scores each slot and lists the right answers", async () => {
-    render(<ItemPlayer item={bowtie} />);
+    render(<ItemPlayer item={bowtie} submit={scoreInProcess(bowtie)} />);
     await place(ACTIONS, ECG, actionSlot(1));
     await place(ACTIONS, WALK, actionSlot(2));
     await place(CONDITION, GERD, conditionSlot());
@@ -129,7 +130,7 @@ describe("bowtie renderer", () => {
   });
 
   it("scores full marks with each pair in either order", async () => {
-    render(<ItemPlayer item={bowtie} />);
+    render(<ItemPlayer item={bowtie} submit={scoreInProcess(bowtie)} />);
     await place(ACTIONS, ASPIRIN, actionSlot(1));
     await place(ACTIONS, ECG, actionSlot(2));
     await place(CONDITION, MI, conditionSlot());

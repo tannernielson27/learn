@@ -5,17 +5,20 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { bowtieItemSchema } from "@/lib/ngn/schemas";
+import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer } from "./ItemPlayer";
+
+const bowtie = bowtieItemSchema.parse(FIXTURES.bowtie.canonical);
 
 describe("QuestionShell headings", () => {
   it("names the question region with a level-2 heading", () => {
-    render(<ItemPlayer item={bowtieItemSchema.parse(FIXTURES.bowtie.canonical)} />);
+    render(<ItemPlayer item={bowtie} submit={scoreInProcess(bowtie)} />);
     const region = screen.getByRole("region", { name: "Question" });
     expect(within(region).getByRole("heading", { level: 2, name: "Question" })).toBeInTheDocument();
   });
 
   it("places the bowtie's level-3 column headings after that level-2 heading", () => {
-    render(<ItemPlayer item={bowtieItemSchema.parse(FIXTURES.bowtie.canonical)} />);
+    render(<ItemPlayer item={bowtie} submit={scoreInProcess(bowtie)} />);
     const levels = screen
       .getAllByRole("heading")
       .map((heading) => Number(heading.tagName.slice(1)));

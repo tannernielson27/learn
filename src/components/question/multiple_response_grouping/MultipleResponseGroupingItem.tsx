@@ -1,7 +1,7 @@
 "use client";
 
-import { scorePlusMinus } from "@/lib/ngn/scoring";
 import { OptionRow } from "../OptionRow";
+import { rowScorer } from "../rowScore";
 import { RowTable, type RowControlContext } from "../row_table/RowTable";
 import {
   elementFeedback,
@@ -50,6 +50,7 @@ export function MultipleResponseGroupingItem({
   item,
   response,
   mode,
+  score,
   onChange,
 }: ItemRendererProps<"multiple_response_grouping">) {
   const selected = new Map(response.rows.map((r) => [r.rowId, new Set(r.optionIds)]));
@@ -84,17 +85,7 @@ export function MultipleResponseGroupingItem({
           onToggle={(optionId) => toggle(context.row.id, optionId)}
         />
       )}
-      rowScore={
-        mode === "feedback" && key.size > 0
-          ? (rowId) => {
-              const result = scorePlusMinus({
-                selected: [...(selected.get(rowId) ?? [])],
-                correct: key.get(rowId) ?? [],
-              });
-              return { points: result.points, maxPoints: result.maxPoints };
-            }
-          : undefined
-      }
+      rowScore={rowScorer(mode, score)}
     />
   );
 }

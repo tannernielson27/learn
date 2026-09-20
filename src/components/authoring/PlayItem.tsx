@@ -2,9 +2,8 @@
 
 import { RecordLayout } from "@/components/ehr/RecordLayout";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
-import type { KeylessItem } from "@/lib/authoring/play";
-import type { ScoreReveal } from "@/lib/authoring/scoreRequest";
 import type { AnyResponse } from "@/lib/ngn/schemas";
+import type { KeylessItem, ScoreReveal } from "@/lib/ngn/submit";
 
 export interface PlayItemProps {
   itemId: string;
@@ -25,7 +24,7 @@ export function PlayItem({ itemId, item }: PlayItemProps) {
     return (await result.json()) as ScoreReveal;
   }
 
-  const player = <ItemPlayer item={item} submitResponse={submitResponse} />;
+  const player = <ItemPlayer item={item} submit={submitResponse} />;
   // A Trend item or standalone bowtie reads from its record, as a student would see it.
   return item.ehr ? <RecordLayout record={item.ehr}>{player}</RecordLayout> : player;
 }
