@@ -55,6 +55,9 @@ export default defineConfig({
         branches: 75,
         statements: 80,
         "src/lib/ngn/**": { lines: 90, functions: 90, branches: 85, statements: 90 },
+        // src/lib/live is held to the same bar as the NGN core (#130): it is the only thing
+        // standing between a student's browser and an answer key until the host reveals it.
+        "src/lib/live/**": { lines: 90, functions: 90, branches: 85, statements: 90 },
       },
     },
   },
