@@ -62,7 +62,7 @@ test("an author writes a multiple choice item beside its preview, saves a draft,
 
   const problems = page.getByRole("region", { name: "Problems to fix" });
   await expect(problems.getByRole("button", { name: "Write the question stem." })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Publish" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "Publish", exact: true })).toHaveAttribute(
     "aria-disabled",
     "true",
   );
@@ -97,7 +97,7 @@ test("an author writes a multiple choice item beside its preview, saves a draft,
   const axe = await new AxeBuilder({ page }).analyze();
   expect(axe.violations).toEqual([]);
 
-  await page.getByRole("button", { name: "Publish" }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
 
   await page.getByRole("link", { name: "Back to bank" }).click();
@@ -193,7 +193,7 @@ test("an author writes a select-all-that-apply item, marks three answers, and pu
   await expect(problems).toHaveCount(0);
   await expectNoAxeViolations(page);
 
-  await page.getByRole("button", { name: "Publish" }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
 
   await page.getByRole("link", { name: "Back to bank" }).click();
@@ -252,7 +252,7 @@ test("an author writes a matrix item, marks one column per row, and publishes", 
   await expect(problems).toHaveCount(0);
   await expectNoAxeViolations(page);
 
-  await page.getByRole("button", { name: "Publish" }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
 
   await page.getByRole("link", { name: "Back to bank" }).click();
@@ -301,7 +301,7 @@ test("an author writes a highlight item, marks phrases, publishes, and plays it"
   await expect(problems).toHaveCount(0);
   await expectNoAxeViolations(page);
 
-  await page.getByRole("button", { name: "Publish" }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
 
   await page.getByRole("link", { name: "Back to bank" }).click();
@@ -375,7 +375,7 @@ test("an author writes a drag-and-drop rationale item from a word bank, publishe
   await expect(problems).toHaveCount(0);
   await expectNoAxeViolations(page);
 
-  await page.getByRole("button", { name: "Publish" }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
 
   await page.getByRole("link", { name: "Back to bank" }).click();
@@ -457,7 +457,7 @@ test("an author writes a bowtie, marks the correct choices, publishes, and plays
     .fill("Why the answer is right.");
   await expect(problems).toHaveCount(0);
   await expectNoAxeViolations(page);
-  await page.getByRole("button", { name: "Publish" }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
 
   await page.getByRole("link", { name: "Back to bank" }).click();
@@ -660,7 +660,7 @@ test("an author gives a matrix item a record at two times, publishes it, and pla
     fullPage: true,
   });
 
-  await page.getByRole("button", { name: "Publish" }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
 
   await page.getByRole("link", { name: "Back to bank" }).click();
