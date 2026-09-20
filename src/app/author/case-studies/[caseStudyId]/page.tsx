@@ -148,6 +148,12 @@ export default async function CaseStudyPage({
             />
           )}
         </div>
+        {row.status === "archived" ? (
+          <p className="mb-6 max-w-prose rounded-sm border border-line bg-surface-2 p-3 text-ink-1">
+            This case study is archived. It is out of the bank&apos;s list, and its record, its
+            steps and their order cannot change until it is restored.
+          </p>
+        ) : null}
       </CaseStudyBuilder>
 
       {blockers.length > 0 ? (

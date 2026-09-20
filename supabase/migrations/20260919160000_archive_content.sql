@@ -5,8 +5,8 @@
 --
 -- The rules live in triggers, so they hold for the app's calls and for the Data API alike:
 --   * an item that is a case study step cannot be archived on its own (2BP01, naming the case study);
---   * an archived item cannot be placed as a step, and an archived case study's steps cannot change
---     (55000);
+--   * an archived item cannot be placed as a step, and an archived case study's steps cannot be
+--     replaced, added to or reordered (55000);
 --   * an archived item or case study cannot be edited, published or made a draft until it is
 --     restored (55000).
 --
@@ -111,7 +111,9 @@ create trigger case_studies_guard_archived before update on public.case_studies
 
 -- The item is locked for share, which waits for an archive of it in flight (archive_item locks it
 -- for update) and is waited on by one: whichever commits first, the other sees it. The case study
--- is read without a lock, so this adds no lock order against start_case_study_step.
+-- is read without a lock, so this adds no lock order against start_case_study_step. Placing and
+-- reordering both lock the steps first and the items second, so they take the same order as each
+-- other and cannot deadlock against one another.
 create function private.guard_archived_step() returns trigger
 language plpgsql set search_path = ''
 as $$
@@ -132,8 +134,9 @@ begin
 end
 $$;
 
--- Reordering changes only positions, so it does not fire this.
-create trigger case_study_items_guard_archived before insert or update of item_id, case_study_id
+-- Every write to a step, including a reorder, which changes only positions: an archived case study
+-- is frozen whole, so its steps cannot be replaced, added to or put in another order.
+create trigger case_study_items_guard_archived before insert or update
   on public.case_study_items
   for each row execute function private.guard_archived_step();
 

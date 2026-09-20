@@ -166,6 +166,7 @@ export async function reorderSteps(
     target: caseStudyId,
     item_ids: [...itemIds],
   });
+  if (isArchivedError(error)) return { ok: false, error: ARCHIVE_ERRORS.caseStudyArchived };
   if (error) return { ok: false, error: CASE_STUDY_ERRORS.badOrder };
   return { ok: true, value: undefined };
 }
@@ -286,6 +287,9 @@ export async function publishCaseStudy(
     .from("case_studies")
     .update({ status: "published" })
     .eq("id", caseStudyId);
+  if (isArchivedError(publishError)) {
+    return { ok: false, error: ARCHIVE_ERRORS.caseStudyArchived };
+  }
   if (publishError) return { ok: false, error: CASE_STUDY_ERRORS.failed };
   return { ok: true, value: undefined };
 }

@@ -5,7 +5,7 @@
 -- Runs with `pnpm exec supabase test db`. Uses its own fixture ids so it never counts the seed's rows.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(39);
+select plan(41);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures, as the superuser
@@ -276,6 +276,29 @@ select throws_ok(
        'multiple_choice') $$,
   '55000', null,
   'an archived case study''s steps cannot change'
+);
+
+-- Reordering changes only positions, so the step guard must watch every write, not only the
+-- columns that name the item or the case study.
+select throws_ok(
+  $$ select public.reorder_case_study_steps('00000000-0000-0000-0000-0000000a07c1', array[
+       '00000000-0000-0000-0000-0000000a0716', '00000000-0000-0000-0000-0000000a0715',
+       '00000000-0000-0000-0000-0000000a0714', '00000000-0000-0000-0000-0000000a0713',
+       '00000000-0000-0000-0000-0000000a0712', '00000000-0000-0000-0000-0000000a0711']::uuid[]) $$,
+  '55000', 'this case study is archived; restore it first',
+  'an archived case study''s steps cannot be reordered'
+);
+
+select results_eq(
+  $$ select item_id from public.case_study_items
+      where case_study_id = '00000000-0000-0000-0000-0000000a07c1' order by position $$,
+  $$ values ('00000000-0000-0000-0000-0000000a0711'::uuid),
+            ('00000000-0000-0000-0000-0000000a0712'::uuid),
+            ('00000000-0000-0000-0000-0000000a0713'::uuid),
+            ('00000000-0000-0000-0000-0000000a0714'::uuid),
+            ('00000000-0000-0000-0000-0000000a0715'::uuid),
+            ('00000000-0000-0000-0000-0000000a0716'::uuid) $$,
+  'and the refused reorder left every step where it was'
 );
 
 select lives_ok(
