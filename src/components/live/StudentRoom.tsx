@@ -65,11 +65,11 @@ export function StudentRoom({
   const [connection, setConnection] = useState<RoomConnection>("connecting");
 
   /**
-   * Fixed for the life of this page rather than recomputed from the props.
+   * This phone's presence entry, fixed for the life of the page.
    *
-   * `joinedAt` is the server's clock at render, and `router.refresh()` below renders again — so a
-   * memo over the prop would hand back a new entry on every reconnect, tear the channel down and
-   * open a fresh one, which is the opposite of what a reconnect should cost.
+   * `router.refresh()` below renders the page again on every reconnect, and the entry is what the
+   * channel is keyed and tracked with — so it is held rather than rebuilt, and a reconnect costs a
+   * re-track rather than tearing the channel down and opening a fresh one.
    */
   const [me] = useState(() => ({ participantId, displayName, joinedAt }));
 
@@ -116,7 +116,9 @@ export function StudentRoom({
     });
     return () => {
       watching = false;
-      void room.leave();
+      // A cleanup cannot await, and a socket that has already dropped must not turn leaving the
+      // page into an unhandled rejection in a student's browser.
+      void room.leave().catch(() => {});
     };
   }, [dial, router]);
 

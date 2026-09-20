@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countPresent, mergeRoster, type RosterEntry } from "./roster";
+import { ROSTER_LIMIT, countPresent, mergeRoster, type RosterEntry } from "./roster";
 import type { Participant } from "./transport";
 
 const ava: Participant = { participantId: "a", displayName: "Ava", joinedAt: 10 };
@@ -63,6 +63,41 @@ describe("mergeRoster", () => {
     expect(mergeRoster([], [ava, { ...ava, displayName: "Ava again" }])).toEqual([
       { ...ava, displayName: "Ava again", present: true },
     ]);
+  });
+});
+
+describe("mergeRoster under flood", () => {
+  const many = (count: number, from: number): Participant[] =>
+    Array.from({ length: count }, (_, index) => ({
+      participantId: `x-${from + index}`,
+      displayName: `Name ${from + index}`,
+      joinedAt: from + index,
+    }));
+
+  it("remembers no more than the cap", () => {
+    const merged = mergeRoster([], many(ROSTER_LIMIT + 50, 0));
+    expect(merged).toHaveLength(ROSTER_LIMIT);
+  });
+
+  it("forgets who has gone away before it forgets anyone still connected", () => {
+    // The console has been open a while and holds a full roster of people who have left.
+    const remembered = many(ROSTER_LIMIT, 0).map(away);
+    // Then everyone real comes back at once, which is more than the cap between them.
+    const connected = many(60, 1_000);
+    const merged = mergeRoster(remembered, connected);
+
+    expect(merged).toHaveLength(ROSTER_LIMIT);
+    expect(merged.filter((entry) => entry.present)).toHaveLength(60);
+    for (const person of connected) {
+      expect(merged.some((entry) => entry.participantId === person.participantId)).toBe(true);
+    }
+  });
+
+  it("keeps the people it has known longest when it has to forget someone", () => {
+    const remembered = many(ROSTER_LIMIT + 10, 0).map(away);
+    const merged = mergeRoster(remembered, []);
+    expect(merged.map((entry) => entry.participantId)).toContain("x-0");
+    expect(merged.map((entry) => entry.participantId)).not.toContain(`x-${ROSTER_LIMIT + 9}`);
   });
 });
 

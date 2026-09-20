@@ -119,11 +119,16 @@ export async function readHostSession(
  * happened to move, because Realtime replays nothing.
  *
  * So the same four facts are read from the source row instead. This is the one exception to the
- * rule on `createSupabaseServiceClient` that a student's request is never given a table read: the
- * columns are named one by one, all four are about to be shown on that student's screen anyway,
- * and nothing else on the row — the org, the host, the code, the title, the item set — is
- * selected, let alone returned. The caller must have resumed the participant against their token
- * first; this function does no checking of its own and must never be reached before that.
+ * rule on `createSupabaseServiceClient` that a student's request is never given a table read, and
+ * it is a narrow one: four columns named one by one, and nothing else on the row — no org, no
+ * host, no code, no title — even selected. Three of the four are about to be on that student's
+ * screen anyway. The fourth, `item_set`, is the exception to the exception: it is a list of item
+ * ids, it is read to be counted and **its length is the only thing that leaves this function**.
+ * The array itself must never be put on the returned object, or a student's page would carry the
+ * ids of every item in the room (ADR 0003).
+ *
+ * The caller must have resumed the participant against their token first; this function does no
+ * checking of its own and must never be reached before that.
  */
 export async function readPublicSessionState(
   client: Client,

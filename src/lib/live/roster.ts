@@ -22,6 +22,19 @@ export interface RosterEntry extends Participant {
 }
 
 /**
+ * How many people a console will remember at once.
+ *
+ * `private.session_is_full` caps a session at 300 participants (#129), so 300 is the most a
+ * roster can honestly hold and the rest is headroom. The cap exists because the session's
+ * presence channel is not a private one — a student has no Postgres identity for a
+ * `realtime.messages` policy to speak for — so anything holding the publishable key and a session
+ * id can track a presence entry, and a console that remembers everyone it has ever seen would
+ * otherwise grow a row per forged entry for the rest of the class. Present phones are never
+ * dropped; what is forgotten is the memory of who has gone away.
+ */
+export const ROSTER_LIMIT = 400;
+
+/**
  * Folds one presence sync into the roster the console is holding. Never mutates either argument.
  *
  * Everyone in `present` is marked present, under the name their entry carries now; everyone the
@@ -46,9 +59,30 @@ export function mergeRoster(
     });
   }
 
-  return [...merged.values()].sort(
+  return [...keep(merged.values())].sort(
     (a, b) => a.joinedAt - b.joinedAt || a.participantId.localeCompare(b.participantId),
   );
+}
+
+/**
+ * Trims the roster to `ROSTER_LIMIT`, if it has to.
+ *
+ * Two orderings decide who survives, and both matter. Connected phones come before remembered
+ * ones, so a name at the front of the class never disappears because someone else is making
+ * noise; and within each group the entries the console has known longest come first, which is
+ * insertion order here — `mergeRoster` seeds the map from the roster it was already holding and
+ * appends whoever is new — so what is forgotten is whatever arrived a moment ago.
+ *
+ * A room cannot hold more than 300 people, so a roster past the cap is not a full room: it is
+ * noise, and cutting it off is the honest answer.
+ */
+function keep(entries: Iterable<RosterEntry>): RosterEntry[] {
+  const held = [...entries];
+  if (held.length <= ROSTER_LIMIT) return held;
+  return [
+    ...held.filter((entry) => entry.present),
+    ...held.filter((entry) => !entry.present),
+  ].slice(0, ROSTER_LIMIT);
 }
 
 /** How many phones are connected. This is the number the lobby shows beside the roster. */

@@ -149,7 +149,14 @@ export function createParticipantRoom(options: ParticipantRoomOptions): Particip
     async leave(): Promise<void> {
       if (gone) return;
       gone = true;
-      await channel.untrack();
+      // A socket that is already down cannot be told this name is going; the server drops the
+      // presence entry with the connection anyway. Swallowed so that the channel is still removed
+      // and so that a component's cleanup — which cannot await — has nothing to reject.
+      try {
+        await channel.untrack();
+      } catch {
+        // Nothing to do: the entry goes with the connection.
+      }
       await client.removeChannel(channel);
     },
   };

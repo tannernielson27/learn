@@ -123,7 +123,9 @@ export function HostLobby({
       watching = false;
       offState();
       offPresence();
-      void console_.close();
+      // A cleanup cannot await, and a socket that has already dropped must not turn leaving the
+      // console into an unhandled rejection.
+      void console_.close().catch(() => {});
     };
   }, [dial]);
 

@@ -37,7 +37,9 @@ function setup(initial: LiveSessionState = state()) {
     />,
   );
 
-  const held = () => handlers as unknown as RoomHandlers;
+  // Set synchronously by `connect` during the first render, so it is never null by the time a
+  // test reaches for it. Asserted rather than checked so a miswired test fails loudly.
+  const held = () => handlers as RoomHandlers;
   return {
     view,
     leave,
