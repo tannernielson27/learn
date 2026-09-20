@@ -15,6 +15,19 @@ async function expectNoAxeViolations(page: Page) {
 const QR_LABEL = "QR code that opens the join page for this session";
 const NO_SUCH_SESSION = "That code does not match a session that is open. Check it and try again.";
 
+/**
+ * A refusal about the code, read the way a screen reader reads it: tied to the code field by
+ * `aria-describedby`, which asserts both the wording and the association at once.
+ *
+ * Deliberately not `getByRole("alert")`. Next renders its own empty route announcer with that
+ * role on every page, so the bare role matches two elements and Playwright refuses it.
+ */
+async function expectCodeRefusal(page: Page, message: string) {
+  await expect(page.getByRole("textbox", { name: "Session code" })).toHaveAccessibleDescription(
+    message,
+  );
+}
+
 test("a student scans the code, types a name, and comes back to the same place on reload", async ({
   page,
   request,
@@ -68,7 +81,7 @@ test("a student scans the code, types a name, and comes back to the same place o
   await student.getByRole("textbox", { name: "Session code" }).fill("ZZZZZZ");
   await student.getByRole("textbox", { name: "Display name" }).fill("Nobody");
   await student.getByRole("button", { name: "Join", exact: true }).click();
-  await expect(student.getByRole("alert")).toHaveText(NO_SUCH_SESSION);
+  await expectCodeRefusal(student, NO_SUCH_SESSION);
   await expectNoAxeViolations(student);
 
   // What the QR code does: the address carries the code, so only the name is left to type.
@@ -109,7 +122,7 @@ test("a student scans the code, types a name, and comes back to the same place o
   await student.goto(`/join/${code}`);
   await student.getByRole("textbox", { name: "Display name" }).fill("Too Late");
   await student.getByRole("button", { name: "Join", exact: true }).click();
-  await expect(student.getByRole("alert")).toHaveText(NO_SUCH_SESSION);
+  await expectCodeRefusal(student, NO_SUCH_SESSION);
 
   await student.close();
 });
