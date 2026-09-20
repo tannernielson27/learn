@@ -87,6 +87,17 @@ export function StudentRoom({
   const [revealed, setRevealed] = useState<ItemReveal | null>(null);
   const [present, setPresent] = useState(1);
   const [connection, setConnection] = useState<RoomConnection>("connecting");
+  /**
+   * What this phone has selected but not yet sent.
+   *
+   * Held here rather than only inside `ItemPlayer` because the player is remounted whenever the
+   * room changes what this screen is showing — a pause takes the item off, a resume puts it back —
+   * and a student who had ticked three boxes when the host paused to talk should find them still
+   * ticked. `ItemPlayer` hands every change over for exactly this, and takes it back as
+   * `initialResponse`. It is dropped when the room moves to another item, which is a different
+   * question and a different answer.
+   */
+  const [draft, setDraft] = useState<{ itemId: string; response: AnyResponse } | null>(null);
 
   /**
    * Who this phone is, fixed for the life of the page.
@@ -129,6 +140,9 @@ export function StudentRoom({
       setItem(view.item);
       setAnswered(view.answered);
       setRevealed(view.revealed);
+      // A view arriving is proof the server is reachable, whatever the socket said a moment ago.
+      // It is what takes the notice below down again after a failed open has put it up.
+      setConnection("live");
     });
     const offPresence = joined.onPresence((roster) => {
       if (watching) setPresent(roster.length);
@@ -139,9 +153,16 @@ export function StudentRoom({
       if (rejoined) router.refresh();
     });
 
-    // A socket that never opens leaves the screen on the server's first paint, which is the room
-    // as it was a moment ago — better than a blank page, and the reconnect notice says so.
-    void joined.resume(me).catch(() => {});
+    /**
+     * A failed open leaves the screen on the server's first paint — the room as it was a moment
+     * ago, which is better than a blank page — and says so, rather than swallowing it. It is not
+     * an error message, because nothing is wrong that will not fix itself: Realtime retries by
+     * itself, and the transport asks the server for the room again the moment the channel comes
+     * up. The notice goes when the first view lands.
+     */
+    void joined.resume(me).catch(() => {
+      if (watching) setConnection("reconnecting");
+    });
 
     return () => {
       watching = false;
@@ -203,6 +224,9 @@ export function StudentRoom({
       setAnswered({ itemId: current.id, submittedAt: ack.submittedAt, response });
     } catch (refused) {
       if (!isLiveSessionError(refused) || refused.code !== "already_answered") throw refused;
+      // A refusal carries no acknowledgement, so there is no session clock to take this from.
+      // Nothing renders it — it is here because the shape says an answer has a time — and the
+      // next view this phone fetches replaces it with the server's own.
       setAnswered({ itemId: current.id, submittedAt: Date.now(), response });
     }
     return new Promise<ScoreReveal>(() => {});
@@ -255,6 +279,8 @@ export function StudentRoom({
           <ItemPlayer
             key={`${item.id}:answer`}
             item={item}
+            initialResponse={draft?.itemId === item.id ? draft.response : undefined}
+            onResponseChange={(response) => setDraft({ itemId: item.id, response })}
             progress={progress}
             submit={send}
             label="Question"

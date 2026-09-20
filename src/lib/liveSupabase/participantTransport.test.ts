@@ -227,6 +227,24 @@ describe("a socket that drops", () => {
     expect(live.socket.tracked).toHaveLength(2);
   });
 
+  it("reads the room when the channel comes up after the first attempt failed", async () => {
+    const live = phone();
+    // The socket fails before it ever subscribes, so nothing read the room.
+    const opening = live.transport.resume(ME);
+    live.socket.emit("CHANNEL_ERROR");
+    await expect(opening).rejects.toThrow();
+    expect(live.asks()).toBe(0);
+
+    // Realtime retries by itself and gets through. Nothing was replayed while it was down and
+    // nobody has fetched the item, so coming up has to mean asking — not just tracking presence.
+    live.socket.emit("SUBSCRIBED");
+    await vi.waitFor(() => expect(live.recorded.views).toHaveLength(1));
+    expect(live.asks()).toBe(1);
+    expect(live.socket.tracked).toHaveLength(1);
+    // And the caller is told it rejoined, so a screen holding a stale server render asks again.
+    expect(live.recorded.connections.at(-1)).toEqual({ status: "live", rejoined: true });
+  });
+
   it("calls a room that timed out or closed reconnecting", async () => {
     const live = phone();
     await live.enter();

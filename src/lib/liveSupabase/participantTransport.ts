@@ -201,8 +201,6 @@ export function createSupabaseParticipant(
   let gone = false;
   /** So a reveal that stays true across several state messages is announced once. */
   let announcedReveal: number | null = null;
-  /** Whether the channel has been up before, so a rejoin can be told from the first subscribe. */
-  let subscribed = false;
   /** The last view fetched, so a state message that needs no fetch can be answered from it. */
   let held: ParticipantViewPayload | null = null;
 
@@ -318,34 +316,47 @@ export function createSupabaseParticipant(
       for (const listener of [...presence]) listener(roster);
     });
 
+    /**
+     * Settles when the channel first comes up, or when it first fails to.
+     *
+     * The flag matters more than it looks. `subscribe` is called again on every reconnect for the
+     * life of the channel, and what a `SUBSCRIBED` means depends entirely on whether the entry
+     * that is awaiting this promise has already been answered. If it has — because this is an
+     * ordinary rejoin, **or because the first attempt failed before anything read the room** —
+     * then Realtime has replayed nothing and nobody has fetched the item, so the only useful
+     * thing to do is ask again. Keying that off "have we ever subscribed before" instead left a
+     * phone whose socket came up late sitting on the server's first paint for the rest of the
+     * class, with a banner that said it had reconnected.
+     */
     return new Promise<void>((resolve, reject) => {
+      let settled = false;
+      const answerEntry = (error?: Error) => {
+        if (settled) return false;
+        settled = true;
+        if (error) reject(error);
+        else resolve();
+        return true;
+      };
+
       opened.subscribe((status) => {
         if (gone) return;
         if (status === "SUBSCRIBED") {
-          const rejoined = subscribed;
-          subscribed = true;
-          if (rejoined) {
-            // A rejoined channel carries none of the presence the old one held, so a phone that
-            // does not track again has quietly left the room as far as the front of the class is
-            // concerned — and it has missed every move made while the socket was down.
-            void opened.track(entry).catch(() => {});
-            void refresh().catch(() => {});
-            notifyConnection("live", true);
-            return;
-          }
-          // `then(resolve, reject)`, not `.then(resolve)`: a `track` that rejects — the socket
-          // dropping in the moment after it subscribed — would otherwise leave this promise, and
-          // the entry awaiting it, pending for ever.
+          const opening = !settled;
+          // `then(..., reject)`, not `.then(...)`: a `track` that rejects — the socket dropping in
+          // the moment after it subscribed — would otherwise leave this promise, and the entry
+          // awaiting it, pending for ever.
           void opened.track(entry).then(() => {
-            notifyConnection("live", false);
-            resolve();
-          }, reject);
+            notifyConnection("live", !opening);
+            // A rejoined channel carries none of the presence the old one held either, which is
+            // why `track` above runs on every subscribe and not only the first.
+            if (!answerEntry()) void refresh().catch(() => {});
+          }, answerEntry);
           return;
         }
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
           notifyConnection("reconnecting", false);
           // Harmless once the promise has settled, which is the ordinary case for CLOSED.
-          reject(new Error(`The session's channel could not be opened (${status}).`));
+          answerEntry(new Error(`The session's channel could not be opened (${status}).`));
         }
       });
     });
@@ -355,7 +366,6 @@ export function createSupabaseParticipant(
   async function enter(mine: number, identity: ResumedIdentity): Promise<StudentView> {
     me = identity;
     gone = false;
-    subscribed = false;
     announcedReveal = null;
     held = null;
     notifyConnection("connecting", false);
@@ -425,7 +435,11 @@ export function createSupabaseParticipant(
       // Resuming twice is the same resume, for the same reason joining twice is: an effect that
       // re-runs must not open a second channel on the same topic.
       if (me !== null) {
+        const mine = generation;
         const payload = await requestView();
+        // The same guard every other awaiting path here keeps: a `leave` that landed while this
+        // was in flight means there is nobody to tell, and nothing to hold on to.
+        if (gone || mine !== generation) throw new LiveSessionError("not_joined");
         announce(payload);
         return studentView(payload);
       }

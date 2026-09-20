@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { act } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, type Mock } from "vitest";
 import type {
   ItemReveal,
   LiveSessionState,
@@ -161,6 +161,19 @@ describe("StudentRoom: waiting", () => {
     expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
   });
 
+  it("keeps a half-finished answer across a pause and a resume", async () => {
+    const user = userEvent.setup();
+    const room = setup();
+    room.push({ state: running(), item: KEYLESS });
+    await user.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
+
+    // The host pauses to talk through something, then picks up where they left off.
+    room.push({ state: running({ status: "paused" }), item: KEYLESS });
+    room.push({ state: running(), item: KEYLESS });
+
+    expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeChecked();
+  });
+
   it("offers no Submit in the moment between the key going up and this phone fetching it", () => {
     const room = setup();
     // The state message travels on its own; the reveal behind it takes a request.
@@ -194,6 +207,29 @@ describe("StudentRoom: waiting", () => {
     room.connection("live", true);
     // Realtime replays nothing, so a phone that slept through a move has to ask again.
     expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("says so when the room could not be opened, and stops saying so when a view lands", async () => {
+    const room = fakeTransport(async (itemId) => ({ itemId, submittedAt: 0 }));
+    (room.transport.resume as unknown as Mock).mockRejectedValueOnce(
+      new Error("the channel could not be opened"),
+    );
+    render(
+      <StudentRoom
+        sessionId="00000000-0000-4000-8000-0000000132aa"
+        title="Cardiac basics"
+        displayName="Sam Okafor"
+        participantId="00000000-0000-4000-8000-0000000132bb"
+        joinedAt={1000}
+        initial={state()}
+        connect={() => room.transport}
+      />,
+    );
+
+    // Not an error: Realtime retries by itself and the transport asks again when it gets through.
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Reconnecting"));
+    room.push({ state: running(), item: KEYLESS });
+    expect(screen.queryByRole("status")).toBeNull();
   });
 
   it("leaves the room when the page goes away", () => {
@@ -272,6 +308,33 @@ describe("StudentRoom: answering the item", () => {
     expect(screen.getByTestId("answer-sent")).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeChecked();
     expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
+  });
+
+  it("does not put a sent state on the next item when the room moves while a submit is in flight", async () => {
+    const user = userEvent.setup();
+    let land: (ack: SubmitAck) => void = () => {};
+    const inFlight = new Promise<SubmitAck>((resolve) => {
+      land = resolve;
+    });
+    const room = setup(state(), async () => inFlight);
+    room.push({ state: running(), item: KEYLESS });
+
+    await user.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
+    await user.click(screen.getByRole("button", { name: /^Submit$/ }));
+
+    // The host advances before the acknowledgement comes back, and only then does it come back.
+    const next = { ...KEYLESS, id: "mr_sample_2" } as ParticipantItem;
+    room.push({ state: running({ position: 2 }), item: next, answered: null });
+    await act(async () => {
+      land({ itemId: SATA.id, submittedAt: 1_700_000_000_000 });
+      await inFlight;
+    });
+
+    // The acknowledgement was for item one; item two is open for answering, not marked as sent,
+    // and nothing is selected on it yet.
+    expect(screen.getByRole("button", { name: /^Submit$/ })).toBeInTheDocument();
+    expect(screen.queryByTestId("answer-sent")).toBeNull();
+    expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).not.toBeChecked();
   });
 
   it("opens a fresh item when the room moves on, rather than keeping the last answer", () => {
