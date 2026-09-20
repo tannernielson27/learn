@@ -98,15 +98,16 @@ test("a student scans the code, types a name, and comes back to the same place o
 
   // Reload: the same seat, not a second one.
   await student.reload();
-  expect(student.url()).toBe(seat);
+  await expect(student).toHaveURL(seat);
   await expect(student.getByText("Joined as")).toContainText("Sam Okafor");
 
   // And joining the same room again with a different name does not make a second participant or
-  // rename the first: the token, not the name, is who you are.
+  // rename the first: the token, not the name, is who you are. `toHaveURL` rather than reading
+  // `url()`, because the Server Function's redirect is a navigation and has to be waited for.
   await student.goto(`/join/${code}`);
   await student.getByRole("textbox", { name: "Display name" }).fill("Someone Else");
   await student.getByRole("button", { name: "Join", exact: true }).click();
-  expect(student.url()).toBe(seat);
+  await expect(student).toHaveURL(seat);
   await expect(student.getByText("Joined as")).toContainText("Sam Okafor");
 
   // The host ends the session. The student is told, rather than being dropped back on a form.
