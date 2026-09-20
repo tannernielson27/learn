@@ -400,6 +400,160 @@ export type Database = {
           },
         ];
       };
+      session_item_aggregates: {
+        Row: {
+          computed_at: string;
+          full_marks: number;
+          item_id: string;
+          item_position: number;
+          item_ref: string;
+          max_points: number;
+          mean_points: number;
+          no_marks: number;
+          org_id: string;
+          partial_marks: number;
+          responded: number;
+          session_id: string;
+        };
+        Insert: {
+          computed_at?: string;
+          full_marks?: number;
+          item_id: string;
+          item_position: number;
+          item_ref: string;
+          max_points?: number;
+          mean_points?: number;
+          no_marks?: number;
+          org_id: string;
+          partial_marks?: number;
+          responded?: number;
+          session_id: string;
+        };
+        Update: {
+          computed_at?: string;
+          full_marks?: number;
+          item_id?: string;
+          item_position?: number;
+          item_ref?: string;
+          max_points?: number;
+          mean_points?: number;
+          no_marks?: number;
+          org_id?: string;
+          partial_marks?: number;
+          responded?: number;
+          session_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "session_item_aggregates_session_org_fkey";
+            columns: ["session_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "sessions";
+            referencedColumns: ["id", "org_id"];
+          },
+        ];
+      };
+      session_public_state: {
+        Row: {
+          item_count: number;
+          item_ends_at: string | null;
+          item_position: number | null;
+          reveal: boolean;
+          session_id: string;
+          status: Database["public"]["Enums"]["session_status"];
+          updated_at: string;
+        };
+        Insert: {
+          item_count?: number;
+          item_ends_at?: string | null;
+          item_position?: number | null;
+          reveal?: boolean;
+          session_id: string;
+          status: Database["public"]["Enums"]["session_status"];
+          updated_at?: string;
+        };
+        Update: {
+          item_count?: number;
+          item_ends_at?: string | null;
+          item_position?: number | null;
+          reveal?: boolean;
+          session_id?: string;
+          status?: Database["public"]["Enums"]["session_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "session_public_state_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: true;
+            referencedRelation: "sessions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      session_responses: {
+        Row: {
+          breakdown: Json;
+          groups: Json | null;
+          id: string;
+          item_id: string;
+          item_position: number;
+          max_points: number;
+          model: string;
+          org_id: string;
+          participant_id: string;
+          points: number;
+          response: Json;
+          session_id: string;
+          submitted_at: string;
+        };
+        Insert: {
+          breakdown?: Json;
+          groups?: Json | null;
+          id?: string;
+          item_id: string;
+          item_position: number;
+          max_points: number;
+          model: string;
+          org_id: string;
+          participant_id: string;
+          points: number;
+          response: Json;
+          session_id: string;
+          submitted_at?: string;
+        };
+        Update: {
+          breakdown?: Json;
+          groups?: Json | null;
+          id?: string;
+          item_id?: string;
+          item_position?: number;
+          max_points?: number;
+          model?: string;
+          org_id?: string;
+          participant_id?: string;
+          points?: number;
+          response?: Json;
+          session_id?: string;
+          submitted_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "session_responses_item_id_fkey";
+            columns: ["item_id"];
+            isOneToOne: false;
+            referencedRelation: "items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "session_responses_session_org_fkey";
+            columns: ["session_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "sessions";
+            referencedColumns: ["id", "org_id"];
+          },
+        ];
+      };
       sessions: {
         Row: {
           bank_id: string | null;
@@ -499,6 +653,14 @@ export type Database = {
     Functions: {
       archive_case_study: { Args: { target: string }; Returns: undefined };
       archive_item: { Args: { target: string }; Returns: undefined };
+      begin_session_submission: {
+        Args: { participant: string; target_session: string };
+        Returns: {
+          item_id: string;
+          item_position: number;
+          refusal: string;
+        }[];
+      };
       duplicate_case_study: {
         Args: { source_case_study: string };
         Returns: string;
@@ -554,6 +716,24 @@ export type Database = {
       place_case_study_step: {
         Args: { step_item: string; step_position: number; target: string };
         Returns: undefined;
+      };
+      record_session_response: {
+        Args: {
+          answer: Json;
+          at_position: number;
+          earned: number;
+          marks: Json;
+          participant: string;
+          possible: number;
+          row_groups?: Json;
+          scoring_model: string;
+          target_item: string;
+          target_session: string;
+        };
+        Returns: {
+          refusal: string;
+          submitted_at: string;
+        }[];
       };
       reorder_case_study_steps: {
         Args: { item_ids: string[]; target: string };

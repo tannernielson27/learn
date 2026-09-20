@@ -43,5 +43,6 @@ export {
   answerAll,
   joinSimulated,
   type AnsweringRound,
+  type JoinableRoom,
   type SimulatedParticipant,
 } from "./simulate";

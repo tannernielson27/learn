@@ -10,8 +10,17 @@
  */
 import type { AnyResponse } from "@/lib/ngn/schemas";
 import { isLiveSessionError, type LiveRefusal } from "./errors";
-import type { InMemoryRoom } from "./memoryRoom";
 import type { LiveSessionTransport } from "./transport";
+
+/**
+ * Any room a load script can fill: a code to join with and a connection per person. Structural
+ * rather than `InMemoryRoom`, so the same sixty participants can be run against the Supabase
+ * adapter (#131) — which is what docs/03 §4 asks for after the in-memory pass.
+ */
+export interface JoinableRoom {
+  readonly code: string;
+  participant(): LiveSessionTransport;
+}
 
 export interface SimulatedParticipant {
   readonly transport: LiveSessionTransport;
@@ -28,7 +37,7 @@ export interface AnsweringRound {
 
 /** Joins one participant per name, in order, and hands back their connections. */
 export async function joinSimulated(
-  room: InMemoryRoom,
+  room: JoinableRoom,
   names: readonly string[],
 ): Promise<SimulatedParticipant[]> {
   const joined: SimulatedParticipant[] = [];
