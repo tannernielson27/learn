@@ -264,7 +264,9 @@ export function describeRoomConformance(adapter: string, createRoom: Conformance
       const ada = await joined(room, "Ada");
       const ack = await ada.submit(FIRST.id, CONFORMANCE_CORRECT);
       expect(ack.itemId).toBe(FIRST.id);
-      expect(ack.submittedAt).toBeGreaterThan(0);
+      // Not zero, and not a default: every adapter's clock — an injected one in memory, `now()`
+      // in Postgres — is past this, and a stamp of 0 or NaN would not be.
+      expect(ack.submittedAt).toBeGreaterThan(1_000);
     });
 
     it("returns nothing that could be an answer key", async () => {
@@ -519,6 +521,49 @@ export function describeRoomConformance(adapter: string, createRoom: Conformance
       await host.reveal();
       await room.settle();
       expect(seen[0]).toMatchObject({ present: 1, responded: 1 });
+    });
+
+    it("count the room, or the answers, whichever is larger — and never a union of the two", async () => {
+      const room = await makeRoom();
+      const { host, seen } = await aggregatesOf(room);
+      await host.start();
+      const ada = await joined(room, "Ada");
+      await joined(room, "Grace");
+      await joined(room, "Quiet");
+      await ada.submit(FIRST.id, CONFORMANCE_CORRECT);
+      // Ada answered and left; Grace and Quiet are still here and have not answered. A tally
+      // carries no participant ids, so no adapter can know that Ada is not one of the two still
+      // in the room — `present` is the larger of the two counts, and both adapters say so.
+      await ada.leave();
+      await room.settle();
+      await host.reveal();
+      await room.settle();
+      expect(seen[0]).toMatchObject({ present: 2, responded: 1 });
+    });
+
+    it("are counted from the answers on record, not from the last time an item changed", async () => {
+      const room = await makeRoom();
+      const host = await openHost(room);
+      await host.start();
+      const ada = await joined(room, "Ada");
+      const grace = await joined(room, "Grace");
+      await joined(room, "Quiet");
+      await ada.submit(FIRST.id, CONFORMANCE_CORRECT);
+      await grace.submit(FIRST.id, CONFORMANCE_WRONG);
+      await room.settle();
+
+      // Nothing has been revealed and the room has not moved, so nothing has been pushed. A
+      // console opening now — an instructor's tab reloading mid-item — must still see the answers
+      // that are already in.
+      expect((await host.open()).aggregate).toMatchObject({
+        position: 1,
+        present: 3,
+        responded: 2,
+        fullMarks: 1,
+        noMarks: 1,
+        meanPoints: 0.5,
+        maxPoints: 1,
+      });
     });
 
     it("say nothing when the room never reached an item", async () => {

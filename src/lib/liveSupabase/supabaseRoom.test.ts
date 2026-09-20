@@ -116,6 +116,52 @@ describe("what actually reaches a student's browser", () => {
   });
 });
 
+describe("a connection whose caller changes its mind", () => {
+  it("does not rejoin a room the caller has already left", async () => {
+    const live = room();
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    // A join that is still in flight when the component unmounts — a tab closing, a route change.
+    const ada = live.participantWith(async (code, identity) => {
+      await gate;
+      return live.joinSession(code, identity);
+    });
+
+    const joining = ada.join(live.code, { displayName: "Ada" });
+    await ada.leave();
+    release();
+
+    await expect(joining).rejects.toMatchObject({ code: "not_joined" });
+    await live.settle();
+
+    // The room is empty: no name was put back, and no channel was left open behind it.
+    const host = live.host();
+    expect((await host.open()).roster).toHaveLength(0);
+  });
+
+  it("stops listening the moment it leaves, even mid-flight", async () => {
+    const live = room();
+    const host = live.host();
+    await host.open();
+    const ada = live.participant();
+    await ada.join(live.code, { displayName: "Ada" });
+    await live.settle();
+
+    const views: unknown[] = [];
+    ada.onSessionState((view) => views.push(view));
+    // The host moves the room and the participant leaves in the same turn, before the state
+    // change has been fetched.
+    const moved = host.start();
+    await ada.leave();
+    await moved;
+    await live.settle();
+
+    expect(views).toHaveLength(0);
+  });
+});
+
 describe("the free-tier budget (ADR 0002)", () => {
   it("costs one message per item change for sixty participants and twenty items", async () => {
     const items: Item[] = Array.from({ length: 20 }, (_, index) => ({

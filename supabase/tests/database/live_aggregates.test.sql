@@ -3,7 +3,7 @@
 -- Runs with `pnpm exec supabase test db`. Uses its own fixture ids so it never counts the seed's.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(43);
+select plan(52);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures, as the superuser
@@ -49,14 +49,14 @@ insert into public.sessions (id, org_id, host_id, bank_id, title, code, item_set
 
 select results_eq(
   $$ select status::text, item_position, item_count, reveal
-     from public.session_public_state
+     from live.session_public_state
     where session_id = '00000000-0000-0000-0000-0000000131d1' $$,
   $$ values ('lobby', null::smallint, 2, false) $$,
   'inserting a session mirrors its four public facts and nothing else'
 );
 
 select columns_are(
-  'public', 'session_public_state',
+  'live', 'session_public_state',
   array['session_id', 'status', 'item_position', 'item_count', 'reveal', 'item_ends_at',
         'updated_at'],
   'the public mirror carries no org, no host, no code, no title and no item ids'
@@ -81,7 +81,7 @@ select is(
 );
 
 select results_eq(
-  $$ select status::text, item_position, reveal from public.session_public_state
+  $$ select status::text, item_position, reveal from live.session_public_state
       where session_id = '00000000-0000-0000-0000-0000000131d1' $$,
   $$ values ('running', 1::smallint, false) $$,
   'the mirror follows the session into running'
@@ -206,7 +206,7 @@ select results_eq(
 );
 
 select results_eq(
-  $$ select status::text, reveal from public.session_public_state
+  $$ select status::text, reveal from live.session_public_state
       where session_id = '00000000-0000-0000-0000-0000000131d1' $$,
   $$ values ('ended', false) $$,
   'the mirror follows the session to ended, with nothing left revealed'
@@ -231,12 +231,140 @@ select is(
 );
 
 -- ---------------------------------------------------------------------------
+-- Every refusal the two submission functions can answer with
+-- ---------------------------------------------------------------------------
+--
+-- These are the branches the route handler turns straight into the sentence `LIVE_REFUSALS`
+-- holds, and they are in the same order as `canSubmit` in src/lib/live/state.ts. A flipped
+-- condition here would reach a classroom as the wrong sentence, so each one is exercised.
+
+insert into public.sessions (id, org_id, host_id, bank_id, title, code, item_set)
+  select '00000000-0000-0000-0000-0000000131d3', p.org_id, p.id,
+         '00000000-0000-0000-0000-0000000131b1', 'Refusals', 'AGG236',
+         '["00000000-0000-0000-0000-0000000131e1",
+           "00000000-0000-0000-0000-0000000131e2"]'::jsonb
+  from public.profiles p where p.id = '00000000-0000-0000-0000-0000000131aa';
+
+create function pg_temp.refusals(target uuid, who uuid)
+returns table (opening text, writing text)
+language sql as $$
+  select (select b.refusal from public.begin_session_submission(target, who) b),
+         (select r.refusal from public.record_session_response(
+            target, who, 1::smallint, '00000000-0000-0000-0000-0000000131e1',
+            '{"type":"multiple_choice"}'::jsonb, 1, 1, 'zero_one', '[]'::jsonb) r);
+$$;
+grant execute on function pg_temp.refusals(uuid, uuid) to service_role;
+
+set local role service_role;
+
+select results_eq(
+  $$ select opening, writing from pg_temp.refusals(
+       '00000000-0000-0000-0000-0000000131d3', '00000000-0000-0000-0000-000000013144') $$,
+  $$ values ('not_started', 'not_started') $$,
+  'a room still in the lobby is on no item, so neither function takes an answer'
+);
+
+select results_eq(
+  $$ select opening, writing from pg_temp.refusals(
+       '00000000-0000-0000-0000-00000000dead', '00000000-0000-0000-0000-000000013144') $$,
+  $$ values ('not_open', 'not_open') $$,
+  'a session that does not exist is over, as far as an answer is concerned'
+);
+
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-0000000131aa","role":"authenticated"}', true);
+update public.sessions set status = 'running', current_position = 1
+  where id = '00000000-0000-0000-0000-0000000131d3';
+update public.sessions set status = 'paused' where id = '00000000-0000-0000-0000-0000000131d3';
+reset role;
+
+set local role service_role;
+select results_eq(
+  $$ select opening, writing from pg_temp.refusals(
+       '00000000-0000-0000-0000-0000000131d3', '00000000-0000-0000-0000-000000013144') $$,
+  $$ values ('paused', 'paused') $$,
+  'a paused room takes no answers'
+);
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-0000000131aa","role":"authenticated"}', true);
+update public.sessions set status = 'running' where id = '00000000-0000-0000-0000-0000000131d3';
+update public.sessions set reveal = true where id = '00000000-0000-0000-0000-0000000131d3';
+reset role;
+
+set local role service_role;
+select results_eq(
+  $$ select opening, writing from pg_temp.refusals(
+       '00000000-0000-0000-0000-0000000131d3', '00000000-0000-0000-0000-000000013144') $$,
+  $$ values ('already_revealed', 'already_revealed') $$,
+  'once the key is showing a submission is not an answer, it is a copy'
+);
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-0000000131aa","role":"authenticated"}', true);
+update public.sessions set status = 'ended' where id = '00000000-0000-0000-0000-0000000131d3';
+reset role;
+
+set local role service_role;
+select results_eq(
+  $$ select opening, writing from pg_temp.refusals(
+       '00000000-0000-0000-0000-0000000131d3', '00000000-0000-0000-0000-000000013144') $$,
+  $$ values ('not_open', 'not_open') $$,
+  'and an ended session refuses both, for ever'
+);
+reset role;
+
+-- ---------------------------------------------------------------------------
+-- How often one person may answer
+-- ---------------------------------------------------------------------------
+
+select ok(
+  (select bool_and(private.take_session_submission('00000000-0000-0000-0000-000000013155'))
+     from generate_series(1, 120)),
+  'the first hundred and twenty attempts in a window are all allowed'
+);
+
+select ok(
+  not private.take_session_submission('00000000-0000-0000-0000-000000013155'),
+  'and the hundred and twenty-first is not'
+);
+
+set local role service_role;
+select is(
+  (select b.refusal from public.begin_session_submission(
+     '00000000-0000-0000-0000-0000000131d1', '00000000-0000-0000-0000-000000013155') b),
+  'rate_limited',
+  'so the submission route is told to back off before it scores anything'
+);
+reset role;
+
+select is(
+  (select count(*)::int from private.session_submits
+    where participant_id = '00000000-0000-0000-0000-000000013155' and calls > 121),
+  0,
+  'and attempts over the limit are counted no further, so hammering does not lengthen the wait'
+);
+
+-- ---------------------------------------------------------------------------
 -- Row level security: who may read a tally
 -- ---------------------------------------------------------------------------
 
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-0000000131aa","role":"authenticated"}', true);
+
+-- Three: two from the session above, and one from the refusals session, which ended on its first
+-- item. Every one of them is this host's own org's.
 select results_eq(
   $$ select count(*)::int from public.session_item_aggregates $$,
-  $$ values (2) $$,
+  $$ values (3) $$,
   'the host reads their own org''s tallies'
 );
 
@@ -274,7 +402,7 @@ select throws_ok(
 );
 
 select throws_ok(
-  $$ update public.session_public_state set reveal = true $$,
+  $$ update live.session_public_state set reveal = true $$,
   '42501', null,
   'nobody edits the public mirror: the trigger owns every row of it'
 );
@@ -313,7 +441,7 @@ select is(
 );
 
 select is(
-  (select count(*)::int from public.session_public_state
+  (select count(*)::int from live.session_public_state
     where session_id = '00000000-0000-0000-0000-0000000131d1'),
   1,
   'but may read the four public facts about a session they are in'
@@ -355,14 +483,14 @@ select throws_ok(
 );
 
 select is(
-  (select count(*)::int from public.session_public_state
+  (select count(*)::int from live.session_public_state
     where session_id = '00000000-0000-0000-0000-0000000131d1'),
   1,
   'anon may read the public mirror, which is how a student who is not signed in follows the room'
 );
 
 select throws_ok(
-  $$ update public.session_public_state set status = 'running' $$,
+  $$ update live.session_public_state set status = 'running' $$,
   '42501', null,
   'but cannot write to it'
 );
@@ -409,13 +537,13 @@ select ok(
 );
 
 select ok(
-  (select relrowsecurity from pg_class where oid = 'public.session_public_state'::regclass),
+  (select relrowsecurity from pg_class where oid = 'live.session_public_state'::regclass),
   'and for the public mirror'
 );
 
 select ok(
   exists (select 1 from pg_publication_tables
-           where pubname = 'supabase_realtime' and schemaname = 'public'
+           where pubname = 'supabase_realtime' and schemaname = 'live'
              and tablename = 'session_public_state'),
   'the public mirror is published to Realtime, which is how a participant hears about a move'
 );

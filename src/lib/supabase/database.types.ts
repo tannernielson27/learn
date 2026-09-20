@@ -453,44 +453,6 @@ export type Database = {
           },
         ];
       };
-      session_public_state: {
-        Row: {
-          item_count: number;
-          item_ends_at: string | null;
-          item_position: number | null;
-          reveal: boolean;
-          session_id: string;
-          status: Database["public"]["Enums"]["session_status"];
-          updated_at: string;
-        };
-        Insert: {
-          item_count?: number;
-          item_ends_at?: string | null;
-          item_position?: number | null;
-          reveal?: boolean;
-          session_id: string;
-          status: Database["public"]["Enums"]["session_status"];
-          updated_at?: string;
-        };
-        Update: {
-          item_count?: number;
-          item_ends_at?: string | null;
-          item_position?: number | null;
-          reveal?: boolean;
-          session_id?: string;
-          status?: Database["public"]["Enums"]["session_status"];
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "session_public_state_session_id_fkey";
-            columns: ["session_id"];
-            isOneToOne: true;
-            referencedRelation: "sessions";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       session_responses: {
         Row: {
           breakdown: Json;

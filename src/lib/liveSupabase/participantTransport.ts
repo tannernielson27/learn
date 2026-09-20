@@ -36,6 +36,7 @@ import { isSessionCode, normalizeSessionCode } from "@/lib/live/sessionCode";
 import type { Database } from "@/lib/supabase/database.types";
 import {
   LIVE_ROUTES,
+  LIVE_SCHEMA,
   liveTopic,
   type JoinSession,
   type ParticipantCredentials,
@@ -91,6 +92,15 @@ export function createSupabaseParticipant(
 
   let credentials: ParticipantCredentials | null = null;
   let channel: ReturnType<SupabaseClient<Database>["channel"]> | null = null;
+  /**
+   * Which join this connection is on. `leave` bumps it, so a `join` that was still in flight when
+   * a component unmounted can tell that it is finishing into a room nobody is in any more.
+   * Without it the awaited `options.join(...)` comes back and quietly undoes the `leave`, putting
+   * a name back in the roster and leaving a channel open for the rest of the session — and
+   * `leave` is documented in `transport.ts` as safe to call from a cleanup without checking,
+   * which is exactly what this makes true.
+   */
+  let generation = 0;
   let gone = false;
   /** So a reveal that stays true across several state messages is announced once. */
   let announcedReveal: number | null = null;
@@ -139,11 +149,14 @@ export function createSupabaseParticipant(
 
   /** Re-reads the view and tells whoever is listening. One fetch per state change, not per field. */
   async function refresh(): Promise<void> {
+    const mine = generation;
     if (gone || credentials === null) return;
     const payload = await requestView();
-    if (gone) return;
+    if (gone || mine !== generation) return;
     const view: SessionView<ParticipantItem> = { state: payload.state, item: payload.item };
-    for (const listener of views) listener(view);
+    // Copied before dispatch: a listener may call `leave`, which clears these sets, and mutating
+    // a Set mid-iteration silently drops whoever had not been reached yet.
+    for (const listener of [...views]) listener(view);
 
     if (payload.revealed === null) {
       announcedReveal = null;
@@ -151,7 +164,7 @@ export function createSupabaseParticipant(
     }
     if (announcedReveal === payload.revealed.position) return;
     announcedReveal = payload.revealed.position;
-    for (const listener of reveals) listener(payload.revealed);
+    for (const listener of [...reveals]) listener(payload.revealed);
   }
 
   function openChannel(sessionId: string, entry: PresenceEntry): Promise<void> {
@@ -163,29 +176,45 @@ export function createSupabaseParticipant(
       "postgres_changes",
       {
         event: "*",
-        schema: "public",
+        // Not `public`: the mirror lives in a schema the Data API does not expose, so a table
+        // `anon` has to be able to read is not a table `anon` can list. See the migration.
+        schema: LIVE_SCHEMA,
         table: "session_public_state",
         filter: `session_id=eq.${sessionId}`,
       },
       () => {
-        void refresh();
+        // A listener cannot await, and a failed refresh must not become an unhandled rejection in
+        // a student's browser. Nothing is retried here on purpose: the next state change asks
+        // again, and a session that has gone away has no move to report.
+        void refresh().catch(() => {});
       },
     );
     opened.on("presence", { event: "sync" }, () => {
       const roster = rosterNow();
-      for (const listener of presence) listener(roster);
+      for (const listener of [...presence]) listener(roster);
     });
 
-    return new Promise<void>((resolve) => {
+    return new Promise<void>((resolve, reject) => {
       opened.subscribe((status) => {
-        if (status !== "SUBSCRIBED") return;
-        void opened.track(entry).then(() => resolve());
+        if (status === "SUBSCRIBED") {
+          // `then(resolve, reject)`, not `.then(resolve)`: a `track` that rejects — the socket
+          // dropping in the moment after it subscribed — would otherwise leave this promise, and
+          // the `join` awaiting it, pending for ever.
+          void opened.track(entry).then(() => resolve(), reject);
+          return;
+        }
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          // Harmless once the promise has settled, which is the ordinary case for CLOSED.
+          reject(new Error(`The session's channel could not be opened (${status}).`));
+        }
       });
     });
   }
 
-  function snapshot(view: ParticipantViewPayload): ParticipantSnapshot {
-    const held = credentials as ParticipantCredentials;
+  function snapshot(
+    held: ParticipantCredentials,
+    view: ParticipantViewPayload,
+  ): ParticipantSnapshot {
     return {
       sessionId: held.sessionId,
       code: held.code,
@@ -201,7 +230,8 @@ export function createSupabaseParticipant(
     async join(typedCode, identity): Promise<ParticipantSnapshot> {
       // Joining twice is the same join: an effect that re-runs must not put a second name in the
       // room. The name given the first time is the one the class sees.
-      if (credentials !== null) return snapshot(await requestView());
+      const already = credentials;
+      if (already !== null) return snapshot(already, await requestView());
 
       const displayName = readName(identity);
       const code = normalizeSessionCode(typedCode);
@@ -210,20 +240,29 @@ export function createSupabaseParticipant(
       // alphabet already says, and a malformed code cannot match a row.
       if (!isSessionCode(code)) throw new LiveSessionError("unknown_code");
 
-      credentials = await options.join(code, { ...identity, displayName });
+      const mine = generation;
+      const joined = await options.join(code, { ...identity, displayName });
+      // Someone called `leave` while the join was in flight. Finishing now would put a name back
+      // in a room the caller has left, and leave a channel open behind it.
+      if (mine !== generation) throw new LiveSessionError("not_joined");
+
+      credentials = joined;
       gone = false;
       announcedReveal = null;
-      await openChannel(credentials.sessionId, {
-        participantId: credentials.participantId,
-        displayName: credentials.displayName,
-        joinedAt: credentials.joinedAt,
+      await openChannel(joined.sessionId, {
+        participantId: joined.participantId,
+        displayName: joined.displayName,
+        joinedAt: joined.joinedAt,
       });
+      if (mine !== generation) throw new LiveSessionError("not_joined");
       const view = await requestView();
+      if (mine !== generation) throw new LiveSessionError("not_joined");
       announcedReveal = view.revealed?.position ?? null;
-      return snapshot(view);
+      return snapshot(joined, view);
     },
 
     async leave(): Promise<void> {
+      generation += 1;
       gone = true;
       views.clear();
       presence.clear();

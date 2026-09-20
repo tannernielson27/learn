@@ -3,11 +3,12 @@
 -- #128 built the session row, its code and the state machine. This adds the three things a real
 -- room needs on top of it:
 --
---   * `public.session_public_state` — the four facts a student may know about a room (status,
+--   * `live.session_public_state` — the four facts a student may know about a room (status,
 --     which item it is on, how many there are, whether the key is showing), mirrored out of
 --     `public.sessions` by a trigger so that Realtime's `postgres_changes` can carry them to a
 --     participant who is not signed in. Students have no privilege and no policy on `sessions`
 --     itself and must not get one: that row holds the org, the host, the code and the item set.
+--     It lives in its own schema, which the Data API does not expose; see the long comment there.
 --   * `public.session_responses` — one answer per participant per position, written only by the
 --     submission route handler after it has scored the answer on the server (ADR 0003).
 --   * `public.session_item_aggregates` — the host dashboard's tallies, written by a trigger on
@@ -25,7 +26,30 @@
 -- What a student may know about a room
 -- ---------------------------------------------------------------------------
 
-create table public.session_public_state (
+-- A schema of its own, and the reason is the whole design of this table.
+--
+-- Realtime has to be able to read a row as `anon`, because that is the only Postgres role a
+-- student who has not signed in ever has. Row level security cannot express "you may read this
+-- row only if you already knew its id": a policy sees one row at a time and cannot tell a
+-- `where session_id = ...` apart from a bare `select *`. So a table that `anon` may read at all
+-- is a table `anon` may LIST, and in `public` — which is what the Data API exposes — that means
+-- `GET /rest/v1/session_public_state` with the publishable key every browser already holds would
+-- hand any passer-by the uuid of every session ever run, in every org.
+--
+-- `live` is not in `[api] schemas` in supabase/config.toml, and must not be added to the hosted
+-- project's exposed schemas either (see the #131 pull request's owner actions). PostgREST
+-- therefore has no route to this table at all, while Realtime — which talks to Postgres directly
+-- and takes the schema as a subscription parameter — still does. The grant below is what the
+-- Realtime RLS check needs and the only thing that reads through it.
+create schema live;
+
+comment on schema live is
+  'Tables that Realtime may deliver to a client but the Data API may never serve. Not listed in '
+  '[api] schemas: adding it there would make every row in here publicly listable.';
+
+grant usage on schema live to anon, authenticated;
+
+create table live.session_public_state (
   session_id uuid primary key references public.sessions (id) on delete cascade,
   status public.session_status not null,
   -- One-based, like `sessions.current_position`, and null before the room starts.
@@ -36,26 +60,21 @@ create table public.session_public_state (
   updated_at timestamptz not null default now()
 );
 
-comment on table public.session_public_state is
+comment on table live.session_public_state is
   'The four facts a participant may know about a live session, mirrored from public.sessions so an '
   'anonymous student can receive them over Realtime without ever being given a policy on the '
   'session row. It carries no org, no host, no join code, no title and no item ids.';
 
--- Every column here is one a participant is about to be shown anyway, so the policy is `true`
--- rather than a join no anonymous caller could satisfy. Reaching a row still needs the session's
--- uuid, which is only handed out by #129's join path after a correct code; and a caller who
--- listed the whole table would learn how many rooms are running and nothing whatsoever about any
--- of them. Insert, update and delete are granted to nobody: the trigger below is the only writer.
-alter table public.session_public_state enable row level security;
-alter table public.session_public_state replica identity full;
-revoke all on public.session_public_state from anon, authenticated;
--- The service role is taken back too, so even this app's own server cannot tell a room something
--- its session row does not say. The trigger is the single writer, without exception.
-revoke insert, update, delete on public.session_public_state from service_role;
-grant select on public.session_public_state to anon, authenticated;
+-- Every column here is one a participant is about to be shown anyway, and the schema above is
+-- what keeps the table off the Data API, so the policy itself is `true`. Insert, update and
+-- delete are granted to nobody: the trigger below is the only writer.
+alter table live.session_public_state enable row level security;
+alter table live.session_public_state replica identity full;
+revoke all on live.session_public_state from anon, authenticated, service_role;
+grant select on live.session_public_state to anon, authenticated;
 
-create policy "anyone holding a session id may read its public state"
-  on public.session_public_state for select to anon, authenticated using (true);
+create policy "a subscriber may read the public state of a session it names"
+  on live.session_public_state for select to anon, authenticated using (true);
 
 create function private.mirror_session_state() returns trigger
 language plpgsql security definer set search_path = ''
@@ -72,7 +91,7 @@ begin
     return null;
   end if;
 
-  insert into public.session_public_state as m
+  insert into live.session_public_state as m
     (session_id, status, item_position, item_count, reveal, item_ends_at, updated_at)
   values
     (new.id, new.status, new.current_position, jsonb_array_length(new.item_set), new.reveal,
@@ -95,7 +114,7 @@ create trigger sessions_mirror_public_state after insert or update on public.ses
 
 -- Sessions that already exist keep working. There are none in production yet; this is here so the
 -- migration is correct wherever it is replayed rather than correct only on an empty database.
-insert into public.session_public_state
+insert into live.session_public_state
   (session_id, status, item_position, item_count, reveal, item_ends_at)
 select s.id, s.status, s.current_position, jsonb_array_length(s.item_set), s.reveal, s.item_ends_at
   from public.sessions s
@@ -135,6 +154,10 @@ create table public.session_responses (
 
 create index session_responses_session_position_idx
   on public.session_responses (session_id, item_position);
+-- `item_id` is a foreign key with ON DELETE RESTRICT, and an author may delete any item in their
+-- bank. Without this index Postgres checks that restriction with a sequential scan of a table that
+-- grows by one row per participant per item for every class ever run.
+create index session_responses_item_id_idx on public.session_responses (item_id);
 
 comment on table public.session_responses is
   'One scored answer per participant per item position. Written only by '
@@ -479,9 +502,9 @@ grant execute on function public.record_session_response(
 -- ---------------------------------------------------------------------------
 
 -- Two tables on the wire and no more. `public.sessions` is deliberately NOT published: the host
--- console reads the same four facts from `session_public_state` as everyone else and fetches the
--- item — key included — under its own row level security, so the session row with its org, host,
--- code and item set never travels over a channel at all.
+-- console reads the same four facts from `live.session_public_state` as everyone else and fetches
+-- the item — key included — under its own row level security, so the session row with its org,
+-- host, code and item set never travels over a channel at all.
 do $$
 begin
   if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
@@ -489,10 +512,10 @@ begin
   end if;
   if not exists (
     select 1 from pg_publication_tables
-     where pubname = 'supabase_realtime' and schemaname = 'public'
+     where pubname = 'supabase_realtime' and schemaname = 'live'
        and tablename = 'session_public_state'
   ) then
-    alter publication supabase_realtime add table public.session_public_state;
+    alter publication supabase_realtime add table live.session_public_state;
   end if;
   if not exists (
     select 1 from pg_publication_tables

@@ -36,11 +36,9 @@ import type { Item } from "@/lib/ngn/schemas";
 import type { Database } from "@/lib/supabase/database.types";
 import { fromItemRow } from "@/lib/supabase/itemRows";
 import type { PresenceEntry } from "./participantTransport";
-import { liveTopic } from "./wire";
+import { LIVE_SCHEMA, liveTopic } from "./wire";
 
 const ITEM_COLUMNS = "type, cjmm_step, tags, version, content, answer_key, rationale, scoring";
-const AGGREGATE_COLUMNS =
-  "item_position, item_ref, responded, full_marks, partial_marks, no_marks, mean_points, max_points";
 
 type AggregateRow = {
   item_position: number;
@@ -92,7 +90,9 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     "postgres_changes",
     {
       event: "*",
-      schema: "public",
+      // The host reads the same four facts from the same mirror as everyone else; the session row
+      // itself never travels over a channel. `live` is not an exposed schema — see the migration.
+      schema: LIVE_SCHEMA,
       table: "session_public_state",
       filter: `session_id=eq.${sessionId}`,
     },
@@ -111,12 +111,14 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     (message) => {
       const row = message.new as Partial<AggregateRow>;
       if (typeof row.item_position !== "number") return;
-      for (const listener of aggregates) listener(toAggregate(row as AggregateRow));
+      // Copied before dispatch: a listener may close the console, which clears these sets, and
+      // mutating a Set mid-iteration silently drops whoever had not been reached yet.
+      for (const listener of [...aggregates]) listener(toAggregate(row as AggregateRow));
     },
   );
   channel.on("presence", { event: "sync" }, () => {
     const roster = rosterNow();
-    for (const listener of presence) listener(roster);
+    for (const listener of [...presence]) listener(roster);
   });
 
   const ready = new Promise<void>((resolve) => {
@@ -144,10 +146,15 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
   }
 
   /**
-   * How many people this tally is over. Presence knows who is in the room; the aggregate knows how
-   * many answered. Neither alone is right — a phone that locks after its owner answered would make
-   * the roster smaller than the count of answers — so the larger of the two is what is reported,
-   * which is what the in-memory adapter's union of the two comes to in every case a room reaches.
+   * How many people this tally is over. Presence knows who is in the room; the tally knows how
+   * many answered. Neither alone is right — a phone that locks after its owner answered would
+   * make the roster smaller than the count of answers — so it is the larger of the two.
+   *
+   * The in-memory adapter computes the same number the same way (`memoryRoom.ts`). It used to
+   * take the union of the two sets, which differs from `max` as soon as one answerer leaves while
+   * non-answerers stay; over a channel there is no such union to take, because a tally deliberately
+   * carries no participant ids. Both now say `max`, the conformance suite pins it, and the
+   * interface has one meaning rather than two.
    */
   function toAggregate(row: AggregateRow): ItemAggregate {
     const responded = Number(row.responded);
@@ -211,30 +218,53 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     current = await loadItem();
     if (closed) return;
     const view: SessionView<Item> = { state, item: current };
-    for (const listener of views) listener(view);
+    for (const listener of [...views]) listener(view);
   }
 
+  /**
+   * The tally for the item the room is on, counted now.
+   *
+   * It is counted from `session_responses` rather than read from `session_item_aggregates`,
+   * because that table is written once per item change (ADR 0002) and so holds nothing at all for
+   * the item currently being answered: a console opened when forty of sixty had answered would
+   * otherwise say nought. The in-memory adapter counts live for exactly the same reason, and the
+   * conformance suite now pins it.
+   *
+   * This costs one indexed read on `open()` — the host's, under their org's row level security —
+   * and is not a push. What goes out over the channel is still the trigger's row, once per item
+   * change.
+   */
   async function readAggregate(): Promise<ItemAggregate | null> {
     if (state.position === null || current === null) return null;
     const { data } = await client
-      .from("session_item_aggregates")
-      .select(AGGREGATE_COLUMNS)
+      .from("session_responses")
+      .select("points, max_points")
       .eq("session_id", sessionId)
-      .eq("item_position", state.position)
-      .maybeSingle();
-    if (data) return toAggregate(data as unknown as AggregateRow);
-    // No row yet: the room is on an item nothing has been written about. That is a tally of
-    // nothing, not the absence of one, and a dashboard that showed nothing there would be blank
-    // for the whole of the first item.
+      .eq("item_position", state.position);
+
+    const marks = (data ?? []) as unknown as { points: number; max_points: number }[];
+    let fullMarks = 0;
+    let partialMarks = 0;
+    let noMarks = 0;
+    let total = 0;
+    for (const mark of marks) {
+      const points = Number(mark.points);
+      const possible = Number(mark.max_points);
+      total += points;
+      if (points >= possible) fullMarks += 1;
+      else if (points > 0) partialMarks += 1;
+      else noMarks += 1;
+    }
+    const responded = marks.length;
     return {
       itemId: current.id,
       position: state.position,
-      present: rosterNow().length,
-      responded: 0,
-      fullMarks: 0,
-      partialMarks: 0,
-      noMarks: 0,
-      meanPoints: 0,
+      present: Math.max(rosterNow().length, responded),
+      responded,
+      fullMarks,
+      partialMarks,
+      noMarks,
+      meanPoints: responded === 0 ? 0 : Math.round((total / responded) * 100) / 100,
       maxPoints: maxPoints(current),
     };
   }

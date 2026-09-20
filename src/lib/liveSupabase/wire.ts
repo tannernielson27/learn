@@ -104,6 +104,15 @@ export interface RefusalPayload {
 /** Sent on every response from these routes: none of it may ever sit in a cache. */
 export const NO_STORE_HEADERS = { "Cache-Control": "no-store" } as const;
 
+/**
+ * The schema `session_public_state` lives in. Not `public`, and that is the point: row level
+ * security cannot say "only if you already knew the id", so a table `anon` may read is a table
+ * `anon` may list — and in `public` that list is a Data API route serving every session's uuid to
+ * anyone holding the publishable key. `live` is not an exposed schema, so PostgREST has no route
+ * to it at all while Realtime, which takes the schema as a subscription parameter, still does.
+ */
+export const LIVE_SCHEMA = "live";
+
 /** The Realtime topic one session's participants and hosts share. */
 export function liveTopic(sessionId: string): string {
   return `live:${sessionId}`;

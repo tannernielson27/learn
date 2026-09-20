@@ -98,11 +98,18 @@ type TableName =
 type Row = Record<string, unknown>;
 
 interface Binding {
+  schema: string;
   table: string;
   filterColumn: string | null;
   filterValue: string | null;
   listener: (message: { new: Row; old: Row }) => void;
 }
+
+/** Where each published table actually lives, as the migration puts it. */
+const TABLE_SCHEMA: Record<string, string> = {
+  session_public_state: "live",
+  session_item_aggregates: "public",
+};
 
 /** What a client is allowed to be told. The two policies that matter to Realtime, said in code. */
 export interface FakeIdentity {
@@ -352,6 +359,9 @@ export class FakeChannel {
     return this.changeBindings.filter(
       (binding) =>
         binding.table === table &&
+        // A subscription that named the wrong schema hears nothing, exactly as it would not in
+        // production: `session_public_state` is in `live`, not in `public`.
+        binding.schema === TABLE_SCHEMA[table] &&
         (binding.filterColumn === null || row[binding.filterColumn] === binding.filterValue),
     );
   }
@@ -368,6 +378,7 @@ export class FakeChannel {
     const filter = options.filter ?? null;
     const parsed = filter === null ? null : /^([a-z_]+)=eq\.(.*)$/.exec(filter);
     this.changeBindings.push({
+      schema: options.schema ?? "public",
       table: options.table ?? "",
       filterColumn: parsed?.[1] ?? null,
       filterValue: parsed?.[2] ?? null,

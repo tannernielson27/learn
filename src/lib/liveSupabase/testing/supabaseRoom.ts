@@ -13,7 +13,7 @@
  * join, that it presents the token on every later call, and that the two refusals which really are
  * the server's are passed through as refusals.
  */
-import { LiveSessionError, type LiveSessionState } from "@/lib/live";
+import { LiveSessionError, type LiveSessionState, type LiveSessionTransport } from "@/lib/live";
 import { normalizeSessionCode } from "@/lib/live/sessionCode";
 import type { ConformanceRoom, ConformanceRoomOptions } from "@/lib/live/roomConformance";
 import type { Item } from "@/lib/ngn/schemas";
@@ -35,6 +35,10 @@ const ORIGIN = "http://live.test";
 export interface FakeRoom extends ConformanceRoom {
   readonly stack: FakeSupabase;
   readonly orgId: string;
+  /** The stand-in for #129's join path, so a test can wrap it — slow it down, make it fail. */
+  readonly joinSession: JoinSession;
+  /** A participant whose join path is the caller's, for the races a conformance test cannot pose. */
+  participantWith(join: JoinSession): LiveSessionTransport;
 }
 
 /** A row id for `public.items`, which is a uuid and is never the id the item calls itself. */
@@ -123,9 +127,19 @@ export function createFakeRoom(options: ConformanceRoomOptions): FakeRoom {
     };
   };
 
+  const participantWith = (join: JoinSession): LiveSessionTransport =>
+    createSupabaseParticipant({
+      client: createFakeClient(stack, { role: "anon" }),
+      join,
+      fetch: call,
+      baseUrl: ORIGIN,
+    });
+
   return {
     stack,
     orgId: ORG_ID,
+    joinSession,
+    participantWith,
     sessionId: session.id,
     code: session.code,
     mode: session.mode,
@@ -140,13 +154,7 @@ export function createFakeRoom(options: ConformanceRoomOptions): FakeRoom {
       };
     },
 
-    participant: () =>
-      createSupabaseParticipant({
-        client: createFakeClient(stack, { role: "anon" }),
-        join: joinSession,
-        fetch: call,
-        baseUrl: ORIGIN,
-      }),
+    participant: () => participantWith(joinSession),
 
     host: () =>
       createSupabaseHost({
