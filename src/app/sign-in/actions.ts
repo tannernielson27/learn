@@ -6,6 +6,7 @@ import type { DemoSignInState } from "@/components/auth/DemoSignIn";
 import type { SignInState } from "@/components/auth/SignInForm";
 import { readDemoAccount, signInToDemo } from "@/lib/auth/demoAccount";
 import { parseSignInForm } from "@/lib/auth/signInForm";
+import { takeSignInAttempt } from "@/lib/auth/signInRateLimit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const RATE_LIMITED = "Too many sign-in emails were asked for. Wait a minute, then try again.";
@@ -22,7 +23,13 @@ export async function requestSignInLink(
   const parsed = parseSignInForm(formData);
   if (!parsed.ok) return { status: "error", error: parsed.error };
 
-  const confirmUrl = new URL("/auth/confirm", await siteOrigin());
+  // Counted here, where the request is about to reach Supabase; an address that never gets past
+  // the form spends nothing.
+  const requestHeaders = await headers();
+  const limit = takeSignInAttempt(requestHeaders, "email");
+  if (!limit.ok) return { status: "error", error: limit.error };
+
+  const confirmUrl = new URL("/auth/confirm", siteOrigin(requestHeaders));
   confirmUrl.searchParams.set("next", parsed.next);
 
   const supabase = await createSupabaseServerClient();
@@ -45,6 +52,9 @@ export async function signInAsDemo(
   _previous: DemoSignInState,
   formData: FormData,
 ): Promise<DemoSignInState> {
+  const limit = takeSignInAttempt(await headers(), "demo");
+  if (!limit.ok) return { status: "error", error: limit.error };
+
   const supabase = await createSupabaseServerClient();
   const result = await signInToDemo(readDemoAccount(), formData.get("next"), (credentials) =>
     supabase.auth.signInWithPassword(credentials),
@@ -53,8 +63,7 @@ export async function signInAsDemo(
   redirect(result.next);
 }
 
-async function siteOrigin(): Promise<string> {
-  const requestHeaders = await headers();
+function siteOrigin(requestHeaders: Headers): string {
   const origin = requestHeaders.get("origin");
   if (origin) return origin;
   const host =
