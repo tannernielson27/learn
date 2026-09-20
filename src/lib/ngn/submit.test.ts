@@ -11,6 +11,7 @@ import {
   scoreSubmission,
   SUBMIT_ERRORS,
   toKeylessItem,
+  type KeylessItem,
 } from "./submit";
 
 const parsed = (type: ItemType) => ITEM_SCHEMAS[type].parse(FIXTURES[type].canonical) as Item;
@@ -72,6 +73,14 @@ describe("toKeylessItem", () => {
     const before = JSON.stringify(item);
     toKeylessItem(item);
     expect(JSON.stringify(item)).toBe(before);
+  });
+
+  it("keeps the item types apart, so type still says which content this is", () => {
+    // A compile-time check as much as a runtime one: a plain `Omit` over the item union collapses
+    // it, and `keyless.content.options` below would not type. KeylessItem distributes instead.
+    const keyless: KeylessItem = toKeylessItem(parsed("multiple_choice"));
+    if (keyless.type !== "multiple_choice") throw new Error("fixture changed type");
+    expect(keyless.content.options.length).toBeGreaterThan(0);
   });
 });
 

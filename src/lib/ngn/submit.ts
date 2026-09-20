@@ -17,10 +17,17 @@ import { scoreItem } from "./scoring";
 import type { ScoreResult } from "./types";
 
 /**
+ * `Omit` over a union collapses it: `keyof` becomes the keys they share and each shared field
+ * becomes the union of its types, so `type` no longer says which `content` this is. Distributing
+ * first keeps the fourteen item types apart.
+ */
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
+/**
  * An item as a browser may receive it before its answer is checked: no answer key, no rationale,
  * and no scoring, whose +/- maxPoints is the number of correct answers (#94).
  */
-export type KeylessItem = Omit<Item, "answerKey" | "rationale" | "scoring">;
+export type KeylessItem = DistributiveOmit<Item, "answerKey" | "rationale" | "scoring">;
 
 /**
  * The only item payload a student-facing page sends to the browser (ADR 0003). The key, rationale

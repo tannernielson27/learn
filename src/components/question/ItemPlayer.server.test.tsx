@@ -112,4 +112,27 @@ describe("ItemPlayer with server scoring", () => {
     expect(await screen.findByRole("complementary", { name: "Score" })).toBeInTheDocument();
     expect(submitResponse).toHaveBeenCalledTimes(2);
   });
+
+  it("says nothing once it has been taken off the page mid-check", async () => {
+    // A case study unmounts the player when the student opens Review or steps away. A slow answer
+    // that lands afterwards must not report a score for a step that has moved on: onSubmitted is
+    // where a session writes one down, and the step may have been answered again since.
+    let finish: (value: ScoreReveal) => void = () => {};
+    const onSubmitted = vi.fn();
+    const user = userEvent.setup();
+    const { unmount } = render(
+      <ItemPlayer
+        item={keyless}
+        submit={() => new Promise<ScoreReveal>((resolve) => (finish = resolve))}
+        onSubmitted={onSubmitted}
+      />,
+    );
+    await answerCorrectly(user);
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    unmount();
+
+    finish(scoreSubmission(item, { type: "multiple_choice", optionId: "opt_a" }));
+    await Promise.resolve();
+    expect(onSubmitted).not.toHaveBeenCalled();
+  });
 });

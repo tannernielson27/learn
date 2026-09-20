@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AnyResponse, Item, ItemOf, ItemType, ResponseOf } from "@/lib/ngn/schemas";
 import { initialResponse as firstResponse } from "@/lib/ngn/presentation";
 import type { KeylessItem, SubmitHandler } from "@/lib/ngn/submit";
@@ -79,6 +79,16 @@ export function ItemPlayer({
   const [submitError, setSubmitError] = useState<string | undefined>(undefined);
   // A ref, not state: a second tap in the same frame must not send a second request.
   const pending = useRef(false);
+  // A check that survives into a promise callback. `pending` only guards one mounted player; a
+  // case study unmounts this one when the student opens Review or steps away, and a submit still
+  // in flight must not come back and report a score for a step that has since been answered again.
+  const live = useRef(true);
+  useEffect(() => {
+    live.current = true;
+    return () => {
+      live.current = false;
+    };
+  }, []);
 
   const rendererModule = RENDERERS[item.type] as ItemRendererModule<ItemType> | undefined;
   if (!rendererModule) {
@@ -119,6 +129,7 @@ export function ItemPlayer({
     submitResponse(response)
       .then(
         (checked) => {
+          if (!live.current) return;
           setReveal({
             answerKey: checked.answerKey,
             rationale: checked.rationale,
@@ -126,7 +137,10 @@ export function ItemPlayer({
           });
           finish(checked.score);
         },
-        () => setSubmitError(CHECK_FAILED),
+        () => {
+          if (!live.current) return;
+          setSubmitError(CHECK_FAILED);
+        },
       )
       .finally(() => {
         pending.current = false;
