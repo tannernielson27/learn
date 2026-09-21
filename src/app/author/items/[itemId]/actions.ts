@@ -34,7 +34,7 @@ import { pinnedStepFor } from "@/lib/authoring/caseStudies";
 import { isUuid } from "@/lib/authoring/ids";
 import { withinItemSizeLimit } from "@/lib/authoring/payloadSize";
 import { checkPublishable } from "@/lib/authoring/publishCheck";
-import { checkRateLimit } from "@/lib/authoring/rateLimit";
+import { checkRateLimit, isRateLimitedError, RATE_LIMIT_ERRORS } from "@/lib/authoring/rateLimit";
 import { requireAuthor } from "@/lib/authoring/session";
 import { nextPublishedVersion } from "@/lib/authoring/versions";
 import type { ItemType } from "@/lib/ngn/labels";
@@ -54,6 +54,8 @@ const PUBLISH_FAILED: SaveResult = {
 };
 /** The database refuses to change archived content (see the archive migration). */
 const ARCHIVED: SaveResult = { ok: false, error: ARCHIVE_ERRORS.itemArchived };
+/** The database refuses the write itself past the limit (#123), not only the action above it. */
+const LIMITED: SaveResult = { ok: false, error: RATE_LIMIT_ERRORS.limited };
 
 function revalidateItem(itemId: string) {
   revalidatePath(`/author/items/${itemId}`);
@@ -100,6 +102,7 @@ async function saveDraft<Values>(
     .eq("id", itemId)
     .eq("type", type)
     .select("id");
+  if (isRateLimitedError(error)) return LIMITED;
   if (isArchivedError(error)) return ARCHIVED;
   if (error) return SAVE_FAILED;
   if (data.length === 0) return GONE;
@@ -152,6 +155,7 @@ async function publish(itemId: string, type: ItemType, input: unknown): Promise<
     .eq("id", itemId)
     .eq("type", type)
     .select("id");
+  if (isRateLimitedError(error)) return LIMITED;
   if (isArchivedError(error)) return ARCHIVED;
   if (error) return PUBLISH_FAILED;
   if (data.length === 0) return GONE;
@@ -162,6 +166,7 @@ async function publish(itemId: string, type: ItemType, input: unknown): Promise<
     version,
     snapshot: JSON.parse(JSON.stringify(item)) as Json,
   });
+  if (isRateLimitedError(versionError)) return LIMITED;
   if (versionError) {
     return {
       ok: false,

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/supabase/database.types";
+import { isRateLimitedError, RATE_LIMIT_ERRORS } from "@/lib/authoring/rateLimit";
 import { fromItemRow } from "@/lib/supabase/itemRows";
 import { assembleCaseStudy, CASE_STUDY_WITH_STEPS } from "./caseStudies";
 import {
@@ -55,10 +56,12 @@ export async function importIntoBank(
 }
 
 /**
- * 22023: the bank is not one the caller can see (or the payload is malformed). 23503: the folder is
- * not one of the bank's folders the caller can see.
+ * 54000: this author is over the import limit (#123) — the function charges one import per call,
+ * before it reads anything. 22023: the bank is not one the caller can see (or the payload is
+ * malformed). 23503: the folder is not one of the bank's folders the caller can see.
  */
 function importError(code: string | undefined): string {
+  if (isRateLimitedError({ code })) return RATE_LIMIT_ERRORS.limited;
   if (code === "22023") return TRANSFER_ERRORS.bankGone;
   if (code === "23503") return TRANSFER_ERRORS.folderGone;
   return TRANSFER_ERRORS.importFailed;

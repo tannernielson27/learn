@@ -6,7 +6,12 @@ import { IMPORT_ERRORS, IMPORT_MAX_BYTES } from "./transfer";
  * file never blocks the others, and no request carries more than one file (800 KB, under the 1 MB
  * Server Action body limit). A larger set is several files. Pure, so the browser and tests share it.
  */
-/** The same as the import rate limit (10 a minute, `private.take_rate_limit`): one call per file. */
+/**
+ * The same as the import rate limit (10 a minute): one call per file, and since #123 one call is
+ * one import unit however many items that file holds, because `import_bank_content` charges the
+ * import once before it writes anything rather than once per row. So a full batch of ten files
+ * spends exactly the minute's budget, and this cap and that limit stay the same number.
+ */
 export const IMPORT_MAX_FILES = 10;
 export const PASTED_LABEL = "Pasted JSON";
 

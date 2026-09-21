@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { isUuid } from "./ids";
+import { isRateLimitedError, RATE_LIMIT_ERRORS } from "./rateLimit";
 
 type Client = SupabaseClient<Database>;
 
@@ -47,6 +48,10 @@ async function call(client: Client, fn: ArchiveFunction, id: string, gone: strin
   if (!isUuid(id)) return { ok: false, error: gone } satisfies ArchiveResult;
   const { error } = await client.rpc(fn, { target: id });
   if (!error) return { ok: true } satisfies ArchiveResult;
+  // 54000: archiving is a write, so it spends a save (#123) and can be refused past the limit.
+  if (isRateLimitedError(error)) {
+    return { ok: false, error: RATE_LIMIT_ERRORS.limited } satisfies ArchiveResult;
+  }
   if (error.code === "22023") return { ok: false, error: gone } satisfies ArchiveResult;
   if (error.code === "2BP01") {
     return {

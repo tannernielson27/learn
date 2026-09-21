@@ -2,7 +2,7 @@
 -- `pnpm exec supabase test db`. Uses its own fixture ids so it never counts the seed's rows.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(27);
+select plan(26);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures, as the superuser
@@ -123,16 +123,15 @@ select throws_ok(
   'a case study that does not exist reads as gone'
 );
 
--- Rate limits: publish allows 20 a minute.
+-- Rate limits. Since #123 public.take_rate_limit asks whether there is room and spends nothing:
+-- the count is taken at the write. authoring_write_limits.test.sql proves that end of it.
 select is(
   (select count(*)::int from generate_series(1, 20) where public.take_rate_limit('publish')),
   20,
-  'A''s first 20 publishes in a minute are within the limit'
+  'asking twenty times over does not use A''s publish budget up'
 );
 
-select is(public.take_rate_limit('publish'), false, 'the 21st publish in the minute is over it');
-
-select is(public.take_rate_limit('save'), true, 'each action counts separately');
+select is(public.take_rate_limit('save'), true, 'each action is asked about separately');
 
 select throws_ok(
   $$ select public.take_rate_limit('delete_everything') $$,
@@ -164,7 +163,7 @@ select throws_ok(
   'another org''s case study reads as gone'
 );
 
-select is(public.take_rate_limit('publish'), true, 'B has a counter of its own');
+select is(public.take_rate_limit('publish'), true, 'B is asked about a counter of its own');
 
 -- ---------------------------------------------------------------------------
 -- As anon
@@ -197,35 +196,42 @@ select is(
   'the bank holds the published item and the two current step drafts, and no orphan'
 );
 
+-- A's four start_case_study_step calls above share one transaction, so they are charged once
+-- between them; PostgREST sends each real call as its own request. The header of
+-- 20260921200000_authoring_limit_at_the_write has the whole argument.
 select is(
   (select calls from private.rate_limits
-    where user_id = '00000000-0000-0000-0000-0000000004aa' and action = 'publish'),
-  21,
-  'calls over the limit are counted, capped one past it'
+    where user_id = '00000000-0000-0000-0000-0000000004aa' and action = 'step'),
+  1,
+  'starting a step charges the step, at the write, with nothing above it counting'
 );
 
-update private.rate_limits set window_start = now() - interval '2 minutes'
-  where user_id = '00000000-0000-0000-0000-0000000004aa' and action = 'publish';
+-- A step budget used right up.
+update private.rate_limits set calls = 30
+  where user_id = '00000000-0000-0000-0000-0000000004aa' and action = 'step';
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000004aa","role":"authenticated"}', true);
 
-select is(public.take_rate_limit('publish'), true, 'a new minute starts a new count');
+select is(public.take_rate_limit('step'), false, 'a budget that is gone answers no');
+
+reset role;
+
+update private.rate_limits set window_start = now() - interval '2 minutes'
+  where user_id = '00000000-0000-0000-0000-0000000004aa' and action = 'step';
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000004aa","role":"authenticated"}', true);
+
+select is(public.take_rate_limit('step'), true, 'a window that has passed answers yes again');
 
 reset role;
 
 select is(
-  (select calls from private.rate_limits
-    where user_id = '00000000-0000-0000-0000-0000000004aa' and action = 'publish'),
-  1,
-  'the new window counts from one'
-);
-
-select is(
   (select count(*)::int from private.rate_limits
     where user_id in ('00000000-0000-0000-0000-0000000004aa', '00000000-0000-0000-0000-0000000004bb')),
-  3,
-  'one row per user and action'
+  1,
+  'one row per user and action, and asking never makes one'
 );
 
 select * from finish();
