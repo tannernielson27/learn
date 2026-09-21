@@ -3,6 +3,7 @@
 import { Component, lazy, Suspense, useState, type ComponentType, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
 import { RendererLoading } from "./RendererLoading";
+import { RendererShownMarker } from "./RendererShown";
 
 /** What a student sees in the question's place when its renderer could not load. */
 export const RENDERER_FAILED = "This question could not load.";
@@ -115,6 +116,7 @@ export function withLoadRecovery<P extends RecoverableProps>(
       >
         <Suspense fallback={<RendererLoading />}>
           <Renderer {...props} />
+          <RendererShownMarker />
         </Suspense>
       </RendererBoundary>
     );
