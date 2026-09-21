@@ -103,11 +103,11 @@ describe("drag-and-drop cloze", () => {
 
   it("enables submit only when every blank is filled, then scores 0/1 per blank", async () => {
     render(<ItemPlayer item={cloze} submit={scoreInProcess(cloze)} />);
-    expect(submit()).toBeDisabled();
+    expect(submit()).toHaveAttribute("aria-disabled", "true");
     await place(SABA, 1, 2);
-    expect(submit()).toBeDisabled();
+    expect(submit()).toHaveAttribute("aria-disabled", "true");
     await place(SUPINE, 2, 2);
-    expect(submit()).toBeEnabled();
+    expect(submit()).not.toHaveAttribute("aria-disabled");
     await userEvent.click(submit());
 
     expect(within(scorePanel()).getByText("1")).toBeInTheDocument();

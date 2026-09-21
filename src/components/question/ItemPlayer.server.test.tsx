@@ -107,7 +107,7 @@ describe("ItemPlayer with server scoring", () => {
       "Your answer could not be checked. Try again.",
     );
     const submit = screen.getByRole("button", { name: "Submit" });
-    expect(submit).toBeEnabled();
+    expect(submit).not.toHaveAttribute("aria-disabled");
     await user.click(submit);
     expect(await screen.findByRole("complementary", { name: "Score" })).toBeInTheDocument();
     expect(submitResponse).toHaveBeenCalledTimes(2);

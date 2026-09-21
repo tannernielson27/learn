@@ -84,8 +84,15 @@ export function QuestionShell({
     scorePanel.current?.focus();
   }, [score]);
 
+  // aria-disabled is advisory: the browser still fires click (and Enter and Space) on the button,
+  // so this is what actually keeps an incomplete or in-flight answer from being sent.
+  const blocked = !canSubmit || submitting;
+  const reasonId = useId();
+  // The reason is only rendered when there is no error in its place, so only then is it pointed to.
+  const showReason = !submitError && !canSubmit;
+
   const submit = () => {
-    if (submitting) return;
+    if (blocked) return;
     focusScore.current = true;
     onSubmit?.();
   };
@@ -140,14 +147,21 @@ export function QuestionShell({
               <p role="alert" className="text-sm text-incorrect">
                 {submitError}
               </p>
-            ) : !canSubmit ? (
-              <span className="text-sm text-ink-2">Complete the item to submit.</span>
+            ) : showReason ? (
+              <span id={reasonId} className="text-sm text-ink-2">
+                Complete the item to submit.
+              </span>
             ) : null}
+            {/* aria-disabled, never disabled (#59): a disabled button cannot take focus, so a
+                screen reader never reaches the reason beside it. It stays focusable, says it is
+                unavailable, is described by the reason, and `submit` ignores the press. The
+                aria-disabled: classes repeat Button's disabled: look so nothing moves visually. */}
             <Button
               variant="primary"
-              disabled={!canSubmit}
-              // aria-disabled, not disabled, while checking: the button keeps focus and its name.
-              aria-disabled={submitting ? true : undefined}
+              type="button"
+              aria-disabled={blocked ? true : undefined}
+              aria-describedby={showReason ? reasonId : undefined}
+              className="aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
               onClick={submit}
             >
               {submitting ? "Checking your answer" : "Submit"}
