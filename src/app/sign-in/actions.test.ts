@@ -2,21 +2,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEMO_UNAVAILABLE } from "@/lib/auth/demoAccount";
 import { SIGN_IN_EMAIL_ERROR } from "@/lib/auth/signInForm";
 import {
-  SIGN_IN_ADDRESS_LIMIT,
+  SIGN_IN_ADDRESS_LIMITS,
   SIGN_IN_LIMITS,
   SIGN_IN_RATE_LIMITED,
 } from "@/lib/auth/signInRateLimit";
 
-const SEND_FAILED = "The email could not be sent just now. Try again in a moment.";
-
 /**
- * The Server Functions are thin: they read the request, count it against the two limits and hand
- * the rest to src/lib. What is worth pinning here is that wiring — that each path counts against
- * its own limit before it reaches Supabase, and that a normal sign-in is untouched.
+ * The Server Functions are thin: they read the request, count it against the three limits and
+ * hand the rest to src/lib. What is worth pinning here is that wiring — that each path counts
+ * against its own limit before it reaches Supabase, and that a normal sign-in is untouched.
  *
  * The other thing pinned here is what #139 turns on: the result the caller sees must not say
- * whether an address has an account. So several of these tests assert not what one path returns
- * but that two paths return the same thing.
+ * whether an address has an account. So most of these tests assert not what one path returns but
+ * that two paths return the same thing — and the counters are checked through `signInWithOtp`,
+ * which is the only place a refusal shows at all.
  */
 
 const requestHeaders = new Headers({
@@ -66,8 +65,10 @@ function newRecipient(): string {
   return `nurse${recipient}@school.edu`;
 }
 
-/** The action logs a real failure and nothing else. Silenced, and asserted on where it matters. */
+/** The action logs every Supabase failure and nothing else. Silenced, asserted where it matters. */
 const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+/** And warns, address-free, when the deployment-wide ceiling refuses. */
+const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
 
 let inbox = "";
 
@@ -115,12 +116,6 @@ describe("requestSignInLink", () => {
     const result = await requestSignInLink({ status: "idle" }, emailForm(inbox));
     expect(result).toEqual({ status: "sent", email: inbox });
   });
-
-  it("says the same thing when Supabase's own limit is what refused", async () => {
-    signInWithOtp.mockResolvedValueOnce({ error: { status: 429 } });
-    const result = await requestSignInLink({ status: "idle" }, emailForm(inbox));
-    expect(result).toEqual({ status: "error", error: SIGN_IN_RATE_LIMITED });
-  });
 });
 
 /**
@@ -128,76 +123,133 @@ describe("requestSignInLink", () => {
  * defended is that the caller cannot tell them apart.
  */
 describe("requestSignInLink does not say which addresses have accounts", () => {
-  it("answers an address with no account exactly as an address with one", async () => {
+  /**
+   * Every answer Supabase can give, and one it cannot: the caller must not tell them apart, so
+   * the test does not name the cases either — it asserts they all come back the same.
+   */
+  const supabaseAnswers = [
+    ["a link really sent", null],
+    ["an address with no account", { status: 422, code: "otp_disabled" }],
+    ["the same, from a GoTrue that answers without a code", { status: 422, code: undefined }],
+    ["a code nobody has seen before", { status: 422, code: "otp_disabled_v2" }],
+    ["Supabase's own per-address limit", { status: 429, code: "over_email_send_rate_limit" }],
+    ["an outage", { status: 500, code: "unexpected_failure" }],
+  ] as const;
+
+  it.each(supabaseAnswers)("answers %s exactly as every other", async (_name, error) => {
+    const to = newRecipient();
+    if (error) signInWithOtp.mockResolvedValueOnce({ error: { ...error } });
+    const result = await requestSignInLink({ status: "idle" }, emailForm(to));
+    expect(result).toEqual({ status: "sent", email: to });
+    // Every one of them reached Supabase, so they are alike in work done as well as in answer.
+    expect(signInWithOtp).toHaveBeenCalledTimes(1);
+  });
+
+  it("holds even if GoTrue renames the no-account code, because nothing reads it", async () => {
+    // `AuthError.code` is typed `ErrorCode | (string & {})`, so a rename would compile and a
+    // function that recognised the old name would quietly stop recognising it. Nothing here
+    // recognises anything, so there is nothing to go stale.
     const known = await requestSignInLink({ status: "idle" }, emailForm(inbox));
-
     const stranger = newRecipient();
-    signInWithOtp.mockResolvedValueOnce({
-      error: { status: 422, code: "otp_disabled", message: "Signups not allowed for otp" },
-    });
+    signInWithOtp.mockResolvedValueOnce({ error: { status: 400, code: "renamed_one_day" } });
     const unknown = await requestSignInLink({ status: "idle" }, emailForm(stranger));
-
-    expect(unknown).toEqual({ status: "sent", email: stranger });
-    // Identical but for the address the caller typed back at themselves.
     expect({ ...unknown, email: "" }).toEqual({ ...known, email: "" });
-    // Both made the same call to Supabase, so the two are alike in work done as well as answer.
-    expect(signInWithOtp).toHaveBeenCalledTimes(2);
-    // And nothing was written down: a log of unknown addresses is the list a prober wanted.
-    expect(logged).not.toHaveBeenCalled();
   });
 
-  it("recognises the refusal from a GoTrue old enough to answer without a code", async () => {
-    signInWithOtp.mockResolvedValueOnce({
-      error: { status: 422, message: "Signups not allowed for otp" },
-    });
-    const result = await requestSignInLink({ status: "idle" }, emailForm(inbox));
-    expect(result).toEqual({ status: "sent", email: inbox });
-    expect(logged).not.toHaveBeenCalled();
+  it("logs every Supabase failure with its status and code, and never the address", async () => {
+    signInWithOtp.mockResolvedValueOnce({ error: { status: 500, code: "unexpected_failure" } });
+    await requestSignInLink({ status: "idle" }, emailForm(inbox));
+
+    expect(logged).toHaveBeenCalledTimes(1);
+    const line = JSON.stringify(logged.mock.calls[0]);
+    expect(line).toContain("unexpected_failure");
+    expect(line).toContain("500");
+    expect(line).not.toContain(inbox);
   });
 
-  it("stops mailing one address past its budget, and tells the caller nothing about it", async () => {
-    fromNewAddress();
+  it("writes nothing to the log when the link really was sent", async () => {
+    await requestSignInLink({ status: "idle" }, emailForm(inbox));
+    expect(logged).not.toHaveBeenCalled();
+    expect(warned).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The lockout half of #139, found in review. One caller must not be able to stop a named person
+ * signing in, and the ceiling that does bound a distributed flood must be visible to an operator
+ * without naming who is under it.
+ */
+describe("requestSignInLink limits the caller and the address separately", () => {
+  it("stops one caller past its budget for one address, and says nothing about it", async () => {
     const accepted = await requestSignInLink({ status: "idle" }, emailForm(inbox));
-    for (let call = 1; call < SIGN_IN_ADDRESS_LIMIT.attempts; call += 1) {
-      fromNewAddress();
+    for (let call = 1; call < SIGN_IN_ADDRESS_LIMITS.perCaller.attempts; call += 1) {
       await requestSignInLink({ status: "idle" }, emailForm(inbox));
     }
-    expect(signInWithOtp).toHaveBeenCalledTimes(SIGN_IN_ADDRESS_LIMIT.attempts);
+    expect(signInWithOtp).toHaveBeenCalledTimes(SIGN_IN_ADDRESS_LIMITS.perCaller.attempts);
 
-    // A caller from somewhere else entirely: the budget belongs to the recipient, not the asker.
-    fromNewAddress();
     const refused = await requestSignInLink({ status: "idle" }, emailForm(inbox));
     expect(refused).toEqual(accepted);
     expect(refused).toEqual({ status: "sent", email: inbox });
-    // Refused means refused, though: Supabase was not asked a fourth time.
-    expect(signInWithOtp).toHaveBeenCalledTimes(SIGN_IN_ADDRESS_LIMIT.attempts);
+    // Refused means refused: Supabase was not asked again.
+    expect(signInWithOtp).toHaveBeenCalledTimes(SIGN_IN_ADDRESS_LIMITS.perCaller.attempts);
+    // And silently: nothing is logged for the ordinary case of a caller repeating itself.
+    expect(warned).not.toHaveBeenCalled();
+  });
+
+  it("does not let that caller lock the address's owner out", async () => {
+    // The whole reason the budget is keyed on the pair. Spend it many times over from one
+    // caller, then ask from somewhere else, the way the owner would.
+    for (let call = 0; call < SIGN_IN_ADDRESS_LIMITS.overall.attempts * 3; call += 1) {
+      await requestSignInLink({ status: "idle" }, emailForm(inbox));
+    }
+    expect(signInWithOtp).toHaveBeenCalledTimes(SIGN_IN_ADDRESS_LIMITS.perCaller.attempts);
+
+    fromNewAddress();
+    await requestSignInLink({ status: "idle" }, emailForm(inbox));
+    expect(signInWithOtp).toHaveBeenCalledTimes(SIGN_IN_ADDRESS_LIMITS.perCaller.attempts + 1);
+    expect(warned).not.toHaveBeenCalled();
   });
 
   it("counts one address however it was capitalised or padded", async () => {
     const shouted = ` ${inbox.toUpperCase()} `;
-    for (let call = 0; call < SIGN_IN_ADDRESS_LIMIT.attempts; call += 1) {
-      fromNewAddress();
+    for (let call = 0; call < SIGN_IN_ADDRESS_LIMITS.perCaller.attempts; call += 1) {
       await requestSignInLink({ status: "idle" }, emailForm(call % 2 === 0 ? inbox : shouted));
     }
-    expect(signInWithOtp).toHaveBeenCalledTimes(SIGN_IN_ADDRESS_LIMIT.attempts);
+    expect(signInWithOtp).toHaveBeenCalledTimes(SIGN_IN_ADDRESS_LIMITS.perCaller.attempts);
 
-    fromNewAddress();
     expect(await requestSignInLink({ status: "idle" }, emailForm(shouted))).toEqual({
       status: "sent",
       email: inbox,
     });
-    expect(signInWithOtp).toHaveBeenCalledTimes(SIGN_IN_ADDRESS_LIMIT.attempts);
+    expect(signInWithOtp).toHaveBeenCalledTimes(SIGN_IN_ADDRESS_LIMITS.perCaller.attempts);
   });
 
-  it("still says an outage out loud, and leaves a line in the log to find it by", async () => {
-    signInWithOtp.mockResolvedValueOnce({ error: { status: 500, code: "unexpected_failure" } });
-    const result = await requestSignInLink({ status: "idle" }, emailForm(inbox));
+  it("holds the ceiling against a flood spread over callers, and logs it without the address", async () => {
+    const { perCaller, overall } = SIGN_IN_ADDRESS_LIMITS;
+    for (let call = 0; call < overall.attempts; call += 1) {
+      if (call % perCaller.attempts === 0) fromNewAddress();
+      expect(await requestSignInLink({ status: "idle" }, emailForm(inbox))).toEqual({
+        status: "sent",
+        email: inbox,
+      });
+    }
+    expect(signInWithOtp).toHaveBeenCalledTimes(overall.attempts);
+    expect(warned).not.toHaveBeenCalled();
 
-    expect(result).toEqual({ status: "error", error: SEND_FAILED });
-    expect(logged).toHaveBeenCalledTimes(1);
-    // The status and the code say what broke; the address is nobody's business.
-    expect(JSON.stringify(logged.mock.calls[0])).toContain("unexpected_failure");
-    expect(JSON.stringify(logged.mock.calls[0])).not.toContain(inbox);
+    // One more caller: the ceiling holds, and the answer is still a send.
+    fromNewAddress();
+    expect(await requestSignInLink({ status: "idle" }, emailForm(inbox))).toEqual({
+      status: "sent",
+      email: inbox,
+    });
+    expect(signInWithOtp).toHaveBeenCalledTimes(overall.attempts);
+
+    // Visible to an operator as a count, and to nobody as a name.
+    expect(warned).toHaveBeenCalledTimes(1);
+    const line = JSON.stringify(warned.mock.calls[0]);
+    expect(line).toMatch(/ceilingRefusals/);
+    expect(line).not.toContain(inbox);
+    expect(line).not.toContain(inbox.split("@")[0]);
   });
 });
 

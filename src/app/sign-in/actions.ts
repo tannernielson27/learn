@@ -7,28 +7,12 @@ import type { SignInState } from "@/components/auth/SignInForm";
 import { readDemoAccount, signInToDemo } from "@/lib/auth/demoAccount";
 import { parseSignInForm } from "@/lib/auth/signInForm";
 import {
-  SIGN_IN_RATE_LIMITED,
+  signInAddressCeilingRefusals,
   takeSignInAddress,
   takeSignInAttempt,
 } from "@/lib/auth/signInRateLimit";
 import { siteOrigin } from "@/lib/http/siteOrigin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-const SEND_FAILED = "The email could not be sent just now. Try again in a moment.";
-
-/**
- * What Supabase answers when `shouldCreateUser` is false and the address has no account: GoTrue
- * looks the user up, does not find one, and returns 422 `otp_disabled` ("Signups not allowed for
- * otp") having sent nothing. Matched on the code, which is the stable half of that answer; the
- * sentence is only a fallback for a GoTrue old enough to reply without one.
- *
- * Deliberately this narrow. Every other error is about the deployment or about Supabase, not
- * about the address, so swallowing those too would hide an outage behind "check your email".
- */
-function isAddressWithoutAccount(error: { code?: string; message?: string }): boolean {
-  if (error.code !== undefined) return error.code === "otp_disabled";
-  return error.message === "Signups not allowed for otp";
-}
 
 /** The single answer to every request that was accepted — and to every one quietly refused. */
 function sent(email: string): SignInState {
@@ -39,10 +23,17 @@ function sent(email: string): SignInState {
  * Emails a sign-in link. The link returns to /auth/confirm on this site; Supabase only sends it
  * if that URL is on the project's redirect allow-list, so a forged Host header cannot redirect.
  *
- * Three paths through this function end in the same `sent` result, and that is the whole design
- * (#139): a link really sent, an address whose five-minute budget is already spent, and an
- * address with no account are indistinguishable to the caller. Telling them apart is exactly the
- * account-existence oracle that `shouldCreateUser: false` would otherwise open.
+ * Once the form has been read and the caller counted, every path out of this function is the
+ * same `sent` result, and that is the whole design (#139). A link really sent, an address whose
+ * budget or ceiling is spent, an address with no account, a Supabase outage: the caller cannot
+ * tell any of them from any other. The rule is blunt on purpose — *no* answer from Supabase is
+ * ever shown — because a rule that shows some answers has to decide which, and that decision is
+ * the account-existence oracle. Whether an address has an account is Supabase's to know and
+ * nobody's to ask.
+ *
+ * The cost, stated plainly: a genuine outage now looks to the person like a link that is on its
+ * way. It is visible only in the log below. That is why the log line exists and why it fires on
+ * every failure, not on the ones some function thought worth reporting.
  */
 export async function requestSignInLink(
   _previous: SignInState,
@@ -57,10 +48,23 @@ export async function requestSignInLink(
   const limit = takeSignInAttempt(requestHeaders, "email");
   if (!limit.ok) return { status: "error", error: limit.error };
 
-  // Then the recipient's own budget, spent whoever asked. After the per-IP limit on purpose: a
-  // request already refused above never reaches Supabase, so it must not spend a third party's
-  // budget either. A refusal here is silent — see `takeSignInAddress`.
-  if (!takeSignInAddress(parsed.email)) return sent(parsed.email);
+  // Then the recipient's two counters. After the per-IP limit on purpose: a request already
+  // refused above never reaches Supabase, so it must not spend anything of the recipient's
+  // either. Both refusals are silent — see `takeSignInAddress`.
+  const decision = takeSignInAddress(requestHeaders, parsed.email);
+  if (decision !== "send") {
+    // The ceiling refusing means one address is being asked for from several callers at once,
+    // which is what a lockout campaign looks like and what an operator needs to be able to see.
+    // A running total says that much and no more; the address stays out, because who is being
+    // targeted is exactly what must not leak. A caller merely repeating itself is the ordinary
+    // case and is not worth a line.
+    if (decision === "over-address-ceiling") {
+      console.warn("[sign-in] an address reached the deployment-wide ceiling", {
+        ceilingRefusals: signInAddressCeilingRefusals(),
+      });
+    }
+    return sent(parsed.email);
+  }
 
   const confirmUrl = new URL("/auth/confirm", siteOrigin(requestHeaders));
   confirmUrl.searchParams.set("next", parsed.next);
@@ -74,22 +78,21 @@ export async function requestSignInLink(
     options: { emailRedirectTo: confirmUrl.toString(), shouldCreateUser: false },
   });
 
+  // Every failure goes to the log and none of it to the caller. Unconditional by design: the
+  // alternative is a list of error codes that are safe to show, and that list rots. `otp_disabled`
+  // is the no-account answer today, but `AuthError.code` is typed `ErrorCode | (string & {})`, so
+  // GoTrue renaming it would still compile and would silently reopen the oracle. Nothing here
+  // reads the code to decide what to return, so nothing here can rot that way. 429 is the same
+  // story: Supabase refuses a second link to one address inside sixty seconds, which depends on
+  // the address and so could never have been shown either.
+  //
+  // The address never reaches the log. The status and the code are what say what broke, and an
+  // operator watching for an outage wants those, not a list of who tried to sign in.
   if (error) {
-    // The one error that must leave no trace. An answer of its own here would say "this address
-    // has an account", a worse hole than the flooding being closed, so it gets the answer a real
-    // send gets. No log line either: an unknown address is an ordinary event now, and logging it
-    // would only build the list the prober was after.
-    if (isAddressWithoutAccount(error)) return sent(parsed.email);
-    // Everything else turns on the deployment rather than the address, so it can be said out
-    // loud, and belongs in the server log where an outage is meant to be visible. The address
-    // stays out of the log; the status and the code are what say what broke.
-    console.error("[sign-in] Supabase refused to send a sign-in link", {
+    console.error("[sign-in] Supabase did not send a sign-in link", {
       status: error.status,
       code: error.code,
     });
-    // Supabase's own limit counts this server's address, so its 429 can arrive without this
-    // caller having reached the limit above. One sentence for both, so neither says which.
-    return { status: "error", error: error.status === 429 ? SIGN_IN_RATE_LIMITED : SEND_FAILED };
   }
   return sent(parsed.email);
 }

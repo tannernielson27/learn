@@ -9,6 +9,27 @@ export function uniqueEmail(label: string): string {
 }
 
 /**
+ * The Supabase to create test users on, refused unless it is the local stack.
+ *
+ * `SUPABASE_SECRET_KEY` is the same variable name production uses (`src/lib/supabase/service.ts`),
+ * and `NEXT_PUBLIC_SUPABASE_URL` is the same one the app reads, so a shell or a `.env.local` left
+ * pointing at a hosted project would have this suite creating real accounts on it with a real
+ * service key. A comment is not enough of a guard for a call that writes users, so this checks
+ * the host it is about to write to and stops before the key is used.
+ */
+function localStackUrl(): string {
+  const { hostname } = new URL(SUPABASE_URL);
+  const loopback = hostname === "localhost" || hostname === "[::1]" || /^127\./.test(hostname);
+  if (!loopback) {
+    throw new Error(
+      `refusing to create test users on ${hostname}: these tests use SUPABASE_SECRET_KEY, which ` +
+        `is the same variable production uses. Point NEXT_PUBLIC_SUPABASE_URL at the local stack.`,
+    );
+  }
+  return SUPABASE_URL;
+}
+
+/**
  * Creates the account first, the way the owner creates one.
  *
  * #139 turned `shouldCreateUser` off, so the sign-in form no longer signs anyone up: an address
@@ -21,10 +42,16 @@ export async function createAuthorAccount(
   request: APIRequestContext,
   email: string,
 ): Promise<void> {
+  const url = localStackUrl();
   const secretKey = process.env.SUPABASE_SECRET_KEY;
-  expect(secretKey, "SUPABASE_SECRET_KEY must name the local stack's secret key").toBeTruthy();
-  const created = await request.post(`${SUPABASE_URL}/auth/v1/admin/users`, {
-    headers: { apikey: secretKey!, Authorization: `Bearer ${secretKey!}` },
+  // A plain throw, not `expect(...).toBeTruthy()`: Playwright's matchers are not TypeScript
+  // assertion signatures, so the expect form left `secretKey` possibly undefined and needed two
+  // non-null assertions to compile. This narrows it for real.
+  if (!secretKey) {
+    throw new Error("SUPABASE_SECRET_KEY must name the local stack's secret key");
+  }
+  const created = await request.post(`${url}/auth/v1/admin/users`, {
+    headers: { apikey: secretKey, Authorization: `Bearer ${secretKey}` },
     data: { email, email_confirm: true },
   });
   if (!created.ok()) {
