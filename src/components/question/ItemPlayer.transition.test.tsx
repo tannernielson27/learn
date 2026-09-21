@@ -1,7 +1,7 @@
 // #55: Submit acknowledges the press first and draws the feedback after it. jsdom never paints, so
 // what is checked here is the order React is asked to do the work in; scripts/measure-inp.mjs
 // measures what that order is worth in a browser.
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FIXTURES } from "@/lib/ngn/fixtures";
@@ -46,7 +46,9 @@ describe("ItemPlayer submit priority", () => {
 
     await user.click(screen.getByRole("button", { name: "Submit" }));
 
-    expect(await screen.findByRole("complementary", { name: "Score" })).toHaveFocus();
+    const score = await screen.findByRole("complementary", { name: "Score" });
+    // Focus moves in an effect after the transition commits, which can land after the panel shows.
+    await waitFor(() => expect(score).toHaveFocus());
     expect(transition).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("button", { name: /Submit|Checking/ })).not.toBeInTheDocument();
   });

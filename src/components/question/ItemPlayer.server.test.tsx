@@ -1,6 +1,6 @@
 // ItemPlayer with a server-scored submit: it plays an item that carries no key, and the key and
 // rationale arrive only with the score.
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { FIXTURES } from "@/lib/ngn/fixtures";
@@ -63,7 +63,9 @@ describe("ItemPlayer with server scoring", () => {
     const score = await screen.findByRole("complementary", { name: "Score" });
     expect(score).toHaveTextContent("1");
     expect(score).toHaveTextContent(/fluid overload/);
-    expect(score).toHaveFocus();
+    // The reveal is a transition (#55), and focus moves in an effect after it commits, which can
+    // land after the panel is first found.
+    await waitFor(() => expect(score).toHaveFocus());
   });
 
   it("holds the answer that was sent while the server scores it", async () => {
