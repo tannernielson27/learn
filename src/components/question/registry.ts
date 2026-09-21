@@ -2,6 +2,7 @@ import dynamic from "next/dynamic";
 import type { ComponentType } from "react";
 import type { ItemType } from "@/lib/ngn/schemas";
 import { RendererLoading } from "./RendererLoading";
+import { withLoadRecovery } from "./RendererRecovery";
 import { RULES } from "./rules";
 import type { ItemRendererModule, ItemRendererProps } from "./types";
 
@@ -90,8 +91,54 @@ const renderers: { [T in ItemType]: Lazy<T> } = {
   }),
 };
 
+/*
+ * The same imports again, for a second attempt after a renderer's chunk failed to load. The
+ * `dynamic` components above cannot make one: each is a `React.lazy`, which keeps a rejected load
+ * for the life of the page. `withLoadRecovery` swaps in a fresh `React.lazy` over these instead
+ * (see RendererRecovery.tsx). They name the same modules, so the bundler maps them to the same
+ * chunks; nothing calls them unless a load has failed.
+ */
+const retryLoaders: { [T in ItemType]: () => Promise<Lazy<T>> } = {
+  multiple_choice: () =>
+    import("./multiple_choice/MultipleChoiceItem").then((m) => m.MultipleChoiceItem),
+  multiple_response: () =>
+    import("./multiple_response/MultipleResponseItem").then((m) => m.MultipleResponseItem),
+  multiple_response_grouping: () =>
+    import("./multiple_response_grouping/MultipleResponseGroupingItem").then(
+      (m) => m.MultipleResponseGroupingItem,
+    ),
+  matrix_multiple_choice: () =>
+    import("./matrix_multiple_choice/MatrixMultipleChoiceItem").then(
+      (m) => m.MatrixMultipleChoiceItem,
+    ),
+  matrix_multiple_response: () =>
+    import("./matrix_multiple_response/MatrixMultipleResponseItem").then(
+      (m) => m.MatrixMultipleResponseItem,
+    ),
+  dropdown_cloze: () =>
+    import("./dropdown_cloze/DropdownClozeItem").then((m) => m.DropdownClozeItem),
+  dropdown_rationale: () =>
+    import("./dropdown_rationale/DropdownRationaleItem").then((m) => m.DropdownRationaleItem),
+  dropdown_table: () =>
+    import("./dropdown_table/DropdownTableItem").then((m) => m.DropdownTableItem),
+  highlight_text: () =>
+    import("./highlight_text/HighlightTextItem").then((m) => m.HighlightTextItem),
+  highlight_table: () =>
+    import("./highlight_table/HighlightTableItem").then((m) => m.HighlightTableItem),
+  dragdrop_cloze: () =>
+    import("./dragdrop_cloze/DragdropClozeItem").then((m) => m.DragdropClozeItem),
+  dragdrop_rationale: () =>
+    import("./dragdrop_rationale/DragdropRationaleItem").then((m) => m.DragdropRationaleItem),
+  ordered_response: () =>
+    import("./ordered_response/OrderedResponseItem").then((m) => m.OrderedResponseItem),
+  bowtie: () => import("./bowtie/BowtieItem").then((m) => m.BowtieItem),
+};
+
 function moduleFor<T extends ItemType>(type: T): ItemRendererModule<T> {
-  return { Renderer: renderers[type], ...RULES[type] };
+  return {
+    Renderer: withLoadRecovery<ItemRendererProps<T>>(renderers[type], retryLoaders[type]),
+    ...RULES[type],
+  };
 }
 
 /**
