@@ -53,6 +53,23 @@ GitHub Actions is down, so this branch was verified locally only.
 - [x] Docs updated if the item contract or workflow changed (contract unchanged)
 - [x] PR title follows `type(scope): summary`
 
+## Review round
+
+`code-reviewer`, on the local branch while CI was unavailable. **No CRITICAL, HIGH or MEDIUM.**
+
+It checked the design against spec §3.14 and confirmed nothing in scoring, review or feedback depends on slot position: scoring is zero-one per element id, and feedback marks by id. It also noted that the list-packing itself predates this branch — `withSlot` already kept a lone choice in slot 1 — so this changes only where focus goes, not the data model.
+
+Verified rather than assumed:
+- The focus-on-landing test genuinely observes the moment focus arrives: the effect runs after the commit that updated the slot's `aria-label`, and the listener reads it synchronously, so a stale label would show up as an "empty" name in the recorded list.
+- dnd-kit's `KeyboardSensor` is never registered anywhere — `useTapToPlaceSensors` uses only mouse and touch — so keyboard is always native button activation and always gets the focus move, while drags go through `onDragEnd` and never set it.
+- `DropSlot`'s new `id` is inert for the drag-and-drop cloze (`TokenSentence.tsx` never passes one), and `slotDomId` is namespaced by `useId()`, so two bowties on one page cannot collide.
+- No baseline is affected: `gallery-items.spec.ts` shoots bowtie with zero interaction, and `bowtie-from-bank-scored.png` in `authoring.spec.ts` is an artifact dump, not a comparison.
+- It merges cleanly with the #59 branch; this branch's test change is one hunk appended at the end of the file.
+
+Recorded, not fixed:
+
+- **LOW — a coupling nothing documents.** `ItemPlayer` swallows `onChange` while a submission is pending, and nothing disables the bowtie slots during that window. If a placement were swallowed after setting the focus-move ref, `response` would never change, the effect would never clear the ref, and a later unrelated change could move focus to a stale slot. It cannot happen today, because the ref is set only when a pair has a gap, and `isComplete` requires every pair full before Submit is possible — so any placement during a pending submit is a same-slot swap that never sets the ref. The safety of the focus move therefore depends on `isComplete`'s all-slots-filled rule. If partial submission is ever allowed, re-check this; a comment or regression test tying the two together would make it explicit.
+
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
 https://claude.ai/code/session_016tcmsv8XALsD2G6KRJLYu4
