@@ -94,6 +94,13 @@ Use `Agent` with `isolation: "worktree"` for each parallel story so agents never
 
 Branch protection on `main`: PR required, CI green, one approval (you) — agent reviews are advisory, your approval is the human gate.
 
+### Database tests (pgTAP)
+
+The `db` job runs `pnpm test:db` (`scripts/test-db.mjs`), which is `supabase test db` plus one more check. Run it the same way locally; arguments pass through (`pnpm test:db supabase/tests/database/x.test.sql`).
+
+- **A plan mismatch fails the run (#163).** The wrapper fails on a non-zero exit, on no `Result: PASS`, on `Bad plan`, `No plan found` or `Parse errors`, and on pgTAP's `# Looks like you planned N tests but ran M`. The last one matters because pg_prove treats it as a comment: when every `ok` line was printed, `supabase test db` still reports the file `ok` and the suite `Result: PASS`.
+- **No `rollback to savepoint` inside a pgTAP file unless the plan is re-asserted.** pgTAP keeps its count of tests run in the same transaction as the test, so rolling back to a savepoint also rolls back that count, and `finish()` then reports fewer tests than ran. Prefer a separate file, or build the scenario so it needs no undo (fixture ids of its own, cleaned up by the file's closing `rollback`). If a savepoint is unavoidable, make no assertions between `savepoint` and `rollback to savepoint`, so the count it restores is still right; `pnpm test:db` fails the file otherwise.
+
 ## 7. Repo `CLAUDE.md` (create in Sprint 0)
 
 Contents: stack + versions, folder rules (`lib/ngn` is pure), the item-type triplet convention, test commands, the Definition of Done, design rules summary (no emoji, motion tokens only, 375px first), and "read `docs/01-NGN-ITEM-SPEC.md` before touching any item type."
