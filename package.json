@@ -13,8 +13,9 @@
     "test:coverage": "vitest run --coverage",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build",
+    "check": "pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build && pnpm gallery:closed",
     "prepare": "husky",
+    "gallery:closed": "node scripts/gallery-closed.mjs",
     "e2e": "playwright test",
     "e2e:install": "playwright install chromium",
     "db:types": "node scripts/db-types.mjs"

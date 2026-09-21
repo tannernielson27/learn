@@ -16,7 +16,13 @@ export default defineConfig({
           environment: "node",
           // src/app holds the Server Functions. Only their wiring is tested here — the work
           // itself lives in src/lib — so they stay out of the coverage numbers below.
-          include: ["src/lib/**/*.{test,spec}.ts", "src/app/**/*.{test,spec}.ts"],
+          include: [
+            "src/lib/**/*.{test,spec}.ts",
+            "src/app/**/*.{test,spec}.ts",
+            // src/proxy.ts is route code too, and since #146 it is where the gallery is closed
+            // on production, so it is held to the same bar as the rest of that gate.
+            "src/*.{test,spec}.ts",
+          ],
         },
       },
       {
