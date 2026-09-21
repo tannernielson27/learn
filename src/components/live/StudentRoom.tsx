@@ -17,10 +17,11 @@ import {
   type StudentView,
   type SupabaseParticipant,
 } from "@/lib/liveSupabase/participantTransport";
-import type { AnsweredPayload } from "@/lib/liveSupabase/wire";
+import { createChannelTokenSource } from "@/lib/liveSupabase/channelTokenSource";
+import type { AnsweredPayload, ChannelCredential } from "@/lib/liveSupabase/wire";
 import type { AnyResponse } from "@/lib/ngn/schemas";
 import type { ScoreReveal, SubmitHandler } from "@/lib/ngn/submit";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { createSupabaseChannelClient } from "@/lib/supabase/browser";
 
 export interface StudentRoomProps {
   sessionId: string;
@@ -32,6 +33,11 @@ export interface StudentRoomProps {
   joinedAt: number;
   /** What the server read a moment ago; the first paint, before any socket opens. */
   initial: LiveSessionState;
+  /**
+   * This phone's first Realtime channel token, minted by the page's server render after the
+   * participant cookie was checked (#149). Later ones come from `POST /api/live/channel`.
+   */
+  channel: ChannelCredential;
   /** Injectable so this can be driven without Supabase. The page passes nothing. */
   connect?: () => SupabaseParticipant;
 }
@@ -78,6 +84,7 @@ export function StudentRoom({
   participantId,
   joinedAt,
   initial,
+  channel,
   connect,
 }: StudentRoomProps) {
   const router = useRouter();
@@ -124,9 +131,23 @@ export function StudentRoom({
 
   const room = useRef<SupabaseParticipant | null>(null);
 
+  /**
+   * The first token, held for the life of the page like `me` above. A `router.refresh()` renders
+   * the page again and mints another, but the source below already refreshes its own before it
+   * expires, and swapping it would mean rebuilding the client and the channel with it.
+   */
+  const [firstChannel] = useState(channel);
+
   const dial = useMemo(
-    () => connect ?? (() => createSupabaseParticipant({ client: createSupabaseBrowserClient() })),
-    [connect],
+    () =>
+      connect ??
+      (() =>
+        createSupabaseParticipant({
+          // A client of its own, authorized by the channel token rather than by any Supabase
+          // session: a student has none (#149). See `createSupabaseChannelClient`.
+          client: createSupabaseChannelClient(createChannelTokenSource({ initial: firstChannel })),
+        })),
+    [connect, firstChannel],
   );
 
   useEffect(() => {

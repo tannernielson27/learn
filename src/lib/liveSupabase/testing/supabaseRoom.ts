@@ -31,6 +31,8 @@ import { normalizeSessionCode } from "@/lib/live/sessionCode";
 import type { ConformanceRoom, ConformanceRoomOptions } from "@/lib/live/roomConformance";
 import type { Item } from "@/lib/ngn/schemas";
 import { toItemRow } from "@/lib/supabase/itemRows";
+import { issueChannelToken } from "../channelRoute";
+import { createChannelTokenSource } from "../channelTokenSource";
 import { createSupabaseHost } from "../hostTransport";
 import {
   createSupabaseParticipant,
@@ -41,7 +43,12 @@ import { participantFromCookie, type LiveRouteDeps } from "../routeDeps";
 import { submitSessionResponse } from "../submitRoute";
 import { readParticipantView } from "../viewRoute";
 import { LIVE_ROUTES, type JoinSession, type ParticipantCredentials } from "../wire";
-import { FakeSupabase, createFakeClient, type FakeSessionRow } from "./fakeSupabase";
+import {
+  FAKE_JWT_SECRET,
+  FakeSupabase,
+  createFakeClient,
+  type FakeSessionRow,
+} from "./fakeSupabase";
 
 const ORG_ID = "00000000-0000-0000-0000-0000000131aa";
 const HOST_ID = "00000000-0000-0000-0000-0000000131bb";
@@ -110,8 +117,14 @@ export function createFakeRoom(options: ConformanceRoomOptions): FakeRoom {
 
   const service = createFakeClient(stack, { role: "service" });
   const deps: LiveRouteDeps = { verify: participantFromCookie(service), service };
+  // The channel route signs with the key this stack's Realtime trusts, as production's signs with
+  // the project's (#149).
+  const channelDeps = {
+    ...deps,
+    signingKey: () => ({ alg: "HS256" as const, secret: FAKE_JWT_SECRET }),
+  };
 
-  /** The two real route handlers, behind a real `Request` and a real `Response`. */
+  /** The three real route handlers, behind a real `Request` and a real `Response`. */
   const call = async (path: string, init: RequestInit, jar: CookieJar): Promise<Response> => {
     stack.touch();
     const headers = new Headers(init.headers);
@@ -126,7 +139,9 @@ export function createFakeRoom(options: ConformanceRoomOptions): FakeRoom {
         ? await readParticipantView(request, deps)
         : path === LIVE_ROUTES.submit
           ? await submitSessionResponse(request, deps)
-          : new Response("not found", { status: 404 });
+          : path === LIVE_ROUTES.channel
+            ? await issueChannelToken(request, channelDeps)
+            : new Response("not found", { status: 404 });
     // Everything the participant's process is handed, as bytes, for the payload test to read.
     stack.record({ kind: "http", label: `POST ${path}`, body: await response.clone().text() });
     return response;
@@ -171,10 +186,26 @@ export function createFakeRoom(options: ConformanceRoomOptions): FakeRoom {
       };
     };
 
+  /**
+   * A student's Realtime client, as `StudentRoom` builds it (#149): anonymous, with the channel
+   * token as its `accessToken`. The source starts with nothing, so the first token comes from the
+   * real `POST /api/live/channel` with this browser's cookie — the cookie is checked, then the
+   * token is minted, exactly the order production keeps.
+   */
+  const studentClient = (jar: CookieJar) =>
+    createFakeClient(stack, {
+      role: "anon",
+      accessToken: createChannelTokenSource({
+        initial: { token: "", expiresAt: 0 },
+        fetch: fetchFor(jar),
+        baseUrl: ORIGIN,
+      }),
+    });
+
   const participantWith = (wrap: (join: JoinSession) => JoinSession): SupabaseParticipant => {
     const jar: CookieJar = { token: null };
     return createSupabaseParticipant({
-      client: createFakeClient(stack, { role: "anon" }),
+      client: studentClient(jar),
       join: wrap(joinInto(jar)),
       fetch: fetchFor(jar),
       baseUrl: ORIGIN,
@@ -206,7 +237,7 @@ export function createFakeRoom(options: ConformanceRoomOptions): FakeRoom {
         token: { sessionId: held.session_id, participantId: held.id, secret: held.rejoin_secret },
       };
       return createSupabaseParticipant({
-        client: createFakeClient(stack, { role: "anon" }),
+        client: studentClient(jar),
         fetch: fetchFor(jar),
         baseUrl: ORIGIN,
       });

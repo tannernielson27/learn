@@ -13,6 +13,8 @@
  * `sessions.reveal` is true for the item the room is on, and the server decides that — not the
  * client asking nicely.
  */
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/database.types";
 import type { LiveRefusal } from "@/lib/live";
 import type { SessionMode, SessionStatus } from "@/lib/live";
 import type { ParticipantItem } from "@/lib/live";
@@ -24,7 +26,21 @@ import type { ScoreResult } from "@/lib/ngn/types";
 export const LIVE_ROUTES = {
   view: "/api/live/view",
   submit: "/api/live/submit",
+  channel: "/api/live/channel",
 } as const;
+
+/**
+ * What lets this phone's socket into its own session's private channel (#149): a short-lived
+ * Supabase JWT, and when it stops working in epoch milliseconds.
+ *
+ * Not a participant credential. The httpOnly cookie is still the only thing any route accepts as
+ * "this is participant X"; this token is minted from it, after it has been checked, and is only
+ * ever presented to Realtime. See `src/lib/supabase/channelToken.ts`.
+ */
+export interface ChannelCredential {
+  token: string;
+  expiresAt: number;
+}
 
 /**
  * What a join has to hand back, and the whole of what this adapter needs from it.
@@ -136,4 +152,28 @@ export const LIVE_SCHEMA = "live";
 /** The Realtime topic one session's participants and hosts share. */
 export function liveTopic(sessionId: string): string {
   return `live:${sessionId}`;
+}
+
+/**
+ * Hands Realtime this client's current token, and waits until it has it. Call before subscribing
+ * to a private channel (#149).
+ *
+ * Not optional, and found the hard way against the local stack: supabase-js fetches a client's
+ * token asynchronously after the client is built, and a channel subscribed before that lands joins
+ * with the publishable key's default token instead. On a private channel that is a refusal — and
+ * the socket's automatic rejoins keep presenting the same stale token, so it never recovers on its
+ * own. `setAuth()` with no argument asks the client's own source: the channel token for a
+ * student, the signed-in session for a host.
+ *
+ * A failure here is not thrown. The subscribe that follows is what reports whether the socket got
+ * in, through the status every caller already handles.
+ */
+export async function presentRealtimeToken(
+  client: Pick<SupabaseClient<Database>, "realtime">,
+): Promise<void> {
+  try {
+    await client.realtime.setAuth();
+  } catch {
+    // Reported by the subscribe that follows, as CHANNEL_ERROR.
+  }
 }

@@ -29,10 +29,15 @@
  * 3. **This one.** The token is a random secret the database issued and can revoke, and it names
  *    nothing but one participant in one session. It is checked by `resume_participant`, which is
  *    granted to `service_role` alone and returns a participant's own name and their session's
- *    status and title — no item set, no answer key, no other session, no authoring table. A
- *    student's browser never holds a Supabase credential of any kind, so there is no surface on
- *    which "can it read an authoring table?" is even a question: the answer is that it cannot
- *    reach the Data API at all. No new environment variable, and nothing new for an owner to set.
+ *    status and title — no item set, no answer key, no other session, no authoring table. No
+ *    new environment variable, and nothing new for an owner to set.
+ *
+ *    Since #149 a student's browser does hold one Supabase credential, and it is derived from
+ *    this token rather than competing with it: a thirty-minute Realtime JWT, role `anon`, naming
+ *    this token's session, minted only after `resume_participant` has matched this cookie. It
+ *    opens that session's private channel and nothing else, and no route accepts it as proof of
+ *    anything. This cookie is still the only participant identity. See
+ *    `src/lib/supabase/channelToken.ts` for why the channel needs it and what it costs.
  *
  * The residual risk is the ordinary one for any bearer token: whoever holds it is that
  * participant. It is httpOnly (so script on the page cannot read it), Secure off localhost,

@@ -5,6 +5,7 @@ import { StudentRoom } from "@/components/live/StudentRoom";
 import { isUuid } from "@/lib/authoring/ids";
 import { PARTICIPANT_COOKIE, parseParticipantToken } from "@/lib/live/participantToken";
 import { JOIN_PATH } from "@/lib/live/routes";
+import { mintChannelToken, readChannelSigningKey } from "@/lib/supabase/channelToken";
 import { resumeParticipant } from "@/lib/supabase/participants";
 import { readPublicSessionState } from "@/lib/supabase/sessions";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -46,6 +47,15 @@ export default async function PlaySessionPage({ params }: PageProps<"/play/[sess
   const state = await readPublicSessionState(service, sessionId);
   if (!state) redirect(JOIN_PATH);
 
+  // #149: the token this phone's socket opens the session's private channel with. Minted only
+  // here, after `resume_participant` has matched the cookie, and only for the session and the
+  // participant it matched — so it says nothing the cookie did not already prove. It is not a
+  // credential any route accepts; Realtime is its only reader.
+  const channel = mintChannelToken(
+    { sessionId, participantId: participant.participantId },
+    readChannelSigningKey(),
+  );
+
   return (
     <main className="mx-auto w-full max-w-lg flex-1 px-4 py-12">
       <StudentRoom
@@ -57,6 +67,7 @@ export default async function PlaySessionPage({ params }: PageProps<"/play/[sess
         // join time could choose its place at the front of the class.
         joinedAt={participant.joinedAt}
         initial={state}
+        channel={channel}
       />
     </main>
   );

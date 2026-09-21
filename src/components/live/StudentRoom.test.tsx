@@ -27,6 +27,8 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
 const SATA = itemSchema.parse(FIXTURES.multiple_response.canonical);
 const KEYLESS = toKeylessItem(SATA) as ParticipantItem;
+/** Never presented: these tests inject the transport, so no Realtime client is built. */
+const CHANNEL = { token: "channel-token", expiresAt: 0 };
 const CORRECT: AnyResponse = {
   type: "multiple_response",
   optionIds: ["opt_a", "opt_b", "opt_d"],
@@ -121,6 +123,7 @@ function setup(
       participantId="00000000-0000-4000-8000-0000000132bb"
       joinedAt={1000}
       initial={initial}
+      channel={CHANNEL}
       connect={() => room.transport}
     />,
   );
@@ -224,6 +227,7 @@ describe("StudentRoom: waiting", () => {
         participantId="00000000-0000-4000-8000-0000000132bb"
         joinedAt={1000}
         initial={state()}
+        channel={CHANNEL}
         connect={() => room.transport}
       />,
     );

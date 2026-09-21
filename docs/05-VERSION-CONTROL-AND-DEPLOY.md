@@ -206,8 +206,10 @@ Run from the repo root, on a machine with the repo checked out. Steps 1–2 and 
    - `NEXT_PUBLIC_SUPABASE_URL` = `https://<prod-ref>.supabase.co`
    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` = the `sb_publishable_…` key from Project Settings → API Keys (never the `sb_secret_…` one)
    - `DEMO_ACCOUNT_EMAIL` / `DEMO_ACCOUNT_PASSWORD` = the user from step 5
+   - `SUPABASE_JWT_SIGNING_KEY` = this project's JWT signing key (#149; `.env.example` says which key and where). Server only. The Preview scope needs its own, from the preview project.
      Leave the Preview scope pointing at `vauokqoyvewtzubqajgh`, with `DEMO_ACCOUNT_*` empty there.
 7. **Redeploy and check.** Vercel → Deployments → latest production → Redeploy (env vars only apply to a new build). Then open `/api/health` on the production URL and on any preview URL: two different `project` refs, both `"supabase": "ok"`.
+8. **Make Realtime private-only (#149), once the private-channel code is deployed.** Dashboard → Realtime → Settings → turn **Allow public access** off, in both projects. Every live-session channel is private from #149 on; this makes Realtime refuse a public channel on any topic. Never add `live` to the Data API's exposed schemas while you are in the dashboard: that is what keeps `live.session_public_state` unlistable.
 
 ### 7.4 Catching an existing project up
 

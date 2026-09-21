@@ -107,6 +107,7 @@ function phone(views: ParticipantViewPayload[] = [LOBBY]) {
     /** Resumes and brings the socket up, the way the fake stack would. */
     async enter(): Promise<StudentView> {
       const opened = transport.resume(ME);
+      await socket.subscribed();
       socket.emit("SUBSCRIBED");
       return opened;
     },
@@ -128,6 +129,30 @@ describe("resuming a room a phone is already in", () => {
       { status: "connecting", rejoined: false },
       { status: "live", rejoined: false },
     ]);
+  });
+
+  it("opens the session's channel as a private one (#149)", async () => {
+    const live = phone();
+    await live.enter();
+    expect(live.socket.options).toMatchObject({
+      config: { private: true, presence: { key: ME.participantId } },
+    });
+  });
+
+  it("hands Realtime its token before it subscribes, not after (#149)", async () => {
+    // Subscribing first joins with the publishable key's default token, which a private channel
+    // refuses — and the socket's own rejoins keep presenting it. See `presentRealtimeToken`.
+    const live = phone();
+    await live.enter();
+    expect(live.socket.order).toEqual(["setAuth", "subscribe"]);
+  });
+
+  it("opens nothing when it is left while the token is still being fetched", async () => {
+    const live = phone();
+    const opening = live.transport.resume(ME);
+    await live.transport.leave();
+    await expect(opening).rejects.toMatchObject({ code: "not_joined" });
+    expect(live.socket.channels).toBe(0);
   });
 
   it("subscribes to the mirror in the schema the Data API cannot serve", async () => {
@@ -231,6 +256,7 @@ describe("a socket that drops", () => {
     const live = phone();
     // The socket fails before it ever subscribes, so nothing read the room.
     const opening = live.transport.resume(ME);
+    await live.socket.subscribed();
     live.socket.emit("CHANNEL_ERROR");
     await expect(opening).rejects.toThrow();
     expect(live.asks()).toBe(0);
@@ -279,7 +305,9 @@ function fakeSocket() {
   const changes: ((message: { new: Record<string, unknown> }) => void)[] = [];
   const syncs: (() => void)[] = [];
   const tracked: Record<string, unknown>[] = [];
+  const order: string[] = [];
   let topic = "";
+  let options: unknown = undefined;
   let channels = 0;
 
   const channel = {
@@ -296,6 +324,7 @@ function fakeSocket() {
       return channel;
     },
     subscribe(callback: (status: string) => void) {
+      order.push("subscribe");
       listeners.push(callback);
       return channel;
     },
@@ -308,18 +337,30 @@ function fakeSocket() {
   };
 
   const client = {
-    channel(name: string) {
+    channel(name: string, given?: unknown) {
       topic = name;
+      options = given;
       channels += 1;
       return channel;
     },
     removeChannel: vi.fn(async () => "ok" as const),
+    realtime: {
+      setAuth: vi.fn(async () => {
+        order.push("setAuth");
+      }),
+    },
   } as unknown as SupabaseClient<Database>;
 
   return {
     client,
     bindings,
     tracked,
+    order,
+    get options() {
+      return options;
+    },
+    /** Waits for the transport to subscribe, which it does only once its token is in. */
+    subscribed: () => vi.waitFor(() => expect(listeners.length).toBeGreaterThan(0)),
     get topic() {
       return topic;
     },

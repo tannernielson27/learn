@@ -58,6 +58,7 @@ import {
   LIVE_ROUTES,
   LIVE_SCHEMA,
   liveTopic,
+  presentRealtimeToken,
   type AnsweredPayload,
   type JoinSession,
   type ParticipantCredentials,
@@ -119,7 +120,10 @@ export interface SupabaseParticipant extends LiveSessionTransport {
 }
 
 export interface ParticipantTransportOptions {
-  /** The browser client, holding the publishable key. Used for its channel and nothing else. */
+  /**
+   * The browser client, holding the publishable key and — since #149 — an `accessToken` callback
+   * that answers with this participant's channel token. Used for its channel and nothing else.
+   */
   client: SupabaseClient<Database>;
   /** #129's join path. Only `join` needs it; a resumed phone has already been through it. */
   join?: JoinSession;
@@ -290,9 +294,17 @@ export function createSupabaseParticipant(
     for (const listener of [...connections]) listener(status, rejoined);
   }
 
-  function openChannel(sessionId: string, entry: PresenceEntry): Promise<void> {
+  async function openChannel(sessionId: string, entry: PresenceEntry): Promise<void> {
+    await presentRealtimeToken(options.client);
+    // A `leave` that landed while the token was being fetched: opening now would leave a channel
+    // behind that nobody will ever remove.
+    if (gone) throw new LiveSessionError("not_joined");
     const opened = options.client.channel(liveTopic(sessionId), {
-      config: { presence: { key: entry.participantId } },
+      // Private (#149): Realtime checks this socket's token against the `realtime.messages`
+      // policies before it lets it in, so only a phone the server vouched for — for this session
+      // and no other — hears the roster or can put a name in it. The token is the client's
+      // `accessToken`; see `channelTokenSource.ts`.
+      config: { private: true, presence: { key: entry.participantId } },
     });
     channel = opened;
     opened.on(

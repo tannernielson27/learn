@@ -37,7 +37,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import { fromItemRow } from "@/lib/supabase/itemRows";
 import { endSession } from "@/lib/supabase/sessions";
 import { rosterFrom, type PresenceEntry } from "./presence";
-import { LIVE_SCHEMA, liveTopic } from "./wire";
+import { LIVE_SCHEMA, liveTopic, presentRealtimeToken } from "./wire";
 
 const ITEM_COLUMNS = "type, cjmm_step, tags, version, content, answer_key, rationale, scoring";
 
@@ -87,7 +87,11 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
    * promise settled would drop whatever happened in between.
    */
   // A host watches the roster and is never in it, so it subscribes and never tracks.
-  const channel = client.channel(liveTopic(sessionId));
+  //
+  // Private (#149), like every participant's: one topic is one kind of channel. The host needs no
+  // minted token for it — their own Supabase session is already a JWT, and the `realtime.messages`
+  // policy lets a signed-in author into a session their org can read.
+  const channel = client.channel(liveTopic(sessionId), { config: { private: true } });
 
   channel.on(
     "postgres_changes",
@@ -135,18 +139,28 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
    * a console that cannot open at all.
    */
   const ready = new Promise<void>((resolve) => {
-    channel.subscribe((status) => {
-      if (status === "SUBSCRIBED") {
+    // The host's own session token first, or the private channel is joined with the publishable
+    // key's and refused. See `presentRealtimeToken`.
+    void presentRealtimeToken(client).then(() => {
+      // Closed while the token was being fetched: the channel has already been removed, and
+      // subscribing it now would open a socket nobody will ever close.
+      if (closed) {
         resolve();
-        // A rejoin has missed every change made while the socket was down, and Realtime replays
-        // nothing. Re-reading is one indexed query and is what keeps a reconnected console from
-        // showing a room that has moved on. Skipped on the first subscribe, where `open()` is
-        // about to read anyway.
-        if (subscribed) void onStateChanged();
-        subscribed = true;
         return;
       }
-      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") resolve();
+      channel.subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          resolve();
+          // A rejoin has missed every change made while the socket was down, and Realtime replays
+          // nothing. Re-reading is one indexed query and is what keeps a reconnected console from
+          // showing a room that has moved on. Skipped on the first subscribe, where `open()` is
+          // about to read anyway.
+          if (subscribed) void onStateChanged();
+          subscribed = true;
+          return;
+        }
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") resolve();
+      });
     });
   });
 
