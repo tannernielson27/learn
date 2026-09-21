@@ -1,7 +1,7 @@
 "use client";
 
-import { allBlanksFilled, DropdownSentence, withAnswer } from "../dropdown/DropdownSentence";
-import type { ItemRendererModule, ItemRendererProps } from "../types";
+import { DropdownSentence, withAnswer } from "../dropdown/DropdownSentence";
+import type { ItemRendererProps } from "../types";
 
 export function DropdownClozeItem({
   item,
@@ -26,8 +26,3 @@ export function DropdownClozeItem({
     />
   );
 }
-
-export const dropdownClozeModule: ItemRendererModule<"dropdown_cloze"> = {
-  Renderer: DropdownClozeItem,
-  isComplete: (item, response) => allBlanksFilled(item.content.tokens, response.blanks),
-};

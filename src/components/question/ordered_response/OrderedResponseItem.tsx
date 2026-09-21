@@ -19,7 +19,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { presentationOrder } from "@/lib/ngn/presentation";
 import { useSilentDndAccessibility } from "../dndAccessibility";
 import { FeedbackIcon, feedbackLabel } from "../OptionRow";
-import type { ElementFeedback, ItemRendererModule, ItemRendererProps, PlayerMode } from "../types";
+import type { ElementFeedback, ItemRendererProps, PlayerMode } from "../types";
 import { usePrefersReducedMotion } from "../usePrefersReducedMotion";
 
 type Direction = "up" | "down";
@@ -279,12 +279,3 @@ function GripIcon() {
     </svg>
   );
 }
-
-export const orderedResponseModule: ItemRendererModule<"ordered_response"> = {
-  Renderer: OrderedResponseItem,
-  isComplete: (item, response) => response.orderedIds.length === item.content.items.length,
-  explainScore: (item) =>
-    item.content.partial === "position"
-      ? "Each step in its correct position earns a point."
-      : "The whole order must be exact to earn the point.",
-};

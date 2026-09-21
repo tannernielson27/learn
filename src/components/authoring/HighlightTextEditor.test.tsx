@@ -7,6 +7,7 @@ import {
 } from "@/lib/authoring/forms/highlight";
 import { highlightTextItemSchema } from "@/lib/ngn/schemas";
 import { HighlightTextEditor } from "./HighlightTextEditor";
+import { renderersLoaded } from "@/components/question/testing/renderers";
 
 function setup(initialValues: HighlightTextFormValues = emptyHighlightTextForm("ht_new")) {
   const onSaveDraft = vi.fn<(values: HighlightTextFormValues) => Promise<{ ok: boolean }>>(
@@ -56,8 +57,9 @@ describe("HighlightTextEditor", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Select a phrase in the passage first.");
   });
 
-  it("previews each span as a phrase the student can press", () => {
+  it("previews each span as a phrase the student can press", async () => {
     setup(withPassage("[[fever|a]] and [[cough|b]]"));
+    await renderersLoaded();
     const preview = screen.getByRole("region", { name: "Preview" });
     expect(within(preview).getByRole("button", { name: "fever" })).toBeInTheDocument();
     expect(within(preview).getByRole("button", { name: "cough" })).toBeInTheDocument();

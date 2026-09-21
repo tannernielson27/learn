@@ -7,12 +7,14 @@ import { FIXTURES } from "@/lib/ngn/fixtures";
 import { multipleChoiceItemSchema, type AnyResponse } from "@/lib/ngn/schemas";
 import { scoreSubmission, toKeylessItem, type ScoreReveal } from "@/lib/ngn/submit";
 import { ItemPlayer } from "./ItemPlayer";
+import { renderersLoaded } from "@/components/question/testing/renderers";
 
 const item = multipleChoiceItemSchema.parse(FIXTURES.multiple_choice.canonical);
 const keyless = toKeylessItem(item);
 
-function setup(submitResponse: (response: AnyResponse) => Promise<ScoreReveal>) {
+async function setup(submitResponse: (response: AnyResponse) => Promise<ScoreReveal>) {
   render(<ItemPlayer item={keyless} submit={submitResponse} />);
+  await renderersLoaded();
   return userEvent.setup();
 }
 
@@ -21,15 +23,15 @@ async function answerCorrectly(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("ItemPlayer with server scoring", () => {
-  it("plays an item that carries no answer key, rationale or scoring", () => {
+  it("plays an item that carries no answer key, rationale or scoring", async () => {
     expect(keyless).not.toHaveProperty("scoring");
-    setup(vi.fn<(response: AnyResponse) => Promise<ScoreReveal>>());
+    await setup(vi.fn<(response: AnyResponse) => Promise<ScoreReveal>>());
     expect(screen.getByRole("radio", { name: /Auscultate the lungs/ })).toBeInTheDocument();
     expect(screen.queryByRole("complementary", { name: "Score" })).not.toBeInTheDocument();
   });
 
   it("shows the model's rule and the points once the server has scored the answer", async () => {
-    const user = setup(async (response) => scoreSubmission(item, response));
+    const user = await setup(async (response) => scoreSubmission(item, response));
     await answerCorrectly(user);
     await user.click(screen.getByRole("button", { name: "Submit" }));
     const score = await screen.findByRole("complementary", { name: "Score" });
@@ -42,7 +44,7 @@ describe("ItemPlayer with server scoring", () => {
     const submitResponse = vi.fn<(response: AnyResponse) => Promise<ScoreReveal>>(
       () => new Promise<ScoreReveal>((resolve) => (finish = resolve)),
     );
-    const user = setup(submitResponse);
+    const user = await setup(submitResponse);
     await answerCorrectly(user);
     await user.click(screen.getByRole("button", { name: "Submit" }));
     const busy = screen.getByRole("button", { name: "Checking your answer" });
@@ -55,7 +57,7 @@ describe("ItemPlayer with server scoring", () => {
   });
 
   it("shows the server's score and rationale, and moves focus to the score", async () => {
-    const user = setup(async (response) => scoreSubmission(item, response));
+    const user = await setup(async (response) => scoreSubmission(item, response));
     await answerCorrectly(user);
     await user.click(screen.getByRole("button", { name: "Submit" }));
     const score = await screen.findByRole("complementary", { name: "Score" });
@@ -69,7 +71,7 @@ describe("ItemPlayer with server scoring", () => {
     const submitResponse = vi.fn<(response: AnyResponse) => Promise<ScoreReveal>>(
       () => new Promise<ScoreReveal>((resolve) => (finish = resolve)),
     );
-    const user = setup(submitResponse);
+    const user = await setup(submitResponse);
     await answerCorrectly(user);
     await user.click(screen.getByRole("button", { name: "Submit" }));
     // A change mid-check would show one answer beside the score for another.
@@ -81,7 +83,7 @@ describe("ItemPlayer with server scoring", () => {
   });
 
   it("clears a failed check's message once the answer changes", async () => {
-    const user = setup(
+    const user = await setup(
       vi
         .fn<(response: AnyResponse) => Promise<ScoreReveal>>()
         .mockRejectedValue(new TypeError("Failed to fetch")),
@@ -100,7 +102,7 @@ describe("ItemPlayer with server scoring", () => {
       .fn<(response: AnyResponse) => Promise<ScoreReveal>>()
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
       .mockImplementationOnce(async (response) => scoreSubmission(item, response));
-    const user = setup(submitResponse);
+    const user = await setup(submitResponse);
     await answerCorrectly(user);
     await user.click(screen.getByRole("button", { name: "Submit" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -127,6 +129,7 @@ describe("ItemPlayer with server scoring", () => {
         onSubmitted={onSubmitted}
       />,
     );
+    await renderersLoaded();
     await answerCorrectly(user);
     await user.click(screen.getByRole("button", { name: "Submit" }));
     unmount();

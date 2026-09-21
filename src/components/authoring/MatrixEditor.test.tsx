@@ -8,6 +8,7 @@ import {
   matrixMultipleResponseItemSchema,
 } from "@/lib/ngn/schemas";
 import { MatrixEditor } from "./MatrixEditor";
+import { renderersLoaded } from "@/components/question/testing/renderers";
 
 function setup(
   type: "matrix_multiple_choice" | "matrix_multiple_response",
@@ -80,6 +81,7 @@ describe("MatrixEditor", () => {
 
   it("previews the grid with the same player, as it is typed", async () => {
     const { user } = setup("matrix_multiple_choice");
+    await renderersLoaded();
     const preview = screen.getByRole("region", { name: "Preview" });
     await user.type(
       within(screen.getByRole("group", { name: "Row 1" })).getByRole("textbox", {

@@ -11,6 +11,7 @@ import {
   type SubmitHandlerFor,
 } from "@/lib/ngn/submit";
 import { CaseStudyPlayer } from "./CaseStudyPlayer";
+import { renderersLoaded } from "@/components/question/testing/renderers";
 
 /**
  * Six copies of one item, so the flow tests read as a flow. The sample case study, with a
@@ -42,14 +43,16 @@ const finishStep = async () => {
 };
 
 describe("CaseStudyPlayer", () => {
-  it("opens on the first step with the patient's record at hand", () => {
+  it("opens on the first step with the patient's record at hand", async () => {
     render(<CaseStudyPlayer caseStudy={sixSteps} submitFor={scoreInProcess} />);
+    await renderersLoaded();
     expect(stepLine()).toHaveTextContent("Step 1 of 6: Recognize Cues");
     expect(screen.getByRole("complementary", { name: "Patient record" })).toBeInTheDocument();
   });
 
   it("leaves focus alone when it opens, then takes it to each new step", async () => {
     render(<CaseStudyPlayer caseStudy={sixSteps} submitFor={scoreInProcess} />);
+    await renderersLoaded();
     expect(document.activeElement).toBe(document.body);
     await finishStep();
     expect(stepLine()).toHaveTextContent("Step 2 of 6: Analyze Cues");
@@ -63,6 +66,7 @@ describe("CaseStudyPlayer", () => {
 
   it("will not move on until the step has been submitted", async () => {
     render(<CaseStudyPlayer caseStudy={sixSteps} submitFor={scoreInProcess} />);
+    await renderersLoaded();
     expect(next()).toBeNull();
     await userEvent.click(correct());
     expect(next()).toBeNull();
@@ -72,6 +76,7 @@ describe("CaseStudyPlayer", () => {
 
   it("shows a submitted step's answer and score again when the student goes back", async () => {
     render(<CaseStudyPlayer caseStudy={sixSteps} submitFor={scoreInProcess} />);
+    await renderersLoaded();
     await userEvent.click(wrong());
     await userEvent.click(submit());
     await userEvent.click(next()!);
@@ -87,6 +92,7 @@ describe("CaseStudyPlayer", () => {
 
   it("keeps a half-finished answer when the student steps away and comes back", async () => {
     render(<CaseStudyPlayer caseStudy={sixSteps} submitFor={scoreInProcess} />);
+    await renderersLoaded();
     await finishStep();
     // Chosen but deliberately not submitted.
     await userEvent.click(wrong());
@@ -102,6 +108,7 @@ describe("CaseStudyPlayer", () => {
     render(
       <CaseStudyPlayer caseStudy={sixSteps} submitFor={scoreInProcess} onFinished={onFinished} />,
     );
+    await renderersLoaded();
     for (let step = 1; step <= 5; step++) await finishStep();
 
     await userEvent.click(correct());
@@ -130,14 +137,16 @@ describe("CaseStudyPlayer", () => {
     const handler = vi.fn(scoreInProcess(sixSteps.items[0]));
     const submitFor = vi.fn(() => handler);
     render(<CaseStudyPlayer caseStudy={sixSteps} submitFor={submitFor} />);
+    await renderersLoaded();
     await userEvent.click(correct());
     await userEvent.click(submit());
     expect(handler).toHaveBeenCalledTimes(1);
     expect(submitFor).toHaveBeenCalledWith(sixSteps.items[0]);
   });
 
-  it("renders whatever format a step happens to use", () => {
+  it("renders whatever format a step happens to use", async () => {
     render(<CaseStudyPlayer caseStudy={sample} submitFor={scoreInProcess} />);
+    await renderersLoaded();
     expect(stepLine()).toHaveTextContent("Step 1 of 6: Recognize Cues");
     // The sample opens on a highlight item, which ItemPlayer renders unchanged.
     expect(screen.getByRole("button", { name: /sudden shortness of breath/ })).toBeInTheDocument();
@@ -148,6 +157,7 @@ describe("CaseStudyPlayer", () => {
     render(
       <CaseStudyPlayer caseStudy={sixSteps} submitFor={scoreInProcess} onFinished={onFinished} />,
     );
+    await renderersLoaded();
     for (let step = 1; step <= 6; step++) await finishStep();
     expect(onFinished).toHaveBeenCalledTimes(1);
 
@@ -162,10 +172,12 @@ describe("CaseStudyPlayer", () => {
     const { rerender } = render(
       <CaseStudyPlayer caseStudy={sixSteps} submitFor={scoreInProcess} />,
     );
+    await renderersLoaded();
     await finishStep();
     expect(stepLine()).toHaveTextContent("Step 2 of 6");
 
     rerender(<CaseStudyPlayer caseStudy={sample} submitFor={scoreInProcess} />);
+    await renderersLoaded();
     expect(stepLine()).toHaveTextContent("Step 1 of 6: Recognize Cues");
     expect(next()).toBeNull();
   });
@@ -180,10 +192,11 @@ describe("CaseStudyPlayer", () => {
       return scoreSubmission(full, response);
     };
 
-    it("plays six steps whose items carry no answer key", () => {
+    it("plays six steps whose items carry no answer key", async () => {
       expect(keyless.items).toHaveLength(6);
       for (const item of keyless.items) expect(item).not.toHaveProperty("answerKey");
       render(<CaseStudyPlayer caseStudy={keyless} submitFor={serverScores} />);
+      await renderersLoaded();
       expect(stepLine()).toHaveTextContent("Step 1 of 6: Recognize Cues");
       expect(correct()).toBeInTheDocument();
       // Nothing is marked before the step has been answered.
@@ -192,6 +205,7 @@ describe("CaseStudyPlayer", () => {
 
     it("hands the renderer the key that came back with that step's score", async () => {
       render(<CaseStudyPlayer caseStudy={keyless} submitFor={serverScores} />);
+      await renderersLoaded();
       await userEvent.click(wrong());
       await userEvent.click(submit());
       // Marks a keyless item could not produce on its own: they came back with the score.
@@ -202,6 +216,7 @@ describe("CaseStudyPlayer", () => {
     it("asks the handler only for the step the student is on", async () => {
       const submitFor = vi.fn(serverScores);
       render(<CaseStudyPlayer caseStudy={keyless} submitFor={submitFor} />);
+      await renderersLoaded();
       await userEvent.click(correct());
       await userEvent.click(submit());
       // Every item the handler is built for is keyless: no key is in the page for any step.
@@ -211,6 +226,7 @@ describe("CaseStudyPlayer", () => {
 
     it("still shows a step's marks when the student walks back into it", async () => {
       render(<CaseStudyPlayer caseStudy={keyless} submitFor={serverScores} />);
+      await renderersLoaded();
       await userEvent.click(wrong());
       await userEvent.click(submit());
       await userEvent.click(next()!);
@@ -231,6 +247,7 @@ describe("CaseStudyPlayer", () => {
       render(
         <CaseStudyPlayer caseStudy={keyless} submitFor={serverScores} onFinished={onFinished} />,
       );
+      await renderersLoaded();
       for (let step = 1; step <= 6; step++) await finishStep();
       const results = screen.getByRole("region", { name: "Case study results" });
       expect(within(results).getByText(/6 of 6 points/)).toBeInTheDocument();
@@ -246,6 +263,7 @@ describe("CaseStudyPlayer", () => {
 
     it("says what every step is, answered or not, and which are flagged", async () => {
       render(<CaseStudyPlayer caseStudy={sixSteps} submitFor={scoreInProcess} />);
+      await renderersLoaded();
       await userEvent.click(screen.getByRole("button", { name: "Flag step 1" }));
       await finishStep();
       await openReview();
@@ -259,6 +277,7 @@ describe("CaseStudyPlayer", () => {
 
     it("keeps a flag on the step it was put on", async () => {
       render(<CaseStudyPlayer caseStudy={sixSteps} submitFor={scoreInProcess} />);
+      await renderersLoaded();
       await userEvent.click(screen.getByRole("button", { name: "Flag step 1" }));
       await finishStep();
       expect(screen.getByRole("button", { name: "Flag step 2" })).toHaveAttribute(
@@ -274,6 +293,7 @@ describe("CaseStudyPlayer", () => {
 
     it("goes to the step the student picks, and puts focus there", async () => {
       render(<CaseStudyPlayer caseStudy={sixSteps} submitFor={scoreInProcess} />);
+      await renderersLoaded();
       await finishStep();
       await finishStep();
       expect(stepLine()).toHaveTextContent("Step 3 of 6");
@@ -287,6 +307,7 @@ describe("CaseStudyPlayer", () => {
 
     it("closes the list when a step is chosen, so the student is back in the work", async () => {
       render(<CaseStudyPlayer caseStudy={sixSteps} submitFor={scoreInProcess} />);
+      await renderersLoaded();
       await finishStep();
       await openReview();
       await userEvent.click(within(review()).getByRole("button", { name: /Step 1/ }));
@@ -296,6 +317,7 @@ describe("CaseStudyPlayer", () => {
 
     it("closes the list and returns focus to the step when the student picks the open one", async () => {
       render(<CaseStudyPlayer caseStudy={sixSteps} submitFor={scoreInProcess} />);
+      await renderersLoaded();
       await finishStep();
       await openReview();
       await userEvent.click(within(review()).getByRole("button", { name: /Step 2/ }));
@@ -306,6 +328,7 @@ describe("CaseStudyPlayer", () => {
 
     it("offers a way back to the results once they have been reached", async () => {
       render(<CaseStudyPlayer caseStudy={sixSteps} submitFor={scoreInProcess} />);
+      await renderersLoaded();
       for (let step = 1; step <= 6; step++) await finishStep();
       expect(screen.getByRole("region", { name: "Case study results" })).toBeInTheDocument();
 

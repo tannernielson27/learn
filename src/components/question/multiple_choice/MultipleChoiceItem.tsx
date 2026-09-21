@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 import { OptionRow } from "../OptionRow";
-import { elementFeedback, type ItemRendererModule, type ItemRendererProps } from "../types";
+import { elementFeedback, type ItemRendererProps } from "../types";
 
 export function MultipleChoiceItem({
   item,
@@ -35,8 +35,3 @@ export function MultipleChoiceItem({
     </div>
   );
 }
-
-export const multipleChoiceModule: ItemRendererModule<"multiple_choice"> = {
-  Renderer: MultipleChoiceItem,
-  isComplete: (_item, response) => response.optionId !== undefined,
-};

@@ -2,7 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
-import { hasRenderer } from "@/components/question/registry";
+import { hasRenderer } from "@/components/question/rendered";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Button } from "@/components/ui/Button";
 import { SCORING_MODEL_LABELS } from "@/lib/ngn/labels";

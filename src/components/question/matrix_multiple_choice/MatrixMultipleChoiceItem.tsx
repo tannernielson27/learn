@@ -1,7 +1,7 @@
 "use client";
 
 import { Matrix } from "../matrix/Matrix";
-import { elementFeedback, type ItemRendererModule, type ItemRendererProps } from "../types";
+import { elementFeedback, type ItemRendererProps } from "../types";
 
 export function MatrixMultipleChoiceItem({
   item,
@@ -44,9 +44,3 @@ export function MatrixMultipleChoiceItem({
     />
   );
 }
-
-export const matrixMultipleChoiceModule: ItemRendererModule<"matrix_multiple_choice"> = {
-  Renderer: MatrixMultipleChoiceItem,
-  isComplete: (item, response) =>
-    item.content.rows.every((row) => response.rows.some((r) => r.rowId === row.id)),
-};

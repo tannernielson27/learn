@@ -2,7 +2,7 @@
 
 import { Matrix } from "../matrix/Matrix";
 import { rowScorer } from "../rowScore";
-import { elementFeedback, type ItemRendererModule, type ItemRendererProps } from "../types";
+import { elementFeedback, type ItemRendererProps } from "../types";
 
 export function MatrixMultipleResponseItem({
   item,
@@ -54,11 +54,3 @@ export function MatrixMultipleResponseItem({
     />
   );
 }
-
-export const matrixMultipleResponseModule: ItemRendererModule<"matrix_multiple_response"> = {
-  Renderer: MatrixMultipleResponseItem,
-  isComplete: (item, response) =>
-    item.content.rows.every((row) =>
-      response.rows.some((r) => r.rowId === row.id && r.columnIds.length > 0),
-    ),
-};

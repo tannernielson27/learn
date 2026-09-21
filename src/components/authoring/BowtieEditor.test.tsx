@@ -5,6 +5,7 @@ import { emptyBowtieForm, toBowtieForm, type BowtieFormValues } from "@/lib/auth
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { bowtieItemSchema } from "@/lib/ngn/schemas";
 import { BowtieEditor } from "./BowtieEditor";
+import { renderersLoaded } from "@/components/question/testing/renderers";
 
 function setup(initialValues: BowtieFormValues = emptyBowtieForm("bt_new")) {
   const onSaveDraft = vi.fn<(values: BowtieFormValues) => Promise<{ ok: boolean }>>(async () => ({
@@ -54,6 +55,7 @@ describe("BowtieEditor", () => {
     await user.clear(heading);
     await user.type(heading, "Nursing actions");
     expect(screen.getByRole("group", { name: "Nursing actions" })).toBeInTheDocument();
+    await renderersLoaded();
     const preview = screen.getByRole("region", { name: "Preview" });
     expect(
       within(preview).getByRole("group", { name: "Nursing actions choices" }),

@@ -9,6 +9,7 @@ import {
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { highlightTableItemSchema } from "@/lib/ngn/schemas";
 import { HighlightTableEditor } from "./HighlightTableEditor";
+import { renderersLoaded } from "@/components/question/testing/renderers";
 
 function setup(initialValues: HighlightTableFormValues = emptyHighlightTableForm("htb_new")) {
   const onSaveDraft = vi.fn<(values: HighlightTableFormValues) => Promise<{ ok: boolean }>>(
@@ -49,6 +50,7 @@ describe("HighlightTableEditor", () => {
     expect(cell(1, 2)).toHaveValue("[[Dry lips|span_1]]; no rash");
     expect(screen.getByRole("checkbox", { name: "Dry lips is correct" })).toBeInTheDocument();
     // The player renders the table and the phone row cards together, so the phrase appears twice.
+    await renderersLoaded();
     const preview = screen.getByRole("region", { name: "Preview" });
     expect(within(preview).getAllByRole("button", { name: "Dry lips" }).length).toBeGreaterThan(0);
   });

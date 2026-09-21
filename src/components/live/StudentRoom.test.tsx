@@ -20,6 +20,7 @@ import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema, type AnyResponse } from "@/lib/ngn/schemas";
 import { toKeylessItem } from "@/lib/ngn/submit";
 import { StudentRoom } from "./StudentRoom";
+import { renderersLoaded } from "@/components/question/testing/renderers";
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
@@ -165,6 +166,7 @@ describe("StudentRoom: waiting", () => {
     const user = userEvent.setup();
     const room = setup();
     room.push({ state: running(), item: KEYLESS });
+    await renderersLoaded();
     await user.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
 
     // The host pauses to talk through something, then picks up where they left off.
@@ -240,9 +242,10 @@ describe("StudentRoom: waiting", () => {
 });
 
 describe("StudentRoom: answering the item", () => {
-  it("renders the item the room is on, with no answer key anywhere in the markup", () => {
+  it("renders the item the room is on, with no answer key anywhere in the markup", async () => {
     const room = setup();
     room.push({ state: running(), item: KEYLESS });
+    await renderersLoaded();
 
     expect(screen.getByRole("group", { name: "Options" })).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeInTheDocument();
@@ -256,6 +259,7 @@ describe("StudentRoom: answering the item", () => {
     const user = userEvent.setup();
     const room = setup();
     room.push({ state: running(), item: KEYLESS });
+    await renderersLoaded();
 
     await user.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
     await user.click(screen.getByRole("button", { name: /^Submit$/ }));
@@ -276,6 +280,7 @@ describe("StudentRoom: answering the item", () => {
       throw new LiveSessionError("already_answered");
     });
     room.push({ state: running(), item: KEYLESS });
+    await renderersLoaded();
 
     await user.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
     await user.click(screen.getByRole("button", { name: /^Submit$/ }));
@@ -291,6 +296,7 @@ describe("StudentRoom: answering the item", () => {
       throw new LiveSessionError("rate_limited");
     });
     room.push({ state: running(), item: KEYLESS });
+    await renderersLoaded();
 
     await user.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
     await user.click(screen.getByRole("button", { name: /^Submit$/ }));
@@ -300,10 +306,11 @@ describe("StudentRoom: answering the item", () => {
     expect(screen.getByRole("button", { name: /^Submit$/ })).toBeInTheDocument();
   });
 
-  it("comes back to the answer it sent when the page is opened again mid-item", () => {
+  it("comes back to the answer it sent when the page is opened again mid-item", async () => {
     const room = setup();
     // What `/api/live/view` tells a reloaded phone: the item, and what this phone already sent.
     room.push({ state: running(), item: KEYLESS, answered: answeredWith() });
+    await renderersLoaded();
 
     expect(screen.getByTestId("answer-sent")).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeChecked();
@@ -318,6 +325,7 @@ describe("StudentRoom: answering the item", () => {
     });
     const room = setup(state(), async () => inFlight);
     room.push({ state: running(), item: KEYLESS });
+    await renderersLoaded();
 
     await user.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
     await user.click(screen.getByRole("button", { name: /^Submit$/ }));
@@ -350,7 +358,7 @@ describe("StudentRoom: answering the item", () => {
 });
 
 describe("StudentRoom: the reveal", () => {
-  it("shows the key, the rationale and this phone's own marks", () => {
+  it("shows the key, the rationale and this phone's own marks", async () => {
     const room = setup();
     room.push({
       state: running({ reveal: true }),
@@ -358,6 +366,7 @@ describe("StudentRoom: the reveal", () => {
       answered: answeredWith(),
       revealed: revealFor({ points: 3, maxPoints: 3, model: "plus_minus", breakdown: [] }),
     });
+    await renderersLoaded();
 
     expect(screen.getByRole("complementary", { name: "Score" })).toHaveTextContent("3");
     expect(screen.getByText(/Tachypnea, hypoxemia/)).toBeInTheDocument();

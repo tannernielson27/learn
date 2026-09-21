@@ -9,6 +9,7 @@ import {
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { dragdropClozeItemSchema, dragdropRationaleItemSchema } from "@/lib/ngn/schemas";
 import { DragDropEditor } from "./DragDropEditor";
+import { renderersLoaded } from "@/components/question/testing/renderers";
 
 function setup(
   type: "dragdrop_cloze" | "dragdrop_rationale",
@@ -55,8 +56,9 @@ describe("DragDropEditor", () => {
     expect(select).toHaveValue("tok_1");
   });
 
-  it("previews the sentence with its blanks and the word bank the student drags from", () => {
+  it("previews the sentence with its blanks and the word bank the student drags from", async () => {
     setup("dragdrop_cloze", canonicalCloze());
+    await renderersLoaded();
     const preview = screen.getByRole("region", { name: "Preview" });
     expect(
       within(preview).getByRole("button", { name: "Blank 1 of 2, empty" }),
