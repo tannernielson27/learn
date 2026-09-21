@@ -13,7 +13,8 @@ export const metadata: Metadata = { title: "Gallery" };
  * The gate lives here rather than on each page because this layout is the one thing every
  * `/gallery/**` route passes through, which makes a new route gated the moment it is added.
  * `notFound()` rather than a redirect or a message: a 404 does not advertise that the surface
- * exists. `src/app/gallery/gate.test.ts` calls this function to check that it really refuses.
+ * exists. `layout.test.ts` calls this function to check that it really refuses, and
+ * `gate.test.ts` checks that every gallery route goes through it.
  *
  * `await connection()` first, and it is load-bearing. Without it nothing in this segment reaches
  * for a request, so Next prerenders `/gallery/**` at build time and bakes this decision into the
