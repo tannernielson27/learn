@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  SIGN_IN_ADDRESS_LIMIT,
   SIGN_IN_LIMITS,
   SIGN_IN_RATE_LIMITED,
   UNIDENTIFIED_CALLER,
   clientIp,
   createSignInRateLimiter,
+  normalizeSignInAddress,
+  takeSignInAddress,
   takeSignInAttempt,
 } from "./signInRateLimit";
 
@@ -222,5 +225,95 @@ describe("the chosen limits", () => {
 
   it("keeps the shared demo account tighter than the emailed link", () => {
     expect(SIGN_IN_LIMITS.demo.attempts).toBeLessThan(SIGN_IN_LIMITS.email.attempts);
+  });
+});
+
+describe("normalizeSignInAddress", () => {
+  it("folds case and surrounding whitespace", () => {
+    expect(normalizeSignInAddress("  Nurse@School.EDU ")).toBe("nurse@school.edu");
+    expect(normalizeSignInAddress("nurse@school.edu")).toBe("nurse@school.edu");
+  });
+
+  it("stops there, and leaves provider conventions alone", () => {
+    // Sub-addressing and Gmail's dots are conventions of particular mail servers, not rules about
+    // mailboxes. Folding them would let a caller spend an address's budget without naming it.
+    expect(normalizeSignInAddress("nurse+ngn@school.edu")).toBe("nurse+ngn@school.edu");
+    expect(normalizeSignInAddress("n.urse@school.edu")).toBe("n.urse@school.edu");
+  });
+});
+
+describe("the per-address counter", () => {
+  const email = "nurse@school.edu";
+
+  it("allows exactly the address limit in a window, then refuses", () => {
+    const limiter = createSignInRateLimiter();
+    const { attempts } = SIGN_IN_ADDRESS_LIMIT;
+    for (let call = 0; call < attempts; call += 1) {
+      expect(limiter.takeAddress(email, call)).toBe(true);
+    }
+    // A bare false, with no message to show: the caller is never told this happened.
+    expect(limiter.takeAddress(email, attempts)).toBe(false);
+  });
+
+  it("gives one address one budget however it was spelled", () => {
+    const limiter = createSignInRateLimiter();
+    const spellings = ["Nurse@School.edu", " NURSE@SCHOOL.EDU ", "nurse@school.edu"];
+    for (let call = 0; call < SIGN_IN_ADDRESS_LIMIT.attempts; call += 1) {
+      expect(limiter.takeAddress(spellings[call % spellings.length], 0)).toBe(true);
+    }
+    expect(limiter.takeAddress("nUrSe@school.EDU", 0)).toBe(false);
+  });
+
+  it("keeps the recipient's budget apart from the callers' and from other recipients'", () => {
+    const limiter = createSignInRateLimiter();
+    for (let call = 0; call <= SIGN_IN_ADDRESS_LIMIT.attempts; call += 1) {
+      limiter.takeAddress(email, 0);
+    }
+    expect(limiter.takeAddress(email, 0)).toBe(false);
+    expect(limiter.take("203.0.113.7", "email", 0)).toEqual({ ok: true });
+    expect(limiter.takeAddress("charge@school.edu", 0)).toBe(true);
+  });
+
+  it("starts a fresh window once the old one has run out", () => {
+    const limiter = createSignInRateLimiter();
+    const { attempts, windowMs } = SIGN_IN_ADDRESS_LIMIT;
+    for (let call = 0; call <= attempts; call += 1) limiter.takeAddress(email, 0);
+    expect(limiter.takeAddress(email, windowMs - 1)).toBe(false);
+    expect(limiter.takeAddress(email, windowMs)).toBe(true);
+  });
+
+  it("counts the recipient even where the caller is not counted at all", () => {
+    // `take` opts out when nothing identifies the caller. The recipient is known either way, so
+    // this counter has no such exemption.
+    const limiter = createSignInRateLimiter();
+    for (let call = 0; call <= SIGN_IN_ADDRESS_LIMIT.attempts; call += 1) {
+      expect(limiter.take(null, "email", call)).toEqual({ ok: true });
+    }
+    for (let call = 0; call < SIGN_IN_ADDRESS_LIMIT.attempts; call += 1) {
+      expect(limiter.takeAddress(email, call)).toBe(true);
+    }
+    expect(limiter.takeAddress(email, SIGN_IN_ADDRESS_LIMIT.attempts)).toBe(false);
+  });
+});
+
+describe("takeSignInAddress", () => {
+  it("counts one link against the address it would be mailed to", () => {
+    const limiter = createSignInRateLimiter();
+    for (let call = 0; call < SIGN_IN_ADDRESS_LIMIT.attempts; call += 1) {
+      expect(takeSignInAddress("nurse@school.edu", limiter)).toBe(true);
+    }
+    expect(takeSignInAddress("nurse@school.edu", limiter)).toBe(false);
+  });
+});
+
+describe("the chosen per-address limit", () => {
+  it("runs in the same five-minute window as the rest", () => {
+    expect(SIGN_IN_ADDRESS_LIMIT.windowMs).toBe(5 * 60_000);
+  });
+
+  it("holds one inbox far tighter than one network", () => {
+    // One address is one person; one IP can be a whole class. See the comment on the constant.
+    expect(SIGN_IN_ADDRESS_LIMIT.attempts).toBe(3);
+    expect(SIGN_IN_ADDRESS_LIMIT.attempts).toBeLessThan(SIGN_IN_LIMITS.email.attempts);
   });
 });

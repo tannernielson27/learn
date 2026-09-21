@@ -1,7 +1,15 @@
 import { isIP } from "node:net";
 
 /**
- * A per-IP limit on the two sign-in paths (#134).
+ * Two counters on the sign-in paths: one on the caller (#134), one on the recipient (#139).
+ *
+ * The per-IP counter bounds what one caller spends. That is the right limit for what it is for,
+ * but it counts the person asking, not the address being mailed: thirty attempts an IP, from as
+ * many IPs as a script cares to use, is still an inbox full of links nobody asked for. So a
+ * second counter is keyed on the email address itself and is spent whoever asks. #139 also turned
+ * `shouldCreateUser` off, which is the larger half of that fix — an address with no account is
+ * not mailed at all now — and this counter covers what remains: the addresses that do have
+ * accounts.
  *
  * Why not the database, where #111 put the authoring limit: a sign-in runs before there is a
  * session, so a Postgres limiter would have to be callable by `anon` — the publishable key that
@@ -12,21 +20,38 @@ import { isIP } from "node:net";
  * person's. And #111's limiter fails closed, which is why an unapplied migration can refuse every
  * save; the same failure on sign-in would shut everyone out of the site.
  *
- * So the counter lives in the server's own memory. It needs no migration, adds no unauthenticated
- * surface, and cannot be skipped by calling the Server Function directly, because the Server
- * Function is what counts. Two limits to know about:
+ * So both counters live in the server's own memory. They need no migration, add no
+ * unauthenticated surface, and cannot be skipped by calling the Server Function directly, because
+ * the Server Function is what counts. Two limits to know about, and both bite harder on the
+ * per-address counter than on the per-IP one:
  *
  * 1. Vercel's functions share no memory, so a burst spread over several warm instances can spend
- *    the budget once per instance.
+ *    the budget once per instance. On the per-IP counter that only lets a caller spend more of
+ *    their own budget. On the per-address counter it is worse, because the budget being
+ *    multiplied belongs to a third party: N warm instances mean up to N budgets' worth of links
+ *    into somebody else's inbox, and that somebody is not the one doing it.
  * 2. It bounds what any one caller spends of Supabase's auth budget; it does not bound the total.
  *    Supabase sees this server's egress address for every call, so its own per-IP limit is in
  *    effect one bucket shared by everyone using the site, and enough separate callers can still
- *    reach it together. That residual needs a deployment-wide ceiling or a shared store.
+ *    reach it together. That residual needs a deployment-wide ceiling or a shared store. The
+ *    per-address counter narrows the same residual rather than closing it: it bounds what this
+ *    deployment sends to one address, not what every address receives in total, and not what any
+ *    other sender does.
  *
  * Both would be answered by the same change — a shared store behind `createSignInRateLimiter`,
  * which the callers would not notice. What this does fix is the case #134 was filed about: one
  * browser holding down the demo button, which at this site's traffic usually lands on the one
  * warm instance. Vercel promises no such affinity; it routes by capacity, not by caller.
+ *
+ * And one cost the per-address counter carries that the per-IP one does not: a caller who gets
+ * past the per-IP limit can deliberately spend a chosen address's budget and keep its owner
+ * waiting for a link that is never sent — silently, because a refusal here looks exactly like a
+ * send (see `SIGN_IN_ADDRESS_LIMIT`). That is the same weakness the Postgres version was rejected
+ * for above, except that here every spend costs a request that is itself counted against the
+ * caller, and invented addresses land in a map that is bounded and evicted rather than a table
+ * that grows. It is the price of not answering the question "does this address have an account?";
+ * a larger budget would not remove it, only make it cost a few more requests. #139 chose that
+ * trade knowingly.
  *
  * This file assumes Vercel. Off the platform it does nothing at all (see `clientIp`), and the
  * header trust below would have to be revisited before running anywhere else.
@@ -56,14 +81,36 @@ const FIVE_MINUTES = 5 * 60_000;
  * demo 20: one shared account that exists to be demonstrated. A room of visitors on one wifi each
  * clicking once fits inside twenty; a browser holding the button down does not.
  *
- * Both are per address, and the window is fixed rather than sliding, so a caller who waits out a
- * window can spend up to two budgets back to back across the boundary. That is the usual cost of
- * a fixed window and is deliberate — it keeps the counter to one row per caller, as #111's does.
+ * Both are per calling address, and the window is fixed rather than sliding, so a caller who
+ * waits out a window can spend up to two budgets back to back across the boundary. That is the
+ * usual cost of a fixed window and is deliberate — it keeps the counter to one row per caller, as
+ * #111's does.
  */
 export const SIGN_IN_LIMITS = {
   email: { attempts: 30, windowMs: FIVE_MINUTES },
   demo: { attempts: 20, windowMs: FIVE_MINUTES },
 } as const satisfies Record<SignInAction, SignInLimit>;
+
+/**
+ * 3 links to one email address in five minutes, whoever asked (#139).
+ *
+ * Far below the per-IP email budget of 30, and deliberately so: the argument that set 30 was a
+ * class or a campus arriving together behind one address, and that argument does not transfer.
+ * An email address is one person's inbox. One person needs one link — two or three if the first
+ * went to a typo, or if the first is slow enough that they ask again. Past three inside five
+ * minutes nothing honest is happening, and Supabase will not send a second link to the same
+ * address inside sixty seconds in any case, so three requests is already near the most that can
+ * turn into three emails.
+ *
+ * The cost is real and is accepted: somebody who asks a fourth time in the same window is told
+ * their link was sent and gets nothing, because saying otherwise would answer a question about
+ * the address (see `takeSignInAddress`). They will have had three, and the window is five
+ * minutes. Lower than three would meet a frantic "resend" often enough to matter; higher would
+ * buy a flooder another email per window for nothing.
+ *
+ * Fixed window, same as the two above, with the same back-to-back-across-the-boundary cost.
+ */
+export const SIGN_IN_ADDRESS_LIMIT: SignInLimit = { attempts: 3, windowMs: FIVE_MINUTES };
 
 /**
  * The same sentence whichever path tripped and whoever asked: it says nothing about whether an
@@ -120,6 +167,28 @@ export function clientIp(
   return UNIDENTIFIED_CALLER;
 }
 
+/**
+ * The bucket key for an email address: trimmed, and lower-cased.
+ *
+ * `parseSignInForm` already does both before the address gets here, but the counter does its own
+ * so that it cannot be weakened by a caller that forgets. Together they mean `Nurse@School.edu `
+ * and `nurse@school.edu` share one budget instead of each getting a fresh one, which is the whole
+ * point: trivial variations must not each buy another email.
+ *
+ * It stops there, and the reason is that every step further is a guess about somebody else's mail
+ * server. Folding `user+tag@` down to `user@`, or dropping dots from a Gmail local part, would
+ * catch a couple more variations — and would also hand anyone a way to spend an address's budget
+ * without naming it: ask for `victim+1@school.edu` and `victim@school.edu` is the one that goes
+ * quiet. Those rules are provider conventions, not standards, and applying them to a domain that
+ * does not follow them merges two real, different mailboxes. Case and whitespace are safe by
+ * comparison — the domain is case-insensitive by RFC 1035, every mailbox provider in practice
+ * treats the local part that way too, and the sign-in form has already lower-cased what it stores
+ * — so the counter matches what the form does and no more.
+ */
+export function normalizeSignInAddress(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 interface CountedWindow {
   start: number;
   calls: number;
@@ -128,6 +197,13 @@ interface CountedWindow {
 export interface SignInRateLimiter {
   /** Counts one attempt and says whether it is within the limit. */
   take(ip: string | null, action: SignInAction, now?: number): SignInRateLimitResult;
+  /**
+   * Counts one link against the address it would be mailed to, and says whether to send it.
+   *
+   * A bare boolean, not a `SignInRateLimitResult`, and that is the point rather than a shortcut:
+   * there is no message because the caller is never told. See `takeSignInAddress`.
+   */
+  takeAddress(email: string, now?: number): boolean;
   /** How many windows are being tracked. For tests. */
   size(): number;
 }
@@ -139,9 +215,16 @@ export interface SignInRateLimiter {
  */
 export function createSignInRateLimiter(
   limits: Readonly<Record<SignInAction, Readonly<SignInLimit>>> = SIGN_IN_LIMITS,
+  addressLimit: Readonly<SignInLimit> = SIGN_IN_ADDRESS_LIMIT,
 ): SignInRateLimiter {
+  // Callers and recipients share one Map, so there is one bound and one eviction policy to
+  // reason about. The keys cannot collide: an action key is an IP, which `clientIp` has already
+  // checked is an IP, and an address key carries a prefix no action uses.
   const windows = new Map<string, CountedWindow>();
-  const longestWindow = Math.max(...Object.values(limits).map((limit) => limit.windowMs));
+  const longestWindow = Math.max(
+    addressLimit.windowMs,
+    ...Object.values(limits).map((limit) => limit.windowMs),
+  );
 
   function forgetFinished(now: number): void {
     if (windows.size < MAX_TRACKED) return;
@@ -159,25 +242,32 @@ export function createSignInRateLimiter(
     }
   }
 
+  /** Counts one call against `key` and says whether it stayed inside `limit`. */
+  function within(key: string, limit: Readonly<SignInLimit>, now: number): boolean {
+    forgetFinished(now);
+
+    const counted = windows.get(key);
+    if (!counted || now - counted.start >= limit.windowMs) {
+      windows.set(key, { start: now, calls: 1 });
+      return true;
+    }
+
+    // One counter behind a Map key, deliberately mutated in place rather than replaced.
+    counted.calls = Math.min(counted.calls + 1, limit.attempts + 1);
+    return counted.calls <= limit.attempts;
+  }
+
   return {
     take(ip, action, now = Date.now()) {
       if (ip === null) return { ok: true };
-
-      const limit = limits[action];
-      const key = `${action}:${ip}`;
-      forgetFinished(now);
-
-      const counted = windows.get(key);
-      if (!counted || now - counted.start >= limit.windowMs) {
-        windows.set(key, { start: now, calls: 1 });
-        return { ok: true };
-      }
-
-      // One counter behind a Map key, deliberately mutated in place rather than replaced.
-      counted.calls = Math.min(counted.calls + 1, limit.attempts + 1);
-      return counted.calls <= limit.attempts
+      return within(`${action}:${ip}`, limits[action], now)
         ? { ok: true }
         : { ok: false, error: SIGN_IN_RATE_LIMITED };
+    },
+    // The address is the whole key: unlike `take`, there is nothing to opt out of off the
+    // platform, because the recipient does not depend on where the request came from.
+    takeAddress(email, now = Date.now()) {
+      return within(`address:${normalizeSignInAddress(email)}`, addressLimit, now);
     },
     size: () => windows.size,
   };
@@ -199,4 +289,27 @@ export function takeSignInAttempt(
   limiter: SignInRateLimiter = sharedLimiter,
 ): SignInRateLimitResult {
   return limiter.take(clientIp(requestHeaders), action);
+}
+
+/**
+ * Counts one link against the address it would be sent to, and says whether to send it.
+ *
+ * True means send. False means do not — and, the part that matters, say nothing about it.
+ *
+ * `SIGN_IN_RATE_LIMITED` tells a caller something about themselves: you have asked too often from
+ * here. Nobody learns anything about anybody else from that, so saying it costs nothing and the
+ * per-IP path says it. A refusal from this counter is the opposite. Its answer turns on an
+ * address the caller typed and may not own, so any distinguishable response — another message,
+ * another status, another shape — is an oracle: ask once, watch the answer change, and you have
+ * learned that this address is one the site sends to. Alongside `shouldCreateUser: false`, which
+ * makes Supabase itself refuse an address that has no account, a visible refusal here would have
+ * traded an email-flooding bug for an account-existence bug, which is the worse of the two. So
+ * this returns a bare boolean with no message to show, and `app/sign-in/actions.ts` answers a
+ * false exactly as it answers a link that really was sent.
+ */
+export function takeSignInAddress(
+  email: string,
+  limiter: SignInRateLimiter = sharedLimiter,
+): boolean {
+  return limiter.takeAddress(email);
 }
