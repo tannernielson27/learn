@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import type { AnyResponse, Item, ItemOf, ItemType, ResponseOf } from "@/lib/ngn/schemas";
 import { ITEM_TYPE_LABELS } from "@/lib/ngn/labels";
 import { initialResponse as firstResponse } from "@/lib/ngn/presentation";
@@ -133,11 +133,26 @@ export function ItemPlayer({
   const canSubmit =
     rendererShown && rendererModule.isComplete(playerItem, response as ResponseOf<ItemType>);
 
+  // The reveal is a transition (#55). Submit's own acknowledgement, "Checking your answer", is an
+  // urgent update and paints first; the feedback render, and the layout the stagger and the focus
+  // move force on it, follow after that paint. An answer scored in this browser (the gallery, the
+  // authoring preview) resolves inside the click, and without this the whole reveal ran before the
+  // press was drawn: about 70 ms of script at 4x CPU, most of it forced layout. `pending` stays set,
+  // so the answer stays held and a second press sends nothing, until Submit is gone.
   const finish = (checked: ScoreReveal) => {
-    setReveal(toReveal(checked));
-    setResult(checked.score);
-    setMode("feedback");
-    onSubmitted?.(response, checked);
+    startTransition(() => {
+      setReveal(toReveal(checked));
+      setResult(checked.score);
+      setMode("feedback");
+      setSubmitting(false);
+      onSubmitted?.(response, checked);
+    });
+  };
+
+  const fail = () => {
+    pending.current = false;
+    setSubmitting(false);
+    setSubmitError(CHECK_FAILED);
   };
 
   const submit = () => {
@@ -145,21 +160,14 @@ export function ItemPlayer({
     pending.current = true;
     setSubmitting(true);
     setSubmitError(undefined);
-    submitResponse(response)
-      .then(
-        (checked) => {
-          if (!live.current) return;
-          finish(checked);
-        },
-        () => {
-          if (!live.current) return;
-          setSubmitError(CHECK_FAILED);
-        },
-      )
-      .finally(() => {
-        pending.current = false;
-        setSubmitting(false);
-      });
+    submitResponse(response).then(
+      (checked) => {
+        if (live.current) finish(checked);
+      },
+      () => {
+        if (live.current) fail();
+      },
+    );
   };
 
   const Renderer = rendererModule.Renderer;

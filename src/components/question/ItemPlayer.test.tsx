@@ -7,6 +7,7 @@ import { scoreInProcess, toKeylessItem } from "@/lib/ngn/submit";
 import { ItemPlayer, toPlayerItem } from "./ItemPlayer";
 import { RENDERERS } from "./registry";
 import { renderersLoaded } from "@/components/question/testing/renderers";
+import { feedbackShown } from "@/components/question/testing/feedback";
 
 const mc = itemSchema.parse(FIXTURES.multiple_choice.canonical);
 const sata = itemSchema.parse(FIXTURES.multiple_response.canonical);
@@ -36,6 +37,7 @@ describe("ItemPlayer with multiple choice", () => {
     await userEvent.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
     expect(submit).not.toHaveAttribute("aria-disabled");
     await userEvent.click(submit);
+    await feedbackShown();
 
     const score = screen.getByRole("complementary", { name: "Score" });
     expect(within(score).getByText("1")).toBeInTheDocument();
@@ -58,6 +60,7 @@ describe("ItemPlayer with multiple choice", () => {
     await renderersLoaded();
     await userEvent.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await feedbackShown();
     // The submit bar is gone, so focus must go somewhere: the result is where the reader wants it.
     const score = screen.getByRole("complementary", { name: "Score" });
     expect(document.activeElement).toBe(score);
@@ -72,6 +75,7 @@ describe("ItemPlayer with multiple choice", () => {
     await renderersLoaded();
     await userEvent.click(screen.getByRole("radio", { name: /Document the weight/ }));
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await feedbackShown();
     expect(screen.getByText("Incorrect")).toBeInTheDocument();
     expect(screen.getByText("Missed")).toBeInTheDocument();
   });
@@ -85,6 +89,7 @@ describe("ItemPlayer with multiple response", () => {
     await userEvent.click(screen.getByRole("checkbox", { name: /Oxygen saturation 89%/ }));
     await userEvent.click(screen.getByRole("checkbox", { name: /Temperature 37.2/ }));
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await feedbackShown();
     const score = screen.getByRole("complementary", { name: "Score" });
     expect(within(score).getByText("1")).toBeInTheDocument();
     expect(within(score).getByText("/ 3")).toBeInTheDocument();

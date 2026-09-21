@@ -7,6 +7,7 @@ import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer } from "../ItemPlayer";
 import { hasRenderer } from "../registry";
 import { renderersLoaded } from "@/components/question/testing/renderers";
+import { feedbackShown } from "@/components/question/testing/feedback";
 
 const table = itemSchema.parse(FIXTURES.dropdown_table.canonical);
 const grouping = itemSchema.parse(FIXTURES.multiple_response_grouping.canonical);
@@ -77,6 +78,8 @@ describe("drop-down table", () => {
 
     await userEvent.click(submit());
 
+    await feedbackShown();
+
     expect(within(scorePanel()).getByText("2")).toBeInTheDocument();
     expect(within(scorePanel()).getByText("/ 3")).toBeInTheDocument();
     const t = grid();
@@ -131,6 +134,7 @@ describe("multiple response grouping", () => {
       await userEvent.click(within(t).getByRole("checkbox", { name }));
     }
     await userEvent.click(submit());
+    await feedbackShown();
 
     // Respiratory is -1, floored to 0; cardiovascular 2; neurologic 1. Total 3, not 2.
     expect(within(scorePanel()).getByText("3")).toBeInTheDocument();

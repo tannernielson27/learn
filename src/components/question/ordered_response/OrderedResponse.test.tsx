@@ -8,6 +8,7 @@ import { ItemPlayer } from "../ItemPlayer";
 import { hasRenderer } from "../registry";
 import { OrderedResponseItem } from "./OrderedResponseItem";
 import { renderersLoaded } from "@/components/question/testing/renderers";
+import { feedbackShown } from "@/components/question/testing/feedback";
 
 const wholeItem = itemSchema.parse(FIXTURES.ordered_response.canonical);
 const byPosition = itemSchema.parse(FIXTURES.ordered_response.edge);
@@ -101,6 +102,7 @@ describe("ordered response renderer", () => {
     await renderersLoaded();
     await arrange([KEY[1]!, KEY[0]!, KEY[2]!, KEY[3]!, KEY[4]!]);
     await userEvent.click(submit());
+    await feedbackShown();
 
     const panel = scorePanel();
     expect(within(panel).getByText("0")).toBeInTheDocument();
@@ -136,6 +138,7 @@ describe("ordered response renderer", () => {
     await renderersLoaded();
     await arrange(KEY);
     await userEvent.click(submit());
+    await feedbackShown();
     expect(within(scorePanel()).getByText("1")).toBeInTheDocument();
     expect(within(scorePanel()).getByText("/ 1")).toBeInTheDocument();
   });
@@ -150,6 +153,7 @@ describe("ordered response renderer", () => {
       "Cleanse the site and inject",
     ]);
     await userEvent.click(submit());
+    await feedbackShown();
 
     const panel = scorePanel();
     expect(within(panel).getByText("2")).toBeInTheDocument();
