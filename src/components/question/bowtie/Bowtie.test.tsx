@@ -141,4 +141,69 @@ describe("bowtie renderer", () => {
     expect(within(scorePanel()).getByText("5")).toBeInTheDocument();
     expect(screen.queryByText(/^Correct: /)).not.toBeInTheDocument();
   });
+
+  // #58: a pair is stored as a list, so a lone choice always sits in the pair's first slot.
+  it("fills the first slot when the second is chosen, and moves keyboard focus to it", async () => {
+    render(<ItemPlayer item={bowtie} submit={scoreInProcess(bowtie)} />);
+    choice(ACTIONS, ECG).focus();
+    await userEvent.keyboard("{Enter}");
+    // What a screen reader would read at the moment focus arrives, not after.
+    const namesOnFocus: (string | null)[] = [];
+    actionSlot(1).addEventListener("focus", (event) => {
+      namesOnFocus.push((event.target as HTMLElement).getAttribute("aria-label"));
+    });
+    actionSlot(2).focus();
+    await userEvent.keyboard("{Enter}");
+
+    expect(namesOnFocus).toEqual([`${ACTIONS} 1 of 2: ${ECG}`]);
+    expect(actionSlot(1)).toHaveFocus();
+    expect(actionSlot(1)).toHaveAccessibleName(`${ACTIONS} 1 of 2: ${ECG}`);
+    expect(actionSlot(2)).toHaveAccessibleName(`${ACTIONS} 2 of 2, empty`);
+    expect(status()).toHaveTextContent(`${ECG} placed in ${ACTIONS} 1 of 2.`);
+  });
+
+  it("moves focus the same way when the second slot is tapped", async () => {
+    render(<ItemPlayer item={bowtie} submit={scoreInProcess(bowtie)} />);
+    await place(PARAMETERS, TROPONIN, parameterSlot(2));
+
+    expect(parameterSlot(1)).toHaveFocus();
+    expect(parameterSlot(1)).toHaveAccessibleName(`${PARAMETERS} 1 of 2: ${TROPONIN}`);
+    expect(parameterSlot(2)).toHaveAccessibleName(`${PARAMETERS} 2 of 2, empty`);
+  });
+
+  it("leaves focus on the second slot when that is where the choice lands", async () => {
+    render(<ItemPlayer item={bowtie} submit={scoreInProcess(bowtie)} />);
+    await place(ACTIONS, ECG, actionSlot(1));
+    await place(ACTIONS, ASPIRIN, actionSlot(2));
+
+    expect(actionSlot(2)).toHaveFocus();
+    expect(actionSlot(2)).toHaveAccessibleName(`${ACTIONS} 2 of 2: ${ASPIRIN}`);
+    expect(status()).toHaveTextContent(`${ASPIRIN} placed in ${ACTIONS} 2 of 2.`);
+  });
+
+  it("says so when clearing the first slot moves the second choice up", async () => {
+    render(<ItemPlayer item={bowtie} submit={scoreInProcess(bowtie)} />);
+    await place(ACTIONS, ECG, actionSlot(1));
+    await place(ACTIONS, ASPIRIN, actionSlot(2));
+    await userEvent.click(actionSlot(1));
+
+    expect(actionSlot(1)).toHaveFocus();
+    expect(actionSlot(1)).toHaveAccessibleName(`${ACTIONS} 1 of 2: ${ASPIRIN}`);
+    expect(actionSlot(2)).toHaveAccessibleName(`${ACTIONS} 2 of 2, empty`);
+    expect(status()).toHaveTextContent(
+      `${ECG} removed from ${ACTIONS} 1 of 2. ${ASPIRIN} moved to ${ACTIONS} 1 of 2.`,
+    );
+  });
+
+  it("clears the second slot without moving anything", async () => {
+    render(<ItemPlayer item={bowtie} submit={scoreInProcess(bowtie)} />);
+    await place(ACTIONS, ECG, actionSlot(1));
+    await place(ACTIONS, ASPIRIN, actionSlot(2));
+    await userEvent.click(actionSlot(2));
+
+    expect(actionSlot(2)).toHaveFocus();
+    expect(actionSlot(2)).toHaveAccessibleName(`${ACTIONS} 2 of 2, empty`);
+    expect(status()).toHaveTextContent(`${ASPIRIN} removed from ${ACTIONS} 2 of 2.`);
+    expect(status()).not.toHaveTextContent(/moved to/);
+  });
 });
