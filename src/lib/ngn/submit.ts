@@ -24,11 +24,83 @@ import type { ScoreResult } from "./types";
  */
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
+// ---------------------------------------------------------------------------
+// Which item fields carry an answer (#144)
+// ---------------------------------------------------------------------------
+
+/**
+ * Every field name of every member of a union. `keyof` over a union gives only the keys its
+ * members share, and a conditional type distributes only over a naked type parameter — hence the
+ * helper rather than `Item extends unknown ? keyof Item : never` written inline, which would
+ * quietly collapse to the shared keys and classify a fifteenth type's own field as nonexistent.
+ */
+type KeysOfUnion<T> = T extends unknown ? keyof T : never;
+
+/** Every top-level field name the item schemas define, computed from them rather than restated. */
+type ItemFieldName = KeysOfUnion<Item>;
+
+/** What a field may do: reach a student's browser before the reveal, or not. */
+type Visibility = "student_safe" | "answer_bearing";
+
+/**
+ * **The one place that says which item fields carry an answer**, and the source of both halves of
+ * ADR 0003: what `toKeylessItem` copies, and what a score reveals.
+ *
+ * The `satisfies` is the point of the whole file. `ItemFieldName` is computed from the schemas, so
+ * a fifteenth item type that adds a top-level field — a fourth answer-bearing one, or an innocent
+ * one — **fails to compile here** until someone classifies it. That happens when the schema is
+ * written, before the field has anywhere to leak to, which is the difference between this and the
+ * hand-written list it replaces: that list was merely correct, and nothing kept it correct. A key
+ * here that no schema has is rejected the same way, so deleting a field cannot leave a stale entry.
+ */
+const ITEM_FIELD_VISIBILITY = {
+  id: "student_safe",
+  type: "student_safe",
+  version: "student_safe",
+  cjmmStep: "student_safe",
+  tags: "student_safe",
+  difficulty: "student_safe",
+  stem: "student_safe",
+  instructions: "student_safe",
+  content: "student_safe",
+  ehr: "student_safe",
+  meta: "student_safe",
+  answerKey: "answer_bearing",
+  rationale: "answer_bearing",
+  scoring: "answer_bearing",
+} as const satisfies Record<ItemFieldName, Visibility>;
+
+/** The field names the table gives one visibility to. */
+type FieldsWith<V extends Visibility> = {
+  [K in ItemFieldName]: (typeof ITEM_FIELD_VISIBILITY)[K] extends V ? K : never;
+}[ItemFieldName];
+
+/** Today: `answerKey`, `rationale` and `scoring` — but read off the table, not written down. */
+export type AnswerBearingField = FieldsWith<"answer_bearing">;
+type StudentSafeField = FieldsWith<"student_safe">;
+
+const ITEM_FIELD_NAMES = Object.keys(ITEM_FIELD_VISIBILITY) as ItemFieldName[];
+
+/**
+ * The only fields `toKeylessItem` copies. An allow-list rather than a delete-list, so a field the
+ * table has never heard of — an item read from a row an older deploy wrote, say, or one the type
+ * system did not see — is dropped rather than passed through.
+ */
+const STUDENT_SAFE_FIELDS = ITEM_FIELD_NAMES.filter(
+  (name): name is StudentSafeField => ITEM_FIELD_VISIBILITY[name] === "student_safe",
+);
+
+/** What a score reveals. Exported so a test can assert the negative against it, not against names. */
+export const ANSWER_BEARING_FIELDS = ITEM_FIELD_NAMES.filter(
+  (name): name is AnswerBearingField => ITEM_FIELD_VISIBILITY[name] === "answer_bearing",
+);
+
 /**
  * An item as a browser may receive it before its answer is checked: no answer key, no rationale,
- * and no scoring, whose +/- maxPoints is the number of correct answers (#94).
+ * and no scoring, whose +/- maxPoints is the number of correct answers (#94). Which fields those
+ * are comes from the table above, so the type and the function below can never disagree.
  */
-export type KeylessItem = DistributiveOmit<Item, "answerKey" | "rationale" | "scoring">;
+export type KeylessItem = DistributiveOmit<Item, AnswerBearingField>;
 
 /**
  * The only item payload a student-facing page sends to the browser (ADR 0003). The key, rationale
@@ -37,10 +109,13 @@ export type KeylessItem = DistributiveOmit<Item, "answerKey" | "rationale" | "sc
  */
 export function toKeylessItem(item: Item): KeylessItem {
   const copy = JSON.parse(JSON.stringify(item)) as Record<string, unknown>;
-  delete copy.answerKey;
-  delete copy.rationale;
-  delete copy.scoring;
-  return copy as KeylessItem;
+  const keyless: Record<string, unknown> = {};
+  // Optional envelope fields are absent more often than not, and an absent field stays absent:
+  // copying it would turn `difficulty?: "easy"` into `difficulty: undefined` in the payload.
+  for (const field of STUDENT_SAFE_FIELDS) {
+    if (field in copy) keyless[field] = copy[field];
+  }
+  return keyless as KeylessItem;
 }
 
 /** An item as a player may hold it: with its key where there is no student, without where there is. */
@@ -71,12 +146,13 @@ export function toKeylessCaseStudy(caseStudy: CaseStudy): KeylessCaseStudy {
   return { ...caseStudy, items: caseStudy.items.map(toKeylessItem) };
 }
 
-/** What a score reveals beside itself, once and only once there is a score. */
-export interface Reveal {
-  answerKey: Item["answerKey"];
-  rationale: Item["rationale"];
-  scoring: Item["scoring"];
-}
+/**
+ * What a score reveals beside itself, once and only once there is a score: the mirror image of
+ * `KeylessItem`, from the same table. A fifteenth answer-bearing field has to be revealed as well
+ * as stripped, and this is what makes that so — `scoreSubmission` below stops compiling until it
+ * returns the new field, so a field cannot be hidden from students and then never shown to them.
+ */
+export type Reveal = Pick<Item, AnswerBearingField>;
 
 /** What checking an answer produces: the score, and only now the key, rationale and scoring. */
 export interface ScoreReveal extends Reveal {
