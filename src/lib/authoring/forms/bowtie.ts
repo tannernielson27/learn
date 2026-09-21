@@ -1,6 +1,12 @@
 import { storedCjmmStepOf } from "./storedValues";
 import { recordFormOf, recordInputOf, storedRecordFormOf, type EhrFormValues } from "./ehr";
-import { bowtieItemSchema, type ItemInputOf, type ItemOf, type RichText } from "@/lib/ngn/schemas";
+import {
+  bowtieItemSchema,
+  rationaleSchema,
+  type ItemInputOf,
+  type ItemOf,
+  type RichText,
+} from "@/lib/ngn/schemas";
 import {
   isRecord,
   markdownText,
@@ -37,6 +43,8 @@ export interface BowtieFormValues {
   conditionId: string;
   parameters: BowtieChoiceForm[];
   columnLabels: { actions: string; condition: string; parameters: string };
+  /** Per-choice rationale, carried through untouched: this editor does not edit it yet (#49). */
+  rationale: BowtieItem["rationale"];
   rationaleGeneral: string;
 }
 
@@ -49,6 +57,8 @@ export const BOWTIE_DEFAULT_LABELS = {
 
 const markdown = (value: string): RichText => ({ kind: "markdown", value });
 const blank = (value: string) => value.trim().length === 0;
+const perElementOnly = (rationale: BowtieItem["rationale"]): BowtieItem["rationale"] =>
+  rationale.perElement ? { perElement: rationale.perElement } : {};
 
 export function toBowtieForm(item: BowtieItem): BowtieFormValues {
   const correctActions = new Set(item.answerKey.actionIds);
@@ -76,6 +86,7 @@ export function toBowtieForm(item: BowtieItem): BowtieFormValues {
       correct: correctParameters.has(id),
     })),
     columnLabels: { ...item.content.labels },
+    rationale: perElementOnly(item.rationale),
     rationaleGeneral: item.rationale.general?.value ?? "",
   };
 }
@@ -106,7 +117,10 @@ export function fromBowtieForm(values: BowtieFormValues): ItemInputOf<"bowtie"> 
       parameterIds: values.parameters.filter((choice) => choice.correct).map((choice) => choice.id),
     },
     scoring: { model: "zero_one", maxPoints: 5 },
-    rationale: blank(values.rationaleGeneral) ? {} : { general: markdown(values.rationaleGeneral) },
+    rationale: {
+      ...perElementOnly(values.rationale),
+      ...(blank(values.rationaleGeneral) ? {} : { general: markdown(values.rationaleGeneral) }),
+    },
     meta: { ...values.meta },
   };
 }
@@ -130,6 +144,7 @@ export function emptyBowtieForm(id: string): BowtieFormValues {
       correct: false,
     })),
     columnLabels: { ...BOWTIE_DEFAULT_LABELS },
+    rationale: {},
     rationaleGeneral: "",
   };
 }
@@ -204,6 +219,7 @@ export function bowtieFormFromStored(stored: unknown, rowId: string): BowtieForm
   ]);
   const firstIndexOf = (list: readonly { id: string }[], id: string) =>
     list.findIndex((choice) => choice.id === id);
+  const storedRationale = rationaleSchema.safeParse(stored.rationale);
 
   return {
     ...blankForm,
@@ -229,6 +245,7 @@ export function bowtieFormFromStored(stored: unknown, rowId: string): BowtieForm
       condition: storedString(labels.condition, BOWTIE_DEFAULT_LABELS.condition),
       parameters: storedString(labels.parameters, BOWTIE_DEFAULT_LABELS.parameters),
     },
+    rationale: storedRationale.success ? perElementOnly(storedRationale.data) : blankForm.rationale,
     rationaleGeneral: markdownText(rationale.general),
   };
 }

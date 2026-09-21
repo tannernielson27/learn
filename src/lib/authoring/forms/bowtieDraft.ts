@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ehrFormDraftSchema } from "./ehrDraft";
-import { cjmmStepSchema, idSchema, itemMetaSchema } from "@/lib/ngn/schemas";
+import { cjmmStepSchema, idSchema, itemMetaSchema, rationaleSchema } from "@/lib/ngn/schemas";
 import { draftTagsSchema } from "./draftTags";
 import type { BowtieFormValues } from "./bowtie";
 import { DRAFT_ERROR, type DraftParseResult } from "./draft";
@@ -31,6 +31,7 @@ const draftSchema = z
       condition: z.string().max(200),
       parameters: z.string().max(200),
     }),
+    rationale: rationaleSchema,
     rationaleGeneral: z.string().max(10_000),
   })
   .refine((values) => {
