@@ -283,7 +283,6 @@ export function StudentRoom({
             onResponseChange={(response) => setDraft({ itemId: item.id, response })}
             progress={progress}
             submit={send}
-            label="Question"
           />
         </div>
       ) : (

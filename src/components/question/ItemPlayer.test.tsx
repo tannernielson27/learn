@@ -108,7 +108,7 @@ describe("ItemPlayer with multiple response", () => {
 describe("ItemPlayer with sample content", () => {
   it("labels an item tagged sample, so it is never shown as if it were real", () => {
     render(<ItemPlayer item={mc} submit={scoreInProcess(mc)} />);
-    const question = screen.getByRole("region", { name: "Question" });
+    const question = screen.getByRole("region", { name: "Multiple Choice question" });
     expect(within(question).getByText("Sample")).toBeInTheDocument();
   });
 
