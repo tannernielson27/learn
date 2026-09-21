@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page, type APIRequestContext } from "@playwright/test";
 import { latestSignInLink } from "./mailbox";
+import { createAuthorAccount } from "./signIn";
 
 // Needs the local Supabase stack (auth + test mailbox) and a build pointed at it; the preview
 // e2e job has neither, so it skips. CI runs this in the `auth-e2e` job with E2E_AUTH=1.
@@ -11,6 +12,8 @@ function uniqueEmail(projectName: string): string {
 }
 
 async function requestLink(page: Page, request: APIRequestContext, email: string): Promise<string> {
+  // The form no longer signs anyone up (#139), so the account has to exist before the ask.
+  await createAuthorAccount(request, email);
   const since = new Date();
   await page.getByRole("textbox", { name: "Email address" }).fill(email);
   await page.getByRole("button", { name: "Email me a sign-in link" }).click();

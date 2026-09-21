@@ -189,6 +189,9 @@ Run from the repo root, on a machine with the repo checked out. Steps 1–2 and 
    `seed.sql` is generated from the fixtures and is safe to run once on an empty project. It inserts one org, one published "Samples" bank, every canonical item, the Trend item and the sample case study. Running it twice fails on the fixed ids, which is the point.
 
 5. **Create the demo account — production only.** Dashboard → Authentication → Users → Add user. Email `demo@learn.app` (any address you control), a long random password, **Auto Confirm User on**. The trigger files it into the seeded org as an instructor. Never run `supabase/seed-demo.sql` against a hosted project: its password is public and local-only.
+
+   **Every author account is created here too, and only here.** #139 turned self-serve sign-up off: the sign-in form no longer creates an account, so an address that has none is answered exactly like an address that has one and is simply never mailed. To add an instructor, Add user with their address and **Auto Confirm User on** — no password is needed, they sign in from the emailed link — then tell them to ask for a link. Until that account exists, the form will tell them to check an inbox nothing was sent to; that silence is deliberate, because any other answer would say aloud which addresses have accounts.
+
 6. **Point Vercel Production at it.** Vercel → project → Settings → Environment Variables, **Production scope only**:
    - `NEXT_PUBLIC_SUPABASE_URL` = `https://<prod-ref>.supabase.co`
    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` = the `sb_publishable_…` key from Project Settings → API Keys (never the `sb_secret_…` one)
