@@ -107,6 +107,24 @@ describe("ordered response renderer", () => {
     expect(screen.queryByRole("button", { name: /^Move / })).not.toBeInTheDocument();
   });
 
+  // #60: this read "Correct position: 1 Incorrect", the verdict after the correction. Now a
+  // misplaced step reads its verdict first, then where it belongs.
+  it("reads a misplaced step's verdict before its correct position", async () => {
+    render(<ItemPlayer item={wholeItem} submit={scoreInProcess(wholeItem)} />);
+    await arrange([KEY[1]!, KEY[0]!, KEY[2]!, KEY[3]!, KEY[4]!]);
+    await userEvent.click(submit());
+
+    const row = within(list())
+      .getAllByRole("listitem")
+      .find((li) => li.getAttribute("data-label") === KEY[0])!;
+    const verdict = within(row).getByText("Incorrect");
+    const position = within(row).getByText("Correct position: 1");
+    expect(
+      verdict.compareDocumentPosition(position) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(row.textContent).toMatch(new RegExp(`${KEY[0]}\\s*Incorrect\\s*Correct position: 1`));
+  });
+
   it("earns the point for the exact order", async () => {
     render(<ItemPlayer item={wholeItem} submit={scoreInProcess(wholeItem)} />);
     await arrange(KEY);

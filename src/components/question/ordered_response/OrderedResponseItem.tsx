@@ -198,16 +198,19 @@ function StepRow(props: StepRowProps) {
       <span className="w-5 shrink-0 font-mono text-sm text-ink-2 tabular">{index + 1}</span>
       <span className="min-w-0 flex-1">
         {label}
+        {/* The verdict straight after the step, then where it belongs ("… Incorrect", then
+            "Correct position: 3"), not the correction first (#60). sr-only, so nothing moves. */}
+        {feedback !== "neutral" ? (
+          <>
+            {" "}
+            <span className="sr-only">{feedbackLabel[feedback]}</span>
+          </>
+        ) : null}
         {correctPosition ? (
           <span className="block text-sm text-ink-2">Correct position: {correctPosition}</span>
         ) : null}
       </span>
-      {feedback !== "neutral" ? (
-        <>
-          <span className="sr-only">{feedbackLabel[feedback]}</span>
-          <FeedbackIcon state={feedback} className="" />
-        </>
-      ) : null}
+      <FeedbackIcon state={feedback} className="" />
       {answering ? (
         // Stacked on phones so the step's text keeps most of the row's width.
         <span className="flex shrink-0 flex-col gap-1 sm:flex-row">
