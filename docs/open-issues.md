@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-20 (Sprint 7 code complete; all ten stories merged, demo and retro in docs/sprints/S7-demo.md).
+Last updated: 2026-09-21 (no-milestone backlog: #154, #139, #152, #146 and #123 merged; #144 waiting on CI; #149 and #59 in progress locally while GitHub Actions is down).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -52,38 +52,45 @@ Parallelization: #132 and #133 both edit the host and student screens — never 
 
 ## No milestone
 
-| #                                                           | Title                                                                           | Area               | Status                                            |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------ | ------------------------------------------------- |
-| [#115](https://github.com/tannernielson27/learn/issues/115) | feat(auth): sign in to a shared demo account without email                      | auth, security     | Merged (#116); owner creates the hosted demo user |
-| [#123](https://github.com/tannernielson27/learn/issues/123) | fix(authoring): enforce the authoring rate limit where the write happens        | authoring, db      | To do; found on #109                              |
-| [#139](https://github.com/tannernielson27/learn/issues/139) | fix(auth): a per-IP sign-in limit still allows ~360 unsolicited emails an hour  | auth, security     | To do; found on #134, pre-existing                |
-| [#140](https://github.com/tannernielson27/learn/issues/140) | chore(lint): forbid scoring-engine imports from student-facing components       | player             | To do; found on #56; needs the config hook lifted |
-| [#144](https://github.com/tannernielson27/learn/issues/144) | chore(types): derive KeylessItem's omit list from the item schemas              | player, security   | To do; found on #46                               |
-| [#146](https://github.com/tannernielson27/learn/issues/146) | fix(gallery): gate the gallery routes so ADR 0003 has a boundary                | player, security   | To do; found on #130                              |
-| [#149](https://github.com/tannernielson27/learn/issues/149) | fix(live): make the Realtime channel private with a per-participant token       | live, security     | To do; found on #131 and #132; unblocked by #133  |
-| [#152](https://github.com/tannernielson27/learn/issues/152) | fix(live): rate limit POST /api/live/view per participant                       | live, security, db | To do; found on #133                              |
-| [#67](https://github.com/tannernielson27/learn/issues/67)   | feat(auth): sign in with Google                                                 | auth, security     | Blocked: owner creates the Google OAuth client    |
-| [#49](https://github.com/tannernielson27/learn/issues/49)   | feat(player): place per-element rationale inline in the pointer-heavy renderers | player             | To do                                             |
-| [#50](https://github.com/tannernielson27/learn/issues/50)   | chore(types): stop casting away the optionality of answerKey and rationale      | player             | To do                                             |
-| [#54](https://github.com/tannernielson27/learn/issues/54)   | perf(player): load item renderers per type                                      | player             | To do                                             |
-| [#55](https://github.com/tannernielson27/learn/issues/55)   | perf(player): Submit and drop interactions over 200 ms at 4x CPU                | player             | To do                                             |
-| [#57](https://github.com/tannernielson27/learn/issues/57)   | chore(design): three font families against a two-family guideline               | player             | To do                                             |
-| [#58](https://github.com/tannernielson27/learn/issues/58)   | fix(bowtie): a pair's second slot cannot hold a choice alone                    | a11y               | To do                                             |
-| [#59](https://github.com/tannernielson27/learn/issues/59)   | fix(a11y): a disabled Submit cannot say why                                     | a11y               | To do                                             |
-| [#60](https://github.com/tannernielson27/learn/issues/60)   | fix(a11y): smaller screen-reader findings                                       | a11y               | To do                                             |
-| [#61](https://github.com/tannernielson27/learn/issues/61)   | chore(a11y): run the case study with NVDA and VoiceOver                         | a11y               | To do; needs a person with the screen readers     |
+| #                                                           | Title                                                                                     | Area               | Status                                                             |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------ | ------------------------------------------------------------------ |
+| [#115](https://github.com/tannernielson27/learn/issues/115) | feat(auth): sign in to a shared demo account without email                                | auth, security     | Merged (#116); owner creates the hosted demo user                  |
+| [#123](https://github.com/tannernielson27/learn/issues/123) | fix(authoring): enforce the authoring rate limit where the write happens                  | authoring, db      | Merged (#160); apply `20260921200000_authoring_limit_at_the_write` |
+| [#139](https://github.com/tannernielson27/learn/issues/139) | fix(auth): a per-IP sign-in limit still allows ~360 unsolicited emails an hour            | auth, security     | Merged (#157); no migration; residual risk is #159                 |
+| [#140](https://github.com/tannernielson27/learn/issues/140) | chore(lint): forbid scoring-engine imports from student-facing components                 | player             | To do; found on #56; needs the config hook lifted                  |
+| [#144](https://github.com/tannernielson27/learn/issues/144) | chore(types): derive KeylessItem's omit list from the item schemas                        | player, security   | In review (#162); **blocked: GitHub Actions billing**              |
+| [#146](https://github.com/tannernielson27/learn/issues/146) | fix(gallery): gate the gallery routes so ADR 0003 has a boundary                          | player, security   | Merged (#156); gate lives in `src/proxy.ts`                        |
+| [#149](https://github.com/tannernielson27/learn/issues/149) | fix(live): make the Realtime channel private with a per-participant token                 | live, security     | In progress (local branch; not pushed)                             |
+| [#152](https://github.com/tannernielson27/learn/issues/152) | fix(live): rate limit POST /api/live/view per participant                                 | live, security, db | Merged (#158); apply `20260921100000_live_view_rate_limit`         |
+| [#154](https://github.com/tannernielson27/learn/issues/154) | fix(test): EditorShell.restore "tells its host while a save is in flight" is flaky        | authoring          | Merged (#155); test-only                                           |
+| [#159](https://github.com/tannernielson27/learn/issues/159) | fix(auth): a sustained lockout of one author's only sign-in path is still cheap           | auth, security     | **Owner decision**; filed from #157's review                       |
+| [#161](https://github.com/tannernielson27/learn/issues/161) | test(authoring): prove every author-writable table is counted, rather than remembering to | authoring, db      | To do; filed from #160's review                                    |
+| [#67](https://github.com/tannernielson27/learn/issues/67)   | feat(auth): sign in with Google                                                           | auth, security     | Blocked: owner creates the Google OAuth client                     |
+| [#49](https://github.com/tannernielson27/learn/issues/49)   | feat(player): place per-element rationale inline in the pointer-heavy renderers           | player             | To do                                                              |
+| [#50](https://github.com/tannernielson27/learn/issues/50)   | chore(types): stop casting away the optionality of answerKey and rationale                | player             | To do                                                              |
+| [#54](https://github.com/tannernielson27/learn/issues/54)   | perf(player): load item renderers per type                                                | player             | To do                                                              |
+| [#55](https://github.com/tannernielson27/learn/issues/55)   | perf(player): Submit and drop interactions over 200 ms at 4x CPU                          | player             | To do                                                              |
+| [#57](https://github.com/tannernielson27/learn/issues/57)   | chore(design): three font families against a two-family guideline                         | player             | To do                                                              |
+| [#58](https://github.com/tannernielson27/learn/issues/58)   | fix(bowtie): a pair's second slot cannot hold a choice alone                              | a11y               | To do                                                              |
+| [#59](https://github.com/tannernielson27/learn/issues/59)   | fix(a11y): a disabled Submit cannot say why                                               | a11y               | In progress (local branch; not pushed)                             |
+| [#60](https://github.com/tannernielson27/learn/issues/60)   | fix(a11y): smaller screen-reader findings                                                 | a11y               | To do                                                              |
+| [#61](https://github.com/tannernielson27/learn/issues/61)   | chore(a11y): run the case study with NVDA and VoiceOver                                   | a11y               | To do; needs a person with the screen readers                      |
 
 ## Owner actions outside GitHub
 
 These block the live site rather than a single issue:
 
+- **GitHub Actions billing.** Since 2026-09-21 every job is refused before it starts: "recent account payments have failed or your spending limit needs to be increased". Fix it under Settings, Billing & plans. Until then nothing can merge, because branch protection requires `ci` to pass. Work is continuing on local branches and will be pushed once CI runs again.
+- **Author accounts are now created by hand** (#139, merged in #157). Sign-in no longer creates accounts, so a new instructor exists only once added under Authentication, Users, Add user. The sign-in form answers identically whether or not an address has an account, so a mistyped or unregistered address will appear to succeed and simply never receive a link.
+- **Decide #159**: whether to accept that four cheap IPs can hold one author's sign-in closed indefinitely, or pay for one of the mitigations listed there.
 - Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` to Vercel (Production and Preview), then redeploy.
 - Supabase Authentication, URL Configuration: Site URL and redirect URLs for production, previews and localhost.
 - Supabase magic-link template: paste `supabase/templates/magic_link.html`. Email sign-in still needs it; the demo account (#115) works without it.
-- Demo account (#115): create the hosted demo user (Authentication, Users, Add user, auto-confirm) and set `DEMO_ACCOUNT_EMAIL` and `DEMO_ACCOUNT_PASSWORD` in Vercel. Remove them before real students use the site. Known gap: the demo action has no rate limit of its own (neither has the email one), so heavy use can trip Supabase's per-IP auth limit for everyone signing in through Vercel. #111's per-user limit covers authoring actions only; sign-in needs a per-IP limit.
+- Demo account (#115): create the hosted demo user (Authentication, Users, Add user, auto-confirm) and set `DEMO_ACCOUNT_EMAIL` and `DEMO_ACCOUNT_PASSWORD` in Vercel. Remove them before real students use the site. Both sign-in paths are now rate limited in the server (#134: 20 demo and 30 email attempts per IP per five minutes; #139: 3 links per caller per address and 12 per address overall). Supabase's own auth limit still applies on top, to the deployment's egress address as a whole.
 - Apply the merged migrations to the hosted project, in order: `20260916000000_bank_folders` (confirm), `20260919000000_item_tags`, `20260919110000_start_step_and_rate_limits`, `20260919120600_duplicate_content`, `20260919130000_item_search`, `20260919150000_import_into_folder`, `20260919160000_archive_content`. Until `start_step_and_rate_limits` is applied, production refuses every save, publish and import.
 - Split production into its own Supabase project. The code landed in #136 (ADR 0006 supersedes ADR 0005); the eight owner steps are written out in `docs/05-VERSION-CONTROL-AND-DEPLOY.md` §7.3. Order matters: `seed.sql` before creating the demo user, and never run `seed-demo.sql` against a hosted project.
 - Apply the four Sprint 7 live migrations to **both** projects, after the Sprint 6 seven: `20260919170000_live_sessions`, `20260920130000_live_responses_and_aggregates`, `20260920140000_session_participants`, `20260921000000_resume_participant_joined_at`.
+- Then the two backlog migrations, to both projects: `20260921100000_live_view_rate_limit` (#152) and `20260921200000_authoring_limit_at_the_write` (#123). The full ordered list of sixteen is in `docs/05-VERSION-CONTROL-AND-DEPLOY.md` §7.2. The second is safe to apply after the app deploys: it keeps `take_rate_limit`'s name and signature, so the app degrades to the old behaviour rather than refusing writes.
 - **Do not add `live` to the exposed schemas** in either Supabase project. That dashboard setting is what keeps the session-state mirror off the Data API.
 - Nothing to set for `LIVE_PARTICIPANT_SECRET`: #131 shipped it as a placeholder and #133 deleted it. If it was set on a deployment, remove it.
 - While creating that project, consider raising its **auth rate limits**. Supabase's default is 30 sign-ins per five minutes and it applies to the deployment's egress address as a whole, not per student — so it, not #134's per-IP limit, is what constrains a NAT'd classroom.
