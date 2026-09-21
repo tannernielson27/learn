@@ -87,6 +87,21 @@ The smaller screen-reader findings in #60 are untouched.
 Open any gallery item without answering, press Tab until Submit has focus, and listen: it is
 announced as unavailable with "Complete the item to submit." Press Enter; nothing is sent.
 
+## Review round
+
+`code-reviewer`, on the local branch while CI was unavailable. **No CRITICAL, no HIGH.** It verified against source rather than taking the PR's word:
+
+- jest-dom 7.0.1's `isElementDisabled` checks only `element.hasAttribute('disabled')`. So after this change `toBeDisabled()` fails loudly and `toBeEnabled()` passes in both states silently — which is why all 30 Submit assertions had to move, not just the 17 that would have failed.
+- Playwright 1.63 reads `aria-disabled` in its enabled check (`hasAriaDisabledInChain`), so the e2e `toBeEnabled()` calls on Submit still mean what they say.
+- `Button.tsx` spreads props onto a native `<button>` with no interception, so the `if (blocked) return` in `submit` is genuinely the only gate. `ItemPlayer` is the only caller of `QuestionShell`; nothing else reaches `submit`.
+- `aria-describedby` walked through all four states (incomplete, complete, checking, error): set only while the reason is rendered, never dangling.
+- None of the 66 baselines captures the "Checking your answer" state — `gallery-items.spec.ts` screenshots right after hydration without pressing Submit — so the one deliberate visual change is uncaptured.
+
+Recorded, not fixed:
+
+- **MEDIUM** — the 13 `not.toHaveAttribute("aria-disabled")` assertions are coupled to the implementation emitting `undefined` rather than `false`. `aria-disabled="false"` means the same thing and is exactly what `EditorShell.tsx:402` already emits, so copying that pattern here would break all thirteen while the button was still correctly enabled. It fails loudly, not silently, so it is a maintenance cost rather than a correctness risk. A shared `expectSubmitEnabled` helper would absorb it if the pattern spreads.
+- **LOW** — the dimming is scoped to QuestionShell rather than added to `Button.tsx`, deliberately: adding `aria-disabled:opacity-50` to the shared component would dim every `aria-disabled` button in the app, including ones that are not dimmed today (`NewItemPicker.tsx:39`, `ItemHistory.tsx:165/189`). But it leaves the authoring Publish button (`EditorShell.tsx:389-413`) `aria-disabled` with no dimming and no stated reason, which predates this branch. Worth a consistency pass.
+
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
 https://claude.ai/code/session_016tcmsv8XALsD2G6KRJLYu4
