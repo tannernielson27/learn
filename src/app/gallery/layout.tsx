@@ -10,11 +10,14 @@ export const metadata: Metadata = { title: "Gallery" };
 /**
  * ADR 0003 / #146: every route under `/gallery` renders a fixture together with its answer key,
  * so the whole segment is closed on the production deployment — the only one with real students.
- * The gate lives here rather than on each page because this layout is the one thing every
- * `/gallery/**` route passes through, which makes a new route gated the moment it is added.
- * `notFound()` rather than a redirect or a message: a 404 does not advertise that the surface
- * exists. `layout.test.ts` calls this function to check that it really refuses, and
- * `gate.test.ts` checks that every gallery route goes through it.
+ *
+ * **This is the second layer, not the boundary.** `src/proxy.ts` is the boundary, because it runs
+ * before anything renders. This gate cannot be, and was tried as one: a layout and the page
+ * beneath it render concurrently, so `notFound()` here ends this segment while the page subtree
+ * that already rendered is still serialized into the same Flight stream. The response came back
+ * 404 with the fixtures in it — 21KB and two `answerKey` objects for `/gallery/items/[type]`.
+ * Keep the gate; do not mistake it for what withholds the payload. `scripts/gallery-closed.mjs`
+ * is the check that reads the response rather than the component.
  *
  * `await connection()` first, and it is load-bearing. Without it nothing in this segment reaches
  * for a request, so Next prerenders `/gallery/**` at build time and bakes this decision into the

@@ -27,6 +27,13 @@ jobs:
       - run: pnpm format:check
       - run: pnpm test:coverage
       - run: pnpm build
+      # ADR 0003 / #146. Asserts on the response a client would receive, against the build above
+      # rather than `next dev`, because the two need not serialize the same things. Note the
+      # build ran with VERCEL_ENV unset: this serves a preview-shaped artifact as production,
+      # which is what Vercel's "Promote to Production" does, and the gate still has to hold.
+      # The script runs its own control first, so a probe that stopped seeing anything fails
+      # loudly instead of passing quietly.
+      - run: pnpm gallery:closed
       - uses: actions/upload-artifact@v7
         if: always()
         with:

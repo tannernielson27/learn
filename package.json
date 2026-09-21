@@ -15,6 +15,7 @@
     "format:check": "prettier --check .",
     "check": "pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build",
     "prepare": "husky",
+    "gallery:closed": "node scripts/gallery-closed.mjs",
     "e2e": "playwright test",
     "e2e:install": "playwright install chromium",
     "db:types": "node scripts/db-types.mjs"

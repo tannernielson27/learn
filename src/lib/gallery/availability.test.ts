@@ -1,6 +1,27 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it } from "vitest";
-import { galleryIsAvailable } from "./availability";
+import { galleryIsAvailable, isGalleryPath } from "./availability";
+
+describe("isGalleryPath", () => {
+  it.each([
+    "/gallery",
+    "/gallery/",
+    "/gallery/live",
+    "/gallery/items/multiple_choice",
+    "/gallery/added-next-sprint",
+  ])("claims %s", (pathname) => {
+    expect(isGalleryPath(pathname)).toBe(true);
+  });
+
+  it.each(["/", "/galleryish", "/gallery-old", "/author/gallery", "/play/gallery", "/sign-in"])(
+    "does not claim %s",
+    (pathname) => {
+      // A prefix test that was written as `startsWith("/gallery")` would take `/galleryish` and
+      // `/gallery-old` with it, so those two are the ones worth naming.
+      expect(isGalleryPath(pathname)).toBe(false);
+    },
+  );
+});
 
 describe("galleryIsAvailable", () => {
   it("says no on the production deployment", () => {

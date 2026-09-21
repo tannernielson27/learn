@@ -32,3 +32,19 @@ const PRODUCTION = "production";
 export function galleryIsAvailable(vercelEnv = process.env.VERCEL_ENV): boolean {
   return vercelEnv !== PRODUCTION;
 }
+
+/** The URL prefix the whole gallery lives under. The proxy matcher below must agree with it. */
+const GALLERY = "/gallery";
+
+/**
+ * Whether this request path belongs to the gallery.
+ *
+ * Matched on the path alone, before anything renders, because that is the only place the answer
+ * key can be withheld. An in-render `notFound()` is too late: a layout and the page beneath it
+ * render concurrently, so refusing in the layout does not stop the page subtree that has already
+ * rendered from being serialized into the same Flight stream — the response carries a 404 status
+ * and the fixtures together (#146, measured at 21KB with two `answerKey` objects in it).
+ */
+export function isGalleryPath(pathname: string): boolean {
+  return pathname === GALLERY || pathname.startsWith(`${GALLERY}/`);
+}
