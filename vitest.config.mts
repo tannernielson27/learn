@@ -22,6 +22,8 @@ export default defineConfig({
             // src/proxy.ts is route code too, and since #146 it is where the gallery is closed
             // on production, so it is held to the same bar as the rest of that gate.
             "src/*.{test,spec}.ts",
+            // Repo tooling with logic worth pinning down, such as the pgTAP verdict (#163).
+            "scripts/**/*.{test,spec}.ts",
           ],
         },
       },
