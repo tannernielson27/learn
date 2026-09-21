@@ -1,3 +1,4 @@
+import { BlockList, isIP } from "node:net";
 import { expect, type APIRequestContext, type Page } from "@playwright/test";
 import { latestSignInLink } from "./mailbox";
 
@@ -6,6 +7,34 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:5
 
 export function uniqueEmail(label: string): string {
   return `author-${label}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.test`;
+}
+
+const LOOPBACK = new BlockList();
+LOOPBACK.addSubnet("127.0.0.0", 8);
+LOOPBACK.addAddress("::1", "ipv6");
+
+/**
+ * Whether a parsed URL's host is this machine.
+ *
+ * Asked of the address, not of the string. `new URL()` has already done the hard part: it
+ * canonicalises `127.1`, `0x7f000001`, `2130706433` and `0177.0.0.1` all to `127.0.0.1`, lower-
+ * cases the name, and strips any `user@` in front of the real host, so `http://localhost@evil.com`
+ * arrives here as `evil.com`. What is left to get wrong is pattern-matching, and a `/^127\./` test
+ * gets it wrong: it is anchored at the start only, so `127.0.0.1.evil.com` and `127.evil.com` pass
+ * it, and both are names anybody can register. `isIP` refuses anything that is not an address at
+ * all, which is what closes that, and `BlockList` answers the subnet question properly — including
+ * for the IPv4-mapped form `[::ffff:127.0.0.1]`, which arrives serialised as `[::ffff:7f00:1]` and
+ * which no string comparison would have recognised. A trailing dot (`localhost.`) is a different
+ * name to the parser and is refused; nothing writes it, and failing closed there is the right way
+ * round for a guard.
+ */
+function isThisMachine(hostname: string): boolean {
+  if (hostname === "localhost") return true;
+  // `new URL()` brackets an IPv6 host; `isIP` and `BlockList` want it bare.
+  const host = hostname.startsWith("[") ? hostname.slice(1, -1) : hostname;
+  const family = isIP(host);
+  if (family === 0) return false;
+  return LOOPBACK.check(host, family === 6 ? "ipv6" : "ipv4");
 }
 
 /**
@@ -19,8 +48,7 @@ export function uniqueEmail(label: string): string {
  */
 function localStackUrl(): string {
   const { hostname } = new URL(SUPABASE_URL);
-  const loopback = hostname === "localhost" || hostname === "[::1]" || /^127\./.test(hostname);
-  if (!loopback) {
+  if (!isThisMachine(hostname)) {
     throw new Error(
       `refusing to create test users on ${hostname}: these tests use SUPABASE_SECRET_KEY, which ` +
         `is the same variable production uses. Point NEXT_PUBLIC_SUPABASE_URL at the local stack.`,

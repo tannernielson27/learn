@@ -65,7 +65,14 @@ import { isIP } from "node:net";
  * warm instance. Vercel promises no such affinity; it routes by capacity, not by caller.
  *
  * This file assumes Vercel. Off the platform it does nothing at all (see `clientIp`), and the
- * header trust below would have to be revisited before running anywhere else.
+ * header trust below would have to be revisited before running anywhere else. That caveat now
+ * carries more weight than it did when only #134 depended on it: with no caller to key on, the
+ * per-caller-and-address tier short-circuits away and every request falls through to the ceiling
+ * alone — which is exactly the single-bucket shape review rejected above. It does not arise on
+ * Vercel, which stamps `x-vercel-id` on every request it forwards whether or not a project
+ * exposes system environment variables. But self-hosting this, or putting a different proxy in
+ * front of it, lands there, and `clientIp` would have to be taught about that proxy before the
+ * per-caller tier means anything at all.
  */
 
 /** The two sign-in paths, each with its own budget. */
