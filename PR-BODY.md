@@ -2,21 +2,25 @@
 
 Closes #60 (filed from the Sprint 3 audit, #42): five smaller screen-reader findings. Each is its own commit with its own test.
 
-**Stacked.** This branch is built on `fix/59-disabled-submit-reason` with `fix/58-bowtie-second-slot` merged in (the only conflict was the two draft `PR-BODY.md` files). Merge #59 and #58 first; this diff is then only the five commits below.
+**Stacked.** This branch is built on `fix/59-disabled-submit-reason` with `fix/58-bowtie-second-slot` merged in (the only conflict was the two draft `PR-BODY.md` files). Merge #59 and #58 first; this diff is then only the five fix commits below, plus one review fix to the matrix names.
 
 ## What a screen reader hears now
 
-| #   | Finding                                        | Before                                                                 | After                                                           |
-| --- | ---------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------- |
-| 1   | Phone matrix controls named by the column only | "Improving, radio button" on every card                                | "Heart rate 124 beats/min Improving, radio button"              |
-| 2   | Option labels read twice                       | "Respiratory rate 28 breaths/min, check box", then the same text again | The name only, once                                             |
-| 3   | Ordered feedback in an awkward order           | "…Correct position: 3 Incorrect"                                       | "<step> Incorrect", then "Correct position: 3"                  |
-| 4   | dnd-kit's empty assertive live region          | An empty `role="status" aria-live="assertive"` in every drag item      | Not in the accessibility tree                                   |
-| 5   | "Question" is a generic region name            | Region and heading "Question"                                          | "Bowtie question", "Matrix Multiple Choice question", and so on |
+| #   | Finding                                        | Before                                                                 | After                                                                                    |
+| --- | ---------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| 1   | Phone matrix controls named by the column only | "Improving, radio button" on every card                                | "Heart rate 124 beats/min Improving, radio button"; after submit "… Improving Incorrect" |
+| 2   | Option labels read twice                       | "Respiratory rate 28 breaths/min, check box", then the same text again | The name only, once                                                                      |
+| 3   | Ordered feedback in an awkward order           | "…Correct position: 3 Incorrect"                                       | "<step> Incorrect", then "Correct position: 3"                                           |
+| 4   | dnd-kit's empty assertive live region          | An empty `role="status" aria-live="assertive"` in every drag item      | Not in the accessibility tree                                                            |
+| 5   | "Question" is a generic region name            | Region and heading "Question"                                          | "Bowtie question", "Matrix Multiple Choice question", and so on                          |
 
 ### 1. Phone matrix names (`Matrix.tsx`)
 
 The grid already named each control by row and column. The phone cards named it by the column alone and left the row to the fieldset's legend, which a screen reader can skip when moving control to control. Card controls are now `aria-labelledby` the legend and the column text. That column text is `aria-hidden`: it is already in the name, and left exposed it would be read a second time (the same problem as #2).
+
+**Review fix: the verdict is part of the name, in both views.** An explicit `aria-labelledby` replaces the name the `<label>`'s content would give, so the first version of this change dropped the sr-only Correct/Incorrect/Missed text from the phone card's name in feedback mode. A card control read "Respiratory rate 32 breaths/min Improved" with no verdict. That was a regression from this branch: before it, the card's name came from the label and included the verdict. The verdict span now has an id that goes last in `aria-labelledby` once there is feedback, and it is `aria-hidden` so it is not read again beside the control (the same approach as `OptionRow`). The card now reads "Respiratory rate 32 breaths/min Improved Incorrect".
+
+**The desktop grid had the same gap, and it predates #60.** It came in with #62 (`01c1db2`): the grid's `aria-labelledby` pointed at the row and column headers only, so on a laptop the verdict was never part of the name either; it sat beside the control as loose text. It is fixed in the same commit, with the same helper. Both views have a feedback-mode test that checks the name and that no verdict text is left exposed outside it. Both tests failed before the fix.
 
 ### 2. Options read once (`OptionRow.tsx`)
 
@@ -58,7 +62,7 @@ No visual change intended. Every change is an attribute, an id, an `aria-hidden`
 
 GitHub Actions is down, so this was verified locally only.
 
-- **Ran:** `pnpm typecheck`, `pnpm lint`, `pnpm format:check` (only complaint: the git-ignored `.claude/settings.local.json`), and `vitest run` on `src/components/question`, `src/components/case-study`, `src/components/live` and `src/components/authoring` (all pass; the 13 new or updated tests were run first and failed before the fixes).
+- **Ran:** `pnpm typecheck`, `pnpm lint`, `pnpm format:check` (only complaint: the git-ignored `.claude/settings.local.json`), and `vitest run` on `src/components/question`, `src/components/case-study`, `src/components/live` and `src/components/authoring` (all pass; the 13 new or updated tests were run first and failed before the fixes). After the review fix, `src/components/question`, `src/components/live` and `src/components/case-study` were re-run (all pass). The two new matrix feedback tests failed before that fix. `src/components/authoring` was not re-run after the review fix.
 - **Not run:** coverage, build, Playwright (e2e, the 66 baselines, axe), and any real screen reader. What NVDA or VoiceOver actually say is inferred from the accessibility tree, as in the #42 audit; #61 covers a real run.
 
 ## Test plan
