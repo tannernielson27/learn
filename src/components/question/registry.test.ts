@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ITEM_TYPES } from "@/lib/ngn/labels";
 import { RENDERED_TYPES, hasRenderer } from "./rendered";
@@ -20,5 +22,19 @@ describe("the renderer registry", () => {
       expect(entry?.isComplete).toBe(RULES[type].isComplete);
       expect(entry?.explainScore).toBe(RULES[type].explainScore);
     }
+  });
+
+  it("retries each type from the same module it first loaded, so the two import lists cannot drift", () => {
+    const source = readFileSync(join(__dirname, "registry.ts"), "utf8");
+    const [first, retry] = source.split("const retryLoaders");
+    const entries = (block: string) =>
+      Object.fromEntries(
+        [...block.matchAll(/(\w+):\s*(?:dynamic\()?\s*\(\)\s*=>\s*import\("([^"]+)"\)/g)].map(
+          (m) => [m[1], m[2]],
+        ),
+      );
+    const loaded = entries(first ?? "");
+    expect(Object.keys(loaded).sort()).toEqual([...RENDERED_TYPES].sort());
+    expect(entries(retry ?? "")).toEqual(loaded);
   });
 });
