@@ -66,8 +66,34 @@ function withoutComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 }
 
-/** Whether this file turns the production deployment away before rendering anything. */
-function callsTheGate(source: string): boolean {
+const HTTP_METHODS = "GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS";
+
+/** The opening brace of each exported HTTP handler, in either declaration style. */
+const EXPORTED_HANDLERS = new RegExp(
+  `export\\s+(?:async\\s+)?function\\s+(?:${HTTP_METHODS})\\s*\\([\\s\\S]*?\\)\\s*\\{` +
+    `|export\\s+const\\s+(?:${HTTP_METHODS})\\s*(?::[^=]+)?=\\s*(?:async\\s*)?\\([\\s\\S]*?\\)\\s*(?::[^=]+)?=>\\s*\\{`,
+  "g",
+);
+
+/**
+ * The gate as the opening statements of a handler body, optionally preceded by `await
+ * connection()`. Requiring it *first* is what makes this more than a grep: a call sitting inside
+ * `if (DEBUG_DISABLE_GATE) { … }`, or stranded in a sibling function nobody calls, is not the
+ * first statement of an exported handler and is rejected.
+ */
+const OPENS_WITH_GATE =
+  /^\s*(?:await\s+connection\s*\(\s*\)\s*;\s*)?if\s*\(\s*!\s*galleryIsAvailable\s*\(\s*\)\s*\)\s*\{?\s*notFound\s*\(\s*\)\s*;/;
+
+/**
+ * Whether a gallery route handler refuses production before doing anything else.
+ *
+ * Route handlers are the one gallery route Next calls directly, with no layout above them, so
+ * they have to carry the gate themselves. There is no function to invoke the way
+ * `layout.test.ts` invokes the layout — the file does not exist yet — so this reads the source,
+ * but only inside each exported handler's body and only at its head. Anything it cannot
+ * recognise as a gated handler is rejected, so an unfamiliar shape fails closed.
+ */
+function handlerRefusesProduction(source: string): boolean {
   const code = withoutComments(source);
   const importsPredicate =
     /import\s*\{[^}]*\bgalleryIsAvailable\b[^}]*\}\s*from\s*["']@\/lib\/gallery\/availability["']/.test(
@@ -75,10 +101,13 @@ function callsTheGate(source: string): boolean {
     );
   const importsNotFound =
     /import\s*\{[^}]*\bnotFound\b[^}]*\}\s*from\s*["']next\/navigation["']/.test(code);
-  const refuses = /if\s*\(\s*!\s*galleryIsAvailable\s*\(\s*\)\s*\)\s*\{?\s*notFound\s*\(\s*\)/.test(
-    code,
+  if (!importsPredicate || !importsNotFound) return false;
+
+  const bodies = [...code.matchAll(EXPORTED_HANDLERS)].map((match) =>
+    code.slice(match.index + match[0].length),
   );
-  return importsPredicate && importsNotFound && refuses;
+  // No recognisable handler means nothing was checked, which is not the same as being safe.
+  return bodies.length > 0 && bodies.every((body) => OPENS_WITH_GATE.test(body));
 }
 
 const galleryRoutes = routeFiles().filter((file) => isGalleryUrl(urlPathOf(file)));
@@ -107,15 +136,12 @@ describe("every gallery route is behind the production gate", () => {
     },
   );
 
-  it("the gated layout is the thing that turns production away", () => {
-    expect(callsTheGate(readFileSync(GALLERY_LAYOUT, "utf8"))).toBe(true);
-  });
-
   it("no gallery route handler slips past, since layouts do not wrap them", () => {
     // Empty today. When the first one arrives it has to refuse production on its own, because
     // Next calls a route handler directly and src/app/gallery/layout.tsx never runs for it.
+    // What the layout itself does is observed in src/app/gallery/layout.test.ts, which calls it.
     const ungated = galleryHandlers
-      .filter((file) => !callsTheGate(readFileSync(file, "utf8")))
+      .filter((file) => !handlerRefusesProduction(readFileSync(file, "utf8")))
       .map(rel);
     expect(ungated).toEqual([]);
   });
@@ -141,40 +167,96 @@ describe("the check would catch a route that skipped the gate", () => {
     expect(layoutChain(home)).not.toContain(GALLERY_LAYOUT);
   });
 
+  const IMPORTS = [
+    'import { notFound } from "next/navigation";',
+    'import { connection } from "next/server";',
+    'import { galleryIsAvailable } from "@/lib/gallery/availability";',
+  ];
+  const handler = (...body: string[]) =>
+    [...IMPORTS, "export async function GET() {", ...body, "  return new Response();", "}"].join(
+      "\n",
+    );
+
+  it("accepts a handler that refuses production first", () => {
+    expect(
+      handlerRefusesProduction(
+        handler("  await connection();", "  if (!galleryIsAvailable()) notFound();"),
+      ),
+    ).toBe(true);
+    // The gate without connection() is still a gate for a route handler, which is never
+    // prerendered the way a page is.
+    expect(handlerRefusesProduction(handler("  if (!galleryIsAvailable()) notFound();"))).toBe(
+      true,
+    );
+  });
+
   it("does not accept a file that only talks about the gate", () => {
     const prose = [
       "// The gallery is closed on production: galleryIsAvailable() decides, notFound() answers.",
-      "export default function Page() { return null; }",
+      "export async function GET() { return new Response(); }",
     ].join("\n");
-    expect(callsTheGate(prose)).toBe(false);
+    expect(handlerRefusesProduction(prose)).toBe(false);
   });
 
   it("does not accept an import without a call, or a call without the import", () => {
-    const importOnly = [
-      'import { notFound } from "next/navigation";',
-      'import { galleryIsAvailable } from "@/lib/gallery/availability";',
-      "export function GET() { return new Response(); }",
-    ].join("\n");
-    expect(callsTheGate(importOnly)).toBe(false);
+    expect(handlerRefusesProduction(handler())).toBe(false);
 
     const callOnly = [
-      "export function GET() {",
+      "export async function GET() {",
       "  if (!galleryIsAvailable()) notFound();",
       "  return new Response();",
       "}",
     ].join("\n");
-    expect(callsTheGate(callOnly)).toBe(false);
+    expect(handlerRefusesProduction(callOnly)).toBe(false);
   });
 
-  it("accepts the shape the layout uses", () => {
-    const gated = [
-      'import { notFound } from "next/navigation";',
-      'import { galleryIsAvailable } from "@/lib/gallery/availability";',
-      "export function GET() {",
+  it("does not accept a gate that a flag can switch off", () => {
+    // The leftover-debug-flag mistake. The call is present, imported and spelled correctly, and
+    // the gallery is wide open. A checker that searches the whole file passes this.
+    const flagged = handler(
+      "  const DEBUG_DISABLE_GATE = false;",
+      "  if (DEBUG_DISABLE_GATE) {",
+      "    if (!galleryIsAvailable()) notFound();",
+      "  }",
+    );
+    expect(handlerRefusesProduction(flagged)).toBe(false);
+  });
+
+  it("does not accept a gate stranded in a function nobody calls", () => {
+    // What a half-finished refactor leaves behind: the guard survives, the handler no longer
+    // reaches it.
+    const orphaned = [
+      ...IMPORTS,
+      "function guard() {",
       "  if (!galleryIsAvailable()) notFound();",
+      "}",
+      "export async function GET() {",
       "  return new Response();",
       "}",
     ].join("\n");
-    expect(callsTheGate(gated)).toBe(true);
+    expect(handlerRefusesProduction(orphaned)).toBe(false);
+  });
+
+  it("does not accept a gate on only some of the handlers", () => {
+    const partial = [
+      ...IMPORTS,
+      "export async function GET() {",
+      "  if (!galleryIsAvailable()) notFound();",
+      "  return new Response();",
+      "}",
+      "export async function POST() {",
+      "  return new Response();",
+      "}",
+    ].join("\n");
+    expect(handlerRefusesProduction(partial)).toBe(false);
+  });
+
+  it("does not accept a handler shape it cannot read, rather than assuming it is safe", () => {
+    const unfamiliar = [
+      ...IMPORTS,
+      "const handlers = { GET: () => new Response() };",
+      "export const { GET } = handlers;",
+    ].join("\n");
+    expect(handlerRefusesProduction(unfamiliar)).toBe(false);
   });
 });
