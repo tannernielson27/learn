@@ -23,8 +23,19 @@ import { setTimeout as sleep } from "node:timers/promises";
 /** Every name the answer key and the scoring rule are serialized under. */
 const FORBIDDEN = ["answerKey", "correctOptionId", "rationale", "scoring", "maxPoints"];
 
-/** Routes that must never answer with a key on production. The first two carry fixtures. */
-const GALLERY_PATHS = ["/gallery/items/multiple_choice", "/gallery/case-study", "/gallery"];
+/**
+ * Routes that must never answer with a key on production. Every route that imports `FIXTURES`
+ * belongs here: today that is `/gallery/items/[type]` and `/gallery/live`. The gate is a blanket
+ * prefix match with no per-route logic, so a missing route is not a live hole — but this list is
+ * what would catch a future regression that is route-specific, and it can only catch what it
+ * probes. `/gallery` itself is the index, and the case study carries its own fixture.
+ */
+const GALLERY_PATHS = [
+  "/gallery/items/multiple_choice",
+  "/gallery/case-study",
+  "/gallery/live",
+  "/gallery",
+];
 
 /** Not under /gallery: proves the gate is scoped and the server is actually serving. */
 const CONTROL_PATH = "/";
@@ -64,11 +75,22 @@ async function waitForServer(base, child) {
   throw new Error(`next start did not answer on ${base} within ${START_TIMEOUT_MS}ms`);
 }
 
-function stop(child) {
+/**
+ * Awaited, deliberately. An earlier round of this story left a `next dev` alive because the kill
+ * was fired and never waited on, and the next run then failed on a port that looked free.
+ */
+async function stop(child) {
   if (child.exitCode !== null) return;
   // `next start` forks workers, so kill the whole group rather than the parent alone.
-  if (process.platform === "win32") spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"]);
-  else process.kill(-child.pid, "SIGKILL");
+  if (process.platform === "win32") {
+    const killer = spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+    await new Promise((resolve) => {
+      killer.on("close", resolve);
+      killer.on("error", resolve);
+    });
+  } else {
+    process.kill(-child.pid, "SIGKILL");
+  }
 }
 
 /** Starts `next start` with VERCEL_ENV set to `vercelEnv`, probes every path, then stops it. */
@@ -90,7 +112,7 @@ async function probeBuiltApp(vercelEnv, port) {
     for (const path of [...GALLERY_PATHS, CONTROL_PATH]) results.push(await probe(base, path));
     return results;
   } finally {
-    stop(child);
+    await stop(child);
     await sleep(500);
   }
 }
