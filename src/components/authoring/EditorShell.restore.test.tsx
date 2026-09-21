@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { toMultipleChoiceForm } from "@/lib/authoring/forms/multipleChoice";
@@ -58,8 +58,10 @@ describe("an editor opened on a restored version", () => {
       .click(screen.getByRole("button", { name: "Save draft" }));
     expect(onBusyChange).toHaveBeenLastCalledWith(true);
     finish({ ok: true });
-    expect(await screen.findByText("Draft saved.")).toBeInTheDocument();
-    expect(onBusyChange).toHaveBeenLastCalledWith(false);
+    // The busy change is an effect and the message is a render, with no ordering between them,
+    // so wait for the callback this test is about rather than for the message.
+    await waitFor(() => expect(onBusyChange).toHaveBeenLastCalledWith(false));
+    expect(screen.getByText("Draft saved.")).toBeInTheDocument();
   });
 
   it("is clean when the saved draft is what it opened with", () => {
