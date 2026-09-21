@@ -96,6 +96,44 @@ describe("matrix multiple choice", () => {
     expect(within(table).getByText("0/1")).toBeInTheDocument();
     for (const radio of within(table).getAllByRole("radio")) expect(radio).toBeDisabled();
   });
+
+  // #60 review: an explicit aria-labelledby replaces the name from the label's content, so the
+  // verdict must be one of the ids it points at, in both views, or it is read zero times.
+  describe("after submit, each control's name carries its verdict", () => {
+    const answerAndSubmit = async () => {
+      render(<ItemPlayer item={mmcEdge} submit={scoreInProcess(mmcEdge)} />);
+      await userEvent.click(within(grid()).getByRole("radio", { name: `${O2} Improved` }));
+      await userEvent.click(within(grid()).getByRole("radio", { name: `${RR} Improved` }));
+      await userEvent.click(submit());
+    };
+    /** Verdict text a screen reader would meet as content, outside any name. */
+    const exposedVerdicts = (container: HTMLElement) =>
+      ["Correct", "Incorrect", "Missed"]
+        .flatMap((text) => within(container).queryAllByText(text))
+        .filter((element) => !element.closest('[aria-hidden="true"]'));
+
+    it("in a phone row card", async () => {
+      await answerAndSubmit();
+      expect(within(card(O2)).getByRole("radio", { name: `${O2} Improved Correct` })).toBeChecked();
+      expect(
+        within(card(RR)).getByRole("radio", { name: `${RR} Improved Incorrect` }),
+      ).toBeChecked();
+      expect(
+        within(card(RR)).getByRole("radio", { name: `${RR} Declined Missed` }),
+      ).not.toBeChecked();
+      expect(exposedVerdicts(card(RR))).toHaveLength(0);
+    });
+
+    it("in the grid", async () => {
+      await answerAndSubmit();
+      expect(within(grid()).getByRole("radio", { name: `${O2} Improved Correct` })).toBeChecked();
+      expect(within(grid()).getByRole("radio", { name: `${RR} Improved Incorrect` })).toBeChecked();
+      expect(
+        within(grid()).getByRole("radio", { name: `${RR} Declined Missed` }),
+      ).not.toBeChecked();
+      expect(exposedVerdicts(grid())).toHaveLength(0);
+    });
+  });
 });
 
 describe("matrix multiple response", () => {

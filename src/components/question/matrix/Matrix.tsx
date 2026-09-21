@@ -44,8 +44,22 @@ function stateClasses(checked: boolean, feedback: ElementFeedback, mode: PlayerM
   return checked ? "border-accent bg-accent-soft" : "";
 }
 
-function FeedbackText({ state }: { state: ElementFeedback }) {
-  return state === "neutral" ? null : <span className="sr-only">{feedbackLabel[state]}</span>;
+/**
+ * The verdict, as part of the control's name. The control has an explicit aria-labelledby, which
+ * replaces any name from the label's content, so the verdict is only heard if this id is in that
+ * list. It is hidden from the tree so it is not read again beside the control (#60).
+ */
+function FeedbackText({ id, state }: { id: string; state: ElementFeedback }) {
+  return state === "neutral" ? null : (
+    <span id={id} aria-hidden="true" className="sr-only">
+      {feedbackLabel[state]}
+    </span>
+  );
+}
+
+/** aria-labelledby for a matrix control: row, column, then the verdict once there is one. */
+function labelledBy(rowId: string, columnId: string, feedbackId: string, state: ElementFeedback) {
+  return [rowId, columnId, state === "neutral" ? null : feedbackId].filter(Boolean).join(" ");
 }
 
 export function RowScoreMark({ score }: { score: RowScore }) {
@@ -139,11 +153,16 @@ function MatrixGrid({
                           checked={checked}
                           disabled={!interactive}
                           onChange={() => onToggle(row.id, column.id)}
-                          aria-labelledby={`${uid}-row-${row.id} ${uid}-col-${column.id}`}
+                          aria-labelledby={labelledBy(
+                            `${uid}-row-${row.id}`,
+                            `${uid}-col-${column.id}`,
+                            `${inputId}-verdict`,
+                            feedback,
+                          )}
                           aria-describedby={whyId}
                           className="size-4 accent-(--accent)"
                         />
-                        <FeedbackText state={feedback} />
+                        <FeedbackText id={`${inputId}-verdict`} state={feedback} />
                         <FeedbackIcon state={feedback} className="" />
                       </label>
                     </td>
@@ -222,7 +241,12 @@ function MatrixCards({
                       onChange={() => onToggle(row.id, column.id)}
                       // Row and column, as in the grid: a phone screen reader can skip the
                       // group's name, and the column alone repeats identically on every card.
-                      aria-labelledby={`${uid}-card-row-${row.id} ${columnId}`}
+                      aria-labelledby={labelledBy(
+                        `${uid}-card-row-${row.id}`,
+                        columnId,
+                        `${inputId}-verdict`,
+                        feedback,
+                      )}
                       aria-describedby={whyId}
                       className="size-4 shrink-0 accent-(--accent)"
                     />
@@ -230,7 +254,7 @@ function MatrixCards({
                     <span id={columnId} aria-hidden="true" className="flex-1">
                       {column.label}
                     </span>
-                    <FeedbackText state={feedback} />
+                    <FeedbackText id={`${inputId}-verdict`} state={feedback} />
                     <FeedbackIcon state={feedback} />
                   </label>
                 );
