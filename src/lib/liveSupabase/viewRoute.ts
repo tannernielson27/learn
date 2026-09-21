@@ -73,6 +73,10 @@ export async function readParticipantView(
   if (!session) return fail(401, LIVE_ROUTE_ERRORS.signedOut);
   const refusal = asRefusal(session.refusal);
   if (refusal !== null) return refuse(refusal);
+  // A refused call answers with nulls in every other column, so a code this app does not know is
+  // not something to carry on past: it would put a null status on a student's page. Never passed
+  // through as itself either — an unknown code reaches a person as an empty sentence.
+  if (session.refusal) return fail(500, LIVE_ROUTE_ERRORS.failed);
 
   const itemSet = Array.isArray(session.session_items) ? (session.session_items as unknown[]) : [];
   const state: LiveSessionState = {

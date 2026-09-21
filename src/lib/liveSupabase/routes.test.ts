@@ -132,6 +132,30 @@ describe("POST /api/live/view", () => {
     expect(await refusalOf(response)).toBe("rate_limited");
   });
 
+  it("treats an unrecognised refusal code as a fault, not as a room to draw", async () => {
+    const response = await readParticipantView(
+      jsonRequest(URL_VIEW, {}),
+      deps({
+        begin_session_view: {
+          data: [
+            {
+              refusal: "something_new",
+              session_status: null,
+              session_position: null,
+              session_reveal: null,
+              session_items: null,
+            },
+          ],
+          error: null,
+        },
+      }),
+    );
+    // A refused call answers with nulls in every other column, so carrying on would put a null
+    // status on a phone. Never passed through as itself either: it would be an empty sentence.
+    expect(response.status).toBe(500);
+    expect(await response.text()).not.toContain("something_new");
+  });
+
   it("answers with no item at all while the room is in the lobby", async () => {
     const response = await readParticipantView(
       jsonRequest(URL_VIEW, {}),
