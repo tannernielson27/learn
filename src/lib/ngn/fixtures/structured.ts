@@ -34,6 +34,19 @@ export const highlightTextFixture: ItemFixture<"highlight_text"> = {
       general: md(
         "Bradycardia with irregularity, hypoxemia on oxygen, and oliguria signal reduced cardiac output.",
       ),
+      perElement: {
+        sp_hr: md(
+          "A slow, irregular rhythm after chest pain can mean ischemia has reached the conduction system. It needs a rhythm strip and a call to the provider.",
+        ),
+        sp_bp: md("128/78 is within the expected range and needs no follow-up on its own."),
+        sp_sat: md(
+          "91% while already on oxygen is low: the client is not oxygenating well even with support.",
+        ),
+        sp_skin: md("Warm, dry skin is expected and does not suggest poor peripheral perfusion."),
+        sp_urine: md(
+          "Less than 0.5 mL/kg an hour, about 30 mL for most adults, means the kidneys are under-perfused. 15 mL is well below it.",
+        ),
+      },
     },
   },
   edge: {
@@ -124,6 +137,19 @@ export const highlightTableFixture: ItemFixture<"highlight_table"> = {
       general: md(
         "Altered responsiveness, delayed capillary refill, dry mucosa, and low urine output are signs of moderate to severe dehydration.",
       ),
+      perElement: {
+        g1: md(
+          "Lethargy means the brain is under-perfused: a sign of moderate to severe dehydration.",
+        ),
+        g2: md("Having no fever is not a sign of dehydration, and it needs no follow-up here."),
+        s1: md("A capillary refill longer than 2 seconds shows poor peripheral perfusion."),
+        s2: md("Dry, cracked lips show the mucous membranes have lost fluid."),
+        s3: md("The absence of a rash says nothing about the child's fluid status."),
+        r1: md(
+          "An infant normally wets six or more diapers a day. Two in 24 hours is low urine output.",
+        ),
+        r2: md("No blood in the urine is expected and unrelated to fluid loss."),
+      },
     },
   },
   edge: {
@@ -204,6 +230,23 @@ export const orderedResponseFixture: ItemFixture<"ordered_response"> = {
       general: md(
         "Activate the response, start high-quality compressions immediately, then defibrillate as soon as the device is available.",
       ),
+      perElement: {
+        act_help: md(
+          "Calling first brings a defibrillator and more hands while compressions start.",
+        ),
+        act_cpr: md(
+          "Compressions start at once: every minute without them lowers the chance of survival.",
+        ),
+        act_aed: md(
+          "The pads go on as soon as the device arrives, with compressions continuing while they are placed.",
+        ),
+        act_rhythm: md(
+          "The rhythm is analyzed once the pads are on, because a shock helps only a shockable rhythm.",
+        ),
+        act_shock: md(
+          "A shock is delivered only when the rhythm is shockable, and compressions resume straight after it.",
+        ),
+      },
     },
   },
   edge: {
@@ -290,6 +333,40 @@ export const bowtieFixture: ItemFixture<"bowtie"> = {
       general: md(
         "Classic ischemic pain with autonomic symptoms is treated as acute MI until proven otherwise: rapid ECG, antiplatelet therapy, and monitoring for biomarker rise and dysrhythmia.",
       ),
+      perElement: {
+        act_ecg: md(
+          "A 12-lead ECG within 10 minutes shows whether the ST segments are raised, which decides the treatment path.",
+        ),
+        act_aspirin: md(
+          "Chewed aspirin inhibits platelets and limits clot growth in the coronary artery.",
+        ),
+        act_walk: md("Walking raises the heart's oxygen demand while it is ischemic."),
+        act_heat: md("A heating pad treats muscle pain and would delay care for cardiac pain."),
+        act_meal: md(
+          "An urgent procedure may follow, so the client should not eat until the plan is clear.",
+        ),
+        cond_mi: md(
+          "Crushing substernal pain spreading to the left arm for 30 minutes, with sweating and nausea, is an acute MI until proved otherwise.",
+        ),
+        cond_gerd: md(
+          "Reflux burns, usually after meals, and does not bring sweating or pain down the arm.",
+        ),
+        cond_costo: md(
+          "Costochondritis pain can be reproduced by pressing on the chest wall and does not cause sweating.",
+        ),
+        cond_panic: md(
+          "Panic can cause chest pain, but a cardiac cause is ruled out first, and this picture is classic ischemia.",
+        ),
+        par_troponin: md(
+          "Troponin rises as heart muscle is damaged; serial levels confirm the infarction and track it.",
+        ),
+        par_rhythm: md(
+          "Dysrhythmias are a leading early cause of death after an MI; continuous monitoring catches them.",
+        ),
+        par_bowel: md("Bowel sounds say nothing about the heart."),
+        par_temp: md("An oral temperature adds nothing to the early care of an MI."),
+        par_pupil: md("Pupil size is a neurologic check and does not track heart muscle injury."),
+      },
     },
   },
   edge: {
