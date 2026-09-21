@@ -671,6 +671,16 @@ export type Database = {
           refusal: string;
         }[];
       };
+      begin_session_view: {
+        Args: { participant: string; target_session: string };
+        Returns: {
+          refusal: string;
+          session_items: Json;
+          session_position: number;
+          session_reveal: boolean;
+          session_status: Database["public"]["Enums"]["session_status"];
+        }[];
+      };
       duplicate_case_study: {
         Args: { source_case_study: string };
         Returns: string;

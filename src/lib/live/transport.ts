@@ -15,8 +15,9 @@
  *
  * **What an adapter owes that is not expressed here.** This interface describes what a room does,
  * not how often anyone may ask. An adapter with a network boundary — #131's — has to add a
- * participant cap and a rate limit on `join` and `submit` of its own: uncapped, they are unbounded
- * roster growth and unbounded scoring work. #128 already does exactly this for resolving a join
+ * participant cap and a rate limit on `join`, on `submit` and on reading the room of its own:
+ * uncapped, they are unbounded roster growth, unbounded scoring work and an unbounded write rate
+ * on the participant row (#152). #128 already does exactly this for resolving a join
  * code (`private.code_lookups`, 150 lookups and 60 misses per address per five minutes) and #134
  * for signing in; a session's own calls need the same treatment. The in-memory adapter below
  * deliberately has neither, because its whole room is garbage collected with the test or the
