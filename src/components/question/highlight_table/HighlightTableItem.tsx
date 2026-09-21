@@ -1,6 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
+import { ElementRationaleList } from "../ElementRationale";
 import {
   HighlightTokens,
   spanOrder,
@@ -16,10 +17,15 @@ interface HighlightRow {
   cells: readonly (readonly HighlightToken[])[];
 }
 
+/** Grid and cards both render, one hidden by CSS, so each needs its own explanation ids. */
+type Layout = "grid" | "card";
+
 interface LayoutProps {
   columns: readonly string[];
   rows: readonly HighlightRow[];
-  cell: (tokens: readonly HighlightToken[]) => ReactNode;
+  cell: (tokens: readonly HighlightToken[], layout: Layout) => ReactNode;
+  /** Explanations for a cell's spans, in feedback only; renders nothing otherwise. */
+  why: (tokens: readonly HighlightToken[], layout: Layout) => ReactNode;
   rowScore?: (rowId: string) => RowScore | undefined;
 }
 
@@ -37,7 +43,7 @@ const headerClasses = (tokens: readonly HighlightToken[]) =>
   tokens.some((t) => t.kind === "span") ? "pt-2 leading-[2.875]" : "pt-[1.1875rem]";
 
 /** A table at 768px and wider, one card per row below; both render from one response. */
-function HighlightGrid({ columns, rows, cell, rowScore }: LayoutProps) {
+function HighlightGrid({ columns, rows, cell, why, rowScore }: LayoutProps) {
   return (
     // Padding cancelled by the margin, so the scroll box does not clip a span's focus ring.
     <div className="-m-1 hidden overflow-x-auto p-1 md:block">
@@ -66,12 +72,14 @@ function HighlightGrid({ columns, rows, cell, rowScore }: LayoutProps) {
                   scope="row"
                   className={`option pr-4 pb-2 text-left align-top font-normal ${headerClasses(first)}`}
                 >
-                  {cell(first)}
+                  {cell(first, "grid")}
                   {score ? <RowScoreMark score={score} /> : null}
+                  {why(first, "grid")}
                 </th>
                 {rest.map((tokens, index) => (
                   <td key={index} className="option py-2 pr-4 align-top leading-[2.875]">
-                    {cell(tokens)}
+                    {cell(tokens, "grid")}
+                    {why(tokens, "grid")}
                   </td>
                 ))}
               </tr>
@@ -83,7 +91,7 @@ function HighlightGrid({ columns, rows, cell, rowScore }: LayoutProps) {
   );
 }
 
-function HighlightCards({ columns, rows, cell, rowScore }: LayoutProps) {
+function HighlightCards({ columns, rows, cell, why, rowScore }: LayoutProps) {
   return (
     <div className="flex flex-col gap-3 md:hidden">
       <p className="sr-only">{CAPTION}</p>
@@ -96,17 +104,21 @@ function HighlightCards({ columns, rows, cell, rowScore }: LayoutProps) {
             aria-label={cellText(first)}
             className="min-w-0 rounded-sm border border-line bg-surface-1 px-3 pt-1 pb-3"
           >
-            <legend className="option float-left w-full py-2 font-medium">{cell(first)}</legend>
+            <legend className="option float-left w-full py-2 font-medium">
+              {cell(first, "card")}
+            </legend>
             {score ? (
               <p className="clear-left -mt-1 mb-1 text-ink-2">
                 <RowScoreMark score={score} />
               </p>
             ) : null}
+            <div className="clear-left">{why(first, "card")}</div>
             <div className="clear-left flex flex-col gap-2">
               {rest.map((tokens, index) => (
                 <div key={index}>
                   <p className="eyebrow">{columns[index + 1]}</p>
-                  <p className="option leading-[2.875]">{cell(tokens)}</p>
+                  <p className="option leading-[2.875]">{cell(tokens, "card")}</p>
+                  {why(tokens, "card")}
                 </div>
               ))}
             </div>
@@ -124,25 +136,45 @@ export function HighlightTableItem({
   score,
   onChange,
 }: ItemRendererProps<"highlight_table">) {
+  const uid = useId();
   const { columns, rows } = item.content;
   const order = rows.flatMap((r) => r.cells.flatMap((c) => spanOrder(c)));
   const selected = new Set(response.spanIds);
   const correct = new Set(item.answerKey?.correctSpanIds ?? []);
-  const cell = (tokens: readonly HighlightToken[]) => (
+  // Rationale reaches the renderer in feedback only; the mode check keeps it off the page anyway.
+  const rationale = (spanId: string) =>
+    mode === "feedback" ? item.rationale?.perElement?.[spanId] : undefined;
+  const whyId = (layout: Layout, spanId: string) => `${uid}-${layout}-why-${spanId}`;
+  const cell = (tokens: readonly HighlightToken[], layout: Layout) => (
     <HighlightTokens
       tokens={tokens}
       selected={selected}
       correct={correct}
       mode={mode}
+      describedBy={(spanId) => (rationale(spanId) ? whyId(layout, spanId) : undefined)}
       onToggle={(spanId) =>
         onChange({ type: "highlight_table", spanIds: toggleSpan(order, response.spanIds, spanId) })
       }
+    />
+  );
+  // #49: a span is a phrase in a table cell, so its explanation goes beneath that cell, inside it,
+  // where the finding sits in the grid and in its row card. A cell's findings are a list, not a
+  // sentence, so nothing reads broken; with more than one explained, each is named.
+  const why = (tokens: readonly HighlightToken[], layout: Layout) => (
+    <ElementRationaleList
+      className="pb-2"
+      items={tokens.flatMap((token) =>
+        token.kind === "span"
+          ? [{ id: whyId(layout, token.spanId), label: token.value, text: rationale(token.spanId) }]
+          : [],
+      )}
     />
   );
   const layout: LayoutProps = {
     columns,
     rows,
     cell,
+    why,
     // Per-row marks appear only when the item scores per row, which is exactly when the score
     // carries per-row subtotals.
     rowScore: rowScorer(mode, score),

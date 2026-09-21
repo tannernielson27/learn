@@ -20,6 +20,7 @@ export function DragdropRationaleItem({
       mode={mode}
       correctToken={(id) => item.answerKey?.blanks.find((b) => b.blankId === id)?.correctTokenId}
       anchorBlankId={isTriad ? item.answerKey?.anchorBlankId : undefined}
+      blankRationale={(blankId) => item.rationale?.perElement?.[blankId]}
       onChange={(blanks) => onChange({ type: "dragdrop_rationale", blanks })}
     />
   );

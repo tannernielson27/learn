@@ -25,3 +25,41 @@ export function ElementRationale({ id, text, className = "" }: ElementRationaleP
     </p>
   );
 }
+
+export interface ExplainedElement {
+  /** Id of the explanation, which the element's control points at with aria-describedby. */
+  id: string;
+  /** The element's own words, e.g. a highlighted phrase or a bowtie choice. */
+  label: string;
+  text?: RichText;
+}
+
+/**
+ * Explanations for several elements that share one place: the phrases of one sentence or table
+ * cell, or the choices of one bowtie column (#49). Each is named after its element when it could
+ * otherwise be read as belonging to its neighbour: always with `labelled`, else only when there
+ * is more than one. Renders nothing when none of the elements has an explanation.
+ */
+export function ElementRationaleList({
+  items,
+  labelled = false,
+  className = "",
+}: {
+  items: readonly ExplainedElement[];
+  labelled?: boolean;
+  className?: string;
+}) {
+  const explained = items.filter((item) => item.text);
+  if (explained.length === 0) return null;
+  const named = labelled || explained.length > 1;
+  return (
+    <div className={`flex flex-col gap-3 ${className}`.trim()}>
+      {explained.map((item) => (
+        <div key={item.id}>
+          {named ? <p className="text-xs font-medium text-ink-2">{item.label}</p> : null}
+          <ElementRationale id={item.id} text={item.text} />
+        </div>
+      ))}
+    </div>
+  );
+}
