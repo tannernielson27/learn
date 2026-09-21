@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { FIXTURES } from "@/lib/ngn/fixtures";
+import { validateItem } from "@/lib/ngn/validate";
 import type { Database } from "@/lib/supabase/database.types";
+import { toItemRow } from "@/lib/supabase/itemRows";
 import type { LiveRouteDeps } from "./routeDeps";
 import { submitSessionResponse } from "./submitRoute";
 import { readParticipantView } from "./viewRoute";
@@ -53,7 +56,40 @@ async function refusalOf(response: Response): Promise<string | undefined> {
   return ((await response.json()) as { refusal?: string }).refusal;
 }
 
+/** What `begin_session_view` answers with for a room in the state given (#152). */
+function viewing(state: {
+  status: string;
+  position: number | null;
+  reveal: boolean;
+  items: string[];
+}): Answer {
+  return {
+    data: [
+      {
+        refusal: null,
+        session_status: state.status,
+        session_position: state.position,
+        session_reveal: state.reveal,
+        session_items: state.items,
+      },
+    ],
+    error: null,
+  };
+}
+
 describe("POST /api/live/view", () => {
+  it("refuses anything that is not JSON, the same way the submission route does", async () => {
+    const response = await readParticipantView(
+      new Request(URL_VIEW, {
+        method: "POST",
+        body: "{}",
+        headers: { "content-type": "text/plain" },
+      }),
+      deps({}),
+    );
+    expect(await refusalOf(response)).toBe("malformed");
+  });
+
   it("refuses a request carrying no participant", async () => {
     const response = await readParticipantView(jsonRequest(URL_VIEW, {}), deps({}, null));
     expect(response.status).toBe(401);
@@ -63,7 +99,7 @@ describe("POST /api/live/view", () => {
   it("reports a database that will not answer, without saying what it said", async () => {
     const response = await readParticipantView(
       jsonRequest(URL_VIEW, {}),
-      deps({ sessions: { data: null, error: { message: "connection refused" } } }),
+      deps({ begin_session_view: { data: null, error: { message: "connection refused" } } }),
     );
     expect(response.status).toBe(500);
     expect(await response.text()).not.toContain("connection refused");
@@ -74,14 +110,62 @@ describe("POST /api/live/view", () => {
     expect(response.status).toBe(401);
   });
 
+  it("passes the rate limiter's refusal on as one, with the status a client can back off on", async () => {
+    const response = await readParticipantView(
+      jsonRequest(URL_VIEW, {}),
+      deps({
+        begin_session_view: {
+          data: [
+            {
+              refusal: "rate_limited",
+              session_status: null,
+              session_position: null,
+              session_reveal: null,
+              session_items: null,
+            },
+          ],
+          error: null,
+        },
+      }),
+    );
+    expect(response.status).toBe(429);
+    expect(await refusalOf(response)).toBe("rate_limited");
+  });
+
+  it("treats an unrecognised refusal code as a fault, not as a room to draw", async () => {
+    const response = await readParticipantView(
+      jsonRequest(URL_VIEW, {}),
+      deps({
+        begin_session_view: {
+          data: [
+            {
+              refusal: "something_new",
+              session_status: null,
+              session_position: null,
+              session_reveal: null,
+              session_items: null,
+            },
+          ],
+          error: null,
+        },
+      }),
+    );
+    // A refused call answers with nulls in every other column, so carrying on would put a null
+    // status on a phone. Never passed through as itself either: it would be an empty sentence.
+    expect(response.status).toBe(500);
+    expect(await response.text()).not.toContain("something_new");
+  });
+
   it("answers with no item at all while the room is in the lobby", async () => {
     const response = await readParticipantView(
       jsonRequest(URL_VIEW, {}),
       deps({
-        sessions: {
-          data: { status: "lobby", current_position: null, reveal: false, item_set: ["a", "b"] },
-          error: null,
-        },
+        begin_session_view: viewing({
+          status: "lobby",
+          position: null,
+          reveal: false,
+          items: ["a", "b"],
+        }),
       }),
     );
     expect(response.status).toBe(200);
@@ -97,10 +181,12 @@ describe("POST /api/live/view", () => {
     const response = await readParticipantView(
       jsonRequest(URL_VIEW, {}),
       deps({
-        sessions: {
-          data: { status: "running", current_position: 1, reveal: false, item_set: ["a"] },
-          error: null,
-        },
+        begin_session_view: viewing({
+          status: "running",
+          position: 1,
+          reveal: false,
+          items: ["a"],
+        }),
         items: {
           data: {
             type: "multiple_choice",
@@ -117,6 +203,34 @@ describe("POST /api/live/view", () => {
       }),
     );
     expect(response.status).toBe(409);
+  });
+
+  it("does not hand back an answer whose stored timestamp will not parse", async () => {
+    const item = validateItem(FIXTURES.multiple_choice.canonical);
+    if (!item.ok) throw new Error("the multiple_choice fixture no longer validates");
+    const response = await readParticipantView(
+      jsonRequest(URL_VIEW, {}),
+      deps({
+        begin_session_view: viewing({
+          status: "running",
+          position: 1,
+          reveal: false,
+          items: ["a"],
+        }),
+        items: { data: toItemRow(item.value), error: null },
+        // `Date.parse` of this is NaN, which serializes to null: an answer that claims never to
+        // have been sent. It reads as "not answered here" instead.
+        session_responses: {
+          data: {
+            response: FIXTURES.multiple_choice.cases[0].response,
+            submitted_at: "not a timestamp",
+          },
+          error: null,
+        },
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(((await response.json()) as { answered: unknown }).answered).toBeNull();
   });
 });
 

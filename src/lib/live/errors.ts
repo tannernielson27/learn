@@ -37,10 +37,13 @@ export const LIVE_REFUSALS = {
   name_too_long: "That name is too long. Use 60 characters or fewer.",
   /**
    * An adapter with a network boundary has to cap how often one person may answer, or `submit` is
-   * unbounded scoring work (see `transport.ts`). #131's Postgres counter says no with this. The
-   * in-memory adapter never raises it: its whole room is garbage collected with the test.
+   * unbounded scoring work, and how often one person may read the room, or the view route is an
+   * unbounded write rate on the participant row (see `transport.ts`). #131's Postgres counter and
+   * #152's say no with this one code: two counters, one vocabulary. The sentence therefore says
+   * "requests" rather than "answers", because it is shown for both. The in-memory adapter never
+   * raises it: its whole room is garbage collected with the test.
    */
-  rate_limited: "Too many answers from this device. Wait a moment and try again.",
+  rate_limited: "Too many requests from this device. Wait a moment and try again.",
   /** Reuses the submit seam's own wording (#56) rather than inventing a second sentence. */
   malformed: SUBMIT_ERRORS.malformed,
   wrong_type: SUBMIT_ERRORS.wrongType,

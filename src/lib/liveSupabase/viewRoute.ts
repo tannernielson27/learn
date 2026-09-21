@@ -17,13 +17,24 @@
  * POST, not GET, for one reason: a GET route handler can be prerendered or cached, and nothing
  * that may carry an answer key is allowed anywhere near a cache. Every answer also carries
  * `Cache-Control: no-store`.
+ *
+ * ## How often one person may ask (#152)
+ *
+ * A participant token is required, so this route is not anonymous — but a participant of a room
+ * could spin it as fast as it liked, and every call costs a `last_seen_at` write in
+ * `resume_participant` plus three reads. `public.begin_session_view` is the cap: it charges this
+ * participant's counter and hands back the four columns of `public.sessions` a student may know,
+ * so the limit replaces the read the route used to do rather than sitting in front of it. That is
+ * `begin_session_submission`'s bargain on the submission route, and the two counters are the same
+ * table, the same five-minute window and the same `rate_limited` refusal. Only the number differs,
+ * and the migration says why.
  */
 import { itemAt, type LiveSessionState, type ParticipantItem } from "@/lib/live";
 import type { Item } from "@/lib/ngn/schemas";
 import { parseSubmission, toKeylessItem, type Reveal } from "@/lib/ngn/submit";
 import type { ScoreResult } from "@/lib/ngn/types";
 import { fromItemRow } from "@/lib/supabase/itemRows";
-import { LIVE_ROUTE_ERRORS, fail, type LiveRouteDeps } from "./routeDeps";
+import { LIVE_ROUTE_ERRORS, asRefusal, fail, refuse, type LiveRouteDeps } from "./routeDeps";
 import {
   NO_STORE_HEADERS,
   type AnsweredPayload,
@@ -33,32 +44,49 @@ import {
 
 const ITEM_COLUMNS = "type, cjmm_step, tags, version, content, answer_key, rationale, scoring";
 
-/** The session columns this route reads. No code, no host, no org: none of it is a student's. */
-const SESSION_COLUMNS = "status, current_position, reveal, item_set";
-
 export async function readParticipantView(
   request: Request,
   deps: LiveRouteDeps,
 ): Promise<Response> {
+  // JSON only, the same rule the submission route holds a request to. Nothing here parses the
+  // body and the participant cookie is SameSite=Lax, so this closes no hole on its own; it stops
+  // the two routes having two different ideas of what a request to this app looks like.
+  if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
+    return refuse("malformed");
+  }
+
   const participant = await deps.verify(request);
   if (participant === null) return fail(401, LIVE_ROUTE_ERRORS.signedOut);
 
-  const { data: session, error } = await deps.service
-    .from("sessions")
-    .select(SESSION_COLUMNS)
-    .eq("id", participant.sessionId)
-    .maybeSingle();
+  // Charges this participant's rate limit and reads the room in one round trip (#152), which is
+  // `begin_session_submission`'s bargain on the other route. The order is the submission route's
+  // too: who is speaking is settled first and the limit charged second, so nobody can spend a
+  // budget that is not theirs.
+  const { data: opened, error } = await deps.service.rpc("begin_session_view", {
+    target_session: participant.sessionId,
+    participant: participant.participantId,
+  });
   if (error) return fail(500, LIVE_ROUTE_ERRORS.failed);
+  const session = opened?.[0];
   // A participant whose session has been deleted is not in a room any more. The token is the only
   // thing that said otherwise, and it says nothing about whether the row still exists.
   if (!session) return fail(401, LIVE_ROUTE_ERRORS.signedOut);
+  const refusal = asRefusal(session.refusal);
+  if (refusal !== null) return refuse(refusal);
+  // A refused call answers with nulls in every other column, so a code this app does not know is
+  // not something to carry on past: it would put a null status on a student's page. Never passed
+  // through as itself either — an unknown code reaches a person as an empty sentence.
+  if (session.refusal) return fail(500, LIVE_ROUTE_ERRORS.failed);
 
-  const itemSet = Array.isArray(session.item_set) ? (session.item_set as unknown[]) : [];
+  const itemSet = Array.isArray(session.session_items) ? (session.session_items as unknown[]) : [];
   const state: LiveSessionState = {
-    status: session.status,
-    position: session.current_position,
+    status: session.session_status,
+    // A `returns table` function carries no nullability into the generated types, so the position
+    // is coerced rather than read straight through: before the room starts it really is null,
+    // whatever the type says.
+    position: session.session_position ?? null,
     itemCount: itemSet.length,
-    reveal: session.reveal,
+    reveal: session.session_reveal,
   };
 
   const currentItemId = itemAt(itemSet, state);
@@ -133,11 +161,13 @@ async function answerFor(
 
   const parsed = parseSubmission({ response: data.response }, item.type);
   if (!parsed.ok) return null;
-  return {
-    itemId: item.id,
-    submittedAt: Date.parse(data.submitted_at),
-    response: parsed.response,
-  };
+  // Stored text, checked rather than trusted, like the response beside it. An unparseable stamp
+  // is `NaN`, which serializes to `null` and would have the phone show an answer whose
+  // `submittedAt` is missing — an answer that claims never to have been sent. Unreadable reads as
+  // "not answered here", the same way an unreadable response does above.
+  const submittedAt = Date.parse(data.submitted_at);
+  if (Number.isNaN(submittedAt)) return null;
+  return { itemId: item.id, submittedAt, response: parsed.response };
 }
 
 /**

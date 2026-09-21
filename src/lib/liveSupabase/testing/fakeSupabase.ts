@@ -647,6 +647,27 @@ function runRpc(
     return error ? { data: null, error } : { data: session.closed_at, error: null };
   }
 
+  // #152. The counter itself is not stood in for: `private.take_session_view` is covered where it
+  // lives, by supabase/tests/database/live_view_limit.test.sql under pgTAP, and a conformance run
+  // is nowhere near six hundred calls. What this has to be faithful about is the rest of the
+  // function — the four columns a student may know, and no rows at all for a session that is gone.
+  if (name === "begin_session_view") {
+    const session = stack.sessions.find((row) => row.id === String(args.target_session));
+    if (!session) return { data: [], error: null };
+    return {
+      data: [
+        {
+          refusal: null,
+          session_status: session.status,
+          session_position: session.current_position,
+          session_reveal: session.reveal,
+          session_items: session.item_set,
+        },
+      ],
+      error: null,
+    };
+  }
+
   if (name === "begin_session_submission") {
     const session = stack.sessions.find((row) => row.id === String(args.target_session));
     if (!session || session.status === "ended") {
