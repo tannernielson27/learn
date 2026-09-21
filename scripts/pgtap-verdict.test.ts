@@ -55,6 +55,26 @@ describe("findProblems", () => {
     expect(findProblems(PASSING, 0)).toEqual([]);
   });
 
+  it("passes a verbose run whose test descriptions quote the markers", () => {
+    const output = PASSING.replace(
+      `${FILE} ........ ok`,
+      [
+        `${FILE} .. `,
+        "ok 1 - rejects a Bad plan submission",
+        "ok 2 - No plan found is reported for an empty bank",
+        "ok 3 - Parse errors: none in the imported rows",
+        "ok 4 - Looks like you planned 3 tests but ran 1 is not raised here",
+        "ok",
+      ].join("\n"),
+    );
+    expect(findProblems(output, 0)).toEqual([]);
+  });
+
+  it("passes a coloured run", () => {
+    const output = PASSING.replace("Result: PASS", "\x1b[32mResult: PASS\x1b[0m");
+    expect(findProblems(output, 0)).toEqual([]);
+  });
+
   it("passes a run with Windows line endings", () => {
     expect(findProblems(PASSING.replaceAll("\n", "\r\n"), 0)).toEqual([]);
   });

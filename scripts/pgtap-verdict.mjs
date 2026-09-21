@@ -10,14 +10,20 @@
 //
 // Kept free of I/O so it can be unit-tested; scripts/test-db.mjs does the running.
 
+// Each pattern is anchored to the start of the line pgTAP or pg_prove prints it on, so a test
+// whose description quotes one (`ok 3 - rejects a Bad plan`) cannot fail a passing run.
+
 /** pgTAP's `finish()` diagnostic, e.g. `# Looks like you planned 12 tests but ran 6`. */
-const PLAN_MISMATCH = /Looks like you planned (\d+) tests? but ran (\d+)/;
+const PLAN_MISMATCH = /^\s*#\s*Looks like you planned (\d+) tests? but ran (\d+)/;
 
 /** pgTAP's `finish()` diagnostic for failures it counted. The harness also sees `not ok`. */
-const FAILED_COUNT = /Looks like you failed (\d+) tests? of (\d+)/;
+const FAILED_COUNT = /^\s*#\s*Looks like you failed (\d+) tests? of (\d+)/;
 
-/** What TAP::Harness (pg_prove) prints when the TAP stream itself is wrong. */
-const HARNESS_MARKERS = ["Bad plan", "No plan found", "Parse errors"];
+/** TAP::Harness's summary line when the TAP stream itself is wrong (`Bad plan`, `No plan found`). */
+const PARSE_ERRORS = /^\s*Parse errors:/;
+
+/** Colour codes, in case anything in the CLI's chain ever treats the output as a terminal. */
+const ANSI = /\x1b\[[0-9;]*m/g;
 
 /** pg_prove's per-file progress line: `/path/to/file.test.sql ....... ok`. */
 const FILE_LINE = /^(\S+\.sql) \.+/;
@@ -41,8 +47,9 @@ export function findProblems(output, exitCode) {
     );
   }
 
+  const plain = output.replace(ANSI, "");
   let file = null;
-  for (const line of output.split(/\r?\n/)) {
+  for (const line of plain.split(/\r?\n/)) {
     const fileMatch = FILE_LINE.exec(line);
     if (fileMatch) file = fileMatch[1];
 
@@ -55,13 +62,12 @@ export function findProblems(output, exitCode) {
     if (failed) {
       problems.push(`pgTAP counted ${failed[1]} failed of ${failed[2]}${where}`);
     }
-    const marker = HARNESS_MARKERS.find((m) => line.includes(m));
-    if (marker) {
+    if (PARSE_ERRORS.test(line)) {
       problems.push(`harness reported "${line.trim()}"${where}`);
     }
   }
 
-  if (!RESULT_PASS.test(output)) {
+  if (!RESULT_PASS.test(plain)) {
     problems.push("no `Result: PASS` line: the harness never reported a passing run");
   }
 

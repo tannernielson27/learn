@@ -40,6 +40,8 @@ Everything was run locally. GitHub Actions is down, so CI did not run.
   - After the file was removed, `pnpm test:db` passed again: 15 files, 441 tests, exit 0. The throwaway project was then stopped with `--no-backup`. The shared stack was not touched.
 - The plain short-plan file through `pnpm test:db` exits 1 and lists the non-zero exit, the plan mismatch, the `Bad plan` parse error and the missing `Result: PASS`.
 
+**Review round.** One HIGH was fixed. The harness markers (`Bad plan`, `No plan found`, `Parse errors`) were matched as substrings anywhere on a line, so in a verbose run a passing test described as `ok 1 - rejects a Bad plan` would have failed the run. The patterns are now anchored to the lines pg_prove and pgTAP actually print them on: `Parse errors:` and `# Looks like…`. ANSI colour codes are stripped before matching. Two tests cover this, and both fail against the old code. `vitest run scripts` now runs 16 tests, all passing. Open LOW: stdout and stderr are collected by separate listeners, so a failure reason could name the wrong file. The pass/fail verdict does not depend on that order.
+
 Known limits: the wrapper reads pg_prove's text output, so a future CLI that renames `Result: PASS` would fail every run. That is loud, not silent. Arguments are joined through a shell on Windows, so a path with spaces needs quoting.
 
 Closes #163
