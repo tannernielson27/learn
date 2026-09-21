@@ -26,7 +26,7 @@ const order = () =>
     .map((li) => li.getAttribute("data-label"));
 const up = (label: string) => screen.getByRole("button", { name: `Move "${label}" up` });
 const down = (label: string) => screen.getByRole("button", { name: `Move "${label}" down` });
-// Named because dnd-kit adds its own (silent) status region to the page.
+// Named, so this never depends on dnd-kit's own status region staying hidden (#60).
 const status = () => screen.getByRole("status", { name: "Order changes" });
 const submit = () => screen.getByRole("button", { name: "Submit" });
 const scorePanel = () => screen.getByRole("complementary", { name: "Score" });

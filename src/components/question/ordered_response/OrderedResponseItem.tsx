@@ -7,7 +7,6 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
-  type Announcements,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import {
@@ -18,6 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { useEffect, useId, useRef, useState } from "react";
 import { presentationOrder } from "@/lib/ngn/presentation";
+import { useSilentDndAccessibility } from "../dndAccessibility";
 import { FeedbackIcon, feedbackLabel } from "../OptionRow";
 import type { ElementFeedback, ItemRendererModule, ItemRendererProps, PlayerMode } from "../types";
 import { usePrefersReducedMotion } from "../usePrefersReducedMotion";
@@ -31,14 +31,6 @@ export function moveStep(order: readonly string[], id: string, direction: Direct
   if (from < 0 || to < 0 || to >= order.length) return [...order];
   return arrayMove([...order], from, to);
 }
-
-// Moves are announced by this component's own status region, so dnd-kit stays silent.
-const SILENT: Announcements = {
-  onDragStart: () => undefined,
-  onDragOver: () => undefined,
-  onDragEnd: () => undefined,
-  onDragCancel: () => undefined,
-};
 
 const feedbackClasses: Record<ElementFeedback, string> = {
   neutral: "border-line",
@@ -57,6 +49,8 @@ export function OrderedResponseItem({
   const [message, setMessage] = useState("");
   const buttons = useRef(new Map<string, HTMLButtonElement>());
   const pendingFocus = useRef<string | null>(null);
+  // Moves are announced by this component's own status region, so dnd-kit stays silent.
+  const dndA11y = useSilentDndAccessibility();
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 100, tolerance: 6 } }),
@@ -111,7 +105,7 @@ export function OrderedResponseItem({
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={onDragEnd}
-      accessibility={{ announcements: SILENT }}
+      accessibility={dndA11y.accessibility}
     >
       <SortableContext
         items={order}
@@ -147,6 +141,7 @@ export function OrderedResponseItem({
       <p role="status" aria-label="Order changes" className="sr-only">
         {message}
       </p>
+      {dndA11y.sink}
     </DndContext>
   );
 }
