@@ -122,13 +122,10 @@ export function ItemPlayer({
   // Feedback mode is not itself the reveal: a caller can open in it with nothing scored yet, and
   // until there is a score there is nothing to explain and nothing to hand over.
   const revealed = mode === "feedback" && result !== undefined;
-  const playerItem = toPlayerItem(fullItem, revealed ? "feedback" : "answer") as PlayerItem<
-    typeof item.type
-  >;
-  const canSubmit = rendererModule.isComplete(
-    playerItem as PlayerItem<ItemType>,
-    response as ResponseOf<ItemType>,
-  );
+  // Typed with the key and rationale optional, and handed over as that: a renderer has to check
+  // for either before reading it, because in answer mode neither is there (#50).
+  const playerItem = toPlayerItem(fullItem, revealed ? "feedback" : "answer");
+  const canSubmit = rendererModule.isComplete(playerItem, response as ResponseOf<ItemType>);
 
   const finish = (checked: ScoreReveal) => {
     setReveal(toReveal(checked));
@@ -183,7 +180,7 @@ export function ItemPlayer({
       label={label ?? `${ITEM_TYPE_LABELS[item.type]} question`}
     >
       <Renderer
-        item={playerItem as PlayerItem<ItemType> & ItemOf<ItemType>}
+        item={playerItem}
         response={response as ResponseOf<ItemType>}
         mode={mode}
         score={result}
