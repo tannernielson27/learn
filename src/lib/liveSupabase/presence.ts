@@ -29,12 +29,15 @@ export interface PresenceEntry {
  * Reads one tracked entry, or null.
  *
  * **Why every field is checked and not just typed.** `presenceState<PresenceEntry>()` is a type
- * parameter and nothing more: Supabase does not validate a presence payload, and the session's
- * channel is not a private one — it cannot be, because a student has no Postgres identity for a
- * `realtime.messages` policy to speak for. So anything holding the publishable key and a session
- * id can `track()` whatever JSON it likes, and what it tracks is printed on the screen at the
- * front of a classroom. A `displayName` that is an object rather than a string would throw
- * "Objects are not valid as a React child" and take the host's console down for the whole room.
+ * parameter and nothing more: Supabase does not validate a presence payload. Since #149 the
+ * session's channel is private, so only a socket the server issued a token for this session can
+ * join it at all — but a `realtime.messages` policy is evaluated when a socket joins, against a
+ * row that carries the topic and the kind of message and nothing of what is later tracked
+ * (checked against the local Realtime: the policy sees `payload` and `event` as null). So a
+ * participant of the room can still `track()` whatever JSON they like, under any presence key,
+ * and what they track is printed on the screen at the front of a classroom. A `displayName` that
+ * is an object rather than a string would throw "Objects are not valid as a React child" and take
+ * the host's console down for the whole room.
  *
  * The name is put through `cleanDisplayName` (#129) for the same reason it is on the way in: a
  * bidi override in a presence entry reorders the roster lines around it, and escaping does not
@@ -42,9 +45,11 @@ export interface PresenceEntry {
  * `join_session` — no name, or one past the cap that function truncates at — is not a
  * participant, and is dropped rather than shown.
  *
- * What this cannot stop is a forged entry carrying an ordinary name, which is a property of a
- * public presence channel rather than of this function. It puts a name in a roster and reaches
- * nothing else: no item, no key, no answer, no row.
+ * What this cannot stop is a participant of the room tracking an entry with an ordinary name —
+ * their own, a made-up one, or a classmate's id — which is a property of Realtime presence rather
+ * than of this function. It changes what the roster shows and reaches nothing else: no item, no
+ * key, no answer, no row. Every one of those is keyed off the cookie-checked participant id, never
+ * off presence. Someone who is not in the room can no longer do even this (#149).
  */
 function personFrom(entry: PresenceEntry): Participant | null {
   if (typeof entry.participantId !== "string" || entry.participantId === "") return null;

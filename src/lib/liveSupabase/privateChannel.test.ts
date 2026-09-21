@@ -71,6 +71,24 @@ describe("the private session channel (#149)", () => {
     );
   });
 
+  it("tells a removed participant's screen it is finished, through the real route, rather than reconnecting", async () => {
+    const live = twoRooms();
+    const adaId = await joinedAda(live);
+    const identity = live.identityOf(adaId);
+    const phone = live.resuming(adaId);
+    const statuses: string[] = [];
+    phone.onConnection((status) => statuses.push(status));
+
+    // The participant row goes. The cookie still parses, but `resume_participant` no longer
+    // matches it, so `POST /api/live/channel` answers 401 and the token source gives up for good.
+    const index = live.stack.participants.findIndex((person) => person.id === adaId);
+    live.stack.participants.splice(index, 1);
+
+    await expect(phone.resume(identity)).rejects.toThrow();
+    await live.settle();
+    expect(statuses).toContain("refused");
+  });
+
   it("refuses the publishable key alone: knowing a session id is no longer enough", async () => {
     const live = twoRooms();
     expect(await subscribeAs(live, { role: "anon" }, SESSION_A)).toBe("CHANNEL_ERROR");

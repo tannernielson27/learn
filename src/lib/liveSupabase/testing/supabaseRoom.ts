@@ -192,20 +192,22 @@ export function createFakeRoom(options: ConformanceRoomOptions): FakeRoom {
    * real `POST /api/live/channel` with this browser's cookie — the cookie is checked, then the
    * token is minted, exactly the order production keeps.
    */
-  const studentClient = (jar: CookieJar) =>
-    createFakeClient(stack, {
-      role: "anon",
-      accessToken: createChannelTokenSource({
-        initial: { token: "", expiresAt: 0 },
-        fetch: fetchFor(jar),
-        baseUrl: ORIGIN,
-      }),
+  const studentConnection = (jar: CookieJar) => {
+    const tokens = createChannelTokenSource({
+      initial: { token: "", expiresAt: 0 },
+      fetch: fetchFor(jar),
+      baseUrl: ORIGIN,
     });
+    return {
+      client: createFakeClient(stack, { role: "anon", accessToken: tokens.accessToken }),
+      tokens,
+    };
+  };
 
   const participantWith = (wrap: (join: JoinSession) => JoinSession): SupabaseParticipant => {
     const jar: CookieJar = { token: null };
     return createSupabaseParticipant({
-      client: studentClient(jar),
+      ...studentConnection(jar),
       join: wrap(joinInto(jar)),
       fetch: fetchFor(jar),
       baseUrl: ORIGIN,
@@ -237,7 +239,7 @@ export function createFakeRoom(options: ConformanceRoomOptions): FakeRoom {
         token: { sessionId: held.session_id, participantId: held.id, secret: held.rejoin_secret },
       };
       return createSupabaseParticipant({
-        client: studentClient(jar),
+        ...studentConnection(jar),
         fetch: fetchFor(jar),
         baseUrl: ORIGIN,
       });

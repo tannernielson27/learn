@@ -52,6 +52,7 @@ import type {
   SessionView,
   Unsubscribe,
 } from "@/lib/live/transport";
+import type { ChannelTokenSource } from "./channelTokenSource";
 import { rosterFrom, type PresenceEntry } from "./presence";
 import type { Database } from "@/lib/supabase/database.types";
 import {
@@ -75,7 +76,7 @@ const DISPLAY_NAME_MAX = 60;
  * "reconnecting" is not an error state: Realtime retries by itself, and this is what lets the
  * screen say so rather than silently showing a room that has moved on.
  */
-export type RoomConnection = "connecting" | "live" | "reconnecting";
+export type RoomConnection = "connecting" | "live" | "reconnecting" | "refused";
 
 /** Who this phone is, as the page's server render established it. Never asserted by the browser. */
 export interface ResumedIdentity {
@@ -125,6 +126,13 @@ export interface ParticipantTransportOptions {
    * that answers with this participant's channel token. Used for its channel and nothing else.
    */
   client: SupabaseClient<Database>;
+  /**
+   * The source behind `client`'s `accessToken` (#149), so the transport hears when the server
+   * refuses this phone another channel token for good. When it does, the channel is closed and
+   * `onConnection` reports `"refused"`, which is final: no `rejoined` will ever follow it, so a
+   * screen must not wait for one. Optional because a client with no token source never refuses.
+   */
+  tokens?: Pick<ChannelTokenSource, "onRefused">;
   /** #129's join path. Only `join` needs it; a resumed phone has already been through it. */
   join?: JoinSession;
   /** Injectable so the conformance suite can drive the real route handlers without a server. */
@@ -293,6 +301,21 @@ export function createSupabaseParticipant(
   function notifyConnection(status: RoomConnection, rejoined: boolean): void {
     for (const listener of [...connections]) listener(status, rejoined);
   }
+
+  /**
+   * The server will not issue this phone another channel token: its participant is gone, or its
+   * session has ended (#149). The socket could only ever be refused from here on, and Realtime
+   * would keep retrying it with a dead token, so the channel is closed and the screen is told —
+   * `"refused"`, not `"reconnecting"`, because nothing is coming back. What the screen does about
+   * it is its own business; `StudentRoom` asks the server for the page again.
+   */
+  options.tokens?.onRefused(() => {
+    if (gone) return;
+    notifyConnection("refused", false);
+    const open = channel;
+    channel = null;
+    if (open !== null) void options.client.removeChannel(open).catch(() => {});
+  });
 
   async function openChannel(sessionId: string, entry: PresenceEntry): Promise<void> {
     await presentRealtimeToken(options.client);

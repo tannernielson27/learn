@@ -70,9 +70,15 @@ const SENT = "Answer sent. Your instructor will show the answer at the front.";
  * room; this screen also asks the server for the page again — `router.refresh()`, which re-runs
  * the server render and hands down a fresh `initial` without touching any state a client
  * component is holding. That last part is why it is a refresh and not a reload: **an answer in
- * progress survives it.** It is also the only thing that notices a participant who is no longer
- * one, and sends them back to the join form rather than leaving them on a screen that has quietly
- * stopped moving.
+ * progress survives it.**
+ *
+ * **When the server is done with this phone (#149).** The channel token is refreshed every half
+ * hour, and the server refuses a refresh for good when this participant no longer exists or the
+ * session has ended. The transport then closes the channel and reports `"refused"` — never
+ * followed by a rejoin — and this screen does the same `router.refresh()`. The server render is
+ * what knows the answer: a participant who is gone is redirected to the join form, and an ended
+ * session renders its own ended screen through `waitingCopy`, the same way it does on a reload.
+ * "Reconnecting" is not shown for a refused phone, because nothing is coming back.
  *
  * Built at 375px: one column, nothing wider than the screen, and long names wrap rather than
  * pushing the layout sideways.
@@ -141,12 +147,15 @@ export function StudentRoom({
   const dial = useMemo(
     () =>
       connect ??
-      (() =>
-        createSupabaseParticipant({
+      (() => {
+        const tokens = createChannelTokenSource({ initial: firstChannel });
+        return createSupabaseParticipant({
           // A client of its own, authorized by the channel token rather than by any Supabase
           // session: a student has none (#149). See `createSupabaseChannelClient`.
-          client: createSupabaseChannelClient(createChannelTokenSource({ initial: firstChannel })),
-        })),
+          client: createSupabaseChannelClient(tokens.accessToken),
+          tokens,
+        });
+      }),
     [connect, firstChannel],
   );
 
@@ -171,7 +180,9 @@ export function StudentRoom({
     const offConnection = joined.onConnection((status, rejoined) => {
       if (!watching) return;
       setConnection(status);
-      if (rejoined) router.refresh();
+      // A rejoin means the room may have moved while the socket was down; a refusal means the
+      // server has finished with this phone. Either way the server render is what knows next.
+      if (rejoined || status === "refused") router.refresh();
     });
 
     /**

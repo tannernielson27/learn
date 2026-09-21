@@ -213,6 +213,8 @@ Run from the repo root, on a machine with the repo checked out. Steps 1–2 and 
 
 ### 7.4 Catching an existing project up
 
+**Environment variables first.** A variable added to the app after a project was set up is not added by `db push`. Since #149, the student page needs `SUPABASE_JWT_SIGNING_KEY` in every Vercel scope, each with its own project's key (`.env.example` says which key and where), and each project needs Realtime's **Allow public access** turned off once the private-channel code is deployed (§7.3 step 8). Set the variable before the deploy that ships #149, or students cannot open a session.
+
 Same `db push`, against the project that is behind. It applies only what is missing, in filename order.
 
 ```sh

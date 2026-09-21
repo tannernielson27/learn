@@ -81,8 +81,16 @@ create policy "a participant joins their own session's channel"
     and (select realtime.topic()) = 'live:' || ((select auth.jwt()) ->> 'live_session_id')
   );
 
--- And may put exactly their own presence in it. Presence is the one thing a phone writes; a
--- broadcast from a phone has no reader and no business existing, so it is not granted.
+-- And may track presence in it. Presence is the one thing a phone writes; a broadcast from a
+-- phone has no reader and no business existing, so it is not granted.
+--
+-- This cannot tie *what* is tracked to the token's `sub`. Realtime evaluates the policy when a
+-- socket joins (and on its first track), against a row that carries the topic and the extension
+-- and nothing else: checked against the local Realtime, `payload` and `event` are null there, and
+-- there is no column for the presence key. So a participant of this room can still track an entry
+-- under a classmate's id. That is display-only — every read and write that matters is keyed off
+-- the cookie-checked participant id, never off presence — and it is now confined to people who
+-- are in the room.
 create policy "a participant tracks presence in their own session's channel"
   on realtime.messages for insert to anon
   with check (

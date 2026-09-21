@@ -8,6 +8,7 @@ import {
   type RoomConnection,
   type StudentView,
 } from "./participantTransport";
+import type { ChannelRefusal } from "./channelTokenSource";
 import { liveTopic, type ParticipantViewPayload } from "./wire";
 
 /**
@@ -75,8 +76,27 @@ interface Recorded {
   connections: { status: RoomConnection; rejoined: boolean }[];
 }
 
+/** A channel token source a test can make refuse, as the server would for good (#149). */
+function refusableTokens() {
+  const listeners = new Set<(why: ChannelRefusal) => void>();
+  return {
+    onRefused(listener: (why: ChannelRefusal) => void) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    refuse(why: ChannelRefusal) {
+      for (const listener of listeners) listener(why);
+    },
+  };
+}
+
 /** A phone on a socket a test drives, answering `/api/live/view` from a script. */
-function phone(views: ParticipantViewPayload[] = [LOBBY]) {
+function phone(
+  views: ParticipantViewPayload[] = [LOBBY],
+  tokens?: ReturnType<typeof refusableTokens>,
+) {
   const socket = fakeSocket();
   let asked = 0;
   const call = vi.fn(async () => {
@@ -89,6 +109,7 @@ function phone(views: ParticipantViewPayload[] = [LOBBY]) {
 
   const transport = createSupabaseParticipant({
     client: socket.client,
+    tokens,
     fetch: call as unknown as typeof globalThis.fetch,
     baseUrl: "http://live.test",
   });
@@ -269,6 +290,29 @@ describe("a socket that drops", () => {
     expect(live.socket.tracked).toHaveLength(1);
     // And the caller is told it rejoined, so a screen holding a stale server render asks again.
     expect(live.recorded.connections.at(-1)).toEqual({ status: "live", rejoined: true });
+  });
+
+  it("closes the channel and says `refused` when the server will not issue another token (#149)", async () => {
+    const tokens = refusableTokens();
+    const live = phone([LOBBY], tokens);
+    await live.enter();
+
+    tokens.refuse("signed_out");
+    expect(live.recorded.connections.at(-1)).toEqual({ status: "refused", rejoined: false });
+    // The channel goes, so Realtime stops retrying a socket that can only ever be refused.
+    expect(live.socket.client.removeChannel).toHaveBeenCalledTimes(1);
+    // And a socket status arriving afterwards is not mistaken for the room coming back.
+    live.socket.emit("CHANNEL_ERROR");
+    expect(live.recorded.connections.filter((entry) => entry.status === "refused")).toHaveLength(1);
+  });
+
+  it("says nothing about a refusal once the phone has left", async () => {
+    const tokens = refusableTokens();
+    const live = phone([LOBBY], tokens);
+    await live.enter();
+    await live.transport.leave();
+    tokens.refuse("ended");
+    expect(live.recorded.connections.map((entry) => entry.status)).not.toContain("refused");
   });
 
   it("calls a room that timed out or closed reconnecting", async () => {
