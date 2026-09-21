@@ -46,11 +46,24 @@ describe("matrix multiple choice", () => {
   it("keeps the grid and the row cards on one response", async () => {
     render(<ItemPlayer item={mmcEdge} submit={scoreInProcess(mmcEdge)} />);
     await userEvent.click(within(grid()).getByRole("radio", { name: `${O2} Improved` }));
-    expect(within(card(O2)).getByRole("radio", { name: "Improved" })).toBeChecked();
+    expect(within(card(O2)).getByRole("radio", { name: `${O2} Improved` })).toBeChecked();
 
-    await userEvent.click(within(card(O2)).getByRole("radio", { name: "Declined" }));
+    await userEvent.click(within(card(O2)).getByRole("radio", { name: `${O2} Declined` }));
     expect(within(grid()).getByRole("radio", { name: `${O2} Declined` })).toBeChecked();
     expect(within(grid()).getByRole("radio", { name: `${O2} Improved` })).not.toBeChecked();
+  });
+
+  // #60: on a phone a screen reader can skip the card's group name, and then "Improved", once
+  // per card, gave no clue which finding it answered. The card names each control by its row and
+  // its column, as the grid does.
+  it("names each row card's controls by their row and column, like the grid", () => {
+    render(<ItemPlayer item={mmcEdge} submit={scoreInProcess(mmcEdge)} />);
+    const rr = card(RR);
+    expect(within(rr).getByRole("radio", { name: `${RR} Improved` })).toBeInTheDocument();
+    expect(within(rr).getByRole("radio", { name: `${RR} Declined` })).toBeInTheDocument();
+    expect(within(rr).queryByRole("radio", { name: "Improved" })).not.toBeInTheDocument();
+    // The visible column text is in the name, so it is not exposed a second time beside it.
+    expect(within(rr).getByText("Improved").closest('[aria-hidden="true"]')).not.toBeNull();
   });
 
   it("moves along a row with the arrow keys", async () => {
@@ -93,15 +106,15 @@ describe("matrix multiple response", () => {
       within(grid()).getByRole("checkbox", { name: "Warfarin Signs of bleeding" }),
     );
     expect(within(grid()).getByRole("checkbox", { name: "Warfarin INR" })).toBeChecked();
-    expect(within(card("Warfarin")).getByRole("checkbox", { name: "INR" })).toBeChecked();
+    expect(within(card("Warfarin")).getByRole("checkbox", { name: "Warfarin INR" })).toBeChecked();
     expect(submit()).toHaveAttribute("aria-disabled", "true");
 
     await userEvent.click(
-      within(card("Furosemide")).getByRole("checkbox", { name: "Daily weight" }),
+      within(card("Furosemide")).getByRole("checkbox", { name: "Furosemide Daily weight" }),
     );
     expect(submit()).not.toHaveAttribute("aria-disabled");
 
-    await userEvent.click(within(card("Warfarin")).getByRole("checkbox", { name: "INR" }));
+    await userEvent.click(within(card("Warfarin")).getByRole("checkbox", { name: "Warfarin INR" }));
     expect(within(grid()).getByRole("checkbox", { name: "Warfarin INR" })).not.toBeChecked();
     expect(screen.queryByText("Correct")).not.toBeInTheDocument();
   });

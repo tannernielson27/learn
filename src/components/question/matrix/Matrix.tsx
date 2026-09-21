@@ -60,7 +60,7 @@ export function RowScoreMark({ score }: { score: RowScore }) {
 /**
  * Shared layout for matrix items. Both views are always rendered from the same response and
  * CSS shows one: a table at 768px and wider, one card per row below. Rotating a phone therefore
- * never loses an answer. Grid inputs are named by their row and column headers.
+ * never loses an answer. Inputs in both views are named by their row and their column.
  */
 export function Matrix(props: MatrixProps) {
   const uid = useId();
@@ -183,7 +183,12 @@ function MatrixCards({
             key={row.id}
             className="min-w-0 rounded-sm border border-line bg-surface-1 px-3 pt-1 pb-3"
           >
-            <legend className="option float-left w-full py-2 font-medium">{row.label}</legend>
+            <legend
+              id={`${uid}-card-row-${row.id}`}
+              className="option float-left w-full py-2 font-medium"
+            >
+              {row.label}
+            </legend>
             {score ? (
               <p className="clear-left -mt-1 mb-2 text-ink-2">
                 <RowScoreMark score={score} />
@@ -197,6 +202,7 @@ function MatrixCards({
             <div className="clear-left flex flex-col divide-y divide-line overflow-hidden rounded-sm border border-line">
               {columns.map((column) => {
                 const inputId = `${uid}-card-${row.id}-${column.id}`;
+                const columnId = `${inputId}-column`;
                 const checked = isSelected(row.id, column.id);
                 const feedback = feedbackFor(row.id, column.id);
                 return (
@@ -214,10 +220,16 @@ function MatrixCards({
                       checked={checked}
                       disabled={!interactive}
                       onChange={() => onToggle(row.id, column.id)}
+                      // Row and column, as in the grid: a phone screen reader can skip the
+                      // group's name, and the column alone repeats identically on every card.
+                      aria-labelledby={`${uid}-card-row-${row.id} ${columnId}`}
                       aria-describedby={whyId}
                       className="size-4 shrink-0 accent-(--accent)"
                     />
-                    <span className="flex-1">{column.label}</span>
+                    {/* Hidden because the name already carries it; otherwise read twice. */}
+                    <span id={columnId} aria-hidden="true" className="flex-1">
+                      {column.label}
+                    </span>
                     <FeedbackText state={feedback} />
                     <FeedbackIcon state={feedback} />
                   </label>
