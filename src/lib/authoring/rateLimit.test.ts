@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { RATE_LIMIT_ERRORS, RATE_LIMITED_ACTIONS, checkRateLimit } from "./rateLimit";
+import {
+  RATE_LIMIT_ERRORS,
+  RATE_LIMITED_ACTIONS,
+  checkRateLimit,
+  isRateLimitedError,
+} from "./rateLimit";
 
 function fakeClient(result: { data: unknown; error: { code?: string } | null }) {
   const rpc = vi.fn(async () => result);
@@ -7,7 +12,7 @@ function fakeClient(result: { data: unknown; error: { code?: string } | null }) 
 }
 
 describe("checkRateLimit", () => {
-  it("counts the call against the signed-in user's limit for that action", async () => {
+  it("asks whether the signed-in user has room for that action", async () => {
     const fake = fakeClient({ data: true, error: null });
     expect(await checkRateLimit(fake.client, "publish")).toEqual({ ok: true });
     expect(fake.rpc).toHaveBeenCalledWith("take_rate_limit", { action_name: "publish" });
@@ -34,5 +39,18 @@ describe("checkRateLimit", () => {
 
   it("covers saving, publishing, importing and step changes", () => {
     expect(RATE_LIMITED_ACTIONS).toEqual(["save", "publish", "import", "step"]);
+  });
+});
+
+describe("isRateLimitedError", () => {
+  it("knows the database's own refusal, which a caller that skipped the question still gets", () => {
+    expect(isRateLimitedError({ code: "54000" })).toBe(true);
+  });
+
+  it("leaves every other refusal to the code that reads it", () => {
+    expect(isRateLimitedError({ code: "55000" })).toBe(false);
+    expect(isRateLimitedError({ code: "22023" })).toBe(false);
+    expect(isRateLimitedError({})).toBe(false);
+    expect(isRateLimitedError(null)).toBe(false);
   });
 });

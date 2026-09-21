@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { AuthoringDataError } from "./banks";
+import { isRateLimitedError, RATE_LIMIT_ERRORS } from "./rateLimit";
 import {
   FOLDER_LIST_LIMIT,
   folderContentsMessage,
@@ -181,6 +182,9 @@ export async function moveToFolder(
     case_study_ids: move.caseStudyIds,
     ...(move.folderId ? { target_folder: move.folderId } : {}),
   });
+  // 54000: moving writes to `items` and `case_studies`, so since #123 it spends a `save` and can
+  // be refused for being over the limit. Say so, rather than blaming the move.
+  if (isRateLimitedError(error)) return fail(RATE_LIMIT_ERRORS.limited);
   // 22023: the folder went away between reading it and moving.
   if (error) return fail(error.code === "22023" ? GONE : FAILED.move);
 

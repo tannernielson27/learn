@@ -83,9 +83,15 @@ grant execute on function public.start_case_study_step(uuid, smallint, text) to 
 -- ---------------------------------------------------------------------------
 
 -- The app's authoring actions (save, publish, import, step changes) count each call here before
--- writing. It limits the authoring UI; it is not a trigger on the tables, so an author's own
--- session token used against the Data API directly is still bounded only by RLS (authors are
--- trusted members of their org, and nothing public can write).
+-- writing.
+--
+-- Superseded by 20260921200000 (#123): when this migration was written the count was taken by the
+-- app before the write, so it bounded the authoring UI and not the write, and an author's own
+-- session token used against the Data API directly was bounded only by RLS. It is now taken at the
+-- write, by triggers on the authoring tables and by the two authoring functions, so all four
+-- actions are bounded either way. This table and private.take_rate_limit are unchanged; what moved
+-- is who calls them. Read that migration's header for the whole argument.
+--
 -- Vercel's serverless functions share no memory, so the count lives here. One row per user and
 -- action: the table never grows past users x actions. Keyed to auth.users (not profiles) and
 -- removed with the user: a counter means nothing without its user.
@@ -158,7 +164,8 @@ revoke all on function private.take_rate_limit(text) from public, anon;
 grant execute on function private.take_rate_limit(text) to authenticated;
 
 -- The Data API exposes only public, so the app calls this. Security invoker: the definer rights
--- stay on the private function above.
+-- stay on the private function above. (20260921200000 replaces this body: it now asks whether
+-- there is room rather than counting, because the count is taken at the write.)
 create function public.take_rate_limit(action_name text)
 returns boolean
 language sql

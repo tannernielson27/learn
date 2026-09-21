@@ -8,6 +8,7 @@ import {
 import { fromEhrForm } from "@/lib/authoring/forms/ehr";
 import { parseEhrDraft } from "@/lib/authoring/forms/ehrDraft";
 import { withinItemSizeLimit } from "@/lib/authoring/payloadSize";
+import { isRateLimitedError, RATE_LIMIT_ERRORS } from "@/lib/authoring/rateLimit";
 import type { ItemType } from "@/lib/ngn/labels";
 import { publishBlockers } from "@/lib/ngn/quality";
 import type { CjmmStep } from "@/lib/ngn/types";
@@ -76,6 +77,7 @@ export async function saveRecord(
     .update({ ehr: record as Json, status: "draft" })
     .eq("id", caseStudyId)
     .select("id");
+  if (isRateLimitedError(error)) return { ok: false, error: RATE_LIMIT_ERRORS.limited };
   if (isArchivedError(error)) return { ok: false, error: ARCHIVE_ERRORS.caseStudyArchived };
   if (error) return { ok: false, error: CASE_STUDY_ERRORS.failed };
   if (data.length === 0) return { ok: false, error: CASE_STUDY_ERRORS.gone };
@@ -128,7 +130,9 @@ export async function startStep(
     step_position: args.position,
     step_type: args.type,
   });
-  // P0002: the function could not see the case study (gone, or another org's).
+  // 54000: this author is over the step limit (#123). P0002: the function could not see the case
+  // study (gone, or another org's).
+  if (isRateLimitedError(error)) return { ok: false, error: RATE_LIMIT_ERRORS.limited };
   if (error?.code === "P0002") return { ok: false, error: CASE_STUDY_ERRORS.gone };
   if (error || !data) return { ok: false, error: CASE_STUDY_ERRORS.failed };
   return { ok: true, value: { itemId: data } };
@@ -148,6 +152,7 @@ export async function placeStep(
     step_item: args.itemId,
   });
   if (!error) return { ok: true, value: undefined };
+  if (isRateLimitedError(error)) return { ok: false, error: RATE_LIMIT_ERRORS.limited };
   // 55000: the item or the case study is archived; the rest is the placement itself.
   if (isArchivedError(error)) return { ok: false, error: ARCHIVE_ERRORS.stepArchived };
   // 23503: the item is in another bank (or org). 23505: it is already another step here.
@@ -166,6 +171,7 @@ export async function reorderSteps(
     target: caseStudyId,
     item_ids: [...itemIds],
   });
+  if (isRateLimitedError(error)) return { ok: false, error: RATE_LIMIT_ERRORS.limited };
   if (isArchivedError(error)) return { ok: false, error: ARCHIVE_ERRORS.caseStudyArchived };
   if (error) return { ok: false, error: CASE_STUDY_ERRORS.badOrder };
   return { ok: true, value: undefined };
@@ -287,6 +293,7 @@ export async function publishCaseStudy(
     .from("case_studies")
     .update({ status: "published" })
     .eq("id", caseStudyId);
+  if (isRateLimitedError(publishError)) return { ok: false, error: RATE_LIMIT_ERRORS.limited };
   if (isArchivedError(publishError)) {
     return { ok: false, error: ARCHIVE_ERRORS.caseStudyArchived };
   }

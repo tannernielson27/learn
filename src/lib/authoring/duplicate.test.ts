@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { DUPLICATE_ERRORS, duplicateCaseStudy, duplicateItem } from "./duplicate";
+import { RATE_LIMIT_ERRORS } from "./rateLimit";
 
 type Result = { data?: unknown; error?: { code?: string; message?: string } | null };
 
@@ -33,6 +34,16 @@ describe("duplicateItem", () => {
     expect(await duplicateItem(fake.client, ITEM_ID)).toEqual({
       ok: false,
       error: DUPLICATE_ERRORS.itemFailed,
+    });
+  });
+
+  // Duplicating writes to `items`, so since #123 it spends a `save` and can be refused for being
+  // over the limit. "Too often" and "could not be duplicated" send the author to different places.
+  it("says the author is over the limit rather than blaming the copy", async () => {
+    const fake = fakeClient({ data: null, error: { code: "54000" } });
+    expect(await duplicateItem(fake.client, ITEM_ID)).toEqual({
+      ok: false,
+      error: RATE_LIMIT_ERRORS.limited,
     });
   });
 

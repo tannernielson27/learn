@@ -106,7 +106,9 @@ export async function importIntoBank(
   const { supabase } = await requireAuthor(`/author/banks/${bankId}`);
   const folder = readImportFolder(formData);
   if (!folder.ok) return { status: "error", errors: [folder.error] };
-  // Counted before the file is read, since reading and checking a large file is the costly part.
+  // Asked before the file is read, since reading and checking a large file is the costly part.
+  // The count itself is taken by import_bank_content, once per call (#123), so a caller that goes
+  // straight to the Data API is bounded too and a ten-file batch still spends exactly ten.
   const limit = await checkRateLimit(supabase, "import");
   if (!limit.ok) return { status: "error", errors: [limit.error] };
 
