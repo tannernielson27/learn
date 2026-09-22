@@ -162,10 +162,11 @@ Everything in `supabase/migrations/` today, in filename order — this is the re
 | 14  | `20260921000000_resume_participant_joined_at`  | resume a participant after a reload (#133)                                     | **not applied**            |
 | 15  | `20260921100000_live_view_rate_limit`          | per-participant limit on `POST /api/live/view` (#152)                          | **not applied**            |
 | 16  | `20260921200000_authoring_limit_at_the_write`  | authoring rate limit enforced at the write, not only in the UI (#123)          | **not applied**            |
+| 17  | `20260921210000_private_live_channel`          | private Realtime channel with a per-participant token (#149)                   | **not applied**            |
 
 "Not applied" means there is no record of it being applied, not that it has been checked. Run `pnpm exec supabase migration list` against the project to know.
 
-> **Standing drift (Sprint 6, grown since).** Rows 4–16 are merged to `main` but not applied to the existing hosted project. **Until `20260919110000_start_step_and_rate_limits` is applied, that project refuses every save, publish and import** — the app calls functions that are not there. Apply rows 4–16 to `vauokqoyvewtzubqajgh` with §7.4 at the same time as the production project is stood up, so the two projects do not start out different.
+> **Standing drift (Sprint 6, grown since).** Rows 4–17 are merged to `main` but not applied to the existing hosted project. **Until `20260919110000_start_step_and_rate_limits` is applied, that project refuses every save, publish and import** — the app calls functions that are not there. Apply rows 4–17 to `vauokqoyvewtzubqajgh` with §7.4 at the same time as the production project is stood up, so the two projects do not start out different.
 >
 > Row 16 is the one exception to that failure mode, by design: it keeps `public.take_rate_limit`'s name and signature, so an app deployed ahead of it degrades to the pre-#123 behaviour instead of refusing writes. Rows 11–15 are needed for any live session to run at all.
 
