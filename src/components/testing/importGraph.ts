@@ -1,7 +1,8 @@
 /**
  * Walks the real import graph from a source file, the way a bundler would follow it, for tests
  * that hold an invariant about what may reach a browser bundle: `noClientScoring.test.ts` (the
- * scoring engine, ADR 0003) and `noClientSigningKey.test.ts` (the channel signing key, #149).
+ * scoring engine, ADR 0003) and `noClientSigningKey.test.ts` (the channel signing key, #149), and the gallery nav's
+ * `nav.test.ts` (#54).
  *
  * Test-only. It lives under a `testing` folder, which the coverage config excludes.
  */
@@ -14,6 +15,9 @@ export const SRC = path.resolve(import.meta.dirname, "..", "..");
 // A type-only statement is erased before bundling, so it carries nothing into the bundle.
 const IMPORTS = /import\s+(type\s+)?(?:[\s\S]*?\s+from\s+)?["']([^"']+)["']/g;
 const REEXPORTS = /export\s+(type\s+)?(?:\*|\{[^}]*\})(?:\s+as\s+\w+)?\s+from\s+["']([^"']+)["']/g;
+// `import("x")`. Since #54 each renderer is its own lazy chunk, and a lazy chunk is still code the
+// browser runs, so the walk follows these too. The empty group keeps the tuple shape.
+const DYNAMIC_IMPORTS = /import\(()\s*["']([^"']+)["']\s*\)/g;
 
 /** Resolves a local specifier to a file on disk; returns undefined for packages. */
 function resolveLocal(specifier: string, fromFile: string): string | undefined {
