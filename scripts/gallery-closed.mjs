@@ -18,6 +18,7 @@
 // production run and report a guarantee it never checked.
 
 import { spawn } from "node:child_process";
+import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 /** Every name the answer key and the scoring rule are serialized under. */
@@ -100,7 +101,7 @@ async function probeBuiltApp(vercelEnv, port) {
   if (vercelEnv === undefined) delete env.VERCEL_ENV;
   else env.VERCEL_ENV = vercelEnv;
 
-  const child = spawn("node_modules/.bin/next", ["start", "--port", String(port)], {
+  const child = spawn(join("node_modules", ".bin", "next"), ["start", "--port", String(port)], {
     env,
     stdio: ["ignore", "ignore", "inherit"],
     shell: process.platform === "win32",
