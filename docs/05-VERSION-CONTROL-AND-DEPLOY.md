@@ -258,6 +258,34 @@ To check who is what: `select u.email, p.role from auth.users u join public.prof
 
 Existing accounts were not changed by #204: the demo account and every current instructor keep their role. From #205 on, a student joins through an instructor's class invite, which sets `app_metadata.learn_invite` server-side; never set a role through `user_metadata`, which the person can write themselves.
 
+### 7.7 Email through Resend from info.tannernielson.com (#206)
+
+Two senders, one Resend account. **Supabase Auth** sends the magic links itself, over Resend's SMTP, using `supabase/templates/magic_link.html`. **The app** sends its own transactional mail (reminders, #212) through `src/lib/email`, which calls Resend's HTTP API with `RESEND_API_KEY` and `EMAIL_FROM`. Locally, neither touches Resend: Auth mail and app mail both land in the local stack's Mailpit at `http://127.0.0.1:55324`.
+
+Until steps 2–4 are done in a project, its magic links go out through Supabase's built-in mailer, which only delivers to the project's own team members and allows about two emails an hour. That is fine for the two of us and useless for a class.
+
+Do these in order, in **both** Supabase projects (production and `vauokqoyvewtzubqajgh`) unless a step says otherwise. Tick each one here in the PR that records it.
+
+1. **[ ] Resend domain verified.** Resend → Domains → `info.tannernielson.com` shows **Verified** (the SPF, DKIM and MX records it lists are at the DNS host for `tannernielson.com`). Nothing else works until this does. Then Resend → API Keys → **Create API key**, permission **Sending access**, domain `info.tannernielson.com`. Make one key per environment (`learn-production`, `learn-preview`) so either can be revoked alone. Each key is shown once.
+2. **[ ] Supabase custom SMTP.** Supabase → Authentication → Emails → **SMTP Settings** → Enable custom SMTP:
+   - Sender email: `learn@info.tannernielson.com` · Sender name: `LeaRN`
+   - Host: `smtp.resend.com` · Port: `465`
+   - Username: `resend` · Password: that environment's Resend API key from step 1
+     Save. (Source: <https://resend.com/docs/send-with-supabase-smtp>.)
+3. **[ ] Magic-link template.** Authentication → Emails → **Magic Link**: subject `Sign in to LeaRN`, body = the whole of `supabase/templates/magic_link.html`, pasted as it is. Its link sends a `token_hash` to `/auth/confirm`, so it works on a phone the link was not requested from.
+4. **[ ] Raise the Auth email rate limit.** Authentication → **Rate Limits** → "Rate limit for sending emails" (only editable once step 2 is saved). Set **150 per hour** in production: a 40-student class asking for links in the same five minutes, with retries, plus instructors. Keep Resend's own quota in mind (the free plan is 100 emails a day); upgrade the Resend plan before a class larger than that. Preview can stay at 30. The app's own per-IP limit (`src/lib/auth/signInRateLimit.ts`, #134) still caps each IP at 30 emailed links per five minutes; a whole class behind one campus NAT shares one IP, so a class over about 30 can hit it before this one.
+5. **[ ] Auth Site URL and redirect URLs.** Authentication → **URL Configuration**:
+   - Production project: Site URL `https://learn-tanner-nielsons-projects.vercel.app` (or the custom domain once it exists); Redirect URLs `https://learn-tanner-nielsons-projects.vercel.app/**`.
+   - Preview project (`vauokqoyvewtzubqajgh`), which serves production too until the §7.3 split: Site URL `https://learn-tanner-nielsons-projects.vercel.app`; Redirect URLs `https://learn-tanner-nielsons-projects.vercel.app/**`, `https://learn-*-tanner-nielsons-projects.vercel.app/**` (previews) and `http://localhost:3000/**`.
+     A redirect that is not on the list silently falls back to the Site URL, which lands a preview's link on production.
+6. **[ ] Vercel environment variables.** Vercel → project → Settings → Environment Variables, both server-only (no `NEXT_PUBLIC_`):
+   - **Production** scope: `RESEND_API_KEY` = the `learn-production` key; `EMAIL_FROM` = `LeaRN <learn@info.tannernielson.com>`.
+   - **Preview** scope: `RESEND_API_KEY` = the `learn-preview` key; `EMAIL_FROM` = the same sender.
+     Redeploy each (env vars apply to a new build only). Nothing sends app email until #212, so a missing value breaks no page; a send attempt without them fails with an error naming `RESEND_API_KEY`.
+7. **[ ] Check it.** On the production URL, ask for a link to an instructor address you own: it arrives from `LeaRN <learn@info.tannernielson.com>` with the LeaRN template, and signs you in. Resend → Emails lists it as delivered.
+
+The app mailer never logs a recipient's address, a message body or the key, and its errors carry only the HTTP status and Resend's error name. Build each message's idempotency key from what it is about (`reminder:<assignmentId>:<userId>`), never from the address; Resend drops a repeat of the same key for 24 hours.
+
 ## 8. Working together day to day
 
 - Pick a story from the sprint milestone, assign yourself, branch, PR. Two people never work on the same story.
