@@ -11,28 +11,35 @@ export async function postJson(
   headers: Record<string, string>,
   body: unknown,
 ): Promise<unknown> {
+  // Outside the try: a body that cannot be serialized is a bug here, not a network failure.
+  const payload = JSON.stringify(body);
   let response: Response;
   try {
-    response = await fetchImpl(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-      cache: "no-store",
-    });
+    response = await fetchImpl(url, { method: "POST", headers, body: payload, cache: "no-store" });
   } catch {
     throw new EmailError("network", `${provider} could not be reached.`);
   }
   const reply = await response.json().catch(() => undefined);
-  if (!response.ok) throw statusError(provider, response.status, reply);
+  if (!response.ok) throw statusError(provider, response, reply);
   return reply;
 }
 
-function statusError(provider: string, status: number, reply: unknown): EmailError {
+function statusError(provider: string, response: Response, reply: unknown): EmailError {
+  const status = response.status;
   const code = errorCode(reply);
   const detail = `${provider} answered ${status}${code ? ` (${code})` : ""}.`;
-  if (status === 429) return new EmailError("rate_limited", detail, { status, code });
+  if (status === 429) {
+    const retryAfterSeconds = retryAfter(response.headers.get("retry-after"));
+    return new EmailError("rate_limited", detail, { status, code, retryAfterSeconds });
+  }
   if (status >= 500) return new EmailError("unavailable", detail, { status, code });
   return new EmailError("rejected", detail, { status, code });
+}
+
+/** Seconds from a Retry-After header; an HTTP date or anything else is ignored. */
+function retryAfter(header: string | null): number | undefined {
+  if (header === null || !/^\d{1,6}$/.test(header.trim())) return undefined;
+  return Number(header.trim());
 }
 
 /**

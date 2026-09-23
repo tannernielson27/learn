@@ -15,7 +15,12 @@ const messageSchema = z.object({
     .regex(/^[^\r\n]*$/),
   text: z.string().min(1),
   html: z.string().min(1),
-  idempotencyKey: z.string().min(1).max(IDEMPOTENCY_KEY_MAX),
+  // Sent as an HTTP header, so only characters that cannot end or split one.
+  idempotencyKey: z
+    .string()
+    .min(1)
+    .max(IDEMPOTENCY_KEY_MAX)
+    .regex(/^[\w:.-]+$/),
 });
 
 /**

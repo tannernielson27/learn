@@ -43,6 +43,8 @@ describe("validateMessage", () => {
     ["an empty html body", { html: "" }],
     ["an empty idempotency key", { idempotencyKey: "" }],
     ["an idempotency key over 256 characters", { idempotencyKey: "k".repeat(257) }],
+    ["an idempotency key with a line break", { idempotencyKey: "reminder:a\r\nX-Evil: 1" }],
+    ["an idempotency key with a space", { idempotencyKey: "reminder a" }],
     ["an address list instead of one address", { to: "a@b.co, c@d.co" }],
   ])("refuses %s", (_name, change) => {
     invalid({ ...MESSAGE, ...change });

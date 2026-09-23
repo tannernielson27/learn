@@ -83,6 +83,26 @@ describe("createResendMailer", () => {
     expect(error.message).toContain(String(status));
   });
 
+  it("carries Retry-After on a 429 so a retry loop knows how long to wait", async () => {
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ name: "rate_limit_exceeded" }), {
+          status: 429,
+          headers: { "retry-after": "7" },
+        }),
+    ) as typeof fetch;
+    const error = await sendError(fetchImpl);
+    expect(error.retryAfterSeconds).toBe(7);
+  });
+
+  it("leaves Retry-After unset when the header is missing or not a number", async () => {
+    expect((await sendError(respond(429, {}))).retryAfterSeconds).toBeUndefined();
+    const fetchImpl = vi.fn(
+      async () => new Response("{}", { status: 429, headers: { "retry-after": "soon" } }),
+    ) as typeof fetch;
+    expect((await sendError(fetchImpl)).retryAfterSeconds).toBeUndefined();
+  });
+
   it("keeps Resend's error code but never its message, which can echo the recipient", async () => {
     const error = await sendError(
       respond(422, { name: "validation_error", message: `Invalid to: ${MESSAGE.to}` }),

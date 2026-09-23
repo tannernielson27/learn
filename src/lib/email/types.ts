@@ -43,11 +43,13 @@ export class EmailError extends Error {
   readonly status: number | undefined;
   /** The provider's machine-readable error name, e.g. `validation_error`, when it gave one. */
   readonly code: string | undefined;
+  /** From a 429's Retry-After header, when it gave a number of seconds. */
+  readonly retryAfterSeconds: number | undefined;
 
   constructor(
     kind: EmailErrorKind,
     message: string,
-    details: { status?: number; code?: string } = {},
+    details: { status?: number; code?: string; retryAfterSeconds?: number } = {},
   ) {
     super(message);
     this.name = "EmailError";
@@ -55,5 +57,6 @@ export class EmailError extends Error {
     this.retryable = RETRYABLE.has(kind);
     this.status = details.status;
     this.code = details.code;
+    this.retryAfterSeconds = details.retryAfterSeconds;
   }
 }
