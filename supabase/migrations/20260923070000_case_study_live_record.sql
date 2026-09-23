@@ -25,7 +25,7 @@ alter table public.sessions
 comment on column public.sessions.patient_record is
   'The case study''s patient record (EHR) as it was when the session started, or null for a '
   'session started from a bank. Written only by private.snapshot_session_record on insert; see '
-  'migration 20260923050000_case_study_live_record.sql.';
+  'migration 20260923070000_case_study_live_record.sql.';
 
 -- Security definer so the snapshot does not depend on what the inserting role may read: the org
 -- is matched explicitly instead, which the composite foreign key on (case_study_id, org_id)

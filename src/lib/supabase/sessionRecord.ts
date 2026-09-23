@@ -8,7 +8,7 @@ type Client = SupabaseClient<Database>;
  * The patient record a case-study session was started with, for a participant's phone (#184).
  *
  * `start_session` snapshots the case study's record onto `sessions.patient_record` when the room
- * opens (migration `20260923050000_case_study_live_record.sql`), so this reads the chart the room
+ * opens (migration `20260923070000_case_study_live_record.sql`), so this reads the chart the room
  * started with and not whatever the author has done to the case study since. A bank session has
  * none, and this answers null for it.
  *
