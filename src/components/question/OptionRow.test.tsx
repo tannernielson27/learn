@@ -8,6 +8,7 @@ import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema } from "@/lib/ngn/schemas";
 import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer } from "./ItemPlayer";
+import { renderersLoaded } from "./testing/renderers";
 
 const mc = itemSchema.parse(FIXTURES.multiple_choice.canonical);
 const sata = itemSchema.parse(FIXTURES.multiple_response.canonical);
@@ -20,15 +21,17 @@ const exposedText = (text: string) =>
   screen.queryAllByText(text).filter((element) => !element.closest('[aria-hidden="true"]'));
 
 describe("option rows", () => {
-  it("name a multiple-response checkbox by its text, and expose that text nowhere else", () => {
+  it("name a multiple-response checkbox by its text, and expose that text nowhere else", async () => {
     render(<ItemPlayer item={sata} submit={scoreInProcess(sata)} />);
+    await renderersLoaded();
     expect(screen.getByRole("checkbox", { name: RR })).toBeInTheDocument();
     expect(screen.getByText(RR)).toBeVisible();
     expect(exposedText(RR)).toHaveLength(0);
   });
 
-  it("keep the letter in a multiple-choice option's name, read once", () => {
+  it("keep the letter in a multiple-choice option's name, read once", async () => {
     render(<ItemPlayer item={mc} submit={scoreInProcess(mc)} />);
+    await renderersLoaded();
     const first = "Auscultate the lungs and assess oxygen saturation";
     expect(screen.getByRole("radio", { name: `A ${first}` })).toBeInTheDocument();
     expect(exposedText(first)).toHaveLength(0);
@@ -37,6 +40,7 @@ describe("option rows", () => {
 
   it("keep the feedback in the name after submit, read once", async () => {
     render(<ItemPlayer item={sata} submit={scoreInProcess(sata)} />);
+    await renderersLoaded();
     await userEvent.click(screen.getByRole("checkbox", { name: RR }));
     await userEvent.click(screen.getByRole("checkbox", { name: TEMP }));
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
