@@ -67,7 +67,10 @@ export {
 } from "./simulate";
 export {
   COMMON_WRONG_LIMIT,
+  concealKey,
   distributionFor,
+  percentOf,
+  shareOf,
   type BlankCounts,
   type BlanksDistribution,
   type ChoiceCount,

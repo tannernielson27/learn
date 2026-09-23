@@ -28,6 +28,7 @@
 import type { AnyResponse, Item } from "@/lib/ngn/schemas";
 import type { KeylessItem, PlayableItem, Reveal, ScoreReveal } from "@/lib/ngn/submit";
 import type { ScoreResult } from "@/lib/ngn/types";
+import type { Distribution } from "./results/types";
 import type { LiveSessionState, SessionMode } from "./state";
 
 /** Drops a subscription. Calling it twice is harmless. */
@@ -200,6 +201,16 @@ export interface LiveHostTransport {
    * for it instead of the room telling everyone. One indexed read per ask, and no message.
    */
   aggregate(): Promise<ItemAggregate | null>;
+  /**
+   * How the room answered the item it is on, counted **now**, choice by choice (#180). Null when
+   * the room is on no item.
+   *
+   * Asked for on the same cadence as `aggregate()` and for the same reason: nothing is pushed
+   * while an item is being answered (ADR 0002). It marks the correct choices, because the host
+   * holds the key already; the console decides when to show them (`concealKey`). There is no
+   * participant counterpart, and there must never be one (ADR 0003).
+   */
+  results(): Promise<Distribution | null>;
   /** Each rejects `LiveSessionError` when the state machine refuses the move. */
   start(): Promise<LiveSessionState>;
   advance(): Promise<LiveSessionState>;

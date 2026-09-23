@@ -6,6 +6,7 @@ import { Countdown } from "@/components/live/Countdown";
 import { SessionQrCode } from "@/components/live/SessionQrCode";
 import { Roster } from "@/components/live/Roster";
 import { TimerControls } from "@/components/live/TimerControls";
+import { HostResults } from "@/components/live/results/HostResults";
 import { Button } from "@/components/ui/Button";
 import {
   canRunHostCommand,
@@ -228,6 +229,8 @@ export function HostLobby({
    * only until the console has opened.
    */
   const serverNow = useCallback(() => transport.current?.serverNow() ?? Date.now(), []);
+  /** How the room answered the item it is on (#180), asked for by the results panel. */
+  const askResults = useCallback(() => transport.current?.results() ?? Promise.resolve(null), []);
 
   const ended = state.status === "ended";
   /**
@@ -339,6 +342,15 @@ export function HostLobby({
           onCommand={(command) => void run(command)}
         />
       )}
+
+      <HostResults
+        sessionId={sessionId}
+        ask={askResults}
+        position={state.position}
+        revealed={state.reveal}
+        active={onAnItem}
+        intervalMs={tallyIntervalMs}
+      />
 
       <Roster roster={roster} />
     </>

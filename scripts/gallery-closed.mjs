@@ -26,8 +26,9 @@ const FORBIDDEN = ["answerKey", "correctOptionId", "rationale", "scoring", "maxP
 
 /**
  * Routes that must never answer with a key on production. Every route that imports `FIXTURES`
- * belongs here: today that is `/gallery/items/[type]` and `/gallery/live`. The gate is a blanket
- * prefix match with no per-route logic, so a missing route is not a live hole — but this list is
+ * belongs here: today that is `/gallery/items/[type]`, `/gallery/live` and `/gallery/live/results`.
+ * The gate is a blanket prefix match with no per-route logic, so a missing route is not a live
+ * hole — but this list is
  * what would catch a future regression that is route-specific, and it can only catch what it
  * probes. `/gallery` itself is the index, and the case study carries its own fixture.
  */
@@ -35,6 +36,7 @@ const GALLERY_PATHS = [
   "/gallery/items/multiple_choice",
   "/gallery/case-study",
   "/gallery/live",
+  "/gallery/live/results",
   "/gallery",
 ];
 

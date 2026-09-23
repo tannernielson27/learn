@@ -3,6 +3,7 @@ import { answerAll, joinSimulated } from "@/lib/live";
 import {
   CONFORMANCE_CORRECT,
   CONFORMANCE_ITEMS,
+  CONFORMANCE_WRONG,
   describeRoomConformance,
   refusalOf,
 } from "@/lib/live/roomConformance";
@@ -114,6 +115,41 @@ describe("what actually reaches a student's browser", () => {
 
     expect(live.stack.aggregates).toHaveLength(1);
     expect(live.stack.wire.every((entry) => !entry.body.includes("full_marks"))).toBe(true);
+  });
+
+  it("never carries the room's results to a participant, before the reveal or after (#180)", async () => {
+    const live = room();
+    const host = live.host();
+    await host.open();
+    await host.start();
+    await live.settle();
+    const ada = live.participant();
+    const bo = live.participant();
+    await ada.join(live.code, { displayName: "Ada" });
+    await bo.join(live.code, { displayName: "Bo" });
+    await ada.submit(FIRST.id, CONFORMANCE_CORRECT);
+    await bo.submit(FIRST.id, CONFORMANCE_WRONG);
+    await live.settle();
+
+    // The control: the host's console does get a distribution, and these are its words.
+    const during = JSON.stringify(await host.results());
+    expect(during).toContain('"unanswered"');
+    expect(during).toContain('"unreadable"');
+    expect(during).toContain('"responded":2');
+
+    await host.reveal();
+    await live.settle();
+    const after = JSON.stringify(await host.results());
+    expect(after).toContain('"unanswered"');
+
+    // And none of them is anywhere in what either phone's process was handed.
+    const bytes = wireText(live);
+    expect(live.stack.wire.length).toBeGreaterThan(0);
+    expect(bytes).toContain(FIRST.id);
+    expect(bytes).not.toContain('"unanswered"');
+    expect(bytes).not.toContain('"unreadable"');
+    expect(bytes).not.toContain('"commonWrong"');
+    expect(bytes).not.toContain('"responded"');
   });
 });
 
