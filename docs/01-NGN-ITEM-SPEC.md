@@ -41,30 +41,35 @@ Fourteen renderable formats. Each has: `type` id, interaction summary, layout no
 - Interaction: pick exactly one option (radio). Options 4–6.
 - Scoring: 0/1, max 1.
 - Key: `{ correctOptionId }`. Response: `{ optionId }`.
+- Shuffle: options permuted.
 
 ### 3.2 `multiple_response` — Extended Multiple Response
 
 - Variants: `sata` (select all that apply, 5–10 options, ≥1 correct) and `select_n` (must select exactly `n`; UI blocks the (n+1)th selection and shows "Select N").
 - Scoring: +/-; max = count of correct options.
 - Key: `{ correctOptionIds[] , n? }`. Response: `{ optionIds[] }`.
+- Shuffle: options permuted (both variants; `n` unchanged).
 
 ### 3.3 `multiple_response_grouping` — Grouped Multiple Response
 
 - Interaction: table; each row (e.g., a body system) has 2–4 option cells; select all that apply per row.
 - Scoring: +/- per row, summed. Max = total correct cells.
 - Key: `{ rows: [{ rowId, correctOptionIds[] }] }`. Response: `{ rows: [{ rowId, optionIds[] }] }`.
+- Shuffle: rows permuted, and the option cells within each row permuted.
 
 ### 3.4 `matrix_multiple_choice`
 
 - Interaction: rows × 2–3 columns; exactly one selection per row (e.g., Indicated / Contraindicated / Non-essential).
 - Scoring: 0/1 per row; max = row count. Unanswered row = 0.
 - Key: `{ rows: [{ rowId, correctColumnId }] }`. Response: `{ rows: [{ rowId, columnId }] }`.
+- Shuffle: rows permuted; columns kept (they are a shared scale, such as improved / no change / declined).
 
 ### 3.5 `matrix_multiple_response`
 
 - Interaction: rows × columns; any number of selections per row; at least one per row is typical.
 - Scoring: +/- per row, summed.
 - Key: `{ rows: [{ rowId, correctColumnIds[] }] }`. Response: `{ rows: [{ rowId, columnIds[] }] }`.
+- Shuffle: rows permuted; columns kept.
 
 ### 3.6 `dropdown_cloze` — Drop-Down Cloze
 
@@ -72,18 +77,21 @@ Fourteen renderable formats. Each has: `type` id, interaction summary, layout no
 - Scoring: 0/1 per blank.
 - Key: `{ blanks: [{ blankId, correctChoiceId }] }`. Response: `{ blanks: [{ blankId, choiceId }] }`.
 - Stem is stored as a token list: `[{ kind: "text", value }, { kind: "blank", blankId }]`.
+- Shuffle: each blank's choices permuted; the prose and its blanks kept.
 
 ### 3.7 `dropdown_rationale` — Drop-Down Rationale
 
 - Interaction: one sentence with 2 (dyad) or 3 (triad) blanks; "X is at risk for __ as evidenced by __".
 - Scoring: rationale dyad/triad. `anchorBlankId` marks the anchor in triads.
 - Key: `{ blanks: [...], anchorBlankId? }`. Response: same as cloze.
+- Shuffle: each blank's choices permuted; the sentence and its blanks kept.
 
 ### 3.8 `dropdown_table` — Drop-Down Table
 
 - Interaction: table where one column holds drop-downs per row.
 - Scoring: 0/1 per row.
 - Key: `{ rows: [{ rowId, correctChoiceId }] }`. Response: `{ rows: [{ rowId, choiceId }] }`.
+- Shuffle: rows permuted, and each row's choices permuted; the column headings kept.
 
 ### 3.9 `highlight_text` — Enhanced Hot Spot
 
@@ -91,34 +99,40 @@ Fourteen renderable formats. Each has: `type` id, interaction summary, layout no
 - Scoring: +/-; max = number of correct spans.
 - Key: `{ correctSpanIds[] }`. Response: `{ spanIds[] }`.
 - Content: `[{ kind: "text", value } | { kind: "span", spanId, value }]`.
+- Shuffle: none. The passage is the answer.
 
 ### 3.10 `highlight_table`
 
 - Same as highlight text, but spans live inside table cells (e.g., Assessment / Findings).
 - Scoring: +/- (whole item, or per row if `scorePerRow: true`).
+- Shuffle: none. The table is the answer.
 
 ### 3.11 `dragdrop_cloze` — Extended Drag and Drop (cloze)
 
 - Interaction: word bank of 4–8 tokens; drag into 1–3 blanks in prose. Bank tokens are single-use unless `reusable: true`. Touch fallback: tap a token, then tap a blank.
 - Scoring: 0/1 per blank.
 - Key / Response: same shape as dropdown cloze with `tokenId`.
+- Shuffle: word bank permuted; the prose and its blanks kept.
 
 ### 3.12 `dragdrop_rationale`
 
 - Interaction: as 3.11 but sentence is a dyad/triad rationale.
 - Scoring: rationale dyad/triad.
+- Shuffle: word bank permuted; the sentence and its blanks kept.
 
 ### 3.13 `ordered_response` (traditional)
 
 - Interaction: reorder 4–6 items (drag, or up/down buttons on touch).
 - Scoring: 0/1 whole item (exact order). Optional `partial: "position"` variant gives 1 per correct position; default off for fidelity.
 - Key: `{ orderedIds[] }`. Response: `{ orderedIds[] }`.
+- Shuffle: none. The order is the answer, and the author's starting order is kept.
 
 ### 3.14 `bowtie`
 
 - Interaction: three columns. Left: pick exactly 2 "Actions to Take" from 5. Center: pick exactly 1 "Potential Condition" from 4. Right: pick exactly 2 "Parameters to Monitor" from 5. Drag or tap-to-place.
 - Scoring: 0/1 per slot, 5 slots, max 5. Order within a pair does not matter.
 - Key: `{ actionIds[2], conditionId, parameterIds[2] }`. Response: same.
+- Shuffle: each column's list (actions, conditions, parameters) permuted; the three columns stay in place.
 
 ## 4. Composite structures
 
@@ -164,6 +178,16 @@ Item {
 ```
 
 `content` never contains `answerKey`; the player receives `content` only until feedback mode so answer keys are never shipped to student clients during live sessions or take-home windows.
+
+### 4.5 Shuffle (take-home attempts, #209)
+
+Where a type's order carries no meaning, its lists are permuted per attempt so two students side by side cannot copy by position. Each type's "Shuffle" line in section 3 says what moves; `SHUFFLE_RULES` in `src/lib/ngn/shuffle.ts` is the same table in code, and its tests hold `shuffleItem` to it.
+
+- Seed: `shuffleSeed(attemptId, itemId)`, so a reload or a resume shows the same order and each student sees a different one. The permutation is a seeded PRNG (cyrb128 + sfc32), never `Math.random`. Each list derives its own seed from the item's seed and the list's name.
+- Applied on the server to the (keyless) item before it is sent; the browser never sees the seed or the author's order. Responses stay keyed by id, so scoring is unchanged.
+- Never moved: anything whose position is the answer (ordered response, highlight text and table), the text around blanks, matrix columns (a shared scale), bowtie columns, and case-study step order.
+- Fixed options: the schema has no "fixed" flag, so an option whose wording points at other options or at a position ("All of the above", "None of these", "Options A and C", "Choice 2") stays at the index the author gave it, and the rest move around it (`isFixedLabel`).
+- Live sessions are not shuffled.
 
 ## 5. Player modes
 
