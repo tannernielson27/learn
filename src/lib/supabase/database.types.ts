@@ -579,6 +579,7 @@ export type Database = {
           mode: Database["public"]["Enums"]["session_mode"];
           opened_at: string;
           org_id: string;
+          patient_record: Json | null;
           reveal: boolean;
           status: Database["public"]["Enums"]["session_status"];
           timer_remaining_ms: number | null;
@@ -600,6 +601,7 @@ export type Database = {
           mode?: Database["public"]["Enums"]["session_mode"];
           opened_at?: string;
           org_id: string;
+          patient_record?: Json | null;
           reveal?: boolean;
           status?: Database["public"]["Enums"]["session_status"];
           timer_remaining_ms?: number | null;
@@ -621,6 +623,7 @@ export type Database = {
           mode?: Database["public"]["Enums"]["session_mode"];
           opened_at?: string;
           org_id?: string;
+          patient_record?: Json | null;
           reveal?: boolean;
           status?: Database["public"]["Enums"]["session_status"];
           timer_remaining_ms?: number | null;

@@ -125,6 +125,7 @@ describe("readHostSession", () => {
         timer_remaining_ms: null,
         opened_at: "2026-09-19T09:00:00Z",
         closed_at: null,
+        case_study_id: null,
       },
       error: null,
     });
@@ -140,9 +141,38 @@ describe("readHostSession", () => {
       timer: { seconds: 60, endsAt: Date.parse("2026-09-19T09:05:00Z"), remainingMs: null },
       openedAt: "2026-09-19T09:00:00Z",
       closedAt: null,
+      caseStudy: false,
     });
     expect(fake.from).toHaveBeenCalledWith("sessions");
     expect(fake.select.mock.calls[0][0]).not.toContain("answer");
+    // The console needs to know it is running a case study, not the chart itself (#184).
+    expect(fake.select.mock.calls[0][0]).not.toContain("patient_record");
+  });
+
+  it("says when the session runs a case study, so the console can name each step (#184)", async () => {
+    const fake = fakeRow({
+      data: {
+        id: SESSION,
+        title: "Post-operative day 1",
+        code: "AJ4K7P",
+        status: "running",
+        mode: "instructor_paced",
+        item_set: ["a", "b", "c", "d", "e", "f"],
+        current_position: 2,
+        reveal: false,
+        timer_seconds: null,
+        item_ends_at: null,
+        timer_remaining_ms: null,
+        opened_at: "2026-09-19T09:00:00Z",
+        closed_at: null,
+        case_study_id: CASE,
+      },
+      error: null,
+    });
+    expect(await readHostSession(fake.client, SESSION)).toMatchObject({
+      itemCount: 6,
+      caseStudy: true,
+    });
   });
 
   it("counts nothing when the set is not an array", async () => {

@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { CaseStudyLayout } from "@/components/live/CaseStudyLayout";
 import { StudentRoom } from "@/components/live/StudentRoom";
 import { isUuid } from "@/lib/authoring/ids";
 import { PARTICIPANT_COOKIE, parseParticipantToken } from "@/lib/live/participantToken";
 import { JOIN_PATH } from "@/lib/live/routes";
 import { mintChannelToken, readChannelSigningKey } from "@/lib/supabase/channelToken";
 import { resumeParticipant } from "@/lib/supabase/participants";
+import { readSessionRecord } from "@/lib/supabase/sessionRecord";
 import { readPublicSessionState } from "@/lib/supabase/sessions";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -29,6 +31,11 @@ export const metadata: Metadata = { title: "Session" };
  * No answer key, no item and no item set reaches this page (ADR 0003). `resume_participant`
  * returns a name and a session's status, mode and title; `readPublicSessionState` returns four
  * numbers and a boolean. There is nothing else here to leak.
+ *
+ * #184 adds one thing, for a session run from a case study: the patient record it was started
+ * with, which the phone shows beside every step. A record is not answer-bearing (the six steps'
+ * keys live on their items and still arrive one step at a time, at the reveal), and
+ * `readSessionRecord` reads that one column and parses it before it leaves the server.
  */
 export default async function PlaySessionPage({ params }: PageProps<"/play/[sessionId]">) {
   const { sessionId } = await params;
@@ -46,6 +53,8 @@ export default async function PlaySessionPage({ params }: PageProps<"/play/[sess
   // Only ever after the token has been checked: this read does no checking of its own.
   const state = await readPublicSessionState(service, sessionId);
   if (!state) redirect(JOIN_PATH);
+  // Also only after the token has been checked. Null for a session run from a bank.
+  const record = await readSessionRecord(service, sessionId);
 
   // #149: the token this phone's socket opens the session's private channel with. Minted only
   // here, after `resume_participant` has matched the cookie, and only for the session and the
@@ -57,7 +66,7 @@ export default async function PlaySessionPage({ params }: PageProps<"/play/[sess
   );
 
   return (
-    <main className="mx-auto w-full max-w-lg flex-1 px-4 py-12">
+    <CaseStudyLayout record={record}>
       <StudentRoom
         sessionId={sessionId}
         title={participant.title}
@@ -69,6 +78,6 @@ export default async function PlaySessionPage({ params }: PageProps<"/play/[sess
         initial={state}
         channel={channel}
       />
-    </main>
+    </CaseStudyLayout>
   );
 }

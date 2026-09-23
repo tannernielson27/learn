@@ -22,6 +22,23 @@ export async function startLiveSession(bankId: string): Promise<never> {
 }
 
 /**
+ * Starts a live session from a case study and opens its console (#184): the six steps, in order,
+ * with the patient record snapshotted beside them. The same shape as `startLiveSession` and for
+ * the same reasons — `start_session` refuses a case study that is not published or has a step in
+ * draft, and row level security refuses one in another org.
+ */
+export async function startCaseStudyLiveSession(caseStudyId: string): Promise<never> {
+  if (!isUuid(caseStudyId)) redirect("/author");
+  const back = `/author/case-studies/${caseStudyId}`;
+  const { supabase } = await requireAuthor(back);
+
+  const started = await startSession(supabase, { kind: "case_study", id: caseStudyId });
+  if (!started.ok) redirect(`${back}?live=${started.reason}`);
+
+  redirect(`/live/${started.sessionId}`);
+}
+
+/**
  * Ending a session is no longer a Server Function. #132 made the console a live connection, and
  * `LiveHostTransport.end()` is the move it makes — the same path `start`, `advance`, `reveal` and
  * `pause` take, guarded once by `applyHostCommand` and once by #128's trigger. A second way to end

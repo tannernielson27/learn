@@ -25,6 +25,11 @@ export interface HostSession {
   timer: ItemTimer;
   openedAt: string;
   closedAt: string | null;
+  /**
+   * Whether the room runs a case study (#184), so the console names each step. Read off the source
+   * pointer; a case study deleted mid-session clears it, and the console falls back to "Item".
+   */
+  caseStudy: boolean;
 }
 
 export type SessionSource = { kind: "bank"; id: string } | { kind: "case_study"; id: string };
@@ -91,7 +96,7 @@ export async function readHostSession(
   const { data, error } = await supabase
     .from("sessions")
     .select(
-      "id, title, code, status, mode, item_set, current_position, reveal, timer_seconds, item_ends_at, timer_remaining_ms, opened_at, closed_at",
+      "id, title, code, status, mode, item_set, current_position, reveal, timer_seconds, item_ends_at, timer_remaining_ms, opened_at, closed_at, case_study_id",
     )
     .eq("id", sessionId)
     .maybeSingle();
@@ -108,6 +113,7 @@ export async function readHostSession(
     timer: readTimer(data.timer_seconds, data.item_ends_at, data.timer_remaining_ms) ?? NO_TIMER,
     openedAt: data.opened_at,
     closedAt: data.closed_at,
+    caseStudy: data.case_study_id != null,
   };
 }
 
