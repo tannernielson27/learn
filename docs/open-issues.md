@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-22 (the backlog stack is open as PRs #165–#176 with #162 after it; GitHub Actions is still refused for billing, so each PR carries local verification; the hosted project was checked and has only migrations 1–3).
+Last updated: 2026-09-22 (the backlog stack is open as PRs #165–#176, with #162 and #177 after it; CI runs again now the repo is public; the hosted project is caught up to migration 16, seeded, and its Vercel variables are set).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -82,17 +82,14 @@ Parallelization: #132 and #133 both edit the host and student screens — never 
 
 These block the live site rather than a single issue:
 
-- **GitHub Actions billing.** Since 2026-09-21 every job is refused before it starts ("recent account payments have failed or your spending limit needs to be increased"); re-checked 2026-09-22, still refused. The free way around it: in the `main` branch protection, remove `check` from the required status checks and turn off "Require branches to be up to date", then merge the stack in order (#165 → #176, then #162 and #177). Keep `Vercel` required. Each PR carries local verification instead of CI.
+- **GitHub Actions runs again** (2026-09-22): the repo was made public, so hosted runners are free. The private plan's 2,000 minutes ran out around Sept 20 (about 3,100 minutes were used Sept 10–22), and every job was refused from Sept 21. Merge the stack in order (#165 → #176, then #162 and #177) as each PR goes green.
 - **Author accounts are now created by hand** (#139, merged in #157). Sign-in no longer creates accounts, so a new instructor exists only once added under Authentication, Users, Add user. The sign-in form answers identically whether or not an address has an account, so a mistyped or unregistered address will appear to succeed and simply never receive a link.
 - **Decide #159**: whether to accept that four cheap IPs can hold one author's sign-in closed indefinitely, or pay for one of the mitigations listed there.
-- Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` to Vercel (Production and Preview), then redeploy.
+- Done 2026-09-22: Vercel Production and Preview both carry `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` and `SUPABASE_JWT_SIGNING_KEY`; Production also has `DEMO_ACCOUNT_*`. The hosted demo user exists as an instructor in the seeded LeaRN org.
 - Supabase Authentication, URL Configuration: Site URL and redirect URLs for production, previews and localhost.
 - Supabase magic-link template: paste `supabase/templates/magic_link.html`. Email sign-in still needs it; the demo account (#115) works without it.
-- Demo account (#115): create the hosted demo user (Authentication, Users, Add user, auto-confirm) and set `DEMO_ACCOUNT_EMAIL` and `DEMO_ACCOUNT_PASSWORD` in Vercel. Remove them before real students use the site. Both sign-in paths are now rate limited in the server (#134: 20 demo and 30 email attempts per IP per five minutes; #139: 3 links per caller per address and 12 per address overall). Supabase's own auth limit still applies on top, to the deployment's egress address as a whole.
-- Apply the merged migrations to the hosted project, in order: `20260916000000_bank_folders` (checked 2026-09-22: not applied), `20260919000000_item_tags`, `20260919110000_start_step_and_rate_limits`, `20260919120600_duplicate_content`, `20260919130000_item_search`, `20260919150000_import_into_folder`, `20260919160000_archive_content`. Until `start_step_and_rate_limits` is applied, production refuses every save, publish and import.
+- Done 2026-09-22 on `vauokqoyvewtzubqajgh`: migration history repaired (rows 1–3 had been applied by hand under other versions), rows 4–16 pushed with `supabase db push`, and `seed.sql` loaded. Row 17 (#149) follows once #176 merges. A separate production project (below) still needs the full replay.
 - Split production into its own Supabase project. The code landed in #136 (ADR 0006 supersedes ADR 0005); the eight owner steps are written out in `docs/05-VERSION-CONTROL-AND-DEPLOY.md` §7.3. Order matters: `seed.sql` before creating the demo user, and never run `seed-demo.sql` against a hosted project.
-- Apply the four Sprint 7 live migrations to **both** projects, after the Sprint 6 seven: `20260919170000_live_sessions`, `20260920130000_live_responses_and_aggregates`, `20260920140000_session_participants`, `20260921000000_resume_participant_joined_at`.
-- Then the two backlog migrations, to both projects: `20260921100000_live_view_rate_limit` (#152) and `20260921200000_authoring_limit_at_the_write` (#123). The full ordered list of sixteen is in `docs/05-VERSION-CONTROL-AND-DEPLOY.md` §7.2. The second is safe to apply after the app deploys: it keeps `take_rate_limit`'s name and signature, so the app degrades to the old behaviour rather than refusing writes.
 - **Do not add `live` to the exposed schemas** in either Supabase project. That dashboard setting is what keeps the session-state mirror off the Data API.
 - Nothing to set for `LIVE_PARTICIPANT_SECRET`: #131 shipped it as a placeholder and #133 deleted it. If it was set on a deployment, remove it.
 - While creating that project, consider raising its **auth rate limits**. Supabase's default is 30 sign-ins per five minutes and it applies to the deployment's egress address as a whole, not per student — so it, not #134's per-IP limit, is what constrains a NAT'd classroom.
