@@ -4,7 +4,7 @@ import { redirectForAccess } from "./routeAccess";
 const at = (pathAndQuery: string) => new URL(`https://learn.example${pathAndQuery}`);
 
 describe("redirectForAccess", () => {
-  it.each([["/author"], ["/author/banks/1"], ["/author/items/9?mode=preview"]])(
+  it.each([["/author"], ["/author/banks/1"], ["/author/items/9?mode=preview"], ["/learn"]])(
     "sends a signed-out visit to %s through sign-in, then back",
     (path) => {
       const target = redirectForAccess(at(path), false);
@@ -33,6 +33,9 @@ describe("redirectForAccess", () => {
     ["/sign-in"],
     ["/auth/confirm"],
     ["/authors"],
+    ["/learning"],
+    // The invite page is for people who have no account yet.
+    ["/c/AbC_-0123456789abcdefghijklmnopq"],
   ])("leaves a signed-out visit to %s alone", (path) => {
     expect(redirectForAccess(at(path), false)).toBeNull();
   });

@@ -6,6 +6,11 @@ describe("noAccessRedirect", () => {
     expect(noAccessRedirect("forbidden")).toBeNull();
   });
 
+  it("sends a student to the student home rather than leaving them on No access yet (#205)", () => {
+    expect(noAccessRedirect("forbidden", "student")).toBe("/learn");
+    expect(noAccessRedirect("forbidden", null)).toBeNull();
+  });
+
   it("sends an author home, since the page is not about them", () => {
     expect(noAccessRedirect("ok")).toBe("/author");
   });

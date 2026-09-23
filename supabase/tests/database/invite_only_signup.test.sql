@@ -21,7 +21,8 @@ values
   ('00000000-0000-0000-0000-0000002040bb', 'new-claims@example.test', 'authenticated',
    'authenticated', '{"provider": "email"}',
    '{"role": "instructor", "org_role": "admin", "learn_invite": {"class_id": "00000000-0000-0000-0000-0000002040c1"}}'),
-  -- The seam #205 completes: an app_metadata invite (service role only) grants nothing YET.
+  -- The seam #205 completed: an app_metadata invite (service role only) to a class that does not
+  -- exist grants nothing. supabase/tests/database/classes.test.sql covers one that does.
   ('00000000-0000-0000-0000-0000002040cc', 'new-invited@example.test', 'authenticated',
    'authenticated',
    '{"provider": "email", "learn_invite": {"class_id": "00000000-0000-0000-0000-0000002040c1"}}', '{}'),
@@ -45,7 +46,7 @@ select is(
 select is(
   (select row(org_id, role)::text from public.profiles where id = '00000000-0000-0000-0000-0000002040cc'),
   row(null::uuid, null::public.org_role)::text,
-  'an app_metadata class invite grants nothing until #205 gives it a class to join'
+  'an app_metadata invite to a class that does not exist grants nothing'
 );
 select is(
   (select row(org_id, role)::text from public.profiles where id = '00000000-0000-0000-0000-0000002040dd'),

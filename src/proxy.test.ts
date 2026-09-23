@@ -103,4 +103,10 @@ describe("the proxy matcher still covers the gallery", () => {
     expect(matcher).toContain("/sign-in");
     expect(matcher).toContain("/auth/:path*");
   });
+
+  it("refreshes the session on the student home and the class invite page (#205)", () => {
+    expect(matcher).toContain("/learn");
+    expect(matcher).toContain("/learn/:path*");
+    expect(matcher).toContain("/c/:path*");
+  });
 });

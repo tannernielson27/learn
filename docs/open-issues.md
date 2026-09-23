@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-23 (Sprint 9 under way: #204 merged in #214 and applied to hosted, which now has all 22 migrations; #206 merged in #216 (Resend; owner steps in docs/05 §7.7); #209 part 1 in #218. Sprint 8 is code complete, with the demo in `docs/sprints/S8-demo.md`).
+Last updated: 2026-09-23 (Sprint 9 under way: #204 merged in #214 and applied to hosted, which now has all 22 migrations; #206 merged in #216 (Resend; owner steps in docs/05 §7.7); #209 part 1 in #218; #205 classes in #220. Sprint 8 is code complete, with the demo in `docs/sprints/S8-demo.md`).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -89,7 +89,7 @@ Demo 9: assign a set Monday, answer it Tuesday on a phone, review results Wednes
 | #                                                           | Title                                                                                      | Gates                     | Status                                                                                                    |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------- | --------------------------------------------------------------------------------------------------------- |
 | [#204](https://github.com/tannernielson27/learn/issues/204) | feat(auth): invite-only sign-up, so no new account becomes an instructor                   | security, db, e2e         | Merged (#214); `20260924000000_invite_only_signup` applied to hosted                                      |
-| [#205](https://github.com/tannernielson27/learn/issues/205) | feat(assign): a class with an invite link students join                                    | security, db, e2e         | To do                                                                                                     |
+| [#205](https://github.com/tannernielson27/learn/issues/205) | feat(assign): a class with an invite link students join                                    | security, db, e2e         | Merged (#220); apply `20260924010000_classes` to hosted                                                   |
 | [#206](https://github.com/tannernielson27/learn/issues/206) | chore(infra): send email through Resend from info.tannernielson.com                        | security                  | Merged (#216); no migration; owner steps in docs/05 §7.7                                                  |
 | [#207](https://github.com/tannernielson27/learn/issues/207) | feat(assign): assign a bank or case study to a class with a window and attempts            | security, db, e2e         | To do                                                                                                     |
 | [#208](https://github.com/tannernielson27/learn/issues/208) | feat(assign): take an assignment on a phone with autosave and resume                       | player, security, db, e2e | To do                                                                                                     |

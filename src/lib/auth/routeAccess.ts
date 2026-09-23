@@ -1,10 +1,14 @@
 import { safeNextPath } from "./nextPath";
 
-const PROTECTED_PREFIX = "/author";
+// Authoring, and the student home (#205). The class invite page, /c/<token>, is deliberately not
+// here: it is where someone with no account yet starts.
+const PROTECTED_PREFIXES = ["/author", "/learn"];
 const SIGN_IN_PATH = "/sign-in";
 
 function isProtected(pathname: string): boolean {
-  return pathname === PROTECTED_PREFIX || pathname.startsWith(`${PROTECTED_PREFIX}/`);
+  return PROTECTED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
 }
 
 /**
