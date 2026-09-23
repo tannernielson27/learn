@@ -46,3 +46,5 @@ coverage
 /test-results/
 /playwright-report/
 /blob-report/
+# pnpm load:live (#187)
+load-live-results*.json

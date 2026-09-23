@@ -63,7 +63,7 @@ docs/01-NGN-ITEM-SPEC.md §3.x, docs/04-DESIGN-DIRECTION.md §<n>
 
 **Editor story (Phase 2)**: same, plus `database-reviewer` for any migration and a round-trip test: editor form → JSON → Zod → renderer.
 
-**Live/session story (Phase 3)**: `security-reviewer` mandatory (join codes, RLS, answer-key exposure); load script with 60 simulated participants against the in-memory transport, then against Supabase on a preview.
+**Live/session story (Phase 3)**: `security-reviewer` mandatory (join codes, RLS, answer-key exposure); load script with 60 simulated participants against the in-memory transport, then against Supabase: `pnpm load:live` (see [load-testing.md](load-testing.md); it refuses production, and refuses any preview that shares production's database).
 
 **Auth/roles story (Phase 4)**: `security-reviewer` + `database-reviewer` mandatory.
 
