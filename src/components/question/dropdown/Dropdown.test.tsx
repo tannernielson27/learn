@@ -46,13 +46,13 @@ describe("drop-down cloze", () => {
 
   it("enables submit only when every blank is filled", async () => {
     render(<ItemPlayer item={cloze} submit={scoreInProcess(cloze)} />);
-    expect(submit()).toBeDisabled();
+    expect(submit()).toHaveAttribute("aria-disabled", "true");
     await userEvent.selectOptions(blank(1, 2), "cardiac dysrhythmia");
-    expect(submit()).toBeDisabled();
+    expect(submit()).toHaveAttribute("aria-disabled", "true");
     await userEvent.selectOptions(blank(2, 2), "apply a warm compress");
-    expect(submit()).toBeEnabled();
+    expect(submit()).not.toHaveAttribute("aria-disabled");
     await userEvent.selectOptions(blank(2, 2), "Select…");
-    expect(submit()).toBeDisabled();
+    expect(submit()).toHaveAttribute("aria-disabled", "true");
   });
 
   it("scores 0/1 per blank and shows the right answer for a wrong blank", async () => {

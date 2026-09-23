@@ -53,7 +53,7 @@ describe("bowtie renderer", () => {
     expect(within(choices(ACTIONS)).getAllByRole("button")).toHaveLength(5);
     expect(within(choices(CONDITION)).getAllByRole("button")).toHaveLength(4);
     expect(within(choices(PARAMETERS)).getAllByRole("button")).toHaveLength(5);
-    expect(submit()).toBeDisabled();
+    expect(submit()).toHaveAttribute("aria-disabled", "true");
   });
 
   it("places a choice by tapping it, then a slot in its column", async () => {
@@ -111,9 +111,9 @@ describe("bowtie renderer", () => {
     await place(ACTIONS, WALK, actionSlot(2));
     await place(CONDITION, GERD, conditionSlot());
     await place(PARAMETERS, TROPONIN, parameterSlot(1));
-    expect(submit()).toBeDisabled();
+    expect(submit()).toHaveAttribute("aria-disabled", "true");
     await place(PARAMETERS, BOWEL, parameterSlot(2));
-    expect(submit()).toBeEnabled();
+    expect(submit()).not.toHaveAttribute("aria-disabled");
     await userEvent.click(submit());
 
     const panel = scorePanel();

@@ -42,14 +42,14 @@ describe("highlight text", () => {
 
   it("toggles a span by click, Space and Enter, and needs one before submit", async () => {
     render(<ItemPlayer item={text} submit={scoreInProcess(text)} />);
-    expect(submit()).toBeDisabled();
+    expect(submit()).toHaveAttribute("aria-disabled", "true");
 
     await userEvent.click(span(HR));
     expect(span(HR)).toHaveAttribute("aria-pressed", "true");
-    expect(submit()).toBeEnabled();
+    expect(submit()).not.toHaveAttribute("aria-disabled");
     await userEvent.click(span(HR));
     expect(span(HR)).toHaveAttribute("aria-pressed", "false");
-    expect(submit()).toBeDisabled();
+    expect(submit()).toHaveAttribute("aria-disabled", "true");
 
     span(BP).focus();
     await userEvent.keyboard(" ");

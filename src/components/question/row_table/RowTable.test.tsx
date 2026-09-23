@@ -66,9 +66,9 @@ describe("drop-down table", () => {
       );
     await pick(DIGOXIN, "Check blood glucose");
     await pick(INSULIN, "Check blood glucose and confirm meal is available");
-    expect(submit()).toBeDisabled();
+    expect(submit()).toHaveAttribute("aria-disabled", "true");
     await pick(METOPROLOL, "Assess blood pressure and heart rate");
-    expect(submit()).toBeEnabled();
+    expect(submit()).not.toHaveAttribute("aria-disabled");
     expect(screen.queryByText(/Correct answer/)).not.toBeInTheDocument();
 
     await userEvent.click(submit());
@@ -107,9 +107,9 @@ describe("multiple response grouping", () => {
     render(<ItemPlayer item={grouping} submit={scoreInProcess(grouping)} />);
     await userEvent.click(within(grid()).getByRole("checkbox", { name: "Drowsiness" }));
     await userEvent.click(within(grid()).getByRole("checkbox", { name: "Fruity breath odor" }));
-    expect(submit()).toBeDisabled();
+    expect(submit()).toHaveAttribute("aria-disabled", "true");
     await userEvent.click(within(card("Cardiovascular")).getByRole("checkbox", { name: /118/ }));
-    expect(submit()).toBeEnabled();
+    expect(submit()).not.toHaveAttribute("aria-disabled");
   });
 
   it("floors a row at zero without taking points from other rows", async () => {

@@ -25,10 +25,14 @@ describe("ItemPlayer with multiple choice", () => {
     const onSubmitted = vi.fn();
     render(<ItemPlayer item={mc} submit={scoreInProcess(mc)} onSubmitted={onSubmitted} />);
     const submit = screen.getByRole("button", { name: "Submit" });
-    expect(submit).toBeDisabled();
+    expect(submit).toHaveAttribute("aria-disabled", "true");
+    // aria-disabled does not stop the click itself (#59): pressing it must still send nothing.
+    await userEvent.click(submit);
+    expect(onSubmitted).not.toHaveBeenCalled();
+    expect(screen.queryByRole("complementary", { name: "Score" })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
-    expect(submit).toBeEnabled();
+    expect(submit).not.toHaveAttribute("aria-disabled");
     await userEvent.click(submit);
 
     const score = screen.getByRole("complementary", { name: "Score" });
@@ -89,15 +93,15 @@ describe("ItemPlayer with multiple response", () => {
     const submit = screen.getByRole("button", { name: "Submit" });
     await userEvent.click(screen.getByRole("checkbox", { name: /blood cultures/ }));
     await userEvent.click(screen.getByRole("checkbox", { name: /broad-spectrum antibiotics/ }));
-    expect(submit).toBeDisabled();
+    expect(submit).toHaveAttribute("aria-disabled", "true");
     expect(screen.getByText(/2 of 3 selected/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("checkbox", { name: /fluid resuscitation/ }));
-    expect(submit).toBeEnabled();
+    expect(submit).not.toHaveAttribute("aria-disabled");
     expect(screen.getByRole("checkbox", { name: /compression devices/ })).toBeDisabled();
     expect(screen.getByText(/Deselect an option/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("checkbox", { name: /broad-spectrum antibiotics/ }));
     expect(screen.getByRole("checkbox", { name: /compression devices/ })).toBeEnabled();
-    expect(submit).toBeDisabled();
+    expect(submit).toHaveAttribute("aria-disabled", "true");
   });
 });
 

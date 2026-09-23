@@ -94,7 +94,7 @@ describe("CaseStudyPlayer", () => {
     await userEvent.click(next()!);
     expect(stepLine()).toHaveTextContent("Step 2 of 6");
     expect(wrong()).toBeChecked();
-    expect(submit()).toBeEnabled();
+    expect(submit()).not.toHaveAttribute("aria-disabled");
   });
 
   it("ends on a summary of every step and the total", async () => {

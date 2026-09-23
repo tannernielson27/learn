@@ -48,7 +48,7 @@ describe("ordered response renderer", () => {
     const start = order();
     expect([...start].sort()).toEqual([...KEY].sort());
     expect(start).not.toEqual(KEY);
-    expect(submit()).toBeEnabled();
+    expect(submit()).not.toHaveAttribute("aria-disabled");
     expect(up(start[0]!)).toBeDisabled();
     expect(down(start[4]!)).toBeDisabled();
     expect(down(start[0]!)).toBeEnabled();

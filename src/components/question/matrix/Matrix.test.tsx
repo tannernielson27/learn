@@ -63,11 +63,11 @@ describe("matrix multiple choice", () => {
 
   it("enables submit only when every row is answered, then scores 0/1 per row", async () => {
     render(<ItemPlayer item={mmcEdge} submit={scoreInProcess(mmcEdge)} />);
-    expect(submit()).toBeDisabled();
+    expect(submit()).toHaveAttribute("aria-disabled", "true");
     await userEvent.click(within(grid()).getByRole("radio", { name: `${O2} Improved` }));
-    expect(submit()).toBeDisabled();
+    expect(submit()).toHaveAttribute("aria-disabled", "true");
     await userEvent.click(within(grid()).getByRole("radio", { name: `${RR} Improved` }));
-    expect(submit()).toBeEnabled();
+    expect(submit()).not.toHaveAttribute("aria-disabled");
     expect(screen.queryByText("Correct")).not.toBeInTheDocument();
 
     await userEvent.click(submit());
@@ -94,12 +94,12 @@ describe("matrix multiple response", () => {
     );
     expect(within(grid()).getByRole("checkbox", { name: "Warfarin INR" })).toBeChecked();
     expect(within(card("Warfarin")).getByRole("checkbox", { name: "INR" })).toBeChecked();
-    expect(submit()).toBeDisabled();
+    expect(submit()).toHaveAttribute("aria-disabled", "true");
 
     await userEvent.click(
       within(card("Furosemide")).getByRole("checkbox", { name: "Daily weight" }),
     );
-    expect(submit()).toBeEnabled();
+    expect(submit()).not.toHaveAttribute("aria-disabled");
 
     await userEvent.click(within(card("Warfarin")).getByRole("checkbox", { name: "INR" }));
     expect(within(grid()).getByRole("checkbox", { name: "Warfarin INR" })).not.toBeChecked();
