@@ -168,9 +168,9 @@ Everything in `supabase/migrations/` today, in filename order — this is the re
 | 20  | `20260923070000_case_study_live_record`        | run a case study live with the patient record on every phone (#184)            | applied                    |
 | 21  | `20260923080000_student_paced`                 | student-paced mode (#185)                                                      | applied                    |
 | 22  | `20260924000000_invite_only_signup`            | new accounts get no role; `private.make_instructor` (#204, §7.6)               | applied                    |
-| 23  | `20260924010000_classes`                       | classes, rosters and invite links; completes the invite seam (#205)            | **not applied**            |
+| 23  | `20260924010000_classes`                       | classes, rosters and invite links; completes the invite seam (#205)            | applied                    |
 
-Checked 2026-09-23 with `pnpm exec supabase migration list --linked`: rows 1–22 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged). Row 23 (#205) is not applied yet. Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
+Checked 2026-09-23 with `pnpm exec supabase migration list --linked`: rows 1–23 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged, row 23 straight after #220). Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
 
 > **Drift: row 23.** Until `20260924010000_classes` is pushed, the hosted project has no classes and the invite page cannot resolve a link. Everything before it is current. The separate production project (§7.3) does not exist yet and will need every row replayed when it is created.
 
