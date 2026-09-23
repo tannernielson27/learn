@@ -563,11 +563,10 @@ test("a case study runs live with the patient record beside each step on the pho
   });
   await expectPatientRecord(phone, testInfo.project.name);
 
-  // Reveal: a phone that did not answer is told the answer is showing, and is not shown the key.
+  // Reveal: a phone that did not answer is shown this step's key and rationale (#181).
   await page.getByRole("button", { name: "Show answer", exact: true }).click();
-  await expect(phone.getByText("The answer is showing.", { exact: true })).toBeVisible({
-    timeout: 15_000,
-  });
+  await expect(phone.getByTestId("not-answered")).toBeVisible({ timeout: 15_000 });
+  await expect(phone.getByText(CASE_STEP_1_RATIONALE).first()).toBeVisible();
 
   // Advance to step 2, on both screens.
   await page.getByRole("button", { name: "Next item", exact: true }).click();
