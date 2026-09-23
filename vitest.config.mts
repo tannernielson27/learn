@@ -40,6 +40,8 @@ export default defineConfig({
           include: [
             "src/components/**/*.{test,spec}.{ts,tsx}",
             "src/features/**/*.{test,spec}.{ts,tsx}",
+            // Route files that render — the error boundaries (#164) — are tested where they live.
+            "src/app/**/*.{test,spec}.tsx",
           ],
         },
       },
