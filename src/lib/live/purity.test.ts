@@ -41,13 +41,17 @@ function importsOf(source: string): string[] {
   return specifiers;
 }
 
-const sources = readdirSync(LIVE_DIR)
+// Recursive, so a subfolder such as `results/` (#179) is held to the same rule. Names use forward
+// slashes on every platform so the test titles read the same on Windows and in CI.
+const sources = readdirSync(LIVE_DIR, { recursive: true, encoding: "utf8" })
+  .map((name) => name.split(path.sep).join("/"))
   .filter((name) => name.endsWith(".ts") && !name.endsWith(".test.ts"))
   .map((name) => ({ name, source: readFileSync(path.join(LIVE_DIR, name), "utf8") }));
 
 describe("src/lib/live is pure TypeScript", () => {
-  it("has files to check", () => {
+  it("has files to check, in subfolders too", () => {
     expect(sources.length).toBeGreaterThan(0);
+    expect(sources.map(({ name }) => name)).toContain("results/index.ts");
   });
 
   it("reads dynamic imports and re-exports, not only static ones", () => {

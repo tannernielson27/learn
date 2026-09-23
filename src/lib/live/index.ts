@@ -48,3 +48,22 @@ export {
   type JoinableRoom,
   type SimulatedParticipant,
 } from "./simulate";
+export {
+  COMMON_WRONG_LIMIT,
+  distributionFor,
+  type BlankCounts,
+  type BlanksDistribution,
+  type ChoiceCount,
+  type CombinationPick,
+  type Distribution,
+  type DistributionKind,
+  type GridDistribution,
+  type GridRow,
+  type OptionsDistribution,
+  type OrderDistribution,
+  type PairsDistribution,
+  type PositionCounts,
+  type SlotCounts,
+  type SlotsDistribution,
+  type WrongCombination,
+} from "./results";
