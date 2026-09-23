@@ -47,7 +47,7 @@ A class-sized crowd: `pnpm load:live --host --participants 60` against the local
 ## Known gaps
 
 - **Production and previews still share one database** (the §7.3 split is owner work). That is also why the load script refuses to run against a preview.
-- **The console reads responses twice per tick** ([#197](https://github.com/tannernielson27/learn/issues/197)): once for the tally, once for the results panel. Fine at class size; one read would do.
+- **The console used to read responses twice per tick**; [#197](https://github.com/tannernielson27/learn/issues/197) (PR #202) now shares one read between the tally and the results panel.
 - **The whole patient record shows from step 1.** A review noted that the sample case's 1400 vitals and labs are visible before the steps that ask about them. No key is exposed, but it is an instructional-design question for the owner.
 - **Student-paced rooms have no timer and cannot run a case study**, by design this sprint; both are check constraints.
 - **The item strip only knows what this console has heard.** A console reloaded mid-session shows no answered counts for earlier items until it revisits them.
