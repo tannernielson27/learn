@@ -7,6 +7,7 @@ import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer } from "../ItemPlayer";
 import { hasRenderer } from "../registry";
 import { renderersLoaded } from "@/components/question/testing/renderers";
+import { feedbackShown } from "@/components/question/testing/feedback";
 
 const mmc = itemSchema.parse(FIXTURES.matrix_multiple_choice.canonical);
 const mmcEdge = itemSchema.parse(FIXTURES.matrix_multiple_choice.edge);
@@ -90,6 +91,8 @@ describe("matrix multiple choice", () => {
 
     await userEvent.click(submit());
 
+    await feedbackShown();
+
     const score = screen.getByRole("complementary", { name: "Score" });
     expect(within(score).getByText("1")).toBeInTheDocument();
     expect(within(score).getByText("/ 2")).toBeInTheDocument();
@@ -107,9 +110,11 @@ describe("matrix multiple choice", () => {
   describe("after submit, each control's name carries its verdict", () => {
     const answerAndSubmit = async () => {
       render(<ItemPlayer item={mmcEdge} submit={scoreInProcess(mmcEdge)} />);
+      await renderersLoaded();
       await userEvent.click(within(grid()).getByRole("radio", { name: `${O2} Improved` }));
       await userEvent.click(within(grid()).getByRole("radio", { name: `${RR} Improved` }));
       await userEvent.click(submit());
+      await feedbackShown();
     };
     /** Verdict text a screen reader would meet as content, outside any name. */
     const exposedVerdicts = (container: HTMLElement) =>
@@ -176,6 +181,7 @@ describe("matrix multiple response", () => {
       await userEvent.click(within(table).getByRole("checkbox", { name }));
     }
     await userEvent.click(submit());
+    await feedbackShown();
 
     const score = screen.getByRole("complementary", { name: "Score" });
     expect(within(score).getByText("2")).toBeInTheDocument();

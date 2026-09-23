@@ -7,6 +7,7 @@ import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer } from "../ItemPlayer";
 import { hasRenderer } from "../registry";
 import { renderersLoaded } from "@/components/question/testing/renderers";
+import { feedbackShown } from "@/components/question/testing/feedback";
 
 const cloze = itemSchema.parse(FIXTURES.dragdrop_cloze.canonical);
 const reusable = itemSchema.parse(FIXTURES.dragdrop_cloze.edge);
@@ -116,6 +117,7 @@ describe("drag-and-drop cloze", () => {
     await place(SUPINE, 2, 2);
     expect(submit()).not.toHaveAttribute("aria-disabled");
     await userEvent.click(submit());
+    await feedbackShown();
 
     expect(within(scorePanel()).getByText("1")).toBeInTheDocument();
     expect(within(scorePanel()).getByText("/ 2")).toBeInTheDocument();
@@ -144,6 +146,7 @@ describe("drag-and-drop rationale", () => {
     await place("atelectasis", 1, 2);
     await place("prolonged immobility", 2, 2);
     await userEvent.click(submit());
+    await feedbackShown();
 
     const panel = scorePanel();
     expect(within(panel).getByText("0")).toBeInTheDocument();
@@ -159,6 +162,7 @@ describe("drag-and-drop rationale", () => {
     await place("unilateral calf swelling", 2, 3);
     await place("immobility", 3, 3);
     await userEvent.click(submit());
+    await feedbackShown();
 
     const panel = scorePanel();
     expect(within(panel).getByText("0")).toBeInTheDocument();

@@ -6,6 +6,7 @@ import { itemSchema } from "@/lib/ngn/schemas";
 import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer, toPlayerItem } from "./ItemPlayer";
 import { renderersLoaded } from "@/components/question/testing/renderers";
+import { feedbackShown } from "@/components/question/testing/feedback";
 
 const mc = itemSchema.parse(FIXTURES.multiple_choice.canonical);
 const sata = itemSchema.parse(FIXTURES.multiple_response.canonical);
@@ -41,6 +42,7 @@ describe("score breakdown", () => {
     await userEvent.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
     await userEvent.click(screen.getByRole("checkbox", { name: /Temperature 37.2/ }));
     await userEvent.click(submit());
+    await feedbackShown();
 
     const rows = within(breakdown()).getAllByRole("listitem");
     // Three correct options and one wrong selection are scored; untouched wrong options are not.
@@ -61,6 +63,7 @@ describe("score breakdown", () => {
     await renderersLoaded();
     await userEvent.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
     await userEvent.click(submit());
+    await feedbackShown();
     const rows = within(breakdown()).getAllByRole("listitem");
     expect(rows).toHaveLength(1);
     expect(rows[0]).toHaveTextContent(/Auscultate the lungs and assess oxygen saturation\s*\+1/);
@@ -76,6 +79,7 @@ describe("per-element rationale", () => {
     await renderersLoaded();
     await userEvent.click(screen.getByRole("radio", { name: /Encourage the client/ }));
     await userEvent.click(submit());
+    await feedbackShown();
 
     const chosen = screen.getByRole("radio", { name: /Encourage the client/ });
     expect(chosen).toHaveAccessibleDescription(/More fluid worsens an already overloaded/);
@@ -98,6 +102,7 @@ describe("per-element rationale", () => {
       );
     }
     await userEvent.click(submit());
+    await feedbackShown();
 
     const grid = screen.getByRole("table");
     const fat = within(grid).getByRole("rowheader", { name: /high-fat diet/ });
@@ -118,6 +123,7 @@ describe("per-element rationale", () => {
       );
     }
     await userEvent.click(submit());
+    await feedbackShown();
     expect(
       within(grid()).getByRole("checkbox", { name: /Blood glucose 48 mg\/dL Ischemic stroke/ }),
     ).toHaveAccessibleDescription(/belongs to hypoglycemia alone/);
@@ -131,6 +137,7 @@ describe("per-element rationale", () => {
     await userEvent.selectOptions(blanks[1]!, "ev1_b");
     await userEvent.selectOptions(blanks[2]!, "ev2_a");
     await userEvent.click(submit());
+    await feedbackShown();
 
     expect(screen.getByText(/The anchor\./)).toBeInTheDocument();
     expect(screen.getByText(/a uterus not clamping down/)).toBeInTheDocument();
@@ -142,6 +149,7 @@ describe("per-element rationale", () => {
     await renderersLoaded();
     await userEvent.click(screen.getByRole("radio", { name: /Diaphoresis and tremor/ }));
     await userEvent.click(submit());
+    await feedbackShown();
     expect(
       screen.getByRole("radio", { name: /Diaphoresis and tremor/ }),
     ).toHaveAccessibleDescription("");

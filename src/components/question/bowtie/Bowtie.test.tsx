@@ -7,6 +7,7 @@ import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer } from "../ItemPlayer";
 import { hasRenderer } from "../registry";
 import { renderersLoaded } from "@/components/question/testing/renderers";
+import { feedbackShown } from "@/components/question/testing/feedback";
 
 const bowtie = itemSchema.parse(FIXTURES.bowtie.canonical);
 
@@ -122,6 +123,7 @@ describe("bowtie renderer", () => {
     await place(PARAMETERS, BOWEL, parameterSlot(2));
     expect(submit()).not.toHaveAttribute("aria-disabled");
     await userEvent.click(submit());
+    await feedbackShown();
 
     const panel = scorePanel();
     expect(within(panel).getByText("2")).toBeInTheDocument();
@@ -145,6 +147,7 @@ describe("bowtie renderer", () => {
     await place(PARAMETERS, RHYTHM, parameterSlot(1));
     await place(PARAMETERS, TROPONIN, parameterSlot(2));
     await userEvent.click(submit());
+    await feedbackShown();
 
     expect(within(scorePanel()).getByText("5")).toBeInTheDocument();
     expect(screen.queryByText(/^Correct: /)).not.toBeInTheDocument();

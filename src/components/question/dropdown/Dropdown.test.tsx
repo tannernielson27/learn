@@ -7,6 +7,7 @@ import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer } from "../ItemPlayer";
 import { hasRenderer } from "../registry";
 import { renderersLoaded } from "@/components/question/testing/renderers";
+import { feedbackShown } from "@/components/question/testing/feedback";
 
 const cloze = itemSchema.parse(FIXTURES.dropdown_cloze.canonical);
 const triad = itemSchema.parse(FIXTURES.dropdown_rationale.canonical);
@@ -63,6 +64,7 @@ describe("drop-down cloze", () => {
     await renderersLoaded();
     await answer(2, ["cardiac dysrhythmia", "apply a warm compress"]);
     await userEvent.click(submit());
+    await feedbackShown();
 
     expect(within(scorePanel()).getByText("1")).toBeInTheDocument();
     expect(within(scorePanel()).getByText("/ 2")).toBeInTheDocument();
@@ -84,6 +86,7 @@ describe("drop-down rationale", () => {
       "saturating a pad in 15 minutes",
     ]);
     await userEvent.click(submit());
+    await feedbackShown();
 
     const panel = scorePanel();
     expect(within(panel).getByText("0")).toBeInTheDocument();
@@ -105,6 +108,7 @@ describe("drop-down rationale", () => {
       "saturating a pad in 15 minutes",
     ]);
     await userEvent.click(submit());
+    await feedbackShown();
 
     const panel = scorePanel();
     expect(within(panel).getByText("1")).toBeInTheDocument();
@@ -119,6 +123,7 @@ describe("drop-down rationale", () => {
     expect(screen.queryByText("Anchor")).not.toBeInTheDocument();
     await answer(2, ["orthostatic hypotension", "caffeine intake"]);
     await userEvent.click(submit());
+    await feedbackShown();
 
     const panel = scorePanel();
     expect(within(panel).getByText("0")).toBeInTheDocument();

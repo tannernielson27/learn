@@ -7,6 +7,7 @@ import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer } from "../ItemPlayer";
 import { hasRenderer } from "../registry";
 import { renderersLoaded } from "@/components/question/testing/renderers";
+import { feedbackShown } from "@/components/question/testing/feedback";
 
 const text = itemSchema.parse(FIXTURES.highlight_text.canonical);
 const perRow = itemSchema.parse(FIXTURES.highlight_table.canonical);
@@ -67,6 +68,7 @@ describe("highlight text", () => {
     await userEvent.click(span(HR));
     await userEvent.click(span(BP));
     await userEvent.click(submit());
+    await feedbackShown();
     expect(
       screen.getByRole("button", { name: /^Heart rate 54 and irregular, Correct$/ }),
     ).toBeInTheDocument();
@@ -83,6 +85,7 @@ describe("highlight text", () => {
     await renderersLoaded();
     for (const name of [HR, SAT, BP]) await userEvent.click(span(name));
     await userEvent.click(submit());
+    await feedbackShown();
 
     expect(within(scorePanel()).getByText("1")).toBeInTheDocument();
     expect(within(scorePanel()).getByText("/ 3")).toBeInTheDocument();
@@ -130,6 +133,7 @@ describe("highlight table", () => {
       await userEvent.click(within(grid()).getByRole("button", { name }));
     }
     await userEvent.click(submit());
+    await feedbackShown();
 
     const panel = scorePanel();
     expect(within(panel).getByText("1")).toBeInTheDocument();
@@ -146,6 +150,7 @@ describe("highlight table", () => {
     await userEvent.click(within(grid()).getByRole("button", { name: "Heart rate 52" }));
     await userEvent.click(within(grid()).getByRole("button", { name: "Warm, moist skin" }));
     await userEvent.click(submit());
+    await feedbackShown();
 
     expect(within(scorePanel()).getByText("0")).toBeInTheDocument();
     expect(within(scorePanel()).getByText("/ 3")).toBeInTheDocument();

@@ -12,6 +12,7 @@ import {
 } from "@/lib/ngn/submit";
 import { CaseStudyPlayer } from "./CaseStudyPlayer";
 import { renderersLoaded } from "@/components/question/testing/renderers";
+import { feedbackShown } from "@/components/question/testing/feedback";
 
 /**
  * Six copies of one item, so the flow tests read as a flow. The sample case study, with a
@@ -39,6 +40,7 @@ const wrong = () => screen.getByRole("radio", { name: /Document the weight/ });
 const finishStep = async () => {
   await userEvent.click(correct());
   await userEvent.click(submit());
+  await feedbackShown();
   await userEvent.click(next()!);
 };
 
@@ -71,6 +73,7 @@ describe("CaseStudyPlayer", () => {
     await userEvent.click(correct());
     expect(next()).toBeNull();
     await userEvent.click(submit());
+    await feedbackShown();
     expect(next()).toBeEnabled();
   });
 
@@ -79,6 +82,7 @@ describe("CaseStudyPlayer", () => {
     await renderersLoaded();
     await userEvent.click(wrong());
     await userEvent.click(submit());
+    await feedbackShown();
     await userEvent.click(next()!);
     expect(stepLine()).toHaveTextContent("Step 2 of 6");
 
@@ -113,6 +117,7 @@ describe("CaseStudyPlayer", () => {
 
     await userEvent.click(correct());
     await userEvent.click(submit());
+    await feedbackShown();
     expect(next()).toHaveTextContent("See results");
     await userEvent.click(next()!);
 
@@ -140,6 +145,7 @@ describe("CaseStudyPlayer", () => {
     await renderersLoaded();
     await userEvent.click(correct());
     await userEvent.click(submit());
+    await feedbackShown();
     expect(handler).toHaveBeenCalledTimes(1);
     expect(submitFor).toHaveBeenCalledWith(sixSteps.items[0]);
   });
@@ -208,6 +214,7 @@ describe("CaseStudyPlayer", () => {
       await renderersLoaded();
       await userEvent.click(wrong());
       await userEvent.click(submit());
+      await feedbackShown();
       // Marks a keyless item could not produce on its own: they came back with the score.
       expect(screen.getByText("Incorrect")).toBeInTheDocument();
       expect(screen.getByText("Missed")).toBeInTheDocument();
@@ -219,6 +226,7 @@ describe("CaseStudyPlayer", () => {
       await renderersLoaded();
       await userEvent.click(correct());
       await userEvent.click(submit());
+      await feedbackShown();
       // Every item the handler is built for is keyless: no key is in the page for any step.
       for (const [item] of submitFor.mock.calls) expect(item).not.toHaveProperty("answerKey");
       expect(new Set(submitFor.mock.calls.map(([item]) => item.id))).toEqual(new Set(["step_1"]));
@@ -229,6 +237,7 @@ describe("CaseStudyPlayer", () => {
       await renderersLoaded();
       await userEvent.click(wrong());
       await userEvent.click(submit());
+      await feedbackShown();
       await userEvent.click(next()!);
       expect(stepLine()).toHaveTextContent("Step 2 of 6");
 

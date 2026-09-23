@@ -8,6 +8,7 @@ import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema } from "@/lib/ngn/schemas";
 import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer } from "./ItemPlayer";
+import { feedbackShown } from "./testing/feedback";
 import { renderersLoaded } from "./testing/renderers";
 
 const mc = itemSchema.parse(FIXTURES.multiple_choice.canonical);
@@ -44,6 +45,7 @@ describe("option rows", () => {
     await userEvent.click(screen.getByRole("checkbox", { name: RR }));
     await userEvent.click(screen.getByRole("checkbox", { name: TEMP }));
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await feedbackShown();
 
     expect(screen.getByRole("checkbox", { name: `${RR} Correct` })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: `${TEMP} Incorrect` })).toBeChecked();
