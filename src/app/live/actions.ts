@@ -10,12 +10,17 @@ import { startSession } from "@/lib/supabase/sessions";
  * database's: `start_session` runs as the caller, so row level security decides whether the bank
  * is theirs and the host policy decides whether the row may be written. requireAuthor is here so
  * a signed-out POST is sent to sign in rather than to a refusal from Postgres.
+ *
+ * #185: the form says how the room is paced. Anything but the one other choice the database knows
+ * is read as instructor-paced, the default, so a form posted without the field starts the room
+ * every earlier version started.
  */
-export async function startLiveSession(bankId: string): Promise<never> {
+export async function startLiveSession(bankId: string, form?: FormData): Promise<never> {
   if (!isUuid(bankId)) redirect("/author");
   const { supabase } = await requireAuthor(`/author/banks/${bankId}`);
 
-  const started = await startSession(supabase, { kind: "bank", id: bankId });
+  const paced = form?.get("pacing") === "student_paced" ? "student_paced" : "instructor_paced";
+  const started = await startSession(supabase, { kind: "bank", id: bankId }, paced);
   if (!started.ok) redirect(`/author/banks/${bankId}?live=${started.reason}`);
 
   redirect(`/live/${started.sessionId}`);

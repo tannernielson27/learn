@@ -33,6 +33,7 @@ import type {
 import { toScoreReveal } from "./transport";
 import { describeResultsConformance } from "./roomConformanceResults";
 import { describeGotoConformance } from "./roomConformanceGoto";
+import { describePacedConformance } from "./roomConformancePaced";
 import { describeTimerConformance } from "./roomConformanceTimer";
 
 /** A room under test, however it is built. The suite knows nothing else about an adapter. */
@@ -67,6 +68,8 @@ export interface ConformanceRoomOptions {
   items: readonly Item[];
   code: string;
   sessionId: string;
+  /** How the room is paced (#185). Instructor-paced when absent. */
+  mode?: SessionMode;
 }
 
 export type ConformanceRoomFactory = (
@@ -102,7 +105,10 @@ export async function refusalOf(call: Promise<unknown>): Promise<LiveRefusal> {
 export function describeRoomConformance(adapter: string, createRoom: ConformanceRoomFactory): void {
   const open: ConformanceRoom[] = [];
 
-  async function makeRoom(items: readonly Item[] = CONFORMANCE_ITEMS): Promise<ConformanceRoom> {
+  async function makeRoom(
+    items: readonly Item[] = CONFORMANCE_ITEMS,
+    mode?: SessionMode,
+  ): Promise<ConformanceRoom> {
     // A uuid, because an adapter over a real schema has uuid session ids and #129's participant
     // cookie is `<session uuid>.<participant uuid>.<secret>` — a made-up "s1" would be refused by
     // the shape check before any adapter was asked anything.
@@ -110,6 +116,7 @@ export function describeRoomConformance(adapter: string, createRoom: Conformance
       items,
       code: "LEARN7",
       sessionId: "00000000-0000-4000-8000-000000000001",
+      ...(mode === undefined ? {} : { mode }),
     });
     open.push(room);
     return room;
@@ -704,4 +711,5 @@ export function describeRoomConformance(adapter: string, createRoom: Conformance
   describeTimerConformance(adapter, makeRoom, openHost, joined);
   describeResultsConformance(adapter, makeRoom, openHost, joined);
   describeGotoConformance(adapter, makeRoom, openHost, joined);
+  describePacedConformance(adapter, makeRoom, openHost, joined);
 }

@@ -6,6 +6,7 @@ import { HostLobby } from "@/components/live/HostLobby";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { joinUrl } from "@/lib/live/routes";
+import { pacedState } from "@/lib/live/state";
 import { siteOrigin } from "@/lib/http/siteOrigin";
 import { readHostSession } from "@/lib/supabase/sessions";
 
@@ -47,13 +48,16 @@ export default async function LiveSessionPage({ params }: PageProps<"/live/[sess
         code={session.code}
         studentUrl={studentUrl}
         caseStudy={session.caseStudy}
-        initial={{
-          status: session.status,
-          position: session.position,
-          itemCount: session.itemCount,
-          reveal: session.reveal,
-          timer: session.timer,
-        }}
+        initial={pacedState(
+          {
+            status: session.status,
+            position: session.position,
+            itemCount: session.itemCount,
+            reveal: session.reveal,
+            timer: session.timer,
+          },
+          session.mode,
+        )}
       />
     </main>
   );

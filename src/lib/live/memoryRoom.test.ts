@@ -21,9 +21,9 @@ import { describeRoomConformance, type ConformanceRoom } from "./roomConformance
 let clock = 1_000;
 const now = () => (clock += 1);
 
-describeRoomConformance("the in-memory adapter", ({ items, code, sessionId }) => {
+describeRoomConformance("the in-memory adapter", ({ items, code, sessionId, mode }) => {
   clock = 1_000;
-  const room = createInMemoryRoom({ items, code, sessionId, now });
+  const room = createInMemoryRoom({ items, code, sessionId, mode, now });
   const conforming: ConformanceRoom = {
     sessionId: room.sessionId,
     code: room.code,

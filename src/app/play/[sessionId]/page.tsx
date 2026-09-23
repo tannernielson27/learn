@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { CaseStudyLayout } from "@/components/live/CaseStudyLayout";
+import { StudentPacedRoom } from "@/components/live/StudentPacedRoom";
 import { StudentRoom } from "@/components/live/StudentRoom";
 import { isUuid } from "@/lib/authoring/ids";
 import { PARTICIPANT_COOKIE, parseParticipantToken } from "@/lib/live/participantToken";
 import { JOIN_PATH } from "@/lib/live/routes";
+import { pacedState } from "@/lib/live/state";
 import { mintChannelToken, readChannelSigningKey } from "@/lib/supabase/channelToken";
 import { resumeParticipant } from "@/lib/supabase/participants";
 import { readSessionRecord } from "@/lib/supabase/sessionRecord";
@@ -51,8 +53,12 @@ export default async function PlaySessionPage({ params }: PageProps<"/play/[sess
   if (!participant) redirect(JOIN_PATH);
 
   // Only ever after the token has been checked: this read does no checking of its own.
-  const state = await readPublicSessionState(service, sessionId);
-  if (!state) redirect(JOIN_PATH);
+  const read = await readPublicSessionState(service, sessionId);
+  if (!read) redirect(JOIN_PATH);
+  // #185: how the room is paced is `resume_participant`'s answer, and it picks the screen. A case
+  // study always runs instructor-paced (`sessions_student_paced_bank_only`).
+  const state = pacedState(read, participant.mode);
+  const Room = participant.mode === "student_paced" ? StudentPacedRoom : StudentRoom;
   // Also only after the token has been checked. Null for a session run from a bank.
   const record = await readSessionRecord(service, sessionId);
 
@@ -67,7 +73,7 @@ export default async function PlaySessionPage({ params }: PageProps<"/play/[sess
 
   return (
     <CaseStudyLayout record={record}>
-      <StudentRoom
+      <Room
         sessionId={sessionId}
         title={participant.title}
         displayName={participant.displayName}

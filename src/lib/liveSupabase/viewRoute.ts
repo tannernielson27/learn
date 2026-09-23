@@ -29,12 +29,19 @@
  * table, the same five-minute window and the same `rate_limited` refusal. Only the number differs,
  * and the migration says why.
  */
-import { itemAt, type LiveSessionState, type ParticipantItem } from "@/lib/live";
+import {
+  itemAt,
+  pacedSet,
+  pacedState,
+  type LiveSessionState,
+  type ParticipantItem,
+} from "@/lib/live";
 import { readTimer } from "@/lib/live/timer";
 import type { Item } from "@/lib/ngn/schemas";
 import { parseSubmission, toKeylessItem, type Reveal } from "@/lib/ngn/submit";
 import type { ScoreResult } from "@/lib/ngn/types";
 import { fromItemRow } from "@/lib/supabase/itemRows";
+import { readPacedSet } from "./pacedView";
 import { LIVE_ROUTE_ERRORS, asRefusal, fail, refuse, type LiveRouteDeps } from "./routeDeps";
 import {
   NO_STORE_HEADERS,
@@ -91,16 +98,39 @@ export async function readParticipantView(
   // The database's clock as it read the room (#182), for the phone to measure its own against.
   const serverNow = Date.parse(session.server_now);
   if (Number.isNaN(serverNow)) return fail(500, LIVE_ROUTE_ERRORS.failed);
-  const state: LiveSessionState = {
-    status: session.session_status,
-    // A `returns table` function carries no nullability into the generated types, so the position
-    // is coerced rather than read straight through: before the room starts it really is null,
-    // whatever the type says.
-    position: session.session_position ?? null,
-    itemCount: itemSet.length,
-    reveal: session.session_reveal,
-    timer,
-  };
+  const state: LiveSessionState = pacedState(
+    {
+      status: session.session_status,
+      // A `returns table` function carries no nullability into the generated types, so the
+      // position is coerced rather than read straight through: before the room starts it really
+      // is null, whatever the type says.
+      position: session.session_position ?? null,
+      itemCount: itemSet.length,
+      reveal: session.session_reveal,
+      timer,
+    },
+    session.session_mode,
+  );
+
+  // #185: a student-paced room is on its whole set, and the phone is handed all of it.
+  const wholeSet = pacedSet(itemSet, state);
+  if (wholeSet !== null) {
+    const read = await readPacedSet(deps, participant, wholeSet as string[], state.reveal);
+    if (!read.ok) {
+      return read.reason === "failed"
+        ? fail(500, LIVE_ROUTE_ERRORS.failed)
+        : fail(409, LIVE_ROUTE_ERRORS.unplayable);
+    }
+    const payload: ParticipantViewPayload = {
+      state,
+      item: null,
+      answered: null,
+      revealed: null,
+      set: read.set,
+      serverNow,
+    };
+    return Response.json(payload, { headers: NO_STORE_HEADERS });
+  }
 
   const currentItemId = itemAt(itemSet, state);
   if (typeof currentItemId !== "string") {

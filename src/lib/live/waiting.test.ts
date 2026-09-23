@@ -50,6 +50,12 @@ describe("waitingCopy", () => {
     ).toBeNull();
   });
 
+  it("names no item in a student-paced room, which is on no one item (#185)", () => {
+    const copy = waitingCopy(state({ status: "paused", position: 1, mode: "student_paced" }));
+    expect(copy.headline).toBe("The session is paused.");
+    expect(copy.progress).toBeNull();
+  });
+
   it("never carries an item, a key or anything a host holds", () => {
     const copy = waitingCopy(state({ status: "running", position: 3, reveal: true }));
     expect(Object.keys(copy).sort()).toEqual(["detail", "headline", "progress"]);

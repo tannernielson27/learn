@@ -12,6 +12,8 @@ const RESULTS_DIR = path.join(SRC, "lib", "live", "results");
 /** Everything a participant's browser runs, and the pages and routes that serve them. */
 const PARTICIPANT_ENTRIES = [
   path.join(SRC, "components", "live", "StudentRoom.tsx"),
+  // #185: the student-paced phone mounts the same player over a whole set.
+  path.join(SRC, "components", "live", "StudentPacedRoom.tsx"),
   path.join(SRC, "components", "live", "JoinForm.tsx"),
   path.join(SRC, "app", "join", "JoinScreen.tsx"),
   path.join(SRC, "app", "join", "page.tsx"),
