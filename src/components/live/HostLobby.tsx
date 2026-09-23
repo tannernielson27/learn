@@ -50,9 +50,11 @@ export interface HostLobbyProps {
  *
  * A pull, because ADR 0002 forbids a push per submission: nothing goes out over the channel while
  * a class answers, so the count a host watches has to be asked for. Three seconds is under the
- * time it takes to notice a number is stale and far above the cost — one indexed read on the
- * host's own connection, and no Realtime message at all. It runs only while the room is on an
- * item, so a lobby, a paused-and-forgotten room and an ended one ask for nothing.
+ * time it takes to notice a number is stale and far above the cost — one indexed read of
+ * `session_responses` per tick on the host's own connection, and no Realtime message at all. The
+ * results panel (#180) asks on the same tick and the transport serves both from that one read
+ * (#197), so the panel does not double it. It runs only while the room is on an item, so a
+ * lobby, a paused-and-forgotten room and an ended one ask for nothing.
  */
 export const TALLY_INTERVAL_MS = 3_000;
 
