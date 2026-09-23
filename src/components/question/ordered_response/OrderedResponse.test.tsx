@@ -26,7 +26,7 @@ const order = () =>
     .map((li) => li.getAttribute("data-label"));
 const up = (label: string) => screen.getByRole("button", { name: `Move "${label}" up` });
 const down = (label: string) => screen.getByRole("button", { name: `Move "${label}" down` });
-// Named because dnd-kit adds its own (silent) status region to the page.
+// Named, so this never depends on dnd-kit's own status region staying hidden (#60).
 const status = () => screen.getByRole("status", { name: "Order changes" });
 const submit = () => screen.getByRole("button", { name: "Submit" });
 const scorePanel = () => screen.getByRole("complementary", { name: "Score" });
@@ -105,6 +105,24 @@ describe("ordered response renderer", () => {
     expect(screen.getAllByText("Incorrect")).toHaveLength(2);
     expect(screen.getAllByText("Correct")).toHaveLength(3);
     expect(screen.queryByRole("button", { name: /^Move / })).not.toBeInTheDocument();
+  });
+
+  // #60: this read "Correct position: 1 Incorrect", the verdict after the correction. Now a
+  // misplaced step reads its verdict first, then where it belongs.
+  it("reads a misplaced step's verdict before its correct position", async () => {
+    render(<ItemPlayer item={wholeItem} submit={scoreInProcess(wholeItem)} />);
+    await arrange([KEY[1]!, KEY[0]!, KEY[2]!, KEY[3]!, KEY[4]!]);
+    await userEvent.click(submit());
+
+    const row = within(list())
+      .getAllByRole("listitem")
+      .find((li) => li.getAttribute("data-label") === KEY[0])!;
+    const verdict = within(row).getByText("Incorrect");
+    const position = within(row).getByText("Correct position: 1");
+    expect(
+      verdict.compareDocumentPosition(position) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(row.textContent).toMatch(new RegExp(`${KEY[0]}\\s*Incorrect\\s*Correct position: 1`));
   });
 
   it("earns the point for the exact order", async () => {

@@ -7,7 +7,6 @@ import {
   useDroppable,
   useSensor,
   useSensors,
-  type Announcements,
 } from "@dnd-kit/core";
 import { useRef, type KeyboardEvent } from "react";
 import { FeedbackIcon, feedbackLabel } from "../OptionRow";
@@ -23,14 +22,6 @@ export interface BankToken {
   id: string;
   label: string;
 }
-
-/** Callers announce placements in their own status region, so dnd-kit stays silent. */
-export const SILENT_ANNOUNCEMENTS: Announcements = {
-  onDragStart: () => undefined,
-  onDragOver: () => undefined,
-  onDragEnd: () => undefined,
-  onDragCancel: () => undefined,
-};
 
 /** Mouse drags start after 6px; touch drags after a 150ms press, so a normal swipe still scrolls. */
 export function useTapToPlaceSensors() {

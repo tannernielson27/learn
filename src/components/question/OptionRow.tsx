@@ -72,6 +72,16 @@ export function OptionRow({
 }: OptionRowProps) {
   const interactive = mode === "answer" && !disabled;
   const rationaleId = `${id}-rationale`;
+  const markerId = `${id}-marker`;
+  const textId = `${id}-text`;
+  const feedbackId = `${id}-feedback`;
+  const hasFeedback = feedback !== "neutral";
+  // The control is named by the row's own text, which is then hidden from the accessibility tree:
+  // left exposed, it was read a second time after the name (#60). A hidden element still names
+  // whatever points at it with aria-labelledby. The whole row stays the label for the tap target.
+  const labelledBy = [marker ? markerId : null, textId, hasFeedback ? feedbackId : null]
+    .filter(Boolean)
+    .join(" ");
   const selectedClasses =
     checked && mode !== "feedback" ? "border-accent ring-1 ring-accent bg-accent-soft" : "";
   return (
@@ -89,12 +99,23 @@ export function OptionRow({
           checked={checked}
           disabled={!interactive}
           onChange={onToggle}
+          aria-labelledby={labelledBy}
           aria-describedby={rationale ? rationaleId : undefined}
           className="mt-1 size-4 shrink-0 accent-(--accent)"
         />
-        {marker ? <span className="font-mono text-sm text-ink-2">{marker}</span> : null}
-        <span className="flex-1">{label}</span>
-        {feedback !== "neutral" ? <span className="sr-only">{feedbackLabel[feedback]}</span> : null}
+        {marker ? (
+          <span id={markerId} aria-hidden="true" className="font-mono text-sm text-ink-2">
+            {marker}
+          </span>
+        ) : null}
+        <span id={textId} aria-hidden="true" className="flex-1">
+          {label}
+        </span>
+        {hasFeedback ? (
+          <span id={feedbackId} aria-hidden="true" className="sr-only">
+            {feedbackLabel[feedback]}
+          </span>
+        ) : null}
         <FeedbackIcon state={feedback} />
       </label>
       <ElementRationale id={rationaleId} text={rationale} className="ml-4" />

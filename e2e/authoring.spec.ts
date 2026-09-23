@@ -38,7 +38,8 @@ test("an author creates a bank, starts an item by type, and finds the draft in t
 
   await page.getByRole("button", { name: "Extended Multiple Response" }).click();
   await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
-  await expect(page.getByText("Extended Multiple Response")).toBeVisible();
+  // Exact: the preview's question region is headed "Extended Multiple Response question" (#60).
+  await expect(page.getByText("Extended Multiple Response", { exact: true })).toBeVisible();
 
   await page.getByRole("link", { name: "Back to bank" }).click();
   await expect(page.getByRole("link", { name: /Untitled item/ })).toContainText("Draft");

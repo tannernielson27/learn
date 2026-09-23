@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { AnyResponse, Item, ItemOf, ItemType, ResponseOf } from "@/lib/ngn/schemas";
+import { ITEM_TYPE_LABELS } from "@/lib/ngn/labels";
 import { initialResponse as firstResponse } from "@/lib/ngn/presentation";
 import type { KeylessItem, Reveal, ScoreReveal, SubmitHandler } from "@/lib/ngn/submit";
 import { SAMPLE_TAG, type ScoreResult } from "@/lib/ngn/types";
@@ -42,7 +43,10 @@ export interface ItemPlayerProps {
   initialReveal?: ScoreReveal;
   /** Every change, so a caller that unmounts the player can hand the response back later. */
   onResponseChange?: (response: AnyResponse) => void;
-  /** Names the question region when more than one player is on the page. */
+  /**
+   * Names the question region. Defaults to the item's format, e.g. "Bowtie question"; pass one
+   * when more than one player is on the page.
+   */
   label?: string;
 }
 
@@ -174,7 +178,9 @@ export function ItemPlayer({
       scoreNote={scoreNote}
       rationale={rationale}
       sample={item.tags.includes(SAMPLE_TAG)}
-      label={label}
+      // #60: named by the item's format ("Bowtie question"), not a bare "Question", so the region
+      // says something in a landmark list. A caller with two players on a page passes its own.
+      label={label ?? `${ITEM_TYPE_LABELS[item.type]} question`}
     >
       <Renderer
         item={playerItem as PlayerItem<ItemType> & ItemOf<ItemType>}

@@ -72,8 +72,8 @@ test("the chosen time survives closing the record on a phone", async ({ page }, 
 test("the trend item answers and scores like any other", async ({ page }, testInfo) => {
   await ready(page);
 
-  // The matrix is a grid at 768px and up and one card per row below, and the two name their
-  // radios differently: the grid by row and column, the card by column alone inside a named group.
+  // The matrix is a grid at 768px and up and one card per row below. Both name a radio by row and
+  // column (#60); on a phone this scopes to the row's card, where the column alone is enough.
   const pick = async (row: string, column: string) => {
     const card = page.getByRole("group", { name: row });
     if ((await card.count()) > 0) await card.getByRole("radio", { name: column }).click();

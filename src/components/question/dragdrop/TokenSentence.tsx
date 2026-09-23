@@ -2,11 +2,11 @@
 
 import { DndContext, type DragEndEvent } from "@dnd-kit/core";
 import { Fragment, useId, useState, type KeyboardEvent } from "react";
+import { useSilentDndAccessibility } from "../dndAccessibility";
 import { blankOrder, type SentenceToken } from "../dropdown/DropdownSentence";
 import { elementFeedback, type PlayerMode } from "../types";
 import {
   DropSlot,
-  SILENT_ANNOUNCEMENTS,
   useDragClickGuard,
   useTapToPlaceSensors,
   WordChip,
@@ -59,6 +59,7 @@ export function TokenSentence(props: TokenSentenceProps) {
   const [message, setMessage] = useState("");
   const sensors = useTapToPlaceSensors();
   const guard = useDragClickGuard();
+  const dndA11y = useSilentDndAccessibility();
   const order = blankOrder(tokens);
   const labelOf = (tokenId: string | undefined) => bank.find((t) => t.id === tokenId)?.label;
   const placedIn = (blankId: string) => answers.find((a) => a.blankId === blankId)?.tokenId;
@@ -109,7 +110,7 @@ export function TokenSentence(props: TokenSentenceProps) {
       onDragStart={guard.start}
       onDragEnd={onDragEnd}
       onDragCancel={guard.end}
-      accessibility={{ announcements: SILENT_ANNOUNCEMENTS }}
+      accessibility={dndA11y.accessibility}
     >
       <p className="option measure text-lg leading-[2.6]">
         {tokens.map((token, index) => {
@@ -171,6 +172,7 @@ export function TokenSentence(props: TokenSentenceProps) {
       <p role="status" aria-label="Word placement" className="sr-only">
         {message}
       </p>
+      {dndA11y.sink}
     </DndContext>
   );
 }

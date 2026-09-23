@@ -3,9 +3,9 @@
 import { DndContext, type DragEndEvent } from "@dnd-kit/core";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import type { ResponseOf } from "@/lib/ngn/schemas";
+import { useSilentDndAccessibility } from "../dndAccessibility";
 import {
   DropSlot,
-  SILENT_ANNOUNCEMENTS,
   useDragClickGuard,
   useTapToPlaceSensors,
   WordChip,
@@ -66,6 +66,7 @@ export function BowtieItem({ item, response, mode, onChange }: ItemRendererProps
   const [message, setMessage] = useState("");
   const sensors = useTapToPlaceSensors();
   const guard = useDragClickGuard();
+  const dndA11y = useSilentDndAccessibility();
   // A slot to focus once the response that fills it has rendered, so its name is already current.
   const focusAfterRender = useRef<string | null>(null);
   useEffect(() => {
@@ -175,7 +176,7 @@ export function BowtieItem({ item, response, mode, onChange }: ItemRendererProps
       onDragStart={guard.start}
       onDragEnd={onDragEnd}
       onDragCancel={guard.end}
-      accessibility={{ announcements: SILENT_ANNOUNCEMENTS }}
+      accessibility={dndA11y.accessibility}
     >
       <div className="grid gap-8 md:grid-cols-3 md:gap-x-12">
         {columns.map((column) => {
@@ -251,6 +252,7 @@ export function BowtieItem({ item, response, mode, onChange }: ItemRendererProps
       <p role="status" aria-label="Bowtie placement" className="sr-only">
         {message}
       </p>
+      {dndA11y.sink}
     </DndContext>
   );
 }

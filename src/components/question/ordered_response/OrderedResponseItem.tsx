@@ -7,7 +7,6 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
-  type Announcements,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import {
@@ -18,6 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { useEffect, useId, useRef, useState } from "react";
 import { presentationOrder } from "@/lib/ngn/presentation";
+import { useSilentDndAccessibility } from "../dndAccessibility";
 import { FeedbackIcon, feedbackLabel } from "../OptionRow";
 import type { ElementFeedback, ItemRendererModule, ItemRendererProps, PlayerMode } from "../types";
 import { usePrefersReducedMotion } from "../usePrefersReducedMotion";
@@ -31,14 +31,6 @@ export function moveStep(order: readonly string[], id: string, direction: Direct
   if (from < 0 || to < 0 || to >= order.length) return [...order];
   return arrayMove([...order], from, to);
 }
-
-// Moves are announced by this component's own status region, so dnd-kit stays silent.
-const SILENT: Announcements = {
-  onDragStart: () => undefined,
-  onDragOver: () => undefined,
-  onDragEnd: () => undefined,
-  onDragCancel: () => undefined,
-};
 
 const feedbackClasses: Record<ElementFeedback, string> = {
   neutral: "border-line",
@@ -57,6 +49,8 @@ export function OrderedResponseItem({
   const [message, setMessage] = useState("");
   const buttons = useRef(new Map<string, HTMLButtonElement>());
   const pendingFocus = useRef<string | null>(null);
+  // Moves are announced by this component's own status region, so dnd-kit stays silent.
+  const dndA11y = useSilentDndAccessibility();
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 100, tolerance: 6 } }),
@@ -111,7 +105,7 @@ export function OrderedResponseItem({
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={onDragEnd}
-      accessibility={{ announcements: SILENT }}
+      accessibility={dndA11y.accessibility}
     >
       <SortableContext
         items={order}
@@ -147,6 +141,7 @@ export function OrderedResponseItem({
       <p role="status" aria-label="Order changes" className="sr-only">
         {message}
       </p>
+      {dndA11y.sink}
     </DndContext>
   );
 }
@@ -203,16 +198,19 @@ function StepRow(props: StepRowProps) {
       <span className="w-5 shrink-0 font-mono text-sm text-ink-2 tabular">{index + 1}</span>
       <span className="min-w-0 flex-1">
         {label}
+        {/* The verdict straight after the step, then where it belongs ("… Incorrect", then
+            "Correct position: 3"), not the correction first (#60). sr-only, so nothing moves. */}
+        {feedback !== "neutral" ? (
+          <>
+            {" "}
+            <span className="sr-only">{feedbackLabel[feedback]}</span>
+          </>
+        ) : null}
         {correctPosition ? (
           <span className="block text-sm text-ink-2">Correct position: {correctPosition}</span>
         ) : null}
       </span>
-      {feedback !== "neutral" ? (
-        <>
-          <span className="sr-only">{feedbackLabel[feedback]}</span>
-          <FeedbackIcon state={feedback} className="" />
-        </>
-      ) : null}
+      <FeedbackIcon state={feedback} className="" />
       {answering ? (
         // Stacked on phones so the step's text keeps most of the row's width.
         <span className="flex shrink-0 flex-col gap-1 sm:flex-row">
