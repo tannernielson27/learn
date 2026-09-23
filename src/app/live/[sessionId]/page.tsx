@@ -46,6 +46,7 @@ export default async function LiveSessionPage({ params }: PageProps<"/live/[sess
         title={session.title}
         code={session.code}
         studentUrl={studentUrl}
+        caseStudy={session.caseStudy}
         initial={{
           status: session.status,
           position: session.position,

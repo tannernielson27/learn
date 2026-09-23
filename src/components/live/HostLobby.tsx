@@ -21,6 +21,7 @@ import {
   type TimerCommand,
 } from "@/lib/live";
 import { createSupabaseHost } from "@/lib/liveSupabase";
+import { positionLabel } from "@/lib/live/positionLabel";
 import { reportPath } from "@/lib/live/reportFormat";
 import { formatSessionCode } from "@/lib/live/sessionCode";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -40,6 +41,8 @@ export interface HostLobbyProps {
    * see `TALLY_INTERVAL_MS`.
    */
   tallyIntervalMs?: number;
+  /** Whether the session runs a case study, so the position names the CJMM step (#184). */
+  caseStudy?: boolean;
 }
 
 /**
@@ -105,12 +108,15 @@ export function HostLobby({
   initial,
   connect,
   tallyIntervalMs = TALLY_INTERVAL_MS,
+  caseStudy = false,
 }: HostLobbyProps) {
   const [state, setState] = useState<LiveSessionState>(initial);
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [tally, setTally] = useState<ItemAggregate | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
+  /** The current item's CJMM step, which a case study's console names (#184). */
+  const [cjmmStep, setCjmmStep] = useState<number | null>(null);
 
   const transport = useRef<LiveHostTransport | null>(null);
   /** Resolves when `open()` has read the room, so a move made in the first second still lands. */
@@ -128,7 +134,9 @@ export function HostLobby({
     let watching = true;
 
     const offState = console_.onSessionState((view) => {
-      if (watching) setState(view.state);
+      if (!watching) return;
+      setState(view.state);
+      setCjmmStep(view.item?.cjmmStep ?? null);
     });
     const offPresence = console_.onPresence((people) => {
       if (watching) setRoster((held) => mergeRoster(held, people));
@@ -143,6 +151,7 @@ export function HostLobby({
       (snapshot) => {
         if (!watching) return;
         setState(snapshot.state);
+        setCjmmStep(snapshot.item?.cjmmStep ?? null);
         setRoster((held) => mergeRoster(held, snapshot.roster));
         setTally(snapshot.aggregate);
       },
@@ -244,10 +253,7 @@ export function HostLobby({
    * nobody has seen yet is worse than showing nothing for a beat.
    */
   const answersOn = tally !== null && tally.position === state.position ? tally : null;
-  const position =
-    state.position !== null && state.itemCount > 0
-      ? `Item ${state.position} of ${state.itemCount}`
-      : null;
+  const position = positionLabel(state, { caseStudy, cjmmStep });
 
   return (
     <>

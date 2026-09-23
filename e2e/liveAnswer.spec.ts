@@ -7,6 +7,7 @@ import {
   type Download,
   type Page,
 } from "@playwright/test";
+import { sampleCaseStudy } from "../src/lib/ngn/fixtures/case-study";
 import { fillMultipleResponse, publishOpenItem } from "./authoringHelpers";
 import { signInAsNewAuthor } from "./signIn";
 
@@ -453,6 +454,129 @@ test("the host skips to an item and goes back, and the phone keeps its answer", 
   await expect(page.getByTestId("answer-count")).toHaveText("1 of 1 answered", {
     timeout: 15_000,
   });
+
+  await page.getByRole("button", { name: "End session", exact: true }).click();
+  await expect(phone.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
+  await phone.context().close();
+});
+
+/** The seeded sample case study (supabase/seed.sql), in the org the demo account signs in to. */
+const SAMPLE_CASE_STUDY = "00000000-0000-4000-8000-000000000003";
+const CASE_STEP_1_STEM = /^Click to highlight the findings in the 1400 nurses/;
+const CASE_STEP_1_RATIONALE =
+  "Acute dyspnea, pleuritic pain, hypoxemia, and a unilateral swollen calf together point to a venous thromboembolic event.";
+const CASE_STEP_2_STEM = /^For each finding, select every condition it is consistent with/;
+
+/**
+ * Serious and critical only, as the other record screens hold themselves (ehr.spec.ts,
+ * case-study.spec.ts): the record's pane comes before the room in reading order, so its own
+ * heading precedes the page's h1, which axe reports as a moderate best-practice finding.
+ */
+async function expectNoBlockingAxeViolations(page: Page) {
+  const { violations } = await new AxeBuilder({ page }).analyze();
+  expect(
+    violations
+      .filter((v) => v.impact === "serious" || v.impact === "critical")
+      .map((v) => `${v.id}: ${v.help}`),
+  ).toEqual([]);
+}
+
+/** Checks the record is on the phone: in the pane at 1280, behind the chip below that. */
+async function expectPatientRecord(phone: Page, projectName: string) {
+  if (projectName === "desktop-1280") {
+    const pane = phone.getByRole("complementary", { name: "Patient record", exact: true });
+    await expect(pane).toBeVisible();
+    await expect(pane).toContainText("Orthopedic unit");
+    return;
+  }
+  const chip = phone.getByRole("button", { name: "Patient record", exact: true });
+  if (projectName === "phone-375") await chip.tap();
+  else await chip.click();
+  // A phone gets the modal sheet, a tablet the in-flow drawer (EhrPanel).
+  const record =
+    projectName === "phone-375"
+      ? phone.getByRole("dialog", { name: "Patient record", exact: true })
+      : phone.getByRole("tablist", { name: "Patient record sections", exact: true });
+  await expect(record).toBeVisible();
+  await expect(phone.getByText(/Orthopedic unit/).filter({ visible: true })).toHaveCount(1);
+  await expectNoBlockingAxeViolations(phone);
+  await phone.screenshot({
+    path: `test-results/screenshots/${projectName}/live-case-study-record.png`,
+    fullPage: false,
+  });
+  // Escape closes the sheet, and the drawer too while focus is still on the chip.
+  await phone.keyboard.press("Escape");
+  await expect(phone.getByRole("dialog")).toHaveCount(0);
+}
+
+/**
+ * #184's demo: start the seeded case study live; a phone shows step 1 with the patient record;
+ * reveal; advance to step 2. That no key reaches the phone before its step is revealed is proved
+ * on the bytes in `caseStudyWire.test.ts`; this proves the room works end to end.
+ */
+test("a case study runs live with the patient record beside each step on the phone", async ({
+  browser,
+  page,
+}, testInfo) => {
+  test.skip(!process.env.DEMO_ACCOUNT_EMAIL, "set DEMO_ACCOUNT_EMAIL and DEMO_ACCOUNT_PASSWORD");
+  test.slow();
+
+  // The demo account is in the seeded org, which holds the published sample case study.
+  await page.goto("/author");
+  await page.getByRole("button", { name: "Use the demo account", exact: true }).click();
+  await expect(page).toHaveURL(/\/author$/);
+
+  await page.goto(`/author/case-studies/${SAMPLE_CASE_STUDY}`);
+  await expect(
+    page.getByRole("heading", { level: 1, name: sampleCaseStudy.title, exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Start a live session", exact: true }).click();
+  await expect(page).toHaveURL(/\/live\/[0-9a-f-]{36}$/);
+
+  const code = (await page.getByTestId("join-code").innerText()).replace(/\s/g, "");
+  const { viewport, isMobile, hasTouch } = testInfo.project.use;
+  const phone = await join(
+    browser,
+    new URL(page.url()).origin,
+    { viewport, isMobile, hasTouch },
+    code,
+    "Ada Brennan",
+  );
+  await expect(page.getByTestId("present-count")).toHaveText("1 phone connected", {
+    timeout: 15_000,
+  });
+
+  await page.getByRole("button", { name: "Start session", exact: true }).click();
+  // The console names the step with its position.
+  await expect(page.getByText(/Step 1 of 6: Recognize Cues/)).toBeVisible({ timeout: 15_000 });
+  await expectNoAxeViolations(page);
+
+  // Step 1 on the phone, with the record beside it and no key.
+  await expect(phone.getByText(CASE_STEP_1_STEM)).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(phone.getByText(CASE_STEP_1_RATIONALE)).toHaveCount(0);
+  await expectNoBlockingAxeViolations(phone);
+  await phone.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/live-case-study-step.png`,
+    fullPage: true,
+  });
+  await expectPatientRecord(phone, testInfo.project.name);
+
+  // Reveal: a phone that did not answer is told the answer is showing, and is not shown the key.
+  await page.getByRole("button", { name: "Show answer", exact: true }).click();
+  await expect(phone.getByText("The answer is showing.", { exact: true })).toBeVisible({
+    timeout: 15_000,
+  });
+
+  // Advance to step 2, on both screens.
+  await page.getByRole("button", { name: "Next item", exact: true }).click();
+  await expect(page.getByText(/Step 2 of 6: Analyze Cues/)).toBeVisible({ timeout: 15_000 });
+  await expect(phone.getByText(CASE_STEP_2_STEM)).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(phone.getByText(CASE_STEP_1_STEM)).toHaveCount(0);
+  await expectNoBlockingAxeViolations(phone);
 
   await page.getByRole("button", { name: "End session", exact: true }).click();
   await expect(phone.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });

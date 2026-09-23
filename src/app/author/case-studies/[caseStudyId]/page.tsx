@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { publishCaseStudyAction } from "@/app/author/case-studies/[caseStudyId]/actions";
 import { archiveCaseStudyAction, restoreCaseStudyAction } from "@/app/author/archiveActions";
 import { duplicateCaseStudyAction } from "@/app/author/duplicateActions";
+import { startCaseStudyLiveSession } from "@/app/live/actions";
 import {
   assembleCaseStudy,
   CASE_STUDY_WITH_STEPS,
@@ -20,10 +21,12 @@ import { editorFor, storedItemOf } from "@/components/authoring/editorFor";
 import { ItemEditorLoader } from "@/components/authoring/ItemEditorLoader";
 import { StepItemPanel } from "@/components/authoring/StepItemPanel";
 import { StepTypeChooser } from "@/components/authoring/StepTypeChooser";
+import { Button } from "@/components/ui/Button";
 import { caseStudyBlockers, stepsReadyLabel } from "@/lib/authoring/caseStudyReadiness";
 import { ehrFormFromStored, previewRecord } from "@/lib/authoring/forms/ehr";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
+import { caseStudyLiveStartMessage } from "@/lib/live/liveStart";
 import { ITEM_TYPE_LABELS, ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 import { ehrRecordSchema } from "@/lib/ngn/schemas";
 import type { CjmmStep } from "@/lib/ngn/types";
@@ -35,8 +38,11 @@ const POSITIONS: readonly CjmmStep[] = [1, 2, 3, 4, 5, 6];
 
 export default async function CaseStudyPage({
   params,
+  searchParams,
 }: PageProps<"/author/case-studies/[caseStudyId]">) {
   const { caseStudyId } = await params;
+  // Why a live session could not start, carried back by startCaseStudyLiveSession (#184).
+  const liveRefusal = caseStudyLiveStartMessage((await searchParams).live);
   if (!isUuid(caseStudyId)) notFound();
 
   const { supabase } = await requireAuthor(`/author/case-studies/${caseStudyId}`);
@@ -136,6 +142,14 @@ export default async function CaseStudyPage({
             action={duplicateCaseStudyAction.bind(null, row.id)}
             label="Duplicate case study"
           />
+          {/* Only a published case study can be run: start_session refuses anything else (#184). */}
+          {row.status === "published" ? (
+            <form action={startCaseStudyLiveSession.bind(null, row.id)}>
+              <Button type="submit" variant="secondary" size="sm">
+                Start a live session
+              </Button>
+            </form>
+          ) : null}
           {row.status === "archived" ? (
             <ArchiveButton
               action={restoreCaseStudyAction.bind(null, row.id)}
@@ -148,6 +162,11 @@ export default async function CaseStudyPage({
             />
           )}
         </div>
+        {liveRefusal ? (
+          <p role="alert" className="mb-6 text-sm text-incorrect">
+            {liveRefusal}
+          </p>
+        ) : null}
         {row.status === "archived" ? (
           <p className="mb-6 max-w-prose rounded-sm border border-line bg-surface-2 p-3 text-ink-1">
             This case study is archived. It is out of the bank&apos;s list, and its record, its
