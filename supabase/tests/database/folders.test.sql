@@ -14,6 +14,14 @@ values
   ('00000000-0000-0000-0000-0000000003bb', 'fold-b@example.test', 'authenticated', 'authenticated'),
   ('00000000-0000-0000-0000-0000000003cc', 'fold-c@example.test', 'authenticated', 'authenticated');
 
+-- #204: the sign-up trigger grants no role, so make these accounts instructors in the seeded
+-- org explicitly, where the trigger used to put them.
+update public.profiles
+  set org_id = (select id from public.orgs order by created_at, id limit 1), role = 'instructor'
+  where id in ('00000000-0000-0000-0000-0000000003aa',
+               '00000000-0000-0000-0000-0000000003bb',
+               '00000000-0000-0000-0000-0000000003cc');
+
 -- B moves to a second org; C is a student in A's org.
 insert into public.orgs (id, name) values ('00000000-0000-0000-0000-0000000003f2', 'Other folders');
 update public.profiles set org_id = '00000000-0000-0000-0000-0000000003f2'

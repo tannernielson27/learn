@@ -57,19 +57,12 @@ function localStackUrl(): string {
   return SUPABASE_URL;
 }
 
-/**
- * Creates the account first, the way the owner creates one.
- *
- * #139 turned `shouldCreateUser` off, so the sign-in form no longer signs anyone up: an address
- * with no account is answered exactly like one that has an account and is simply never mailed.
- * A test that only filled the form would wait out `latestSignInLink` for an email that was never
- * sent. This admin call stands in for the Supabase dashboard; `on_auth_user_created` gives the
- * new user its profile and org either way, so the journey under test is unchanged.
- */
-export async function createAuthorAccount(
-  request: APIRequestContext,
-  email: string,
-): Promise<void> {
+interface LocalAdmin {
+  url: string;
+  headers: Record<string, string>;
+}
+
+function localAdmin(): LocalAdmin {
   const url = localStackUrl();
   const secretKey = process.env.SUPABASE_SECRET_KEY;
   // A plain throw, not `expect(...).toBeTruthy()`: Playwright's matchers are not TypeScript
@@ -78,13 +71,62 @@ export async function createAuthorAccount(
   if (!secretKey) {
     throw new Error("SUPABASE_SECRET_KEY must name the local stack's secret key");
   }
+  return { url, headers: { apikey: secretKey, Authorization: `Bearer ${secretKey}` } };
+}
+
+/**
+ * Creates an account the way the owner's Add user does, and nothing more: since #204 the sign-up
+ * trigger gives it a profile with no org and no role, so it can sign in and author nothing.
+ *
+ * #139 turned `shouldCreateUser` off, so the sign-in form no longer signs anyone up: an address
+ * with no account is answered exactly like one that has an account and is simply never mailed.
+ * A test that only filled the form would wait out `latestSignInLink` for an email that was never
+ * sent. This admin call stands in for the Supabase dashboard.
+ */
+export async function createAccountWithoutRole(
+  request: APIRequestContext,
+  email: string,
+): Promise<string> {
+  const { url, headers } = localAdmin();
   const created = await request.post(`${url}/auth/v1/admin/users`, {
-    headers: { apikey: secretKey, Authorization: `Bearer ${secretKey}` },
+    headers,
     data: { email, email_confirm: true },
   });
   if (!created.ok()) {
     throw new Error(`could not create ${email}: ${created.status()} ${await created.text()}`);
   }
+  const { id } = (await created.json()) as { id: string };
+  return id;
+}
+
+/**
+ * The second of the owner's two steps (#204): what `private.make_instructor` does, through the
+ * Data API with the local secret key, which bypasses RLS. The account joins the first org, the
+ * seeded one, as an instructor.
+ */
+async function makeInstructor(request: APIRequestContext, userId: string): Promise<void> {
+  const { url, headers } = localAdmin();
+  const firstOrg = `${url}/rest/v1/orgs?select=id&order=created_at.asc,id.asc&limit=1`;
+  const orgs = await request.get(firstOrg, { headers });
+  const [org] = orgs.ok() ? ((await orgs.json()) as { id: string }[]) : [];
+  if (!org) throw new Error(`no org to make ${userId} an instructor in: ${orgs.status()}`);
+  const updated = await request.patch(`${url}/rest/v1/profiles?id=eq.${userId}`, {
+    headers: { ...headers, Prefer: "return=representation" },
+    data: { org_id: org.id, role: "instructor" },
+  });
+  const rows = updated.ok() ? ((await updated.json()) as unknown[]) : [];
+  if (rows.length !== 1) {
+    throw new Error(`could not make ${userId} an instructor: ${updated.status()}`);
+  }
+}
+
+/** Creates an author: Add user, then the promotion, as the owner does it since #204. */
+export async function createAuthorAccount(
+  request: APIRequestContext,
+  email: string,
+): Promise<void> {
+  const userId = await createAccountWithoutRole(request, email);
+  await makeInstructor(request, userId);
 }
 
 /** Signs in a brand-new account through the emailed link and waits for the author home. */

@@ -86,17 +86,17 @@ Decisions taken at kickoff while the owner was away (2026-09-23), each the conse
 
 Demo 9: assign a set Monday, answer it Tuesday on a phone, review results Wednesday.
 
-| #                                                           | Title                                                                             | Gates                     | Status |
-| ----------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------- | ------ |
-| [#204](https://github.com/tannernielson27/learn/issues/204) | feat(auth): invite-only sign-up, so no new account becomes an instructor          | security, db, e2e         | To do  |
-| [#205](https://github.com/tannernielson27/learn/issues/205) | feat(assign): a class with an invite link students join                           | security, db, e2e         | To do  |
-| [#206](https://github.com/tannernielson27/learn/issues/206) | chore(infra): send email through Resend from info.tannernielson.com               | security                  | To do  |
-| [#207](https://github.com/tannernielson27/learn/issues/207) | feat(assign): assign a bank or case study to a class with a window and attempts   | security, db, e2e         | To do  |
-| [#208](https://github.com/tannernielson27/learn/issues/208) | feat(assign): take an assignment on a phone with autosave and resume              | player, security, db, e2e | To do  |
-| [#209](https://github.com/tannernielson27/learn/issues/209) | feat(assign): shuffle options where the item type allows it                       | player, security          | To do  |
-| [#210](https://github.com/tannernielson27/learn/issues/210) | feat(assign): student results with keys and rationales after close                | security, e2e             | To do  |
-| [#211](https://github.com/tannernielson27/learn/issues/211) | feat(assign): an assignment report per student, item and CJMM step, with CSV      | security, db              | To do  |
-| [#212](https://github.com/tannernielson27/learn/issues/212) | feat(assign): reminder emails when an assignment opens and a day before it closes | infra, security, db       | To do  |
+| #                                                           | Title                                                                             | Gates                     | Status                                                             |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------ |
+| [#204](https://github.com/tannernielson27/learn/issues/204) | feat(auth): invite-only sign-up, so no new account becomes an instructor          | security, db, e2e         | Merged (#214); apply `20260924000000_invite_only_signup` to hosted |
+| [#205](https://github.com/tannernielson27/learn/issues/205) | feat(assign): a class with an invite link students join                           | security, db, e2e         | To do                                                              |
+| [#206](https://github.com/tannernielson27/learn/issues/206) | chore(infra): send email through Resend from info.tannernielson.com               | security                  | To do                                                              |
+| [#207](https://github.com/tannernielson27/learn/issues/207) | feat(assign): assign a bank or case study to a class with a window and attempts   | security, db, e2e         | To do                                                              |
+| [#208](https://github.com/tannernielson27/learn/issues/208) | feat(assign): take an assignment on a phone with autosave and resume              | player, security, db, e2e | To do                                                              |
+| [#209](https://github.com/tannernielson27/learn/issues/209) | feat(assign): shuffle options where the item type allows it                       | player, security          | To do                                                              |
+| [#210](https://github.com/tannernielson27/learn/issues/210) | feat(assign): student results with keys and rationales after close                | security, e2e             | To do                                                              |
+| [#211](https://github.com/tannernielson27/learn/issues/211) | feat(assign): an assignment report per student, item and CJMM step, with CSV      | security, db              | To do                                                              |
+| [#212](https://github.com/tannernielson27/learn/issues/212) | feat(assign): reminder emails when an assignment opens and a day before it closes | infra, security, db       | To do                                                              |
 
 Suggested order: #204 invite-only first (every later story assumes a student cannot author), with #206 email alongside; then #205 classes; #207 assign; #208 take an assignment; then #209 shuffle and #211 report; #210 results; #212 reminders last, or alongside #208 once #206 and #207 have merged.
 
@@ -154,7 +154,7 @@ These block the live site rather than a single issue:
 - **GitHub Actions runs again** (2026-09-22): the repo was made public, so hosted runners are free. The private plan's 2,000 minutes ran out around Sept 20 (about 3,100 minutes were used Sept 10–22), and every job was refused from Sept 21. The backlog stack is merged.
 - **Turn off Realtime "Allow public access"** in the Supabase project settings. It unblocks #178, which drops the last open select policy on `live.session_public_state`.
 - **Apply each Sprint 8 migration to hosted after its PR merges**, in filename order (`pnpm exec supabase db push`). Each PR lists its own.
-- **Author accounts are now created by hand** (#139, merged in #157). Sign-in no longer creates accounts, so a new instructor exists only once added under Authentication, Users, Add user. The sign-in form answers identically whether or not an address has an account, so a mistyped or unregistered address will appear to succeed and simply never receive a link.
+- **Author accounts are now created by hand** (#139, merged in #157). Sign-in no longer creates accounts, so a new instructor exists only once added under Authentication, Users, Add user. **Since #204 that is two steps**: Add user, then `select private.make_instructor('<address>');` in the SQL editor (docs/05 §7.6); without the second step the account lands on "No access yet". The sign-in form answers identically whether or not an address has an account, so a mistyped or unregistered address will appear to succeed and simply never receive a link.
 - **Sprint 9 email (#206)**: in Resend, confirm info.tannernielson.com is verified; in Supabase, set custom SMTP to Resend and raise the Auth email rate limit; in Vercel, add `RESEND_API_KEY` and `EMAIL_FROM` to Production and Preview. #206 writes the exact steps into docs/05.
 - **Before any real student gets an invite**, create the production project and replay migrations (§7.3). Sprint 9 puts student emails in the database.
 - **Decide #159**: whether to accept that four cheap IPs can hold one author's sign-in closed indefinitely, or pay for one of the mitigations listed there.

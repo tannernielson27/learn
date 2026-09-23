@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { NO_ACCESS_PATH } from "@/lib/auth/noAccess";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -41,7 +42,7 @@ export async function authorForRoute(): Promise<RouteAuthor> {
 export async function requireAuthor(returnTo: string): Promise<AuthorSession> {
   const author = await authorForRoute();
   if (author.status === "signed_out") redirect(`/sign-in?next=${encodeURIComponent(returnTo)}`);
-  if (author.status === "forbidden") redirect("/author/no-access");
+  if (author.status === "forbidden") redirect(NO_ACCESS_PATH);
   const { supabase, userId, email, orgId } = author;
   return { supabase, userId, email, orgId };
 }

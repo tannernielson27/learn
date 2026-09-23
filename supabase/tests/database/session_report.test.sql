@@ -22,6 +22,15 @@ values
   ('00000000-0000-0000-0000-0000000186cc', 'report-student@example.test', 'authenticated', 'authenticated'),
   ('00000000-0000-0000-0000-0000000186dd', 'report-colleague@example.test', 'authenticated', 'authenticated');
 
+-- #204: the sign-up trigger grants no role, so make these accounts instructors in the seeded
+-- org explicitly, where the trigger used to put them.
+update public.profiles
+  set org_id = (select id from public.orgs order by created_at, id limit 1), role = 'instructor'
+  where id in ('00000000-0000-0000-0000-0000000186aa',
+               '00000000-0000-0000-0000-0000000186bb',
+               '00000000-0000-0000-0000-0000000186cc',
+               '00000000-0000-0000-0000-0000000186dd');
+
 insert into public.orgs (id, name) values ('00000000-0000-0000-0000-0000000186f2', 'Other report');
 update public.profiles set org_id = '00000000-0000-0000-0000-0000000186f2'
   where id = '00000000-0000-0000-0000-0000000186bb';

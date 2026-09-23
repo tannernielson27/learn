@@ -13,6 +13,12 @@ insert into auth.users (id, email, aud, role)
 values
   ('00000000-0000-0000-0000-0000000184aa', 'record-a@example.test', 'authenticated', 'authenticated');
 
+-- #204: the sign-up trigger grants no role, so make these accounts instructors in the seeded
+-- org explicitly, where the trigger used to put them.
+update public.profiles
+  set org_id = (select id from public.orgs order by created_at, id limit 1), role = 'instructor'
+  where id in ('00000000-0000-0000-0000-0000000184aa');
+
 insert into public.item_banks (id, org_id, name)
   select '00000000-0000-0000-0000-0000000184b1', org_id, 'Record bank'
   from public.profiles where id = '00000000-0000-0000-0000-0000000184aa';

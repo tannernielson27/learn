@@ -17,6 +17,14 @@ values
   ('00000000-0000-0000-0000-0000000a07bb', 'arc-b@example.test', 'authenticated', 'authenticated'),
   ('00000000-0000-0000-0000-0000000a07cc', 'arc-s@example.test', 'authenticated', 'authenticated');
 
+-- #204: the sign-up trigger grants no role, so make these accounts instructors in the seeded
+-- org explicitly, where the trigger used to put them.
+update public.profiles
+  set org_id = (select id from public.orgs order by created_at, id limit 1), role = 'instructor'
+  where id in ('00000000-0000-0000-0000-0000000a07aa',
+               '00000000-0000-0000-0000-0000000a07bb',
+               '00000000-0000-0000-0000-0000000a07cc');
+
 -- B moves to a second org, to check isolation. S stays in A's org as a student.
 insert into public.orgs (id, name) values ('00000000-0000-0000-0000-0000000a07f2', 'Other archive');
 update public.profiles set org_id = '00000000-0000-0000-0000-0000000a07f2'

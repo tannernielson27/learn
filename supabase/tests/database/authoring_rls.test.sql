@@ -16,14 +16,23 @@ values
   ('00000000-0000-0000-0000-00000000000c', 'c@example.test', 'authenticated', 'authenticated');
 
 select is(
-  (select role::text from public.profiles where id = '00000000-0000-0000-0000-00000000000a'),
-  'instructor',
-  'a new account joins as an instructor'
+  (select role from public.profiles where id = '00000000-0000-0000-0000-00000000000a'),
+  null::public.org_role,
+  'a new account gets no role (#204: sign-up is invite-only)'
 );
+
+-- Made instructors in the seeded org on purpose, the way the owner's make_instructor does.
+update public.profiles
+  set org_id = (select id from public.orgs order by created_at, id limit 1), role = 'instructor'
+  where id in ('00000000-0000-0000-0000-00000000000a',
+               '00000000-0000-0000-0000-00000000000b',
+               '00000000-0000-0000-0000-00000000000c');
 select is(
-  (select count(distinct org_id)::int from public.profiles),
+  (select count(distinct org_id)::int from public.profiles
+   where id in ('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-00000000000b',
+                '00000000-0000-0000-0000-00000000000c')),
   1,
-  'every new account joins the same org'
+  'the three start in the same org'
 );
 
 -- Move B to a second org, and make C a student, to exercise isolation and role checks.

@@ -15,6 +15,14 @@ values
   ('00000000-0000-0000-0000-0000000131bb', 'agg-other@example.test', 'authenticated', 'authenticated'),
   ('00000000-0000-0000-0000-0000000131cc', 'agg-student@example.test', 'authenticated', 'authenticated');
 
+-- #204: the sign-up trigger grants no role, so make these accounts instructors in the seeded
+-- org explicitly, where the trigger used to put them.
+update public.profiles
+  set org_id = (select id from public.orgs order by created_at, id limit 1), role = 'instructor'
+  where id in ('00000000-0000-0000-0000-0000000131aa',
+               '00000000-0000-0000-0000-0000000131bb',
+               '00000000-0000-0000-0000-0000000131cc');
+
 -- B is in a second org, so org isolation is exercised; C is a student in A's org, so the author
 -- half of every policy is exercised too.
 insert into public.orgs (id, name) values ('00000000-0000-0000-0000-0000000131f2', 'Other aggregates');

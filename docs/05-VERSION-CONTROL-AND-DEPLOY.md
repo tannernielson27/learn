@@ -163,10 +163,15 @@ Everything in `supabase/migrations/` today, in filename order — this is the re
 | 15  | `20260921100000_live_view_rate_limit`          | per-participant limit on `POST /api/live/view` (#152)                          | **not applied**            |
 | 16  | `20260921200000_authoring_limit_at_the_write`  | authoring rate limit enforced at the write, not only in the UI (#123)          | **not applied**            |
 | 17  | `20260921210000_private_live_channel`          | private Realtime channel with a per-participant token (#149)                   | **not applied**            |
+| 18  | `20260923010000_item_timer`                    | optional per-item timer on a live session (#182)                               | **not applied**            |
+| 19  | `20260923060000_session_goto`                  | skip an item or go back to one (#183)                                          | **not applied**            |
+| 20  | `20260923070000_case_study_live_record`        | run a case study live with the patient record on every phone (#184)            | **not applied**            |
+| 21  | `20260923080000_student_paced`                 | student-paced mode (#185)                                                      | **not applied**            |
+| 22  | `20260924000000_invite_only_signup`            | new accounts get no role; `private.make_instructor` (#204, §7.6)               | **not applied**            |
 
 "Not applied" means there is no record of it being applied, not that it has been checked. Run `pnpm exec supabase migration list` against the project to know.
 
-> **Standing drift (Sprint 6, grown since).** Rows 4–17 are merged to `main` but not applied to the existing hosted project. **Until `20260919110000_start_step_and_rate_limits` is applied, that project refuses every save, publish and import** — the app calls functions that are not there. Apply rows 4–17 to `vauokqoyvewtzubqajgh` with §7.4 at the same time as the production project is stood up, so the two projects do not start out different.
+> **Standing drift (Sprint 6, grown since).** Rows 4–22 are merged to `main` but not applied to the existing hosted project. **Until `20260919110000_start_step_and_rate_limits` is applied, that project refuses every save, publish and import** — the app calls functions that are not there. Apply rows 4–22 to `vauokqoyvewtzubqajgh` with §7.4 at the same time as the production project is stood up, so the two projects do not start out different.
 >
 > Row 16 is the one exception to that failure mode, by design: it keeps `public.take_rate_limit`'s name and signature, so an app deployed ahead of it degrades to the pre-#123 behaviour instead of refusing writes. Rows 11–15 are needed for any live session to run at all.
 
@@ -187,7 +192,7 @@ Run from the repo root, on a machine with the repo checked out. Steps 1–2 and 
    pnpm exec supabase migration list              # every row in 7.2 present, local and remote
    ```
 
-4. **Load the sample content, then create the demo user — in that order.** `seed.sql` creates the org that the sign-up trigger puts the first user into, so a user created before it would land in an org of its own.
+4. **Load the sample content, then create the demo user — in that order.** `seed.sql` creates the org that `private.make_instructor` puts the first instructor into; promoting someone before it would make an empty org of its own.
 
    ```sh
    # <db-uri>: dashboard > Project Settings > Database > Connection string. Take the direct
@@ -199,9 +204,9 @@ Run from the repo root, on a machine with the repo checked out. Steps 1–2 and 
 
    `seed.sql` is generated from the fixtures and is safe to run once on an empty project. It inserts one org, one published "Samples" bank, every canonical item, the Trend item and the sample case study. Running it twice fails on the fixed ids, which is the point.
 
-5. **Create the demo account — production only.** Dashboard → Authentication → Users → Add user. Email `demo@learn.app` (any address you control), a long random password, **Auto Confirm User on**. The trigger files it into the seeded org as an instructor. Never run `supabase/seed-demo.sql` against a hosted project: its password is public and local-only.
+5. **Create the demo account — production only.** Dashboard → Authentication → Users → Add user. Email `demo@learn.app` (any address you control), a long random password, **Auto Confirm User on**. Then make it an instructor with the one line in §7.6 — since #204 a new account has no role until you do. Never run `supabase/seed-demo.sql` against a hosted project: its password is public and local-only.
 
-   **Every author account is created here too, and only here.** #139 turned self-serve sign-up off: the sign-in form no longer creates an account, so an address that has none is answered exactly like an address that has one and is simply never mailed. To add an instructor, Add user with their address and **Auto Confirm User on** — no password is needed, they sign in from the emailed link — then tell them to ask for a link. Until that account exists, the form will tell them to check an inbox nothing was sent to; that silence is deliberate, because any other answer would say aloud which addresses have accounts.
+   **Every author account is created here too, and only here.** #139 turned self-serve sign-up off: the sign-in form no longer creates an account, so an address that has none is answered exactly like an address that has one and is simply never mailed. To add an instructor, Add user with their address and **Auto Confirm User on** — no password is needed, they sign in from the emailed link — then run the §7.6 line for that address, then tell them to ask for a link. Until that account exists, the form will tell them to check an inbox nothing was sent to; that silence is deliberate, because any other answer would say aloud which addresses have accounts.
 
 6. **Point Vercel Production at it.** Vercel → project → Settings → Environment Variables, **Production scope only**:
    - `NEXT_PUBLIC_SUPABASE_URL` = `https://<prod-ref>.supabase.co`
@@ -237,6 +242,23 @@ pnpm exec supabase db reset     # drops, recreates, applies all migrations in or
 ```
 
 `db reset` prints each migration as it applies it and stops at the first failure. It also runs `seed.sql` and `seed-demo.sql`, so a green run proves the sample content and the local demo account still load against the current schema. Afterwards `pnpm db:types` regenerates `src/lib/supabase/database.types.ts`; CI fails if the committed file differs.
+
+### 7.6 Adding an instructor (two steps, since #204)
+
+Sign-up is invite-only. A new account, however it was made, gets a profile with **no org and no role**: it can sign in, lands on "No access yet", and row level security shows it nothing. Nothing makes an account an instructor automatically, so adding one is two steps:
+
+1. Dashboard → Authentication → Users → **Add user**, their address, **Auto Confirm User on**.
+2. Dashboard → SQL Editor, in the same project:
+
+   ```sql
+   select private.make_instructor('person@example.com');
+   ```
+
+It finds the account by address (any letter case), puts it in the org (`seed.sql`'s, or a new "LeaRN" org on a project that has none) and makes it an instructor. An admin stays an admin, running it twice is harmless, and an address with no account is an error rather than a silent success. A student's address is refused too, so a typo cannot hand a student the answer keys. It runs only from the SQL editor: no API role (`anon`, `authenticated`, `service_role`) may call it. The person reloads and lands on the author home.
+
+To check who is what: `select u.email, p.role from auth.users u join public.profiles p on p.id = u.id order by u.email;`
+
+Existing accounts were not changed by #204: the demo account and every current instructor keep their role. From #205 on, a student joins through an instructor's class invite, which sets `app_metadata.learn_invite` server-side; never set a role through `user_metadata`, which the person can write themselves.
 
 ## 8. Working together day to day
 
