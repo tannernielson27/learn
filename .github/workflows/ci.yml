@@ -55,8 +55,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # Postgres only: migrations and the seed apply from zero on every run.
       - run: pnpm exec supabase db start
+      # #163: `supabase test db` through scripts/test-db.mjs, which also fails the run when pgTAP
+      # reports `Looks like you planned N tests but ran M`. The harness treats that line as a
+      # comment, so a savepoint rollback inside a file could drop pgTAP's count and still pass.
       - name: RLS and schema tests
-        run: pnpm exec supabase test db
+        run: pnpm test:db
       - name: Generated types match the migrations
         run: |
           pnpm exec supabase gen types typescript --local --schema public > "$RUNNER_TEMP/raw.ts"
