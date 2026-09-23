@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-23 (Sprint 8 code complete: every story merged, `main` at 139ae57, demo in `docs/sprints/S8-demo.md`; #197 merged; the hosted project has all 21 migrations).
+Last updated: 2026-09-23 (Sprint 9 kicked off: #204–#212 filed under milestone 9 with four owner decisions. Sprint 8 is code complete, with the demo in `docs/sprints/S8-demo.md`; the hosted project has all 21 migrations).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -82,6 +82,42 @@ Decisions taken at kickoff while the owner was away (2026-09-23), each the conse
 4. **The console never marks the correct option before reveal** (#180), so projecting the results cannot give the answer away.
 5. **Report access is the session's org only** (#186), the same boundary as the bank the session came from.
 
+## S9: Take-home assignments (milestone 9)
+
+Demo 9: assign a set Monday, answer it Tuesday on a phone, review results Wednesday.
+
+| #                                                           | Title                                                                             | Gates                     | Status |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------- | ------ |
+| [#204](https://github.com/tannernielson27/learn/issues/204) | feat(auth): invite-only sign-up, so no new account becomes an instructor          | security, db, e2e         | To do  |
+| [#205](https://github.com/tannernielson27/learn/issues/205) | feat(assign): a class with an invite link students join                           | security, db, e2e         | To do  |
+| [#206](https://github.com/tannernielson27/learn/issues/206) | chore(infra): send email through Resend from info.tannernielson.com               | security                  | To do  |
+| [#207](https://github.com/tannernielson27/learn/issues/207) | feat(assign): assign a bank or case study to a class with a window and attempts   | security, db, e2e         | To do  |
+| [#208](https://github.com/tannernielson27/learn/issues/208) | feat(assign): take an assignment on a phone with autosave and resume              | player, security, db, e2e | To do  |
+| [#209](https://github.com/tannernielson27/learn/issues/209) | feat(assign): shuffle options where the item type allows it                       | player, security          | To do  |
+| [#210](https://github.com/tannernielson27/learn/issues/210) | feat(assign): student results with keys and rationales after close                | security, e2e             | To do  |
+| [#211](https://github.com/tannernielson27/learn/issues/211) | feat(assign): an assignment report per student, item and CJMM step, with CSV      | security, db              | To do  |
+| [#212](https://github.com/tannernielson27/learn/issues/212) | feat(assign): reminder emails when an assignment opens and a day before it closes | infra, security, db       | To do  |
+
+Suggested order: #204 invite-only first (every later story assumes a student cannot author), with #206 email alongside; then #205 classes; #207 assign; #208 take an assignment; then #209 shuffle and #211 report; #210 results; #212 reminders last, or alongside #208 once #206 and #207 have merged.
+
+Parallelization: one builder at a time on this machine (see the S8 retro). The only pairs that may run together, with the second builder skipping Docker and `next dev`, are #204 with #206, #209 with #211 (the pure part), and #208 with #212. #205, #207, #208 and #210 all add student-facing routes and the student home; never build two of them at once. Number migrations at merge time, not build time.
+
+Owner decisions, 2026-09-23:
+
+1. **Sign-up is invite-only.** Existing instructors and the demo account keep their role. A class invite makes a student, and any other new account gets no role until the owner promotes it (#204, #205).
+2. **Email goes through Resend** from info.tannernielson.com (the owner's existing account and domain), both as Supabase's custom SMTP and as the app's mailer (#206).
+3. **Attempts: 1 by default, up to 3, and the best attempt counts** (#207, #208, #210, #211).
+4. **Build on the shared project; split before real students.** No real student gets an invite link until the §7.3 production project exists and has every migration.
+
+Decisions taken at kickoff, each the conservative option; say if any should change:
+
+1. **Classes are minimal:** a name, an invite link and a roster (#205). Bulk rosters and email invites wait for Phase 4.
+2. **Scores, keys and rationales all wait until close** (#208, #210), so a student who submits early cannot pass answers on while the window is still open.
+3. **An attempt still open at close is submitted with what it saved** (#208), rather than discarded.
+4. **Assignment content is snapshotted when it is assigned** (#207), as sessions are.
+5. **Reminders run on `pg_cron` every 15 minutes through `pg_net`** (#212, ADR 0007 to write), because Vercel Cron on Hobby runs only once a day. A reminder can be up to 15 minutes late.
+6. **The assignment report shows progress only while open** (#211), so projecting it mid-window gives nothing away.
+
 ## No milestone
 
 | #                                                           | Title                                                                                     | Area               | Status                                                             |
@@ -119,6 +155,8 @@ These block the live site rather than a single issue:
 - **Turn off Realtime "Allow public access"** in the Supabase project settings. It unblocks #178, which drops the last open select policy on `live.session_public_state`.
 - **Apply each Sprint 8 migration to hosted after its PR merges**, in filename order (`pnpm exec supabase db push`). Each PR lists its own.
 - **Author accounts are now created by hand** (#139, merged in #157). Sign-in no longer creates accounts, so a new instructor exists only once added under Authentication, Users, Add user. The sign-in form answers identically whether or not an address has an account, so a mistyped or unregistered address will appear to succeed and simply never receive a link.
+- **Sprint 9 email (#206)**: in Resend, confirm info.tannernielson.com is verified; in Supabase, set custom SMTP to Resend and raise the Auth email rate limit; in Vercel, add `RESEND_API_KEY` and `EMAIL_FROM` to Production and Preview. #206 writes the exact steps into docs/05.
+- **Before any real student gets an invite**, create the production project and replay migrations (§7.3). Sprint 9 puts student emails in the database.
 - **Decide #159**: whether to accept that four cheap IPs can hold one author's sign-in closed indefinitely, or pay for one of the mitigations listed there.
 - Done 2026-09-22: Vercel Production and Preview both carry `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` and `SUPABASE_JWT_SIGNING_KEY`; Production also has `DEMO_ACCOUNT_*`. The hosted demo user exists as an instructor in the seeded LeaRN org.
 - Supabase Authentication, URL Configuration: Site URL and redirect URLs for production, previews and localhost.
