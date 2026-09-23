@@ -64,9 +64,14 @@ export type ResolvedCode =
 export async function startSession(
   supabase: Client,
   source: SessionSource,
+  paced: SessionMode = "instructor_paced",
 ): Promise<StartSessionResult> {
+  // #185: named only when it is not the default, so an instructor-paced start is the call it was.
+  const pacing = paced === "student_paced" ? { paced } : {};
   const args =
-    source.kind === "bank" ? { source_bank: source.id } : { source_case_study: source.id };
+    source.kind === "bank"
+      ? { source_bank: source.id, ...pacing }
+      : { source_case_study: source.id, ...pacing };
   const { data, error } = await supabase.rpc("start_session", args);
   if (error) return { ok: false, reason: startReason(error) };
   if (!data) return { ok: false, reason: "failed" };

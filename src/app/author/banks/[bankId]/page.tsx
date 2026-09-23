@@ -134,7 +134,22 @@ export default async function BankPage({
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <h1 className="min-w-0 font-read text-3xl break-words text-ink-1">{heading}</h1>
         <ArchiveViewSwitch bankId={bank.id} view={view} filter={filter} />
-        <form action={startLiveSession.bind(null, bank.id)}>
+        <form
+          action={startLiveSession.bind(null, bank.id)}
+          className="flex flex-wrap items-center gap-x-4 gap-y-2"
+        >
+          {/* #185: how the room is paced. Instructor-paced stays the default and comes first. */}
+          <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <legend className="sr-only">Pacing</legend>
+            <label className="tap-target inline-flex items-center gap-2 text-sm text-ink-1">
+              <input type="radio" name="pacing" value="instructor_paced" defaultChecked />
+              Instructor-paced
+            </label>
+            <label className="tap-target inline-flex items-center gap-2 text-sm text-ink-1">
+              <input type="radio" name="pacing" value="student_paced" />
+              Student-paced
+            </label>
+          </fieldset>
           <Button type="submit" variant="secondary">
             Start a live session
           </Button>

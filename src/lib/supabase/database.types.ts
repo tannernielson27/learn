@@ -670,7 +670,11 @@ export type Database = {
       archive_case_study: { Args: { target: string }; Returns: undefined };
       archive_item: { Args: { target: string }; Returns: undefined };
       begin_session_submission: {
-        Args: { participant: string; target_session: string };
+        Args: {
+          participant: string;
+          requested_position?: number;
+          target_session: string;
+        };
         Returns: {
           item_id: string;
           item_position: number;
@@ -684,6 +688,7 @@ export type Database = {
           server_now: string;
           session_ends_at: string;
           session_items: Json;
+          session_mode: Database["public"]["Enums"]["session_mode"];
           session_position: number;
           session_remaining_ms: number;
           session_reveal: boolean;

@@ -47,7 +47,43 @@ export interface LiveSessionState {
    * migration, which hold the same three numbers.
    */
   timer: ItemTimer;
+  /**
+   * How the room is paced (#185): `sessions.mode`, fixed once the session has started. Carried
+   * **only by a student-paced room**; absent means instructor-paced, so every state an
+   * instructor-paced room has ever had is exactly the object it was before #185. In a
+   * student-paced room `position` is 1 from the start and means nothing — each phone moves through
+   * the set by itself — and `reveal` means the whole set's answers are showing. See `pacedState`.
+   */
+  mode?: SessionMode;
 }
+
+/** Whether `state` is a student-paced room (#185). */
+export function isStudentPaced(state: Pick<LiveSessionState, "mode">): boolean {
+  return state.mode === "student_paced";
+}
+
+/**
+ * `state` with the pacing a session row says it has, carried the one way `LiveSessionState.mode`
+ * is carried: set for a student-paced room and left off an instructor-paced one. Never mutates.
+ */
+export function pacedState<T extends LiveSessionState>(state: T, mode: SessionMode): T {
+  if (mode === "student_paced") return { ...state, mode };
+  if (state.mode === undefined) return state;
+  const rest = { ...state };
+  delete rest.mode;
+  return rest;
+}
+
+/**
+ * The moves that mean nothing when every phone moves by itself (#185): there is no room-wide item
+ * to step on from, and no room-wide item to put a clock on. `goto` and choosing a time are refused
+ * by their own functions below, on the same rule.
+ */
+const PACED_REFUSED: ReadonlySet<HostCommand | TimerCommand> = new Set<HostCommand | TimerCommand>([
+  "advance",
+  "extend_timer",
+  "stop_timer",
+]);
 
 /** What a host can ask for. The set is closed, so a console cannot invent a fifth move. */
 export const HOST_COMMANDS = ["start", "advance", "reveal", "pause", "resume", "end"] as const;
@@ -81,14 +117,18 @@ const refuse = (refusal: LiveRefusal): { ok: false; refusal: LiveRefusal; messag
 export function initialSessionState(
   itemCount: number,
   timerSeconds: number | null = null,
+  mode: SessionMode = "instructor_paced",
 ): LiveSessionState {
-  return {
-    status: "lobby",
-    position: null,
-    itemCount,
-    reveal: false,
-    timer: { ...NO_TIMER, seconds: timerSeconds },
-  };
+  return pacedState(
+    {
+      status: "lobby",
+      position: null,
+      itemCount,
+      reveal: false,
+      timer: { ...NO_TIMER, seconds: timerSeconds },
+    },
+    mode,
+  );
 }
 
 /**
@@ -106,6 +146,9 @@ export function applyHostCommand(
   // An ended session is over for every command, including `end` itself. #128: "no update of any
   // kind is allowed on an ended row", so its code can never start resolving again.
   if (state.status === "ended") return refuse("not_open");
+  // #185. Before anything about the lobby or the clock: in a student-paced room these moves are
+  // not refused for now, they are refused for good.
+  if (isStudentPaced(state) && PACED_REFUSED.has(command)) return refuse("student_paced");
   if (command === "extend_timer" || command === "stop_timer") {
     return applyTimerCommand(state, command, now);
   }
@@ -174,6 +217,7 @@ function moveRoom(state: LiveSessionState, command: HostCommand): TransitionResu
  */
 export function goToItem(state: LiveSessionState, position: number, now: number): TransitionResult {
   if (state.status === "ended") return refuse("not_open");
+  if (isStudentPaced(state)) return refuse("student_paced");
   if (state.status === "lobby" || state.position === null) return refuse("not_started");
   if (!Number.isInteger(position) || position < 1 || position > state.itemCount) {
     return refuse("out_of_range");
@@ -215,6 +259,8 @@ function applyTimerCommand(
  */
 export function chooseTimer(state: LiveSessionState, seconds: number | null): TransitionResult {
   if (state.status === "ended") return refuse("not_open");
+  // #185: out of scope by the owner's decision, and `sessions_student_paced_untimed` agrees.
+  if (isStudentPaced(state)) return refuse("student_paced");
   if (!isTimerChoice(seconds)) return refuse("bad_timer");
   return { ok: true, state: { ...state, timer: { ...state.timer, seconds } } };
 }
@@ -248,6 +294,12 @@ export function canSubmit(
   if (state.status === "lobby" || state.position === null) return refuse("not_started");
   if (state.status === "paused") return refuse("paused");
   if (state.reveal) return refuse("already_revealed");
+  // #185. Any item in the set, answered at its own position; once per item is the adapter's rule,
+  // as it is for one item at a time. A student-paced room has no clock (`chooseTimer` above).
+  if (isStudentPaced(state)) {
+    const index = itemIds.indexOf(itemId);
+    return index === -1 ? refuse("wrong_item") : { ok: true, position: index + 1 };
+  }
   // #182. After the checks above and before `wrong_item`, in the order `begin_session_submission`
   // and `record_session_response` keep, so both adapters give the same answer to the same answer.
   if (timeIsUp(state.timer, now)) return refuse("time_up");
@@ -256,9 +308,24 @@ export function canSubmit(
   return { ok: true, position: state.position };
 }
 
-/** The item the room is on, or null when it is not on one. Counts from 1, like `position`. */
+/**
+ * The item the room is on, or null when it is not on one. Counts from 1, like `position`. A
+ * student-paced room (#185) is never on one item; `pacedSet` is what it is on.
+ */
 export function itemAt<T>(items: readonly T[], state: LiveSessionState): T | null {
+  if (isStudentPaced(state)) return null;
   if (state.status !== "running" && state.status !== "paused") return null;
   if (state.position === null) return null;
   return items[state.position - 1] ?? null;
+}
+
+/**
+ * The whole set, while a student-paced room (#185) is running or paused, or null — in the lobby,
+ * once it has ended, and always for an instructor-paced room, which is on one item at a time
+ * (`itemAt`). A paused room still has its set: the phones keep their place and wait.
+ */
+export function pacedSet<T>(items: readonly T[], state: LiveSessionState): readonly T[] | null {
+  if (!isStudentPaced(state)) return null;
+  if (state.status !== "running" && state.status !== "paused") return null;
+  return items;
 }

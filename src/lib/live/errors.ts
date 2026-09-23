@@ -43,6 +43,11 @@ export const LIVE_REFUSALS = {
   no_timer: "This item has no timer running.",
   /** A per-item time the console does not offer. */
   bad_timer: "Choose one of the times offered for the timer.",
+  /**
+   * Next item, a jump or a timer button in a student-paced room (#185): each phone moves through
+   * the set by itself, so there is no room-wide item to move or to time.
+   */
+  student_paced: "Students work through this set at their own pace.",
   unknown_code: "No open session has that code.",
   not_joined: "You have not joined this session.",
   already_answered: "You have already answered this item.",

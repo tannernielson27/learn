@@ -386,7 +386,7 @@ export function StudentRoom({
  * A reveal with marks but no answer this phone can draw (a stored answer that no longer parses)
  * falls to the key-only view too, without the note: they did answer, it just cannot be shown.
  */
-function RevealedItem({
+export function RevealedItem({
   item,
   answered,
   revealed,
@@ -435,6 +435,6 @@ function RevealedItem({
 }
 
 /** A player opened on an answer already given has nothing to send. */
-const refuseSecondAnswer: SubmitHandler = async () => {
+export const refuseSecondAnswer: SubmitHandler = async () => {
   throw new Error("This item has already been answered.");
 };

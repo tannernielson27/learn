@@ -41,7 +41,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // student's phone loads (ADR 0003, `noClientScoring.test.ts`), so it takes only what it uses.
 import { LIVE_REFUSALS, LiveSessionError, type LiveRefusal } from "@/lib/live/errors";
 import { isSessionCode, normalizeSessionCode } from "@/lib/live/sessionCode";
-import { SESSION_STATUSES, type LiveSessionState, type SessionStatus } from "@/lib/live/state";
+import {
+  SESSION_STATUSES,
+  isStudentPaced,
+  pacedSet,
+  type LiveSessionState,
+  type SessionStatus,
+} from "@/lib/live/state";
 import { clockOffset, readTimer } from "@/lib/live/timer";
 import type {
   ItemReveal,
@@ -63,6 +69,7 @@ import {
   presentRealtimeToken,
   type AnsweredPayload,
   type JoinSession,
+  type PacedItemPayload,
   type ParticipantCredentials,
   type ParticipantViewPayload,
   type RefusalPayload,
@@ -102,6 +109,12 @@ export interface ResumedIdentity {
 export interface StudentView extends SessionView<ParticipantItem> {
   answered: AnsweredPayload | null;
   revealed: ItemReveal | null;
+  /**
+   * A student-paced room's whole set (#185), item by item with this phone's own answer and — once
+   * the host has shown answers — the key and its own marks. Absent unless the room is
+   * student-paced and running or paused.
+   */
+  paced?: PacedItemPayload[];
 }
 
 /**
@@ -194,9 +207,22 @@ export function postgresChangesReady(payload: unknown): boolean {
  * purpose: it differs on every read and is only ever used for the clock offset.
  */
 function sameView(a: ParticipantViewPayload, b: ParticipantViewPayload): boolean {
-  const shown = ({ state, item, answered, revealed }: ParticipantViewPayload) =>
-    JSON.stringify([state, item, answered, revealed]);
+  const shown = ({ state, item, answered, revealed, set }: ParticipantViewPayload) =>
+    JSON.stringify([state, item, answered, revealed, set ?? null]);
   return shown(a) === shown(b);
+}
+
+/**
+ * The view held, under a state message that needed no fetch (a pause, a resume, an end). The mode
+ * is not on the mirror row, so it is carried over from what was held; and a student-paced set is
+ * dropped the moment the room is no longer on it (#185), exactly as the server would answer.
+ */
+function restated(held: ParticipantViewPayload, next: LiveSessionState): ParticipantViewPayload {
+  const state = isStudentPaced(held.state) ? { ...next, mode: held.state.mode } : next;
+  if (held.set === undefined || pacedSet(held.set, state) !== null) return { ...held, state };
+  const rest = { ...held, state };
+  delete rest.set;
+  return rest;
 }
 
 /** Adds a listener to a set and hands back the unsubscribe. Calling it twice is harmless. */
@@ -243,6 +269,8 @@ export function createSupabaseParticipant(
   let gone = false;
   /** So a reveal that stays true across several state messages is announced once. */
   let announcedReveal: number | null = null;
+  /** The same, for each item of a student-paced set (#185): every one is announced once. */
+  let announcedPaced = new Set<number>();
   /** The last view fetched, so a state message that needs no fetch can be answered from it. */
   let held: ParticipantViewPayload | null = null;
   /**
@@ -290,13 +318,16 @@ export function createSupabaseParticipant(
 
   function announce(payload: ParticipantViewPayload): void {
     held = payload;
-    const view: SessionView<ParticipantItem> = { state: payload.state, item: payload.item };
+    const view: SessionView<ParticipantItem> = {
+      state: payload.state,
+      item: payload.item,
+      ...(payload.set === undefined ? {} : { set: payload.set.map((entry) => entry.item) }),
+    };
     // Copied before dispatch: a listener may call `leave`, which clears these sets, and mutating
     // a Set mid-iteration silently drops whoever had not been reached yet.
     for (const listener of [...views]) listener(view);
-    for (const listener of [...students]) {
-      listener({ ...view, answered: payload.answered, revealed: payload.revealed });
-    }
+    for (const listener of [...students]) listener(studentView(payload));
+    announcePacedReveals(payload.set);
 
     if (payload.revealed === null) {
       announcedReveal = null;
@@ -305,6 +336,20 @@ export function createSupabaseParticipant(
     if (announcedReveal === payload.revealed.position) return;
     announcedReveal = payload.revealed.position;
     for (const listener of [...reveals]) listener(payload.revealed);
+  }
+
+  /** "Show answers" in a student-paced room (#185): one reveal per item, each announced once. */
+  function announcePacedReveals(set: PacedItemPayload[] | undefined): void {
+    const revealed = (set ?? []).flatMap((entry) => (entry.revealed === null ? [] : [entry]));
+    if (revealed.length === 0) {
+      announcedPaced = new Set();
+      return;
+    }
+    for (const entry of revealed) {
+      if (announcedPaced.has(entry.position) || entry.revealed === null) continue;
+      announcedPaced.add(entry.position);
+      for (const listener of [...reveals]) listener(entry.revealed);
+    }
   }
 
   /**
@@ -360,7 +405,7 @@ export function createSupabaseParticipant(
       next.position === standing.state.position &&
       next.reveal === standing.state.reveal
     ) {
-      announce({ ...standing, state: next });
+      announce(restated(standing, next));
       return;
     }
     // A listener cannot await, and a failed refresh must not become an unhandled rejection in a
@@ -487,6 +532,7 @@ export function createSupabaseParticipant(
     me = identity;
     gone = false;
     announcedReveal = null;
+    announcedPaced = new Set();
     held = null;
     notifyConnection("connecting", false);
     await openChannel(identity.sessionId, {
@@ -517,6 +563,9 @@ export function createSupabaseParticipant(
     item: payload.item,
     answered: payload.answered,
     revealed: payload.revealed,
+    ...(payload.set === undefined
+      ? {}
+      : { set: payload.set.map((entry) => entry.item), paced: payload.set }),
   });
 
   function snapshot(joined: ParticipantCredentials, view: StudentView): ParticipantSnapshot {
@@ -528,6 +577,7 @@ export function createSupabaseParticipant(
       roster: rosterNow(),
       state: view.state,
       item: view.item,
+      ...(view.set === undefined ? {} : { set: view.set }),
     };
   }
 
@@ -605,11 +655,17 @@ export function createSupabaseParticipant(
 
     async submit(itemId, response) {
       if (me === null) throw new LiveSessionError("not_joined");
+      // #185: in a student-paced set the phone chooses the item, so it names its place. Looked up
+      // from the set the server handed this phone; an id it was not handed is sent without one,
+      // and the server refuses it as the item the room is not on.
+      const position = held?.set?.find((entry) => entry.item.id === itemId)?.position;
       const sent = await call(`${base}${LIVE_ROUTES.submit}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ itemId, response }),
+        body: JSON.stringify(
+          position === undefined ? { itemId, response } : { itemId, response, position },
+        ),
       });
       if (!sent.ok) throw await asError(sent);
       const ack = (await sent.json()) as SubmitAckPayload;

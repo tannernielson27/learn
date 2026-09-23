@@ -46,6 +46,17 @@ describe("startSession", () => {
     expect(fake.rpc).toHaveBeenCalledWith("start_session", { source_bank: BANK });
   });
 
+  it("names the pacing only when a bank is started student-paced (#185)", async () => {
+    const fake = fakeRpc({ data: SESSION, error: null });
+    await startSession(fake.client, { kind: "bank", id: BANK }, "student_paced");
+    expect(fake.rpc).toHaveBeenCalledWith("start_session", {
+      source_bank: BANK,
+      paced: "student_paced",
+    });
+    await startSession(fake.client, { kind: "bank", id: BANK }, "instructor_paced");
+    expect(fake.rpc).toHaveBeenLastCalledWith("start_session", { source_bank: BANK });
+  });
+
   it("starts from a case study by naming the other argument, never both", async () => {
     const fake = fakeRpc({ data: SESSION, error: null });
     await startSession(fake.client, { kind: "case_study", id: CASE });

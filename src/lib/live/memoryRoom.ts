@@ -24,7 +24,9 @@ import {
   chooseTimer,
   goToItem,
   initialSessionState,
+  isStudentPaced,
   itemAt,
+  pacedSet,
   type HostCommand,
   type TimerCommand,
   type LiveSessionState,
@@ -40,6 +42,7 @@ import type {
   ParticipantItem,
   ParticipantSnapshot,
   HostSnapshot,
+  SessionProgress,
   SessionView,
   SubmitAck,
   Unsubscribe,
@@ -121,10 +124,12 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
   const mode: SessionMode = options.mode ?? "instructor_paced";
   const now = options.now ?? (() => Date.now());
 
-  let state = initialSessionState(items.length);
+  let state = initialSessionState(items.length, null, mode);
   let nextParticipant = 1;
 
   const roster = new Map<string, Participant>();
+  /** Everyone who has ever joined, leavers too: the progress board keeps a row for each (#185). */
+  const everyone = new Map<string, Participant>();
   /** One-based position -> participant id -> what they answered and what it scored. */
   const answers = new Map<number, Map<string, StoredAnswer>>();
   const connections = new Set<ParticipantConnection>();
@@ -135,10 +140,11 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
       (a, b) => a.joinedAt - b.joinedAt || a.participantId.localeCompare(b.participantId),
     );
 
-  const participantView = (): SessionView<ParticipantItem> => ({
-    state,
-    item: itemAt(keylessItems, state),
-  });
+  const participantView = (): SessionView<ParticipantItem> => {
+    // #185: a student-paced room hands its phones the whole set, keyless, and no single item.
+    const set = pacedSet(keylessItems, state);
+    return { state, item: itemAt(keylessItems, state), ...(set === null ? {} : { set }) };
+  };
   const hostView = (): SessionView<Item> => ({ state, item: itemAt(items, state) });
 
   function emitState(): void {
@@ -213,10 +219,20 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
     }
   }
 
-  /** On reveal, each participant learns the key — and, if they answered, their own marks. */
+  /**
+   * On reveal, each participant learns the key — and, if they answered, their own marks. For the
+   * item the room is on, or, in a student-paced room (#185), for every item in the set at once.
+   */
   function emitReveal(): void {
-    const position = state.position;
-    if (position === null) return;
+    const positions = isStudentPaced(state)
+      ? items.map((_, index) => index + 1)
+      : state.position === null
+        ? []
+        : [state.position];
+    for (const position of positions) emitRevealAt(position);
+  }
+
+  function emitRevealAt(position: number): void {
     const item = items[position - 1];
     if (item === undefined) return;
     const reveal = { answerKey: item.answerKey, rationale: item.rationale, scoring: item.scoring };
@@ -232,6 +248,22 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
       };
       for (const listener of connection.reveals) listener(payload);
     }
+  }
+
+  /** Who has answered which item, from the answers on record (#185). Never a mark. */
+  function progressNow(): SessionProgress | null {
+    if (state.status === "lobby") return null;
+    const answered = items.map((_, index) => answers.get(index + 1)?.size ?? 0);
+    const rows = [...everyone.values()]
+      .sort((a, b) => a.joinedAt - b.joinedAt || a.participantId.localeCompare(b.participantId))
+      .map((person) => ({
+        participantId: person.participantId,
+        displayName: person.displayName,
+        positions: items
+          .map((_, index) => index + 1)
+          .filter((position) => answers.get(position)?.has(person.participantId) ?? false),
+      }));
+    return { answered, rows };
   }
 
   function runCommand(
@@ -294,7 +326,9 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
         nextParticipant += 1;
         connection.participantId = participantId;
         connections.add(connection);
-        roster.set(participantId, { participantId, displayName, joinedAt: now() });
+        const person = { participantId, displayName, joinedAt: now() };
+        roster.set(participantId, person);
+        everyone.set(participantId, person);
         emitPresence();
         return snapshot(participantId);
       },
@@ -410,6 +444,10 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
           item,
           given.map((answer) => answer.response),
         );
+      },
+
+      async progress() {
+        return progressNow();
       },
 
       async start() {
