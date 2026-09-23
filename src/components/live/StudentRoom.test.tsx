@@ -434,17 +434,43 @@ describe("StudentRoom: the reveal", () => {
     expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
   });
 
-  it("tells a phone that did not answer that the answer is showing, and shows it no key", () => {
+  it("shows a phone that did not answer the key and the rationale, read-only, and says so", async () => {
     const room = setup();
-    // Sprint 7 cut: marking a key needs an answer to mark it against. Sprint 8's result view is
-    // what shows the key to a phone that stayed quiet.
     room.push({
       state: running({ reveal: true }),
       item: KEYLESS,
       answered: null,
       revealed: revealFor(null),
     });
+    await renderersLoaded();
 
+    expect(screen.getByTestId("not-answered")).toHaveTextContent("You did not answer this item.");
+    expect(screen.getByRole("complementary", { name: "Rationale" })).toHaveTextContent(
+      /Tachypnea, hypoxemia/,
+    );
+    // The key on the same renderer: nothing chosen, the right options marked missed.
+    expect(screen.getAllByText("Missed").length).toBeGreaterThan(0);
+    for (const box of screen.getAllByRole("checkbox")) expect(box).not.toBeChecked();
+    // No marks, because there was no answer, and nothing to send.
+    expect(screen.queryByRole("complementary", { name: "Score" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
+    expect(screen.queryByText("The answer is showing.")).toBeNull();
+  });
+
+  it("shows the same phone no key before the reveal: the control", async () => {
+    const room = setup();
+    room.push({ state: running(), item: KEYLESS, answered: null, revealed: null });
+    await renderersLoaded();
+
+    expect(screen.getByRole("button", { name: /^Submit$/ })).toBeInTheDocument();
+    expect(screen.queryByTestId("not-answered")).toBeNull();
+    expect(screen.queryByText("Missed")).toBeNull();
+    expect(document.body.textContent).not.toContain("Tachypnea, hypoxemia");
+  });
+
+  it("says the answer is showing in the moment before the key has been fetched", () => {
+    const room = setup();
+    room.push({ state: running({ reveal: true }), item: KEYLESS, answered: null, revealed: null });
     expect(screen.getByText("The answer is showing.")).toBeInTheDocument();
     expect(document.body.textContent).not.toContain("Tachypnea, hypoxemia");
   });

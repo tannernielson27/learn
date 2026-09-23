@@ -114,13 +114,17 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
   for (const name of ["Ada Brennan", "Bo Ntuli", "Chidi Okeke"]) {
     phones.push(await join(browser, origin, shape, code, name));
   }
-  await expect(page.getByTestId("present-count")).toHaveText("3 phones connected", {
+  // A fourth phone that stays quiet all item long (#181): it still sees the key at the reveal.
+  const quiet = await join(browser, origin, shape, code, "Dara Quinn");
+  await expect(page.getByTestId("present-count")).toHaveText("4 phones connected", {
     timeout: 15_000,
   });
 
   // Nothing to answer yet, and nothing to count.
   await expect(page.getByTestId("answer-count")).toHaveCount(0);
-  for (const phone of phones) await expect(phone.getByText("You are in.")).toBeVisible();
+  for (const phone of [...phones, quiet]) {
+    await expect(phone.getByText("You are in.")).toBeVisible();
+  }
 
   await page.getByRole("button", { name: "Start session", exact: true }).click();
 
@@ -138,7 +142,7 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
   await answer(phones[2] as Page, [0, 2]);
 
   // The count the host watches before deciding to reveal. It is polled, not pushed (ADR 0002).
-  await expect(page.getByTestId("answer-count")).toHaveText("3 of 3 answered", {
+  await expect(page.getByTestId("answer-count")).toHaveText("3 of 4 answered", {
     timeout: 15_000,
   });
   await expectNoAxeViolations(page);
@@ -203,13 +207,29 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
   await expect(resultRow(2).getByTestId("result-correct")).toHaveCount(0);
   await expectNoAxeViolations(page);
 
+  // The phone that did not answer sees the key and the rationale too, with no marks (#181).
+  await expect(quiet.getByTestId("not-answered")).toHaveText(
+    "You did not answer this item. Here is the answer your instructor is showing.",
+    { timeout: 15_000 },
+  );
+  await expect(quiet.getByText(RATIONALE, { exact: true })).toBeVisible();
+  await expect(quiet.getByRole("complementary", { name: "Rationale", exact: true })).toBeVisible();
+  await expect(quiet.getByRole("complementary", { name: "Score", exact: true })).toHaveCount(0);
+  await expect(quiet.getByRole("button", { name: "Submit", exact: true })).toHaveCount(0);
+  await expect(quiet.getByRole("checkbox", { name: OPTIONS[0] as string })).not.toBeChecked();
+  await expectNoAxeViolations(quiet);
+  await quiet.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/live-reveal-not-answered.png`,
+    fullPage: true,
+  });
+
   // A late answer, after the key is up, is refused rather than quietly taken.
   await expect(
     (phones[2] as Page).getByRole("button", { name: "Submit", exact: true }),
   ).toHaveCount(0);
 
   await page.getByRole("button", { name: "End session", exact: true }).click();
-  for (const phone of phones) {
+  for (const phone of [...phones, quiet]) {
     await expect(phone.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
     await phone.context().close();
   }
