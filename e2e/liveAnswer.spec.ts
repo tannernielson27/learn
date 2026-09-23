@@ -363,3 +363,78 @@ test("a timed item counts down on the phone, and refuses an answer after zero", 
   await expect(phone.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
   await phone.context().close();
 });
+
+/**
+ * #183's demo, on two items: answer item 1, jump on to item 2 from the console's item strip, then
+ * back. The phone returns to item 1 showing the answer it sent, and the console counts it.
+ */
+test("the host skips to an item and goes back, and the phone keeps its answer", async ({
+  browser,
+  page,
+  request,
+}, testInfo) => {
+  test.slow();
+  await signInAsNewAuthor(page, request, testInfo.project.name);
+
+  const bankName = `Goto ${testInfo.project.name} ${Date.now()}`;
+  const SECOND_STEM = "Which findings are expected after the procedure?";
+  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create bank" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
+  // `start_session` orders the set by when each item was made, so this one is item 1.
+  for (const stem of [STEM, SECOND_STEM]) {
+    await page.getByRole("link", { name: "New item" }).click();
+    await page.getByRole("button", { name: "Extended Multiple Response", exact: true }).click();
+    await fillMultipleResponse(page, stem, OPTIONS, CORRECT);
+    await publishOpenItem(page);
+    await page.getByRole("link", { name: "Back to bank" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
+  }
+  await page.getByRole("button", { name: "Start a live session", exact: true }).click();
+  await expect(page).toHaveURL(/\/live\/[0-9a-f-]{36}$/);
+
+  const code = (await page.getByTestId("join-code").innerText()).replace(/\s/g, "");
+  const { viewport, isMobile, hasTouch } = testInfo.project.use;
+  const phone = await join(
+    browser,
+    new URL(page.url()).origin,
+    { viewport, isMobile, hasTouch },
+    code,
+    "Ada Brennan",
+  );
+  await expect(page.getByTestId("present-count")).toHaveText("1 phone connected", {
+    timeout: 15_000,
+  });
+  await page.getByRole("button", { name: "Start session", exact: true }).click();
+  await expect(phone.getByText(STEM)).toBeVisible({ timeout: 15_000 });
+  await answer(phone, CORRECT);
+  await expect(page.getByTestId("answer-count")).toHaveText("1 of 1 answered", {
+    timeout: 15_000,
+  });
+
+  const strip = page.getByRole("navigation", { name: "Items" });
+  await strip.getByRole("button", { name: "Go to item 2", exact: true }).click();
+  await expect(phone.getByText(SECOND_STEM)).toBeVisible({ timeout: 15_000 });
+  await expect(phone.getByRole("button", { name: "Submit", exact: true })).toBeVisible();
+  await expect(page.getByText(/Item 2 of 2/)).toBeVisible();
+  await expectNoAxeViolations(page);
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/live-item-strip.png`,
+    fullPage: true,
+  });
+
+  // Back to item 1 from the keyboard: the phone shows what it sent, not a fresh item.
+  await strip.getByRole("button", { name: "Go to item 1", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(phone.getByText(STEM)).toBeVisible({ timeout: 15_000 });
+  await expect(phone.getByTestId("answer-sent")).toBeVisible();
+  await expect(phone.getByRole("checkbox", { name: OPTIONS[0] as string })).toBeChecked();
+  await expect(phone.getByRole("button", { name: "Submit", exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("answer-count")).toHaveText("1 of 1 answered", {
+    timeout: 15_000,
+  });
+
+  await page.getByRole("button", { name: "End session", exact: true }).click();
+  await expect(phone.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
+  await phone.context().close();
+});

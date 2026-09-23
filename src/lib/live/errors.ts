@@ -24,6 +24,10 @@ export const LIVE_REFUSALS = {
   /** A session with nothing to run would sit on an item that does not exist. */
   empty_set: "This session has no items to run.",
   past_end: "That was the last item.",
+  /** A jump (#183) to a position the set does not have. */
+  out_of_range: "There is no item at that position.",
+  /** A jump (#183) to the item the room is already on: nothing would move. */
+  same_item: "The session is already on that item.",
   already_revealed: "The answer to this item is already showing.",
   not_running: "This session is not running.",
   not_paused: "This session is not paused.",

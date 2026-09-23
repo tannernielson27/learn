@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Countdown } from "@/components/live/Countdown";
+import { ItemStrip } from "@/components/live/ItemStrip";
 import { SessionQrCode } from "@/components/live/SessionQrCode";
 import { Roster } from "@/components/live/Roster";
 import { TimerControls } from "@/components/live/TimerControls";
@@ -71,8 +72,8 @@ function offered(state: LiveSessionState): HostCommand[] {
     : ["reveal", "advance", "pause", "end"];
 }
 
-/** What is in flight: a move, a timer button, or a new time per item. */
-type Pending = HostCommand | TimerCommand | "set_timer";
+/** What is in flight: a move, a timer button, a new time per item, or a jump (#183). */
+type Pending = HostCommand | TimerCommand | "set_timer" | "goto";
 
 const OFFLINE =
   "Live updates are not running. The room still works, but this screen will not move by itself — " +
@@ -219,6 +220,10 @@ export function HostLobby({
     (command: HostCommand | TimerCommand) => perform(command, COMMANDS[command]),
     [perform],
   );
+  const jump = useCallback(
+    (position: number) => perform("goto", (to) => to.goto(position)),
+    [perform],
+  );
   const chooseTime = useCallback(
     (seconds: number | null) => perform("set_timer", (to) => to.setTimer(seconds)),
     [perform],
@@ -333,6 +338,13 @@ export function HostLobby({
           ))}
         </div>
       )}
+
+      <ItemStrip
+        state={state}
+        tally={tally}
+        busy={pending !== null}
+        onGoto={(position) => void jump(position)}
+      />
 
       {ended ? null : (
         <TimerControls

@@ -219,6 +219,13 @@ export interface LiveHostTransport {
   resume(): Promise<LiveSessionState>;
   end(): Promise<LiveSessionState>;
   /**
+   * Jumps the room to the item at `position`, counting from 1, forwards or back (#183). Rejects
+   * `not_started` in the lobby, `not_open` once ended, `out_of_range` for a position the set does
+   * not have and `same_item` for the one it is on; see `goToItem`. The reveal clears and the item
+   * gets the whole chosen time, as on `advance`; answers already given to it stay.
+   */
+  goto(position: number): Promise<LiveSessionState>;
+  /**
    * Chooses the time each item gets, or null for no timer (#182). Applies from the next item the
    * room moves to; see `chooseTimer`. Rejects `bad_timer` for a time the console does not offer.
    */

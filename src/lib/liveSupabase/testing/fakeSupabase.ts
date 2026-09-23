@@ -251,9 +251,13 @@ export class FakeSupabase {
     const session = this.sessions.find((row) => row.id === sessionId);
     if (!session) return { error: { message: "no such session" } };
     if (session.status === "ended") return { error: { message: "that session has ended" } };
+    const refused = refusedMove(session, { ...session, ...patch });
+    if (refused !== null) return { error: { message: refused } };
 
     const before: FakeSessionRow = { ...session };
     Object.assign(session, patch);
+    // #183: a move to another item clears the reveal, whatever the write said about it.
+    if (before.current_position !== session.current_position) session.reveal = false;
     // `end_session` settles the row itself, the way #128's guard trigger does: a reveal left
     // standing on an ended session would be a standing invitation to read the key.
     if ((session.status as string) === "ended") {
@@ -921,4 +925,31 @@ function runRpc(
   }
 
   return { data: null, error: { message: `unknown function ${name}` } };
+}
+
+/**
+ * The position rules `private.guard_session_change` holds since #183 (migration
+ * 20260923060000_session_goto.sql), with the range check `sessions_position_within_set` beside
+ * it. Null when the write may go ahead, else the sentence Postgres would raise.
+ *
+ *   * Leaving the lobby puts the room on item 1 and nowhere else.
+ *   * Otherwise the room moves only while running or paused, stays running or paused, and moves
+ *     to an item the set has — any of them, forwards or back.
+ */
+function refusedMove(before: FakeSessionRow, after: FakeSessionRow): string | null {
+  if (before.current_position === after.current_position) return null;
+  if (before.status === "lobby") {
+    return after.status === "running" && after.current_position === 1
+      ? null
+      : "a session starts on its first item";
+  }
+  const open = (status: SessionStatus) => status === "running" || status === "paused";
+  if (!open(before.status) || !open(after.status)) {
+    return "a session moves between items only while it is running or paused";
+  }
+  if (after.current_position === null) return "a session's position cannot be cleared";
+  if (after.current_position < 1 || after.current_position > after.item_set.length) {
+    return 'new row for relation "sessions" violates check constraint "sessions_position_within_set"';
+  }
+  return null;
 }

@@ -184,7 +184,9 @@ select throws_ok(
 );
 
 select throws_ok(
-  $$ update public.sessions set current_position = 1, reveal = true
+  -- The reveal alone: since #183 the guard trigger refuses putting a lobby on an item (22023)
+  -- before this check would be reached, and it is the check that is under test here.
+  $$ update public.sessions set reveal = true
       where id = (select session_id from started where label = 'bank') $$,
   '23514', null,
   'nothing can be revealed while the session is still in the lobby'

@@ -157,6 +157,37 @@ function moveRoom(state: LiveSessionState, command: HostCommand): TransitionResu
   }
 }
 
+/**
+ * Jumps the room to `position` (#183): any item in the set, forwards or back, while it is running
+ * or paused. Never mutates.
+ *
+ * It is `advance` with the destination chosen, and nothing more: the status stays what it was, the
+ * reveal clears (a different item is a different question), and the clock follows by the same
+ * `settleTimer` rule, so the item jumped to gets the whole chosen time. Answers already given to
+ * it stay — one answer per person per item is a database fact — so going back shows that item's
+ * results as they were. `private.guard_session_change` (migration 20260923060000) holds the same
+ * rules, refusal for refusal:
+ *
+ *   * `not_open` once the session has ended, `not_started` in the lobby,
+ *   * `out_of_range` for anything but a whole number from 1 to the set's length,
+ *   * `same_item` for the item the room is already on, which would move nothing.
+ */
+export function goToItem(state: LiveSessionState, position: number, now: number): TransitionResult {
+  if (state.status === "ended") return refuse("not_open");
+  if (state.status === "lobby" || state.position === null) return refuse("not_started");
+  if (!Number.isInteger(position) || position < 1 || position > state.itemCount) {
+    return refuse("out_of_range");
+  }
+  if (position === state.position) return refuse("same_item");
+  const moved: LiveSessionState = { ...state, position, reveal: false };
+  return { ok: true, state: { ...moved, timer: settleTimer(state, moved, now) } };
+}
+
+/** Whether a jump to `position` would be accepted right now. The item strip greys out with it. */
+export function canGoTo(state: LiveSessionState, position: number): boolean {
+  return goToItem(state, position, 0).ok;
+}
+
 /** "Add 15 seconds" and "Stop timer": the room stays where it is and only the clock changes. */
 function applyTimerCommand(
   state: LiveSessionState,

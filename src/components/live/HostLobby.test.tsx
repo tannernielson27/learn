@@ -6,6 +6,7 @@ import {
   NO_TIMER,
   applyHostCommand,
   chooseTimer,
+  goToItem,
   type HostCommand,
   type HostSnapshot,
   type ItemAggregate,
@@ -54,7 +55,7 @@ function fakeTransport(initial: LiveSessionState, refusal?: LiveSessionError) {
   let resultAsks = 0;
   const views = new Set<(view: SessionView<Item>) => void>();
   const presence = new Set<(roster: Participant[]) => void>();
-  const ran: (HostCommand | TimerCommand | `set_timer:${string}`)[] = [];
+  const ran: (HostCommand | TimerCommand | `set_timer:${string}` | `goto:${number}`)[] = [];
   let asked = 0;
   let resolveOpen: (() => void) | null = null;
   const opened = new Promise<void>((resolve) => {
@@ -108,6 +109,14 @@ function fakeTransport(initial: LiveSessionState, refusal?: LiveSessionError) {
     pause: () => run("pause"),
     resume: () => run("resume"),
     end: () => run("end"),
+    async goto(position) {
+      ran.push(`goto:${position}`);
+      const result = goToItem(held, position, SERVER_NOW);
+      if (!result.ok) throw new LiveSessionError(result.refusal);
+      held = result.state;
+      for (const listener of [...views]) listener({ state: held, item: null });
+      return held;
+    },
     async setTimer(seconds) {
       ran.push(`set_timer:${String(seconds)}`);
       const result = chooseTimer(held, seconds);
@@ -459,5 +468,25 @@ describe("HostLobby: the item timer (#182)", () => {
     await fake.user.click(button("End session"));
     await waitFor(() => expect(screen.queryByRole("combobox")).toBeNull());
     expect(screen.queryByRole("timer")).toBeNull();
+  });
+});
+
+describe("HostLobby: skipping an item or going back (#183)", () => {
+  it("offers no item strip in the lobby", () => {
+    setup();
+    expect(screen.queryByRole("navigation", { name: "Items" })).toBeNull();
+  });
+
+  it("jumps the room to the item chosen on the strip, and back", async () => {
+    const { user, ran } = setup(state({ status: "running", position: 1 }));
+    await user.click(screen.getByRole("button", { name: "Go to item 3" }));
+    await waitFor(() => expect(screen.getByText(/Item 3 of 3/)).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Go to item 3" })).toHaveAttribute(
+      "aria-current",
+      "step",
+    );
+    await user.click(screen.getByRole("button", { name: "Go to item 1" }));
+    await waitFor(() => expect(screen.getByText(/Item 1 of 3/)).toBeInTheDocument());
+    expect(ran).toEqual(["goto:3", "goto:1"]);
   });
 });
