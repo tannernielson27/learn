@@ -19,7 +19,8 @@
     "e2e": "playwright test",
     "e2e:install": "playwright install chromium",
     "db:types": "node scripts/db-types.mjs",
-    "test:db": "node scripts/test-db.mjs"
+    "test:db": "node scripts/test-db.mjs",
+    "load:live": "node --env-file-if-exists=.env.local scripts/load-live.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
