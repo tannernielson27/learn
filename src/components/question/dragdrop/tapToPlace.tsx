@@ -102,6 +102,8 @@ export function WordChip({ token, armed, onChoose, onKeyDown }: WordChipProps) {
 
 interface DropSlotProps {
   slotId: string;
+  /** DOM id for the button, so a caller can move focus to it. */
+  id?: string;
   /** Accessible name, including what the slot holds, e.g. "Blank 1 of 2, empty". */
   name: string;
   /** Visible text while the slot is empty. */
@@ -120,7 +122,7 @@ interface DropSlotProps {
 
 /** A place a choice can go: a button that is also a dnd-kit drop target. */
 export function DropSlot(props: DropSlotProps) {
-  const { slotId, name, placeholder, label, feedback, mode, target, block = false } = props;
+  const { slotId, id, name, placeholder, label, feedback, mode, target, block = false } = props;
   const { describedBy, onChoose, onKeyDown } = props;
   const { setNodeRef, isOver } = useDroppable({ id: slotId, disabled: mode !== "answer" });
   const answerClasses =
@@ -139,6 +141,7 @@ export function DropSlot(props: DropSlotProps) {
     >
       <button
         ref={setNodeRef}
+        id={id}
         type="button"
         aria-label={name}
         aria-describedby={describedBy}

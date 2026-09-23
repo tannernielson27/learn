@@ -1,7 +1,7 @@
 "use client";
 
 import { DndContext, type DragEndEvent } from "@dnd-kit/core";
-import { useId, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import type { ResponseOf } from "@/lib/ngn/schemas";
 import {
   DropSlot,
@@ -32,8 +32,9 @@ export function slotsOf(response: BowtieResponse, key: ColumnKey): (string | und
 }
 
 /**
- * A new response with one slot set or cleared. Pairs are stored as lists (order does not score),
- * so a pair with one empty slot keeps its choice in the first slot.
+ * A new response with one slot set or cleared. Pairs are stored as lists (order does not score,
+ * spec 3.14), so a pair with one empty slot keeps its choice in the first slot: a choice placed
+ * in an empty pair's second slot lands in the first, and clearing the first moves the second up.
  */
 export function withSlot(
   response: BowtieResponse,
@@ -65,6 +66,14 @@ export function BowtieItem({ item, response, mode, onChange }: ItemRendererProps
   const [message, setMessage] = useState("");
   const sensors = useTapToPlaceSensors();
   const guard = useDragClickGuard();
+  // A slot to focus once the response that fills it has rendered, so its name is already current.
+  const focusAfterRender = useRef<string | null>(null);
+  useEffect(() => {
+    const id = focusAfterRender.current;
+    if (id === null) return;
+    focusAfterRender.current = null;
+    document.getElementById(id)?.focus();
+  }, [response]);
   const { actions, conditions, parameters, labels } = item.content;
   const key = item.answerKey;
   const columns: Column[] = [
@@ -88,19 +97,21 @@ export function BowtieItem({ item, response, mode, onChange }: ItemRendererProps
     columns.flatMap((c) => c.choices).find((t) => t.id === tokenId)?.label;
   const slotName = (column: Column, index: number) =>
     column.key === "condition" ? column.label : `${column.label} ${index + 1} of 2`;
+  const slotDomId = (key: ColumnKey, index: number) => `${uid}-slot-${key}-${index}`;
 
+  /** Places a choice; returns the slot it actually landed in, or undefined when refused. */
   const place = (tokenId: string, column: Column, index: number) => {
     const home = columnOf(tokenId);
     if (!home || home.key !== column.key) {
       setMessage(`${labelOf(tokenId)} belongs in ${home?.label}, not ${column.label}.`);
-      return;
+      return undefined;
     }
     const next = withSlot(response, column.key, index, tokenId);
+    const landed = slotsOf(next, column.key).indexOf(tokenId);
     onChange(next);
     setArmed(null);
-    setMessage(
-      `${labelOf(tokenId)} placed in ${slotName(column, slotsOf(next, column.key).indexOf(tokenId))}.`,
-    );
+    setMessage(`${labelOf(tokenId)} placed in ${slotName(column, landed)}.`);
+    return landed;
   };
   const chooseToken = (tokenId: string) => {
     if (guard.isDragging()) return;
@@ -121,11 +132,25 @@ export function BowtieItem({ item, response, mode, onChange }: ItemRendererProps
     );
   };
   const chooseSlot = (column: Column, index: number) => {
-    if (armed) return place(armed, column, index);
+    if (armed) {
+      // #58: an empty pair's second slot fills the first, so focus follows the choice there
+      // rather than staying on a slot that still says "empty".
+      const landed = place(armed, column, index);
+      if (landed !== undefined && landed !== index) {
+        focusAfterRender.current = slotDomId(column.key, landed);
+      }
+      return;
+    }
     const current = slotsOf(response, column.key)[index];
     if (!current) return setMessage("Select a choice first, then choose a slot.");
-    onChange(withSlot(response, column.key, index, undefined));
-    setMessage(`${labelOf(current)} removed from ${slotName(column, index)}.`);
+    const next = withSlot(response, column.key, index, undefined);
+    const shifted = slotsOf(next, column.key)[index];
+    onChange(next);
+    const where = slotName(column, index);
+    setMessage(
+      `${labelOf(current)} removed from ${where}.` +
+        (shifted ? ` ${labelOf(shifted)} moved to ${where}.` : ""),
+    );
   };
   const cancelOnEscape = (event: KeyboardEvent) => {
     if (event.key !== "Escape" || !armed) return;
@@ -177,6 +202,7 @@ export function BowtieItem({ item, response, mode, onChange }: ItemRendererProps
                     <DropSlot
                       key={index}
                       slotId={`${column.key}:${index}`}
+                      id={slotDomId(column.key, index)}
                       name={`${name}${label ? `: ${label}` : ", empty"}`}
                       placeholder={column.key === "condition" ? "Condition" : `${index + 1}`}
                       label={label}
