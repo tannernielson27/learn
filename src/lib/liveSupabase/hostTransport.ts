@@ -359,14 +359,22 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     return rows;
   }
 
+  /**
+   * Null when the read failed, whether it answered with an error or never answered at all. It is
+   * shared by two asks, so a rejection here would otherwise fail the tally and the panel together.
+   */
   async function readResponses(position: number): Promise<ResponseRow[] | null> {
-    const { data, error } = await client
-      .from("session_responses")
-      .select(RESPONSE_COLUMNS)
-      .eq("session_id", sessionId)
-      .eq("item_position", position);
-    if (error) return null;
-    return (data ?? []) as unknown as ResponseRow[];
+    try {
+      const { data, error } = await client
+        .from("session_responses")
+        .select(RESPONSE_COLUMNS)
+        .eq("session_id", sessionId)
+        .eq("item_position", position);
+      if (error) return null;
+      return (data ?? []) as unknown as ResponseRow[];
+    } catch {
+      return null;
+    }
   }
 
   /**

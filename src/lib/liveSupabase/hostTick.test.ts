@@ -28,6 +28,7 @@ function room(): FakeRoom {
 /** The host's own client, with every `select` on `session_responses` written down. */
 function countingHost(live: FakeRoom) {
   const reads: string[] = [];
+  const network = { down: false };
   const client = createFakeClient(live.stack, { role: "authenticated", orgId: live.orgId });
   const counted = {
     ...client,
@@ -38,19 +39,28 @@ function countingHost(live: FakeRoom) {
         ...query,
         select: (columns: string) => {
           reads.push(columns);
+          if (network.down) {
+            // A request that never answers at all, rather than one that answers with an error.
+            const rejected: { eq: () => typeof rejected; then: PromiseLike<never>["then"] } = {
+              eq: () => rejected,
+              then: (onFulfilled, onRejected) =>
+                Promise.reject(new Error("network down")).then(onFulfilled, onRejected),
+            };
+            return rejected;
+          }
           return query.select(columns);
         },
       };
     },
   } as unknown as SupabaseClient<Database>;
   const host = createSupabaseHost({ client: counted, sessionId: live.sessionId });
-  return { host, reads };
+  return { host, reads, network };
 }
 
 /** A started room on item 1, the host console open, and two answers in. */
 async function answeredRoom() {
   const live = room();
-  const { host, reads } = countingHost(live);
+  const { host, reads, network } = countingHost(live);
   await host.open();
   await host.start();
   await live.settle();
@@ -63,7 +73,7 @@ async function answeredRoom() {
   await bo.submit(FIRST.id, CONFORMANCE_WRONG);
   await live.settle();
   reads.length = 0;
-  return { live, host, reads };
+  return { live, host, reads, network };
 }
 
 afterEach(() => {
@@ -71,6 +81,21 @@ afterEach(() => {
 });
 
 describe("one read of session_responses per host tick (#197)", () => {
+  it("degrades both asks, without throwing, when the shared read itself rejects", async () => {
+    const { host, reads, network } = await answeredRoom();
+    network.down = true;
+
+    const [aggregate, results] = await Promise.all([host.aggregate(), host.results()]);
+
+    expect(reads).toHaveLength(1);
+    // A tally is not worth an error: nobody yet. The panel has nothing to draw.
+    expect(aggregate).toMatchObject({ itemId: FIRST.id, responded: 0 });
+    expect(results).toBeNull();
+
+    network.down = false;
+    expect(await host.results()).toMatchObject({ responded: 2 });
+  });
+
   it("serves the tally and the results panel from one read when both ask at once", async () => {
     const { host, reads } = await answeredRoom();
 
