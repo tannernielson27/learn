@@ -52,12 +52,14 @@ import type {
   SessionView,
   Unsubscribe,
 } from "@/lib/live/transport";
+import type { ChannelTokenSource } from "./channelTokenSource";
 import { rosterFrom, type PresenceEntry } from "./presence";
 import type { Database } from "@/lib/supabase/database.types";
 import {
   LIVE_ROUTES,
   LIVE_SCHEMA,
   liveTopic,
+  presentRealtimeToken,
   type AnsweredPayload,
   type JoinSession,
   type ParticipantCredentials,
@@ -74,7 +76,7 @@ const DISPLAY_NAME_MAX = 60;
  * "reconnecting" is not an error state: Realtime retries by itself, and this is what lets the
  * screen say so rather than silently showing a room that has moved on.
  */
-export type RoomConnection = "connecting" | "live" | "reconnecting";
+export type RoomConnection = "connecting" | "live" | "reconnecting" | "refused";
 
 /** Who this phone is, as the page's server render established it. Never asserted by the browser. */
 export interface ResumedIdentity {
@@ -119,8 +121,18 @@ export interface SupabaseParticipant extends LiveSessionTransport {
 }
 
 export interface ParticipantTransportOptions {
-  /** The browser client, holding the publishable key. Used for its channel and nothing else. */
+  /**
+   * The browser client, holding the publishable key and — since #149 — an `accessToken` callback
+   * that answers with this participant's channel token. Used for its channel and nothing else.
+   */
   client: SupabaseClient<Database>;
+  /**
+   * The source behind `client`'s `accessToken` (#149), so the transport hears when the server
+   * refuses this phone another channel token for good. When it does, the channel is closed and
+   * `onConnection` reports `"refused"`, which is final: no `rejoined` will ever follow it, so a
+   * screen must not wait for one. Optional because a client with no token source never refuses.
+   */
+  tokens?: Pick<ChannelTokenSource, "onRefused">;
   /** #129's join path. Only `join` needs it; a resumed phone has already been through it. */
   join?: JoinSession;
   /** Injectable so the conformance suite can drive the real route handlers without a server. */
@@ -290,9 +302,32 @@ export function createSupabaseParticipant(
     for (const listener of [...connections]) listener(status, rejoined);
   }
 
-  function openChannel(sessionId: string, entry: PresenceEntry): Promise<void> {
+  /**
+   * The server will not issue this phone another channel token: its participant is gone, or its
+   * session has ended (#149). The socket could only ever be refused from here on, and Realtime
+   * would keep retrying it with a dead token, so the channel is closed and the screen is told —
+   * `"refused"`, not `"reconnecting"`, because nothing is coming back. What the screen does about
+   * it is its own business; `StudentRoom` asks the server for the page again.
+   */
+  options.tokens?.onRefused(() => {
+    if (gone) return;
+    notifyConnection("refused", false);
+    const open = channel;
+    channel = null;
+    if (open !== null) void options.client.removeChannel(open).catch(() => {});
+  });
+
+  async function openChannel(sessionId: string, entry: PresenceEntry): Promise<void> {
+    await presentRealtimeToken(options.client);
+    // A `leave` that landed while the token was being fetched: opening now would leave a channel
+    // behind that nobody will ever remove.
+    if (gone) throw new LiveSessionError("not_joined");
     const opened = options.client.channel(liveTopic(sessionId), {
-      config: { presence: { key: entry.participantId } },
+      // Private (#149): Realtime checks this socket's token against the `realtime.messages`
+      // policies before it lets it in, so only a phone the server vouched for — for this session
+      // and no other — hears the roster or can put a name in it. The token is the client's
+      // `accessToken`; see `channelTokenSource.ts`.
+      config: { private: true, presence: { key: entry.participantId } },
     });
     channel = opened;
     opened.on(

@@ -20,8 +20,10 @@
  * Deliveries are asynchronous, as they are in production: nothing a write causes has happened when
  * the write resolves. `settle()` is what the suite awaits instead of sprinkling timeouts.
  */
+import { createHmac, timingSafeEqual } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SessionMode, SessionStatus } from "@/lib/live";
+import { CHANNEL_SESSION_CLAIM } from "@/lib/supabase/channelToken";
 import type { Database, Json } from "@/lib/supabase/database.types";
 
 export interface FakeSessionRow {
@@ -134,6 +136,33 @@ const TABLE_SCHEMA: Record<string, string> = {
 export interface FakeIdentity {
   role: "anon" | "authenticated" | "service";
   orgId?: string;
+  /**
+   * The `accessToken` callback a student's real client is built with (#149). Read when a private
+   * channel subscribes, verified against `FAKE_JWT_SECRET`, and its claims are what the
+   * `realtime.messages` policy below is evaluated against, the way Realtime does it.
+   */
+  accessToken?: () => Promise<string>;
+}
+
+/**
+ * The secret this stack's Realtime trusts, standing in for the project's JWT signing key. It is
+ * the local Supabase stack's well-known value, and it is not a secret.
+ */
+export const FAKE_JWT_SECRET = "super-secret-jwt-token-with-at-least-32-characters-long";
+
+/** Verifies an HS256 token the way Realtime would, and hands back its claims, or null. */
+function verifiedClaims(token: string): Record<string, unknown> | null {
+  const [header, payload, signature] = token.split(".");
+  if (!header || !payload || !signature) return null;
+  const expected = createHmac("sha256", FAKE_JWT_SECRET).update(`${header}.${payload}`).digest();
+  const given = Buffer.from(signature, "base64url");
+  if (given.length !== expected.length || !timingSafeEqual(given, expected)) return null;
+  const claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as Record<
+    string,
+    unknown
+  >;
+  if (typeof claims.exp !== "number" || claims.exp * 1000 <= Date.now()) return null;
+  return claims;
 }
 
 /** Every payload one participant's process received, so a test can read the wire itself. */
@@ -364,8 +393,31 @@ export class FakeChannel {
     private readonly stack: FakeSupabase,
     private readonly identity: FakeIdentity,
     private readonly presenceKey: string,
+    readonly isPrivate: boolean = false,
   ) {
     stack.register(this);
+  }
+
+  /** Set when Realtime refused this channel at join. Nothing it asks for afterwards is honoured. */
+  denied = false;
+
+  /**
+   * `20260921210000_private_live_channel.sql`'s `realtime.messages` policies, said in code: an
+   * anonymous socket may join `live:<id>` only when its verified token names that session, and a
+   * signed-in one only when the session is in its own org. Realtime evaluates this at join.
+   */
+  private async mayJoin(): Promise<boolean> {
+    const match = /^live:(.+)$/.exec(this.topic);
+    if (match === null) return false;
+    const sessionId = match[1];
+    if (this.identity.role === "authenticated") {
+      return this.stack.sessions.some(
+        (row) => row.id === sessionId && row.org_id === this.identity.orgId,
+      );
+    }
+    if (this.identity.role !== "anon" || this.identity.accessToken === undefined) return false;
+    const claims = verifiedClaims(await this.identity.accessToken());
+    return claims !== null && claims.role === "anon" && claims[CHANNEL_SESSION_CLAIM] === sessionId;
   }
 
   mayRead(table: string, orgId: string | null): boolean {
@@ -409,14 +461,29 @@ export class FakeChannel {
 
   subscribe(callback?: (status: string) => void): this {
     this.stack.touch();
-    queueMicrotask(() => {
+    if (!this.isPrivate) {
+      queueMicrotask(() => {
+        this.stack.touch();
+        callback?.("SUBSCRIBED");
+      });
+      return this;
+    }
+    void this.mayJoin().then((allowed) => {
       this.stack.touch();
-      callback?.("SUBSCRIBED");
+      if (allowed) {
+        callback?.("SUBSCRIBED");
+        return;
+      }
+      // A refused private join hears nothing at all: not the roster, and not the state changes.
+      this.denied = true;
+      this.stack.unregister(this);
+      callback?.("CHANNEL_ERROR");
     });
     return this;
   }
 
   async track(entry: Row): Promise<"ok"> {
+    if (this.denied) throw new Error("this channel was refused at join");
     this.stack.presenceFor(this.topic).set(this.presenceKey, [entry]);
     this.stack.syncPresence(this.topic);
     return "ok";
@@ -521,9 +588,20 @@ export function createFakeClient(
       stack.touch();
       return Promise.resolve(runRpc(stack, name, args));
     },
-    channel(topic: string, options?: { config?: { presence?: { key?: string } } }) {
-      return new FakeChannel(topic, stack, identity, options?.config?.presence?.key ?? "host");
+    channel(
+      topic: string,
+      options?: { config?: { presence?: { key?: string }; private?: boolean } },
+    ) {
+      return new FakeChannel(
+        topic,
+        stack,
+        identity,
+        options?.config?.presence?.key ?? "host",
+        options?.config?.private === true,
+      );
     },
+    // Realtime's own copy of the token. The fake reads `identity.accessToken` at join instead.
+    realtime: { setAuth: async () => {} },
     async removeChannel(channel: FakeChannel) {
       channel.unsubscribe();
       return "ok";

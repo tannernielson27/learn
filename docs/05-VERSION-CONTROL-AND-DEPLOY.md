@@ -162,10 +162,11 @@ Everything in `supabase/migrations/` today, in filename order — this is the re
 | 14  | `20260921000000_resume_participant_joined_at`  | resume a participant after a reload (#133)                                     | **not applied**            |
 | 15  | `20260921100000_live_view_rate_limit`          | per-participant limit on `POST /api/live/view` (#152)                          | **not applied**            |
 | 16  | `20260921200000_authoring_limit_at_the_write`  | authoring rate limit enforced at the write, not only in the UI (#123)          | **not applied**            |
+| 17  | `20260921210000_private_live_channel`          | private Realtime channel with a per-participant token (#149)                   | **not applied**            |
 
 "Not applied" means there is no record of it being applied, not that it has been checked. Run `pnpm exec supabase migration list` against the project to know.
 
-> **Standing drift (Sprint 6, grown since).** Rows 4–16 are merged to `main` but not applied to the existing hosted project. **Until `20260919110000_start_step_and_rate_limits` is applied, that project refuses every save, publish and import** — the app calls functions that are not there. Apply rows 4–16 to `vauokqoyvewtzubqajgh` with §7.4 at the same time as the production project is stood up, so the two projects do not start out different.
+> **Standing drift (Sprint 6, grown since).** Rows 4–17 are merged to `main` but not applied to the existing hosted project. **Until `20260919110000_start_step_and_rate_limits` is applied, that project refuses every save, publish and import** — the app calls functions that are not there. Apply rows 4–17 to `vauokqoyvewtzubqajgh` with §7.4 at the same time as the production project is stood up, so the two projects do not start out different.
 >
 > Row 16 is the one exception to that failure mode, by design: it keeps `public.take_rate_limit`'s name and signature, so an app deployed ahead of it degrades to the pre-#123 behaviour instead of refusing writes. Rows 11–15 are needed for any live session to run at all.
 
@@ -206,10 +207,14 @@ Run from the repo root, on a machine with the repo checked out. Steps 1–2 and 
    - `NEXT_PUBLIC_SUPABASE_URL` = `https://<prod-ref>.supabase.co`
    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` = the `sb_publishable_…` key from Project Settings → API Keys (never the `sb_secret_…` one)
    - `DEMO_ACCOUNT_EMAIL` / `DEMO_ACCOUNT_PASSWORD` = the user from step 5
+   - `SUPABASE_JWT_SIGNING_KEY` = this project's JWT signing key (#149; `.env.example` says which key and where). Server only. The Preview scope needs its own, from the preview project.
      Leave the Preview scope pointing at `vauokqoyvewtzubqajgh`, with `DEMO_ACCOUNT_*` empty there.
 7. **Redeploy and check.** Vercel → Deployments → latest production → Redeploy (env vars only apply to a new build). Then open `/api/health` on the production URL and on any preview URL: two different `project` refs, both `"supabase": "ok"`.
+8. **Make Realtime private-only (#149), once the private-channel code is deployed.** Dashboard → Realtime → Settings → turn **Allow public access** off, in both projects. Every live-session channel is private from #149 on; this makes Realtime refuse a public channel on any topic. Never add `live` to the Data API's exposed schemas while you are in the dashboard: that is what keeps `live.session_public_state` unlistable.
 
 ### 7.4 Catching an existing project up
+
+**Environment variables first.** A variable added to the app after a project was set up is not added by `db push`. Since #149, the student page needs `SUPABASE_JWT_SIGNING_KEY` in every Vercel scope, each with its own project's key (`.env.example` says which key and where), and each project needs Realtime's **Allow public access** turned off once the private-channel code is deployed (§7.3 step 8). Set the variable before the deploy that ships #149, or students cannot open a session.
 
 Same `db push`, against the project that is behind. It applies only what is missing, in filename order.
 

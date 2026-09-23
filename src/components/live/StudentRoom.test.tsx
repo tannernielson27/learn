@@ -27,6 +27,8 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
 const SATA = itemSchema.parse(FIXTURES.multiple_response.canonical);
 const KEYLESS = toKeylessItem(SATA) as ParticipantItem;
+/** Never presented: these tests inject the transport, so no Realtime client is built. */
+const CHANNEL = { token: "channel-token", expiresAt: 0 };
 const CORRECT: AnyResponse = {
   type: "multiple_response",
   optionIds: ["opt_a", "opt_b", "opt_d"],
@@ -121,6 +123,7 @@ function setup(
       participantId="00000000-0000-4000-8000-0000000132bb"
       joinedAt={1000}
       initial={initial}
+      channel={CHANNEL}
       connect={() => room.transport}
     />,
   );
@@ -211,6 +214,35 @@ describe("StudentRoom: waiting", () => {
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
+  it("asks the server what to show when it has finished with this phone, without saying reconnecting (#149)", () => {
+    const room = setup();
+    room.connection("reconnecting");
+    room.connection("refused");
+    // The server render decides: a participant who is gone is redirected to the join form, and an
+    // ended session renders its ended screen. Nothing is coming back, so no "stay on this page".
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/Reconnecting/)).toBeNull();
+  });
+
+  it("lands on the ended screen when the server's answer to a refusal is an ended session", () => {
+    const room = setup();
+    room.connection("refused");
+    room.view.rerender(
+      <StudentRoom
+        sessionId="00000000-0000-4000-8000-0000000132aa"
+        title="Cardiac basics"
+        displayName="Sam Okafor"
+        participantId="00000000-0000-4000-8000-0000000132bb"
+        joinedAt={1000}
+        initial={state({ status: "ended" })}
+        channel={CHANNEL}
+        connect={() => room.transport}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "This session has ended." })).toBeInTheDocument();
+    expect(screen.queryByText(/Reconnecting/)).toBeNull();
+  });
+
   it("says so when the room could not be opened, and stops saying so when a view lands", async () => {
     const room = fakeTransport(async (itemId) => ({ itemId, submittedAt: 0 }));
     (room.transport.resume as unknown as Mock).mockRejectedValueOnce(
@@ -224,6 +256,7 @@ describe("StudentRoom: waiting", () => {
         participantId="00000000-0000-4000-8000-0000000132bb"
         joinedAt={1000}
         initial={state()}
+        channel={CHANNEL}
         connect={() => room.transport}
       />,
     );

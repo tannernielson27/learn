@@ -4,7 +4,7 @@
 // route bundles.
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { describeChain, importGraph, SRC } from "./testing/importGraph";
+import { SRC, reachable, shortest } from "../testing/importGraph";
 
 const ENGINE_DIR = path.join(SRC, "lib", "ngn", "scoring");
 
@@ -20,12 +20,6 @@ const ENTRY_POINTS = [
   path.join(SRC, "components", "live", "StudentRoom.tsx"),
 ];
 
-/**
- * Every module reachable from `entry`, as a map from file to the chain of imports that reached it.
- * Lazy `import()`s count (#54): a renderer's own chunk still runs in the student's browser.
- */
-const reachable = (entry: string) => importGraph(entry).files;
-
 describe("the shared players hold no scoring code", () => {
   it.each(ENTRY_POINTS.map((f) => [path.relative(SRC, f), f] as const))(
     "%s never reaches the scoring engine",
@@ -35,7 +29,7 @@ describe("the shared players hold no scoring code", () => {
       expect(graph.size).toBeGreaterThan(20);
       const offenders = [...graph.entries()]
         .filter(([file]) => file.startsWith(ENGINE_DIR + path.sep))
-        .map(([, chain]) => describeChain(chain));
+        .map(([, chain]) => shortest(chain));
       expect(offenders).toEqual([]);
     },
   );
