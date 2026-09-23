@@ -5,6 +5,7 @@ import { emptyClozeForm, toClozeForm } from "@/lib/authoring/forms/cloze";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { dropdownClozeItemSchema, dropdownRationaleItemSchema } from "@/lib/ngn/schemas";
 import { ClozeEditor } from "./ClozeEditor";
+import { renderersLoaded } from "@/components/question/testing/renderers";
 
 function setup(
   type: "dropdown_cloze" | "dropdown_rationale",
@@ -62,6 +63,7 @@ describe("ClozeEditor", () => {
   it("previews each blank as a drop-down in the same player", async () => {
     const valid = toClozeForm(dropdownClozeItemSchema.parse(FIXTURES.dropdown_cloze.canonical));
     setup("dropdown_cloze", valid);
+    await renderersLoaded();
     const preview = screen.getByRole("region", { name: "Preview" });
     expect(
       within(preview).getAllByRole("combobox", { name: "Blank 1 of 2" }).length,

@@ -5,6 +5,7 @@ import { emptyDropdownTableForm, toDropdownTableForm } from "@/lib/authoring/for
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { dropdownTableItemSchema } from "@/lib/ngn/schemas";
 import { DropdownTableEditor, type DropdownTableEditorProps } from "./DropdownTableEditor";
+import { renderersLoaded } from "@/components/question/testing/renderers";
 
 function setup(props: Partial<DropdownTableEditorProps> = {}) {
   const onSaveDraft = vi.fn<DropdownTableEditorProps["onSaveDraft"]>(async () => ({ ok: true }));
@@ -50,6 +51,7 @@ describe("DropdownTableEditor", () => {
 
   it("previews the table with the same player, as it is typed", async () => {
     const { user } = setup();
+    await renderersLoaded();
     const preview = screen.getByRole("region", { name: "Preview" });
     await user.type(screen.getByRole("textbox", { name: "Row heading" }), "Medication");
     await user.type(

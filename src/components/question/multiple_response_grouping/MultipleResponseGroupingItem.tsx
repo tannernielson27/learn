@@ -3,12 +3,7 @@
 import { OptionRow } from "../OptionRow";
 import { rowScorer } from "../rowScore";
 import { RowTable, type RowControlContext } from "../row_table/RowTable";
-import {
-  elementFeedback,
-  type ItemRendererModule,
-  type ItemRendererProps,
-  type PlayerMode,
-} from "../types";
+import { elementFeedback, type ItemRendererProps, type PlayerMode } from "../types";
 
 interface GroupOptionsProps {
   context: RowControlContext;
@@ -89,11 +84,3 @@ export function MultipleResponseGroupingItem({
     />
   );
 }
-
-export const multipleResponseGroupingModule: ItemRendererModule<"multiple_response_grouping"> = {
-  Renderer: MultipleResponseGroupingItem,
-  isComplete: (item, response) =>
-    item.content.rows.every((row) =>
-      response.rows.some((r) => r.rowId === row.id && r.optionIds.length > 0),
-    ),
-};

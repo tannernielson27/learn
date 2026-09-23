@@ -1,13 +1,7 @@
 "use client";
 
-import {
-  allBlanksFilled,
-  blankOrder,
-  DropdownSentence,
-  withAnswer,
-} from "../dropdown/DropdownSentence";
-import { explainRationale } from "../rationale";
-import type { ItemRendererModule, ItemRendererProps } from "../types";
+import { blankOrder, DropdownSentence, withAnswer } from "../dropdown/DropdownSentence";
+import type { ItemRendererProps } from "../types";
 
 export function DropdownRationaleItem({
   item,
@@ -34,10 +28,3 @@ export function DropdownRationaleItem({
     />
   );
 }
-
-export const dropdownRationaleModule: ItemRendererModule<"dropdown_rationale"> = {
-  Renderer: DropdownRationaleItem,
-  isComplete: (item, response) => allBlanksFilled(item.content.tokens, response.blanks),
-  explainScore: (item, result) =>
-    explainRationale(item.content.tokens, item.answerKey.anchorBlankId, result),
-};

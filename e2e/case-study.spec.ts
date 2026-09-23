@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { questionShown } from "./renderer";
 
 const ready = async (page: Page) => {
   await page.goto("/gallery/case-study");
@@ -33,8 +34,11 @@ test("the six steps run end to end and land on a total", async ({ page }, testIn
   await ready(page);
 
   const submit = page.getByRole("button", { name: "Submit" });
-  const onStep = (step: number) =>
-    expect(page.locator("[data-step-indicator]")).toContainText(`Step ${step} of 6`);
+  // A step's renderer loads when the step opens, so wait for it before counting its controls.
+  const onStep = async (step: number) => {
+    await expect(page.locator("[data-step-indicator]")).toContainText(`Step ${step} of 6`);
+    await questionShown(page);
+  };
   const clickAll = async (locator: ReturnType<Page["getByRole"]>) => {
     for (let i = 0; i < (await locator.count()); i++) await locator.nth(i).click();
   };

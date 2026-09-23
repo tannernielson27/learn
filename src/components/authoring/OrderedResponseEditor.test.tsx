@@ -9,6 +9,7 @@ import {
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { orderedResponseItemSchema } from "@/lib/ngn/schemas";
 import { OrderedResponseEditor } from "./OrderedResponseEditor";
+import { renderersLoaded } from "@/components/question/testing/renderers";
 
 function setup(initialValues: OrderedResponseFormValues = emptyOrderedResponseForm("or_new")) {
   const onSaveDraft = vi.fn<(values: OrderedResponseFormValues) => Promise<{ ok: boolean }>>(
@@ -67,8 +68,9 @@ describe("OrderedResponseEditor", () => {
     expect(screen.queryByRole("textbox", { name: "Step 6" })).not.toBeInTheDocument();
   });
 
-  it("previews the steps for the student to put in order", () => {
+  it("previews the steps for the student to put in order", async () => {
     setup(edge());
+    await renderersLoaded();
     const preview = screen.getByRole("region", { name: "Preview" });
     const list = within(preview).getByRole("list", { name: "Steps in order" });
     expect(within(list).getAllByRole("listitem")).toHaveLength(4);

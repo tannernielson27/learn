@@ -5,6 +5,7 @@ import { emptyGroupingForm, toGroupingForm } from "@/lib/authoring/forms/multipl
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { multipleResponseGroupingItemSchema } from "@/lib/ngn/schemas";
 import { GroupingEditor, type GroupingEditorProps } from "./GroupingEditor";
+import { renderersLoaded } from "@/components/question/testing/renderers";
 
 function setup(props: Partial<GroupingEditorProps> = {}) {
   const onSaveDraft = vi.fn<GroupingEditorProps["onSaveDraft"]>(async () => ({ ok: true }));
@@ -48,6 +49,7 @@ describe("GroupingEditor", () => {
 
   it("previews the item with the same player, as it is typed", async () => {
     const { user } = setup();
+    await renderersLoaded();
     const preview = screen.getByRole("region", { name: "Preview" });
     const first = screen.getByRole("group", { name: "Group 1" });
     await user.type(within(first).getByRole("textbox", { name: "Group name" }), "Respiratory");

@@ -9,6 +9,7 @@ import { matrixMultipleChoiceItemSchema } from "@/lib/ngn/schemas";
 import { EhrEditor } from "./EhrEditor";
 import { ItemEditorHostContext } from "./ItemEditorHost";
 import { MatrixEditor } from "./MatrixEditor";
+import { renderersLoaded } from "@/components/question/testing/renderers";
 
 const matrix = () =>
   toMatrixForm(matrixMultipleChoiceItemSchema.parse(FIXTURES.matrix_multiple_choice.canonical));
@@ -50,8 +51,9 @@ describe("an item editor inside a case study", () => {
     ).toBeInTheDocument();
   });
 
-  it("previews the question with the case study's record", () => {
+  it("previews the question with the case study's record", async () => {
     renderInCaseStudy();
+    await renderersLoaded();
     const preview = within(screen.getByRole("region", { name: "Preview" }));
     expect(preview.getByRole("heading", { name: "74-year-old female" })).toBeInTheDocument();
   });

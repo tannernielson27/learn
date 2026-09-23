@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 import { OptionRow } from "../OptionRow";
-import { elementFeedback, type ItemRendererModule, type ItemRendererProps } from "../types";
+import { elementFeedback, type ItemRendererProps } from "../types";
 
 export function MultipleResponseItem({
   item,
@@ -54,11 +54,3 @@ export function MultipleResponseItem({
     </div>
   );
 }
-
-export const multipleResponseModule: ItemRendererModule<"multiple_response"> = {
-  Renderer: MultipleResponseItem,
-  isComplete: (item, response) => {
-    if (item.content.variant === "select_n") return response.optionIds.length === item.content.n;
-    return response.optionIds.length > 0;
-  },
-};

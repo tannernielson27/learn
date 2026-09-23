@@ -6,7 +6,8 @@ import { itemSchema } from "@/lib/ngn/schemas";
 import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer } from "../ItemPlayer";
 import { hasRenderer } from "../registry";
-import { orderedResponseModule } from "./OrderedResponseItem";
+import { OrderedResponseItem } from "./OrderedResponseItem";
+import { renderersLoaded } from "@/components/question/testing/renderers";
 
 const wholeItem = itemSchema.parse(FIXTURES.ordered_response.canonical);
 const byPosition = itemSchema.parse(FIXTURES.ordered_response.edge);
@@ -43,8 +44,9 @@ describe("ordered response renderer", () => {
     expect(hasRenderer("ordered_response")).toBe(true);
   });
 
-  it("starts in an order other than the authored one, ready to submit", () => {
+  it("starts in an order other than the authored one, ready to submit", async () => {
     render(<ItemPlayer item={wholeItem} submit={scoreInProcess(wholeItem)} />);
+    await renderersLoaded();
     const start = order();
     expect([...start].sort()).toEqual([...KEY].sort());
     expect(start).not.toEqual(KEY);
@@ -54,9 +56,9 @@ describe("ordered response renderer", () => {
     expect(down(start[0]!)).toBeEnabled();
   });
 
-  it("never falls back to the authored order when the answer is missing", () => {
+  it("never falls back to the authored order when the answer is missing", async () => {
     if (wholeItem.type !== "ordered_response") throw new Error("fixture type");
-    const { Renderer } = orderedResponseModule;
+    const Renderer = OrderedResponseItem;
     render(
       <Renderer
         item={wholeItem}
@@ -65,12 +67,14 @@ describe("ordered response renderer", () => {
         onChange={() => {}}
       />,
     );
+    await renderersLoaded();
     expect(order()).not.toEqual(KEY);
     expect([...order()].sort()).toEqual([...KEY].sort());
   });
 
   it("moves a step with the buttons and announces its new position", async () => {
     render(<ItemPlayer item={wholeItem} submit={scoreInProcess(wholeItem)} />);
+    await renderersLoaded();
     const first = order()[0]!;
     await userEvent.click(down(first));
     expect(order()[1]).toBe(first);
@@ -79,6 +83,7 @@ describe("ordered response renderer", () => {
 
   it("keeps focus on the moved step", async () => {
     render(<ItemPlayer item={wholeItem} submit={scoreInProcess(wholeItem)} />);
+    await renderersLoaded();
     const third = order()[2]!;
     up(third).focus();
     await userEvent.keyboard("{Enter}");
@@ -93,6 +98,7 @@ describe("ordered response renderer", () => {
 
   it("scores the whole order and shows where each misplaced step belongs", async () => {
     render(<ItemPlayer item={wholeItem} submit={scoreInProcess(wholeItem)} />);
+    await renderersLoaded();
     await arrange([KEY[1]!, KEY[0]!, KEY[2]!, KEY[3]!, KEY[4]!]);
     await userEvent.click(submit());
 
@@ -127,6 +133,7 @@ describe("ordered response renderer", () => {
 
   it("earns the point for the exact order", async () => {
     render(<ItemPlayer item={wholeItem} submit={scoreInProcess(wholeItem)} />);
+    await renderersLoaded();
     await arrange(KEY);
     await userEvent.click(submit());
     expect(within(scorePanel()).getByText("1")).toBeInTheDocument();
@@ -135,6 +142,7 @@ describe("ordered response renderer", () => {
 
   it("gives a point per correct position when the item scores by position", async () => {
     render(<ItemPlayer item={byPosition} submit={scoreInProcess(byPosition)} />);
+    await renderersLoaded();
     await arrange([
       "Verify the prescription against the MAR",
       "Identify the client using two identifiers",

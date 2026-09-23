@@ -1,5 +1,5 @@
 import type { ScoreResult } from "@/lib/ngn/types";
-import { blankOrder, type SentenceToken } from "./dropdown/DropdownSentence";
+import { blankOrder, type SentenceToken } from "./sentence";
 
 /**
  * Score-panel note for rationale items (drop-down and drag-and-drop): a dyad needs both blanks,

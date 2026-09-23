@@ -9,7 +9,7 @@ import {
 } from "../highlight/HighlightTokens";
 import { RowScoreMark, type RowScore } from "../matrix/Matrix";
 import { rowScorer } from "../rowScore";
-import type { ItemRendererModule, ItemRendererProps } from "../types";
+import type { ItemRendererProps } from "../types";
 
 interface HighlightRow {
   id: string;
@@ -154,12 +154,3 @@ export function HighlightTableItem({
     </div>
   );
 }
-
-export const highlightTableModule: ItemRendererModule<"highlight_table"> = {
-  Renderer: HighlightTableItem,
-  isComplete: (_item, response) => response.spanIds.length > 0,
-  explainScore: (item) =>
-    item.content.scorePerRow
-      ? "Each row is scored on its own, so an extra highlight in one row cannot cost points in another."
-      : undefined,
-};

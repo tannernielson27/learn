@@ -11,7 +11,7 @@ import {
   WordChip,
   type BankToken,
 } from "../dragdrop/tapToPlace";
-import { elementFeedback, type ItemRendererModule, type ItemRendererProps } from "../types";
+import { elementFeedback, type ItemRendererProps } from "../types";
 
 type BowtieResponse = ResponseOf<"bowtie">;
 type ColumnKey = "actions" | "condition" | "parameters";
@@ -283,13 +283,3 @@ function Connectors() {
     </>
   );
 }
-
-export const bowtieModule: ItemRendererModule<"bowtie"> = {
-  Renderer: BowtieItem,
-  isComplete: (_item, response) =>
-    response.actionIds.length === 2 &&
-    response.conditionId !== undefined &&
-    response.parameterIds.length === 2,
-  explainScore: () =>
-    "Each of the five slots earns a point; the order within a pair does not matter.",
-};

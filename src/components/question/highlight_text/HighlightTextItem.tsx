@@ -1,7 +1,7 @@
 "use client";
 
 import { HighlightTokens, spanOrder, toggleSpan } from "../highlight/HighlightTokens";
-import type { ItemRendererModule, ItemRendererProps } from "../types";
+import type { ItemRendererProps } from "../types";
 
 export function HighlightTextItem({
   item,
@@ -24,8 +24,3 @@ export function HighlightTextItem({
     </p>
   );
 }
-
-export const highlightTextModule: ItemRendererModule<"highlight_text"> = {
-  Renderer: HighlightTextItem,
-  isComplete: (_item, response) => response.spanIds.length > 0,
-};

@@ -8,6 +8,7 @@ import type { KeylessItem, Reveal, ScoreReveal, SubmitHandler } from "@/lib/ngn/
 import { SAMPLE_TAG, type ScoreResult } from "@/lib/ngn/types";
 import { QuestionShell } from "./QuestionShell";
 import { RENDERERS } from "./registry";
+import { RendererShownContext } from "./RendererShown";
 import type { ItemRendererModule, PlayerItem, PlayerMode } from "./types";
 
 export interface ItemPlayerProps {
@@ -92,6 +93,8 @@ export function ItemPlayer({
   const [reveal, setReveal] = useState<Reveal | null>(() => toReveal(initialReveal));
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | undefined>(undefined);
+  // Whether the question is on screen rather than its loading placeholder or failure message (#54).
+  const [rendererShown, setRendererShown] = useState(false);
   // A ref, not state: a second tap in the same frame must not send a second request.
   const pending = useRef(false);
   // A check that survives into a promise callback. `pending` only guards one mounted player; a
@@ -125,7 +128,10 @@ export function ItemPlayer({
   // Typed with the key and rationale optional, and handed over as that: a renderer has to check
   // for either before reading it, because in answer mode neither is there (#50).
   const playerItem = toPlayerItem(fullItem, revealed ? "feedback" : "answer");
-  const canSubmit = rendererModule.isComplete(playerItem, response as ResponseOf<ItemType>);
+  // An answer can be complete before it is seen (an ordered response opens arranged), so Submit
+  // also waits for the question itself to be on screen.
+  const canSubmit =
+    rendererShown && rendererModule.isComplete(playerItem, response as ResponseOf<ItemType>);
 
   const finish = (checked: ScoreReveal) => {
     setReveal(toReveal(checked));
@@ -179,19 +185,21 @@ export function ItemPlayer({
       // says something in a landmark list. A caller with two players on a page passes its own.
       label={label ?? `${ITEM_TYPE_LABELS[item.type]} question`}
     >
-      <Renderer
-        item={playerItem}
-        response={response as ResponseOf<ItemType>}
-        mode={mode}
-        score={result}
-        onChange={(next) => {
-          // Hold the answer that was sent while it is scored, so the feedback shows that answer.
-          if (pending.current) return;
-          setSubmitError(undefined);
-          setResponse(next);
-          onResponseChange?.(next);
-        }}
-      />
+      <RendererShownContext value={setRendererShown}>
+        <Renderer
+          item={playerItem}
+          response={response as ResponseOf<ItemType>}
+          mode={mode}
+          score={result}
+          onChange={(next) => {
+            // Hold the answer that was sent while it is scored, so the feedback shows that answer.
+            if (pending.current) return;
+            setSubmitError(undefined);
+            setResponse(next);
+            onResponseChange?.(next);
+          }}
+        />
+      </RendererShownContext>
     </QuestionShell>
   );
 }

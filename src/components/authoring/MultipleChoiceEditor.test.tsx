@@ -7,6 +7,7 @@ import {
 } from "@/lib/authoring/forms/multipleChoice";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { multipleChoiceItemSchema } from "@/lib/ngn/schemas";
+import { renderersLoaded } from "@/components/question/testing/renderers";
 import { MultipleChoiceEditor, type MultipleChoiceEditorProps } from "./MultipleChoiceEditor";
 
 function setup(props: Partial<MultipleChoiceEditorProps> = {}) {
@@ -37,6 +38,7 @@ describe("MultipleChoiceEditor", () => {
 
   it("shows the item in the preview as it is typed, without remounting the player", async () => {
     const { user } = setup();
+    await renderersLoaded();
     const preview = screen.getByRole("region", { name: "Preview" });
     const before = within(preview).getByRole("radiogroup", { name: "Options" });
     await user.type(

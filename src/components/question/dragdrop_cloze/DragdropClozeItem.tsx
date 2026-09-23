@@ -1,8 +1,7 @@
 "use client";
 
-import { allBlanksFilled } from "../dropdown/DropdownSentence";
 import { TokenSentence } from "../dragdrop/TokenSentence";
-import type { ItemRendererModule, ItemRendererProps } from "../types";
+import type { ItemRendererProps } from "../types";
 
 export function DragdropClozeItem({
   item,
@@ -22,8 +21,3 @@ export function DragdropClozeItem({
     />
   );
 }
-
-export const dragdropClozeModule: ItemRendererModule<"dragdrop_cloze"> = {
-  Renderer: DragdropClozeItem,
-  isComplete: (item, response) => allBlanksFilled(item.content.tokens, response.blanks),
-};

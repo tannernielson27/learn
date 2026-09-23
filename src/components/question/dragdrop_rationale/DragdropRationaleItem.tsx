@@ -1,9 +1,8 @@
 "use client";
 
-import { allBlanksFilled, blankOrder } from "../dropdown/DropdownSentence";
+import { blankOrder } from "../dropdown/DropdownSentence";
 import { TokenSentence } from "../dragdrop/TokenSentence";
-import { explainRationale } from "../rationale";
-import type { ItemRendererModule, ItemRendererProps } from "../types";
+import type { ItemRendererProps } from "../types";
 
 export function DragdropRationaleItem({
   item,
@@ -25,10 +24,3 @@ export function DragdropRationaleItem({
     />
   );
 }
-
-export const dragdropRationaleModule: ItemRendererModule<"dragdrop_rationale"> = {
-  Renderer: DragdropRationaleItem,
-  isComplete: (item, response) => allBlanksFilled(item.content.tokens, response.blanks),
-  explainScore: (item, result) =>
-    explainRationale(item.content.tokens, item.answerKey.anchorBlankId, result),
-};

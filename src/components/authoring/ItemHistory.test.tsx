@@ -5,6 +5,7 @@ import { FIXTURES } from "@/lib/ngn/fixtures";
 import { multipleChoiceItemSchema } from "@/lib/ngn/schemas";
 import { toItemRow } from "@/lib/supabase/itemRows";
 import { historyEntries, type HistoryEntry } from "./historyEntries";
+import { renderersLoaded } from "@/components/question/testing/renderers";
 import { ItemHistory } from "./ItemHistory";
 
 const ITEM_ID = "3f0c9a52-8d4e-4f6b-9a41-6c2d7e8f9012";
@@ -77,6 +78,7 @@ describe("ItemHistory", () => {
   it("previews a version read-only with what changed since", async () => {
     const { user } = renderHistory();
     await openVersion(user, 1);
+    await renderersLoaded();
 
     expect(screen.getByRole("button", { name: /^Version 1\b/ })).toHaveAttribute(
       "aria-pressed",

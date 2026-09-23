@@ -5,7 +5,6 @@ import { RowTable, type RowControlContext } from "../row_table/RowTable";
 import {
   elementFeedback,
   type ElementFeedback,
-  type ItemRendererModule,
   type ItemRendererProps,
   type PlayerMode,
 } from "../types";
@@ -121,9 +120,3 @@ export function DropdownTableItem({
     />
   );
 }
-
-export const dropdownTableModule: ItemRendererModule<"dropdown_table"> = {
-  Renderer: DropdownTableItem,
-  isComplete: (item, response) =>
-    item.content.rows.every((row) => response.rows.some((r) => r.rowId === row.id)),
-};

@@ -8,6 +8,7 @@ import {
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { multipleResponseItemSchema } from "@/lib/ngn/schemas";
 import { MultipleResponseEditor, type MultipleResponseEditorProps } from "./MultipleResponseEditor";
+import { renderersLoaded } from "@/components/question/testing/renderers";
 
 function setup(props: Partial<MultipleResponseEditorProps> = {}) {
   const onSaveDraft = vi.fn<MultipleResponseEditorProps["onSaveDraft"]>(async () => ({ ok: true }));
@@ -59,6 +60,7 @@ describe("MultipleResponseEditor", () => {
 
   it("previews the item with the same player, as it is typed", async () => {
     const { user } = setup();
+    await renderersLoaded();
     const preview = screen.getByRole("region", { name: "Preview" });
     await user.type(
       screen.getByRole("textbox", { name: "Question stem" }),

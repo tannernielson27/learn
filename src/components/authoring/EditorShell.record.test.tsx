@@ -6,6 +6,7 @@ import { emptyMatrixForm, toMatrixForm, type MatrixFormValues } from "@/lib/auth
 import { sampleTrendEhr, sampleTrendItem } from "@/lib/ngn/fixtures/trend";
 import { matrixMultipleChoiceItemSchema } from "@/lib/ngn/schemas";
 import type { SaveResult } from "./EditorShell";
+import { renderersLoaded } from "@/components/question/testing/renderers";
 import { MatrixEditor } from "./MatrixEditor";
 
 function setup(initialValues: MatrixFormValues) {
@@ -44,6 +45,7 @@ const preview = () => screen.getByLabelText("Preview");
 describe("a patient record in an item editor", () => {
   it("previews the item's record beside the question, with its time selector", async () => {
     const { user } = setup(trend());
+    await renderersLoaded();
     const record = within(preview());
     expect(record.getByRole("radio", { name: "0800" })).toBeChecked();
     await user.click(record.getByRole("radio", { name: "1600" }));
