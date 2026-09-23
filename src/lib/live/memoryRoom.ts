@@ -22,6 +22,7 @@ import {
   applyHostCommand,
   canSubmit,
   chooseTimer,
+  goToItem,
   initialSessionState,
   itemAt,
   type HostCommand,
@@ -201,7 +202,7 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
 
   /**
    * ADR 0002: aggregates go out **once per item change**, never once per submission. The only
-   * callers are `advance`, `end` (the item being left) and `reveal` (the item now showing), so a
+   * callers are `advance`, `goto`, `end` (the item being left) and `reveal` (the item now showing), so a
    * class of sixty answering twenty items costs at most forty messages instead of twelve hundred.
    */
   function emitAggregate(position: number | null): void {
@@ -233,16 +234,22 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
     }
   }
 
-  function runCommand(command: HostCommand | TimerCommand): LiveSessionState {
+  function runCommand(
+    command: HostCommand | TimerCommand | "goto",
+    position = 0,
+  ): LiveSessionState {
     const before = state;
-    const result = applyHostCommand(before, command, now());
+    const result =
+      command === "goto"
+        ? goToItem(before, position, now())
+        : applyHostCommand(before, command, now());
     if (!result.ok) throw new LiveSessionError(result.refusal);
     state = result.state;
     emitState();
     if (command === "reveal") {
       emitReveal();
       emitAggregate(state.position);
-    } else if (command === "advance" || command === "end") {
+    } else if (command === "advance" || command === "goto" || command === "end") {
       // The tally for the item the room has just left, so leaving it does not lose the count.
       emitAggregate(before.position);
     }
@@ -422,6 +429,9 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
       },
       async end() {
         return runCommand("end");
+      },
+      async goto(position) {
+        return runCommand("goto", position);
       },
       async setTimer(seconds) {
         const result = chooseTimer(state, seconds);

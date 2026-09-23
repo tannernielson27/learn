@@ -24,6 +24,7 @@ import {
   chooseTimer,
   clockOffset,
   distributionFor,
+  goToItem,
   itemAt,
   readTimer,
   type HostCommand,
@@ -379,13 +380,15 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
   }
 
   /**
-   * The item the room is on, fetched when this console does not yet hold one. `current` is
-   * otherwise only set by `open()` and by a channel message, so a console that opened on a lobby
-   * and then started the room itself has moved the room without yet being told about it. False
-   * when the room could not be read or the console has closed meanwhile.
+   * The item the room is on, fetched when this console does not yet hold one — or holds another.
+   * `current` is otherwise only set by `open()` and by a channel message, so a console that opened
+   * on a lobby and then started the room itself has moved the room without yet being told about
+   * it, and one that has just moved the room (`advance`, `goto` in #183) still holds the item it
+   * left until the echo lands: a tally for item 1 must not be stamped with item 3's id and maximum
+   * in the meantime. False when the room could not be read or the console has closed meanwhile.
    */
   async function ensureCurrent(): Promise<boolean> {
-    if (current === null && state.position !== null) {
+    if (state.position !== null && (current === null || current.id !== itemAt(itemIds, state))) {
       try {
         await readSession();
       } catch {
@@ -401,9 +404,15 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
    * the database is then told, and the trigger is free to disagree — if it does, the update fails
    * and this rejects rather than pretending the move happened.
    */
-  async function run(command: HostCommand | TimerCommand): Promise<LiveSessionState> {
+  async function run(
+    command: HostCommand | TimerCommand | "goto",
+    position = 0,
+  ): Promise<LiveSessionState> {
     if (closed) throw new Error("This console has been closed.");
-    const result = applyHostCommand(state, command, serverNow());
+    const result =
+      command === "goto"
+        ? goToItem(state, position, serverNow())
+        : applyHostCommand(state, command, serverNow());
     if (!result.ok) throw new LiveSessionError(result.refusal);
 
     if (command === "extend_timer" || command === "stop_timer") {
@@ -511,6 +520,9 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     pause: () => run("pause"),
     resume: () => run("resume"),
     end: () => run("end"),
+    // #183. An ordinary update like `advance`, to a position the host chose; the guard trigger
+    // holds the same rules as `goToItem` and clears the reveal and re-arms the clock itself.
+    goto: (position) => run("goto", position),
     setTimer,
     extendTimer: () => run("extend_timer"),
     stopTimer: () => run("stop_timer"),

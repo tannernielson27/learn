@@ -394,6 +394,26 @@ describe("StudentRoom: answering the item", () => {
     expect(screen.queryByTestId("answer-sent")).toBeNull();
     expect(screen.getByRole("button", { name: /^Submit$/ })).toBeInTheDocument();
   });
+
+  it("shows its sent answer again when the host goes back to an item it answered (#183)", async () => {
+    const user = userEvent.setup();
+    const room = setup();
+    room.push({ state: running({ position: 2 }), item: KEYLESS });
+    await renderersLoaded();
+    await user.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
+    await user.click(screen.getByRole("button", { name: /^Submit$/ }));
+    expect(await screen.findByTestId("answer-sent")).toBeInTheDocument();
+
+    // The host jumps on to item three, then back: the view route answers with what was sent.
+    const later = { ...KEYLESS, id: "mr_sample_3" } as ParticipantItem;
+    room.push({ state: running({ position: 3 }), item: later, answered: null });
+    expect(screen.queryByTestId("answer-sent")).toBeNull();
+    room.push({ state: running({ position: 2 }), item: KEYLESS, answered: answeredWith() });
+
+    expect(screen.getByTestId("answer-sent")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeChecked();
+    expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
+  });
 });
 
 describe("StudentRoom: the reveal", () => {

@@ -32,6 +32,7 @@ import type {
 } from "./transport";
 import { toScoreReveal } from "./transport";
 import { describeResultsConformance } from "./roomConformanceResults";
+import { describeGotoConformance } from "./roomConformanceGoto";
 import { describeTimerConformance } from "./roomConformanceTimer";
 
 /** A room under test, however it is built. The suite knows nothing else about an adapter. */
@@ -702,4 +703,5 @@ export function describeRoomConformance(adapter: string, createRoom: Conformance
 
   describeTimerConformance(adapter, makeRoom, openHost, joined);
   describeResultsConformance(adapter, makeRoom, openHost, joined);
+  describeGotoConformance(adapter, makeRoom, openHost, joined);
 }
