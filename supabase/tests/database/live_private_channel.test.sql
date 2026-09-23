@@ -21,6 +21,14 @@ values
   ('00000000-0000-0000-0000-0000001490bb', 'chan-other@example.test', 'authenticated', 'authenticated'),
   ('00000000-0000-0000-0000-0000001490cc', 'chan-student@example.test', 'authenticated', 'authenticated');
 
+-- #204: the sign-up trigger grants no role, so make these accounts instructors in the seeded
+-- org explicitly, where the trigger used to put them.
+update public.profiles
+  set org_id = (select id from public.orgs order by created_at, id limit 1), role = 'instructor'
+  where id in ('00000000-0000-0000-0000-0000001490aa',
+               '00000000-0000-0000-0000-0000001490bb',
+               '00000000-0000-0000-0000-0000001490cc');
+
 -- BB authors in a second org; CC is a student account in the host's org, so the "author" half of
 -- the host policy is exercised as well as the org half.
 insert into public.orgs (id, name) values ('00000000-0000-0000-0000-0000001490f2', 'Other channels');

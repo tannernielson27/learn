@@ -1,5 +1,6 @@
--- The shared demo account for the LOCAL stack only (#115). Runs after seed.sql, so the sign-up
--- trigger puts it in the seeded org as an instructor. The password is public and local-only: the
+-- The shared demo account for the LOCAL stack only (#115). Runs after seed.sql. Since #204 the
+-- sign-up trigger grants no role, so the last statement makes it an instructor in the seeded org,
+-- explicitly, as the owner does for a hosted account with private.make_instructor. The password is public and local-only: the
 -- hosted demo user is created by hand with its own password (see docs/05).
 -- Sign in with DEMO_ACCOUNT_EMAIL=demo@learn.test and DEMO_ACCOUNT_PASSWORD=learn-demo-local.
 
@@ -26,3 +27,8 @@ values (
   '{"sub": "00000000-0000-4000-8000-00000000d3e0", "email": "demo@learn.test", "email_verified": true}',
   now(), now(), now()
 );
+
+-- #204: an instructor in the org seed.sql made, set here rather than left to the trigger.
+update public.profiles
+  set org_id = '00000000-0000-4000-8000-000000000001', role = 'instructor'
+  where id = '00000000-0000-4000-8000-00000000d3e0';

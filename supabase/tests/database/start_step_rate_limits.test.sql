@@ -13,6 +13,13 @@ values
   ('00000000-0000-0000-0000-0000000004aa', 'step-a@example.test', 'authenticated', 'authenticated'),
   ('00000000-0000-0000-0000-0000000004bb', 'step-b@example.test', 'authenticated', 'authenticated');
 
+-- #204: the sign-up trigger grants no role, so make these accounts instructors in the seeded
+-- org explicitly, where the trigger used to put them.
+update public.profiles
+  set org_id = (select id from public.orgs order by created_at, id limit 1), role = 'instructor'
+  where id in ('00000000-0000-0000-0000-0000000004aa',
+               '00000000-0000-0000-0000-0000000004bb');
+
 -- B moves to a second org, to check isolation.
 insert into public.orgs (id, name) values ('00000000-0000-0000-0000-0000000004f2', 'Other steps');
 update public.profiles set org_id = '00000000-0000-0000-0000-0000000004f2'

@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page, type APIRequestContext } from "@playwright/test";
 import { latestSignInLink } from "./mailbox";
-import { createAuthorAccount } from "./signIn";
+import { createAccountWithoutRole, createAuthorAccount } from "./signIn";
 
 // Needs the local Supabase stack (auth + test mailbox) and a build pointed at it; the preview
 // e2e job has neither, so it skips. CI runs this in the `auth-e2e` job with E2E_AUTH=1.
@@ -48,6 +48,51 @@ test("an author signs in from an emailed link, lands where they were going, then
   await expect(page).toHaveURL(/\/sign-in$/);
   await page.goto("/author");
   await expect(page).toHaveURL(/\/sign-in\?next=%2Fauthor$/);
+});
+
+test("an account with no role signs in to No access yet and cannot open authoring", async ({
+  page,
+  request,
+}, testInfo) => {
+  // #204: Add user and nothing else, which is what the sign-up trigger now leaves an account as.
+  const email = uniqueEmail(`norole-${testInfo.project.name}`);
+  await createAccountWithoutRole(request, email);
+
+  await page.goto("/author");
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fauthor$/);
+  const since = new Date();
+  await page.getByRole("textbox", { name: "Email address" }).fill(email);
+  await page.getByRole("button", { name: "Email me a sign-in link" }).click();
+  await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
+  await page.goto(await latestSignInLink(request, email, since));
+
+  await expect(page).toHaveURL(/\/author\/no-access$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "No access yet", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(/invite link your instructor shares/)).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Item banks", exact: true }),
+  ).toHaveCount(0);
+  const axe = await new AxeBuilder({ page }).analyze();
+  expect(axe.violations).toEqual([]);
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/no-access-yet.png`,
+    fullPage: true,
+  });
+
+  // Every way into authoring comes back here, the home and a deep link alike.
+  for (const path of [
+    "/author",
+    "/author/sessions",
+    "/author/banks/00000000-0000-4000-8000-000000000002",
+  ]) {
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/author\/no-access$/);
+  }
+
+  await page.getByRole("main").getByRole("button", { name: "Sign out", exact: true }).click();
+  await expect(page).toHaveURL(/\/sign-in$/);
 });
 
 test("the demo account signs in without an email and lands where the person was going", async ({
