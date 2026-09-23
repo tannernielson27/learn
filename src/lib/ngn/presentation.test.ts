@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { FIXTURES, allFixtures, sampleTrendEhr, sampleTrendItem } from "./fixtures";
-import { initialResponse, isTrendItem, presentationOrder } from "./presentation";
+import {
+  initialResponse,
+  isTrendItem,
+  presentationOrder,
+  unansweredResponse,
+} from "./presentation";
 import { itemSchema } from "./schemas";
 import { emptyResponse } from "./scoring";
 
@@ -56,6 +61,33 @@ describe("initialResponse", () => {
       if (item.type === "ordered_response") continue;
       expect(initialResponse(item)).toEqual(emptyResponse(item));
     }
+  });
+});
+
+describe("unansweredResponse (#181)", () => {
+  it("lays an ordered response out in the key's order, so the right order is what shows", () => {
+    const item = itemSchema.parse(FIXTURES.ordered_response.canonical);
+    if (item.type !== "ordered_response") throw new Error("fixture type");
+    expect(unansweredResponse(item)).toEqual({
+      type: "ordered_response",
+      orderedIds: item.answerKey.orderedIds,
+    });
+  });
+
+  it("is the empty response for every other type: nothing chosen, so every key element is missed", () => {
+    for (const fixture of allFixtures) {
+      const item = itemSchema.parse(fixture.canonical);
+      if (item.type === "ordered_response") continue;
+      expect(unansweredResponse(item)).toEqual(emptyResponse(item));
+    }
+  });
+
+  it("does not hand back the key's own array", () => {
+    const item = itemSchema.parse(FIXTURES.ordered_response.canonical);
+    if (item.type !== "ordered_response") throw new Error("fixture type");
+    const response = unansweredResponse(item);
+    if (response.type !== "ordered_response") throw new Error("response type");
+    expect(response.orderedIds).not.toBe(item.answerKey.orderedIds);
   });
 });
 

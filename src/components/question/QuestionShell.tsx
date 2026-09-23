@@ -138,6 +138,10 @@ export function QuestionShell({
           <ScorePanel panel={scorePanel} score={score} note={scoreNote} rationale={rationale} />
           <ScoreBreakdown score={score} />
         </>
+      ) : mode === "feedback" && rationale ? (
+        // A key with no score: shown to someone who did not answer (#181). The rationale is the
+        // same text the score panel carries, standing on its own because there are no marks.
+        <RationalePanel rationale={rationale} />
       ) : null}
 
       {mode === "answer" ? (
@@ -212,6 +216,22 @@ function ScorePanel({
           <RichTextView text={rationale} className="mt-2 text-ink-1" />
         </div>
       ) : null}
+    </aside>
+  );
+}
+
+/** The rationale on its own, for a key revealed with no answer to score (#181). */
+function RationalePanel({ rationale }: { rationale: RichText }) {
+  const headingId = useId();
+  return (
+    <aside
+      aria-labelledby={headingId}
+      className="mt-8 animate-[fade-up_var(--duration-slow)_var(--ease-out-expo)_both] rounded-md border border-line bg-surface-1 p-5"
+    >
+      <h2 id={headingId} className="eyebrow">
+        Rationale
+      </h2>
+      <RichTextView text={rationale} className="mt-2 text-ink-1" />
     </aside>
   );
 }
