@@ -23,6 +23,7 @@ import {
   applyHostCommand,
   chooseTimer,
   clockOffset,
+  distributionFor,
   itemAt,
   readTimer,
   type HostCommand,
@@ -34,6 +35,7 @@ import {
   type Participant,
   type SessionMode,
   type SessionView,
+  type Distribution,
   type Unsubscribe,
 } from "@/lib/live";
 import { maxPoints } from "@/lib/ngn/scoring";
@@ -352,6 +354,49 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
   }
 
   /**
+   * How the room answered the item it is on (#180): the stored answers for this position, read
+   * under the host's own row level security (their org's authors only; a participant and anon
+   * read none, which `live_aggregates.test.sql` pins), and counted here by `distributionFor`.
+   *
+   * Counted in the host's own process because the host already holds the item with its key; the
+   * responses go nowhere but this console. One indexed read per ask, asked on the tally's
+   * cadence, and nothing on the channel.
+   */
+  async function readResults(): Promise<Distribution | null> {
+    if (state.position === null || current === null) return null;
+    const item = current;
+    const { data, error } = await client
+      .from("session_responses")
+      .select("response")
+      .eq("session_id", sessionId)
+      .eq("item_position", state.position);
+    if (error) return null;
+    const rows = (data ?? []) as unknown as { response: unknown }[];
+    return distributionFor(
+      item,
+      rows.map((row) => row.response),
+    );
+  }
+
+  /**
+   * The item the room is on, fetched when this console does not yet hold one. `current` is
+   * otherwise only set by `open()` and by a channel message, so a console that opened on a lobby
+   * and then started the room itself has moved the room without yet being told about it. False
+   * when the room could not be read or the console has closed meanwhile.
+   */
+  async function ensureCurrent(): Promise<boolean> {
+    if (current === null && state.position !== null) {
+      try {
+        await readSession();
+      } catch {
+        return false;
+      }
+      current = await loadItem();
+    }
+    return !closed;
+  }
+
+  /**
    * Runs one host command. The reducer decides whether it is allowed and what the room becomes;
    * the database is then told, and the trigger is free to disagree — if it does, the update fails
    * and this rejects rather than pretending the move happened.
@@ -450,17 +495,14 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
      * nothing but the read it was going to make anyway.
      */
     async aggregate(): Promise<ItemAggregate | null> {
-      if (closed) return null;
-      if (current === null && state.position !== null) {
-        try {
-          await readSession();
-        } catch {
-          return null;
-        }
-        current = await loadItem();
-        if (closed) return null;
-      }
+      if (closed || !(await ensureCurrent())) return null;
       return readAggregate();
+    },
+
+    /** Asked for alongside `aggregate()`, and fetches the item first on the same terms. */
+    async results(): Promise<Distribution | null> {
+      if (closed || !(await ensureCurrent())) return null;
+      return readResults();
     },
 
     start: () => run("start"),

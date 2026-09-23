@@ -143,6 +143,30 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
   });
   await expectNoAxeViolations(page);
 
+  // #180: the console draws how the room answered, option by option, on the same poll. Nothing
+  // is marked correct yet: a projected console must not give the answer away.
+  const resultRow = (index: number) =>
+    page
+      .getByRole("list", { name: "Options", exact: true })
+      .getByRole("listitem")
+      .filter({ hasText: OPTIONS[index] as string });
+  await expect(resultRow(0)).toContainText("3 of 3 · 100%", { timeout: 15_000 });
+  await expect(resultRow(1)).toContainText("2 of 3 · 67%");
+  await expect(resultRow(2)).toContainText("1 of 3 · 33%");
+  await expect(resultRow(3)).toContainText("0 of 3 · 0%");
+  await expect(page.getByTestId("result-correct")).toHaveCount(0);
+  await expectNoAxeViolations(page);
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/live-results-console.png`,
+    fullPage: true,
+  });
+
+  // "Hide results" takes the tallies off the projector and puts them back.
+  await page.getByRole("button", { name: "Hide results", exact: true }).click();
+  await expect(page.getByRole("list", { name: "Options", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Show results", exact: true }).click();
+  await expect(resultRow(0)).toContainText("3 of 3 · 100%");
+
   // A reload mid-item comes back to the answer that was sent, not to a blank form.
   const reloaded = phones[0] as Page;
   await reloaded.reload();
@@ -168,6 +192,16 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
     "0 / 2",
   );
   await expectNoAxeViolations(phones[0] as Page);
+
+  // And on the console, the two correct options are now marked, in words, and only those.
+  await expect(page.getByTestId("result-correct")).toHaveCount(CORRECT.length, {
+    timeout: 15_000,
+  });
+  for (const index of CORRECT) {
+    await expect(resultRow(index).getByTestId("result-correct")).toContainText("Correct");
+  }
+  await expect(resultRow(2).getByTestId("result-correct")).toHaveCount(0);
+  await expectNoAxeViolations(page);
 
   // A late answer, after the key is up, is refused rather than quietly taken.
   await expect(

@@ -25,6 +25,7 @@ import { bowtieDistribution } from "./slots";
 import type { Distribution } from "./types";
 
 export { COMMON_WRONG_LIMIT } from "./pairs";
+export { concealKey, percentOf, shareOf } from "./conceal";
 export type * from "./types";
 
 const unreachable = (value: never): never => {

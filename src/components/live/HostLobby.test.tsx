@@ -15,6 +15,9 @@ import {
   type SessionView,
   type TimerCommand,
 } from "@/lib/live";
+import { distributionFor, type Distribution } from "@/lib/live/results";
+import { FIXTURES } from "@/lib/ngn/fixtures";
+import { itemSchema } from "@/lib/ngn/schemas";
 import type { Item } from "@/lib/ngn/schemas";
 import { HostLobby } from "./HostLobby";
 
@@ -47,6 +50,8 @@ function fakeTransport(initial: LiveSessionState, refusal?: LiveSessionError) {
   let held = initial;
   let roster: Participant[] = [];
   let tally: ItemAggregate | null = null;
+  let results: Distribution | null = null;
+  let resultAsks = 0;
   const views = new Set<(view: SessionView<Item>) => void>();
   const presence = new Set<(roster: Participant[]) => void>();
   const ran: (HostCommand | TimerCommand | `set_timer:${string}`)[] = [];
@@ -93,6 +98,10 @@ function fakeTransport(initial: LiveSessionState, refusal?: LiveSessionError) {
       asked += 1;
       return tally;
     },
+    async results(): Promise<Distribution | null> {
+      resultAsks += 1;
+      return results;
+    },
     start: () => run("start"),
     advance: () => run("advance"),
     reveal: () => run("reveal"),
@@ -116,6 +125,11 @@ function fakeTransport(initial: LiveSessionState, refusal?: LiveSessionError) {
     ran,
     letOpen: () => resolveOpen?.(),
     asks: () => asked,
+    resultAsks: () => resultAsks,
+    /** What the next ask for the results will answer with. */
+    resultsIn: (next: Distribution | null) => {
+      results = next;
+    },
     /** What the next ask for the tally will answer with. */
     answersIn: (next: ItemAggregate | null) => {
       tally = next;
@@ -354,6 +368,35 @@ describe("HostLobby: how many have answered (#133)", () => {
     const settled = fake.asks();
     await new Promise((resolve) => setTimeout(resolve, 60));
     expect(fake.asks()).toBe(settled);
+  });
+});
+
+describe("HostLobby: the item's results (#180)", () => {
+  const sata = itemSchema.parse(FIXTURES.multiple_response.canonical) as Item & {
+    type: "multiple_response";
+  };
+  const [first] = sata.content.options;
+  const twoAnswered = distributionFor(sata, [
+    { type: "multiple_response", optionIds: [first?.id] },
+    { type: "multiple_response", optionIds: [first?.id] },
+  ]);
+
+  it("asks for no results in the lobby, and shows no panel", async () => {
+    const fake = setup();
+    fake.resultsIn(twoAnswered);
+    await waitFor(() => expect(screen.getByTestId("join-code")).toBeInTheDocument());
+    expect(screen.queryByRole("heading", { name: "Results" })).toBeNull();
+    expect(fake.resultAsks()).toBe(0);
+  });
+
+  it("draws the item's results while the room is on it, marking nothing before the reveal", async () => {
+    const fake = setup(state({ status: "running", position: 1 }));
+    fake.resultsIn(twoAnswered);
+    expect(await screen.findByText("2 answers counted")).toBeInTheDocument();
+    expect(screen.queryAllByTestId("result-correct")).toHaveLength(0);
+
+    await fake.user.click(button("Show answer"));
+    await waitFor(() => expect(screen.getAllByTestId("result-correct").length).toBeGreaterThan(0));
   });
 });
 

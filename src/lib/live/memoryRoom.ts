@@ -17,6 +17,7 @@ import type { AnyResponse, Item } from "@/lib/ngn/schemas";
 import { parseSubmission, scoreSubmission, toKeylessItem, SUBMIT_ERRORS } from "@/lib/ngn/submit";
 import type { ScoreResult } from "@/lib/ngn/types";
 import { LiveSessionError } from "./errors";
+import { distributionFor } from "./results";
 import {
   applyHostCommand,
   canSubmit,
@@ -391,6 +392,17 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
        */
       async aggregate() {
         return itemAt(items, state) === null ? null : aggregateAt(state.position);
+      },
+
+      /** Read from the same answers on record the tally is counted from. */
+      async results() {
+        const item = itemAt(items, state);
+        if (item === null || state.position === null) return null;
+        const given = [...(answers.get(state.position)?.values() ?? [])];
+        return distributionFor(
+          item,
+          given.map((answer) => answer.response),
+        );
       },
 
       async start() {
