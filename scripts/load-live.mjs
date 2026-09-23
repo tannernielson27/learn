@@ -168,14 +168,21 @@ async function waitForEnd(joined, options) {
   }
 }
 
+/** A --publishable-key given on the command line, once read, so every exit path redacts it. */
+let cliKey;
+
+/** Everything this script must never print, whichever path it leaves by. */
+const secrets = () => [
+  cliKey,
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+  process.env.LOAD_HOST_PASSWORD,
+  process.env.DEMO_ACCOUNT_PASSWORD,
+];
+
 async function main() {
   const options = readOptions(process.argv.slice(2), process.env);
   if (options.help) return console.log(USAGE);
-  const secrets = () => [
-    options.publishableKey,
-    process.env.LOAD_HOST_PASSWORD,
-    process.env.DEMO_ACCOUNT_PASSWORD,
-  ];
+  cliKey = options.publishableKey;
   const say = (text) => console.log(redact(text, secrets()));
 
   const project = await guard(options);
@@ -246,6 +253,6 @@ process.on("SIGINT", () => {
 
 main().catch((error) => {
   const message = error instanceof Error ? error.message : String(error);
-  console.error(redact(message, [process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY]));
+  console.error(redact(message, secrets()));
   process.exit(1);
 });

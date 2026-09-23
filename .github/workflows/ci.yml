@@ -96,13 +96,17 @@ jobs:
           DEMO_ACCOUNT_EMAIL: demo@learn.test
           DEMO_ACCOUNT_PASSWORD: learn-demo-local
       # #187: five simulated phones through the seeded six-step case study, against the build the
-      # e2e step just made. Small on purpose: it proves the load script and the room still work
+      # e2e step just made (Playwright's webServer runs `pnpm build`, leaving .next here). Small on purpose: it proves the load script and the room still work
       # end to end, not how many students the room holds (docs/load-testing.md has the 60 run).
       - name: Load smoke (five participants)
         timeout-minutes: 4
         run: |
+          test -f .next/BUILD_ID || { echo "No production build: the e2e step did not build one."; exit 1; }
           pnpm start --port 3100 > "$RUNNER_TEMP/next-start.log" 2>&1 &
+          server=$!
+          trap "kill $server" EXIT
           for i in $(seq 1 60); do curl -sf http://127.0.0.1:3100/api/health > /dev/null && break; sleep 1; done
+          curl -sf http://127.0.0.1:3100/api/health > /dev/null || { echo "next start never answered /api/health"; cat "$RUNNER_TEMP/next-start.log"; exit 1; }
           pnpm load:live --base http://127.0.0.1:3100 --host --participants 5 --think 200-1000 \
             --ramp 500 --lobby-ms 2000 --reveal-ms 300 --step-timeout 20000 --max-minutes 3 \
             --seed 187 --out "$RUNNER_TEMP/load-live-results.json"
