@@ -8,12 +8,17 @@ import { screen, waitFor } from "@testing-library/react";
  * one left on the page from an earlier step.
  */
 export async function feedbackShown(): Promise<void> {
-  await waitFor(() => {
-    if (screen.queryByRole("button", { name: "Checking your answer" })) {
-      throw new Error("The answer is still being checked.");
-    }
-    if (screen.queryAllByRole("complementary", { name: "Score" }).length === 0) {
-      throw new Error("No feedback on the page yet.");
-    }
-  });
+  await waitFor(
+    () => {
+      if (screen.queryByRole("button", { name: "Checking your answer" })) {
+        throw new Error("The answer is still being checked.");
+      }
+      if (screen.queryAllByRole("complementary", { name: "Score" }).length === 0) {
+        throw new Error("No feedback on the page yet.");
+      }
+    },
+    // A ceiling, not a delay, as in `renderersLoaded`: under a full parallel run the reveal can
+    // outlast waitFor's 1s default.
+    { timeout: 10_000 },
+  );
 }
