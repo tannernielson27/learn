@@ -8,6 +8,7 @@ import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema } from "@/lib/ngn/schemas";
 import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer } from "./ItemPlayer";
+import { renderersLoaded } from "./testing/renderers";
 
 const DRAG_ITEMS = {
   bowtie: itemSchema.parse(FIXTURES.bowtie.canonical),
@@ -21,8 +22,9 @@ const dndLiveRegions = () => [...document.querySelectorAll('[id^="DndLiveRegion"
 
 describe("dnd-kit's live region", () => {
   for (const [type, item] of Object.entries(DRAG_ITEMS)) {
-    it(`is kept out of the accessibility tree in ${type}`, () => {
+    it(`is kept out of the accessibility tree in ${type}`, async () => {
       render(<ItemPlayer item={item} submit={scoreInProcess(item)} />);
+      await renderersLoaded();
       // Still rendered, so dnd-kit has somewhere to write; just never exposed.
       expect(dndLiveRegions()).toHaveLength(1);
       for (const region of dndLiveRegions()) expect(region.closest("[hidden]")).not.toBeNull();
@@ -38,6 +40,7 @@ describe("dnd-kit's live region", () => {
   it("leaves the item's own announcements working", async () => {
     const item = DRAG_ITEMS.ordered_response;
     render(<ItemPlayer item={item} submit={scoreInProcess(item)} />);
+    await renderersLoaded();
     const [first] = screen.getAllByRole("button", { name: /^Move ".*" down$/ });
     await userEvent.click(first!);
     expect(screen.getByRole("status", { name: "Order changes" })).toHaveTextContent(
