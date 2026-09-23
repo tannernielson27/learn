@@ -142,22 +142,32 @@ Rules:
 
 ### 7.2 Migrations in order
 
-Everything in `supabase/migrations/` today, in filename order — this is the replay list, and a new project must end with all ten:
+Everything in `supabase/migrations/` today, in filename order — this is the replay list, and a new project must end with every row below. Add a row in the same PR as the migration; a table that silently falls behind the directory is worse than none, because a replay checked against it looks complete when it is not.
 
-| #   | Migration                                   | What it adds                                                        | On `vauokqoyvewtzubqajgh`? |
-| --- | ------------------------------------------- | ------------------------------------------------------------------- | -------------------------- |
-| 1   | `20260913000000_authoring_schema`           | orgs, profiles, item banks, items, versions, case studies, RLS      | applied                    |
-| 2   | `20260914000000_case_study_steps`           | step items live in the case study's bank; atomic reorder            | applied                    |
-| 3   | `20260915000000_import_bank_content`        | one-call JSON import                                                | applied                    |
-| 4   | `20260916000000_bank_folders`               | nested folders per bank                                             | **confirm**                |
-| 5   | `20260919000000_item_tags`                  | tag filtering on the bank page                                      | **not applied**            |
-| 6   | `20260919110000_start_step_and_rate_limits` | `start_case_study_step`, per-user rate limit on authoring mutations | **not applied**            |
-| 7   | `20260919120600_duplicate_content`          | duplicate an item or a case study                                   | **not applied**            |
-| 8   | `20260919130000_item_search`                | full-text search over a bank                                        | **not applied**            |
-| 9   | `20260919150000_import_into_folder`         | import straight into a folder                                       | **not applied**            |
-| 10  | `20260919160000_archive_content`            | archive and restore                                                 | **not applied**            |
+| #   | Migration                                      | What it adds                                                                   | On `vauokqoyvewtzubqajgh`? |
+| --- | ---------------------------------------------- | ------------------------------------------------------------------------------ | -------------------------- |
+| 1   | `20260913000000_authoring_schema`              | orgs, profiles, item banks, items, versions, case studies, RLS                 | applied                    |
+| 2   | `20260914000000_case_study_steps`              | step items live in the case study's bank; atomic reorder                       | applied                    |
+| 3   | `20260915000000_import_bank_content`           | one-call JSON import                                                           | applied                    |
+| 4   | `20260916000000_bank_folders`                  | nested folders per bank                                                        | **not applied**            |
+| 5   | `20260919000000_item_tags`                     | tag filtering on the bank page                                                 | **not applied**            |
+| 6   | `20260919110000_start_step_and_rate_limits`    | `start_case_study_step`, per-user rate limit on authoring mutations            | **not applied**            |
+| 7   | `20260919120600_duplicate_content`             | duplicate an item or a case study                                              | **not applied**            |
+| 8   | `20260919130000_item_search`                   | full-text search over a bank                                                   | **not applied**            |
+| 9   | `20260919150000_import_into_folder`            | import straight into a folder                                                  | **not applied**            |
+| 10  | `20260919160000_archive_content`               | archive and restore                                                            | **not applied**            |
+| 11  | `20260919170000_live_sessions`                 | live sessions with a six-character join code (#128)                            | **not applied**            |
+| 12  | `20260920130000_live_responses_and_aggregates` | live responses, server-side scoring, per-participant submit limit (#131, #133) | **not applied**            |
+| 13  | `20260920140000_session_participants`          | join with a display name and no account (#129)                                 | **not applied**            |
+| 14  | `20260921000000_resume_participant_joined_at`  | resume a participant after a reload (#133)                                     | **not applied**            |
+| 15  | `20260921100000_live_view_rate_limit`          | per-participant limit on `POST /api/live/view` (#152)                          | **not applied**            |
+| 16  | `20260921200000_authoring_limit_at_the_write`  | authoring rate limit enforced at the write, not only in the UI (#123)          | **not applied**            |
 
-> **Standing drift (Sprint 6).** Rows 4–10 are merged to `main` but not applied to the existing hosted project. **Until `20260919110000_start_step_and_rate_limits` is applied, that project refuses every save, publish and import** — the app calls functions that are not there. Apply rows 4–10 to `vauokqoyvewtzubqajgh` with §7.4 at the same time as the production project is stood up, so the two projects do not start out different.
+"Not applied" means there is no record of it being applied, not that it has been checked. Run `pnpm exec supabase migration list` against the project to know.
+
+> **Standing drift (Sprint 6, grown since).** Rows 4–16 are merged to `main` but not applied to the existing hosted project. **Until `20260919110000_start_step_and_rate_limits` is applied, that project refuses every save, publish and import** — the app calls functions that are not there. Apply rows 4–16 to `vauokqoyvewtzubqajgh` with §7.4 at the same time as the production project is stood up, so the two projects do not start out different.
+>
+> Row 16 is the one exception to that failure mode, by design: it keeps `public.take_rate_limit`'s name and signature, so an app deployed ahead of it degrades to the pre-#123 behaviour instead of refusing writes. Rows 11–15 are needed for any live session to run at all.
 
 ### 7.3 Standing up a fresh project (the production split)
 
