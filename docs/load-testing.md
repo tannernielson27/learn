@@ -40,16 +40,16 @@ gitignored).
 
 A small table on stdout, and all of it as JSON in `--out` for comparing runs:
 
-| Measure       | What it is                                                                                                                         |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| joined        | participants who got a cookie and a subscribed channel, of those asked for                                                         |
-| join ms       | the join form post, p50 / p95 / max                                                                                                |
-| view ms       | `POST /api/live/view`, fired by every move that changes the item or the reveal                                                     |
-| submit ms     | `POST /api/live/submit`                                                                                                            |
-| refusals      | by code; `wrong_item`, `already_revealed`, `not_started`, `paused`, `not_open` are expected when an answer lands as the host moves |
-| unexpected    | every other refusal or HTTP error; the run fails when it is not zero                                                               |
-| stalled steps | `--host` only: steps whose answers had not all arrived when the step timed out                                                     |
-| realtime msgs | `postgres_changes` plus presence syncs each participant received                                                                   |
+| Measure       | What it is                                                                                                                                    |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| joined        | participants who got a cookie and a subscribed channel, of those asked for                                                                    |
+| join ms       | the join form post, p50 / p95 / max                                                                                                           |
+| view ms       | `POST /api/live/view`, fired by every move that changes the item or the reveal                                                                |
+| submit ms     | `POST /api/live/submit`                                                                                                                       |
+| refusals      | by code; `wrong_item`, `already_revealed`, `not_started`, `paused`, `not_open`, `time_up` are expected when an answer lands as the host moves |
+| unexpected    | every other refusal or HTTP error; the run fails when it is not zero                                                                          |
+| stalled steps | `--host` only: steps whose answers had not all arrived when the step timed out                                                                |
+| realtime msgs | `postgres_changes` plus presence syncs each participant received                                                                              |
 
 The exit code is 1 when anyone failed to join, any refusal was unexpected, or a step stalled.
 

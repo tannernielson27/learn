@@ -26,7 +26,7 @@ export function summarize(values) {
 
 /**
  * Refusals a real class runs into when an answer arrives just as the host moves: the item has
- * changed, the key is already showing, the room is paused or over. Everything else — a rate limit,
+ * changed, the key is already showing, the timer ran out, the room is paused or over. Everything else — a rate limit,
  * an answer the route could not read, a participant it did not recognise, a server error — is a
  * fault in the room or in the script, and fails the run.
  */
@@ -36,6 +36,8 @@ const EXPECTED_REFUSALS = new Set([
   "not_started",
   "paused",
   "not_open",
+  // #182: the item's timer ran out before the answer arrived.
+  "time_up",
 ]);
 
 export const isUnexpectedRefusal = (code) => !EXPECTED_REFUSALS.has(code);

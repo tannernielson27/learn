@@ -33,7 +33,15 @@ describe("summarize", () => {
 
 describe("isUnexpectedRefusal", () => {
   it("treats a room that moved on under a slow answer as expected, and everything else not", () => {
-    for (const code of ["wrong_item", "already_revealed", "not_started", "paused", "not_open"]) {
+    const expected = [
+      "wrong_item",
+      "already_revealed",
+      "not_started",
+      "paused",
+      "not_open",
+      "time_up",
+    ];
+    for (const code of expected) {
       expect(isUnexpectedRefusal(code)).toBe(false);
     }
     for (const code of ["rate_limited", "malformed", "wrong_type", "not_joined", "http_500"]) {
