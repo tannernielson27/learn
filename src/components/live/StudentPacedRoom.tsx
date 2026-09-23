@@ -249,7 +249,8 @@ export function StudentPacedRoom({
       ) : state.reveal ? (
         <p className="measure mt-8 text-ink-2">{SHOWING}</p>
       ) : mine !== null ? (
-        <section aria-label="Your answer" className="mt-8">
+        // A plain wrapper: the player inside is already the "Your answer" landmark.
+        <div className="mt-8">
           <p data-testid="answer-sent" className="measure mb-4 text-sm text-ink-2">
             {SENT}
           </p>
@@ -262,7 +263,7 @@ export function StudentPacedRoom({
             submit={refuseSecondAnswer}
             label="Your answer"
           />
-        </section>
+        </div>
       ) : (
         <div className="mt-8">
           <ItemPlayer
