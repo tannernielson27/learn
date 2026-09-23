@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Countdown } from "@/components/live/Countdown";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 // Module by module rather than through `@/lib/live` and `@/lib/liveSupabase`: those barrels
 // value-export the in-memory room and the host console, both of which hold items with their keys
@@ -43,6 +44,8 @@ export interface StudentRoomProps {
 }
 
 const SENT = "Answer sent. Your instructor will show the answer at the front.";
+const LATE =
+  "Your answer was not taken: the time for this item ran out. Your instructor will move the room on.";
 
 /**
  * A student's phone during a live session (#132, #133).
@@ -111,6 +114,12 @@ export function StudentRoom({
    * question and a different answer.
    */
   const [draft, setDraft] = useState<{ itemId: string; response: AnyResponse } | null>(null);
+  /**
+   * The item this phone tried to answer after its time was up (#182), which the server refused
+   * with `time_up`, and the end time it was refused against. Kept with both, so the next item — a
+   * new clock — opens fresh, and so does this one if the host adds time or stops the clock.
+   */
+  const [lateFor, setLateFor] = useState<{ itemId: string; endsAt: number | null } | null>(null);
 
   /**
    * Who this phone is, fixed for the life of the page.
@@ -136,6 +145,11 @@ export function StudentRoom({
   }
 
   const room = useRef<SupabaseParticipant | null>(null);
+  /**
+   * The session's clock, as the transport measured it against the server's own (#182). A phone's
+   * clock can be minutes out; the countdown reads this and never `Date.now()` directly.
+   */
+  const serverNow = useCallback(() => room.current?.serverNow() ?? Date.now(), []);
 
   /**
    * The first token, held for the life of the page like `me` above. A `router.refresh()` renders
@@ -226,6 +240,15 @@ export function StudentRoom({
    */
   const answering = onAnItem && !state.reveal;
   const sent = answered !== null && item !== null && answered.itemId === item.id;
+  const late =
+    answering &&
+    !sent &&
+    lateFor !== null &&
+    lateFor.itemId === item.id &&
+    lateFor.endsAt === state.timer.endsAt;
+  /** Whether the item's clock belongs on this screen: on an item, with no key showing. */
+  const clocked =
+    item !== null && !state.reveal && (state.status === "running" || state.status === "paused");
   const progress =
     state.position === null || state.itemCount === 0
       ? undefined
@@ -255,6 +278,12 @@ export function StudentRoom({
       const ack = await joined.submit(current.id, response);
       setAnswered({ itemId: current.id, submittedAt: ack.submittedAt, response });
     } catch (refused) {
+      // Time was up when the answer reached the server (#182). Not a failure to show as one: the
+      // screen says what happened in its own words, and the player it came from goes away.
+      if (isLiveSessionError(refused) && refused.code === "time_up") {
+        setLateFor({ itemId: current.id, endsAt: state.timer.endsAt });
+        return new Promise<ScoreReveal>(() => {});
+      }
       if (!isLiveSessionError(refused) || refused.code !== "already_answered") throw refused;
       // A refusal carries no acknowledgement, so there is no session clock to take this from.
       // Nothing renders it — it is here because the shape says an answer has a time — and the
@@ -280,6 +309,8 @@ export function StudentRoom({
         </p>
       ) : null}
 
+      {clocked ? <Countdown timer={state.timer} now={serverNow} /> : null}
+
       {showing && revealed !== null ? (
         <RevealedItem
           item={item}
@@ -288,6 +319,15 @@ export function StudentRoom({
           progress={progress}
           copy={copy}
         />
+      ) : late ? (
+        <section aria-labelledby="late-heading" className="mt-8">
+          <h2 id="late-heading" className="font-read text-2xl text-ink-1">
+            Time is up
+          </h2>
+          <p role="status" data-testid="answer-late" className="measure mt-2 text-ink-2">
+            {LATE}
+          </p>
+        </section>
       ) : answering && sent && answered !== null ? (
         <section aria-label="Your answer" className="mt-8">
           <p role="status" data-testid="answer-sent" className="measure mb-4 text-sm text-ink-2">

@@ -31,6 +31,7 @@ import type {
   SessionView,
 } from "./transport";
 import { toScoreReveal } from "./transport";
+import { describeTimerConformance } from "./roomConformanceTimer";
 
 /** A room under test, however it is built. The suite knows nothing else about an adapter. */
 export interface ConformanceRoom {
@@ -49,6 +50,13 @@ export interface ConformanceRoom {
    * prose and a suite full of sleeps.
    */
   settle(): Promise<void>;
+  /**
+   * Moves the session's clock forward (#182). The room's clock only: a participant's or a host's
+   * own clock is not the room's, which is the whole point of `serverNow()`.
+   */
+  tick(ms: number): void;
+  /** The session's clock as it stands, epoch ms, without moving it. */
+  clock(): number;
   /** Drops the room. Called after every test, whether it passed or not. */
   dispose(): Promise<void>;
 }
@@ -690,4 +698,6 @@ export function describeRoomConformance(adapter: string, createRoom: Conformance
       expect(seen.at(-1)?.state.position).toBe(1);
     });
   });
+
+  describeTimerConformance(adapter, makeRoom, openHost, joined);
 }

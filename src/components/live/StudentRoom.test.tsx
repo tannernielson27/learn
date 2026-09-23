@@ -9,7 +9,7 @@ import type {
   ParticipantItem,
   SubmitAck,
 } from "@/lib/live";
-import { LiveSessionError } from "@/lib/live";
+import { LiveSessionError, NO_TIMER } from "@/lib/live";
 import type {
   AnsweredPayload,
   RoomConnection,
@@ -39,8 +39,12 @@ const state = (over: Partial<LiveSessionState> = {}): LiveSessionState => ({
   position: null,
   itemCount: 12,
   reveal: false,
+  timer: NO_TIMER,
   ...over,
 });
+
+/** How far the session's clock is ahead of this phone's in these tests: two minutes (#182). */
+const SKEW = 120_000;
 
 const running = (over: Partial<LiveSessionState> = {}) =>
   state({ status: "running", position: 1, itemCount: 3, ...over });
@@ -84,6 +88,8 @@ function fakeTransport(submit: (itemId: string, response: AnyResponse) => Promis
       return () => connectionListeners.delete(listener);
     },
     submit: vi.fn(submit),
+    // A phone whose own clock is two minutes slow: the transport has measured the difference.
+    serverNow: () => Date.now() + SKEW,
   } as unknown as SupabaseParticipant;
 
   return {
@@ -421,5 +427,79 @@ describe("StudentRoom: the reveal", () => {
 
     expect(screen.getByText("The answer is showing.")).toBeInTheDocument();
     expect(document.body.textContent).not.toContain("Tachypnea, hypoxemia");
+  });
+});
+
+describe("StudentRoom: the item timer (#182)", () => {
+  /** An item whose time runs out `left` ms from now on the session's clock. */
+  const timedFor = (left: number, over: Partial<LiveSessionState> = {}) =>
+    running({
+      timer: { seconds: 30, endsAt: Date.now() + SKEW + left, remainingMs: null },
+      ...over,
+    });
+
+  it("shows the right time left on a phone whose own clock is two minutes off", async () => {
+    const room = setup();
+    room.push({ state: timedFor(25_000), item: KEYLESS });
+    // On the phone's own clock this would read 2:25. The session's clock says 0:25 — or 0:24 once
+    // the test has taken a moment.
+    await waitFor(() => expect(screen.getByRole("timer")).toHaveTextContent(/^0:2[45]$/));
+  });
+
+  it("holds the clock still while the room is paused", () => {
+    const room = setup();
+    room.push({
+      state: running({
+        status: "paused",
+        timer: { seconds: 30, endsAt: null, remainingMs: 12_000 },
+      }),
+      item: KEYLESS,
+    });
+    expect(screen.getByRole("timer")).toHaveTextContent("0:12");
+    expect(screen.getByTestId("countdown-state")).toHaveTextContent("Paused");
+  });
+
+  it("takes the clock away once the answer is showing", () => {
+    const room = setup();
+    room.push({ state: timedFor(10_000, { reveal: true }), item: KEYLESS });
+    expect(screen.queryByRole("timer")).toBeNull();
+  });
+
+  it("says Time is up when the server refused the answer as late, and offers no retry", async () => {
+    const user = userEvent.setup();
+    const room = setup(state(), async () => {
+      throw new LiveSessionError("time_up");
+    });
+    room.push({ state: timedFor(0), item: KEYLESS });
+    await renderersLoaded();
+
+    await user.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
+    await user.click(screen.getByRole("button", { name: /^Submit$/ }));
+
+    await waitFor(() => expect(screen.getByTestId("answer-late")).toBeInTheDocument());
+    expect(screen.getByRole("heading", { name: "Time is up" })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
+  });
+
+  it("gives the item back, answer and all, when the host adds time", async () => {
+    const user = userEvent.setup();
+    const room = setup(state(), async () => {
+      throw new LiveSessionError("time_up");
+    });
+    const first = timedFor(0);
+    room.push({ state: first, item: KEYLESS });
+    await renderersLoaded();
+    await user.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
+    await user.click(screen.getByRole("button", { name: /^Submit$/ }));
+    await waitFor(() => expect(screen.getByTestId("answer-late")).toBeInTheDocument());
+
+    room.push({
+      state: { ...first, timer: { ...first.timer, endsAt: Date.now() + SKEW + 15_000 } },
+      item: KEYLESS,
+    });
+    await renderersLoaded();
+    expect(screen.queryByTestId("answer-late")).toBeNull();
+    expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeChecked();
   });
 });

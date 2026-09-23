@@ -155,7 +155,8 @@ export function FakeRoom({ set }: { set: RoomEntry[] }) {
   const answered = current === null ? 0 : (answeredBy[current.id] ?? 0);
   const refused = HOST_COMMANDS.map((command) => ({
     command,
-    result: applyHostCommand(state, command),
+    // Only the refusal is read, and no command is refused by what time it is.
+    result: applyHostCommand(state, command, 0),
   })).flatMap(({ command, result }) => (result.ok ? [] : [{ command, message: result.message }]));
 
   const run = useCallback(

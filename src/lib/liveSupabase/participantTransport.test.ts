@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
-import type { LiveSessionState, Participant } from "@/lib/live";
+import { NO_TIMER, type LiveSessionState, type Participant } from "@/lib/live";
 import type { Database } from "@/lib/supabase/database.types";
 import {
   createSupabaseParticipant,
@@ -28,11 +28,17 @@ const ME = {
 };
 
 const LOBBY: ParticipantViewPayload = {
-  state: { status: "lobby", position: null, itemCount: 2, reveal: false },
+  state: { status: "lobby", position: null, itemCount: 2, reveal: false, timer: NO_TIMER },
   item: null,
   answered: null,
   revealed: null,
+  serverNow: Date.now(),
 };
+
+/** The state fields of a view, with no timer on them unless a test says so. */
+const at = (
+  state: Omit<LiveSessionState, "timer"> & Partial<Pick<LiveSessionState, "timer">>,
+): LiveSessionState => ({ timer: NO_TIMER, ...state });
 
 const stateRow = (over: Partial<Record<string, unknown>> = {}) => ({
   session_id: SESSION_ID,
@@ -40,20 +46,57 @@ const stateRow = (over: Partial<Record<string, unknown>> = {}) => ({
   item_position: 1,
   item_count: 2,
   reveal: false,
+  timer_seconds: null,
+  item_ends_at: null,
+  timer_remaining_ms: null,
   ...over,
 });
+
+/** The three clock columns, as the mirror carries them when no timer is on. */
+const NO_CLOCK = { timer_seconds: null, item_ends_at: null, timer_remaining_ms: null };
 
 describe("publicStateFrom", () => {
   it("reads the four facts the mirror carries", () => {
     expect(
-      publicStateFrom({ status: "running", item_position: 2, item_count: 9, reveal: true }),
-    ).toEqual({ status: "running", position: 2, itemCount: 9, reveal: true });
+      publicStateFrom({
+        status: "running",
+        item_position: 2,
+        item_count: 9,
+        reveal: true,
+        ...NO_CLOCK,
+      }),
+    ).toEqual({ status: "running", position: 2, itemCount: 9, reveal: true, timer: NO_TIMER });
   });
 
   it("takes a lobby row, where there is no position yet", () => {
     expect(
-      publicStateFrom({ status: "lobby", item_position: null, item_count: 9, reveal: false }),
-    ).toEqual({ status: "lobby", position: null, itemCount: 9, reveal: false });
+      publicStateFrom({
+        status: "lobby",
+        item_position: null,
+        item_count: 9,
+        reveal: false,
+        ...NO_CLOCK,
+      }),
+    ).toEqual({ status: "lobby", position: null, itemCount: 9, reveal: false, timer: NO_TIMER });
+  });
+
+  it("reads the item's clock, which the mirror carries since #182", () => {
+    expect(
+      publicStateFrom(
+        stateRow({ timer_seconds: 30, item_ends_at: "2027-01-15T08:00:30.250+00:00" }),
+      )?.timer,
+    ).toEqual({ seconds: 30, endsAt: Date.parse("2027-01-15T08:00:30.250Z"), remainingMs: null });
+    expect(
+      publicStateFrom(stateRow({ status: "paused", timer_seconds: 30, timer_remaining_ms: 12_000 }))
+        ?.timer,
+    ).toEqual({ seconds: 30, endsAt: null, remainingMs: 12_000 });
+  });
+
+  it("refuses a row without the clock, rather than guessing there is none", () => {
+    expect(
+      publicStateFrom({ status: "running", item_position: 2, item_count: 9, reveal: true }),
+    ).toBeNull();
+    expect(publicStateFrom(stateRow({ item_ends_at: "soon" }))).toBeNull();
   });
 
   it("refuses anything that is not one of those rows", () => {
@@ -140,7 +183,7 @@ describe("resuming a room a phone is already in", () => {
     const live = phone();
     const view = await live.enter();
 
-    expect(view).toEqual(LOBBY);
+    expect(view).toEqual({ state: LOBBY.state, item: null, answered: null, revealed: null });
     expect(live.socket.topic).toBe(liveTopic(SESSION_ID));
     expect(live.socket.tracked).toEqual([
       { participantId: ME.participantId, displayName: "Sam Okafor", joinedAt: 100 },
@@ -214,7 +257,7 @@ describe("resuming a room a phone is already in", () => {
 describe("what a state message costs", () => {
   it("shows a pause from the message itself, with no request at all", async () => {
     const live = phone([
-      { ...LOBBY, state: { status: "running", position: 1, itemCount: 2, reveal: false } },
+      { ...LOBBY, state: at({ status: "running", position: 1, itemCount: 2, reveal: false }) },
     ]);
     await live.enter();
     expect(live.asks()).toBe(1);
@@ -227,8 +270,8 @@ describe("what a state message costs", () => {
 
   it("asks the server again when the room moves to another item", async () => {
     const live = phone([
-      { ...LOBBY, state: { status: "running", position: 1, itemCount: 2, reveal: false } },
-      { ...LOBBY, state: { status: "running", position: 2, itemCount: 2, reveal: false } },
+      { ...LOBBY, state: at({ status: "running", position: 1, itemCount: 2, reveal: false }) },
+      { ...LOBBY, state: at({ status: "running", position: 2, itemCount: 2, reveal: false }) },
     ]);
     await live.enter();
     live.socket.deliver({ new: stateRow({ item_position: 2 }) });
@@ -238,8 +281,8 @@ describe("what a state message costs", () => {
 
   it("asks the server again when the key goes up, because the key is the server's to give", async () => {
     const live = phone([
-      { ...LOBBY, state: { status: "running", position: 1, itemCount: 2, reveal: false } },
-      { ...LOBBY, state: { status: "running", position: 1, itemCount: 2, reveal: true } },
+      { ...LOBBY, state: at({ status: "running", position: 1, itemCount: 2, reveal: false }) },
+      { ...LOBBY, state: at({ status: "running", position: 1, itemCount: 2, reveal: true }) },
     ]);
     await live.enter();
     live.socket.deliver({ new: stateRow({ reveal: true }) });
@@ -251,6 +294,36 @@ describe("what a state message costs", () => {
     await live.enter();
     live.socket.deliver({ new: { nonsense: true } });
     await vi.waitFor(() => expect(live.asks()).toBe(2));
+  });
+});
+
+describe("the item's clock (#182)", () => {
+  it("takes fifteen more seconds from the message itself, with no request", async () => {
+    const live = phone([
+      { ...LOBBY, state: at({ status: "running", position: 1, itemCount: 2, reveal: false }) },
+    ]);
+    await live.enter();
+    const endsAt = "2027-01-15T08:00:45.000+00:00";
+    live.socket.deliver({ new: stateRow({ timer_seconds: 30, item_ends_at: endsAt }) });
+    expect(live.asks()).toBe(1);
+    expect(live.recorded.states.at(-1)?.timer).toEqual({
+      seconds: 30,
+      endsAt: Date.parse(endsAt),
+      remainingMs: null,
+    });
+  });
+
+  it("reads the session's clock on a phone whose own clock is two minutes slow", async () => {
+    // What the server says the time is, two minutes ahead of this phone's clock.
+    const live = phone([{ ...LOBBY, serverNow: Date.now() + 120_000 }]);
+    await live.enter();
+    const ahead = live.transport.serverNow() - Date.now();
+    expect(Math.abs(ahead - 120_000)).toBeLessThan(1_000);
+  });
+
+  it("uses its own clock until it has heard the server's", () => {
+    const live = phone();
+    expect(Math.abs(live.transport.serverNow() - Date.now())).toBeLessThan(1_000);
   });
 });
 

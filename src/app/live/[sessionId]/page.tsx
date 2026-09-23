@@ -51,6 +51,7 @@ export default async function LiveSessionPage({ params }: PageProps<"/live/[sess
           position: session.position,
           itemCount: session.itemCount,
           reveal: session.reveal,
+          timer: session.timer,
         }}
       />
     </main>

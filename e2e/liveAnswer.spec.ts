@@ -237,3 +237,95 @@ async function readDownload(download: Download): Promise<string> {
   for await (const chunk of stream) chunks.push(chunk as Buffer);
   return Buffer.concat(chunks).toString("utf8");
 }
+
+/**
+ * #182's demo: set 30 seconds and start; the phone counts down with the console; an answer after
+ * zero is refused with "Time is up"; adding fifteen seconds gives the item back.
+ *
+ * It waits out a real thirty seconds, because the point is what the server's own clock decides —
+ * nothing here can be faked from the browser — so it is given the time to do so.
+ */
+test("a timed item counts down on the phone, and refuses an answer after zero", async ({
+  browser,
+  page,
+  request,
+}, testInfo) => {
+  test.setTimeout(180_000);
+  await signInAsNewAuthor(page, request, testInfo.project.name);
+
+  const bankName = `Timer ${testInfo.project.name} ${Date.now()}`;
+  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create bank" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
+  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("button", { name: "Extended Multiple Response", exact: true }).click();
+  await fillMultipleResponse(page, STEM, OPTIONS, CORRECT);
+  await publishOpenItem(page);
+  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("button", { name: "Start a live session", exact: true }).click();
+  await expect(page).toHaveURL(/\/live\/[0-9a-f-]{36}$/);
+
+  const code = (await page.getByTestId("join-code").innerText()).replace(/\s/g, "");
+  const { viewport, isMobile, hasTouch } = testInfo.project.use;
+  const phone = await join(
+    browser,
+    new URL(page.url()).origin,
+    { viewport, isMobile, hasTouch },
+    code,
+    "Ada Brennan",
+  );
+
+  // The time is chosen in the lobby and applies from the first item.
+  const perItem = page.getByRole("combobox", { name: "Time per item" });
+  await perItem.selectOption({ label: "30 seconds" });
+  await expect(perItem).toHaveValue("30");
+  await page.getByRole("button", { name: "Start session", exact: true }).click();
+
+  // Both screens count down, from the same end time on the database's clock.
+  await expect(page.getByRole("timer")).toHaveText(/^0:(2\d|30)$/, { timeout: 15_000 });
+  await expect(phone.getByRole("timer")).toHaveText(/^0:(2\d|30)$/, { timeout: 15_000 });
+  await expectNoAxeViolations(page);
+  await expectNoAxeViolations(phone);
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/live-timer-console.png`,
+    fullPage: true,
+  });
+  await phone.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/live-timer-phone.png`,
+    fullPage: true,
+  });
+
+  // An answer picked in time, sent after zero and the two seconds of grace.
+  await phone.getByRole("checkbox", { name: OPTIONS[0] as string }).click();
+  await expect(phone.getByTestId("countdown-state")).toHaveText("Time is up", { timeout: 45_000 });
+  await expect(page.getByTestId("countdown-state")).toHaveText("Time is up");
+  // The grace is the server's: waiting it out is the only way to be past it.
+  await phone.waitForTimeout(3_000);
+  await phone.getByRole("button", { name: "Submit", exact: true }).click();
+  await expect(phone.getByRole("heading", { name: "Time is up", exact: true })).toBeVisible();
+  await expect(phone.getByTestId("answer-late")).toBeVisible();
+  await expectNoAxeViolations(phone);
+  await phone.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/live-timer-phone-late.png`,
+    fullPage: true,
+  });
+  // Nothing was taken, so the console has nothing to count.
+  await expect(page.getByTestId("answer-count")).toHaveText("0 of 1 answered", {
+    timeout: 15_000,
+  });
+
+  // Fifteen more seconds, and the phone has the item back with its answer still ticked.
+  await page.getByRole("button", { name: "Add 15 seconds", exact: true }).click();
+  await expect(phone.getByRole("checkbox", { name: OPTIONS[0] as string })).toBeChecked({
+    timeout: 15_000,
+  });
+  await phone.getByRole("button", { name: "Submit", exact: true }).click();
+  await expect(phone.getByTestId("answer-sent")).toBeVisible();
+  await expect(page.getByTestId("answer-count")).toHaveText("1 of 1 answered", {
+    timeout: 15_000,
+  });
+
+  await page.getByRole("button", { name: "End session", exact: true }).click();
+  await expect(phone.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
+  await phone.context().close();
+});

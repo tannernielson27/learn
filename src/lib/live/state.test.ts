@@ -3,6 +3,7 @@ import {
   HOST_COMMANDS,
   LIVE_REFUSALS,
   LiveSessionError,
+  NO_TIMER,
   SESSION_MODES,
   SESSION_STATUSES,
   applyHostCommand,
@@ -20,14 +21,14 @@ const lobby = (itemCount = 3): LiveSessionState => initialSessionState(itemCount
 /** Runs a list of commands from the lobby, asserting each is accepted. */
 function drive(from: LiveSessionState, commands: readonly HostCommand[]): LiveSessionState {
   return commands.reduce((state, command) => {
-    const result = applyHostCommand(state, command);
+    const result = applyHostCommand(state, command, 0);
     if (!result.ok) throw new Error(`${command} was refused: ${result.refusal}`);
     return result.state;
   }, from);
 }
 
 function refusalOf(state: LiveSessionState, command: HostCommand): string {
-  const result = applyHostCommand(state, command);
+  const result = applyHostCommand(state, command, 0);
   if (result.ok) throw new Error(`${command} was accepted`);
   return result.refusal;
 }
@@ -52,7 +53,13 @@ describe("the vocabulary", () => {
 
 describe("initialSessionState", () => {
   it("opens in the lobby, on no item, with nothing revealed", () => {
-    expect(lobby(6)).toEqual({ status: "lobby", position: null, itemCount: 6, reveal: false });
+    expect(lobby(6)).toEqual({
+      status: "lobby",
+      position: null,
+      itemCount: 6,
+      reveal: false,
+      timer: NO_TIMER,
+    });
   });
 });
 
@@ -72,8 +79,8 @@ describe("starting", () => {
 
   it("does not mutate the state it was given", () => {
     const before = lobby();
-    applyHostCommand(before, "start");
-    expect(before).toEqual({ status: "lobby", position: null, itemCount: 3, reveal: false });
+    applyHostCommand(before, "start", 0);
+    expect(before).toEqual(initialSessionState(3));
   });
 });
 
@@ -174,8 +181,8 @@ describe("canSubmit", () => {
 
   it("accepts an answer to the item the room is on", () => {
     // The accepted branch carries the position it checked, so the caller needs no cast.
-    expect(canSubmit(drive(lobby(), ["start"]), "a", ids)).toEqual({ ok: true, position: 1 });
-    expect(canSubmit(drive(lobby(), ["start", "advance"]), "b", ids)).toEqual({
+    expect(canSubmit(drive(lobby(), ["start"]), "a", ids, 0)).toEqual({ ok: true, position: 1 });
+    expect(canSubmit(drive(lobby(), ["start", "advance"]), "b", ids, 0)).toEqual({
       ok: true,
       position: 2,
     });
@@ -183,30 +190,33 @@ describe("canSubmit", () => {
 
   it("refuses an answer after the session ends", () => {
     const ended = drive(lobby(), ["start", "end"]);
-    expect(canSubmit(ended, "a", ids)).toMatchObject({ ok: false, refusal: "not_open" });
+    expect(canSubmit(ended, "a", ids, 0)).toMatchObject({ ok: false, refusal: "not_open" });
   });
 
   it("refuses an answer before the session starts", () => {
-    expect(canSubmit(lobby(), "a", ids)).toMatchObject({ ok: false, refusal: "not_started" });
+    expect(canSubmit(lobby(), "a", ids, 0)).toMatchObject({ ok: false, refusal: "not_started" });
   });
 
   it("refuses an answer while the session is paused", () => {
     const paused = drive(lobby(), ["start", "pause"]);
-    expect(canSubmit(paused, "a", ids)).toMatchObject({ ok: false, refusal: "paused" });
+    expect(canSubmit(paused, "a", ids, 0)).toMatchObject({ ok: false, refusal: "paused" });
   });
 
   it("refuses an answer once the key is showing", () => {
     const revealed = drive(lobby(), ["start", "reveal"]);
-    expect(canSubmit(revealed, "a", ids)).toMatchObject({ ok: false, refusal: "already_revealed" });
+    expect(canSubmit(revealed, "a", ids, 0)).toMatchObject({
+      ok: false,
+      refusal: "already_revealed",
+    });
   });
 
   it("refuses an answer to an item the room has moved on from", () => {
     const second = drive(lobby(), ["start", "advance"]);
-    expect(canSubmit(second, "a", ids)).toMatchObject({ ok: false, refusal: "wrong_item" });
+    expect(canSubmit(second, "a", ids, 0)).toMatchObject({ ok: false, refusal: "wrong_item" });
   });
 
   it("carries the sentence to show beside the code", () => {
-    const result = canSubmit(lobby(), "a", ids);
+    const result = canSubmit(lobby(), "a", ids, 0);
     expect(result).toMatchObject({ ok: false, message: LIVE_REFUSALS.not_started });
   });
 });
@@ -230,7 +240,13 @@ describe("itemAt", () => {
 
   it("answers null when the set is shorter than the state claims", () => {
     expect(
-      itemAt(["only"], { status: "running", position: 2, itemCount: 2, reveal: false }),
+      itemAt(["only"], {
+        status: "running",
+        position: 2,
+        itemCount: 2,
+        reveal: false,
+        timer: NO_TIMER,
+      }),
     ).toBeNull();
   });
 });

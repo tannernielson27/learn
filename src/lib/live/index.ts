@@ -11,13 +11,16 @@ export {
   HOST_COMMANDS,
   SESSION_MODES,
   SESSION_STATUSES,
+  TIMER_COMMANDS,
   applyHostCommand,
   canRunHostCommand,
   canSubmit,
+  chooseTimer,
   initialSessionState,
   itemAt,
   type GuardResult,
   type HostCommand,
+  type TimerCommand,
   type LiveSessionState,
   type SessionMode,
   type SessionStatus,
@@ -38,6 +41,20 @@ export {
   type SubmitAck,
   type Unsubscribe,
 } from "./transport";
+export {
+  NO_TIMER,
+  SUBMIT_GRACE_MS,
+  TIMER_CHOICES,
+  TIMER_EXTEND_MS,
+  clockOffset,
+  formatClock,
+  hasClock,
+  readTimer,
+  remainingMs,
+  timerAnnouncement,
+  type ItemTimer,
+  type TimerChoice,
+} from "./timer";
 export { countPresent, mergeRoster, type RosterEntry } from "./roster";
 export { waitingCopy, type WaitingCopy } from "./waiting";
 export { createInMemoryRoom, type InMemoryRoom, type InMemoryRoomOptions } from "./memoryRoom";

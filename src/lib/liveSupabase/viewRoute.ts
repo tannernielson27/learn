@@ -30,6 +30,7 @@
  * and the migration says why.
  */
 import { itemAt, type LiveSessionState, type ParticipantItem } from "@/lib/live";
+import { readTimer } from "@/lib/live/timer";
 import type { Item } from "@/lib/ngn/schemas";
 import { parseSubmission, toKeylessItem, type Reveal } from "@/lib/ngn/submit";
 import type { ScoreResult } from "@/lib/ngn/types";
@@ -79,6 +80,17 @@ export async function readParticipantView(
   if (session.refusal) return fail(500, LIVE_ROUTE_ERRORS.failed);
 
   const itemSet = Array.isArray(session.session_items) ? (session.session_items as unknown[]) : [];
+  // The same nullability as the position below: a column the generator calls a number is null
+  // whenever the timer is off or not running, so every one is coerced before it is read.
+  const timer = readTimer(
+    session.session_timer_seconds ?? null,
+    session.session_ends_at ?? null,
+    session.session_remaining_ms ?? null,
+  );
+  if (timer === null) return fail(500, LIVE_ROUTE_ERRORS.failed);
+  // The database's clock as it read the room (#182), for the phone to measure its own against.
+  const serverNow = Date.parse(session.server_now);
+  if (Number.isNaN(serverNow)) return fail(500, LIVE_ROUTE_ERRORS.failed);
   const state: LiveSessionState = {
     status: session.session_status,
     // A `returns table` function carries no nullability into the generated types, so the position
@@ -87,11 +99,18 @@ export async function readParticipantView(
     position: session.session_position ?? null,
     itemCount: itemSet.length,
     reveal: session.session_reveal,
+    timer,
   };
 
   const currentItemId = itemAt(itemSet, state);
   if (typeof currentItemId !== "string") {
-    const payload: ParticipantViewPayload = { state, item: null, answered: null, revealed: null };
+    const payload: ParticipantViewPayload = {
+      state,
+      item: null,
+      answered: null,
+      revealed: null,
+      serverNow,
+    };
     return Response.json(payload, { headers: NO_STORE_HEADERS });
   }
 
@@ -125,7 +144,7 @@ export async function readParticipantView(
       })
     : null;
 
-  const payload: ParticipantViewPayload = { state, item, answered, revealed };
+  const payload: ParticipantViewPayload = { state, item, answered, revealed, serverNow };
   return Response.json(payload, { headers: NO_STORE_HEADERS });
 }
 

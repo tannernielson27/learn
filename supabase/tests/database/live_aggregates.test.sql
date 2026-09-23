@@ -58,7 +58,7 @@ select results_eq(
 select columns_are(
   'live', 'session_public_state',
   array['session_id', 'status', 'item_position', 'item_count', 'reveal', 'item_ends_at',
-        'updated_at'],
+        'timer_seconds', 'timer_remaining_ms', 'updated_at'],
   'the public mirror carries no org, no host, no code, no title and no item ids'
 );
 

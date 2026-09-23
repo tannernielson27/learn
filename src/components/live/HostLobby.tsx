@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Countdown } from "@/components/live/Countdown";
 import { SessionQrCode } from "@/components/live/SessionQrCode";
 import { Roster } from "@/components/live/Roster";
+import { TimerControls } from "@/components/live/TimerControls";
 import { Button } from "@/components/ui/Button";
 import {
   canRunHostCommand,
@@ -14,6 +16,7 @@ import {
   type LiveHostTransport,
   type LiveSessionState,
   type RosterEntry,
+  type TimerCommand,
 } from "@/lib/live";
 import { createSupabaseHost } from "@/lib/liveSupabase";
 import { reportPath } from "@/lib/live/reportFormat";
@@ -67,6 +70,9 @@ function offered(state: LiveSessionState): HostCommand[] {
     : ["reveal", "advance", "pause", "end"];
 }
 
+/** What is in flight: a move, a timer button, or a new time per item. */
+type Pending = HostCommand | TimerCommand | "set_timer";
+
 const OFFLINE =
   "Live updates are not running. The room still works, but this screen will not move by itself — " +
   "reload it to catch up.";
@@ -102,7 +108,7 @@ export function HostLobby({
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [tally, setTally] = useState<ItemAggregate | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState<HostCommand | null>(null);
+  const [pending, setPending] = useState<Pending | null>(null);
 
   const transport = useRef<LiveHostTransport | null>(null);
   /** Resolves when `open()` has read the room, so a move made in the first second still lands. */
@@ -188,22 +194,40 @@ export function HostLobby({
     };
   }, [onAnItem, state.position, state.reveal, tallyIntervalMs]);
 
-  const run = useCallback(async (command: HostCommand) => {
-    const console_ = transport.current;
-    if (console_ === null) return;
-    setPending(command);
-    setError(null);
-    try {
-      // The adapter guards against the room it has read, so a button pressed before the first
-      // read came back waits for it rather than being refused for a room that looks empty.
-      await opened.current;
-      setState(await COMMANDS[command](console_));
-    } catch (refused) {
-      setError(isLiveSessionError(refused) ? refused.message : FAILED);
-    } finally {
-      setPending(null);
-    }
-  }, []);
+  const perform = useCallback(
+    async (label: Pending, move: (to: LiveHostTransport) => Promise<LiveSessionState>) => {
+      const console_ = transport.current;
+      if (console_ === null) return;
+      setPending(label);
+      setError(null);
+      try {
+        // The adapter guards against the room it has read, so a button pressed before the first
+        // read came back waits for it rather than being refused for a room that looks empty.
+        await opened.current;
+        setState(await move(console_));
+      } catch (refused) {
+        setError(isLiveSessionError(refused) ? refused.message : FAILED);
+      } finally {
+        setPending(null);
+      }
+    },
+    [],
+  );
+
+  const run = useCallback(
+    (command: HostCommand | TimerCommand) => perform(command, COMMANDS[command]),
+    [perform],
+  );
+  const chooseTime = useCallback(
+    (seconds: number | null) => perform("set_timer", (to) => to.setTimer(seconds)),
+    [perform],
+  );
+  /**
+   * The session's clock for the countdown (#182): the database's, as the console measured it on
+   * opening, so this screen and every phone count down to the same zero. This laptop's own clock
+   * only until the console has opened.
+   */
+  const serverNow = useCallback(() => transport.current?.serverNow() ?? Date.now(), []);
 
   const ended = state.status === "ended";
   /**
@@ -235,6 +259,8 @@ export function HostLobby({
           {answersOn.responded} of {answersOn.present} answered
         </p>
       ) : null}
+
+      {onAnItem ? <Countdown timer={state.timer} now={serverNow} /> : null}
 
       <section
         aria-labelledby="code-heading"
@@ -305,6 +331,15 @@ export function HostLobby({
         </div>
       )}
 
+      {ended ? null : (
+        <TimerControls
+          state={state}
+          busy={pending !== null}
+          onChoose={(seconds) => void chooseTime(seconds)}
+          onCommand={(command) => void run(command)}
+        />
+      )}
+
       <Roster roster={roster} />
     </>
   );
@@ -317,11 +352,16 @@ const STATUS_LABEL: Record<LiveSessionState["status"], string> = {
   ended: "Ended",
 };
 
-const COMMANDS: Record<HostCommand, (to: LiveHostTransport) => Promise<LiveSessionState>> = {
+const COMMANDS: Record<
+  HostCommand | TimerCommand,
+  (to: LiveHostTransport) => Promise<LiveSessionState>
+> = {
   start: (to) => to.start(),
   advance: (to) => to.advance(),
   reveal: (to) => to.reveal(),
   pause: (to) => to.pause(),
   resume: (to) => to.resume(),
   end: (to) => to.end(),
+  extend_timer: (to) => to.extendTimer(),
+  stop_timer: (to) => to.stopTimer(),
 };

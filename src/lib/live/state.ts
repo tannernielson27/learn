@@ -10,6 +10,15 @@
  * Pure TypeScript: no React, Next or Supabase.
  */
 import { LIVE_REFUSALS, type LiveRefusal } from "./errors";
+import {
+  NO_TIMER,
+  extendTimer,
+  hasClock,
+  isTimerChoice,
+  settleTimer,
+  timeIsUp,
+  type ItemTimer,
+} from "./timer";
 
 export const SESSION_STATUSES = ["lobby", "running", "paused", "ended"] as const;
 export type SessionStatus = (typeof SESSION_STATUSES)[number];
@@ -32,11 +41,25 @@ export interface LiveSessionState {
   itemCount: number;
   /** Whether the current item's answer key has been shown (ADR 0003). */
   reveal: boolean;
+  /**
+   * The per-item timer (#182): the time chosen, and the clock on the current item, if any. See
+   * `timer.ts`, and `sessions.timer_seconds`, `item_ends_at` and `timer_remaining_ms` in #182's
+   * migration, which hold the same three numbers.
+   */
+  timer: ItemTimer;
 }
 
 /** What a host can ask for. The set is closed, so a console cannot invent a fifth move. */
 export const HOST_COMMANDS = ["start", "advance", "reveal", "pause", "resume", "end"] as const;
 export type HostCommand = (typeof HOST_COMMANDS)[number];
+
+/**
+ * The host's two timer buttons (#182): "Add 15 seconds" and "Stop timer". Not room moves — the room
+ * stays on the same item in the same status — so they are kept out of `HOST_COMMANDS`, which the
+ * gallery and the console map one-to-one onto the six methods that move a room.
+ */
+export const TIMER_COMMANDS = ["extend_timer", "stop_timer"] as const;
+export type TimerCommand = (typeof TIMER_COMMANDS)[number];
 
 export type TransitionResult =
   { ok: true; state: LiveSessionState } | { ok: false; refusal: LiveRefusal; message: string };
@@ -55,8 +78,17 @@ const refuse = (refusal: LiveRefusal): { ok: false; refusal: LiveRefusal; messag
 });
 
 /** The state a session opens in: in the lobby, on no item, with nothing revealed. */
-export function initialSessionState(itemCount: number): LiveSessionState {
-  return { status: "lobby", position: null, itemCount, reveal: false };
+export function initialSessionState(
+  itemCount: number,
+  timerSeconds: number | null = null,
+): LiveSessionState {
+  return {
+    status: "lobby",
+    position: null,
+    itemCount,
+    reveal: false,
+    timer: { ...NO_TIMER, seconds: timerSeconds },
+  };
 }
 
 /**
@@ -66,11 +98,26 @@ export function initialSessionState(itemCount: number): LiveSessionState {
  * The refusals the story names explicitly are `advance` past the end, `reveal` before the session
  * starts, and — through `canSubmit` below — answering after it ends.
  */
-export function applyHostCommand(state: LiveSessionState, command: HostCommand): TransitionResult {
+export function applyHostCommand(
+  state: LiveSessionState,
+  command: HostCommand | TimerCommand,
+  now: number,
+): TransitionResult {
   // An ended session is over for every command, including `end` itself. #128: "no update of any
   // kind is allowed on an ended row", so its code can never start resolving again.
   if (state.status === "ended") return refuse("not_open");
+  if (command === "extend_timer" || command === "stop_timer") {
+    return applyTimerCommand(state, command, now);
+  }
 
+  const moved = moveRoom(state, command);
+  if (!moved.ok) return moved;
+  // The timer follows the move by the one rule the trigger follows too (`settleTimer`).
+  return { ok: true, state: { ...moved.state, timer: settleTimer(state, moved.state, now) } };
+}
+
+/** The room move itself, before the timer is settled. */
+function moveRoom(state: LiveSessionState, command: HostCommand): TransitionResult {
   switch (command) {
     case "start":
       if (state.status !== "lobby") return refuse("already_started");
@@ -110,27 +157,69 @@ export function applyHostCommand(state: LiveSessionState, command: HostCommand):
   }
 }
 
-/** Whether a command would be accepted right now. Host consoles disable their buttons with this. */
-export function canRunHostCommand(state: LiveSessionState, command: HostCommand): boolean {
-  return applyHostCommand(state, command).ok;
+/** "Add 15 seconds" and "Stop timer": the room stays where it is and only the clock changes. */
+function applyTimerCommand(
+  state: LiveSessionState,
+  command: TimerCommand,
+  now: number,
+): TransitionResult {
+  if (state.status === "lobby" || state.position === null) return refuse("not_started");
+  if (!hasClock(state.timer)) return refuse("no_timer");
+  if (command === "stop_timer") {
+    return {
+      ok: true,
+      state: { ...state, timer: { ...state.timer, endsAt: null, remainingMs: null } },
+    };
+  }
+  // `hasClock` has just said there is one, so this is never null here.
+  const timer = extendTimer(state, now) as ItemTimer;
+  return { ok: true, state: { ...state, timer } };
+}
+
+/**
+ * Chooses the per-item time (#182), or turns the timer off with null. It applies from the next
+ * item the room moves to: the clock on the item already showing is left alone, because a class
+ * halfway through answering should not have its time changed under it. "Add 15 seconds" and
+ * "Stop timer" are what change that one.
+ */
+export function chooseTimer(state: LiveSessionState, seconds: number | null): TransitionResult {
+  if (state.status === "ended") return refuse("not_open");
+  if (!isTimerChoice(seconds)) return refuse("bad_timer");
+  return { ok: true, state: { ...state, timer: { ...state.timer, seconds } } };
+}
+
+/**
+ * Whether a command would be accepted right now. Host consoles disable their buttons with this.
+ * The clock is not asked: no command is allowed or refused by what time it is.
+ */
+export function canRunHostCommand(
+  state: LiveSessionState,
+  command: HostCommand | TimerCommand,
+): boolean {
+  return applyHostCommand(state, command, 0).ok;
 }
 
 /**
  * Whether this participant may answer `itemId` right now.
  *
- * Beyond "not after the session ends", two rules earn their place: a paused room takes no answers,
- * and **an item whose key is already showing takes no answers either** — once the key is on the
- * screen a submission is not an answer, it is a copy.
+ * Beyond "not after the session ends", three rules earn their place: a paused room takes no
+ * answers, **an item whose key is already showing takes no answers either** — once the key is on
+ * the screen a submission is not an answer, it is a copy — and an item whose time is up takes none
+ * once `SUBMIT_GRACE_MS` has passed too (#182). `now` is the session's clock, never a phone's.
  */
 export function canSubmit(
   state: LiveSessionState,
   itemId: string,
   itemIds: readonly string[],
+  now: number,
 ): GuardResult {
   if (state.status === "ended") return refuse("not_open");
   if (state.status === "lobby" || state.position === null) return refuse("not_started");
   if (state.status === "paused") return refuse("paused");
   if (state.reveal) return refuse("already_revealed");
+  // #182. After the checks above and before `wrong_item`, in the order `begin_session_submission`
+  // and `record_session_response` keep, so both adapters give the same answer to the same answer.
+  if (timeIsUp(state.timer, now)) return refuse("time_up");
   // `position` counts from 1, the array from 0.
   if (itemIds[state.position - 1] !== itemId) return refuse("wrong_item");
   return { ok: true, position: state.position };

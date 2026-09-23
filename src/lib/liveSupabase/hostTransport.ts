@@ -19,9 +19,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   LiveSessionError,
+  NO_TIMER,
   applyHostCommand,
+  chooseTimer,
+  clockOffset,
   itemAt,
+  readTimer,
   type HostCommand,
+  type TimerCommand,
   type HostSnapshot,
   type ItemAggregate,
   type LiveHostTransport,
@@ -72,7 +77,15 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
   const presence = new Set<(roster: Participant[]) => void>();
   const aggregates = new Set<(aggregate: ItemAggregate) => void>();
 
-  let state: LiveSessionState = { status: "lobby", position: null, itemCount: 0, reveal: false };
+  let state: LiveSessionState = {
+    status: "lobby",
+    position: null,
+    itemCount: 0,
+    reveal: false,
+    timer: NO_TIMER,
+  };
+  /** How far the database's clock is ahead of this laptop's (#182). Measured on `open()`. */
+  let offset = 0;
   let itemIds: string[] = [];
   let code = "";
   let mode: SessionMode = "instructor_paced";
@@ -214,7 +227,9 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
   async function readSession(): Promise<void> {
     const { data, error } = await client
       .from("sessions")
-      .select("code, mode, status, current_position, reveal, item_set")
+      .select(
+        "code, mode, status, current_position, reveal, item_set, timer_seconds, item_ends_at, timer_remaining_ms",
+      )
       .eq("id", sessionId)
       .maybeSingle();
     if (error) throw new Error("The session could not be read.");
@@ -228,7 +243,50 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
       position: data.current_position,
       itemCount: itemIds.length,
       reveal: data.reveal,
+      // Typed columns from the host's own read; `readTimer` only fails on a row this app did not
+      // write, which reads as no clock rather than as a console that cannot open.
+      timer: readTimer(data.timer_seconds, data.item_ends_at, data.timer_remaining_ms) ?? NO_TIMER,
     };
+  }
+
+  /**
+   * Measures the database's clock against this laptop's, so the console counts down on the same
+   * clock the phones do and the server refuses by (#182). One round trip on `open()`; a failure
+   * leaves the offset where it was, which on a first open is this laptop's own clock.
+   */
+  async function measureClock(): Promise<void> {
+    const sentAt = Date.now();
+    const { data, error } = await client.rpc("server_clock");
+    const receivedAt = Date.now();
+    if (error || typeof data !== "string") return;
+    const serverNow = Date.parse(data);
+    if (!Number.isNaN(serverNow)) offset = clockOffset(serverNow, sentAt, receivedAt);
+  }
+
+  const serverNow = (): number => Date.now() + offset;
+
+  /**
+   * Reads the room back after a move, so the console holds the clock the trigger derived rather
+   * than the one the reducer guessed with this laptop's time. If the read fails the reducer's
+   * answer stands; the channel's echo corrects it either way.
+   */
+  async function settleFrom(guess: LiveSessionState): Promise<LiveSessionState> {
+    try {
+      await readSession();
+    } catch {
+      state = guess;
+    }
+    return state;
+  }
+
+  /** What a timer function's refusal means: the room ended under it, or its clock was gone. */
+  async function timerRefusal(): Promise<LiveSessionError> {
+    try {
+      await readSession();
+    } catch {
+      return new LiveSessionError("not_open");
+    }
+    return new LiveSessionError(state.status === "ended" ? "not_open" : "no_timer");
   }
 
   async function onStateChanged(): Promise<void> {
@@ -298,12 +356,20 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
    * the database is then told, and the trigger is free to disagree — if it does, the update fails
    * and this rejects rather than pretending the move happened.
    */
-  async function run(command: HostCommand): Promise<LiveSessionState> {
+  async function run(command: HostCommand | TimerCommand): Promise<LiveSessionState> {
     if (closed) throw new Error("This console has been closed.");
-    const result = applyHostCommand(state, command);
+    const result = applyHostCommand(state, command, serverNow());
     if (!result.ok) throw new LiveSessionError(result.refusal);
 
-    if (command === "end") {
+    if (command === "extend_timer" || command === "stop_timer") {
+      // The two timer buttons are functions, not updates: "fifteen more seconds" has to be read
+      // off the row and written back in one place, under a lock, by the database's clock (#182).
+      const { error } = await client.rpc(
+        command === "extend_timer" ? "extend_item_timer" : "stop_item_timer",
+        { target: sessionId },
+      );
+      if (error) throw await timerRefusal();
+    } else if (command === "end") {
       // Idempotent in the database (#128), so a double-tapped button is not an error. Through the
       // same wrapper the rest of the app ends a session with, rather than a second call site for
       // the same function: #132 made this the only way a room is ended.
@@ -313,6 +379,7 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
       const { error } = await client
         .from("sessions")
         .update({
+          // The clock is not sent: the guard trigger derives it from the move (#182).
           status: result.state.status,
           current_position: result.state.position,
           reveal: result.state.reveal,
@@ -324,13 +391,26 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     // Held locally so the next command is guarded against what the room now is rather than what it
     // was; listeners still hear about it only when the change comes back over the channel, so no
     // one is told twice.
-    state = result.state;
-    return state;
+    return settleFrom(result.state);
+  }
+
+  /** Chooses the per-item time (#182). A column the host owns, so a plain update. */
+  async function setTimer(seconds: number | null): Promise<LiveSessionState> {
+    if (closed) throw new Error("This console has been closed.");
+    const result = chooseTimer(state, seconds);
+    if (!result.ok) throw new LiveSessionError(result.refusal);
+    const { error } = await client
+      .from("sessions")
+      .update({ timer_seconds: seconds })
+      .eq("id", sessionId);
+    if (error) throw new LiveSessionError("not_open");
+    return settleFrom(result.state);
   }
 
   return {
     async open(): Promise<HostSnapshot> {
       await ready;
+      await measureClock();
       await readSession();
       current = await loadItem();
       return {
@@ -389,5 +469,9 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     pause: () => run("pause"),
     resume: () => run("resume"),
     end: () => run("end"),
+    setTimer,
+    extendTimer: () => run("extend_timer"),
+    stopTimer: () => run("stop_timer"),
+    serverNow,
   };
 }

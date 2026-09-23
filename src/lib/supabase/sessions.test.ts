@@ -119,7 +119,10 @@ describe("readHostSession", () => {
         mode: "instructor_paced",
         item_set: ["a", "b", "c"],
         current_position: 2,
-        reveal: true,
+        reveal: false,
+        timer_seconds: 60,
+        item_ends_at: "2026-09-19T09:05:00.000+00:00",
+        timer_remaining_ms: null,
         opened_at: "2026-09-19T09:00:00Z",
         closed_at: null,
       },
@@ -133,7 +136,8 @@ describe("readHostSession", () => {
       mode: "instructor_paced",
       itemCount: 3,
       position: 2,
-      reveal: true,
+      reveal: false,
+      timer: { seconds: 60, endsAt: Date.parse("2026-09-19T09:05:00Z"), remainingMs: null },
       openedAt: "2026-09-19T09:00:00Z",
       closedAt: null,
     });
@@ -167,20 +171,31 @@ describe("readHostSession", () => {
 });
 
 describe("readPublicSessionState", () => {
-  it("returns the four facts a participant may know, and selects nothing else", async () => {
+  it("returns the four facts a participant may know and the clock, and selects nothing else", async () => {
     const fake = fakeRow({
-      data: { status: "running", current_position: 2, item_set: ["a", "b"], reveal: false },
+      data: {
+        status: "paused",
+        current_position: 2,
+        item_set: ["a", "b"],
+        reveal: false,
+        timer_seconds: 30,
+        item_ends_at: null,
+        timer_remaining_ms: 12_000,
+      },
       error: null,
     });
     expect(await readPublicSessionState(fake.client, SESSION)).toEqual({
-      status: "running",
+      status: "paused",
       position: 2,
       itemCount: 2,
       reveal: false,
+      timer: { seconds: 30, endsAt: null, remainingMs: 12_000 },
     });
     // The columns are named one by one; a student's first paint must not carry the org, the host,
     // the code, the title or the item ids.
-    expect(fake.select).toHaveBeenCalledWith("status, current_position, item_set, reveal");
+    expect(fake.select).toHaveBeenCalledWith(
+      "status, current_position, item_set, reveal, timer_seconds, item_ends_at, timer_remaining_ms",
+    );
     expect(fake.eq).toHaveBeenCalledWith("id", SESSION);
   });
 
@@ -194,6 +209,8 @@ describe("readPublicSessionState", () => {
       position: null,
       itemCount: 0,
       reveal: false,
+      // A row without the clock columns reads as no clock at all.
+      timer: { seconds: null, endsAt: null, remainingMs: null },
     });
   });
 
