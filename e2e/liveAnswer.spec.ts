@@ -4,6 +4,7 @@ import {
   test,
   type Browser,
   type BrowserContextOptions,
+  type Download,
   type Page,
 } from "@playwright/test";
 import { fillMultipleResponse, publishOpenItem } from "./authoringHelpers";
@@ -178,4 +179,61 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
     await expect(phone.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
     await phone.context().close();
   }
+
+  await readTheReport(page, bankName);
 });
+
+/** No sideways scroll on the page itself: a wide table scrolls inside its own box (#186). */
+async function expectNoPageScroll(page: Page) {
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
+}
+
+/**
+ * Sprint 8's report demo (#186), on the session the test above just ran: open the report from the
+ * ended console, read a student's score, switch to the CJMM view, download the CSV, and find the
+ * session in the list.
+ */
+async function readTheReport(page: Page, bankName: string) {
+  await page.getByRole("link", { name: "Open the report", exact: true }).click();
+  await expect(page).toHaveURL(/\/live\/[0-9a-f-]{36}\/report$/);
+  await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
+
+  const scores = page.getByRole("region", { name: "Scores by student" });
+  await expect(scores.getByRole("row", { name: /^Ada Brennan/ })).toContainText("2 / 2");
+  await expect(scores.getByRole("row", { name: /^Chidi Okeke/ })).toContainText("0 / 2");
+  await expectNoPageScroll(page);
+  await expectNoAxeViolations(page);
+
+  await page.getByRole("link", { name: "Items", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Results by item" })).toBeVisible();
+  await expectNoAxeViolations(page);
+
+  await page.getByRole("link", { name: "CJMM steps", exact: true }).click();
+  await expect(page).toHaveURL(/\?view=steps$/);
+  // The item written above carries no step, so the view says why it is empty.
+  await expect(page.getByText(/No item in this session is tagged with a CJMM step/)).toBeVisible();
+  await expectNoAxeViolations(page);
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("link", { name: "Download CSV", exact: true }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/\.csv$/);
+  const csv = await readDownload(download);
+  expect(csv).toContain("Ada Brennan,2,2,2,100\r\n");
+  expect(csv).toContain("Chidi Okeke,0,0,2,0\r\n");
+
+  await page.goto("/author/sessions");
+  await expect(page.getByRole("link", { name: new RegExp(bankName) }).first()).toBeVisible();
+  await expectNoAxeViolations(page);
+}
+
+async function readDownload(download: Download): Promise<string> {
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(chunk as Buffer);
+  return Buffer.concat(chunks).toString("utf8");
+}

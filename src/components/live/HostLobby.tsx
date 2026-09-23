@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SessionQrCode } from "@/components/live/SessionQrCode";
 import { Roster } from "@/components/live/Roster";
@@ -15,6 +16,7 @@ import {
   type RosterEntry,
 } from "@/lib/live";
 import { createSupabaseHost } from "@/lib/liveSupabase";
+import { reportPath } from "@/lib/live/reportFormat";
 import { formatSessionCode } from "@/lib/live/sessionCode";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -249,6 +251,14 @@ export function HostLobby({
             <p className="mt-3 text-sm text-ink-2">
               This session has ended. The code no longer works, and an ended session cannot be
               reopened. Start a new one from the bank.
+            </p>
+            <p className="mt-4">
+              <Link
+                href={reportPath(sessionId)}
+                className="tap-target inline-flex items-center font-medium text-accent-ink hover:underline"
+              >
+                Open the report
+              </Link>
             </p>
           </>
         ) : (

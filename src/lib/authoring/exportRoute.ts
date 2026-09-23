@@ -8,7 +8,7 @@ import { authorForRoute } from "./session";
  * The page's own link is same-origin; an address typed or bookmarked is "none". Browsers that send
  * no header are allowed, since the header cannot be forged by a page.
  */
-function startedElsewhere(request: Request): boolean {
+export function startedElsewhere(request: Request): boolean {
   const site = request.headers.get("sec-fetch-site");
   return site !== null && site !== "same-origin" && site !== "none";
 }
