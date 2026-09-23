@@ -3,6 +3,96 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      assignments: {
+        Row: {
+          bank_id: string | null;
+          case_study_id: string | null;
+          class_id: string;
+          closes_at: string;
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          item_set: Json;
+          max_attempts: number;
+          opens_at: string;
+          org_id: string;
+          patient_record: Json | null;
+          shuffle_options: boolean;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          bank_id?: string | null;
+          case_study_id?: string | null;
+          class_id: string;
+          closes_at: string;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          item_set?: Json;
+          max_attempts?: number;
+          opens_at: string;
+          org_id?: string;
+          patient_record?: Json | null;
+          shuffle_options?: boolean;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          bank_id?: string | null;
+          case_study_id?: string | null;
+          class_id?: string;
+          closes_at?: string;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          item_set?: Json;
+          max_attempts?: number;
+          opens_at?: string;
+          org_id?: string;
+          patient_record?: Json | null;
+          shuffle_options?: boolean;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "assignments_bank_org_fkey";
+            columns: ["bank_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "item_banks";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "assignments_case_org_fkey";
+            columns: ["case_study_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "case_studies";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "assignments_class_org_fkey";
+            columns: ["class_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "classes";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "assignments_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "assignments_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "orgs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       bank_folders: {
         Row: {
           bank_id: string;

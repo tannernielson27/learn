@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { deleteAssignment, editAssignment } from "@/app/author/assignments/actions";
+import { AssignmentList } from "@/components/assignments/AssignmentList";
 import { ClassNameForm } from "@/components/classes/ClassNameForm";
 import { ClassRoster } from "@/components/classes/ClassRoster";
 import { InviteLinkPanel } from "@/components/classes/InviteLinkPanel";
@@ -9,6 +11,7 @@ import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { classPath, CLASSES_PATH, inviteUrl } from "@/lib/classes/classes";
 import { canonicalSiteOrigin } from "@/lib/http/siteOrigin";
+import { listClassAssignments } from "@/lib/supabase/assignments";
 import { classRoster, readClass } from "@/lib/supabase/classes";
 import { removeStudent, renameClass, rotateInvite } from "../actions";
 
@@ -22,7 +25,10 @@ export default async function ClassPage({ params }: PageProps<"/author/classes/[
 
   const detail = await readClass(supabase, classId);
   if (!detail) notFound();
-  const roster = await classRoster(supabase, classId);
+  const [roster, assignments] = await Promise.all([
+    classRoster(supabase, classId),
+    listClassAssignments(supabase, classId),
+  ]);
   const url = inviteUrl(canonicalSiteOrigin(await headers()), detail.inviteToken);
 
   return (
@@ -48,6 +54,26 @@ export default async function ClassPage({ params }: PageProps<"/author/classes/[
           classTitle={detail.name}
           rotateAction={rotateInvite.bind(null, detail.id)}
         />
+      </section>
+
+      <section aria-labelledby="assignments-heading" className="mb-10">
+        <h2 id="assignments-heading" className="mb-3 text-lg font-medium text-ink-1">
+          Assignments
+        </h2>
+        {assignments === null ? (
+          <p role="alert" className="text-ink-2">
+            The assignments could not be loaded. Reload the page to try again.
+          </p>
+        ) : (
+          <AssignmentList
+            assignments={assignments}
+            now={new Date()}
+            editActionFor={(assignmentId, closeOnly) =>
+              editAssignment.bind(null, detail.id, assignmentId, closeOnly)
+            }
+            deleteActionFor={(assignmentId) => deleteAssignment.bind(null, detail.id, assignmentId)}
+          />
+        )}
       </section>
 
       <section aria-labelledby="roster-heading" className="mb-10">

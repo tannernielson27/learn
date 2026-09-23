@@ -18,6 +18,7 @@ import { Pager } from "@/components/authoring/Pager";
 import { TagFilterBar } from "@/components/authoring/TagFilterBar";
 import { Button } from "@/components/ui/Button";
 import { startLiveSession } from "@/app/live/actions";
+import { assignmentPath } from "@/lib/assignments/assignments";
 import {
   isSearching,
   parseItemSearch,
@@ -153,6 +154,13 @@ export default async function BankPage({
           <Button type="submit" variant="secondary">
             Start a live session
           </Button>
+          {/* #207: the same bank, given to a class to take at home. */}
+          <Link
+            href={assignmentPath({ kind: "bank", id: bank.id })}
+            className="tap-target inline-flex items-center rounded-sm border border-line bg-surface-1 px-4 font-medium text-ink-1 hover:border-line-strong hover:bg-surface-2"
+          >
+            Assign
+          </Link>
         </form>
         <Link
           href={`/author/banks/${bank.id}/new`}

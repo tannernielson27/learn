@@ -1,17 +1,23 @@
 import type { Metadata } from "next";
+import { StudentAssignmentList } from "@/components/assignments/StudentAssignmentList";
 import { StudentClassList } from "@/components/classes/StudentClassList";
 import { requireStudent } from "@/lib/classes/viewer";
+import { listOpenAssignments } from "@/lib/supabase/assignments";
 import { myClasses } from "@/lib/supabase/classInvites";
 
 export const metadata: Metadata = { title: "Your classes" };
 
 /**
- * The student home (#205): the classes this student belongs to. Minimal on purpose; #207 adds the
- * assignments. Anyone who is not a student is sent to their own home by `requireStudent`.
+ * The student home (#205): the classes this student belongs to, and (#207) their open assignments.
+ * Taking one is #208. Anyone who is not a student is sent to their own home by `requireStudent`.
  */
 export default async function StudentHomePage() {
   const { supabase } = await requireStudent();
-  const classes = await myClasses(supabase);
+  const [classes, assignments] = await Promise.all([
+    myClasses(supabase),
+    listOpenAssignments(supabase, new Date()),
+  ]);
+  const classNames = new Map((classes ?? []).map((entry) => [entry.id, entry.name]));
 
   return (
     <>
@@ -23,6 +29,18 @@ export default async function StudentHomePage() {
       ) : (
         <StudentClassList classes={classes} />
       )}
+      <section aria-labelledby="open-assignments-heading" className="mt-10">
+        <h2 id="open-assignments-heading" className="mb-3 text-lg font-medium text-ink-1">
+          Open assignments
+        </h2>
+        {assignments === null ? (
+          <p role="alert" className="text-ink-2">
+            Your assignments could not be loaded. Reload the page to try again.
+          </p>
+        ) : (
+          <StudentAssignmentList assignments={assignments} classNames={classNames} />
+        )}
+      </section>
     </>
   );
 }
