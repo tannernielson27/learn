@@ -46,19 +46,22 @@ export function clozeBlankDefs(
 /**
  * Parses responses whose entries are `{ [blankField]: blankId, [choiceField]: choiceId }` and
  * turns each into fills. A response that fills a blank twice, names a blank the item does not
- * have, or puts a choice in a blank that does not offer it is unreadable.
+ * have, or puts a choice in a blank that does not offer it is unreadable. With `singleUse`, so is
+ * one that places the same choice in two blanks: a single-use drag-and-drop bank cannot do that.
  */
 export function readFills<T extends ItemType>(
   type: T,
   raws: readonly unknown[],
   defs: readonly BlankDef[],
   entriesOf: (response: ResponseOf<T>) => readonly Entry[],
+  singleUse = false,
 ): { fills: Fills[]; unreadable: number } {
   const offered = new Map(defs.map((def) => [def.id, new Set(def.choices.map((c) => c.id))]));
   const { responses, unreadable } = readResponses(type, raws, (r) => {
     const entries = entriesOf(r);
     return (
       noRepeats(entries.map((entry) => entry.blank)) &&
+      (!singleUse || noRepeats(entries.map((entry) => entry.choice))) &&
       entries.every((entry) => offered.get(entry.blank)?.has(entry.choice) === true)
     );
   });
@@ -152,7 +155,11 @@ export function dragdropClozeDistribution(
   raws: readonly unknown[],
 ): BlanksDistribution {
   const defs = dragdropDefs(item);
-  return blanksDistribution(item, defs, readFills(item.type, raws, defs, dragdropEntries));
+  return blanksDistribution(
+    item,
+    defs,
+    readFills(item.type, raws, defs, dragdropEntries, !item.content.reusable),
+  );
 }
 
 export function dropdownTableDistribution(

@@ -106,6 +106,14 @@ describe("pairs distributions (rationale types)", () => {
     ]);
   });
 
+  it("treats a single-use token placed in both blanks of a rationale as unreadable", () => {
+    const item = itemSchema.parse(FIXTURES.dragdrop_rationale.canonical);
+    if (item.type !== "dragdrop_rationale") throw new Error("expected dragdrop_rationale");
+    expect(item.content.reusable).toBe(false);
+    const result = distributionFor(item, [dragdrop("tok_atelectasis", "tok_atelectasis")]);
+    expect(result).toMatchObject({ responded: 0, unreadable: 1 });
+  });
+
   it("keeps the top wrong dyads of a drag-and-drop rationale room, ties in arrival order", () => {
     const item = itemSchema.parse(FIXTURES.dragdrop_rationale.canonical);
     const [atel, pe, shallow, immob] = [

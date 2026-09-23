@@ -94,6 +94,6 @@ export function dragdropRationaleDistribution(
   return pairsDistribution(
     { id: item.id, type: item.type, anchorBlankId: item.answerKey.anchorBlankId },
     defs,
-    readFills(item.type, raws, defs, dragdropEntries),
+    readFills(item.type, raws, defs, dragdropEntries, !item.content.reusable),
   );
 }

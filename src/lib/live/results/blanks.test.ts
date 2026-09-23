@@ -125,6 +125,23 @@ describe("blanks distributions", () => {
     ]);
   });
 
+  it("treats one single-use token placed in two blanks as unreadable, and allows it when reusable", () => {
+    const twice = {
+      type: "dragdrop_cloze",
+      blanks: [
+        { blankId: "blank_1", tokenId: "tok_saba" },
+        { blankId: "blank_2", tokenId: "tok_saba" },
+      ],
+    };
+    const singleUse = canonical("dragdrop_cloze");
+    if (singleUse.type !== "dragdrop_cloze") throw new Error("expected dragdrop_cloze");
+    expect(singleUse.content.reusable).toBe(false);
+    expect(distributionFor(singleUse, [twice])).toMatchObject({ responded: 0, unreadable: 1 });
+
+    const reusable = { ...singleUse, content: { ...singleUse.content, reusable: true } };
+    expect(distributionFor(reusable, [twice])).toMatchObject({ responded: 1, unreadable: 0 });
+  });
+
   it("counts a drag-and-drop cloze against the whole word bank for every blank", () => {
     const responses = [
       {
