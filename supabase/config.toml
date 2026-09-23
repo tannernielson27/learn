@@ -223,7 +223,10 @@ web3 = 30
 
 # Sends a token_hash link to /auth/confirm, so a link opened on another device still signs in
 # (the default PKCE link only works in the browser that asked). The hosted project needs the
-# same template, set under Authentication > Emails > Magic Link.
+# same template, set under Authentication > Emails > Magic Link (docs/05 §7.7).
+# #206 restyled it for instructors and students alike: inline styles only, hex approximations of
+# the docs/04 tokens (mail clients do not understand oklch), no comments (they would ship in every
+# email). Keep the href exactly as it is; e2e/mailbox.ts finds the link by its /auth/confirm path.
 [auth.email.template.magic_link]
 subject = "Sign in to LeaRN"
 content_path = "./supabase/templates/magic_link.html"
