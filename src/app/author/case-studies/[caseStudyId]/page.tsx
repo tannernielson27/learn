@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { assignmentPath } from "@/lib/assignments/assignments";
 import { publishCaseStudyAction } from "@/app/author/case-studies/[caseStudyId]/actions";
 import { archiveCaseStudyAction, restoreCaseStudyAction } from "@/app/author/archiveActions";
 import { duplicateCaseStudyAction } from "@/app/author/duplicateActions";
@@ -149,6 +151,15 @@ export default async function CaseStudyPage({
                 Start a live session
               </Button>
             </form>
+          ) : null}
+          {/* #207: only a published case study can be assigned, as only one can be run. */}
+          {row.status === "published" ? (
+            <Link
+              href={assignmentPath({ kind: "case_study", id: row.id })}
+              className="tap-target inline-flex items-center rounded-sm border border-line bg-surface-1 px-3 text-sm font-medium text-ink-1 hover:border-line-strong hover:bg-surface-2"
+            >
+              Assign
+            </Link>
           ) : null}
           {row.status === "archived" ? (
             <ArchiveButton

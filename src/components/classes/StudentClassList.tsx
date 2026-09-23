@@ -4,7 +4,7 @@ export interface StudentClassListProps {
   classes: readonly StudentClass[];
 }
 
-/** A student's classes, by name. Assignments join each one from #207. */
+/** A student's classes, by name. Their open assignments are listed separately on /learn. */
 export function StudentClassList({ classes }: StudentClassListProps) {
   if (classes.length === 0) {
     return (
