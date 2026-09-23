@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-23 (Sprint 8 under way: #179, #180, #181, #182, #186, #187 and #193 merged; #183 and #184 in progress; the hosted project is at 18 migrations).
+Last updated: 2026-09-23 (Sprint 8 code complete: every story merged, `main` at 139ae57, demo in `docs/sprints/S8-demo.md`; #197 merged; the hosted project has all 21 migrations).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -54,23 +54,25 @@ Parallelization: #132 and #133 both edit the host and student screens — never 
 
 Demo 8: run a full case study live with a class-sized simulated crowd (load script).
 
-| #                                                           | Title                                                                           | Gates               | Status                                                       |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------ |
-| [#179](https://github.com/tannernielson27/learn/issues/179) | feat(live): count how a room answered each item, per item type                  | live                | Merged (#189)                                                |
-| [#180](https://github.com/tannernielson27/learn/issues/180) | feat(live): show each item's results on the host console                        | live, security, e2e | Merged (#196)                                                |
-| [#181](https://github.com/tannernielson27/learn/issues/181) | feat(live): show the answer and rationale to every phone at reveal              | live, security, e2e | Merged (#195)                                                |
-| [#182](https://github.com/tannernielson27/learn/issues/182) | feat(live): time an item and stop taking answers when it runs out               | live, db, security  | Merged (#191); `20260923010000_item_timer` applied to hosted |
-| [#183](https://github.com/tannernielson27/learn/issues/183) | feat(live): skip an item or go back to one                                      | live, db, e2e       | In progress                                                  |
-| [#184](https://github.com/tannernielson27/learn/issues/184) | feat(live): run a case study live with the patient record on every phone        | live, security, e2e | In progress                                                  |
-| [#185](https://github.com/tannernielson27/learn/issues/185) | feat(live): student-paced mode with a live progress board                       | live, db, security  | To do                                                        |
-| [#186](https://github.com/tannernielson27/learn/issues/186) | feat(live): a session report per student, item and CJMM step, with CSV export   | live, db, security  | Merged (#190); no migration                                  |
-| [#187](https://github.com/tannernielson27/learn/issues/187) | test(live): a load script that runs a class-sized crowd through a case study    | live                | Merged (#192); five-participant smoke runs in CI             |
-| [#193](https://github.com/tannernielson27/learn/issues/193) | fix(live): a phone that joins as the host presses Start may miss the first move | live                | Merged (#194)                                                |
-| [#197](https://github.com/tannernielson27/learn/issues/197) | perf(live): one read per host tick for the tally and the results panel          | live                | To do                                                        |
+| #                                                           | Title                                                                           | Gates               | Status                                                                   |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------ |
+| [#179](https://github.com/tannernielson27/learn/issues/179) | feat(live): count how a room answered each item, per item type                  | live                | Merged (#189)                                                            |
+| [#180](https://github.com/tannernielson27/learn/issues/180) | feat(live): show each item's results on the host console                        | live, security, e2e | Merged (#196)                                                            |
+| [#181](https://github.com/tannernielson27/learn/issues/181) | feat(live): show the answer and rationale to every phone at reveal              | live, security, e2e | Merged (#195)                                                            |
+| [#182](https://github.com/tannernielson27/learn/issues/182) | feat(live): time an item and stop taking answers when it runs out               | live, db, security  | Merged (#191); `20260923010000_item_timer` applied to hosted             |
+| [#183](https://github.com/tannernielson27/learn/issues/183) | feat(live): skip an item or go back to one                                      | live, db, e2e       | Merged (#200); `20260923060000_session_goto` applied to hosted           |
+| [#184](https://github.com/tannernielson27/learn/issues/184) | feat(live): run a case study live with the patient record on every phone        | live, security, e2e | Merged (#199); `20260923070000_case_study_live_record` applied to hosted |
+| [#185](https://github.com/tannernielson27/learn/issues/185) | feat(live): student-paced mode with a live progress board                       | live, db, security  | Merged (#201); `20260923080000_student_paced` applied to hosted          |
+| [#186](https://github.com/tannernielson27/learn/issues/186) | feat(live): a session report per student, item and CJMM step, with CSV export   | live, db, security  | Merged (#190); no migration                                              |
+| [#187](https://github.com/tannernielson27/learn/issues/187) | test(live): a load script that runs a class-sized crowd through a case study    | live                | Merged (#192); five-participant smoke runs in CI                         |
+| [#193](https://github.com/tannernielson27/learn/issues/193) | fix(live): a phone that joins as the host presses Start may miss the first move | live                | Merged (#194)                                                            |
+| [#197](https://github.com/tannernielson27/learn/issues/197) | perf(live): one read per host tick for the tally and the results panel          | live                | Merged (#202)                                                            |
 
 Suggested order: #179 distributions (pure) alongside #182 timer; then #180 results on the console; #181 reveal to every phone; #183 skip and go back; #184 case study live; #185 student-paced; #186 report (independent, can run beside any of the above); #187 load script last, against whatever has merged.
 
 Parallelization: #180, #181, #182, #183 and #185 all edit the host console or the phone room (`HostLobby.tsx`, `StudentRoom.tsx`) and the state machine; never build two of them at once. #179, #186 and #187 are mostly new files and can run beside one of them. At most two builders at a time.
+
+Sprint 8 is code complete: every story merged, `main` at 139ae57. Demo script, known gaps and retro in `docs/sprints/S8-demo.md`. Milestone 8 stays open until the owner accepts the demo. Every Sprint 8 migration is already applied to hosted.
 
 Decisions taken at kickoff while the owner was away (2026-09-23), each the conservative option; say if any should change:
 
