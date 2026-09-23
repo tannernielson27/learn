@@ -238,6 +238,15 @@ describe("HostLobby", () => {
     expect(screen.queryByRole("img", { name: /QR code/ })).toBeNull();
   });
 
+  it("points an ended room at its report", async () => {
+    const fake = setup();
+    await fake.user.click(button("End session"));
+    expect(await screen.findByRole("link", { name: "Open the report" })).toHaveAttribute(
+      "href",
+      `/live/${SESSION_ID}/report`,
+    );
+  });
+
   it("shows the room's own sentence when a move is refused", async () => {
     const fake = setup(state(), new LiveSessionError("not_open"));
     await fake.user.click(button("Start session"));
