@@ -1,7 +1,7 @@
 // The submit seam (#56). ADR 0003: every student-facing payload builder ships with a test that it
 // never includes the key, and one item scores the same however it was submitted.
 import { describe, expect, it } from "vitest";
-import { FIXTURES, sampleCaseStudy } from "./fixtures";
+import { FIXTURES, sampleCaseStudy, sampleTrendItem } from "./fixtures";
 import { ITEM_TYPES, type ItemType } from "./labels";
 import {
   caseStudySchema,
@@ -12,12 +12,14 @@ import {
 } from "./schemas";
 import { scoreItem } from "./scoring";
 import {
+  ANSWER_BEARING_FIELDS,
   parseSubmission,
   scoreInProcess,
   scoreSubmission,
   SUBMIT_ERRORS,
   toKeylessCaseStudy,
   toKeylessItem,
+  type AnswerBearingField,
   type KeylessItem,
 } from "./submit";
 
@@ -31,22 +33,48 @@ function propertyPaths(value: unknown, at = ""): string[] {
   });
 }
 
-/** The three fields ADR 0003 keeps on the server until a score comes back with them. */
-const SECRETS = ["answerKey", "rationale", "scoring"];
+/**
+ * "Answer-bearing", operationally, for a property anywhere in a payload (#144): either its name is
+ * one of the top-level fields the seam itself classifies as answer-bearing — read off
+ * `ANSWER_BEARING_FIELDS`, never listed here, so a fifteenth type is covered the day it is
+ * registered — or the name reads like an answer wherever it sits.
+ *
+ * The second half is what a top-level rule cannot do: catch a type that buried its key *inside*
+ * `content` rather than beside it. It is a deliberately wide net. No property name in any of the
+ * fourteen types' content, envelope or patient record matches it today (`scorePerRow` does not:
+ * the pattern is `scoring`), so a future type that trips it is being asked to justify the name
+ * rather than to rename around the test.
+ */
+const ANSWER_BEARING_NAME = /answer|correct|rationale|scoring|maxPoints/i;
+const ANSWER_BEARING = new Set<string>(ANSWER_BEARING_FIELDS);
 
 /** Walks the real object rather than its JSON, so a key hidden under any name is still found. */
-const secretsIn = (payload: unknown) =>
-  propertyPaths(payload).filter((path) => SECRETS.includes(path.split(".").pop() as string));
+const answerBearingIn = (payload: unknown) =>
+  propertyPaths(payload).filter((path) => {
+    const name = path.split(".").pop() as string;
+    return ANSWER_BEARING.has(name) || ANSWER_BEARING_NAME.test(name);
+  });
 
 const parsed = (type: ItemType) => ITEM_SCHEMAS[type].parse(FIXTURES[type].canonical) as Item;
 
-const samples = ITEM_TYPES.flatMap((type) => {
-  const fixture = FIXTURES[type];
-  return [
-    [`${type} canonical`, ITEM_SCHEMAS[type].parse(fixture.canonical) as Item],
-    [`${type} edge`, ITEM_SCHEMAS[type].parse(fixture.edge) as Item],
-  ] as const;
-});
+const samples = [
+  ...ITEM_TYPES.flatMap((type) => {
+    const fixture = FIXTURES[type];
+    return [
+      [`${type} canonical`, ITEM_SCHEMAS[type].parse(fixture.canonical) as Item],
+      [`${type} edge`, ITEM_SCHEMAS[type].parse(fixture.edge) as Item],
+    ] as const;
+  }),
+  // No fixture above carries a patient record or a difficulty, and both are student-safe envelope
+  // fields that an allow-list could silently drop where a delete-list could not.
+  [
+    "matrix_multiple_choice with a record and a difficulty",
+    ITEM_SCHEMAS.matrix_multiple_choice.parse({
+      ...sampleTrendItem,
+      difficulty: "hard",
+    }) as Item,
+  ],
+] as const;
 
 // Every scoring case the fixtures define.
 const cases = ITEM_TYPES.flatMap((type) =>
@@ -61,35 +89,64 @@ const cases = ITEM_TYPES.flatMap((type) =>
   ),
 );
 
+describe("ANSWER_BEARING_FIELDS", () => {
+  it("still holds the three fields ADR 0003 names", () => {
+    // A floor, not a ceiling: the list is derived, so it may grow, but reclassifying one of these
+    // as student-safe is the leak this story is about. The annotation is the compile-time half —
+    // if `AnswerBearingField` stopped including one of them, this line would stop typing.
+    const adr: AnswerBearingField[] = ["answerKey", "rationale", "scoring"];
+    expect(ANSWER_BEARING_FIELDS).toEqual(expect.arrayContaining(adr));
+  });
+});
+
 describe("toKeylessItem", () => {
   it("covers every item type", () => {
     expect(new Set(samples.map(([, item]) => item.type))).toEqual(new Set(ITEM_TYPES));
   });
 
-  it.each(samples)("never includes the answer key, rationale or scoring: %s", (_name, item) => {
-    const payload = toKeylessItem(item);
-    expect(payload).not.toHaveProperty("answerKey");
-    expect(payload).not.toHaveProperty("rationale");
-    // For +/- items maxPoints is the number of correct answers, so it tells a student how many
-    // to pick (#94). The model and points arrive with the score instead.
-    expect(payload).not.toHaveProperty("scoring");
-    // Serialized too, so nothing nested carries them either.
-    const json = JSON.stringify(payload);
-    expect(json).not.toContain('"answerKey":');
-    expect(json).not.toContain('"rationale":');
-    expect(json).not.toContain('"scoring":');
-    expect(json).not.toContain("maxPoints");
-    expect(json).not.toMatch(/"correct[A-Za-z]*":/);
+  it.each(samples)("carries no answer-bearing property under any name: %s", (_name, item) => {
+    // The negative ADR 0003 actually asks for: not "the three named fields are gone" but "nothing
+    // that could be an answer survived". Walks the object, not its JSON, so a key nested inside
+    // `content` counts too.
+    expect(answerBearingIn(toKeylessItem(item))).toEqual([]);
+    // The same walk over the item it came from finds them, so the walk is doing something.
+    expect(answerBearingIn(item).length).toBeGreaterThan(0);
   });
 
-  it.each(samples)("keeps what the player needs to render: %s", (_name, item) => {
-    const payload = toKeylessItem(item);
-    expect(payload).toMatchObject({
-      id: item.id,
-      type: item.type,
-      stem: item.stem,
-      content: item.content,
-    });
+  it.each(samples)("carries no answer-bearing value, verbatim: %s", (_name, item) => {
+    // A name is easy to change; the value is the thing that must not arrive. Serializing each
+    // answer-bearing field and searching the payload for it catches a key copied out under an
+    // innocent name — and, unlike the ids it references, a whole subtree does not collide with
+    // anything in `content`.
+    const json = JSON.stringify(toKeylessItem(item));
+    const record = item as unknown as Record<string, unknown>;
+    const secrets = ANSWER_BEARING_FIELDS.map((field) => JSON.stringify(record[field])).filter(
+      (value): value is string => value !== undefined && value.length > 2,
+    );
+    expect(secrets.length).toBeGreaterThan(0);
+    for (const secret of secrets) expect(json).not.toContain(secret);
+  });
+
+  it.each(samples)("is the item minus exactly its answer-bearing fields: %s", (_name, item) => {
+    // The other half of the guarantee, and the guard on this refactor: an allow-list must not
+    // quietly drop something a player renders. Every field the item has and the seam does not
+    // call answer-bearing is present, with the same value, and nothing else is.
+    const record = item as unknown as Record<string, unknown>;
+    const payload = toKeylessItem(item) as Record<string, unknown>;
+    const kept = Object.keys(record).filter((key) => !ANSWER_BEARING.has(key));
+    expect(Object.keys(payload).sort()).toEqual([...kept].sort());
+    for (const key of kept) expect(payload[key]).toEqual(record[key]);
+  });
+
+  it("drops a top-level field it has never been taught the name of", () => {
+    // A fifteenth item type, simulated. In the real thing the visibility table would not compile
+    // until someone classified `solutionHint`; this is what happens meanwhile, and what happens to
+    // a row written by a deploy this one has never heard of: the field is not copied at all.
+    const invented = { ...parsed("multiple_choice"), solutionHint: { correctOptionId: "opt_a" } };
+    const payload = toKeylessItem(invented as unknown as Item) as Record<string, unknown>;
+    expect(payload).not.toHaveProperty("solutionHint");
+    expect(answerBearingIn(payload)).toEqual([]);
+    expect(Object.keys(payload)).toEqual(Object.keys(toKeylessItem(parsed("multiple_choice"))));
   });
 
   it("does not change the item it is given", () => {
@@ -97,13 +154,6 @@ describe("toKeylessItem", () => {
     const before = JSON.stringify(item);
     toKeylessItem(item);
     expect(JSON.stringify(item)).toBe(before);
-  });
-
-  it.each(samples)("carries no secret under any name, walked in full: %s", (_name, item) => {
-    // The structural check ADR 0003 asks for: the object itself, not a string search of its JSON.
-    expect(secretsIn(toKeylessItem(item))).toEqual([]);
-    // The same walk over the item it came from finds them, so the walk is doing something.
-    expect(secretsIn(item).length).toBeGreaterThan(0);
   });
 
   it("keeps the item types apart, so type still says which content this is", () => {
@@ -118,12 +168,12 @@ describe("toKeylessItem", () => {
 describe("toKeylessCaseStudy", () => {
   const caseStudy = caseStudySchema.parse(sampleCaseStudy);
 
-  it("carries no step's key, rationale or scoring, walked in full", () => {
+  it("carries no answer-bearing property from any step, walked in full", () => {
     const payload = toKeylessCaseStudy(caseStudy);
-    expect(secretsIn(payload)).toEqual([]);
+    expect(answerBearingIn(payload)).toEqual([]);
     // Every one of the six steps was stripped, not just the one the student opens on.
     expect(payload.items).toHaveLength(6);
-    expect(secretsIn(caseStudy).length).toBeGreaterThanOrEqual(18);
+    expect(answerBearingIn(caseStudy).length).toBeGreaterThanOrEqual(18);
   });
 
   it("keeps the record and everything a student needs to answer each step", () => {
