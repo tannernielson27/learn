@@ -11,7 +11,7 @@ import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { isLiveSessionError } from "@/lib/live/errors";
 import type { LiveSessionState } from "@/lib/live/state";
 import { toScoreReveal, type ItemReveal, type ParticipantItem } from "@/lib/live/transport";
-import { waitingCopy, type WaitingCopy } from "@/lib/live/waiting";
+import { waitingCopy } from "@/lib/live/waiting";
 import {
   createSupabaseParticipant,
   type RoomConnection,
@@ -46,6 +46,7 @@ export interface StudentRoomProps {
 const SENT = "Answer sent. Your instructor will show the answer at the front.";
 const LATE =
   "Your answer was not taken: the time for this item ran out. Your instructor will move the room on.";
+const NOT_ANSWERED = "You did not answer this item. Here is the answer your instructor is showing.";
 
 /**
  * A student's phone during a live session (#132, #133).
@@ -57,7 +58,8 @@ const LATE =
  * have been two presence entries for one phone.
  *
  * **Three states per item, and the renderer is the same one every time.** Answering, sent, and —
- * once the host reveals — the key with this phone's own marks. All three are `ItemPlayer`, keyed
+ * once the host reveals — the key with this phone's own marks, or the key alone for a phone that
+ * did not answer (#181). All three are `ItemPlayer`, keyed
  * so that each is its own mount: the player reads `item`, `initialResponse` and `initialReveal`
  * once, which is exactly what makes a step reopen in a different state. Nothing here is a second
  * copy of any item type, and nothing here scores anything.
@@ -312,13 +314,7 @@ export function StudentRoom({
       {clocked ? <Countdown timer={state.timer} now={serverNow} /> : null}
 
       {showing && revealed !== null ? (
-        <RevealedItem
-          item={item}
-          answered={answered}
-          revealed={revealed}
-          progress={progress}
-          copy={copy}
-        />
+        <RevealedItem item={item} answered={answered} revealed={revealed} progress={progress} />
       ) : late ? (
         <section aria-labelledby="late-heading" className="mt-8">
           <h2 id="late-heading" className="font-read text-2xl text-ink-1">
@@ -379,37 +375,47 @@ export function StudentRoom({
 }
 
 /**
- * The item once the host has revealed it, for a phone that answered: the same renderer again, in
- * feedback mode, with this phone's own answer marked against the key.
+ * The item once the host has revealed it: the same renderer again, in feedback mode.
  *
- * A phone that did **not** answer sees the waiting copy instead — "The answer is showing" — and
- * not the key. `ItemPlayer` marks a key against an answer, and there is none to mark; showing the
- * key on its own is the per-item result view, which is Sprint 8. Saying so here rather than
- * discovering it in front of a class.
+ * A phone that answered sees its own answer marked against the key. A phone that did **not**
+ * (#181) is handed the same key — the server sends every participant the reveal, with `score`
+ * null for one that stayed quiet — and sees it on the same renderer through `initialKey`: nothing
+ * chosen, the key's elements marked, the rationale beneath, and a line saying they did not answer,
+ * so the class discussion has something on every phone to follow.
+ *
+ * A reveal with marks but no answer this phone can draw (a stored answer that no longer parses)
+ * falls to the key-only view too, without the note: they did answer, it just cannot be shown.
  */
 function RevealedItem({
   item,
   answered,
   revealed,
   progress,
-  copy,
 }: {
   item: ParticipantItem;
   answered: AnsweredPayload | null;
   revealed: ItemReveal;
   progress?: { index: number; total: number };
-  copy: WaitingCopy;
 }) {
   const mine = toScoreReveal(revealed);
 
   if (mine === null || answered === null || answered.itemId !== item.id) {
     return (
-      <section aria-labelledby="waiting-heading" className="mt-8">
-        <h2 id="waiting-heading" className="font-read text-2xl text-ink-1">
-          {copy.headline}
-        </h2>
-        <p className="measure mt-2 text-ink-2">{copy.detail}</p>
-      </section>
+      <div className="mt-8">
+        {revealed.score === null ? (
+          <p data-testid="not-answered" className="measure mb-4 text-sm text-ink-2">
+            {NOT_ANSWERED}
+          </p>
+        ) : null}
+        <ItemPlayer
+          key={`${item.id}:key`}
+          item={item}
+          initialKey={revealed.reveal}
+          progress={progress}
+          submit={refuseSecondAnswer}
+          label="Answer key"
+        />
+      </div>
     );
   }
 

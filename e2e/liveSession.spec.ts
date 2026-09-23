@@ -92,7 +92,8 @@ test("an instructor starts a session from a bank, sees a six-character code, and
   await expect(page.getByRole("button", { name: "Next item", exact: true })).toBeDisabled();
 
   await page.getByRole("button", { name: "Show answer", exact: true }).click();
-  await expect(student.getByText("The answer is showing.")).toBeVisible({ timeout: 15_000 });
+  // A phone that did not answer is shown the key too (#181).
+  await expect(student.getByTestId("not-answered")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole("button", { name: "Show answer", exact: true })).toBeDisabled();
 
   await page.getByRole("button", { name: "Pause", exact: true }).click();

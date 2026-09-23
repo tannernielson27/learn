@@ -81,6 +81,45 @@ describe("what actually reaches a student's browser", () => {
     expect(after).toContain("correctOptionId");
   });
 
+  it("hands a phone that never answered the key at the reveal, and not a byte before (#181)", async () => {
+    const live = room();
+    const host = live.host();
+    await host.open();
+    await host.start();
+    await live.settle();
+
+    // Grace joins and never answers. Her browser's bytes are the only ones in this room.
+    const grace = live.participant();
+    const revealed: unknown[] = [];
+    grace.onReveal((entry) => revealed.push(entry));
+    await grace.join(live.code, { displayName: "Grace" });
+    await live.settle();
+
+    const before = wireText(live);
+    expect(before).not.toContain("answerKey");
+    expect(before).not.toContain("correctOptionId");
+    expect(before).not.toContain("rationale");
+    // The item did arrive, so the absence above is not for want of a payload.
+    expect(before).toContain(FIRST.id);
+    expect(revealed).toHaveLength(0);
+
+    const seenBefore = live.stack.wire.length;
+    await host.reveal();
+    await live.settle();
+
+    // The control: the same phone, the same bytes, after the host revealed. The key and the
+    // rationale are there now, and no marks, because there was no answer to mark.
+    const after = live.stack.wire
+      .slice(seenBefore)
+      .map((entry) => entry.body)
+      .join("\n");
+    expect(after).toContain("answerKey");
+    expect(after).toContain("correctOptionId");
+    expect(after).toContain("rationale");
+    expect(after).not.toContain('"points"');
+    expect(revealed).toEqual([expect.objectContaining({ itemId: FIRST.id, score: null })]);
+  });
+
   it("sends the answer to the server and never the score back", async () => {
     const live = room();
     const host = live.host();

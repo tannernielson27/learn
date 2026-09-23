@@ -3,7 +3,7 @@
 import { startTransition, useEffect, useRef, useState } from "react";
 import type { AnyResponse, Item, ItemOf, ItemType, ResponseOf } from "@/lib/ngn/schemas";
 import { ITEM_TYPE_LABELS } from "@/lib/ngn/labels";
-import { initialResponse as firstResponse } from "@/lib/ngn/presentation";
+import { initialResponse as firstResponse, unansweredResponse } from "@/lib/ngn/presentation";
 import type { KeylessItem, Reveal, ScoreReveal, SubmitHandler } from "@/lib/ngn/submit";
 import { SAMPLE_TAG, type ScoreResult } from "@/lib/ngn/types";
 import { QuestionShell } from "./QuestionShell";
@@ -42,6 +42,14 @@ export interface ItemPlayerProps {
    * the answer against.
    */
   initialReveal?: ScoreReveal;
+  /**
+   * The key, rationale and scoring rule for someone who **did not answer** (#181): a live
+   * session's phone that stayed quiet is still shown the answer the class is discussing. Opens in
+   * feedback, read-only, on `unansweredResponse` — nothing chosen, so the renderer marks the key's
+   * elements missed — with the rationale beneath and no score, because there is none. Ignored when
+   * `initialReveal` is given: an answer with marks is the fuller view of the same key.
+   */
+  initialKey?: Reveal;
   /** Every change, so a caller that unmounts the player can hand the response back later. */
   onResponseChange?: (response: AnyResponse) => void;
   /**
@@ -80,17 +88,25 @@ export function ItemPlayer({
   onSubmitted,
   initialResponse,
   initialReveal,
+  initialKey,
   onResponseChange,
   label,
 }: ItemPlayerProps) {
-  const [mode, setMode] = useState<PlayerMode>(initialReveal ? "feedback" : initialMode);
+  // Only a key with no marks beside it is key-only; a reveal with a score takes precedence.
+  const keyOnly = initialReveal ? undefined : initialKey;
+  const [mode, setMode] = useState<PlayerMode>(initialReveal || keyOnly ? "feedback" : initialMode);
   const [response, setResponse] = useState<AnyResponse>(
-    // Building a first response reads only the item's content, never its key.
-    () => initialResponse ?? firstResponse(item as Item),
+    // Building a first response reads only the item's content, never its key — except for someone
+    // who did not answer, whose view is built from the key they have just been handed.
+    () =>
+      initialResponse ??
+      (keyOnly ? unansweredResponse({ ...item, ...keyOnly } as Item) : firstResponse(item as Item)),
   );
   const [result, setResult] = useState<ScoreResult | undefined>(initialReveal?.score);
   // The score is held separately above, so only the three revealed fields are merged onto the item.
-  const [reveal, setReveal] = useState<Reveal | null>(() => toReveal(initialReveal));
+  const [reveal, setReveal] = useState<Reveal | null>(
+    () => toReveal(initialReveal) ?? keyOnly ?? null,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | undefined>(undefined);
   // Whether the question is on screen rather than its loading placeholder or failure message (#54).
@@ -123,8 +139,9 @@ export function ItemPlayer({
   const rationale = "rationale" in fullItem ? fullItem.rationale?.general : undefined;
 
   // Feedback mode is not itself the reveal: a caller can open in it with nothing scored yet, and
-  // until there is a score there is nothing to explain and nothing to hand over.
-  const revealed = mode === "feedback" && result !== undefined;
+  // until there is a score there is nothing to explain and nothing to hand over. The one reveal
+  // without a score is a key handed to someone who did not answer (#181).
+  const revealed = mode === "feedback" && (result !== undefined || keyOnly !== undefined);
   // Typed with the key and rationale optional, and handed over as that: a renderer has to check
   // for either before reading it, because in answer mode neither is there (#50).
   const playerItem = toPlayerItem(fullItem, revealed ? "feedback" : "answer");
@@ -187,7 +204,9 @@ export function ItemPlayer({
       submitError={submitError}
       score={result}
       scoreNote={scoreNote}
-      rationale={rationale}
+      // Only once revealed: the shell shows a rationale on its own for a key with no score (#181),
+      // and a gallery item opened in feedback with nothing scored must not count as that.
+      rationale={revealed ? rationale : undefined}
       sample={item.tags.includes(SAMPLE_TAG)}
       // #60: named by the item's format ("Bowtie question"), not a bare "Question", so the region
       // says something in a landmark list. A caller with two players on a page passes its own.

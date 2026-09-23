@@ -59,6 +59,23 @@ export function initialResponse(item: Item): AnyResponse {
 }
 
 /**
+ * The response a player shows for someone who **did not answer**, once the key is out (#181): a
+ * live session's phone that stayed quiet still sees the answer the class is discussing.
+ *
+ * Nothing chosen, so every element the key names is marked missed and every other is left alone:
+ * the key, read off the renderer's own feedback. Ordered response is the exception, because its
+ * order on screen is always an answer; the presented order would be marked as a wrong attempt the
+ * student never made, so it is laid out in the key's order instead. Reads the key, so it is only
+ * ever called with an item whose key has been revealed.
+ */
+export function unansweredResponse(item: Item): AnyResponse {
+  if (item.type === "ordered_response") {
+    return { type: item.type, orderedIds: [...item.answerKey.orderedIds] };
+  }
+  return emptyResponse(item);
+}
+
+/**
  * Whether an item is a Trend item: one whose attached record is charted at more than one time,
  * so the panel offers a time selector (docs/01-NGN-ITEM-SPEC.md section 4.2). Trend is a shape an
  * item takes rather than a fifteenth format, so any of the fourteen can be one.
