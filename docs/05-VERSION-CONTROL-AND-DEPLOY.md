@@ -149,7 +149,7 @@ Everything in `supabase/migrations/` today, in filename order — this is the re
 | 1   | `20260913000000_authoring_schema`              | orgs, profiles, item banks, items, versions, case studies, RLS                 | applied                    |
 | 2   | `20260914000000_case_study_steps`              | step items live in the case study's bank; atomic reorder                       | applied                    |
 | 3   | `20260915000000_import_bank_content`           | one-call JSON import                                                           | applied                    |
-| 4   | `20260916000000_bank_folders`                  | nested folders per bank                                                        | **confirm**                |
+| 4   | `20260916000000_bank_folders`                  | nested folders per bank                                                        | **not applied**            |
 | 5   | `20260919000000_item_tags`                     | tag filtering on the bank page                                                 | **not applied**            |
 | 6   | `20260919110000_start_step_and_rate_limits`    | `start_case_study_step`, per-user rate limit on authoring mutations            | **not applied**            |
 | 7   | `20260919120600_duplicate_content`             | duplicate an item or a case study                                              | **not applied**            |
