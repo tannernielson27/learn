@@ -52,6 +52,30 @@ import { LIVE_SCHEMA, liveTopic, presentRealtimeToken } from "./wire";
 
 const ITEM_COLUMNS = "type, cjmm_step, tags, version, content, answer_key, rationale, scoring";
 
+/** Everything the tally and the results panel are counted from, in one select (#197). */
+const RESPONSE_COLUMNS = "response, points, max_points";
+
+/**
+ * How long one read of the answers may serve the *other* of the two asks (#197). The console asks
+ * for the tally and for the results on the same three-second tick, a few milliseconds apart; a
+ * second is ample slack for that and well short of the next tick, so one tick's read is never
+ * passed off as the next one's.
+ */
+const SHARE_WINDOW_MS = 1_000;
+
+type ResponseRow = { response: unknown; points: number; max_points: number };
+
+/** The two asks that are counted from the same rows. */
+type Ask = "aggregate" | "results";
+
+/** One read of the answers to one item, and which of the two asks it has served. */
+interface SharedRead {
+  key: string;
+  startedAt: number;
+  rows: Promise<ResponseRow[] | null>;
+  served: Set<Ask>;
+}
+
 type AggregateRow = {
   item_position: number;
   item_ref: string;
@@ -99,6 +123,8 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
   let closed = false;
   /** Whether the channel has been up before, so a rejoin can be told from the first subscribe. */
   let subscribed = false;
+  /** The last read of the answers, for the other ask on the same tick to reuse (#197). */
+  let lastRead: SharedRead | null = null;
 
   /**
    * Registered as soon as the console exists rather than at `open()`: a component subscribes on
@@ -315,6 +341,51 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
   }
 
   /**
+   * The answers to the item the room is on: one read that serves both asks on a tick (#197).
+   *
+   * The console asks for the tally and for the results panel on the same cadence, and both are
+   * counted from the same rows. Whichever asks first reads; the other reuses that read if it asks
+   * about the same item within `SHARE_WINDOW_MS`, whether the read is still in flight or has just
+   * landed. A read serves each ask at most once, so asking the same thing twice always reads again
+   * and a count never stands still because the *other* ask read a moment ago. Null when it failed.
+   */
+  function responsesFor(ask: Ask, position: number, item: Item): Promise<ResponseRow[] | null> {
+    const key = `${position}:${item.id}`;
+    const now = Date.now();
+    const shared = lastRead;
+    if (
+      shared !== null &&
+      shared.key === key &&
+      !shared.served.has(ask) &&
+      now - shared.startedAt < SHARE_WINDOW_MS
+    ) {
+      lastRead = { ...shared, served: new Set([...shared.served, ask]) };
+      return shared.rows;
+    }
+    const rows = readResponses(position);
+    lastRead = { key, startedAt: now, rows, served: new Set([ask]) };
+    return rows;
+  }
+
+  /**
+   * Null when the read failed, whether it answered with an error or never answered at all. It is
+   * shared by two asks, so a rejection here would otherwise fail the tally and the panel together.
+   */
+  async function readResponses(position: number): Promise<ResponseRow[] | null> {
+    try {
+      const { data, error } = await client
+        .from("session_responses")
+        .select(RESPONSE_COLUMNS)
+        .eq("session_id", sessionId)
+        .eq("item_position", position);
+      if (error) return null;
+      return (data ?? []) as unknown as ResponseRow[];
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * The tally for the item the room is on, counted now.
    *
    * It is counted from `session_responses` rather than read from `session_item_aggregates`,
@@ -323,19 +394,16 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
    * otherwise say nought. The in-memory adapter counts live for exactly the same reason, and the
    * conformance suite now pins it.
    *
-   * This costs one indexed read on `open()` — the host's, under their org's row level security —
-   * and is not a push. What goes out over the channel is still the trigger's row, once per item
-   * change.
+   * This costs one indexed read — the host's, under their org's row level security, and shared
+   * with the results panel on the same tick (#197) — and is not a push. What goes out over the
+   * channel is still the trigger's row, once per item change.
    */
   async function readAggregate(): Promise<ItemAggregate | null> {
     if (state.position === null || current === null) return null;
-    const { data } = await client
-      .from("session_responses")
-      .select("points, max_points")
-      .eq("session_id", sessionId)
-      .eq("item_position", state.position);
-
-    const marks = (data ?? []) as unknown as { points: number; max_points: number }[];
+    const position = state.position;
+    const item = current;
+    // A failed read counts as nobody yet, as it always has: a tally is not worth an error.
+    const marks = (await responsesFor("aggregate", position, item)) ?? [];
     let fullMarks = 0;
     let partialMarks = 0;
     let noMarks = 0;
@@ -350,15 +418,15 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     }
     const responded = marks.length;
     return {
-      itemId: current.id,
-      position: state.position,
+      itemId: item.id,
+      position,
       present: Math.max(rosterNow().length, responded),
       responded,
       fullMarks,
       partialMarks,
       noMarks,
       meanPoints: responded === 0 ? 0 : Math.round((total / responded) * 100) / 100,
-      maxPoints: maxPoints(current),
+      maxPoints: maxPoints(item),
     };
   }
 
@@ -368,19 +436,14 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
    * read none, which `live_aggregates.test.sql` pins), and counted here by `distributionFor`.
    *
    * Counted in the host's own process because the host already holds the item with its key; the
-   * responses go nowhere but this console. One indexed read per ask, asked on the tally's
-   * cadence, and nothing on the channel.
+   * responses go nowhere but this console. The same read as the tally's on the same tick (#197),
+   * and nothing on the channel.
    */
   async function readResults(): Promise<Distribution | null> {
     if (state.position === null || current === null) return null;
     const item = current;
-    const { data, error } = await client
-      .from("session_responses")
-      .select("response")
-      .eq("session_id", sessionId)
-      .eq("item_position", state.position);
-    if (error) return null;
-    const rows = (data ?? []) as unknown as { response: unknown }[];
+    const rows = await responsesFor("results", state.position, item);
+    if (rows === null) return null;
     return distributionFor(
       item,
       rows.map((row) => row.response),
@@ -516,7 +579,10 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
       return readAggregate();
     },
 
-    /** Asked for alongside `aggregate()`, and fetches the item first on the same terms. */
+    /**
+     * Asked for alongside `aggregate()`, and fetches the item first on the same terms. Asked on
+     * the same tick, the two share one read of the answers (#197).
+     */
     async results(): Promise<Distribution | null> {
       if (closed || !(await ensureCurrent())) return null;
       return readResults();
