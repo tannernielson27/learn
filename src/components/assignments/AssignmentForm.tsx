@@ -151,7 +151,8 @@ function AssignmentFields({
               name="maxAttempts"
               value={attempts}
               onChange={(event) => setAttempts(event.target.value)}
-              aria-describedby={`${id}-attempts-hint`}
+              aria-invalid={error ? true : undefined}
+              aria-describedby={[`${id}-attempts-hint`, describedBy].filter(Boolean).join(" ")}
               className={`${fieldClass} sm:max-w-40`}
             >
               {ATTEMPT_CHOICES.map((count) => (

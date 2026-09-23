@@ -7,7 +7,7 @@
 -- now() is fixed for the whole transaction, so "open" and "not yet open" are set relative to it.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(49);
+select plan(51);
 
 -- ---------------------------------------------------------------------------
 -- Cast, as the superuser
@@ -306,6 +306,32 @@ select throws_ok(
   'the title, class, source and snapshot are not editable'
 );
 
+-- A closed assignment: assigned normally, then moved into the past as the superuser with triggers
+-- off, since no client can make one.
+insert into public.assignments (class_id, bank_id, title, opens_at, closes_at)
+  values ('00000000-0000-0000-0000-0000002070c2', '00000000-0000-0000-0000-0000002070e0',
+          'Closed 207', now() + interval '1 day', now() + interval '2 days');
+reset role;
+set local session_replication_role = replica;
+update public.assignments
+   set opens_at = now() - interval '2 days', closes_at = now() - interval '1 day'
+ where title = 'Closed 207';
+set local session_replication_role = origin;
+set local role authenticated;
+select pg_temp.act_as('00000000-0000-0000-0000-0000002070a1');
+select throws_ok(
+  $$ update public.assignments set closes_at = now() + interval '1 day' where title = 'Closed 207' $$,
+  '22023', null,
+  'once closed it stays closed: students may already have seen the keys'
+);
+-- Gone again, so the visibility counts below are unchanged.
+reset role;
+set local session_replication_role = replica;
+delete from public.assignments where title = 'Closed 207';
+set local session_replication_role = origin;
+set local role authenticated;
+select pg_temp.act_as('00000000-0000-0000-0000-0000002070a1');
+
 -- ---------------------------------------------------------------------------
 -- Deleting: only before it opens
 -- ---------------------------------------------------------------------------
@@ -418,8 +444,11 @@ select throws_ok(
 -- ---------------------------------------------------------------------------
 
 reset role;
+-- The bank's case study goes first: its steps hold the bank's items, and the authoring schema
+-- refuses to drop items a case study still uses. That rule is older than assignments.
 select lives_ok(
-  $$ delete from public.item_banks where id = '00000000-0000-0000-0000-0000002070e0' $$,
+  $$ delete from public.case_studies where id = '00000000-0000-0000-0000-0000002070a5';
+     delete from public.item_banks where id = '00000000-0000-0000-0000-0000002070e0' $$,
   'the bank can still be deleted'
 );
 select is(
@@ -427,6 +456,12 @@ select is(
      from public.assignments where title = 'Open 207'),
   row(true, 2)::text,
   'the assignment stays, its pointer cleared and its items kept'
+);
+select is(
+  (select row(case_study_id is null, jsonb_array_length(item_set), patient_record is not null)::text
+     from public.assignments where title = 'Heart failure case'),
+  row(true, 1, true)::text,
+  'and so does a case study''s, with its steps and its patient record'
 );
 
 select * from finish();

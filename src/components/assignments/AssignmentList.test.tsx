@@ -91,4 +91,19 @@ describe("AssignmentList", () => {
     expect(screen.queryByLabelText("Opens")).toBeNull();
     expect(screen.getByLabelText("Closes")).toBeVisible();
   });
+
+  it("offers no edit on one that has closed: students may have seen the keys", () => {
+    const { editActionFor, deleteActionFor } = setup([CLOSED]);
+    expect(editActionFor).not.toHaveBeenCalled();
+    expect(deleteActionFor).not.toHaveBeenCalled();
+    expect(screen.queryByText("Change close time", { exact: false })).toBeNull();
+    expect(screen.queryByText("Edit", { exact: false })).toBeNull();
+  });
+
+  it("mounts an edit form only when its row is opened", async () => {
+    const { user } = setup([SCHEDULED, OPEN]);
+    expect(screen.queryByLabelText("Closes")).toBeNull();
+    await user.click(screen.getByText("Change close time", { exact: false }));
+    expect(screen.getAllByLabelText("Closes")).toHaveLength(1);
+  });
 });

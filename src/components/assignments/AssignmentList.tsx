@@ -7,13 +7,15 @@ import {
 } from "@/lib/assignments/assignments";
 import type { AssignmentSummary } from "@/lib/supabase/assignments";
 import { AssignmentForm, type AssignmentFormProps } from "./AssignmentForm";
+import { LazyDetails } from "./LazyDetails";
 import { LocalTime } from "./LocalTime";
 
 export interface AssignmentListProps {
   assignments: readonly AssignmentSummary[];
   /** When the page was rendered: decides each assignment's state. */
   now: Date;
-  /** The edit Server Function bound to one assignment; `closeOnly` once it has opened. */
+  /** The edit Server Function bound to one assignment; `closeOnly` once it has opened. Never
+   * asked for one that has closed. */
   editActionFor: (assignmentId: string, closeOnly: boolean) => AssignmentFormProps["action"];
   /** The delete Server Function bound to one assignment that has not opened. */
   deleteActionFor: (assignmentId: string) => (formData: FormData) => Promise<void>;
@@ -91,20 +93,24 @@ function AssignmentRow({ entry, state, editActionFor, deleteActionFor }: Assignm
         </dl>
         <p>{attemptsLabel(entry.maxAttempts)}</p>
       </div>
-      <details>
-        <summary className="tap-target inline-flex cursor-pointer items-center text-sm font-medium text-accent-ink">
-          {scheduled ? "Edit" : "Change close time"}
-          <span className="sr-only"> for {entry.title}</span>
-        </summary>
-        <div className="mt-3">
+      {/* A closed assignment is final: its keys may already be in front of students (#210). */}
+      {state === "closed" ? null : (
+        <LazyDetails
+          summary={
+            <>
+              {scheduled ? "Edit" : "Change close time"}
+              <span className="sr-only"> for {entry.title}</span>
+            </>
+          }
+        >
           <AssignmentForm
             action={editActionFor(entry.id, !scheduled)}
             initial={entry}
             closeOnly={!scheduled}
             submitLabel={scheduled ? "Save changes" : "Save close time"}
           />
-        </div>
-      </details>
+        </LazyDetails>
+      )}
       {scheduled ? (
         <ConfirmSubmit
           action={deleteActionFor(entry.id)}

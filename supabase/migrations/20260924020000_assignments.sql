@@ -91,6 +91,9 @@ create index assignments_class_opens_idx on public.assignments (class_id, opens_
 create index assignments_bank_id_idx on public.assignments (bank_id);
 create index assignments_case_study_id_idx on public.assignments (case_study_id);
 create index assignments_created_by_idx on public.assignments (created_by);
+-- The student home lists what is still open, filtered and ordered by close time across every class
+-- the student is in, so it is not narrowed by class_id first.
+create index assignments_closes_at_idx on public.assignments (closes_at);
 
 comment on column public.assignments.item_set is
   'Item ids, snapshotted on insert by private.snapshot_assignment. Never answer keys.';
@@ -215,6 +218,12 @@ begin
      ) then
     raise exception 'that assignment has opened: only its close time can change'
       using errcode = '22023';
+  end if;
+
+  -- Closed is final. Keys and rationales reach students at close (#210), so moving the close time
+  -- later again would reopen the assignment to people who have read the answers.
+  if old.closes_at <= now() and new.closes_at <> old.closes_at then
+    raise exception 'that assignment has closed and cannot reopen' using errcode = '22023';
   end if;
 
   if new.closes_at <> old.closes_at and new.closes_at <= now() then
