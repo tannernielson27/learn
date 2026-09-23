@@ -37,7 +37,7 @@ describe("ItemPlayer when a renderer fails to load", () => {
     expect(alert).toHaveTextContent(RENDERER_FAILED);
     expect(alert).not.toHaveTextContent(/chunk/);
     expect(screen.getByText(mc.stem.value.split(/\n{2,}/)[0])).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Submit" })).toHaveAttribute("aria-disabled", "true");
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
     vi.restoreAllMocks();
   });
@@ -47,7 +47,7 @@ describe("ItemPlayer when a renderer fails to load", () => {
     render(<ItemPlayer item={ordered} submit={scoreInProcess(ordered)} />);
 
     await screen.findByRole("alert", {}, { timeout: 10_000 });
-    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Submit" })).toHaveAttribute("aria-disabled", "true");
     vi.restoreAllMocks();
   });
 });
