@@ -51,9 +51,11 @@ $$;
 --
 -- Finds the account by address (any letter case), puts it in the first org if it has none (making
 -- that org on a project that has none, as the old trigger did), and makes it an instructor. An
--- admin stays an admin. An address with no account raises, so a typo is not a silent success.
+-- admin stays an admin. An address with no account raises, so a typo is not a silent success, and
+-- so does a student's, so a typo cannot promote one either. SECURITY INVOKER by design: it runs as
+-- the owner in the SQL editor. Do not grant it to an API role or loosen `profiles`' grants for it.
 -- Not callable by anon, authenticated or service_role: it is for the owner in the SQL editor.
-create function private.make_instructor(account_email text) returns void
+create or replace function private.make_instructor(account_email text) returns void
 language plpgsql set search_path = ''
 as $$
 declare
@@ -65,6 +67,13 @@ begin
     raise exception 'no account has the address %', account_email
       using errcode = 'no_data_found',
             hint = 'Add the user first: dashboard > Authentication > Users > Add user.';
+  end if;
+  -- A student is someone who joined through a class invite. Promoting one by a mistyped or
+  -- mis-copied address would hand them every answer key, which is the accident #204 closes.
+  if exists (select 1 from public.profiles where id = account and role = 'student') then
+    raise exception 'the account % is a student', account_email
+      using errcode = 'check_violation',
+            hint = 'Students are not promoted. If this really is an instructor, remove them from their classes first and set the role by hand.';
   end if;
 
   -- Serialized like the old trigger, so two promotions at once cannot each create an org.

@@ -6,7 +6,7 @@
 -- nothing next to rows that are really there.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(24);
+select plan(25);
 
 -- ---------------------------------------------------------------------------
 -- New accounts, as the superuser (the dashboard's Add user and the admin API both insert here)
@@ -64,7 +64,7 @@ select is(
 -- ---------------------------------------------------------------------------
 
 select is(
-  (select role::text from public.profiles p join auth.users u on u.id = p.id
+  (select p.role::text from public.profiles p join auth.users u on u.id = p.id
    where u.email = 'demo@learn.test'),
   'instructor',
   'the local demo account is still an instructor'
@@ -115,6 +115,15 @@ select throws_ok(
   $$ select private.make_instructor('nobody@example.test') $$,
   'P0002', null,
   'an address with no account is an error, not a silent no-op'
+);
+
+update public.profiles
+  set org_id = (select id from public.orgs order by created_at, id limit 1), role = 'student'
+  where id = '00000000-0000-0000-0000-0000002040aa';
+select throws_ok(
+  $$ select private.make_instructor('new-plain@example.test') $$,
+  '23514', null,
+  'a student is never promoted by address, so a typo cannot hand one the keys'
 );
 
 -- ---------------------------------------------------------------------------

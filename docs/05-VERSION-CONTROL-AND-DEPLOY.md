@@ -254,7 +254,7 @@ Sign-up is invite-only. A new account, however it was made, gets a profile with 
    select private.make_instructor('person@example.com');
    ```
 
-It finds the account by address (any letter case), puts it in the org (`seed.sql`'s, or a new "LeaRN" org on a project that has none) and makes it an instructor. An admin stays an admin, running it twice is harmless, and an address with no account is an error rather than a silent success. It runs only from the SQL editor: no API role (`anon`, `authenticated`, `service_role`) may call it. The person reloads and lands on the author home.
+It finds the account by address (any letter case), puts it in the org (`seed.sql`'s, or a new "LeaRN" org on a project that has none) and makes it an instructor. An admin stays an admin, running it twice is harmless, and an address with no account is an error rather than a silent success. A student's address is refused too, so a typo cannot hand a student the answer keys. It runs only from the SQL editor: no API role (`anon`, `authenticated`, `service_role`) may call it. The person reloads and lands on the author home.
 
 To check who is what: `select u.email, p.role from auth.users u join public.profiles p on p.id = u.id order by u.email;`
 
