@@ -15,7 +15,7 @@ import {
 } from "@/lib/auth/signInRateLimit";
 import { clipInviteToken, invitePath, STUDENT_HOME } from "@/lib/classes/classes";
 import { readViewer } from "@/lib/classes/viewer";
-import { siteOrigin } from "@/lib/http/siteOrigin";
+import { canonicalSiteOrigin } from "@/lib/http/siteOrigin";
 import { joinClass, resolveClassInvite } from "@/lib/supabase/classInvites";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -82,7 +82,7 @@ export async function requestInviteLink(
     email: parsed.email,
     classId: invite.classId,
     token: clipInviteToken(token),
-    origin: siteOrigin(requestHeaders),
+    origin: canonicalSiteOrigin(requestHeaders),
   };
   after(() => sendInviteLink(input, adminCalls(service)));
   return sent;

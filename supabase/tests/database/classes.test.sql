@@ -7,7 +7,7 @@
 -- INSERT, which is why the update path exists), and `join_class` serves a signed-in account.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(60);
+select plan(63);
 
 -- ---------------------------------------------------------------------------
 -- Cast, as the superuser
@@ -471,8 +471,18 @@ delete from public.class_members
 select pg_temp.act_as('00000000-0000-0000-0000-0000002050d1');
 select is_empty($$ select * from public.my_classes() $$,
   'a removed student no longer has the class');
+select is(public.join_class((select token from new_token)), 'invalid',
+  'and the link they still hold does not let them back in');
+select is_empty($$ select * from public.my_classes() $$,
+  'so the removal holds');
 
 reset role;
+select ok(
+  exists (select 1 from private.class_removals
+          where class_id = '00000000-0000-0000-0000-0000002050c1'
+            and profile_id = '00000000-0000-0000-0000-0000002050d1'),
+  'the removal is recorded where no client can reach it'
+);
 select is(
   (select role::text from public.profiles where id = '00000000-0000-0000-0000-0000002050d1'),
   'student',

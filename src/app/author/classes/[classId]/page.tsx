@@ -8,7 +8,7 @@ import { InviteLinkPanel } from "@/components/classes/InviteLinkPanel";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { classPath, CLASSES_PATH, inviteUrl } from "@/lib/classes/classes";
-import { siteOrigin } from "@/lib/http/siteOrigin";
+import { canonicalSiteOrigin } from "@/lib/http/siteOrigin";
 import { classRoster, readClass } from "@/lib/supabase/classes";
 import { removeStudent, renameClass, rotateInvite } from "../actions";
 
@@ -23,7 +23,7 @@ export default async function ClassPage({ params }: PageProps<"/author/classes/[
   const detail = await readClass(supabase, classId);
   if (!detail) notFound();
   const roster = await classRoster(supabase, classId);
-  const url = inviteUrl(siteOrigin(await headers()), detail.inviteToken);
+  const url = inviteUrl(canonicalSiteOrigin(await headers()), detail.inviteToken);
 
   return (
     <>

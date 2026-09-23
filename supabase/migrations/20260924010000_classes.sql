@@ -76,6 +76,33 @@ create table public.class_members (
 );
 create index class_members_profile_id_idx on public.class_members (profile_id);
 
+-- A student an author took off a class. The invite link stays valid for everyone else, and the
+-- removed student still has it in their inbox, so without this record they could tap Join again
+-- and undo the removal. admit_to_class refuses anyone listed here. Letting them back in is an owner
+-- step in v1: delete the row. Private, so no client reads or writes it.
+create table private.class_removals (
+  class_id uuid not null references public.classes (id) on delete cascade,
+  profile_id uuid not null references public.profiles (id) on delete cascade,
+  removed_at timestamptz not null default now(),
+  primary key (class_id, profile_id)
+);
+create index class_removals_profile_id_idx on private.class_removals (profile_id);
+
+create function private.record_class_removal() returns trigger
+language plpgsql security definer set search_path = ''
+as $$
+begin
+  insert into private.class_removals (class_id, profile_id)
+  values (old.class_id, old.profile_id)
+  on conflict do nothing;
+  return old;
+end;
+$$;
+revoke all on function private.record_class_removal() from public, anon, authenticated, service_role;
+
+create trigger class_members_record_removal after delete on public.class_members
+  for each row execute function private.record_class_removal();
+
 -- ---------------------------------------------------------------------------
 -- Privileges and RLS
 -- ---------------------------------------------------------------------------
@@ -172,6 +199,11 @@ begin
 
   if account_role in ('instructor', 'admin') then
     return 'instructor';
+  end if;
+  -- Taken off this class by an author: the link they still hold no longer lets them in.
+  if exists (select 1 from private.class_removals r
+             where r.class_id = target_class and r.profile_id = account) then
+    return 'invalid';
   end if;
   if account_role is null then
     update public.profiles set org_id = class_org, role = 'student' where id = account;

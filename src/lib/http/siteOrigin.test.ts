@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { siteOrigin } from "./siteOrigin";
+import { canonicalSiteOrigin, siteOrigin } from "./siteOrigin";
 
 describe("siteOrigin", () => {
   it("prefers Origin, which a browser sets on every form post", () => {
@@ -26,5 +26,36 @@ describe("siteOrigin", () => {
 
   it("has an answer even for a request that carries no host at all", () => {
     expect(siteOrigin(new Headers())).toBe("http://localhost:3000");
+  });
+});
+
+describe("canonicalSiteOrigin", () => {
+  const forged = new Headers({ origin: "https://attacker.example", host: "attacker.example" });
+
+  it("uses the production domain Vercel sets, whatever the request claims", () => {
+    const env = {
+      VERCEL_ENV: "production",
+      VERCEL_PROJECT_PRODUCTION_URL: "learn-tanner-nielsons-projects.vercel.app",
+      VERCEL_URL: "learn-abc123-tanner-nielsons-projects.vercel.app",
+    };
+    expect(canonicalSiteOrigin(forged, env)).toBe(
+      "https://learn-tanner-nielsons-projects.vercel.app",
+    );
+  });
+
+  it("uses the deployment's own address on a preview", () => {
+    const env = {
+      VERCEL_ENV: "preview",
+      VERCEL_PROJECT_PRODUCTION_URL: "learn-tanner-nielsons-projects.vercel.app",
+      VERCEL_URL: "learn-abc123-tanner-nielsons-projects.vercel.app",
+    };
+    expect(canonicalSiteOrigin(forged, env)).toBe(
+      "https://learn-abc123-tanner-nielsons-projects.vercel.app",
+    );
+  });
+
+  it("falls back to the request only off Vercel, as in local development", () => {
+    const local = new Headers({ host: "localhost:3000" });
+    expect(canonicalSiteOrigin(local, {})).toBe("http://localhost:3000");
   });
 });

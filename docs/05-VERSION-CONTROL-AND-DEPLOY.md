@@ -260,6 +260,7 @@ To check who is what: `select u.email, p.role from auth.users u join public.prof
 Existing accounts were not changed by #204: the demo account and every current instructor keep their role. From #205 on, a student joins through an instructor's class invite, which sets `app_metadata.learn_invite` server-side; never set a role through `user_metadata`, which the person can write themselves.
 
 A class invite never demotes anyone. An instructor who opens one is told they already are one; an account with no role that joins becomes a student, and `make_instructor` then refuses it (remove it from its classes and set the role by hand if that was a mistake). To see a class's roster from the SQL editor: `select u.email, c.name from public.class_members m join public.classes c on c.id = m.class_id join auth.users u on u.id = m.profile_id order by c.name, u.email;`
+Removing a student from a roster is recorded in `private.class_removals`, so the invite link they still hold will not let them back in. To let a removed student rejoin, delete their row in the SQL editor, then send them the link again: `delete from private.class_removals where profile_id = (select id from auth.users where lower(email) = lower('student@example.com'));`
 
 ### 7.7 Email through Resend from info.tannernielson.com (#206)
 
