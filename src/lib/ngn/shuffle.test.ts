@@ -290,6 +290,16 @@ describe("shuffleSeed", () => {
     expect(() => shuffleSeed("", "i1")).toThrow();
     expect(() => shuffleSeed("a1", "")).toThrow();
   });
+
+  it("refuses ids outside the id alphabet, so no two seeds can collide on a separator", () => {
+    expect(() => shuffleSeed("a:1", "i1")).toThrow();
+    expect(() => shuffleSeed("a1", "i|1")).toThrow();
+    expect(() => shuffleSeed("a1", "x".repeat(65))).toThrow();
+  });
+
+  it("accepts a uuid attempt id", () => {
+    expect(shuffleSeed("0b6f3c8e-4c1a-4f7e-9d2b-7a5e1c3d9f01", "i1")).toContain(":i1");
+  });
 });
 
 function deepFreeze<T>(value: T): T {

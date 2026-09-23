@@ -79,10 +79,14 @@ export function isFixedLabel(label: string): boolean {
   return FIXED_LABEL_PATTERNS.some((pattern) => pattern.test(label));
 }
 
+const SEED_ID = /^[A-Za-z0-9_-]{1,64}$/;
+
 /** The seed for one attempt at one item: stable across reloads, different per student. */
 export function shuffleSeed(attemptId: string, itemId: string): string {
-  if (attemptId.length === 0 || itemId.length === 0) {
-    throw new Error("a shuffle seed needs both an attempt id and an item id");
+  // The same alphabet as `idSchema`: no `:` or `|`, so the separators below cannot be forged and
+  // two different (attempt, item) pairs can never produce the same seed.
+  if (!SEED_ID.test(attemptId) || !SEED_ID.test(itemId)) {
+    throw new Error("a shuffle seed needs an attempt id and an item id in the id alphabet");
   }
   return `${attemptId}:${itemId}`;
 }
