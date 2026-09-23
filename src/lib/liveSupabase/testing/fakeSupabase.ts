@@ -481,6 +481,9 @@ export class FakeChannel {
       this.presenceListeners.add(() => listener({ new: {}, old: {} }));
       return this;
     }
+    // Realtime's own status messages (#193). This stack delivers a change the moment a channel
+    // has subscribed, so there is no late `postgres_changes` confirmation for it to send.
+    if (type === "system") return this;
     const filter = options.filter ?? null;
     const parsed = filter === null ? null : /^([a-z_]+)=eq\.(.*)$/.exec(filter);
     this.changeBindings.push({

@@ -297,6 +297,112 @@ describe("what a state message costs", () => {
   });
 });
 
+describe("a move made while the subscription was coming up (#193)", () => {
+  const RUNNING: ParticipantViewPayload = {
+    ...LOBBY,
+    state: at({ status: "running", position: 1, itemCount: 2, reveal: false }),
+  };
+
+  it("lands on the current item when the subscription confirms after the room moved", async () => {
+    // The phone subscribes and reads the lobby. The host presses Start before Realtime has the
+    // replication subscription streaming, so that change is never delivered to this phone.
+    const live = phone([LOBBY, RUNNING]);
+    const view = await live.enter();
+    expect(view.state.status).toBe("lobby");
+
+    // Realtime says the subscription is live. Nothing was replayed, so the phone asks once.
+    live.socket.confirm();
+    await vi.waitFor(() => expect(live.recorded.states.at(-1)).toMatchObject({ position: 1 }));
+    expect(live.recorded.views.at(-1)).toMatchObject({ state: { status: "running", position: 1 } });
+    expect(live.asks()).toBe(2);
+  });
+
+  it("does not show the same view twice when nothing moved in the gap", async () => {
+    const live = phone([LOBBY]);
+    await live.enter();
+    const shown = live.recorded.views.length;
+
+    live.socket.confirm();
+    await vi.waitFor(() => expect(live.asks()).toBe(2));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(live.recorded.views).toHaveLength(shown);
+    expect(live.recorded.states).toHaveLength(shown);
+  });
+
+  it("asks nothing for a system message that is not the subscription coming up", async () => {
+    const live = phone([LOBBY, RUNNING]);
+    await live.enter();
+    live.socket.confirm({ ...POSTGRES_READY, status: "error", message: "Error 401" });
+    live.socket.confirm({ extension: "system", status: "ok", message: "Replication ready" });
+    live.socket.confirm({ nonsense: true });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(live.asks()).toBe(1);
+  });
+
+  it("asks again after a reconnect, whose subscription also comes up late", async () => {
+    const live = phone([
+      LOBBY,
+      LOBBY,
+      { ...RUNNING, state: at({ status: "running", position: 2, itemCount: 2, reveal: false }) },
+    ]);
+    await live.enter();
+    live.socket.emit("CHANNEL_ERROR");
+    live.socket.emit("SUBSCRIBED");
+    await vi.waitFor(() => expect(live.asks()).toBe(2));
+
+    live.socket.confirm();
+    await vi.waitFor(() => expect(live.recorded.states.at(-1)).toMatchObject({ position: 2 }));
+  });
+
+  it("keeps the newer read when an older one lands after it", async () => {
+    // The entry's read is slow; the confirmation's read, sent later, comes back first.
+    const socket = fakeSocket();
+    const answers: ((payload: ParticipantViewPayload) => void)[] = [];
+    const call = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          answers.push((payload) =>
+            resolve(
+              new Response(JSON.stringify(payload), {
+                headers: { "content-type": "application/json" },
+              }),
+            ),
+          );
+        }),
+    );
+    const transport = createSupabaseParticipant({
+      client: socket.client,
+      fetch: call as unknown as typeof globalThis.fetch,
+    });
+    const states: LiveSessionState[] = [];
+    transport.onSessionState((view) => states.push(view.state));
+
+    const opening = transport.resume(ME);
+    await socket.subscribed();
+    socket.emit("SUBSCRIBED");
+    await vi.waitFor(() => expect(answers).toHaveLength(1));
+    socket.confirm();
+    await vi.waitFor(() => expect(answers).toHaveLength(2));
+
+    answers[1]?.(RUNNING);
+    await vi.waitFor(() => expect(states.at(-1)).toMatchObject({ position: 1 }));
+    answers[0]?.(LOBBY);
+    const view = await opening;
+
+    expect(view.state).toMatchObject({ status: "running", position: 1 });
+    expect(states).toHaveLength(1);
+  });
+
+  it("asks nothing once the phone has left", async () => {
+    const live = phone([LOBBY, RUNNING]);
+    await live.enter();
+    await live.transport.leave();
+    live.socket.confirm();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(live.asks()).toBe(1);
+  });
+});
+
 describe("the item's clock (#182)", () => {
   it("takes fifteen more seconds from the message itself, with no request", async () => {
     const live = phone([
@@ -420,6 +526,7 @@ function fakeSocket() {
   const listeners: ((status: string) => void)[] = [];
   const bindings: Record<string, string | undefined>[] = [];
   const changes: ((message: { new: Record<string, unknown> }) => void)[] = [];
+  const systems: ((payload: Record<string, unknown>) => void)[] = [];
   const syncs: (() => void)[] = [];
   const tracked: Record<string, unknown>[] = [];
   const order: string[] = [];
@@ -434,7 +541,9 @@ function fakeSocket() {
       listener: (message: { new: Record<string, unknown> }) => void,
     ) {
       if (type === "presence") syncs.push(() => listener({ new: {} }));
-      else {
+      else if (type === "system") {
+        systems.push(listener as unknown as (payload: Record<string, unknown>) => void);
+      } else {
         bindings.push(options);
         changes.push(listener);
       }
@@ -493,5 +602,20 @@ function fakeSocket() {
     sync: () => {
       for (const listener of syncs) listener();
     },
+    /**
+     * The server's word that the `postgres_changes` subscription is live, which Realtime sends
+     * some time *after* `SUBSCRIBED` (#193). Until it does, a change to the mirror is not delivered.
+     */
+    confirm: (payload: Record<string, unknown> = POSTGRES_READY) => {
+      for (const listener of systems) listener(payload);
+    },
   };
 }
+
+/** What Realtime sends once the replication subscription behind a channel is streaming. */
+const POSTGRES_READY = {
+  extension: "postgres_changes",
+  status: "ok",
+  message: "Subscribed to PostgreSQL",
+  channel: `live:${SESSION_ID}`,
+};
