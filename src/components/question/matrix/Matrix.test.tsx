@@ -110,9 +110,11 @@ describe("matrix multiple choice", () => {
   describe("after submit, each control's name carries its verdict", () => {
     const answerAndSubmit = async () => {
       render(<ItemPlayer item={mmcEdge} submit={scoreInProcess(mmcEdge)} />);
+      await renderersLoaded();
       await userEvent.click(within(grid()).getByRole("radio", { name: `${O2} Improved` }));
       await userEvent.click(within(grid()).getByRole("radio", { name: `${RR} Improved` }));
       await userEvent.click(submit());
+      await feedbackShown();
     };
     /** Verdict text a screen reader would meet as content, outside any name. */
     const exposedVerdicts = (container: HTMLElement) =>

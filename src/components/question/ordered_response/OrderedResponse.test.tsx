@@ -119,8 +119,10 @@ describe("ordered response renderer", () => {
   // misplaced step reads its verdict first, then where it belongs.
   it("reads a misplaced step's verdict before its correct position", async () => {
     render(<ItemPlayer item={wholeItem} submit={scoreInProcess(wholeItem)} />);
+    await renderersLoaded();
     await arrange([KEY[1]!, KEY[0]!, KEY[2]!, KEY[3]!, KEY[4]!]);
     await userEvent.click(submit());
+    await feedbackShown();
 
     const row = within(list())
       .getAllByRole("listitem")
