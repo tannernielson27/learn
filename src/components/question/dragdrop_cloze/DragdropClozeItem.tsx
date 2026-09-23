@@ -17,6 +17,7 @@ export function DragdropClozeItem({
       answers={response.blanks}
       mode={mode}
       correctToken={(id) => item.answerKey?.blanks.find((b) => b.blankId === id)?.correctTokenId}
+      blankRationale={(blankId) => item.rationale?.perElement?.[blankId]}
       onChange={(blanks) => onChange({ type: "dragdrop_cloze", blanks })}
     />
   );

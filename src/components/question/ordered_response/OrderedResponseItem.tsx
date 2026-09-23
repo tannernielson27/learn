@@ -18,6 +18,8 @@ import {
 import { useEffect, useId, useRef, useState } from "react";
 import { presentationOrder } from "@/lib/ngn/presentation";
 import { useSilentDndAccessibility } from "../dndAccessibility";
+import type { RichText } from "@/lib/ngn/schemas";
+import { ElementRationale } from "../ElementRationale";
 import { FeedbackIcon, feedbackLabel } from "../OptionRow";
 import type { ElementFeedback, ItemRendererProps, PlayerMode } from "../types";
 import { usePrefersReducedMotion } from "../usePrefersReducedMotion";
@@ -131,6 +133,8 @@ export function OrderedResponseItem({
                 mode={mode}
                 feedback={feedback}
                 correctPosition={feedback === "incorrect" ? key.indexOf(id) + 1 : undefined}
+                rationale={mode === "feedback" ? item.rationale?.perElement?.[id] : undefined}
+                rationaleId={`${uid}-why-${id}`}
                 onMove={move}
                 register={register}
               />
@@ -155,6 +159,9 @@ interface StepRowProps {
   feedback: ElementFeedback;
   /** 1-based position the step belongs in; shown for misplaced steps in feedback. */
   correctPosition?: number;
+  /** Why the step goes where it does. Feedback mode only. */
+  rationale?: RichText;
+  rationaleId: string;
   onMove: (id: string, direction: Direction) => void;
   register: (buttonKey: string, element: HTMLButtonElement | null) => void;
 }
@@ -165,6 +172,7 @@ interface StepRowProps {
  */
 function StepRow(props: StepRowProps) {
   const { id, label, index, count, mode, feedback, correctPosition, onMove, register } = props;
+  const { rationale, rationaleId } = props;
   const reduced = usePrefersReducedMotion();
   const { listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({
@@ -181,6 +189,7 @@ function StepRow(props: StepRowProps) {
       ref={setNodeRef}
       style={style}
       data-label={label}
+      aria-describedby={rationale ? rationaleId : undefined}
       className={`option flex items-center gap-2 rounded-sm border bg-surface-1 px-2 py-2 sm:gap-3 sm:px-3 ${feedbackClasses[feedback]} ${
         isDragging ? "relative z-10 shadow-md" : ""
       }`}
@@ -196,7 +205,9 @@ function StepRow(props: StepRowProps) {
         </span>
       ) : null}
       <span className="w-5 shrink-0 font-mono text-sm text-ink-2 tabular">{index + 1}</span>
-      <span className="min-w-0 flex-1">
+      {/* #49: the element is a step in an order, so its explanation sits under the step's own
+          words, in the order the student gave, beside its correct position when it was misplaced. */}
+      <div className="min-w-0 flex-1">
         {label}
         {/* The verdict straight after the step, then where it belongs ("… Incorrect", then
             "Correct position: 3"), not the correction first (#60). sr-only, so nothing moves. */}
@@ -209,7 +220,8 @@ function StepRow(props: StepRowProps) {
         {correctPosition ? (
           <span className="block text-sm text-ink-2">Correct position: {correctPosition}</span>
         ) : null}
-      </span>
+        <ElementRationale id={rationaleId} text={rationale} />
+      </div>
       <FeedbackIcon state={feedback} className="" />
       {answering ? (
         // Stacked on phones so the step's text keeps most of the row's width.

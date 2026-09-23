@@ -59,6 +59,14 @@ describe("bowtieFormFromStored", () => {
     expect(form.conditionId).toBe("c9");
     expect(bowtieFormFromStored(null, "row-id")).toEqual(emptyBowtieForm("row-id"));
   });
+
+  it("carries a draft's per-choice rationale through, since the editor cannot rewrite it", () => {
+    const why = { kind: "markdown" as const, value: "Because." };
+    const stored = { id: "bt_draft", rationale: { perElement: { a1: why } } };
+    expect(bowtieFormFromStored(stored, "row-id").rationale).toEqual({ perElement: { a1: why } });
+    const form = bowtieFormFromStored({ ...stored, rationale: "nope" }, "row-id");
+    expect(form.rationale).toEqual({});
+  });
 });
 
 describe("parseBowtieDraft", () => {

@@ -3,7 +3,9 @@
 import { DndContext, type DragEndEvent } from "@dnd-kit/core";
 import { Fragment, useId, useState, type KeyboardEvent } from "react";
 import { useSilentDndAccessibility } from "../dndAccessibility";
+import type { RichText } from "@/lib/ngn/schemas";
 import { blankOrder, type SentenceToken } from "../dropdown/DropdownSentence";
+import { ElementRationale } from "../ElementRationale";
 import { elementFeedback, type PlayerMode } from "../types";
 import {
   DropSlot,
@@ -44,6 +46,8 @@ export interface TokenSentenceProps {
   correctToken: (blankId: string) => string | undefined;
   /** Triad anchor, tagged in feedback mode. */
   anchorBlankId?: string;
+  /** Why each blank scored as it did. Feedback mode only; the blank is the scored element here. */
+  blankRationale?: (blankId: string) => RichText | undefined;
   onChange: (answers: TokenAnswer[]) => void;
 }
 
@@ -54,6 +58,9 @@ export interface TokenSentenceProps {
  */
 export function TokenSentence(props: TokenSentenceProps) {
   const { tokens, bank, reusable, answers, mode, correctToken, anchorBlankId, onChange } = props;
+  // Rationale reaches the renderer in feedback only; the mode check keeps it off the page anyway.
+  const why = (blankId: string) =>
+    mode === "feedback" ? props.blankRationale?.(blankId) : undefined;
   const uid = useId();
   const [armed, setArmed] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -119,6 +126,11 @@ export function TokenSentence(props: TokenSentenceProps) {
           const label = labelOf(placedIn(token.blankId));
           const anchorId =
             mode === "feedback" && token.blankId === anchorBlankId ? `${uid}-anchor` : undefined;
+          // A blank can be described by both its anchor tag and its explanation, in that order.
+          const describedBy =
+            [anchorId, why(token.blankId) ? `${uid}-why-${token.blankId}` : undefined]
+              .filter(Boolean)
+              .join(" ") || undefined;
           return (
             <Fragment key={index}>
               {anchorId ? (
@@ -134,7 +146,7 @@ export function TokenSentence(props: TokenSentenceProps) {
                 feedback={feedbackOf(token.blankId)}
                 mode={mode}
                 target={armed !== null}
-                describedBy={anchorId}
+                describedBy={describedBy}
                 onChoose={chooseBlank}
                 onKeyDown={cancelOnEscape}
               />
@@ -157,6 +169,23 @@ export function TokenSentence(props: TokenSentenceProps) {
               onKeyDown={cancelOnEscape}
             />
           ))}
+        </div>
+      ) : null}
+      {/* #49: the token moves, so its explanation belongs to the blank it was dropped in, and
+          says what goes there. It follows the sentence, one per blank, as the drop-down sentence
+          does (#39): inside the sentence it would break it mid-clause. */}
+      {order.some((id) => why(id)) ? (
+        <div className="measure mt-5 flex flex-col gap-4">
+          {order.map((id, index) => {
+            const text = why(id);
+            if (!text) return null;
+            return (
+              <div key={id}>
+                <p className="font-mono text-xs text-ink-2">Blank {index + 1}</p>
+                <ElementRationale id={`${uid}-why-${id}`} text={text} />
+              </div>
+            );
+          })}
         </div>
       ) : null}
       {wrong.length > 0 ? (

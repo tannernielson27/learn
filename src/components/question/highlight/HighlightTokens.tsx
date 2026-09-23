@@ -28,6 +28,8 @@ export interface HighlightTokensProps {
   /** Correct span ids; empty outside feedback mode. */
   correct: ReadonlySet<string>;
   mode: PlayerMode;
+  /** Id of a span's explanation, when one is on the page (feedback only, #49). */
+  describedBy?: (spanId: string) => string | undefined;
   onToggle: (spanId: string) => void;
 }
 
@@ -61,6 +63,7 @@ export function HighlightTokens({
   selected,
   correct,
   mode,
+  describedBy,
   onToggle,
 }: HighlightTokensProps) {
   const interactive = mode === "answer";
@@ -82,6 +85,7 @@ export function HighlightTokens({
               tabIndex={interactive ? 0 : -1}
               aria-pressed={isSelected}
               aria-disabled={interactive ? undefined : true}
+              aria-describedby={describedBy?.(token.spanId)}
               onClick={interactive ? () => onToggle(token.spanId) : undefined}
               onKeyDown={interactive ? onKeyDown : undefined}
               className={`${base} ${stateClasses(isSelected, feedback, mode)}`}

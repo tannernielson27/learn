@@ -11,6 +11,7 @@ import {
   WordChip,
   type BankToken,
 } from "../dragdrop/tapToPlace";
+import { ElementRationaleList } from "../ElementRationale";
 import { elementFeedback, type ItemRendererProps } from "../types";
 
 type BowtieResponse = ResponseOf<"bowtie">;
@@ -167,6 +168,13 @@ export function BowtieItem({ item, response, mode, onChange }: ItemRendererProps
   };
 
   const placed = new Set(columns.flatMap((c) => slotsOf(response, c.key)));
+  // Keyed by choice id. Rationale reaches the renderer in feedback only; the mode check keeps it
+  // off the page anyway.
+  const why = (tokenId: string) =>
+    mode === "feedback" ? item.rationale?.perElement?.[tokenId] : undefined;
+  const whyId = (tokenId: string) => `${uid}-why-${tokenId}`;
+  const explained = (ids: readonly (string | undefined)[]) =>
+    ids.flatMap((id) => (id ? [{ id: whyId(id), label: labelOf(id) ?? id, text: why(id) }] : []));
   const armedColumn = armed ? columnOf(armed)?.key : undefined;
 
   return (
@@ -214,6 +222,7 @@ export function BowtieItem({ item, response, mode, onChange }: ItemRendererProps
                       )}
                       mode={mode}
                       target={armedColumn === column.key}
+                      describedBy={id && why(id) ? whyId(id) : undefined}
                       block
                       onChoose={() => chooseSlot(column, index)}
                       onKeyDown={cancelOnEscape}
@@ -221,11 +230,20 @@ export function BowtieItem({ item, response, mode, onChange }: ItemRendererProps
                   );
                 })}
               </div>
+              {/* #49: the slots are a diagram, and an explanation inside one would push the
+                  connector lines off their slots, so each column's explanations sit directly
+                  beneath its slots: the choice in each slot, in slot order, each named. A right
+                  choice left out is explained after the line that names it. */}
+              <ElementRationaleList labelled items={explained(slots)} />
               {showCorrect ? (
                 <p className="text-sm text-ink-2">
                   Correct: {column.correct.map((id) => labelOf(id)).join("; ")}
                 </p>
               ) : null}
+              <ElementRationaleList
+                labelled
+                items={explained(column.correct.filter((id) => !slots.includes(id)))}
+              />
               {mode === "answer" ? (
                 <div
                   role="group"

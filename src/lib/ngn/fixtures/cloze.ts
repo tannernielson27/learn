@@ -423,6 +423,14 @@ export const dragdropClozeFixture: ItemFixture<"dragdrop_cloze"> = {
       general: md(
         "Rescue bronchodilation comes first; upright positioning maximizes chest expansion.",
       ),
+      perElement: {
+        blank_1: md(
+          "A short-acting beta agonist opens the airways within minutes, so it comes first. An inhaled corticosteroid works on inflammation over days, and an antihistamine does not relieve bronchospasm.",
+        ),
+        blank_2: md(
+          "High Fowler position lets the diaphragm drop and the chest expand. Lying supine makes breathing harder.",
+        ),
+      },
     },
   },
   edge: {
@@ -524,6 +532,14 @@ export const dragdropRationaleFixture: ItemFixture<"dragdrop_rationale"> = {
       general: md(
         "Low-grade fever, diminished bases, and splinting on day two are classic for atelectasis from hypoventilation.",
       ),
+      perElement: {
+        cond: md(
+          "A low-grade fever and diminished breath sounds at the bases on day two point to atelectasis. The stem describes no sudden shortness of breath or chest pain, which a pulmonary embolism would bring.",
+        ),
+        cause: md(
+          "Splinting the incision keeps each breath shallow, so the alveoli at the bases collapse. Immobility adds to it, but the splinting is what the stem describes.",
+        ),
+      },
     },
   },
   edge: {
