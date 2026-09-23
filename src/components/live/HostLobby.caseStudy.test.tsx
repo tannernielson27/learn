@@ -61,6 +61,7 @@ function caseStudyTransport(initial: LiveSessionState): LiveHostTransport {
     results: async () => null,
     start: () => run("start"),
     advance: () => run("advance"),
+    goto: refuse,
     reveal: () => run("reveal"),
     pause: refuse,
     resume: refuse,
