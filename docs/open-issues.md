@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-23 (Sprint 9 kicked off: #204–#212 filed under milestone 9 with four owner decisions. Sprint 8 is code complete, with the demo in `docs/sprints/S8-demo.md`; the hosted project has all 21 migrations).
+Last updated: 2026-09-23 (Sprint 9 under way: #204 merged in #214 and applied to hosted, which now has all 22 migrations; #206 next. Sprint 8 is code complete, with the demo in `docs/sprints/S8-demo.md`).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -86,17 +86,17 @@ Decisions taken at kickoff while the owner was away (2026-09-23), each the conse
 
 Demo 9: assign a set Monday, answer it Tuesday on a phone, review results Wednesday.
 
-| #                                                           | Title                                                                             | Gates                     | Status                                                             |
-| ----------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------ |
-| [#204](https://github.com/tannernielson27/learn/issues/204) | feat(auth): invite-only sign-up, so no new account becomes an instructor          | security, db, e2e         | Merged (#214); apply `20260924000000_invite_only_signup` to hosted |
-| [#205](https://github.com/tannernielson27/learn/issues/205) | feat(assign): a class with an invite link students join                           | security, db, e2e         | To do                                                              |
-| [#206](https://github.com/tannernielson27/learn/issues/206) | chore(infra): send email through Resend from info.tannernielson.com               | security                  | To do                                                              |
-| [#207](https://github.com/tannernielson27/learn/issues/207) | feat(assign): assign a bank or case study to a class with a window and attempts   | security, db, e2e         | To do                                                              |
-| [#208](https://github.com/tannernielson27/learn/issues/208) | feat(assign): take an assignment on a phone with autosave and resume              | player, security, db, e2e | To do                                                              |
-| [#209](https://github.com/tannernielson27/learn/issues/209) | feat(assign): shuffle options where the item type allows it                       | player, security          | To do                                                              |
-| [#210](https://github.com/tannernielson27/learn/issues/210) | feat(assign): student results with keys and rationales after close                | security, e2e             | To do                                                              |
-| [#211](https://github.com/tannernielson27/learn/issues/211) | feat(assign): an assignment report per student, item and CJMM step, with CSV      | security, db              | To do                                                              |
-| [#212](https://github.com/tannernielson27/learn/issues/212) | feat(assign): reminder emails when an assignment opens and a day before it closes | infra, security, db       | To do                                                              |
+| #                                                           | Title                                                                             | Gates                     | Status                                                               |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------- | -------------------------------------------------------------------- |
+| [#204](https://github.com/tannernielson27/learn/issues/204) | feat(auth): invite-only sign-up, so no new account becomes an instructor          | security, db, e2e         | Merged (#214); `20260924000000_invite_only_signup` applied to hosted |
+| [#205](https://github.com/tannernielson27/learn/issues/205) | feat(assign): a class with an invite link students join                           | security, db, e2e         | To do                                                                |
+| [#206](https://github.com/tannernielson27/learn/issues/206) | chore(infra): send email through Resend from info.tannernielson.com               | security                  | To do                                                                |
+| [#207](https://github.com/tannernielson27/learn/issues/207) | feat(assign): assign a bank or case study to a class with a window and attempts   | security, db, e2e         | To do                                                                |
+| [#208](https://github.com/tannernielson27/learn/issues/208) | feat(assign): take an assignment on a phone with autosave and resume              | player, security, db, e2e | To do                                                                |
+| [#209](https://github.com/tannernielson27/learn/issues/209) | feat(assign): shuffle options where the item type allows it                       | player, security          | To do                                                                |
+| [#210](https://github.com/tannernielson27/learn/issues/210) | feat(assign): student results with keys and rationales after close                | security, e2e             | To do                                                                |
+| [#211](https://github.com/tannernielson27/learn/issues/211) | feat(assign): an assignment report per student, item and CJMM step, with CSV      | security, db              | To do                                                                |
+| [#212](https://github.com/tannernielson27/learn/issues/212) | feat(assign): reminder emails when an assignment opens and a day before it closes | infra, security, db       | To do                                                                |
 
 Suggested order: #204 invite-only first (every later story assumes a student cannot author), with #206 email alongside; then #205 classes; #207 assign; #208 take an assignment; then #209 shuffle and #211 report; #210 results; #212 reminders last, or alongside #208 once #206 and #207 have merged.
 
