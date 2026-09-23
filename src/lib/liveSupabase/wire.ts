@@ -89,6 +89,8 @@ export interface PublicStatePayload {
   itemCount: number;
   reveal: boolean;
   timer: ItemTimer;
+  /** Only on a student-paced room (#185); see `LiveSessionState.mode`. */
+  mode?: SessionMode;
 }
 
 /** What the host has revealed, once it has. Null at every other moment. */
@@ -116,12 +118,30 @@ export interface AnsweredPayload {
   response: AnyResponse;
 }
 
+/**
+ * One item of a student-paced set (#185), as this participant may see it: keyless, with their own
+ * answer if they gave one, and — only once the host has pressed "Show answers" — the key with
+ * their own marks. `revealed` is null at every other moment, exactly as it is for one item.
+ */
+export interface PacedItemPayload {
+  /** One-based, the item's place in the set. What a submit names the item by. */
+  position: number;
+  item: ParticipantItem;
+  answered: AnsweredPayload | null;
+  revealed: RevealedPayload | null;
+}
+
 /** The body of a successful `POST /api/live/view`. */
 export interface ParticipantViewPayload {
   state: PublicStatePayload;
   item: ParticipantItem | null;
   answered: AnsweredPayload | null;
   revealed: RevealedPayload | null;
+  /**
+   * The whole set, while a student-paced room (#185) is running or paused; absent otherwise.
+   * `item`, `answered` and `revealed` above are then null: there is no one item the room is on.
+   */
+  set?: PacedItemPayload[];
   /**
    * The database's `now()` as it read the room, epoch ms (#182). What a phone measures its own
    * clock against, so a countdown is right on a phone whose clock is not. See `clockOffset`.
@@ -133,6 +153,11 @@ export interface ParticipantViewPayload {
 export interface SubmitRequestBody {
   itemId: string;
   response: unknown;
+  /**
+   * The item's place in the set, for a student-paced room (#185), where the phone chooses which
+   * item it answers. Ignored by an instructor-paced room, which is on the item it is on.
+   */
+  position?: number;
 }
 
 /** The body of a successful `POST /api/live/submit`: the acknowledgement and nothing else. */

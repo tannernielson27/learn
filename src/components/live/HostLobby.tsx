@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Countdown } from "@/components/live/Countdown";
 import { ItemStrip } from "@/components/live/ItemStrip";
+import { ProgressBoard } from "@/components/live/ProgressBoard";
 import { SessionQrCode } from "@/components/live/SessionQrCode";
 import { Roster } from "@/components/live/Roster";
 import { TimerControls } from "@/components/live/TimerControls";
@@ -12,6 +13,7 @@ import { Button } from "@/components/ui/Button";
 import {
   canRunHostCommand,
   isLiveSessionError,
+  isStudentPaced,
   mergeRoster,
   type HostCommand,
   type ItemAggregate,
@@ -68,13 +70,23 @@ const LABELS: Record<HostCommand, string> = {
   end: "End session",
 };
 
-/** Which buttons are on the screen at all. The rest is `canRunHostCommand` greying them out. */
+/**
+ * Which buttons are on the screen at all. The rest is `canRunHostCommand` greying them out. A
+ * student-paced room (#185) has no "Next item": every phone moves through the set by itself.
+ */
 function offered(state: LiveSessionState): HostCommand[] {
   if (state.status === "ended") return [];
   if (state.status === "lobby") return ["start", "end"];
-  return state.status === "paused"
-    ? ["reveal", "advance", "resume", "end"]
-    : ["reveal", "advance", "pause", "end"];
+  const moves: HostCommand[] =
+    state.status === "paused"
+      ? ["reveal", "advance", "resume", "end"]
+      : ["reveal", "advance", "pause", "end"];
+  return isStudentPaced(state) ? moves.filter((command) => command !== "advance") : moves;
+}
+
+/** What a button says. One "Show answers" reveals a student-paced room's whole set (#185). */
+function labelFor(command: HostCommand, state: LiveSessionState): string {
+  return command === "reveal" && isStudentPaced(state) ? "Show answers" : LABELS[command];
 }
 
 /** What is in flight: a move, a timer button, a new time per item, or a jump (#183). */
@@ -185,7 +197,11 @@ export function HostLobby({
    * an ask that fails is simply not repeated until the next tick: a count that stops moving for
    * three seconds is not worth an error on a projector.
    */
-  const onAnItem = state.position !== null && state.status !== "lobby" && state.status !== "ended";
+  const paced = isStudentPaced(state);
+  /** A student-paced room (#185) is on its whole set, never on one item; the board is its view. */
+  const open = state.status === "running" || state.status === "paused";
+  const onAnItem =
+    !paced && state.position !== null && state.status !== "lobby" && state.status !== "ended";
   useEffect(() => {
     if (!onAnItem) return;
     let watching = true;
@@ -247,6 +263,8 @@ export function HostLobby({
   const serverNow = useCallback(() => transport.current?.serverNow() ?? Date.now(), []);
   /** How the room answered the item it is on (#180), asked for by the results panel. */
   const askResults = useCallback(() => transport.current?.results() ?? Promise.resolve(null), []);
+  /** Who has answered what (#185), asked for by the student-paced progress board. */
+  const askProgress = useCallback(() => transport.current?.progress() ?? Promise.resolve(null), []);
 
   const ended = state.status === "ended";
   /**
@@ -255,15 +273,17 @@ export function HostLobby({
    * nobody has seen yet is worse than showing nothing for a beat.
    */
   const answersOn = tally !== null && tally.position === state.position ? tally : null;
-  const position = positionLabel(state, { caseStudy, cjmmStep });
+  // A student-paced room (#185) is on no one item, so there is no position to name.
+  const position = paced ? null : positionLabel(state, { caseStudy, cjmmStep });
 
   return (
     <>
       <h1 className="font-read text-3xl break-words text-ink-1">{title}</h1>
       <p className="mt-1 text-sm text-ink-2">
         {STATUS_LABEL[state.status]} · {state.itemCount} {state.itemCount === 1 ? "item" : "items"}
+        {paced ? <> · Student-paced</> : null}
         {position === null ? null : <> · {position}</>}
-        {state.reveal ? <> · answer showing</> : null}
+        {state.reveal ? <> · {paced ? "answers showing" : "answer showing"}</> : null}
       </p>
 
       {onAnItem && answersOn !== null ? (
@@ -341,20 +361,22 @@ export function HostLobby({
               disabled={pending !== null || !canRunHostCommand(state, command)}
               onClick={() => void run(command)}
             >
-              {LABELS[command]}
+              {labelFor(command, state)}
             </Button>
           ))}
         </div>
       )}
 
-      <ItemStrip
-        state={state}
-        tally={tally}
-        busy={pending !== null}
-        onGoto={(position) => void jump(position)}
-      />
+      {paced ? null : (
+        <ItemStrip
+          state={state}
+          tally={tally}
+          busy={pending !== null}
+          onGoto={(position) => void jump(position)}
+        />
+      )}
 
-      {ended ? null : (
+      {ended || paced ? null : (
         <TimerControls
           state={state}
           busy={pending !== null}
@@ -371,6 +393,15 @@ export function HostLobby({
         active={onAnItem}
         intervalMs={tallyIntervalMs}
       />
+
+      {paced ? (
+        <ProgressBoard
+          ask={askProgress}
+          itemCount={state.itemCount}
+          active={open}
+          intervalMs={tallyIntervalMs}
+        />
+      ) : null}
 
       <Roster roster={roster} />
     </>

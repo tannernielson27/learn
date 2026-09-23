@@ -18,6 +18,8 @@ const ENTRY_POINTS = [
   path.join(SRC, "components", "question", "ItemPlayer.tsx"),
   path.join(SRC, "components", "case-study", "CaseStudyPlayer.tsx"),
   path.join(SRC, "components", "live", "StudentRoom.tsx"),
+  // #185: the student-paced phone mounts the same player over a whole set.
+  path.join(SRC, "components", "live", "StudentPacedRoom.tsx"),
 ];
 
 describe("the shared players hold no scoring code", () => {

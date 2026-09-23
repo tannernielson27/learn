@@ -12,7 +12,7 @@
  *
  * Pure TypeScript: no React, Next or Supabase.
  */
-import type { LiveSessionState } from "./state";
+import { isStudentPaced, type LiveSessionState } from "./state";
 
 export interface WaitingCopy {
   /** The line that answers "what is happening right now?" */
@@ -24,7 +24,9 @@ export interface WaitingCopy {
 }
 
 export function waitingCopy(state: LiveSessionState): WaitingCopy {
+  // A student-paced room (#185) is on no one item, so there is no "Item 1 of 12" to tell anyone.
   const onAnItem =
+    !isStudentPaced(state) &&
     (state.status === "running" || state.status === "paused") &&
     state.position !== null &&
     state.position >= 1 &&

@@ -18,6 +18,7 @@
  */
 import {
   LiveSessionError,
+  pacedState,
   type LiveSessionState,
   type LiveSessionTransport,
   type SessionMode,
@@ -95,7 +96,7 @@ export function createFakeRoom(options: ConformanceRoomOptions): FakeRoom {
     host_id: HOST_ID,
     code: normalizeSessionCode(options.code),
     title: "Conformance room",
-    mode: "instructor_paced",
+    mode: options.mode ?? "instructor_paced",
     status: "lobby",
     item_set: items.map((_, index) => rowId(index)),
     current_position: null,
@@ -255,17 +256,20 @@ export function createFakeRoom(options: ConformanceRoomOptions): FakeRoom {
 
     async currentState(): Promise<LiveSessionState> {
       const held = stack.sessions.find((row) => row.id === session.id) as FakeSessionRow;
-      return {
-        status: held.status,
-        position: held.current_position,
-        itemCount: held.item_set.length,
-        reveal: held.reveal,
-        timer: {
-          seconds: held.timer_seconds,
-          endsAt: held.item_ends_at === null ? null : Date.parse(held.item_ends_at),
-          remainingMs: held.timer_remaining_ms,
+      return pacedState(
+        {
+          status: held.status,
+          position: held.current_position,
+          itemCount: held.item_set.length,
+          reveal: held.reveal,
+          timer: {
+            seconds: held.timer_seconds,
+            endsAt: held.item_ends_at === null ? null : Date.parse(held.item_ends_at),
+            remainingMs: held.timer_remaining_ms,
+          },
         },
-      };
+        held.mode,
+      );
     },
 
     participant: () => participantWith((join) => join),

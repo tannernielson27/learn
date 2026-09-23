@@ -119,7 +119,12 @@ export interface FakeAggregateRow {
 }
 
 type TableName =
-  "sessions" | "items" | "session_responses" | "session_public_state" | "session_item_aggregates";
+  | "sessions"
+  | "items"
+  | "participants"
+  | "session_responses"
+  | "session_public_state"
+  | "session_item_aggregates";
 
 type Row = Record<string, unknown>;
 
@@ -581,14 +586,24 @@ class FakeFilter implements PromiseLike<{ data: Row | Row[] | null; error: null 
     private readonly patch: Row | null,
   ) {}
 
+  private readonly within: [string, Set<string>][] = [];
+
   eq(column: string, value: unknown): this {
     this.equals.push([column, value]);
     return this;
   }
 
+  /** `.in(column, values)`, which the student-paced view reads the whole set with (#185). */
+  in(column: string, values: readonly unknown[]): this {
+    this.within.push([column, new Set(values.map(String))]);
+    return this;
+  }
+
   private matching(): Row[] {
-    return this.rows.filter((row) =>
-      this.equals.every(([column, value]) => String(row[column]) === String(value)),
+    return this.rows.filter(
+      (row) =>
+        this.equals.every(([column, value]) => String(row[column]) === String(value)) &&
+        this.within.every(([column, values]) => values.has(String(row[column]))),
     );
   }
 
@@ -629,6 +644,8 @@ export function createFakeClient(
         return stack.sessions as unknown as Row[];
       case "items":
         return stack.items as unknown as Row[];
+      case "participants":
+        return stack.participants as unknown as Row[];
       case "session_responses":
         return stack.responses as unknown as Row[];
       case "session_public_state":
@@ -798,6 +815,7 @@ function runRpc(
         {
           refusal: null,
           session_status: session.status,
+          session_mode: session.mode,
           session_position: session.current_position,
           session_reveal: session.reveal,
           session_items: session.item_set,
@@ -834,6 +852,18 @@ function runRpc(
     if (lateFor(stack, session)) {
       return { data: [{ refusal: "time_up", item_position: null, item_id: null }], error: null };
     }
+    // #185: a student-paced phone names the item it is answering, by its place in the set.
+    if (session.mode === "student_paced") {
+      const asked = Number(args.requested_position);
+      const itemId = session.item_set[asked - 1];
+      if (!Number.isInteger(asked) || itemId === undefined) {
+        return {
+          data: [{ refusal: "wrong_item", item_position: null, item_id: null }],
+          error: null,
+        };
+      }
+      return { data: [{ refusal: null, item_position: asked, item_id: itemId }], error: null };
+    }
     return {
       data: [
         {
@@ -865,7 +895,7 @@ function runRpc(
       return { data: [{ refusal: "time_up", submitted_at: null }], error: null };
     }
     if (
-      session.current_position !== position ||
+      (session.mode !== "student_paced" && session.current_position !== position) ||
       session.item_set[position - 1] !== String(args.target_item)
     ) {
       return { data: [{ refusal: "wrong_item", submitted_at: null }], error: null };
@@ -937,6 +967,8 @@ function runRpc(
  *     to an item the set has — any of them, forwards or back.
  */
 function refusedMove(before: FakeSessionRow, after: FakeSessionRow): string | null {
+  const paced = refusedPacing(before, after);
+  if (paced !== null) return paced;
   if (before.current_position === after.current_position) return null;
   if (before.status === "lobby") {
     return after.status === "running" && after.current_position === 1
@@ -950,6 +982,31 @@ function refusedMove(before: FakeSessionRow, after: FakeSessionRow): string | nu
   if (after.current_position === null) return "a session's position cannot be cleared";
   if (after.current_position < 1 || after.current_position > after.item_set.length) {
     return 'new row for relation "sessions" violates check constraint "sessions_position_within_set"';
+  }
+  return null;
+}
+
+/**
+ * The pacing rules `private.guard_session_change` holds since #185 (migration
+ * 20260923080000_student_paced.sql), with `sessions_student_paced_untimed` beside them.
+ *
+ *   * The pacing is fixed once the room has left the lobby.
+ *   * A student-paced room has no item to move once it has started, and no clock.
+ *   * Answers once shown stay shown until the room ends.
+ */
+function refusedPacing(before: FakeSessionRow, after: FakeSessionRow): string | null {
+  if (after.mode !== before.mode && before.status !== "lobby") {
+    return "a session's pacing cannot change once it has started";
+  }
+  if (after.mode !== "student_paced") return null;
+  if (after.timer_seconds !== null) {
+    return 'new row for relation "sessions" violates check constraint "sessions_student_paced_untimed"';
+  }
+  if (before.status !== "lobby" && after.current_position !== before.current_position) {
+    return "a student-paced session has no current item to move";
+  }
+  if (before.reveal && !after.reveal && after.status !== "ended") {
+    return "a student-paced session's answers stay shown";
   }
   return null;
 }

@@ -39,6 +39,7 @@ export {
   liveTopic,
   type AnsweredPayload,
   type JoinSession,
+  type PacedItemPayload,
   type ParticipantCredentials,
   type ParticipantViewPayload,
   type PublicStatePayload,

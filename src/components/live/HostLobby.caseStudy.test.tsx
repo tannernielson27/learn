@@ -59,6 +59,7 @@ function caseStudyTransport(initial: LiveSessionState): LiveHostTransport {
     onAggregate: () => () => {},
     aggregate: async () => null,
     results: async () => null,
+    progress: async () => null,
     start: () => run("start"),
     advance: () => run("advance"),
     goto: refuse,

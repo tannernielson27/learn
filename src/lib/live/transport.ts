@@ -76,6 +76,31 @@ export interface SessionView<T extends PlayableItem = ParticipantItem> {
   state: LiveSessionState;
   /** The item the room is on. Null in the lobby and once the session has ended. */
   item: T | null;
+  /**
+   * The whole set, in order, while a student-paced room (#185) is running or paused: each phone
+   * works through it at its own pace, so there is no one `item`, which is null. Absent otherwise.
+   * Keyless on a participant's channel for the same reason `item` is. See `pacedSet`.
+   */
+  set?: readonly T[];
+}
+
+/**
+ * Who has answered what in a student-paced room (#185), for the host's progress board: answered or
+ * not, and nothing else. No marks, no responses and no key — a projected board that coloured a
+ * cell right or wrong before "Show answers" would give the answer away.
+ */
+export interface SessionProgress {
+  /** How many answered each item, in set order: `answered[0]` is item 1. */
+  answered: number[];
+  /** Everyone who has joined, in the order they joined, and the positions each has answered. */
+  rows: ProgressRow[];
+}
+
+export interface ProgressRow {
+  participantId: string;
+  displayName: string;
+  /** One-based positions, ascending. */
+  positions: number[];
 }
 
 /** What `join` answers with: the view, plus the facts about the session that never change. */
@@ -211,6 +236,12 @@ export interface LiveHostTransport {
    * participant counterpart, and there must never be one (ADR 0003).
    */
   results(): Promise<Distribution | null>;
+  /**
+   * Who has answered which item, counted **now** (#185): the student-paced progress board. Null in
+   * the lobby. Asked for on the tally's cadence and for the tally's reason — nothing is pushed per
+   * submission (ADR 0002) — and it carries only answered-or-not, never a mark.
+   */
+  progress(): Promise<SessionProgress | null>;
   /** Each rejects `LiveSessionError` when the state machine refuses the move. */
   start(): Promise<LiveSessionState>;
   advance(): Promise<LiveSessionState>;

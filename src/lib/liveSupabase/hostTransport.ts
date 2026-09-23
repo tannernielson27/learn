@@ -26,6 +26,7 @@ import {
   distributionFor,
   goToItem,
   itemAt,
+  pacedState,
   readTimer,
   type HostCommand,
   type TimerCommand,
@@ -35,6 +36,7 @@ import {
   type LiveSessionState,
   type Participant,
   type SessionMode,
+  type SessionProgress,
   type SessionView,
   type Distribution,
   type Unsubscribe,
@@ -44,6 +46,7 @@ import type { Item } from "@/lib/ngn/schemas";
 import type { Database } from "@/lib/supabase/database.types";
 import { fromItemRow } from "@/lib/supabase/itemRows";
 import { endSession } from "@/lib/supabase/sessions";
+import { readProgress } from "./progress";
 import { rosterFrom, type PresenceEntry } from "./presence";
 import { LIVE_SCHEMA, liveTopic, presentRealtimeToken } from "./wire";
 
@@ -267,15 +270,20 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     code = data.code;
     mode = data.mode;
     itemIds = Array.isArray(data.item_set) ? (data.item_set as string[]) : [];
-    state = {
-      status: data.status,
-      position: data.current_position,
-      itemCount: itemIds.length,
-      reveal: data.reveal,
-      // Typed columns from the host's own read; `readTimer` only fails on a row this app did not
-      // write, which reads as no clock rather than as a console that cannot open.
-      timer: readTimer(data.timer_seconds, data.item_ends_at, data.timer_remaining_ms) ?? NO_TIMER,
-    };
+    state = pacedState(
+      {
+        status: data.status,
+        position: data.current_position,
+        itemCount: itemIds.length,
+        reveal: data.reveal,
+        // Typed columns from the host's own read; `readTimer` only fails on a row this app did
+        // not write, which reads as no clock rather than as a console that cannot open.
+        timer:
+          readTimer(data.timer_seconds, data.item_ends_at, data.timer_remaining_ms) ?? NO_TIMER,
+      },
+      // #185: a student-paced room says so, and the reducer refuses its per-item moves.
+      data.mode,
+    );
   }
 
   /**
@@ -578,6 +586,15 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     async results(): Promise<Distribution | null> {
       if (closed || !(await ensureCurrent())) return null;
       return readResults();
+    },
+
+    /**
+     * The student-paced board (#185). Two reads under the host's own row level security — who
+     * joined, and which positions each has answered — and no Realtime message. See `progress.ts`.
+     */
+    async progress(): Promise<SessionProgress | null> {
+      if (closed || state.status === "lobby") return null;
+      return readProgress(client, sessionId, state.itemCount);
     },
 
     start: () => run("start"),

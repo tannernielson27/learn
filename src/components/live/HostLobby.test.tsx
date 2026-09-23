@@ -13,6 +13,7 @@ import {
   type LiveHostTransport,
   type LiveSessionState,
   type Participant,
+  type SessionProgress,
   type SessionView,
   type TimerCommand,
 } from "@/lib/live";
@@ -53,6 +54,7 @@ function fakeTransport(initial: LiveSessionState, refusal?: LiveSessionError) {
   let tally: ItemAggregate | null = null;
   let results: Distribution | null = null;
   let resultAsks = 0;
+  let progress: SessionProgress | null = null;
   const views = new Set<(view: SessionView<Item>) => void>();
   const presence = new Set<(roster: Participant[]) => void>();
   const ran: (HostCommand | TimerCommand | `set_timer:${string}` | `goto:${number}`)[] = [];
@@ -103,6 +105,9 @@ function fakeTransport(initial: LiveSessionState, refusal?: LiveSessionError) {
       resultAsks += 1;
       return results;
     },
+    async progress(): Promise<SessionProgress | null> {
+      return progress;
+    },
     start: () => run("start"),
     advance: () => run("advance"),
     reveal: () => run("reveal"),
@@ -138,6 +143,10 @@ function fakeTransport(initial: LiveSessionState, refusal?: LiveSessionError) {
     /** What the next ask for the results will answer with. */
     resultsIn: (next: Distribution | null) => {
       results = next;
+    },
+    /** What the next ask for the student-paced board will answer with (#185). */
+    progressIn: (next: SessionProgress | null) => {
+      progress = next;
     },
     /** What the next ask for the tally will answer with. */
     answersIn: (next: ItemAggregate | null) => {
@@ -488,5 +497,44 @@ describe("HostLobby: skipping an item or going back (#183)", () => {
     await user.click(screen.getByRole("button", { name: "Go to item 1" }));
     await waitFor(() => expect(screen.getByText(/Item 1 of 3/)).toBeInTheDocument());
     expect(ran).toEqual(["goto:3", "goto:1"]);
+  });
+});
+
+describe("HostLobby: a student-paced room (#185)", () => {
+  const paced = (over: Partial<LiveSessionState> = {}) =>
+    state({ mode: "student_paced", status: "running", position: 1, ...over });
+
+  it("offers Show answers, Pause and End, and nothing that moves the room between items", () => {
+    setup(paced());
+    expect(button("Show answers")).toBeEnabled();
+    expect(button("Pause")).toBeEnabled();
+    expect(button("End session")).toBeEnabled();
+    expect(screen.queryByRole("button", { name: /^Next item$/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Show answer$/ })).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Items" })).toBeNull();
+    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Results" })).toBeNull();
+    expect(screen.queryByText(/Item 1 of 3/)).toBeNull();
+    expect(screen.getByText(/Student-paced/)).toBeInTheDocument();
+  });
+
+  it("draws the progress board, and shows every answer with one press", async () => {
+    const fake = setup(paced());
+    fake.progressIn({
+      answered: [1, 0, 1],
+      rows: [{ participantId: "p1", displayName: "Ada", positions: [1, 3] }],
+    });
+    await waitFor(() => expect(screen.getByTestId("answered-count-1")).toHaveTextContent("1 of 1"));
+    await fake.user.click(button("Show answers"));
+    await waitFor(() => expect(screen.getByText(/answers showing/)).toBeInTheDocument());
+    expect(fake.ran).toEqual(["reveal"]);
+    expect(button("Show answers")).toBeDisabled();
+  });
+
+  it("starts from the lobby with the same Start button", async () => {
+    const fake = setup(state({ mode: "student_paced" }));
+    await fake.user.click(button("Start session"));
+    await waitFor(() => expect(button("Show answers")).toBeEnabled());
+    expect(screen.queryByRole("button", { name: /^Next item$/ })).toBeNull();
   });
 });

@@ -333,6 +333,16 @@ describe("POST /api/live/submit", () => {
     }
   });
 
+  it("refuses a place in the set that is not a whole number from 1 (#185)", async () => {
+    for (const position of ["2", 0, -1, 1.5, 40_000, null]) {
+      const response = await submitSessionResponse(
+        jsonRequest(URL_SUBMIT, { itemId: "x", response: {}, position }),
+        deps(running),
+      );
+      expect(await refusalOf(response)).toBe("malformed");
+    }
+  });
+
   it("passes the rate limiter's refusal on as one, with the status a client can back off on", async () => {
     const response = await submitSessionResponse(
       jsonRequest(URL_SUBMIT, { itemId: "x", response: {} }),

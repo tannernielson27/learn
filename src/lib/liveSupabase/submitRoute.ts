@@ -49,19 +49,27 @@ export async function submitSessionResponse(
   if (!withinItemSizeLimit(body)) return fail(413, LIVE_ROUTE_ERRORS.tooLarge);
   if (typeof body !== "object" || body === null || Array.isArray(body)) return refuse("malformed");
 
-  const { itemId, response } = body as { itemId?: unknown; response?: unknown };
+  const { itemId, response, position } = body as {
+    itemId?: unknown;
+    response?: unknown;
+    position?: unknown;
+  };
   // The item's own id, not the row's: what a browser holds is the item `/api/live/view` gave it,
   // and `items.id` is a uuid the participant never sees. The two are compared below, once the row
   // has been read and reassembled.
   if (typeof itemId !== "string" || itemId === "" || itemId.length > 128) {
     return refuse("malformed");
   }
+  // #185: which item of a student-paced set this answers, by its place. Optional, because an
+  // instructor-paced room is on one item and the database ignores it there.
+  if (position !== undefined && !isPosition(position)) return refuse("malformed");
 
   // Charges this participant's rate limit and answers what the room is on, in one round trip. A
   // flood of unreadable answers costs a counter update rather than a scoring pass.
   const { data: opened, error: openError } = await deps.service.rpc("begin_session_submission", {
     target_session: participant.sessionId,
     participant: participant.participantId,
+    ...(position === undefined ? {} : { requested_position: position }),
   });
   if (openError) return fail(500, LIVE_ROUTE_ERRORS.failed);
   const opening = opened?.[0];
@@ -119,4 +127,9 @@ export async function submitSessionResponse(
     submittedAt: Date.parse(record.submitted_at),
   };
   return Response.json(payload, { headers: NO_STORE_HEADERS });
+}
+
+/** A place in a set: a whole number `sessions.current_position`'s smallint could hold. */
+function isPosition(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 32_767;
 }
