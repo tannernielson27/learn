@@ -200,7 +200,7 @@ describe("listRecentSessions", () => {
     const fake = fakeClient({
       sessions: {
         data: [
-          { ...sessionRow, participants: [{ count: 24 }] },
+          { ...sessionRow, participants: Array.from({ length: 24 }, (_, i) => ({ id: `p${i}` })) },
           { ...sessionRow, id: "s2", status: "running", closed_at: null, participants: [] },
         ],
         error: null,

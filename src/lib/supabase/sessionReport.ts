@@ -41,11 +41,17 @@ export const RECENT_SESSION_LIMIT = 50;
 /** PostgREST's `max_rows` in supabase/config.toml; a longer read is taken a page at a time. */
 export const PAGE_SIZE = 1000;
 
-/** The host's recent sessions, newest first, with how many people joined each. */
+/**
+ * The host's recent sessions, newest first, with how many people joined each.
+ *
+ * The roster is counted here from its ids, not with `participants(count)`: an aggregate embed needs
+ * table-wide select on `participants`, which authors do not have (only listed columns, so
+ * `rejoin_hash` stays unreadable), and PostgREST refuses aggregate functions on this project.
+ */
 export async function listRecentSessions(supabase: Client): Promise<SessionSummary[] | null> {
   const { data, error } = await supabase
     .from("sessions")
-    .select("id, title, status, opened_at, closed_at, participants(count)")
+    .select("id, title, status, opened_at, closed_at, participants(id)")
     .order("opened_at", { ascending: false })
     .limit(RECENT_SESSION_LIMIT);
   if (error || !data) return null;
@@ -55,7 +61,7 @@ export async function listRecentSessions(supabase: Client): Promise<SessionSumma
     status: row.status,
     openedAt: row.opened_at,
     closedAt: row.closed_at,
-    participantCount: row.participants[0]?.count ?? 0,
+    participantCount: row.participants.length,
   }));
 }
 
