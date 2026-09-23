@@ -169,11 +169,11 @@ Everything in `supabase/migrations/` today, in filename order — this is the re
 | 21  | `20260923080000_student_paced`                 | student-paced mode (#185)                                                      | applied                    |
 | 22  | `20260924000000_invite_only_signup`            | new accounts get no role; `private.make_instructor` (#204, §7.6)               | applied                    |
 | 23  | `20260924010000_classes`                       | classes, rosters and invite links; completes the invite seam (#205)            | applied                    |
-| 24  | `20260924020000_assignments`                   | assign a bank or case study to a class with a window and attempts (#207)       | **not applied**            |
+| 24  | `20260924020000_assignments`                   | assign a bank or case study to a class with a window and attempts (#207)       | applied                    |
 
-Checked 2026-09-23 with `pnpm exec supabase migration list --linked`: rows 1–23 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged, row 23 straight after #220). Row 24 (#207) is not applied yet. Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
+Checked 2026-09-23 with `pnpm exec supabase migration list --linked`: rows 1–24 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged, row 23 straight after #220, row 24 straight after #222). Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
 
-> **Drift: row 24.** Until `20260924020000_assignments` is pushed, the hosted project has no assignments table, so assigning fails and the Assignments and Open assignments lists say they could not be loaded. Everything before it is current. The separate production project (§7.3) does not exist yet and will need every row replayed when it is created.
+> **No standing drift.** The existing hosted project is current. The separate production project (§7.3) does not exist yet and will need every row replayed when it is created.
 
 ### 7.3 Standing up a fresh project (the production split)
 
