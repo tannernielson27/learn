@@ -45,17 +45,17 @@ describe("authorForRoute", () => {
 
   it("refuses an account with no role and no org, as every new account now is", async () => {
     profile = { org_id: null, role: null };
-    expect(await authorForRoute()).toEqual({ status: "forbidden" });
+    expect(await authorForRoute()).toEqual({ status: "forbidden", role: null });
   });
 
   it("refuses an account with no profile at all", async () => {
     profile = null;
-    expect(await authorForRoute()).toEqual({ status: "forbidden" });
+    expect(await authorForRoute()).toEqual({ status: "forbidden", role: null });
   });
 
-  it("refuses a student", async () => {
+  it("refuses a student, and says it is one so it can be sent to the student home (#205)", async () => {
     profile = { org_id: ORG, role: "student" };
-    expect(await authorForRoute()).toEqual({ status: "forbidden" });
+    expect(await authorForRoute()).toEqual({ status: "forbidden", role: "student" });
   });
 
   it.each(["instructor", "admin"])("lets an %s in with its org", async (role) => {
@@ -73,6 +73,11 @@ describe("requireAuthor", () => {
   it("sends an account with no role to No access yet", async () => {
     profile = { org_id: null, role: null };
     await expect(requireAuthor("/author")).rejects.toThrow("redirect:/author/no-access");
+  });
+
+  it("sends a student to the student home, not No access yet (#205)", async () => {
+    profile = { org_id: ORG, role: "student" };
+    await expect(requireAuthor("/author")).rejects.toThrow("redirect:/learn");
   });
 
   it("sends a signed-out visitor to sign in, coming back where they were going", async () => {

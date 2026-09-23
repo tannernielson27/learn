@@ -43,7 +43,18 @@ export async function proxy(request: NextRequest) {
 }
 
 // Only the routes that care about a session, plus the gallery, which is here for the opposite
-// reason: it is turned away above before any session work happens.
+// reason: it is turned away above before any session work happens. The student home and the class
+// invite page (#205) read the session in Server Components, which cannot write the refreshed
+// cookies themselves, so the refresh has to happen here.
 export const config = {
-  matcher: ["/author/:path*", "/sign-in", "/auth/:path*", "/gallery", "/gallery/:path*"],
+  matcher: [
+    "/author/:path*",
+    "/learn",
+    "/learn/:path*",
+    "/c/:path*",
+    "/sign-in",
+    "/auth/:path*",
+    "/gallery",
+    "/gallery/:path*",
+  ],
 };

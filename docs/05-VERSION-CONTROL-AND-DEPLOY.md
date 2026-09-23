@@ -168,10 +168,11 @@ Everything in `supabase/migrations/` today, in filename order — this is the re
 | 20  | `20260923070000_case_study_live_record`        | run a case study live with the patient record on every phone (#184)            | applied                    |
 | 21  | `20260923080000_student_paced`                 | student-paced mode (#185)                                                      | applied                    |
 | 22  | `20260924000000_invite_only_signup`            | new accounts get no role; `private.make_instructor` (#204, §7.6)               | applied                    |
+| 23  | `20260924010000_classes`                       | classes, rosters and invite links; completes the invite seam (#205)            | **not applied**            |
 
-Checked 2026-09-23 with `pnpm exec supabase migration list --linked`: every row is applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged). Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
+Checked 2026-09-23 with `pnpm exec supabase migration list --linked`: rows 1–22 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged). Row 23 (#205) is not applied yet. Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
 
-> **No standing drift.** The existing hosted project is current. The separate production project (§7.3) does not exist yet and will need every row replayed when it is created.
+> **Drift: row 23.** Until `20260924010000_classes` is pushed, the hosted project has no classes and the invite page cannot resolve a link. Everything before it is current. The separate production project (§7.3) does not exist yet and will need every row replayed when it is created.
 
 ### 7.3 Standing up a fresh project (the production split)
 
@@ -257,6 +258,8 @@ It finds the account by address (any letter case), puts it in the org (`seed.sql
 To check who is what: `select u.email, p.role from auth.users u join public.profiles p on p.id = u.id order by u.email;`
 
 Existing accounts were not changed by #204: the demo account and every current instructor keep their role. From #205 on, a student joins through an instructor's class invite, which sets `app_metadata.learn_invite` server-side; never set a role through `user_metadata`, which the person can write themselves.
+
+A class invite never demotes anyone. An instructor who opens one is told they already are one; an account with no role that joins becomes a student, and `make_instructor` then refuses it (remove it from its classes and set the role by hand if that was a mistake). To see a class's roster from the SQL editor: `select u.email, c.name from public.class_members m join public.classes c on c.id = m.class_id join auth.users u on u.id = m.profile_id order by c.name, u.email;`
 
 ### 7.7 Email through Resend from info.tannernielson.com (#206)
 

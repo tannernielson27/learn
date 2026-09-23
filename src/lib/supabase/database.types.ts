@@ -178,6 +178,84 @@ export type Database = {
           },
         ];
       };
+      class_members: {
+        Row: {
+          class_id: string;
+          joined_at: string;
+          profile_id: string;
+        };
+        Insert: {
+          class_id: string;
+          joined_at?: string;
+          profile_id: string;
+        };
+        Update: {
+          class_id?: string;
+          joined_at?: string;
+          profile_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "class_members_class_id_fkey";
+            columns: ["class_id"];
+            isOneToOne: false;
+            referencedRelation: "classes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "class_members_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      classes: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          invite_token: string;
+          name: string;
+          org_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          invite_token?: string;
+          name: string;
+          org_id?: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          invite_token?: string;
+          name?: string;
+          org_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "classes_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "classes_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "orgs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       item_banks: {
         Row: {
           created_at: string;
@@ -696,6 +774,16 @@ export type Database = {
           session_timer_seconds: number;
         }[];
       };
+      class_roster: {
+        Args: { target_class: string };
+        Returns: {
+          display_name: string;
+          email: string;
+          joined_at: string;
+          profile_id: string;
+          signed_in: boolean;
+        }[];
+      };
       duplicate_case_study: {
         Args: { source_case_study: string };
         Returns: string;
@@ -712,6 +800,7 @@ export type Database = {
         };
         Returns: Json;
       };
+      join_class: { Args: { token: string }; Returns: string };
       join_session: {
         Args: { chosen_name: string; target_session: string };
         Returns: {
@@ -756,6 +845,14 @@ export type Database = {
         };
         Returns: Json;
       };
+      my_classes: {
+        Args: never;
+        Returns: {
+          class_id: string;
+          class_name: string;
+          joined_at: string;
+        }[];
+      };
       place_case_study_step: {
         Args: { step_item: string; step_position: number; target: string };
         Returns: undefined;
@@ -781,6 +878,13 @@ export type Database = {
       reorder_case_study_steps: {
         Args: { item_ids: string[]; target: string };
         Returns: undefined;
+      };
+      resolve_class_invite: {
+        Args: { client_key?: string; token: string };
+        Returns: {
+          class_id: string;
+          class_name: string;
+        }[];
       };
       resolve_session_code: {
         Args: { client_key?: string; session_code: string };
@@ -808,6 +912,7 @@ export type Database = {
           session_title: string;
         }[];
       };
+      rotate_class_invite: { Args: { target_class: string }; Returns: string };
       server_clock: { Args: never; Returns: string };
       start_case_study_step: {
         Args: { step_position: number; step_type: string; target: string };

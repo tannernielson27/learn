@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { NO_ACCESS_PATH } from "@/lib/auth/noAccess";
+import { STUDENT_HOME } from "@/lib/classes/classes";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -11,8 +12,14 @@ export interface AuthorSession {
   orgId: string;
 }
 
+/**
+ * `role` says who a forbidden account is, so a student can be sent to the student home (#205)
+ * rather than to "No access yet". It is never an author role: those are `ok` or have no org.
+ */
 export type RouteAuthor =
-  ({ status: "ok" } & AuthorSession) | { status: "signed_out" } | { status: "forbidden" };
+  | ({ status: "ok" } & AuthorSession)
+  | { status: "signed_out" }
+  | { status: "forbidden"; role?: "student" | null };
 
 /**
  * The real access check (the proxy's redirect is only optimistic). Verifies the session token,
@@ -31,7 +38,7 @@ export async function authorForRoute(): Promise<RouteAuthor> {
     .eq("id", userId)
     .maybeSingle();
   if (!profile?.org_id || (profile.role !== "instructor" && profile.role !== "admin")) {
-    return { status: "forbidden" };
+    return { status: "forbidden", role: profile?.role === "student" ? "student" : null };
   }
 
   const email = typeof data.claims.email === "string" ? data.claims.email : "";
@@ -42,7 +49,9 @@ export async function authorForRoute(): Promise<RouteAuthor> {
 export async function requireAuthor(returnTo: string): Promise<AuthorSession> {
   const author = await authorForRoute();
   if (author.status === "signed_out") redirect(`/sign-in?next=${encodeURIComponent(returnTo)}`);
-  if (author.status === "forbidden") redirect(NO_ACCESS_PATH);
+  if (author.status === "forbidden") {
+    redirect(author.role === "student" ? STUDENT_HOME : NO_ACCESS_PATH);
+  }
   const { supabase, userId, email, orgId } = author;
   return { supabase, userId, email, orgId };
 }

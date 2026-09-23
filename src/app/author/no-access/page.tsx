@@ -10,10 +10,15 @@ export const metadata: Metadata = { title: "No access yet" };
 /**
  * Where a signed-in account with no author role lands (#204). Sign-up is invite-only: a new
  * account has no role until an instructor's invite or the owner gives it one, so this is the
- * ordinary first stop for such an account, not an error. Anyone else is sent to their own home.
+ * ordinary first stop for such an account, not an error. Anyone else is sent to their own home,
+ * a student included (#205).
  */
 export default async function NoAccessPage() {
-  const target = noAccessRedirect((await authorForRoute()).status);
+  const access = await authorForRoute();
+  const target = noAccessRedirect(
+    access.status,
+    access.status === "forbidden" ? (access.role ?? null) : null,
+  );
   if (target) redirect(target);
 
   return (

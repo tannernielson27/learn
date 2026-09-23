@@ -154,6 +154,14 @@ insert into uncharged_allowlist (schema_name, table_name, reason) values
   ('public', 'profiles',
    'Not authoring. A user may rename themselves (update of display_name only, own row only); no '
    'insert or delete. It holds one row per user and has nothing to amplify.'),
+  ('public', 'classes',
+   'Classes (#205) are a name and an invite link, outside the four authoring actions. Insert and '
+   'update are limited to the name column; the org, creator and token come from defaults, and the '
+   'token changes only through rotate_class_invite. An author makes a class a term, not a minute.'),
+  ('public', 'class_members',
+   'Roster rows (#205). Authenticated may only DELETE, and only in its own org''s classes as an '
+   'author: removing a student. Nobody inserts; joining goes through the invite trigger and '
+   'join_class, which count wrong tokens themselves.'),
   ('public', 'sessions',
    'Live sessions, not authoring content. Hosting inserts and pacing updates (a fixed column '
    'list) are the live path, which has its own limits (#152 view limit, per-step guards) and must '
