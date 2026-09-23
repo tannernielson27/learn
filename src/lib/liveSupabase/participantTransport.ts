@@ -178,6 +178,27 @@ export function publicStateFrom(row: unknown): LiveSessionState | null {
   };
 }
 
+/**
+ * Whether a Realtime `system` message says the channel's `postgres_changes` subscription is live
+ * (#193). Realtime sends `{ extension: "postgres_changes", status: "ok" }` once it is, and
+ * `status: "error"` when it could not be; the second has no move to go and fetch.
+ */
+export function postgresChangesReady(payload: unknown): boolean {
+  if (typeof payload !== "object" || payload === null) return false;
+  const { extension, status } = payload as Record<string, unknown>;
+  return extension === "postgres_changes" && status === "ok";
+}
+
+/**
+ * Whether two reads of the view would put the same thing on a screen. `serverNow` is left out on
+ * purpose: it differs on every read and is only ever used for the clock offset.
+ */
+function sameView(a: ParticipantViewPayload, b: ParticipantViewPayload): boolean {
+  const shown = ({ state, item, answered, revealed }: ParticipantViewPayload) =>
+    JSON.stringify([state, item, answered, revealed]);
+  return shown(a) === shown(b);
+}
+
 /** Adds a listener to a set and hands back the unsubscribe. Calling it twice is harmless. */
 function subscribe<T>(listeners: Set<T>, listener: T): Unsubscribe {
   listeners.add(listener);
@@ -230,6 +251,13 @@ export function createSupabaseParticipant(
    * Kept across a `leave`: it is a fact about this phone's clock, not about a room.
    */
   let offset = 0;
+  /**
+   * Reads of the view, numbered in the order they were sent, and the newest one shown (#193). Two
+   * reads can be in flight at once — the entry's, and the one the subscription coming up asks for
+   * — and the one sent first may land last. It must not put the older room back on the screen.
+   */
+  let readsSent = 0;
+  let newestShown = 0;
 
   function rosterNow(): Participant[] {
     // An entry has to answer with a roster this person is already in, so this connection's own
@@ -279,12 +307,35 @@ export function createSupabaseParticipant(
     for (const listener of [...reveals]) listener(payload.revealed);
   }
 
-  /** Re-reads the view and tells whoever is listening. One fetch per state change, not per field. */
-  async function refresh(): Promise<void> {
+  /**
+   * Reads the view, and says whether it is still the newest read to come back. A read that lost
+   * the race is not announced; the caller answers from `held`, which the newer one has set.
+   */
+  async function readView(): Promise<{ payload: ParticipantViewPayload; newest: boolean }> {
+    readsSent += 1;
+    const sent = readsSent;
+    const payload = await requestView();
+    const newest = sent > newestShown;
+    if (newest) newestShown = sent;
+    return { payload, newest };
+  }
+
+  /**
+   * Re-reads the view and tells whoever is listening. One fetch per state change, not per field.
+   *
+   * `quiet` is for a read nobody asked for because anything moved — only because a move *might*
+   * have gone undelivered (#193). If the room is exactly where the screen already has it, nothing
+   * is announced, so a phone that missed nothing does not repaint.
+   */
+  async function refresh(quiet = false): Promise<void> {
     const mine = generation;
     if (gone || me === null) return;
-    const payload = await requestView();
-    if (gone || mine !== generation) return;
+    const { payload, newest } = await readView();
+    if (gone || mine !== generation || !newest) return;
+    if (quiet && held !== null && sameView(held, payload)) {
+      held = payload;
+      return;
+    }
     announce(payload);
   }
 
@@ -365,6 +416,20 @@ export function createSupabaseParticipant(
         onStateMessage(message.new);
       },
     );
+    /**
+     * The subscription above being live, which is not what `SUBSCRIBED` says (#193).
+     *
+     * `SUBSCRIBED` fires when the channel has joined, and Realtime sets up the replication
+     * subscription behind `postgres_changes` after that; it says so with this `system` message.
+     * A move the host makes in between is written, published, and delivered to nobody — so a phone
+     * that joined in the second the host pressed Start sat on the lobby until the next move. The
+     * entry's own read may well have been answered inside that gap, so once the subscription is
+     * live the phone reads the room once more. It comes again on every rejoin, and so does the read.
+     */
+    opened.on("system", {}, (payload: unknown) => {
+      if (gone || !postgresChangesReady(payload)) return;
+      void refresh(true).catch(() => {});
+    });
     opened.on("presence", { event: "sync" }, () => {
       if (gone) return;
       const roster = rosterNow();
@@ -430,10 +495,21 @@ export function createSupabaseParticipant(
       joinedAt: identity.joinedAt,
     });
     if (mine !== generation) throw new LiveSessionError("not_joined");
-    const view = await requestView();
-    if (mine !== generation) throw new LiveSessionError("not_joined");
-    announce(view);
-    return studentView(view);
+    return readAndAnnounce(mine);
+  }
+
+  /**
+   * Reads the room for an entry and tells whoever is listening. If a newer read landed first —
+   * the subscription came up while this one was in flight (#193) — that one is the room.
+   */
+  async function readAndAnnounce(mine: number): Promise<StudentView> {
+    const { payload, newest } = await readView();
+    if (gone || mine !== generation) throw new LiveSessionError("not_joined");
+    if (newest || held === null) {
+      announce(payload);
+      return studentView(payload);
+    }
+    return studentView(held);
   }
 
   const studentView = (payload: ParticipantViewPayload): StudentView => ({
@@ -489,15 +565,9 @@ export function createSupabaseParticipant(
     async resume(identity): Promise<StudentView> {
       // Resuming twice is the same resume, for the same reason joining twice is: an effect that
       // re-runs must not open a second channel on the same topic.
-      if (me !== null) {
-        const mine = generation;
-        const payload = await requestView();
-        // The same guard every other awaiting path here keeps: a `leave` that landed while this
-        // was in flight means there is nobody to tell, and nothing to hold on to.
-        if (gone || mine !== generation) throw new LiveSessionError("not_joined");
-        announce(payload);
-        return studentView(payload);
-      }
+      // `readAndAnnounce` keeps the same guard every other awaiting path here keeps: a `leave`
+      // that landed while this was in flight means there is nobody to tell.
+      if (me !== null) return readAndAnnounce(generation);
       return enter(generation, identity);
     },
 
