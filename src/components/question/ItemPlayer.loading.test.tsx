@@ -30,10 +30,12 @@ describe("ItemPlayer while its renderer loads", () => {
     render(<ItemPlayer item={ordered} submit={scoreInProcess(ordered)} />);
 
     expect(screen.getByText(RENDERER_LOADING)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Submit" })).toHaveAttribute("aria-disabled", "true");
 
     gate.open();
     await renderersLoaded();
-    expect(await screen.findByRole("button", { name: "Submit" })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "Submit" })).not.toHaveAttribute(
+      "aria-disabled",
+    );
   });
 });
