@@ -63,6 +63,7 @@ create table public.classes (
   constraint classes_invite_token_key unique (invite_token)
 );
 create index classes_org_id_idx on public.classes (org_id);
+create index classes_created_by_idx on public.classes (created_by);
 
 create trigger classes_set_updated_at before update on public.classes
   for each row execute function private.set_updated_at();
@@ -91,6 +92,10 @@ grant update (name) on public.classes to authenticated;
 
 -- Nobody inserts a membership: the invite (trigger or join_class) is the only way in. Removing a
 -- student is a delete by an author of the class's org.
+--
+-- Deliberately absent, as the conservative choice for #205: deleting or archiving a class (no
+-- delete grant on classes) and a student leaving a class on their own (no self-delete policy on
+-- class_members). Both are later decisions, not oversights.
 grant select, delete on public.class_members to authenticated;
 
 alter table public.classes enable row level security;
