@@ -8,7 +8,8 @@
  * demoed before the Supabase adapter (#131) exists.
  *
  * Pure TypeScript: no React, Next or Supabase. The room is a plain closure with no timers, no
- * network and no global state, so a test can create a hundred of them and a component can hold one
+ * network and no global state — an item timer (#182) is only ever a time compared with `now`, so
+ * nothing here needs to wake up when one runs out — so a test can create a hundred of them and a component can hold one
  * in `useState`.
  */
 import { maxPoints } from "@/lib/ngn/scoring";
@@ -19,9 +20,11 @@ import { LiveSessionError } from "./errors";
 import {
   applyHostCommand,
   canSubmit,
+  chooseTimer,
   initialSessionState,
   itemAt,
   type HostCommand,
+  type TimerCommand,
   type LiveSessionState,
   type SessionMode,
 } from "./state";
@@ -229,9 +232,9 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
     }
   }
 
-  function runCommand(command: HostCommand): LiveSessionState {
+  function runCommand(command: HostCommand | TimerCommand): LiveSessionState {
     const before = state;
-    const result = applyHostCommand(before, command);
+    const result = applyHostCommand(before, command, now());
     if (!result.ok) throw new LiveSessionError(result.refusal);
     state = result.state;
     emitState();
@@ -304,12 +307,14 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
       onSessionState: (listener) => subscribe(connection.views, listener),
       onPresence: (listener) => subscribe(connection.presence, listener),
       onReveal: (listener) => subscribe(connection.reveals, listener),
+      serverNow: () => now(),
 
       async submit(itemId, response): Promise<SubmitAck> {
         const participantId = connection.participantId;
         if (participantId === null) throw new LiveSessionError("not_joined");
 
-        const guard = canSubmit(state, itemId, itemIds);
+        // The room's own clock decides whether the time is up (#182), never the participant's.
+        const guard = canSubmit(state, itemId, itemIds, now());
         if (!guard.ok) throw new LiveSessionError(guard.refusal);
 
         // The accepted branch carries the position it checked, so there is nothing to assert here.
@@ -406,6 +411,20 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
       async end() {
         return runCommand("end");
       },
+      async setTimer(seconds) {
+        const result = chooseTimer(state, seconds);
+        if (!result.ok) throw new LiveSessionError(result.refusal);
+        state = result.state;
+        emitState();
+        return state;
+      },
+      async extendTimer() {
+        return runCommand("extend_timer");
+      },
+      async stopTimer() {
+        return runCommand("stop_timer");
+      },
+      serverNow: () => now(),
     };
   }
 

@@ -18,6 +18,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import type { LiveRefusal } from "@/lib/live";
 import type { SessionMode, SessionStatus } from "@/lib/live";
 import type { ParticipantItem } from "@/lib/live";
+import type { ItemTimer } from "@/lib/live/timer";
 import type { AnyResponse } from "@/lib/ngn/schemas";
 import type { Reveal } from "@/lib/ngn/submit";
 import type { ScoreResult } from "@/lib/ngn/types";
@@ -78,12 +79,16 @@ export type JoinSession = (
   identity: { displayName: string; profileId?: string | null },
 ) => Promise<ParticipantCredentials>;
 
-/** The state fields a participant may know. The same four `session_public_state` carries. */
+/**
+ * The state fields a participant may know: the four `session_public_state` has always carried,
+ * and since #182 the item's clock, which it carries too.
+ */
 export interface PublicStatePayload {
   status: SessionStatus;
   position: number | null;
   itemCount: number;
   reveal: boolean;
+  timer: ItemTimer;
 }
 
 /** What the host has revealed, once it has. Null at every other moment. */
@@ -117,6 +122,11 @@ export interface ParticipantViewPayload {
   item: ParticipantItem | null;
   answered: AnsweredPayload | null;
   revealed: RevealedPayload | null;
+  /**
+   * The database's `now()` as it read the room, epoch ms (#182). What a phone measures its own
+   * clock against, so a countdown is right on a phone whose clock is not. See `clockOffset`.
+   */
+  serverNow: number;
 }
 
 /** The body a participant posts to `/api/live/submit`. */

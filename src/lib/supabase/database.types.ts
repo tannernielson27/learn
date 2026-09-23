@@ -581,6 +581,7 @@ export type Database = {
           org_id: string;
           reveal: boolean;
           status: Database["public"]["Enums"]["session_status"];
+          timer_remaining_ms: number | null;
           timer_seconds: number | null;
           title: string;
           updated_at: string;
@@ -601,6 +602,7 @@ export type Database = {
           org_id: string;
           reveal?: boolean;
           status?: Database["public"]["Enums"]["session_status"];
+          timer_remaining_ms?: number | null;
           timer_seconds?: number | null;
           title: string;
           updated_at?: string;
@@ -621,6 +623,7 @@ export type Database = {
           org_id?: string;
           reveal?: boolean;
           status?: Database["public"]["Enums"]["session_status"];
+          timer_remaining_ms?: number | null;
           timer_seconds?: number | null;
           title?: string;
           updated_at?: string;
@@ -675,10 +678,14 @@ export type Database = {
         Args: { participant: string; target_session: string };
         Returns: {
           refusal: string;
+          server_now: string;
+          session_ends_at: string;
           session_items: Json;
           session_position: number;
+          session_remaining_ms: number;
           session_reveal: boolean;
           session_status: Database["public"]["Enums"]["session_status"];
+          session_timer_seconds: number;
         }[];
       };
       duplicate_case_study: {
@@ -687,6 +694,7 @@ export type Database = {
       };
       duplicate_item: { Args: { source_item: string }; Returns: string };
       end_session: { Args: { target: string }; Returns: string };
+      extend_item_timer: { Args: { target: string }; Returns: undefined };
       import_bank_content: {
         Args: {
           new_case_study: Json;
@@ -792,6 +800,7 @@ export type Database = {
           session_title: string;
         }[];
       };
+      server_clock: { Args: never; Returns: string };
       start_case_study_step: {
         Args: { step_position: number; step_type: string; target: string };
         Returns: string;
@@ -805,6 +814,7 @@ export type Database = {
         };
         Returns: string;
       };
+      stop_item_timer: { Args: { target: string }; Returns: undefined };
       take_rate_limit: { Args: { action_name: string }; Returns: boolean };
     };
     Enums: {

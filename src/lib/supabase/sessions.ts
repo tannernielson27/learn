@@ -1,5 +1,6 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import type { LiveSessionState } from "@/lib/live/state";
+import { NO_TIMER, readTimer, type ItemTimer } from "@/lib/live/timer";
 import { isSessionCode, normalizeSessionCode } from "@/lib/live/sessionCode";
 import type { Database } from "./database.types";
 
@@ -20,6 +21,8 @@ export interface HostSession {
   position: number | null;
   /** Whether the current item's key is showing (ADR 0003). */
   reveal: boolean;
+  /** The per-item time and the clock on the current item (#182). */
+  timer: ItemTimer;
   openedAt: string;
   closedAt: string | null;
 }
@@ -88,7 +91,7 @@ export async function readHostSession(
   const { data, error } = await supabase
     .from("sessions")
     .select(
-      "id, title, code, status, mode, item_set, current_position, reveal, opened_at, closed_at",
+      "id, title, code, status, mode, item_set, current_position, reveal, timer_seconds, item_ends_at, timer_remaining_ms, opened_at, closed_at",
     )
     .eq("id", sessionId)
     .maybeSingle();
@@ -102,6 +105,7 @@ export async function readHostSession(
     itemCount: Array.isArray(data.item_set) ? data.item_set.length : 0,
     position: data.current_position,
     reveal: data.reveal,
+    timer: readTimer(data.timer_seconds, data.item_ends_at, data.timer_remaining_ms) ?? NO_TIMER,
     openedAt: data.opened_at,
     closedAt: data.closed_at,
   };
@@ -127,6 +131,9 @@ export async function readHostSession(
  * The array itself must never be put on the returned object, or a student's page would carry the
  * ids of every item in the room (ADR 0003).
  *
+ * Since #182 the item's clock comes with them — the three timer columns, which the mirror carries
+ * too and which the phone shows as a countdown. They say how long, never what the answer is.
+ *
  * The caller must have resumed the participant against their token first; this function does no
  * checking of its own and must never be reached before that.
  */
@@ -136,7 +143,9 @@ export async function readPublicSessionState(
 ): Promise<LiveSessionState | null> {
   const { data, error } = await client
     .from("sessions")
-    .select("status, current_position, item_set, reveal")
+    .select(
+      "status, current_position, item_set, reveal, timer_seconds, item_ends_at, timer_remaining_ms",
+    )
     .eq("id", sessionId)
     .maybeSingle();
   if (error || !data) return null;
@@ -145,6 +154,7 @@ export async function readPublicSessionState(
     position: data.current_position,
     itemCount: Array.isArray(data.item_set) ? data.item_set.length : 0,
     reveal: data.reveal,
+    timer: readTimer(data.timer_seconds, data.item_ends_at, data.timer_remaining_ms) ?? NO_TIMER,
   };
 }
 

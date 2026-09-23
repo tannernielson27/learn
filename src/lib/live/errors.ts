@@ -30,6 +30,15 @@ export const LIVE_REFUSALS = {
   paused: "This session is paused.",
   /** The room moved on between the student opening the item and answering it. */
   wrong_item: "The session has moved on to another item.",
+  /**
+   * The item's timer ran out (#182), and the two seconds allowed for latency after it. Refused by
+   * the server, whose clock is the only one that counts, never by a phone's.
+   */
+  time_up: "Time is up.",
+  /** "Add 15 seconds" or "Stop timer" on an item with no clock running or frozen on it. */
+  no_timer: "This item has no timer running.",
+  /** A per-item time the console does not offer. */
+  bad_timer: "Choose one of the times offered for the timer.",
   unknown_code: "No open session has that code.",
   not_joined: "You have not joined this session.",
   already_answered: "You have already answered this item.",

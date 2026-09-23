@@ -4,6 +4,7 @@ import {
   CONFORMANCE_CORRECT,
   CONFORMANCE_ITEMS,
   describeRoomConformance,
+  refusalOf,
 } from "@/lib/live/roomConformance";
 import type { Item } from "@/lib/ngn/schemas";
 import { createFakeRoom, type FakeRoom } from "./testing/supabaseRoom";
@@ -225,6 +226,66 @@ describe("answering an item from a phone (#133)", () => {
     expect(views.at(-1)?.item).not.toHaveProperty("answerKey");
     await watcher.leave();
     await ada.leave();
+  });
+});
+
+describe("the item timer over the wire (#182)", () => {
+  async function timed() {
+    const live = room();
+    const host = live.host();
+    await host.open();
+    await host.setTimer(30);
+    await host.start();
+    await live.settle();
+    const ada = live.participant();
+    await ada.join(live.code, { displayName: "Ada" });
+    await live.settle();
+    return { live, host, ada };
+  }
+
+  it("tells a late phone Time is up in the bytes it receives, and writes nothing down", async () => {
+    const { live, ada } = await timed();
+    live.tick(32_001);
+    await expect(ada.submit(FIRST.id, CONFORMANCE_CORRECT)).rejects.toMatchObject({
+      code: "time_up",
+      message: "Time is up.",
+    });
+    expect(live.stack.wire.at(-1)?.body).toBe(
+      JSON.stringify({ refusal: "time_up", error: "Time is up." }),
+    );
+    expect(live.stack.responses).toHaveLength(0);
+  });
+
+  it("carries the clock on the channel, and still no key", async () => {
+    const { live, host } = await timed();
+    await host.extendTimer();
+    await live.settle();
+    const message = live.stack.wire.filter((entry) => entry.kind === "channel").at(-1);
+    const row = JSON.parse(message?.body ?? "{}") as Record<string, unknown>;
+    expect(row).toMatchObject({ timer_seconds: 30, timer_remaining_ms: null });
+    expect(typeof row.item_ends_at).toBe("string");
+    expect(message?.body).not.toContain("answerKey");
+  });
+
+  it("refuses a co-host's add after the other console stopped the clock, as no_timer", async () => {
+    const { live, host } = await timed();
+    const other = live.host();
+    await other.open();
+    await live.settle();
+    // Both consoles hold a running clock. One stops it; the other presses "Add 15 seconds" before
+    // the channel has told it, so its own reducer lets the press through and the database says no.
+    await other.stopTimer();
+    expect(await refusalOf(host.extendTimer())).toBe("no_timer");
+    await live.settle();
+    expect((await live.currentState()).timer.endsAt).toBeNull();
+  });
+
+  it("says the room has ended when a timer button meets an ended session", async () => {
+    const { live, host } = await timed();
+    const other = live.host();
+    await other.open();
+    await other.end();
+    expect(await refusalOf(host.stopTimer())).toBe("not_open");
   });
 });
 

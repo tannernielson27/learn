@@ -128,6 +128,8 @@ const DATABASE_REFUSALS = new Set<string>([
   "wrong_item",
   "already_answered",
   "rate_limited",
+  // #182: the item's time, and its two seconds of grace, had run out when the answer arrived.
+  "time_up",
 ]);
 
 /**

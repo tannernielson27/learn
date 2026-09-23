@@ -34,6 +34,10 @@ describeRoomConformance("the in-memory adapter", ({ items, code, sessionId }) =>
     // Nothing travels: a listener has already been called by the time the call that moved the
     // room resolves.
     settle: async () => {},
+    tick: (ms) => {
+      clock += ms;
+    },
+    clock: () => clock,
     dispose: async () => {},
   };
   return conforming;

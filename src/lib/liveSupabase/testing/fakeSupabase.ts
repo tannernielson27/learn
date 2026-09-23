@@ -23,6 +23,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SessionMode, SessionStatus } from "@/lib/live";
+import { SUBMIT_GRACE_MS, extendTimer, settleTimer, type TimedState } from "@/lib/live/timer";
 import { CHANNEL_SESSION_CLAIM } from "@/lib/supabase/channelToken";
 import type { Database, Json } from "@/lib/supabase/database.types";
 
@@ -37,7 +38,9 @@ export interface FakeSessionRow {
   item_set: string[];
   current_position: number | null;
   reveal: boolean;
+  timer_seconds: number | null;
   item_ends_at: string | null;
+  timer_remaining_ms: number | null;
   closed_at: string | null;
 }
 
@@ -95,6 +98,8 @@ export interface FakePublicStateRow {
   item_count: number;
   reveal: boolean;
   item_ends_at: string | null;
+  timer_seconds: number | null;
+  timer_remaining_ms: number | null;
   updated_at: string;
 }
 
@@ -196,6 +201,16 @@ export class FakeSupabase {
     return new Date(this.clock).toISOString();
   }
 
+  /** The database's `now()` as it stands, without moving it. */
+  peek(): number {
+    return this.clock;
+  }
+
+  /** Time passing, as far as the database can tell (#182). Nothing else is told. */
+  advance(ms: number): void {
+    this.clock += ms;
+  }
+
   /**
    * Waits until every message this stack has in flight has been delivered and acted on.
    *
@@ -244,7 +259,22 @@ export class FakeSupabase {
     if ((session.status as string) === "ended") {
       session.closed_at = this.now();
       session.reveal = false;
-      session.item_ends_at = null;
+    }
+    // #182: the trigger derives the clock on every move, from its own `now()`, by the rule
+    // `settleTimer` states. A write to the clock alone (the two timer functions) is kept as sent.
+    const moved =
+      before.status !== session.status ||
+      before.current_position !== session.current_position ||
+      before.reveal !== session.reveal;
+    if (moved) {
+      const timer = settleTimer(
+        timedState(before),
+        timedState(session),
+        this.clock,
+        session.timer_seconds,
+      );
+      session.item_ends_at = timer.endsAt === null ? null : new Date(timer.endsAt).toISOString();
+      session.timer_remaining_ms = timer.remainingMs;
     }
     this.mirror(before, session);
     this.pushAggregates(before, session);
@@ -256,7 +286,9 @@ export class FakeSupabase {
       before.status === after.status &&
       before.current_position === after.current_position &&
       before.reveal === after.reveal &&
-      before.item_ends_at === after.item_ends_at
+      before.item_ends_at === after.item_ends_at &&
+      before.timer_seconds === after.timer_seconds &&
+      before.timer_remaining_ms === after.timer_remaining_ms
     ) {
       return;
     }
@@ -267,6 +299,8 @@ export class FakeSupabase {
       item_count: after.item_set.length,
       reveal: after.reveal,
       item_ends_at: after.item_ends_at,
+      timer_seconds: after.timer_seconds,
+      timer_remaining_ms: after.timer_remaining_ms,
       updated_at: this.now(),
     };
     const index = this.publicState.findIndex((held) => held.session_id === after.id);
@@ -502,6 +536,26 @@ export class FakeChannel {
   unsubscribe(): void {
     this.stack.unregister(this);
   }
+}
+
+/** A session row as the pure timer rules see it. */
+function timedState(row: FakeSessionRow): TimedState {
+  return {
+    status: row.status,
+    position: row.current_position,
+    reveal: row.reveal,
+    timer: {
+      seconds: row.timer_seconds,
+      endsAt: row.item_ends_at === null ? null : Date.parse(row.item_ends_at),
+      remainingMs: row.timer_remaining_ms,
+    },
+  };
+}
+
+/** Whether an answer now is past the item's end and its grace, by the database's clock. */
+function lateFor(stack: FakeSupabase, session: FakeSessionRow): boolean {
+  if (session.item_ends_at === null) return false;
+  return stack.peek() > Date.parse(session.item_ends_at) + SUBMIT_GRACE_MS;
 }
 
 /** Picks the columns a `select` asked for, so nothing a route did not ask for can reach it. */
@@ -740,6 +794,10 @@ function runRpc(
           session_position: session.current_position,
           session_reveal: session.reveal,
           session_items: session.item_set,
+          session_timer_seconds: session.timer_seconds,
+          session_ends_at: session.item_ends_at,
+          session_remaining_ms: session.timer_remaining_ms,
+          server_now: new Date(stack.peek()).toISOString(),
         },
       ],
       error: null,
@@ -765,6 +823,9 @@ function runRpc(
         data: [{ refusal: "already_revealed", item_position: null, item_id: null }],
         error: null,
       };
+    }
+    if (lateFor(stack, session)) {
+      return { data: [{ refusal: "time_up", item_position: null, item_id: null }], error: null };
     }
     return {
       data: [
@@ -792,6 +853,9 @@ function runRpc(
     }
     if (session.reveal) {
       return { data: [{ refusal: "already_revealed", submitted_at: null }], error: null };
+    }
+    if (lateFor(stack, session)) {
+      return { data: [{ refusal: "time_up", submitted_at: null }], error: null };
     }
     if (
       session.current_position !== position ||
@@ -824,6 +888,33 @@ function runRpc(
       submitted_at: submittedAt,
     });
     return { data: [{ refusal: null, submitted_at: submittedAt }], error: null };
+  }
+
+  // #182's three, said the way the migration says them.
+  if (name === "server_clock") return { data: new Date(stack.peek()).toISOString(), error: null };
+
+  if (name === "extend_item_timer" || name === "stop_item_timer") {
+    const target = String(args.target);
+    const session = stack.sessions.find((row) => row.id === target);
+    if (!session) return { data: null, error: { message: "gone", code: "P0002" } };
+    const current = timedState(session);
+    if (name === "stop_item_timer") {
+      if (current.timer.endsAt === null && current.timer.remainingMs === null) {
+        return { data: null, error: null };
+      }
+      const { error } = stack.updateSession(target, {
+        item_ends_at: null,
+        timer_remaining_ms: null,
+      });
+      return { data: null, error };
+    }
+    const next = extendTimer(current, stack.peek());
+    if (next === null) return { data: null, error: { message: "no timer", code: "22023" } };
+    const { error } = stack.updateSession(target, {
+      item_ends_at: next.endsAt === null ? null : new Date(next.endsAt).toISOString(),
+      timer_remaining_ms: next.remainingMs,
+    });
+    return { data: null, error };
   }
 
   return { data: null, error: { message: `unknown function ${name}` } };

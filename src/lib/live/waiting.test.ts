@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LiveSessionState } from "./state";
+import { NO_TIMER } from "./timer";
 import { waitingCopy } from "./waiting";
 
 const state = (over: Partial<LiveSessionState> = {}): LiveSessionState => ({
@@ -7,6 +8,7 @@ const state = (over: Partial<LiveSessionState> = {}): LiveSessionState => ({
   position: null,
   itemCount: 12,
   reveal: false,
+  timer: NO_TIMER,
   ...over,
 });
 

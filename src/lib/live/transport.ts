@@ -164,9 +164,15 @@ export interface LiveSessionTransport {
   /**
    * Answers the item the room is on. Rejects `LiveSessionError` when the state machine refuses —
    * the session ended, it is paused, the room moved on, the key is already showing, or this
-   * participant has answered this item once already.
+   * participant has answered this item once already, or its time is up (#182).
    */
   submit(itemId: string, response: AnyResponse): Promise<SubmitAck>;
+  /**
+   * The session's clock, now, in epoch milliseconds, as well as this connection can tell (#182).
+   * A countdown reads `state.timer` against this and never against `Date.now()`: a phone whose
+   * own clock is two minutes off would otherwise count down two minutes wrong.
+   */
+  serverNow(): number;
 }
 
 /**
@@ -201,4 +207,15 @@ export interface LiveHostTransport {
   pause(): Promise<LiveSessionState>;
   resume(): Promise<LiveSessionState>;
   end(): Promise<LiveSessionState>;
+  /**
+   * Chooses the time each item gets, or null for no timer (#182). Applies from the next item the
+   * room moves to; see `chooseTimer`. Rejects `bad_timer` for a time the console does not offer.
+   */
+  setTimer(seconds: number | null): Promise<LiveSessionState>;
+  /** "Add 15 seconds" to the item's clock. Rejects `no_timer` when it has none. */
+  extendTimer(): Promise<LiveSessionState>;
+  /** "Stop timer": the item takes answers until the host moves on. Rejects `no_timer` likewise. */
+  stopTimer(): Promise<LiveSessionState>;
+  /** The session's clock, now. See `LiveSessionTransport.serverNow`. */
+  serverNow(): number;
 }

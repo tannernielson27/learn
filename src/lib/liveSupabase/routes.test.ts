@@ -56,12 +56,19 @@ async function refusalOf(response: Response): Promise<string | undefined> {
   return ((await response.json()) as { refusal?: string }).refusal;
 }
 
-/** What `begin_session_view` answers with for a room in the state given (#152). */
+/** The database's clock in these scripts (#182). */
+const DB_NOW = "2027-01-15T08:00:00.000+00:00";
+
+/** What `begin_session_view` answers with for a room in the state given (#152, #182). */
 function viewing(state: {
   status: string;
   position: number | null;
   reveal: boolean;
   items: string[];
+  seconds?: number | null;
+  endsAt?: string | null;
+  remainingMs?: number | null;
+  serverNow?: string;
 }): Answer {
   return {
     data: [
@@ -71,6 +78,10 @@ function viewing(state: {
         session_position: state.position,
         session_reveal: state.reveal,
         session_items: state.items,
+        session_timer_seconds: state.seconds ?? null,
+        session_ends_at: state.endsAt ?? null,
+        session_remaining_ms: state.remainingMs ?? null,
+        server_now: state.serverNow ?? DB_NOW,
       },
     ],
     error: null,
@@ -170,11 +181,55 @@ describe("POST /api/live/view", () => {
     );
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
-      state: { status: "lobby", position: null, itemCount: 2, reveal: false },
+      state: {
+        status: "lobby",
+        position: null,
+        itemCount: 2,
+        reveal: false,
+        timer: { seconds: null, endsAt: null, remainingMs: null },
+      },
       item: null,
       answered: null,
       revealed: null,
+      serverNow: Date.parse(DB_NOW),
     });
+  });
+
+  it("carries the item's clock and the database's own time (#182)", async () => {
+    const response = await readParticipantView(
+      jsonRequest(URL_VIEW, {}),
+      deps({
+        begin_session_view: viewing({
+          status: "paused",
+          position: null,
+          reveal: false,
+          items: ["a"],
+          seconds: 60,
+          remainingMs: 21_500,
+        }),
+      }),
+    );
+    const body = (await response.json()) as { state: { timer: unknown }; serverNow: number };
+    expect(body.state.timer).toEqual({ seconds: 60, endsAt: null, remainingMs: 21_500 });
+    expect(body.serverNow).toBe(Date.parse(DB_NOW));
+  });
+
+  it("treats a clock it cannot read as a fault, not as a room without one", async () => {
+    for (const broken of [{ endsAt: "whenever" }, { serverNow: "whenever" }]) {
+      const response = await readParticipantView(
+        jsonRequest(URL_VIEW, {}),
+        deps({
+          begin_session_view: viewing({
+            status: "running",
+            position: null,
+            reveal: false,
+            items: [],
+            ...broken,
+          }),
+        }),
+      );
+      expect(response.status).toBe(500);
+    }
   });
 
   it("refuses to show an item whose stored JSON no longer validates", async () => {
@@ -290,6 +345,44 @@ describe("POST /api/live/submit", () => {
     );
     expect(response.status).toBe(429);
     expect(await refusalOf(response)).toBe("rate_limited");
+  });
+
+  it("refuses an answer whose time is up with its own code, before scoring it (#182)", async () => {
+    const response = await submitSessionResponse(
+      jsonRequest(URL_SUBMIT, { itemId: "x", response: {} }),
+      deps({
+        begin_session_submission: {
+          data: [{ refusal: "time_up", item_position: null, item_id: null }],
+          error: null,
+        },
+      }),
+    );
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ refusal: "time_up", error: "Time is up." });
+  });
+
+  it("refuses one whose time ran out while it was being scored, at the write (#182)", async () => {
+    const item = validateItem(FIXTURES.multiple_choice.canonical);
+    if (!item.ok) throw new Error("fixture");
+    const response = await submitSessionResponse(
+      jsonRequest(URL_SUBMIT, {
+        itemId: item.value.id,
+        response: { type: "multiple_choice", optionId: "opt_a" },
+      }),
+      deps({
+        begin_session_submission: {
+          data: [{ refusal: null, item_position: 1, item_id: "row-1" }],
+          error: null,
+        },
+        items: { data: toItemRow(item.value), error: null },
+        record_session_response: {
+          data: [{ refusal: "time_up", submitted_at: null }],
+          error: null,
+        },
+      }),
+    );
+    expect(response.status).toBe(409);
+    expect(await refusalOf(response)).toBe("time_up");
   });
 
   it("refuses an answer to an item the room is not on", async () => {

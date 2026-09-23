@@ -100,7 +100,9 @@ export function createFakeRoom(options: ConformanceRoomOptions): FakeRoom {
     item_set: items.map((_, index) => rowId(index)),
     current_position: null,
     reveal: false,
+    timer_seconds: null,
     item_ends_at: null,
+    timer_remaining_ms: null,
     closed_at: null,
   };
   stack.sessions.push(session);
@@ -112,6 +114,8 @@ export function createFakeRoom(options: ConformanceRoomOptions): FakeRoom {
     item_count: session.item_set.length,
     reveal: false,
     item_ends_at: null,
+    timer_seconds: null,
+    timer_remaining_ms: null,
     updated_at: stack.now(),
   });
 
@@ -256,6 +260,11 @@ export function createFakeRoom(options: ConformanceRoomOptions): FakeRoom {
         position: held.current_position,
         itemCount: held.item_set.length,
         reveal: held.reveal,
+        timer: {
+          seconds: held.timer_seconds,
+          endsAt: held.item_ends_at === null ? null : Date.parse(held.item_ends_at),
+          remainingMs: held.timer_remaining_ms,
+        },
       };
     },
 
@@ -268,6 +277,8 @@ export function createFakeRoom(options: ConformanceRoomOptions): FakeRoom {
       }),
 
     settle: () => stack.settle(),
+    tick: (ms) => stack.advance(ms),
+    clock: () => stack.peek(),
     dispose: async () => {
       await stack.settle();
     },

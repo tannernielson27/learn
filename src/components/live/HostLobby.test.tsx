@@ -3,7 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import {
   LiveSessionError,
+  NO_TIMER,
   applyHostCommand,
+  chooseTimer,
   type HostCommand,
   type HostSnapshot,
   type ItemAggregate,
@@ -11,6 +13,7 @@ import {
   type LiveSessionState,
   type Participant,
   type SessionView,
+  type TimerCommand,
 } from "@/lib/live";
 import type { Item } from "@/lib/ngn/schemas";
 import { HostLobby } from "./HostLobby";
@@ -23,8 +26,12 @@ const state = (over: Partial<LiveSessionState> = {}): LiveSessionState => ({
   position: null,
   itemCount: 3,
   reveal: false,
+  timer: NO_TIMER,
   ...over,
 });
+
+/** The session's clock in these tests (#182). */
+const SERVER_NOW = 1_800_000_000_000;
 
 const person = (id: string, name: string, joinedAt: number): Participant => ({
   participantId: id,
@@ -42,17 +49,17 @@ function fakeTransport(initial: LiveSessionState, refusal?: LiveSessionError) {
   let tally: ItemAggregate | null = null;
   const views = new Set<(view: SessionView<Item>) => void>();
   const presence = new Set<(roster: Participant[]) => void>();
-  const ran: HostCommand[] = [];
+  const ran: (HostCommand | TimerCommand | `set_timer:${string}`)[] = [];
   let asked = 0;
   let resolveOpen: (() => void) | null = null;
   const opened = new Promise<void>((resolve) => {
     resolveOpen = resolve;
   });
 
-  const run = async (command: HostCommand): Promise<LiveSessionState> => {
+  const run = async (command: HostCommand | TimerCommand): Promise<LiveSessionState> => {
     ran.push(command);
     if (refusal) throw refusal;
-    const result = applyHostCommand(held, command);
+    const result = applyHostCommand(held, command, SERVER_NOW);
     if (!result.ok) throw new LiveSessionError(result.refusal);
     held = result.state;
     for (const listener of [...views]) listener({ state: held, item: null });
@@ -92,6 +99,16 @@ function fakeTransport(initial: LiveSessionState, refusal?: LiveSessionError) {
     pause: () => run("pause"),
     resume: () => run("resume"),
     end: () => run("end"),
+    async setTimer(seconds) {
+      ran.push(`set_timer:${String(seconds)}`);
+      const result = chooseTimer(held, seconds);
+      if (!result.ok) throw new LiveSessionError(result.refusal);
+      held = result.state;
+      return held;
+    },
+    extendTimer: () => run("extend_timer"),
+    stopTimer: () => run("stop_timer"),
+    serverNow: () => SERVER_NOW,
   };
 
   return {
@@ -337,5 +354,67 @@ describe("HostLobby: how many have answered (#133)", () => {
     const settled = fake.asks();
     await new Promise((resolve) => setTimeout(resolve, 60));
     expect(fake.asks()).toBe(settled);
+  });
+});
+
+describe("HostLobby: the item timer (#182)", () => {
+  const timed = (over: Partial<LiveSessionState> = {}) =>
+    state({
+      status: "running",
+      position: 1,
+      timer: { seconds: 30, endsAt: SERVER_NOW + 27_000, remainingMs: null },
+      ...over,
+    });
+
+  it("offers a time per item from the lobby, and says what running out does", async () => {
+    const fake = setup();
+    const select = screen.getByRole("combobox", { name: "Time per item" });
+    expect([...(select as HTMLSelectElement).options].map((option) => option.textContent)).toEqual([
+      "Off",
+      "30 seconds",
+      "1 minute",
+      "90 seconds",
+      "2 minutes",
+    ]);
+    expect(screen.getByText(/you still move the room on/)).toBeInTheDocument();
+
+    await fake.user.selectOptions(select, "30 seconds");
+    await waitFor(() => expect(fake.ran).toEqual(["set_timer:30"]));
+    await waitFor(() => expect(select).toHaveValue("30"));
+
+    await fake.user.selectOptions(select, "Off");
+    await waitFor(() => expect(fake.ran).toEqual(["set_timer:30", "set_timer:null"]));
+  });
+
+  it("counts down on the session's clock while the room is on a timed item", async () => {
+    setup(timed());
+    // The first frame may be drawn before the console has connected, on this machine's clock; the
+    // next is on the session's, which is what the console measures on opening.
+    await waitFor(() => expect(screen.getByRole("timer")).toHaveTextContent(/0:2[67]/));
+  });
+
+  it("adds fifteen seconds and stops the timer", async () => {
+    const fake = setup(timed());
+    await fake.user.click(button("Add 15 seconds"));
+    await waitFor(() => expect(screen.getByRole("timer")).toHaveTextContent("0:42"));
+    await fake.user.click(button("Stop timer"));
+    await waitFor(() => expect(screen.queryByRole("timer")).toBeNull());
+    expect(fake.ran).toEqual(["extend_timer", "stop_timer"]);
+    // With no clock left there is nothing to add to or stop.
+    expect(button("Add 15 seconds")).toBeDisabled();
+    expect(button("Stop timer")).toBeDisabled();
+  });
+
+  it("greys the timer buttons out on an item that has no clock", () => {
+    setup(state({ status: "running", position: 1 }));
+    expect(button("Add 15 seconds")).toBeDisabled();
+    expect(button("Stop timer")).toBeDisabled();
+  });
+
+  it("puts the timer away once the session has ended", async () => {
+    const fake = setup(timed());
+    await fake.user.click(button("End session"));
+    await waitFor(() => expect(screen.queryByRole("combobox")).toBeNull());
+    expect(screen.queryByRole("timer")).toBeNull();
   });
 });

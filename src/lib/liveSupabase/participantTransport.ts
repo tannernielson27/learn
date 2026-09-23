@@ -42,6 +42,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { LIVE_REFUSALS, LiveSessionError, type LiveRefusal } from "@/lib/live/errors";
 import { isSessionCode, normalizeSessionCode } from "@/lib/live/sessionCode";
 import { SESSION_STATUSES, type LiveSessionState, type SessionStatus } from "@/lib/live/state";
+import { clockOffset, readTimer } from "@/lib/live/timer";
 import type {
   ItemReveal,
   LiveSessionTransport,
@@ -157,15 +158,23 @@ export function publicStateFrom(row: unknown): LiveSessionState | null {
     item_position: position,
     item_count: count,
     reveal,
+    timer_seconds: seconds,
+    item_ends_at: endsAt,
+    timer_remaining_ms: left,
   } = row as Record<string, unknown>;
   if (typeof status !== "string" || !STATUSES.has(status)) return null;
   if (position !== null && typeof position !== "number") return null;
   if (typeof count !== "number" || typeof reveal !== "boolean") return null;
+  // The clock (#182). A row without all three columns is not one this app wrote, so it falls
+  // through to a fetch like any other payload that is not a state row.
+  const timer = readTimer(seconds, endsAt, left);
+  if (timer === null) return null;
   return {
     status: status as SessionStatus,
     position: position ?? null,
     itemCount: count,
     reveal,
+    timer,
   };
 }
 
@@ -215,6 +224,12 @@ export function createSupabaseParticipant(
   let announcedReveal: number | null = null;
   /** The last view fetched, so a state message that needs no fetch can be answered from it. */
   let held: ParticipantViewPayload | null = null;
+  /**
+   * How far the session's clock is ahead of this phone's, from the last view fetched (#182). Zero
+   * until the first one lands, which is before any item — and so any countdown — is on the screen.
+   * Kept across a `leave`: it is a fact about this phone's clock, not about a room.
+   */
+  let offset = 0;
 
   function rosterNow(): Participant[] {
     // An entry has to answer with a roster this person is already in, so this connection's own
@@ -228,6 +243,7 @@ export function createSupabaseParticipant(
 
   async function requestView(): Promise<ParticipantViewPayload> {
     if (me === null) throw new LiveSessionError("not_joined");
+    const sentAt = Date.now();
     const response = await call(`${base}${LIVE_ROUTES.view}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -237,7 +253,11 @@ export function createSupabaseParticipant(
       body: "{}",
     });
     if (!response.ok) throw await asError(response);
-    return (await response.json()) as ParticipantViewPayload;
+    const payload = (await response.json()) as ParticipantViewPayload;
+    if (typeof payload.serverNow === "number" && Number.isFinite(payload.serverNow)) {
+      offset = clockOffset(payload.serverNow, sentAt, Date.now());
+    }
+    return payload;
   }
 
   function announce(payload: ParticipantViewPayload): void {
@@ -511,6 +531,7 @@ export function createSupabaseParticipant(
     onPresence: (listener) => subscribe(presence, listener),
     onReveal: (listener) => subscribe(reveals, listener),
     onConnection: (listener) => subscribe(connections, listener),
+    serverNow: () => Date.now() + offset,
 
     async submit(itemId, response) {
       if (me === null) throw new LiveSessionError("not_joined");
