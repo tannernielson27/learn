@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { RecordLayout } from "@/components/ehr/RecordLayout";
+import { ShowFeedbackWords } from "@/components/question/FeedbackWords";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { SetNav } from "@/components/question/SetNav";
 import { Button } from "@/components/ui/Button";
@@ -158,7 +159,9 @@ export function AssignmentResults({ best, attemptsMade, entries, record }: Assig
     <>
       <Total best={best} attemptsMade={attemptsMade} />
       <div className="mt-6">
-        {record ? <RecordLayout record={record}>{review}</RecordLayout> : review}
+        <ShowFeedbackWords>
+          {record ? <RecordLayout record={record}>{review}</RecordLayout> : review}
+        </ShowFeedbackWords>
       </div>
     </>
   );

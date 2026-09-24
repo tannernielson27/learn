@@ -77,8 +77,10 @@ describe("AssignmentResults", () => {
 
     goTo(2, true);
     await renderersLoaded();
-    // Words, not colour alone: the renderer names the missed option.
-    expect(screen.getAllByText("Missed").length).toBeGreaterThan(0);
+    // Words, not colour alone: the missed option says so on screen, not only to a screen reader.
+    const missed = screen.getAllByText("Missed");
+    expect(missed.length).toBeGreaterThan(0);
+    for (const word of missed) expect(word).not.toHaveClass("sr-only");
     expect(screen.getByRole("complementary", { name: "Score" })).toBeInTheDocument();
     expect(firstLine(MR)).not.toBe("");
     expect(screen.getByText(firstLine(MR), { exact: false })).toBeInTheDocument();

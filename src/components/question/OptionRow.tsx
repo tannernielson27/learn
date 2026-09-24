@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { RichText } from "@/lib/ngn/schemas";
 import { ElementRationale } from "./ElementRationale";
+import { useFeedbackWordClass } from "./FeedbackWords";
 import type { ElementFeedback, PlayerMode } from "./types";
 
 export interface OptionRowProps {
@@ -76,6 +77,7 @@ export function OptionRow({
   const textId = `${id}-text`;
   const feedbackId = `${id}-feedback`;
   const hasFeedback = feedback !== "neutral";
+  const feedbackWordClass = useFeedbackWordClass();
   // The control is named by the row's own text, which is then hidden from the accessibility tree:
   // left exposed, it was read a second time after the name (#60). A hidden element still names
   // whatever points at it with aria-labelledby. The whole row stays the label for the tap target.
@@ -112,7 +114,7 @@ export function OptionRow({
           {label}
         </span>
         {hasFeedback ? (
-          <span id={feedbackId} aria-hidden="true" className="sr-only">
+          <span id={feedbackId} aria-hidden="true" className={feedbackWordClass}>
             {feedbackLabel[feedback]}
           </span>
         ) : null}

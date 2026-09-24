@@ -6,6 +6,7 @@ import { ElementRationale } from "../ElementRationale";
 import { FeedbackIcon, feedbackLabel } from "../OptionRow";
 import { blankOrder, type BlankAnswer, type SentenceToken } from "../sentence";
 import { elementFeedback, type ElementFeedback, type PlayerMode } from "../types";
+import { useFeedbackWordClass } from "../FeedbackWords";
 
 // The plain helpers moved to ../sentence (#54); re-exported so the renderers' imports still read.
 export { allBlanksFilled, blankOrder, withAnswer } from "../sentence";
@@ -38,10 +39,11 @@ const stateClasses: Record<ElementFeedback, string> = {
 };
 
 function Mark({ state }: { state: ElementFeedback }) {
+  const feedbackWordClass = useFeedbackWordClass();
   if (state === "neutral") return null;
   return (
     <>
-      <span className="sr-only">{feedbackLabel[state]}</span>
+      <span className={feedbackWordClass}>{feedbackLabel[state]}</span>
       <FeedbackIcon state={state} className="" />
     </>
   );
