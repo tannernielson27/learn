@@ -135,10 +135,10 @@ Rules:
 `/api/health` says which one a deployment actually reached:
 
 ```json
-{ "supabase": "ok", "project": "vauokqoyvewtzubqajgh" }
+{ "supabase": "ok", "project": "vauokqoyvewtzubqajgh", "version": "9288d33a1b2c", "ready": false }
 ```
 
-`project` is the ref parsed out of `NEXT_PUBLIC_SUPABASE_URL`, or `local` for the local stack, or `unknown` when the variable is absent or is not a project URL. The ref is the public part of the URL; no key, URL or error text is ever echoed. **The demo step for the split is to open `/api/health` on the production URL and on a preview URL and see two different refs.**
+`project` is the ref parsed out of `NEXT_PUBLIC_SUPABASE_URL`, or `local` for the local stack, or `unknown` when the variable is absent or is not a project URL. The ref is the public part of the URL; no key, URL or error text is ever echoed. `version` is the deployed commit (`local` off Vercel) and `ready` is the one-word answer of the go-live check ([§7.11](#711-go-live-every-owner-step-in-order-and-pnpm-golivecheck-237)). **The demo step for the split is to open `/api/health` on the production URL and on a preview URL and see two different refs.**
 
 ### 7.2 Migrations in order
 
@@ -430,6 +430,47 @@ The app reports browser and server errors to Sentry on the free tier. It is off 
 To repeat the drill locally: dump the running stack with `PROD_DB_URL=postgresql://postgres:postgres@127.0.0.1:55322/postgres`, `BACKUP_AGE_RECIPIENT` and `OUT_DIR` set; reset the stack to an empty project with `supabase --workdir <copy> db reset`, where the copy is `supabase/config.toml` and `supabase/templates` with `[db.migrations]` and `[db.seed]` set to `enabled = false`; restore as in step 5; then `pnpm test:db`. Finish with a plain `pnpm exec supabase db reset` to put the stack back.
 
 **Free-tier pausing.** A free project pauses after about a week without activity. The nightly dump connects to the database every day, which should count as activity and keep production awake. Do not rely on it alone: Supabase decides what counts, it could change, and a backup that stops (a secret expired, a failed run nobody opened) stops keeping the project awake at the same moment. GitHub also turns off scheduled workflows in a repo with no commits for 60 days. Check the Actions tab weekly, or subscribe to failed runs (GitHub → your profile → Settings → Notifications → Actions → "Send notifications for failed workflows only"), and decide the plan at go-live as planned.
+
+### 7.11 Go-live: every owner step in order, and `pnpm golive:check` (#237)
+
+Before the first real student gets an invite, do these in order, then run the check until every automated line passes. Each step is written out in full in the section it names; this is the order, not the detail.
+
+1. **[ ] Production project** (§7.3 steps 1–4): create `learn-prod`, copy its ref, `db push` every migration in §7.2, load `seed.sql`. Check the replay locally first if §7.2 changed since the last one (§7.5). §7.4 is only for catching up a project that already exists.
+2. **[ ] Instructor accounts** (§7.3 step 5 and §7.6): Add user, then `select private.make_instructor('<address>');` for each instructor. **Leave the demo account out of production**: do not set `DEMO_ACCOUNT_EMAIL` or `DEMO_ACCOUNT_PASSWORD` in Vercel Production (delete them if they are there), so "Use the demo account" is not on the sign-in page students see. The check fails while either is set.
+3. **[ ] Vercel Production variables** (§7.3 step 6): the Supabase URL, publishable key, `SUPABASE_SECRET_KEY` and `SUPABASE_JWT_SIGNING_KEY`, all from the production project. Redeploy and check the ref (§7.3 step 7).
+4. **[ ] Realtime private-only** (§7.3 step 8): "Allow public access" off. Never add `live` or `private` to the Data API's exposed schemas. Then #178 can merge and be applied, which drops the last open policy on `live.session_public_state`.
+5. **[ ] Email** (§7.7 steps 1–7): Resend domain and key, custom SMTP, the magic-link template, the Auth email rate limit, the Auth URL configuration, `RESEND_API_KEY` and `EMAIL_FROM` in Vercel, and a real link to your own inbox.
+6. **[ ] Reminder job** (§7.8 steps 1–5): `CRON_SECRET` in Vercel, pg_cron and pg_net, the two Vault secrets and `cron.schedule`, then `private.call_reminder_route()` answers `queued`.
+7. **[ ] Sentry** (§7.9 steps 1–7): the project, its privacy settings, the five variables, a test error from a preview, the alert rules.
+8. **[ ] Backups** (§7.10 steps 1–3): the age key pair, `BACKUP_AGE_RECIPIENT` and `PROD_DB_URL`, one run by hand. Do a restore drill into a scratch project before students depend on it.
+9. **[ ] Choose the plan** (owner decision, 2026-09-24): Pro, or free plus the nightly dump.
+10. **[ ] Run the check** (below) against production. Every automated line passes; work through each MANUAL line by hand.
+
+**Running it.** From the repo root, on a machine signed in to the Supabase CLI (`pnpm exec supabase login`; the queries go through it) and, for the backup line, to GitHub (`gh auth login`):
+
+```sh
+read -rs GOLIVE_HEALTH_TOKEN && export GOLIVE_HEALTH_TOKEN   # paste production's CRON_SECRET; not echoed
+pnpm golive:check -- --url https://learn-tanner-nielsons-projects.vercel.app \
+  --project-ref <prod-ref> --publishable-key <the sb_publishable_ key>
+```
+
+On PowerShell, `$env:GOLIVE_HEALTH_TOKEN = Read-Host -MaskInput` does the same. The token is optional: without it the check reads the public health answer, which says only whether the site is ready, not which variable is missing. The publishable key is public (it ships to every browser) and is only used to ask PostgREST which schemas it exposes; without it that line is MANUAL. To try it against the local stack: `pnpm golive:check -- --url http://127.0.0.1:3000 --local` with `pnpm dev` running. There it reports the expected failures: no Resend, no Sentry, the demo account on, no pg_cron, #178 not applied, and no backup.
+
+It prints one line per check, `PASS`, `FAIL` or `MANUAL`, each with what it found and the step above that fixes it, and exits non-zero when any line fails. It is read-only: single `select` statements through `supabase db query`, GETs to the site and to PostgREST, and `gh run list`. It never prints a key, a password or the token. What it checks:
+
+| Line                        | How                                                                                                                                                                    | Fixed by          |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| migrations                  | `supabase_migrations.schema_migrations` equals the files in `supabase/migrations`                                                                                      | §7.3 step 3, §7.4 |
+| exposed schemas             | PostgREST's refusal of an unknown schema lists the exposed ones; only `public` and `graphql_public` pass (docs/audits/S10-security.md)                                 | §7.3 step 8       |
+| `live.session_public_state` | anon has no select, or no `using (true)` policy applies to anon (#178)                                                                                                 | §7.3 step 8, #178 |
+| site                        | `/api/health` answers, reaches Supabase, and names the `--project-ref` project                                                                                         | §7.3 steps 6–7    |
+| variables                   | `/api/health` reports every variable in `src/lib/golive/envVars.ts` as set: the four Supabase ones, `RESEND_API_KEY`, `EMAIL_FROM`, `CRON_SECRET` and both Sentry DSNs | the step it names |
+| demo account                | neither `DEMO_ACCOUNT_*` variable is set                                                                                                                               | step 2 above      |
+| reminder job                | pg_cron is on, `learn-assignment-reminders` is scheduled and active, and both Vault names exist                                                                        | §7.8 steps 3–4    |
+| backup                      | the newest successful `db-backup.yml` run is under 26 hours old and uploaded a `db-backup-*` artifact (MANUAL when `gh` cannot answer)                                 | §7.10 steps 2–3   |
+| manual                      | Realtime public access, SMTP and the template, Auth URLs, Sentry's test event and alerts, and the rate-limit sweep job (#248, not built yet)                           | the step it names |
+
+**What `/api/health` shows, and to whom.** Anyone gets `{supabase, project, version, ready}`, cached for 5 seconds (`Cache-Control: public, max-age=5, s-maxage=5`). `ready` is true only when Supabase answers, every required variable is set and the demo account is off; it deliberately does not say which variable is missing, since a list of absent secrets tells a stranger which feature is unprotected. With `Authorization: Bearer <CRON_SECRET>` the answer adds one boolean per variable and `demoAccount`, never cached; a wrong token gets `401` and nothing else. No value is ever returned, which a route test proves on the response bytes. The route has no rate limit of its own: it reads no table, the CDN absorbs repeats, and its one outbound call (Supabase's auth health) is made at most once every 5 seconds per server instance however often it is asked.
 
 ## 8. Working together day to day
 

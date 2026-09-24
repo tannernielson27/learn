@@ -1,31 +1,50 @@
+import { createSupabaseMemo, handleHealth, type SupabaseStatus } from "@/lib/golive/healthReport";
 import { readSupabasePublicEnv } from "@/lib/supabase/env";
 import { checkSupabaseHealth } from "@/lib/supabase/health";
 import { supabaseProjectRef } from "@/lib/supabase/projectRef";
 
-const NO_STORE = { "Cache-Control": "no-store" };
+/** Supabase is asked at most once per window per server instance (see healthReport.ts). */
+const SUPABASE_MEMO_MS = 5_000;
+
+async function supabaseStatus(): Promise<SupabaseStatus> {
+  try {
+    return await checkSupabaseHealth(readSupabasePublicEnv());
+  } catch {
+    return {
+      status: "not_configured",
+      project: supabaseProjectRef(process.env.NEXT_PUBLIC_SUPABASE_URL),
+    };
+  }
+}
+
+const supabase = createSupabaseMemo(supabaseStatus, SUPABASE_MEMO_MS);
 
 /**
- * Reports whether the deployment can reach Supabase, and which project that is. The project ref
- * is the public part of the project URL, so production and a preview can be told apart from the
- * outside (ADR 0006). Keys, full URLs and errors are never echoed.
+ * Each variable is read by name, so the NEXT_PUBLIC_ ones are the values this build carries. Only
+ * whether each is set leaves this route (`summarizeEnv`); the values never do.
  */
-export async function GET(): Promise<Response> {
-  let env;
-  try {
-    env = readSupabasePublicEnv();
-  } catch {
-    return Response.json(
-      {
-        supabase: "not_configured",
-        project: supabaseProjectRef(process.env.NEXT_PUBLIC_SUPABASE_URL),
-      },
-      { status: 503, headers: NO_STORE },
-    );
-  }
+function envSnapshot() {
+  return {
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
+    SUPABASE_JWT_SIGNING_KEY: process.env.SUPABASE_JWT_SIGNING_KEY,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    EMAIL_FROM: process.env.EMAIL_FROM,
+    CRON_SECRET: process.env.CRON_SECRET,
+    SENTRY_DSN: process.env.SENTRY_DSN,
+    NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+    DEMO_ACCOUNT_EMAIL: process.env.DEMO_ACCOUNT_EMAIL,
+    DEMO_ACCOUNT_PASSWORD: process.env.DEMO_ACCOUNT_PASSWORD,
+    VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA,
+  };
+}
 
-  const { status, project } = await checkSupabaseHealth(env);
-  return Response.json(
-    { supabase: status, project },
-    { status: status === "ok" ? 200 : 503, headers: NO_STORE },
-  );
+/**
+ * Whether this deployment can reach Supabase, which project that is (ADR 0006), which commit it
+ * runs, and whether it is ready for students (#237). Per-variable booleans need
+ * `Authorization: Bearer <CRON_SECRET>`; values never leave. See `handleHealth`.
+ */
+export async function GET(request: Request): Promise<Response> {
+  return handleHealth(request, { env: envSnapshot(), supabase });
 }
