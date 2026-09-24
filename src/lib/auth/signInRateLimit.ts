@@ -1,7 +1,9 @@
 import { isIP } from "node:net";
 
 /**
- * Three counters on the sign-in paths: one on the caller (#134), two on the recipient (#139).
+ * Three counters on the sign-in paths: one on the caller (#134), two on the recipient (#139). A
+ * fourth, on the class invite path only, takes the caller's place once an invite token has
+ * resolved (#217): see `SIGN_IN_INVITE_LIMIT`.
  *
  * The per-IP counter bounds what one caller spends. That is the right limit for what it is for,
  * but it counts the person asking, not the address being mailed: thirty attempts an IP, from as
@@ -41,7 +43,7 @@ import { isIP } from "node:net";
  * person's. And #111's limiter fails closed, which is why an unapplied migration can refuse every
  * save; the same failure on sign-in would shut everyone out of the site.
  *
- * So all three counters live in the server's own memory. They need no migration, add no
+ * So all the counters live in the server's own memory. They need no migration, add no
  * unauthenticated surface, and cannot be skipped by calling the Server Function directly, because
  * the Server Function is what counts. Two limits to know about, and both bite hardest on the
  * address ceiling, which is the only one of the three that a third party can spend:
@@ -134,7 +136,8 @@ export const SIGN_IN_LIMITS = {
  * per caller across every address (`SIGN_IN_LIMITS.email`). One caller hammering one address
  * meets the first, a flood on one address meets the second, and the third still bounds what any
  * one caller spends in total. It also means a caller needs four addresses of its own to hold one
- * ceiling down, and each of the four keeps paying against its own 30.
+ * ceiling down, and each of the four keeps paying against its own 30 (120 per class, 150 in all,
+ * while it holds a live class invite: see `SIGN_IN_INVITE_LIMIT`).
  *
  * Fixed windows, like the two above, with the same back-to-back-across-the-boundary cost.
  */
@@ -142,6 +145,52 @@ export const SIGN_IN_ADDRESS_LIMITS = {
   perCaller: { attempts: 3, windowMs: FIVE_MINUTES },
   overall: { attempts: 12, windowMs: FIVE_MINUTES },
 } as const satisfies Record<"perCaller" | "overall", SignInLimit>;
+
+/**
+ * The budget a class invite request earns once its token has resolved (#217), keyed on the class
+ * and the caller together, in place of the per-IP email budget above.
+ *
+ * Why the invite path needs its own: a class on campus Wi-Fi reaches this server from one public
+ * address (NAT), so the thirty-first student to open the link in the same five minutes was refused
+ * — on the first day, which is when it matters. Thirty was set for plain sign-in, where an address
+ * with no account is not mailed at all; it was never meant to admit a whole class at once.
+ *
+ * 120: a sixty-student class with a retry each. Earned only by a token `resolve_class_invite` has
+ * just matched, so a caller with no valid token never sees it — an unknown, rotated, malformed or
+ * absent token still spends the per-IP email budget exactly as before (see
+ * `app/c/[token]/actions.ts`). What a larger budget hands to someone who holds a real link (a
+ * student can forward it) is recorded here because it is the price of the fix:
+ *
+ * - Up to 120 addresses mailed per class per caller in five minutes, instead of 30. Each address is
+ *   still bounded by `SIGN_IN_ADDRESS_LIMITS` (3 per caller, 12 overall), which this does not touch,
+ *   so no one inbox gets more than it did. What grows is the number of strangers one holder can
+ *   reach, and the number of never-signed-in student accounts they can leave on that class's roster
+ *   — the invite path is the one that creates accounts (#205).
+ * - Rotating the invite ends it: the old token stops resolving, and its holder is back on 30.
+ * - Supabase's own Auth email limit (docs/05 §7.7 step 4, 150 an hour in production) is shared by
+ *   the whole deployment and is the next ceiling a large class meets; it is what really bounds a
+ *   holder spraying addresses, and a class of sixty spends a good part of it at once.
+ * - The lockout of #159 keeps its shape: one address's ceiling is still 12 and one caller's share
+ *   of it is still 3, so holding any one address down still takes four callers. What changes is
+ *   breadth. A caller's 3 per address against 30 in total let four callers hold about ten
+ *   addresses down at once; against 120 it is about forty — but only while they hold a live invite,
+ *   and only until it is rotated. A caller with no valid token is exactly where #159 left them.
+ */
+export const SIGN_IN_INVITE_LIMIT = {
+  attempts: 120,
+  windowMs: FIVE_MINUTES,
+} as const satisfies SignInLimit;
+
+/**
+ * One caller's budget across every class it holds a live link to. Without it the per-class budgets
+ * stack: a caller holding ten links (ten sections, or links forwarded to it) would get 1,200 invites
+ * and account creations a window instead of 120. 150 still lets two whole classes of sixty sign up
+ * behind one address at once, with room for retries.
+ */
+export const SIGN_IN_INVITE_TOTAL_LIMIT = {
+  attempts: 150,
+  windowMs: FIVE_MINUTES,
+} as const satisfies SignInLimit;
 
 /**
  * The same sentence whichever path tripped and whoever asked: it says nothing about whether an
@@ -165,7 +214,9 @@ const IP_HEADERS = ["x-vercel-forwarded-for", "x-real-ip", "x-forwarded-for"] as
 // callers in one window. #139's recipient keys change that arithmetic and the number was not
 // re-tuned: a caller's thirty email attempts can now leave up to thirty address keys and thirty
 // pair keys behind as well as its own, so sixty-one keys a caller, and a couple of hundred
-// callers reach ten thousand. Left as it is on purpose. Eviction below still bounds the memory
+// callers reach ten thousand. #217's invite budget stretches that again for a caller holding a
+// live invite — up to 120 address and 120 pair keys a class — and it was still not re-tuned: at
+// this site's traffic ten thousand is a flood either way. Left as it is on purpose. Eviction below still bounds the memory
 // and still drops the windows nearest their end first, so the worst a flood buys is somebody's
 // window starting over early — never a refusal, and never a lockout.
 const MAX_TRACKED = 10_000;
@@ -247,6 +298,11 @@ export interface SignInRateLimiter {
   /** Counts one attempt and says whether it is within the limit. */
   take(ip: string | null, action: SignInAction, now?: number): SignInRateLimitResult;
   /**
+   * Counts one invite request against the class and the caller together (#217). Only for a
+   * request whose token has already resolved to `classId`; see `SIGN_IN_INVITE_LIMIT`.
+   */
+  takeInvite(ip: string | null, classId: string, now?: number): SignInRateLimitResult;
+  /**
    * Counts one link against the caller and the address together, then against the address alone,
    * and says whether to send it. The caller's own budget is taken first, so a request this caller
    * has already spent cannot go on to spend the shared ceiling.
@@ -272,16 +328,21 @@ export function createSignInRateLimiter(
   addressLimits: Readonly<
     Record<"perCaller" | "overall", Readonly<SignInLimit>>
   > = SIGN_IN_ADDRESS_LIMITS,
+  inviteLimit: Readonly<SignInLimit> = SIGN_IN_INVITE_LIMIT,
+  inviteTotalLimit: Readonly<SignInLimit> = SIGN_IN_INVITE_TOTAL_LIMIT,
 ): SignInRateLimiter {
-  // All three counters share one Map, so there is one bound and one eviction policy to reason
+  // All five counters share one Map, so there is one bound and one eviction policy to reason
   // about. The keys cannot collide: each carries a prefix the others do not use, and inside a
   // pair key neither half can hold the separator — `clientIp` has already checked that the
-  // caller is an IP address or the one fixed word, and a validated email has no `|` in it.
+  // caller is an IP address or the one fixed word, a validated email has no `|` in it, and a
+  // class id is a uuid the database just returned.
   const windows = new Map<string, CountedWindow>();
   let ceilingRefusals = 0;
   const longestWindow = Math.max(
     ...Object.values(addressLimits).map((limit) => limit.windowMs),
     ...Object.values(limits).map((limit) => limit.windowMs),
+    inviteLimit.windowMs,
+    inviteTotalLimit.windowMs,
   );
 
   function forgetFinished(now: number): void {
@@ -322,6 +383,14 @@ export function createSignInRateLimiter(
         ? { ok: true }
         : { ok: false, error: SIGN_IN_RATE_LIMITED };
     },
+    takeInvite(ip, classId, now = Date.now()) {
+      if (ip === null) return { ok: true };
+      // The class first, so a class that is full does not also spend the caller's total.
+      return within(`invite:${classId}|${ip}`, inviteLimit, now) &&
+        within(`invite-all:${ip}`, inviteTotalLimit, now)
+        ? { ok: true }
+        : { ok: false, error: SIGN_IN_RATE_LIMITED };
+    },
     takeAddress(ip, email, now = Date.now()) {
       const address = normalizeSignInAddress(email);
       // Off the platform there is no caller to key a pair on, so that tier drops out exactly as
@@ -357,6 +426,19 @@ export function takeSignInAttempt(
   limiter: SignInRateLimiter = sharedLimiter,
 ): SignInRateLimitResult {
   return limiter.take(clientIp(requestHeaders), action);
+}
+
+/**
+ * Counts one class invite request from this request's address, in place of `takeSignInAttempt`,
+ * once the invite token has resolved to `classId` (#217). The caller must not reach this with a
+ * token that did not resolve: that request spends the per-IP email budget, as it always has.
+ */
+export function takeSignInInviteAttempt(
+  requestHeaders: RequestHeaders,
+  classId: string,
+  limiter: SignInRateLimiter = sharedLimiter,
+): SignInRateLimitResult {
+  return limiter.takeInvite(clientIp(requestHeaders), classId);
 }
 
 /**
