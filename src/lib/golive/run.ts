@@ -10,6 +10,7 @@ import {
   migrationsCheck,
   reminderJobCheck,
   sessionStateCheck,
+  sweepJobCheck,
   type HealthReading,
 } from "./checks.ts";
 import {
@@ -19,6 +20,7 @@ import {
   readLatestBackup,
   readReminderJob,
   readSessionState,
+  readSweepJob,
   type FetchLike,
   type Gh,
   type Query,
@@ -135,6 +137,14 @@ export async function runGoLiveCheck(
     () =>
       guarded("cron", "the reminder job is scheduled", "fail", DB_HINT, async () =>
         reminderJobCheck(await readReminderJob(query)),
+      ),
+    () =>
+      guarded(
+        "rate-limit-sweep",
+        "the rate-limit sweep job is scheduled",
+        "fail",
+        DB_HINT,
+        async () => sweepJobCheck(await readSweepJob(query)),
       ),
     () =>
       guarded(

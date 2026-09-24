@@ -8,6 +8,7 @@ import {
   parseExposedSchemas,
   reminderJobCheck,
   sessionStateCheck,
+  sweepJobCheck,
   type HealthReading,
 } from "./checks.ts";
 import { REQUIRED_ENV, type DetailedHealth, type PublicHealth } from "./envVars.ts";
@@ -123,6 +124,40 @@ describe("reminderJobCheck", () => {
     [{ ...good, vault_names: 1 }, "Vault lacks"],
   ])("fails: %o", (row, text) => {
     const result = reminderJobCheck(row);
+    expect(result.status).toBe("fail");
+    expect(result.detail).toContain(text);
+  });
+});
+
+describe("sweepJobCheck", () => {
+  const good = { has_cron: true, job_count: 1, job_active: true };
+
+  it("passes with exactly one active sweep job", () => {
+    const result = sweepJobCheck(good);
+    expect(result).toMatchObject({ id: "rate-limit-sweep", status: "pass" });
+    expect(result.title).toContain("learn-rate-limit-sweep");
+  });
+
+  it("fails with pg_cron off, naming the §7.8 steps that fix it", () => {
+    const result = sweepJobCheck({ has_cron: false, job_count: 0, job_active: false });
+    expect(result.status).toBe("fail");
+    expect(result.detail).toContain("pg_cron is not enabled");
+    expect(result.detail).toContain("§7.8 step 3");
+    expect(result.detail).toContain("select private.schedule_rate_limit_sweep()");
+  });
+
+  it("fails with pg_cron on but no job, naming the call that schedules it", () => {
+    const result = sweepJobCheck({ ...good, job_count: 0, job_active: false });
+    expect(result.status).toBe("fail");
+    expect(result.detail).toContain("no job by that name");
+    expect(result.detail).toContain("select private.schedule_rate_limit_sweep()");
+  });
+
+  it.each([
+    [{ ...good, job_active: false }, "inactive"],
+    [{ ...good, job_count: 2 }, "2 jobs by that name"],
+  ])("fails: %o", (row, text) => {
+    const result = sweepJobCheck(row);
     expect(result.status).toBe("fail");
     expect(result.detail).toContain(text);
   });
@@ -247,7 +282,6 @@ describe("MANUAL_STEPS", () => {
       "smtp",
       "auth-urls",
       "sentry",
-      "rate-limit-sweep",
     ]);
   });
 });

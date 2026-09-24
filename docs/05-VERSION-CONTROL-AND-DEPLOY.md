@@ -179,8 +179,9 @@ Everything in `supabase/migrations/` today, in filename order — this is the re
 | 31  | `20260925020000_class_timezone_and_removed`    | class time zone set in the app; removed students in the assignment report (#242)   | applied                    |
 | 32  | `20260925030000_student_history`               | a student's closed assignments with their own attempts, for History (#238)         | applied                    |
 | 33  | `20260925040000_practice_shares`               | share a bank with a class for practice; the graded-reuse warning (#240)            | applied                    |
+| 34  | `20260925050000_rate_limit_sweep`              | a pg_cron job sweeps expired shared rate-limit rows every 5 minutes (#248, §7.8)   | applied                    |
 
-Checked 2026-09-24 with `pnpm exec supabase migration list --linked`: rows 1–33 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged, row 23 straight after #220, row 24 straight after #222, row 25 straight after #224, row 26 straight after #226, row 27 straight after #228, row 28 straight after #230, row 29 straight after #245, row 30 after #247 and row 31 after #251 and row 32 after #254 and row 33 after #255, all on 2026-09-24). Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
+Checked 2026-09-24 with `pnpm exec supabase migration list --linked`: rows 1–34 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged, row 23 straight after #220, row 24 straight after #222, row 25 straight after #224, row 26 straight after #226, row 27 straight after #228, row 28 straight after #230, row 29 straight after #245, row 30 after #247 and row 31 after #251 and row 32 after #254 and row 33 after #255 and row 34 after #257, all on 2026-09-24). Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
 
 > **No standing drift.** The existing hosted project is current. The separate production project (§7.3) does not exist yet and will need every row replayed when it is created.
 
@@ -300,7 +301,7 @@ Do these in order, in **both** Supabase projects (production and `vauokqoyvewtzu
 
 The app mailer never logs a recipient's address, a message body or the key, and its errors carry only the HTTP status and Resend's error name. Build each message's idempotency key from what it is about (`reminder:<assignmentId>:<userId>:<kind>`), never from the address; Resend drops a repeat of the same key for 24 hours.
 
-### 7.8 Scheduled jobs: reminder emails and the submit at close (#212, ADR 0007)
+### 7.8 Scheduled jobs: reminder emails, the submit at close, and the rate-limit sweep (#212, #248, ADR 0007)
 
 pg_cron in the database calls the app's `POST /api/cron/assignment-reminders` every 15 minutes through pg_net, with a shared secret. Each run submits attempts left open at close (#208) and sends the reminder emails that are due: "Week 5 is open" to every class member when an assignment opens, and "Week 5 closes tomorrow at 17:00" 24 hours before close to members who have not submitted. Until these steps are done in a project nothing is scheduled: no reminder goes out, and the submit at close happens only when someone opens the assignment or its report, as before. Do them after migration 28 is applied and after §7.7 (the job sends through Resend).
 
@@ -315,13 +316,18 @@ Until the §7.3 split there is one project and one job, pointed at the productio
    select vault.create_secret('https://learn-tanner-nielsons-projects.vercel.app/api/cron/assignment-reminders', 'learn_reminders_url');
    select vault.create_secret('<secret>', 'learn_cron_secret');
    select cron.schedule('learn-assignment-reminders', '*/15 * * * *', $$select private.call_reminder_route()$$);
+   select private.schedule_rate_limit_sweep();
    ```
+
+   The last line schedules the second job, `learn-rate-limit-sweep` (#248): every 5 minutes it deletes up to 5000 expired rows from `private.shared_rate_limits`, the sign-in, invite and cron limiter of #234, so a flood from many addresses cannot grow that table faster than the limiter's own cleanup. It needs no URL and no secret, only pg_cron. It answers `scheduled`, or `updated` when its migration (`20260925050000_rate_limit_sweep`) already scheduled it (the migration does that on a project where pg_cron was on before it was applied), or `no_pg_cron` when step 3 is not done. Running it again never makes a second job: it resets the existing one and switches it back on.
 
    Use the production URL (or the custom domain once it exists); a preview URL sits behind Vercel's deployment protection and would answer with a login page. To change either value later: `select vault.update_secret((select id from vault.secrets where name = 'learn_cron_secret'), '<new secret>');` (and the same for the URL), then update `CRON_SECRET` in Vercel and redeploy. Never run `create_secret` again for a name that already exists: Vault allows two secrets with one name, and although the job reads the newest, a stale copy is confusing to debug. Check with `select name, created_at from vault.secrets where name like 'learn_%';`
 
-5. **[ ] Check it.** In the SQL editor, `select private.call_reminder_route();` must answer `queued` (anything else names what is missing: `no_pg_net`, `no_vault` or `not_configured`). A few seconds later, `select status_code, content from net._http_response order by created desc limit 1;` shows `200` and a body of counts only, such as `{"autoSubmitted":0,"opened":0,"closingSoon":0,"sent":0,...}`. A `401` means the two secrets differ; `503` means `CRON_SECRET` is missing from the deployment. After 15 minutes, `select status, return_message from cron.job_run_details order by start_time desc limit 3;` shows the scheduled runs succeeding.
+5. **[ ] Check it.** In the SQL editor, `select private.call_reminder_route();` must answer `queued` (anything else names what is missing: `no_pg_net`, `no_vault` or `not_configured`). A few seconds later, `select status_code, content from net._http_response order by created desc limit 1;` shows `200` and a body of counts only, such as `{"autoSubmitted":0,"opened":0,"closingSoon":0,"sent":0,...}`. A `401` means the two secrets differ; `503` means `CRON_SECRET` is missing from the deployment. After 15 minutes, `select status, return_message from cron.job_run_details order by start_time desc limit 3;` shows the scheduled runs succeeding. `select jobname, schedule, active from cron.job;` lists exactly two jobs, `learn-assignment-reminders` and `learn-rate-limit-sweep`, both active.
 
-**Turning it off:** `select cron.unschedule('learn-assignment-reminders');`. Nothing is lost: what is owed stays owed, and whatever is still due when the job comes back goes out then (an "is open" email only within a day of opening, so a long pause does not send stale ones).
+**Turning the sweep off:** `select cron.unschedule('learn-rate-limit-sweep');`. The limiter still removes up to 20 expired rows on every call, as before #248; `select count(*) from private.shared_rate_limits;` shows how far the table has grown. `select private.schedule_rate_limit_sweep();` brings it back.
+
+**Turning the reminders off:** `select cron.unschedule('learn-assignment-reminders');`. Nothing is lost: what is owed stays owed, and whatever is still due when the job comes back goes out then (an "is open" email only within a day of opening, so a long pause does not send stale ones).
 
 **A class's time zone.** The due time in each email, on the student home and on the assignment pages is in the class's time zone, which is `America/Denver` for a new class. An instructor changes it in the app: Classes → the class → **Time zone** (#242). The database refuses a name Postgres does not know, whoever writes it.
 
@@ -442,7 +448,7 @@ Before the first real student gets an invite, do these in order, then run the ch
 3. **[ ] Vercel Production variables** (§7.3 step 6): the Supabase URL, publishable key, `SUPABASE_SECRET_KEY` and `SUPABASE_JWT_SIGNING_KEY`, all from the production project. Redeploy and check the ref (§7.3 step 7).
 4. **[ ] Realtime private-only** (§7.3 step 8): "Allow public access" off. Never add `live` or `private` to the Data API's exposed schemas. Then #178 can merge and be applied, which drops the last open policy on `live.session_public_state`.
 5. **[ ] Email** (§7.7 steps 1–7): Resend domain and key, custom SMTP, the magic-link template, the Auth email rate limit, the Auth URL configuration, `RESEND_API_KEY` and `EMAIL_FROM` in Vercel, and a real link to your own inbox.
-6. **[ ] Reminder job** (§7.8 steps 1–5): `CRON_SECRET` in Vercel, pg_cron and pg_net, the two Vault secrets and `cron.schedule`, then `private.call_reminder_route()` answers `queued`.
+6. **[ ] Scheduled jobs** (§7.8 steps 1–5): `CRON_SECRET` in Vercel, pg_cron and pg_net, the two Vault secrets, `cron.schedule` and `private.schedule_rate_limit_sweep()`, then `private.call_reminder_route()` answers `queued`.
 7. **[ ] Sentry** (§7.9 steps 1–7): the project, its privacy settings, the five variables, a test error from a preview, the alert rules.
 8. **[ ] Backups** (§7.10 steps 1–3): the age key pair, `BACKUP_AGE_RECIPIENT` and `PROD_DB_URL`, one run by hand. Do a restore drill into a scratch project before students depend on it.
 9. **[ ] Choose the plan** (owner decision, 2026-09-24): Pro, or free plus the nightly dump.
@@ -456,7 +462,7 @@ pnpm golive:check -- --url https://learn-tanner-nielsons-projects.vercel.app \
   --project-ref <prod-ref> --publishable-key <the sb_publishable_ key>
 ```
 
-On PowerShell, `$env:GOLIVE_HEALTH_TOKEN = Read-Host -MaskInput` does the same. The token is optional: without it the check reads the public health answer, which says only whether the site is ready, not which variable is missing. The publishable key is public (it ships to every browser) and is only used to ask PostgREST which schemas it exposes; without it that line is MANUAL. To try it against the local stack: `pnpm golive:check -- --url http://127.0.0.1:3000 --local` with `pnpm dev` running. There it reports the expected failures: no Resend, no Sentry, the demo account on, no pg_cron, #178 not applied, and no backup.
+On PowerShell, `$env:GOLIVE_HEALTH_TOKEN = Read-Host -MaskInput` does the same. The token is optional: without it the check reads the public health answer, which says only whether the site is ready, not which variable is missing. The publishable key is public (it ships to every browser) and is only used to ask PostgREST which schemas it exposes; without it that line is MANUAL. To try it against the local stack: `pnpm golive:check -- --url http://127.0.0.1:3000 --local` with `pnpm dev` running. There it reports the expected failures: no Resend, no Sentry, the demo account on, no pg_cron (so neither scheduled job), #178 not applied, and no backup.
 
 It prints one line per check, `PASS`, `FAIL` or `MANUAL`, each with what it found and the step above that fixes it, and exits non-zero when any line fails. It is read-only: single `select` statements through `supabase db query`, GETs to the site and to PostgREST, and `gh run list`. It never prints a key, a password or the token. What it checks:
 
@@ -469,8 +475,9 @@ It prints one line per check, `PASS`, `FAIL` or `MANUAL`, each with what it foun
 | variables                   | `/api/health` reports every variable in `src/lib/golive/envVars.ts` as set: the four Supabase ones, `RESEND_API_KEY`, `EMAIL_FROM`, `CRON_SECRET` and both Sentry DSNs | the step it names |
 | demo account                | neither `DEMO_ACCOUNT_*` variable is set                                                                                                                               | step 2 above      |
 | reminder job                | pg_cron is on, `learn-assignment-reminders` is scheduled and active, and both Vault names exist                                                                        | §7.8 steps 3–4    |
+| rate-limit sweep            | pg_cron is on and exactly one `learn-rate-limit-sweep` job is scheduled and active (#248)                                                                              | §7.8 steps 3–4    |
 | backup                      | the newest successful `db-backup.yml` run is under 26 hours old and uploaded a `db-backup-*` artifact (MANUAL when `gh` cannot answer)                                 | §7.10 steps 2–3   |
-| manual                      | Realtime public access, SMTP and the template, Auth URLs, Sentry's test event and alerts, and the rate-limit sweep job (#248, not built yet)                           | the step it names |
+| manual                      | Realtime public access, SMTP and the template, Auth URLs, and Sentry's test event and alerts                                                                           | the step it names |
 
 **What `/api/health` shows, and to whom.** Anyone gets `{supabase, project, version, ready}`, cached for 5 seconds (`Cache-Control: public, max-age=5, s-maxage=5`). `ready` is true only when Supabase answers, every required variable is set and the demo account is off; it deliberately does not say which variable is missing, since a list of absent secrets tells a stranger which feature is unprotected. With `Authorization: Bearer <CRON_SECRET>` the answer adds one boolean per variable and `demoAccount`, never cached; a wrong token gets `401` and nothing else. No value is ever returned, which a route test proves on the response bytes. The route has no rate limit of its own: it reads no table, the CDN absorbs repeats, and its one outbound call (Supabase's auth health) is made at most once every 5 seconds per server instance however often it is asked.
 

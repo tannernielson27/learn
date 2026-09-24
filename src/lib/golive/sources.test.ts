@@ -11,7 +11,9 @@ import {
   readLatestBackup,
   readReminderJob,
   readSessionState,
+  readSweepJob,
   SESSION_STATE_SQL,
+  SWEEP_JOB_SQL,
   VAULT_NAMES_SQL,
   type Query,
 } from "./sources.ts";
@@ -101,6 +103,36 @@ describe("the database readers", () => {
       job_active: true,
       vault_names: 2,
     });
+  });
+});
+
+describe("readSweepJob", () => {
+  it("does not ask cron.job when pg_cron is absent", async () => {
+    const query = vi.fn<Query>(async () => [{ has_cron: false }]);
+    await expect(readSweepJob(query)).resolves.toEqual({
+      has_cron: false,
+      job_count: 0,
+      job_active: false,
+    });
+    expect(query).toHaveBeenCalledWith(CRON_PRESENT_SQL);
+    expect(query).not.toHaveBeenCalledWith(SWEEP_JOB_SQL);
+  });
+
+  it("reads the sweep job when pg_cron is present", async () => {
+    const answers = new Map<string, Record<string, unknown>>([
+      [CRON_PRESENT_SQL, { has_cron: "t" }],
+      [SWEEP_JOB_SQL, { job_count: "1", job_active: "t" }],
+    ]);
+    const query: Query = async (sql) => [answers.get(sql) ?? {}];
+    await expect(readSweepJob(query)).resolves.toEqual({
+      has_cron: true,
+      job_count: 1,
+      job_active: true,
+    });
+  });
+
+  it("asks for the job by the name the migration schedules", () => {
+    expect(SWEEP_JOB_SQL).toContain("jobname = 'learn-rate-limit-sweep'");
   });
 });
 
