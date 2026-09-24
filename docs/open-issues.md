@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-24 (#238 merged in #254 with `20260925030000_student_history` applied to hosted; auth e2e job limit raised to 30 minutes).
+Last updated: 2026-09-24 (#240 merged in #255 with `20260925040000_practice_shares` applied to hosted; #256 filed from its review and #251's).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -138,11 +138,12 @@ Phase 4 splits across two sprints. Sprint 10 covers what real students need: har
 | [#178](https://github.com/tannernielson27/learn/issues/178) | fix(live): drop the open select policy on live.session_public_state                           | live, security            | Blocked: owner turns off Realtime "Allow public access"                                       |
 | [#238](https://github.com/tannernielson27/learn/issues/238) | feat(student): a history of my assignments and best scores                                    | security, db, e2e         | Merged (#254); `20260925030000_student_history` applied to hosted                             |
 | [#239](https://github.com/tannernielson27/learn/issues/239) | feat(student): my weakest clinical judgment steps                                             | security                  | To do                                                                                         |
-| [#240](https://github.com/tannernielson27/learn/issues/240) | feat(authoring): share a bank with a class for practice, and warn on graded reuse             | security, db, e2e         | To do                                                                                         |
+| [#240](https://github.com/tannernielson27/learn/issues/240) | feat(authoring): share a bank with a class for practice, and warn on graded reuse             | security, db, e2e         | Merged (#255); `20260925040000_practice_shares` applied to hosted                             |
 | [#241](https://github.com/tannernielson27/learn/issues/241) | feat(student): practice a shared bank with instant feedback                                   | player, security, db, e2e | To do                                                                                         |
 | [#242](https://github.com/tannernielson27/learn/issues/242) | feat(assign): a class time zone setting, and removed students in the report                   | db, e2e                   | Merged (#251); `20260925020000_class_timezone_and_removed` applied to hosted                  |
 | [#244](https://github.com/tannernielson27/learn/issues/244) | test(security): check live play and a second student on the real response bytes               | security, e2e             | To do; filed from #233                                                                        |
 | [#248](https://github.com/tannernielson27/learn/issues/248) | chore(db): sweep expired rate-limit rows on a schedule                                        | security, db              | To do; filed from #247's review                                                               |
+| [#256](https://github.com/tannernielson27/learn/issues/256) | fix(authoring): show an error when a confirmed remove or stop-sharing fails                   | e2e                       | To do; filed from #251 and #255 reviews                                                       |
 
 Suggested order:
 

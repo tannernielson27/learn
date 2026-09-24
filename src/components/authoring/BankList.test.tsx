@@ -26,6 +26,16 @@ describe("BankList", () => {
     ).toHaveLength(2);
   });
 
+  it("marks a bank shared for practice with the classes' names (#240)", () => {
+    render(<BankList banks={banks} sharedWith={new Map([["b1", ["NUR 310", "NUR 320"]]])} />);
+    const cardiac = screen.getByRole("link", { name: /Cardiac/ });
+    expect(
+      within(cardiac).getByText("Shared for practice with NUR 310 and NUR 320"),
+    ).toBeInTheDocument();
+    const respiratory = screen.getByRole("link", { name: /Respiratory/ });
+    expect(within(respiratory).queryByText(/Shared for practice/)).toBeNull();
+  });
+
   it("says what to do when there are no banks", () => {
     render(<BankList banks={[]} />);
     expect(screen.queryByRole("list")).not.toBeInTheDocument();

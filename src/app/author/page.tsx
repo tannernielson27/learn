@@ -5,6 +5,7 @@ import { CreateBankForm } from "@/components/authoring/CreateBankForm";
 import { listBanks } from "@/lib/authoring/banks";
 import { requireAuthor } from "@/lib/authoring/session";
 import { CLASSES_PATH } from "@/lib/classes/classes";
+import { listSharedClassNamesByBank } from "@/lib/supabase/practiceShares";
 import { SESSIONS_PATH } from "@/lib/live/reportFormat";
 import { createBank } from "./actions";
 
@@ -12,7 +13,11 @@ export const metadata: Metadata = { title: "Item banks" };
 
 export default async function AuthorHomePage() {
   const { supabase } = await requireAuthor("/author");
-  const banks = await listBanks(supabase);
+  // Both in one round trip: the badges are one read of the org's shares, not one per bank.
+  const [banks, sharedWith] = await Promise.all([
+    listBanks(supabase),
+    listSharedClassNamesByBank(supabase),
+  ]);
 
   return (
     <>
@@ -33,7 +38,7 @@ export default async function AuthorHomePage() {
           </Link>
         </nav>
       </div>
-      <BankList banks={banks} />
+      <BankList banks={banks} sharedWith={sharedWith} />
       <section aria-labelledby="new-bank-heading" className="mt-10 border-t border-line pt-6">
         <h2 id="new-bank-heading" className="mb-3 text-lg font-medium text-ink-1">
           New bank

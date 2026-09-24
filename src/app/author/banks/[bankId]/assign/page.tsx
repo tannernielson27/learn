@@ -6,6 +6,7 @@ import { assignmentPath } from "@/lib/assignments/assignments";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { listClasses } from "@/lib/supabase/classes";
+import { readPracticeExposure } from "@/lib/supabase/practiceShares";
 
 export const metadata: Metadata = { title: "Assign a bank" };
 
@@ -24,7 +25,10 @@ export default async function AssignBankPage({
     .eq("id", bankId)
     .maybeSingle();
   if (!bank) notFound();
-  const classes = await listClasses(supabase);
+  const [classes, exposure] = await Promise.all([
+    listClasses(supabase),
+    readPracticeExposure(supabase, source),
+  ]);
 
   return (
     <AssignPanel
@@ -32,6 +36,7 @@ export default async function AssignBankPage({
       backHref={`/author/banks/${bank.id}`}
       backLabel="Back to bank"
       classes={classes}
+      exposure={exposure}
       action={assignSource.bind(null, source)}
     />
   );

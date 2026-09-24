@@ -259,6 +259,62 @@ export type Database = {
           },
         ];
       };
+      bank_practice_shares: {
+        Row: {
+          bank_id: string;
+          class_id: string;
+          id: string;
+          org_id: string;
+          shared_at: string;
+          shared_by: string | null;
+        };
+        Insert: {
+          bank_id: string;
+          class_id: string;
+          id?: string;
+          org_id?: string;
+          shared_at?: string;
+          shared_by?: string | null;
+        };
+        Update: {
+          bank_id?: string;
+          class_id?: string;
+          id?: string;
+          org_id?: string;
+          shared_at?: string;
+          shared_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "bank_practice_shares_bank_org_fkey";
+            columns: ["bank_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "item_banks";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "bank_practice_shares_class_org_fkey";
+            columns: ["class_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "classes";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "bank_practice_shares_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "orgs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "bank_practice_shares_shared_by_fkey";
+            columns: ["shared_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       case_studies: {
         Row: {
           archived_from: Database["public"]["Enums"]["content_status"] | null;
@@ -1175,6 +1231,14 @@ export type Database = {
       place_case_study_step: {
         Args: { step_item: string; step_position: number; target: string };
         Returns: undefined;
+      };
+      practice_exposure: {
+        Args: { source_bank?: string; source_case_study?: string };
+        Returns: {
+          class_id: string;
+          class_name: string;
+          exposed_items: number;
+        }[];
       };
       record_attempt_submission: {
         Args: {

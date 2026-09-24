@@ -1,6 +1,23 @@
 import Link from "next/link";
 import { CLASSES_PATH } from "@/lib/classes/classes";
+import { practiceWarning, type PracticeExposure } from "@/lib/practice/shares";
 import { AssignmentForm, type AssignmentFormProps } from "./AssignmentForm";
+
+const COULD_NOT_CHECK = "Could not check whether students can see these answers in practice.";
+
+/** #240: warn, never block, when practice has already shown some of these answers. */
+function PracticeNote({ exposure }: { exposure: PracticeExposure | null }) {
+  const text = exposure === null ? COULD_NOT_CHECK : practiceWarning(exposure);
+  if (!text) return null;
+  return (
+    <p
+      role="note"
+      className="mb-6 max-w-prose border-l-2 border-line-strong bg-surface-2 px-3 py-2 text-ink-1"
+    >
+      {text}
+    </p>
+  );
+}
 
 export interface AssignPanelProps {
   /** The bank's or case study's name. */
@@ -11,6 +28,8 @@ export interface AssignPanelProps {
   /** The org's classes, or null when they could not be read. */
   classes: readonly { id: string; name: string }[] | null;
   action: AssignmentFormProps["action"];
+  /** Which classes can see some of these answers in practice; null when it could not be read. */
+  exposure: PracticeExposure | null;
 }
 
 const linkClass =
@@ -23,6 +42,7 @@ export function AssignPanel({
   backLabel,
   classes,
   action,
+  exposure,
 }: AssignPanelProps) {
   return (
     <>
@@ -35,6 +55,7 @@ export function AssignPanel({
         Students in the class see it from the open time until the close time, in their own time
         zone. What it contains is fixed now: later edits to it do not change this assignment.
       </p>
+      <PracticeNote exposure={exposure} />
       {classes === null ? (
         <p role="alert" className="text-ink-2">
           Your classes could not be loaded. Reload the page to try again.

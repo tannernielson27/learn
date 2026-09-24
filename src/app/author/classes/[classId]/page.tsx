@@ -8,13 +8,18 @@ import { ClassNameForm } from "@/components/classes/ClassNameForm";
 import { ClassRoster } from "@/components/classes/ClassRoster";
 import { ClassTimeZoneForm } from "@/components/classes/ClassTimeZoneForm";
 import { InviteLinkPanel } from "@/components/classes/InviteLinkPanel";
+import { PracticeSection } from "@/components/practice/PracticeSection";
+import { shareClassWithBank, stopSharing } from "@/app/author/practice/actions";
+import { listBanks } from "@/lib/authoring/banks";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { classPath, CLASSES_PATH, inviteUrl } from "@/lib/classes/classes";
 import { supportedTimeZones, timeZoneChoices } from "@/lib/classes/timeZone";
 import { canonicalSiteOrigin } from "@/lib/http/siteOrigin";
+import { stopSharingWarning } from "@/lib/practice/shares";
 import { listClassAssignments } from "@/lib/supabase/assignments";
 import { classRoster, readClass } from "@/lib/supabase/classes";
+import { listClassShares } from "@/lib/supabase/practiceShares";
 import { removeStudent, renameClass, rotateInvite, setTimeZone } from "../actions";
 
 export const metadata: Metadata = { title: "Class" };
@@ -27,9 +32,12 @@ export default async function ClassPage({ params }: PageProps<"/author/classes/[
 
   const detail = await readClass(supabase, classId);
   if (!detail) notFound();
-  const [roster, assignments] = await Promise.all([
+  const [roster, assignments, shares, banks] = await Promise.all([
     classRoster(supabase, classId),
     listClassAssignments(supabase, classId),
+    listClassShares(supabase, classId),
+    // The share form's choices; a failed read hides the form rather than failing the page.
+    listBanks(supabase).catch(() => null),
   ]);
   const url = inviteUrl(canonicalSiteOrigin(await headers()), detail.inviteToken);
 
@@ -77,6 +85,30 @@ export default async function ClassPage({ params }: PageProps<"/author/classes/[
           />
         )}
       </section>
+
+      <div className="mb-10">
+        <PracticeSection
+          headingClassName="text-lg font-medium text-ink-1"
+          intro="Students in this class can practice the published items of a bank shared here, seeing each answer and rationale as soon as they answer it."
+          shares={shares}
+          options={banks}
+          list={{
+            label: "Banks shared for practice",
+            stopActionFor: (bankId) => stopSharing.bind(null, bankId, detail.id),
+            stopLabelFor: (entry) => `Stop sharing ${entry.name}`,
+            warningFor: (entry) => stopSharingWarning(detail.name, entry.name),
+            emptyMessage: "No bank is shared with this class for practice.",
+          }}
+          form={{
+            action: shareClassWithBank.bind(null, detail.id),
+            label: "Bank",
+            emptyMessage:
+              banks && banks.length === 0
+                ? "There is no bank to share yet."
+                : "Every bank is shared with this class.",
+          }}
+        />
+      </div>
 
       <section aria-labelledby="roster-heading" className="mb-10">
         <h2 id="roster-heading" className="mb-3 text-lg font-medium text-ink-1">
