@@ -353,6 +353,87 @@ The app reports browser and server errors to Sentry on the free tier. It is off 
 
 **Turning it off:** delete `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN` from the scope and redeploy.
 
+### 7.10 Nightly encrypted backup, and restoring it (#236)
+
+`.github/workflows/db-backup.yml` dumps the production database every night at 09:17 UTC (and whenever it is run by hand), encrypts it with [age](https://age-encryption.org) to the owner's public key, and keeps it as a workflow artifact for 14 days. It runs `scripts/db-backup.sh`. It is the fallback whichever plan production is on (owner decision 2026-09-24): Pro keeps its own 7 daily backups, but they cannot be downloaded or restored anywhere else.
+
+**This repo is public, so anyone with a GitHub account can download these artifacts.** That is why encryption is not optional. The workflow holds only the public key, so it can encrypt but never decrypt. Every dump goes straight from `pg_dump` into `age` through a pipe, so no plaintext file is ever written, logged, cached or uploaded. The workflow runs only on its schedule or by hand, never for a pull request, and has read-only permissions.
+
+**What a backup holds.** Five files, each an age ciphertext:
+
+| File               | What it is                                                                                                                                                                                                                                                                                                       |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `roles.sql.age`    | custom database roles (`supabase db dump --role-only`); today there are none, only settings on the platform's roles                                                                                                                                                                                              |
+| `schema.sql.age`   | the full definition of `public`, `private` and `live`: tables, functions, RLS policies, grants, and the extensions in use (`supabase db dump`)                                                                                                                                                                   |
+| `data.sql.age`     | every row of `public`, `private` and `live`, **and of `auth`: `auth.users`, identities and sessions** (`supabase db dump --data-only`). Without `auth.users` a restored class has rosters, attempts and scores that belong to nobody, and no student can sign in, so a backup without it is useless for a cohort |
+| `history.sql.age`  | the rows of `supabase_migrations`, so `supabase db push` knows which migrations the restored project already has; its tables are made only if missing and emptied first (`scripts/db-backup-history.sql`), so it loads whether or not the new project has them                                                   |
+| `platform.sql.age` | our triggers on `auth.users` (a new account gets a profile, an invite is accepted) and our policies on `realtime.messages` (the private live channel). `supabase db dump` leaves those schemas out; `scripts/db-backup-platform.sql` says why they matter                                                        |
+
+**What it does not hold:** the Vault secrets and the pg_cron job from §7.8 (Vault is encrypted with the old project's own key, and a restored copy should not start calling production by itself), Storage files (the app stores none), and project settings that live outside the database: auth settings and email templates, the JWT signing key, Realtime's "Allow public access" switch. A restore therefore ends with those steps done by hand, listed in step 5.
+
+1. **[ ] Make the key pair, once, on your own machine.** Install age (`winget install FiloSottile.age`, `brew install age` or `sudo apt install age`), then:
+
+   ```sh
+   age-keygen -o learn-backup-key.txt
+   # Public key: age1...   <- this line is the recipient; it is safe to share
+   ```
+
+   The file holds the **private** key (`AGE-SECRET-KEY-1...`). Put it in your password manager as a secure note, keep one offline copy (a USB stick or a printout in a drawer), and delete the file. Never put it in the repo, in a GitHub secret, in Vercel or in a chat. Lose it and every backup is unreadable; leak it and anyone can read the last 14 days of backups, so make a new pair, replace the secret in step 2 and delete the old artifacts (`gh run list -w db-backup.yml`, then `gh run delete <id>` for each).
+
+2. **[ ] Set the two repository secrets** (GitHub → repo → Settings → Secrets and variables → Actions, or `gh secret set`, which reads the value from the prompt and keeps it out of shell history):
+   - `BACKUP_AGE_RECIPIENT` = the `age1...` public key. The script refuses a value that is not a public key, and refuses outright a value that is a secret key.
+   - `PROD_DB_URL` = the production project's **session pooler** string: Supabase → the production project → Connect → Session pooler. It looks like `postgresql://postgres.<prod-ref>:<password>@aws-0-us-east-1.pooler.supabase.com:5432/postgres`, with the database password from §7.3 step 1 (percent-encode any `@ : / ? #` in it). The session pooler because GitHub's runners have IPv4 only and the direct connection is IPv6 only; not the transaction pooler (port 6543), which `pg_dump` cannot use.
+
+   Until both are set the workflow does nothing and stays green, with a notice saying so. Leave `PROD_DB_URL` unset until the §7.3 production project exists; pointing it at the preview project for a drill is fine.
+
+3. **[ ] Run it by hand once.** `gh workflow run db-backup.yml`, then `gh run watch`. The run's summary lists an artifact named `db-backup-<UTC time>` with the five `.age` files. If a step fails, nothing is uploaded: a failed dump never leaves a partial backup behind.
+
+4. **Download and decrypt.** In a folder outside the repo, because the plaintext holds every student's email address and answers:
+
+   ```sh
+   gh run list -w db-backup.yml --limit 5                      # pick a run id
+   gh run view <run-id>                                        # names its artifact, db-backup-<UTC time>
+   gh run download <run-id> -n db-backup-<UTC time> -D backup  # backup/*.sql.age
+   umask 077                                                   # decrypted files readable by you alone
+   mkdir -p plain
+   for part in roles schema data history platform; do
+     age --decrypt --identity /path/to/learn-backup-key.txt \
+       --output "plain/$part.sql" "backup/$part.sql.age"
+   done
+   ```
+
+   Delete `plain/` as soon as the restore is done.
+
+5. **Restore into a fresh project, step by step.**
+   1. Create the project as in §7.3 steps 1–2. **Do not** run `db push` or load `seed.sql`: the backup brings the schema, the data and the migration history itself.
+   2. Copy its session pooler string (as in step 2 above) into `NEW_DB_URL` without echoing it, for example `read -rs NEW_DB_URL`.
+   3. From the repo root, with a `psql` of version 17 or later, in one transaction so a failure leaves the project empty rather than half restored:
+
+      ```sh
+      psql --single-transaction --variable ON_ERROR_STOP=1 \
+        --file plain/roles.sql \
+        --file scripts/db-restore-prepare.sql \
+        --file plain/schema.sql \
+        --command 'SET session_replication_role = replica' \
+        --file plain/data.sql \
+        --file plain/history.sql \
+        --file plain/platform.sql \
+        --dbname "$NEW_DB_URL"
+      ```
+
+      `scripts/db-restore-prepare.sql` must come before `schema.sql`. A fresh project grants ALL on every new table and function in `public` to `anon` and `authenticated` by default, and `pg_dump` does not undo that; without the prepare step the restored tables come back open to `anon` (TRUNCATE included, which RLS does not stop) and every function closed to `anon` in #233 is open again. `session_replication_role = replica` keeps triggers from firing while rows load, so loading `auth.users` does not make a second profile for every user. The command is Supabase's own restore order from its CLI backup guide; `data.sql` sets the same thing itself and ends with `RESET ALL`, which is fine because what follows it loads no rows through a trigger. If `history.sql` is the only file that fails (a newer CLI can change the history table), leave it out, re-run the rest, and record the history with `supabase migration repair --status applied <version>` for each row in §7.2.
+
+   4. Check it: `pnpm exec supabase link --project-ref <new-ref>` then `pnpm exec supabase migration list`, where every row in §7.2 shows on both sides. Sign in as an instructor and open a class.
+   5. Finish what the database does not carry: §7.3 step 6 (Vercel's variables, including the new project's `SUPABASE_JWT_SIGNING_KEY`) and step 8 (Realtime public access off); §7.3 step 5's auth settings, if they were changed from the defaults; §7.8 steps 3–4, only if this project is becoming production (`schema.sql` already creates pg_cron and pg_net, so step 3 changes nothing and is safe to repeat; step 4's Vault secrets and job are not in the backup). Everyone signs in again, because the new project signs tokens with a new key; accounts and passwords come through intact.
+
+**Tested end to end on 2026-09-24** against the local stack, twice. Each time the source was the migrated, seeded database with pg_cron, pg_net, a Vault secret and a scheduled job; it was dumped by `scripts/db-backup.sh`, decrypted, and restored as in step 5 into the stack reset with no migrations and no seed, which is what a fresh project is. Both times the row counts matched in all 62 tables of `public`, `private`, `live`, `auth`, `storage`, `cron` and `supabase_migrations`, with the one expected difference that `cron.job` was empty, and a `pg_dump --schema-only` of the whole restored database, every schema included, matched the source line for line. The first run added a fictional cohort (three students with auth accounts, a class, an assignment, three scored attempts): the restored students and demo account were all there, the demo account signed in through Auth, and `migration list` showed all 30 migrations on both sides. The second run used the seed alone, because the pgTAP suite assumes it, and the full suite (`pnpm test:db`, 32 files, 923 tests) passed against the restored database. Without `db-restore-prepare.sql`, the schema comparison showed 99 grants wider than the source; with it, none. A third run restored into an empty project that already had `supabase_migrations` with a stale row in it, and ended with exactly the source's history.
+
+**Not yet tested against a hosted project.** On a hosted project `postgres` is not a superuser, which the local stack cannot reproduce, so the first real drill is the demo step: restore a nightly backup into a scratch project (a free one, deleted afterwards), and write the result here. Check there, after the restore, that `select count(*) from information_schema.role_table_grants where grantee = 'anon' and table_schema = 'public' and privilege_type = 'TRUNCATE';` is `0`: the prepare step did its job.
+
+To repeat the drill locally: dump the running stack with `PROD_DB_URL=postgresql://postgres:postgres@127.0.0.1:55322/postgres`, `BACKUP_AGE_RECIPIENT` and `OUT_DIR` set; reset the stack to an empty project with `supabase --workdir <copy> db reset`, where the copy is `supabase/config.toml` and `supabase/templates` with `[db.migrations]` and `[db.seed]` set to `enabled = false`; restore as in step 5; then `pnpm test:db`. Finish with a plain `pnpm exec supabase db reset` to put the stack back.
+
+**Free-tier pausing.** A free project pauses after about a week without activity. The nightly dump connects to the database every day, which should count as activity and keep production awake. Do not rely on it alone: Supabase decides what counts, it could change, and a backup that stops (a secret expired, a failed run nobody opened) stops keeping the project awake at the same moment. GitHub also turns off scheduled workflows in a repo with no commits for 60 days. Check the Actions tab weekly, or subscribe to failed runs (GitHub → your profile → Settings → Notifications → Actions → "Send notifications for failed workflows only"), and decide the plan at go-live as planned.
+
 ## 8. Working together day to day
 
 - Pick a story from the sprint milestone, assign yourself, branch, PR. Two people never work on the same story.
