@@ -203,6 +203,11 @@ describe("scrubString", () => {
     [`no session for ${JOIN_CODE}`, "no session for [code]"],
     [`no session for code 2345AB.`, "no session for code [code]."],
     [`invite ${INVITE_TOKEN} was rotated`, "invite [token] was rotated"],
+    // About one code in six has no digit at all: (24/32)^6.
+    ["no session for BCDEFH", "no session for [code]"],
+    // Percent-encoded links are decoded before the rules run.
+    [`link https%3A%2F%2Fx.app%2Fc%2F${INVITE_TOKEN}`, "link https://x.app/c/[redacted]"],
+    [`next=%2Fjoin%2F${JOIN_CODE}`, "next=/join/[redacted]"],
   ])("masks %s", (input, expected) => {
     expect(scrubString(input)).toBe(expected);
   });
@@ -215,8 +220,11 @@ describe("scrubString", () => {
     "Cannot read properties of null (reading 'position')",
     "/learn",
     "/c",
-    // Six capitals with no digit are SQL and HTTP words far more often than they are codes.
+    // The few six-letter words an error message really uses are kept readable.
     "SELECT failed; UPDATE refused",
+    "DELETE, CREATE, SCHEMA, HEADER, BEFORE, RETURN, NUMBER",
+    // A malformed escape is left as it was rather than throwing.
+    "100% of 50%zz",
     // Ids are how an error is traced to a row, and they are not secrets.
     `item ${SESSION_ID} not found`,
     "app:///_next/static/chunks/0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d.js",

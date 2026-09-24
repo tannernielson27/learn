@@ -85,15 +85,43 @@ const LONG_TOKEN = /[A-Za-z0-9_-]{24,}/g;
 const looksLikeToken = (run: string) => /[A-Z]/.test(run) && /[a-z]/.test(run) && /\d/.test(run);
 
 /**
- * A join code said in prose: six characters from SESSION_CODE_ALPHABET (no 0, 1, I or O). It must
- * mix a digit and a capital, so SQL and HTTP words such as SELECT or UPDATE are left readable.
+ * A join code said in prose: six characters from SESSION_CODE_ALPHABET (no 0, 1, I or O). About
+ * one code in six is letters only, so a digit cannot be required. Every such run is masked except
+ * a short list of words error messages really use; a plain word lost now and then is cheap.
  */
 const JOIN_CODE = /\b[2-9A-HJ-NP-Z]{6}\b/g;
-const looksLikeJoinCode = (run: string) => /\d/.test(run) && /[A-Z]/.test(run);
+const READABLE_WORDS = new Set([
+  "SELECT",
+  "UPDATE",
+  "DELETE",
+  "CREATE",
+  "SCHEMA",
+  "HEADER",
+  "BEFORE",
+  "RETURN",
+  "NUMBER",
+]);
+const looksLikeJoinCode = (run: string) => !READABLE_WORDS.has(run);
+
+/** A percent escape. A string holding one is decoded before the rules run. */
+const ESCAPE = /%[0-9A-Fa-f]{2}/;
+
+/**
+ * An encoded link (`%2Fc%2F<token>`) would slip past every path and query rule, so it is decoded
+ * first. A malformed escape cannot be decoded and is scrubbed as it stands.
+ */
+function decoded(value: string): string {
+  if (!ESCAPE.test(value)) return value;
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
 
 /** Masks every secret this app knows the shape of, anywhere in a string. */
 export function scrubString(value: string): string {
-  return value
+  return decoded(value)
     .replace(JWT, "[jwt]")
     .replace(EMAIL, "[email]")
     .replace(SECRET_SEGMENT, (match, api: string | undefined, route: string) =>
