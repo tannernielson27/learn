@@ -7,7 +7,7 @@
 -- what an assignment would expose, in one statement, for the assign form's warning.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(40);
+select plan(41);
 
 -- ---------------------------------------------------------------------------
 -- Cast, as the superuser
@@ -83,9 +83,12 @@ insert into public.case_studies (id, bank_id, org_id, title, ehr, status)
          'Heart failure case', '{}', 'published'
     from public.profiles where id = '00000000-0000-0000-0000-0000002400a1';
 insert into public.case_study_items (case_study_id, org_id, bank_id, position, item_id)
-  select '00000000-0000-0000-0000-0000002400a5', org_id, '00000000-0000-0000-0000-0000002400e0', 1,
-         '00000000-0000-0000-0000-0000002400f2'
-    from public.profiles where id = '00000000-0000-0000-0000-0000002400a1';
+  select '00000000-0000-0000-0000-0000002400a5', org_id, '00000000-0000-0000-0000-0000002400e0',
+         v.position, v.item::uuid
+    from public.profiles,
+         (values (1, '00000000-0000-0000-0000-0000002400f2'),
+                 (2, '00000000-0000-0000-0000-0000002400f3')) as v(position, item)
+   where id = '00000000-0000-0000-0000-0000002400a1';
 
 -- ---------------------------------------------------------------------------
 -- The catalog
@@ -290,7 +293,14 @@ select results_eq(
   $$ select class_id, class_name, exposed_items
        from public.practice_exposure(null, '00000000-0000-0000-0000-0000002400a5') $$,
   $$ values ('00000000-0000-0000-0000-0000002400c1'::uuid, 'NUR 310', 1) $$,
-  'a case study in a shared bank exposes its steps'
+  'a case study in a shared bank exposes its published steps, not its draft one'
+);
+select results_eq(
+  $$ select exposed_items
+       from public.practice_exposure('00000000-0000-0000-0000-0000002400e0',
+                                     '00000000-0000-0000-0000-0000002400a5') $$,
+  $$ values (2) $$,
+  'an item reached through both a bank and its case study is counted once'
 );
 select is_empty(
   $$ select * from public.practice_exposure(null, null) $$,

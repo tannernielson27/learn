@@ -27,7 +27,8 @@
 -- Every insert and delete is charged one `save` through private.charge_save_write, the same
 -- counter as the editor (#123, authoring_trigger_coverage.test.sql).
 --
--- Safe to replay on a fresh project: a new table and new functions only.
+-- Safe to replay on a fresh project: a new table and new functions only. The class foreign key
+-- relies on classes_id_org_key, added by 20260924020000_assignments.sql, which sorts before this.
 
 create table public.bank_practice_shares (
   id uuid primary key default gen_random_uuid(),
@@ -112,7 +113,7 @@ create policy "authors stop their org's practice shares" on public.bank_practice
 -- nothing is exposed and the form shows no warning.
 --
 -- What is counted is what the assignment would snapshot (private.snapshot_assignment): a bank's
--- published items, or a case study's steps. An item is exposed when the bank it sits in is shared
+-- published items, or a case study's published steps. An item is exposed when the bank it sits in is shared
 -- with any class; `exposed_items` is that count over the whole source, the same on every row.
 -- Items live in exactly one bank, and a case study's steps in the case study's own bank, so today
 -- this is "all of them, or none"; the count is written per item so it stays right if that changes.
@@ -133,12 +134,16 @@ as $$
      where source_bank is not null
        and i.bank_id = source_bank
        and i.status = 'published'
-    union all
+    -- union, not union all: an item reached both ways (a caller passing a bank and one of its
+    -- case studies) counts once.
+    union
     select i.id, i.bank_id
       from public.case_study_items csi
       join public.items i on i.id = csi.item_id
      where source_case_study is not null
        and csi.case_study_id = source_case_study
+       -- Practice serves published items only, so a draft step has shown nobody its answer.
+       and i.status = 'published'
   ),
   exposing as (
     select s.bank_id, s.class_id

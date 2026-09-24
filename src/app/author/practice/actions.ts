@@ -60,8 +60,8 @@ export async function shareClassWithBank(
  * seen, which the confirmation says before this runs.
  */
 export async function stopSharing(bankId: string, classId: string): Promise<void> {
-  const { supabase } = await requireAuthor(bankPath(bankId));
   if (!isUuid(bankId) || !isUuid(classId)) return;
+  const { supabase } = await requireAuthor(bankPath(bankId));
   await stopPractice(supabase, bankId, classId);
   revalidateShare(bankId, classId);
 }
