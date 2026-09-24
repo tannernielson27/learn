@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-24 (#234 merged in #247, `20260925010000_shared_rate_limits` applied to hosted; #248 filed from its review).
+Last updated: 2026-09-24 (#219 merged in #249; #234 merged in #247 with `20260925010000_shared_rate_limits` applied to hosted; #248 filed from its review).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -134,7 +134,7 @@ Phase 4 splits across two sprints. Sprint 10 covers what real students need: har
 | [#235](https://github.com/tannernielson27/learn/issues/235) | chore(infra): report client and server errors to Sentry with student data scrubbed            | security                  | Merged (#246); no migration; owner steps in docs/05 §7.9             |
 | [#236](https://github.com/tannernielson27/learn/issues/236) | chore(infra): a nightly encrypted database dump, with restore steps                           | security, db              | To do; runs for real once the §7.3 project exists                    |
 | [#237](https://github.com/tannernielson27/learn/issues/237) | chore(infra): a go-live check that proves production is ready for students                    | security                  | To do                                                                |
-| [#219](https://github.com/tannernielson27/learn/issues/219) | fix(player): an ordered-response item starts in the author's order, which is often the answer | player                    | To do; moved in from S9 known gaps                                   |
+| [#219](https://github.com/tannernielson27/learn/issues/219) | fix(player): an ordered-response item starts in the author's order, which is often the answer | player                    | Merged (#249); no migration; start order is keyed server-side        |
 | [#178](https://github.com/tannernielson27/learn/issues/178) | fix(live): drop the open select policy on live.session_public_state                           | live, security            | Blocked: owner turns off Realtime "Allow public access"              |
 | [#238](https://github.com/tannernielson27/learn/issues/238) | feat(student): a history of my assignments and best scores                                    | security, db, e2e         | To do                                                                |
 | [#239](https://github.com/tannernielson27/learn/issues/239) | feat(student): my weakest clinical judgment steps                                             | security                  | To do                                                                |
