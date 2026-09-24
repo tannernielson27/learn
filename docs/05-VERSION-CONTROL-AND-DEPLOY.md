@@ -144,38 +144,39 @@ Rules:
 
 Everything in `supabase/migrations/` today, in filename order — this is the replay list, and a new project must end with every row below. Add a row in the same PR as the migration; a table that silently falls behind the directory is worse than none, because a replay checked against it looks complete when it is not.
 
-| #   | Migration                                      | What it adds                                                                   | On `vauokqoyvewtzubqajgh`? |
-| --- | ---------------------------------------------- | ------------------------------------------------------------------------------ | -------------------------- |
-| 1   | `20260913000000_authoring_schema`              | orgs, profiles, item banks, items, versions, case studies, RLS                 | applied                    |
-| 2   | `20260914000000_case_study_steps`              | step items live in the case study's bank; atomic reorder                       | applied                    |
-| 3   | `20260915000000_import_bank_content`           | one-call JSON import                                                           | applied                    |
-| 4   | `20260916000000_bank_folders`                  | nested folders per bank                                                        | applied                    |
-| 5   | `20260919000000_item_tags`                     | tag filtering on the bank page                                                 | applied                    |
-| 6   | `20260919110000_start_step_and_rate_limits`    | `start_case_study_step`, per-user rate limit on authoring mutations            | applied                    |
-| 7   | `20260919120600_duplicate_content`             | duplicate an item or a case study                                              | applied                    |
-| 8   | `20260919130000_item_search`                   | full-text search over a bank                                                   | applied                    |
-| 9   | `20260919150000_import_into_folder`            | import straight into a folder                                                  | applied                    |
-| 10  | `20260919160000_archive_content`               | archive and restore                                                            | applied                    |
-| 11  | `20260919170000_live_sessions`                 | live sessions with a six-character join code (#128)                            | applied                    |
-| 12  | `20260920130000_live_responses_and_aggregates` | live responses, server-side scoring, per-participant submit limit (#131, #133) | applied                    |
-| 13  | `20260920140000_session_participants`          | join with a display name and no account (#129)                                 | applied                    |
-| 14  | `20260921000000_resume_participant_joined_at`  | resume a participant after a reload (#133)                                     | applied                    |
-| 15  | `20260921100000_live_view_rate_limit`          | per-participant limit on `POST /api/live/view` (#152)                          | applied                    |
-| 16  | `20260921200000_authoring_limit_at_the_write`  | authoring rate limit enforced at the write, not only in the UI (#123)          | applied                    |
-| 17  | `20260921210000_private_live_channel`          | private Realtime channel with a per-participant token (#149)                   | applied                    |
-| 18  | `20260923010000_item_timer`                    | optional per-item timer on a live session (#182)                               | applied                    |
-| 19  | `20260923060000_session_goto`                  | skip an item or go back to one (#183)                                          | applied                    |
-| 20  | `20260923070000_case_study_live_record`        | run a case study live with the patient record on every phone (#184)            | applied                    |
-| 21  | `20260923080000_student_paced`                 | student-paced mode (#185)                                                      | applied                    |
-| 22  | `20260924000000_invite_only_signup`            | new accounts get no role; `private.make_instructor` (#204, §7.6)               | applied                    |
-| 23  | `20260924010000_classes`                       | classes, rosters and invite links; completes the invite seam (#205)            | applied                    |
-| 24  | `20260924020000_assignments`                   | assign a bank or case study to a class with a window and attempts (#207)       | applied                    |
-| 25  | `20260924030800_assignment_attempts`           | take an assignment: attempts, autosave, submit, submit at close (#208)         | applied                    |
-| 26  | `20260924040000_assignment_report`             | the author's read of attempt scores for the assignment report (#211)           | applied                    |
-| 27  | `20260924050000_my_assignment_result`          | a student's own score and marks after an assignment closes (#210)              | applied                    |
-| 28  | `20260924060000_assignment_reminders`          | reminder email outbox, class time zone, the pg_cron entry point (#212, §7.8)   | applied                    |
+| #   | Migration                                      | What it adds                                                                       | On `vauokqoyvewtzubqajgh`? |
+| --- | ---------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------- |
+| 1   | `20260913000000_authoring_schema`              | orgs, profiles, item banks, items, versions, case studies, RLS                     | applied                    |
+| 2   | `20260914000000_case_study_steps`              | step items live in the case study's bank; atomic reorder                           | applied                    |
+| 3   | `20260915000000_import_bank_content`           | one-call JSON import                                                               | applied                    |
+| 4   | `20260916000000_bank_folders`                  | nested folders per bank                                                            | applied                    |
+| 5   | `20260919000000_item_tags`                     | tag filtering on the bank page                                                     | applied                    |
+| 6   | `20260919110000_start_step_and_rate_limits`    | `start_case_study_step`, per-user rate limit on authoring mutations                | applied                    |
+| 7   | `20260919120600_duplicate_content`             | duplicate an item or a case study                                                  | applied                    |
+| 8   | `20260919130000_item_search`                   | full-text search over a bank                                                       | applied                    |
+| 9   | `20260919150000_import_into_folder`            | import straight into a folder                                                      | applied                    |
+| 10  | `20260919160000_archive_content`               | archive and restore                                                                | applied                    |
+| 11  | `20260919170000_live_sessions`                 | live sessions with a six-character join code (#128)                                | applied                    |
+| 12  | `20260920130000_live_responses_and_aggregates` | live responses, server-side scoring, per-participant submit limit (#131, #133)     | applied                    |
+| 13  | `20260920140000_session_participants`          | join with a display name and no account (#129)                                     | applied                    |
+| 14  | `20260921000000_resume_participant_joined_at`  | resume a participant after a reload (#133)                                         | applied                    |
+| 15  | `20260921100000_live_view_rate_limit`          | per-participant limit on `POST /api/live/view` (#152)                              | applied                    |
+| 16  | `20260921200000_authoring_limit_at_the_write`  | authoring rate limit enforced at the write, not only in the UI (#123)              | applied                    |
+| 17  | `20260921210000_private_live_channel`          | private Realtime channel with a per-participant token (#149)                       | applied                    |
+| 18  | `20260923010000_item_timer`                    | optional per-item timer on a live session (#182)                                   | applied                    |
+| 19  | `20260923060000_session_goto`                  | skip an item or go back to one (#183)                                              | applied                    |
+| 20  | `20260923070000_case_study_live_record`        | run a case study live with the patient record on every phone (#184)                | applied                    |
+| 21  | `20260923080000_student_paced`                 | student-paced mode (#185)                                                          | applied                    |
+| 22  | `20260924000000_invite_only_signup`            | new accounts get no role; `private.make_instructor` (#204, §7.6)                   | applied                    |
+| 23  | `20260924010000_classes`                       | classes, rosters and invite links; completes the invite seam (#205)                | applied                    |
+| 24  | `20260924020000_assignments`                   | assign a bank or case study to a class with a window and attempts (#207)           | applied                    |
+| 25  | `20260924030800_assignment_attempts`           | take an assignment: attempts, autosave, submit, submit at close (#208)             | applied                    |
+| 26  | `20260924040000_assignment_report`             | the author's read of attempt scores for the assignment report (#211)               | applied                    |
+| 27  | `20260924050000_my_assignment_result`          | a student's own score and marks after an assignment closes (#210)                  | applied                    |
+| 28  | `20260924060000_assignment_reminders`          | reminder email outbox, class time zone, the pg_cron entry point (#212, §7.8)       | applied                    |
+| 29  | `20260925000000_security_guard`                | RLS on class_removals, anon execute revoked, removal trigger skips cascades (#233) | applied                    |
 
-Checked 2026-09-23 with `pnpm exec supabase migration list --linked`: rows 1–28 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged, row 23 straight after #220, row 24 straight after #222, row 25 straight after #224, row 26 straight after #226, row 27 straight after #228, row 28 straight after #230). Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
+Checked 2026-09-24 with `pnpm exec supabase migration list --linked`: rows 1–29 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged, row 23 straight after #220, row 24 straight after #222, row 25 straight after #224, row 26 straight after #226, row 27 straight after #228, row 28 straight after #230, row 29 straight after #245 on 2026-09-24). Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
 
 > **No standing drift.** The existing hosted project is current. The separate production project (§7.3) does not exist yet and will need every row replayed when it is created.
 

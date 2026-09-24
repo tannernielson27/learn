@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-24 (#233 security audit merged in #245; #244 filed from it).
+Last updated: 2026-09-24 (#233 merged in #245, #235 merged in #246; #244 filed from the audit).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -131,7 +131,7 @@ Phase 4 splits across two sprints. Sprint 10 covers what real students need: har
 | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------- | ---------------------------------------------------------------- |
 | [#233](https://github.com/tannernielson27/learn/issues/233) | chore(security): audit RLS, security-definer functions and routes before real students        | security, db, e2e         | Merged (#245); `20260925000000_security_guard` applied to hosted |
 | [#234](https://github.com/tannernielson27/learn/issues/234) | fix(auth): keep rate limits in Postgres so they hold across server instances                  | security, db              | To do                                                            |
-| [#235](https://github.com/tannernielson27/learn/issues/235) | chore(infra): report client and server errors to Sentry with student data scrubbed            | security                  | To do; owner creates the Sentry project (docs/05 §7.9)           |
+| [#235](https://github.com/tannernielson27/learn/issues/235) | chore(infra): report client and server errors to Sentry with student data scrubbed            | security                  | Merged (#246); no migration; owner steps in docs/05 §7.9         |
 | [#236](https://github.com/tannernielson27/learn/issues/236) | chore(infra): a nightly encrypted database dump, with restore steps                           | security, db              | To do; runs for real once the §7.3 project exists                |
 | [#237](https://github.com/tannernielson27/learn/issues/237) | chore(infra): a go-live check that proves production is ready for students                    | security                  | To do                                                            |
 | [#219](https://github.com/tannernielson27/learn/issues/219) | fix(player): an ordered-response item starts in the author's order, which is often the answer | player                    | To do; moved in from S9 known gaps                               |
