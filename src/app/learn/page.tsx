@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { ClosedAssignmentList } from "@/components/assignments/ClosedAssignmentList";
 import { StudentAssignmentList } from "@/components/assignments/StudentAssignmentList";
 import { StudentClassList } from "@/components/classes/StudentClassList";
 import { requireStudent } from "@/lib/classes/viewer";
-import { listOpenAssignments } from "@/lib/supabase/assignments";
+import { listClosedAssignments, listOpenAssignments } from "@/lib/supabase/assignments";
 import { listMyAttemptProgress } from "@/lib/supabase/attempts";
 import { myClasses } from "@/lib/supabase/classInvites";
 
@@ -10,14 +11,17 @@ export const metadata: Metadata = { title: "Your classes" };
 
 /**
  * The student home (#205): the classes this student belongs to, and (#207) their open assignments,
- * each linking to where it is taken (#208) with how their attempts stand. Anyone who is not a
- * student is sent to their own home by `requireStudent`.
+ * each linking to where it is taken (#208) with how their attempts stand, and (#210) the ones that
+ * have closed, each linking to its results. Anyone who is not a student is sent to their own home
+ * by `requireStudent`.
  */
 export default async function StudentHomePage() {
   const { supabase } = await requireStudent();
-  const [classes, assignments] = await Promise.all([
+  const now = new Date();
+  const [classes, assignments, closed] = await Promise.all([
     myClasses(supabase),
-    listOpenAssignments(supabase, new Date()),
+    listOpenAssignments(supabase, now),
+    listClosedAssignments(supabase, now),
   ]);
   const classNames = new Map((classes ?? []).map((entry) => [entry.id, entry.name]));
   // #208: how this student's attempts stand at each; a failed read just leaves the counts off.
@@ -51,6 +55,18 @@ export default async function StudentHomePage() {
             classNames={classNames}
             progress={progress}
           />
+        )}
+      </section>
+      <section aria-labelledby="closed-assignments-heading" className="mt-10">
+        <h2 id="closed-assignments-heading" className="mb-3 text-lg font-medium text-ink-1">
+          Closed assignments
+        </h2>
+        {closed === null ? (
+          <p role="alert" className="text-ink-2">
+            Your closed assignments could not be loaded. Reload the page to try again.
+          </p>
+        ) : (
+          <ClosedAssignmentList assignments={closed} classNames={classNames} />
         )}
       </section>
     </>

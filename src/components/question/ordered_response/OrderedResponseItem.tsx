@@ -23,6 +23,7 @@ import { ElementRationale } from "../ElementRationale";
 import { FeedbackIcon, feedbackLabel } from "../OptionRow";
 import type { ElementFeedback, ItemRendererProps, PlayerMode } from "../types";
 import { usePrefersReducedMotion } from "../usePrefersReducedMotion";
+import { useFeedbackWordClass } from "../FeedbackWords";
 
 type Direction = "up" | "down";
 
@@ -171,6 +172,7 @@ interface StepRowProps {
  * screen-reader users, moves it with the up and down buttons.
  */
 function StepRow(props: StepRowProps) {
+  const feedbackWordClass = useFeedbackWordClass();
   const { id, label, index, count, mode, feedback, correctPosition, onMove, register } = props;
   const { rationale, rationaleId } = props;
   const reduced = usePrefersReducedMotion();
@@ -214,7 +216,7 @@ function StepRow(props: StepRowProps) {
         {feedback !== "neutral" ? (
           <>
             {" "}
-            <span className="sr-only">{feedbackLabel[feedback]}</span>
+            <span className={feedbackWordClass}>{feedbackLabel[feedback]}</span>
           </>
         ) : null}
         {correctPosition ? (

@@ -172,6 +172,7 @@ Everything in `supabase/migrations/` today, in filename order — this is the re
 | 24  | `20260924020000_assignments`                   | assign a bank or case study to a class with a window and attempts (#207)       | applied                    |
 | 25  | `20260924030800_assignment_attempts`           | take an assignment: attempts, autosave, submit, submit at close (#208)         | applied                    |
 | 26  | `20260924040000_assignment_report`             | the author's read of attempt scores for the assignment report (#211)           | applied                    |
+| 27  | `20260924050000_my_assignment_result`          | a student's own score and marks after an assignment closes (#210)              | **not applied**            |
 
 Checked 2026-09-23 with `pnpm exec supabase migration list --linked`: rows 1–26 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged, row 23 straight after #220, row 24 straight after #222, row 25 straight after #224, row 26 straight after #226). Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
 

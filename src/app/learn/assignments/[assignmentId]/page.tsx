@@ -8,7 +8,7 @@ import { StartAttemptForm } from "@/components/assignments/StartAttemptForm";
 import { RecordLayout } from "@/components/ehr/RecordLayout";
 import { loadAttemptPage, type AssignmentHeader } from "@/lib/assignments/attemptPage";
 import { attemptPageStore } from "@/lib/assignments/attemptStore";
-import { attemptsLabel } from "@/lib/assignments/assignments";
+import { attemptsLabel, studentResultsPath } from "@/lib/assignments/assignments";
 import { isUuid } from "@/lib/authoring/ids";
 import { STUDENT_HOME } from "@/lib/classes/classes";
 import { requireStudent } from "@/lib/classes/viewer";
@@ -89,9 +89,19 @@ export default async function StudentAssignmentPage({
     <>
       <Header assignment={view.assignment} />
       {view.closed ? (
-        <p role="status" className="measure mt-6 text-ink-1">
-          This assignment has closed.
-        </p>
+        <>
+          <p role="status" className="measure mt-6 text-ink-1">
+            This assignment has closed.
+          </p>
+          <p className="mt-4">
+            <Link
+              href={studentResultsPath(view.assignment.id)}
+              className="tap-target inline-flex items-center font-medium text-ink-1 underline decoration-line-strong underline-offset-4 hover:decoration-accent"
+            >
+              See your results
+            </Link>
+          </p>
+        </>
       ) : submitted ? (
         <p role="status" data-testid="submitted-notice" className="measure mt-6 text-ink-1">
           Submitted. Your results will be shown when the assignment closes.

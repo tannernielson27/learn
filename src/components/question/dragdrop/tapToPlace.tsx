@@ -11,6 +11,7 @@ import {
 import { useRef, type KeyboardEvent } from "react";
 import { FeedbackIcon, feedbackLabel } from "../OptionRow";
 import type { ElementFeedback, PlayerMode } from "../types";
+import { useFeedbackWordClass } from "../FeedbackWords";
 
 /**
  * Shared pieces for items filled from a bank of choices (drag-and-drop cloze and rationale,
@@ -113,6 +114,7 @@ interface DropSlotProps {
 
 /** A place a choice can go: a button that is also a dnd-kit drop target. */
 export function DropSlot(props: DropSlotProps) {
+  const feedbackWordClass = useFeedbackWordClass();
   const { slotId, id, name, placeholder, label, feedback, mode, target, block = false } = props;
   const { describedBy, onChoose, onKeyDown } = props;
   const { setNodeRef, isOver } = useDroppable({ id: slotId, disabled: mode !== "answer" });
@@ -156,7 +158,7 @@ export function DropSlot(props: DropSlotProps) {
       </button>
       {feedback !== "neutral" ? (
         <>
-          <span className="sr-only">{feedbackLabel[feedback]}</span>
+          <span className={feedbackWordClass}>{feedbackLabel[feedback]}</span>
           <FeedbackIcon state={feedback} className="" />
         </>
       ) : null}

@@ -3,6 +3,7 @@
 import { Fragment, type KeyboardEvent } from "react";
 import { FeedbackIcon, feedbackLabel } from "../OptionRow";
 import { elementFeedback, type ElementFeedback, type PlayerMode } from "../types";
+import { useFeedbackWordClass } from "../FeedbackWords";
 
 export type HighlightToken =
   { kind: "text"; value: string } | { kind: "span"; spanId: string; value: string };
@@ -66,6 +67,7 @@ export function HighlightTokens({
   describedBy,
   onToggle,
 }: HighlightTokensProps) {
+  const feedbackWordClass = useFeedbackWordClass();
   const interactive = mode === "answer";
   return (
     <>
@@ -93,7 +95,7 @@ export function HighlightTokens({
               {token.value}
               {/* Inside the span, so it is part of the name a reader hears on reaching it. */}
               {feedback !== "neutral" ? (
-                <span className="sr-only">{`, ${feedbackLabel[feedback]}`}</span>
+                <span className={feedbackWordClass}>{`, ${feedbackLabel[feedback]}`}</span>
               ) : null}
             </span>
             {feedback !== "neutral" ? <FeedbackIcon state={feedback} className="ml-1" /> : null}

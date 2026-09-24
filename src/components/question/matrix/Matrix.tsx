@@ -3,6 +3,7 @@
 import { useId } from "react";
 import type { RichText } from "@/lib/ngn/schemas";
 import { ElementRationale } from "../ElementRationale";
+import { useFeedbackWordClass } from "../FeedbackWords";
 import { FeedbackIcon, feedbackLabel } from "../OptionRow";
 import type { ElementFeedback, PlayerMode } from "../types";
 
@@ -50,8 +51,9 @@ function stateClasses(checked: boolean, feedback: ElementFeedback, mode: PlayerM
  * list. It is hidden from the tree so it is not read again beside the control (#60).
  */
 function FeedbackText({ id, state }: { id: string; state: ElementFeedback }) {
+  const feedbackWordClass = useFeedbackWordClass();
   return state === "neutral" ? null : (
-    <span id={id} aria-hidden="true" className="sr-only">
+    <span id={id} aria-hidden="true" className={feedbackWordClass}>
       {feedbackLabel[state]}
     </span>
   );

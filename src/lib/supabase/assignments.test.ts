@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  CLOSED_LIST_LIMIT,
   createAssignment,
   deleteAssignment,
   listClassAssignments,
+  listClosedAssignments,
   listOpenAssignments,
   updateAssignmentCloseTime,
   updateAssignmentWindow,
@@ -19,7 +21,17 @@ const BANK_ID = "00000000-0000-4000-8000-0000000000b1";
 function fakeQuery(reply: Reply) {
   const calls: [string, unknown[]][] = [];
   const builder: Record<string, unknown> = {};
-  for (const step of ["select", "insert", "update", "delete", "eq", "gt", "order", "limit"]) {
+  for (const step of [
+    "select",
+    "insert",
+    "update",
+    "delete",
+    "eq",
+    "gt",
+    "lte",
+    "order",
+    "limit",
+  ]) {
     builder[step] = (...args: unknown[]) => {
       calls.push([step, args]);
       return builder;
@@ -128,6 +140,22 @@ describe("listing", () => {
   it("returns null when a student's list cannot be read", async () => {
     const fake = fakeQuery({ data: null, error: { code: "x" } });
     expect(await listOpenAssignments(fake.client, new Date())).toBeNull();
+  });
+
+  it("lists a student's closed assignments, most recently closed first (#210)", async () => {
+    const now = new Date("2026-09-25T16:00:00.000Z");
+    const fake = fakeQuery({ data: [ROW], error: null });
+    expect(await listClosedAssignments(fake.client, now)).toEqual([SUMMARY]);
+    expect(fake.calls).toContainEqual(["lte", ["closes_at", now.toISOString()]]);
+    expect(fake.calls).toContainEqual(["order", ["closes_at", { ascending: false }]]);
+    expect(fake.calls).toContainEqual(["limit", [CLOSED_LIST_LIMIT]]);
+    const selected = fake.calls.find(([step]) => step === "select")?.[1][0];
+    expect(selected).not.toContain("item_set");
+  });
+
+  it("returns null when the closed list cannot be read", async () => {
+    const fake = fakeQuery({ data: null, error: { code: "x" } });
+    expect(await listClosedAssignments(fake.client, new Date())).toBeNull();
   });
 });
 

@@ -8,6 +8,7 @@ import {
   type ItemRendererProps,
   type PlayerMode,
 } from "../types";
+import { useFeedbackWordClass } from "../FeedbackWords";
 
 const feedbackClasses: Record<ElementFeedback, string> = {
   neutral: "",
@@ -35,6 +36,7 @@ function RowSelect({
   mode,
   onChoose,
 }: RowSelectProps) {
+  const feedbackWordClass = useFeedbackWordClass();
   const feedback = elementFeedback(value !== undefined, value === correctId, mode);
   const stateClass =
     mode === "feedback"
@@ -65,7 +67,7 @@ function RowSelect({
         </select>
         {feedback !== "neutral" ? (
           <>
-            <span className="sr-only">{feedbackLabel[feedback]}</span>
+            <span className={feedbackWordClass}>{feedbackLabel[feedback]}</span>
             <FeedbackIcon state={feedback} className="" />
           </>
         ) : null}
