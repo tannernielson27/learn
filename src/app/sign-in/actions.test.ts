@@ -5,7 +5,10 @@ import {
   SIGN_IN_ADDRESS_LIMITS,
   SIGN_IN_LIMITS,
   SIGN_IN_RATE_LIMITED,
+  SIGN_IN_UNAVAILABLE,
 } from "@/lib/auth/signInRateLimit";
+import type { MemoryRateLimitStore } from "@/lib/rateLimit/testing/memoryStore";
+import { RateLimitUnavailableError } from "@/lib/rateLimit/store";
 
 /**
  * The Server Functions are thin: they read the request, count it against the three limits and
@@ -42,6 +45,16 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({ auth: { signInWithOtp, signInWithPassword } }),
 }));
 
+// #234: the limiter counts in Postgres; here it counts in the in-memory fake, shared by every call.
+vi.mock("@/lib/rateLimit/postgresStore", async () => {
+  const { createMemoryRateLimitStore } = await import("@/lib/rateLimit/testing/memoryStore");
+  const store = createMemoryRateLimitStore();
+  return { sharedRateLimitStore: () => store };
+});
+const rateLimitStore = (
+  await import("@/lib/rateLimit/postgresStore")
+).sharedRateLimitStore() as MemoryRateLimitStore;
+
 const { requestSignInLink, signInAsDemo } = await import("./actions");
 
 function emailForm(email: string): FormData {
@@ -74,6 +87,7 @@ let inbox = "";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  rateLimitStore.failWith(null);
   fromNewAddress();
   inbox = newRecipient();
 });
@@ -297,5 +311,44 @@ describe("signInAsDemo", () => {
       error: DEMO_UNAVAILABLE,
     });
     expect(signInWithPassword).not.toHaveBeenCalled();
+  });
+});
+
+describe("when the shared rate limiter cannot answer (#234)", () => {
+  it("refuses the emailed link and never reaches Supabase", async () => {
+    rateLimitStore.failWith(new RateLimitUnavailableError("PGRST301"));
+    const result = await requestSignInLink({ status: "idle" }, emailForm(inbox));
+    expect(result).toEqual({ status: "error", error: SIGN_IN_UNAVAILABLE });
+    expect(signInWithOtp).not.toHaveBeenCalled();
+  });
+
+  it("refuses the demo button and never reaches Supabase", async () => {
+    vi.stubEnv("DEMO_ACCOUNT_EMAIL", "demo@learn.test");
+    vi.stubEnv("DEMO_ACCOUNT_PASSWORD", "learn-demo");
+    rateLimitStore.failWith(new RateLimitUnavailableError("PGRST301"));
+    const form = new FormData();
+    form.set("next", "/author");
+    expect(await signInAsDemo({ status: "idle" }, form)).toEqual({
+      status: "error",
+      error: SIGN_IN_UNAVAILABLE,
+    });
+    expect(signInWithPassword).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+  });
+
+  it("does not send once the caller is counted, and answers as if it had", async () => {
+    // The per-IP count answers; the store then fails on the address. Not sent, and the answer is
+    // the same `sent` every other silent refusal gets.
+    const realHit = rateLimitStore.hit.bind(rateLimitStore);
+    let calls = 0;
+    const hit = vi.spyOn(rateLimitStore, "hit").mockImplementation(async (...args) => {
+      calls += 1;
+      if (calls > 1) throw new RateLimitUnavailableError("PGRST301");
+      return realHit(...args);
+    });
+    const result = await requestSignInLink({ status: "idle" }, emailForm(inbox));
+    expect(result).toEqual({ status: "sent", email: inbox });
+    expect(signInWithOtp).not.toHaveBeenCalled();
+    hit.mockRestore();
   });
 });

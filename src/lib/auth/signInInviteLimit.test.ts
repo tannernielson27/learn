@@ -8,6 +8,14 @@ import {
   createSignInRateLimiter,
   takeSignInInviteAttempt,
 } from "./signInRateLimit";
+import { createMemoryRateLimitStore } from "@/lib/rateLimit/testing/memoryStore";
+
+/** A limiter on the in-memory fake, with a clock the test moves. */
+function setup() {
+  const clock = { at: 0 };
+  const store = createMemoryRateLimitStore({ now: () => clock.at });
+  return { clock, store, limiter: createSignInRateLimiter(store) };
+}
 
 /**
  * #217: the per-(class, caller) budget a request earns only once its invite token has resolved.
@@ -25,37 +33,37 @@ function request(headers: Record<string, string>): Headers {
 }
 
 describe("the per-class invite budget", () => {
-  it("lets sixty students behind one address through inside one window", () => {
-    const limiter = createSignInRateLimiter();
+  it("lets sixty students behind one address through inside one window", async () => {
+    const { limiter } = setup();
     for (let student = 0; student < 60; student += 1) {
-      expect(limiter.takeInvite(IP, CLASS_A, student * 1_000)).toEqual({ ok: true });
+      expect(await limiter.takeInvite(IP, CLASS_A)).toEqual({ ok: true });
     }
   });
 
-  it("allows exactly the ceiling in a window, then refuses with the sign-in wording", () => {
-    const limiter = createSignInRateLimiter();
+  it("allows exactly the ceiling in a window, then refuses with the sign-in wording", async () => {
+    const { limiter } = setup();
     const { attempts } = SIGN_IN_INVITE_LIMIT;
     for (let call = 0; call < attempts; call += 1) {
-      expect(limiter.takeInvite(IP, CLASS_A, call)).toEqual({ ok: true });
+      expect(await limiter.takeInvite(IP, CLASS_A)).toEqual({ ok: true });
     }
-    expect(limiter.takeInvite(IP, CLASS_A, attempts)).toEqual({
+    expect(await limiter.takeInvite(IP, CLASS_A)).toEqual({
       ok: false,
       error: SIGN_IN_RATE_LIMITED,
     });
   });
 
-  it("keeps each class, and each caller, on its own counter", () => {
-    const limiter = createSignInRateLimiter();
+  it("keeps each class, and each caller, on its own counter", async () => {
+    const { limiter } = setup();
     for (let call = 0; call <= SIGN_IN_INVITE_LIMIT.attempts; call += 1) {
-      limiter.takeInvite(IP, CLASS_A, call);
+      await limiter.takeInvite(IP, CLASS_A);
     }
-    expect(limiter.takeInvite(IP, CLASS_A, 0).ok).toBe(false);
-    expect(limiter.takeInvite(IP, CLASS_B, 0)).toEqual({ ok: true });
-    expect(limiter.takeInvite("198.51.100.9", CLASS_A, 0)).toEqual({ ok: true });
+    expect((await limiter.takeInvite(IP, CLASS_A)).ok).toBe(false);
+    expect(await limiter.takeInvite(IP, CLASS_B)).toEqual({ ok: true });
+    expect(await limiter.takeInvite("198.51.100.9", CLASS_A)).toEqual({ ok: true });
   });
 
-  it("caps one caller across every class it holds a link to, so budgets do not stack", () => {
-    const limiter = createSignInRateLimiter();
+  it("caps one caller across every class it holds a link to, so budgets do not stack", async () => {
+    const { limiter } = setup();
     const classes = Array.from(
       { length: 10 },
       (_, n) => `00000000-0000-4000-8000-0000000001${String(n).padStart(2, "0")}`,
@@ -63,67 +71,69 @@ describe("the per-class invite budget", () => {
     let granted = 0;
     for (const classId of classes) {
       for (let call = 0; call < SIGN_IN_INVITE_LIMIT.attempts; call += 1) {
-        if (limiter.takeInvite(IP, classId, granted).ok) granted += 1;
+        if ((await limiter.takeInvite(IP, classId)).ok) granted += 1;
       }
     }
     expect(granted).toBe(SIGN_IN_INVITE_TOTAL_LIMIT.attempts);
     // Two whole classes behind one address still fit.
     expect(SIGN_IN_INVITE_TOTAL_LIMIT.attempts).toBeGreaterThanOrEqual(2 * 60);
-    expect(limiter.takeInvite("198.51.100.9", classes[0] ?? "", 0)).toEqual({ ok: true });
+    expect(await limiter.takeInvite("198.51.100.9", classes[0] ?? "")).toEqual({ ok: true });
   });
 
-  it("does not spend, or draw on, the plain sign-in budget", () => {
-    const limiter = createSignInRateLimiter();
+  it("does not spend, or draw on, the plain sign-in budget", async () => {
+    const { limiter } = setup();
     for (let call = 0; call < SIGN_IN_INVITE_LIMIT.attempts; call += 1) {
-      limiter.takeInvite(IP, CLASS_A, call);
+      await limiter.takeInvite(IP, CLASS_A);
     }
     // Plain sign-in from the same address still has every one of its thirty.
     for (let call = 0; call < SIGN_IN_LIMITS.email.attempts; call += 1) {
-      expect(limiter.take(IP, "email", call)).toEqual({ ok: true });
+      expect(await limiter.take(IP, "email")).toEqual({ ok: true });
     }
-    expect(limiter.take(IP, "email", 0).ok).toBe(false);
+    expect((await limiter.take(IP, "email")).ok).toBe(false);
     // And an exhausted plain budget leaves the class's own budget whole.
-    expect(limiter.takeInvite(IP, CLASS_B, 0)).toEqual({ ok: true });
+    expect(await limiter.takeInvite(IP, CLASS_B)).toEqual({ ok: true });
   });
 
-  it("leaves the per-recipient budgets exactly where they were", () => {
-    const limiter = createSignInRateLimiter();
+  it("leaves the per-recipient budgets exactly where they were", async () => {
+    const { limiter } = setup();
     for (let call = 0; call < SIGN_IN_INVITE_LIMIT.attempts; call += 1) {
-      limiter.takeInvite(IP, CLASS_A, call);
+      await limiter.takeInvite(IP, CLASS_A);
     }
     const email = "student@school.edu";
     for (let call = 0; call < SIGN_IN_ADDRESS_LIMITS.perCaller.attempts; call += 1) {
-      expect(limiter.takeAddress(IP, email, call)).toBe("send");
+      expect(await limiter.takeAddress(IP, email)).toBe("send");
     }
-    expect(limiter.takeAddress(IP, email, 0)).toBe("over-caller-budget");
+    expect(await limiter.takeAddress(IP, email)).toBe("over-caller-budget");
   });
 
-  it("starts a fresh window once the old one has run out", () => {
-    const limiter = createSignInRateLimiter();
+  it("starts a fresh window once the old one has run out", async () => {
+    const { limiter, clock } = setup();
     const { attempts, windowMs } = SIGN_IN_INVITE_LIMIT;
-    for (let call = 0; call <= attempts; call += 1) limiter.takeInvite(IP, CLASS_A, 0);
-    expect(limiter.takeInvite(IP, CLASS_A, windowMs - 1).ok).toBe(false);
-    expect(limiter.takeInvite(IP, CLASS_A, windowMs)).toEqual({ ok: true });
+    for (let call = 0; call <= attempts; call += 1) await limiter.takeInvite(IP, CLASS_A);
+    clock.at = windowMs - 1;
+    expect((await limiter.takeInvite(IP, CLASS_A)).ok).toBe(false);
+    clock.at = windowMs;
+    expect(await limiter.takeInvite(IP, CLASS_A)).toEqual({ ok: true });
   });
 
-  it("does not limit a caller nothing identifies, as the per-IP counter does not", () => {
-    const limiter = createSignInRateLimiter();
+  it("does not limit a caller nothing identifies, as the per-IP counter does not", async () => {
+    const { limiter } = setup();
     for (let call = 0; call < SIGN_IN_INVITE_LIMIT.attempts + 5; call += 1) {
-      expect(limiter.takeInvite(null, CLASS_A, call)).toEqual({ ok: true });
+      expect(await limiter.takeInvite(null, CLASS_A)).toEqual({ ok: true });
     }
   });
 });
 
 describe("takeSignInInviteAttempt", () => {
-  it("counts against the caller the request headers name", () => {
-    const limiter = createSignInRateLimiter();
+  it("counts against the caller the request headers name", async () => {
+    const { limiter } = setup();
     const headers = request({ "x-forwarded-for": "203.0.113.77" });
     for (let call = 0; call < SIGN_IN_INVITE_LIMIT.attempts; call += 1) {
-      expect(takeSignInInviteAttempt(headers, CLASS_A, limiter)).toEqual({ ok: true });
+      expect(await takeSignInInviteAttempt(headers, CLASS_A, limiter)).toEqual({ ok: true });
     }
-    expect(takeSignInInviteAttempt(headers, CLASS_A, limiter).ok).toBe(false);
+    expect((await takeSignInInviteAttempt(headers, CLASS_A, limiter)).ok).toBe(false);
     const elsewhere = request({ "x-forwarded-for": "198.51.100.9" });
-    expect(takeSignInInviteAttempt(elsewhere, CLASS_A, limiter)).toEqual({ ok: true });
+    expect(await takeSignInInviteAttempt(elsewhere, CLASS_A, limiter)).toEqual({ ok: true });
   });
 });
 
