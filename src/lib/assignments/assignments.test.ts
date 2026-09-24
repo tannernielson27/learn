@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   assignmentPath,
   assignmentState,
+  attemptProgressLabel,
   attemptsLabel,
   defaultWindow,
   formatInstant,
@@ -11,6 +12,7 @@ import {
   parseAssignmentForm,
   parseCloseTime,
   STATE_LABEL,
+  studentAssignmentPath,
   toLocalInputValue,
 } from "./assignments";
 
@@ -108,6 +110,18 @@ describe("labels and routes", () => {
   it("puts the Assign page beside its source", () => {
     expect(assignmentPath({ kind: "bank", id: "b1" })).toBe("/author/banks/b1/assign");
     expect(assignmentPath({ kind: "case_study", id: "c1" })).toBe("/author/case-studies/c1/assign");
+  });
+
+  it("puts a student's assignment under the student home (#208)", () => {
+    expect(studentAssignmentPath("a1")).toBe("/learn/assignments/a1");
+  });
+
+  it("says how a student's attempts stand (#208)", () => {
+    expect(attemptProgressLabel(2, undefined)).toBe("2 attempts");
+    expect(attemptProgressLabel(1, { submitted: 0, open: true })).toBe("In progress");
+    expect(attemptProgressLabel(3, { submitted: 1, open: false })).toBe("2 attempts left");
+    expect(attemptProgressLabel(2, { submitted: 1, open: false })).toBe("1 attempt left");
+    expect(attemptProgressLabel(1, { submitted: 1, open: false })).toBe("Submitted");
   });
 });
 

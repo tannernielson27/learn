@@ -120,6 +120,40 @@ async function makeInstructor(request: APIRequestContext, userId: string): Promi
   }
 }
 
+/**
+ * Inserts one row with the local secret key, as a test's stand-in for setup it is not about (#208
+ * assigns the seeded bank this way rather than through the Assign form #207's spec covers).
+ * Returns the row as written. Local stack only, like everything here.
+ */
+export async function insertAsAdmin<T>(
+  request: APIRequestContext,
+  table: string,
+  row: Record<string, unknown>,
+): Promise<T> {
+  const { url, headers } = localAdmin();
+  const created = await request.post(`${url}/rest/v1/${table}`, {
+    headers: { ...headers, Prefer: "return=representation" },
+    data: row,
+  });
+  const rows = created.ok() ? ((await created.json()) as T[]) : [];
+  if (rows.length !== 1) {
+    throw new Error(`could not insert into ${table}: ${created.status()} ${await created.text()}`);
+  }
+  return rows[0] as T;
+}
+
+/** Reads rows with the local secret key, which sees every column, for a test's control. */
+export async function selectAsAdmin<T>(
+  request: APIRequestContext,
+  table: string,
+  query: string,
+): Promise<T[]> {
+  const { url, headers } = localAdmin();
+  const read = await request.get(`${url}/rest/v1/${table}?${query}`, { headers });
+  if (!read.ok()) throw new Error(`could not read ${table}: ${read.status()}`);
+  return (await read.json()) as T[];
+}
+
 /** Creates an author: Add user, then the promotion, as the owner does it since #204. */
 export async function createAuthorAccount(
   request: APIRequestContext,

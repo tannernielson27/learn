@@ -57,6 +57,11 @@ export interface ItemPlayerProps {
    * when more than one player is on the page.
    */
   label?: string;
+  /**
+   * False for an assignment (#208), whose answers are saved as they change and submitted as a set:
+   * the player draws no Submit bar of its own and `submit` is never called.
+   */
+  showSubmit?: boolean;
 }
 
 const CHECK_FAILED = "Your answer could not be checked. Try again.";
@@ -91,6 +96,7 @@ export function ItemPlayer({
   initialKey,
   onResponseChange,
   label,
+  showSubmit = true,
 }: ItemPlayerProps) {
   // Only a key with no marks beside it is key-only; a reveal with a score takes precedence.
   const keyOnly = initialReveal ? undefined : initialKey;
@@ -211,6 +217,7 @@ export function ItemPlayer({
       // #60: named by the item's format ("Bowtie question"), not a bare "Question", so the region
       // says something in a landmark list. A caller with two players on a page passes its own.
       label={label ?? `${ITEM_TYPE_LABELS[item.type]} question`}
+      showSubmit={showSubmit}
     >
       <RendererShownContext value={setRendererShown}>
         <Renderer

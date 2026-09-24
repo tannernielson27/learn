@@ -124,3 +124,21 @@ describe("QuestionShell Submit once the item is complete", () => {
     expect(submit).not.toHaveAttribute("aria-disabled");
   });
 });
+
+describe("QuestionShell without its own Submit (#208)", () => {
+  it("draws no Submit bar and no reason where the caller submits a whole set", () => {
+    render(
+      <QuestionShell
+        stem={{ kind: "markdown", value: "Which finding needs follow-up?" }}
+        mode="answer"
+        canSubmit={false}
+        showSubmit={false}
+      >
+        <button type="button">An option</button>
+      </QuestionShell>,
+    );
+    expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
+    expect(screen.queryByText(REASON)).toBeNull();
+    expect(screen.getByRole("button", { name: "An option" })).toBeInTheDocument();
+  });
+});

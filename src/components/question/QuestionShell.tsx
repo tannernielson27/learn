@@ -30,6 +30,11 @@ export interface QuestionShellProps {
   sample?: boolean;
   /** The region's name. Two players on one page need different names, e.g. "Version 1 question". */
   label?: string;
+  /**
+   * False where answers are not submitted one at a time: an assignment (#208) saves each change and
+   * submits the whole set from its own bar, so the item's own Submit bar is not drawn.
+   */
+  showSubmit?: boolean;
   children: ReactNode;
 }
 
@@ -65,6 +70,7 @@ export function QuestionShell({
   rationale,
   sample = false,
   label = "Question",
+  showSubmit = true,
   children,
 }: QuestionShellProps) {
   const root = useRef<HTMLElement>(null);
@@ -144,7 +150,7 @@ export function QuestionShell({
         <RationalePanel rationale={rationale} />
       ) : null}
 
-      {mode === "answer" ? (
+      {mode === "answer" && showSubmit ? (
         <div className="fixed inset-x-0 bottom-0 border-t border-line bg-surface-1/95 px-5 py-3 backdrop-blur-sm [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
           <div className="mx-auto flex max-w-3xl items-center justify-end gap-3">
             {submitError ? (

@@ -32,4 +32,28 @@ describe("StudentAssignmentList", () => {
     expect(item).toHaveTextContent(`Closes ${formatInstant(ENTRY.closesAt, "local")}`);
     expect(item).toHaveTextContent("2 attempts");
   });
+
+  it("links each to the page that takes it, and says how the student's attempts stand (#208)", () => {
+    render(
+      <StudentAssignmentList
+        assignments={[ENTRY, { ...ENTRY, id: "a2", title: "Renal bank", maxAttempts: 1 }]}
+        classNames={new Map([[CLASS_ID, "NUR 310"]])}
+        progress={
+          new Map([
+            ["a1", { submitted: 1, open: false }],
+            ["a2", { submitted: 1, open: false }],
+          ])
+        }
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Cardiac bank" })).toHaveAttribute(
+      "href",
+      "/learn/assignments/a1",
+    );
+    const [first, second] = within(
+      screen.getByRole("list", { name: "Open assignments" }),
+    ).getAllByRole("listitem");
+    expect(first).toHaveTextContent("1 attempt left");
+    expect(second).toHaveTextContent("Submitted");
+  });
 });
