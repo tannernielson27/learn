@@ -34,6 +34,33 @@ export function attemptsLabel(count: number): string {
   return count === 1 ? "1 attempt" : `${count} attempts`;
 }
 
+/** Where a student takes an assignment (#208). */
+export function studentAssignmentPath(assignmentId: string): string {
+  return `/learn/assignments/${assignmentId}`;
+}
+
+/** One student's attempts at one assignment, counted: how many submitted, and whether one is open. */
+export interface AttemptProgress {
+  submitted: number;
+  open: boolean;
+}
+
+/**
+ * What the student home says about an assignment's attempts (#208): "In progress" while one is
+ * open, the attempts on offer before any, how many are left after one, "Submitted" when none are.
+ */
+export function attemptProgressLabel(
+  maxAttempts: number,
+  progress: AttemptProgress | undefined,
+): string {
+  if (progress?.open) return "In progress";
+  const submitted = progress?.submitted ?? 0;
+  const left = maxAttempts - submitted;
+  if (left <= 0) return "Submitted";
+  if (submitted === 0) return attemptsLabel(maxAttempts);
+  return `${attemptsLabel(left)} left`;
+}
+
 export function assignmentState(opensAt: string, closesAt: string, now: Date): AssignmentState {
   const at = now.getTime();
   if (at < Date.parse(opensAt)) return "scheduled";

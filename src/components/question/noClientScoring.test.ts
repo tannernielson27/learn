@@ -20,6 +20,8 @@ const ENTRY_POINTS = [
   path.join(SRC, "components", "live", "StudentRoom.tsx"),
   // #185: the student-paced phone mounts the same player over a whole set.
   path.join(SRC, "components", "live", "StudentPacedRoom.tsx"),
+  // #208: a take-home attempt mounts the same player over a set, and saves rather than scores.
+  path.join(SRC, "components", "assignments", "AttemptPlayer.tsx"),
 ];
 
 describe("the shared players hold no scoring code", () => {

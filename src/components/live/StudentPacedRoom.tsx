@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
+import { SetNav } from "@/components/question/SetNav";
 import { Button } from "@/components/ui/Button";
 import { RevealedItem, refuseSecondAnswer, type StudentRoomProps } from "./StudentRoom";
 // Module by module, for the reason `StudentRoom` gives: this is a screen a student loads, and the
@@ -203,41 +204,11 @@ export function StudentPacedRoom({
         {state.reveal ? SHOWING : `${done} of ${set.length} answered`}
       </p>
 
-      <nav aria-label="Items" className="mt-4">
-        <ol className="flex flex-wrap gap-2">
-          {set.map((each, position) => {
-            const answered = answeredFor(each) !== null;
-            return (
-              <li key={each.item.id}>
-                <button
-                  type="button"
-                  aria-current={position === at ? "step" : undefined}
-                  onClick={() => setIndex(position)}
-                  className={`tap-target inline-flex min-w-11 items-center justify-center gap-1 rounded-sm border px-3 text-sm ${
-                    position === at
-                      ? "border-accent bg-accent-soft text-ink-1"
-                      : "border-line bg-surface-1 text-ink-1 hover:border-line-strong"
-                  }`}
-                >
-                  <span aria-hidden="true" className="tabular">
-                    {position + 1}
-                  </span>
-                  {/* Answered is a filled dot and an outlined one is not: shape, not colour alone. */}
-                  <span
-                    aria-hidden="true"
-                    className={`inline-block size-2 rounded-full border ${
-                      answered ? "border-accent bg-accent" : "border-line-strong bg-transparent"
-                    }`}
-                  />
-                  <span className="sr-only">
-                    {`Item ${position + 1}, ${answered ? "answered" : "not answered"}`}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-      </nav>
+      <SetNav
+        entries={set.map((each) => ({ key: each.item.id, answered: answeredFor(each) !== null }))}
+        current={at}
+        onSelect={setIndex}
+      />
 
       {state.reveal && entry.revealed !== null ? (
         <RevealedItem

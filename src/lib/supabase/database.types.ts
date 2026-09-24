@@ -3,6 +3,70 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      assignment_attempts: {
+        Row: {
+          assignment_id: string;
+          auto_submitted: boolean;
+          id: string;
+          max_score: number | null;
+          number: number;
+          org_id: string;
+          revision: number;
+          score: number | null;
+          started_at: string;
+          student_id: string;
+          submitted_at: string | null;
+        };
+        Insert: {
+          assignment_id: string;
+          auto_submitted?: boolean;
+          id?: string;
+          max_score?: number | null;
+          number: number;
+          org_id: string;
+          revision?: number;
+          score?: number | null;
+          started_at?: string;
+          student_id: string;
+          submitted_at?: string | null;
+        };
+        Update: {
+          assignment_id?: string;
+          auto_submitted?: boolean;
+          id?: string;
+          max_score?: number | null;
+          number?: number;
+          org_id?: string;
+          revision?: number;
+          score?: number | null;
+          started_at?: string;
+          student_id?: string;
+          submitted_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "assignment_attempts_assignment_org_fkey";
+            columns: ["assignment_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "assignments";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "assignment_attempts_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "orgs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "assignment_attempts_student_id_fkey";
+            columns: ["student_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       assignments: {
         Row: {
           bank_id: string | null;
@@ -90,6 +154,53 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "orgs";
             referencedColumns: ["id"];
+          },
+        ];
+      };
+      attempt_responses: {
+        Row: {
+          attempt_id: string;
+          breakdown: Json | null;
+          groups: Json | null;
+          item_id: string;
+          max_points: number | null;
+          model: string | null;
+          org_id: string;
+          points: number | null;
+          response: Json;
+          saved_at: string;
+        };
+        Insert: {
+          attempt_id: string;
+          breakdown?: Json | null;
+          groups?: Json | null;
+          item_id: string;
+          max_points?: number | null;
+          model?: string | null;
+          org_id: string;
+          points?: number | null;
+          response: Json;
+          saved_at?: string;
+        };
+        Update: {
+          attempt_id?: string;
+          breakdown?: Json | null;
+          groups?: Json | null;
+          item_id?: string;
+          max_points?: number | null;
+          model?: string | null;
+          org_id?: string;
+          points?: number | null;
+          response?: Json;
+          saved_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "attempt_responses_attempt_org_fkey";
+            columns: ["attempt_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "assignment_attempts";
+            referencedColumns: ["id", "org_id"];
           },
         ];
       };
@@ -837,6 +948,15 @@ export type Database = {
     Functions: {
       archive_case_study: { Args: { target: string }; Returns: undefined };
       archive_item: { Args: { target: string }; Returns: undefined };
+      begin_attempt_submission: {
+        Args: { target_attempt: string };
+        Returns: {
+          answers: Json;
+          item_set: Json;
+          refusal: string;
+          revision: number;
+        }[];
+      };
       begin_session_submission: {
         Args: {
           participant: string;
@@ -880,6 +1000,21 @@ export type Database = {
       };
       duplicate_item: { Args: { source_item: string }; Returns: string };
       end_session: { Args: { target: string }; Returns: string };
+      expired_open_attempts: {
+        Args: {
+          max_rows?: number;
+          target_assignment?: string;
+          target_student?: string;
+        };
+        Returns: {
+          answers: Json;
+          assignment_id: string;
+          attempt_id: string;
+          item_set: Json;
+          revision: number;
+          student_id: string;
+        }[];
+      };
       extend_item_timer: { Args: { target: string }; Returns: undefined };
       import_bank_content: {
         Args: {
@@ -947,6 +1082,21 @@ export type Database = {
         Args: { step_item: string; step_position: number; target: string };
         Returns: undefined;
       };
+      record_attempt_submission: {
+        Args: {
+          automatic?: boolean;
+          expected_revision: number;
+          marks: Json;
+          possible: number;
+          student: string;
+          target_attempt: string;
+          total: number;
+        };
+        Returns: {
+          refusal: string;
+          submitted_at: string;
+        }[];
+      };
       record_session_response: {
         Args: {
           answer: Json;
@@ -1003,7 +1153,21 @@ export type Database = {
         }[];
       };
       rotate_class_invite: { Args: { target_class: string }; Returns: string };
+      save_attempt_response: {
+        Args: { answer: Json; target_attempt: string; target_item: string };
+        Returns: {
+          refusal: string;
+          saved_at: string;
+        }[];
+      };
       server_clock: { Args: never; Returns: string };
+      start_assignment_attempt: {
+        Args: { target_assignment: string };
+        Returns: {
+          attempt_id: string;
+          refusal: string;
+        }[];
+      };
       start_case_study_step: {
         Args: { step_position: number; step_type: string; target: string };
         Returns: string;

@@ -3,13 +3,15 @@ import { StudentAssignmentList } from "@/components/assignments/StudentAssignmen
 import { StudentClassList } from "@/components/classes/StudentClassList";
 import { requireStudent } from "@/lib/classes/viewer";
 import { listOpenAssignments } from "@/lib/supabase/assignments";
+import { listMyAttemptProgress } from "@/lib/supabase/attempts";
 import { myClasses } from "@/lib/supabase/classInvites";
 
 export const metadata: Metadata = { title: "Your classes" };
 
 /**
- * The student home (#205): the classes this student belongs to, and (#207) their open assignments.
- * Taking one is #208. Anyone who is not a student is sent to their own home by `requireStudent`.
+ * The student home (#205): the classes this student belongs to, and (#207) their open assignments,
+ * each linking to where it is taken (#208) with how their attempts stand. Anyone who is not a
+ * student is sent to their own home by `requireStudent`.
  */
 export default async function StudentHomePage() {
   const { supabase } = await requireStudent();
@@ -18,6 +20,12 @@ export default async function StudentHomePage() {
     listOpenAssignments(supabase, new Date()),
   ]);
   const classNames = new Map((classes ?? []).map((entry) => [entry.id, entry.name]));
+  // #208: how this student's attempts stand at each; a failed read just leaves the counts off.
+  const progress =
+    (await listMyAttemptProgress(
+      supabase,
+      (assignments ?? []).map((entry) => entry.id),
+    )) ?? undefined;
 
   return (
     <>
@@ -38,7 +46,11 @@ export default async function StudentHomePage() {
             Your assignments could not be loaded. Reload the page to try again.
           </p>
         ) : (
-          <StudentAssignmentList assignments={assignments} classNames={classNames} />
+          <StudentAssignmentList
+            assignments={assignments}
+            classNames={classNames}
+            progress={progress}
+          />
         )}
       </section>
     </>
