@@ -137,6 +137,18 @@ describe("createResendMailer", () => {
     expect(error.status).toBeUndefined();
   });
 
+  it("gives every request a deadline, and a request that runs past it is a retryable network error", async () => {
+    let signal: AbortSignal | null | undefined;
+    const hangs = vi.fn(async (_url: unknown, init?: RequestInit) => {
+      signal = init?.signal;
+      throw new DOMException("The operation timed out.", "TimeoutError");
+    }) as typeof fetch;
+    const error = await sendError(hangs);
+    expect(signal).toBeInstanceOf(AbortSignal);
+    expect(error.kind).toBe("network");
+    expect(error.retryable).toBe(true);
+  });
+
   it("treats a 2xx without an id as unavailable rather than sent", async () => {
     const error = await sendError(respond(200, { nope: true }));
     expect(error.kind).toBe("unavailable");

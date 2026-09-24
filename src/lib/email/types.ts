@@ -7,7 +7,7 @@ export interface EmailMessage {
   /**
    * The same key sends at most once. Resend keeps it for 24 hours, so a retried reminder job
    * does not mail anyone twice. Build it from what the message is about, never from the address:
-   * `reminder:<assignmentId>:<userId>`.
+   * `reminder:<assignmentId>:<userId>:<kind>`.
    */
   readonly idempotencyKey: string;
 }
