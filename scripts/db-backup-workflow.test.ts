@@ -96,16 +96,20 @@ describe("the backup script (#236)", () => {
   });
 
   it("pipes every dump straight into age, so no plaintext file is written", () => {
-    const dumps = script
-      .split(/\r?\n/)
-      .filter((line) => /(db dump|pg_dump|psql)\b/.test(line) && !line.trim().startsWith("#"));
+    const code = script.split(/\r?\n/).filter((line) => !line.trim().startsWith("#"));
+    const dumps = code.filter((line) => /(db dump|pg_dump|psql)\b/.test(line));
     expect(dumps.length).toBe(5);
     for (const line of dumps) {
-      expect(line).toMatch(/\|\s*(sed .*\|\s*)?encrypt \w+$/);
+      // Straight into age, or (the history) into a pipe inside history(), which goes into age.
+      expect(line).toMatch(/\|\s*(sed .*\|\s*)?encrypt \w+$|\\$/);
       // psql's one `-f` reads the committed query; no other file flag, and no redirect, may appear.
       const writes = line.replace(/ -f "\$here\/db-backup-platform\.sql"/, "");
       expect(writes).not.toMatch(/(^|\s)(-f|--file|-o|--output)(\s|=)|>/);
     }
+    expect(code).toContain("history | encrypt history");
+    // Five parts, each written by age and by nothing else.
+    expect(code.filter((line) => /\|\s*encrypt \w+$/.test(line))).toHaveLength(5);
+    expect(code.filter((line) => />/.test(line) && !/>&2/.test(line))).toEqual([]);
   });
 
   it("refuses an age secret key in place of the recipient", () => {

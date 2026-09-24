@@ -32,6 +32,10 @@ jobs:
       # The CLI release that package.json pins, verified against its published checksum.
       SUPABASE_CLI_VERSION: 2.117.0
       SUPABASE_CLI_SHA256: 913d1b8303a1bfa05a4f52909f60cbc2f8247f7f9444283c37dbe9eaef0d95de
+      # age from its official release, the version the restore was tested with, checksum-verified.
+      # Ubuntu's own package is older and moves with the archive.
+      AGE_VERSION: 1.3.2
+      AGE_SHA256: cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10
     steps:
       - name: Check the secrets
         id: secrets
@@ -66,10 +70,18 @@ jobs:
           set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends postgresql-common
-          # PGDG, for a client at the hosted server's major version (Ubuntu 24.04 ships 16).
+          # PGDG, for a client at the hosted server's major version (Ubuntu 24.04 ships 16). Pinned to
+          # the major only: PGDG keeps just the newest minor, so an exact pin would break on its next
+          # release. apt verifies the package against PGDG's signing key, and the next step checks the
+          # major. This is the one tool not pinned by checksum.
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y > /dev/null
-          sudo apt-get install -y -qq --no-install-recommends postgresql-client-17 age
+          sudo apt-get install -y -qq --no-install-recommends postgresql-client-17
           echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+          curl -fsSL -o "$RUNNER_TEMP/age.tar.gz" \
+            "https://github.com/FiloSottile/age/releases/download/v${AGE_VERSION}/age-v${AGE_VERSION}-linux-amd64.tar.gz"
+          echo "${AGE_SHA256}  $RUNNER_TEMP/age.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/age.tar.gz" -C "$RUNNER_TEMP"
+          sudo install -m 0755 "$RUNNER_TEMP/age/age" /usr/local/bin/age
           curl -fsSL -o "$RUNNER_TEMP/supabase.deb" \
             "https://github.com/supabase/cli/releases/download/v${SUPABASE_CLI_VERSION}/supabase_${SUPABASE_CLI_VERSION}_linux_amd64.deb"
           echo "${SUPABASE_CLI_SHA256}  $RUNNER_TEMP/supabase.deb" | sha256sum --check --strict
@@ -81,7 +93,7 @@ jobs:
           set -euo pipefail
           pg_dump --version | grep -E ' 17\.' || { echo "::error::pg_dump is not version 17"; exit 1; }
           psql --version | grep -E ' 17\.' || { echo "::error::psql is not version 17"; exit 1; }
-          age --version
+          age --version | grep -Fx "v$AGE_VERSION" || { echo "::error::unexpected age version"; exit 1; }
           supabase --version | grep -Fx "$SUPABASE_CLI_VERSION" || { echo "::error::unexpected Supabase CLI version"; exit 1; }
 
       - name: Dump and encrypt
@@ -108,4 +120,4 @@ jobs:
 
       - name: Remove the local copy
         if: always()
-        run: rm -rf "$RUNNER_TEMP/db-backup" "$RUNNER_TEMP/supabase.deb"
+        run: rm -rf "$RUNNER_TEMP/db-backup" "$RUNNER_TEMP/supabase.deb" "$RUNNER_TEMP/age.tar.gz" "$RUNNER_TEMP/age"

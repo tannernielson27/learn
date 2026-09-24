@@ -10,6 +10,12 @@
 -- This removes those defaults for our schemas, so each restored object gets exactly the grants
 -- the dump lists. schema.sql then puts back the source project's own default privileges, which
 -- it carries as ALTER DEFAULT PRIVILEGES statements at its end.
+--
+-- Only defaults FOR ROLE postgres matter: default privileges apply to objects the named role
+-- creates, and the restore runs as postgres, so it creates every object. (Defaults for
+-- supabase_admin cannot be changed by postgres on a hosted project, and do not apply here.)
+-- `private` and `live` do not exist yet when this runs, so today only `public` matches; they are
+-- listed so that a project that somehow has them is handled the same way.
 do $$
 declare
   d record;

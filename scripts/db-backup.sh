@@ -56,7 +56,15 @@ encrypt() {
 "$supabase_bin" db dump --db-url "$PROD_DB_URL" --role-only | sed -E 's/^GRANT .* ON PARAMETER .* TO "supabase_[a-z_]+";$/-- &/' | encrypt roles
 "$supabase_bin" db dump --db-url "$PROD_DB_URL" | encrypt schema
 "$supabase_bin" db dump --db-url "$PROD_DB_URL" --data-only --use-copy -x storage.buckets_vectors -x storage.vector_indexes | encrypt data
-pg_dump --dbname "$PROD_DB_URL" --schema supabase_migrations --quote-all-identifiers --no-owner --no-privileges | encrypt history
+# The history must load whether or not the new project already has supabase_migrations, so its
+# tables come from scripts/db-backup-history.sql (IF NOT EXISTS, then emptied) and only the rows
+# come from the dump. pg_dump's psql meta-commands are commented out, as the CLI does.
+history() {
+  cat "$here/db-backup-history.sql"
+  pg_dump --dbname "$PROD_DB_URL" --schema supabase_migrations --data-only --quote-all-identifiers --no-owner --no-privileges \
+    | sed -E 's/^\\(un)?restrict .*$/-- &/'
+}
+history | encrypt history
 psql --dbname "$PROD_DB_URL" -X -q -At -v ON_ERROR_STOP=1 -f "$here/db-backup-platform.sql" | encrypt platform
 
 # An empty or truncated ciphertext means a dump produced nothing; fail rather than keep it.
