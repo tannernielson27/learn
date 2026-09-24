@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-24 (#236 merged in #250: nightly encrypted dump, no migration; it runs once the owner sets the two secrets in docs/05 §7.10).
+Last updated: 2026-09-24 (#242 merged in #251 with `20260925020000_class_timezone_and_removed` applied to hosted; #236 merged in #250).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -140,7 +140,7 @@ Phase 4 splits across two sprints. Sprint 10 covers what real students need: har
 | [#239](https://github.com/tannernielson27/learn/issues/239) | feat(student): my weakest clinical judgment steps                                             | security                  | To do                                                                                         |
 | [#240](https://github.com/tannernielson27/learn/issues/240) | feat(authoring): share a bank with a class for practice, and warn on graded reuse             | security, db, e2e         | To do                                                                                         |
 | [#241](https://github.com/tannernielson27/learn/issues/241) | feat(student): practice a shared bank with instant feedback                                   | player, security, db, e2e | To do                                                                                         |
-| [#242](https://github.com/tannernielson27/learn/issues/242) | feat(assign): a class time zone setting, and removed students in the report                   | db, e2e                   | To do                                                                                         |
+| [#242](https://github.com/tannernielson27/learn/issues/242) | feat(assign): a class time zone setting, and removed students in the report                   | db, e2e                   | Merged (#251); `20260925020000_class_timezone_and_removed` applied to hosted                  |
 | [#244](https://github.com/tannernielson27/learn/issues/244) | test(security): check live play and a second student on the real response bytes               | security, e2e             | To do; filed from #233                                                                        |
 | [#248](https://github.com/tannernielson27/learn/issues/248) | chore(db): sweep expired rate-limit rows on a schedule                                        | security, db              | To do; filed from #247's review                                                               |
 
