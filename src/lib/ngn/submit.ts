@@ -147,6 +147,10 @@ export type KeylessCaseStudy = PlayableCaseStudy<KeylessItem>;
 /**
  * Strips every step's key, rationale and scoring. Each item is a deep copy, so the case study it
  * is given is never changed; the patient's record is shared by reference, since it holds no answer.
+ *
+ * Seeds each step's starting order (#219) by the step's own id, which a student can see. Fine for
+ * the gallery and an author's preview; a path that hands a case study to a student must build it
+ * with `toKeylessItem(step, secretStartingOrderSeed(scopeId, step.id))` per step instead.
  */
 export function toKeylessCaseStudy(caseStudy: CaseStudy): KeylessCaseStudy {
   return { ...caseStudy, items: caseStudy.items.map((item) => toKeylessItem(item)) };
