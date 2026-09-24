@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page, type Route } from "@playwright/test";
 import { latestSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor } from "./signIn";
 
@@ -37,15 +37,31 @@ async function bytesOf(context: BrowserContext, path: string): Promise<string> {
 /**
  * The raw response of the Server Action a click sends (the POST carrying Next-Action): the Flight
  * stream Next replays into the page, which a leak could ride without ever reaching a plain GET.
+ * Captured by routing the request through the test and handing the page the same bytes, because
+ * Chromium drops a streamed body before `response.text()` can read it.
  */
 async function actionBytes(page: Page, act: () => Promise<void>): Promise<string> {
-  const response = page.waitForResponse(
-    (r) => r.request().method() === "POST" && "next-action" in r.request().headers(),
-  );
-  await act();
-  const bytes = await (await response).text();
-  expect(bytes.length).toBeGreaterThan(0);
-  return bytes;
+  let captured: string | undefined;
+  const handler = async (route: Route) => {
+    const request = route.request();
+    if (request.method() !== "POST" || !("next-action" in request.headers())) {
+      await route.fallback();
+      return;
+    }
+    const response = await route.fetch();
+    const body = await response.text();
+    captured = body;
+    await route.fulfill({ response, body });
+  };
+  await page.route("**/*", handler);
+  try {
+    await act();
+    await expect.poll(() => captured !== undefined, { timeout: 15_000 }).toBe(true);
+  } finally {
+    await page.unroute("**/*", handler);
+  }
+  expect(captured?.length ?? 0).toBeGreaterThan(0);
+  return captured ?? "";
 }
 
 function expectKeyless(bytes: string, rationales: readonly string[]): void {
