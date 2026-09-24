@@ -194,4 +194,46 @@ describe("autoSubmitExpired", () => {
     const failed = autoStore(null);
     expect(await autoSubmitExpired(failed.fake)).toBe(0);
   });
+
+  it("does not let one attempt that throws hold up every attempt queued behind it", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    let calls = 0;
+    const { fake } = autoStore(
+      [
+        due("00000000-0000-0000-0000-0000000000a1", "00000000-0000-0000-0000-0000000000b1", {}),
+        due("00000000-0000-0000-0000-0000000000a2", "00000000-0000-0000-0000-0000000000b1", {}),
+        due("00000000-0000-0000-0000-0000000000a3", "00000000-0000-0000-0000-0000000000b2", {}),
+      ],
+      {
+        record: vi.fn(async () => {
+          calls += 1;
+          if (calls === 1) throw new Error("connection reset");
+          return { ok: true, value: "2026-09-23T12:00:00Z" } as const;
+        }),
+        items: vi.fn(async (itemSet: readonly string[]) => {
+          if (itemSet.length === 0) throw new Error("never");
+          return SET;
+        }),
+      },
+    );
+    expect(await autoSubmitExpired(fake)).toBe(2);
+    expect(fake.record).toHaveBeenCalledTimes(3);
+  });
+
+  it("skips an assignment whose items throw, and carries on with the next", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { fake } = autoStore(
+      [
+        due("00000000-0000-0000-0000-0000000000a1", "00000000-0000-0000-0000-0000000000b1", {}),
+        due("00000000-0000-0000-0000-0000000000a2", "00000000-0000-0000-0000-0000000000b2", {}),
+      ],
+      {
+        items: vi
+          .fn()
+          .mockRejectedValueOnce(new Error("read failed"))
+          .mockResolvedValue(SET) as unknown as AutoSubmitStore["items"],
+      },
+    );
+    expect(await autoSubmitExpired(fake)).toBe(1);
+  });
 });

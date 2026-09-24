@@ -92,20 +92,42 @@ export async function autoSubmitExpired(
 
   const sets = new Map<string, SetItem[] | null>();
   let recorded = 0;
+  // Each attempt on its own: the list comes back in a stable order, so one that throws every time
+  // would otherwise hold up every attempt behind it on every run (#212 runs this for everyone).
   for (const attempt of due) {
-    if (!sets.has(attempt.assignmentId)) {
-      sets.set(attempt.assignmentId, await store.items(attempt.itemSet));
+    try {
+      if (!sets.has(attempt.assignmentId)) {
+        sets.set(attempt.assignmentId, await readSet(store, attempt));
+      }
+      const set = sets.get(attempt.assignmentId);
+      if (!set) continue;
+      const result = await store.record({
+        attemptId: attempt.attemptId,
+        studentId: attempt.studentId,
+        revision: attempt.revision,
+        score: scoreAttempt(set, attempt.answers),
+        automatic: true,
+      });
+      if (result.ok) recorded += 1;
+    } catch (error) {
+      console.error("[auto-submit] an attempt could not be submitted at close", {
+        attemptId: attempt.attemptId,
+        error: error instanceof Error ? error.name : "unknown",
+      });
     }
-    const set = sets.get(attempt.assignmentId);
-    if (!set) continue;
-    const result = await store.record({
-      attemptId: attempt.attemptId,
-      studentId: attempt.studentId,
-      revision: attempt.revision,
-      score: scoreAttempt(set, attempt.answers),
-      automatic: true,
-    });
-    if (result.ok) recorded += 1;
   }
   return recorded;
+}
+
+/** An assignment's items, or null (skip its attempts this run) when the read throws. */
+async function readSet(store: AutoSubmitStore, attempt: ExpiredAttempt): Promise<SetItem[] | null> {
+  try {
+    return await store.items(attempt.itemSet);
+  } catch (error) {
+    console.error("[auto-submit] an assignment's items could not be read", {
+      assignmentId: attempt.assignmentId,
+      error: error instanceof Error ? error.name : "unknown",
+    });
+    return null;
+  }
 }

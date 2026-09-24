@@ -86,6 +86,9 @@ create index email_outbox_due_idx on private.email_outbox (next_attempt_at)
 create index email_outbox_student_id_idx on private.email_outbox (student_id);
 
 revoke all on private.email_outbox from public, anon, authenticated, service_role;
+-- No policies: only the definer functions below read or write it, and RLS stays on as the second
+-- layer every private table here has, in case a later grant forgets it.
+alter table private.email_outbox enable row level security;
 
 -- ---------------------------------------------------------------------------
 -- Who is owed what
@@ -362,9 +365,9 @@ begin
     return 'no_vault';
   end if;
 
-  execute 'select decrypted_secret from vault.decrypted_secrets where name = $1 limit 1'
+  execute 'select decrypted_secret from vault.decrypted_secrets where name = $1 order by created_at desc limit 1'
     into target_url using 'learn_reminders_url';
-  execute 'select decrypted_secret from vault.decrypted_secrets where name = $1 limit 1'
+  execute 'select decrypted_secret from vault.decrypted_secrets where name = $1 order by created_at desc limit 1'
     into secret using 'learn_cron_secret';
 
   if target_url is null or target_url !~ '^https?://[^\s]+$'
@@ -377,7 +380,8 @@ begin
           '{}'::jsonb,
           jsonb_build_object('Content-Type', 'application/json',
                              'Authorization', 'Bearer ' || secret),
-          10000;
+          -- Longer than the route's maxDuration (60 s): a full run is not reported as a timeout.
+          65000;
   return 'queued';
 end;
 $$;

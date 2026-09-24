@@ -3,6 +3,12 @@ import { EmailError } from "./types";
 // A provider error name we are willing to repeat: `validation_error`, `rate_limit_exceeded`.
 const ERROR_CODE = /^[a-z][a-z0-9_]{0,63}$/;
 
+/**
+ * How long one send may take. A reminder run sends many in one function call (#212), so a provider
+ * that hangs must fail this one message, retryably, rather than use up the whole run.
+ */
+export const SEND_TIMEOUT_MS = 10_000;
+
 /** POSTs JSON and returns the parsed reply, or throws a typed EmailError. Never logs. */
 export async function postJson(
   fetchImpl: typeof fetch,
@@ -15,7 +21,13 @@ export async function postJson(
   const payload = JSON.stringify(body);
   let response: Response;
   try {
-    response = await fetchImpl(url, { method: "POST", headers, body: payload, cache: "no-store" });
+    response = await fetchImpl(url, {
+      method: "POST",
+      headers,
+      body: payload,
+      cache: "no-store",
+      signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
+    });
   } catch {
     throw new EmailError("network", `${provider} could not be reached.`);
   }
