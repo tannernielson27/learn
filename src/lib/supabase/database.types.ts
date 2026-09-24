@@ -961,6 +961,7 @@ export type Database = {
           email: string;
           marks: Json;
           max_score: number;
+          membership: string;
           score: number;
           scores_released: boolean;
           started_at: string;
@@ -1153,6 +1154,7 @@ export type Database = {
           class_id: string;
           class_name: string;
           joined_at: string;
+          time_zone: string;
         }[];
       };
       place_case_study_step: {

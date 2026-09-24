@@ -9,14 +9,20 @@ import { formatPercent, formatPoints } from "@/lib/live/reportFormat";
 const STICKY_HEAD = `${HEAD} sticky left-0 bg-surface-1 text-left`;
 
 interface ProgressTableProps {
+  /** The scrolling region's accessible name. */
+  label?: string;
   students: readonly AssignmentStudentRow[];
   maxAttempts: number;
 }
 
 /** While the assignment is open: who has started and who has submitted, and nothing else. */
-export function ProgressTable({ students, maxAttempts }: ProgressTableProps) {
+export function ProgressTable({
+  students,
+  maxAttempts,
+  label = "Progress by student",
+}: ProgressTableProps) {
   return (
-    <ScrollRegion label="Progress by student">
+    <ScrollRegion label={label}>
       <table className="tabular w-full border-collapse text-sm">
         <thead>
           <tr>
@@ -54,9 +60,14 @@ interface ScoreTableProps extends ProgressTableProps {
 }
 
 /** Once closed: each student's status, best attempt, attempts used, and the best attempt by item. */
-export function ScoreTable({ items, students, maxAttempts }: ScoreTableProps) {
+export function ScoreTable({
+  items,
+  students,
+  maxAttempts,
+  label = "Scores by student",
+}: ScoreTableProps) {
   return (
-    <ScrollRegion label="Scores by student">
+    <ScrollRegion label={label}>
       <table className="tabular w-full border-collapse text-sm">
         <thead>
           <tr>

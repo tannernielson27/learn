@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { clipInviteToken } from "@/lib/classes/classes";
+import { DEFAULT_CLASS_TIME_ZONE } from "@/lib/classes/timeZone";
 import type { Database } from "./database.types";
 
 type Client = SupabaseClient<Database>;
@@ -53,11 +54,19 @@ export interface StudentClass {
   id: string;
   name: string;
   joinedAt: string;
+  /** The IANA zone the class's due times are read in (#242). */
+  timeZone: string;
 }
 
-/** The caller's own classes: id and name, never a token (`public.my_classes`). */
+/** The caller's own classes: id, name and zone, never a token (`public.my_classes`). */
 export async function myClasses(client: Client): Promise<StudentClass[] | null> {
   const { data, error } = await client.rpc("my_classes");
   if (error || !data) return null;
-  return data.map((row) => ({ id: row.class_id, name: row.class_name, joinedAt: row.joined_at }));
+  return data.map((row) => ({
+    id: row.class_id,
+    name: row.class_name,
+    joinedAt: row.joined_at,
+    // Missing only while a deploy runs ahead of its migration.
+    timeZone: row.time_zone || DEFAULT_CLASS_TIME_ZONE,
+  }));
 }

@@ -120,6 +120,20 @@ describe("loadAttemptPage, on what the student's page is handed before close", (
   });
 });
 
+describe("loadAttemptPage, the header", () => {
+  it("names the assignment's class, so the page can say the close in its zone (#242)", async () => {
+    const view = await loadAttemptPage(store(), ASSIGNMENT, STUDENT, NOW);
+    if (view.kind === "missing" || view.kind === "failed") throw new Error(view.kind);
+    expect(view.assignment).toEqual({
+      id: ASSIGNMENT,
+      classId: "00000000-0000-4000-8000-0000000208c1",
+      title: "NUR 310 — Week 5",
+      closesAt: "2026-09-24T12:00:00Z",
+      maxAttempts: 2,
+    });
+  });
+});
+
 describe("loadAttemptPage, the other states", () => {
   it("is missing when the student may not see the assignment", async () => {
     const fake = store({ assignment: vi.fn(async () => null) });

@@ -99,7 +99,10 @@ function toAttempt(row: ReportRow): ReportAttemptInput {
   };
 }
 
-/** Every current member and every attempt of theirs. Throws when a read fails part way. */
+/**
+ * Every current member, every student removed after attempting (#242), and every attempt of
+ * theirs. Throws when a read fails part way.
+ */
 export async function readAssignmentReportRows(
   client: Client,
   assignmentId: string,
@@ -112,7 +115,12 @@ export async function readAssignmentReportRows(
   const students = new Map<string, ReportStudentInput>();
   for (const row of rows) {
     if (!students.has(row.student_id)) {
-      students.set(row.student_id, { id: row.student_id, displayName: nameOf(row) });
+      students.set(row.student_id, {
+        id: row.student_id,
+        displayName: nameOf(row),
+        // Only the database's own word makes someone removed; anything else is a member.
+        membership: row.membership === "removed" ? "removed" : "member",
+      });
     }
   }
   return {

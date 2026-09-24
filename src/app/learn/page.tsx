@@ -23,7 +23,10 @@ export default async function StudentHomePage() {
     listOpenAssignments(supabase, now),
     listClosedAssignments(supabase, now),
   ]);
-  const classNames = new Map((classes ?? []).map((entry) => [entry.id, entry.name]));
+  // #242: due times are shown in each class's zone, not the device's.
+  const classInfo = new Map(
+    (classes ?? []).map((entry) => [entry.id, { name: entry.name, timeZone: entry.timeZone }]),
+  );
   // #208: how this student's attempts stand at each; a failed read just leaves the counts off.
   const progress =
     (await listMyAttemptProgress(
@@ -52,7 +55,7 @@ export default async function StudentHomePage() {
         ) : (
           <StudentAssignmentList
             assignments={assignments}
-            classNames={classNames}
+            classes={classInfo}
             progress={progress}
           />
         )}
@@ -66,7 +69,7 @@ export default async function StudentHomePage() {
             Your closed assignments could not be loaded. Reload the page to try again.
           </p>
         ) : (
-          <ClosedAssignmentList assignments={closed} classNames={classNames} />
+          <ClosedAssignmentList assignments={closed} classes={classInfo} />
         )}
       </section>
     </>

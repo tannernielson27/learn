@@ -21,6 +21,8 @@ export interface ClassDetail {
   id: string;
   name: string;
   inviteToken: string;
+  /** The IANA zone the class's due times are read in (#242). */
+  timeZone: string;
 }
 
 export interface RosterEntry {
@@ -50,12 +52,17 @@ export async function listClasses(client: Client): Promise<ClassSummary[] | null
 export async function readClass(client: Client, classId: string): Promise<ClassDetail | null> {
   const { data, error } = await client
     .from("classes")
-    .select("id, name, invite_token")
+    .select("id, name, invite_token, time_zone")
     .eq("id", classId)
     .maybeSingle();
   if (error) throw new Error("The class could not be read.");
   if (!data) return null;
-  return { id: data.id, name: data.name, inviteToken: data.invite_token };
+  return {
+    id: data.id,
+    name: data.name,
+    inviteToken: data.invite_token,
+    timeZone: data.time_zone,
+  };
 }
 
 export async function classRoster(client: Client, classId: string): Promise<RosterEntry[] | null> {
@@ -87,6 +94,27 @@ export async function renameClass(client: Client, classId: string, name: string)
     .eq("id", classId)
     .select("id");
   return !error && (data?.length ?? 0) > 0;
+}
+
+/**
+ * `invalid` is the database's check (23514): a zone Postgres does not know. `gone` is a class this
+ * author cannot update, which row level security reports as no row at all.
+ */
+export type TimeZoneWrite = "saved" | "invalid" | "gone" | "failed";
+
+/** Moves the class's due times to another zone (#242). */
+export async function setClassTimeZone(
+  client: Client,
+  classId: string,
+  zone: string,
+): Promise<TimeZoneWrite> {
+  const { data, error } = await client
+    .from("classes")
+    .update({ time_zone: zone })
+    .eq("id", classId)
+    .select("id");
+  if (error) return error.code === "23514" ? "invalid" : "failed";
+  return (data?.length ?? 0) > 0 ? "saved" : "gone";
 }
 
 /** A new token; the old link stops working as this returns. */

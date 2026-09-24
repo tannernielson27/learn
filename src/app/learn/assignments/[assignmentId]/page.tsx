@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AttemptPlayer } from "@/components/assignments/AttemptPlayer";
 import { AttemptSummary } from "@/components/assignments/AttemptSummary";
-import { LocalTime } from "@/components/assignments/LocalTime";
+import { ClassTime } from "@/components/assignments/ClassTime";
 import { StartAttemptForm } from "@/components/assignments/StartAttemptForm";
 import { RecordLayout } from "@/components/ehr/RecordLayout";
 import { loadAttemptPage, type AssignmentHeader } from "@/lib/assignments/attemptPage";
@@ -11,13 +11,15 @@ import { attemptPageStore } from "@/lib/assignments/attemptStore";
 import { attemptsLabel, studentResultsPath } from "@/lib/assignments/assignments";
 import { isUuid } from "@/lib/authoring/ids";
 import { STUDENT_HOME } from "@/lib/classes/classes";
+import { zoneOfClass } from "@/lib/classes/timeZone";
 import { requireStudent } from "@/lib/classes/viewer";
+import { myClasses } from "@/lib/supabase/classInvites";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { startAssignmentAttempt, submitAssignmentAttempt } from "./actions";
 
 export const metadata: Metadata = { title: "Assignment" };
 
-function Header({ assignment }: { assignment: AssignmentHeader }) {
+function Header({ assignment, timeZone }: { assignment: AssignmentHeader; timeZone: string }) {
   return (
     <>
       <p className="mb-2 text-sm text-ink-2">
@@ -28,7 +30,8 @@ function Header({ assignment }: { assignment: AssignmentHeader }) {
       <p className="eyebrow mb-2">Assignment</p>
       <h1 className="font-read text-3xl break-words text-ink-1">{assignment.title}</h1>
       <p className="mt-2 text-sm text-ink-2">
-        Closes <LocalTime iso={assignment.closesAt} /> · {attemptsLabel(assignment.maxAttempts)}
+        Closes <ClassTime iso={assignment.closesAt} timeZone={timeZone} /> ·{" "}
+        {attemptsLabel(assignment.maxAttempts)}
       </p>
     </>
   );
@@ -48,12 +51,15 @@ export default async function StudentAssignmentPage({
   if (!isUuid(assignmentId)) notFound();
 
   const { supabase, userId } = await requireStudent();
-  const view = await loadAttemptPage(
-    attemptPageStore(supabase, createSupabaseServiceClient()),
-    assignmentId,
-    userId,
-    new Date(),
-  );
+  const [view, classes] = await Promise.all([
+    loadAttemptPage(
+      attemptPageStore(supabase, createSupabaseServiceClient()),
+      assignmentId,
+      userId,
+      new Date(),
+    ),
+    myClasses(supabase),
+  ]);
 
   if (view.kind === "missing") notFound();
   if (view.kind === "failed") {
@@ -63,6 +69,8 @@ export default async function StudentAssignmentPage({
       </p>
     );
   }
+  // #242: the close is said in the class's zone, as on the student home and in the reminder email.
+  const timeZone = zoneOfClass(classes, view.assignment.classId);
 
   if (view.kind === "taking") {
     const player = (
@@ -75,7 +83,7 @@ export default async function StudentAssignmentPage({
     );
     return (
       <>
-        <Header assignment={view.assignment} />
+        <Header assignment={view.assignment} timeZone={timeZone} />
         <div className="mt-6">
           {view.record ? <RecordLayout record={view.record}>{player}</RecordLayout> : player}
         </div>
@@ -87,7 +95,7 @@ export default async function StudentAssignmentPage({
   const submitted = latest?.submittedAt != null;
   return (
     <>
-      <Header assignment={view.assignment} />
+      <Header assignment={view.assignment} timeZone={timeZone} />
       {view.closed ? (
         <>
           <p role="status" className="measure mt-6 text-ink-1">

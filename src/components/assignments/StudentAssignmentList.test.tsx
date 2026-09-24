@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { formatInstant } from "@/lib/assignments/assignments";
+import { formatInZone } from "@/lib/classes/timeZone";
 import { StudentAssignmentList } from "./StudentAssignmentList";
 
 const CLASS_ID = "00000000-0000-4000-8000-0000000000c1";
@@ -13,23 +13,27 @@ const ENTRY = {
   maxAttempts: 2,
   shuffleOptions: true,
 };
+const NUR_310 = { name: "NUR 310", timeZone: "America/New_York" };
 
 describe("StudentAssignmentList", () => {
   it("says so when nothing is open", () => {
-    render(<StudentAssignmentList assignments={[]} classNames={new Map()} />);
+    render(<StudentAssignmentList assignments={[]} classes={new Map()} />);
     expect(screen.getByText("Nothing is open right now.")).toBeInTheDocument();
   });
 
   it("lists what is open, with its class, its close time and its attempts", () => {
     render(
-      <StudentAssignmentList assignments={[ENTRY]} classNames={new Map([[CLASS_ID, "NUR 310"]])} />,
+      <StudentAssignmentList assignments={[ENTRY]} classes={new Map([[CLASS_ID, NUR_310]])} />,
     );
     const item = within(screen.getByRole("list", { name: "Open assignments" })).getByRole(
       "listitem",
     );
     expect(item).toHaveTextContent("Cardiac bank");
     expect(item).toHaveTextContent("NUR 310");
-    expect(item).toHaveTextContent(`Closes ${formatInstant(ENTRY.closesAt, "local")}`);
+    expect(item).toHaveTextContent(`Closes ${formatInZone(ENTRY.closesAt, "America/New_York")}`);
+    // In the class's zone (#242), whatever zone the viewer's device is on.
+    expect(item).toHaveTextContent("Closes Thu 24 Sep 2026, 19:00 EDT");
+    expect(within(item).getByText(/19:00 EDT/)).toHaveAttribute("datetime", ENTRY.closesAt);
     expect(item).toHaveTextContent("2 attempts");
   });
 
@@ -37,7 +41,7 @@ describe("StudentAssignmentList", () => {
     render(
       <StudentAssignmentList
         assignments={[ENTRY, { ...ENTRY, id: "a2", title: "Renal bank", maxAttempts: 1 }]}
-        classNames={new Map([[CLASS_ID, "NUR 310"]])}
+        classes={new Map([[CLASS_ID, NUR_310]])}
         progress={
           new Map([
             ["a1", { submitted: 1, open: false }],

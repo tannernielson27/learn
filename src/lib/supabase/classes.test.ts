@@ -7,6 +7,7 @@ import {
   removeStudent,
   renameClass,
   rotateInvite,
+  setClassTimeZone,
 } from "./classes";
 
 type Reply = { data?: unknown; error?: { code?: string; message?: string } | null };
@@ -58,13 +59,17 @@ describe("listClasses", () => {
 });
 
 describe("readClass", () => {
-  it("reads one class with its token, for the author's page", async () => {
-    const fake = fakeQuery({ data: { id: CLASS_ID, name: "NUR 310", invite_token: TOKEN } });
+  it("reads one class with its token and time zone, for the author's page", async () => {
+    const fake = fakeQuery({
+      data: { id: CLASS_ID, name: "NUR 310", invite_token: TOKEN, time_zone: "America/Denver" },
+    });
     expect(await readClass(fake.client, CLASS_ID)).toEqual({
       id: CLASS_ID,
       name: "NUR 310",
       inviteToken: TOKEN,
+      timeZone: "America/Denver",
     });
+    expect(fake.calls[0]).toEqual(["select", ["id, name, invite_token, time_zone"]]);
   });
 
   it("returns null for a class the author cannot see", async () => {
@@ -129,6 +134,24 @@ describe("writes", () => {
     expect(await renameClass(fakeQuery({ data: [], error: null }).client, CLASS_ID, "New")).toBe(
       false,
     );
+  });
+
+  it("sets the time zone, and says when no row changed (#242)", async () => {
+    const set = fakeQuery({ data: [{ id: CLASS_ID }], error: null });
+    expect(await setClassTimeZone(set.client, CLASS_ID, "America/New_York")).toBe("saved");
+    expect(set.from).toHaveBeenCalledWith("classes");
+    expect(set.calls[0]).toEqual(["update", [{ time_zone: "America/New_York" }]]);
+    expect(set.calls).toContainEqual(["eq", ["id", CLASS_ID]]);
+    expect(
+      await setClassTimeZone(fakeQuery({ data: [], error: null }).client, CLASS_ID, "UTC"),
+    ).toBe("gone");
+  });
+
+  it("tells a zone the database refused from any other failure", async () => {
+    const refused = fakeQuery({ data: null, error: { code: "23514" } });
+    expect(await setClassTimeZone(refused.client, CLASS_ID, "Mars/Olympus")).toBe("invalid");
+    const down = fakeQuery({ data: null, error: { code: "08006" } });
+    expect(await setClassTimeZone(down.client, CLASS_ID, "UTC")).toBe("failed");
   });
 
   it("rotates through the database function", async () => {

@@ -6,18 +6,20 @@ import { deleteAssignment, editAssignment } from "@/app/author/assignments/actio
 import { AssignmentList } from "@/components/assignments/AssignmentList";
 import { ClassNameForm } from "@/components/classes/ClassNameForm";
 import { ClassRoster } from "@/components/classes/ClassRoster";
+import { ClassTimeZoneForm } from "@/components/classes/ClassTimeZoneForm";
 import { InviteLinkPanel } from "@/components/classes/InviteLinkPanel";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { classPath, CLASSES_PATH, inviteUrl } from "@/lib/classes/classes";
+import { supportedTimeZones, timeZoneChoices } from "@/lib/classes/timeZone";
 import { canonicalSiteOrigin } from "@/lib/http/siteOrigin";
 import { listClassAssignments } from "@/lib/supabase/assignments";
 import { classRoster, readClass } from "@/lib/supabase/classes";
-import { removeStudent, renameClass, rotateInvite } from "../actions";
+import { removeStudent, renameClass, rotateInvite, setTimeZone } from "../actions";
 
 export const metadata: Metadata = { title: "Class" };
 
-/** One class: its name, its invite link and QR code, and its roster (#205). */
+/** One class: its name, its invite link and QR code, its roster (#205) and its time zone (#242). */
 export default async function ClassPage({ params }: PageProps<"/author/classes/[classId]">) {
   const { classId } = await params;
   const { supabase } = await requireAuthor(classPath(classId));
@@ -90,6 +92,17 @@ export default async function ClassPage({ params }: PageProps<"/author/classes/[
             removeActionFor={(profileId) => removeStudent.bind(null, detail.id, profileId)}
           />
         )}
+      </section>
+
+      <section aria-labelledby="time-zone-heading" className="mb-10 border-t border-line pt-6">
+        <h2 id="time-zone-heading" className="mb-3 text-lg font-medium text-ink-1">
+          Time zone
+        </h2>
+        <ClassTimeZoneForm
+          action={setTimeZone.bind(null, detail.id)}
+          currentZone={detail.timeZone}
+          zones={timeZoneChoices(supportedTimeZones(), detail.timeZone)}
+        />
       </section>
 
       <section aria-labelledby="rename-heading" className="border-t border-line pt-6">

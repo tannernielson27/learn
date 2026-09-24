@@ -1,19 +1,29 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { LocalTime } from "@/components/assignments/LocalTime";
+import { ClassTime } from "@/components/assignments/ClassTime";
 import { AssignmentResults } from "@/components/assignments/results/AssignmentResults";
 import { studentAssignmentPath } from "@/lib/assignments/assignments";
 import { resultsStore } from "@/lib/assignments/attemptStore";
 import { loadResultsPage, type ResultsHeader } from "@/lib/assignments/results";
 import { isUuid } from "@/lib/authoring/ids";
 import { STUDENT_HOME } from "@/lib/classes/classes";
+import { DEFAULT_CLASS_TIME_ZONE, zoneOfClass } from "@/lib/classes/timeZone";
 import { requireStudent } from "@/lib/classes/viewer";
+import { myClasses } from "@/lib/supabase/classInvites";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const metadata: Metadata = { title: "Results" };
 
-function Header({ assignment, closed }: { assignment: ResultsHeader; closed: boolean }) {
+function Header({
+  assignment,
+  closed,
+  timeZone,
+}: {
+  assignment: ResultsHeader;
+  closed: boolean;
+  timeZone: string;
+}) {
   return (
     <>
       <p className="mb-2 text-sm text-ink-2">
@@ -25,7 +35,7 @@ function Header({ assignment, closed }: { assignment: ResultsHeader; closed: boo
       <h1 className="font-read text-3xl break-words text-ink-1">{assignment.title}</h1>
       <p className="mt-2 text-sm text-ink-2">
         {closed ? "Closed " : "Closes "}
-        <LocalTime iso={assignment.closesAt} />
+        <ClassTime iso={assignment.closesAt} timeZone={timeZone} />
       </p>
     </>
   );
@@ -45,11 +55,10 @@ export default async function StudentResultsPage({
   if (!isUuid(assignmentId)) notFound();
 
   const { supabase, userId } = await requireStudent();
-  const view = await loadResultsPage(
-    resultsStore(supabase, createSupabaseServiceClient()),
-    assignmentId,
-    userId,
-  );
+  const [view, classes] = await Promise.all([
+    loadResultsPage(resultsStore(supabase, createSupabaseServiceClient()), assignmentId, userId),
+    myClasses(supabase),
+  ]);
 
   if (view.kind === "missing") notFound();
   if (view.kind === "failed") {
@@ -59,11 +68,14 @@ export default async function StudentResultsPage({
       </p>
     );
   }
+  // #242: the close is said in the class's zone; a student no longer in the class gets the default.
+  const classId = view.assignment.classId;
+  const timeZone = classId === null ? DEFAULT_CLASS_TIME_ZONE : zoneOfClass(classes, classId);
 
   if (view.kind === "pending") {
     return (
       <>
-        <Header assignment={view.assignment} closed={false} />
+        <Header assignment={view.assignment} closed={false} timeZone={timeZone} />
         <p role="status" data-testid="results-pending" className="measure mt-6 text-ink-1">
           Your results will be shown when the assignment closes.
         </p>
@@ -81,7 +93,7 @@ export default async function StudentResultsPage({
 
   return (
     <>
-      <Header assignment={view.assignment} closed />
+      <Header assignment={view.assignment} closed timeZone={timeZone} />
       <AssignmentResults
         best={view.best}
         attemptsMade={view.attemptsMade}

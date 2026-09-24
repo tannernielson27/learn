@@ -175,9 +175,10 @@ Everything in `supabase/migrations/` today, in filename order — this is the re
 | 27  | `20260924050000_my_assignment_result`          | a student's own score and marks after an assignment closes (#210)                  | applied                    |
 | 28  | `20260924060000_assignment_reminders`          | reminder email outbox, class time zone, the pg_cron entry point (#212, §7.8)       | applied                    |
 | 29  | `20260925000000_security_guard`                | RLS on class_removals, anon execute revoked, removal trigger skips cascades (#233) | applied                    |
-| 30  | `20260925010000_shared_rate_limits`            | sign-in, invite and cron limits shared across server instances, keys hashed (#234) | **apply on merge**         |
+| 30  | `20260925010000_shared_rate_limits`            | sign-in, invite and cron limits shared across server instances, keys hashed (#234) | applied                    |
+| 31  | `20260925020000_class_timezone_and_removed`    | class time zone set in the app; removed students in the assignment report (#242)   | applied                    |
 
-Checked 2026-09-24 with `pnpm exec supabase migration list --linked`: rows 1–29 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged, row 23 straight after #220, row 24 straight after #222, row 25 straight after #224, row 26 straight after #226, row 27 straight after #228, row 28 straight after #230, row 29 straight after #245 on 2026-09-24). Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
+Checked 2026-09-24 with `pnpm exec supabase migration list --linked`: rows 1–31 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged, row 23 straight after #220, row 24 straight after #222, row 25 straight after #224, row 26 straight after #226, row 27 straight after #228, row 28 straight after #230, row 29 straight after #245, row 30 after #247 and row 31 after #251, all on 2026-09-24). Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
 
 > **No standing drift.** The existing hosted project is current. The separate production project (§7.3) does not exist yet and will need every row replayed when it is created.
 
@@ -320,11 +321,7 @@ Until the §7.3 split there is one project and one job, pointed at the productio
 
 **Turning it off:** `select cron.unschedule('learn-assignment-reminders');`. Nothing is lost: what is owed stays owed, and whatever is still due when the job comes back goes out then (an "is open" email only within a day of opening, so a long pause does not send stale ones).
 
-**A class's time zone.** The due time in each email is in the class's time zone, which is `America/Denver` for every class unless changed. There is no setting in the app yet; to change one in the SQL editor (the name must be one Postgres knows, such as `America/Chicago` or `Europe/London`, or the update is refused):
-
-```sql
-update public.classes set time_zone = 'America/Chicago' where name = 'NUR 310';
-```
+**A class's time zone.** The due time in each email, on the student home and on the assignment pages is in the class's time zone, which is `America/Denver` for a new class. An instructor changes it in the app: Classes → the class → **Time zone** (#242). The database refuses a name Postgres does not know, whoever writes it.
 
 **What was sent.** `select o.kind, o.status, o.tries, o.last_error, o.sent_at from private.email_outbox o order by o.created_at desc limit 20;` lists recent reminders with their state. The table holds no addresses and the route logs none; `last_error` is only an error kind such as `rate_limited`. A reminder is given up after five failed tries (`status = 'failed'`).
 

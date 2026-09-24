@@ -39,6 +39,11 @@ export interface ResultsHeader {
   id: string;
   title: string;
   closesAt: string;
+  /**
+   * Whose zone the close is said in (#242). Null for a student taken off the class after
+   * attempting, who still sees their own results but can no longer read the assignment row.
+   */
+  classId: string | null;
 }
 
 /** How the student's best attempt stands on one item. */
@@ -165,19 +170,33 @@ export async function loadResultsPage(
     return assignment
       ? {
           kind: "pending",
-          assignment: { id: assignment.id, title: assignment.title, closesAt: assignment.closesAt },
+          assignment: {
+            id: assignment.id,
+            title: assignment.title,
+            closesAt: assignment.closesAt,
+            classId: assignment.classId,
+          },
         }
       : { kind: "missing" };
   }
 
   const { result } = read;
-  const set = await store.items(result.itemSet);
+  // The assignment row only names the class; a removed student reads none, and still has results.
+  const [set, assignment] = await Promise.all([
+    store.items(result.itemSet),
+    store.assignment(assignmentId),
+  ]);
   if (set === null) return { kind: "failed" };
 
   const best = bestOf(result.attempts);
   return {
     kind: "results",
-    assignment: { id: result.assignmentId, title: result.title, closesAt: result.closesAt },
+    assignment: {
+      id: result.assignmentId,
+      title: result.title,
+      closesAt: result.closesAt,
+      classId: assignment?.classId ?? null,
+    },
     best:
       best && best.score !== null && best.maxScore !== null
         ? { attemptNumber: best.number, score: best.score, maxScore: best.maxScore }
