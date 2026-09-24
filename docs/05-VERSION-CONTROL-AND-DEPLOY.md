@@ -173,6 +173,7 @@ Everything in `supabase/migrations/` today, in filename order — this is the re
 | 25  | `20260924030800_assignment_attempts`           | take an assignment: attempts, autosave, submit, submit at close (#208)         | applied                    |
 | 26  | `20260924040000_assignment_report`             | the author's read of attempt scores for the assignment report (#211)           | applied                    |
 | 27  | `20260924050000_my_assignment_result`          | a student's own score and marks after an assignment closes (#210)              | applied                    |
+| 28  | `20260924060000_assignment_reminders`          | reminder email outbox, class time zone, the pg_cron entry point (#212, §7.8)   | **not applied**            |
 
 Checked 2026-09-23 with `pnpm exec supabase migration list --linked`: rows 1–27 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged, row 23 straight after #220, row 24 straight after #222, row 25 straight after #224, row 26 straight after #226, row 27 straight after #228). Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
 
@@ -289,10 +290,41 @@ Do these in order, in **both** Supabase projects (production and `vauokqoyvewtzu
 6. **[ ] Vercel environment variables.** Vercel → project → Settings → Environment Variables, both server-only (no `NEXT_PUBLIC_`):
    - **Production** scope: `RESEND_API_KEY` = the `learn-production` key; `EMAIL_FROM` = `LeaRN <learn@info.tannernielson.com>`.
    - **Preview** scope: `RESEND_API_KEY` = the `learn-preview` key; `EMAIL_FROM` = the same sender.
-     Redeploy each (env vars apply to a new build only). Nothing sends app email until #212, so a missing value breaks no page; a send attempt without them fails with an error naming `RESEND_API_KEY`.
+     Redeploy each (env vars apply to a new build only). Only the reminder job (#212, §7.8) sends app email, so a missing value breaks no page; without them the job sends nothing and keeps every reminder for its next run, logging an error that names `RESEND_API_KEY`.
 7. **[ ] Check it.** On the production URL, ask for a link to an instructor address you own: it arrives from `LeaRN <learn@info.tannernielson.com>` with the LeaRN template, and signs you in. Resend → Emails lists it as delivered.
 
-The app mailer never logs a recipient's address, a message body or the key, and its errors carry only the HTTP status and Resend's error name. Build each message's idempotency key from what it is about (`reminder:<assignmentId>:<userId>`), never from the address; Resend drops a repeat of the same key for 24 hours.
+The app mailer never logs a recipient's address, a message body or the key, and its errors carry only the HTTP status and Resend's error name. Build each message's idempotency key from what it is about (`reminder:<assignmentId>:<userId>:<kind>`), never from the address; Resend drops a repeat of the same key for 24 hours.
+
+### 7.8 Scheduled jobs: reminder emails and the submit at close (#212, ADR 0007)
+
+pg_cron in the database calls the app's `POST /api/cron/assignment-reminders` every 15 minutes through pg_net, with a shared secret. Each run submits attempts left open at close (#208) and sends the reminder emails that are due: "Week 5 is open" to every class member when an assignment opens, and "Week 5 closes tomorrow at 17:00" 24 hours before close to members who have not submitted. Until these steps are done in a project nothing is scheduled: no reminder goes out, and the submit at close happens only when someone opens the assignment or its report, as before. Do them after migration 28 is applied and after §7.7 (the job sends through Resend).
+
+Until the §7.3 split there is one project and one job, pointed at the production URL. After the split, repeat steps 1–4 in the production project with its own secret, and leave the preview project unscheduled.
+
+1. **[ ] Make the secret.** On your own machine: `openssl rand -hex 32` (64 characters; the route refuses anything under 32). It is shown once here and pasted twice below; do not save it anywhere else.
+2. **[ ] Vercel `CRON_SECRET`.** Vercel → project → Settings → Environment Variables → `CRON_SECRET` = that value, **Production** scope, server-only (never `NEXT_PUBLIC_`). Redeploy. Until it is set the route answers every call `503 not_configured`.
+3. **[ ] Enable the two extensions.** Supabase → Database → Extensions → enable **pg_cron** (it installs into `pg_catalog`) and **pg_net** (schema `extensions`). Or in the SQL editor: `create extension if not exists pg_cron with schema pg_catalog; create extension if not exists pg_net with schema extensions;`
+4. **[ ] Store the URL and the secret in Vault, then schedule the job.** Supabase → SQL Editor, in the same project, with the secret from step 1 pasted in place of `<secret>`:
+
+   ```sql
+   select vault.create_secret('https://learn-tanner-nielsons-projects.vercel.app/api/cron/assignment-reminders', 'learn_reminders_url');
+   select vault.create_secret('<secret>', 'learn_cron_secret');
+   select cron.schedule('learn-assignment-reminders', '*/15 * * * *', $$select private.call_reminder_route()$$);
+   ```
+
+   Use the production URL (or the custom domain once it exists); a preview URL sits behind Vercel's deployment protection and would answer with a login page. To change either value later: `select vault.update_secret((select id from vault.secrets where name = 'learn_cron_secret'), '<new secret>');` (and the same for the URL), then update `CRON_SECRET` in Vercel and redeploy.
+
+5. **[ ] Check it.** In the SQL editor, `select private.call_reminder_route();` must answer `queued` (anything else names what is missing: `no_pg_net`, `no_vault` or `not_configured`). A few seconds later, `select status_code, content from net._http_response order by created desc limit 1;` shows `200` and a body of counts only, such as `{"autoSubmitted":0,"opened":0,"closingSoon":0,"sent":0,...}`. A `401` means the two secrets differ; `503` means `CRON_SECRET` is missing from the deployment. After 15 minutes, `select status, return_message from cron.job_run_details order by start_time desc limit 3;` shows the scheduled runs succeeding.
+
+**Turning it off:** `select cron.unschedule('learn-assignment-reminders');`. Nothing is lost: what is owed stays owed, and whatever is still due when the job comes back goes out then (an "is open" email only within a day of opening, so a long pause does not send stale ones).
+
+**A class's time zone.** The due time in each email is in the class's time zone, which is `America/Denver` for every class unless changed. There is no setting in the app yet; to change one in the SQL editor (the name must be one Postgres knows, such as `America/Chicago` or `Europe/London`, or the update is refused):
+
+```sql
+update public.classes set time_zone = 'America/Chicago' where name = 'NUR 310';
+```
+
+**What was sent.** `select o.kind, o.status, o.tries, o.last_error, o.sent_at from private.email_outbox o order by o.created_at desc limit 20;` lists recent reminders with their state. The table holds no addresses and the route logs none; `last_error` is only an error kind such as `rate_limited`. A reminder is given up after five failed tries (`status = 'failed'`).
 
 ## 8. Working together day to day
 

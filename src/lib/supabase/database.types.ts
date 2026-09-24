@@ -420,6 +420,7 @@ export type Database = {
           invite_token: string;
           name: string;
           org_id: string;
+          time_zone: string;
           updated_at: string;
         };
         Insert: {
@@ -429,6 +430,7 @@ export type Database = {
           invite_token?: string;
           name: string;
           org_id?: string;
+          time_zone?: string;
           updated_at?: string;
         };
         Update: {
@@ -438,6 +440,7 @@ export type Database = {
           invite_token?: string;
           name?: string;
           org_id?: string;
+          time_zone?: string;
           updated_at?: string;
         };
         Relationships: [
@@ -1001,6 +1004,20 @@ export type Database = {
           session_timer_seconds: number;
         }[];
       };
+      claim_assignment_reminders: {
+        Args: { lease_seconds?: number; max_rows?: number };
+        Returns: {
+          assignment_id: string;
+          closes_at: string;
+          email: string;
+          kind: string;
+          outbox_id: string;
+          student_id: string;
+          time_zone: string;
+          title: string;
+          tries: number;
+        }[];
+      };
       class_roster: {
         Args: { target_class: string };
         Returns: {
@@ -1011,12 +1028,23 @@ export type Database = {
           signed_in: boolean;
         }[];
       };
+      complete_assignment_reminder: {
+        Args: { message_id?: string; target: string };
+        Returns: boolean;
+      };
       duplicate_case_study: {
         Args: { source_case_study: string };
         Returns: string;
       };
       duplicate_item: { Args: { source_item: string }; Returns: string };
       end_session: { Args: { target: string }; Returns: string };
+      enqueue_assignment_reminders: {
+        Args: never;
+        Returns: {
+          closing_soon: number;
+          opened: number;
+        }[];
+      };
       expired_open_attempts: {
         Args: {
           max_rows?: number;
@@ -1033,6 +1061,10 @@ export type Database = {
         }[];
       };
       extend_item_timer: { Args: { target: string }; Returns: undefined };
+      fail_assignment_reminder: {
+        Args: { error_kind: string; retry_in_seconds?: number; target: string };
+        Returns: string;
+      };
       import_bank_content: {
         Args: {
           new_case_study: Json;
@@ -1150,6 +1182,10 @@ export type Database = {
           refusal: string;
           submitted_at: string;
         }[];
+      };
+      release_assignment_reminders: {
+        Args: { retry_in_seconds?: number; targets: string[] };
+        Returns: number;
       };
       reorder_case_study_steps: {
         Args: { item_ids: string[]; target: string };
