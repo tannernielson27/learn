@@ -37,6 +37,10 @@ const GALLERY_PATHS = [
   "/gallery/case-study",
   "/gallery/live",
   "/gallery/live/results",
+  // #235: the page that throws on purpose for the Sentry check. No key in it, but it must be 404
+  // on production like the rest. Its `/server` handler is not probed: on a preview it answers 500
+  // by design, which the open-gallery control above would count as a failure.
+  "/gallery/sentry-check",
   "/gallery",
 ];
 

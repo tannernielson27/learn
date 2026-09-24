@@ -1,6 +1,7 @@
 "use client";
 
 import type { ErrorInfo } from "next/error";
+import { useReportError } from "@/components/observability/useReportError";
 import { RouteRecovery } from "@/components/recovery/RouteRecovery";
 import "./globals.css";
 
@@ -16,7 +17,8 @@ import "./globals.css";
  * re-renders from the server, and on a live session's page that is the same rejoin the room's own
  * boundary does (see `play/[sessionId]/error.tsx`).
  */
-export default function GlobalError({ retry }: ErrorInfo) {
+export default function GlobalError({ error, retry }: ErrorInfo) {
+  useReportError(error);
   return (
     <html lang="en" className="h-full antialiased">
       <body className="flex min-h-full flex-col bg-surface-0 text-ink-1">

@@ -326,6 +326,31 @@ update public.classes set time_zone = 'America/Chicago' where name = 'NUR 310';
 
 **What was sent.** `select o.kind, o.status, o.tries, o.last_error, o.sent_at from private.email_outbox o order by o.created_at desc limit 20;` lists recent reminders with their state. The table holds no addresses and the route logs none; `last_error` is only an error kind such as `rate_limited`. A reminder is given up after five failed tries (`status = 'failed'`).
 
+### 7.9 Error reporting through Sentry (#235)
+
+The app reports browser and server errors to Sentry on the free tier. It is off until the DSN is set: without it nothing loads, nothing is sent, and the build is the same as before. Every event is scrubbed in the app before it leaves (`src/lib/observability/scrub.ts`): no user, no cookies, no request body or query string, and emails, names, invite tokens (`/c/…`), join codes, session ids in `/live/…` and `/play/…`, answer keys and rationales are removed or masked. There is no session replay, and the browser sends no traces; the server samples 10% of requests for tracing.
+
+1. **[ ] Create the Sentry project.** sentry.io → sign up on the free (Developer) plan → Create Project → platform **Next.js**, alert frequency "Alert me on every new issue", name `learn-web`. Skip the wizard's install step; the code is already in the repo.
+2. **[ ] Harden the project's own privacy settings** (a second layer behind the in-app scrub). Project → Settings → Security & Privacy: turn on **Data Scrubber**, **Use Default Scrubbers** and **Prevent Storing of IP Addresses**. Organization → Settings → Security & Privacy: the same two scrubber switches.
+3. **[ ] Copy the DSN.** Project → Settings → Client Keys (DSN). It looks like `https://<key>@o<n>.ingest.us.sentry.io/<id>`. A DSN can only send events, so it is safe in the browser.
+4. **[ ] Make an upload token.** Organization → Settings → Developer Settings → Organization Tokens → Create. It is shown once. It uploads source maps at build so stack traces are readable; the build deletes the maps from the output afterwards, so they are never served. Note the organization slug and the project slug from the Sentry URL (`sentry.io/organizations/<org>/projects/<project>/`).
+5. **[ ] Add five variables to Vercel**, each in **Production** and **Preview**: Vercel → project → Settings → Environment Variables.
+
+   | Variable                 | Value                 | Notes                                                   |
+   | ------------------------ | --------------------- | ------------------------------------------------------- |
+   | `SENTRY_DSN`             | the DSN from step 3   | server errors                                           |
+   | `NEXT_PUBLIC_SENTRY_DSN` | the same DSN          | browser errors; baked in at build                       |
+   | `SENTRY_AUTH_TOKEN`      | the token from step 4 | build only; mark it **Sensitive**; never `NEXT_PUBLIC_` |
+   | `SENTRY_ORG`             | the organization slug | build only                                              |
+   | `SENTRY_PROJECT`         | `learn-web`           | build only                                              |
+
+   Then redeploy (variables apply to a new build only). Without the last three, errors are still reported and the build skips the source map upload with a warning. Production and previews file under separate environments (`production`, `preview`) in the one project, from Vercel's `VERCEL_ENV`; keep Vercel's "Automatically expose System Environment Variables" on so the browser gets `NEXT_PUBLIC_VERCEL_ENV`.
+
+6. **[ ] Check it on a preview.** Open `<preview URL>/gallery/sentry-check` (it is closed on production, like the rest of the gallery). Press **Throw in the browser**, then open **Throw on the server**. Within a minute both errors appear in Sentry → Issues, filtered to the `preview` environment. Open each one: the message must read `fake student [email] opened /c/[redacted] with code [code]`, and the event must have no User, no Cookies and no request body. If the fake email, token or code appears in full, stop and report it; the scrub did not run.
+7. **[ ] Set the alert rules.** Project → Alerts → Create Alert → Issues: "A new issue is created" → email the owner, environment `production`. Add a second: "The issue is seen more than 10 times in 1 hour" → email. The free tier allows 5,000 errors a month; Settings → Spike Protection stays on so one bad deploy cannot use them up.
+
+**Turning it off:** delete `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN` from the scope and redeploy.
+
 ## 8. Working together day to day
 
 - Pick a story from the sprint milestone, assign yourself, branch, PR. Two people never work on the same story.

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ErrorInfo } from "next/error";
+import { useReportError } from "@/components/observability/useReportError";
 import { RouteRecovery } from "@/components/recovery/RouteRecovery";
 
 /**
@@ -8,7 +9,8 @@ import { RouteRecovery } from "@/components/recovery/RouteRecovery";
  * header — the way back to the banks, and Sign out — stays on the screen. `retry` asks the server
  * for the page again, which is also what reloads anything saved since.
  */
-export default function AuthorError({ retry }: ErrorInfo) {
+export default function AuthorError({ error, retry }: ErrorInfo) {
+  useReportError(error);
   return (
     <RouteRecovery
       headline="This page could not be shown."

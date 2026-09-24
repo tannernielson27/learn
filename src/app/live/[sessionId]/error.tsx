@@ -1,6 +1,7 @@
 "use client";
 
 import type { ErrorInfo } from "next/error";
+import { useReportError } from "@/components/observability/useReportError";
 import { RouteRecovery } from "@/components/recovery/RouteRecovery";
 
 /**
@@ -9,7 +10,8 @@ import { RouteRecovery } from "@/components/recovery/RouteRecovery";
  * `retry` (a `router.refresh()` and a reset in one transition) reads the session again on the
  * server and mounts the console fresh, which reopens its channel.
  */
-export default function HostError({ retry }: ErrorInfo) {
+export default function HostError({ error, retry }: ErrorInfo) {
+  useReportError(error);
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
       <RouteRecovery

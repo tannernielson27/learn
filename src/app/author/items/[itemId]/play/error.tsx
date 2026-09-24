@@ -1,6 +1,7 @@
 "use client";
 
 import type { ErrorInfo } from "next/error";
+import { useReportError } from "@/components/observability/useReportError";
 import { RouteRecovery } from "@/components/recovery/RouteRecovery";
 
 /**
@@ -9,7 +10,8 @@ import { RouteRecovery } from "@/components/recovery/RouteRecovery";
  * is caught closer than this, in the question area (#54). A case study keeps its steps in memory,
  * so the honest thing to say is that Try again starts it over.
  */
-export default function PlayItemError({ retry }: ErrorInfo) {
+export default function PlayItemError({ error, retry }: ErrorInfo) {
+  useReportError(error);
   return (
     <RouteRecovery
       headline="This could not be played."

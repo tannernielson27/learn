@@ -1,6 +1,7 @@
 "use client";
 
 import type { ErrorInfo } from "next/error";
+import { useReportError } from "@/components/observability/useReportError";
 import { RouteRecovery } from "@/components/recovery/RouteRecovery";
 
 /**
@@ -25,7 +26,8 @@ import { RouteRecovery } from "@/components/recovery/RouteRecovery";
  * What does not survive is anything only the unmounted component held: an answer chosen but not
  * sent. The copy says so rather than promising it.
  */
-export default function PlayError({ retry }: ErrorInfo) {
+export default function PlayError({ error, retry }: ErrorInfo) {
+  useReportError(error);
   return (
     <main className="mx-auto w-full max-w-lg flex-1 px-4 py-12">
       <RouteRecovery
