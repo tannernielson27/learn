@@ -130,29 +130,6 @@ export async function listOpenAssignments(
   return data.map(toSummary);
 }
 
-/** How many closed assignments the student home lists: the most recent, for their results. */
-export const CLOSED_LIST_LIMIT = 50;
-
-/**
- * A student's assignments that have closed, most recently closed first, for links to their
- * results (#210). RLS leaves out every class they are no longer in. Whether results are released
- * is the database's call on the results page, not this list's.
- */
-export async function listClosedAssignments(
-  client: Client,
-  now: Date,
-): Promise<AssignmentSummary[] | null> {
-  const { data, error } = await client
-    .from("assignments")
-    .select(SUMMARY_COLUMNS)
-    .lte("closes_at", now.toISOString())
-    .order("closes_at", { ascending: false })
-    .order("id")
-    .limit(CLOSED_LIST_LIMIT);
-  if (error || !data) return null;
-  return data.map(toSummary);
-}
-
 async function updateAssignment(
   client: Client,
   assignmentId: string,

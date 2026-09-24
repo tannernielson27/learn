@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-24 (#237 merged in #252: `pnpm golive:check` and `/api/health`, no migration).
+Last updated: 2026-09-24 (#238 merged in #254 with `20260925030000_student_history` applied to hosted; auth e2e job limit raised to 30 minutes).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -136,7 +136,7 @@ Phase 4 splits across two sprints. Sprint 10 covers what real students need: har
 | [#237](https://github.com/tannernielson27/learn/issues/237) | chore(infra): a go-live check that proves production is ready for students                    | security                  | Merged (#252); no migration; run it per docs/05 §7.11                                         |
 | [#219](https://github.com/tannernielson27/learn/issues/219) | fix(player): an ordered-response item starts in the author's order, which is often the answer | player                    | Merged (#249); no migration; start order is keyed server-side                                 |
 | [#178](https://github.com/tannernielson27/learn/issues/178) | fix(live): drop the open select policy on live.session_public_state                           | live, security            | Blocked: owner turns off Realtime "Allow public access"                                       |
-| [#238](https://github.com/tannernielson27/learn/issues/238) | feat(student): a history of my assignments and best scores                                    | security, db, e2e         | To do                                                                                         |
+| [#238](https://github.com/tannernielson27/learn/issues/238) | feat(student): a history of my assignments and best scores                                    | security, db, e2e         | Merged (#254); `20260925030000_student_history` applied to hosted                             |
 | [#239](https://github.com/tannernielson27/learn/issues/239) | feat(student): my weakest clinical judgment steps                                             | security                  | To do                                                                                         |
 | [#240](https://github.com/tannernielson27/learn/issues/240) | feat(authoring): share a bank with a class for practice, and warn on graded reuse             | security, db, e2e         | To do                                                                                         |
 | [#241](https://github.com/tannernielson27/learn/issues/241) | feat(student): practice a shared bank with instant feedback                                   | player, security, db, e2e | To do                                                                                         |

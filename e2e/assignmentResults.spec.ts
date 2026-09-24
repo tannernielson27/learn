@@ -156,7 +156,7 @@ test("a student sees nothing before the close, then their score, keys and ration
   // After the close (and its two seconds of grace).
   await student.waitForTimeout(Math.max(0, closesAt + 3_000 - Date.now()));
   await student.goto("/learn");
-  const closed = student.getByRole("list", { name: "Closed assignments", exact: true });
+  const closed = student.getByRole("list", { name: "Assignment history", exact: true });
   await closed.getByRole("link", { name: `Results for ${bankTitle}`, exact: true }).click();
   await expect(student).toHaveURL(new RegExp(`${bankResults}$`));
 

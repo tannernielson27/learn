@@ -11,8 +11,10 @@ import {
   readStudentAssignment,
   recordSubmission,
 } from "@/lib/supabase/attempts";
+import { readMyHistory } from "@/lib/supabase/history";
 import { readMyResult } from "@/lib/supabase/results";
 import type { AttemptPageStore } from "./attemptPage";
+import type { HistoryStore } from "./history";
 import type { ResultsStore } from "./results";
 import { AUTO_SUBMIT_BATCH, type AssignmentReportStore } from "./reportLoader";
 import { autoSubmitExpired, type AutoSubmitStore, type SubmitStore } from "./submitAttempt";
@@ -67,6 +69,18 @@ export function resultsStore(user: Client, service: Client): ResultsStore {
     result: (assignmentId) => readMyResult(user, assignmentId),
     assignment: (assignmentId) => readStudentAssignment(user, assignmentId),
     items: (ids) => readSetItems(service, ids),
+  };
+}
+
+/**
+ * The student home's history (#238). The history is read as the student: the definer function
+ * answers only them, only about their own attempts, and only once each assignment has closed. The
+ * service role runs only the submit at close, narrowed to this student.
+ */
+export function historyStore(user: Client, service: Client): HistoryStore {
+  return {
+    autoSubmit: (filter) => autoSubmitExpired(autoSubmitStore(service), filter),
+    history: () => readMyHistory(user),
   };
 }
 
