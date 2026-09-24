@@ -54,9 +54,16 @@ function takeInviteBudget(
   requestHeaders: RequestHeaders,
   invite: ResolvedInvite,
 ): SignInRateLimitResult {
-  return invite.status === "open"
-    ? takeSignInInviteAttempt(requestHeaders, invite.classId)
-    : takeSignInAttempt(requestHeaders, "email");
+  if (invite.status !== "open") return takeSignInAttempt(requestHeaders, "email");
+  const taken = takeSignInInviteAttempt(requestHeaders, invite.classId);
+  if (!taken.ok) {
+    // A link used this hard is either a very large class or being farmed: the class id is what
+    // to rotate. Never the address, which this request carries.
+    console.warn("[invite] a class invite link reached its rate limit", {
+      classId: invite.classId,
+    });
+  }
+  return taken;
 }
 
 /**

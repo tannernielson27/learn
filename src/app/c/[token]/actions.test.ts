@@ -163,9 +163,17 @@ describe("requestInviteLink", () => {
       await requestInviteLink(TOKEN, { status: "idle" }, emailForm(newRecipient()));
     }
     scheduled.length = 0;
-    const over = await requestInviteLink(TOKEN, { status: "idle" }, emailForm(newRecipient()));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const recipient = newRecipient();
+    const over = await requestInviteLink(TOKEN, { status: "idle" }, emailForm(recipient));
     expect(over).toEqual({ status: "error", error: SIGN_IN_RATE_LIMITED });
     expect(scheduled).toHaveLength(0);
+    // Said out loud, with the class to rotate, and never the address.
+    expect(warn).toHaveBeenCalledTimes(1);
+    const logged = JSON.stringify(warn.mock.calls);
+    expect(logged).toContain("classId");
+    expect(logged).not.toContain(recipient);
+    warn.mockRestore();
   });
 
   it("gives another class from the same address a ceiling of its own", async () => {

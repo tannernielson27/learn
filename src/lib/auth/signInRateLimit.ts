@@ -136,7 +136,8 @@ export const SIGN_IN_LIMITS = {
  * per caller across every address (`SIGN_IN_LIMITS.email`). One caller hammering one address
  * meets the first, a flood on one address meets the second, and the third still bounds what any
  * one caller spends in total. It also means a caller needs four addresses of its own to hold one
- * ceiling down, and each of the four keeps paying against its own 30.
+ * ceiling down, and each of the four keeps paying against its own 30 (120 per class, 150 in all,
+ * while it holds a live class invite: see `SIGN_IN_INVITE_LIMIT`).
  *
  * Fixed windows, like the two above, with the same back-to-back-across-the-boundary cost.
  */
@@ -177,6 +178,17 @@ export const SIGN_IN_ADDRESS_LIMITS = {
  */
 export const SIGN_IN_INVITE_LIMIT = {
   attempts: 120,
+  windowMs: FIVE_MINUTES,
+} as const satisfies SignInLimit;
+
+/**
+ * One caller's budget across every class it holds a live link to. Without it the per-class budgets
+ * stack: a caller holding ten links (ten sections, or links forwarded to it) would get 1,200 invites
+ * and account creations a window instead of 120. 150 still lets two whole classes of sixty sign up
+ * behind one address at once, with room for retries.
+ */
+export const SIGN_IN_INVITE_TOTAL_LIMIT = {
+  attempts: 150,
   windowMs: FIVE_MINUTES,
 } as const satisfies SignInLimit;
 
@@ -317,8 +329,9 @@ export function createSignInRateLimiter(
     Record<"perCaller" | "overall", Readonly<SignInLimit>>
   > = SIGN_IN_ADDRESS_LIMITS,
   inviteLimit: Readonly<SignInLimit> = SIGN_IN_INVITE_LIMIT,
+  inviteTotalLimit: Readonly<SignInLimit> = SIGN_IN_INVITE_TOTAL_LIMIT,
 ): SignInRateLimiter {
-  // All four counters share one Map, so there is one bound and one eviction policy to reason
+  // All five counters share one Map, so there is one bound and one eviction policy to reason
   // about. The keys cannot collide: each carries a prefix the others do not use, and inside a
   // pair key neither half can hold the separator — `clientIp` has already checked that the
   // caller is an IP address or the one fixed word, a validated email has no `|` in it, and a
@@ -329,6 +342,7 @@ export function createSignInRateLimiter(
     ...Object.values(addressLimits).map((limit) => limit.windowMs),
     ...Object.values(limits).map((limit) => limit.windowMs),
     inviteLimit.windowMs,
+    inviteTotalLimit.windowMs,
   );
 
   function forgetFinished(now: number): void {
@@ -371,7 +385,9 @@ export function createSignInRateLimiter(
     },
     takeInvite(ip, classId, now = Date.now()) {
       if (ip === null) return { ok: true };
-      return within(`invite:${classId}|${ip}`, inviteLimit, now)
+      // The class first, so a class that is full does not also spend the caller's total.
+      return within(`invite:${classId}|${ip}`, inviteLimit, now) &&
+        within(`invite-all:${ip}`, inviteTotalLimit, now)
         ? { ok: true }
         : { ok: false, error: SIGN_IN_RATE_LIMITED };
     },

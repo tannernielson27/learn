@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   SIGN_IN_ADDRESS_LIMITS,
   SIGN_IN_INVITE_LIMIT,
+  SIGN_IN_INVITE_TOTAL_LIMIT,
   SIGN_IN_LIMITS,
   SIGN_IN_RATE_LIMITED,
   createSignInRateLimiter,
@@ -51,6 +52,24 @@ describe("the per-class invite budget", () => {
     expect(limiter.takeInvite(IP, CLASS_A, 0).ok).toBe(false);
     expect(limiter.takeInvite(IP, CLASS_B, 0)).toEqual({ ok: true });
     expect(limiter.takeInvite("198.51.100.9", CLASS_A, 0)).toEqual({ ok: true });
+  });
+
+  it("caps one caller across every class it holds a link to, so budgets do not stack", () => {
+    const limiter = createSignInRateLimiter();
+    const classes = Array.from(
+      { length: 10 },
+      (_, n) => `00000000-0000-4000-8000-0000000001${String(n).padStart(2, "0")}`,
+    );
+    let granted = 0;
+    for (const classId of classes) {
+      for (let call = 0; call < SIGN_IN_INVITE_LIMIT.attempts; call += 1) {
+        if (limiter.takeInvite(IP, classId, granted).ok) granted += 1;
+      }
+    }
+    expect(granted).toBe(SIGN_IN_INVITE_TOTAL_LIMIT.attempts);
+    // Two whole classes behind one address still fit.
+    expect(SIGN_IN_INVITE_TOTAL_LIMIT.attempts).toBeGreaterThanOrEqual(2 * 60);
+    expect(limiter.takeInvite("198.51.100.9", classes[0] ?? "", 0)).toEqual({ ok: true });
   });
 
   it("does not spend, or draw on, the plain sign-in budget", () => {
