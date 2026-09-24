@@ -163,7 +163,9 @@ test("a student removed after attempting stays in the report, under Removed from
   await page.goto(classPage);
   await page.getByRole("button", { name: `Remove ${email}`, exact: true }).click();
   await page.getByRole("button", { name: "Remove from class", exact: true }).click();
-  await expect(page.getByRole("list", { name: "Roster", exact: true })).not.toContainText(email);
+  // The class had one student, so the roster list gives way to its empty state (a list that is
+  // gone cannot be asserted "not to contain" anything).
+  await expect(page.getByText("Nobody has joined yet.", { exact: false })).toBeVisible();
 
   // The report still shows the attempt, in its own group and not in the class's.
   await page.goto(`/author/assignments/${assignmentId}/report`);
