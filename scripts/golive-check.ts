@@ -48,7 +48,9 @@ const supabase = (args: readonly string[]) =>
   run(process.execPath, [SUPABASE_BIN, ...args], QUERY_TIMEOUT_MS);
 
 function queryFor(target: Target): Query {
-  const where = target.kind === "local" ? ["--local"] : ["--project-ref", target.ref];
+  // The CLI takes --project-ref only alongside --linked; with it, the query goes to that ref through the
+  // Management API, whatever project this checkout is linked to.
+  const where = target.kind === "local" ? ["--local"] : ["--linked", "--project-ref", target.ref];
   return async (sql) =>
     parseQueryRows(await supabase(["db", "query", ...where, "-o", "json", sql]));
 }
