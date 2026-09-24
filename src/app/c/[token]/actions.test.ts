@@ -1,15 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SIGN_IN_EMAIL_ERROR } from "@/lib/auth/signInForm";
-import { SIGN_IN_ADDRESS_LIMITS, SIGN_IN_LIMITS } from "@/lib/auth/signInRateLimit";
+import {
+  SIGN_IN_ADDRESS_LIMITS,
+  SIGN_IN_INVITE_LIMIT,
+  SIGN_IN_LIMITS,
+  SIGN_IN_RATE_LIMITED,
+  takeSignInAttempt,
+} from "@/lib/auth/signInRateLimit";
 
 /**
  * The invite's Server Functions are wiring: the per-IP and per-recipient limits of #139/#157, the
- * token check, and handing the account work to `after()`. What is pinned here is that wiring, and
+ * per-class budget a valid token earns (#217), the token check, and handing the account work to
+ * `after()`. What is pinned here is that wiring, and
  * that no answer says whether an address has an account or which way a token failed.
  */
 
 const TOKEN = "AbC_-0123456789abcdefghijklmnopq";
 const CLASS_ID = "00000000-0000-4000-8000-0000000000c1";
+const OTHER_TOKEN = "ZyX_-9876543210zyxwvutsrqponmlkj";
+const OTHER_CLASS_ID = "00000000-0000-4000-8000-0000000000c2";
 
 const requestHeaders = new Headers({
   "x-vercel-id": "iad1::test",
@@ -138,12 +147,100 @@ describe("requestInviteLink", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  it("shares the sign-in per-IP limit", async () => {
-    for (let i = 0; i < SIGN_IN_LIMITS.email.attempts; i += 1) {
+  it("lets sixty students behind one campus address each get a link through a valid invite (#217)", async () => {
+    for (let student = 0; student < 60; student += 1) {
+      const email = newRecipient();
+      expect(await requestInviteLink(TOKEN, { status: "idle" }, emailForm(email))).toEqual({
+        status: "sent",
+        email,
+      });
+    }
+    expect(scheduled).toHaveLength(60);
+  });
+
+  it("refuses a valid invite past its per-class ceiling, with the sign-in wording", async () => {
+    for (let i = 0; i < SIGN_IN_INVITE_LIMIT.attempts; i += 1) {
       await requestInviteLink(TOKEN, { status: "idle" }, emailForm(newRecipient()));
     }
+    scheduled.length = 0;
     const over = await requestInviteLink(TOKEN, { status: "idle" }, emailForm(newRecipient()));
-    expect(over.status).toBe("error");
+    expect(over).toEqual({ status: "error", error: SIGN_IN_RATE_LIMITED });
+    expect(scheduled).toHaveLength(0);
+  });
+
+  it("gives another class from the same address a ceiling of its own", async () => {
+    for (let i = 0; i <= SIGN_IN_INVITE_LIMIT.attempts; i += 1) {
+      await requestInviteLink(TOKEN, { status: "idle" }, emailForm(newRecipient()));
+    }
+    resolveReply = { data: [{ class_id: OTHER_CLASS_ID, class_name: "NUR 320" }], error: null };
+    const email = newRecipient();
+    expect(await requestInviteLink(OTHER_TOKEN, { status: "idle" }, emailForm(email))).toEqual({
+      status: "sent",
+      email,
+    });
+  });
+
+  it.each([
+    ["an unknown or rotated token", TOKEN, { data: [], error: null }],
+    ["a malformed token", "../../etc", { data: [], error: null }],
+    [
+      "an address that has guessed too many tokens",
+      TOKEN,
+      { data: null, error: { code: "PT429" } },
+    ],
+    ["a database that cannot answer", TOKEN, { data: null, error: { code: "XX000" } }],
+  ] as const)("limits %s to the per-IP budget exactly as before", async (_label, token, reply) => {
+    resolveReply = reply;
+    const first = await requestInviteLink(token, { status: "idle" }, emailForm(newRecipient()));
+    for (let i = 1; i < SIGN_IN_LIMITS.email.attempts; i += 1) {
+      expect(await requestInviteLink(token, { status: "idle" }, emailForm(newRecipient()))).toEqual(
+        first,
+      );
+    }
+    expect(first.status).not.toBe("sent");
+    const over = await requestInviteLink(token, { status: "idle" }, emailForm(newRecipient()));
+    expect(over).toEqual({ status: "error", error: SIGN_IN_RATE_LIMITED });
+    expect(scheduled).toHaveLength(0);
+  });
+
+  it("does not let a burst of valid invites spend plain sign-in's per-IP budget", async () => {
+    for (let student = 0; student < 60; student += 1) {
+      await requestInviteLink(TOKEN, { status: "idle" }, emailForm(newRecipient()));
+    }
+    for (let i = 0; i < SIGN_IN_LIMITS.email.attempts; i += 1) {
+      expect(takeSignInAttempt(requestHeaders, "email")).toEqual({ ok: true });
+    }
+    expect(takeSignInAttempt(requestHeaders, "email").ok).toBe(false);
+  });
+
+  it("gives no larger budget once the token stops resolving", async () => {
+    // A student shares the link, the instructor rotates it: the holder falls back to per-IP.
+    for (let i = 0; i < 40; i += 1) {
+      await requestInviteLink(TOKEN, { status: "idle" }, emailForm(newRecipient()));
+    }
+    resolveReply = { data: [], error: null };
+    for (let i = 0; i < SIGN_IN_LIMITS.email.attempts; i += 1) {
+      expect(await requestInviteLink(TOKEN, { status: "idle" }, emailForm(newRecipient()))).toEqual(
+        { status: "invalid" },
+      );
+    }
+    expect(await requestInviteLink(TOKEN, { status: "idle" }, emailForm(newRecipient()))).toEqual({
+      status: "error",
+      error: SIGN_IN_RATE_LIMITED,
+    });
+  });
+
+  it("lets a class through even after someone on its network spent the per-IP budget on bad tokens", async () => {
+    resolveReply = { data: [], error: null };
+    for (let i = 0; i <= SIGN_IN_LIMITS.email.attempts; i += 1) {
+      await requestInviteLink(TOKEN, { status: "idle" }, emailForm(newRecipient()));
+    }
+    resolveReply = { data: [{ class_id: CLASS_ID, class_name: "NUR 310" }], error: null };
+    const email = newRecipient();
+    expect(await requestInviteLink(TOKEN, { status: "idle" }, emailForm(email))).toEqual({
+      status: "sent",
+      email,
+    });
   });
 
   it("stops mailing one address after its per-caller budget, silently", async () => {
