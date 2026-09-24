@@ -51,7 +51,17 @@ export async function assignmentReportCsvDownload(
   }
 
   const filename = reportCsvFilename(loaded.assignment.title, loaded.assignment.closesAt);
-  return new Response(BOM + assignmentReportCsv(loaded.report), {
+  let csv: string;
+  try {
+    csv = assignmentReportCsv(loaded.report);
+  } catch (error) {
+    console.error("[assignment-report] could not write an assignment report", {
+      assignmentId,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return refuse(500, "The report could not be read. Try again.");
+  }
+  return new Response(BOM + csv, {
     status: 200,
     headers: {
       "Content-Type": "text/csv; charset=utf-8",

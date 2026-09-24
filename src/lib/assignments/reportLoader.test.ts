@@ -66,6 +66,22 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe("loadAssignmentReport: a class with nobody in it", () => {
+  const EMPTY: AssignmentReportRows = { released: false, students: [], attempts: [] };
+
+  it("counts as released once closed, since there is no row to say so", async () => {
+    const { store } = fakeStore({ rows: vi.fn(async () => EMPTY) });
+    const loaded = await loadAssignmentReport(store, ASSIGNMENT.id, CLOSED);
+    expect(loaded?.report.released).toBe(true);
+  });
+
+  it("stays unreleased while open", async () => {
+    const { store } = fakeStore({ rows: vi.fn(async () => EMPTY) });
+    const loaded = await loadAssignmentReport(store, ASSIGNMENT.id, OPEN);
+    expect(loaded?.report.released).toBe(false);
+  });
+});
+
 describe("loadAssignmentReport", () => {
   it("is null for an assignment this author cannot see, and does no other work", async () => {
     const { store } = fakeStore({ assignment: vi.fn(async () => null) });

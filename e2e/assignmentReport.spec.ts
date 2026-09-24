@@ -13,8 +13,9 @@ test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase 
 // its instructor.
 const SAMPLES_BANK = "00000000-0000-4000-8000-000000000002";
 
-/** Long enough for the student to take and submit one attempt and start another. */
-const WINDOW_MS = 90_000;
+/** Long enough for the student to take and submit one attempt and start another, and the
+ * instructor to read the progress; it starts only after sign-in and the email round trip. */
+const WINDOW_MS = 60_000;
 
 async function expectNoAxeViolations(page: Page): Promise<void> {
   const axe = await new AxeBuilder({ page }).analyze();
@@ -26,7 +27,8 @@ test("an instructor sees progress while open, then the report and its CSV after 
   browser,
   request,
 }, testInfo) => {
-  test.slow();
+  // Setup plus a real window that has to pass: well over the default timeout, even tripled.
+  test.setTimeout(180_000);
   const project = testInfo.project.name;
   const shot = (name: string) => `test-results/screenshots/${project}/${name}.png`;
 
@@ -84,6 +86,10 @@ test("an instructor sees progress while open, then the report and its CSV after 
   await student.getByRole("radio", { name: /Auscultate the lungs/ }).click();
   await expect(status).toHaveText("Saved", { timeout: 15_000 });
 
+  // If the steps above ran slow enough to reach the close, the checks below would be meaningless.
+  expect(Date.now(), "the window closed before the open-state checks ran").toBeLessThan(
+    closesAt - 10_000,
+  );
   // While open: progress only, reached from the class page.
   await page.goto(classPage);
   await page.getByRole("link", { name: `View progress for ${title}`, exact: true }).click();

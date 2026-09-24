@@ -10,6 +10,7 @@
 import type { ReportItemInput } from "@/lib/live/report";
 import type { AssignmentReportRows, ReportAssignment } from "@/lib/supabase/assignmentReport";
 import { assignmentState } from "./assignments";
+import { isClosed } from "./attemptPage";
 import { buildAssignmentReport, type AssignmentReport } from "./report";
 
 export interface AssignmentReportStore {
@@ -61,5 +62,8 @@ export async function loadAssignmentReport(
     store.items(assignment.itemSet),
     store.rows(assignmentId),
   ]);
-  return { assignment, report: buildAssignmentReport({ ...rows, items }) };
+  // With nobody in the class the database returns no row to carry scores_released, so the
+  // close itself decides, with the same grace the database uses.
+  const released = rows.students.length === 0 ? isClosed(assignment.closesAt, now) : rows.released;
+  return { assignment, report: buildAssignmentReport({ ...rows, released, items }) };
 }
