@@ -9,6 +9,15 @@ import type { ErrorInfo } from "next/error";
 import type { ComponentType } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// #235: every boundary hands what it caught to Sentry. The DSN check and the scrub live behind
+// this call and are tested in src/lib/observability; here it is only whether the call is made.
+const reporting = vi.hoisted(() => ({
+  reportClientError: vi.fn(),
+  startClientReporting: vi.fn(),
+}));
+vi.mock("@/lib/observability/reportError", () => reporting);
+
 import AuthorError from "./author/error";
 import CaseStudyError from "./author/case-studies/[caseStudyId]/error";
 import PlayItemError from "./author/items/[itemId]/play/error";
@@ -107,6 +116,16 @@ describe("route error boundaries", () => {
     },
   );
 
+  it.each(BOUNDARIES)("%s reports the error it caught, once", (_, Boundary) => {
+    reporting.reportClientError.mockClear();
+    renderInSegment(Boundary);
+
+    expect(reporting.reportClientError).toHaveBeenCalledTimes(1);
+    const [reported] = reporting.reportClientError.mock.calls[0];
+    expect(reported).toBeInstanceOf(Error);
+    expect((reported as Error & { digest?: string }).digest).toBe("4031337");
+  });
+
   it("the student room says the student keeps their place", () => {
     renderInSegment(PlayError);
 
@@ -126,5 +145,16 @@ describe("global error", () => {
     expect(html).toContain('role="alert"');
     expect(html).toContain("Try again");
     expect(html).not.toMatch(/Cannot read|position|chunks|4031337|Error/);
+  });
+
+  it("reports the error it caught", () => {
+    reporting.reportClientError.mockClear();
+    // It renders its own <html>, which React warns about inside a test container.
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const error = new Error(SECRET);
+    render(<GlobalError error={error} retry={vi.fn()} reset={vi.fn()} />);
+
+    expect(reporting.reportClientError).toHaveBeenCalledWith(error);
+    vi.restoreAllMocks();
   });
 });

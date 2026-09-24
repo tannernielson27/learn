@@ -1,6 +1,7 @@
 "use client";
 
 import type { ErrorInfo } from "next/error";
+import { useReportError } from "@/components/observability/useReportError";
 import { RouteRecovery } from "@/components/recovery/RouteRecovery";
 
 /**
@@ -8,7 +9,8 @@ import { RouteRecovery } from "@/components/recovery/RouteRecovery";
  * navigation — when it fails to render (#164). Closer than authoring's own boundary so the copy
  * can say what was lost: steps are saved one at a time, so an unsaved one is the risk.
  */
-export default function CaseStudyError({ retry }: ErrorInfo) {
+export default function CaseStudyError({ error, retry }: ErrorInfo) {
+  useReportError(error);
   return (
     <RouteRecovery
       headline="The case study builder stopped working."
