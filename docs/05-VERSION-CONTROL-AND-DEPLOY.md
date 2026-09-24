@@ -173,9 +173,9 @@ Everything in `supabase/migrations/` today, in filename order — this is the re
 | 25  | `20260924030800_assignment_attempts`           | take an assignment: attempts, autosave, submit, submit at close (#208)         | applied                    |
 | 26  | `20260924040000_assignment_report`             | the author's read of attempt scores for the assignment report (#211)           | applied                    |
 | 27  | `20260924050000_my_assignment_result`          | a student's own score and marks after an assignment closes (#210)              | applied                    |
-| 28  | `20260924060000_assignment_reminders`          | reminder email outbox, class time zone, the pg_cron entry point (#212, §7.8)   | **not applied**            |
+| 28  | `20260924060000_assignment_reminders`          | reminder email outbox, class time zone, the pg_cron entry point (#212, §7.8)   | applied                    |
 
-Checked 2026-09-23 with `pnpm exec supabase migration list --linked`: rows 1–27 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged, row 23 straight after #220, row 24 straight after #222, row 25 straight after #224, row 26 straight after #226, row 27 straight after #228). Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
+Checked 2026-09-23 with `pnpm exec supabase migration list --linked`: rows 1–28 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged, row 23 straight after #220, row 24 straight after #222, row 25 straight after #224, row 26 straight after #226, row 27 straight after #228, row 28 straight after #230). Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
 
 > **No standing drift.** The existing hosted project is current. The separate production project (§7.3) does not exist yet and will need every row replayed when it is created.
 
