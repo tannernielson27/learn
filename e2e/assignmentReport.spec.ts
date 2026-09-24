@@ -146,7 +146,7 @@ test("an instructor sees progress while open, then the report and its CSV after 
   const body = await csv.text();
   expect(body).toMatch(/^﻿?Student,Q1 /);
   expect(body).toContain(`${email},`);
-  expect(body).toContain(",2,Submitted\r\n");
+  expect(body).toContain(",2,Submitted,member\r\n");
 
   // A student cannot reach the report or its file.
   await student.goto(reportPath);

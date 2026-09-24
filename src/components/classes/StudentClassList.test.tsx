@@ -7,8 +7,18 @@ describe("StudentClassList", () => {
     render(
       <StudentClassList
         classes={[
-          { id: "a", name: "NUR 310 — Fall", joinedAt: "2026-09-23T10:00:00Z" },
-          { id: "b", name: "NUR 320", joinedAt: "2026-09-23T10:00:00Z" },
+          {
+            id: "a",
+            name: "NUR 310 — Fall",
+            joinedAt: "2026-09-23T10:00:00Z",
+            timeZone: "America/Denver",
+          },
+          {
+            id: "b",
+            name: "NUR 320",
+            joinedAt: "2026-09-23T10:00:00Z",
+            timeZone: "America/Denver",
+          },
         ]}
       />,
     );

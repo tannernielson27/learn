@@ -76,15 +76,35 @@ describe("joinClass", () => {
 });
 
 describe("myClasses", () => {
-  it("lists the caller's classes by id and name", async () => {
+  it("lists the caller's classes by id, name and time zone", async () => {
+    const fake = fakeRpc({
+      data: [
+        {
+          class_id: CLASS_ID,
+          class_name: "NUR 310",
+          joined_at: "2026-09-23T10:00:00Z",
+          time_zone: "America/New_York",
+        },
+      ],
+      error: null,
+    });
+    expect(await myClasses(fake.client)).toEqual([
+      {
+        id: CLASS_ID,
+        name: "NUR 310",
+        joinedAt: "2026-09-23T10:00:00Z",
+        timeZone: "America/New_York",
+      },
+    ]);
+    expect(fake.rpc).toHaveBeenCalledWith("my_classes");
+  });
+
+  it("puts a class on the default zone while the database sends none (#242)", async () => {
     const fake = fakeRpc({
       data: [{ class_id: CLASS_ID, class_name: "NUR 310", joined_at: "2026-09-23T10:00:00Z" }],
       error: null,
     });
-    expect(await myClasses(fake.client)).toEqual([
-      { id: CLASS_ID, name: "NUR 310", joinedAt: "2026-09-23T10:00:00Z" },
-    ]);
-    expect(fake.rpc).toHaveBeenCalledWith("my_classes");
+    expect((await myClasses(fake.client))?.[0]?.timeZone).toBe("America/Denver");
   });
 
   it("returns null when the list cannot be read", async () => {

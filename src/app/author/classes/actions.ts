@@ -6,11 +6,13 @@ import type { ClassFormState } from "@/components/classes/ClassNameForm";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { classPath, CLASSES_PATH, parseClassForm } from "@/lib/classes/classes";
+import { parseTimeZoneForm, TIME_ZONE_ERROR } from "@/lib/classes/timeZone";
 import {
   createClass as insertClass,
   removeStudent as deleteMembership,
   renameClass as updateClassName,
   rotateInvite as rotateToken,
+  setClassTimeZone as updateTimeZone,
 } from "@/lib/supabase/classes";
 
 const GONE = "That class no longer exists.";
@@ -46,6 +48,27 @@ export async function renameClass(
   }
   revalidatePath(classPath(classId));
   revalidatePath(CLASSES_PATH);
+  return { status: "saved" };
+}
+
+/** The zone the class's due times are shown in (#242). The database checks the name again. */
+export async function setTimeZone(
+  classId: string,
+  _previous: ClassFormState,
+  formData: FormData,
+): Promise<ClassFormState> {
+  if (!isUuid(classId)) return { status: "error", error: GONE };
+  const parsed = parseTimeZoneForm(formData);
+  if (!parsed.ok) return { status: "error", error: parsed.error };
+
+  const { supabase } = await requireAuthor(classPath(classId));
+  const outcome = await updateTimeZone(supabase, classId, parsed.zone);
+  if (outcome === "gone") return { status: "error", error: GONE };
+  if (outcome === "invalid") return { status: "error", error: TIME_ZONE_ERROR };
+  if (outcome === "failed") {
+    return { status: "error", error: "The time zone could not be saved. Try again." };
+  }
+  revalidatePath(classPath(classId));
   return { status: "saved" };
 }
 

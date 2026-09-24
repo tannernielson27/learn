@@ -1,14 +1,16 @@
 -- The assignment report (#211): public.assignment_report_rows.
 --
 -- An author of the assignment's org reads a row per attempt of every current member (and one empty
--- row for a member who has not started); no score or mark while the assignment is open, and the
--- scores and per-item marks once it has closed. A student (even one in the class, even for their
+-- row for a member who has not started), and (#242) a row per attempt of every student removed from
+-- the class after attempting, marked 'removed'; no score or mark while the assignment is open, and
+-- the scores and per-item marks once it has closed. A removed student reads nothing about the class
+-- beyond their own result (#210). A student (even one in the class, even for their
 -- own attempt), an author of another org, an account with no role and anon read nothing, before or
 -- after the close. now() is fixed for the transaction, so "closed" is made by moving closes_at into
 -- the past with the guard trigger switched off, as the superuser.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(27);
 
 -- ---------------------------------------------------------------------------
 -- Cast, as the superuser
@@ -21,7 +23,8 @@ insert into auth.users (id, email, aud, role) values
   ('00000000-0000-0000-0000-0000002110d2', 'report-grace@example.test', 'authenticated', 'authenticated'),
   ('00000000-0000-0000-0000-0000002110d3', 'report-hal@example.test', 'authenticated', 'authenticated'),
   ('00000000-0000-0000-0000-0000002110d4', 'report-removed@example.test', 'authenticated', 'authenticated'),
-  ('00000000-0000-0000-0000-0000002110d5', 'report-norole@example.test', 'authenticated', 'authenticated');
+  ('00000000-0000-0000-0000-0000002110d5', 'report-norole@example.test', 'authenticated', 'authenticated'),
+  ('00000000-0000-0000-0000-0000002110d6', 'report-dropped@example.test', 'authenticated', 'authenticated');
 
 select private.make_instructor('report-teacher@example.test');
 select private.make_instructor('report-elsewhere@example.test');
@@ -29,7 +32,8 @@ update public.profiles
    set org_id = (select org_id from public.profiles where id = '00000000-0000-0000-0000-0000002110a1'),
        role = 'student'
  where id in ('00000000-0000-0000-0000-0000002110d1', '00000000-0000-0000-0000-0000002110d2',
-              '00000000-0000-0000-0000-0000002110d3', '00000000-0000-0000-0000-0000002110d4');
+              '00000000-0000-0000-0000-0000002110d3', '00000000-0000-0000-0000-0000002110d4',
+              '00000000-0000-0000-0000-0000002110d6');
 -- 2110d5 keeps what sign-up gives since #204: no org and no role.
 update public.profiles set display_name = 'Ada' where id = '00000000-0000-0000-0000-0000002110d1';
 
@@ -51,7 +55,8 @@ insert into public.class_members (class_id, profile_id) values
   ('00000000-0000-0000-0000-0000002110c1', '00000000-0000-0000-0000-0000002110d1'),
   ('00000000-0000-0000-0000-0000002110c1', '00000000-0000-0000-0000-0000002110d2'),
   ('00000000-0000-0000-0000-0000002110c1', '00000000-0000-0000-0000-0000002110d3'),
-  ('00000000-0000-0000-0000-0000002110c1', '00000000-0000-0000-0000-0000002110d4');
+  ('00000000-0000-0000-0000-0000002110c1', '00000000-0000-0000-0000-0000002110d4'),
+  ('00000000-0000-0000-0000-0000002110c1', '00000000-0000-0000-0000-0000002110d6');
 
 insert into public.item_banks (id, org_id, name)
   select '00000000-0000-0000-0000-0000002110e0', org_id, 'Report bank 211'
@@ -99,7 +104,9 @@ insert into public.attempt_responses
            as v(attempt, item, points, max_points, model, breakdown)
    where a.id = '00000000-0000-0000-0000-0000002110b1';
 
-delete from public.class_members where profile_id = '00000000-0000-0000-0000-0000002110d4';
+-- Both taken off the class: 2110d4 after submitting, 2110d6 without ever starting.
+delete from public.class_members
+ where profile_id in ('00000000-0000-0000-0000-0000002110d4', '00000000-0000-0000-0000-0000002110d6');
 
 -- The control: the scores exist.
 select is(
@@ -118,8 +125,8 @@ select pg_temp.act_as('00000000-0000-0000-0000-0000002110a1');
 
 select is(
   (select count(*)::integer from public.assignment_report_rows('00000000-0000-0000-0000-0000002110b1')),
-  4,
-  'the author reads a row per attempt of each current member, and one for a member not started'
+  5,
+  'the author reads a row per attempt of each current member, one for a member not started, and the removed student''s attempt'
 );
 select is(
   (select count(*)::integer from public.assignment_report_rows('00000000-0000-0000-0000-0000002110b1')
@@ -128,10 +135,24 @@ select is(
   'a member who has not started has a row with no attempt'
 );
 select is(
-  (select count(*)::integer from public.assignment_report_rows('00000000-0000-0000-0000-0000002110b1')
+  (select row(membership, attempt_id, email)::text
+     from public.assignment_report_rows('00000000-0000-0000-0000-0000002110b1')
     where student_id = '00000000-0000-0000-0000-0000002110d4'),
+  row('removed', '00000000-0000-0000-0000-000000211a04'::uuid, 'report-removed@example.test')::text,
+  'a student taken off the class after attempting is listed with their attempt, marked removed'
+);
+select is(
+  (select count(*)::integer from public.assignment_report_rows('00000000-0000-0000-0000-0000002110b1')
+    where student_id = '00000000-0000-0000-0000-0000002110d6'),
   0,
-  'a student taken off the class is not listed'
+  'a student taken off the class who never attempted it is not listed'
+);
+select is(
+  (select count(*)::integer from public.assignment_report_rows('00000000-0000-0000-0000-0000002110b1')
+    where membership is distinct from 'member'
+      and student_id <> '00000000-0000-0000-0000-0000002110d4'),
+  0,
+  'every other row is a member'
 );
 select is(
   (select row(display_name, email, attempt_number, submitted_at is not null)::text
@@ -206,8 +227,15 @@ select is(
 );
 select is(
   (select count(*)::integer from public.assignment_report_rows('00000000-0000-0000-0000-0000002110b1')),
-  4,
+  5,
   'the same rows as before the close'
+);
+select is(
+  (select row(membership, score, max_score)::text
+     from public.assignment_report_rows('00000000-0000-0000-0000-0000002110b1')
+    where attempt_id = '00000000-0000-0000-0000-000000211a04'),
+  row('removed', 0.00, 2.00)::text,
+  'once closed, the removed student''s attempt carries its score like any other'
 );
 select is(
   (select count(*)::integer from public.assignment_report_rows('00000000-0000-0000-0000-0000002110ff')),
@@ -233,6 +261,19 @@ select is(
   0,
   'a removed student reads nothing'
 );
+select is(
+  (select count(*)::integer from public.my_classes()),
+  0,
+  'a removed student no longer has the class'
+);
+select is(
+  (select count(*)::integer from public.assignments
+    where id = '00000000-0000-0000-0000-0000002110b1'),
+  0,
+  'nor its assignment'
+);
+-- (Their own result stays theirs: #210's my_assignment_result still answers them about their own
+-- attempts, as my_assignment_result.test.sql checks. That is their work, not the class.)
 
 select pg_temp.act_as('00000000-0000-0000-0000-0000002110a2');
 select is(

@@ -54,6 +54,7 @@ const row = (overrides: Record<string, unknown>) => ({
   student_id: "s-ava",
   display_name: "Ava",
   email: "ava@example.test",
+  membership: "member",
   attempt_id: null,
   attempt_number: null,
   started_at: null,
@@ -123,6 +124,15 @@ describe("readAssignmentReportRows", () => {
           row({ attempt_id: "ava-2", attempt_number: 2 }),
           row({ student_id: "s-hal", display_name: null, email: "hal@example.test" }),
           row({ student_id: "s-kim", display_name: "   ", email: "kim@example.test" }),
+          row({
+            student_id: "s-eve",
+            display_name: "Eve",
+            membership: "removed",
+            attempt_id: "eve-1",
+            attempt_number: 1,
+          }),
+          // A row from before the column existed (a deploy ahead of its migration).
+          row({ student_id: "s-old", display_name: "Old", membership: undefined }),
         ],
         error: null,
       },
@@ -130,9 +140,11 @@ describe("readAssignmentReportRows", () => {
     const read = await readAssignmentReportRows(fake.client, ASSIGNMENT);
     expect(read.released).toBe(true);
     expect(read.students).toEqual([
-      { id: "s-ava", displayName: "Ava" },
-      { id: "s-hal", displayName: "hal@example.test" },
-      { id: "s-kim", displayName: "kim@example.test" },
+      { id: "s-ava", displayName: "Ava", membership: "member" },
+      { id: "s-hal", displayName: "hal@example.test", membership: "member" },
+      { id: "s-kim", displayName: "kim@example.test", membership: "member" },
+      { id: "s-eve", displayName: "Eve", membership: "removed" },
+      { id: "s-old", displayName: "Old", membership: "member" },
     ]);
     expect(read.attempts).toEqual([
       {
@@ -148,6 +160,15 @@ describe("readAssignmentReportRows", () => {
         studentId: "s-ava",
         id: "ava-2",
         number: 2,
+        submittedAt: null,
+        score: null,
+        maxScore: null,
+        marks: null,
+      },
+      {
+        studentId: "s-eve",
+        id: "eve-1",
+        number: 1,
         submittedAt: null,
         score: null,
         maxScore: null,

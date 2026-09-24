@@ -122,6 +122,6 @@ describe("assignmentReportCsvDownload", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");
     const body = await response.text();
-    expect(body.split("\r\n")[1]).toBe(`"'=HYPERLINK(""http://x"")",1,1,1,100,1,Submitted`);
+    expect(body.split("\r\n")[1]).toBe(`"'=HYPERLINK(""http://x"")",1,1,1,100,1,Submitted,member`);
   });
 });

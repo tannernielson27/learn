@@ -56,29 +56,52 @@ const lines = assignmentReportCsv(buildAssignmentReport(INPUT)).split("\r\n");
 describe("assignmentReportCsv", () => {
   it("heads like the session CSV, then the attempts and the status", () => {
     expect(lines[0]).toBe(
-      "Student,Q1 mc-vitals,Q2 mr-assess,Points,Possible,Percent,Attempts used,Status",
+      "Student,Q1 mc-vitals,Q2 mr-assess,Points,Possible,Percent,Attempts used,Status,Class status",
     );
   });
 
   it("writes each student's best attempt, with the attempts they used", () => {
-    expect(lines).toContain("Ava,1,1.5,2.5,3,83.33,1,Submitted");
+    expect(lines).toContain("Ava,1,1.5,2.5,3,83.33,1,Submitted,member");
   });
 
   it("leaves an unanswered item empty, and every score empty for a student with none", () => {
-    expect(lines).toContain("'+1 555,,,,,,0,Not started");
+    expect(lines).toContain("'+1 555,,,,,,0,Not started,member");
   });
 
   it("neutralises a display name written as a spreadsheet formula", () => {
-    expect(lines).toContain("'=cmd|' /C calc'!A0,1,,1,3,33.33,2,Submitted");
+    expect(lines).toContain("'=cmd|' /C calc'!A0,1,,1,3,33.33,2,Submitted,member");
   });
 
   it("quotes a display name with a comma in it", () => {
-    expect(lines).toContain('"Cleo, RN",,,,,,0,Not started');
+    expect(lines).toContain('"Cleo, RN",,,,,,0,Not started,member');
   });
 
   it("has a header, a row per student and a final CRLF", () => {
     expect(lines).toHaveLength(1 + INPUT.students.length + 1);
     expect(lines.at(-1)).toBe("");
+  });
+
+  it("lists a student removed after attempting last, with their best, marked removed (#242)", () => {
+    const withRemoved = assignmentReportCsv(
+      buildAssignmentReport({
+        ...INPUT,
+        students: [...INPUT.students, { id: "s-zed", displayName: "Aaron", membership: "removed" }],
+        attempts: [
+          ...INPUT.attempts,
+          {
+            studentId: "s-zed",
+            id: "zed-1",
+            number: 1,
+            submittedAt: "2026-09-23T10:00:00Z",
+            score: 2,
+            maxScore: 3,
+            marks: [{ itemId: ITEM_B, points: 2, maxPoints: 2 }],
+          },
+        ],
+      }),
+    ).split("\r\n");
+    expect(withRemoved).toHaveLength(1 + INPUT.students.length + 1 + 1);
+    expect(withRemoved.at(-2)).toBe("Aaron,,2,2,3,66.67,1,Submitted,removed");
   });
 
   it("refuses a report whose scores are not released", () => {

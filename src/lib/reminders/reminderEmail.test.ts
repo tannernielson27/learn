@@ -28,6 +28,28 @@ describe("formatDueTime", () => {
     expect(formatDueTime(CLOSES, "America/Denver", twoDaysOut).day).toBe("on Thursday");
   });
 
+  it("renders the due time in the class's zone across a daylight saving change (#242)", () => {
+    // Denver leaves daylight time at 02:00 on Sunday 1 November 2026. The reminder goes out on
+    // the Saturday, in MDT, for a close on the Sunday, in MST: the 23:00 UTC close is 16:00 there,
+    // not the 17:00 it was the day before, and the zone's name changes with it.
+    const saturday = new Date("2026-10-31T23:00:00Z");
+    expect(formatDueTime("2026-10-31T23:00:00Z", "America/Denver", saturday)).toMatchObject({
+      time: "17:00",
+      zone: "MDT",
+    });
+    expect(formatDueTime("2026-11-01T23:00:00Z", "America/Denver", saturday)).toEqual({
+      day: "tomorrow",
+      date: "Sunday, November 1",
+      time: "16:00",
+      zone: "MST",
+    });
+    // New York changes on the same night, two hours ahead of Denver on both sides of it.
+    expect(formatDueTime("2026-11-01T23:00:00Z", "America/New_York", saturday)).toMatchObject({
+      time: "18:00",
+      zone: "EST",
+    });
+  });
+
   it("uses another zone when the class has one", () => {
     expect(formatDueTime(CLOSES, "Europe/London", DAY_BEFORE)).toMatchObject({
       time: "00:00",

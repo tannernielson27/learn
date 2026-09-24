@@ -115,7 +115,12 @@ describe("loadResultsPage before the close", () => {
     const view = await loadResultsPage(fake, ASSIGNMENT, STUDENT);
     expect(view).toEqual({
       kind: "pending",
-      assignment: { id: ASSIGNMENT, title: header.title, closesAt: header.closesAt },
+      assignment: {
+        id: ASSIGNMENT,
+        title: header.title,
+        closesAt: header.closesAt,
+        classId: header.classId,
+      },
     });
     const bytes = JSON.stringify(view);
     for (const item of [MC, MR])
@@ -161,6 +166,34 @@ describe("loadResultsPage after the close", () => {
     expect(order).toEqual(["autoSubmit", "result", "items"]);
     expect(fake.autoSubmit).toHaveBeenCalledWith({ assignmentId: ASSIGNMENT, studentId: STUDENT });
     expect(fake.items).toHaveBeenCalledWith([rowId(1), rowId(2)]);
+  });
+
+  it("names the assignment's class, so the page can say the close in its zone (#242)", async () => {
+    const set = setOf([MC, MR]);
+    const view = await loadResultsPage(
+      store({ kind: "released", result: result(set, []) }, set),
+      ASSIGNMENT,
+      STUDENT,
+    );
+    expect(view.kind === "results" && view.assignment).toEqual({
+      id: ASSIGNMENT,
+      title: "NUR 310 — Week 5",
+      closesAt: "2026-09-23T12:00:00Z",
+      classId: header.classId,
+    });
+  });
+
+  it("still shows the results of a student taken off the class, with no class to name", async () => {
+    const set = setOf([MC, MR]);
+    const view = await loadResultsPage(
+      store({ kind: "released", result: result(set, []) }, set, {
+        assignment: vi.fn(async () => null),
+      }),
+      ASSIGNMENT,
+      STUDENT,
+    );
+    expect(view.kind).toBe("results");
+    expect(view.kind === "results" && view.assignment.classId).toBeNull();
   });
 
   it("a bank: the best attempt, every key and rationale, and the student's own answers", async () => {

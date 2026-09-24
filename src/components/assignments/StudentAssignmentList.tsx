@@ -4,13 +4,21 @@ import {
   studentAssignmentPath,
   type AttemptProgress,
 } from "@/lib/assignments/assignments";
+import { DEFAULT_CLASS_TIME_ZONE } from "@/lib/classes/timeZone";
 import type { AssignmentSummary } from "@/lib/supabase/assignments";
-import { LocalTime } from "./LocalTime";
+import { ClassTime } from "./ClassTime";
+
+/** What a student's lists need to know about each of their classes. */
+export interface StudentClassInfo {
+  name: string;
+  /** The zone its due times are shown in (#242). */
+  timeZone: string;
+}
 
 export interface StudentAssignmentListProps {
   assignments: readonly AssignmentSummary[];
-  /** Class id to name, from the student's own classes. */
-  classNames: ReadonlyMap<string, string>;
+  /** Class id to name and zone, from the student's own classes. */
+  classes: ReadonlyMap<string, StudentClassInfo>;
   /** This student's attempts per assignment (#208); an assignment with none is absent. */
   progress?: ReadonlyMap<string, AttemptProgress>;
 }
@@ -21,7 +29,7 @@ export interface StudentAssignmentListProps {
  */
 export function StudentAssignmentList({
   assignments,
-  classNames,
+  classes,
   progress = new Map(),
 }: StudentAssignmentListProps) {
   if (assignments.length === 0) {
@@ -42,11 +50,15 @@ export function StudentAssignmentList({
             {entry.title}
           </Link>
           <span className="text-sm text-ink-2">
-            {classNames.get(entry.classId) ?? "Your class"} ·{" "}
+            {classes.get(entry.classId)?.name ?? "Your class"} ·{" "}
             {attemptProgressLabel(entry.maxAttempts, progress.get(entry.id))}
           </span>
           <span className="text-sm text-ink-2">
-            Closes <LocalTime iso={entry.closesAt} />
+            Closes{" "}
+            <ClassTime
+              iso={entry.closesAt}
+              timeZone={classes.get(entry.classId)?.timeZone ?? DEFAULT_CLASS_TIME_ZONE}
+            />
           </span>
         </li>
       ))}

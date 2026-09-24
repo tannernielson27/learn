@@ -254,8 +254,8 @@ select throws_ok(
   'a zone Postgres does not know is refused'
 );
 select ok(
-  not has_column_privilege('authenticated', 'public.classes', 'time_zone', 'update'),
-  'and no client can write it yet'
+  has_column_privilege('authenticated', 'public.classes', 'time_zone', 'update'),
+  'and since #242 an author writes it from the class page (class_time_zone.test.sql)'
 );
 
 -- ---------------------------------------------------------------------------

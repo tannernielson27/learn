@@ -1,19 +1,21 @@
 import Link from "next/link";
 import { studentResultsPath } from "@/lib/assignments/assignments";
+import { DEFAULT_CLASS_TIME_ZONE } from "@/lib/classes/timeZone";
 import type { AssignmentSummary } from "@/lib/supabase/assignments";
-import { LocalTime } from "./LocalTime";
+import { ClassTime } from "./ClassTime";
+import type { StudentClassInfo } from "./StudentAssignmentList";
 
 export interface ClosedAssignmentListProps {
   assignments: readonly AssignmentSummary[];
-  /** Class id to name, from the student's own classes. */
-  classNames: ReadonlyMap<string, string>;
+  /** Class id to name and zone, from the student's own classes. */
+  classes: ReadonlyMap<string, StudentClassInfo>;
 }
 
 /**
  * A student's closed assignments (#210), most recently closed first, each linking to its results:
  * the score, and every item with its key and rationale.
  */
-export function ClosedAssignmentList({ assignments, classNames }: ClosedAssignmentListProps) {
+export function ClosedAssignmentList({ assignments, classes }: ClosedAssignmentListProps) {
   if (assignments.length === 0) {
     return <p className="text-ink-2">Nothing has closed yet.</p>;
   }
@@ -32,10 +34,14 @@ export function ClosedAssignmentList({ assignments, classNames }: ClosedAssignme
             {`Results for ${entry.title}`}
           </Link>
           <span className="text-sm text-ink-2">
-            {classNames.get(entry.classId) ?? "Your class"}
+            {classes.get(entry.classId)?.name ?? "Your class"}
           </span>
           <span className="text-sm text-ink-2">
-            Closed <LocalTime iso={entry.closesAt} />
+            Closed{" "}
+            <ClassTime
+              iso={entry.closesAt}
+              timeZone={classes.get(entry.classId)?.timeZone ?? DEFAULT_CLASS_TIME_ZONE}
+            />
           </span>
         </li>
       ))}

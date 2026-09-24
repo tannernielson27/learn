@@ -259,3 +259,62 @@ describe("buildAssignmentReport: before the close", () => {
     expect(INPUT).toEqual(copy);
   });
 });
+
+describe("buildAssignmentReport: students removed from the class (#242)", () => {
+  // Eve took it and was then taken off the class; the database lists her marked removed.
+  const WITH_REMOVED: AssignmentReportInput = {
+    ...INPUT,
+    students: [...INPUT.students, { id: "s-eve", displayName: "Eve", membership: "removed" }],
+    attempts: [
+      ...INPUT.attempts,
+      attempt({
+        studentId: "s-eve",
+        id: "eve-1",
+        number: 1,
+        score: 1,
+        maxScore: 4,
+        marks: [{ itemId: ITEM_A, points: 0, maxPoints: 1 }],
+      }),
+    ],
+  };
+  const withRemoved = buildAssignmentReport(WITH_REMOVED);
+
+  it("puts them in their own group, with their attempts and best, not among the class", () => {
+    expect(withRemoved.students.map((row) => row.displayName)).toEqual([
+      "Ava",
+      "Ben",
+      "Cleo",
+      "Dev",
+    ]);
+    expect(withRemoved.removed).toEqual([
+      {
+        studentId: "s-eve",
+        displayName: "Eve",
+        membership: "removed",
+        status: "submitted",
+        attemptsUsed: 1,
+        best: { attemptNumber: 1, score: 1, maxScore: 4, percent: 25 },
+        scores: [{ points: 0, maxPoints: 1 }, null, null],
+      },
+    ]);
+    expect(withRemoved.students.every((row) => row.membership === "member")).toBe(true);
+  });
+
+  it("leaves the class's counts, items and steps as the class stands", () => {
+    expect(withRemoved.counts).toEqual(report.counts);
+    expect(withRemoved.items).toEqual(report.items);
+    expect(withRemoved.steps).toEqual(report.steps);
+  });
+
+  it("is an empty group when nobody was removed", () => {
+    expect(report.removed).toEqual([]);
+  });
+
+  it("before the close, shows their progress and no score, like everyone else", () => {
+    const open = buildAssignmentReport({ ...WITH_REMOVED, released: false });
+    expect(open.removed).toEqual([
+      expect.objectContaining({ status: "submitted", attemptsUsed: 1, best: null }),
+    ]);
+    expect(open.removed[0]?.scores.every((score) => score === null)).toBe(true);
+  });
+});

@@ -29,6 +29,8 @@ export interface AttemptPageStore {
 /** The facts about the assignment every view shows. */
 export interface AssignmentHeader {
   id: string;
+  /** Whose zone the close is said in (#242). */
+  classId: string;
   title: string;
   closesAt: string;
   maxAttempts: number;
@@ -61,6 +63,7 @@ export function isClosed(closesAt: string, now: Date): boolean {
 function headerOf(assignment: StudentAssignment): AssignmentHeader {
   return {
     id: assignment.id,
+    classId: assignment.classId,
     title: assignment.title,
     closesAt: assignment.closesAt,
     maxAttempts: assignment.maxAttempts,

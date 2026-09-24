@@ -10,6 +10,9 @@
  * While the assignment is open the report is progress only. The database already withholds every
  * score before the close (`public.assignment_report_rows`); `released: false` drops any score it
  * is handed anyway, so the rule holds in both places.
+ *
+ * A student taken off the class after attempting (#242) gets a row of their own in `removed`, by
+ * the same rules, and is left out of the class's counts, items and steps.
  */
 import {
   buildSessionReport,
@@ -20,9 +23,14 @@ import {
   type StepRow,
 } from "@/lib/live/report";
 
+/** A current member of the class, or (#242) a student taken off it after attempting. */
+export type Membership = "member" | "removed";
+
 export interface ReportStudentInput {
   id: string;
   displayName: string;
+  /** Absent means a member. */
+  membership?: Membership;
 }
 
 export interface ReportMarkInput {
@@ -70,6 +78,7 @@ export interface BestAttempt {
 export interface AssignmentStudentRow {
   studentId: string;
   displayName: string;
+  membership: Membership;
   status: StudentStatus;
   attemptsUsed: number;
   /** Null before the close, and for a student with nothing submitted. */
@@ -86,7 +95,10 @@ export interface AssignmentItemRow extends ItemRow {
 export interface AssignmentReport {
   released: boolean;
   items: AssignmentItemRow[];
+  /** The class as it stands: its current members. Counts, items and steps are theirs alone. */
   students: AssignmentStudentRow[];
+  /** Students taken off the class after attempting (#242), by name; their work is kept. */
+  removed: AssignmentStudentRow[];
   steps: StepRow[];
   counts: { notStarted: number; inProgress: number; submitted: number };
 }
@@ -164,6 +176,41 @@ const withPercentCorrect = (item: ItemRow): AssignmentItemRow => ({
   percentCorrect: item.responded > 0 ? (item.full / item.responded) * 100 : null,
 });
 
+/** The session report over one group of students, each with only their own best attempt. */
+function sessionOver(
+  items: readonly ReportItemInput[],
+  group: readonly ReportStudentInput[],
+  best: ReadonlyMap<string, ScoredAttempt | null>,
+) {
+  const ids = new Set(group.map((s) => s.id));
+  return buildSessionReport({
+    items,
+    // The roster has no join time; the id keeps the order stable for two students of one name.
+    participants: group.map((s) => ({ id: s.id, displayName: s.displayName, joinedAt: "" })),
+    responses: bestResponses(items, new Map([...best].filter(([id]) => ids.has(id)))),
+  });
+}
+
+function studentRows(
+  session: ReturnType<typeof buildSessionReport>,
+  membership: Membership,
+  attemptsOf: ReadonlyMap<string, readonly ReportAttemptInput[]>,
+  best: ReadonlyMap<string, ScoredAttempt | null>,
+): AssignmentStudentRow[] {
+  return session.students.map((row): AssignmentStudentRow => {
+    const attempts = attemptsOf.get(row.participantId) ?? [];
+    return {
+      studentId: row.participantId,
+      displayName: row.displayName,
+      membership,
+      status: statusOf(attempts),
+      attemptsUsed: attempts.length,
+      best: bestOf(best.get(row.participantId) ?? null),
+      scores: row.scores,
+    };
+  });
+}
+
 export function buildAssignmentReport(input: AssignmentReportInput): AssignmentReport {
   const attemptsOf = groupByStudent(input);
   const best = new Map(
@@ -172,33 +219,21 @@ export function buildAssignmentReport(input: AssignmentReportInput): AssignmentR
       input.released ? pickBestAttempt(attempts) : null,
     ]),
   );
-  const session = buildSessionReport({
-    items: input.items,
-    // The roster has no join time; the id keeps the order stable for two students of one name.
-    participants: input.students.map((s) => ({
-      id: s.id,
-      displayName: s.displayName,
-      joinedAt: "",
-    })),
-    responses: bestResponses(input.items, best),
-  });
-
-  const students = session.students.map((row): AssignmentStudentRow => {
-    const attempts = attemptsOf.get(row.participantId) ?? [];
-    return {
-      studentId: row.participantId,
-      displayName: row.displayName,
-      status: statusOf(attempts),
-      attemptsUsed: attempts.length,
-      best: bestOf(best.get(row.participantId) ?? null),
-      scores: row.scores,
-    };
-  });
+  const isRemoved = (s: ReportStudentInput) => s.membership === "removed";
+  // The class's own figures are the class as it stands; a removed student is shown on their own.
+  const session = sessionOver(
+    input.items,
+    input.students.filter((s) => !isRemoved(s)),
+    best,
+  );
+  const removedSession = sessionOver(input.items, input.students.filter(isRemoved), best);
+  const students = studentRows(session, "member", attemptsOf, best);
 
   return {
     released: input.released,
     items: session.items.map(withPercentCorrect),
     students,
+    removed: studentRows(removedSession, "removed", attemptsOf, best),
     steps: session.steps,
     counts: {
       notStarted: students.filter((s) => s.status === "not_started").length,

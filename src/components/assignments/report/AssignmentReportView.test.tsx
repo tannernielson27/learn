@@ -168,3 +168,64 @@ describe("AssignmentReportView, with nobody in the class", () => {
     expect(screen.getByText(/Nobody has joined this class yet/)).toBeInTheDocument();
   });
 });
+
+describe("AssignmentReportView, with students removed from the class (#242)", () => {
+  const WITH_REMOVED: AssignmentReportInput = {
+    ...INPUT,
+    students: [...INPUT.students, { id: "s-eve", displayName: "Eve", membership: "removed" }],
+    attempts: [
+      ...INPUT.attempts,
+      {
+        studentId: "s-eve",
+        id: "eve-1",
+        number: 1,
+        submittedAt: "2026-09-23T10:30:00Z",
+        score: 1,
+        maxScore: 2,
+        marks: [{ itemId: ITEM_A, points: 1, maxPoints: 1 }],
+      },
+    ],
+  };
+  const renderWith = (released: boolean, input: AssignmentReportInput = WITH_REMOVED) =>
+    render(
+      <AssignmentReportView
+        assignmentId={ASSIGNMENT}
+        classId={CLASS}
+        title="Week 5"
+        closesAt="2026-09-23T17:00:00Z"
+        maxAttempts={2}
+        report={buildAssignmentReport({ ...input, released })}
+        view="students"
+      />,
+    );
+
+  it("shows their attempt under Removed from class, apart from the class, once closed", () => {
+    renderWith(true);
+    const group = screen.getByRole("region", { name: "Removed from class" });
+    const row = within(group).getByRole("row", { name: /^Eve/ });
+    expect(row).toHaveTextContent("Submitted");
+    expect(row).toHaveTextContent("50%");
+    const classTable = screen.getByRole("region", { name: "Scores by student" });
+    expect(within(classTable).queryByRole("row", { name: /^Eve/ })).toBeNull();
+    // The class's own counts are unchanged by a removed student.
+    expect(screen.getByText(/1 submitted · 1 in progress · 1 not started/)).toBeInTheDocument();
+  });
+
+  it("shows only their progress while the assignment is open", () => {
+    renderWith(false);
+    const group = screen.getByRole("region", { name: "Removed from class" });
+    expect(within(group).getByRole("row", { name: /^Eve/ })).toHaveTextContent("Submitted");
+    expect(group.textContent).not.toMatch(/%|1 \/ 2/);
+  });
+
+  it("has no such group when nobody was removed", () => {
+    renderWith(true, INPUT);
+    expect(screen.queryByRole("region", { name: "Removed from class" })).toBeNull();
+  });
+
+  it("still shows a removed student's work when nobody is left in the class", () => {
+    renderWith(true, { ...WITH_REMOVED, students: WITH_REMOVED.students.slice(-1) });
+    expect(screen.getByText(/Nobody is in this class now/)).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Removed from class" })).toBeInTheDocument();
+  });
+});

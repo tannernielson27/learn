@@ -117,15 +117,25 @@ function ReportBody({
   view: ReportView;
   maxAttempts: number;
 }) {
-  if (report.students.length === 0) {
+  if (report.students.length === 0 && report.removed.length === 0) {
     return <p className="text-ink-2">Nobody has joined this class yet.</p>;
   }
   if (view === "students") {
-    return report.released ? (
-      <ScoreTable items={report.items} students={report.students} maxAttempts={maxAttempts} />
-    ) : (
-      <ProgressTable students={report.students} maxAttempts={maxAttempts} />
+    return (
+      <>
+        {report.students.length === 0 ? (
+          <p className="text-ink-2">Nobody is in this class now.</p>
+        ) : (
+          <StudentTable report={report} students={report.students} maxAttempts={maxAttempts} />
+        )}
+        {report.removed.length > 0 ? (
+          <RemovedGroup report={report} maxAttempts={maxAttempts} />
+        ) : null}
+      </>
     );
+  }
+  if (report.students.length === 0) {
+    return <p className="text-ink-2">Nobody is in this class now.</p>;
   }
   if (!report.released) {
     return <p className="text-ink-2">Scores show here once the assignment closes.</p>;
@@ -136,6 +146,58 @@ function ReportBody({
     );
   }
   return <StepsBody report={report} />;
+}
+
+function StudentTable({
+  report,
+  students,
+  maxAttempts,
+  label,
+}: {
+  report: AssignmentReport;
+  students: AssignmentReport["students"];
+  maxAttempts: number;
+  label?: string;
+}) {
+  return report.released ? (
+    <ScoreTable
+      items={report.items}
+      students={students}
+      maxAttempts={maxAttempts}
+      label={label ?? "Scores by student"}
+    />
+  ) : (
+    <ProgressTable
+      students={students}
+      maxAttempts={maxAttempts}
+      label={label ?? "Progress by student"}
+    />
+  );
+}
+
+/**
+ * Students taken off the class after attempting (#242): their work is kept and shown here, by the
+ * same rules as everyone else's (progress only until the close), and left out of the class's own
+ * counts, items and steps.
+ */
+function RemovedGroup({ report, maxAttempts }: { report: AssignmentReport; maxAttempts: number }) {
+  return (
+    <section aria-labelledby="removed-heading" className="mt-8">
+      <h2 id="removed-heading" className="mb-1 text-lg font-medium text-ink-1">
+        Removed from class
+      </h2>
+      <p className="measure mb-3 text-sm text-ink-2">
+        Taken off the class after attempting this assignment. Their attempts are kept here and are
+        not counted in the class&apos;s figures.
+      </p>
+      <StudentTable
+        report={report}
+        students={report.removed}
+        maxAttempts={maxAttempts}
+        label={report.released ? "Scores of removed students" : "Progress of removed students"}
+      />
+    </section>
+  );
 }
 
 function StepsBody({ report }: { report: AssignmentReport }) {
