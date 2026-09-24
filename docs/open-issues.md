@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-24 (Sprint 10 kicked off: #233–#242 filed under milestone 10, with #219 and #178 moved in; owner decisions below).
+Last updated: 2026-09-24 (#233 security audit merged in #245; #244 filed from it).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -127,20 +127,21 @@ Demo 10: production passes the go-live check. A student signs in on a phone, see
 
 Phase 4 splits across two sprints. Sprint 10 covers what real students need: hardening and the student home. Sprint 11 covers the landing page, onboarding, empty and error states, email templates, the guides, and the cold-onboarding demo.
 
-| #                                                           | Title                                                                                         | Gates                     | Status                                                  |
-| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------- | ------------------------------------------------------- |
-| [#233](https://github.com/tannernielson27/learn/issues/233) | chore(security): audit RLS, security-definer functions and routes before real students        | security, db, e2e         | To do                                                   |
-| [#234](https://github.com/tannernielson27/learn/issues/234) | fix(auth): keep rate limits in Postgres so they hold across server instances                  | security, db              | To do                                                   |
-| [#235](https://github.com/tannernielson27/learn/issues/235) | chore(infra): report client and server errors to Sentry with student data scrubbed            | security                  | To do; owner creates the Sentry project (docs/05 §7.9)  |
-| [#236](https://github.com/tannernielson27/learn/issues/236) | chore(infra): a nightly encrypted database dump, with restore steps                           | security, db              | To do; runs for real once the §7.3 project exists       |
-| [#237](https://github.com/tannernielson27/learn/issues/237) | chore(infra): a go-live check that proves production is ready for students                    | security                  | To do                                                   |
-| [#219](https://github.com/tannernielson27/learn/issues/219) | fix(player): an ordered-response item starts in the author's order, which is often the answer | player                    | To do; moved in from S9 known gaps                      |
-| [#178](https://github.com/tannernielson27/learn/issues/178) | fix(live): drop the open select policy on live.session_public_state                           | live, security            | Blocked: owner turns off Realtime "Allow public access" |
-| [#238](https://github.com/tannernielson27/learn/issues/238) | feat(student): a history of my assignments and best scores                                    | security, db, e2e         | To do                                                   |
-| [#239](https://github.com/tannernielson27/learn/issues/239) | feat(student): my weakest clinical judgment steps                                             | security                  | To do                                                   |
-| [#240](https://github.com/tannernielson27/learn/issues/240) | feat(authoring): share a bank with a class for practice, and warn on graded reuse             | security, db, e2e         | To do                                                   |
-| [#241](https://github.com/tannernielson27/learn/issues/241) | feat(student): practice a shared bank with instant feedback                                   | player, security, db, e2e | To do                                                   |
-| [#242](https://github.com/tannernielson27/learn/issues/242) | feat(assign): a class time zone setting, and removed students in the report                   | db, e2e                   | To do                                                   |
+| #                                                           | Title                                                                                         | Gates                     | Status                                                           |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------- | ---------------------------------------------------------------- |
+| [#233](https://github.com/tannernielson27/learn/issues/233) | chore(security): audit RLS, security-definer functions and routes before real students        | security, db, e2e         | Merged (#245); `20260925000000_security_guard` applied to hosted |
+| [#234](https://github.com/tannernielson27/learn/issues/234) | fix(auth): keep rate limits in Postgres so they hold across server instances                  | security, db              | To do                                                            |
+| [#235](https://github.com/tannernielson27/learn/issues/235) | chore(infra): report client and server errors to Sentry with student data scrubbed            | security                  | To do; owner creates the Sentry project (docs/05 §7.9)           |
+| [#236](https://github.com/tannernielson27/learn/issues/236) | chore(infra): a nightly encrypted database dump, with restore steps                           | security, db              | To do; runs for real once the §7.3 project exists                |
+| [#237](https://github.com/tannernielson27/learn/issues/237) | chore(infra): a go-live check that proves production is ready for students                    | security                  | To do                                                            |
+| [#219](https://github.com/tannernielson27/learn/issues/219) | fix(player): an ordered-response item starts in the author's order, which is often the answer | player                    | To do; moved in from S9 known gaps                               |
+| [#178](https://github.com/tannernielson27/learn/issues/178) | fix(live): drop the open select policy on live.session_public_state                           | live, security            | Blocked: owner turns off Realtime "Allow public access"          |
+| [#238](https://github.com/tannernielson27/learn/issues/238) | feat(student): a history of my assignments and best scores                                    | security, db, e2e         | To do                                                            |
+| [#239](https://github.com/tannernielson27/learn/issues/239) | feat(student): my weakest clinical judgment steps                                             | security                  | To do                                                            |
+| [#240](https://github.com/tannernielson27/learn/issues/240) | feat(authoring): share a bank with a class for practice, and warn on graded reuse             | security, db, e2e         | To do                                                            |
+| [#241](https://github.com/tannernielson27/learn/issues/241) | feat(student): practice a shared bank with instant feedback                                   | player, security, db, e2e | To do                                                            |
+| [#242](https://github.com/tannernielson27/learn/issues/242) | feat(assign): a class time zone setting, and removed students in the report                   | db, e2e                   | To do                                                            |
+| [#244](https://github.com/tannernielson27/learn/issues/244) | test(security): check live play and a second student on the real response bytes               | security, e2e             | To do; filed from #233                                           |
 
 Suggested order:
 
