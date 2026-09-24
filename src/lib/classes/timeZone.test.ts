@@ -54,6 +54,10 @@ describe("formatInZone", () => {
     );
   });
 
+  it("hands back an unreadable instant as it is rather than failing the page", () => {
+    expect(formatInZone("not-a-date", "America/Denver")).toBe("not-a-date");
+  });
+
   it("falls back to UTC, labelled, for a zone this runtime does not know", () => {
     expect(formatInZone(CLOSES, "Not/AZone")).toBe("Thu 24 Sep 2026, 23:00 UTC");
   });

@@ -45,7 +45,7 @@ describe("ClassTimeZoneForm", () => {
   it("suggests the browser's zone when it differs, and picks it on request", async () => {
     browserZone("America/New_York");
     const { user } = setup({ status: "idle" });
-    await user.click(screen.getByRole("button", { name: "Use America/New_York" }));
+    await user.click(screen.getByRole("button", { name: "Use America/New York" }));
     expect(screen.getByRole("combobox", { name: "Time zone" })).toHaveValue("America/New_York");
     expect(screen.queryByRole("button", { name: /^Use / })).toBeNull();
   });

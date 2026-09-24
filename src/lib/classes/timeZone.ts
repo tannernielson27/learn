@@ -35,6 +35,8 @@ export function isKnownTimeZone(zone: string): boolean {
  * falls back to UTC, still labelled.
  */
 export function formatInZone(iso: string, zone: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
   const timeZone = isKnownTimeZone(zone) ? zone : FALLBACK_ZONE;
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
@@ -46,7 +48,7 @@ export function formatInZone(iso: string, zone: string): string {
     minute: "2-digit",
     hourCycle: "h23",
     timeZoneName: "short",
-  }).formatToParts(new Date(iso));
+  }).formatToParts(date);
   const p = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return `${p.weekday} ${p.day} ${p.month} ${p.year}, ${p.hour}:${p.minute} ${p.timeZoneName}`;
 }

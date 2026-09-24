@@ -74,7 +74,7 @@ export function ClassTimeZoneForm({ action, currentZone, zones }: ClassTimeZoneF
         {suggestion ? (
           <div>
             <Button type="button" size="sm" onClick={() => setZone(suggestion)}>
-              {`Use ${suggestion}`}
+              {`Use ${suggestion.replaceAll("_", " ")}`}
             </Button>
           </div>
         ) : null}

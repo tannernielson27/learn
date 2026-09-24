@@ -184,7 +184,7 @@ export async function loadResultsPage(
   // The assignment row only names the class; a removed student reads none, and still has results.
   const [set, assignment] = await Promise.all([
     store.items(result.itemSet),
-    store.assignment(assignmentId).catch(() => null),
+    store.assignment(assignmentId),
   ]);
   if (set === null) return { kind: "failed" };
 
