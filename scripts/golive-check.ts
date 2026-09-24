@@ -21,7 +21,7 @@ import {
   type Target,
 } from "../src/lib/golive/options.ts";
 import { exitCode, formatReport } from "../src/lib/golive/report.ts";
-import { runGoLiveCheck } from "../src/lib/golive/run.ts";
+import { redact, runGoLiveCheck } from "../src/lib/golive/run.ts";
 import { migrationVersions, parseQueryRows, type Query } from "../src/lib/golive/sources.ts";
 
 const ROOT = join(import.meta.dirname, "..");
@@ -106,7 +106,7 @@ main().then(
     process.exitCode = code;
   },
   (error: unknown) => {
-    console.error(`golive:check: ${error instanceof Error ? error.message : String(error)}\n`);
+    console.error(`golive:check: ${redact(error)}\n`);
     console.error(USAGE);
     process.exitCode = 2;
   },

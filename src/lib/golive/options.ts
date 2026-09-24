@@ -106,8 +106,8 @@ export function checkedSupabase(
   publishableKey: string | null;
 } {
   if (publishableKey === null) {
-    readSupabasePublicEnv({ url, publishableKey: "sb_publishable_placeholder" });
-    return { url, publishableKey: null };
+    const env = readSupabasePublicEnv({ url, publishableKey: "sb_publishable_placeholder" });
+    return { url: env.url, publishableKey: null };
   }
   const env = readSupabasePublicEnv({ url, publishableKey });
   return { url: env.url, publishableKey: env.publishableKey };

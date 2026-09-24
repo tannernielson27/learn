@@ -151,6 +151,17 @@ describe("createSupabaseMemo", () => {
     expect(check).toHaveBeenCalledTimes(2);
   });
 
+  it("forgets a rejected check at once, so the next caller retries", async () => {
+    const check = vi
+      .fn<() => Promise<{ status: "ok"; project: string }>>()
+      .mockRejectedValueOnce(new Error("boom"))
+      .mockResolvedValueOnce({ status: "ok", project: "p" });
+    const memo = createSupabaseMemo(check, 10_000, () => 0);
+    await expect(memo()).rejects.toThrow("boom");
+    await expect(memo()).resolves.toEqual({ status: "ok", project: "p" });
+    expect(check).toHaveBeenCalledTimes(2);
+  });
+
   it("shares one request between concurrent callers", async () => {
     const check = vi.fn(async () => ({ status: "ok" as const, project: "p" }));
     const memo = createSupabaseMemo(check, 10_000, () => 0);
