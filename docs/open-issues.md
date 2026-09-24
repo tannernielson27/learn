@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-23 (Sprint 9 code complete: #204–#212 and #217 merged, `main` at 3c3b1e2, demo in `docs/sprints/S9-demo.md`; the hosted project has all 28 migrations; owner steps before real students are listed there).
+Last updated: 2026-09-24 (Sprint 10 kicked off: #233–#242 filed under milestone 10, with #219 and #178 moved in; owner decisions below).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -121,6 +121,60 @@ Decisions taken at kickoff, each the conservative option; say if any should chan
 5. **Reminders run on `pg_cron` every 15 minutes through `pg_net`** (#212, ADR 0007 to write), because Vercel Cron on Hobby runs only once a day. A reminder can be up to 15 minutes late.
 6. **The assignment report shows progress only while open** (#211), so projecting it mid-window gives nothing away.
 
+## S10: Go-live + student home (milestone 10)
+
+Demo 10: production passes the go-live check. A student signs in on a phone, sees their assignment history and their weakest CJMM step, and practices a shared bank with instant feedback.
+
+Phase 4 splits across two sprints. Sprint 10 covers what real students need: hardening and the student home. Sprint 11 covers the landing page, onboarding, empty and error states, email templates, the guides, and the cold-onboarding demo.
+
+| #                                                           | Title                                                                                         | Gates                     | Status                                                  |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------- | ------------------------------------------------------- |
+| [#233](https://github.com/tannernielson27/learn/issues/233) | chore(security): audit RLS, security-definer functions and routes before real students        | security, db, e2e         | To do                                                   |
+| [#234](https://github.com/tannernielson27/learn/issues/234) | fix(auth): keep rate limits in Postgres so they hold across server instances                  | security, db              | To do                                                   |
+| [#235](https://github.com/tannernielson27/learn/issues/235) | chore(infra): report client and server errors to Sentry with student data scrubbed            | security                  | To do; owner creates the Sentry project (docs/05 §7.9)  |
+| [#236](https://github.com/tannernielson27/learn/issues/236) | chore(infra): a nightly encrypted database dump, with restore steps                           | security, db              | To do; runs for real once the §7.3 project exists       |
+| [#237](https://github.com/tannernielson27/learn/issues/237) | chore(infra): a go-live check that proves production is ready for students                    | security                  | To do                                                   |
+| [#219](https://github.com/tannernielson27/learn/issues/219) | fix(player): an ordered-response item starts in the author's order, which is often the answer | player                    | To do; moved in from S9 known gaps                      |
+| [#178](https://github.com/tannernielson27/learn/issues/178) | fix(live): drop the open select policy on live.session_public_state                           | live, security            | Blocked: owner turns off Realtime "Allow public access" |
+| [#238](https://github.com/tannernielson27/learn/issues/238) | feat(student): a history of my assignments and best scores                                    | security, db, e2e         | To do                                                   |
+| [#239](https://github.com/tannernielson27/learn/issues/239) | feat(student): my weakest clinical judgment steps                                             | security                  | To do                                                   |
+| [#240](https://github.com/tannernielson27/learn/issues/240) | feat(authoring): share a bank with a class for practice, and warn on graded reuse             | security, db, e2e         | To do                                                   |
+| [#241](https://github.com/tannernielson27/learn/issues/241) | feat(student): practice a shared bank with instant feedback                                   | player, security, db, e2e | To do                                                   |
+| [#242](https://github.com/tannernielson27/learn/issues/242) | feat(assign): a class time zone setting, and removed students in the report                   | db, e2e                   | To do                                                   |
+
+Suggested order:
+
+1. #233, the audit, first, because its findings may add fixes to the sprint. #235 (Sentry) and #219 can run alongside it.
+2. #234, shared rate limits. #241 needs the limiter.
+3. #236 (backups) and #242 (leftovers).
+4. #238 history, then #239 weak steps.
+5. #240 share, then #241 practice.
+6. #237, the go-live check, last, once the Sentry and backup checks have something to check.
+
+Parallelization: one builder at a time on this machine, with a light second builder allowed only when it skips Docker and `next dev`. The pairs that may run together:
+
+- #235 or #219 beside #233;
+- #236 beside #242;
+- the pure part of #239 beside #240.
+
+#238, #239 and #241 all edit the student home (`src/app/learn/page.tsx`), so never build two of them at once. Number migrations at merge time.
+
+Owner decisions, 2026-09-24:
+
+1. **Sprint 10 is go-live plus the student home.** Landing, onboarding, email templates and the guides move to Sprint 11.
+2. **Practice is opt-in per bank, and graded reuse only warns** (#240, #241). An instructor shares a bank with a class. Students see each item's key and rationale right after answering it. Assigning a practice-shared item as graded work shows a warning but is allowed.
+3. **The production plan is decided at go-live.** Free tier pauses after about a week idle and has no downloadable backups; Pro does not pause and keeps 7 days of daily backups. The nightly encrypted dump (#236) is built either way as the fallback.
+4. **Sentry on the free tier** (#235), with student data scrubbed before it leaves the app. The owner creates the Sentry project and adds the DSN to Vercel.
+
+Decisions taken at kickoff, each the conservative option; say if any should change:
+
+1. **Rate limits move into Postgres** (#234), not a new vendor such as Upstash. Keys that are IPs or emails are stored hashed.
+2. **Sentry gets no session replay and no PII** (#235). Users are an opaque hashed id at most, and answer keys, invite tokens and join codes are stripped.
+3. **The backup artifact is encrypted to the owner's public key** (#236), because anyone with a GitHub account can download artifacts from a public repo. The workflow never holds the decryption key.
+4. **History and weak steps count only closed assignments** (#238, #239), using the best attempt. A step needs 5 items before it is ranked.
+5. **Practice never counts toward a grade** and stays out of the instructor's assignment report (#241). It feeds the student's weak steps as a separate source.
+6. **Practice keys arrive one item at a time, from the server, after that item is answered** (#241). No endpoint hands out a key for an unanswered item.
+
 ## No milestone
 
 | #                                                           | Title                                                                                     | Area               | Status                                                             |
@@ -133,7 +187,6 @@ Decisions taken at kickoff, each the conservative option; say if any should chan
 | [#146](https://github.com/tannernielson27/learn/issues/146) | fix(gallery): gate the gallery routes so ADR 0003 has a boundary                          | player, security   | Merged (#156); gate lives in `src/proxy.ts`                        |
 | [#149](https://github.com/tannernielson27/learn/issues/149) | fix(live): make the Realtime channel private with a per-participant token                 | live, security     | Merged (#176)                                                      |
 | [#152](https://github.com/tannernielson27/learn/issues/152) | fix(live): rate limit POST /api/live/view per participant                                 | live, security, db | Merged (#158); apply `20260921100000_live_view_rate_limit`         |
-| [#178](https://github.com/tannernielson27/learn/issues/178) | fix(live): drop the open select policy on live.session_public_state                       | live, security     | Blocked: owner turns off Realtime "Allow public access"            |
 | [#154](https://github.com/tannernielson27/learn/issues/154) | fix(test): EditorShell.restore "tells its host while a save is in flight" is flaky        | authoring          | Merged (#155); test-only                                           |
 | [#159](https://github.com/tannernielson27/learn/issues/159) | fix(auth): a sustained lockout of one author's only sign-in path is still cheap           | auth, security     | **Owner decision**; filed from #157's review                       |
 | [#161](https://github.com/tannernielson27/learn/issues/161) | test(authoring): prove every author-writable table is counted, rather than remembering to | authoring, db      | Merged (#174)                                                      |
@@ -160,6 +213,9 @@ These block the live site rather than a single issue:
 - **Author accounts are now created by hand** (#139, merged in #157). Sign-in no longer creates accounts, so a new instructor exists only once added under Authentication, Users, Add user. **Since #204 that is two steps**: Add user, then `select private.make_instructor('<address>');` in the SQL editor (docs/05 §7.6); without the second step the account lands on "No access yet". The sign-in form answers identically whether or not an address has an account, so a mistyped or unregistered address will appear to succeed and simply never receive a link.
 - **Sprint 9 email (#206)**: in Resend, confirm info.tannernielson.com is verified; in Supabase, set custom SMTP to Resend and raise the Auth email rate limit; in Vercel, add `RESEND_API_KEY` and `EMAIL_FROM` to Production and Preview. The exact steps are in docs/05 §7.7.
 - **Before any real student gets an invite**, create the production project and replay migrations (§7.3). Sprint 9 puts student emails in the database.
+- **Sprint 10 monitoring (#235)**: create a Sentry project (free tier) and add `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` and `SENTRY_AUTH_TOKEN` to Vercel Production and Preview. The steps will be in docs/05 §7.9 when #235 merges.
+- **Sprint 10 backups (#236)**: generate an `age` key pair and keep the private key off GitHub. Once the §7.3 project exists, add the repo secrets `BACKUP_AGE_RECIPIENT` (the public key) and `PROD_DB_URL`.
+- **Choose the production plan at go-live**: Pro, or free plus the nightly dump (owner decision 2026-09-24).
 - **Decide #159**: whether to accept that four cheap IPs can hold one author's sign-in closed indefinitely, or pay for one of the mitigations listed there.
 - Done 2026-09-22: Vercel Production and Preview both carry `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` and `SUPABASE_JWT_SIGNING_KEY`; Production also has `DEMO_ACCOUNT_*`. The hosted demo user exists as an instructor in the seeded LeaRN org.
 - Supabase Authentication, URL Configuration: Site URL and redirect URLs for production, previews and localhost.
