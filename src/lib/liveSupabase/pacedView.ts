@@ -13,7 +13,7 @@
  *
  * Two reads, however long the set: the items by id, and this participant's answers by session.
  */
-import { startingOrderSeed } from "@/lib/ngn/startingOrder";
+import type { StartingOrderSeedFor } from "@/lib/ngn/startingOrder";
 import { parseSubmission, toKeylessItem } from "@/lib/ngn/submit";
 import type { Item } from "@/lib/ngn/schemas";
 import type { ScoreResult } from "@/lib/ngn/types";
@@ -43,7 +43,7 @@ export type PacedSetResult =
   { ok: true; set: PacedItemPayload[] } | { ok: false; reason: "failed" | "unplayable" };
 
 export async function readPacedSet(
-  deps: LiveRouteDeps,
+  deps: LiveRouteDeps & { startingOrderSeed: StartingOrderSeedFor },
   participant: { sessionId: string; participantId: string },
   itemIds: readonly string[],
   reveal: boolean,
@@ -81,7 +81,7 @@ export async function readPacedSet(
     return {
       position,
       // One starting order per room for an ordered-response item (#219).
-      item: toKeylessItem(item, startingOrderSeed(participant.sessionId, item.id)),
+      item: toKeylessItem(item, deps.startingOrderSeed(participant.sessionId, item.id)),
       answered: answeredFrom(item, mine),
       revealed: reveal ? revealedFrom(item, position, mine) : null,
     };

@@ -40,9 +40,10 @@ import {
   type ResumedIdentity,
   type SupabaseParticipant,
 } from "../participantTransport";
-import { participantFromCookie, type LiveRouteDeps } from "../routeDeps";
+import { secretStartingOrderSeed } from "@/lib/supabase/startingOrderSeed";
+import { participantFromCookie } from "../routeDeps";
 import { submitSessionResponse } from "../submitRoute";
-import { readParticipantView } from "../viewRoute";
+import { readParticipantView, type ViewRouteDeps } from "../viewRoute";
 import { LIVE_ROUTES, type JoinSession, type ParticipantCredentials } from "../wire";
 import {
   FAKE_JWT_SECRET,
@@ -121,7 +122,12 @@ export function createFakeRoom(options: ConformanceRoomOptions): FakeRoom {
   });
 
   const service = createFakeClient(stack, { role: "service" });
-  const deps: LiveRouteDeps = { verify: participantFromCookie(service), service };
+  // The view route's seed as the real route handler passes it (#219).
+  const deps: ViewRouteDeps = {
+    verify: participantFromCookie(service),
+    service,
+    startingOrderSeed: secretStartingOrderSeed,
+  };
   // The channel route signs with the key this stack's Realtime trusts, as production's signs with
   // the project's (#149).
   const channelDeps = {

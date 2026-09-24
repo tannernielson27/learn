@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { startingOrder, startingOrderSeed } from "@/lib/ngn/startingOrder";
 import { FIXTURES, sampleCaseStudy } from "@/lib/ngn/fixtures";
 import { caseStudySchema, itemSchema, type Item } from "@/lib/ngn/schemas";
 import type { SetItem } from "./attemptScoring";
@@ -135,6 +136,24 @@ describe("an ordered-response item's starting order, on the bytes (#219)", () =>
         expect(stepOrder(bytes)).not.toEqual(key);
         expect(bytes).not.toContain(JSON.stringify(key));
       }
+    }
+  });
+
+  it("keys the seed with the server's secret, so a student cannot replay the scramble", () => {
+    // A student knows their attempt id and the item id, and the scramble is public (#219).
+    vi.stubEnv("SUPABASE_SECRET_KEY", "sb_secret_attemptView_test");
+    try {
+      const differs = Array.from({ length: 8 }, (_, s) => {
+        const attemptId = attempt(s, "e");
+        const bytes = JSON.stringify(
+          buildAttemptSet({ set: setOf([OR]), attemptId, shuffle: false, answers: {} }),
+        );
+        const replayed = startingOrder(key, key, startingOrderSeed(attemptId, OR.id));
+        return stepOrder(bytes).join() !== replayed.join();
+      });
+      expect(differs.filter(Boolean).length).toBeGreaterThan(4);
+    } finally {
+      vi.unstubAllEnvs();
     }
   });
 

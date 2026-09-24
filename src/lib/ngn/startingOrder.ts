@@ -70,6 +70,9 @@ export function startingOrder(
   return sameOrder(shuffled, key) ? [...shuffled.slice(1), shuffled[0]!] : shuffled;
 }
 
+/** Turns a room or an attempt and an item into a seed. The server's is keyed with a secret. */
+export type StartingOrderSeedFor = (scopeId: string, itemId: string) => string;
+
 /**
  * The seed for one item in one live session (every phone in the room starts from the same order)
  * or one take-home attempt (a reload or a resume starts from the same order again).

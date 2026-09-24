@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { startingOrder, startingOrderSeed } from "@/lib/ngn/startingOrder";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema, type Item } from "@/lib/ngn/schemas";
 import type { SessionMode } from "@/lib/live";
@@ -10,6 +11,14 @@ import { createFakeRoom, type FakeRoom } from "./testing/supabaseRoom";
  * bytes the participant's process was sent, with the reveal as the control: the key's order is on
  * the wire then, so the reader below would have seen it before if it had been there.
  */
+
+// The server's secret, as production has one: the seed is keyed with it (secretStartingOrderSeed).
+beforeEach(() => {
+  vi.stubEnv("SUPABASE_SECRET_KEY", "sb_secret_orderedStart_test");
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 const ORDERED = itemSchema.parse(FIXTURES.ordered_response.canonical) as Item;
 const KEY = (ORDERED.answerKey as { orderedIds: string[] }).orderedIds;
@@ -78,6 +87,20 @@ describe.each<SessionMode>(["instructor_paced", "student_paced"])(
     });
   },
 );
+
+it("is not the order a student could compute from the ids they can see", async () => {
+  // A student knows the session id and the item id, and the scramble is public. Replaying it with
+  // those as the seed must not reproduce what they were sent, or undoing it would give the
+  // authored order, which is the key. Over several rooms, the keyed seed parts from the public one.
+  const differs: boolean[] = [];
+  for (let s = 0; s < 6; s += 1) {
+    const sessionId = `00000000-0000-0000-0000-0000000219d${s}`;
+    const { live } = await joinedRoom("instructor_paced", sessionId);
+    const replayed = startingOrder(KEY, KEY, startingOrderSeed(sessionId, ORDERED.id));
+    differs.push(stepOrder(wireSince(live)).join() !== replayed.join());
+  }
+  expect(differs.filter(Boolean).length).toBeGreaterThan(3);
+});
 
 it("seeds the order by session, so another room may start from another order", async () => {
   const orders = new Set<string>();
