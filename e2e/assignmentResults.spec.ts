@@ -77,6 +77,13 @@ test("a student sees nothing before the close, then their score, keys and ration
   await student.goto(await latestSignInLink(request, email, since));
   await expect(student).toHaveURL(/\/learn$/);
 
+  // #233: the invite page is public, so it must not carry who is already on the roster. The
+  // control: the instructor's roster response does carry the student's address.
+  expect(await bytesOf(page.context(), `/author/classes/${classId}`)).toContain(email);
+  const stranger = await browser.newContext();
+  expect(await bytesOf(stranger, invite)).not.toContain(email);
+  await stranger.close();
+
   // Both assigned now, closing shortly; the clock starts only after the sign-in above.
   const [klass] = await selectAsAdmin<{ org_id: string }>(
     request,
@@ -138,6 +145,8 @@ test("a student sees nothing before the close, then their score, keys and ration
   );
   expectKeyless(await bytesOf(phone, bankResults), [MC_RATIONALE, MR_RATIONALE]);
   expectKeyless(await bytesOf(phone, caseResults), [STEP_6_RATIONALE]);
+  // #233: the student home lists both open assignments; the same controls above cover it.
+  expectKeyless(await bytesOf(phone, "/learn"), [MC_RATIONALE, MR_RATIONALE, STEP_6_RATIONALE]);
   await student.goto("/learn");
   await expect(
     student.getByRole("link", { name: `Results for ${bankTitle}`, exact: true }),
