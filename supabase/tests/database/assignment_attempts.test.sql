@@ -8,7 +8,7 @@
 -- with the guard trigger switched off, as the superuser.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(47);
+select plan(48);
 
 -- ---------------------------------------------------------------------------
 -- Cast, as the superuser
@@ -430,8 +430,8 @@ select is(
        (select id from ids where name = 'grace'), '00000000-0000-0000-0000-0000002080f1',
        jsonb_build_object('type', 'multiple_choice', 'selectedOptionId', 'opt_' || n)) as s
     where s.refusal = 'rate_limited'),
-  5,
-  'saves past 120 a minute are refused'
+  6,
+  'saves past 120 a minute are refused, counting the refused save into Ada''s attempt above'
 );
 
 reset role;
