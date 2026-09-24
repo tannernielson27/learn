@@ -58,6 +58,31 @@ export function refuseSave(refusal: AttemptRefusal): Response {
   return Response.json(body, { status: STATUS[refusal] ?? 409, headers: NO_STORE });
 }
 
+/**
+ * The body as text, read no further than `limit` bytes. A Route Handler has no body cap of its
+ * own (the Server Action limit does not apply here), and Content-Length is optional and can lie,
+ * so the cap is enforced on the bytes as they arrive.
+ */
+async function readCapped(request: Request, limit: number): Promise<string | "too_large"> {
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > limit) {
+      await reader.cancel();
+      return "too_large";
+    }
+    chunks.push(value);
+  }
+  const whole = new Uint8Array(size);
+  chunks.reduce((offset, chunk) => (whole.set(chunk, offset), offset + chunk.byteLength), 0);
+  return new TextDecoder().decode(whole);
+}
+
 async function readBody(request: Request): Promise<SaveRequestBody | AttemptRefusal> {
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
     return "malformed";
@@ -65,9 +90,11 @@ async function readBody(request: Request): Promise<SaveRequestBody | AttemptRefu
   if (Number(request.headers.get("content-length") ?? 0) > MAX_ITEM_PAYLOAD_BYTES) {
     return "too_large";
   }
+  const text = await readCapped(request, MAX_ITEM_PAYLOAD_BYTES);
+  if (text === "too_large") return "too_large";
   let body: unknown;
   try {
-    body = await request.json();
+    body = JSON.parse(text);
   } catch {
     return "malformed";
   }

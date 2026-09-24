@@ -77,6 +77,30 @@ describe("POST /api/assignments/save", () => {
     expect(response.status).toBe(413);
   });
 
+  it("stops reading a body that never declared its length once it passes the cap", async () => {
+    const fake = deps(SAVED);
+    const chunk = new TextEncoder().encode("x".repeat(64 * 1024));
+    let sent = 0;
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        // Far more than the cap if read to the end; a reader that stops early pulls a few chunks.
+        if (sent >= 64) return controller.close();
+        sent += 1;
+        controller.enqueue(chunk);
+      },
+    });
+    const request = new Request("http://localhost/api/assignments/save", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: stream,
+      duplex: "half",
+    } as RequestInit);
+    const response = await saveAttemptAnswer(request, fake.deps);
+    expect(response.status).toBe(413);
+    expect(sent).toBeLessThan(10);
+    expect(fake.rpc).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["closed", 409],
     ["already_submitted", 409],

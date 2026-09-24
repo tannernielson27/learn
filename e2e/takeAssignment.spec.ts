@@ -34,6 +34,20 @@ async function bytesOf(context: BrowserContext, path: string): Promise<string> {
   return response.text();
 }
 
+/**
+ * The raw response of the Server Action a click sends (the POST carrying Next-Action): the Flight
+ * stream Next replays into the page, which a leak could ride without ever reaching a plain GET.
+ */
+async function actionBytes(page: Page, act: () => Promise<void>): Promise<string> {
+  const response = page.waitForResponse(
+    (r) => r.request().method() === "POST" && "next-action" in r.request().headers(),
+  );
+  await act();
+  const bytes = await (await response).text();
+  expect(bytes.length).toBeGreaterThan(0);
+  return bytes;
+}
+
 function expectKeyless(bytes: string, rationales: readonly string[]): void {
   for (const text of rationales) expect(bytes).not.toContain(text);
   for (const marker of KEY_MARKERS) expect(bytes).not.toContain(marker);
@@ -116,7 +130,10 @@ test("a student answers on a phone, reloads to find the answers, and submits", a
   await expect(
     student.getByRole("heading", { level: 1, name: bankTitle, exact: true }),
   ).toBeVisible();
-  await student.getByRole("button", { name: "Start", exact: true }).click();
+  const startBytes = await actionBytes(student, () =>
+    student.getByRole("button", { name: "Start", exact: true }).click(),
+  );
+  expectKeyless(startBytes, [MC_RATIONALE, MR_RATIONALE]);
 
   // Two answers, each saved on its own.
   const status = student.getByTestId("save-status");
@@ -147,7 +164,10 @@ test("a student answers on a phone, reloads to find the answers, and submits", a
 
   // Submit: "Submitted", and nothing about right or wrong.
   await student.getByRole("button", { name: "Submit assignment", exact: true }).click();
-  await student.getByRole("button", { name: "Submit now", exact: true }).click();
+  const submitBytes = await actionBytes(student, () =>
+    student.getByRole("button", { name: "Submit now", exact: true }).click(),
+  );
+  expectKeyless(submitBytes, [MC_RATIONALE, MR_RATIONALE]);
   await expect(student.getByTestId("submitted-notice")).toBeVisible({ timeout: 15_000 });
   await expect(student.getByTestId("attempt-submitted")).toContainText("Submitted");
   await expectNoAxeViolations(student);
@@ -165,7 +185,10 @@ test("a student answers on a phone, reloads to find the answers, and submits", a
 
   // A case study: its patient record beside the steps, and no step's key on the wire.
   await student.goto(`/learn/assignments/${caseAssignment}`);
-  await student.getByRole("button", { name: "Start", exact: true }).click();
+  const caseStartBytes = await actionBytes(student, () =>
+    student.getByRole("button", { name: "Start", exact: true }).click(),
+  );
+  expectKeyless(caseStartBytes, [STEP_6_RATIONALE]);
   await expect(
     student
       .getByRole("button", { name: "Patient record", exact: true })

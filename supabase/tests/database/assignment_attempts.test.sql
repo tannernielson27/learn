@@ -8,7 +8,7 @@
 -- with the guard trigger switched off, as the superuser.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(48);
+select plan(49);
 
 -- ---------------------------------------------------------------------------
 -- Cast, as the superuser
@@ -240,6 +240,13 @@ select is(
      (select id from ids where name = 'ada1'), '00000000-0000-0000-0000-0000002080d2', 2, 1, 2, '[]')),
   'not_found',
   'the score is recorded only for the student whose attempt it is'
+);
+select is(
+  (select refusal from public.record_attempt_submission(
+     (select id from ids where name = 'ada1'), '00000000-0000-0000-0000-0000002080d1', 2, 1, 2,
+     '[{"item_id":"not-a-uuid","points":1,"max_points":1,"model":"zero_one","breakdown":[]}]')),
+  'malformed',
+  'a mark naming something that is not an item id is refused cleanly, not a cast error'
 );
 select is(
   (select refusal from public.record_attempt_submission(

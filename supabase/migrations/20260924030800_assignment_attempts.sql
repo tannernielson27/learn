@@ -79,7 +79,7 @@ create table public.assignment_attempts (
   number smallint not null check (number between 1 and 3),
   started_at timestamptz not null default now(),
   submitted_at timestamptz,
-  score numeric(8, 2),
+  score numeric(8, 2) check (score is null or score >= 0),
   max_score numeric(8, 2) check (max_score >= 0),
   auto_submitted boolean not null default false,
   -- Bumped by every save; see "A save racing a submit" above.
@@ -91,7 +91,8 @@ create table public.assignment_attempts (
   -- Open, or submitted with a score: never half of each.
   constraint assignment_attempts_submitted_scored check (
     (submitted_at is null and score is null and max_score is null and not auto_submitted)
-    or (submitted_at is not null and score is not null and max_score is not null)
+    or (submitted_at is not null and score is not null and max_score is not null
+        and score <= max_score)
   )
 );
 
@@ -120,7 +121,7 @@ create table public.attempt_responses (
     check (jsonb_typeof(response) = 'object' and octet_length(response::text) <= 200000),
   saved_at timestamptz not null default now(),
   -- Written once, at submit, by record_attempt_submission. Null while the attempt is open.
-  points numeric(8, 2),
+  points numeric(8, 2) check (points is null or points >= 0),
   max_points numeric(8, 2) check (max_points >= 0),
   model text check (model is null or length(model) between 1 and 40),
   breakdown jsonb check (breakdown is null or jsonb_typeof(breakdown) = 'array'),
@@ -294,12 +295,15 @@ begin
     return;
   end if;
 
-  begin
-    insert into public.assignment_attempts (org_id, assignment_id, student_id, number)
-    values (found_assignment.org_id, target_assignment, caller, used + 1)
-    returning id into created;
-  exception when unique_violation then
-    -- Two devices started at once: the other one won, and its attempt is the one to resume.
+  -- Two devices starting at once both reach this insert. The unique indexes (one open attempt,
+  -- one row per attempt number) decide: the loser inserts nothing and resumes the winner's
+  -- attempt. ON CONFLICT DO NOTHING with no target covers every unique index, so no hand-written
+  -- exception path is left to get wrong.
+  insert into public.assignment_attempts (org_id, assignment_id, student_id, number)
+  values (found_assignment.org_id, target_assignment, caller, used + 1)
+  on conflict do nothing
+  returning id into created;
+  if created is null then
     select a.id into created
       from public.assignment_attempts a
      where a.assignment_id = target_assignment and a.student_id = caller
@@ -308,7 +312,7 @@ begin
       return query select 'no_attempts_left'::text, null::uuid;
       return;
     end if;
-  end;
+  end if;
 
   return query select null::text, created;
 end;
@@ -527,7 +531,10 @@ begin
     return;
   end if;
   if total is null or possible is null or possible < 0 or total > possible
-     or marks is null or jsonb_typeof(marks) <> 'array' then
+     or marks is null or jsonb_typeof(marks) <> 'array'
+     or exists (select 1 from jsonb_array_elements(marks) as m
+                 where jsonb_typeof(m) <> 'object'
+                    or coalesce(m ->> 'item_id', '') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') then
     return query select 'malformed'::text, null::timestamptz;
     return;
   end if;
@@ -585,7 +592,7 @@ as $$
     from public.assignment_attempts a
     join public.assignments s on s.id = a.assignment_id
    where a.submitted_at is null
-     and now() > s.closes_at + interval '2 seconds'
+     and s.closes_at < now() - interval '2 seconds'
      and (target_assignment is null or a.assignment_id = target_assignment)
      and (target_student is null or a.student_id = target_student)
    order by s.closes_at, a.id
