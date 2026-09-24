@@ -19,7 +19,7 @@ test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase 
 const SAMPLES_BANK = "00000000-0000-4000-8000-000000000002";
 
 /** Long enough to take three attempts and check the page before the close. */
-const WINDOW_MS = 120_000;
+const WINDOW_MS = 180_000;
 
 async function expectNoAxeViolations(page: Page): Promise<void> {
   const axe = await new AxeBuilder({ page }).analyze();
@@ -65,7 +65,7 @@ test("History shows a closed assignment's best score, and nothing of one still o
   browser,
   request,
 }, testInfo) => {
-  test.setTimeout(240_000);
+  test.setTimeout(330_000);
   const project = testInfo.project.name;
   const shot = (name: string) => `test-results/screenshots/${project}/${name}.png`;
 

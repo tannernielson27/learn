@@ -46,9 +46,7 @@ export const HISTORY_AUTO_SUBMIT_BATCH = 50;
 
 function standingOf(entry: HistoryAssignment): HistoryStanding {
   if (entry.attempts.length === 0) return { kind: "not_attempted" };
-  const best = bestAttemptOf(
-    entry.attempts.map((attempt) => ({ ...attempt, studentId: "", marks: null })),
-  );
+  const best = bestAttemptOf(entry.attempts);
   return best ? { kind: "scored", best } : { kind: "unmarked" };
 }
 

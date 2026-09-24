@@ -103,16 +103,23 @@ export interface AssignmentReport {
   counts: { notStarted: number; inProgress: number; submitted: number };
 }
 
-type ScoredAttempt = ReportAttemptInput & { score: number; maxScore: number };
+/** All the best-attempt rule reads of an attempt. */
+export type RankedAttempt = Pick<
+  ReportAttemptInput,
+  "number" | "submittedAt" | "score" | "maxScore"
+>;
 
-const isScored = (attempt: ReportAttemptInput): attempt is ScoredAttempt =>
+type Scored<T extends RankedAttempt> = T & { score: number; maxScore: number };
+type ScoredAttempt = Scored<ReportAttemptInput>;
+
+const isScored = <T extends RankedAttempt>(attempt: T): attempt is Scored<T> =>
   attempt.submittedAt !== null && attempt.score !== null && attempt.maxScore !== null;
 
 /** The highest total among the submitted attempts; a tie goes to the earlier attempt. */
-export function pickBestAttempt(attempts: readonly ReportAttemptInput[]): ScoredAttempt | null {
+export function pickBestAttempt<T extends RankedAttempt>(attempts: readonly T[]): Scored<T> | null {
   return attempts
     .filter(isScored)
-    .reduce<ScoredAttempt | null>(
+    .reduce<Scored<T> | null>(
       (best, next) =>
         best === null ||
         next.score > best.score ||
@@ -128,7 +135,7 @@ function statusOf(attempts: readonly ReportAttemptInput[]): StudentStatus {
   return attempts.length > 0 ? "submitted" : "not_started";
 }
 
-function bestOf(attempt: ScoredAttempt | null): BestAttempt | null {
+function bestOf(attempt: Scored<RankedAttempt> | null): BestAttempt | null {
   if (attempt === null) return null;
   return {
     attemptNumber: attempt.number,
@@ -139,7 +146,7 @@ function bestOf(attempt: ScoredAttempt | null): BestAttempt | null {
 }
 
 /** The best of one student's attempts (#238), with its percent; null when none was submitted. */
-export function bestAttemptOf(attempts: readonly ReportAttemptInput[]): BestAttempt | null {
+export function bestAttemptOf(attempts: readonly RankedAttempt[]): BestAttempt | null {
   return bestOf(pickBestAttempt(attempts));
 }
 
