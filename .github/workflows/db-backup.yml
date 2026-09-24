@@ -1,0 +1,111 @@
+name: db backup
+
+# #236: a nightly logical backup of the production database, encrypted to the owner's age public
+# key before it touches the disk, kept 14 days as a workflow artifact. The restore is docs/05 §7.10.
+#
+# The repo is public, so anyone with a GitHub account can download these artifacts. That is why
+# every part is encrypted, why the workflow holds only the PUBLIC key, and why it never runs for a
+# pull request (a fork's pull request must never reach PROD_DB_URL).
+#
+# Run it by hand: gh workflow run db-backup.yml
+on:
+  schedule:
+    # 09:17 UTC, the small hours in the US. Off the hour, when GitHub's scheduler is least loaded.
+    - cron: "17 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: dump, encrypt, upload
+    # Pinned, not ubuntu-latest: the apt package names and the PGDG codename below are this release's.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # The secrets are given only to the two steps that read them, never to an action.
+    env:
+      # The CLI release that package.json pins, verified against its published checksum.
+      SUPABASE_CLI_VERSION: 2.117.0
+      SUPABASE_CLI_SHA256: 913d1b8303a1bfa05a4f52909f60cbc2f8247f7f9444283c37dbe9eaef0d95de
+    steps:
+      - name: Check the secrets
+        id: secrets
+        env:
+          PROD_DB_URL: ${{ secrets.PROD_DB_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PROD_DB_URL:-}" ] || [ -z "${BACKUP_AGE_RECIPIENT:-}" ]; then
+            echo "::notice title=db backup skipped::PROD_DB_URL or BACKUP_AGE_RECIPIENT is not set, so there is nothing to back up. docs/05 §7.10 says how to set them."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Masked in full and by its password, so neither can reach the log even inside an error.
+          echo "::add-mask::$PROD_DB_URL"
+          password="$(printf '%s' "$PROD_DB_URL" | sed -nE 's#^[a-z]+://[^:/@]+:([^@]+)@.*#\1#p')"
+          if [ -n "$password" ]; then
+            echo "::add-mask::$password"
+            # And as it reads once percent-decoded, the form a driver would use.
+            echo "::add-mask::$(printf '%b' "${password//%/\\x}")"
+          fi
+          echo "run=true" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.secrets.outputs.run == 'true'
+        with:
+          persist-credentials: false
+
+      - name: Install age, the Postgres 17 client and the Supabase CLI
+        if: steps.secrets.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends postgresql-common
+          # PGDG, for a client at the hosted server's major version (Ubuntu 24.04 ships 16).
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y > /dev/null
+          sudo apt-get install -y -qq --no-install-recommends postgresql-client-17 age
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+          curl -fsSL -o "$RUNNER_TEMP/supabase.deb" \
+            "https://github.com/supabase/cli/releases/download/v${SUPABASE_CLI_VERSION}/supabase_${SUPABASE_CLI_VERSION}_linux_amd64.deb"
+          echo "${SUPABASE_CLI_SHA256}  $RUNNER_TEMP/supabase.deb" | sha256sum --check --strict
+          sudo dpkg -i "$RUNNER_TEMP/supabase.deb" > /dev/null
+
+      - name: Check the tool versions
+        if: steps.secrets.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          pg_dump --version | grep -E ' 17\.' || { echo "::error::pg_dump is not version 17"; exit 1; }
+          psql --version | grep -E ' 17\.' || { echo "::error::psql is not version 17"; exit 1; }
+          age --version
+          supabase --version | grep -Fx "$SUPABASE_CLI_VERSION" || { echo "::error::unexpected Supabase CLI version"; exit 1; }
+
+      - name: Dump and encrypt
+        id: dump
+        if: steps.secrets.outputs.run == 'true'
+        env:
+          PROD_DB_URL: ${{ secrets.PROD_DB_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+          OUT_DIR: ${{ runner.temp }}/db-backup
+        run: |
+          set -euo pipefail
+          bash scripts/db-backup.sh
+          echo "name=db-backup-$(date -u +%Y%m%dT%H%MZ)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: steps.secrets.outputs.run == 'true'
+        with:
+          name: ${{ steps.dump.outputs.name }}
+          path: ${{ runner.temp }}/db-backup/*.age
+          if-no-files-found: error
+          retention-days: 14
+          # age output does not compress; zipping it again only costs time.
+          compression-level: 0
+
+      - name: Remove the local copy
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/db-backup" "$RUNNER_TEMP/supabase.deb"
