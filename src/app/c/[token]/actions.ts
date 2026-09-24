@@ -9,6 +9,7 @@ import { sendInviteLink, type InviteLinkDeps } from "@/lib/auth/inviteLink";
 import { parseSignInForm } from "@/lib/auth/signInForm";
 import {
   clientIp,
+  SIGN_IN_RATE_LIMITED,
   signInAddressCeilingRefusals,
   type RequestHeaders,
   type SignInRateLimitResult,
@@ -50,13 +51,13 @@ function adminCalls(service: ServiceClient): InviteLinkDeps {
  * email budget exactly as every invite request did before, and is answered exactly as before:
  * the network message once that budget is spent, the lookup's own answer until then.
  */
-function takeInviteBudget(
+async function takeInviteBudget(
   requestHeaders: RequestHeaders,
   invite: ResolvedInvite,
-): SignInRateLimitResult {
+): Promise<SignInRateLimitResult> {
   if (invite.status !== "open") return takeSignInAttempt(requestHeaders, "email");
-  const taken = takeSignInInviteAttempt(requestHeaders, invite.classId);
-  if (!taken.ok) {
+  const taken = await takeSignInInviteAttempt(requestHeaders, invite.classId);
+  if (!taken.ok && taken.error === SIGN_IN_RATE_LIMITED) {
     // A link used this hard is either a very large class or being farmed: the class id is what
     // to rotate. Never the address, which this request carries.
     console.warn("[invite] a class invite link reached its rate limit", {
@@ -90,14 +91,14 @@ export async function requestInviteLink(
   const requestHeaders = await headers();
   const service = createSupabaseServiceClient();
   const invite = await resolveClassInvite(service, token, clientIp(requestHeaders));
-  const limit = takeInviteBudget(requestHeaders, invite);
+  const limit = await takeInviteBudget(requestHeaders, invite);
   if (!limit.ok) return { status: "error", error: limit.error };
   if (invite.status === "invalid") return { status: "invalid" };
   if (invite.status === "rate_limited") return { status: "error", error: LOOKUPS_LIMITED };
   if (invite.status === "unavailable") return { status: "error", error: UNAVAILABLE };
 
   const sent: InviteLinkState = { status: "sent", email: parsed.email };
-  const decision = takeSignInAddress(requestHeaders, parsed.email);
+  const decision = await takeSignInAddress(requestHeaders, parsed.email);
   if (decision !== "send") {
     if (decision === "over-address-ceiling") {
       console.warn("[invite] an address reached the deployment-wide ceiling", {

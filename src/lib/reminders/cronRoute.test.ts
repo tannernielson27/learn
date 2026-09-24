@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { createMemoryMailer } from "@/lib/email/memory";
 import { createCronLimiter, handleReminderCron, type ReminderCronDeps } from "./cronRoute";
 import type { ReminderRow, ReminderStore } from "./sendReminders";
+import { RateLimitUnavailableError } from "@/lib/rateLimit/store";
+import { createMemoryRateLimitStore } from "@/lib/rateLimit/testing/memoryStore";
 
 const SECRET = "s".repeat(40);
 const URL = "https://learn.example/api/cron/assignment-reminders";
@@ -40,7 +42,7 @@ function deps(overrides: Partial<ReminderCronDeps> = {}): ReminderCronDeps {
     mailer: () => createMemoryMailer(),
     autoSubmit: vi.fn(async () => 2),
     origin: () => "https://learn.example",
-    limiter: createCronLimiter(),
+    limiter: createCronLimiter(createMemoryRateLimitStore()),
     log: vi.fn(),
     now: () => new Date("2026-09-23T23:00:00Z"),
     ...overrides,
@@ -171,7 +173,7 @@ describe("handleReminderCron: the work", () => {
 
 describe("handleReminderCron: rate limits", () => {
   it("limits wrong secrets per caller, so the secret cannot be guessed at speed", async () => {
-    const limiter = createCronLimiter({
+    const limiter = createCronLimiter(createMemoryRateLimitStore(), {
       denied: { attempts: 3, windowMs: 60_000 },
       runs: { attempts: 10, windowMs: 60_000 },
     });
@@ -184,7 +186,7 @@ describe("handleReminderCron: rate limits", () => {
   });
 
   it("does not let wrong secrets lock out the real job", async () => {
-    const limiter = createCronLimiter({
+    const limiter = createCronLimiter(createMemoryRateLimitStore(), {
       denied: { attempts: 1, windowMs: 60_000 },
       runs: { attempts: 10, windowMs: 60_000 },
     });
@@ -195,7 +197,7 @@ describe("handleReminderCron: rate limits", () => {
   });
 
   it("limits authorised runs too, so a leaked secret cannot drive the mailer flat out", async () => {
-    const limiter = createCronLimiter({
+    const limiter = createCronLimiter(createMemoryRateLimitStore(), {
       denied: { attempts: 10, windowMs: 60_000 },
       runs: { attempts: 2, windowMs: 60_000 },
     });
@@ -207,16 +209,61 @@ describe("handleReminderCron: rate limits", () => {
     expect(statuses).toEqual([200, 200, 429]);
   });
 
-  it("opens a new window once the old one has passed", () => {
-    const limiter = createCronLimiter({
+  it("opens a new window once the old one has passed", async () => {
+    const clock = { at: 0 };
+    const store = createMemoryRateLimitStore({ now: () => clock.at });
+    const limiter = createCronLimiter(store, {
       denied: { attempts: 1, windowMs: 1_000 },
       runs: { attempts: 1, windowMs: 1_000 },
     });
-    expect(limiter.takeRun(0)).toBe(true);
-    expect(limiter.takeRun(500)).toBe(false);
-    expect(limiter.takeRun(1_000)).toBe(true);
-    expect(limiter.takeDenied("1.2.3.4", 0)).toBe(true);
-    expect(limiter.takeDenied("1.2.3.4", 10)).toBe(false);
-    expect(limiter.takeDenied("5.6.7.8", 10)).toBe(true);
+    expect(await limiter.takeRun()).toBe(true);
+    clock.at = 500;
+    expect(await limiter.takeRun()).toBe(false);
+    clock.at = 1_000;
+    expect(await limiter.takeRun()).toBe(true);
+    expect(await limiter.takeDenied("1.2.3.4")).toBe(true);
+    expect(await limiter.takeDenied("1.2.3.4")).toBe(false);
+    expect(await limiter.takeDenied("5.6.7.8")).toBe(true);
+  });
+
+  it("counts in the shared store, so the limits hold across server instances (#234)", async () => {
+    const store = createMemoryRateLimitStore();
+    const limits = {
+      denied: { attempts: 1, windowMs: 60_000 },
+      runs: { attempts: 1, windowMs: 60_000 },
+    };
+    const first = createCronLimiter(store, limits);
+    const second = createCronLimiter(store, limits);
+    expect(await first.takeRun()).toBe(true);
+    expect(await second.takeRun()).toBe(false);
+    expect(store.hits()).toEqual([
+      { bucket: "cron_runs", key: "runs" },
+      { bucket: "cron_runs", key: "runs" },
+    ]);
+  });
+});
+
+describe("handleReminderCron: when the shared rate limiter cannot answer (#234)", () => {
+  function failingLimiter() {
+    const store = createMemoryRateLimitStore();
+    store.failWith(new RateLimitUnavailableError("PGRST301"));
+    return createCronLimiter(store);
+  }
+
+  it("still refuses a wrong secret, as 401", async () => {
+    const d = deps({ limiter: failingLimiter() });
+    const response = await handleReminderCron(post("Bearer wrong"), d);
+    expect(response.status).toBe(401);
+    expect(d.autoSubmit).not.toHaveBeenCalled();
+  });
+
+  it("does not run, and says why in the log, when an authorised run cannot be counted", async () => {
+    const log = vi.fn();
+    const d = deps({ limiter: failingLimiter(), log });
+    const response = await handleReminderCron(post(`Bearer ${SECRET}`), d);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "rate_limit_unavailable" });
+    expect(d.autoSubmit).not.toHaveBeenCalled();
+    expect(JSON.stringify(log.mock.calls)).toContain("PGRST301");
   });
 });

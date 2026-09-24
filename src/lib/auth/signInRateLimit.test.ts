@@ -3,6 +3,8 @@ import {
   SIGN_IN_ADDRESS_LIMITS,
   SIGN_IN_LIMITS,
   SIGN_IN_RATE_LIMITED,
+  SIGN_IN_UNAVAILABLE,
+  type SignInRateLimiter,
   UNIDENTIFIED_CALLER,
   clientIp,
   createSignInRateLimiter,
@@ -11,6 +13,8 @@ import {
   takeSignInAddress,
   takeSignInAttempt,
 } from "./signInRateLimit";
+import { RateLimitUnavailableError } from "@/lib/rateLimit/store";
+import { createMemoryRateLimitStore } from "@/lib/rateLimit/testing/memoryStore";
 
 /** A request that came through Vercel, which is the only place the address headers are read. */
 function request(headers: Record<string, string>): Headers {
@@ -77,31 +81,40 @@ describe("clientIp", () => {
   });
 });
 
+/** A limiter on the in-memory fake, with a clock the test moves. */
+function setup() {
+  const clock = { at: 0 };
+  const store = createMemoryRateLimitStore({ now: () => clock.at });
+  return { clock, store, limiter: createSignInRateLimiter(store) };
+}
+
+const REFUSED = { ok: false, error: SIGN_IN_RATE_LIMITED };
+
 describe("createSignInRateLimiter", () => {
   const ip = "203.0.113.7";
 
-  it("lets a normal sign-in through on both paths", () => {
-    const limiter = createSignInRateLimiter();
-    expect(limiter.take(ip, "email", 0)).toEqual({ ok: true });
-    expect(limiter.take(ip, "demo", 0)).toEqual({ ok: true });
+  it("lets a normal sign-in through on both paths", async () => {
+    const { limiter } = setup();
+    expect(await limiter.take(ip, "email")).toEqual({ ok: true });
+    expect(await limiter.take(ip, "demo")).toEqual({ ok: true });
   });
 
-  it("allows exactly the email limit in a window, then refuses", () => {
-    const limiter = createSignInRateLimiter();
+  it("allows exactly the email limit in a window, then refuses", async () => {
+    const { limiter } = setup();
     const { attempts } = SIGN_IN_LIMITS.email;
     for (let call = 0; call < attempts; call += 1) {
-      expect(limiter.take(ip, "email", call)).toEqual({ ok: true });
+      expect(await limiter.take(ip, "email")).toEqual({ ok: true });
     }
-    expect(limiter.take(ip, "email", attempts)).toEqual({ ok: false, error: SIGN_IN_RATE_LIMITED });
+    expect(await limiter.take(ip, "email")).toEqual(REFUSED);
   });
 
-  it("allows exactly the demo limit in a window, then refuses", () => {
-    const limiter = createSignInRateLimiter();
+  it("allows exactly the demo limit in a window, then refuses", async () => {
+    const { limiter } = setup();
     const { attempts } = SIGN_IN_LIMITS.demo;
     for (let call = 0; call < attempts; call += 1) {
-      expect(limiter.take(ip, "demo", call)).toEqual({ ok: true });
+      expect(await limiter.take(ip, "demo")).toEqual({ ok: true });
     }
-    expect(limiter.take(ip, "demo", attempts)).toEqual({ ok: false, error: SIGN_IN_RATE_LIMITED });
+    expect(await limiter.take(ip, "demo")).toEqual(REFUSED);
   });
 
   it("says the same thing however the limit was reached, revealing nothing about an account", () => {
@@ -109,111 +122,134 @@ describe("createSignInRateLimiter", () => {
       "Too many sign-in attempts from this network. Wait a few minutes, then try again.",
     );
     expect(SIGN_IN_RATE_LIMITED).not.toMatch(/account|email|password|exist/i);
+    expect(SIGN_IN_UNAVAILABLE).not.toMatch(/account|email|password|exist/i);
   });
 
-  it("spends the two paths' budgets separately", () => {
-    const limiter = createSignInRateLimiter();
+  it("spends the two paths' budgets separately", async () => {
+    const { limiter } = setup();
     for (let call = 0; call < SIGN_IN_LIMITS.demo.attempts + 5; call += 1) {
-      limiter.take(ip, "demo", call);
+      await limiter.take(ip, "demo");
     }
-    expect(limiter.take(ip, "demo", 0)).toEqual({ ok: false, error: SIGN_IN_RATE_LIMITED });
-    expect(limiter.take(ip, "email", 0)).toEqual({ ok: true });
+    expect(await limiter.take(ip, "demo")).toEqual(REFUSED);
+    expect(await limiter.take(ip, "email")).toEqual({ ok: true });
   });
 
-  it("counts each address on its own, so one heavy caller cannot lock out another", () => {
-    const limiter = createSignInRateLimiter();
+  it("counts each address on its own, so one heavy caller cannot lock out another", async () => {
+    const { limiter } = setup();
     for (let call = 0; call < SIGN_IN_LIMITS.demo.attempts + 1; call += 1) {
-      limiter.take(ip, "demo", call);
+      await limiter.take(ip, "demo");
     }
-    expect(limiter.take(ip, "demo", 0)).toEqual({ ok: false, error: SIGN_IN_RATE_LIMITED });
-    expect(limiter.take("198.51.100.4", "demo", 0)).toEqual({ ok: true });
+    expect(await limiter.take(ip, "demo")).toEqual(REFUSED);
+    expect(await limiter.take("198.51.100.4", "demo")).toEqual({ ok: true });
   });
 
-  it("starts a fresh window once the old one has run out", () => {
-    const limiter = createSignInRateLimiter();
+  it("starts a fresh window once the old one has run out", async () => {
+    const { limiter, clock } = setup();
     const { attempts, windowMs } = SIGN_IN_LIMITS.demo;
-    for (let call = 0; call <= attempts; call += 1) limiter.take(ip, "demo", 0);
-    expect(limiter.take(ip, "demo", windowMs - 1)).toEqual({
-      ok: false,
-      error: SIGN_IN_RATE_LIMITED,
-    });
-    expect(limiter.take(ip, "demo", windowMs)).toEqual({ ok: true });
+    for (let call = 0; call <= attempts; call += 1) await limiter.take(ip, "demo");
+    clock.at = windowMs - 1;
+    expect(await limiter.take(ip, "demo")).toEqual(REFUSED);
+    clock.at = windowMs;
+    expect(await limiter.take(ip, "demo")).toEqual({ ok: true });
   });
 
-  it("does not let hammering push the window out, so the wait never grows", () => {
-    const limiter = createSignInRateLimiter();
+  it("does not let hammering push the window out, so the wait never grows", async () => {
+    const { limiter, clock } = setup();
     const { attempts, windowMs } = SIGN_IN_LIMITS.demo;
-    for (let call = 0; call < attempts + 200; call += 1) limiter.take(ip, "demo", call);
+    for (let call = 0; call < attempts + 200; call += 1) {
+      clock.at = call;
+      await limiter.take(ip, "demo");
+    }
     // The window still ends one length after the first attempt, not after the last.
-    expect(limiter.take(ip, "demo", windowMs)).toEqual({ ok: true });
+    clock.at = windowMs;
+    expect(await limiter.take(ip, "demo")).toEqual({ ok: true });
   });
 
-  it("does not limit a caller nothing identifies", () => {
-    const limiter = createSignInRateLimiter();
+  it("does not limit a caller nothing identifies, and does not even ask the store", async () => {
+    const { limiter, store } = setup();
     for (let call = 0; call < SIGN_IN_LIMITS.demo.attempts + 10; call += 1) {
-      expect(limiter.take(null, "demo", call)).toEqual({ ok: true });
+      expect(await limiter.take(null, "demo")).toEqual({ ok: true });
     }
+    expect(store.hits()).toEqual([]);
   });
 
-  it("forgets windows that have run out", () => {
-    const limiter = createSignInRateLimiter();
-    for (let caller = 0; caller < 10_000; caller += 1) {
-      limiter.take(`198.51.${Math.floor(caller / 250)}.${caller % 250}`, "email", 0);
-    }
-    expect(limiter.size()).toBe(10_000);
-    // One more call after they have all run out sweeps them and leaves only the new one.
-    limiter.take("203.0.113.7", "email", SIGN_IN_LIMITS.email.windowMs);
-    expect(limiter.size()).toBe(1);
+  it("counts in the bucket each path names", async () => {
+    const { limiter, store } = setup();
+    await limiter.take(ip, "email");
+    await limiter.take(ip, "demo");
+    expect(store.hits()).toEqual([
+      { bucket: "sign_in_email", key: ip },
+      { bucket: "sign_in_demo", key: ip },
+    ]);
+  });
+});
+
+describe("when the shared store cannot answer (#234)", () => {
+  const ip = "203.0.113.7";
+  const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+
+  afterEach(() => {
+    logged.mockClear();
   });
 
-  it("stays bounded under a flood, without handing anyone a clean slate", () => {
-    const limiter = createSignInRateLimiter();
-    const flood = (from: number, to: number, now: number) => {
-      for (let caller = from; caller < to; caller += 1) {
-        limiter.take(`198.51.${Math.floor(caller / 250)}.${caller % 250}`, "email", now);
-      }
-    };
+  it("refuses sign-in on both paths, saying the site is having trouble", async () => {
+    const { limiter, store } = setup();
+    store.failWith(new RateLimitUnavailableError("PGRST301"));
+    const unavailable = { ok: false, error: SIGN_IN_UNAVAILABLE };
+    expect(await limiter.take(ip, "email")).toEqual(unavailable);
+    expect(await limiter.take(ip, "demo")).toEqual(unavailable);
+    expect(await limiter.takeInvite(ip, "00000000-0000-4000-8000-0000000000a1")).toEqual(
+      unavailable,
+    );
+  });
 
-    flood(0, 11_000, 0);
-    // Someone reaches their limit while the flood is running.
-    for (let call = 0; call <= SIGN_IN_LIMITS.demo.attempts; call += 1) {
-      limiter.take("203.0.113.7", "demo", 1);
-    }
-    flood(11_000, 13_000, 2);
+  it("does not send a link, and answers it as it answers every refusal: silently", async () => {
+    const { limiter, store } = setup();
+    store.failWith(new RateLimitUnavailableError("PGRST301"));
+    expect(await limiter.takeAddress(ip, "nurse@school.edu")).toBe("unchecked");
+    expect(await limiter.takeAddress(null, "nurse@school.edu")).toBe("unchecked");
+  });
 
-    expect(limiter.size()).toBeLessThanOrEqual(10_000);
-    // Eviction takes the windows nearest their end first, so a live counter survives and the
-    // flood buys nobody a fresh budget.
-    expect(limiter.take("203.0.113.7", "demo", 3)).toEqual({
-      ok: false,
-      error: SIGN_IN_RATE_LIMITED,
-    });
+  it("logs the failure without the caller or the address", async () => {
+    const { limiter, store } = setup();
+    store.failWith(new RateLimitUnavailableError("PGRST301"));
+    await limiter.take(ip, "email");
+    await limiter.takeAddress(ip, "nurse@school.edu");
+    expect(logged).toHaveBeenCalledTimes(2);
+    const text = JSON.stringify(logged.mock.calls);
+    expect(text).toContain("PGRST301");
+    expect(text).not.toContain(ip);
+    expect(text).not.toContain("nurse");
+  });
+
+  it("logs something useful even when the failure is not an Error", async () => {
+    const { limiter, store } = setup();
+    store.failWith("socket closed" as unknown as Error);
+    expect(await limiter.take(ip, "email")).toEqual({ ok: false, error: SIGN_IN_UNAVAILABLE });
+    expect(JSON.stringify(logged.mock.calls)).toContain("unknown");
   });
 });
 
 describe("takeSignInAttempt", () => {
-  it("counts the attempt against the address the request came from", () => {
-    const limiter = createSignInRateLimiter();
+  it("counts the attempt against the address the request came from", async () => {
+    const { limiter } = setup();
     const headers = request({ "x-forwarded-for": "203.0.113.77" });
     for (let call = 0; call < SIGN_IN_LIMITS.demo.attempts; call += 1) {
-      expect(takeSignInAttempt(headers, "demo", limiter)).toEqual({ ok: true });
+      expect(await takeSignInAttempt(headers, "demo", limiter)).toEqual({ ok: true });
     }
-    expect(takeSignInAttempt(headers, "demo", limiter)).toEqual({
-      ok: false,
-      error: SIGN_IN_RATE_LIMITED,
-    });
+    expect(await takeSignInAttempt(headers, "demo", limiter)).toEqual(REFUSED);
     // The email path still has its own budget, and another address is untouched.
-    expect(takeSignInAttempt(headers, "email", limiter)).toEqual({ ok: true });
+    expect(await takeSignInAttempt(headers, "email", limiter)).toEqual({ ok: true });
     expect(
-      takeSignInAttempt(request({ "x-forwarded-for": "198.51.100.9" }), "demo", limiter),
+      await takeSignInAttempt(request({ "x-forwarded-for": "198.51.100.9" }), "demo", limiter),
     ).toEqual({ ok: true });
   });
 
-  it("does not limit the same request off the platform", () => {
-    const limiter = createSignInRateLimiter();
+  it("does not limit the same request off the platform", async () => {
+    const { limiter } = setup();
     const headers = new Headers({ "x-forwarded-for": "203.0.113.77" });
     for (let call = 0; call < SIGN_IN_LIMITS.demo.attempts + 10; call += 1) {
-      expect(takeSignInAttempt(headers, "demo", limiter)).toEqual({ ok: true });
+      expect(await takeSignInAttempt(headers, "demo", limiter)).toEqual({ ok: true });
     }
   });
 });
@@ -248,65 +284,76 @@ describe("the per-caller-and-address budget", () => {
   const ip = "203.0.113.7";
   const { perCaller } = SIGN_IN_ADDRESS_LIMITS;
 
-  it("allows exactly the budget in a window, then refuses that caller", () => {
-    const limiter = createSignInRateLimiter();
+  it("allows exactly the budget in a window, then refuses that caller", async () => {
+    const { limiter } = setup();
     for (let call = 0; call < perCaller.attempts; call += 1) {
-      expect(limiter.takeAddress(ip, email, call)).toBe("send");
+      expect(await limiter.takeAddress(ip, email)).toBe("send");
     }
-    expect(limiter.takeAddress(ip, email, perCaller.attempts)).toBe("over-caller-budget");
+    expect(await limiter.takeAddress(ip, email)).toBe("over-caller-budget");
   });
 
-  it("refuses only the caller that spent it, which is the whole point of the pair key", () => {
+  it("refuses only the caller that spent it, which is the whole point of the pair key", async () => {
     // The shape that makes this not a lockout: one caller hammering an address cannot stop its
     // owner, or anyone else, from asking for a link.
-    const limiter = createSignInRateLimiter();
-    for (let call = 0; call <= perCaller.attempts; call += 1) limiter.takeAddress(ip, email, 0);
-    expect(limiter.takeAddress(ip, email, 0)).toBe("over-caller-budget");
-    expect(limiter.takeAddress("198.51.100.4", email, 0)).toBe("send");
+    const { limiter } = setup();
+    for (let call = 0; call <= perCaller.attempts; call += 1) await limiter.takeAddress(ip, email);
+    expect(await limiter.takeAddress(ip, email)).toBe("over-caller-budget");
+    expect(await limiter.takeAddress("198.51.100.4", email)).toBe("send");
   });
 
-  it("does not let a refused caller go on to spend the shared ceiling", () => {
-    const limiter = createSignInRateLimiter();
+  it("does not let a refused caller go on to spend the shared ceiling", async () => {
+    const { limiter } = setup();
     // Far more asks than the ceiling, all from one caller: the ceiling must survive them.
     for (let call = 0; call < SIGN_IN_ADDRESS_LIMITS.overall.attempts * 5; call += 1) {
-      limiter.takeAddress(ip, email, 0);
+      await limiter.takeAddress(ip, email);
     }
-    expect(limiter.takeAddress("198.51.100.4", email, 0)).toBe("send");
+    expect(await limiter.takeAddress("198.51.100.4", email)).toBe("send");
     expect(limiter.addressCeilingRefusals()).toBe(0);
   });
 
-  it("gives one caller and address one budget however the address was spelled", () => {
-    const limiter = createSignInRateLimiter();
+  it("gives one caller and address one budget however the address was spelled", async () => {
+    const { limiter } = setup();
     const spellings = ["Nurse@School.edu", " NURSE@SCHOOL.EDU ", "nurse@school.edu"];
     for (let call = 0; call < perCaller.attempts; call += 1) {
-      expect(limiter.takeAddress(ip, spellings[call % spellings.length], 0)).toBe("send");
+      expect(await limiter.takeAddress(ip, spellings[call % spellings.length])).toBe("send");
     }
-    expect(limiter.takeAddress(ip, "nUrSe@school.EDU", 0)).toBe("over-caller-budget");
+    expect(await limiter.takeAddress(ip, "nUrSe@school.EDU")).toBe("over-caller-budget");
   });
 
-  it("keeps each address, and the sign-in paths, on their own counters", () => {
-    const limiter = createSignInRateLimiter();
-    for (let call = 0; call <= perCaller.attempts; call += 1) limiter.takeAddress(ip, email, 0);
-    expect(limiter.takeAddress(ip, email, 0)).toBe("over-caller-budget");
-    expect(limiter.takeAddress(ip, "charge@school.edu", 0)).toBe("send");
-    expect(limiter.take(ip, "email", 0)).toEqual({ ok: true });
+  it("keeps each address, and the sign-in paths, on their own counters", async () => {
+    const { limiter } = setup();
+    for (let call = 0; call <= perCaller.attempts; call += 1) await limiter.takeAddress(ip, email);
+    expect(await limiter.takeAddress(ip, email)).toBe("over-caller-budget");
+    expect(await limiter.takeAddress(ip, "charge@school.edu")).toBe("send");
+    expect(await limiter.take(ip, "email")).toEqual({ ok: true });
   });
 
-  it("starts a fresh window once the old one has run out", () => {
-    const limiter = createSignInRateLimiter();
-    for (let call = 0; call <= perCaller.attempts; call += 1) limiter.takeAddress(ip, email, 0);
-    expect(limiter.takeAddress(ip, email, perCaller.windowMs - 1)).toBe("over-caller-budget");
-    expect(limiter.takeAddress(ip, email, perCaller.windowMs)).toBe("send");
+  it("starts a fresh window once the old one has run out", async () => {
+    const { limiter, clock } = setup();
+    for (let call = 0; call <= perCaller.attempts; call += 1) await limiter.takeAddress(ip, email);
+    clock.at = perCaller.windowMs - 1;
+    expect(await limiter.takeAddress(ip, email)).toBe("over-caller-budget");
+    clock.at = perCaller.windowMs;
+    expect(await limiter.takeAddress(ip, email)).toBe("send");
   });
 
-  it("drops out where nothing identifies the caller, leaving only the ceiling", () => {
+  it("drops out where nothing identifies the caller, leaving only the ceiling", async () => {
     // `take` opts out off the platform for the reasons in `clientIp`; the pair key cannot exist
     // without a caller, so it opts out with it. The ceiling has no such exemption.
-    const limiter = createSignInRateLimiter();
+    const { limiter } = setup();
     for (let call = 0; call < SIGN_IN_ADDRESS_LIMITS.overall.attempts; call += 1) {
-      expect(limiter.takeAddress(null, email, call)).toBe("send");
+      expect(await limiter.takeAddress(null, email)).toBe("send");
     }
-    expect(limiter.takeAddress(null, email, 0)).toBe("over-address-ceiling");
+    expect(await limiter.takeAddress(null, email)).toBe("over-address-ceiling");
+  });
+
+  it("hands the store the normalised address, in the pair and the ceiling buckets", async () => {
+    const { limiter, store } = setup();
+    await limiter.takeAddress(ip, " Nurse@School.EDU ");
+    expect(store.hits()).toEqual([
+      { bucket: "sign_in_address_pair", key: `${ip}|${email}` },
+      { bucket: "sign_in_address", key: email },
+    ]);
   });
 });
 
@@ -315,73 +362,85 @@ describe("the deployment-wide address ceiling", () => {
   const { perCaller, overall } = SIGN_IN_ADDRESS_LIMITS;
 
   /** Spends the ceiling the only way a caller can: a fresh caller every `perCaller` asks. */
-  function floodFromManyCallers(limiter: ReturnType<typeof createSignInRateLimiter>, to: string) {
+  async function floodFromManyCallers(limiter: SignInRateLimiter, to: string) {
     for (let call = 0; call < overall.attempts; call += 1) {
       const caller = `198.51.100.${Math.floor(call / perCaller.attempts)}`;
-      expect(limiter.takeAddress(caller, to, 0)).toBe("send");
+      expect(await limiter.takeAddress(caller, to)).toBe("send");
     }
   }
 
-  it("holds when the asks are spread across callers, which is what #139 asked for", () => {
-    const limiter = createSignInRateLimiter();
-    floodFromManyCallers(limiter, email);
-    expect(limiter.takeAddress("203.0.113.7", email, 0)).toBe("over-address-ceiling");
+  it("holds when the asks are spread across callers, which is what #139 asked for", async () => {
+    const { limiter } = setup();
+    await floodFromManyCallers(limiter, email);
+    expect(await limiter.takeAddress("203.0.113.7", email)).toBe("over-address-ceiling");
   });
 
-  it("counts its refusals in the aggregate, and says nothing about which address", () => {
-    const limiter = createSignInRateLimiter();
+  it("holds across server instances, because the count lives in the shared store", async () => {
+    // Two instances: two limiters, one store. The in-memory limiter this replaced gave each
+    // instance its own ceiling.
+    const { store } = setup();
+    const first = createSignInRateLimiter(store);
+    const second = createSignInRateLimiter(store);
+    await floodFromManyCallers(first, email);
+    expect(await second.takeAddress("203.0.113.7", email)).toBe("over-address-ceiling");
+  });
+
+  it("counts its refusals in the aggregate, and says nothing about which address", async () => {
+    const { limiter } = setup();
     expect(limiter.addressCeilingRefusals()).toBe(0);
-    floodFromManyCallers(limiter, email);
-    limiter.takeAddress("203.0.113.7", email, 0);
-    limiter.takeAddress("203.0.113.8", email, 0);
+    await floodFromManyCallers(limiter, email);
+    await limiter.takeAddress("203.0.113.7", email);
+    await limiter.takeAddress("203.0.113.8", email);
     expect(limiter.addressCeilingRefusals()).toBe(2);
   });
 
-  it("leaves other addresses alone, so a campaign is not a site-wide outage", () => {
-    const limiter = createSignInRateLimiter();
-    floodFromManyCallers(limiter, email);
-    expect(limiter.takeAddress("203.0.113.7", email, 0)).toBe("over-address-ceiling");
-    expect(limiter.takeAddress("203.0.113.7", "charge@school.edu", 0)).toBe("send");
+  it("leaves other addresses alone, so a campaign is not a site-wide outage", async () => {
+    const { limiter } = setup();
+    await floodFromManyCallers(limiter, email);
+    expect(await limiter.takeAddress("203.0.113.7", email)).toBe("over-address-ceiling");
+    expect(await limiter.takeAddress("203.0.113.7", "charge@school.edu")).toBe("send");
   });
 
-  it("starts a fresh window once the old one has run out", () => {
-    const limiter = createSignInRateLimiter();
-    floodFromManyCallers(limiter, email);
-    expect(limiter.takeAddress("203.0.113.7", email, overall.windowMs - 1)).toBe(
-      "over-address-ceiling",
-    );
-    expect(limiter.takeAddress("203.0.113.7", email, overall.windowMs)).toBe("send");
+  it("starts a fresh window once the old one has run out", async () => {
+    const { limiter, clock } = setup();
+    await floodFromManyCallers(limiter, email);
+    clock.at = overall.windowMs - 1;
+    expect(await limiter.takeAddress("203.0.113.7", email)).toBe("over-address-ceiling");
+    clock.at = overall.windowMs;
+    expect(await limiter.takeAddress("203.0.113.7", email)).toBe("send");
   });
 });
 
 describe("takeSignInAddress", () => {
-  it("counts against the caller the request headers name, the way takeSignInAttempt does", () => {
-    const limiter = createSignInRateLimiter();
+  it("counts against the caller the request headers name, the way takeSignInAttempt does", async () => {
+    const { limiter } = setup();
     const headers = request({ "x-forwarded-for": "203.0.113.77" });
     for (let call = 0; call < SIGN_IN_ADDRESS_LIMITS.perCaller.attempts; call += 1) {
-      expect(takeSignInAddress(headers, "nurse@school.edu", limiter)).toBe("send");
+      expect(await takeSignInAddress(headers, "nurse@school.edu", limiter)).toBe("send");
     }
-    expect(takeSignInAddress(headers, "nurse@school.edu", limiter)).toBe("over-caller-budget");
+    expect(await takeSignInAddress(headers, "nurse@school.edu", limiter)).toBe(
+      "over-caller-budget",
+    );
     // Another caller, same address: refused callers do not refuse anybody else.
     const elsewhere = request({ "x-forwarded-for": "198.51.100.9" });
-    expect(takeSignInAddress(elsewhere, "nurse@school.edu", limiter)).toBe("send");
+    expect(await takeSignInAddress(elsewhere, "nurse@school.edu", limiter)).toBe("send");
   });
 
-  it("reads no caller off the platform, so only the ceiling applies", () => {
-    const limiter = createSignInRateLimiter();
+  it("reads no caller off the platform, so only the ceiling applies", async () => {
+    const { limiter } = setup();
     const headers = new Headers({ "x-forwarded-for": "203.0.113.77" });
     for (let call = 0; call < SIGN_IN_ADDRESS_LIMITS.perCaller.attempts + 1; call += 1) {
-      expect(takeSignInAddress(headers, "nurse@school.edu", limiter)).toBe("send");
+      expect(await takeSignInAddress(headers, "nurse@school.edu", limiter)).toBe("send");
     }
   });
 });
 
 describe("signInAddressCeilingRefusals", () => {
-  it("reports the running total the log line carries", () => {
-    const limiter = createSignInRateLimiter();
+  it("reports the running total the log line carries", async () => {
+    const { limiter } = setup();
     expect(signInAddressCeilingRefusals(limiter)).toBe(0);
     for (let call = 0; call < SIGN_IN_ADDRESS_LIMITS.overall.attempts + 1; call += 1) {
-      takeSignInAddress(new Headers(), "nurse@school.edu", limiter);
+      await takeSignInAddress(new Headers(), "nurse@school.edu", limiter);
     }
     expect(signInAddressCeilingRefusals(limiter)).toBe(1);
   });

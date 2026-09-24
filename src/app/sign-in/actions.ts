@@ -45,13 +45,14 @@ export async function requestSignInLink(
   // Counted here, where the request is about to reach Supabase; an address that never gets past
   // the form spends nothing.
   const requestHeaders = await headers();
-  const limit = takeSignInAttempt(requestHeaders, "email");
+  const limit = await takeSignInAttempt(requestHeaders, "email");
   if (!limit.ok) return { status: "error", error: limit.error };
 
   // Then the recipient's two counters. After the per-IP limit on purpose: a request already
   // refused above never reaches Supabase, so it must not spend anything of the recipient's
-  // either. Both refusals are silent — see `takeSignInAddress`.
-  const decision = takeSignInAddress(requestHeaders, parsed.email);
+  // either. Every refusal is silent, including the shared store failing to answer, which the
+  // limiter has already logged — see `takeSignInAddress`.
+  const decision = await takeSignInAddress(requestHeaders, parsed.email);
   if (decision !== "send") {
     // The ceiling refusing means one address is being asked for from several callers at once,
     // which is what a lockout campaign looks like and what an operator needs to be able to see.
@@ -107,7 +108,7 @@ export async function signInAsDemo(
 ): Promise<DemoSignInState> {
   // Before the demo account is even read: a deployment with the demo turned off should not
   // answer a scripted post any differently from one with it turned on.
-  const limit = takeSignInAttempt(await headers(), "demo");
+  const limit = await takeSignInAttempt(await headers(), "demo");
   if (!limit.ok) return { status: "error", error: limit.error };
 
   const supabase = await createSupabaseServerClient();

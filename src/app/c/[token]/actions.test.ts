@@ -5,8 +5,11 @@ import {
   SIGN_IN_INVITE_LIMIT,
   SIGN_IN_LIMITS,
   SIGN_IN_RATE_LIMITED,
+  SIGN_IN_UNAVAILABLE,
   takeSignInAttempt,
 } from "@/lib/auth/signInRateLimit";
+import type { MemoryRateLimitStore } from "@/lib/rateLimit/testing/memoryStore";
+import { RateLimitUnavailableError } from "@/lib/rateLimit/store";
 
 /**
  * The invite's Server Functions are wiring: the per-IP and per-recipient limits of #139/#157, the
@@ -51,6 +54,16 @@ let viewer: Record<string, unknown>;
 const joinRpc = vi.fn(async () => ({ data: "joined" as unknown, error: null }));
 vi.mock("@/lib/classes/viewer", () => ({ readViewer: async () => viewer }));
 
+// #234: the limiter counts in Postgres; here it counts in the in-memory fake, shared by every call.
+vi.mock("@/lib/rateLimit/postgresStore", async () => {
+  const { createMemoryRateLimitStore } = await import("@/lib/rateLimit/testing/memoryStore");
+  const store = createMemoryRateLimitStore();
+  return { sharedRateLimitStore: () => store };
+});
+const rateLimitStore = (
+  await import("@/lib/rateLimit/postgresStore")
+).sharedRateLimitStore() as MemoryRateLimitStore;
+
 const { requestInviteLink, joinInvitedClass } = await import("./actions");
 
 function emailForm(email: string): FormData {
@@ -66,11 +79,12 @@ function newRecipient(): string {
   return `student${recipient}@school.edu`;
 }
 
-vi.spyOn(console, "warn").mockImplementation(() => {});
+const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
 vi.spyOn(console, "error").mockImplementation(() => {});
 
 beforeEach(() => {
   vi.clearAllMocks();
+  rateLimitStore.failWith(null);
   scheduled.length = 0;
   caller += 1;
   requestHeaders.set("x-vercel-forwarded-for", `203.0.113.${caller}`);
@@ -216,9 +230,9 @@ describe("requestInviteLink", () => {
       await requestInviteLink(TOKEN, { status: "idle" }, emailForm(newRecipient()));
     }
     for (let i = 0; i < SIGN_IN_LIMITS.email.attempts; i += 1) {
-      expect(takeSignInAttempt(requestHeaders, "email")).toEqual({ ok: true });
+      expect(await takeSignInAttempt(requestHeaders, "email")).toEqual({ ok: true });
     }
-    expect(takeSignInAttempt(requestHeaders, "email").ok).toBe(false);
+    expect((await takeSignInAttempt(requestHeaders, "email")).ok).toBe(false);
   });
 
   it("gives no larger budget once the token stops resolving", async () => {
@@ -291,5 +305,24 @@ describe("joinInvitedClass", () => {
     viewer = { status: "signed_out" };
     await expect(joinInvitedClass(TOKEN)).rejects.toThrow(`redirect:/c/${TOKEN}`);
     expect(joinRpc).not.toHaveBeenCalled();
+  });
+});
+
+describe("requestInviteLink when the shared rate limiter cannot answer (#234)", () => {
+  it("refuses a valid token's request, creates no account and sends nothing", async () => {
+    rateLimitStore.failWith(new RateLimitUnavailableError("PGRST301"));
+    const result = await requestInviteLink(TOKEN, { status: "idle" }, emailForm(newRecipient()));
+    expect(result).toEqual({ status: "error", error: SIGN_IN_UNAVAILABLE });
+    expect(scheduled).toHaveLength(0);
+    expect(createUser).not.toHaveBeenCalled();
+    // Not a rate limit, so not logged as a link used too hard: the log keys on the refusal's wording.
+    expect(warned).not.toHaveBeenCalled();
+  });
+
+  it("refuses an unknown token's request the same way, before saying the token is wrong", async () => {
+    resolveReply = { data: [], error: null };
+    rateLimitStore.failWith(new RateLimitUnavailableError("PGRST301"));
+    const result = await requestInviteLink(TOKEN, { status: "idle" }, emailForm(newRecipient()));
+    expect(result).toEqual({ status: "error", error: SIGN_IN_UNAVAILABLE });
   });
 });

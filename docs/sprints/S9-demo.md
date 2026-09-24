@@ -58,7 +58,7 @@ Reminders: with the scheduler set up (docs/05 §7.8), each student gets "Week 5 
 - **Ordered-response items start in the author's order** (#219), which is often the answer. That is true in live sessions and take-home alike.
 - **Class time zone has no UI.** It defaults to America/Denver and is changed in SQL (§7.8).
 - **The report lists current members only.** A removed student's attempts are kept but not shown.
-- **Rate limits are per server instance, in memory,** as sign-in's are. The invite trade-off (#217) is written up in `SIGN_IN_INVITE_LIMIT`. A holder of a shared link can reach up to 150 addresses per network per five minutes, each still capped per inbox, until the link is rotated.
+- **A shared invite link can mail strangers.** The trade-off (#217) is written up in `SIGN_IN_INVITE_LIMIT`. A holder of a shared link can reach up to 150 addresses per network per five minutes, each still capped per inbox, until the link is rotated.
 - **Two e2e specs wait out a real 60-second window.** No test-only way to close an assignment exists, on purpose. They carry a guard and a three-minute timeout.
 
 ## Retro

@@ -8,28 +8,28 @@
  *
  * The secret is compared in constant time: both sides are hashed to 32 bytes first, so
  * `timingSafeEqual` always compares equal-length buffers and the length of the real secret does
- * not leak either. Two in-memory limits, separate so one cannot starve the other: wrong secrets per
- * caller (guessing), and authorised runs overall (a leaked secret cannot drive the mailer flat
- * out). Like the sign-in limiter they are per instance; the secret, not the limit, is the boundary.
+ * not leak either. Two limits, separate so one cannot starve the other: wrong secrets per caller
+ * (guessing), and authorised runs overall (a leaked secret cannot drive the mailer flat out). Both
+ * count in the shared store (#234), so they hold across server instances; the secret, not the
+ * limit, is still the boundary.
  */
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { Mailer } from "@/lib/email";
 import { clientIp, type RequestHeaders } from "@/lib/auth/signInRateLimit";
+import type { RateLimit, RateLimitStore } from "@/lib/rateLimit/store";
 import { sendDueReminders, type ReminderLog, type ReminderStore } from "./sendReminders";
 
 /** Anything shorter was not made with `openssl rand`, and is refused rather than trusted. */
 export const MIN_SECRET_LENGTH = 32;
 
-export interface CronLimit {
-  attempts: number;
-  windowMs: number;
-}
+export type CronLimit = RateLimit;
 
+/** Both reject when the shared store cannot answer; `handleReminderCron` decides what that means. */
 export interface CronLimiter {
   /** Counts one wrong secret from this caller; false once over the limit. */
-  takeDenied(caller: string, now?: number): boolean;
+  takeDenied(caller: string): Promise<boolean>;
   /** Counts one authorised run; false once over the limit. */
-  takeRun(now?: number): boolean;
+  takeRun(): Promise<boolean>;
 }
 
 export interface ReminderCronDeps {
@@ -40,7 +40,7 @@ export interface ReminderCronDeps {
   /** The submit at close for every assignment; resolves to how many it submitted. */
   autoSubmit: () => Promise<number>;
   origin: (headers: RequestHeaders) => string;
-  limiter?: CronLimiter;
+  limiter: CronLimiter;
   log?: ReminderLog;
   now?: () => Date;
 }
@@ -53,37 +53,15 @@ export const CRON_LIMITS = {
   runs: { attempts: 4, windowMs: 60_000 },
 } as const satisfies Record<"denied" | "runs", CronLimit>;
 
-const MAX_TRACKED_CALLERS = 1_000;
-
-interface CountedWindow {
-  start: number;
-  calls: number;
-}
-
 export function createCronLimiter(
+  store: RateLimitStore,
   limits: Readonly<Record<"denied" | "runs", CronLimit>> = CRON_LIMITS,
 ): CronLimiter {
-  // Fixed windows in a Map, mutated in place: the counter itself is the state.
-  const windows = new Map<string, CountedWindow>();
-
-  function within(key: string, limit: CronLimit, now: number): boolean {
-    const counted = windows.get(key);
-    if (!counted || now - counted.start >= limit.windowMs) {
-      if (windows.size >= MAX_TRACKED_CALLERS) windows.clear();
-      windows.set(key, { start: now, calls: 1 });
-      return true;
-    }
-    counted.calls = Math.min(counted.calls + 1, limit.attempts + 1);
-    return counted.calls <= limit.attempts;
-  }
-
   return {
-    takeDenied: (caller, now = Date.now()) => within(`denied:${caller}`, limits.denied, now),
-    takeRun: (now = Date.now()) => within("runs", limits.runs, now),
+    takeDenied: (caller) => store.hit("cron_denied", caller, limits.denied),
+    takeRun: () => store.hit("cron_runs", "runs", limits.runs),
   };
 }
-
-const sharedLimiter = createCronLimiter();
 
 function digest(value: string): Buffer {
   return createHash("sha256").update(value, "utf8").digest();
@@ -115,6 +93,38 @@ async function runAutoSubmit(deps: ReminderCronDeps, log: ReminderLog): Promise<
   }
 }
 
+/** A wrong secret is refused either way; the limit only turns 401 into 429 for a guesser. */
+async function refuseWrongSecret(
+  request: Request,
+  limiter: CronLimiter,
+  log: ReminderLog,
+): Promise<Response> {
+  const caller = clientIp(request.headers) ?? "local";
+  try {
+    if (!(await limiter.takeDenied(caller))) return reply({ error: "rate_limited" }, 429);
+  } catch (error) {
+    log("[reminders] the shared rate limiter could not answer", { error: failure(error) });
+  }
+  return reply({ error: "unauthorized" }, 401);
+}
+
+/**
+ * An authorised run that cannot be counted does not run (fails closed): the next pg_cron tick is
+ * fifteen minutes away, and running uncounted is how a leaked secret would get past an outage.
+ */
+async function countRun(limiter: CronLimiter, log: ReminderLog): Promise<"allowed" | Response> {
+  try {
+    return (await limiter.takeRun()) ? "allowed" : reply({ error: "rate_limited" }, 429);
+  } catch (error) {
+    log("[reminders] the shared rate limiter could not answer", { error: failure(error) });
+    return reply({ error: "rate_limit_unavailable" }, 503);
+  }
+}
+
+function failure(error: unknown): string {
+  return error instanceof Error ? `${error.name}: ${error.message}` : "unknown";
+}
+
 const consoleLog: ReminderLog = (message, details) => console.error(message, details);
 
 export async function handleReminderCron(
@@ -122,7 +132,7 @@ export async function handleReminderCron(
   deps: ReminderCronDeps,
 ): Promise<Response> {
   const log = deps.log ?? consoleLog;
-  const limiter = deps.limiter ?? sharedLimiter;
+  const limiter = deps.limiter;
   const secret = deps.secret?.trim() ?? "";
   if (secret.length < MIN_SECRET_LENGTH) {
     log("[reminders] CRON_SECRET is not set, or is too short", { minLength: MIN_SECRET_LENGTH });
@@ -130,12 +140,10 @@ export async function handleReminderCron(
   }
 
   if (!bearerMatches(request.headers.get("authorization"), secret)) {
-    const caller = clientIp(request.headers) ?? "local";
-    return limiter.takeDenied(caller)
-      ? reply({ error: "unauthorized" }, 401)
-      : reply({ error: "rate_limited" }, 429);
+    return refuseWrongSecret(request, limiter, log);
   }
-  if (!limiter.takeRun()) return reply({ error: "rate_limited" }, 429);
+  const run = await countRun(limiter, log);
+  if (run !== "allowed") return run;
 
   const autoSubmitted = await runAutoSubmit(deps, log);
   try {

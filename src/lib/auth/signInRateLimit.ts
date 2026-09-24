@@ -1,4 +1,6 @@
 import { isIP } from "node:net";
+import { sharedRateLimitStore } from "@/lib/rateLimit/postgresStore";
+import type { RateLimit, RateLimitBucket, RateLimitStore } from "@/lib/rateLimit/store";
 
 /**
  * Three counters on the sign-in paths: one on the caller (#134), two on the recipient (#139). A
@@ -34,37 +36,27 @@ import { isIP } from "node:net";
  * honest state of it. A ceiling on an address that a stranger cannot spend does not exist,
  * because a stranger's request and the owner's own request are the same request.
  *
- * Why not the database, where #111 put the authoring limit: a sign-in runs before there is a
- * session, so a Postgres limiter would have to be callable by `anon` — the publishable key that
- * ships to every browser — with the address as an argument. Anyone could then spend a chosen
- * address's budget or fill the table with invented ones, which is a worse hole than the one being
- * closed. Reading the address inside Postgres does not work either: a Data API call is made by
- * this server, so the request headers Supabase sees carry this server's address, not the
- * person's. And #111's limiter fails closed, which is why an unapplied migration can refuse every
- * save; the same failure on sign-in would shut everyone out of the site.
+ * Where the counts live (#234). They began in each server instance's memory, because #134 judged
+ * a Postgres limiter unsafe: callable by `anon`, keyed on an argument anyone could forge, and
+ * shutting everyone out when it failed. Each of those is answered by how the shared store is
+ * built (`src/lib/rateLimit`, `20260925010000_shared_rate_limits.sql`):
  *
- * So all the counters live in the server's own memory. They need no migration, add no
- * unauthenticated surface, and cannot be skipped by calling the Server Function directly, because
- * the Server Function is what counts. Two limits to know about, and both bite hardest on the
- * address ceiling, which is the only one of the three that a third party can spend:
+ * - `public.hit_rate_limit` is granted to `service_role` alone, so only this server can call it;
+ *   the publishable key cannot spend anyone's budget or fill the table.
+ * - The key is read off the request here, by `clientIp`, and hashed here with an HMAC under a key
+ *   derived from the server's secret, so the table holds digests and never an address in the
+ *   clear. Reading the address inside Postgres would not work: the Data API sees this server's
+ *   egress address, not the person's.
+ * - Failing closed is accepted on purpose: Supabase Auth runs on the same database, so when the
+ *   limiter cannot answer, a link usually could not have been sent either. The refusal says the
+ *   site is having trouble (`SIGN_IN_UNAVAILABLE`), and the address checks stay silent.
  *
- * 1. Vercel's functions share no memory, so a burst spread over several warm instances can spend
- *    the budget once per instance. On the two per-caller counters that only lets a caller spend
- *    more of their own budget. On the address ceiling it cuts both ways: N warm instances mean up
- *    to N ceilings' worth of requests forwarded for one address, and equally N times as many
- *    callers needed to hold that address's ceiling down everywhere at once.
- * 2. It bounds what any one caller spends of Supabase's auth budget; it does not bound the total.
- *    Supabase sees this server's egress address for every call, so its own per-IP limit is in
- *    effect one bucket shared by everyone using the site, and enough separate callers can still
- *    reach it together. That residual needs a deployment-wide ceiling or a shared store. The
- *    address ceiling narrows the same residual rather than closing it: it bounds what this
- *    deployment forwards for one address, not what every address receives in total, and not what
- *    any other sender does.
- *
- * Both would be answered by the same change — a shared store behind `createSignInRateLimiter`,
- * which the callers would not notice. What this does fix is the case #134 was filed about: one
- * browser holding down the demo button, which at this site's traffic usually lands on the one
- * warm instance. Vercel promises no such affinity; it routes by capacity, not by caller.
+ * What that buys is the limitation the in-memory counters had to document: Vercel's functions
+ * share no memory, so a burst spread over several warm instances could spend each budget once per
+ * instance. Every counter below is now one count for the whole deployment. What remains is
+ * Supabase's own auth budget, which it keys on this server's egress address and so is in effect
+ * one bucket for everyone; the address ceiling bounds what this deployment forwards for one
+ * address, not what every address receives in total.
  *
  * This file assumes Vercel. Off the platform it does nothing at all (see `clientIp`), and the
  * header trust below would have to be revisited before running anywhere else. That caveat now
@@ -80,10 +72,7 @@ import { isIP } from "node:net";
 /** The two sign-in paths, each with its own budget. */
 export type SignInAction = "email" | "demo";
 
-export interface SignInLimit {
-  attempts: number;
-  windowMs: number;
-}
+export type SignInLimit = RateLimit;
 
 /** All this module reads. Narrow, so a test can pass a plain `Headers`. */
 export type RequestHeaders = Pick<Headers, "get" | "has">;
@@ -199,6 +188,12 @@ export const SIGN_IN_INVITE_TOTAL_LIMIT = {
 export const SIGN_IN_RATE_LIMITED =
   "Too many sign-in attempts from this network. Wait a few minutes, then try again.";
 
+/**
+ * When the shared store cannot answer (#234). Says nothing about any address or account, only that
+ * the site is having trouble; the request is refused rather than let through uncounted.
+ */
+export const SIGN_IN_UNAVAILABLE = "Signing in is not working just now. Try again in a moment.";
+
 export type SignInRateLimitResult = { ok: true } | { ok: false; error: string };
 
 /** One shared bucket for a deployed request whose address no header gives. */
@@ -209,18 +204,6 @@ export const UNIDENTIFIED_CALLER = "unidentified";
 // the two conventional ones. They are read only when the request came through Vercel; nothing
 // else may name its own address.
 const IP_HEADERS = ["x-vercel-forwarded-for", "x-real-ip", "x-forwarded-for"] as const;
-
-// Sized when every key was a caller's address, where reaching it needed ten thousand distinct
-// callers in one window. #139's recipient keys change that arithmetic and the number was not
-// re-tuned: a caller's thirty email attempts can now leave up to thirty address keys and thirty
-// pair keys behind as well as its own, so sixty-one keys a caller, and a couple of hundred
-// callers reach ten thousand. #217's invite budget stretches that again for a caller holding a
-// live invite — up to 120 address and 120 pair keys a class — and it was still not re-tuned: at
-// this site's traffic ten thousand is a flood either way. Left as it is on purpose. Eviction below still bounds the memory
-// and still drops the windows nearest their end first, so the worst a flood buys is somebody's
-// window starting over early — never a refusal, and never a lockout.
-const MAX_TRACKED = 10_000;
-const EVICT_TO = Math.floor(MAX_TRACKED * 0.9);
 
 /**
  * Whether the request came through Vercel, which is the only place these headers can be trusted.
@@ -279,51 +262,79 @@ export function normalizeSignInAddress(email: string): string {
   return email.trim().toLowerCase();
 }
 
-interface CountedWindow {
-  start: number;
-  calls: number;
-}
-
 /**
  * Whether to mail this address, and — only for the log — which counter said no.
  *
  * Not a `SignInRateLimitResult`, and that is the point rather than a shortcut: there is no
- * message on either refusal, because the caller is told neither of them apart from a send. The
- * two refusals are named for the operator, who needs to tell an ordinary repeat from a campaign.
- * See `takeSignInAddress`.
+ * message on any refusal, because the caller is told none of them apart from a send. The
+ * refusals are named for the operator, who needs to tell an ordinary repeat from a campaign.
+ * `unchecked` is the shared store failing to answer (#234): the link is not sent, and the caller
+ * is still told it was. See `takeSignInAddress`.
  */
-export type SignInAddressDecision = "send" | "over-caller-budget" | "over-address-ceiling";
+export type SignInAddressDecision =
+  "send" | "over-caller-budget" | "over-address-ceiling" | "unchecked";
 
 export interface SignInRateLimiter {
   /** Counts one attempt and says whether it is within the limit. */
-  take(ip: string | null, action: SignInAction, now?: number): SignInRateLimitResult;
+  take(ip: string | null, action: SignInAction): Promise<SignInRateLimitResult>;
   /**
    * Counts one invite request against the class and the caller together (#217). Only for a
    * request whose token has already resolved to `classId`; see `SIGN_IN_INVITE_LIMIT`.
    */
-  takeInvite(ip: string | null, classId: string, now?: number): SignInRateLimitResult;
+  takeInvite(ip: string | null, classId: string): Promise<SignInRateLimitResult>;
   /**
    * Counts one link against the caller and the address together, then against the address alone,
    * and says whether to send it. The caller's own budget is taken first, so a request this caller
    * has already spent cannot go on to spend the shared ceiling.
    */
-  takeAddress(ip: string | null, email: string, now?: number): SignInAddressDecision;
+  takeAddress(ip: string | null, email: string): Promise<SignInAddressDecision>;
   /**
-   * How many times the address ceiling has refused since this process started, across every
-   * address. The aggregate is the whole point: it says a campaign is running without saying who
+   * How many times the address ceiling has refused in this server instance since it started,
+   * across every address. The counters are shared (#234); this tally is not, and does not need to
+   * be: it only says, in this instance's log, that a campaign is running, without saying who
    * against. For the log line in `app/sign-in/actions.ts`.
    */
   addressCeilingRefusals(): number;
-  /** How many windows are being tracked. For tests. */
-  size(): number;
+}
+
+const ACTION_BUCKETS = {
+  email: "sign_in_email",
+  demo: "sign_in_demo",
+} as const satisfies Record<SignInAction, RateLimitBucket>;
+
+const ALLOWED: SignInRateLimitResult = { ok: true };
+const REFUSED: SignInRateLimitResult = { ok: false, error: SIGN_IN_RATE_LIMITED };
+const UNAVAILABLE: SignInRateLimitResult = { ok: false, error: SIGN_IN_UNAVAILABLE };
+
+/**
+ * Runs one count, and answers `fallback` if the shared store cannot. Sign-in and invites fail
+ * closed (#234): Supabase Auth runs on the same database, so a store that cannot answer usually
+ * means a link could not have been sent either, and letting requests through unchecked is how a
+ * flood would get past an outage. Logged with the error's name and code, never a key.
+ */
+async function orFallback<T>(fallback: T, count: () => Promise<T>): Promise<T> {
+  try {
+    return await count();
+  } catch (error) {
+    console.error(
+      "[sign-in] the shared rate limiter could not answer, so the request was refused",
+      {
+        error: error instanceof Error ? `${error.name}: ${error.message}` : "unknown",
+      },
+    );
+    return fallback;
+  }
 }
 
 /**
- * A fixed-window counter per address and path, in this process's memory. Calls over the limit are
- * counted but capped, so hammering neither shortens nor lengthens the wait — the same shape as
- * #111's `private.take_rate_limit`.
+ * The sign-in counters, on a shared store (#234). Each counter is a fixed window per bucket and
+ * key; calls over the limit are counted but capped, so hammering neither shortens nor lengthens
+ * the wait — the same shape as #111's `private.take_rate_limit`. Keys go to the store as written
+ * here (`203.0.113.7`, `pair|address`); the production store hashes each one before it leaves
+ * the server, so no address reaches the database in the clear.
  */
 export function createSignInRateLimiter(
+  store: RateLimitStore,
   limits: Readonly<Record<SignInAction, Readonly<SignInLimit>>> = SIGN_IN_LIMITS,
   addressLimits: Readonly<
     Record<"perCaller" | "overall", Readonly<SignInLimit>>
@@ -331,89 +342,57 @@ export function createSignInRateLimiter(
   inviteLimit: Readonly<SignInLimit> = SIGN_IN_INVITE_LIMIT,
   inviteTotalLimit: Readonly<SignInLimit> = SIGN_IN_INVITE_TOTAL_LIMIT,
 ): SignInRateLimiter {
-  // All five counters share one Map, so there is one bound and one eviction policy to reason
-  // about. The keys cannot collide: each carries a prefix the others do not use, and inside a
-  // pair key neither half can hold the separator — `clientIp` has already checked that the
-  // caller is an IP address or the one fixed word, a validated email has no `|` in it, and a
-  // class id is a uuid the database just returned.
-  const windows = new Map<string, CountedWindow>();
+  // Inside a pair key neither half can hold the separator: `clientIp` has already checked that
+  // the caller is an IP address or the one fixed word, a validated email has no `|` in it, and a
+  // class id is a uuid the database just returned. The bucket keeps the kinds of key apart.
   let ceilingRefusals = 0;
-  const longestWindow = Math.max(
-    ...Object.values(addressLimits).map((limit) => limit.windowMs),
-    ...Object.values(limits).map((limit) => limit.windowMs),
-    inviteLimit.windowMs,
-    inviteTotalLimit.windowMs,
-  );
-
-  function forgetFinished(now: number): void {
-    if (windows.size < MAX_TRACKED) return;
-    for (const [key, counted] of windows) {
-      if (now - counted.start >= longestWindow) windows.delete(key);
-    }
-    if (windows.size < MAX_TRACKED) return;
-    // Still that many live windows: more distinct addresses in five minutes than this site sees,
-    // so it is a flood. Drop the ones nearest the end of their window rather than everything, so
-    // a caller currently at their limit is the last to have it forgotten.
-    const oldestFirst = [...windows.entries()].sort((a, b) => a[1].start - b[1].start);
-    for (const [key] of oldestFirst) {
-      if (windows.size <= EVICT_TO) break;
-      windows.delete(key);
-    }
-  }
-
-  /** Counts one call against `key` and says whether it stayed inside `limit`. */
-  function within(key: string, limit: Readonly<SignInLimit>, now: number): boolean {
-    forgetFinished(now);
-
-    const counted = windows.get(key);
-    if (!counted || now - counted.start >= limit.windowMs) {
-      windows.set(key, { start: now, calls: 1 });
-      return true;
-    }
-
-    // One counter behind a Map key, deliberately mutated in place rather than replaced.
-    counted.calls = Math.min(counted.calls + 1, limit.attempts + 1);
-    return counted.calls <= limit.attempts;
-  }
 
   return {
-    take(ip, action, now = Date.now()) {
-      if (ip === null) return { ok: true };
-      return within(`${action}:${ip}`, limits[action], now)
-        ? { ok: true }
-        : { ok: false, error: SIGN_IN_RATE_LIMITED };
+    async take(ip, action) {
+      if (ip === null) return ALLOWED;
+      return orFallback(UNAVAILABLE, async () =>
+        (await store.hit(ACTION_BUCKETS[action], ip, limits[action])) ? ALLOWED : REFUSED,
+      );
     },
-    takeInvite(ip, classId, now = Date.now()) {
-      if (ip === null) return { ok: true };
-      // The class first, so a class that is full does not also spend the caller's total.
-      return within(`invite:${classId}|${ip}`, inviteLimit, now) &&
-        within(`invite-all:${ip}`, inviteTotalLimit, now)
-        ? { ok: true }
-        : { ok: false, error: SIGN_IN_RATE_LIMITED };
+    async takeInvite(ip, classId) {
+      if (ip === null) return ALLOWED;
+      return orFallback(UNAVAILABLE, async () => {
+        // The class first, so a class that is full does not also spend the caller's total.
+        if (!(await store.hit("sign_in_invite_class", `${classId}|${ip}`, inviteLimit))) {
+          return REFUSED;
+        }
+        return (await store.hit("sign_in_invite_total", ip, inviteTotalLimit)) ? ALLOWED : REFUSED;
+      });
     },
-    takeAddress(ip, email, now = Date.now()) {
+    async takeAddress(ip, email) {
       const address = normalizeSignInAddress(email);
-      // Off the platform there is no caller to key a pair on, so that tier drops out exactly as
-      // `take` does, and for the same reason. The ceiling has no such exemption: the recipient is
-      // known wherever the request came from.
-      if (ip !== null && !within(`pair:${ip}|${address}`, addressLimits.perCaller, now)) {
-        return "over-caller-budget";
-      }
-      if (!within(`address:${address}`, addressLimits.overall, now)) {
-        ceilingRefusals += 1;
-        return "over-address-ceiling";
-      }
-      return "send";
+      return orFallback<SignInAddressDecision>("unchecked", async () => {
+        // Off the platform there is no caller to key a pair on, so that tier drops out exactly as
+        // `take` does, and for the same reason. The ceiling has no such exemption: the recipient
+        // is known wherever the request came from.
+        if (
+          ip !== null &&
+          !(await store.hit("sign_in_address_pair", `${ip}|${address}`, addressLimits.perCaller))
+        ) {
+          return "over-caller-budget";
+        }
+        if (!(await store.hit("sign_in_address", address, addressLimits.overall))) {
+          ceilingRefusals += 1;
+          return "over-address-ceiling";
+        }
+        return "send";
+      });
     },
     addressCeilingRefusals: () => ceilingRefusals,
-    size: () => windows.size,
   };
 }
 
-// Pinned to globalThis so an edit in development, which re-evaluates the module, does not hand
-// everyone a fresh budget, and so two server bundles of this module cannot each keep their own.
-const shared = globalThis as typeof globalThis & { __learnSignInRateLimiter?: SignInRateLimiter };
-const sharedLimiter = (shared.__learnSignInRateLimiter ??= createSignInRateLimiter());
+let sharedLimiter: SignInRateLimiter | undefined;
+
+/** The limiter every sign-in path uses: the Postgres store, built on first use. */
+function defaultLimiter(): SignInRateLimiter {
+  return (sharedLimiter ??= createSignInRateLimiter(sharedRateLimitStore()));
+}
 
 /**
  * Counts one sign-in attempt from this request's address, before the request reaches Supabase.
@@ -423,8 +402,8 @@ const sharedLimiter = (shared.__learnSignInRateLimiter ??= createSignInRateLimit
 export function takeSignInAttempt(
   requestHeaders: RequestHeaders,
   action: SignInAction,
-  limiter: SignInRateLimiter = sharedLimiter,
-): SignInRateLimitResult {
+  limiter: SignInRateLimiter = defaultLimiter(),
+): Promise<SignInRateLimitResult> {
   return limiter.take(clientIp(requestHeaders), action);
 }
 
@@ -436,8 +415,8 @@ export function takeSignInAttempt(
 export function takeSignInInviteAttempt(
   requestHeaders: RequestHeaders,
   classId: string,
-  limiter: SignInRateLimiter = sharedLimiter,
-): SignInRateLimitResult {
+  limiter: SignInRateLimiter = defaultLimiter(),
+): Promise<SignInRateLimitResult> {
   return limiter.takeInvite(clientIp(requestHeaders), classId);
 }
 
@@ -464,8 +443,8 @@ export function takeSignInInviteAttempt(
 export function takeSignInAddress(
   requestHeaders: RequestHeaders,
   email: string,
-  limiter: SignInRateLimiter = sharedLimiter,
-): SignInAddressDecision {
+  limiter: SignInRateLimiter = defaultLimiter(),
+): Promise<SignInAddressDecision> {
   return limiter.takeAddress(clientIp(requestHeaders), email);
 }
 
@@ -476,6 +455,8 @@ export function takeSignInAddress(
  * several callers at once, which an operator should be able to see; naming the address would put
  * back the oracle that all of this exists to close.
  */
-export function signInAddressCeilingRefusals(limiter: SignInRateLimiter = sharedLimiter): number {
+export function signInAddressCeilingRefusals(
+  limiter: SignInRateLimiter = defaultLimiter(),
+): number {
   return limiter.addressCeilingRefusals();
 }

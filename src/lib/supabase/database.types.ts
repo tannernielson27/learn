@@ -1065,6 +1065,15 @@ export type Database = {
         Args: { error_kind: string; retry_in_seconds?: number; target: string };
         Returns: string;
       };
+      hit_rate_limit: {
+        Args: {
+          bucket_name: string;
+          key_digest: string;
+          max_hits: number;
+          window_seconds: number;
+        };
+        Returns: boolean;
+      };
       import_bank_content: {
         Args: {
           new_case_study: Json;

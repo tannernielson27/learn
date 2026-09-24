@@ -32,6 +32,11 @@ describe("reminderCronDeps", () => {
     expect(createSupabaseServiceClient).not.toHaveBeenCalled();
   });
 
+  it("counts its limits in the shared store (#234)", () => {
+    expect(reminderCronDeps().limiter).toBeDefined();
+    expect(createSupabaseServiceClient).not.toHaveBeenCalled();
+  });
+
   it("shares one service client between the store and the submit at close", async () => {
     const deps = reminderCronDeps();
     expect(deps.store()).toBe("store");
