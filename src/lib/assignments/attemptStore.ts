@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { readAssignmentReportRows, readReportAssignment } from "@/lib/supabase/assignmentReport";
 import type { Database } from "@/lib/supabase/database.types";
+import { readReportItems } from "@/lib/supabase/sessionReport";
 import {
   beginSubmission,
   listExpiredAttempts,
@@ -10,6 +12,7 @@ import {
   recordSubmission,
 } from "@/lib/supabase/attempts";
 import type { AttemptPageStore } from "./attemptPage";
+import { AUTO_SUBMIT_BATCH, type AssignmentReportStore } from "./reportLoader";
 import { autoSubmitExpired, type AutoSubmitStore, type SubmitStore } from "./submitAttempt";
 
 type Client = SupabaseClient<Database>;
@@ -47,5 +50,20 @@ export function attemptPageStore(user: Client, service: Client): AttemptPageStor
     answers: (attemptId) => readSavedAnswers(user, attemptId),
     items: (ids) => readSetItems(service, ids),
     autoSubmit: (filter) => autoSubmitExpired(autoSubmitStore(service), filter),
+  };
+}
+
+/**
+ * The assignment report's reads (#211). `author` reads the assignment, its items' names and the
+ * report rows as the signed-in author; `service` runs only the submit at close, and only after the
+ * author's own read has found the assignment (see `loadAssignmentReport`).
+ */
+export function assignmentReportStore(author: Client, service: Client): AssignmentReportStore {
+  return {
+    assignment: (assignmentId) => readReportAssignment(author, assignmentId),
+    autoSubmit: (assignmentId) =>
+      autoSubmitExpired(autoSubmitStore(service), { assignmentId, limit: AUTO_SUBMIT_BATCH }),
+    items: (ids) => readReportItems(author, ids),
+    rows: (assignmentId) => readAssignmentReportRows(author, assignmentId),
   };
 }

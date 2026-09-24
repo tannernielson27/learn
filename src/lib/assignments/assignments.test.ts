@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   assignmentPath,
+  assignmentReportCsvPath,
+  assignmentReportPath,
   assignmentState,
   attemptProgressLabel,
   attemptsLabel,
@@ -114,6 +116,13 @@ describe("labels and routes", () => {
 
   it("puts a student's assignment under the student home (#208)", () => {
     expect(studentAssignmentPath("a1")).toBe("/learn/assignments/a1");
+  });
+
+  it("puts an assignment's report and its CSV under /author, keeping the view (#211)", () => {
+    expect(assignmentReportPath("a1")).toBe("/author/assignments/a1/report");
+    expect(assignmentReportPath("a1", "students")).toBe("/author/assignments/a1/report");
+    expect(assignmentReportPath("a1", "steps")).toBe("/author/assignments/a1/report?view=steps");
+    expect(assignmentReportCsvPath("a1")).toBe("/author/assignments/a1/report/csv");
   });
 
   it("says how a student's attempts stand (#208)", () => {

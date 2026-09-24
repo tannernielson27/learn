@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { ConfirmSubmit } from "@/components/classes/ConfirmSubmit";
 import {
+  assignmentReportPath,
   assignmentState,
   attemptsLabel,
   STATE_LABEL,
@@ -68,6 +70,7 @@ interface AssignmentRowProps extends Pick<
 
 function AssignmentRow({ entry, state, editActionFor, deleteActionFor }: AssignmentRowProps) {
   const scheduled = state === "scheduled";
+  const reportLabel = state === "closed" ? "View report" : "View progress";
   return (
     <li className="flex flex-col gap-3 px-2 py-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -93,6 +96,16 @@ function AssignmentRow({ entry, state, editActionFor, deleteActionFor }: Assignm
         </dl>
         <p>{attemptsLabel(entry.maxAttempts)}</p>
       </div>
+      {/* #211: progress while it is open, scores once it has closed. Nothing to see before. */}
+      {scheduled ? null : (
+        <Link
+          href={assignmentReportPath(entry.id)}
+          aria-label={`${reportLabel} for ${entry.title}`}
+          className="tap-target inline-flex items-center self-start text-sm font-medium text-accent-ink hover:underline"
+        >
+          {reportLabel}
+        </Link>
+      )}
       {/* A closed assignment is final: its keys may already be in front of students (#210). */}
       {state === "closed" ? null : (
         <LazyDetails

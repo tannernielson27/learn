@@ -4,6 +4,7 @@ import {
   RECENT_SESSION_LIMIT,
   listRecentSessions,
   readAllPages,
+  readReportItems,
   readSessionReport,
 } from "./sessionReport";
 
@@ -235,5 +236,21 @@ describe("listRecentSessions", () => {
   it("answers null when the list cannot be read", async () => {
     const fake = fakeClient({ sessions: { data: null, error: { message: "down" } } });
     expect(await listRecentSessions(fake.client)).toBeNull();
+  });
+});
+
+describe("readReportItems", () => {
+  it("lists a set's items in the set's order, keeping one it can no longer read", async () => {
+    const fake = fakeClient(okReplies());
+    expect(await readReportItems(fake.client, [ITEM_B, ITEM_GONE])).toEqual([
+      { position: 1, itemId: ITEM_B, ref: "bowtie-act", type: "bowtie", cjmmStep: 5 },
+      { position: 2, itemId: ITEM_GONE, ref: ITEM_GONE, type: null, cjmmStep: null },
+    ]);
+  });
+
+  it("reads nothing for an empty set", async () => {
+    const fake = fakeClient({});
+    expect(await readReportItems(fake.client, [])).toEqual([]);
+    expect(fake.calls).toEqual([]);
   });
 });

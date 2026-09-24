@@ -2,17 +2,18 @@ import type { ReactNode } from "react";
 import type { ItemRow, StepRow, StudentRow } from "@/lib/live/report";
 import { formatPercent, formatPoints } from "@/lib/live/reportFormat";
 
-const HEAD = "border-b border-line-strong px-3 py-2 font-medium text-ink-2 whitespace-nowrap";
-const CELL = "px-3 py-2 text-right whitespace-nowrap";
+export const HEAD =
+  "border-b border-line-strong px-3 py-2 font-medium text-ink-2 whitespace-nowrap";
+export const CELL = "px-3 py-2 text-right whitespace-nowrap";
 /** The first column stays put while the rest scroll under it, so a row keeps its name at 375px. */
-const ROW_HEAD = "sticky left-0 bg-surface-1 px-3 py-2 text-left font-medium text-ink-1";
-const ROW = "border-b border-line last:border-b-0";
+export const ROW_HEAD = "sticky left-0 bg-surface-1 px-3 py-2 text-left font-medium text-ink-1";
+export const ROW = "border-b border-line last:border-b-0";
 
 /**
  * A table that scrolls sideways inside its own box, never the page (#186's 375px criterion).
  * Focusable and named, so a keyboard can scroll it and axe's scrollable-region rule holds.
  */
-function ScrollRegion({ label, children }: { label: string; children: ReactNode }) {
+export function ScrollRegion({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div
       role="region"
@@ -79,10 +80,16 @@ export function StudentTable({
 export function ItemTable({
   items,
   participantCount,
+  correctColumn = false,
 }: {
-  items: readonly ItemRow[];
+  items: readonly (ItemRow & { percentCorrect?: number | null })[];
   participantCount: number;
+  /** The share of answers fully correct, after Answered (#211's assignment report). */
+  correctColumn?: boolean;
 }) {
+  const heads = correctColumn
+    ? ["Step", "Answered", "Correct", "Mean", "Mean %", "Full", "Partial", "None"]
+    : ["Step", "Answered", "Mean", "Mean %", "Full", "Partial", "None"];
   return (
     <ScrollRegion label="Results by item">
       <table className="tabular w-full border-collapse text-sm">
@@ -91,7 +98,7 @@ export function ItemTable({
             <th scope="col" className={`${HEAD} sticky left-0 bg-surface-1 text-left`}>
               Item
             </th>
-            {["Step", "Answered", "Mean", "Mean %", "Full", "Partial", "None"].map((head) => (
+            {heads.map((head) => (
               <th key={head} scope="col" className={`${HEAD} text-right`}>
                 {head}
               </th>
@@ -106,6 +113,9 @@ export function ItemTable({
               </th>
               <td className={CELL}>{item.cjmmStep === null ? "–" : `Step ${item.cjmmStep}`}</td>
               <td className={CELL}>{`${item.responded} of ${participantCount}`}</td>
+              {correctColumn ? (
+                <td className={CELL}>{formatPercent(item.percentCorrect ?? null)}</td>
+              ) : null}
               <td className={CELL}>
                 {item.meanPoints === null
                   ? "–"

@@ -100,6 +100,18 @@ export async function readSessionReport(
   };
 }
 
+/**
+ * A set of items as a report lists them, in the set's order: each one's name and step, and never
+ * its stem, options or key. The assignment report (#211) reads its items through this too. Throws
+ * when the read fails.
+ */
+export async function readReportItems(
+  supabase: Client,
+  ids: readonly string[],
+): Promise<ReportItemInput[]> {
+  return toReportItems(ids, await readItems(supabase, ids));
+}
+
 /** `item_set` is a JSON array of item ids, written only by `start_session`; checked anyway. */
 function itemIdsOf(itemSet: unknown): string[] {
   return Array.isArray(itemSet) ? itemSet.filter((id): id is string => typeof id === "string") : [];
