@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-23 (Sprint 9 under way: #204 merged in #214 and applied to hosted, which now has all 24 migrations; #206 merged in #216 (Resend; owner steps in docs/05 §7.7); #209 part 1 in #218; #205 merged in #220 and applied; #207 merged in #222 and applied; #208 and the #209 wiring in #224. Sprint 8 is code complete, with the demo in `docs/sprints/S8-demo.md`).
+Last updated: 2026-09-23 (Sprint 9 under way: #204 merged in #214 and applied to hosted, which now has all 25 migrations; #206 merged in #216 (Resend; owner steps in docs/05 §7.7); #209 part 1 in #218; #205 merged in #220 and applied; #207 merged in #222 and applied; #208 and the #209 wiring merged in #224 and applied; #211 in progress. Sprint 8 is code complete, with the demo in `docs/sprints/S8-demo.md`).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -86,18 +86,18 @@ Decisions taken at kickoff while the owner was away (2026-09-23), each the conse
 
 Demo 9: assign a set Monday, answer it Tuesday on a phone, review results Wednesday.
 
-| #                                                           | Title                                                                                      | Gates                     | Status                                                               |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------- | -------------------------------------------------------------------- |
-| [#204](https://github.com/tannernielson27/learn/issues/204) | feat(auth): invite-only sign-up, so no new account becomes an instructor                   | security, db, e2e         | Merged (#214); `20260924000000_invite_only_signup` applied to hosted |
-| [#205](https://github.com/tannernielson27/learn/issues/205) | feat(assign): a class with an invite link students join                                    | security, db, e2e         | Merged (#220); `20260924010000_classes` applied to hosted            |
-| [#206](https://github.com/tannernielson27/learn/issues/206) | chore(infra): send email through Resend from info.tannernielson.com                        | security                  | Merged (#216); no migration; owner steps in docs/05 §7.7             |
-| [#207](https://github.com/tannernielson27/learn/issues/207) | feat(assign): assign a bank or case study to a class with a window and attempts            | security, db, e2e         | Merged (#222); `20260924020000_assignments` applied to hosted        |
-| [#208](https://github.com/tannernielson27/learn/issues/208) | feat(assign): take an assignment on a phone with autosave and resume                       | player, security, db, e2e | Merged (#224); apply `20260924030800_assignment_attempts` to hosted  |
-| [#209](https://github.com/tannernielson27/learn/issues/209) | feat(assign): shuffle options where the item type allows it                                | player, security          | Merged: part 1 (#218) and the wiring in #224                         |
-| [#210](https://github.com/tannernielson27/learn/issues/210) | feat(assign): student results with keys and rationales after close                         | security, e2e             | To do                                                                |
-| [#211](https://github.com/tannernielson27/learn/issues/211) | feat(assign): an assignment report per student, item and CJMM step, with CSV               | security, db              | To do                                                                |
-| [#212](https://github.com/tannernielson27/learn/issues/212) | feat(assign): reminder emails when an assignment opens and a day before it closes          | infra, security, db       | To do                                                                |
-| [#217](https://github.com/tannernielson27/learn/issues/217) | fix(auth): a class behind one campus IP hits the per-IP sign-in limit at about 30 students | security                  | To do; found on #206, needed before a real class uses invite links   |
+| #                                                           | Title                                                                                      | Gates                     | Status                                                                |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------- | --------------------------------------------------------------------- |
+| [#204](https://github.com/tannernielson27/learn/issues/204) | feat(auth): invite-only sign-up, so no new account becomes an instructor                   | security, db, e2e         | Merged (#214); `20260924000000_invite_only_signup` applied to hosted  |
+| [#205](https://github.com/tannernielson27/learn/issues/205) | feat(assign): a class with an invite link students join                                    | security, db, e2e         | Merged (#220); `20260924010000_classes` applied to hosted             |
+| [#206](https://github.com/tannernielson27/learn/issues/206) | chore(infra): send email through Resend from info.tannernielson.com                        | security                  | Merged (#216); no migration; owner steps in docs/05 §7.7              |
+| [#207](https://github.com/tannernielson27/learn/issues/207) | feat(assign): assign a bank or case study to a class with a window and attempts            | security, db, e2e         | Merged (#222); `20260924020000_assignments` applied to hosted         |
+| [#208](https://github.com/tannernielson27/learn/issues/208) | feat(assign): take an assignment on a phone with autosave and resume                       | player, security, db, e2e | Merged (#224); `20260924030800_assignment_attempts` applied to hosted |
+| [#209](https://github.com/tannernielson27/learn/issues/209) | feat(assign): shuffle options where the item type allows it                                | player, security          | Merged: part 1 (#218) and the wiring in #224                          |
+| [#210](https://github.com/tannernielson27/learn/issues/210) | feat(assign): student results with keys and rationales after close                         | security, e2e             | To do                                                                 |
+| [#211](https://github.com/tannernielson27/learn/issues/211) | feat(assign): an assignment report per student, item and CJMM step, with CSV               | security, db              | In progress                                                           |
+| [#212](https://github.com/tannernielson27/learn/issues/212) | feat(assign): reminder emails when an assignment opens and a day before it closes          | infra, security, db       | To do                                                                 |
+| [#217](https://github.com/tannernielson27/learn/issues/217) | fix(auth): a class behind one campus IP hits the per-IP sign-in limit at about 30 students | security                  | To do; found on #206, needed before a real class uses invite links    |
 
 Suggested order: #204 invite-only first (every later story assumes a student cannot author), with #206 email alongside; then #205 classes; #207 assign; #208 take an assignment; then #209 shuffle and #211 report; #210 results; #212 reminders last, or alongside #208 once #206 and #207 have merged.
 

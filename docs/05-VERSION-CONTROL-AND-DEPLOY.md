@@ -170,9 +170,9 @@ Everything in `supabase/migrations/` today, in filename order — this is the re
 | 22  | `20260924000000_invite_only_signup`            | new accounts get no role; `private.make_instructor` (#204, §7.6)               | applied                    |
 | 23  | `20260924010000_classes`                       | classes, rosters and invite links; completes the invite seam (#205)            | applied                    |
 | 24  | `20260924020000_assignments`                   | assign a bank or case study to a class with a window and attempts (#207)       | applied                    |
-| 25  | `20260924030800_assignment_attempts`           | take an assignment: attempts, autosave, submit, submit at close (#208)         | **not applied**            |
+| 25  | `20260924030800_assignment_attempts`           | take an assignment: attempts, autosave, submit, submit at close (#208)         | applied                    |
 
-Checked 2026-09-23 with `pnpm exec supabase migration list --linked`: rows 1–24 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged, row 23 straight after #220, row 24 straight after #222). Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
+Checked 2026-09-23 with `pnpm exec supabase migration list --linked`: rows 1–25 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged, row 23 straight after #220, row 24 straight after #222, row 25 straight after #224). Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
 
 > **No standing drift.** The existing hosted project is current. The separate production project (§7.3) does not exist yet and will need every row replayed when it is created.
 
