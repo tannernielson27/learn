@@ -14,6 +14,7 @@
  */
 import { maxPoints } from "@/lib/ngn/scoring";
 import type { AnyResponse, Item } from "@/lib/ngn/schemas";
+import { startingOrderSeed } from "@/lib/ngn/startingOrder";
 import { parseSubmission, scoreSubmission, toKeylessItem, SUBMIT_ERRORS } from "@/lib/ngn/submit";
 import type { ScoreResult } from "@/lib/ngn/types";
 import { LiveSessionError } from "./errors";
@@ -117,9 +118,12 @@ function subscribe<T>(listeners: Set<T>, listener: T): Unsubscribe {
 export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
   const items: Item[] = [...options.items];
   /** Built once, so no request path ever reaches for `toKeylessItem` under time pressure. */
-  const keylessItems: ParticipantItem[] = items.map(toKeylessItem);
-  const itemIds = items.map((item) => item.id);
   const sessionId = options.sessionId ?? "in-memory-session";
+  // One starting order per room for an ordered-response item (#219), as the Supabase adapter does.
+  const keylessItems: ParticipantItem[] = items.map((item) =>
+    toKeylessItem(item, startingOrderSeed(sessionId, item.id)),
+  );
+  const itemIds = items.map((item) => item.id);
   const code = options.code ?? DEFAULT_CODE;
   const mode: SessionMode = options.mode ?? "instructor_paced";
   const now = options.now ?? (() => Date.now());

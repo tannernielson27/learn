@@ -69,8 +69,9 @@ export function toOrderedResponseForm(item: OrderedItem): OrderedResponseFormVal
 }
 
 /**
- * The steps are written in their correct order, which becomes the key. The player shuffles what
- * students see (presentationOrder), so content keeps the authored order.
+ * The steps are written in their correct order, which becomes the key. Content keeps the authored
+ * order; what students receive is scrambled on the server so it never starts in the key's order
+ * (`toKeylessItem` and `withStartingOrder`, #219).
  */
 export function fromOrderedResponseForm(
   values: OrderedResponseFormValues,

@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { startingOrder, startingOrderSeed } from "@/lib/ngn/startingOrder";
 import { FIXTURES, sampleCaseStudy } from "@/lib/ngn/fixtures";
 import { caseStudySchema, itemSchema, type Item } from "@/lib/ngn/schemas";
 import type { SetItem } from "./attemptScoring";
@@ -111,5 +112,60 @@ describe("the shuffle (#209)", () => {
     const before = JSON.stringify(set);
     buildAttemptSet({ set, attemptId: ATTEMPT_A, shuffle: true, answers: {} });
     expect(JSON.stringify(set)).toBe(before);
+  });
+});
+
+describe("an ordered-response item's starting order, on the bytes (#219)", () => {
+  const OR = itemSchema.parse(FIXTURES.ordered_response.canonical) as Item;
+  const key = (OR.answerKey as { orderedIds: string[] }).orderedIds;
+  /** The steps in the order the bytes list them, read off the `"id":"…"` of each. */
+  const stepOrder = (bytes: string) =>
+    [...key].sort((a, b) => bytes.indexOf(`"id":"${a}"`) - bytes.indexOf(`"id":"${b}"`));
+  const attempt = (n: number, block = "c") =>
+    `3f1c1f0e-8f5e-4c43-9a55-6c3f1b2a0${block}${String(n).padStart(2, "0")}`;
+
+  it("never sends the steps in the key's order, shuffled assignment or not", () => {
+    // The control: the item as stored lists its steps in the key's order, and the reader sees it.
+    expect(stepOrder(JSON.stringify(setOf([OR])))).toEqual(key);
+    for (const shuffle of [true, false]) {
+      for (let s = 0; s < 40; s += 1) {
+        const bytes = JSON.stringify(
+          buildAttemptSet({ set: setOf([OR]), attemptId: attempt(s), shuffle, answers: {} }),
+        );
+        for (const id of key) expect(bytes).toContain(`"id":"${id}"`);
+        expect(stepOrder(bytes)).not.toEqual(key);
+        expect(bytes).not.toContain(JSON.stringify(key));
+      }
+    }
+  });
+
+  it("keys the seed with the server's secret, so a student cannot replay the scramble", () => {
+    // A student knows their attempt id and the item id, and the scramble is public (#219).
+    vi.stubEnv("SUPABASE_SECRET_KEY", "sb_secret_attemptView_test");
+    try {
+      const differs = Array.from({ length: 8 }, (_, s) => {
+        const attemptId = attempt(s, "e");
+        const bytes = JSON.stringify(
+          buildAttemptSet({ set: setOf([OR]), attemptId, shuffle: false, answers: {} }),
+        );
+        const replayed = startingOrder(key, key, startingOrderSeed(attemptId, OR.id));
+        return stepOrder(bytes).join() !== replayed.join();
+      });
+      expect(differs.filter(Boolean).length).toBeGreaterThan(4);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("seeds the order by attempt, so a resume sees it again and two students may not", () => {
+    const orderFor = (attemptId: string) =>
+      stepOrder(
+        JSON.stringify(
+          buildAttemptSet({ set: setOf([OR]), attemptId, shuffle: false, answers: {} }),
+        ),
+      ).join();
+    expect(orderFor(ATTEMPT_A)).toBe(orderFor(ATTEMPT_A));
+    const orders = new Set(Array.from({ length: 12 }, (_, s) => orderFor(attempt(s, "d"))));
+    expect(orders.size).toBeGreaterThan(1);
   });
 });

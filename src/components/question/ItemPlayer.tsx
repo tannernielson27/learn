@@ -106,7 +106,7 @@ export function ItemPlayer({
     // who did not answer, whose view is built from the key they have just been handed.
     () =>
       initialResponse ??
-      (keyOnly ? unansweredResponse({ ...item, ...keyOnly } as Item) : firstResponse(item as Item)),
+      (keyOnly ? unansweredResponse({ ...item, ...keyOnly } as Item) : firstResponse(item)),
   );
   const [result, setResult] = useState<ScoreResult | undefined>(initialReveal?.score);
   // The score is held separately above, so only the three revealed fields are merged onto the item.

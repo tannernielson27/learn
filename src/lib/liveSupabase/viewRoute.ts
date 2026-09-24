@@ -38,6 +38,7 @@ import {
 } from "@/lib/live";
 import { readTimer } from "@/lib/live/timer";
 import type { Item } from "@/lib/ngn/schemas";
+import type { StartingOrderSeedFor } from "@/lib/ngn/startingOrder";
 import { parseSubmission, toKeylessItem, type Reveal } from "@/lib/ngn/submit";
 import type { ScoreResult } from "@/lib/ngn/types";
 import { fromItemRow } from "@/lib/supabase/itemRows";
@@ -52,9 +53,19 @@ import {
 
 const ITEM_COLUMNS = "type, cjmm_step, tags, version, content, answer_key, rationale, scoring";
 
+/**
+ * What the view route needs beyond the other live routes: the seed for an ordered-response item's
+ * starting order (#219). Required, so no caller can forget it; the route handler passes
+ * `secretStartingOrderSeed`, which is keyed with a server secret and so is never imported here,
+ * where the barrel would carry `node:crypto` into a browser bundle.
+ */
+export interface ViewRouteDeps extends LiveRouteDeps {
+  startingOrderSeed: StartingOrderSeedFor;
+}
+
 export async function readParticipantView(
   request: Request,
-  deps: LiveRouteDeps,
+  deps: ViewRouteDeps,
 ): Promise<Response> {
   // JSON only, the same rule the submission route holds a request to. Nothing here parses the
   // body and the participant cookie is SameSite=Lax, so this closes no hole on its own; it stops
@@ -157,7 +168,11 @@ export async function readParticipantView(
   const stored = fromItemRow(row);
   if (!stored.ok) return fail(409, LIVE_ROUTE_ERRORS.unplayable);
 
-  const item: ParticipantItem = toKeylessItem(stored.value);
+  // One starting order per room for an ordered-response item (#219): every phone sees the same.
+  const item: ParticipantItem = toKeylessItem(
+    stored.value,
+    deps.startingOrderSeed(participant.sessionId, stored.value.id),
+  );
   // `itemAt` only answers with an id while the room is on an item, which is exactly when
   // `position` is not null. The cast is that fact, not an assumption about the row.
   const position = state.position as number;

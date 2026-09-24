@@ -125,7 +125,11 @@ Fourteen renderable formats. Each has: `type` id, interaction summary, layout no
 - Interaction: reorder 4–6 items (drag, or up/down buttons on touch).
 - Scoring: 0/1 whole item (exact order). Optional `partial: "position"` variant gives 1 per correct position; default off for fidelity.
 - Key: `{ orderedIds[] }`. Response: `{ orderedIds[] }`.
-- Shuffle: none. The order is the answer, and the author's starting order is kept.
+- Shuffle: none in the #209 sense (the order is the answer). Separately, the **starting order** is always scrambled (#219), because authors type the steps in their correct order and the authored order is usually the key:
+  - For two or more steps, the order a candidate starts from is **never the key's order**, for any seed. A seeded scramble (`startingOrder` in `src/lib/ngn/startingOrder.ts`) that lands on the key is rotated one place; with two steps that is the one other order.
+  - It reads the key, so it runs on the server: `toKeylessItem` lists the steps in their starting order before the item is sent, and the player starts from them as they arrive. The response bytes never list the steps in the key's order before the reveal. A browser that already holds the whole item (the gallery, an author's preview) computes the same order from the same seed.
+  - Seed: the item id by default (the author's play page, the gallery). Where a student plays, the seed is `secretStartingOrderSeed(scopeId, itemId)` (`src/lib/supabase/startingOrderSeed.ts`): an HMAC-SHA256 under the server's secret key. The scramble is public and a student can see the session, attempt and item ids, so a seed built from those alone would let them replay the scramble, undo it and read off the authored order. The scope is the session in live sessions, both modes, so every phone in a room starts from the same order, and the attempt for take-home, whether or not the assignment shuffles, so a resume starts from the same order. The in-memory room (the gallery's fake live room) uses the unkeyed `startingOrderSeed`.
+  - Scoring is unchanged: the response is the explicit id list, scored against the key, never against positions in `content`.
 
 ### 3.14 `bowtie`
 
@@ -187,7 +191,7 @@ Where a type's order carries no meaning, its lists are permuted per attempt so t
 - Applied on the server to the (keyless) item before it is sent; the browser never sees the seed or the author's order. Responses stay keyed by id, so scoring is unchanged.
 - Never moved: anything whose position is the answer (ordered response, highlight text and table), the text around blanks, matrix columns (a shared scale), bowtie columns, and case-study step order.
 - Fixed options: the schema has no "fixed" flag, so an option whose wording points at other options or at a position ("All of the above", "None of these", "Options A and C", "Choice 2") stays at the index the author gave it, and the rest move around it (`isFixedLabel`).
-- Live sessions are not shuffled.
+- Live sessions are not shuffled. The one exception to both of those rules is an ordered-response item's starting order, which is scrambled everywhere a candidate plays it (section 3.13, #219).
 
 ## 5. Player modes
 

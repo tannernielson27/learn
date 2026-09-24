@@ -99,6 +99,31 @@ describe("the in-memory room itself", () => {
     });
   });
 
+  it("hands phones an ordered-response item's steps in one room-wide order, never the key's (#219)", async () => {
+    const ordered = itemSchema.parse(FIXTURES.ordered_response.canonical);
+    if (ordered.type !== "ordered_response") throw new Error("fixture type");
+    const shownIn = async (sessionId: string) => {
+      const room = createInMemoryRoom({ items: [ordered], sessionId });
+      const host = room.host();
+      await host.open();
+      await host.start();
+      const ada = await room.participant().join(room.code, { displayName: "Ada" });
+      const grace = await room.participant().join(room.code, { displayName: "Grace" });
+      const steps = (view: SessionView<ParticipantItem>) =>
+        view.item?.type === "ordered_response" ? view.item.content.items.map((s) => s.id) : [];
+      expect(steps(grace)).toEqual(steps(ada));
+      return steps(ada);
+    };
+    const orders = new Set<string>();
+    for (let s = 0; s < 8; s += 1) {
+      const order = await shownIn(`session-${s}`);
+      expect(order).toHaveLength(ordered.answerKey.orderedIds.length);
+      expect(order).not.toEqual(ordered.answerKey.orderedIds);
+      orders.add(order.join());
+    }
+    expect(orders.size).toBeGreaterThan(1);
+  });
+
   it("will not compile if a host's view is put on a participant's channel", () => {
     const participantListener = (view: SessionView<ParticipantItem>) => view.item;
     const hostView: SessionView<Item> = { state: initialSessionState(1), item: first };

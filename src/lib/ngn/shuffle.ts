@@ -155,7 +155,9 @@ function shuffledContent(item: PlayableItem, seed: string): Content {
     case "highlight_text":
     case "highlight_table":
     case "ordered_response":
-      // Position is the answer (the passage, the table, the steps to order): nothing moves.
+      // Position is the answer (the passage, the table, the steps to order): nothing moves. An
+      // ordered-response item's steps already arrive in their starting order, never the key's,
+      // from `toKeylessItem` (#219); that needs the key, which a keyless item no longer has.
       return item.content;
     default:
       return assertNever(item);

@@ -4,9 +4,9 @@ import { FIXTURES } from "@/lib/ngn/fixtures";
 import { validateItem } from "@/lib/ngn/validate";
 import type { Database } from "@/lib/supabase/database.types";
 import { toItemRow } from "@/lib/supabase/itemRows";
-import type { LiveRouteDeps } from "./routeDeps";
+import { startingOrderSeed } from "@/lib/ngn/startingOrder";
 import { submitSessionResponse } from "./submitRoute";
-import { readParticipantView } from "./viewRoute";
+import { readParticipantView, type ViewRouteDeps } from "./viewRoute";
 
 /**
  * The refusals and faults the conformance suite cannot reach, because they are things a browser
@@ -41,8 +41,12 @@ function scriptedService(script: Record<string, Answer>): SupabaseClient<Databas
   return client as unknown as SupabaseClient<Database>;
 }
 
-function deps(script: Record<string, Answer>, verified: typeof ME | null = ME): LiveRouteDeps {
-  return { verify: async () => verified, service: scriptedService(script) };
+function deps(script: Record<string, Answer>, verified: typeof ME | null = ME): ViewRouteDeps {
+  return {
+    verify: async () => verified,
+    service: scriptedService(script),
+    startingOrderSeed: startingOrderSeed,
+  };
 }
 
 const jsonRequest = (url: string, body: unknown, headers: Record<string, string> = {}) =>

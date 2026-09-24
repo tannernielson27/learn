@@ -14,6 +14,7 @@ import { z } from "zod";
 import type { ItemType } from "./labels";
 import { responseSchema, type AnyResponse, type CaseStudy, type Item } from "./schemas";
 import { scoreItem } from "./scoring";
+import { withStartingOrder } from "./startingOrder";
 import { SUBMIT_ERRORS } from "./submitErrors";
 import type { ScoreResult } from "./types";
 
@@ -106,9 +107,14 @@ export type KeylessItem = DistributiveOmit<Item, AnswerBearingField>;
  * The only item payload a student-facing page sends to the browser (ADR 0003). The key, rationale
  * and scoring stay on the server until the score comes back with them. Works on a deep copy, so
  * the item it is given is never changed.
+ *
+ * An ordered-response item's steps are the one thing it reorders (#219): the authored order is
+ * usually the key, so the steps go out in their starting order (`withStartingOrder`, never the
+ * key's order), seeded by `seed`. Pass `startingOrderSeed(sessionId | attemptId, itemId)` where
+ * a room or an attempt should see one order; the item id is the default.
  */
-export function toKeylessItem(item: Item): KeylessItem {
-  const copy = JSON.parse(JSON.stringify(item)) as Record<string, unknown>;
+export function toKeylessItem(item: Item, seed: string = item.id): KeylessItem {
+  const copy = JSON.parse(JSON.stringify(withStartingOrder(item, seed))) as Record<string, unknown>;
   const keyless: Record<string, unknown> = {};
   // Optional envelope fields are absent more often than not, and an absent field stays absent:
   // copying it would turn `difficulty?: "easy"` into `difficulty: undefined` in the payload.
@@ -141,9 +147,13 @@ export type KeylessCaseStudy = PlayableCaseStudy<KeylessItem>;
 /**
  * Strips every step's key, rationale and scoring. Each item is a deep copy, so the case study it
  * is given is never changed; the patient's record is shared by reference, since it holds no answer.
+ *
+ * Seeds each step's starting order (#219) by the step's own id, which a student can see. Fine for
+ * the gallery and an author's preview; a path that hands a case study to a student must build it
+ * with `toKeylessItem(step, secretStartingOrderSeed(scopeId, step.id))` per step instead.
  */
 export function toKeylessCaseStudy(caseStudy: CaseStudy): KeylessCaseStudy {
-  return { ...caseStudy, items: caseStudy.items.map(toKeylessItem) };
+  return { ...caseStudy, items: caseStudy.items.map((item) => toKeylessItem(item)) };
 }
 
 /**

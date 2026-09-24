@@ -34,7 +34,7 @@ function unusedStepId(taken: ReadonlySet<string>): string {
 
 /**
  * Ordered response: the author writes the steps in their correct order, which is the key, and
- * moves them with Up and Down. Students see them shuffled by the player.
+ * moves them with Up and Down. Students see them scrambled, never starting in this order (#219).
  */
 export function OrderedResponseEditor({
   initialValues,
