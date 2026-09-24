@@ -39,6 +39,11 @@ export function studentAssignmentPath(assignmentId: string): string {
   return `/learn/assignments/${assignmentId}`;
 }
 
+/** Where a student reads their results once the assignment has closed (#210). */
+export function studentResultsPath(assignmentId: string): string {
+  return `${studentAssignmentPath(assignmentId)}/results`;
+}
+
 /** An assignment's report for its author (#211), on one of the session report's three views. */
 export function assignmentReportPath(
   assignmentId: string,

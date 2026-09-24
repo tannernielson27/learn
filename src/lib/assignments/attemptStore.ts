@@ -11,7 +11,9 @@ import {
   readStudentAssignment,
   recordSubmission,
 } from "@/lib/supabase/attempts";
+import { readMyResult } from "@/lib/supabase/results";
 import type { AttemptPageStore } from "./attemptPage";
+import type { ResultsStore } from "./results";
 import { AUTO_SUBMIT_BATCH, type AssignmentReportStore } from "./reportLoader";
 import { autoSubmitExpired, type AutoSubmitStore, type SubmitStore } from "./submitAttempt";
 
@@ -50,6 +52,21 @@ export function attemptPageStore(user: Client, service: Client): AttemptPageStor
     answers: (attemptId) => readSavedAnswers(user, attemptId),
     items: (ids) => readSetItems(service, ids),
     autoSubmit: (filter) => autoSubmitExpired(autoSubmitStore(service), filter),
+  };
+}
+
+/**
+ * The results page's reads (#210). The result and the assignment are read as the student: the
+ * definer function answers only them, only about their own attempts, and only after the close.
+ * The service role runs the submit at close (narrowed to this student) and reads the items with
+ * their keys, which `loadResultsPage` does only once the student's own read has said "released".
+ */
+export function resultsStore(user: Client, service: Client): ResultsStore {
+  return {
+    autoSubmit: (filter) => autoSubmitExpired(autoSubmitStore(service), filter),
+    result: (assignmentId) => readMyResult(user, assignmentId),
+    assignment: (assignmentId) => readStudentAssignment(user, assignmentId),
+    items: (ids) => readSetItems(service, ids),
   };
 }
 

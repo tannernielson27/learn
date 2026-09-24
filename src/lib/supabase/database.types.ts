@@ -1087,6 +1087,25 @@ export type Database = {
         };
         Returns: Json;
       };
+      my_assignment_result: {
+        Args: { target_assignment: string };
+        Returns: {
+          assignment_id: string;
+          attempt_id: string;
+          attempt_number: number;
+          auto_submitted: boolean;
+          closes_at: string;
+          item_set: Json;
+          marks: Json;
+          max_attempts: number;
+          max_score: number;
+          patient_record: Json;
+          score: number;
+          started_at: string;
+          submitted_at: string;
+          title: string;
+        }[];
+      };
       my_classes: {
         Args: never;
         Returns: {

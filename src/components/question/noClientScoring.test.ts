@@ -22,6 +22,8 @@ const ENTRY_POINTS = [
   path.join(SRC, "components", "live", "StudentPacedRoom.tsx"),
   // #208: a take-home attempt mounts the same player over a set, and saves rather than scores.
   path.join(SRC, "components", "assignments", "AttemptPlayer.tsx"),
+  // #210: the results after close show marks computed on the server at submit, never here.
+  path.join(SRC, "components", "assignments", "results", "AssignmentResults.tsx"),
 ];
 
 describe("the shared players hold no scoring code", () => {

@@ -15,6 +15,7 @@ import {
   parseCloseTime,
   STATE_LABEL,
   studentAssignmentPath,
+  studentResultsPath,
   toLocalInputValue,
 } from "./assignments";
 
@@ -116,6 +117,7 @@ describe("labels and routes", () => {
 
   it("puts a student's assignment under the student home (#208)", () => {
     expect(studentAssignmentPath("a1")).toBe("/learn/assignments/a1");
+    expect(studentResultsPath("a1")).toBe("/learn/assignments/a1/results");
   });
 
   it("puts an assignment's report and its CSV under /author, keeping the view (#211)", () => {
