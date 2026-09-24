@@ -948,6 +948,23 @@ export type Database = {
     Functions: {
       archive_case_study: { Args: { target: string }; Returns: undefined };
       archive_item: { Args: { target: string }; Returns: undefined };
+      assignment_report_rows: {
+        Args: { target_assignment: string };
+        Returns: {
+          attempt_id: string;
+          attempt_number: number;
+          auto_submitted: boolean;
+          display_name: string;
+          email: string;
+          marks: Json;
+          max_score: number;
+          score: number;
+          scores_released: boolean;
+          started_at: string;
+          student_id: string;
+          submitted_at: string;
+        }[];
+      };
       begin_attempt_submission: {
         Args: { target_attempt: string };
         Returns: {

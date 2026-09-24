@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-23 (Sprint 9 under way: #204 merged in #214 and applied to hosted, which now has all 25 migrations; #206 merged in #216 (Resend; owner steps in docs/05 §7.7); #209 part 1 in #218; #205 merged in #220 and applied; #207 merged in #222 and applied; #208 and the #209 wiring merged in #224 and applied; #211 in progress. Sprint 8 is code complete, with the demo in `docs/sprints/S8-demo.md`).
+Last updated: 2026-09-23 (Sprint 9 under way: #204 merged in #214 and applied to hosted, which now has all 25 migrations; #206 merged in #216 (Resend; owner steps in docs/05 §7.7); #209 part 1 in #218; #205 merged in #220 and applied; #207 merged in #222 and applied; #208 and the #209 wiring merged in #224 and applied; #211 in #226. Sprint 8 is code complete, with the demo in `docs/sprints/S8-demo.md`).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -95,7 +95,7 @@ Demo 9: assign a set Monday, answer it Tuesday on a phone, review results Wednes
 | [#208](https://github.com/tannernielson27/learn/issues/208) | feat(assign): take an assignment on a phone with autosave and resume                       | player, security, db, e2e | Merged (#224); `20260924030800_assignment_attempts` applied to hosted |
 | [#209](https://github.com/tannernielson27/learn/issues/209) | feat(assign): shuffle options where the item type allows it                                | player, security          | Merged: part 1 (#218) and the wiring in #224                          |
 | [#210](https://github.com/tannernielson27/learn/issues/210) | feat(assign): student results with keys and rationales after close                         | security, e2e             | To do                                                                 |
-| [#211](https://github.com/tannernielson27/learn/issues/211) | feat(assign): an assignment report per student, item and CJMM step, with CSV               | security, db              | In progress                                                           |
+| [#211](https://github.com/tannernielson27/learn/issues/211) | feat(assign): an assignment report per student, item and CJMM step, with CSV               | security, db              | Merged (#226); apply `20260924040000_assignment_report` to hosted     |
 | [#212](https://github.com/tannernielson27/learn/issues/212) | feat(assign): reminder emails when an assignment opens and a day before it closes          | infra, security, db       | To do                                                                 |
 | [#217](https://github.com/tannernielson27/learn/issues/217) | fix(auth): a class behind one campus IP hits the per-IP sign-in limit at about 30 students | security                  | To do; found on #206, needed before a real class uses invite links    |
 

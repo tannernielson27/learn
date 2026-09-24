@@ -100,6 +100,18 @@ describe("AssignmentList", () => {
     expect(screen.queryByText("Edit", { exact: false })).toBeNull();
   });
 
+  it("links an open assignment to its progress and a closed one to its report (#211)", () => {
+    setup([SCHEDULED, OPEN, CLOSED]);
+    expect(
+      screen.getByRole("link", { name: "View progress for Heart failure case" }),
+    ).toHaveAttribute("href", "/author/assignments/a2/report");
+    expect(screen.getByRole("link", { name: "View report for Week 1" })).toHaveAttribute(
+      "href",
+      "/author/assignments/a3/report",
+    );
+    expect(screen.queryByRole("link", { name: /Cardiac bank/ })).toBeNull();
+  });
+
   it("mounts an edit form only when its row is opened", async () => {
     const { user } = setup([SCHEDULED, OPEN]);
     expect(screen.queryByLabelText("Closes")).toBeNull();

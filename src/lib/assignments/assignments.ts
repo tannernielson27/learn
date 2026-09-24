@@ -39,6 +39,19 @@ export function studentAssignmentPath(assignmentId: string): string {
   return `/learn/assignments/${assignmentId}`;
 }
 
+/** An assignment's report for its author (#211), on one of the session report's three views. */
+export function assignmentReportPath(
+  assignmentId: string,
+  view: "students" | "items" | "steps" = "students",
+): string {
+  const base = `/author/assignments/${assignmentId}/report`;
+  return view === "students" ? base : `${base}?view=${view}`;
+}
+
+export function assignmentReportCsvPath(assignmentId: string): string {
+  return `/author/assignments/${assignmentId}/report/csv`;
+}
+
 /** One student's attempts at one assignment, counted: how many submitted, and whether one is open. */
 export interface AttemptProgress {
   submitted: number;
