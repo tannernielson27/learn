@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { createPostgresRateLimitStore, type RateLimitRpc } from "./postgresStore";
+import {
+  createPostgresRateLimitStore,
+  sharedRateLimitStore,
+  type RateLimitRpc,
+} from "./postgresStore";
 import { RateLimitUnavailableError } from "./store";
 
 const SECRET = "sb_secret_test_only_0123456789abcdef";
@@ -107,5 +111,26 @@ describe("createPostgresRateLimitStore", () => {
     const rpc = rpcAnswering({ data: true, error: null });
     await storeWith(rpc).hit("cron_runs", "runs", { attempts: 4, windowMs: 1_500 });
     expect(rpc.mock.calls[0]![1].window_seconds).toBe(2);
+  });
+});
+
+describe("sharedRateLimitStore", () => {
+  it("is one store for the whole process", () => {
+    expect(sharedRateLimitStore()).toBe(sharedRateLimitStore());
+  });
+});
+
+describe("creating a store", () => {
+  it("reads no secret and builds no client until the first hit", async () => {
+    const secret = vi.fn(() => SECRET);
+    const rpc = rpcAnswering({ data: true, error: null });
+    const build = vi.fn(() => rpc);
+    const store = createPostgresRateLimitStore({ rpc: build, secret });
+    expect(secret).not.toHaveBeenCalled();
+    expect(build).not.toHaveBeenCalled();
+    await store.hit("sign_in_email", "x", LIMIT);
+    await store.hit("sign_in_email", "x", LIMIT);
+    expect(secret).toHaveBeenCalledTimes(1);
+    expect(build).toHaveBeenCalledTimes(1);
   });
 });

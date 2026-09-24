@@ -12,7 +12,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 create extension if not exists dblink with schema extensions;
-select plan(19);
+select plan(20);
 
 -- ---------------------------------------------------------------------------
 -- Shape and privileges
@@ -114,6 +114,12 @@ select throws_ok(
 -- A real burst: twelve sessions at once against a limit of five
 -- ---------------------------------------------------------------------------
 
+-- The burst reconnects over TCP with a password. Say so plainly if this session is on a unix
+-- socket, rather than failing later inside dblink.
+select ok(inet_server_addr() is not null, 'this session reached the server over TCP, as dblink needs');
+
+-- The burst sessions commit on their own. If this file stops part-way, their rows stay until their
+-- five-minute window ends or the next run deletes them first.
 create temporary table burst_results (allowed boolean) on commit drop;
 
 do $$ begin perform pg_advisory_lock(234234); end; $$;

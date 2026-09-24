@@ -124,6 +124,25 @@ describe("the per-class invite budget", () => {
   });
 });
 
+describe("the order the invite counters are spent in", () => {
+  it("counts the class first, and a full class does not spend the caller's total", async () => {
+    const { limiter, store } = setup();
+    await limiter.takeInvite(IP, CLASS_A);
+    expect(store.hits()).toEqual([
+      { bucket: "sign_in_invite_class", key: `${CLASS_A}|${IP}` },
+      { bucket: "sign_in_invite_total", key: IP },
+    ]);
+    for (let call = 1; call < SIGN_IN_INVITE_LIMIT.attempts; call += 1) {
+      await limiter.takeInvite(IP, CLASS_A);
+    }
+    const before = store.hits().length;
+    expect((await limiter.takeInvite(IP, CLASS_A)).ok).toBe(false);
+    expect(store.hits().slice(before)).toEqual([
+      { bucket: "sign_in_invite_class", key: `${CLASS_A}|${IP}` },
+    ]);
+  });
+});
+
 describe("takeSignInInviteAttempt", () => {
   it("counts against the caller the request headers name", async () => {
     const { limiter } = setup();

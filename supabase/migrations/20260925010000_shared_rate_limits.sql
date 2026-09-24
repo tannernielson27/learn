@@ -38,7 +38,7 @@
 -- Growth
 -- ------
 -- Unlike private.rate_limits (one row per user and action), these keys are unbounded, so each call
--- first deletes up to 20 rows whose window has ended, oldest first, skipping any row another call
+-- then deletes up to 20 rows whose window has ended, oldest first, skipping any row another call
 -- holds. That is an index range scan on expires_at and never touches a live window, so it cannot
 -- clear anyone's budget early. Each call adds at most one row and removes up to twenty, so the table
 -- stays near the number of windows open at once. No pg_cron job: the hosted project may not have
@@ -46,7 +46,9 @@
 --
 -- The limits themselves (max_hits, window_seconds) are the caller's arguments, unlike
 -- private.take_rate_limit, whose caller is a signed-in user who must not choose its own window.
--- Here the caller is the server; the numbers live beside the code that explains them.
+-- Here the caller is the server; the numbers live beside the code that explains them. They are
+-- constants per bucket: the cap on `calls` is taken from the call, not stored, so a bucket whose
+-- limit changed mid-deploy is only consistent again once its windows roll over.
 
 create table private.shared_rate_limits (
   bucket text not null check (bucket ~ '^[a-z][a-z0-9_]{0,47}$'),
@@ -89,16 +91,6 @@ begin
       using errcode = '22023';
   end if;
 
-  delete from private.shared_rate_limits s
-   where (s.bucket, s.key_hash) in (
-     select e.bucket, e.key_hash
-       from private.shared_rate_limits e
-      where e.expires_at <= now()
-      order by e.expires_at
-      limit 20
-        for update skip locked
-   );
-
   insert into private.shared_rate_limits as r (bucket, key_hash, expires_at, calls)
   values (bucket_name, key_digest, now() + make_interval(secs => window_seconds), 1)
   on conflict (bucket, key_hash) do update
@@ -111,6 +103,22 @@ begin
           else least(r.calls + 1, max_hits + 1)
         end
   returning calls into used;
+
+  -- The sweep comes after this call's own upsert, never before. The upsert is the only statement
+  -- here that can wait on another transaction, and it must wait holding no other row's lock:
+  -- sweeping first could lock key Q's stale row while waiting on key P, as another call holds P
+  -- and waits on Q, which is a deadlock (40P01) and, through fail-closed, a refused sign-in. SKIP
+  -- LOCKED means the sweep itself never waits. This call's own row is not expired, so it is never
+  -- swept.
+  delete from private.shared_rate_limits s
+   where (s.bucket, s.key_hash) in (
+     select e.bucket, e.key_hash
+       from private.shared_rate_limits e
+      where e.expires_at <= now()
+      order by e.expires_at
+      limit 20
+        for update skip locked
+   );
 
   return used <= max_hits;
 end;

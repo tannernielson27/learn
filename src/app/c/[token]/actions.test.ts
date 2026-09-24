@@ -315,7 +315,7 @@ describe("requestInviteLink when the shared rate limiter cannot answer (#234)", 
     expect(result).toEqual({ status: "error", error: SIGN_IN_UNAVAILABLE });
     expect(scheduled).toHaveLength(0);
     expect(createUser).not.toHaveBeenCalled();
-    // Not a rate limit, so not logged as a link used too hard.
+    // Not a rate limit, so not logged as a link used too hard: the log keys on the refusal's wording.
     expect(warned).not.toHaveBeenCalled();
   });
 
