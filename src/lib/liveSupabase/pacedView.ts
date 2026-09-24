@@ -13,6 +13,7 @@
  *
  * Two reads, however long the set: the items by id, and this participant's answers by session.
  */
+import { startingOrderSeed } from "@/lib/ngn/startingOrder";
 import { parseSubmission, toKeylessItem } from "@/lib/ngn/submit";
 import type { Item } from "@/lib/ngn/schemas";
 import type { ScoreResult } from "@/lib/ngn/types";
@@ -79,7 +80,8 @@ export async function readPacedSet(
     const mine = byPosition.get(position) ?? null;
     return {
       position,
-      item: toKeylessItem(item),
+      // One starting order per room for an ordered-response item (#219).
+      item: toKeylessItem(item, startingOrderSeed(participant.sessionId, item.id)),
       answered: answeredFrom(item, mine),
       revealed: reveal ? revealedFrom(item, position, mine) : null,
     };

@@ -16,7 +16,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useEffect, useId, useRef, useState } from "react";
-import { presentationOrder } from "@/lib/ngn/presentation";
+import { startingIds } from "@/lib/ngn/presentation";
 import { useSilentDndAccessibility } from "../dndAccessibility";
 import type { RichText } from "@/lib/ngn/schemas";
 import { ElementRationale } from "../ElementRationale";
@@ -69,14 +69,9 @@ export function OrderedResponseItem({
   const steps = item.content.items;
   const labels = new Map(steps.map((s) => [s.id, s.label]));
   // The player normally starts from initialResponse. If an answer is ever missing, fall back to
-  // the same seeded shuffle, never the authored order, which is usually the answer.
+  // the same starting order (#219), never the authored order, which is usually the answer.
   const order =
-    response.orderedIds.length === steps.length
-      ? response.orderedIds
-      : presentationOrder(
-          steps.map((s) => s.id),
-          item.id,
-        );
+    response.orderedIds.length === steps.length ? response.orderedIds : startingIds(item);
   const key = item.answerKey?.orderedIds ?? [];
 
   const commit = (next: string[], id: string) => {

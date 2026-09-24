@@ -14,6 +14,7 @@
  */
 import type { AnyResponse } from "@/lib/ngn/schemas";
 import { shuffleItem, shuffleSeed } from "@/lib/ngn/shuffle";
+import { startingOrderSeed } from "@/lib/ngn/startingOrder";
 import { parseSubmission, toKeylessItem, type KeylessItem } from "@/lib/ngn/submit";
 import type { SetItem } from "./attemptScoring";
 
@@ -36,7 +37,9 @@ export interface AttemptSetInput {
 }
 
 function keylessFor(entry: SetItem, attemptId: string, shuffle: boolean): KeylessItem {
-  const keyless = toKeylessItem(entry.item);
+  // Ordered-response steps start scrambled whether or not the assignment shuffles (#219): their
+  // authored order is usually the key. Seeded by attempt, so a resume starts from the same order.
+  const keyless = toKeylessItem(entry.item, startingOrderSeed(attemptId, entry.item.id));
   if (!shuffle) return keyless;
   try {
     return shuffleItem(keyless, shuffleSeed(attemptId, keyless.id));

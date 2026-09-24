@@ -11,6 +11,7 @@ import {
   type Item,
 } from "./schemas";
 import { scoreItem } from "./scoring";
+import { withStartingOrder } from "./startingOrder";
 import {
   ANSWER_BEARING_FIELDS,
   parseSubmission,
@@ -135,7 +136,39 @@ describe("toKeylessItem", () => {
     const payload = toKeylessItem(item) as Record<string, unknown>;
     const kept = Object.keys(record).filter((key) => !ANSWER_BEARING.has(key));
     expect(Object.keys(payload).sort()).toEqual([...kept].sort());
-    for (const key of kept) expect(payload[key]).toEqual(record[key]);
+    // Ordered response is the one exception, and only in the order of its steps (#219).
+    const started = withStartingOrder(item, item.id) as unknown as Record<string, unknown>;
+    for (const key of kept) expect(payload[key]).toEqual(started[key]);
+  });
+
+  it("never lists ordered-response steps in the key's order (#219)", () => {
+    for (const variant of ["canonical", "edge"] as const) {
+      const item = ITEM_SCHEMAS.ordered_response.parse(FIXTURES.ordered_response[variant]);
+      for (let s = 0; s < 50; s += 1) {
+        const keyless = toKeylessItem(item, `session-${s}:${item.id}`);
+        if (keyless.type !== "ordered_response") throw new Error("fixture changed type");
+        const shown = keyless.content.items.map((step) => step.id);
+        expect(shown).not.toEqual(item.answerKey.orderedIds);
+        expect([...shown].sort()).toEqual([...item.answerKey.orderedIds].sort());
+      }
+      // The control: these items were authored in their key's order, so without the scramble
+      // the payload's order would have been the answer.
+      expect(item.content.items.map((step) => step.id)).toEqual(item.answerKey.orderedIds);
+    }
+  });
+
+  it("seeds the ordered-response scramble by the item id unless told otherwise", () => {
+    const item = ITEM_SCHEMAS.ordered_response.parse(FIXTURES.ordered_response.canonical);
+    expect(toKeylessItem(item)).toEqual(toKeylessItem(item, item.id));
+    const orders = new Set(
+      Array.from({ length: 20 }, (_, s) => {
+        const keyless = toKeylessItem(item, `attempt-${s}:${item.id}`);
+        return keyless.type === "ordered_response"
+          ? keyless.content.items.map((step) => step.id).join(",")
+          : "";
+      }),
+    );
+    expect(orders.size).toBeGreaterThan(1);
   });
 
   it("drops a top-level field it has never been taught the name of", () => {
@@ -186,7 +219,10 @@ describe("toKeylessCaseStudy", () => {
     expect(payload.items.map((item) => [item.id, item.type, item.cjmmStep])).toEqual(
       caseStudy.items.map((item) => [item.id, item.type, item.cjmmStep]),
     );
-    payload.items.forEach((item, i) => expect(item.content).toEqual(caseStudy.items[i]?.content));
+    payload.items.forEach((item, i) => {
+      const step = caseStudy.items[i]!;
+      expect(item.content).toEqual(withStartingOrder(step, step.id).content);
+    });
   });
 
   it("does not change the case study it is given", () => {

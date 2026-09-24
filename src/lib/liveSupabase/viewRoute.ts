@@ -38,6 +38,7 @@ import {
 } from "@/lib/live";
 import { readTimer } from "@/lib/live/timer";
 import type { Item } from "@/lib/ngn/schemas";
+import { startingOrderSeed } from "@/lib/ngn/startingOrder";
 import { parseSubmission, toKeylessItem, type Reveal } from "@/lib/ngn/submit";
 import type { ScoreResult } from "@/lib/ngn/types";
 import { fromItemRow } from "@/lib/supabase/itemRows";
@@ -157,7 +158,11 @@ export async function readParticipantView(
   const stored = fromItemRow(row);
   if (!stored.ok) return fail(409, LIVE_ROUTE_ERRORS.unplayable);
 
-  const item: ParticipantItem = toKeylessItem(stored.value);
+  // One starting order per room for an ordered-response item (#219): every phone sees the same.
+  const item: ParticipantItem = toKeylessItem(
+    stored.value,
+    startingOrderSeed(participant.sessionId, stored.value.id),
+  );
   // `itemAt` only answers with an id while the room is on an item, which is exactly when
   // `position` is not null. The cast is that fact, not an assumption about the row.
   const position = state.position as number;

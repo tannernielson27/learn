@@ -1,58 +1,49 @@
 import { describe, expect, it } from "vitest";
 import { FIXTURES, allFixtures, sampleTrendEhr, sampleTrendItem } from "./fixtures";
-import {
-  initialResponse,
-  isTrendItem,
-  presentationOrder,
-  unansweredResponse,
-} from "./presentation";
-import { itemSchema } from "./schemas";
+import { initialResponse, isTrendItem, unansweredResponse } from "./presentation";
+import { itemSchema, type Item } from "./schemas";
 import { emptyResponse } from "./scoring";
+import { startingOrder, startingOrderSeed } from "./startingOrder";
+import { toKeylessItem } from "./submit";
 
-const ids = ["a", "b", "c", "d", "e"];
-
-describe("presentationOrder", () => {
-  it("returns a permutation of the ids", () => {
-    expect([...presentationOrder(ids, "seed-1")].sort()).toEqual(ids);
-  });
-
-  it("is the same every time for the same seed", () => {
-    expect(presentationOrder(ids, "item-42")).toEqual(presentationOrder(ids, "item-42"));
-  });
-
-  it("never returns the authored order", () => {
-    for (let n = 0; n < 200; n++) {
-      expect(presentationOrder(ids, `seed-${n}`)).not.toEqual(ids);
-    }
-    expect(presentationOrder(["x", "y"], "any")).toEqual(["y", "x"]);
-  });
-
-  it("varies with the seed", () => {
-    const seen = new Set(
-      Array.from({ length: 20 }, (_, n) => presentationOrder(ids, `s${n}`).join(",")),
-    );
-    expect(seen.size).toBeGreaterThan(1);
-  });
-
-  it("leaves short lists and its input alone", () => {
-    const input = ["only"];
-    expect(presentationOrder(input, "seed")).toEqual(["only"]);
-    expect(presentationOrder([], "seed")).toEqual([]);
-    const snapshot = [...ids];
-    presentationOrder(ids, "seed");
-    expect(ids).toEqual(snapshot);
-  });
-});
+function orderedFixture(): Extract<Item, { type: "ordered_response" }> {
+  const item = itemSchema.parse(FIXTURES.ordered_response.canonical);
+  if (item.type !== "ordered_response") throw new Error("fixture type");
+  return item;
+}
 
 describe("initialResponse", () => {
-  it("seeds an ordered response with the order the student sees", () => {
-    const item = itemSchema.parse(FIXTURES.ordered_response.canonical);
-    if (item.type !== "ordered_response") throw new Error("fixture type");
-    const itemIds = item.content.items.map((i) => i.id);
-    expect(initialResponse(item)).toEqual({
+  it("starts a whole ordered-response item from its starting order, never the key (#219)", () => {
+    const item = orderedFixture();
+    const response = initialResponse(item);
+    expect(response).toEqual({
       type: "ordered_response",
-      orderedIds: presentationOrder(itemIds, item.id),
+      orderedIds: startingOrder(
+        item.content.items.map((step) => step.id),
+        item.answerKey.orderedIds,
+        item.id,
+      ),
     });
+    if (response.type !== "ordered_response") throw new Error("type");
+    expect(response.orderedIds).not.toEqual(item.answerKey.orderedIds);
+  });
+
+  it("starts a keyless item from the order the server sent, which is already scrambled", () => {
+    const item = orderedFixture();
+    for (let s = 0; s < 30; s += 1) {
+      const keyless = toKeylessItem(item, startingOrderSeed(`session-${s}`, item.id));
+      if (keyless.type !== "ordered_response") throw new Error("type");
+      const response = initialResponse(keyless);
+      if (response.type !== "ordered_response") throw new Error("type");
+      // Taken as sent: a second scramble in the browser, which has no key, could land on it.
+      expect(response.orderedIds).toEqual(keyless.content.items.map((step) => step.id));
+      expect(response.orderedIds).not.toEqual(item.answerKey.orderedIds);
+    }
+  });
+
+  it("starts the gallery and the author's keyless play page in the same order", () => {
+    const item = orderedFixture();
+    expect(initialResponse(toKeylessItem(item))).toEqual(initialResponse(item));
   });
 
   it("is the empty response for every other type", () => {
