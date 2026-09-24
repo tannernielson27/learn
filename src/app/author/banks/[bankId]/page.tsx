@@ -13,11 +13,14 @@ import { FolderNameForm } from "@/components/authoring/FolderNameForm";
 import { FolderTree } from "@/components/authoring/FolderTree";
 import { ImportJsonForm } from "@/components/authoring/ImportJsonForm";
 import { ItemList } from "@/components/authoring/ItemList";
+import { PracticeBadge } from "@/components/practice/PracticeBadge";
+import { PracticeSection } from "@/components/practice/PracticeSection";
 import { MoveToFolderForm } from "@/components/authoring/MoveToFolderForm";
 import { Pager } from "@/components/authoring/Pager";
 import { TagFilterBar } from "@/components/authoring/TagFilterBar";
 import { Button } from "@/components/ui/Button";
 import { startLiveSession } from "@/app/live/actions";
+import { shareBankWithClass, stopSharing } from "@/app/author/practice/actions";
 import { assignmentPath } from "@/lib/assignments/assignments";
 import {
   isSearching,
@@ -32,6 +35,9 @@ import { folderTrail, MAX_FOLDER_DEPTH, parseFolderView } from "@/lib/authoring/
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { bankViewHref, isFiltering, parseTagFilter, tagFacets } from "@/lib/authoring/tagFilter";
+import { stopSharingWarning } from "@/lib/practice/shares";
+import { listClasses } from "@/lib/supabase/classes";
+import { listBankShares } from "@/lib/supabase/practiceShares";
 import {
   createCaseStudyInBank,
   createFolderInBank,
@@ -84,7 +90,7 @@ export default async function BankPage({
 
   // The filter and search run in the database, under RLS; the tag counts come from the view's
   // items within the search.
-  const [folders, itemPage, caseStudies, taggedRows] = await Promise.all([
+  const [folders, itemPage, caseStudies, taggedRows, shares, classes] = await Promise.all([
     listFolders(supabase, bank.id),
     listItems(supabase, bank.id, view, filter, page),
     // Case studies carry no item tags or type, so a tag or type filter lists none of them.
@@ -92,6 +98,8 @@ export default async function BankPage({
       ? Promise.resolve([])
       : listCaseStudies(supabase, bank.id, view, search),
     listTaggedRows(supabase, bank.id, view, search),
+    listBankShares(supabase, bank.id),
+    listClasses(supabase),
   ]);
   const { items } = itemPage;
   const facets = tagFacets(taggedRows, filter);
@@ -133,7 +141,10 @@ export default async function BankPage({
     <>
       <FolderBreadcrumbs bankId={bank.id} bankName={bank.name} trail={trail} view={view} />
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <h1 className="min-w-0 font-read text-3xl break-words text-ink-1">{heading}</h1>
+        <div className="flex min-w-0 flex-col items-start gap-2">
+          <h1 className="min-w-0 font-read text-3xl break-words text-ink-1">{heading}</h1>
+          <PracticeBadge classNames={(shares ?? []).map((entry) => entry.name)} />
+        </div>
         <ArchiveViewSwitch bankId={bank.id} view={view} filter={filter} />
         <form
           action={startLiveSession.bind(null, bank.id)}
@@ -265,6 +276,27 @@ export default async function BankPage({
             )}
             <CreateCaseStudyForm action={createCaseStudyInBank.bind(null, bank.id)} />
           </section>
+          <PracticeSection
+            headingClassName="font-read text-2xl text-ink-1"
+            intro="Share this bank with a class, and its students can practice the published items, seeing each answer and rationale as soon as they answer it. Assigning these items as graded work later shows a warning."
+            shares={shares}
+            options={classes}
+            list={{
+              label: "Shared for practice",
+              stopActionFor: (classId) => stopSharing.bind(null, bank.id, classId),
+              stopLabelFor: (entry) => `Stop sharing with ${entry.name}`,
+              warningFor: (entry) => stopSharingWarning(entry.name, bank.name),
+              emptyMessage: "Not shared with any class.",
+            }}
+            form={{
+              action: shareBankWithClass.bind(null, bank.id),
+              label: "Class",
+              emptyMessage:
+                classes && classes.length === 0
+                  ? "Create a class to share this bank with."
+                  : "Shared with every class.",
+            }}
+          />
           <section aria-labelledby="import-heading" className="flex flex-col gap-4">
             <h2 id="import-heading" className="font-read text-2xl text-ink-1">
               Import JSON
