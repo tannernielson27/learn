@@ -167,6 +167,13 @@ Goal: the Socrative moment. A room full of phones answering the same case study,
 - Hardening: security review of RLS and session endpoints, rate limiting, observability (Sentry), backups, load test.
 - Docs: instructor guide, item-authoring guide, contributor guide.
 
+**Split, decided 2026-09-24:**
+
+- **Sprint 10, "Go-live + student home":** hardening (the security audit, shared rate limits, Sentry, nightly backups, a go-live check) plus the student home (history, weak CJMM steps, practice on shared banks). Demo 10: production passes the go-live check, and a student practices a shared bank with instant feedback.
+- **Sprint 11:** the landing page, onboarding, empty and error states, email templates, the guides, and Demo 12 below.
+
+The accounts, roles, roster and invite link shipped early, in Sprint 9.
+
 **Demo 12:** an outside instructor onboards cold and runs a class without help.
 
 ### v2 (parked)
