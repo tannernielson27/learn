@@ -1129,6 +1129,21 @@ export type Database = {
         };
         Returns: Json;
       };
+      my_assignment_history: {
+        Args: never;
+        Returns: {
+          assignment_id: string;
+          attempt_id: string;
+          attempt_number: number;
+          class_id: string;
+          closes_at: string;
+          max_attempts: number;
+          max_score: number;
+          score: number;
+          submitted_at: string;
+          title: string;
+        }[];
+      };
       my_assignment_result: {
         Args: { target_assignment: string };
         Returns: {

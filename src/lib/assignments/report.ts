@@ -138,6 +138,11 @@ function bestOf(attempt: ScoredAttempt | null): BestAttempt | null {
   };
 }
 
+/** The best of one student's attempts (#238), with its percent; null when none was submitted. */
+export function bestAttemptOf(attempts: readonly ReportAttemptInput[]): BestAttempt | null {
+  return bestOf(pickBestAttempt(attempts));
+}
+
 function groupByStudent(
   input: AssignmentReportInput,
 ): ReadonlyMap<string, readonly ReportAttemptInput[]> {
