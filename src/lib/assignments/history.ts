@@ -12,16 +12,24 @@
  *
  * The best attempt counts (owner decision 2026-09-23): `bestAttemptOf`, the same rule as #210 and
  * #211 — the highest total, a tie to the earlier attempt, and only a submitted attempt.
+ *
+ * The same submit at close comes before "Your steps" (#239), read beside the history through
+ * `public.my_step_marks`, under the same rules, and ranked by `buildMyStepStandings`.
  */
 import type { ExpiredFilter } from "@/lib/supabase/attempts";
+import type { StepStandings } from "@/lib/ngn/stepStandings";
 import type { HistoryAssignment } from "@/lib/supabase/history";
+import type { StepAttempt } from "@/lib/supabase/steps";
 import { bestAttemptOf, type BestAttempt } from "./report";
+import { buildMyStepStandings } from "./steps";
 
 export interface HistoryStore {
   /** The submit at close, narrowed to this student. */
   autoSubmit(filter: ExpiredFilter): Promise<number>;
   /** The student's closed assignments with their own attempts, as the student. Null on an error. */
   history(): Promise<HistoryAssignment[] | null>;
+  /** The student's submitted attempts at closed assignments with their marks (#239). Null on an error. */
+  stepAttempts(): Promise<StepAttempt[] | null>;
 }
 
 /** How the student stands on one closed assignment. */
@@ -73,12 +81,20 @@ async function submitAtClose(store: HistoryStore, studentId: string): Promise<vo
   }
 }
 
-/** Null when the history could not be read. */
-export async function loadHistory(
+/** What the student home shows of past work; each part is null when its read failed. */
+export interface StudentRecord {
+  history: HistoryRow[] | null;
+  steps: StepStandings | null;
+}
+
+export async function loadStudentRecord(
   store: HistoryStore,
   studentId: string,
-): Promise<HistoryRow[] | null> {
+): Promise<StudentRecord> {
   await submitAtClose(store, studentId);
-  const assignments = await store.history();
-  return assignments === null ? null : buildHistory(assignments);
+  const [assignments, attempts] = await Promise.all([store.history(), store.stepAttempts()]);
+  return {
+    history: assignments === null ? null : buildHistory(assignments),
+    steps: attempts === null ? null : buildMyStepStandings(attempts),
+  };
 }

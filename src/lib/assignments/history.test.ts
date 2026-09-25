@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { HistoryAssignment, HistoryAttempt } from "@/lib/supabase/history";
-import { buildHistory, loadHistory, type HistoryStore } from "./history";
+import type { StepAttempt } from "@/lib/supabase/steps";
+import { buildHistory, loadStudentRecord, type HistoryStore } from "./history";
 
 const BASE: HistoryAssignment = {
   id: "w1",
@@ -77,8 +78,17 @@ describe("buildHistory (#238)", () => {
   });
 });
 
-describe("loadHistory (#238)", () => {
+describe("loadStudentRecord (#238, #239)", () => {
   afterEach(() => vi.restoreAllMocks());
+
+  const STEP_ATTEMPT: StepAttempt = {
+    assignmentId: "w1",
+    number: 1,
+    submittedAt: "2026-09-22T11:00:00Z",
+    score: 2,
+    maxScore: 4,
+    marks: [{ cjmmStep: 1, points: 0, maxPoints: 1 }],
+  };
 
   function fakeStore(overrides: Partial<HistoryStore> = {}) {
     const calls: string[] = [];
@@ -91,19 +101,25 @@ describe("loadHistory (#238)", () => {
         calls.push("history");
         return [{ ...BASE, attempts: [attempt(1, 2)] }];
       }),
+      stepAttempts: vi.fn(async () => {
+        calls.push("stepAttempts");
+        return [STEP_ATTEMPT];
+      }),
       ...overrides,
     };
     return { store, calls };
   }
 
-  it("submits this student's attempts left open at close, then reads", async () => {
+  it("submits this student's attempts left open at close, then reads both", async () => {
     const { store, calls } = fakeStore();
-    const rows = await loadHistory(store, "student-1");
+    const { history, steps } = await loadStudentRecord(store, "student-1");
     expect(store.autoSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ studentId: "student-1" }),
     );
-    expect(calls).toEqual(["autoSubmit", "history"]);
-    expect(rows?.[0]?.standing).toMatchObject({ kind: "scored" });
+    expect(calls[0]).toBe("autoSubmit");
+    expect([...calls].sort()).toEqual(["autoSubmit", "history", "stepAttempts"]);
+    expect(history?.[0]?.standing).toMatchObject({ kind: "scored" });
+    expect(steps?.steps.find((s) => s.step === 1)).toMatchObject({ items: 1, points: 0 });
   });
 
   it("still reads when the submit at close fails", async () => {
@@ -113,12 +129,21 @@ describe("loadHistory (#238)", () => {
         throw new Error("down");
       }),
     });
-    expect(await loadHistory(store, "student-1")).toHaveLength(1);
+    const record = await loadStudentRecord(store, "student-1");
+    expect(record.history).toHaveLength(1);
+    expect(record.steps).not.toBeNull();
     expect(error).toHaveBeenCalled();
   });
 
-  it("is null when the read fails", async () => {
-    const { store } = fakeStore({ history: vi.fn(async () => null) });
-    expect(await loadHistory(store, "student-1")).toBeNull();
+  it("is null for each read that fails, on its own", async () => {
+    const noHistory = fakeStore({ history: vi.fn(async () => null) });
+    const first = await loadStudentRecord(noHistory.store, "student-1");
+    expect(first.history).toBeNull();
+    expect(first.steps).not.toBeNull();
+
+    const noSteps = fakeStore({ stepAttempts: vi.fn(async () => null) });
+    const second = await loadStudentRecord(noSteps.store, "student-1");
+    expect(second.history).toHaveLength(1);
+    expect(second.steps).toBeNull();
   });
 });

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { AssignmentHistory } from "@/components/assignments/AssignmentHistory";
 import { StudentAssignmentList } from "@/components/assignments/StudentAssignmentList";
+import { YourSteps } from "@/components/assignments/YourSteps";
 import { StudentClassList } from "@/components/classes/StudentClassList";
 import { historyStore } from "@/lib/assignments/attemptStore";
-import { loadHistory } from "@/lib/assignments/history";
+import { loadStudentRecord } from "@/lib/assignments/history";
 import { requireStudent } from "@/lib/classes/viewer";
 import { listOpenAssignments } from "@/lib/supabase/assignments";
 import { listMyAttemptProgress } from "@/lib/supabase/attempts";
@@ -16,15 +17,16 @@ export const metadata: Metadata = { title: "Your classes" };
  * The student home (#205): the classes this student belongs to, and (#207) their open assignments,
  * each linking to where it is taken (#208) with how their attempts stand, and (#238) their history:
  * every closed assignment in their current classes with their best score, linking to its results
- * (#210). Anyone who is not a student is sent to their own home by `requireStudent`.
+ * (#210), and (#239) their clinical judgment steps, weakest first, from the same closed work.
+ * Anyone who is not a student is sent to their own home by `requireStudent`.
  */
 export default async function StudentHomePage() {
   const { supabase, userId } = await requireStudent();
   const now = new Date();
-  const [classes, assignments, history] = await Promise.all([
+  const [classes, assignments, { history, steps }] = await Promise.all([
     myClasses(supabase),
     listOpenAssignments(supabase, now),
-    loadHistory(historyStore(supabase, createSupabaseServiceClient()), userId),
+    loadStudentRecord(historyStore(supabase, createSupabaseServiceClient()), userId),
   ]);
   // #242: due times are shown in each class's zone, not the device's.
   const classInfo = new Map(
@@ -73,6 +75,18 @@ export default async function StudentHomePage() {
           </p>
         ) : (
           <AssignmentHistory rows={history} classes={classInfo} />
+        )}
+      </section>
+      <section aria-labelledby="steps-heading" className="mt-10">
+        <h2 id="steps-heading" className="mb-3 text-lg font-medium text-ink-1">
+          Your steps
+        </h2>
+        {steps === null ? (
+          <p role="alert" className="text-ink-2">
+            Your steps could not be loaded. Reload the page to try again.
+          </p>
+        ) : (
+          <YourSteps standings={steps} />
         )}
       </section>
     </>

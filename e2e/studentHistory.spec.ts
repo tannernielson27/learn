@@ -5,7 +5,9 @@ import { latestSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor } from "./signIn";
 
 // #238: the student home's History lists each closed assignment with the student's best score, and
-// carries no score of an assignment that is still open. One assignment closes during the test
+// carries no score of an assignment that is still open. #239: "Your steps" counts the same closed
+// work, from the best attempt only: the seeded MC is a Take Action item, answered in the open
+// assignment and twice in the closing one, so after the close exactly one item stands behind it. One assignment closes during the test
 // (two attempts, the first one better); another stays open with a submitted, scored attempt. Needs
 // the local Supabase stack; CI runs it in the `auth-e2e` job.
 //
@@ -90,7 +92,10 @@ test("History shows a closed assignment's best score, and nothing of one still o
   await student.goto(await latestSignInLink(request, email, since));
   await expect(student).toHaveURL(/\/learn$/);
 
-  // Nothing has closed yet: the empty state.
+  // Nothing has closed yet: the empty states.
+  const noSteps =
+    "Nothing to show yet. Your steps appear here once an assignment you answered has closed.";
+  await expect(student.getByText(noSteps, { exact: true })).toBeVisible();
   await expect(
     student.getByText(
       "Nothing has closed yet. Your scores appear here once an assignment closes.",
@@ -147,6 +152,18 @@ test("History shows a closed assignment's best score, and nothing of one still o
   expect(closingScores).toHaveLength(2);
   expect(closingScores.every((row) => row.score !== null)).toBe(true);
   expect(openScore?.score).not.toBeNull();
+  // #239's control: the open attempt's per-item mark, which a leak would count, is stored.
+  const [openAttempt] = await selectAsAdmin<{ id: string }>(
+    request,
+    "assignment_attempts",
+    `assignment_id=eq.${open.id}&select=id`,
+  );
+  const openMarks = await selectAsAdmin<{ points: number | null }>(
+    request,
+    "attempt_responses",
+    `attempt_id=eq.${openAttempt?.id}&select=points`,
+  );
+  expect(openMarks.some((mark) => mark.points !== null)).toBe(true);
 
   const before = await bytesOf(phone, "/learn");
   expect(before).toContain(closingTitle); // listed, as open
@@ -154,6 +171,10 @@ test("History shows a closed assignment's best score, and nothing of one still o
   expect(before).not.toContain("Best score");
   expect(before).not.toContain(`Results for ${closingTitle}`);
   expect(before).not.toContain(`Results for ${openTitle}`);
+  // #239: no step has a mark of either assignment while both are open.
+  expect(before).toContain(noSteps);
+  expect(before).not.toContain("Not enough answers yet");
+  expect(before).not.toContain("Your clinical judgment steps");
 
   // After the close (and its two seconds of grace).
   await student.waitForTimeout(Math.max(0, closesAt + 3_000 - Date.now()));
@@ -177,14 +198,36 @@ test("History shows a closed assignment's best score, and nothing of one still o
   await expect(
     history.getByRole("link", { name: `Results for ${openTitle}`, exact: true }),
   ).toHaveCount(0);
+
+  // #239: Take Action holds the closing assignment's best attempt only: one item, not three.
+  const steps = student.getByRole("list", { name: "Your clinical judgment steps", exact: true });
+  const stepRows = steps.getByRole("listitem");
+  await expect(stepRows).toHaveCount(6);
+  await expect(stepRows.getByRole("heading", { level: 3 })).toHaveText([
+    "Recognize Cues",
+    "Analyze Cues",
+    "Prioritize Hypotheses",
+    "Generate Solutions",
+    "Take Action",
+    "Evaluate Outcomes",
+  ]);
+  await expect(stepRows.nth(4)).toContainText("Not enough answers yet (1 item)");
+  await expect(stepRows.filter({ hasText: "No answers yet" })).toHaveCount(5);
+
   await expectNoAxeViolations(student);
   await student.screenshot({ path: shot("student-history"), fullPage: true });
+  await student
+    .getByRole("region", { name: "Your steps", exact: true })
+    .screenshot({ path: shot("student-steps") });
 
   // On the wire now: the closed one's score, and still nothing of the open one's.
   const after = await bytesOf(phone, "/learn");
   expect(after).toContain("history-score");
   expect(after).toContain(figure);
   expect(after).not.toContain(`Results for ${openTitle}`);
+  expect(after).toContain("Not enough answers yet (1 item)");
+  expect(after).not.toContain("(2 items)");
+  expect(after).not.toContain("(3 items)");
 
   // Keyboard: the row's link is reachable and opens the results.
   const link = history.getByRole("link", { name: `Results for ${closingTitle}`, exact: true });

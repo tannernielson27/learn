@@ -1228,6 +1228,17 @@ export type Database = {
           time_zone: string;
         }[];
       };
+      my_step_marks: {
+        Args: never;
+        Returns: {
+          assignment_id: string;
+          attempt_number: number;
+          marks: Json;
+          max_score: number;
+          score: number;
+          submitted_at: string;
+        }[];
+      };
       place_case_study_step: {
         Args: { step_item: string; step_position: number; target: string };
         Returns: undefined;
