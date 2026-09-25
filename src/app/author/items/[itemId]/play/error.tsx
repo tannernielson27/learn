@@ -3,6 +3,7 @@
 import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
 import { RouteRecovery } from "@/components/recovery/RouteRecovery";
+import { errorDigest } from "@/components/status/errorDigest";
 
 /**
  * An item or a case study being played, when the player around the question fails to render
@@ -17,6 +18,7 @@ export default function PlayItemError({ error, retry }: ErrorInfo) {
       headline="This could not be played."
       detail="Try again to start it over. Nothing here was saved, so nothing is lost."
       onRetry={retry}
+      digest={errorDigest(error)}
     />
   );
 }

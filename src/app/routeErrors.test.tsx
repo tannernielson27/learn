@@ -21,6 +21,7 @@ vi.mock("@/lib/observability/reportError", () => reporting);
 import AuthorError from "./author/error";
 import CaseStudyError from "./author/case-studies/[caseStudyId]/error";
 import PlayItemError from "./author/items/[itemId]/play/error";
+import RootError from "./error";
 import GlobalError from "./global-error";
 import HostError from "./live/[sessionId]/error";
 import PlayError from "./play/[sessionId]/error";
@@ -34,6 +35,7 @@ const BOUNDARIES: [string, ComponentType<ErrorInfo>][] = [
   ["authoring", AuthorError],
   ["the case study builder", CaseStudyError],
   ["an item or case study being played", PlayItemError],
+  ["any other page (the root boundary)", RootError],
 ];
 
 /**
@@ -91,15 +93,20 @@ describe("route error boundaries", () => {
     vi.restoreAllMocks();
   });
 
-  it.each(BOUNDARIES)("%s shows a calm message and no error details", (_, Boundary) => {
-    renderInSegment(Boundary);
+  it.each(BOUNDARIES)(
+    "%s shows a calm message, the digest as a reference, and never the message",
+    (_, Boundary) => {
+      renderInSegment(Boundary);
 
-    expect(screen.getByRole("alert")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
-    const shown = document.body.textContent ?? "";
-    expect(shown).not.toMatch(/Cannot read|position|chunks|4031337|Error/);
-  });
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+      expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+      // #267, kickoff decision 4: the digest is the one thing about the error that may show.
+      expect(screen.getByText("4031337")).toBeInTheDocument();
+      const shown = document.body.textContent ?? "";
+      expect(shown).not.toMatch(/Cannot read|position|chunks|Error/);
+    },
+  );
 
   it.each(BOUNDARIES)(
     "%s asks the server for the page again and renders it on Try again",
@@ -134,7 +141,7 @@ describe("route error boundaries", () => {
 });
 
 describe("global error", () => {
-  it("renders a whole document with a calm message and no error details", () => {
+  it("renders a whole document with a calm message, the digest, and no error details", () => {
     const error = new Error(SECRET) as Error & { digest?: string };
     error.digest = "4031337";
     const html = renderToStaticMarkup(
@@ -144,7 +151,9 @@ describe("global error", () => {
     expect(html).toMatch(/^<html/);
     expect(html).toContain('role="alert"');
     expect(html).toContain("Try again");
-    expect(html).not.toMatch(/Cannot read|position|chunks|4031337|Error/);
+    expect(html).toContain("4031337");
+    expect(html).toContain('href="/sign-in"');
+    expect(html).not.toMatch(/Cannot read|position|chunks|Error/);
   });
 
   it("reports the error it caught", () => {

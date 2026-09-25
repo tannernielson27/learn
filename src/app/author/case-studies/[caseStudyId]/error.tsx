@@ -3,6 +3,7 @@
 import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
 import { RouteRecovery } from "@/components/recovery/RouteRecovery";
+import { errorDigest } from "@/components/status/errorDigest";
 
 /**
  * The case study builder — steps, the EHR editor and the preview with its tabs and step
@@ -16,6 +17,7 @@ export default function CaseStudyError({ error, retry }: ErrorInfo) {
       headline="The case study builder stopped working."
       detail="Saved steps are safe. Try again to reload the builder; a step you had not saved may be lost."
       onRetry={retry}
+      digest={errorDigest(error)}
     />
   );
 }

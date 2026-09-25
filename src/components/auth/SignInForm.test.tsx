@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { SignInForm, type SignInFormProps, type SignInState } from "./SignInForm";
 
-const LINK_ERROR = "That sign-in link has expired or was already used. Ask for a new one.";
+const LINK_ERROR =
+  "That sign-in link has expired or was already used. Enter your email to get a new one.";
 
 function setup(result: SignInState, props: { next?: string; linkError?: boolean } = {}) {
   const action = vi.fn<SignInFormProps["action"]>(async () => result);
@@ -59,5 +60,10 @@ describe("SignInForm", () => {
   it("explains a used or expired link on arrival", () => {
     setup({ status: "idle" }, { linkError: true });
     expect(screen.getByRole("alert")).toHaveTextContent(LINK_ERROR);
+    // #267: the form to send a new one is right there, ready to use.
+    expect(screen.getByRole("textbox", { name: "Email address" })).toHaveAccessibleDescription(
+      LINK_ERROR,
+    );
+    expect(screen.getByRole("button", { name: "Email me a sign-in link" })).toBeEnabled();
   });
 });

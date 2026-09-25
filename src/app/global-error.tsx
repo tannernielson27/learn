@@ -3,6 +3,8 @@
 import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
 import { RouteRecovery } from "@/components/recovery/RouteRecovery";
+import { errorDigest } from "@/components/status/errorDigest";
+import { StatusLinks } from "@/components/status/StatusLinks";
 import "./globals.css";
 
 /**
@@ -15,7 +17,8 @@ import "./globals.css";
  * Every route's own boundary is closer than this one, so this is seen only when the frame around
  * all of them breaks. The copy is written for a student as much as an instructor: `retry`
  * re-renders from the server, and on a live session's page that is the same rejoin the room's own
- * boundary does (see `play/[sessionId]/error.tsx`).
+ * boundary does (see `play/[sessionId]/error.tsx`). Like the root `error.tsx` (#267) it shows the
+ * digest as a reference, never the message, and offers home and sign in as plain links.
  */
 export default function GlobalError({ error, retry }: ErrorInfo) {
   useReportError(error);
@@ -28,7 +31,10 @@ export default function GlobalError({ error, retry }: ErrorInfo) {
             headline="LeaRN could not show this page."
             detail="Try again to load it. If you were in a live session, your place is kept."
             onRetry={retry}
-          />
+            digest={errorDigest(error)}
+          >
+            <StatusLinks />
+          </RouteRecovery>
         </main>
       </body>
     </html>

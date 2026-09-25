@@ -3,6 +3,7 @@
 import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
 import { RouteRecovery } from "@/components/recovery/RouteRecovery";
+import { errorDigest } from "@/components/status/errorDigest";
 
 /**
  * The student room, when something outside the question renderer fails to render (#164). A class
@@ -34,6 +35,7 @@ export default function PlayError({ error, retry }: ErrorInfo) {
         headline="This screen stopped working."
         detail="Your place in the session is kept. Try again to rejoin the room; an answer you had not sent may need choosing again."
         onRetry={retry}
+        digest={errorDigest(error)}
       />
     </main>
   );
