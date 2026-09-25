@@ -12,6 +12,7 @@ import {
   recordSubmission,
 } from "@/lib/supabase/attempts";
 import { readMyHistory } from "@/lib/supabase/history";
+import { readMyPracticeStepMarks } from "@/lib/supabase/practice";
 import { readMyResult } from "@/lib/supabase/results";
 import { readMyStepAttempts } from "@/lib/supabase/steps";
 import type { AttemptPageStore } from "./attemptPage";
@@ -74,15 +75,16 @@ export function resultsStore(user: Client, service: Client): ResultsStore {
 }
 
 /**
- * The student home's history (#238) and steps (#239). Both are read as the student: each definer
- * function answers only them, only about their own attempts, and only once each assignment has
- * closed. The service role runs only the submit at close, narrowed to this student.
+ * The student home's history (#238) and steps (#239, with #241's practice marks). All are read as
+ * the student: each definer function answers only them, only about their own attempts (or their own
+ * practice of banks still shared with them), and assignments only once each has closed. The service role runs only the submit at close, narrowed to this student.
  */
 export function historyStore(user: Client, service: Client): HistoryStore {
   return {
     autoSubmit: (filter) => autoSubmitExpired(autoSubmitStore(service), filter),
     history: () => readMyHistory(user),
     stepAttempts: () => readMyStepAttempts(user),
+    practiceMarks: () => readMyPracticeStepMarks(user),
   };
 }
 

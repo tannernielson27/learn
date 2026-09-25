@@ -105,6 +105,10 @@ describe("loadStudentRecord (#238, #239)", () => {
         calls.push("stepAttempts");
         return [STEP_ATTEMPT];
       }),
+      practiceMarks: vi.fn(async () => {
+        calls.push("practiceMarks");
+        return [{ cjmmStep: 1, points: 1, maxPoints: 1 }];
+      }),
       ...overrides,
     };
     return { store, calls };
@@ -117,9 +121,13 @@ describe("loadStudentRecord (#238, #239)", () => {
       expect.objectContaining({ studentId: "student-1" }),
     );
     expect(calls[0]).toBe("autoSubmit");
-    expect([...calls].sort()).toEqual(["autoSubmit", "history", "stepAttempts"]);
+    expect([...calls].sort()).toEqual(["autoSubmit", "history", "practiceMarks", "stepAttempts"]);
     expect(history?.[0]?.standing).toMatchObject({ kind: "scored" });
-    expect(steps?.steps.find((s) => s.step === 1)).toMatchObject({ items: 1, points: 0 });
+    // #241: practice counts beside the assignments, and is kept apart by source.
+    const stepOne = steps?.steps.find((s) => s.step === 1);
+    expect(stepOne).toMatchObject({ items: 2, points: 1 });
+    expect(stepOne?.bySource.assignments).toEqual({ items: 1, points: 0, maxPoints: 1 });
+    expect(stepOne?.bySource.practice).toEqual({ items: 1, points: 1, maxPoints: 1 });
   });
 
   it("still reads when the submit at close fails", async () => {
@@ -145,5 +153,12 @@ describe("loadStudentRecord (#238, #239)", () => {
     const second = await loadStudentRecord(noSteps.store, "student-1");
     expect(second.history).toHaveLength(1);
     expect(second.steps).toBeNull();
+
+    // Steps from assignments alone would be a quietly different number, so a failed practice
+    // read says the section could not be loaded.
+    const noPractice = fakeStore({ practiceMarks: vi.fn(async () => null) });
+    const third = await loadStudentRecord(noPractice.store, "student-1");
+    expect(third.history).toHaveLength(1);
+    expect(third.steps).toBeNull();
   });
 });

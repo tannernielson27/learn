@@ -24,6 +24,8 @@ const ENTRY_POINTS = [
   path.join(SRC, "components", "assignments", "AttemptPlayer.tsx"),
   // #210: the results after close show marks computed on the server at submit, never here.
   path.join(SRC, "components", "assignments", "results", "AssignmentResults.tsx"),
+  // #241: practice checks each answer on the server and is handed that item's reveal back.
+  path.join(SRC, "components", "practice", "PracticePlayer.tsx"),
 ];
 
 describe("the shared players hold no scoring code", () => {

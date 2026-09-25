@@ -3,12 +3,14 @@ import { AssignmentHistory } from "@/components/assignments/AssignmentHistory";
 import { StudentAssignmentList } from "@/components/assignments/StudentAssignmentList";
 import { YourSteps } from "@/components/assignments/YourSteps";
 import { StudentClassList } from "@/components/classes/StudentClassList";
+import { PracticeBankList } from "@/components/practice/PracticeBankList";
 import { historyStore } from "@/lib/assignments/attemptStore";
 import { loadStudentRecord } from "@/lib/assignments/history";
 import { requireStudent } from "@/lib/classes/viewer";
 import { listOpenAssignments } from "@/lib/supabase/assignments";
 import { listMyAttemptProgress } from "@/lib/supabase/attempts";
 import { myClasses } from "@/lib/supabase/classInvites";
+import { readMyPracticeBanks } from "@/lib/supabase/practice";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const metadata: Metadata = { title: "Your classes" };
@@ -17,15 +19,17 @@ export const metadata: Metadata = { title: "Your classes" };
  * The student home (#205): the classes this student belongs to, and (#207) their open assignments,
  * each linking to where it is taken (#208) with how their attempts stand, and (#238) their history:
  * every closed assignment in their current classes with their best score, linking to its results
- * (#210), and (#239) their clinical judgment steps, weakest first, from the same closed work.
+ * (#210), and (#239) their clinical judgment steps, weakest first, from the same closed work and
+ * (#241) their practice. Practice lists the banks shared with their classes, each opening a run.
  * Anyone who is not a student is sent to their own home by `requireStudent`.
  */
 export default async function StudentHomePage() {
   const { supabase, userId } = await requireStudent();
   const now = new Date();
-  const [classes, assignments, { history, steps }] = await Promise.all([
+  const [classes, assignments, practice, { history, steps }] = await Promise.all([
     myClasses(supabase),
     listOpenAssignments(supabase, now),
+    readMyPracticeBanks(supabase),
     loadStudentRecord(historyStore(supabase, createSupabaseServiceClient()), userId),
   ]);
   // #242: due times are shown in each class's zone, not the device's.
@@ -63,6 +67,18 @@ export default async function StudentHomePage() {
             classes={classInfo}
             progress={progress}
           />
+        )}
+      </section>
+      <section aria-labelledby="practice-heading" className="mt-10">
+        <h2 id="practice-heading" className="mb-3 text-lg font-medium text-ink-1">
+          Practice
+        </h2>
+        {practice === null ? (
+          <p role="alert" className="text-ink-2">
+            Your practice could not be loaded. Reload the page to try again.
+          </p>
+        ) : (
+          <PracticeBankList banks={practice} />
         )}
       </section>
       <section aria-labelledby="history-heading" className="mt-10">

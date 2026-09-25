@@ -751,6 +751,103 @@ export type Database = {
           },
         ];
       };
+      practice_responses: {
+        Row: {
+          answered_at: string;
+          item_id: string;
+          max_points: number;
+          org_id: string;
+          points: number;
+          response: Json;
+          run_id: string;
+          score: Json;
+        };
+        Insert: {
+          answered_at?: string;
+          item_id: string;
+          max_points: number;
+          org_id: string;
+          points: number;
+          response: Json;
+          run_id: string;
+          score: Json;
+        };
+        Update: {
+          answered_at?: string;
+          item_id?: string;
+          max_points?: number;
+          org_id?: string;
+          points?: number;
+          response?: Json;
+          run_id?: string;
+          score?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "practice_responses_item_org_fkey";
+            columns: ["item_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "items";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "practice_responses_run_org_fkey";
+            columns: ["run_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "practice_runs";
+            referencedColumns: ["id", "org_id"];
+          },
+        ];
+      };
+      practice_runs: {
+        Row: {
+          bank_id: string;
+          id: string;
+          org_id: string;
+          seed: string;
+          started_at: string;
+          student_id: string;
+        };
+        Insert: {
+          bank_id: string;
+          id?: string;
+          org_id: string;
+          seed?: string;
+          started_at?: string;
+          student_id: string;
+        };
+        Update: {
+          bank_id?: string;
+          id?: string;
+          org_id?: string;
+          seed?: string;
+          started_at?: string;
+          student_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "practice_runs_bank_org_fkey";
+            columns: ["bank_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "item_banks";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "practice_runs_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "orgs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "practice_runs_student_id_fkey";
+            columns: ["student_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           created_at: string;
@@ -1228,6 +1325,23 @@ export type Database = {
           time_zone: string;
         }[];
       };
+      my_practice_banks: {
+        Args: never;
+        Returns: {
+          answered: number;
+          bank_id: string;
+          bank_name: string;
+          item_count: number;
+        }[];
+      };
+      my_practice_step_marks: {
+        Args: never;
+        Returns: {
+          cjmm_step: number;
+          max_points: number;
+          points: number;
+        }[];
+      };
       my_step_marks: {
         Args: never;
         Returns: {
@@ -1237,6 +1351,16 @@ export type Database = {
           max_score: number;
           score: number;
           submitted_at: string;
+        }[];
+      };
+      open_practice_run: {
+        Args: { fresh: boolean; student: string; target_bank: string };
+        Returns: {
+          bank_id: string;
+          bank_name: string;
+          run_id: string;
+          seed: string;
+          started_at: string;
         }[];
       };
       place_case_study_step: {
@@ -1249,6 +1373,16 @@ export type Database = {
           class_id: string;
           class_name: string;
           exposed_items: number;
+        }[];
+      };
+      practice_run_items: {
+        Args: { student: string; target_run: string };
+        Returns: {
+          answered: boolean;
+          case_study_id: string;
+          item_id: string;
+          ordinal: number;
+          step: number;
         }[];
       };
       record_attempt_submission: {
@@ -1265,6 +1399,18 @@ export type Database = {
           refusal: string;
           submitted_at: string;
         }[];
+      };
+      record_practice_response: {
+        Args: {
+          answer: Json;
+          earned: number;
+          marks: Json;
+          possible: number;
+          student: string;
+          target_item: string;
+          target_run: string;
+        };
+        Returns: string;
       };
       record_session_response: {
         Args: {

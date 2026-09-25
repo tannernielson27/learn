@@ -10,6 +10,7 @@ import type { AnyResponse } from "@/lib/ngn/schemas";
 import type {
   PlayableCaseStudy,
   PlayableItem,
+  Reveal,
   ScoreReveal,
   SubmitHandlerFor,
 } from "@/lib/ngn/submit";
@@ -26,9 +27,23 @@ interface StepState {
    * step has no key of its own to mark it against (#46).
    */
   reveal?: ScoreReveal;
+  /**
+   * A step answered before, whose answer can no longer be marked: its key with no score, opened
+   * read-only (`ItemPlayer`'s `initialKey`). Only a practice run reopened on a reload sets it.
+   */
+  keyOnly?: Reveal;
   /** Marked to come back to. Independent of whether it has been answered. */
   flagged?: boolean;
 }
+
+/** What a step reopens with: a practice run reloaded (#241) hands back the steps it has answered. */
+export interface InitialStep {
+  response?: AnyResponse;
+  reveal?: ScoreReveal;
+  keyOnly?: Reveal;
+}
+
+const isAnswered = (step: StepState | undefined): boolean => Boolean(step?.reveal ?? step?.keyOnly);
 
 export interface CaseStudyPlayerProps<T extends PlayableItem> {
   /**
@@ -44,6 +59,11 @@ export interface CaseStudyPlayerProps<T extends PlayableItem> {
    */
   submitFor: SubmitHandlerFor<T>;
   onFinished?: (results: ScoreResult[]) => void;
+  /**
+   * Steps already answered, by position, read once at mount (#241): a practice run's case study
+   * reopens on a reload with each answered step's own marks and key, and nothing for the rest.
+   */
+  initialSteps?: readonly (InitialStep | undefined)[];
 }
 
 /**
@@ -58,11 +78,14 @@ export function CaseStudyPlayer<T extends PlayableItem>({
   caseStudy,
   submitFor,
   onFinished,
+  initialSteps,
 }: CaseStudyPlayerProps<T>) {
   const total = caseStudy.items.length;
   // 0 to total - 1 while working; `total` once the student has reached the results.
   const [index, setIndex] = useState(0);
-  const [steps, setSteps] = useState<StepState[]>(() => caseStudy.items.map(() => ({})));
+  const [steps, setSteps] = useState<StepState[]>(() =>
+    caseStudy.items.map((_item, i) => ({ ...initialSteps?.[i] })),
+  );
   const [finished, setFinished] = useState(false);
   const [playing, setPlaying] = useState(caseStudy.id);
   const [reviewing, setReviewing] = useState(false);
@@ -118,7 +141,7 @@ export function CaseStudyPlayer<T extends PlayableItem>({
   const entries = caseStudy.items.map((_item, i) => ({
     id: String(i),
     label: `Step ${i + 1}: ${CJMM_STEP_LABELS[(i + 1) as CjmmStep]}`,
-    answered: Boolean(steps[i]?.reveal),
+    answered: isAnswered(steps[i]),
     flagged: Boolean(steps[i]?.flagged),
   }));
 
@@ -195,6 +218,7 @@ export function CaseStudyPlayer<T extends PlayableItem>({
               submit={submitFor(item)}
               initialResponse={current?.response}
               initialReveal={current?.reveal}
+              initialKey={current?.keyOnly}
               onResponseChange={(response) => update(index, { response })}
               onSubmitted={(response, checked) => update(index, { response, reveal: checked })}
             />
@@ -203,7 +227,7 @@ export function CaseStudyPlayer<T extends PlayableItem>({
       </div>
 
       {/* Takes the place of the shell's submit bar, which is gone once the step has been answered. */}
-      {!onResults && !reviewing && current?.reveal ? (
+      {!onResults && !reviewing && isAnswered(current) ? (
         <div className="fixed inset-x-0 bottom-0 border-t border-line bg-surface-1/95 px-5 py-3 backdrop-blur-sm [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
           <div className="mx-auto flex max-w-3xl items-center justify-end">
             <Button variant="primary" onClick={advance}>
