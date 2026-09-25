@@ -15,10 +15,15 @@
 --   * Only the rows this call's own import_bank_content wrote: their ids come back from that call
 --     and nothing else is updated. The target bank must be empty (no item, no case study, archived
 --     or not), so nothing already in the bank changes, and every write is pinned to that bank.
---   * The payload must be the sample: every top-level item and the case study carry the `sample`
---     tag the fixtures carry. This is a scope line, not a security boundary: an author can already
+--   * The payload must be the sample: every item, the case study and each of its steps carry the
+--     `sample` tag the fixtures carry. This is a scope line, not a security boundary: an author can already
 --     publish any row in their own org with one PATCH under "authors manage items". So the function
 --     gives no one a power they lack; it only saves the sample 21 requests.
+--   * The tag is a scope line, but the RATE is a real limit. One import unit could otherwise publish
+--     up to 50 items and a case study, ten times a minute, where the publish limit allows 20
+--     publishes a minute. So each call also spends one `sample_publish`, capped at one a minute:
+--     at most one sample's worth (about 28 rows) of publishing a minute, which is the publish cap's
+--     order, and a real instructor imports the sample once.
 --   * The app checks every part with the editor's own publish rule before calling
 --     (samplePublishProblems in src/lib/onboarding/sampleBank.ts).
 --
@@ -26,6 +31,23 @@
 -- org's bank reads as not found and a student or role-less account can write nothing. The role
 -- check below says so first, before any charge or read. search_path is pinned; anon executes
 -- nothing. RLS on every table is unchanged.
+
+-- 20260924030800's limits with one action added; every existing limit is unchanged.
+create or replace function private.rate_limit_for(action_name text) returns integer
+language sql immutable set search_path = ''
+as $$
+  select case action_name
+    when 'save' then 60
+    when 'publish' then 20
+    when 'import' then 10
+    when 'step' then 30
+    when 'attempt_save' then 120
+    when 'attempt_submit' then 20
+    when 'sample_publish' then 1
+  end;
+$$;
+
+revoke all on function private.rate_limit_for(text) from public, anon, authenticated;
 
 create function public.import_sample_bank(
   target_bank uuid,
@@ -49,9 +71,13 @@ begin
   -- The one charge for this transaction. import_bank_content and every row written below find it
   -- already charged, so the whole sample, published, costs one import unit.
   perform private.charge_authoring_action('import');
+  if not private.take_rate_limit('sample_publish') then
+    raise exception 'that is too many sample imports in a minute' using errcode = '54000';
+  end if;
 
-  -- Security invoker: a bank the caller cannot see reads as not found.
-  if not exists (select 1 from public.item_banks b where b.id = target_bank) then
+  -- Security invoker: a bank the caller cannot see reads as not found. The row lock makes a second
+  -- call on the same bank (a double click, two tabs) wait for this one, then find the bank full.
+  if not exists (select 1 from public.item_banks b where b.id = target_bank for update) then
     raise exception 'that bank does not exist' using errcode = '22023';
   end if;
 
@@ -71,7 +97,13 @@ begin
            or jsonb_typeof(e.value->'tags') <> 'array'
            or not (e.value->'tags') ? 'sample')
      or jsonb_typeof(new_case_study->'tags') <> 'array'
-     or not (new_case_study->'tags') ? 'sample' then
+     or not (new_case_study->'tags') ? 'sample'
+     or jsonb_typeof(new_case_study->'items') <> 'array'
+     or exists (
+       select 1 from jsonb_array_elements(new_case_study->'items') st
+        where jsonb_typeof(st.value) <> 'object'
+           or jsonb_typeof(st.value->'tags') <> 'array'
+           or not (st.value->'tags') ? 'sample') then
     raise exception 'only the sample imports published' using errcode = '22023';
   end if;
 

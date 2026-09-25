@@ -9,7 +9,7 @@
 -- authoring_write_limits.test.sql does.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(24);
+select plan(28);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures, as the superuser
@@ -150,6 +150,15 @@ select throws_ok(
 select set_config('learn.authoring_charge', '', true);
 select throws_ok(
   $$ select public.import_sample_bank('00000000-0000-0000-0000-0000000283b1',
+       (select jsonb_build_array(item) from sample_fixtures),
+       (select jsonb_set(case_study, '{items,3,tags}', '["mine"]') from sample_case)) $$,
+  '22023', 'only the sample imports published',
+  'a case study step without the sample tag is refused too'
+);
+
+select set_config('learn.authoring_charge', '', true);
+select throws_ok(
+  $$ select public.import_sample_bank('00000000-0000-0000-0000-0000000283b1',
        (select jsonb_build_array(item) from sample_fixtures), null) $$,
   '22023', 'the sample is items and a case study',
   'the sample without its case study is refused'
@@ -232,8 +241,27 @@ select is(
 select results_eq(
   $$ select action, calls from private.rate_limits
       where user_id = '00000000-0000-0000-0000-0000000283aa' order by action $$,
-  $$ values ('import'::text, 1) $$,
-  'the whole sample, published, cost one import unit and no publish or save'
+  $$ values ('import'::text, 1), ('sample_publish'::text, 1) $$,
+  'the whole sample, published, cost one import unit and one sample_publish, and no publish or save'
+);
+
+-- A second sample within the minute is refused: one import unit must not buy unbounded publishing.
+insert into public.item_banks (id, org_id, name)
+values ('00000000-0000-0000-0000-0000000283b5', '00000000-0000-0000-0000-0000000283f1', 'Second');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000283aa","role":"authenticated"}', true);
+select set_config('learn.authoring_charge', '', true);
+select throws_ok(
+  $$ select public.import_sample_bank('00000000-0000-0000-0000-0000000283b5',
+       (select jsonb_build_array(item) from sample_fixtures), (select case_study from sample_case)) $$,
+  '54000', null,
+  'a second sample import within the minute is refused'
+);
+reset role;
+select is(
+  (select count(*)::int from public.items where bank_id = '00000000-0000-0000-0000-0000000283b5'),
+  0,
+  'and it wrote nothing'
 );
 
 -- ---------------------------------------------------------------------------
@@ -273,6 +301,12 @@ select is(
   (select status from public.case_studies where bank_id = '00000000-0000-0000-0000-0000000283b2'),
   'draft',
   'and its case study is a draft'
+);
+
+select ok(
+  (select pg_get_functiondef('public.import_sample_bank(uuid, jsonb, jsonb)'::regprocedure)
+     ~ 'where b\.id = target_bank for update'),
+  'the bank row is locked before the empty check, so two calls on one bank cannot both pass it'
 );
 
 -- ---------------------------------------------------------------------------
