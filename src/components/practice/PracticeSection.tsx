@@ -17,6 +17,8 @@ export interface PracticeSectionProps {
   form: Pick<PracticeShareFormProps, "action" | "label" | "emptyMessage">;
 }
 
+const HEADING_ID = "practice-heading";
+
 /**
  * The Practice section of a bank page or a class page (#240): who it is shared with, Stop sharing,
  * and a form to share with one more. The form offers only what is not already shared.
@@ -33,8 +35,9 @@ export function PracticeSection({
   const choices = (options ?? []).filter((option) => !shared.has(option.id));
 
   return (
-    <section aria-labelledby="practice-heading" className="flex flex-col gap-4">
-      <h2 id="practice-heading" className={headingClassName}>
+    <section aria-labelledby={HEADING_ID} className="flex flex-col gap-4">
+      {/* Focusable from script only: a confirmed Stop sharing sends focus here (#288). */}
+      <h2 id={HEADING_ID} tabIndex={-1} className={headingClassName}>
         Practice
       </h2>
       <p className="max-w-prose text-ink-2">{intro}</p>
@@ -43,7 +46,7 @@ export function PracticeSection({
           The practice shares could not be loaded. Reload the page to try again.
         </p>
       ) : (
-        <PracticeShareList entries={shares} {...list} />
+        <PracticeShareList entries={shares} focusAfterStop={HEADING_ID} {...list} />
       )}
       {options === null || shares === null ? null : (
         <PracticeShareForm choices={choices} {...form} />

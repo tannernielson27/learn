@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { PracticeSection, type PracticeSectionProps } from "./PracticeSection";
 
@@ -36,6 +37,18 @@ describe("PracticeSection", () => {
     expect(screen.getByRole("list", { name: "Shared for practice" })).toHaveTextContent("NUR 310");
     const options = screen.getAllByRole("option").map((option) => option.textContent);
     expect(options).toEqual(["NUR 320"]);
+  });
+
+  it("puts focus on the Practice heading after a confirmed Stop sharing (#288)", async () => {
+    const user = userEvent.setup();
+    renderSection();
+    const heading = screen.getByRole("heading", { level: 2, name: "Practice" });
+    expect(heading).toHaveAttribute("id", "practice-heading");
+    expect(heading).toHaveAttribute("tabindex", "-1");
+    await user.click(screen.getByRole("button", { name: "Stop sharing with NUR 310" }));
+    await user.click(screen.getByRole("button", { name: "Stop sharing" }));
+    await screen.findByRole("button", { name: "Stop sharing with NUR 310" });
+    expect(heading).toHaveFocus();
   });
 
   it("says so when everything is shared", () => {

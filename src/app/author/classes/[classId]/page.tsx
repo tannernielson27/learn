@@ -67,7 +67,8 @@ export default async function ClassPage({ params }: PageProps<"/author/classes/[
       </section>
 
       <section aria-labelledby="assignments-heading" className="mb-10">
-        <h2 id="assignments-heading" className="mb-3 text-lg font-medium text-ink-1">
+        {/* Focusable from script only: a confirmed Delete sends focus here (#288). */}
+        <h2 id="assignments-heading" tabIndex={-1} className="mb-3 text-lg font-medium text-ink-1">
           Assignments
         </h2>
         {assignments === null ? (
@@ -82,6 +83,7 @@ export default async function ClassPage({ params }: PageProps<"/author/classes/[
               editAssignment.bind(null, detail.id, assignmentId, closeOnly)
             }
             deleteActionFor={(assignmentId) => deleteAssignment.bind(null, detail.id, assignmentId)}
+            focusAfterDelete="assignments-heading"
           />
         )}
       </section>

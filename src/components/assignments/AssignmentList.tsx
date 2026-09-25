@@ -22,6 +22,11 @@ export interface AssignmentListProps {
   editActionFor: (assignmentId: string, closeOnly: boolean) => AssignmentFormProps["action"];
   /** The delete Server Function bound to one assignment that has not opened. */
   deleteActionFor: (assignmentId: string) => (formData: FormData) => Promise<void>;
+  /**
+   * The id of the focusable heading above the list. A confirmed Delete takes the row and its
+   * button off the page, so focus goes here rather than to the document body (#288).
+   */
+  focusAfterDelete?: string;
 }
 
 const STATE_CLASS: Readonly<Record<AssignmentState, string>> = {
@@ -36,6 +41,7 @@ export function AssignmentList({
   now,
   editActionFor,
   deleteActionFor,
+  focusAfterDelete,
 }: AssignmentListProps) {
   if (assignments.length === 0) {
     // Under the class page's Assignments h2.
@@ -61,6 +67,7 @@ export function AssignmentList({
           state={assignmentState(entry.opensAt, entry.closesAt, now)}
           editActionFor={editActionFor}
           deleteActionFor={deleteActionFor}
+          focusAfterDelete={focusAfterDelete}
         />
       ))}
     </ul>
@@ -69,13 +76,19 @@ export function AssignmentList({
 
 interface AssignmentRowProps extends Pick<
   AssignmentListProps,
-  "editActionFor" | "deleteActionFor"
+  "editActionFor" | "deleteActionFor" | "focusAfterDelete"
 > {
   entry: AssignmentSummary;
   state: AssignmentState;
 }
 
-function AssignmentRow({ entry, state, editActionFor, deleteActionFor }: AssignmentRowProps) {
+function AssignmentRow({
+  entry,
+  state,
+  editActionFor,
+  deleteActionFor,
+  focusAfterDelete,
+}: AssignmentRowProps) {
   const scheduled = state === "scheduled";
   const reportLabel = state === "closed" ? "View report" : "View progress";
   return (
@@ -138,6 +151,7 @@ function AssignmentRow({ entry, state, editActionFor, deleteActionFor }: Assignm
           ariaLabel={`Delete ${entry.title}`}
           confirmLabel="Delete assignment"
           warning="It has not opened, so no student has seen it. This cannot be undone."
+          focusOnSuccess={focusAfterDelete}
         />
       ) : null}
     </li>
