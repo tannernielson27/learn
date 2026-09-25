@@ -1,7 +1,6 @@
-import { FIXTURES, sampleCaseStudy, sampleTrendItem } from "@/lib/ngn/fixtures";
-import { ITEM_TYPES } from "@/lib/ngn/labels";
 import type { CaseStudy, Item } from "@/lib/ngn/schemas";
 import { validateCaseStudy, validateItem } from "@/lib/ngn/validate";
+import { sampleSet } from "@/lib/onboarding/sampleBank";
 import { toCaseStudyRow, toItemRow, type ItemRow } from "./itemRows";
 
 // Fixed ids so a local `supabase db reset` always produces the same rows. Local seed only.
@@ -19,10 +18,10 @@ const JSON_QUOTE = "$json$";
  * against this output in seed.test.ts.
  */
 export function buildSampleSeedSql(): string {
-  const standalone = [...ITEM_TYPES.map((type) => FIXTURES[type].canonical), sampleTrendItem].map(
-    mustItem,
-  );
-  const caseStudy = toCaseStudyRow(mustCaseStudy(sampleCaseStudy));
+  // The same set the Get started checklist imports as "Sample bank" (#265).
+  const sample = sampleSet();
+  const standalone = sample.items.map(mustItem);
+  const caseStudy = toCaseStudyRow(mustCaseStudy(sample.caseStudy));
   const rows = [...standalone.map(toItemRow), ...caseStudy.items];
   const caseStudyItemIds = caseStudy.items.map((_, i) => itemId(standalone.length + i));
 
