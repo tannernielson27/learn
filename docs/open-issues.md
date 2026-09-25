@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-25 (Sprint 11 in progress: #264 merged in #277, #268 in #278, #270 in #276; #271 built but its push was blocked; hosted at all 36 migrations).
+Last updated: 2026-09-25 (Sprint 11 in progress: #264, #267, #268 and #270 merged; #271 built but its push was blocked; hosted at all 36 migrations).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -191,7 +191,7 @@ Sprint 11 is the last Phase 4 sprint. It covers the landing page, onboarding, em
 | [#264](https://github.com/tannernielson27/learn/issues/264) | feat(onboarding): a landing page that says what LeaRN is and how to get in            | e2e               | Merged (#277); no migration                                                                         |
 | [#265](https://github.com/tannernielson27/learn/issues/265) | feat(onboarding): a first-run checklist on the author home, with a sample bank import | security, e2e     | To do                                                                                               |
 | [#266](https://github.com/tannernielson27/learn/issues/266) | feat(onboarding): every empty list says what to do next                               | e2e               | To do                                                                                               |
-| [#267](https://github.com/tannernielson27/learn/issues/267) | feat(onboarding): designed not-found and error pages, and clear expired-link messages | security, e2e     | To do                                                                                               |
+| [#267](https://github.com/tannernielson27/learn/issues/267) | feat(onboarding): designed not-found and error pages, and clear expired-link messages | security, e2e     | Merged (#279); no migration                                                                         |
 | [#268](https://github.com/tannernielson27/learn/issues/268) | feat(email): branded email templates with plain-text parts and a preview              | security, e2e     | Merged (#278); no migration; owner pastes the regenerated magic-link template (docs/05 §7.7)        |
 | [#269](https://github.com/tannernielson27/learn/issues/269) | docs(help): an instructor guide and an item-authoring guide under /help               | e2e               | To do                                                                                               |
 | [#270](https://github.com/tannernielson27/learn/issues/270) | docs: a contributor guide                                                             | none              | Merged (#276); no migration                                                                         |
