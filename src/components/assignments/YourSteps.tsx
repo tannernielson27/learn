@@ -91,8 +91,9 @@ export function YourSteps({ standings }: YourStepsProps) {
   return (
     <>
       <p className="mb-3 text-sm text-ink-2">
-        From your best attempt at each closed assignment, weakest first. A step needs 5 items before
-        it is ranked.
+        From your best attempt at each closed assignment and your first answer to each practice
+        item, weakest first. Practice never counts toward a grade. A step needs 5 items before it is
+        ranked.
       </p>
       <ol
         aria-label="Your clinical judgment steps"

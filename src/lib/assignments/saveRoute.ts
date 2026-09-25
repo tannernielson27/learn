@@ -63,7 +63,7 @@ export function refuseSave(refusal: AttemptRefusal): Response {
  * own (the Server Action limit does not apply here), and Content-Length is optional and can lie,
  * so the cap is enforced on the bytes as they arrive.
  */
-async function readCapped(request: Request, limit: number): Promise<string | "too_large"> {
+export async function readCapped(request: Request, limit: number): Promise<string | "too_large"> {
   if (!request.body) return "";
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];

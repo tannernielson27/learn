@@ -29,6 +29,9 @@ export const RATE_LIMIT_BUCKETS = [
   "sign_in_address",
   "cron_denied",
   "cron_runs",
+  // #241: per student, failing open (see `src/lib/practice/limits.ts`).
+  "practice_answer",
+  "practice_start",
 ] as const;
 
 export type RateLimitBucket = (typeof RATE_LIMIT_BUCKETS)[number];

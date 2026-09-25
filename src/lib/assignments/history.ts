@@ -14,12 +14,14 @@
  * #211 — the highest total, a tie to the earlier attempt, and only a submitted attempt.
  *
  * The same submit at close comes before "Your steps" (#239), read beside the history through
- * `public.my_step_marks`, under the same rules, and ranked by `buildMyStepStandings`.
+ * `public.my_step_marks`, under the same rules, and ranked by `buildMyStepStandings` together
+ * with the student's practice marks (#241, `public.my_practice_step_marks`), which are their own
+ * source and never count toward a grade.
  */
 import type { ExpiredFilter } from "@/lib/supabase/attempts";
 import type { StepStandings } from "@/lib/ngn/stepStandings";
 import type { HistoryAssignment } from "@/lib/supabase/history";
-import type { StepAttempt } from "@/lib/supabase/steps";
+import type { StepAttempt, StepAttemptMark } from "@/lib/supabase/steps";
 import { bestAttemptOf, type BestAttempt } from "./report";
 import { buildMyStepStandings } from "./steps";
 
@@ -30,6 +32,8 @@ export interface HistoryStore {
   history(): Promise<HistoryAssignment[] | null>;
   /** The student's submitted attempts at closed assignments with their marks (#239). Null on an error. */
   stepAttempts(): Promise<StepAttempt[] | null>;
+  /** The student's practice marks by step (#241). Null on an error. */
+  practiceMarks(): Promise<StepAttemptMark[] | null>;
 }
 
 /** How the student stands on one closed assignment. */
@@ -92,9 +96,14 @@ export async function loadStudentRecord(
   studentId: string,
 ): Promise<StudentRecord> {
   await submitAtClose(store, studentId);
-  const [assignments, attempts] = await Promise.all([store.history(), store.stepAttempts()]);
+  const [assignments, attempts, practice] = await Promise.all([
+    store.history(),
+    store.stepAttempts(),
+    store.practiceMarks(),
+  ]);
   return {
     history: assignments === null ? null : buildHistory(assignments),
-    steps: attempts === null ? null : buildMyStepStandings(attempts),
+    // Either source missing would be a quietly different ranking, so the section says it failed.
+    steps: attempts === null || practice === null ? null : buildMyStepStandings(attempts, practice),
   };
 }
