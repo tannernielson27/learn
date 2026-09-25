@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/Button";
 import { startLiveSession } from "@/app/live/actions";
 import { shareBankWithClass, stopSharing } from "@/app/author/practice/actions";
 import { assignmentPath } from "@/lib/assignments/assignments";
+import { bankCaseStudiesEmpty, bankItemsEmpty } from "@/lib/authoring/bankEmpty";
 import {
   isSearching,
   parseItemSearch,
@@ -108,34 +109,10 @@ export default async function BankPage({
   if (view.kind === "folder" && trail.length === 0) notFound();
   const folder = trail.at(-1);
   const heading = folder?.name ?? (view.kind === "unfiled" ? "Unfiled" : bank.name);
-  const filtered = view.kind !== "all";
   const hasContent = items.length > 0 || caseStudies.length > 0;
-  // The Archived view speaks for itself; a search or a filter within it says so instead.
-  const onlyArchived = archived && !search.query && !search.type;
-  const noItems =
-    page > 1
-      ? "No items on this page."
-      : tagFiltered
-        ? filter.warnings
-          ? "No items here match every chosen filter."
-          : "No items here carry every chosen tag."
-        : onlyArchived
-          ? "No archived items here."
-          : searching
-            ? "No items here match the search."
-            : filtered
-              ? "No items in this folder."
-              : undefined;
+  // #266: what each list says when it is empty, most specific reason first.
+  const emptyView = { bankId: bank.id, view, filter, page };
   const liveRefusal = liveStartMessage(query.live);
-  const noCaseStudies = search.query
-    ? "No case study titles match the search."
-    : onlyArchived
-      ? "No archived case studies here."
-      : searching
-        ? "No case studies here have that status."
-        : filtered
-          ? "No case studies in this folder."
-          : undefined;
 
   return (
     <>
@@ -248,7 +225,7 @@ export default async function BankPage({
               items={items}
               moveFormId={hasContent ? MOVE_FORM_ID : undefined}
               restoreAction={archived ? (id) => restoreItemAction.bind(null, id) : undefined}
-              emptyMessage={noItems}
+              empty={bankItemsEmpty(emptyView)}
             />
             <Pager
               page={page}
@@ -271,7 +248,7 @@ export default async function BankPage({
                 caseStudies={caseStudies}
                 moveFormId={hasContent ? MOVE_FORM_ID : undefined}
                 restoreAction={archived ? (id) => restoreCaseStudyAction.bind(null, id) : undefined}
-                emptyMessage={noCaseStudies}
+                empty={bankCaseStudiesEmpty(emptyView)}
               />
             )}
             <CreateCaseStudyForm action={createCaseStudyInBank.bind(null, bank.id)} />

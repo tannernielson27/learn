@@ -18,7 +18,10 @@ function renderSteps(input: StepMark[]) {
 describe("YourSteps (#239)", () => {
   it("says so when nothing has been marked yet", () => {
     renderSteps([]);
-    expect(screen.getByText(/once an assignment you answered has closed/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Nothing to show yet" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/once an assignment you answered closes/)).toBeInTheDocument();
     expect(screen.queryByRole("list")).toBeNull();
   });
 

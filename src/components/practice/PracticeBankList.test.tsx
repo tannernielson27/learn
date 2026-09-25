@@ -21,6 +21,10 @@ describe("PracticeBankList (#241)", () => {
 
   it("says when nothing is shared", () => {
     render(<PracticeBankList banks={[]} />);
-    expect(screen.getByText("Nothing is shared for practice yet.")).toBeInTheDocument();
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Nothing is shared for practice yet" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/instructor shares for practice/)).toBeInTheDocument();
   });
 });

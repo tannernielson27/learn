@@ -3,6 +3,7 @@ import { reportPath } from "@/lib/live/reportFormat";
 import type { SessionSummary } from "@/lib/supabase/sessionReport";
 import type { SessionStatus } from "@/lib/supabase/sessions";
 import { formatSessionDate } from "./formatDate";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const STATUS_LABELS: Record<SessionStatus, string> = {
   lobby: "Lobby",
@@ -24,11 +25,14 @@ export interface SessionListProps {
  */
 export function SessionList({ sessions }: SessionListProps) {
   if (sessions.length === 0) {
+    // Right under the Live sessions page's h1.
     return (
-      <p className="text-ink-2">
-        No live sessions yet. Start one from a bank, and its report will be listed here once it
-        ends.
-      </p>
+      <EmptyState
+        level={2}
+        heading="No live sessions yet"
+        body="Start one from a bank, and its report will be listed here once it ends."
+        action={{ href: "/author", label: "Go to your item banks" }}
+      />
     );
   }
 

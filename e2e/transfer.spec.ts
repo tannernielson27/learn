@@ -43,7 +43,9 @@ test("an author exports a case study and imports the copy into another bank as a
   await importJson(page, "{ not json");
   const refused = page.getByRole("alert").filter({ hasText: "Nothing was imported." });
   await expect(refused).toContainText("This is not valid JSON.");
-  await expect(page.getByText("No case studies in this bank yet.")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "No case studies in this bank yet", exact: true }),
+  ).toBeVisible();
   await expectNoAxeViolations(page);
 
   // Seed the source bank with a case study, then export it from its builder.

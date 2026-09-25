@@ -38,7 +38,21 @@ describe("ClassRoster", () => {
   });
 
   it("says when nobody has joined", () => {
-    render(<ClassRoster entries={[]} removeActionFor={() => async () => {}} />);
-    expect(screen.getByText(/Nobody has joined yet/)).toBeInTheDocument();
+    render(
+      <ClassRoster
+        entries={[]}
+        removeActionFor={() => async () => {}}
+        emptyAction={{ href: "#invite-heading", label: "Go to the invite link" }}
+      />,
+    );
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Nobody has joined yet" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Share the invite link with your class.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Go to the invite link" })).toHaveAttribute(
+      "href",
+      "#invite-heading",
+    );
   });
 });

@@ -56,7 +56,11 @@ export default async function AuthorHomePage() {
       {showChecklist(steps, hidden) ? (
         <GetStarted steps={steps} importSample={importSample} hide={hideGetStarted} />
       ) : null}
-      <BankList banks={banks} sharedWith={sharedWith} />
+      <BankList
+        banks={banks}
+        sharedWith={sharedWith}
+        emptyAction={{ href: "#new-bank-heading", label: "Create a bank" }}
+      />
       <section aria-labelledby="new-bank-heading" className="mt-10 border-t border-line pt-6">
         <h2 id="new-bank-heading" className="mb-3 text-lg font-medium text-ink-1">
           New bank

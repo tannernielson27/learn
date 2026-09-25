@@ -81,7 +81,9 @@ test("an author archives an item, finds it in the Archived view, and restores it
 
   // Restore it from its row: the Archived view empties.
   await page.getByRole("button", { name: `Restore ${FILED}`, exact: true }).click();
-  await expect(page.getByText("No archived items here.")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "No archived items here", exact: true }),
+  ).toBeVisible();
 
   // And it is back among the bank's current items.
   await views.getByRole("link", { name: "Current", exact: true }).click();

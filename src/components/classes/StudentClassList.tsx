@@ -1,4 +1,5 @@
 import type { StudentClass } from "@/lib/supabase/classInvites";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export interface StudentClassListProps {
   classes: readonly StudentClass[];
@@ -7,10 +8,13 @@ export interface StudentClassListProps {
 /** A student's classes, by name. Their open assignments are listed separately on /learn. */
 export function StudentClassList({ classes }: StudentClassListProps) {
   if (classes.length === 0) {
+    // Right under the student home's h1.
     return (
-      <p className="text-ink-2">
-        You are not in a class yet. Open the invite link your instructor shares to join one.
-      </p>
+      <EmptyState
+        level={2}
+        heading="You are not in a class yet"
+        body="Open the invite link your instructor shares to join one."
+      />
     );
   }
 

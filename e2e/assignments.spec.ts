@@ -43,7 +43,9 @@ test("an instructor assigns a bank to a class and sees it listed in local time",
   await page.getByRole("textbox", { name: "Class name", exact: true }).fill(className);
   await page.getByRole("button", { name: "Create class", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: className, exact: true })).toBeVisible();
-  await expect(page.getByText("No assignments yet.", { exact: false })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "No assignments yet", exact: true }),
+  ).toBeVisible();
 
   await page.goto("/author");
   const bankName = `Assigned ${project} ${Date.now()}`;

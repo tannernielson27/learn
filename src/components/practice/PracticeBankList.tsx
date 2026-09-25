@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { practicePath, practiceProgressLabel } from "@/lib/practice/paths";
 import type { PracticeBank } from "@/lib/supabase/practice";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export interface PracticeBankListProps {
   banks: readonly PracticeBank[];
@@ -13,7 +14,14 @@ export interface PracticeBankListProps {
  */
 export function PracticeBankList({ banks }: PracticeBankListProps) {
   if (banks.length === 0) {
-    return <p className="text-ink-2">Nothing is shared for practice yet.</p>;
+    // Under the student home's Practice h2.
+    return (
+      <EmptyState
+        level={3}
+        heading="Nothing is shared for practice yet"
+        body="Banks your instructor shares for practice appear here, ready to open."
+      />
+    );
   }
   return (
     <ul

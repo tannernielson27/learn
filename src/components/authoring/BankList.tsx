@@ -2,18 +2,29 @@ import Link from "next/link";
 import { PracticeBadge } from "@/components/practice/PracticeBadge";
 import type { BankSummary } from "@/lib/authoring/banks";
 import { formatEdited, itemCountLabel } from "@/lib/authoring/format";
+import { EmptyState, type EmptyStateAction } from "@/components/ui/EmptyState";
 
 export interface BankListProps {
   banks: readonly BankSummary[];
   /** Bank id to the names of the classes it is shared with for practice (#240). */
   sharedWith?: ReadonlyMap<string, readonly string[]>;
+  /** With no banks yet: where one is made, on the page that lists them. */
+  emptyAction?: EmptyStateAction;
 }
 
 const NOBODY: readonly string[] = [];
 
-export function BankList({ banks, sharedWith }: BankListProps) {
+export function BankList({ banks, sharedWith, emptyAction }: BankListProps) {
   if (banks.length === 0) {
-    return <p className="text-ink-2">No item banks yet. Create one to start writing items.</p>;
+    // Right under the author home's h1.
+    return (
+      <EmptyState
+        level={2}
+        heading="No item banks yet"
+        body="Create one to start writing items."
+        action={emptyAction}
+      />
+    );
   }
 
   return (

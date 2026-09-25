@@ -1,17 +1,26 @@
 import type { RosterEntry } from "@/lib/supabase/classes";
 import { ConfirmSubmit, type ConfirmSubmitProps } from "./ConfirmSubmit";
+import { EmptyState, type EmptyStateAction } from "@/components/ui/EmptyState";
 
 export interface ClassRosterProps {
   entries: readonly RosterEntry[];
   /** The remove Server Function bound to one student. */
   removeActionFor: (profileId: string) => ConfirmSubmitProps["action"];
+  /** With nobody on it yet: where the invite link is, on the class page. */
+  emptyAction?: EmptyStateAction;
 }
 
 /** Who has joined a class, and a way to take someone off it. */
-export function ClassRoster({ entries, removeActionFor }: ClassRosterProps) {
+export function ClassRoster({ entries, removeActionFor, emptyAction }: ClassRosterProps) {
   if (entries.length === 0) {
+    // Under the class page's Roster h2.
     return (
-      <p className="text-ink-2">Nobody has joined yet. Share the invite link with your class.</p>
+      <EmptyState
+        level={3}
+        heading="Nobody has joined yet"
+        body="Share the invite link with your class."
+        action={emptyAction}
+      />
     );
   }
 

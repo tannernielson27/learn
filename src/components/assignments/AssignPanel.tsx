@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CLASSES_PATH } from "@/lib/classes/classes";
 import { practiceWarning, type PracticeExposure } from "@/lib/practice/shares";
 import { AssignmentForm, type AssignmentFormProps } from "./AssignmentForm";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const COULD_NOT_CHECK = "Could not check whether students can see these answers in practice.";
 
@@ -61,13 +62,13 @@ export function AssignPanel({
           Your classes could not be loaded. Reload the page to try again.
         </p>
       ) : classes.length === 0 ? (
-        <p className="text-ink-2">
-          There is no class to assign to yet.{" "}
-          <Link href={CLASSES_PATH} className="text-accent-ink underline underline-offset-4">
-            Create a class
-          </Link>{" "}
-          first.
-        </p>
+        // Right under the Assign page's h1.
+        <EmptyState
+          level={2}
+          heading="No class to assign to yet"
+          body="Create a class first, then come back here to assign this to it."
+          action={{ href: CLASSES_PATH, label: "Create a class" }}
+        />
       ) : (
         <AssignmentForm action={action} classes={classes} submitLabel="Assign" />
       )}

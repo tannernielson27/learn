@@ -37,10 +37,17 @@ describe("BankList", () => {
   });
 
   it("says what to do when there are no banks", () => {
-    render(<BankList banks={[]} />);
+    render(
+      <BankList banks={[]} emptyAction={{ href: "#new-bank-heading", label: "Create a bank" }} />,
+    );
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
     expect(
-      screen.getByText("No item banks yet. Create one to start writing items."),
+      screen.getByRole("heading", { level: 2, name: "No item banks yet" }),
     ).toBeInTheDocument();
+    expect(screen.getByText("Create one to start writing items.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Create a bank" })).toHaveAttribute(
+      "href",
+      "#new-bank-heading",
+    );
   });
 });

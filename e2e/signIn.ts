@@ -284,3 +284,30 @@ export async function rpcAsUser<T>(
   if (!called.ok()) throw new Error(`${fn} failed: ${called.status()} ${await called.text()}`);
   return (await called.json()) as T;
 }
+
+/**
+ * A brand-new instructor alone in a brand-new org, so every list starts empty (#266). The owner's
+ * steps (docs/05 §7.6) always join the first org, the seeded one; this does the same two steps but
+ * points the profile at an org of its own. Returns the org's id.
+ */
+export async function signInAsInstructorInEmptyOrg(
+  page: Page,
+  request: APIRequestContext,
+  label: string,
+): Promise<string> {
+  const org = await insertAsAdmin<{ id: string }>(request, "orgs", { name: `Empty ${label}` });
+  const email = uniqueEmail(label);
+  const userId = await createAccountWithoutRole(request, email);
+  await updateAsAdmin(request, "profiles", `id=eq.${userId}`, {
+    org_id: org.id,
+    role: "instructor",
+  });
+  await page.goto("/sign-in");
+  const since = new Date();
+  await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await page.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
+  await page.goto(await latestSignInLink(request, email, since));
+  await expect(page).toHaveURL(/\/author$/);
+  return org.id;
+}
