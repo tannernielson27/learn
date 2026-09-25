@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-25 (Sprint 11 in progress: #264, #267, #268 and #270 merged; #271 built but its push was blocked; hosted at all 36 migrations).
+Last updated: 2026-09-25 (Sprint 11 in progress: #264, #267, #268, #269 and #270 merged; #271 built but its push was blocked; hosted at all 36 migrations).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -193,7 +193,7 @@ Sprint 11 is the last Phase 4 sprint. It covers the landing page, onboarding, em
 | [#266](https://github.com/tannernielson27/learn/issues/266) | feat(onboarding): every empty list says what to do next                               | e2e               | To do                                                                                               |
 | [#267](https://github.com/tannernielson27/learn/issues/267) | feat(onboarding): designed not-found and error pages, and clear expired-link messages | security, e2e     | Merged (#279); no migration                                                                         |
 | [#268](https://github.com/tannernielson27/learn/issues/268) | feat(email): branded email templates with plain-text parts and a preview              | security, e2e     | Merged (#278); no migration; owner pastes the regenerated magic-link template (docs/05 §7.7)        |
-| [#269](https://github.com/tannernielson27/learn/issues/269) | docs(help): an instructor guide and an item-authoring guide under /help               | e2e               | To do                                                                                               |
+| [#269](https://github.com/tannernielson27/learn/issues/269) | docs(help): an instructor guide and an item-authoring guide under /help               | e2e               | Merged (#280); no migration                                                                         |
 | [#270](https://github.com/tannernielson27/learn/issues/270) | docs: a contributor guide                                                             | none              | Merged (#276); no migration                                                                         |
 | [#271](https://github.com/tannernielson27/learn/issues/271) | fix(student): freeze a practice run's items when it starts                            | security, db, e2e | Built; branch not pushed: the permission classifier blocked the builder's push (owner action below) |
 | [#272](https://github.com/tannernielson27/learn/issues/272) | chore: Sprint 10 leftovers: roster focus, Sentry bundle size, fonts                   | e2e               | To do                                                                                               |

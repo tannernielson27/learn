@@ -5,6 +5,13 @@ import { Landing } from "./Landing";
 const SIGN_IN = { href: "/sign-in", label: "Sign in" };
 
 describe("Landing (#264)", () => {
+  // #269: the help pages are public, so the front page's footer points at them.
+  it("links to help from its footer", () => {
+    render(<Landing entry={SIGN_IN} />);
+    const footer = screen.getByRole("navigation", { name: "Footer" });
+    expect(within(footer).getByRole("link", { name: "Help" })).toHaveAttribute("href", "/help");
+  });
+
   it("says what LeaRN is in its one headline", () => {
     render(<Landing entry={SIGN_IN} />);
     const headings = screen.getAllByRole("heading", { level: 1 });
