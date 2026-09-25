@@ -45,9 +45,11 @@ export async function proxy(request: NextRequest) {
 // Only the routes that care about a session, plus the gallery, which is here for the opposite
 // reason: it is turned away above before any session work happens. The student home and the class
 // invite page (#205) read the session in Server Components, which cannot write the refreshed
-// cookies themselves, so the refresh has to happen here.
+// cookies themselves, so the refresh has to happen here. The landing page (#264) is the same: it
+// reads the session to swap Sign in for the visitor's home. `/` matches the root alone.
 export const config = {
   matcher: [
+    "/",
     "/author/:path*",
     "/learn",
     "/learn/:path*",

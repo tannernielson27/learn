@@ -1,25 +1,38 @@
-import Link from "next/link";
+import type { Metadata } from "next";
+import { Landing } from "@/components/landing/Landing";
+import { landingEntry, type LandingVisitor } from "@/lib/auth/landing";
+import { readViewer } from "@/lib/classes/viewer";
 
-export default function HomePage() {
-  return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-5 py-16">
-      <p className="eyebrow">LeaRN</p>
-      <h1 className="mt-3 text-3xl font-semibold tracking-tight text-ink-1 sm:text-4xl">
-        Live learning for the Next Generation NCLEX.
-      </h1>
-      <p className="mt-4 max-w-prose text-lg text-ink-2">
-        Exam-faithful clinical judgment items, fast authoring, live sessions and take-home practice.
-        Built for phones in the classroom and laptops at home.
-      </p>
-      <div className="mt-8 flex flex-wrap gap-3">
-        <Link
-          href="/gallery"
-          className="tap-target inline-flex items-center rounded-sm border border-accent bg-accent px-4 font-medium text-accent-contrast transition-colors duration-fast hover:bg-accent-ink"
-        >
-          Open the component gallery
-        </Link>
-      </div>
-      <p className="mt-16 text-sm text-ink-2">Sprint 0 · foundation build</p>
-    </main>
-  );
+const TITLE = "LeaRN: live learning for the Next Generation NCLEX";
+const DESCRIPTION =
+  "Exam-faithful NGN items, fast authoring, live sessions and take-home assignments for nursing " +
+  "instructors and their students. Invite-only.";
+
+export const metadata: Metadata = {
+  title: { absolute: TITLE },
+  description: DESCRIPTION,
+  openGraph: {
+    type: "website",
+    siteName: "LeaRN",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+};
+
+/**
+ * Who is looking, only to pick the first link. Signed out, `getClaims` finds no session cookie and
+ * makes no request, so a visitor costs no Supabase call. Any failure (no Supabase env on a preview,
+ * an auth outage) reads as signed out: the page still renders and offers Sign in.
+ */
+async function readVisitor(): Promise<LandingVisitor> {
+  try {
+    const viewer = await readViewer();
+    return viewer.status === "signed_out" ? viewer : { status: "signed_in", role: viewer.role };
+  } catch {
+    return { status: "signed_out" };
+  }
+}
+
+export default async function HomePage() {
+  return <Landing entry={landingEntry(await readVisitor())} />;
 }
