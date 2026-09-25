@@ -143,7 +143,7 @@ Phase 4 splits across two sprints. Sprint 10 covers what real students need: har
 | [#242](https://github.com/tannernielson27/learn/issues/242) | feat(assign): a class time zone setting, and removed students in the report                   | db, e2e                   | Merged (#251); `20260925020000_class_timezone_and_removed` applied to hosted                    |
 | [#244](https://github.com/tannernielson27/learn/issues/244) | test(security): check live play and a second student on the real response bytes               | security, e2e             | To do; filed from #233                                                                          |
 | [#248](https://github.com/tannernielson27/learn/issues/248) | chore(db): sweep expired rate-limit rows on a schedule                                        | security, db              | Merged (#257); `20260925050000_rate_limit_sweep` applied to hosted; job waits on pg_cron (§7.8) |
-| [#256](https://github.com/tannernielson27/learn/issues/256) | fix(authoring): show an error when a confirmed remove or stop-sharing fails                   | e2e                       | To do; filed from #251 and #255 reviews                                                         |
+| [#256](https://github.com/tannernielson27/learn/issues/256) | fix(authoring): show an error when a confirmed remove or stop-sharing fails                   | e2e                       | Merged (#259); no migration                                                                     |
 
 Suggested order:
 

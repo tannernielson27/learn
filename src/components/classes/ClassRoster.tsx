@@ -1,10 +1,10 @@
 import type { RosterEntry } from "@/lib/supabase/classes";
-import { ConfirmSubmit } from "./ConfirmSubmit";
+import { ConfirmSubmit, type ConfirmSubmitProps } from "./ConfirmSubmit";
 
 export interface ClassRosterProps {
   entries: readonly RosterEntry[];
   /** The remove Server Function bound to one student. */
-  removeActionFor: (profileId: string) => (formData: FormData) => Promise<void>;
+  removeActionFor: (profileId: string) => ConfirmSubmitProps["action"];
 }
 
 /** Who has joined a class, and a way to take someone off it. */

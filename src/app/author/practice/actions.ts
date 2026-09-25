@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { ConfirmOutcome } from "@/components/classes/ConfirmSubmit";
 import type { ShareFormState } from "@/components/practice/PracticeShareForm";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
@@ -15,6 +16,10 @@ import { sharePractice, stopPractice } from "@/lib/supabase/practiceShares";
 
 const bankPath = (bankId: string) => `/author/banks/${bankId}`;
 const CHOOSE: ShareFormState = { status: "error", error: "Choose from the list." };
+const STOP_FAILED: ConfirmOutcome = {
+  ok: false,
+  message: "Could not stop sharing this bank. Try again.",
+};
 
 /** Every page that shows a share: the bank list's badges, the bank page and the class page. */
 function revalidateShare(bankId: string, classId: string): void {
@@ -57,11 +62,17 @@ export async function shareClassWithBank(
 
 /**
  * Stops one share. The bank leaves the class's practice list at once; answers already seen stay
- * seen, which the confirmation says before this runs.
+ * seen, which the confirmation says before this runs. A share someone else already stopped is
+ * done; a refused delete says so, so nobody believes a bank is private when it is not (#256).
  */
-export async function stopSharing(bankId: string, classId: string): Promise<void> {
-  if (!isUuid(bankId) || !isUuid(classId)) return;
+export async function stopSharing(bankId: string, classId: string): Promise<ConfirmOutcome> {
+  if (!isUuid(bankId) || !isUuid(classId)) return STOP_FAILED;
   const { supabase } = await requireAuthor(bankPath(bankId));
-  await stopPractice(supabase, bankId, classId);
+  const write = await stopPractice(supabase, bankId, classId);
+  if (!write.ok) {
+    console.error("[practice] a share could not be stopped", { bankId, classId, code: write.code });
+    return STOP_FAILED;
+  }
   revalidateShare(bankId, classId);
+  return { ok: true };
 }

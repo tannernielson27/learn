@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AssignmentSource } from "@/lib/assignments/assignments";
 import type { PracticeExposure, ShareFailure } from "@/lib/practice/shares";
 import type { Database } from "./database.types";
+import { type ConfirmedWrite, deleteWrite } from "./writes";
 
 type Client = SupabaseClient<Database>;
 
@@ -106,19 +107,19 @@ export async function sharePractice(
   return { ok: false, reason: "failed" };
 }
 
-/** Stops one share. False when there was nothing to stop or the delete failed. */
+/** Stops one share. `changed: false` when there was nothing left to stop. */
 export async function stopPractice(
   client: Client,
   bankId: string,
   classId: string,
-): Promise<boolean> {
-  const { data, error } = await client
+): Promise<ConfirmedWrite> {
+  const reply = await client
     .from("bank_practice_shares")
     .delete()
     .eq("bank_id", bankId)
     .eq("class_id", classId)
     .select("id");
-  return !error && (data?.length ?? 0) > 0;
+  return deleteWrite(reply);
 }
 
 /**

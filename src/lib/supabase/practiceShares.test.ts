@@ -134,14 +134,19 @@ describe("sharePractice", () => {
 describe("stopPractice", () => {
   it("deletes the one share", async () => {
     const fake = fakeQuery({ data: [{ id: "x" }], error: null });
-    expect(await stopPractice(fake.client, BANK, CLASS)).toBe(true);
+    expect(await stopPractice(fake.client, BANK, CLASS)).toEqual({ ok: true, changed: true });
     expect(fake.calls).toContainEqual(["eq", ["bank_id", BANK]]);
     expect(fake.calls).toContainEqual(["eq", ["class_id", CLASS]]);
   });
 
-  it("says so when nothing was deleted or the delete failed", async () => {
-    expect(await stopPractice(fakeQuery({ data: [] }).client, BANK, CLASS)).toBe(false);
-    expect(await stopPractice(fakeQuery({ error: { code: "x" } }).client, BANK, CLASS)).toBe(false);
+  it("tells a share already stopped from a delete that failed", async () => {
+    expect(await stopPractice(fakeQuery({ data: [] }).client, BANK, CLASS)).toEqual({
+      ok: true,
+      changed: false,
+    });
+    expect(await stopPractice(fakeQuery({ error: { code: "08006" } }).client, BANK, CLASS)).toEqual(
+      { ok: false, code: "08006" },
+    );
   });
 });
 
