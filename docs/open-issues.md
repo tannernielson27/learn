@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-25 (Sprint 11 in progress: #264, #265, #267, #268, #269 and #270 merged; #283 filed; #271 built but its push was blocked; hosted at all 36 migrations).
+Last updated: 2026-09-25 (Sprint 11 in progress: #264, #265, #267, #268, #269, #270 and #273 merged; #283 filed; #271 in review (#284); hosted at all 36 migrations).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -198,7 +198,7 @@ Sprint 11 is the last Phase 4 sprint. It covers the landing page, onboarding, em
 | [#271](https://github.com/tannernielson27/learn/issues/271) | fix(student): freeze a practice run's items when it starts                            | security, db, e2e | Built; branch not pushed: the permission classifier blocked the builder's push (owner action below) |
 | [#272](https://github.com/tannernielson27/learn/issues/272) | chore: Sprint 10 leftovers: roster focus, Sentry bundle size, fonts                   | e2e               | To do                                                                                               |
 | [#57](https://github.com/tannernielson27/learn/issues/57)   | chore(design): three font families against a two-family guideline                     | none              | To do; closed by #272                                                                               |
-| [#273](https://github.com/tannernielson27/learn/issues/273) | test(student): an e2e for the ranked Your steps section                               | e2e               | To do                                                                                               |
+| [#273](https://github.com/tannernielson27/learn/issues/273) | test(student): an e2e for the ranked Your steps section                               | e2e               | Merged (#281); test-only; runs on phone-375 only                                                    |
 | [#274](https://github.com/tannernielson27/learn/issues/274) | test(onboarding): a Demo 12 cold-onboarding rehearsal                                 | e2e               | To do                                                                                               |
 | [#283](https://github.com/tannernielson27/learn/issues/283) | feat(onboarding): the sample bank arrives published, ready to assign or run live      | security, db, e2e | To do; filed from #282; migration `20260926010000_sample_published` if needed; before #274          |
 

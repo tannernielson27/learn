@@ -202,3 +202,85 @@ export async function signInAsNewAuthor(
   await expect(page).toHaveURL(/\/author$/);
   return email;
 }
+
+/** Inserts several rows in one request with the local secret key; returns them as written. */
+export async function insertManyAsAdmin<T>(
+  request: APIRequestContext,
+  table: string,
+  rows: readonly Record<string, unknown>[],
+): Promise<T[]> {
+  const { url, headers } = localAdmin();
+  const created = await request.post(`${url}/rest/v1/${table}`, {
+    headers: { ...headers, Prefer: "return=representation" },
+    data: rows,
+  });
+  const written = created.ok() ? ((await created.json()) as T[]) : [];
+  if (written.length !== rows.length) {
+    throw new Error(`could not insert into ${table}: ${created.status()} ${await created.text()}`);
+  }
+  return written;
+}
+
+/** Calls a service-role-only database function with the local secret key, for setup. */
+export async function rpcAsAdmin<T>(
+  request: APIRequestContext,
+  fn: string,
+  args: Record<string, unknown>,
+): Promise<T> {
+  const { url, headers } = localAdmin();
+  const called = await request.post(`${url}/rest/v1/rpc/${fn}`, { headers, data: args });
+  if (!called.ok()) throw new Error(`${fn} failed: ${called.status()} ${await called.text()}`);
+  return (await called.json()) as T;
+}
+
+function localPublishableKey(): string {
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!key) throw new Error("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY must name the local stack's key");
+  return key;
+}
+
+/**
+ * An access token for an account that already exists, for setup that has to run as that user
+ * (#273 starts and saves a student's attempt through the student's own functions, which take the
+ * caller from the token). Gives the account a random password with the local secret key, then
+ * signs in with it through the publishable key, as a browser would. Local stack only.
+ */
+export async function accessTokenFor(
+  request: APIRequestContext,
+  userId: string,
+  email: string,
+): Promise<string> {
+  const { url, headers } = localAdmin();
+  const password = `e2e-${crypto.randomUUID()}`;
+  const updated = await request.put(`${url}/auth/v1/admin/users/${userId}`, {
+    headers,
+    data: { password },
+  });
+  if (!updated.ok()) {
+    throw new Error(`could not set a password: ${updated.status()} ${await updated.text()}`);
+  }
+  const signedIn = await request.post(`${url}/auth/v1/token?grant_type=password`, {
+    headers: { apikey: localPublishableKey() },
+    data: { email, password },
+  });
+  const body = signedIn.ok() ? ((await signedIn.json()) as { access_token?: unknown }) : {};
+  if (typeof body.access_token !== "string") {
+    throw new Error(`could not sign in as ${email}: ${signedIn.status()}`);
+  }
+  return body.access_token;
+}
+
+/** Calls a database function as the user whose access token this is, under their own grants. */
+export async function rpcAsUser<T>(
+  request: APIRequestContext,
+  accessToken: string,
+  fn: string,
+  args: Record<string, unknown>,
+): Promise<T> {
+  const called = await request.post(`${localStackUrl()}/rest/v1/rpc/${fn}`, {
+    headers: { apikey: localPublishableKey(), Authorization: `Bearer ${accessToken}` },
+    data: args,
+  });
+  if (!called.ok()) throw new Error(`${fn} failed: ${called.status()} ${await called.text()}`);
+  return (await called.json()) as T;
+}
