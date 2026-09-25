@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-25 (Sprint 11 kicked off: #264–#274 filed in milestone 11, #57 moved in; `main` at 4750493, hosted at all 36 migrations).
+Last updated: 2026-09-25 (Sprint 11 in progress: #270 merged in #276; `main` at bd21bb7, hosted at all 36 migrations).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -186,20 +186,20 @@ Demo 12: an outside instructor onboards cold and runs a class without help.
 
 Sprint 11 is the last Phase 4 sprint. It covers the landing page, onboarding, empty and error states, email templates, the guides, the Sprint 10 leftovers, and a rehearsal of the cold-onboarding demo.
 
-| #                                                           | Title                                                                                 | Gates             | Status                |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------- | --------------------- |
-| [#264](https://github.com/tannernielson27/learn/issues/264) | feat(onboarding): a landing page that says what LeaRN is and how to get in            | e2e               | To do                 |
-| [#265](https://github.com/tannernielson27/learn/issues/265) | feat(onboarding): a first-run checklist on the author home, with a sample bank import | security, e2e     | To do                 |
-| [#266](https://github.com/tannernielson27/learn/issues/266) | feat(onboarding): every empty list says what to do next                               | e2e               | To do                 |
-| [#267](https://github.com/tannernielson27/learn/issues/267) | feat(onboarding): designed not-found and error pages, and clear expired-link messages | security, e2e     | To do                 |
-| [#268](https://github.com/tannernielson27/learn/issues/268) | feat(email): branded email templates with plain-text parts and a preview              | security, e2e     | To do                 |
-| [#269](https://github.com/tannernielson27/learn/issues/269) | docs(help): an instructor guide and an item-authoring guide under /help               | e2e               | To do                 |
-| [#270](https://github.com/tannernielson27/learn/issues/270) | docs: a contributor guide                                                             | none              | To do                 |
-| [#271](https://github.com/tannernielson27/learn/issues/271) | fix(student): freeze a practice run's items when it starts                            | security, db, e2e | To do                 |
-| [#272](https://github.com/tannernielson27/learn/issues/272) | chore: Sprint 10 leftovers: roster focus, Sentry bundle size, fonts                   | e2e               | To do                 |
-| [#57](https://github.com/tannernielson27/learn/issues/57)   | chore(design): three font families against a two-family guideline                     | none              | To do; closed by #272 |
-| [#273](https://github.com/tannernielson27/learn/issues/273) | test(student): an e2e for the ranked Your steps section                               | e2e               | To do                 |
-| [#274](https://github.com/tannernielson27/learn/issues/274) | test(onboarding): a Demo 12 cold-onboarding rehearsal                                 | e2e               | To do                 |
+| #                                                           | Title                                                                                 | Gates             | Status                      |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------- | --------------------------- |
+| [#264](https://github.com/tannernielson27/learn/issues/264) | feat(onboarding): a landing page that says what LeaRN is and how to get in            | e2e               | To do                       |
+| [#265](https://github.com/tannernielson27/learn/issues/265) | feat(onboarding): a first-run checklist on the author home, with a sample bank import | security, e2e     | To do                       |
+| [#266](https://github.com/tannernielson27/learn/issues/266) | feat(onboarding): every empty list says what to do next                               | e2e               | To do                       |
+| [#267](https://github.com/tannernielson27/learn/issues/267) | feat(onboarding): designed not-found and error pages, and clear expired-link messages | security, e2e     | To do                       |
+| [#268](https://github.com/tannernielson27/learn/issues/268) | feat(email): branded email templates with plain-text parts and a preview              | security, e2e     | To do                       |
+| [#269](https://github.com/tannernielson27/learn/issues/269) | docs(help): an instructor guide and an item-authoring guide under /help               | e2e               | To do                       |
+| [#270](https://github.com/tannernielson27/learn/issues/270) | docs: a contributor guide                                                             | none              | Merged (#276); no migration |
+| [#271](https://github.com/tannernielson27/learn/issues/271) | fix(student): freeze a practice run's items when it starts                            | security, db, e2e | To do                       |
+| [#272](https://github.com/tannernielson27/learn/issues/272) | chore: Sprint 10 leftovers: roster focus, Sentry bundle size, fonts                   | e2e               | To do                       |
+| [#57](https://github.com/tannernielson27/learn/issues/57)   | chore(design): three font families against a two-family guideline                     | none              | To do; closed by #272       |
+| [#273](https://github.com/tannernielson27/learn/issues/273) | test(student): an e2e for the ranked Your steps section                               | e2e               | To do                       |
+| [#274](https://github.com/tannernielson27/learn/issues/274) | test(onboarding): a Demo 12 cold-onboarding rehearsal                                 | e2e               | To do                       |
 
 Suggested order, in pairs (one heavier builder, one light):
 
