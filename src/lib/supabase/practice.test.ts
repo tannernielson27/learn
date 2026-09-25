@@ -5,6 +5,7 @@ import { itemSchema, type Item } from "@/lib/ngn/schemas";
 import type { Database } from "./database.types";
 import { toItemRow } from "./itemRows";
 import {
+  MAX_RUN_ITEM_READ,
   openPracticeRun,
   readMyPracticeBanks,
   readMyPracticeStepMarks,
@@ -125,6 +126,13 @@ describe("readRunItems", () => {
     expect(
       await readRunItems(rpcClient({ data: null, error: {} }).client, STUDENT, RUN, [MC_ROW]),
     ).toBeNull();
+  });
+
+  it("fails rather than truncating past the function's row limit", async () => {
+    const { client, rpc } = rpcClient({ data: [], error: null });
+    const ids = Array.from({ length: MAX_RUN_ITEM_READ + 1 }, () => MC_ROW);
+    expect(await readRunItems(client, STUDENT, RUN, ids)).toBeNull();
+    expect(rpc).not.toHaveBeenCalled();
   });
 });
 

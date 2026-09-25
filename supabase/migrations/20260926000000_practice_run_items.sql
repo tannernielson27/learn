@@ -170,22 +170,32 @@ begin
     returning * into found_run;
 
     -- One statement, so the items are read once: the snapshot and the slot name the same content
-    -- even if an author saves an item while the run opens.
-    with source as (
-      select s.item_id, s.case_study_id, s.step, s.ordinal,
+    -- even if an author saves an item while the run opens. The slots' foreign key to the
+    -- snapshots is checked at the end of the statement, after the snapshot insert has run.
+    --
+    -- An item can be a step of two playable case studies. A run answers an item once, so it is
+    -- recorded once, where it first plays, and the slots are numbered again without a gap.
+    with listed as (
+      select distinct on (s.item_id) s.item_id, s.case_study_id, s.step, s.ordinal
+        from private.practice_item_set(target_bank) s
+       order by s.item_id, s.ordinal
+    ),
+    source as (
+      select l.item_id, l.case_study_id, l.step,
+             row_number() over (order by l.ordinal) as ordinal,
              i.org_id, i.type, i.cjmm_step, i.tags, i.version,
              i.content, i.answer_key, i.rationale, i.scoring,
              sha256(convert_to(jsonb_build_array(
                i.type, i.cjmm_step, i.tags, i.version,
                i.content, i.answer_key, i.rationale, i.scoring)::text, 'UTF8')) as digest
-        from private.practice_item_set(target_bank) s
-        join public.items i on i.id = s.item_id
+        from listed l
+        join public.items i on i.id = l.item_id
     ),
     kept as (
       insert into public.practice_item_snapshots
         (item_id, org_id, digest, type, cjmm_step, tags, version,
          content, answer_key, rationale, scoring)
-      select distinct on (src.item_id, src.digest)
+      select
              src.item_id, src.org_id, src.digest, src.type, src.cjmm_step, src.tags, src.version,
              src.content, src.answer_key, src.rationale, src.scoring
         from source src

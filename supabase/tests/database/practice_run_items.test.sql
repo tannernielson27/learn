@@ -8,7 +8,7 @@
 -- two new tables.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(38);
+select plan(39);
 
 -- ---------------------------------------------------------------------------
 -- Cast, as the superuser
@@ -408,6 +408,36 @@ select is(
   0,
   'resuming an earlier run freezes nothing'
 );
+
+-- ---------------------------------------------------------------------------
+-- A step shared by two playable case studies is recorded once, where it first plays
+-- ---------------------------------------------------------------------------
+
+insert into public.case_studies (id, bank_id, org_id, title, ehr, status, created_at)
+  select '00000000-0000-0000-0000-0000002710a7', '00000000-0000-0000-0000-0000002710e0', org_id,
+         'Second case', '{}', 'published', now() + interval '1 day'
+    from public.profiles where id = '00000000-0000-0000-0000-0000002710a1';
+insert into public.case_study_items (case_study_id, org_id, bank_id, position, item_id)
+  select '00000000-0000-0000-0000-0000002710a7', org_id, '00000000-0000-0000-0000-0000002710e0',
+         1, '00000000-0000-0000-0000-0000002710f5'
+    from public.profiles where id = '00000000-0000-0000-0000-0000002710a1';
+-- The earlier run above starts an hour ahead; out of the way, so the new run is the newest.
+delete from public.practice_runs where id = '00000000-0000-0000-0000-0000002710b9';
+
+set local role service_role;
+insert into ids
+  select 'run3', run_id
+    from public.open_practice_run('00000000-0000-0000-0000-0000002710d1',
+                                  '00000000-0000-0000-0000-0000002710e0', true);
+select results_eq(
+  $$ select item_id, ordinal from public.practice_run_items('00000000-0000-0000-0000-0000002710d1',
+       (select id from ids where name = 'run3')) order by ordinal $$,
+  $$ values ('00000000-0000-0000-0000-0000002710f1'::uuid, 1::bigint),
+            ('00000000-0000-0000-0000-0000002710f5'::uuid, 2::bigint),
+            ('00000000-0000-0000-0000-0000002710f6'::uuid, 3::bigint) $$,
+  'a run still opens, holding the shared step once, numbered without a gap'
+);
+reset role;
 
 select * from finish();
 rollback;

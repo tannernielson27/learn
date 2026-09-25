@@ -74,6 +74,9 @@ export async function readRunSlots(
  * re-checks that the run is live for this student and holds each item. A row that no longer parses
  * is left out, as `readSetItems` does.
  */
+/** `practice_run_item_content`'s row limit. */
+export const MAX_RUN_ITEM_READ = 1000;
+
 export async function readRunItems(
   service: Client,
   student: string,
@@ -81,6 +84,8 @@ export async function readRunItems(
   ids: readonly string[],
 ): Promise<SetItem[] | null> {
   if (ids.length === 0) return [];
+  // The function returns at most this many rows; asking for more would drop items silently.
+  if (ids.length > MAX_RUN_ITEM_READ) return null;
   const { data, error } = await service.rpc("practice_run_item_content", {
     student,
     target_run: runId,
