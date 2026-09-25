@@ -12,7 +12,7 @@ interface PostgrestReply {
 }
 
 export function failedWrite(error: { code?: string }): ConfirmedWrite {
-  return { ok: false, code: error.code || "unknown" };
+  return { ok: false, code: error.code ?? "unknown" };
 }
 
 /** A delete that selected what it removed. */

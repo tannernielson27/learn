@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/Button";
 
 /**
@@ -21,6 +22,32 @@ export interface ConfirmSubmitProps {
 }
 
 type Step = "idle" | "asking" | "returned";
+
+/** For an action that threw rather than answering: nothing the person can act on but a retry. */
+const UNEXPECTED = "That did not work. Try again.";
+
+function isFrameworkSignal(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "digest" in error;
+}
+
+/**
+ * The confirm button, busy while its form is in flight. aria-disabled, not disabled: a disabled
+ * button drops focus, and after a failure focus belongs here for the retry.
+ */
+function ConfirmButton({ label, describedBy }: { label: string; describedBy?: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <Button
+      type="submit"
+      variant="primary"
+      size="sm"
+      aria-disabled={pending || undefined}
+      aria-describedby={describedBy}
+    >
+      {label}
+    </Button>
+  );
+}
 
 /**
  * A two-step button for something that cannot be undone from the page: rotating an invite link,
@@ -61,18 +88,28 @@ export function ConfirmSubmit({
     setStep("returned");
   }
 
+  function fail(text: string) {
+    setMessage(text);
+    setFailures((count) => count + 1);
+  }
+
   async function confirm(formData: FormData) {
     // A second press while the first is in flight is dropped, not queued behind it.
     if (inFlight.current) return;
     inFlight.current = true;
-    // Cleared first, so the same sentence twice in a row is still announced twice.
-    setMessage(null);
-    const outcome = await action(formData).finally(() => {
+    let outcome: ConfirmOutcome | void;
+    try {
+      outcome = await action(formData);
+    } catch (error) {
+      // Next's redirect and not-found signals carry a digest and must reach the router.
+      if (isFrameworkSignal(error)) throw error;
+      fail(UNEXPECTED);
+      return;
+    } finally {
       inFlight.current = false;
-    });
+    }
     if (outcome && !outcome.ok) {
-      setMessage(outcome.message);
-      setFailures((count) => count + 1);
+      fail(outcome.message);
       return;
     }
     close();
@@ -99,21 +136,15 @@ export function ConfirmSubmit({
       <form action={confirm} className="flex flex-col gap-2">
         <p className="text-sm text-ink-1">{warning}</p>
         <div className="flex flex-wrap gap-2">
-          <Button
-            type="submit"
-            variant="primary"
-            size="sm"
-            aria-describedby={message ? messageId : undefined}
-          >
-            {confirmLabel}
-          </Button>
+          <ConfirmButton label={confirmLabel} describedBy={message ? messageId : undefined} />
           <Button data-focus-target variant="ghost" size="sm" onClick={close}>
             Cancel
           </Button>
         </div>
         {/* Always rendered: a region that appears with its text already in it is often not read. */}
         <p id={messageId} aria-live="polite" className="text-sm text-incorrect">
-          {message}
+          {/* Keyed by the failure, so the same sentence twice in a row is a new node, read again. */}
+          {message ? <span key={failures}>{message}</span> : null}
         </p>
       </form>
     </div>

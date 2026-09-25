@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ConfirmSubmit, type ConfirmOutcome } from "./ConfirmSubmit";
@@ -89,6 +89,32 @@ describe("ConfirmSubmit", () => {
     expect(action).toHaveBeenCalledTimes(2);
     expect(await screen.findByRole("button", { name: "New link" })).toHaveFocus();
     expect(screen.queryByText(FAILED.message)).not.toBeInTheDocument();
+  });
+
+  it("drops a second press while the first is in flight, and says it is busy", async () => {
+    let finish: (outcome: ConfirmOutcome) => void = () => {};
+    const action = vi.fn(
+      () =>
+        new Promise<ConfirmOutcome>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const { user } = setup(action);
+    await confirm(user);
+    const button = screen.getByRole("button", { name: "Replace the link" });
+    expect(button).toHaveAttribute("aria-disabled", "true");
+    await user.click(button);
+    expect(action).toHaveBeenCalledTimes(1);
+    await act(async () => finish({ ok: true }));
+    expect(await screen.findByRole("button", { name: "New link" })).toHaveFocus();
+  });
+
+  it("says something plain when the action throws instead of answering", async () => {
+    const { user } = setup(vi.fn(async () => Promise.reject(new Error("socket hang up"))));
+    await confirm(user);
+    expect(await screen.findByText("That did not work. Try again.")).toBeInTheDocument();
+    expect(screen.queryByText(/socket/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Replace the link" })).toHaveFocus();
   });
 
   it("forgets an old failure when asked again after Cancel", async () => {
