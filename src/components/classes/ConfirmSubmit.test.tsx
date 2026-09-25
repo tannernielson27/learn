@@ -1,10 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { ConfirmSubmit } from "./ConfirmSubmit";
+import { ConfirmSubmit, type ConfirmOutcome } from "./ConfirmSubmit";
 
-function setup() {
-  const action = vi.fn(async () => {});
+const FAILED: ConfirmOutcome = { ok: false, message: "Could not replace the link. Try again." };
+
+function setup(action = vi.fn(async (): Promise<ConfirmOutcome | void> => {})) {
   render(
     <ConfirmSubmit
       action={action}
@@ -14,6 +15,11 @@ function setup() {
     />,
   );
   return { action, user: userEvent.setup() };
+}
+
+async function confirm(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: "New link" }));
+  await user.click(screen.getByRole("button", { name: "Replace the link" }));
 }
 
 describe("ConfirmSubmit", () => {
@@ -27,8 +33,7 @@ describe("ConfirmSubmit", () => {
 
   it("does it once confirmed", async () => {
     const { action, user } = setup();
-    await user.click(screen.getByRole("button", { name: "New link" }));
-    await user.click(screen.getByRole("button", { name: "Replace the link" }));
+    await confirm(user);
     expect(action).toHaveBeenCalledTimes(1);
   });
 
@@ -38,5 +43,60 @@ describe("ConfirmSubmit", () => {
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(action).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "New link" })).toHaveFocus();
+  });
+
+  it("closes on success and puts focus back on the first button", async () => {
+    const { user } = setup(vi.fn(async () => ({ ok: true as const })));
+    await confirm(user);
+    expect(await screen.findByRole("button", { name: "New link" })).toHaveFocus();
+    expect(screen.queryByText("The old link stops working.")).not.toBeInTheDocument();
+  });
+
+  it("still closes for an action that returns nothing", async () => {
+    const { user } = setup();
+    await confirm(user);
+    expect(await screen.findByRole("button", { name: "New link" })).toHaveFocus();
+  });
+
+  it("keeps the dialog open on a failure, says why, and keeps focus on the confirm button", async () => {
+    const { user } = setup(vi.fn(async () => FAILED));
+    await confirm(user);
+    const message = await screen.findByText(FAILED.message);
+    expect(message.closest("[aria-live]")).toHaveAttribute("aria-live", "polite");
+    expect(screen.getByText("The old link stops working.")).toBeInTheDocument();
+    const retry = screen.getByRole("button", { name: "Replace the link" });
+    expect(retry).toHaveFocus();
+    expect(retry).toHaveAccessibleDescription(FAILED.message);
+  });
+
+  it("keeps the live region in place before anything fails, so the message is announced", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: "New link" }));
+    const region = document.querySelector("[aria-live='polite']");
+    expect(region).not.toBeNull();
+    expect(region).toBeEmptyDOMElement();
+  });
+
+  it("can be retried from the keyboard, and succeeds the second time", async () => {
+    const action = vi
+      .fn<() => Promise<ConfirmOutcome>>()
+      .mockResolvedValueOnce(FAILED)
+      .mockResolvedValueOnce({ ok: true });
+    const { user } = setup(action);
+    await confirm(user);
+    await screen.findByText(FAILED.message);
+    await user.keyboard("{Enter}");
+    expect(action).toHaveBeenCalledTimes(2);
+    expect(await screen.findByRole("button", { name: "New link" })).toHaveFocus();
+    expect(screen.queryByText(FAILED.message)).not.toBeInTheDocument();
+  });
+
+  it("forgets an old failure when asked again after Cancel", async () => {
+    const { user } = setup(vi.fn(async () => FAILED));
+    await confirm(user);
+    await screen.findByText(FAILED.message);
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "New link" }));
+    expect(screen.queryByText(FAILED.message)).not.toBeInTheDocument();
   });
 });

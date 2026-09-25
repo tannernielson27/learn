@@ -156,19 +156,38 @@ describe("writes", () => {
 
   it("rotates through the database function", async () => {
     const fake = fakeRpc({ data: TOKEN, error: null });
-    expect(await rotateInvite(fake.client, CLASS_ID)).toBe(true);
+    expect(await rotateInvite(fake.client, CLASS_ID)).toEqual({ ok: true, changed: true });
     expect(fake.rpc).toHaveBeenCalledWith("rotate_class_invite", { target_class: CLASS_ID });
-    expect(await rotateInvite(fakeRpc({ error: { code: "P0002" } }).client, CLASS_ID)).toBe(false);
+  });
+
+  it("passes on the database's code when a rotation is refused, and never its text", async () => {
+    const refused = fakeRpc({ error: { code: "P0002", message: "that class does not exist" } });
+    expect(await rotateInvite(refused.client, CLASS_ID)).toEqual({ ok: false, code: "P0002" });
+    const bare = fakeRpc({ error: { message: "network" } });
+    expect(await rotateInvite(bare.client, CLASS_ID)).toEqual({ ok: false, code: "unknown" });
   });
 
   it("removes one student from one class", async () => {
     const fake = fakeQuery({ data: [{ profile_id: STUDENT }], error: null });
-    expect(await removeStudent(fake.client, CLASS_ID, STUDENT)).toBe(true);
+    expect(await removeStudent(fake.client, CLASS_ID, STUDENT)).toEqual({
+      ok: true,
+      changed: true,
+    });
     expect(fake.from).toHaveBeenCalledWith("class_members");
     expect(fake.calls).toContainEqual(["eq", ["class_id", CLASS_ID]]);
     expect(fake.calls).toContainEqual(["eq", ["profile_id", STUDENT]]);
-    expect(
-      await removeStudent(fakeQuery({ data: [], error: null }).client, CLASS_ID, STUDENT),
-    ).toBe(false);
+  });
+
+  it("tells a student already gone from a delete the database refused", async () => {
+    const gone = fakeQuery({ data: [], error: null });
+    expect(await removeStudent(gone.client, CLASS_ID, STUDENT)).toEqual({
+      ok: true,
+      changed: false,
+    });
+    const refused = fakeQuery({ data: null, error: { code: "42501", message: "denied" } });
+    expect(await removeStudent(refused.client, CLASS_ID, STUDENT)).toEqual({
+      ok: false,
+      code: "42501",
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { ConfirmSubmit } from "@/components/classes/ConfirmSubmit";
+import { ConfirmSubmit, type ConfirmSubmitProps } from "@/components/classes/ConfirmSubmit";
 
 export interface PracticeShareEntry {
   id: string;
@@ -11,7 +11,7 @@ export interface PracticeShareListProps<Entry extends PracticeShareEntry> {
   /** The classes a bank is shared with, or the banks shared with a class. */
   entries: readonly Entry[];
   /** The stop Server Function bound to one entry. */
-  stopActionFor: (id: string) => (formData: FormData) => Promise<void>;
+  stopActionFor: (id: string) => ConfirmSubmitProps["action"];
   /** A name for the Stop sharing button that says which share it stops. */
   stopLabelFor: (entry: Entry) => string;
   /** What stopping does, said before it happens: seen answers stay seen. */

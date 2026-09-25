@@ -99,6 +99,8 @@ test("a student joins a class from its invite link and the roster shows them", a
   await expect(page.getByRole("textbox", { name: "Invite link", exact: true })).not.toHaveValue(
     invite,
   );
+  // A replacement that worked closes the question (#256); a failed one would keep it open.
+  await expect(page.getByRole("button", { name: "Replace it now", exact: true })).toHaveCount(0);
   const stranger = await (await browser.newContext()).newPage();
   for (const target of [invite, "/c/not-a-token", "/c/zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"]) {
     await stranger.goto(target);

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
+import { type ConfirmedWrite, deleteWrite, failedWrite } from "./writes";
 
 type Client = SupabaseClient<Database>;
 
@@ -118,9 +119,9 @@ export async function setClassTimeZone(
 }
 
 /** A new token; the old link stops working as this returns. */
-export async function rotateInvite(client: Client, classId: string): Promise<boolean> {
+export async function rotateInvite(client: Client, classId: string): Promise<ConfirmedWrite> {
   const { error } = await client.rpc("rotate_class_invite", { target_class: classId });
-  return !error;
+  return error ? failedWrite(error) : { ok: true, changed: true };
 }
 
 /** Takes one student off one class. Their account, and later their past attempts, are kept. */
@@ -128,12 +129,12 @@ export async function removeStudent(
   client: Client,
   classId: string,
   profileId: string,
-): Promise<boolean> {
-  const { data, error } = await client
+): Promise<ConfirmedWrite> {
+  const reply = await client
     .from("class_members")
     .delete()
     .eq("class_id", classId)
     .eq("profile_id", profileId)
     .select("profile_id");
-  return !error && (data?.length ?? 0) > 0;
+  return deleteWrite(reply);
 }

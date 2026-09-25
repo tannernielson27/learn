@@ -1,5 +1,5 @@
 import { SessionQrCode } from "@/components/live/SessionQrCode";
-import { ConfirmSubmit } from "./ConfirmSubmit";
+import { ConfirmSubmit, type ConfirmSubmitProps } from "./ConfirmSubmit";
 import { CopyLinkButton } from "./CopyLinkButton";
 
 export interface InviteLinkPanelProps {
@@ -8,7 +8,7 @@ export interface InviteLinkPanelProps {
   /** The class's name, for the QR code's accessible name. */
   classTitle: string;
   /** Rotates the token, bound to this class. */
-  rotateAction: (formData: FormData) => Promise<void>;
+  rotateAction: ConfirmSubmitProps["action"];
 }
 
 /**
