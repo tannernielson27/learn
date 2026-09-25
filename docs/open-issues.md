@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-25 (Sprint 11 in progress: #264, #267, #268, #269 and #270 merged; #271 built but its push was blocked; hosted at all 36 migrations).
+Last updated: 2026-09-25 (Sprint 11 in progress: #264, #265, #267, #268, #269 and #270 merged; #283 filed; #271 built but its push was blocked; hosted at all 36 migrations).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -189,7 +189,7 @@ Sprint 11 is the last Phase 4 sprint. It covers the landing page, onboarding, em
 | #                                                           | Title                                                                                 | Gates             | Status                                                                                              |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------- | --------------------------------------------------------------------------------------------------- |
 | [#264](https://github.com/tannernielson27/learn/issues/264) | feat(onboarding): a landing page that says what LeaRN is and how to get in            | e2e               | Merged (#277); no migration                                                                         |
-| [#265](https://github.com/tannernielson27/learn/issues/265) | feat(onboarding): a first-run checklist on the author home, with a sample bank import | security, e2e     | To do                                                                                               |
+| [#265](https://github.com/tannernielson27/learn/issues/265) | feat(onboarding): a first-run checklist on the author home, with a sample bank import | security, e2e     | Merged (#282); no migration; the sample lands as drafts until #283                                  |
 | [#266](https://github.com/tannernielson27/learn/issues/266) | feat(onboarding): every empty list says what to do next                               | e2e               | To do                                                                                               |
 | [#267](https://github.com/tannernielson27/learn/issues/267) | feat(onboarding): designed not-found and error pages, and clear expired-link messages | security, e2e     | Merged (#279); no migration                                                                         |
 | [#268](https://github.com/tannernielson27/learn/issues/268) | feat(email): branded email templates with plain-text parts and a preview              | security, e2e     | Merged (#278); no migration; owner pastes the regenerated magic-link template (docs/05 §7.7)        |
@@ -200,6 +200,7 @@ Sprint 11 is the last Phase 4 sprint. It covers the landing page, onboarding, em
 | [#57](https://github.com/tannernielson27/learn/issues/57)   | chore(design): three font families against a two-family guideline                     | none              | To do; closed by #272                                                                               |
 | [#273](https://github.com/tannernielson27/learn/issues/273) | test(student): an e2e for the ranked Your steps section                               | e2e               | To do                                                                                               |
 | [#274](https://github.com/tannernielson27/learn/issues/274) | test(onboarding): a Demo 12 cold-onboarding rehearsal                                 | e2e               | To do                                                                                               |
+| [#283](https://github.com/tannernielson27/learn/issues/283) | feat(onboarding): the sample bank arrives published, ready to assign or run live      | security, db, e2e | To do; filed from #282; migration `20260926010000_sample_published` if needed; before #274          |
 
 Suggested order, in pairs (one heavier builder, one light):
 
