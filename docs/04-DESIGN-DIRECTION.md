@@ -51,6 +51,23 @@ Light-mode primary. Warm off-white paper surfaces, near-black ink, one deep clin
 
 Dark theme: same hues, flipped lightness; accent lightened for contrast. Both themes must pass WCAG AA (4.5:1 body, 3:1 UI).
 
+### Three font families: a recorded exception (#57, #272)
+
+The web performance guideline allows two font families; LeaRN loads three, on purpose. Each carries a job the other two cannot: Inter is the UI, Source Serif 4 is the reading face of EHR notes and case narratives, and JetBrains Mono sets vitals, lab values and timestamps so digits line up the way they do in a real chart. All three are in use (`font-read` and `font-mono` each appear in 39 components, including `/learn` and the case-study player), so none can be dropped without losing EHR fidelity.
+
+**Measured cost** (local production build, 2026-09-25, Next 16.3.4). The root layout loads the three with `next/font/google`, `subsets: ["latin"]` and the default `preload: true`, so every page, `/learn` and a case study included, preloads the same three latin `woff2` files. woff2 is already compressed, so the transfer size is the file size:
+
+| Family         | latin file, preloaded on every page |
+| -------------- | ----------------------------------- |
+| Inter          | 48,432 B (47.3 KiB)                 |
+| Source Serif 4 | 50,924 B (49.7 KiB)                 |
+| JetBrains Mono | 40,480 B (39.5 KiB)                 |
+| **Total**      | **139,836 B (136.6 KiB)**           |
+
+The third family therefore costs about 40 to 50 KiB per cold visit, once, and is cached after that. The other subsets (latin-ext, cyrillic, greek, vietnamese) are built but fetched only if a page uses a character from them. How it was measured: `pnpm build`, then the `<link rel="preload" as="font">` tags in the prerendered `/help` HTML (the same root layout as every route) matched against the `@font-face` rules in `.next/static/chunks/*.css` and the file sizes in `.next/static/media/`.
+
+The decision: keep all three. If the cost ever matters (a failing LCP budget on a slow phone), the first lever is `preload: false` on Source Serif 4 and JetBrains Mono, so they load only on pages that use them, not dropping a family.
+
 ## 3. Layout
 
 - **Desktop (≥1024px):** two-pane. Left 45%: EHR panel with tabs (sticky, independently scrollable). Right 55%: item. Progress bar and step indicator across the top; submit bar fixed at the bottom of the right pane.

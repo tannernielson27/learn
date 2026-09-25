@@ -19,6 +19,12 @@ export interface ConfirmSubmitProps {
   warning: string;
   /** An accessible name for the first button when `label` alone is ambiguous in a list. */
   ariaLabel?: string;
+  /**
+   * The id of an element to focus after a success, instead of the first button. For a row that
+   * the success removes from the page (#272): its button goes with it, and focus would otherwise
+   * fall to the document body. The element must be focusable, e.g. a heading with tabIndex -1.
+   */
+  focusOnSuccess?: string;
 }
 
 type Step = "idle" | "asking" | "returned";
@@ -51,7 +57,8 @@ function ConfirmButton({ label, describedBy }: { label: string; describedBy?: st
 
 /**
  * A two-step button for something that cannot be undone from the page: rotating an invite link,
- * removing a student. The first press only asks; Cancel or success puts focus back where it was.
+ * removing a student. The first press only asks; Cancel or success puts focus back where it was,
+ * or, on success, on `focusOnSuccess` when given.
  *
  * A failure keeps the question open with the reason beside it. Focus stays on the confirm button,
  * where the next useful press is a retry, and the reason is announced through a polite live region
@@ -63,19 +70,26 @@ export function ConfirmSubmit({
   confirmLabel,
   warning,
   ariaLabel,
+  focusOnSuccess,
 }: ConfirmSubmitProps) {
   const [step, setStep] = useState<Step>("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [failures, setFailures] = useState(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inFlight = useRef(false);
+  const succeeded = useRef(false);
   const messageId = useId();
 
   // Focus follows the step: to Cancel when asking, back to the first button when it is over.
   useEffect(() => {
     if (step === "idle") return;
+    if (step === "returned" && succeeded.current && focusOnSuccess) {
+      succeeded.current = false;
+      document.getElementById(focusOnSuccess)?.focus();
+      return;
+    }
     wrapperRef.current?.querySelector<HTMLButtonElement>("[data-focus-target]")?.focus();
-  }, [step]);
+  }, [step, focusOnSuccess]);
 
   // After each failure, focus is on the confirm button, ready for a retry.
   useEffect(() => {
@@ -111,6 +125,11 @@ export function ConfirmSubmit({
     if (outcome && !outcome.ok) {
       fail(outcome.message);
       return;
+    }
+    if (focusOnSuccess) {
+      // Now, as well as after the re-render: the refreshed page may drop this row before then.
+      succeeded.current = true;
+      document.getElementById(focusOnSuccess)?.focus();
     }
     close();
   }

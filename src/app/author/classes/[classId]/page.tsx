@@ -111,7 +111,8 @@ export default async function ClassPage({ params }: PageProps<"/author/classes/[
       </div>
 
       <section aria-labelledby="roster-heading" className="mb-10">
-        <h2 id="roster-heading" className="mb-3 text-lg font-medium text-ink-1">
+        {/* Focusable from script only: a confirmed remove sends focus here (#272). */}
+        <h2 id="roster-heading" tabIndex={-1} className="mb-3 text-lg font-medium text-ink-1">
           Roster
         </h2>
         {roster === null ? (
@@ -123,6 +124,7 @@ export default async function ClassPage({ params }: PageProps<"/author/classes/[
             entries={roster}
             removeActionFor={(profileId) => removeStudent.bind(null, detail.id, profileId)}
             emptyAction={{ href: "#invite-heading", label: "Go to the invite link" }}
+            focusAfterRemove="roster-heading"
           />
         )}
       </section>

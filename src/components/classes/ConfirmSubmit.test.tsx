@@ -52,6 +52,49 @@ describe("ConfirmSubmit", () => {
     expect(screen.queryByText("The old link stops working.")).not.toBeInTheDocument();
   });
 
+  it("moves focus to a named element on success, for a row that goes away (#272)", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <h2 id="roster-heading" tabIndex={-1}>
+          Roster
+        </h2>
+        <ConfirmSubmit
+          action={vi.fn(async () => ({ ok: true as const }))}
+          label="Remove"
+          confirmLabel="Remove from class"
+          warning="They lose this class."
+          focusOnSuccess="roster-heading"
+        />
+      </>,
+    );
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(screen.getByRole("button", { name: "Remove from class" }));
+    await screen.findByRole("button", { name: "Remove" });
+    expect(screen.getByRole("heading", { name: "Roster" })).toHaveFocus();
+  });
+
+  it("keeps focus on the first button after a cancel, even with a success target", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <h2 id="roster-heading" tabIndex={-1}>
+          Roster
+        </h2>
+        <ConfirmSubmit
+          action={vi.fn(async () => ({ ok: true as const }))}
+          label="Remove"
+          confirmLabel="Remove from class"
+          warning="They lose this class."
+          focusOnSuccess="roster-heading"
+        />
+      </>,
+    );
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("button", { name: "Remove" })).toHaveFocus();
+  });
+
   it("still closes for an action that returns nothing", async () => {
     const { user } = setup();
     await confirm(user);
