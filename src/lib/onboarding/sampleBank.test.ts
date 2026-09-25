@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SAMPLE_TAG } from "@/lib/ngn/fixtures";
 import { ITEM_TYPES } from "@/lib/ngn/labels";
-import { SAMPLE_BANK_NAME, sampleImport, sampleSet } from "./sampleBank";
+import { SAMPLE_BANK_NAME, sampleImport, samplePublishProblems, sampleSet } from "./sampleBank";
 
 describe("sampleSet", () => {
   it("is the seed's set: every canonical item, the Trend item and the case study", () => {
@@ -49,5 +49,42 @@ describe("sampleImport", () => {
 
   it("names the bank Sample bank", () => {
     expect(SAMPLE_BANK_NAME).toBe("Sample bank");
+  });
+});
+
+// #283: the sample arrives published, so every row in it must be one the editor would publish.
+describe("samplePublishProblems", () => {
+  it("finds none in the sample: every item and step validates and has a general rationale", () => {
+    expect(samplePublishProblems(sampleSet())).toEqual([]);
+  });
+
+  it("names an item the editor would refuse to publish", () => {
+    const { items, caseStudy } = sampleSet();
+    const [first, ...rest] = items as { rationale: object }[];
+    // Valid without a general rationale, which only the publish rule refuses.
+    const noRationale = { ...first, rationale: { ...first.rationale, general: undefined } };
+    expect(samplePublishProblems({ items: [noRationale, ...rest], caseStudy })).toEqual([
+      "items.0 cannot be published",
+    ]);
+  });
+
+  it("names an invalid item and an invalid case study", () => {
+    const { items } = sampleSet();
+    expect(
+      samplePublishProblems({ items: [{ type: "nope" }, ...items.slice(1)], caseStudy: {} }),
+    ).toEqual(["items.0 cannot be published", "the case study cannot be published"]);
+  });
+
+  it("names a case study step the editor would refuse to publish", () => {
+    const { items, caseStudy } = sampleSet();
+    const study = caseStudy as { items: { rationale: object }[] };
+    const steps = study.items.map((step, index) =>
+      index === 2
+        ? { ...step, rationale: { ...step.rationale, general: { kind: "markdown", value: " " } } }
+        : step,
+    );
+    expect(samplePublishProblems({ items, caseStudy: { ...study, items: steps } })).toEqual([
+      "caseStudy.items.2 cannot be published",
+    ]);
   });
 });

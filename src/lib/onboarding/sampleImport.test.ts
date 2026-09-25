@@ -44,14 +44,14 @@ const AUTHOR = { orgId: ORG, userId: USER };
 const ROOM = { take_rate_limit: { data: true, error: null } };
 const IMPORTED = {
   ...ROOM,
-  import_bank_content: { data: { item_ids: ["x"], case_study_id: "y" }, error: null },
+  import_sample_bank: { data: { item_ids: ["x"], case_study_id: "y" }, error: null },
 };
 
 const step = (call: Call | undefined, method: string) =>
   call?.steps.filter((entry) => entry.method === method).map((entry) => entry.args);
 
 describe("importSampleBank", () => {
-  it("makes a Sample bank in the caller's org and fills it in one import call", async () => {
+  it("makes a Sample bank in the caller's org and fills it, published, in one call", async () => {
     const fake = fakeClient(
       {
         item_banks: [
@@ -76,7 +76,9 @@ describe("importSampleBank", () => {
       [{ name: SAMPLE_BANK_NAME, org_id: ORG, created_by: USER }],
     ]);
 
-    const imports = fake.rpc.mock.calls.filter(([name]) => name === "import_bank_content");
+    // #283: one call writes and publishes the sample; the drafts-only import is not used.
+    expect(fake.rpc).not.toHaveBeenCalledWith("import_bank_content", expect.anything());
+    const imports = fake.rpc.mock.calls.filter(([name]) => name === "import_sample_bank");
     expect(imports).toHaveLength(1);
     const [, args] = imports[0] as unknown as [string, Record<string, unknown>];
     expect(args.target_bank).toBe(CREATED);
@@ -131,7 +133,7 @@ describe("importSampleBank", () => {
       ok: false,
       error: SAMPLE_IMPORT_ERRORS.failed,
     });
-    expect(fake.rpc).not.toHaveBeenCalledWith("import_bank_content", expect.anything());
+    expect(fake.rpc).not.toHaveBeenCalledWith("import_sample_bank", expect.anything());
   });
 
   it("removes the empty bank when the import is refused, so a retry is not sent to it", async () => {
@@ -143,7 +145,7 @@ describe("importSampleBank", () => {
           { data: null, error: null },
         ],
       },
-      { ...ROOM, import_bank_content: { data: null, error: { code: "54000" } } },
+      { ...ROOM, import_sample_bank: { data: null, error: { code: "54000" } } },
     );
     expect(await importSampleBank(fake.client, AUTHOR)).toEqual({
       ok: false,
@@ -155,5 +157,23 @@ describe("importSampleBank", () => {
       ["id", CREATED],
       ["org_id", ORG],
     ]);
+  });
+
+  it("says the import failed on any other refusal, and removes the empty bank", async () => {
+    const fake = fakeClient(
+      {
+        item_banks: [
+          { data: [], error: null },
+          { data: { id: CREATED }, error: null },
+          { data: null, error: null },
+        ],
+      },
+      { ...ROOM, import_sample_bank: { data: null, error: { code: "22023" } } },
+    );
+    expect(await importSampleBank(fake.client, AUTHOR)).toEqual({
+      ok: false,
+      error: SAMPLE_IMPORT_ERRORS.failed,
+    });
+    expect(step(fake.calls[2], "delete")).toHaveLength(1);
   });
 });

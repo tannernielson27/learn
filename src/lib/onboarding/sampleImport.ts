@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { importIntoBank } from "@/lib/authoring/importExport";
-import { checkRateLimit } from "@/lib/authoring/rateLimit";
-import type { Database } from "@/lib/supabase/database.types";
+import { checkRateLimit, isRateLimitedError, RATE_LIMIT_ERRORS } from "@/lib/authoring/rateLimit";
+import type { ImportRows } from "@/lib/authoring/transfer";
+import type { Database, Json } from "@/lib/supabase/database.types";
 import { SAMPLE_BANK_NAME, sampleImport } from "./sampleBank";
 
 type Client = SupabaseClient<Database>;
@@ -14,9 +14,10 @@ export type SampleImportResult =
   { ok: true; bankId: string; created: boolean } | { ok: false; error: string };
 
 /**
- * Makes "Sample bank" in the author's org and fills it through the import path (#265), or finds
- * the one the org already has. Runs as the caller: RLS limits every read and write to their own
- * org, and the org id written is the one `requireAuthor` read from their profile.
+ * Makes "Sample bank" in the author's org and fills it through the import path (#265), published
+ * and ready to assign or run live (#283), or finds the one the org already has. Runs as the caller:
+ * RLS limits every read and write to their own org, and the org id written is the one
+ * `requireAuthor` read from their profile.
  */
 export async function importSampleBank(
   client: Client,
@@ -41,7 +42,7 @@ export async function importSampleBank(
     .single();
   if (error || !bank) return { ok: false, error: SAMPLE_IMPORT_ERRORS.failed };
 
-  const written = await importIntoBank(client, bank.id, sample.rows);
+  const written = await importPublished(client, bank.id, sample.rows);
   if (!written.ok) {
     // The import writes all or nothing, so the bank is empty: remove it, or the next try would be
     // sent to an empty "Sample bank". If the removal fails too, the next try opens that bank.
@@ -49,6 +50,26 @@ export async function importSampleBank(
     return { ok: false, error: written.error };
   }
   return { ok: true, bankId: bank.id, created: true };
+}
+
+/**
+ * `import_sample_bank` writes the rows through `import_bank_content` and publishes exactly the rows
+ * that call wrote, in one transaction and for one import unit (#283). It refuses a bank that
+ * already holds anything, so nothing already in the bank or the org changes.
+ */
+async function importPublished(
+  client: Client,
+  bankId: string,
+  rows: ImportRows,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { error } = await client.rpc("import_sample_bank", {
+    target_bank: bankId,
+    new_items: rows.items as unknown as Json,
+    new_case_study: rows.caseStudy as unknown as Json,
+  });
+  if (!error) return { ok: true };
+  if (isRateLimitedError(error)) return { ok: false, error: RATE_LIMIT_ERRORS.limited };
+  return { ok: false, error: SAMPLE_IMPORT_ERRORS.failed };
 }
 
 async function findSampleBank(
