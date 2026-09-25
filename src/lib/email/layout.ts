@@ -17,35 +17,44 @@
  * use it without pulling the Resend key's module into anything.
  */
 
-/** Markup passed through unescaped. Only for placeholders written in this repo. */
-export interface TrustedHtml {
-  readonly trustedHtml: string;
+/**
+ * Markup passed through unescaped. Only for placeholders written in this repo. A class with a
+ * private field, so the type is nominal: a plain `{ trustedHtml: someString }` does not type-check
+ * as one, and the only way to make one is to call `trustedHtml()` where a reviewer can see it.
+ */
+export class TrustedHtml {
+  readonly #brand = true;
+  constructor(readonly trustedHtml: string) {}
+  /** Keeps the private brand from being reported as unused. */
+  get isTrusted(): boolean {
+    return this.#brand;
+  }
 }
 
 export function trustedHtml(markup: string): TrustedHtml {
-  return { trustedHtml: markup };
+  return new TrustedHtml(markup);
 }
 
 export type EmailText = string | TrustedHtml;
 
 export interface EmailAction {
-  label: string;
-  href: EmailText;
+  readonly label: string;
+  readonly href: EmailText;
   /** The link as visible text under the button. Defaults to `href`. */
-  text?: EmailText;
+  readonly text?: EmailText;
 }
 
 export interface EmailLayout {
   /** The document title; also what some clients show as the preview heading. */
-  title: string;
-  heading: EmailText;
+  readonly title: string;
+  readonly heading: EmailText;
   /** Above the button. */
-  paragraphs: readonly EmailText[];
-  action: EmailAction;
+  readonly paragraphs: readonly EmailText[];
+  readonly action: EmailAction;
   /** Smaller print under the button and the visible link. */
-  notes?: readonly EmailText[];
+  readonly notes?: readonly EmailText[];
   /** Under the card: why this person got the email. */
-  footer: string;
+  readonly footer: string;
 }
 
 /** System fonts only. Single quotes, because it sits inside a double-quoted style attribute. */
@@ -76,14 +85,27 @@ export function escapeHtml(value: string): string {
 }
 
 function markup(value: EmailText): string {
-  return typeof value === "string" ? escapeHtml(value) : value.trustedHtml;
+  // String() so that anything else that reaches here at runtime is escaped rather than trusted.
+  return value instanceof TrustedHtml ? value.trustedHtml : escapeHtml(String(value));
+}
+
+/**
+ * The link, escaped for an attribute. A plain string must be a web address: a `javascript:` or
+ * `data:` link in a mail is never something LeaRN meant to send, so it throws instead.
+ */
+function hrefOf(action: EmailAction): string {
+  if (action.href instanceof TrustedHtml) return action.href.trustedHtml;
+  if (!/^https?:\/\//i.test(action.href)) {
+    throw new Error("An email link must start with https:// or http://.");
+  }
+  return escapeHtml(action.href);
 }
 
 function button(action: EmailAction): string {
   return [
     '<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>',
     `<td style="border-radius: 6px; background-color: ${C.accent}">`,
-    `<a href="${markup(action.href)}" style="display: inline-block; padding: 12px 24px; ${FONT}; font-size: 16px; font-weight: 700; color: ${C.onAccent}; text-decoration: none; border-radius: 6px">${escapeHtml(action.label)}</a>`,
+    `<a href="${hrefOf(action)}" style="display: inline-block; padding: 12px 24px; ${FONT}; font-size: 16px; font-weight: 700; color: ${C.onAccent}; text-decoration: none; border-radius: 6px">${escapeHtml(action.label)}</a>`,
     "</td></tr></table>",
   ].join("\n");
 }
@@ -91,7 +113,7 @@ function button(action: EmailAction): string {
 function visibleLink(action: EmailAction): string {
   return (
     `<p style="margin: 24px 0 0; font-size: 14px; color: ${C.muted}">Or copy this link into your browser:<br />` +
-    `<a href="${markup(action.href)}" style="color: ${C.accent}; text-decoration: underline; word-break: break-all">${markup(action.text ?? action.href)}</a></p>`
+    `<a href="${hrefOf(action)}" style="color: ${C.accent}; text-decoration: underline; word-break: break-all">${markup(action.text ?? action.href)}</a></p>`
   );
 }
 

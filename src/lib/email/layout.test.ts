@@ -104,6 +104,20 @@ describe("renderEmailDocument", () => {
     expect(html).toContain(">{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}</a>");
   });
 
+  it("escapes a look-alike object: only trustedHtml() skips escaping", () => {
+    const forged = { trustedHtml: "<b>typed by someone</b>" } as unknown as string;
+    const html = renderEmailDocument({ ...layout, heading: forged });
+    expect(html).not.toContain("<b>typed by someone</b>");
+  });
+
+  it("refuses a link that is not a web address", () => {
+    for (const href of ["javascript:alert(1)", "data:text/html,x", " https://x", "/relative"]) {
+      expect(() => renderEmailDocument({ ...layout, action: { label: "Go", href } })).toThrow(
+        /https:\/\//,
+      );
+    }
+  });
+
   it("carries no emoji", () => {
     expect(EMOJI.test(html)).toBe(false);
   });
