@@ -63,6 +63,7 @@ test("an instructor assigns a bank to a class and sees it listed in local time",
   await publishOpenItem(page);
   await page.getByRole("link", { name: "Back to bank" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
+  const bankUrl = page.url();
 
   // Assign sits beside Start a live session.
   await page.getByRole("link", { name: "Assign", exact: true }).click();
@@ -102,4 +103,32 @@ test("an instructor assigns a bank to a class and sees it listed in local time",
     path: `test-results/screenshots/${project}/class-assignments.png`,
     fullPage: true,
   });
+
+  // One that has not opened yet can be deleted. With the keyboard only (#288): the row goes, and
+  // focus lands on the Assignments heading rather than falling to the document body. The same bank
+  // is assigned again (nothing makes bank + class unique); only this scheduled one has a Delete.
+  await page.goto(bankUrl);
+  await page.getByRole("link", { name: "Assign", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: bankName, exact: true })).toBeVisible();
+  await page.getByLabel("Opens", { exact: true }).fill("2099-01-05T09:00");
+  await page.getByLabel("Closes", { exact: true }).fill("2099-01-06T17:00");
+  await page
+    .getByRole("combobox", { name: "Class", exact: true })
+    .selectOption({ label: className });
+  await page.getByRole("button", { name: "Assign", exact: true }).click();
+  await expect(page).toHaveURL(/\/author\/classes\/[0-9a-f-]{36}$/);
+  await expect(list.getByRole("listitem")).toHaveCount(2);
+  const remove = page.getByRole("button", { name: `Delete ${bankName}`, exact: true });
+  await remove.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(page.getByRole("button", { name: "Delete assignment", exact: true })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(list.getByRole("listitem")).toHaveCount(1);
+  await expect(remove).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Assignments", exact: true }),
+  ).toBeFocused();
+  await expectNoAxeViolations(page);
 });

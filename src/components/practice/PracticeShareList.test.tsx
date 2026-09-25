@@ -1,5 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
+import { flushSync } from "react-dom";
 import { describe, expect, it, vi } from "vitest";
 import { PracticeShareList } from "./PracticeShareList";
 
@@ -42,6 +44,38 @@ describe("PracticeShareList", () => {
     await user.click(screen.getByRole("button", { name: "Stop sharing" }));
     expect(stop).toHaveBeenCalledTimes(1);
     expect(stopActionFor).toHaveBeenCalledWith(ENTRIES[1]!.id);
+  });
+
+  it("sends focus to the given heading when a stopped share leaves the list (#288)", async () => {
+    const user = userEvent.setup();
+    function Section() {
+      const [entries, setEntries] = useState(ENTRIES);
+      return (
+        <>
+          <h2 id="practice-heading" tabIndex={-1}>
+            Practice
+          </h2>
+          <PracticeShareList
+            label="Shared for practice"
+            entries={entries}
+            stopActionFor={(id) => async () => {
+              // Like the revalidated page: the row and its button are gone before any effect.
+              flushSync(() => setEntries((current) => current.filter((entry) => entry.id !== id)));
+              return { ok: true as const };
+            }}
+            stopLabelFor={(entry) => `Stop sharing with ${entry.name}`}
+            warningFor={() => "Seen stays seen."}
+            emptyMessage="Not shared with any class."
+            focusAfterStop="practice-heading"
+          />
+        </>
+      );
+    }
+    render(<Section />);
+    await user.click(screen.getByRole("button", { name: "Stop sharing with NUR 320" }));
+    await user.click(screen.getByRole("button", { name: "Stop sharing" }));
+    expect(screen.queryByRole("button", { name: "Stop sharing with NUR 320" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Practice" })).toHaveFocus();
   });
 
   it("says when nothing is shared", () => {

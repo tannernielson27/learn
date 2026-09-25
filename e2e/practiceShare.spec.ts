@@ -111,10 +111,20 @@ test("share a bank for practice, be warned on assigning it, and stop sharing", a
   await expect(classPractice.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
   await expectNoAxeViolations(page);
   await classPractice.screenshot({ path: `${shots}/practice-stop-confirm.png` });
-  await classPractice.getByRole("button", { name: "Stop sharing", exact: true }).click();
+  // Confirmed with the keyboard too (#288): the row goes, and focus lands on the Practice heading
+  // rather than falling to the document body.
+  await page.keyboard.press("Shift+Tab");
+  await expect(
+    classPractice.getByRole("button", { name: "Stop sharing", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
   await expect(
     classPractice.getByText("No bank is shared with this class for practice.", { exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Practice", exact: true }),
+  ).toBeFocused();
+  await expectNoAxeViolations(page);
 
   // The badge goes from the bank list and the bank page, and assigning no longer warns.
   await page.goto("/author");

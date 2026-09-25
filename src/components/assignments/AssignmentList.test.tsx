@@ -1,5 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
+import { flushSync } from "react-dom";
 import { describe, expect, it, vi } from "vitest";
 import { formatInstant } from "@/lib/assignments/assignments";
 import type { AssignmentSummary } from "@/lib/supabase/assignments";
@@ -87,6 +89,35 @@ describe("AssignmentList", () => {
     expect(deleteActionFor).toHaveBeenCalledWith("a1");
     expect(screen.getByText("Edit", { exact: false })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete Cardiac bank" })).toBeInTheDocument();
+  });
+
+  it("sends focus to the given heading when a deleted assignment leaves the list (#288)", async () => {
+    const user = userEvent.setup();
+    function Section() {
+      const [entries, setEntries] = useState<readonly AssignmentSummary[]>([SCHEDULED, OPEN]);
+      return (
+        <>
+          <h2 id="assignments-heading" tabIndex={-1}>
+            Assignments
+          </h2>
+          <AssignmentList
+            assignments={entries}
+            now={NOW}
+            editActionFor={() => vi.fn(async () => ({ status: "idle" as const }))}
+            deleteActionFor={(id) => async () => {
+              // Like the revalidated page: the row and its button are gone before any effect.
+              flushSync(() => setEntries((current) => current.filter((entry) => entry.id !== id)));
+            }}
+            focusAfterDelete="assignments-heading"
+          />
+        </>
+      );
+    }
+    render(<Section />);
+    await user.click(screen.getByRole("button", { name: "Delete Cardiac bank" }));
+    await user.click(screen.getByRole("button", { name: "Delete assignment" }));
+    expect(screen.queryByRole("button", { name: "Delete Cardiac bank" })).toBeNull();
+    expect(screen.getByRole("heading", { level: 2, name: "Assignments" })).toHaveFocus();
   });
 
   it("changes only the close time of one that has opened, and cannot delete it", async () => {
