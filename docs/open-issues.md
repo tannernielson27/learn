@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-24 (#241 merged in #261 with `20260925070000_practice` applied to hosted; #244 merged in #260, #256 in #259).
+Last updated: 2026-09-24 (Sprint 10 code complete: every story merged except #178, `main` at e26e8e6, hosted at all 36 migrations; demo in `docs/sprints/S10-demo.md`).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -144,6 +144,8 @@ Phase 4 splits across two sprints. Sprint 10 covers what real students need: har
 | [#244](https://github.com/tannernielson27/learn/issues/244) | test(security): check live play and a second student on the real response bytes               | security, e2e             | Merged (#260); tests only; also fixed a `"score":` marker that could never match                |
 | [#248](https://github.com/tannernielson27/learn/issues/248) | chore(db): sweep expired rate-limit rows on a schedule                                        | security, db              | Merged (#257); `20260925050000_rate_limit_sweep` applied to hosted; job waits on pg_cron (§7.8) |
 | [#256](https://github.com/tannernielson27/learn/issues/256) | fix(authoring): show an error when a confirmed remove or stop-sharing fails                   | e2e                       | Merged (#259); no migration                                                                     |
+
+Sprint 10 is code complete: every story is merged except #178, which waits on the owner turning off Realtime "Allow public access". `main` is at e26e8e6. The demo script, owner steps, known gaps and retro are in `docs/sprints/S10-demo.md`. Milestone 10 stays open until the owner accepts the demo. Every Sprint 10 migration is applied to hosted (36 in all). The go-live owner steps are in docs/05 §7.11, and `pnpm golive:check` reports which are done.
 
 Suggested order:
 
