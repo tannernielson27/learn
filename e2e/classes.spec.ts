@@ -129,6 +129,7 @@ test("a student joins a class from its invite link and the roster shows them", a
     page.getByRole("heading", { name: "Nobody has joined yet", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Roster", exact: true })).toBeFocused();
+  await expectNoAxeViolations(page);
   await student.goto("/learn");
   await expect(student.getByText(/You are not in a class yet/)).toBeVisible();
 
