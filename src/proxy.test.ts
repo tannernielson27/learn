@@ -109,4 +109,8 @@ describe("the proxy matcher still covers the gallery", () => {
     expect(matcher).toContain("/learn/:path*");
     expect(matcher).toContain("/c/:path*");
   });
+
+  it("refreshes the session on the landing page, which reads it to pick a link (#264)", () => {
+    expect(matcher).toContain("/");
+  });
 });
