@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-24 (Sprint 10 code complete: every story merged except #178, `main` at e26e8e6, hosted at all 36 migrations; demo in `docs/sprints/S10-demo.md`).
+Last updated: 2026-09-25 (Sprint 11 kicked off: #264–#274 filed in milestone 11, #57 moved in; `main` at 4750493, hosted at all 36 migrations).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -180,6 +180,64 @@ Decisions taken at kickoff, each the conservative option; say if any should chan
 5. **Practice never counts toward a grade** and stays out of the instructor's assignment report (#241). It feeds the student's weak steps as a separate source.
 6. **Practice keys arrive one item at a time, from the server, after that item is answered** (#241). No endpoint hands out a key for an unanswered item.
 
+## S11: Onboarding + polish (milestone 11)
+
+Demo 12: an outside instructor onboards cold and runs a class without help.
+
+Sprint 11 is the last Phase 4 sprint. It covers the landing page, onboarding, empty and error states, email templates, the guides, the Sprint 10 leftovers, and a rehearsal of the cold-onboarding demo.
+
+| #                                                           | Title                                                                                 | Gates             | Status                |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------- | --------------------- |
+| [#264](https://github.com/tannernielson27/learn/issues/264) | feat(onboarding): a landing page that says what LeaRN is and how to get in            | e2e               | To do                 |
+| [#265](https://github.com/tannernielson27/learn/issues/265) | feat(onboarding): a first-run checklist on the author home, with a sample bank import | security, e2e     | To do                 |
+| [#266](https://github.com/tannernielson27/learn/issues/266) | feat(onboarding): every empty list says what to do next                               | e2e               | To do                 |
+| [#267](https://github.com/tannernielson27/learn/issues/267) | feat(onboarding): designed not-found and error pages, and clear expired-link messages | security, e2e     | To do                 |
+| [#268](https://github.com/tannernielson27/learn/issues/268) | feat(email): branded email templates with plain-text parts and a preview              | security, e2e     | To do                 |
+| [#269](https://github.com/tannernielson27/learn/issues/269) | docs(help): an instructor guide and an item-authoring guide under /help               | e2e               | To do                 |
+| [#270](https://github.com/tannernielson27/learn/issues/270) | docs: a contributor guide                                                             | none              | To do                 |
+| [#271](https://github.com/tannernielson27/learn/issues/271) | fix(student): freeze a practice run's items when it starts                            | security, db, e2e | To do                 |
+| [#272](https://github.com/tannernielson27/learn/issues/272) | chore: Sprint 10 leftovers: roster focus, Sentry bundle size, fonts                   | e2e               | To do                 |
+| [#57](https://github.com/tannernielson27/learn/issues/57)   | chore(design): three font families against a two-family guideline                     | none              | To do; closed by #272 |
+| [#273](https://github.com/tannernielson27/learn/issues/273) | test(student): an e2e for the ranked Your steps section                               | e2e               | To do                 |
+| [#274](https://github.com/tannernielson27/learn/issues/274) | test(onboarding): a Demo 12 cold-onboarding rehearsal                                 | e2e               | To do                 |
+
+Suggested order, in pairs (one heavier builder, one light):
+
+1. #264 landing, beside #270 contributor guide.
+2. #271 freeze practice (heavy: the local stack for pgTAP), beside #268 email templates.
+3. #267 error states, beside #269 guides.
+4. #265 onboarding, beside #273 the Your steps e2e.
+5. #266 empty states, beside #272 leftovers (heavy: a local `next build` for the Sentry measurement).
+6. #274 the rehearsal, alone and last, since it walks the landing page, onboarding and empty states.
+
+Parallelization map. Never build two stories at once that edit the same page:
+
+- **Author home** (`src/app/author/page.tsx`, `BankList`): #265 and #266. #266 goes after #265.
+- **Student home** (`src/app/learn/page.tsx`): #266 only. #273 seeds data and adds a spec but does not edit the page. #271 edits the practice page and route, not the home.
+- **Class page** (`src/app/author/classes/[classId]/`): #266 (roster empty state) and #272 (roster focus). #272 goes after #266.
+- **Root layout** (`src/app/layout.tsx`): #272 (fonts). #267 adds `not-found.tsx` and `error.tsx` beside it but must not edit the layout.
+- **Author layout** (`src/app/author/layout.tsx`): #269 (the Help link). No other story touches it.
+- **Sign-in and invite pages**: #267 only. #264 and #274 link to them without editing them.
+- **Gallery**: #268 adds a preview route with no nav entry. #269 only reads `e2e/__screenshots__`.
+- **ci.yml e2e list**: most stories add a spec. The orchestrator resolves it at merge; keep both lines.
+
+Migrations, given out ahead of time in merge order:
+
+- `20260926000000_practice_run_items` (#271).
+- `20260926010000_*`, reserved for any story that turns out to need one; the orchestrator names it at merge.
+
+Decisions taken at kickoff, each the conservative option; say if any should change:
+
+1. **The landing page has no sign-up, pricing, tracking or contact form** (#264). It explains the product and links to Sign in and Join a live session, because sign-up is invite-only.
+2. **Onboarding state is derived, and dismissal is a cookie** (#265). The three steps read the org's own data on each load, so nothing new is stored. Hiding the checklist lasts per browser, with no migration.
+3. **The sample bank comes from the same fixtures as the seed** (#265), through the existing import and validation path, labeled "Sample". A second import links to the existing "Sample bank" instead of copying it again.
+4. **Error pages never show an error's message or stack** (#267), only its digest as a reference.
+5. **Emails carry no remote images, fonts or tracking pixels** (#268), and each app-sent message keeps a plain-text part. The preview route sits behind the gallery gate, so it is closed on production.
+6. **Help is public, static and in the app** (#269), under `/help`. Its screenshots are copies of the committed Playwright baselines, so no page renders an item's key for the guide.
+7. **A practice run freezes item versions at start** (#271). Runs started before the migration keep reading the bank's current items. Stopping a share still closes every run at once.
+8. **The three font families stay, with the exception written down** (#272, #57), unless one proves unused. The Sentry bundle delta is measured with a local build and a dummy DSN, since previews have no DSN until the owner step.
+9. **The rehearsal walks a live session, not a take-home window** (#274), so it adds no real-time wait to the auth e2e job.
+
 ## No milestone
 
 | #                                                           | Title                                                                                     | Area               | Status                                                             |
@@ -202,7 +260,6 @@ Decisions taken at kickoff, each the conservative option; say if any should chan
 | [#50](https://github.com/tannernielson27/learn/issues/50)   | chore(types): stop casting away the optionality of answerKey and rationale                | player             | Merged (#169)                                                      |
 | [#54](https://github.com/tannernielson27/learn/issues/54)   | perf(player): load item renderers per type                                                | player             | Merged (#170)                                                      |
 | [#55](https://github.com/tannernielson27/learn/issues/55)   | perf(player): Submit and drop interactions over 200 ms at 4x CPU                          | player             | Merged (#171)                                                      |
-| [#57](https://github.com/tannernielson27/learn/issues/57)   | chore(design): three font families against a two-family guideline                         | player             | To do                                                              |
 | [#58](https://github.com/tannernielson27/learn/issues/58)   | fix(bowtie): a pair's second slot cannot hold a choice alone                              | a11y               | Merged (#167)                                                      |
 | [#59](https://github.com/tannernielson27/learn/issues/59)   | fix(a11y): a disabled Submit cannot say why                                               | a11y               | Merged (#166)                                                      |
 | [#60](https://github.com/tannernielson27/learn/issues/60)   | fix(a11y): smaller screen-reader findings                                                 | a11y               | Merged (#168)                                                      |
