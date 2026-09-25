@@ -1,5 +1,7 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
+import { flushSync } from "react-dom";
 import { describe, expect, it, vi } from "vitest";
 import { ConfirmSubmit, type ConfirmOutcome } from "./ConfirmSubmit";
 
@@ -50,6 +52,98 @@ describe("ConfirmSubmit", () => {
     await confirm(user);
     expect(await screen.findByRole("button", { name: "New link" })).toHaveFocus();
     expect(screen.queryByText("The old link stops working.")).not.toBeInTheDocument();
+  });
+
+  it("moves focus to a named element on success, for a row that goes away (#272)", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <h2 id="roster-heading" tabIndex={-1}>
+          Roster
+        </h2>
+        <ConfirmSubmit
+          action={vi.fn(async () => ({ ok: true as const }))}
+          label="Remove"
+          confirmLabel="Remove from class"
+          warning="They lose this class."
+          focusOnSuccess="roster-heading"
+        />
+      </>,
+    );
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(screen.getByRole("button", { name: "Remove from class" }));
+    await screen.findByRole("button", { name: "Remove" });
+    expect(screen.getByRole("heading", { name: "Roster" })).toHaveFocus();
+  });
+
+  it("still reaches the heading when the success removes this row before it re-renders", async () => {
+    const user = userEvent.setup();
+    function Row() {
+      const [present, setPresent] = useState(true);
+      return (
+        <>
+          <h2 id="roster-heading" tabIndex={-1}>
+            Roster
+          </h2>
+          {present ? (
+            <ConfirmSubmit
+              action={async () => {
+                // Like a revalidated page that drops the row before this instance re-renders:
+                // the unmount is committed now, so no effect of this component runs after it.
+                flushSync(() => setPresent(false));
+                return { ok: true as const };
+              }}
+              label="Remove"
+              confirmLabel="Remove from class"
+              warning="They lose this class."
+              focusOnSuccess="roster-heading"
+            />
+          ) : null}
+        </>
+      );
+    }
+    render(<Row />);
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(screen.getByRole("button", { name: "Remove from class" }));
+    expect(screen.queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Roster" })).toHaveFocus();
+  });
+
+  it("falls back to the first button when the success target is not on the page", async () => {
+    const user = userEvent.setup();
+    render(
+      <ConfirmSubmit
+        action={vi.fn(async () => ({ ok: true as const }))}
+        label="Remove"
+        confirmLabel="Remove from class"
+        warning="They lose this class."
+        focusOnSuccess="no-such-heading"
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(screen.getByRole("button", { name: "Remove from class" }));
+    expect(await screen.findByRole("button", { name: "Remove" })).toHaveFocus();
+  });
+
+  it("keeps focus on the first button after a cancel, even with a success target", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <h2 id="roster-heading" tabIndex={-1}>
+          Roster
+        </h2>
+        <ConfirmSubmit
+          action={vi.fn(async () => ({ ok: true as const }))}
+          label="Remove"
+          confirmLabel="Remove from class"
+          warning="They lose this class."
+          focusOnSuccess="roster-heading"
+        />
+      </>,
+    );
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("button", { name: "Remove" })).toHaveFocus();
   });
 
   it("still closes for an action that returns nothing", async () => {

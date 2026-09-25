@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ClassRoster } from "./ClassRoster";
 
@@ -35,6 +36,26 @@ describe("ClassRoster", () => {
     const items = screen.getAllByRole("listitem");
     expect(items[0]).not.toHaveTextContent("Has not signed in yet");
     expect(items[1]).toHaveTextContent("Has not signed in yet");
+  });
+
+  it("sends focus to the given heading after a confirmed remove (#272)", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <h2 id="roster-heading" tabIndex={-1}>
+          Roster
+        </h2>
+        <ClassRoster
+          entries={entries}
+          removeActionFor={() => async () => ({ ok: true as const })}
+          focusAfterRemove="roster-heading"
+        />
+      </>,
+    );
+    await user.click(screen.getByRole("button", { name: "Remove ana@school.edu" }));
+    await user.click(screen.getByRole("button", { name: "Remove from class" }));
+    await screen.findByRole("button", { name: "Remove ana@school.edu" });
+    expect(screen.getByRole("heading", { name: "Roster" })).toHaveFocus();
   });
 
   it("says when nobody has joined", () => {

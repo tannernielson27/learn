@@ -359,6 +359,16 @@ The app reports browser and server errors to Sentry on the free tier. It is off 
 6. **[ ] Check it on a preview.** Open `<preview URL>/gallery/sentry-check` (it is closed on production, like the rest of the gallery). Press **Throw in the browser**, then open **Throw on the server**. Within a minute both errors appear in Sentry → Issues, filtered to the `preview` environment. Open each one: the message must read `fake student [email] opened /c/[redacted] with code [code]`, and the event must have no User, no Cookies and no request body. If the fake email, token or code appears in full, stop and report it; the scrub did not run.
 7. **[ ] Set the alert rules.** Project → Alerts → Create Alert → Issues: "A new issue is created" → email the owner, environment `production`. Add a second: "The issue is seen more than 10 times in 1 hour" → email. The free tier allows 5,000 errors a month; Settings → Spike Protection stays on so one bad deploy cannot use them up.
 
+**What it costs the browser** (measured for #272 on 2026-09-25, Next 16.3.4 with Turbopack). A preview has no DSN until step 5, so this was measured with two local production builds of the same commit: one with no Sentry variables, one with `NEXT_PUBLIC_SENTRY_DSN` and `SENTRY_DSN` set to a dummy DSN (`https://<32 hex>@o0.ingest.us.sentry.io/0`) and no upload credentials. Next 16 no longer prints a First Load JS column, so first-load JS is counted from the build: `rootMainFiles` in `.next/build-manifest.json` plus every chunk in the route's `entryJSFiles` (layouts, page, error and not-found boundaries) in `.next/server/app/<route>/page_client-reference-manifest.js`, deduplicated, each gzipped at level 9.
+
+| Route               | First-load JS, no DSN (gzip) | With a DSN (gzip) | Delta            |
+| ------------------- | ---------------------------- | ----------------- | ---------------- |
+| `/`                 | 157,823 B                    | 157,983 B         | +160 B (+78 raw) |
+| `/learn`            | 152,861 B                    | 153,035 B         | +174 B (+78 raw) |
+| `/play/[sessionId]` | 239,947 B                    | 240,124 B         | +177 B (+78 raw) |
+
+First load barely moves, because `instrumentation-client.ts` only starts a dynamic import; the delta is the DSN string and the build-time flags. The SDK itself is one lazy chunk, fetched after hydration and only when a DSN is set: **50,798 B gzip (150,697 B raw)** with the DSN build. The no-DSN build still emits that chunk (72,521 B gzip, larger because the Sentry build plugin's tree-shaking flags are not applied), but no page requests it.
+
 **Turning it off:** delete `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN` from the scope and redeploy.
 
 ### 7.10 Nightly encrypted backup, and restoring it (#236)

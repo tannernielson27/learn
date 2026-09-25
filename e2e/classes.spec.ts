@@ -117,11 +117,19 @@ test("a student joins a class from its invite link and the roster shows them", a
   await expectNoAxeViolations(stranger);
 
   // Removing the student takes the class off their home; the account stays.
-  await page.getByRole("button", { name: `Remove ${email}`, exact: true }).click();
-  await page.getByRole("button", { name: "Remove from class", exact: true }).click();
+  // With the keyboard only (#272): the row goes away, and focus lands on the Roster heading
+  // rather than falling to the document body.
+  await page.getByRole("button", { name: `Remove ${email}`, exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(page.getByRole("button", { name: "Remove from class", exact: true })).toBeFocused();
+  await page.keyboard.press("Enter");
   await expect(
     page.getByRole("heading", { name: "Nobody has joined yet", exact: true }),
   ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Roster", exact: true })).toBeFocused();
+  await expectNoAxeViolations(page);
   await student.goto("/learn");
   await expect(student.getByText(/You are not in a class yet/)).toBeVisible();
 

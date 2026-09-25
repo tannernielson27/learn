@@ -8,10 +8,20 @@ export interface ClassRosterProps {
   removeActionFor: (profileId: string) => ConfirmSubmitProps["action"];
   /** With nobody on it yet: where the invite link is, on the class page. */
   emptyAction?: EmptyStateAction;
+  /**
+   * The id of the focusable heading above the roster. A confirmed remove takes the row and its
+   * button off the page, so focus goes here rather than to the document body (#272).
+   */
+  focusAfterRemove?: string;
 }
 
 /** Who has joined a class, and a way to take someone off it. */
-export function ClassRoster({ entries, removeActionFor, emptyAction }: ClassRosterProps) {
+export function ClassRoster({
+  entries,
+  removeActionFor,
+  emptyAction,
+  focusAfterRemove,
+}: ClassRosterProps) {
   if (entries.length === 0) {
     // Under the class page's Roster h2.
     return (
@@ -46,6 +56,7 @@ export function ClassRoster({ entries, removeActionFor, emptyAction }: ClassRost
             ariaLabel={`Remove ${entry.email}`}
             confirmLabel="Remove from class"
             warning="They lose this class. Their account is kept."
+            focusOnSuccess={focusAfterRemove}
           />
         </li>
       ))}
