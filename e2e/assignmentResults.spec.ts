@@ -156,7 +156,9 @@ test("a student sees nothing before the close, then their score, keys and ration
   await other.page.goto(bankPath);
   await other.page.getByRole("button", { name: "Start", exact: true }).click();
   await expect(other.page.getByTestId("answered-count")).toBeVisible({ timeout: 15_000 });
-  const [classmateAttempt] = await attemptsAt();
+  const started = await attemptsAt();
+  expect(started, "only the classmate has started").toHaveLength(1);
+  const [classmateAttempt] = started;
   if (!classmateAttempt) throw new Error("the classmate's attempt was not started");
 
   // The bank: the MC right, and the SATA with one of its three right options missed.
@@ -175,7 +177,9 @@ test("a student sees nothing before the close, then their score, keys and ration
 
   // #244: student A's attempt, and a display name of their own, in the database: the markers
   // student B's pages must never carry.
-  const mine = (await attemptsAt()).find((row) => row.id !== classmateAttempt.id);
+  const both = await attemptsAt();
+  expect(both, "one attempt each for A and the classmate").toHaveLength(2);
+  const mine = both.find((row) => row.id !== classmateAttempt.id);
   if (!mine) throw new Error("student A's attempt is not in the database");
   const displayName = `Ada Marker ${project} ${Date.now() % 100_000}`;
   await updateAsAdmin(request, "profiles", `id=eq.${mine.student_id}`, {
@@ -204,12 +208,15 @@ test("a student sees nothing before the close, then their score, keys and ration
   // is in the database, so the probes below can see them where they exist.
   expect(await bytesOf(page.context(), `/author/items/${MC_ITEM}`)).toContain(MC_RATIONALE);
   expect(await bytesOf(page.context(), `/author/items/${CASE_STEP_6}`)).toContain(STEP_6_RATIONALE);
-  const [scored] = await selectAsAdmin<{ score: number | null }>(
+  // Student A's submitted attempt by its id: the classmate's open attempt on the same assignment
+  // has no score yet, and an unordered read by assignment alone could return it first (#244).
+  const scoredRows = await selectAsAdmin<{ score: number | null }>(
     request,
     "assignment_attempts",
-    `assignment_id=eq.${bank.id}&select=score`,
+    `id=eq.${mine.id}&student_id=eq.${mine.student_id}&submitted_at=not.is.null&select=score`,
   );
-  expect(scored?.score).not.toBeNull();
+  expect(scoredRows).toHaveLength(1);
+  expect(scoredRows[0]?.score).not.toBeNull();
 
   await student.goto(bankResults);
   await expect(student.getByTestId("results-pending")).toHaveText(
