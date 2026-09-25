@@ -131,9 +131,18 @@ export function Landing({ entry }: LandingProps) {
         </section>
       </div>
 
-      <p className="mt-16 text-sm text-ink-2">
-        Every patient and chart shown in LeaRN is fictional.
-      </p>
+      <div className="mt-16 flex flex-col gap-2 text-sm text-ink-2 sm:flex-row sm:items-center sm:justify-between">
+        <p>Every patient and chart shown in LeaRN is fictional.</p>
+        {/* #269: the instructor and item guides are public. */}
+        <nav aria-label="Footer">
+          <Link
+            href="/help"
+            className="tap-target inline-flex items-center text-accent-ink underline underline-offset-4"
+          >
+            Help
+          </Link>
+        </nav>
+      </div>
     </main>
   );
 }

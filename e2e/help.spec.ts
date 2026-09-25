@@ -75,6 +75,15 @@ test("a reader finds how a drop-down rationale item is scored", async ({ page })
   await expect(section).toContainText("Anchor wrong: 0.");
 });
 
+test("the landing page's footer links to help", async ({ page }) => {
+  await page.goto("/");
+  await page
+    .getByRole("navigation", { name: "Footer" })
+    .getByRole("link", { name: "Help", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/help$/);
+});
+
 test("the author nav links to help", async ({ page, request }, testInfo) => {
   test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
   await signInAsNewAuthor(page, request, `help-${testInfo.project.name}`);
