@@ -122,6 +122,9 @@ test("Your steps ranks the weakest step first and counts assignments and practic
   browser,
   request,
 }, testInfo) => {
+  // A data check with a real wait: the ranking does not depend on the viewport, and the auth e2e
+  // job's time is short, so it runs on the phone only.
+  test.skip(testInfo.project.name !== "phone-375", "a data check: one viewport is enough");
   test.setTimeout(120_000);
   const project = testInfo.project.name;
   const shot = (name: string) => `test-results/screenshots/${project}/${name}.png`;
