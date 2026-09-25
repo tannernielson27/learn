@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
-import { withSentryConfig } from "@sentry/nextjs";
+// #289: not from "@sentry/nextjs", whose copy is deprecated (it warns once per build and goes in v11).
+import { withSentryConfig } from "@sentry/nextjs/config";
 import { sentryBuildEnabled, sentryBuildOptions } from "./src/lib/observability/buildOptions";
 
 const nextConfig: NextConfig = {/* config options here */};
