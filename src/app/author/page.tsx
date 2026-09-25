@@ -35,9 +35,6 @@ export default async function AuthorHomePage() {
 
   return (
     <>
-      {showChecklist(steps, hidden) ? (
-        <GetStarted steps={steps} importSample={importSample} hide={hideGetStarted} />
-      ) : null}
       <div className="mb-6 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
         <h1 className="font-read text-3xl text-ink-1">Item banks</h1>
         <nav aria-label="More" className="flex flex-wrap gap-x-4">
@@ -55,6 +52,10 @@ export default async function AuthorHomePage() {
           </Link>
         </nav>
       </div>
+      {/* After the h1, so the heading outline reads Item banks, then Get started. */}
+      {showChecklist(steps, hidden) ? (
+        <GetStarted steps={steps} importSample={importSample} hide={hideGetStarted} />
+      ) : null}
       <BankList banks={banks} sharedWith={sharedWith} />
       <section aria-labelledby="new-bank-heading" className="mt-10 border-t border-line pt-6">
         <h2 id="new-bank-heading" className="mb-3 text-lg font-medium text-ink-1">
