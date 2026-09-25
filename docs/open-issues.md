@@ -200,7 +200,7 @@ Sprint 11 is the last Phase 4 sprint. It covers the landing page, onboarding, em
 | [#57](https://github.com/tannernielson27/learn/issues/57)   | chore(design): three font families against a two-family guideline                     | none              | To do; closed by #272                                                                               |
 | [#273](https://github.com/tannernielson27/learn/issues/273) | test(student): an e2e for the ranked Your steps section                               | e2e               | Merged (#281); test-only; runs on phone-375 only                                                    |
 | [#274](https://github.com/tannernielson27/learn/issues/274) | test(onboarding): a Demo 12 cold-onboarding rehearsal                                 | e2e               | To do                                                                                               |
-| [#283](https://github.com/tannernielson27/learn/issues/283) | feat(onboarding): the sample bank arrives published, ready to assign or run live      | security, db, e2e | To do; filed from #282; migration `20260926010000_sample_published` if needed; before #274          |
+| [#283](https://github.com/tannernielson27/learn/issues/283) | feat(onboarding): the sample bank arrives published, ready to assign or run live      | security, db, e2e | Merged (#286); migration `20260926010000_sample_published`; owner pushes it                         |
 
 Suggested order, in pairs (one heavier builder, one light):
 
@@ -281,6 +281,7 @@ These block the live site rather than a single issue:
 - **Choose the production plan at go-live**: Pro, or free plus the nightly dump (owner decision 2026-09-24).
 - **Decide #159**: whether to accept that four cheap IPs can hold one author's sign-in closed indefinitely, or pay for one of the mitigations listed there.
 - **Sprint 11: paste the regenerated magic-link template** (#268, merged in #278). `supabase/templates/magic_link.html` is now generated from `src/lib/email/templates/magicLink.ts`. Paste it into Authentication, Emails, Magic Link in every hosted project (docs/05 §7.7). The link is unchanged, so the old copy keeps working until then.
+- **Sprint 11: push the hosted migrations** `20260926000000_practice_run_items` (#284) and `20260926010000_sample_published` (#286): `pnpm exec supabase db push --dry-run`, then `pnpm exec supabase db push --yes`. The permission classifier refused the orchestrator's push as a production deploy. Until they are applied, student practice and the sample import fail closed on the live site.
 - Done 2026-09-22: Vercel Production and Preview both carry `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` and `SUPABASE_JWT_SIGNING_KEY`; Production also has `DEMO_ACCOUNT_*`. The hosted demo user exists as an instructor in the seeded LeaRN org.
 - Supabase Authentication, URL Configuration: Site URL and redirect URLs for production, previews and localhost.
 - Supabase magic-link template: paste `supabase/templates/magic_link.html`. Email sign-in still needs it; the demo account (#115) works without it.
