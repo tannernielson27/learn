@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type BrowserContext, type Page, type Route } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+import { actionBytes, bytesOf, expectKeyless } from "./bytes";
 import { latestSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor } from "./signIn";
 
@@ -15,58 +16,15 @@ const SAMPLE_CASE_STUDY = "00000000-0000-4000-8000-000000000003";
 const MC_ITEM = "00000000-0000-4000-8000-000000000100";
 const CASE_STEP_6 = "00000000-0000-4000-8000-000000000120";
 
-// What only a key, a rationale or a score would put in a response. The rationales are the seeded
-// items' own words, so the control below can find them where they are allowed to be.
+// The seeded items' own rationales, so the control below can find them where they are allowed to
+// be. The key and score markers are e2e/bytes.ts's.
 const MC_RATIONALE = "Rapid weight gain with orthopnea suggests fluid overload.";
 const MR_RATIONALE = "Tachypnea, hypoxemia, and new confusion indicate worsening gas exchange";
 const STEP_6_RATIONALE = "Oxygenation and respiratory rate have improved";
-const KEY_MARKERS = ["answerKey", "correctOptionId", "correctOptionIds", '"score":', "max_score"];
 
 async function expectNoAxeViolations(page: Page): Promise<void> {
   const axe = await new AxeBuilder({ page }).analyze();
   expect(axe.violations).toEqual([]);
-}
-
-/** The bytes a page's own GET returns to this browser: the HTML and its inline Flight payload. */
-async function bytesOf(context: BrowserContext, path: string): Promise<string> {
-  const response = await context.request.get(path);
-  expect(response.ok()).toBe(true);
-  return response.text();
-}
-
-/**
- * The raw response of the Server Action a click sends (the POST carrying Next-Action): the Flight
- * stream Next replays into the page, which a leak could ride without ever reaching a plain GET.
- * Captured by routing the request through the test and handing the page the same bytes, because
- * Chromium drops a streamed body before `response.text()` can read it.
- */
-async function actionBytes(page: Page, act: () => Promise<void>): Promise<string> {
-  let captured: string | undefined;
-  const handler = async (route: Route) => {
-    const request = route.request();
-    if (request.method() !== "POST" || !("next-action" in request.headers())) {
-      await route.fallback();
-      return;
-    }
-    const response = await route.fetch();
-    const body = await response.text();
-    captured = body;
-    await route.fulfill({ response, body });
-  };
-  await page.route("**/*", handler);
-  try {
-    await act();
-    await expect.poll(() => captured !== undefined, { timeout: 15_000 }).toBe(true);
-  } finally {
-    await page.unroute("**/*", handler);
-  }
-  expect(captured?.length ?? 0).toBeGreaterThan(0);
-  return captured ?? "";
-}
-
-function expectKeyless(bytes: string, rationales: readonly string[]): void {
-  for (const text of rationales) expect(bytes).not.toContain(text);
-  for (const marker of KEY_MARKERS) expect(bytes).not.toContain(marker);
 }
 
 async function assign(
