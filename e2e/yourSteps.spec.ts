@@ -19,12 +19,15 @@ import {
 // marks are written through the same functions the app uses: the student's own start and save
 // (with their token), then the service role's record, which takes the score. The database refuses
 // an assignment created already closed (private.snapshot_assignment) and refuses the service role
-// any direct write to attempts, so the assignment gets a window of seconds, created before the
-// student joins; the join and the seeding run inside it, and only the remainder is waited out.
+// any direct write to attempts, so the assignment gets a window of seconds, started once the student
+// has joined (the email round trip stays outside it); the seeding runs inside it and the rest is
+// waited out.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
 
-/** Long enough for the student to join and the attempt to be seeded; short enough to wait out. */
+/** Long enough to seed the attempt and check the page before the close; short enough to wait out. */
 const WINDOW_MS = 25_000;
+/** The open-state check must finish this long before the close, as in studentHistory.spec.ts. */
+const OPEN_MARGIN_MS = 10_000;
 /** #208's two seconds of grace after the close, and a second for clocks. */
 const GRACE_MS = 3_000;
 
@@ -96,6 +99,14 @@ function itemRow(orgId: string, bankId: string, step: Step, index: number) {
   };
 }
 
+/** A function's one row, refused if there is none or it carries a refusal. */
+function accepted<T extends { refusal: string | null }>(rows: readonly T[], fn: string): T {
+  const [row] = rows;
+  if (!row) throw new Error(`${fn} returned no row`);
+  if (row.refusal !== null) throw new Error(`${fn} refused: ${row.refusal}`);
+  return row;
+}
+
 async function createClass(page: Page, name: string): Promise<{ id: string; invite: string }> {
   await page.getByRole("link", { name: "Classes", exact: true }).click();
   await page.getByRole("textbox", { name: "Class name", exact: true }).fill(name);
@@ -131,32 +142,21 @@ test("Your steps ranks the weakest step first and counts assignments and practic
     org_id: orgId,
     name: `Steps e2e ${project} ${Date.now()}`,
   });
-  const items = await insertManyAsAdmin<{ id: string }>(
+  const items = await insertManyAsAdmin<{ id: string; content: { id: string } }>(
     request,
     "items",
     SEEDS.map((seed, index) => itemRow(orgId, bank.id, seed.step, index)),
   );
-  const seeded = SEEDS.map((seed, index) => ({
-    ...seed,
-    itemId: (items[index] as { id: string }).id,
-  }));
+  // Matched on the content id each row carries, not on the order the rows came back in.
+  const seeded = SEEDS.map((seed, index) => {
+    const item = items.find((row) => row.content.id === `steps_e2e_${index}`);
+    if (!item) throw new Error(`item ${index} was not inserted`);
+    return { ...seed, itemId: item.id };
+  });
   await insertAsAdmin(request, "bank_practice_shares", {
     org_id: orgId,
     bank_id: bank.id,
     class_id: klass.id,
-  });
-
-  // The assignment's window starts now, so the join below runs inside it.
-  const closesAt = Date.now() + WINDOW_MS;
-  const assignment = await insertAsAdmin<{ id: string }>(request, "assignments", {
-    org_id: orgId,
-    class_id: klass.id,
-    bank_id: bank.id,
-    title: `Steps ${project}`,
-    opens_at: new Date(Date.now() - 60_000).toISOString(),
-    closes_at: new Date(closesAt).toISOString(),
-    max_attempts: 1,
-    shuffle_options: false,
   });
 
   // A student on a phone joins from the invite link.
@@ -177,41 +177,60 @@ test("Your steps ranks the weakest step first and counts assignments and practic
   );
   if (!member) throw new Error("the student did not join");
   const studentId = member.profile_id;
+  const token = await accessTokenFor(request, studentId, email);
+
+  // The assignment's window starts now, with the student already in the class.
+  const closesAt = Date.now() + WINDOW_MS;
+  const assignment = await insertAsAdmin<{ id: string }>(request, "assignments", {
+    org_id: orgId,
+    class_id: klass.id,
+    bank_id: bank.id,
+    title: `Steps ${project}`,
+    opens_at: new Date(Date.now() - 60_000).toISOString(),
+    closes_at: new Date(closesAt).toISOString(),
+    max_attempts: 1,
+    shuffle_options: false,
+  });
 
   // The assignment: started and saved as the student, then scored by the service role.
-  const token = await accessTokenFor(request, studentId, email);
-  const [started] = await rpcAsUser<{ refusal: string | null; attempt_id: string | null }[]>(
-    request,
-    token,
-    "start_assignment_attempt",
-    { target_assignment: assignment.id },
-  );
-  expect(started?.refusal ?? null).toBeNull();
-  const attemptId = started?.attempt_id as string;
-  const answered = seeded.filter((seed) => seed.source === "assignment");
-  for (const seed of answered) {
-    const [saved] = await rpcAsUser<{ refusal: string | null }[]>(
+  const started = accepted(
+    await rpcAsUser<{ refusal: string | null; attempt_id: string | null }[]>(
       request,
       token,
-      "save_attempt_response",
-      { target_attempt: attemptId, target_item: seed.itemId, answer: { optionId: "opt_a" } },
-    );
-    expect(saved?.refusal ?? null).toBeNull();
-  }
-  const [begun] = await rpcAsUser<{ refusal: string | null; revision: number }[]>(
-    request,
-    token,
-    "begin_attempt_submission",
-    { target_attempt: attemptId },
+      "start_assignment_attempt",
+      { target_assignment: assignment.id },
+    ),
+    "start_assignment_attempt",
   );
-  expect(begun?.refusal ?? null).toBeNull();
-  const [recorded] = await rpcAsAdmin<{ refusal: string | null }[]>(
+  const attemptId = started.attempt_id;
+  if (!attemptId) throw new Error("start_assignment_attempt returned no attempt");
+  const answered = seeded.filter((seed) => seed.source === "assignment");
+  for (const seed of answered) {
+    accepted(
+      await rpcAsUser<{ refusal: string | null }[]>(request, token, "save_attempt_response", {
+        target_attempt: attemptId,
+        target_item: seed.itemId,
+        answer: { optionId: "opt_a" },
+      }),
+      "save_attempt_response",
+    );
+  }
+  const begun = accepted(
+    await rpcAsUser<{ refusal: string | null; revision: number }[]>(
+      request,
+      token,
+      "begin_attempt_submission",
+      { target_attempt: attemptId },
+    ),
+    "begin_attempt_submission",
+  );
+  const recorded = await rpcAsAdmin<{ refusal: string | null }[]>(
     request,
     "record_attempt_submission",
     {
       target_attempt: attemptId,
       student: studentId,
-      expected_revision: begun?.revision,
+      expected_revision: begun.revision,
       total: answered.reduce((sum, seed) => sum + seed.points, 0),
       possible: answered.length,
       marks: answered.map((seed) => ({
@@ -224,7 +243,7 @@ test("Your steps ranks the weakest step first and counts assignments and practic
       automatic: false,
     },
   );
-  expect(recorded?.refusal ?? null).toBeNull();
+  accepted(recorded, "record_attempt_submission");
 
   // Practice: one run, each practice item's first (and only) answer. Practice has no window.
   const [run] = await rpcAsAdmin<{ run_id: string }[]>(request, "open_practice_run", {
@@ -248,7 +267,7 @@ test("Your steps ranks the weakest step first and counts assignments and practic
 
   // If the seeding reached the close, the open-state check below would prove nothing.
   expect(Date.now(), "the window closed before the open-state check ran").toBeLessThan(
-    closesAt - 2_000,
+    closesAt - OPEN_MARGIN_MS,
   );
 
   const steps = student.getByRole("list", { name: "Your clinical judgment steps", exact: true });
