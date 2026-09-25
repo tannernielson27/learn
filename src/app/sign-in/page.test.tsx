@@ -13,7 +13,7 @@ async function renderPage(searchParams: Record<string, string>) {
   const page = await SignInPage({
     params: Promise.resolve({}),
     searchParams: Promise.resolve(searchParams),
-  } as PageProps<"/sign-in">);
+  } satisfies PageProps<"/sign-in">);
   render(page);
 }
 

@@ -60,15 +60,19 @@ export default async function ClassInvitePage({ params }: PageProps<"/c/[token]"
         {invite.status === "invalid" ? (
           <InviteUnavailable />
         ) : (
-          <>
-            {/* #267: every page someone lands on from a link opens on a focused heading. */}
-            <FocusHeading className="mb-3 font-read text-3xl text-ink-1 outline-none">
+          // #267: every page someone lands on from a link opens on a focused heading, in a region
+          // named by it, as `InviteUnavailable` does.
+          <section aria-labelledby="invite-paused-heading">
+            <FocusHeading
+              id="invite-paused-heading"
+              className="mb-3 font-read text-3xl text-ink-1 outline-none"
+            >
               {PAUSED_HEADING}
             </FocusHeading>
             <p role="alert" className="text-ink-1">
               {invite.status === "rate_limited" ? LIMITED : UNAVAILABLE}
             </p>
-          </>
+          </section>
         )}
       </Shell>
     );
