@@ -1,20 +1,26 @@
 /**
  * The two reminder emails (#212): "Week 5 is open" and "Week 5 closes tomorrow at 17:00".
  *
- * Short plain text plus a simple HTML version that follows the magic-link template's rules
- * (`supabase/templates/magic_link.html`): tables and inline styles only, light only, no emoji, no
- * scripts, no classes. The due time is in the class's time zone on a 24-hour clock with the zone's
- * short name, so "17:00 MDT" means the same thing to everyone reading it.
+ * Short plain text plus HTML in the shared LeaRN layout (`src/lib/email/layout.ts`, #268), the same
+ * one the magic-link template is generated from. The due time is in the class's time zone on a
+ * 24-hour clock with the zone's short name, so "17:00 MDT" means the same thing to everyone reading
+ * it.
  *
  * Pure: no Next, no Supabase, no environment. `now` is a parameter so "today" and "tomorrow" can be
  * tested.
  */
+import { renderEmailDocument, type EmailLayout } from "@/lib/email/layout";
 
 export type ReminderKind = "opened" | "closing_soon";
 
 export interface ReminderContent {
   kind: ReminderKind;
   title: string;
+  /**
+   * The class's name, when the caller has it. The outbox claim does not return it yet, so a sent
+   * reminder has no class line until it does; the preview shows one.
+   */
+  className?: string;
   /** ISO timestamp of the close. */
   closesAt: string;
   /** IANA zone of the class, e.g. America/Denver. */
@@ -109,15 +115,6 @@ function shorten(value: string, max: number): string {
   return value.length <= max ? value : `${value.slice(0, max - 3).trimEnd()}...`;
 }
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
 interface Copy {
   subject: string;
   heading: string;
@@ -129,11 +126,13 @@ function copyFor(content: ReminderContent): Copy {
   const title = oneLine(content.title);
   const subjectTitle = shorten(title, SUBJECT_TITLE_MAX);
   const due = formatDueTime(content.closesAt, content.timeZone, content.now);
+  const className = content.className === undefined ? "" : oneLine(content.className);
+  const forClass = className === "" ? [] : [`For ${className}.`];
   if (content.kind === "opened") {
     return {
       subject: `${subjectTitle} is open`,
       heading: `${title} is open in LeaRN.`,
-      lines: [`It is due ${due.date} at ${due.time} ${due.zone}.`],
+      lines: [...forClass, `It is due ${due.date} at ${due.time} ${due.zone}.`],
       button: "Open the assignment",
     };
   }
@@ -141,6 +140,7 @@ function copyFor(content: ReminderContent): Copy {
     subject: `${subjectTitle} closes ${due.day} at ${due.time}`,
     heading: `${title} closes ${due.day} at ${due.time} ${due.zone}, and you have not submitted it yet.`,
     lines: [
+      ...forClass,
       `It closes ${due.date} at ${due.time} ${due.zone}. If you have started it, what you have saved by then is submitted for you.`,
     ],
     button: "Finish the assignment",
@@ -155,42 +155,20 @@ function renderText(copy: Copy, link: string): string {
   );
 }
 
-const FONT = "font-family: Inter, Arial, Helvetica, sans-serif";
+/** The HTML part, in the shared layout. Every string is escaped there, the link included. */
+function layoutFor(copy: Copy, link: string): EmailLayout {
+  return {
+    title: copy.subject,
+    heading: copy.heading,
+    paragraphs: copy.lines,
+    action: { label: copy.button, href: link },
+    footer: FOOTER,
+  };
+}
 
-function renderHtml(copy: Copy, link: string): string {
-  const href = escapeHtml(link);
-  const paragraphs = copy.lines
-    .map((line) => `<p style="margin: 0 0 24px">${escapeHtml(line)}</p>`)
-    .join("\n");
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="color-scheme" content="light only" />
-<title>${escapeHtml(copy.subject)}</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #faf9f6">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #faf9f6">
-<tr><td align="center" style="padding: 32px 16px">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 480px; background-color: #ffffff; border: 1px solid #dddad4; border-radius: 8px">
-<tr><td style="padding: 32px 28px; ${FONT}; color: #1b1d22; font-size: 16px; line-height: 1.5">
-<p style="margin: 0 0 24px; font-size: 14px; font-weight: 700; letter-spacing: 0.02em; color: #1f5596">LeaRN</p>
-<h1 style="margin: 0 0 12px; font-size: 22px; line-height: 1.3; font-weight: 700">${escapeHtml(copy.heading)}</h1>
-${paragraphs}
-<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td style="border-radius: 6px; background-color: #1f5596">
-<a href="${href}" style="display: inline-block; padding: 12px 24px; ${FONT}; font-size: 16px; font-weight: 700; color: #ffffff; text-decoration: none; border-radius: 6px">${escapeHtml(copy.button)}</a>
-</td></tr></table>
-<p style="margin: 24px 0 0; font-size: 14px; color: #5b5e66">Or paste this into your browser: ${href}</p>
-</td></tr>
-</table>
-<p style="margin: 16px 0 0; max-width: 480px; ${FONT}; font-size: 12px; line-height: 1.5; color: #5b5e66">${escapeHtml(FOOTER)}</p>
-</td></tr>
-</table>
-</body>
-</html>
-`;
+/** The HTML part's layout, for a preview that renders it inside a page. */
+export function reminderLayout(content: ReminderContent): EmailLayout {
+  return layoutFor(copyFor(content), content.link);
 }
 
 export function renderReminderEmail(content: ReminderContent): RenderedReminder {
@@ -198,6 +176,6 @@ export function renderReminderEmail(content: ReminderContent): RenderedReminder 
   return {
     subject: copy.subject,
     text: renderText(copy, content.link),
-    html: renderHtml(copy, content.link),
+    html: renderEmailDocument(layoutFor(copy, content.link)),
   };
 }
