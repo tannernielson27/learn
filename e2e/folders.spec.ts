@@ -70,9 +70,7 @@ test("an author sorts ten items into Cardiac and Respiratory and opens a folder"
   // Nothing is left unfiled, and moving left every item a draft.
   const folders = page.getByRole("navigation", { name: "Folders" });
   await folders.getByRole("link", { name: "Unfiled", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "No items in this folder", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No unfiled items", exact: true })).toBeVisible();
 
   // Open Cardiac from the keyboard.
   const cardiac = folders.getByRole("link", { name: "Cardiac", exact: true });

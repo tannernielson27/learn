@@ -5,10 +5,10 @@ import { bankViewHref, isFiltering } from "./tagFilter";
 
 /** What the bank page is showing when a list comes back empty. */
 export interface BankEmptyView {
-  bankId: string;
-  view: FolderView;
-  filter: BankFilter;
-  page: number;
+  readonly bankId: string;
+  readonly view: FolderView;
+  readonly filter: BankFilter;
+  readonly page: number;
 }
 
 /** The Archived view is the status filter set to archived, with no words or type on top. */

@@ -95,8 +95,6 @@ test("an author imports three files of 120 items into Cardiac; the broken file i
   await expect(itemLinks(page).filter({ hasText: "Cardiac bulk 2." })).toHaveCount(0);
   await expect(itemLinks(page).filter({ hasNotText: "Draft" })).toHaveCount(0);
   await folders.getByRole("link", { name: "Unfiled", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "No items in this folder", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No unfiled items", exact: true })).toBeVisible();
   await expectNoAxeViolations(page);
 });
