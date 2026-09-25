@@ -131,8 +131,10 @@ Locations are in the step-2 grep. **OK.**
 
 The 18 **security invoker** functions in `public` (authoring, `start_session`, `end_session`, the
 timer, `list_bank_items`, `server_clock`, `take_rate_limit`), plus #283's `import_sample_bank`
-(`is_author()` raise first; empty target bank only; publishes only the ids its own import wrote,
-for one import unit; `20260926010000_sample_published.sql`, pgTAP `sample_published.test.sql`),
+(`is_author()` raise first; bank row locked, empty target bank only; publishes only the ids its own
+import wrote, for one import unit plus one `sample_publish`, capped at one a minute so the path
+cannot outrun the publish limit; `20260926010000_sample_published.sql`, pgTAP
+`sample_published.test.sql`),
 run as the caller, so the table policies above apply. Probe: student `start_session` on the seeded bank gets "that bank does not
 exist", because RLS hides it. **OK.**
 
