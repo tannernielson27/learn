@@ -139,6 +139,35 @@ describe("renderReminderEmail", () => {
     }
   });
 
+  it("names the class when it has one, escaped in the HTML and plain in the text", () => {
+    const email = renderReminderEmail({
+      ...base,
+      kind: "opened",
+      className: 'NURS <301> & "Adult Health"',
+    });
+    expect(email.text).toContain('For NURS <301> & "Adult Health".');
+    expect(email.html).toContain("For NURS &lt;301&gt; &amp; &quot;Adult Health&quot;.");
+    expect(email.html).not.toContain("<301>");
+    // No class, no line: the send path does not know the class's name yet.
+    expect(renderReminderEmail({ ...base, kind: "opened" }).text).not.toContain("For ");
+  });
+
+  it("builds HTML and text for both kinds, loading nothing remote", () => {
+    for (const kind of ["opened", "closing_soon"] as const) {
+      const email = renderReminderEmail({ ...base, kind, className: "NURS 301" });
+      expect(email.html).not.toContain("http://");
+      expect(email.html).not.toMatch(/<img|\ssrc=|<link|url\(/i);
+      expect(email.html).toContain('<html lang="en">');
+      expect(email.html).toContain(`>${LINK}</a>`);
+      // The plain-text part says the same thing: heading, class, due time, link.
+      expect(email.text).toContain("Week 5");
+      expect(email.text).toContain("For NURS 301.");
+      expect(email.text).toContain("17:00 MDT");
+      expect(email.text).toContain(LINK);
+      expect(email.text).not.toMatch(/<[a-z]/i);
+    }
+  });
+
   it("escapes the link too", () => {
     const email = renderReminderEmail({ ...base, kind: "opened", link: 'https://x/"><b>' });
     expect(email.html).not.toContain('"><b>');

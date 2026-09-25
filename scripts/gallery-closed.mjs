@@ -41,6 +41,8 @@ const GALLERY_PATHS = [
   // on production like the rest. Its `/server` handler is not probed: on a preview it answers 500
   // by design, which the open-gallery control above would count as a failure.
   "/gallery/sentry-check",
+  // #268: the email preview. No key in it either, and not in the nav; 404 on production all the same.
+  "/gallery/email",
   "/gallery",
 ];
 

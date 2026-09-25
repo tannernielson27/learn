@@ -1,109 +1,30 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="light only" />
-    <title>Sign in to LeaRN</title>
-  </head>
-  <body style="margin: 0; padding: 0; background-color: #faf9f6">
-    <table
-      role="presentation"
-      width="100%"
-      cellpadding="0"
-      cellspacing="0"
-      border="0"
-      style="background-color: #faf9f6"
-    >
-      <tr>
-        <td align="center" style="padding: 32px 16px">
-          <table
-            role="presentation"
-            width="100%"
-            cellpadding="0"
-            cellspacing="0"
-            border="0"
-            style="
-              max-width: 480px;
-              background-color: #ffffff;
-              border: 1px solid #dddad4;
-              border-radius: 8px;
-            "
-          >
-            <tr>
-              <td
-                style="
-                  padding: 32px 28px;
-                  font-family: Inter, Arial, Helvetica, sans-serif;
-                  color: #1b1d22;
-                  font-size: 16px;
-                  line-height: 1.5;
-                "
-              >
-                <p
-                  style="
-                    margin: 0 0 24px;
-                    font-size: 14px;
-                    font-weight: 700;
-                    letter-spacing: 0.02em;
-                    color: #1f5596;
-                  "
-                >
-                  LeaRN
-                </p>
-                <h1 style="margin: 0 0 12px; font-size: 22px; line-height: 1.3; font-weight: 700">
-                  Sign in to LeaRN
-                </h1>
-                <p style="margin: 0 0 24px">
-                  Use the button below to sign in. It takes you straight to your classes, whether
-                  you teach them or are joining one.
-                </p>
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                  <tr>
-                    <td style="border-radius: 6px; background-color: #1f5596">
-                      <a
-                        href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email"
-                        style="
-                          display: inline-block;
-                          padding: 12px 24px;
-                          font-family: Inter, Arial, Helvetica, sans-serif;
-                          font-size: 16px;
-                          font-weight: 700;
-                          color: #ffffff;
-                          text-decoration: none;
-                          border-radius: 6px;
-                        "
-                        >Sign in</a
-                      >
-                    </td>
-                  </tr>
-                </table>
-                <p style="margin: 24px 0 0; font-size: 14px; color: #5b5e66">
-                  The link works once and expires in an hour. You can open it on any device, such as
-                  your phone in class. If it has expired, ask for a new one on the sign-in page.
-                </p>
-                <p style="margin: 16px 0 0; font-size: 14px; color: #5b5e66">
-                  If you did not ask to sign in, you can ignore this email. Nobody can sign in
-                  without the link.
-                </p>
-              </td>
-            </tr>
-          </table>
-          <p
-            style="
-              margin: 16px 0 0;
-              max-width: 480px;
-              font-family: Inter, Arial, Helvetica, sans-serif;
-              font-size: 12px;
-              line-height: 1.5;
-              color: #5b5e66;
-            "
-          >
-            Sent by LeaRN, an NCLEX practice app, because someone entered this address on its
-            sign-in page.
-          </p>
-        </td>
-      </tr>
-    </table>
-  </body>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light only" />
+<title>Sign in to LeaRN</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #faf9f6">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #faf9f6">
+<tr><td align="center" style="padding: 32px 16px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 480px; background-color: #ffffff; border: 1px solid #dddad4; border-radius: 8px">
+<tr><td style="padding: 32px 28px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1b1d22; font-size: 16px; line-height: 1.5">
+<p style="margin: 0 0 24px; font-size: 14px; font-weight: 700; letter-spacing: 0.02em; color: #1f5596">LeaRN</p>
+<h1 style="margin: 0 0 12px; font-size: 22px; line-height: 1.3; font-weight: 700; color: #1b1d22">Sign in to LeaRN</h1>
+<p style="margin: 0 0 24px">Use the button below to sign in. It takes you straight to your classes, whether you teach them or are joining one.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+<td style="border-radius: 6px; background-color: #1f5596">
+<a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email" style="display: inline-block; padding: 12px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: 700; color: #ffffff; text-decoration: none; border-radius: 6px">Sign in</a>
+</td></tr></table>
+<p style="margin: 24px 0 0; font-size: 14px; color: #5b5e66">Or copy this link into your browser:<br /><a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email" style="color: #1f5596; text-decoration: underline; word-break: break-all">{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=email</a></p>
+<p style="margin: 16px 0 0; font-size: 14px; color: #5b5e66">The link works once and expires in an hour. You can open it on any device, such as your phone in class. If it has expired, ask for a new one on the sign-in page.</p>
+<p style="margin: 16px 0 0; font-size: 14px; color: #5b5e66">If you did not ask to sign in, you can ignore this email. Nobody can sign in without the link.</p>
+</td></tr>
+</table>
+<p style="margin: 16px 0 0; max-width: 480px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; line-height: 1.5; color: #5b5e66">Sent by LeaRN, an NCLEX practice app, because someone entered this address on its sign-in page.</p>
+</td></tr>
+</table>
+</body>
 </html>

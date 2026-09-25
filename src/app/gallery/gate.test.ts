@@ -123,6 +123,8 @@ describe("every gallery route is behind the production gate", () => {
     expect(urls).toContain("/gallery");
     expect(urls).toContain("/gallery/live");
     expect(urls).toContain("/gallery/items/[type]");
+    // #268: the email preview is opened by URL, not from the nav, and is gated all the same.
+    expect(urls).toContain("/gallery/email");
   });
 
   it.each(galleryPages.map((file) => [rel(file), file] as const))(

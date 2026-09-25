@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-25 (Sprint 11 in progress: #264 merged in #277, #270 in #276; hosted at all 36 migrations).
+Last updated: 2026-09-25 (Sprint 11 in progress: #264 merged in #277, #268 in #278, #270 in #276; #271 built but its push was blocked; hosted at all 36 migrations).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -186,20 +186,20 @@ Demo 12: an outside instructor onboards cold and runs a class without help.
 
 Sprint 11 is the last Phase 4 sprint. It covers the landing page, onboarding, empty and error states, email templates, the guides, the Sprint 10 leftovers, and a rehearsal of the cold-onboarding demo.
 
-| #                                                           | Title                                                                                 | Gates             | Status                      |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------- | --------------------------- |
-| [#264](https://github.com/tannernielson27/learn/issues/264) | feat(onboarding): a landing page that says what LeaRN is and how to get in            | e2e               | Merged (#277); no migration |
-| [#265](https://github.com/tannernielson27/learn/issues/265) | feat(onboarding): a first-run checklist on the author home, with a sample bank import | security, e2e     | To do                       |
-| [#266](https://github.com/tannernielson27/learn/issues/266) | feat(onboarding): every empty list says what to do next                               | e2e               | To do                       |
-| [#267](https://github.com/tannernielson27/learn/issues/267) | feat(onboarding): designed not-found and error pages, and clear expired-link messages | security, e2e     | To do                       |
-| [#268](https://github.com/tannernielson27/learn/issues/268) | feat(email): branded email templates with plain-text parts and a preview              | security, e2e     | To do                       |
-| [#269](https://github.com/tannernielson27/learn/issues/269) | docs(help): an instructor guide and an item-authoring guide under /help               | e2e               | To do                       |
-| [#270](https://github.com/tannernielson27/learn/issues/270) | docs: a contributor guide                                                             | none              | Merged (#276); no migration |
-| [#271](https://github.com/tannernielson27/learn/issues/271) | fix(student): freeze a practice run's items when it starts                            | security, db, e2e | To do                       |
-| [#272](https://github.com/tannernielson27/learn/issues/272) | chore: Sprint 10 leftovers: roster focus, Sentry bundle size, fonts                   | e2e               | To do                       |
-| [#57](https://github.com/tannernielson27/learn/issues/57)   | chore(design): three font families against a two-family guideline                     | none              | To do; closed by #272       |
-| [#273](https://github.com/tannernielson27/learn/issues/273) | test(student): an e2e for the ranked Your steps section                               | e2e               | To do                       |
-| [#274](https://github.com/tannernielson27/learn/issues/274) | test(onboarding): a Demo 12 cold-onboarding rehearsal                                 | e2e               | To do                       |
+| #                                                           | Title                                                                                 | Gates             | Status                                                                                              |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------- | --------------------------------------------------------------------------------------------------- |
+| [#264](https://github.com/tannernielson27/learn/issues/264) | feat(onboarding): a landing page that says what LeaRN is and how to get in            | e2e               | Merged (#277); no migration                                                                         |
+| [#265](https://github.com/tannernielson27/learn/issues/265) | feat(onboarding): a first-run checklist on the author home, with a sample bank import | security, e2e     | To do                                                                                               |
+| [#266](https://github.com/tannernielson27/learn/issues/266) | feat(onboarding): every empty list says what to do next                               | e2e               | To do                                                                                               |
+| [#267](https://github.com/tannernielson27/learn/issues/267) | feat(onboarding): designed not-found and error pages, and clear expired-link messages | security, e2e     | To do                                                                                               |
+| [#268](https://github.com/tannernielson27/learn/issues/268) | feat(email): branded email templates with plain-text parts and a preview              | security, e2e     | Merged (#278); no migration; owner pastes the regenerated magic-link template (docs/05 §7.7)        |
+| [#269](https://github.com/tannernielson27/learn/issues/269) | docs(help): an instructor guide and an item-authoring guide under /help               | e2e               | To do                                                                                               |
+| [#270](https://github.com/tannernielson27/learn/issues/270) | docs: a contributor guide                                                             | none              | Merged (#276); no migration                                                                         |
+| [#271](https://github.com/tannernielson27/learn/issues/271) | fix(student): freeze a practice run's items when it starts                            | security, db, e2e | Built; branch not pushed: the permission classifier blocked the builder's push (owner action below) |
+| [#272](https://github.com/tannernielson27/learn/issues/272) | chore: Sprint 10 leftovers: roster focus, Sentry bundle size, fonts                   | e2e               | To do                                                                                               |
+| [#57](https://github.com/tannernielson27/learn/issues/57)   | chore(design): three font families against a two-family guideline                     | none              | To do; closed by #272                                                                               |
+| [#273](https://github.com/tannernielson27/learn/issues/273) | test(student): an e2e for the ranked Your steps section                               | e2e               | To do                                                                                               |
+| [#274](https://github.com/tannernielson27/learn/issues/274) | test(onboarding): a Demo 12 cold-onboarding rehearsal                                 | e2e               | To do                                                                                               |
 
 Suggested order, in pairs (one heavier builder, one light):
 
@@ -279,6 +279,8 @@ These block the live site rather than a single issue:
 - **Sprint 10 backups (#236)**: generate an `age` key pair and keep the private key off GitHub. Once the §7.3 project exists, add the repo secrets `BACKUP_AGE_RECIPIENT` (the public key) and `PROD_DB_URL`.
 - **Choose the production plan at go-live**: Pro, or free plus the nightly dump (owner decision 2026-09-24).
 - **Decide #159**: whether to accept that four cheap IPs can hold one author's sign-in closed indefinitely, or pay for one of the mitigations listed there.
+- **Sprint 11: paste the regenerated magic-link template** (#268, merged in #278). `supabase/templates/magic_link.html` is now generated from `src/lib/email/templates/magicLink.ts`. Paste it into Authentication, Emails, Magic Link in every hosted project (docs/05 §7.7). The link is unchanged, so the old copy keeps working until then.
+- **Sprint 11: push #271's branch and open its PR.** The builder finished `fix/271-freeze-practice-run` (two commits, pgTAP green locally, migration `20260926000000_practice_run_items`), but the permission classifier refused its `git push` and `gh pr create`. The orchestrator did not work around it. From the repo root: `git -C .claude/worktrees/agent-a085b1821811fc5dd push -u origin fix/271-freeze-practice-run`, then `gh pr create` with the body file the builder left in the session scratchpad (`pr-271-freeze.md`; check it first). After it merges, apply the migration to hosted.
 - Done 2026-09-22: Vercel Production and Preview both carry `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` and `SUPABASE_JWT_SIGNING_KEY`; Production also has `DEMO_ACCOUNT_*`. The hosted demo user exists as an instructor in the seeded LeaRN org.
 - Supabase Authentication, URL Configuration: Site URL and redirect URLs for production, previews and localhost.
 - Supabase magic-link template: paste `supabase/templates/magic_link.html`. Email sign-in still needs it; the demo account (#115) works without it.

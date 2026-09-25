@@ -227,6 +227,9 @@ web3 = 30
 # #206 restyled it for instructors and students alike: inline styles only, hex approximations of
 # the docs/04 tokens (mail clients do not understand oklch), no comments (they would ship in every
 # email). Keep the href exactly as it is; e2e/mailbox.ts finds the link by its /auth/confirm path.
+# #268: the file is generated from src/lib/email/templates/magicLink.ts, in the layout the app's
+# own emails share. Do not edit it by hand: change the module, then run
+# `pnpm vitest run src/lib/email/templates -u`, and paste the result into each hosted project.
 [auth.email.template.magic_link]
 subject = "Sign in to LeaRN"
 content_path = "./supabase/templates/magic_link.html"
