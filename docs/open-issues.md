@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-24 (#248 merged in #257 with `20260925050000_rate_limit_sweep` applied to hosted; #240 merged in #255).
+Last updated: 2026-09-24 (#239 merged in #258 with `20260925060000_student_steps` applied to hosted; #248 merged in #257).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -137,7 +137,7 @@ Phase 4 splits across two sprints. Sprint 10 covers what real students need: har
 | [#219](https://github.com/tannernielson27/learn/issues/219) | fix(player): an ordered-response item starts in the author's order, which is often the answer | player                    | Merged (#249); no migration; start order is keyed server-side                                   |
 | [#178](https://github.com/tannernielson27/learn/issues/178) | fix(live): drop the open select policy on live.session_public_state                           | live, security            | Blocked: owner turns off Realtime "Allow public access"                                         |
 | [#238](https://github.com/tannernielson27/learn/issues/238) | feat(student): a history of my assignments and best scores                                    | security, db, e2e         | Merged (#254); `20260925030000_student_history` applied to hosted                               |
-| [#239](https://github.com/tannernielson27/learn/issues/239) | feat(student): my weakest clinical judgment steps                                             | security                  | To do                                                                                           |
+| [#239](https://github.com/tannernielson27/learn/issues/239) | feat(student): my weakest clinical judgment steps                                             | security                  | Merged (#258); `20260925060000_student_steps` applied to hosted                                 |
 | [#240](https://github.com/tannernielson27/learn/issues/240) | feat(authoring): share a bank with a class for practice, and warn on graded reuse             | security, db, e2e         | Merged (#255); `20260925040000_practice_shares` applied to hosted                               |
 | [#241](https://github.com/tannernielson27/learn/issues/241) | feat(student): practice a shared bank with instant feedback                                   | player, security, db, e2e | To do                                                                                           |
 | [#242](https://github.com/tannernielson27/learn/issues/242) | feat(assign): a class time zone setting, and removed students in the report                   | db, e2e                   | Merged (#251); `20260925020000_class_timezone_and_removed` applied to hosted                    |
