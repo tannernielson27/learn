@@ -9,6 +9,7 @@ import type {
   CheckStatus,
   ReminderJobRow,
   SessionStateRow,
+  SweepJobRow,
 } from "./types.ts";
 
 /** The schemas the audit (docs/audits/S10-security.md) assumes the Data API exposes, and no more. */
@@ -19,6 +20,9 @@ export const REMINDER_JOB = "learn-assignment-reminders";
 
 /** The two Vault names the job reads (§7.8 step 4). */
 export const REMINDER_VAULT_NAMES = ["learn_reminders_url", "learn_cron_secret"] as const;
+
+/** The job migration 20260925050000 (or `private.schedule_rate_limit_sweep()`) schedules (#248). */
+export const SWEEP_JOB = "learn-rate-limit-sweep";
 
 /** The backup runs nightly; 26 hours allows for a late start without hiding a missed night. */
 export const BACKUP_MAX_AGE_MS = 26 * 60 * 60 * 1000;
@@ -133,6 +137,30 @@ export function reminderJobCheck(row: ReminderJobRow): CheckResult {
     );
   }
   return line("cron", title, "pass", "scheduled, active, and its Vault secrets exist");
+}
+
+const SCHEDULE_SWEEP = "select private.schedule_rate_limit_sweep();";
+
+export function sweepJobCheck(row: SweepJobRow): CheckResult {
+  const title = `the rate-limit sweep job ${SWEEP_JOB} is scheduled (#248, docs/05 §7.8)`;
+  const fail = (detail: string) => line("rate-limit-sweep", title, "fail", detail);
+  if (!row.has_cron) {
+    return fail(
+      `pg_cron is not enabled (§7.8 step 3); then run ${SCHEDULE_SWEEP} in the SQL editor (§7.8 step 4)`,
+    );
+  }
+  if (row.job_count === 0) {
+    return fail(`no job by that name; run ${SCHEDULE_SWEEP} in the SQL editor (§7.8 step 4)`);
+  }
+  if (row.job_count > 1) {
+    return fail(
+      `${row.job_count} jobs by that name; unschedule the extras by jobid, keep one (§7.8)`,
+    );
+  }
+  if (!row.job_active) {
+    return fail(`the job exists but is inactive; ${SCHEDULE_SWEEP} switches it back on (§7.8)`);
+  }
+  return line("rate-limit-sweep", title, "pass", "scheduled every five minutes, and active");
 }
 
 export function backupCheck(run: BackupRun | null, now: Date): CheckResult {
@@ -253,11 +281,5 @@ export const MANUAL_STEPS: readonly CheckResult[] = [
     "Sentry receives a scrubbed test error and has its alert rules",
     "manual",
     "docs/05 §7.9 steps 2, 6-7",
-  ),
-  line(
-    "rate-limit-sweep",
-    "the rate-limit sweep job is scheduled",
-    "manual",
-    "not built yet (#248); nothing to check until it merges",
   ),
 ];

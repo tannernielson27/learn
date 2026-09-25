@@ -5,6 +5,7 @@ import {
   CRON_PRESENT_SQL,
   MIGRATIONS_SQL,
   SESSION_STATE_SQL,
+  SWEEP_JOB_SQL,
   VAULT_NAMES_SQL,
   type Query,
 } from "./sources.ts";
@@ -32,6 +33,7 @@ const READY_DB = new Map<string, Record<string, unknown>[]>([
   [CRON_PRESENT_SQL, [{ has_cron: true }]],
   [CRON_JOB_SQL, [{ job_count: 1, job_active: true }]],
   [VAULT_NAMES_SQL, [{ vault_names: 2 }]],
+  [SWEEP_JOB_SQL, [{ job_count: 1, job_active: true }]],
 ]);
 
 const readyQuery: Query = async (sql) => READY_DB.get(sql) ?? [];
@@ -90,12 +92,12 @@ describe("runGoLiveCheck", () => {
       env: "pass",
       demo: "pass",
       cron: "pass",
+      "rate-limit-sweep": "pass",
       backup: "pass",
       realtime: "manual",
       smtp: "manual",
       "auth-urls": "manual",
       sentry: "manual",
-      "rate-limit-sweep": "manual",
     });
     expect(exitCode(results)).toBe(0);
   });
@@ -109,9 +111,22 @@ describe("runGoLiveCheck", () => {
     expect(byId.migrations.status).toBe("fail");
     expect(byId["anon-state"].status).toBe("fail");
     expect(byId.cron.status).toBe("fail");
+    expect(byId["rate-limit-sweep"].status).toBe("fail");
     expect(byId.migrations.detail).toContain("[redacted]");
     expect(byId.migrations.detail).not.toContain("sbp_0123");
     expect(exitCode(results)).toBe(1);
+  });
+
+  it("fails the sweep line when pg_cron is on but the sweep job is missing", async () => {
+    const db = new Map([...READY_DB, [SWEEP_JOB_SQL, [{ job_count: 0, job_active: false }]]]);
+    const results = await runGoLiveCheck(
+      OPTIONS,
+      deps({ query: async (sql) => db.get(sql) ?? [] }),
+    );
+    const sweep = results.find((result) => result.id === "rate-limit-sweep");
+    expect(sweep?.status).toBe("fail");
+    expect(sweep?.detail).toContain("select private.schedule_rate_limit_sweep()");
+    expect(statusById(results).cron).toBe("pass");
   });
 
   it("marks the backup line manual when gh cannot answer", async () => {
@@ -179,6 +194,8 @@ describe("runGoLiveCheck", () => {
     expect(byId.demo.status).toBe("fail");
     expect(byId["anon-state"].status).toBe("fail");
     expect(byId.cron.status).toBe("fail");
+    expect(byId["rate-limit-sweep"].status).toBe("fail");
+    expect(byId["rate-limit-sweep"].detail).toContain("pg_cron is not enabled");
     expect(formatReport(results)).toContain("Not ready");
   });
 });

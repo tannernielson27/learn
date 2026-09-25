@@ -25,6 +25,12 @@ export interface ReminderJobRow {
   vault_names: number;
 }
 
+export interface SweepJobRow {
+  has_cron: boolean;
+  job_count: number;
+  job_active: boolean;
+}
+
 /** The newest successful run of `.github/workflows/db-backup.yml`, with its artifact names. */
 export interface BackupRun {
   createdAt: string;

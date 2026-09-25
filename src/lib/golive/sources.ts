@@ -7,9 +7,10 @@ import {
   parseExposedSchemas,
   REMINDER_JOB,
   REMINDER_VAULT_NAMES,
+  SWEEP_JOB,
   type HealthReading,
 } from "./checks.ts";
-import type { BackupRun, ReminderJobRow, SessionStateRow } from "./types.ts";
+import type { BackupRun, ReminderJobRow, SessionStateRow, SweepJobRow } from "./types.ts";
 
 export type Row = Readonly<Record<string, unknown>>;
 export type Query = (sql: string) => Promise<readonly Row[]>;
@@ -40,6 +41,9 @@ export const CRON_PRESENT_SQL = "select to_regclass('cron.job') is not null as h
 export const CRON_JOB_SQL = `select count(*)::int as job_count, coalesce(bool_and(active), false) as job_active
   from cron.job where jobname = '${REMINDER_JOB}'`;
 
+export const SWEEP_JOB_SQL = `select count(*)::int as job_count, coalesce(bool_and(active), false) as job_active
+  from cron.job where jobname = '${SWEEP_JOB}'`;
+
 export const VAULT_NAMES_SQL = `select case when to_regclass('vault.secrets') is null then 0 else (
   select count(distinct name)::int from vault.secrets
   where name in (${REMINDER_VAULT_NAMES.map((name) => `'${name}'`).join(", ")})
@@ -52,6 +56,7 @@ export const ALL_SQL = [
   CRON_PRESENT_SQL,
   CRON_JOB_SQL,
   VAULT_NAMES_SQL,
+  SWEEP_JOB_SQL,
 ] as const;
 
 /**
@@ -107,6 +112,14 @@ export async function readReminderJob(query: Query): Promise<ReminderJobRow> {
     job_active: bool(job.job_active),
     vault_names: vaultNames,
   };
+}
+
+/** cron.job does not exist until pg_cron is enabled, so it is only asked once pg_cron is there. */
+export async function readSweepJob(query: Query): Promise<SweepJobRow> {
+  const hasCron = bool((await one(query, CRON_PRESENT_SQL)).has_cron);
+  if (!hasCron) return { has_cron: false, job_count: 0, job_active: false };
+  const job = await one(query, SWEEP_JOB_SQL);
+  return { has_cron: true, job_count: int(job.job_count), job_active: bool(job.job_active) };
 }
 
 /** The migration versions in the repo, from `supabase/migrations/<version>_<name>.sql` filenames. */
