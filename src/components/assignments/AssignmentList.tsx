@@ -11,6 +11,7 @@ import type { AssignmentSummary } from "@/lib/supabase/assignments";
 import { AssignmentForm, type AssignmentFormProps } from "./AssignmentForm";
 import { LazyDetails } from "./LazyDetails";
 import { LocalTime } from "./LocalTime";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export interface AssignmentListProps {
   assignments: readonly AssignmentSummary[];
@@ -37,8 +38,14 @@ export function AssignmentList({
   deleteActionFor,
 }: AssignmentListProps) {
   if (assignments.length === 0) {
+    // Under the class page's Assignments h2.
     return (
-      <p className="text-ink-2">No assignments yet. Assign a bank or a case study from its page.</p>
+      <EmptyState
+        level={3}
+        heading="No assignments yet"
+        body="Assign a bank or a case study to this class from its page."
+        action={{ href: "/author", label: "Go to your item banks" }}
+      />
     );
   }
 

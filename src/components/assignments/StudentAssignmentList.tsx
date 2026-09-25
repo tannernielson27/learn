@@ -7,6 +7,7 @@ import {
 import { DEFAULT_CLASS_TIME_ZONE } from "@/lib/classes/timeZone";
 import type { AssignmentSummary } from "@/lib/supabase/assignments";
 import { ClassTime } from "./ClassTime";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 /** What a student's lists need to know about each of their classes. */
 export interface StudentClassInfo {
@@ -33,7 +34,14 @@ export function StudentAssignmentList({
   progress = new Map(),
 }: StudentAssignmentListProps) {
   if (assignments.length === 0) {
-    return <p className="text-ink-2">Nothing is open right now.</p>;
+    // Under the student home's Open assignments h2.
+    return (
+      <EmptyState
+        level={3}
+        heading="Nothing is open right now"
+        body="Assignments from your instructor appear here while they are open."
+      />
+    );
   }
 
   return (

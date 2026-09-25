@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState, type EmptyStateContent } from "@/components/ui/EmptyState";
 import type { ItemSummary } from "@/lib/authoring/banks";
 import { formatEdited } from "@/lib/authoring/format";
 import { excerptSegments } from "@/lib/authoring/highlight";
@@ -10,8 +11,8 @@ import { SelectForMove } from "./SelectForMove";
 
 export interface ItemListProps {
   items: readonly ItemSummary[];
-  /** Shown when there are no items; defaults to the empty-bank hint. */
-  emptyMessage?: string;
+  /** What an empty list says, under the page's Items h2; defaults to the empty-bank hint. */
+  empty?: EmptyStateContent;
   /** The id of a move form: each item gets a checkbox that joins it. Without one, no selection. */
   moveFormId?: string;
   /** In the Archived view: the restore action for an item, so each row offers Restore. */
@@ -46,14 +47,14 @@ function TagChips({ labels }: { labels: readonly string[] }) {
   );
 }
 
-export function ItemList({
-  items,
-  emptyMessage = "No items in this bank yet. Choose New item to write one.",
-  moveFormId,
-  restoreAction,
-}: ItemListProps) {
+const EMPTY_BANK: EmptyStateContent = {
+  heading: "No items in this bank yet",
+  body: "Choose New item to write one.",
+};
+
+export function ItemList({ items, empty = EMPTY_BANK, moveFormId, restoreAction }: ItemListProps) {
   if (items.length === 0) {
-    return <p className="text-ink-2">{emptyMessage}</p>;
+    return <EmptyState level={3} {...empty} />;
   }
 
   return (

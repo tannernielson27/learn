@@ -122,6 +122,7 @@ export default async function ClassPage({ params }: PageProps<"/author/classes/[
           <ClassRoster
             entries={roster}
             removeActionFor={(profileId) => removeStudent.bind(null, detail.id, profileId)}
+            emptyAction={{ href: "#invite-heading", label: "Go to the invite link" }}
           />
         )}
       </section>

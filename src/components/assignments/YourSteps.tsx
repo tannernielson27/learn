@@ -6,6 +6,7 @@ import {
   type StepStandings,
 } from "@/lib/ngn/stepStandings";
 import { formatPercent } from "@/lib/live/reportFormat";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export interface YourStepsProps {
   standings: StepStandings;
@@ -81,10 +82,13 @@ function UntaggedNote({ items }: { items: number }) {
 export function YourSteps({ standings }: YourStepsProps) {
   const answered = standings.steps.reduce((sum, step) => sum + step.items, 0);
   if (answered === 0 && standings.untagged.items === 0) {
+    // Under the student home's Your steps h2.
     return (
-      <p className="text-ink-2">
-        Nothing to show yet. Your steps appear here once an assignment you answered has closed.
-      </p>
+      <EmptyState
+        level={3}
+        heading="Nothing to show yet"
+        body="Your steps appear here once you practice, or once an assignment you answered closes."
+      />
     );
   }
 

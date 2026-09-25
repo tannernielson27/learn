@@ -1,18 +1,29 @@
 import Link from "next/link";
 import { classPath } from "@/lib/classes/classes";
 import type { ClassSummary } from "@/lib/supabase/classes";
+import { EmptyState, type EmptyStateAction } from "@/components/ui/EmptyState";
 
 export interface ClassListProps {
   classes: readonly ClassSummary[];
+  /** With no classes yet: where one is made, on the page that lists them. */
+  emptyAction?: EmptyStateAction;
 }
 
 function studentCount(count: number): string {
   return count === 1 ? "1 student" : `${count} students`;
 }
 
-export function ClassList({ classes }: ClassListProps) {
+export function ClassList({ classes, emptyAction }: ClassListProps) {
   if (classes.length === 0) {
-    return <p className="text-ink-2">No classes yet. Create one to get an invite link.</p>;
+    // Right under the Classes page's h1.
+    return (
+      <EmptyState
+        level={2}
+        heading="No classes yet"
+        body="Create one to get an invite link for your students."
+        action={emptyAction}
+      />
+    );
   }
 
   return (

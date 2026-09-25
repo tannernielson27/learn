@@ -38,12 +38,22 @@ describe("CaseStudyList", () => {
 
   it("says when the bank has no case studies", () => {
     render(<CaseStudyList caseStudies={[]} />);
-    expect(screen.getByText("No case studies in this bank yet.")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 3, name: "No case studies in this bank yet" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Name one below/)).toBeInTheDocument();
   });
 
-  it("says so when a folder holds no case studies", () => {
-    render(<CaseStudyList caseStudies={[]} emptyMessage="No case studies in this folder." />);
-    expect(screen.getByText("No case studies in this folder.")).toBeInTheDocument();
+  it("says what the page passes when a folder holds no case studies", () => {
+    render(
+      <CaseStudyList
+        caseStudies={[]}
+        empty={{ heading: "No case studies in this folder", body: "Move one here." }}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { level: 3, name: "No case studies in this folder" }),
+    ).toBeInTheDocument();
   });
 
   it("lets each case study be selected for a move, outside its link, only with a move form", () => {

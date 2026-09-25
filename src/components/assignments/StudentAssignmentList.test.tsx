@@ -18,7 +18,11 @@ const NUR_310 = { name: "NUR 310", timeZone: "America/New_York" };
 describe("StudentAssignmentList", () => {
   it("says so when nothing is open", () => {
     render(<StudentAssignmentList assignments={[]} classes={new Map()} />);
-    expect(screen.getByText("Nothing is open right now.")).toBeInTheDocument();
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Nothing is open right now" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/appear here while they are open/)).toBeInTheDocument();
   });
 
   it("lists what is open, with its class, its close time and its attempts", () => {

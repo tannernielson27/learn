@@ -24,7 +24,7 @@ test("an author creates a bank, starts an item by type, and finds the draft in t
 
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   await expect(
-    page.getByText("No items in this bank yet. Choose New item to write one."),
+    page.getByRole("heading", { name: "No items in this bank yet", exact: true }),
   ).toBeVisible();
   await expectNoAxeViolations(page);
 
@@ -498,7 +498,9 @@ test("an author starts a case study in a bank and finds it listed as a draft", a
     .fill(`Cases ${testInfo.project.name} ${Date.now()}`);
   await page.getByRole("button", { name: "Create bank" }).click();
 
-  await expect(page.getByText("No case studies in this bank yet.")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "No case studies in this bank yet", exact: true }),
+  ).toBeVisible();
   await page.getByRole("textbox", { name: "Case study title" }).fill("Post-operative day two");
   await page.getByRole("button", { name: "New case study" }).click();
 

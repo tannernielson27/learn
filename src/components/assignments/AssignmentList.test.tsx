@@ -56,7 +56,14 @@ describe("LocalTime", () => {
 describe("AssignmentList", () => {
   it("says so when a class has no assignments", () => {
     setup([]);
-    expect(screen.getByText(/No assignments yet/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 3, name: "No assignments yet" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Assign a bank or a case study/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Go to your item banks" })).toHaveAttribute(
+      "href",
+      "/author",
+    );
   });
 
   it("lists each assignment with its state, local window and attempts", () => {

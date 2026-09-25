@@ -21,7 +21,10 @@ export default async function ClassesPage() {
           The class list could not be loaded. Reload the page to try again.
         </p>
       ) : (
-        <ClassList classes={classes} />
+        <ClassList
+          classes={classes}
+          emptyAction={{ href: "#new-class-heading", label: "Create a class" }}
+        />
       )}
       <section aria-labelledby="new-class-heading" className="mt-10 border-t border-line pt-6">
         <h2 id="new-class-heading" className="mb-3 text-lg font-medium text-ink-1">

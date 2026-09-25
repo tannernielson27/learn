@@ -19,7 +19,18 @@ describe("ClassList", () => {
   });
 
   it("says there are none yet", () => {
-    render(<ClassList classes={[]} />);
-    expect(screen.getByText(/No classes yet/)).toBeInTheDocument();
+    render(
+      <ClassList
+        classes={[]}
+        emptyAction={{ href: "#new-class-heading", label: "Create a class" }}
+      />,
+    );
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "No classes yet" })).toBeInTheDocument();
+    expect(screen.getByText(/invite link/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Create a class" })).toHaveAttribute(
+      "href",
+      "#new-class-heading",
+    );
   });
 });

@@ -16,6 +16,20 @@ function renderPanel(props: Partial<AssignPanelProps> = {}) {
   );
 }
 
+describe("AssignPanel with no class (#266)", () => {
+  it("says there is no class yet and links to where one is made, with no form", () => {
+    renderPanel({ classes: [] });
+    expect(
+      screen.getByRole("heading", { level: 2, name: "No class to assign to yet" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Create a class" })).toHaveAttribute(
+      "href",
+      "/author/classes",
+    );
+    expect(screen.queryByRole("button", { name: "Assign" })).toBeNull();
+  });
+});
+
 describe("AssignPanel practice warning (#240)", () => {
   it("warns, naming the classes and counting the items, and still offers Assign", () => {
     renderPanel({ exposure: { classNames: ["NUR 310"], exposedItems: 12 } });

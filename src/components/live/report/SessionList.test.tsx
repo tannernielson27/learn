@@ -48,6 +48,13 @@ describe("SessionList", () => {
   it("says so when there are no sessions yet", () => {
     render(<SessionList sessions={[]} />);
     expect(screen.queryByRole("list")).toBeNull();
-    expect(screen.getByText(/No live sessions yet/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "No live sessions yet" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Start one from a bank/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Go to your item banks" })).toHaveAttribute(
+      "href",
+      "/author",
+    );
   });
 });

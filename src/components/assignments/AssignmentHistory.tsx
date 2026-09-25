@@ -5,6 +5,7 @@ import { DEFAULT_CLASS_TIME_ZONE } from "@/lib/classes/timeZone";
 import { formatPercent, formatPoints } from "@/lib/live/reportFormat";
 import { ClassTime } from "./ClassTime";
 import type { StudentClassInfo } from "./StudentAssignmentList";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export interface AssignmentHistoryProps {
   rows: readonly HistoryRow[];
@@ -38,10 +39,13 @@ function Standing({ standing }: { standing: HistoryStanding }) {
  */
 export function AssignmentHistory({ rows, classes }: AssignmentHistoryProps) {
   if (rows.length === 0) {
+    // Under the student home's History h2.
     return (
-      <p className="text-ink-2">
-        Nothing has closed yet. Your scores appear here once an assignment closes.
-      </p>
+      <EmptyState
+        level={3}
+        heading="Nothing has closed yet"
+        body="Your scores appear here once an assignment closes."
+      />
     );
   }
 

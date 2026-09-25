@@ -258,7 +258,7 @@ test("a student practises a shared bank on a phone, sees each key as they answer
   expect(await stoppedAnswer.text()).not.toContain(MC_RATIONALE);
   await student.goto("/learn");
   await expect(
-    student.getByText("Nothing is shared for practice yet.", { exact: true }),
+    student.getByRole("heading", { name: "Nothing is shared for practice yet", exact: true }),
   ).toBeVisible();
 
   await phone.context.close();

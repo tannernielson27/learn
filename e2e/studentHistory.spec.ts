@@ -87,16 +87,11 @@ test("History shows a closed assignment's best score, and nothing of one still o
   await expect(student).toHaveURL(/\/learn$/);
 
   // Nothing has closed yet: the empty states.
-  const noSteps =
-    "Nothing to show yet. Your steps appear here once an assignment you answered has closed.";
-  await expect(student.getByText(noSteps, { exact: true })).toBeVisible();
+  // #266: the Your steps empty state's heading; the bytes check below looks for it too.
+  const noSteps = "Nothing to show yet";
+  await expect(student.getByRole("heading", { name: noSteps, exact: true })).toBeVisible();
   await expect(
-    student.getByText(
-      "Nothing has closed yet. Your scores appear here once an assignment closes.",
-      {
-        exact: true,
-      },
-    ),
+    student.getByRole("heading", { name: "Nothing has closed yet", exact: true }),
   ).toBeVisible();
 
   // One closing shortly with two attempts, one open for a day with one; the clock starts now.

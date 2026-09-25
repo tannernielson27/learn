@@ -98,14 +98,31 @@ describe("ItemList", () => {
 
   it("says what to do when the bank is empty", () => {
     render(<ItemList items={[]} />);
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
     expect(
-      screen.getByText("No items in this bank yet. Choose New item to write one."),
+      screen.getByRole("heading", { level: 3, name: "No items in this bank yet" }),
     ).toBeInTheDocument();
+    expect(screen.getByText(/Choose New item to write one/)).toBeInTheDocument();
   });
 
-  it("says so when a folder holds no items", () => {
-    render(<ItemList items={[]} emptyMessage="No items in this folder." />);
-    expect(screen.getByText("No items in this folder.")).toBeInTheDocument();
+  it("says what the page passes when a view holds no items, with its link", () => {
+    render(
+      <ItemList
+        items={[]}
+        empty={{
+          heading: "No items in this folder",
+          body: "Move items here.",
+          action: { href: "/author/banks/b1", label: "See all items" },
+        }}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { level: 3, name: "No items in this folder" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "See all items" })).toHaveAttribute(
+      "href",
+      "/author/banks/b1",
+    );
   });
 
   it("offers no selection unless there is a move form to join", () => {

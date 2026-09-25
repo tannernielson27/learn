@@ -40,7 +40,9 @@ test("a student joins a class from its invite link and the roster shows them", a
   await expect(
     page.getByRole("img", { name: `QR code for the ${className} invite link`, exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("Nobody has joined yet.", { exact: false })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Nobody has joined yet", exact: true }),
+  ).toBeVisible();
   await expectNoAxeViolations(page);
 
   // The student, on their own phone: not signed in.
@@ -117,7 +119,9 @@ test("a student joins a class from its invite link and the roster shows them", a
   // Removing the student takes the class off their home; the account stays.
   await page.getByRole("button", { name: `Remove ${email}`, exact: true }).click();
   await page.getByRole("button", { name: "Remove from class", exact: true }).click();
-  await expect(page.getByText("Nobody has joined yet.", { exact: false })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Nobody has joined yet", exact: true }),
+  ).toBeVisible();
   await student.goto("/learn");
   await expect(student.getByText(/You are not in a class yet/)).toBeVisible();
 
