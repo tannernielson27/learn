@@ -1345,6 +1345,10 @@ export type Database = {
         };
         Returns: Json;
       };
+      import_sample_bank: {
+        Args: { new_case_study: Json; new_items: Json; target_bank: string };
+        Returns: Json;
+      };
       join_class: { Args: { token: string }; Returns: string };
       join_session: {
         Args: { chosen_name: string; target_session: string };

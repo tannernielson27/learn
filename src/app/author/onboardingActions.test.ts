@@ -97,7 +97,7 @@ describe("importSample", () => {
     bankReplies = [{ data: [{ id: BANK }], error: null }];
     await expect(importSample()).rejects.toThrow(`redirect:/author/banks/${BANK}`);
     expect(written).toEqual([]);
-    expect(rpc).not.toHaveBeenCalledWith("import_bank_content", expect.anything());
+    expect(rpc).not.toHaveBeenCalledWith("import_sample_bank", expect.anything());
   });
 
   it("refuses a student, sending them home before anything is read or written", async () => {
