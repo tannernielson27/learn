@@ -1,3 +1,4 @@
+import { captureException } from "@sentry/nextjs";
 import type { Metadata } from "next";
 import { Landing } from "@/components/landing/Landing";
 import { landingEntry, type LandingVisitor } from "@/lib/auth/landing";
@@ -28,7 +29,10 @@ async function readVisitor(): Promise<LandingVisitor> {
   try {
     const viewer = await readViewer();
     return viewer.status === "signed_out" ? viewer : { status: "signed_in", role: viewer.role };
-  } catch {
+  } catch (error) {
+    // Still reported: a real auth outage should not hide behind a page that renders. Without a DSN
+    // (previews, local builds) Sentry is not started and this is a no-op.
+    captureException(error);
     return { status: "signed_out" };
   }
 }

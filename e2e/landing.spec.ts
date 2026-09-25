@@ -13,24 +13,26 @@ async function expectNoAxeViolations(page: Page) {
   expect(results.violations).toEqual([]);
 }
 
-/** Cumulative layout shift so far, from the buffered `layout-shift` entries. */
+/**
+ * Cumulative layout shift so far, from the buffered `layout-shift` entries, read once the fonts
+ * have settled. Entries still queued for the observer's callback when it resolves are collected
+ * with `takeRecords`, so a callback that has not run yet cannot make the total read as zero.
+ */
 async function layoutShift(page: Page): Promise<number> {
-  return page.evaluate(
-    () =>
-      new Promise<number>((resolve) => {
-        let total = 0;
-        new PerformanceObserver((list) => {
-          for (const entry of list.getEntries() as (PerformanceEntry & {
-            value: number;
-            hadRecentInput: boolean;
-          })[]) {
-            if (!entry.hadRecentInput) total += entry.value;
-          }
-        }).observe({ type: "layout-shift", buffered: true });
-        // Buffered entries arrive in the first callback; give it a frame.
-        requestAnimationFrame(() => setTimeout(() => resolve(total), 0));
-      }),
-  );
+  return page.evaluate(async () => {
+    type Shift = PerformanceEntry & { value: number; hadRecentInput: boolean };
+    let total = 0;
+    const add = (entries: PerformanceEntryList) => {
+      for (const entry of entries as Shift[]) if (!entry.hadRecentInput) total += entry.value;
+    };
+    const observer = new PerformanceObserver((list) => add(list.getEntries()));
+    observer.observe({ type: "layout-shift", buffered: true });
+    await document.fonts.ready;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    add(observer.takeRecords());
+    observer.disconnect();
+    return total;
+  });
 }
 
 test("a visitor learns what LeaRN is and finds Sign in and Join, and no gallery", async ({

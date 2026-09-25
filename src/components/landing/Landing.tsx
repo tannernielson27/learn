@@ -83,6 +83,8 @@ export function Landing({ entry }: LandingProps) {
             height={SAMPLE.height}
             alt={SAMPLE.alt}
             sizes="(min-width: 1024px) 640px, 100vw"
+            // Beside the headline from 1024px up, so it is not left to lazy loading.
+            loading="eager"
             className="h-auto w-full rounded-md border border-line"
           />
           <figcaption className="mt-3 text-sm text-ink-2">
