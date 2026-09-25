@@ -29,9 +29,16 @@ export interface StepAttempt {
 
 type Row = Database["public"]["Functions"]["my_step_marks"]["Returns"][number];
 
-/** numeric over PostgREST is a number, but a driver may hand back a string. */
-const toNumber = (value: unknown): number | null =>
-  value === null || value === undefined || !Number.isFinite(Number(value)) ? null : Number(value);
+/**
+ * numeric over PostgREST is a number, but a driver may hand back a string. Nothing else is a
+ * number here: `Number` would read `[]`, `true` or `""` as a score.
+ */
+function toNumber(value: unknown): number | null {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value !== "string" || value.trim() === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
 /** Stored JSON is external input: a mark that is not a well-formed one is left out. */
 function toMarks(value: Json | null): StepAttemptMark[] {
