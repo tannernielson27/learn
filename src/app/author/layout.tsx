@@ -20,18 +20,29 @@ export default async function AuthorLayout({ children }: LayoutProps<"/author">)
           >
             LeaRN
           </GuardedLink>
-          {email ? (
-            <div className="flex min-w-0 items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            {email ? (
               <p className="truncate text-sm text-ink-2" data-testid="signed-in-email">
                 {email}
               </p>
+            ) : null}
+            {/* #269: the guides are public pages outside /author. */}
+            <nav aria-label="Author">
+              <GuardedLink
+                href="/help"
+                className="tap-target inline-flex items-center rounded-sm px-2 text-sm text-accent-ink transition-colors duration-fast hover:bg-accent-soft"
+              >
+                Help
+              </GuardedLink>
+            </nav>
+            {email ? (
               <form action={signOut}>
                 <Button type="submit" variant="ghost" size="sm">
                   Sign out
                 </Button>
               </form>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </header>
         <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">{children}</main>
       </div>
