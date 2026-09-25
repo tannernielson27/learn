@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type APIRequestContext, type Locator, type Page } from "@playwright/test";
 import { latestSignInLink } from "./mailbox";
@@ -140,7 +141,13 @@ test("the imported sample is ready to assign and to run live straight away", asy
   const project = testInfo.project.name;
   const orgId = await signInAsInstructorInEmptyOrg(page, request, `sample-live-${project}`);
   const className = `Sample class ${project} ${Date.now() % 100_000}`;
-  await insertAsAdmin(request, "classes", { org_id: orgId, name: className });
+  // The column's default calls private.new_invite_token(), which only `authenticated` may run, so
+  // the service role supplies a token of the same shape (32 base64url characters) itself.
+  await insertAsAdmin(request, "classes", {
+    org_id: orgId,
+    name: className,
+    invite_token: randomBytes(24).toString("base64url"),
+  });
 
   const checklist = page.getByRole("region", { name: "Get started", exact: true });
   await expect(
