@@ -46,7 +46,7 @@ export function PracticeSection({
           The practice shares could not be loaded. Reload the page to try again.
         </p>
       ) : (
-        <PracticeShareList entries={shares} focusAfterStop={HEADING_ID} {...list} />
+        <PracticeShareList entries={shares} {...list} focusAfterStop={HEADING_ID} />
       )}
       {options === null || shares === null ? null : (
         <PracticeShareForm choices={choices} {...form} />

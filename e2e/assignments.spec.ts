@@ -105,7 +105,8 @@ test("an instructor assigns a bank to a class and sees it listed in local time",
   });
 
   // One that has not opened yet can be deleted. With the keyboard only (#288): the row goes, and
-  // focus lands on the Assignments heading rather than falling to the document body.
+  // focus lands on the Assignments heading rather than falling to the document body. The same bank
+  // is assigned again (nothing makes bank + class unique); only this scheduled one has a Delete.
   await page.goto(bankUrl);
   await page.getByRole("link", { name: "Assign", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName, exact: true })).toBeVisible();
