@@ -24,6 +24,7 @@ test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase 
 // item in one statement, so the MC (…100) is item 1 and the SATA (…101) item 2.
 const SAMPLES_BANK = "00000000-0000-4000-8000-000000000002";
 const SAMPLE_CASE_STUDY = "00000000-0000-4000-8000-000000000003";
+const MC_ITEM = "00000000-0000-4000-8000-000000000100";
 const MC_STEM = /gaining 2\.3 kg/;
 const SATA_STEM = /community-acquired pneumonia/;
 const SATA_RATIONALE = "Tachypnea, hypoxemia, and new confusion indicate worsening gas exchange";
@@ -96,9 +97,13 @@ test("a live SATA and a case-study step reach the phone keyless until the reveal
   // The bytes are the same whatever the screen, so one project runs it: the phone the rule is for.
   test.skip(testInfo.project.name !== "phone-375", "the response bytes do not depend on viewport");
   // Two rooms, one phone, no real-time wait.
-  test.slow();
+  test.setTimeout(180_000);
   await signInAsNewAuthor(page, request, "live-bytes");
   const origin = new URL(page.url()).origin;
+  // The control for the MC, which this test moves past unrevealed: its rationale and key are in an
+  // author's response, so the greps below for them can match where they exist.
+  const authorMc = await bytesOf(page.context(), `/author/items/${MC_ITEM}`);
+  expect(authorMc).toContain(MC_RATIONALE);
 
   // A SATA from a bank, instructor-paced.
   const code = await startRoom(page, `/author/banks/${SAMPLES_BANK}`);
@@ -143,6 +148,8 @@ test("a live SATA and a case-study step reach the phone keyless until the reveal
   expect(after).toContain('"answerKey"');
   expect(after).toContain('"correctOptionIds"');
   expect(after).toContain('"points"');
+  expect(after).toContain('"score":');
+  // `correctOptionId` is a prefix of the plural, so the plural here is its control too.
   // A late submit after the reveal is refused, and the refusal is only a refusal.
   const late = await expectRefused(
     await context.request.post("/api/live/submit", {

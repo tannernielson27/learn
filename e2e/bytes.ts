@@ -9,7 +9,8 @@ export const KEY_MARKERS = [
   "correctOptionId",
   "correctOptionIds",
   '"score":',
-  "max_score",
+  // The wire name of a total's maximum (`best.maxScore`); the database column never reaches a page.
+  "maxScore",
 ] as const;
 
 /** A live item's marks as well (#244): `"points"` is a `ScoreResult`'s, and only a reveal has one. */
@@ -23,7 +24,13 @@ export const LIVE_KEY_MARKERS = [...KEY_MARKERS, '"points"'] as const;
  * this, never less.
  */
 export function wireText(bytes: string): string {
-  return bytes.replaceAll('\\"', '"');
+  // To a fixed point, so a payload escaped twice (a JSON string inside a JSON string) is read too.
+  let text = bytes;
+  for (let previous = ""; previous !== text;) {
+    previous = text;
+    text = text.replaceAll('\\"', '"');
+  }
+  return text;
 }
 
 /** The bytes a page's own GET returns to this browser: the HTML and its inline Flight payload. */

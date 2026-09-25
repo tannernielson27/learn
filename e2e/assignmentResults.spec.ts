@@ -262,6 +262,7 @@ test("a student sees nothing before the close, then their score, keys and ration
   // #244: the wire control for the score and for an answer. The `"score":` the checks before the
   // close look for is in this page's Flight now, and so is A's own answered item.
   expect(after).toContain('"score":');
+  expect(after).toContain('"maxScore"');
   expect(after).toContain('"kind":"answered"');
 
   // #244: after the close, B's results carry the keys (B's to see now) and nothing of A's: no
