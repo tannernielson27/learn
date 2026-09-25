@@ -154,6 +154,28 @@ export async function selectAsAdmin<T>(
   return (await read.json()) as T[];
 }
 
+/**
+ * Updates the rows `query` picks with the local secret key and returns them as written, for setup a
+ * test is not about (#244 gives a student a display name this way). Refuses to touch no rows.
+ */
+export async function updateAsAdmin<T>(
+  request: APIRequestContext,
+  table: string,
+  query: string,
+  patch: Record<string, unknown>,
+): Promise<T[]> {
+  const { url, headers } = localAdmin();
+  const updated = await request.patch(`${url}/rest/v1/${table}?${query}`, {
+    headers: { ...headers, Prefer: "return=representation" },
+    data: patch,
+  });
+  const rows = updated.ok() ? ((await updated.json()) as T[]) : [];
+  if (rows.length === 0) {
+    throw new Error(`could not update ${table}: ${updated.status()} ${await updated.text()}`);
+  }
+  return rows;
+}
+
 /** Creates an author: Add user, then the promotion, as the owner does it since #204. */
 export async function createAuthorAccount(
   request: APIRequestContext,

@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { formatPercent, formatPoints } from "../src/lib/live/reportFormat";
+import { bytesOf } from "./bytes";
 import { latestSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor } from "./signIn";
 
@@ -26,13 +27,6 @@ const WINDOW_MS = 180_000;
 async function expectNoAxeViolations(page: Page): Promise<void> {
   const axe = await new AxeBuilder({ page }).analyze();
   expect(axe.violations).toEqual([]);
-}
-
-/** The bytes a page's own GET returns to this browser: the HTML and its inline Flight payload. */
-async function bytesOf(context: BrowserContext, path: string): Promise<string> {
-  const response = await context.request.get(path);
-  expect(response.ok()).toBe(true);
-  return response.text();
 }
 
 /** Takes one attempt: the seeded MC answered with `option`, then submitted. */
