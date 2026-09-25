@@ -129,3 +129,75 @@ test("a new instructor imports the sample from Get started, then hides it", asyn
   ).toBeVisible();
   await expect(checklist).toHaveCount(0);
 });
+
+// #283: the sample arrives published, so a new instructor can assign it and run it live at once,
+// with no publish step in between.
+test("the imported sample is ready to assign and to run live straight away", async ({
+  page,
+  request,
+}, testInfo) => {
+  test.slow();
+  const project = testInfo.project.name;
+  const orgId = await signInAsInstructorInEmptyOrg(page, request, `sample-live-${project}`);
+  const className = `Sample class ${project} ${Date.now() % 100_000}`;
+  await insertAsAdmin(request, "classes", { org_id: orgId, name: className });
+
+  const checklist = page.getByRole("region", { name: "Get started", exact: true });
+  await expect(
+    checklist.getByText("published, ready to assign or run live", { exact: false }),
+  ).toBeVisible();
+  await expect(checklist.getByText("Only published items are used", { exact: false })).toHaveCount(
+    0,
+  );
+  await checklist.getByRole("button", { name: "Import the sample bank", exact: true }).click();
+  await expect(page).toHaveURL(/\/author\/banks\/[0-9a-f-]{36}$/);
+  const bankUrl = page.url();
+  const bankId = bankUrl.split("/").pop();
+
+  // Every item, step and the case study landed published; no draft is left to publish by hand.
+  const items = await selectAsAdmin<{ status: string }>(
+    request,
+    "items",
+    `select=status&bank_id=eq.${bankId}`,
+  );
+  expect(items.length).toBeGreaterThanOrEqual(21);
+  expect(new Set(items.map((item) => item.status))).toEqual(new Set(["published"]));
+  const cases = await selectAsAdmin<{ status: string }>(
+    request,
+    "case_studies",
+    `select=status&bank_id=eq.${bankId}`,
+  );
+  expect(cases).toEqual([{ status: "published" }]);
+
+  // Assign: the form takes the bank as it is, and the assignment is listed on the class.
+  await page.getByRole("link", { name: "Assign", exact: true }).click();
+  await expect(page).toHaveURL(/\/author\/banks\/[0-9a-f-]{36}\/assign$/);
+  await page
+    .getByRole("combobox", { name: "Class", exact: true })
+    .selectOption({ label: className });
+  await expectNoAxeViolations(page);
+  await page.screenshot({
+    path: `test-results/screenshots/${project}/sample-assign.png`,
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Assign", exact: true }).click();
+  await expect(page).toHaveURL(/\/author\/classes\/[0-9a-f-]{36}$/);
+  await expect(
+    page
+      .getByRole("list", { name: "Assignments", exact: true })
+      .getByRole("listitem")
+      .filter({ hasText: "Sample bank" }),
+  ).toHaveCount(1);
+
+  // Start a live session: the lobby opens, where a bank with nothing published is refused.
+  await page.goto(bankUrl);
+  await page.getByRole("button", { name: "Start a live session", exact: true }).click();
+  await expect(page).toHaveURL(/\/live\/[0-9a-f-]{36}$/);
+  await expect(page.getByTestId("join-code")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start session", exact: true })).toBeEnabled();
+  await expectNoAxeViolations(page);
+  await page.screenshot({
+    path: `test-results/screenshots/${project}/sample-live.png`,
+    fullPage: true,
+  });
+});

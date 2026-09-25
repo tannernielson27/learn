@@ -46,7 +46,7 @@ export function checklistSteps(progress: OrgProgress): ChecklistStep[] {
     {
       id: "bank",
       title: "Make a bank or import the sample",
-      hint: "A bank holds your items and case studies. The sample has one item of every type and a case study, as drafts to read or publish.",
+      hint: "A bank holds your items and case studies. The sample has one item of every type and a case study, published, ready to assign or run live.",
       done: progress.banks.length > 0,
       href: "#new-bank-heading",
       linkLabel: "Name a new bank",
@@ -65,7 +65,7 @@ export function checklistSteps(progress: OrgProgress): ChecklistStep[] {
       id: "assign",
       title: "Assign work or run a live session",
       hint: latest
-        ? "Open a bank to assign it to a class or start a live session. Only published items are used."
+        ? "Open a bank to assign it to a class or start a live session. The sample is ready as it is; items you write are used once you publish them."
         : "Once you have a bank, assign it to a class or start a live session from it.",
       done: progress.hasAssignmentOrSession,
       href: latest ? `/author/banks/${latest.id}` : null,
