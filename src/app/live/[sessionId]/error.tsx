@@ -3,6 +3,7 @@
 import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
 import { RouteRecovery } from "@/components/recovery/RouteRecovery";
+import { errorDigest } from "@/components/status/errorDigest";
 
 /**
  * The host console, when something in it fails to render (#164). The session lives in the
@@ -18,6 +19,7 @@ export default function HostError({ error, retry }: ErrorInfo) {
         headline="The session console stopped working."
         detail="The session is still running and students stay in the room. Try again to bring the console back."
         onRetry={retry}
+        digest={errorDigest(error)}
       />
     </main>
   );

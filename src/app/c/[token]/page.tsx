@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { InviteEmailForm } from "@/components/classes/InviteEmailForm";
 import { InviteUnavailable } from "@/components/classes/InviteUnavailable";
 import { ALREADY_INSTRUCTOR, JoinClassButton } from "@/components/classes/JoinClassButton";
+import { FocusHeading } from "@/components/status/FocusHeading";
 import { clientIp } from "@/lib/auth/signInRateLimit";
 import { STUDENT_HOME } from "@/lib/classes/classes";
 import { readViewer } from "@/lib/classes/viewer";
@@ -36,6 +37,8 @@ function Shell({ children }: { children: ReactNode }) {
 const LIMITED =
   "Too many invite links tried from this network. Wait a few minutes, then open the link again.";
 const UNAVAILABLE = "Joining is not working just now. Reload the page in a moment.";
+/** Says nothing about the token: a limited or failed lookup never learned whether it was good. */
+const PAUSED_HEADING = "This invite link cannot be opened just now";
 
 /**
  * A class invite link, `/c/<token>` (#205). The token is resolved on the server, counting a wrong
@@ -57,9 +60,15 @@ export default async function ClassInvitePage({ params }: PageProps<"/c/[token]"
         {invite.status === "invalid" ? (
           <InviteUnavailable />
         ) : (
-          <p role="alert" className="text-ink-1">
-            {invite.status === "rate_limited" ? LIMITED : UNAVAILABLE}
-          </p>
+          <>
+            {/* #267: every page someone lands on from a link opens on a focused heading. */}
+            <FocusHeading className="mb-3 font-read text-3xl text-ink-1 outline-none">
+              {PAUSED_HEADING}
+            </FocusHeading>
+            <p role="alert" className="text-ink-1">
+              {invite.status === "rate_limited" ? LIMITED : UNAVAILABLE}
+            </p>
+          </>
         )}
       </Shell>
     );

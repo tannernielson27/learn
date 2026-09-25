@@ -3,6 +3,7 @@
 import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
 import { RouteRecovery } from "@/components/recovery/RouteRecovery";
+import { errorDigest } from "@/components/status/errorDigest";
 
 /**
  * Any authoring page that fails to render (#164). It sits inside the authoring layout, so the
@@ -16,6 +17,7 @@ export default function AuthorError({ error, retry }: ErrorInfo) {
       headline="This page could not be shown."
       detail="Try again to load it. Changes you had not saved may be lost."
       onRetry={retry}
+      digest={errorDigest(error)}
     />
   );
 }

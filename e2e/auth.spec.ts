@@ -137,5 +137,7 @@ test("a link that was already used sends the person back with a reason", async (
     page
       .getByRole("alert")
       .filter({ hasText: "That sign-in link has expired or was already used." }),
-  ).toHaveText("That sign-in link has expired or was already used. Ask for a new one.");
+  ).toHaveText(
+    "That sign-in link has expired or was already used. Enter your email to get a new one.",
+  );
 });

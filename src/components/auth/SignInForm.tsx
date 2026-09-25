@@ -14,7 +14,8 @@ export interface SignInFormProps {
   linkError?: boolean;
 }
 
-const LINK_ERROR = "That sign-in link has expired or was already used. Ask for a new one.";
+const LINK_ERROR =
+  "That sign-in link has expired or was already used. Enter your email to get a new one.";
 const INITIAL: SignInState = { status: "idle" };
 
 export function SignInForm({ action, next, linkError = false }: SignInFormProps) {
