@@ -1,13 +1,17 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SetItem } from "@/lib/assignments/attemptScoring";
+import type { Item } from "@/lib/ngn/schemas";
 import type { RecordInput, RecordOutcome, RunSlots } from "@/lib/practice/answerRoute";
 import type { PracticeCaseStudyRow, PracticeRun, PracticeSlot } from "@/lib/practice/view";
 import type { Database, Json } from "./database.types";
+import { fromItemRow } from "./itemRows";
 import type { StepAttemptMark } from "./steps";
 
 /**
  * Practice runs (#241).
  *
- * The run functions are the service role's alone (see `20260925070000_practice.sql`): each takes
+ * The run functions are the service role's alone (see `20260925070000_practice.sql` and, for a
+ * run's frozen items, `20260926000000_practice_run_items.sql`): each takes
  * the student the server verified and re-checks, on every call, that the bank is still shared with
  * a class they are a current member of. `readRunAnswers` reads the table directly with the service
  * role, so it is only ever called after `readRunSlots` has said the run is live.
@@ -61,6 +65,42 @@ export async function readRunSlots(
     slots,
     answered: new Set(sorted.filter((row) => row.answered).map((row) => row.item_id)),
   };
+}
+
+/**
+ * Some of a live run's items, with their keys, in the order asked (#271). A run opened since #271
+ * reads the content it recorded at start, so an item edited or unpublished mid-run plays and scores
+ * as the student first saw it; an earlier run reads the bank's current items. The function
+ * re-checks that the run is live for this student and holds each item. A row that no longer parses
+ * is left out, as `readSetItems` does.
+ */
+/** `practice_run_item_content`'s row limit. */
+export const MAX_RUN_ITEM_READ = 1000;
+
+export async function readRunItems(
+  service: Client,
+  student: string,
+  runId: string,
+  ids: readonly string[],
+): Promise<SetItem[] | null> {
+  if (ids.length === 0) return [];
+  // The function returns at most this many rows; asking for more would drop items silently.
+  if (ids.length > MAX_RUN_ITEM_READ) return null;
+  const { data, error } = await service.rpc("practice_run_item_content", {
+    student,
+    target_run: runId,
+    target_items: [...ids],
+  });
+  if (error || !Array.isArray(data)) return null;
+  const byId = new Map<string, Item>();
+  for (const row of data) {
+    const stored = fromItemRow(row);
+    if (stored.ok) byId.set(row.item_id, stored.value);
+  }
+  return ids.flatMap((rowId) => {
+    const item = byId.get(rowId);
+    return item ? [{ rowId, item }] : [];
+  });
 }
 
 /** The run's stored answers by item. Only after `readRunSlots` has found the run live. */

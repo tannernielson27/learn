@@ -51,8 +51,11 @@ export interface RecordInput {
 export interface PracticeAnswerStore {
   /** Null when the read failed. */
   slots(student: string, runId: string): Promise<RunSlots | null>;
-  /** The items with their keys, by row id. Service role. */
-  items(ids: readonly string[]): Promise<SetItem[] | null>;
+  /**
+   * The run's own items with their keys, by row id: as the run recorded them at start (#271), so
+   * an item edited since scores against the key the student was shown. Service role.
+   */
+  items(student: string, runId: string, ids: readonly string[]): Promise<SetItem[] | null>;
   record(input: RecordInput): Promise<RecordOutcome>;
 }
 
@@ -139,7 +142,7 @@ async function itemToAnswer(
   if (run === null) return "failed";
   if (!run.slots.some((slot) => slot.itemId === body.itemId)) return "not_found";
   if (run.answered.has(body.itemId)) return "answered";
-  const items = await store.items([body.itemId]);
+  const items = await store.items(student, body.runId, [body.itemId]);
   if (items === null) return "failed";
   return items.find((entry) => entry.rowId === body.itemId) ?? "not_found";
 }

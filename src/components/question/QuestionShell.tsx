@@ -151,7 +151,10 @@ export function QuestionShell({
       ) : null}
 
       {mode === "answer" && showSubmit ? (
-        <div className="fixed inset-x-0 bottom-0 border-t border-line bg-surface-1/95 px-5 py-3 backdrop-blur-sm [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
+        // z-1: a disabled button after this in the page (opacity-50 makes it a stacking context)
+        // would otherwise paint over the bar and swallow a tap on Submit. It stays under the EHR
+        // panel (z-2) and sheet (z-5).
+        <div className="fixed inset-x-0 bottom-0 z-1 border-t border-line bg-surface-1/95 px-5 py-3 backdrop-blur-sm [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
           <div className="mx-auto flex max-w-3xl items-center justify-end gap-3">
             {submitError ? (
               <p role="alert" className="text-sm text-incorrect">
