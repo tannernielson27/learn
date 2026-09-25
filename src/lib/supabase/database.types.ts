@@ -751,6 +751,59 @@ export type Database = {
           },
         ];
       };
+      practice_item_snapshots: {
+        Row: {
+          answer_key: Json;
+          cjmm_step: number | null;
+          content: Json;
+          created_at: string;
+          digest: string;
+          item_id: string;
+          org_id: string;
+          rationale: Json;
+          scoring: Json;
+          tags: string[];
+          type: string;
+          version: number;
+        };
+        Insert: {
+          answer_key: Json;
+          cjmm_step?: number | null;
+          content: Json;
+          created_at?: string;
+          digest: string;
+          item_id: string;
+          org_id: string;
+          rationale: Json;
+          scoring: Json;
+          tags: string[];
+          type: string;
+          version: number;
+        };
+        Update: {
+          answer_key?: Json;
+          cjmm_step?: number | null;
+          content?: Json;
+          created_at?: string;
+          digest?: string;
+          item_id?: string;
+          org_id?: string;
+          rationale?: Json;
+          scoring?: Json;
+          tags?: string[];
+          type?: string;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "practice_item_snapshots_item_org_fkey";
+            columns: ["item_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "items";
+            referencedColumns: ["id", "org_id"];
+          },
+        ];
+      };
       practice_responses: {
         Row: {
           answered_at: string;
@@ -799,9 +852,62 @@ export type Database = {
           },
         ];
       };
+      practice_run_slots: {
+        Row: {
+          case_study_id: string | null;
+          digest: string;
+          item_id: string;
+          ordinal: number;
+          org_id: string;
+          run_id: string;
+          step: number | null;
+        };
+        Insert: {
+          case_study_id?: string | null;
+          digest: string;
+          item_id: string;
+          ordinal: number;
+          org_id: string;
+          run_id: string;
+          step?: number | null;
+        };
+        Update: {
+          case_study_id?: string | null;
+          digest?: string;
+          item_id?: string;
+          ordinal?: number;
+          org_id?: string;
+          run_id?: string;
+          step?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "practice_run_slots_case_org_fkey";
+            columns: ["case_study_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "case_studies";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "practice_run_slots_run_org_fkey";
+            columns: ["run_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "practice_runs";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "practice_run_slots_snapshot_fkey";
+            columns: ["item_id", "digest"];
+            isOneToOne: false;
+            referencedRelation: "practice_item_snapshots";
+            referencedColumns: ["item_id", "digest"];
+          },
+        ];
+      };
       practice_runs: {
         Row: {
           bank_id: string;
+          frozen: boolean;
           id: string;
           org_id: string;
           seed: string;
@@ -810,6 +916,7 @@ export type Database = {
         };
         Insert: {
           bank_id: string;
+          frozen?: boolean;
           id?: string;
           org_id: string;
           seed?: string;
@@ -818,6 +925,7 @@ export type Database = {
         };
         Update: {
           bank_id?: string;
+          frozen?: boolean;
           id?: string;
           org_id?: string;
           seed?: string;
@@ -1373,6 +1481,20 @@ export type Database = {
           class_id: string;
           class_name: string;
           exposed_items: number;
+        }[];
+      };
+      practice_run_item_content: {
+        Args: { student: string; target_items: string[]; target_run: string };
+        Returns: {
+          answer_key: Json;
+          cjmm_step: number;
+          content: Json;
+          item_id: string;
+          rationale: Json;
+          scoring: Json;
+          tags: string[];
+          type: string;
+          version: number;
         }[];
       };
       practice_run_items: {

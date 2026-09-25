@@ -1,12 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
+import { FIXTURES } from "@/lib/ngn/fixtures";
+import { itemSchema, type Item } from "@/lib/ngn/schemas";
 import type { Database } from "./database.types";
+import { toItemRow } from "./itemRows";
 import {
   openPracticeRun,
   readMyPracticeBanks,
   readMyPracticeStepMarks,
   readPracticeCaseStudies,
   readRunAnswers,
+  readRunItems,
   readRunSlots,
   recordPracticeResponse,
 } from "./practice";
@@ -89,6 +93,37 @@ describe("readRunSlots", () => {
   it("is null on an error", async () => {
     expect(
       await readRunSlots(rpcClient({ data: null, error: {} }).client, STUDENT, RUN),
+    ).toBeNull();
+  });
+});
+
+describe("readRunItems", () => {
+  const MC = itemSchema.parse(FIXTURES.multiple_choice.canonical) as Item;
+  const MC_ROW = "00000000-0000-4000-8000-0000000000f1";
+  const BAD_ROW = "00000000-0000-4000-8000-0000000000f2";
+  const row = { item_id: MC_ROW, ...toItemRow(MC) };
+
+  it("reads the run's own content for this student, in the order asked, dropping what does not parse", async () => {
+    const { client, rpc } = rpcClient({
+      data: [{ ...row, item_id: BAD_ROW, content: "not an item" }, row],
+      error: null,
+    });
+    const read = await readRunItems(client, STUDENT, RUN, [BAD_ROW, MC_ROW]);
+    expect(read).toEqual([{ rowId: MC_ROW, item: expect.objectContaining({ type: MC.type }) }]);
+    expect(read?.[0]?.item.answerKey).toEqual(MC.answerKey);
+    expect(rpc).toHaveBeenCalledWith("practice_run_item_content", {
+      student: STUDENT,
+      target_run: RUN,
+      target_items: [BAD_ROW, MC_ROW],
+    });
+  });
+
+  it("asks nothing for no items, and is null on an error", async () => {
+    const { client, rpc } = rpcClient({ data: [], error: null });
+    expect(await readRunItems(client, STUDENT, RUN, [])).toEqual([]);
+    expect(rpc).not.toHaveBeenCalled();
+    expect(
+      await readRunItems(rpcClient({ data: null, error: {} }).client, STUDENT, RUN, [MC_ROW]),
     ).toBeNull();
   });
 });

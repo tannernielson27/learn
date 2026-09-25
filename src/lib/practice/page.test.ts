@@ -40,7 +40,7 @@ describe("loadPracticePage", () => {
     expect(view.view.bankName).toBe("Cardiac week");
     expect(store.open).toHaveBeenCalledWith(STUDENT, BANK, false);
     expect(store.slots).toHaveBeenCalledWith(STUDENT, RUN.runId);
-    expect(store.items).toHaveBeenCalledWith([ITEM]);
+    expect(store.items).toHaveBeenCalledWith(STUDENT, RUN.runId, [ITEM]);
     expect(store.answers).toHaveBeenCalledWith(RUN.runId);
     expect(JSON.stringify(view)).not.toContain(RUN.seed);
   });

@@ -17,7 +17,8 @@ import { buildPracticeView, type PracticeCaseStudyRow, type PracticeView } from 
 export interface PracticePageStore {
   open(student: string, bankId: string, fresh: boolean): Promise<OpenedRun>;
   slots(student: string, runId: string): Promise<RunSlots | null>;
-  items(ids: readonly string[]): Promise<SetItem[] | null>;
+  /** The run's own items with their keys (#271: as recorded at start). Service role. */
+  items(student: string, runId: string, ids: readonly string[]): Promise<SetItem[] | null>;
   caseStudies(ids: readonly string[]): Promise<PracticeCaseStudyRow[] | null>;
   answers(runId: string): Promise<Record<string, unknown> | null>;
 }
@@ -42,7 +43,7 @@ export async function loadPracticePage(
     ...new Set(listed.slots.flatMap((slot) => (slot.caseStudyId ? [slot.caseStudyId] : []))),
   ];
   const [items, caseStudies, answers] = await Promise.all([
-    store.items(itemIds),
+    store.items(student, run.runId, itemIds),
     store.caseStudies(caseIds),
     store.answers(run.runId),
   ]);

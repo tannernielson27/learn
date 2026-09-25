@@ -30,7 +30,7 @@ const SLOTS: PracticeSlot[] = [
 function fakeStore(overrides: Partial<PracticeAnswerStore> = {}) {
   const store: PracticeAnswerStore = {
     slots: vi.fn(async () => ({ slots: SLOTS, answered: new Set<string>() })),
-    items: vi.fn(async (ids: readonly string[]) =>
+    items: vi.fn(async (_student: string, _runId: string, ids: readonly string[]) =>
       ids.flatMap((id) =>
         id === MR_ROW ? [{ rowId: id, item: MR }] : id === MC_ROW ? [{ rowId: id, item: MC }] : [],
       ),
@@ -93,7 +93,32 @@ describe("POST /api/practice/answer, on the bytes it returns", () => {
     expect((body.score as { points: number }).points).toBeLessThan(
       (body.score as { maxPoints: number }).maxPoints,
     );
-    expect(store.items).toHaveBeenCalledWith([MR_ROW]);
+    expect(store.items).toHaveBeenCalledWith(STUDENT, RUN, [MR_ROW]);
+  });
+
+  it("scores and reveals the run's recorded content, read for this student and run (#271)", async () => {
+    // What the run recorded at start, and what the author has since saved over it.
+    const recorded = { ...MR, answerKey: { correctOptionIds: ["opt_c"] } } as Item;
+    const store = fakeStore({
+      items: vi.fn(async (student: string, runId: string, ids: readonly string[]) =>
+        student === STUDENT && runId === RUN && ids.includes(MR_ROW)
+          ? [{ rowId: MR_ROW, item: recorded }]
+          : [{ rowId: MR_ROW, item: MR }],
+      ),
+    });
+    const response = await answerPracticeItem(answer(), deps({ store }));
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      answerKey: unknown;
+      score: { points: number; maxPoints: number };
+    };
+    expect(body.answerKey).toEqual({ correctOptionIds: ["opt_c"] });
+    expect(body.answerKey).not.toEqual(MR.answerKey);
+    // opt_c alone is wrong against the current key and right against the recorded one.
+    expect(body.score.points).toBe(body.score.maxPoints);
+    expect(store.record).toHaveBeenCalledWith(
+      expect.objectContaining({ score: expect.objectContaining({ points: body.score.points }) }),
+    );
   });
 
   it("records the score before it answers, as the student the session names", async () => {
