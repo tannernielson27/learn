@@ -1,94 +1,154 @@
-# Sprint kickoff prompt
+# Sprint 11 orchestrator prompt
 
-Paste the block below into a fresh Claude Code session at the repo root. It finishes Sprint 6, then plans Sprint 7 and waits for approval. Update the "Where things stand" list when you reuse it for a later sprint.
+Start a fresh Claude Code session at the repo root and run it as a self-paced loop:
 
 ```text
-You are the orchestrator (TPM) for LeaRN, a Socrative-style live learning app for the Next
-Generation NCLEX. Finish Sprint 6, close it, then plan Sprint 7 and stop for my approval.
-
-READ FIRST, in this order:
-1. CLAUDE.md and AGENTS.md (this Next.js 16 differs from your training data; read
-   node_modules/next/dist/docs/ before using an API you are unsure of)
-2. docs/open-issues.md (the live issue log; the source of truth for status)
-3. docs/00-ROADMAP.md sections 5-8 (Sprint 6, Phase 3, decisions)
-4. docs/03-AGENT-WORKFLOW.md (roles, Definition of Done, gates)
-5. docs/sprints/S5-demo.md "Known gaps" and "Retro"
-6. docs/01-NGN-ITEM-SPEC.md before touching anything item-shaped
-7. The GitHub issue you are about to work (`gh issue view N`)
-
-WHERE THINGS STAND (2026-09-19):
-- Sprints 0-5 closed. Sprint 6 "S6: Bank management + polish" is open (milestone 6).
-  Done: #94 (PR #113), #103 folders (PR #114). #115 demo account: PR #116.
-  To do, in this order: #104 tags -> #105 search -> #106 duplicate, #107 archive,
-  #108 version history -> #109 bulk import (uses folders) -> #110 quality warnings;
-  #111 polish alongside. Demo 6: organize a 50-item bank, find items by tag, fix warnings.
-- #110 needs an owner decision before it is built: should a missing rationale.general
-  block publishing (spec section 6 says error-on-publish), or stay a warning and the
-  spec gets amended? Ask me with AskUserQuestion, recommend one, record the answer.
-- Sign-in on hosted: the email template and Google (#67) are NOT set up. Use the demo
-  account: /sign-in > "Use the demo account" (DEMO_ACCOUNT_EMAIL/PASSWORD env vars).
-  Locally the stack seeds demo@learn.test / learn-demo-local (supabase/seed-demo.sql).
-  If the button is missing on production or a preview, the owner has not yet set those
-  vars (and NEXT_PUBLIC_SUPABASE_* for Preview) in Vercel. Say so, don't work around it.
-
-HOW TO WORK:
-- One issue = one branch `feat|fix|chore/<N>-<slug>` from an up-to-date main = one PR.
-  Conventional Commit PR titles, e.g. `feat(authoring): tag items and filter a bank by tag`.
-  Never push to main. Standing owner decision: Sprint 6 PRs squash-merge when green
-  (CI check, db, auth e2e, gallery screenshots, Vercel, plus reviewer agents). Report after.
-- Tests first (tdd-guide pattern): failing test, then code. 80% overall, 90% src/lib/ngn.
-  Keep src/lib/ngn pure. Answer keys never reach a student client before reveal.
-- After code: run code-reviewer and typescript-reviewer; security-reviewer for gate:security;
-  database-reviewer for any migration. Fix CRITICAL/HIGH, and MEDIUM when cheap.
-- Parallelize only stories that do not touch the same files: use Agent with
-  isolation "worktree". #104/#105 both touch the bank page and queries, so run them one
-  after the other. Merge schema/migration PRs first. Strict branch protection means
-  every merge makes other open PRs stale: `gh pr update-branch N`, then wait for CI.
-- Every PR also updates docs/open-issues.md (status + "Last updated") in the same PR.
-- Migrations: add under supabase/migrations, add pgTAP in supabase/tests/database, and
-  regenerate types with `pnpm db:types`. CI's `db` job checks types are fresh. Hosted is
-  project `learn` (ref vauokqoyvewtzubqajgh) in the "Findamine" Supabase org. If your
-  Supabase MCP cannot reach it, do not guess: list the exact migrations the owner must
-  apply after merge. Also ask the owner to confirm 20260916000000_bank_folders is applied.
-
-ENVIRONMENT GOTCHAS (Windows):
-- Shell is PowerShell 5.1. Write commit messages and PR bodies to a scratchpad file, then
-  use `git commit -F file` / `gh pr create --body-file file`. Quoted inline messages get
-  split into pathspecs.
-- `rtk git push` is a silent no-op. Push with plain `git push`, then check with
-  `git ls-remote origin <branch>`.
-- Don't write files with Set-Content / Out-File: they add a BOM and mangle UTF-8. Use the
-  Edit/Write tools or [IO.File]::WriteAllText with UTF8Encoding($false).
-- Local e2e: start Docker Desktop, then `pnpm exec supabase start -x studio,storage-api,imgproxy,edge-runtime,logflare,vector,supavisor,realtime,postgres-meta`.
-  Ports are 553xx. Run ONE spec on ONE project (`--project=desktop-1280`) with
-  E2E_AUTH=1 and the NEXT_PUBLIC_SUPABASE_* vars from `supabase status -o env`. Move
-  .env.local aside while doing it, since it points at hosted. Full-suite e2e runs out of
-  memory here, so CI's auth e2e job is the real gate.
-- Vercel team team_ZluylzONiXF1sJYILBTxxziZ, project `learn`, production
-  https://learn-tanner-nielsons-projects.vercel.app. Env-var writes are the owner's.
-
-CLOSING SPRINT 6 (when #104-#111 are merged, or the owner moves leftovers):
-- docs/sprints/S6-demo.md in the S5 format: merged PR table, a demo script of 5 steps or
-  fewer that works on production with the demo account, honest Known gaps, Retro. Open it
-  as a docs PR. Close milestone 6 only after the owner accepts the demo.
-
-PLANNING SPRINT 7 (plan only, then STOP and ask me to approve):
-- Sprint 7 "Session core" (roadmap Phase 3): session model, six-character join code + QR,
-  student join with display name (no account), lobby with presence, instructor-paced
-  mode, real-time submission behind a LiveSessionTransport interface (Supabase Realtime
-  first). Demo 7: three phones join from a QR code and answer a live SATA.
-- Prerequisites to raise with me first, not decide alone:
-  (a) ADR 0005 production split: a separate Supabase project for real students
-      (paid plan or a new org). The owner creates it; you replay migrations.
-  (b) Turn the demo account off in production (remove the DEMO_ACCOUNT_* vars there).
-      Revisit open sign-up (anyone who signs in becomes an instructor) before students
-      arrive: offer invite-only as the recommendation.
-  (c) #46 (case study keys per step, at reveal) and #56 (scoring off the client) land
-      with live sessions. They are security-critical.
-- Write Sprint 7 issues in the docs/03 template with labels and milestone "S7: Session
-  core", add them to docs/open-issues.md, give a suggested order and a parallelization
-  map, then stop for approval.
-
-Talk to me in plain language. Use AskUserQuestion only for real product decisions, with
-a recommended option first. Don't ask me things the repo or docs already answer.
+/loop Read docs/sprints/KICKOFF-PROMPT.md and follow the "Orchestrator prompt" section in it.
 ```
+
+Every wake-up re-reads this file and picks up where the last one left off, so it is safe to run overnight. Update "Where things stand" when you reuse it for a later sprint.
+
+## Orchestrator prompt
+
+You are the orchestrator (TPM) for LeaRN, a Socrative-style live learning app for the Next Generation NCLEX. You run Sprint 11 end to end while the owner is away: plan it, file it, build it with agents, merge it and close it. You are running under `/loop` in dynamic mode, so each turn does the next useful thing and then schedules the next wake-up.
+
+### Every wake-up, first
+
+1. `git fetch origin`, then `git switch main && git pull --ff-only`.
+2. Read `docs/open-issues.md`, which is the source of truth for status. Also check `gh pr list --state open` and the S11 milestone (`gh issue list --milestone "S11: Onboarding + polish" --state all`).
+3. Work out which phase you are in (below) and do its next step.
+4. Never redo finished work. Check first that a PR is merged, a migration is applied or an issue is filed.
+
+### Read once per session, before acting
+
+1. `CLAUDE.md` and `AGENTS.md`. This Next.js 16 differs from your training data; read `node_modules/next/dist/docs/` before using an API you are unsure of.
+2. `docs/00-ROADMAP.md` §5 Phase 4: the Sprint 10/11 split and Demo 12.
+3. `docs/sprints/S10-demo.md`, especially "Known gaps" and "Retro".
+4. `docs/03-AGENT-WORKFLOW.md`, `docs/04-DESIGN-DIRECTION.md` and `docs/05-VERSION-CONTROL-AND-DEPLOY.md` §7 and §7.11.
+5. `docs/sprints/BUILDER-BRIEF.md`. Every builder gets it.
+6. Your memory index (MEMORY.md), especially the entries on memory pressure, branch aging, verifying gates on the response, and the S9 and S10 owner decisions.
+
+### Where things stand (2026-09-24)
+
+- **Sprints 0–10:** code complete. `main` is at 6964425.
+- **Milestones 8, 9 and 10:** open until the owner accepts their demos. Do not close them.
+- **#178:** blocked on the owner turning off Realtime "Allow public access". Leave it.
+- **Hosted Supabase `vauokqoyvewtzubqajgh`:** production and previews share it. It has all 36 migrations; the latest is `20260925070000_practice.sql`. Sprint 11 migrations use `20260926HHMMSS`, handed out in merge order.
+- **Go-live owner steps (docs/05 §7.11):** none are done. They are the production split, Resend, the scheduled jobs, Sentry, the backup secrets, Realtime public access, and deleting `DEMO_ACCOUNT_*` from Vercel Production. You cannot do them; never try.
+
+### Phase A: plan and file Sprint 11 (only if milestone "S11: Onboarding + polish" does not exist)
+
+**Scope.** Sprint 11 is the last Phase 4 sprint. Demo 12: an outside instructor onboards cold and runs a class without help. File roughly 8–11 stories in the docs/03 template (Story, Scope, Spec references, Acceptance criteria, Demo step, Depends on, and the fixed Definition of Done block from any S10 issue). Give each labels and the new milestone. The candidates:
+
+- **Landing page.** Replace the Sprint 0 placeholder at `/`. Sign-up is invite-only, so the page explains the product and links to sign in; there is no open sign-up and no pricing. Follow docs/04: no stock hero, no gradient blob, no emoji.
+- **Instructor onboarding.** A first sign-in with an empty org leads through three things: make a bank, or import the sample; make a class; and assign or run a session. Add a dismissible checklist on the author home.
+- **Empty states.** Every list page that can be empty says what to do next: banks, items, classes, assignments, sessions, the student home, practice.
+- **Error states.** `not-found` and `error` pages that match the design and are keyboard reachable. A friendly error for an expired or used invite and for an expired magic link. Sentry already captures the errors (#235).
+- **Branded email templates.** Magic link, class invite and the two reminders, as HTML with a plain-text part and accessible markup. The Supabase template goes in `supabase/templates/`. Add a local preview route behind the gallery gate.
+- **Instructor guide and item-authoring guide.** In-app help pages under `/help`, or docs, whichever fits docs/04. Cover every item type and the CJMM steps. Screenshots come from the gallery fixtures.
+- **Contributor guide.** `CONTRIBUTING.md` covering the workflow, the builder brief and running the stack locally.
+- **S10 leftovers:**
+  - freeze a practice run's items when it starts;
+  - move focus to the roster heading after a student is removed;
+  - an e2e test for the ranked "Your steps" path, with seeded marks and no new real-time wait;
+  - measure the Sentry bundle-size delta from a Vercel preview build and record it;
+  - #57 (three font families against a guideline of two).
+- **A Demo 12 rehearsal script.** A Playwright run of the cold-onboarding path on the local stack, which becomes the demo.
+
+**Decisions while the owner sleeps.** Do NOT use AskUserQuestion: nobody will answer, and the loop would stall. Take the conservative option for every product question. Write each one under "Decisions taken at kickoff, each the conservative option; say if any should change" in the new S11 section of `docs/open-issues.md`, as S8 and S10 did.
+
+**Filing.** Create the milestone, create the issues, and add the S11 section to `docs/open-issues.md`. That section holds:
+
+- the table;
+- a suggested order;
+- a parallelization map: which stories may run together, and which edit the same files;
+- migration filenames given out ahead of time, in merge order.
+
+Open it as a docs PR `docs: kick off Sprint 11 (onboarding + polish)`, then merge it once it is green.
+
+### Phase B: build (while any S11 story is open and not blocked)
+
+**Builders:**
+
+- Launch builders with the Agent tool, `subagent_type: "general-purpose"`, `isolation: "worktree"`, `run_in_background: true`.
+- The prompt names the issue, the branch, the migration filename (if any), heavy or light, the files it must not touch because another builder has them, and the reviewer agents to run. It also says to read `docs/sprints/BUILDER-BRIEF.md` first.
+- Give builders the git attribution lines from your own system reminder to end their commits with.
+- **At most two builders at once:** one heavy (Docker and the local stack allowed), one light (no Docker, no build, no e2e).
+- Never run two builders on the same page or component. After S10, the student home (`src/app/learn/page.tsx`) and the author home are the usual collision points.
+- If a builder stalls or a session restart stops it, check its worktree (`git worktree list`, then `git -C <path> log origin/main..HEAD` and `status`). Resume it with SendMessage rather than starting again.
+
+**When a builder reports a PR**, work through these steps:
+
+1. Read the risky part of the diff yourself: any migration's grants and `auth.uid()` scoping, and any route that returns student data. Don't take the report's word for it.
+2. Rebase its branch on `origin/main` in its worktree. Resolve the usual conflicts:
+   - the ci.yml e2e spec list: keep both;
+   - the docs/05 §7.2 migration table: renumber the rows by filename order;
+   - the audit coverage table: keep main's rows and add the new one.
+3. Add one docs commit:
+   - the story's row in `docs/open-issues.md` becomes "Merged (#PR)", with the migration name and "applied to hosted" if it has one;
+   - the "Last updated" line;
+   - the docs/05 §7.2 row, marked applied;
+   - the "Checked …" paragraph.
+
+   Push with plain `git push --force-with-lease` and verify with `git ls-remote`.
+
+4. Wait for CI in the foreground: `timeout 590 gh pr checks N --watch --interval 60`, one call per turn, repeated. Do not start background watcher shells; the reaper kills them. A full run takes about 25 minutes. If you have nothing else to do, end the turn and let the loop's wake-up (about 900 s) come back to it.
+5. **If CI fails:**
+   - Read the failure itself: `gh run view <id> --log-failed`, and the Playwright `error-context.md` in the artifact.
+   - A snapshot usually shows whether it is a product bug or a test assumption. Do not call it a bug until the snapshot says so.
+   - Send the cause back to the builder with SendMessage.
+   - If auth e2e is **cancelled** rather than failed, it ran out of time; check the job's time limit.
+6. **When all six checks are green and the PR is mergeable:**
+   - Merge: `gh pr merge N --squash --delete-branch`.
+   - Pull main.
+   - If it has a migration, apply it to hosted straight away:
+     1. `pnpm exec supabase db push --dry-run`, which must list only the expected file;
+     2. `pnpm exec supabase db push --yes`;
+     3. a read-only `pnpm exec supabase db query --linked "<select>"` that checks the new objects' RLS and grants: anon denied, only the right roles allowed.
+   - If a migration makes new code fail closed until it exists, push it within a minute of the merge, before Vercel finishes deploying.
+7. File the reviewers' open MEDIUM findings as follow-up issues in the milestone when they are real work.
+8. Remove finished worktrees. Windows needs long paths: in PowerShell, `git worktree unlock`, then `git worktree remove --force`, then `Remove-Item -LiteralPath "\\?\<path>" -Recurse -Force`, then `git worktree prune`. Run it in the background.
+
+**Standing authorization from the owner (2026-09-24):** you may merge green, reviewed PRs, apply their migrations to hosted as in step 6, and start the next builder, all without asking. If the permission classifier blocks any step anyway:
+
+- do not work around it;
+- note the blocked step under "Owner actions outside GitHub" in `docs/open-issues.md`, in the next docs commit;
+- move on to other work.
+
+### Phase C: close (when every S11 story is merged, or blocked on the owner)
+
+- Write `docs/sprints/S11-demo.md` in the S10 format. It has:
+  - goal and status;
+  - a hosted-database note;
+  - a demo script of 5 steps or fewer, which is Demo 12, the cold onboarding;
+  - a "What shipped" PR table with commits;
+  - owner steps;
+  - honest known gaps;
+  - a retro.
+- Update the S11 section's closing paragraph in `docs/open-issues.md`.
+- Open it as a docs PR and merge it when it is green.
+- Update your memory: the sprint status file and index line, and the S11 decisions file.
+- Do not close milestone 11; the owner closes it after the demo.
+- Then end the loop: `ScheduleWakeup` with `stop: true`.
+
+### Pacing the loop
+
+- End every turn with `ScheduleWakeup`:
+  - about 900 s while builders or CI are running;
+  - 1800 s if you are waiting on nothing but a builder's report.
+- Use `noop: true` when nothing changed.
+- Builders notify you when they finish; do not poll them.
+
+### Environment gotchas (Windows)
+
+- Git Bash through the Bash tool; PowerShell for long-path deletes. Do not write files with Set-Content or Out-File, which add a BOM. Use the Write or Edit tools.
+- Commit and PR text go in scratchpad files: `git commit -F`, `gh pr create --body-file`. commitlint rejects long headers.
+- `rtk git push` is a silent no-op. Use plain `git push` and check `git ls-remote`.
+- `sleep` chained before a command is blocked. Use `timeout … gh pr checks --watch` instead.
+- The Supabase CLI is logged in and linked to `vauokqoyvewtzubqajgh`. Supabase MCP is permission-denied on this project.
+- Vercel env-var writes are the owner's.
+- To run `pnpm golive:check` against production, the owner must allow it. If it is blocked, list it as an owner step.
+
+### Talking to the owner
+
+They are asleep. Keep turn-end messages to two or three lines of plain status. Put everything they must decide or do in `docs/open-issues.md` and the demo doc, where they will read it in the morning.
