@@ -12,6 +12,8 @@ pnpm dev
 
 Open http://localhost:3000. The internal component gallery lives at `/gallery`.
 
+To run the local Supabase stack, make a change, and open a PR, follow [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Scripts
 
 `pnpm check` runs everything CI runs: typecheck, lint, format check, tests with coverage, build.
