@@ -12,7 +12,7 @@ import {
   type ImportStep,
 } from "@/lib/authoring/bulkImport";
 import { folderOptions, UNFILED, type FolderRow } from "@/lib/authoring/folders";
-import { IMPORT_MAX_ITEMS } from "@/lib/authoring/transfer";
+import { IMPORT_MAX_ITEMS } from "@/lib/authoring/importLimits";
 
 export interface ImportJsonFormProps {
   /** Imports one file (or pasted JSON) into the bank; called once per file. */

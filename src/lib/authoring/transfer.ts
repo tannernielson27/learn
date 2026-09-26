@@ -1,27 +1,19 @@
 import { caseStudySchema, itemSchema, type CaseStudy, type Item } from "@/lib/ngn/schemas";
 import type { Json } from "@/lib/supabase/database.types";
 import { toCaseStudyRow, toItemRow, type ItemRow } from "@/lib/supabase/itemRows";
+import { IMPORT_ERRORS, IMPORT_MAX_BYTES, IMPORT_MAX_ITEMS } from "./importLimits";
 import { withinItemSizeLimit } from "./payloadSize";
+
+export { IMPORT_ERRORS, IMPORT_MAX_BYTES, IMPORT_MAX_ITEMS };
 
 /**
  * The learn.v1 exchange format (docs/transfer-format.md): an envelope holding either items or one
  * case study, in the same validated shape the ngn schemas describe. Pure, so it runs anywhere.
  */
 export const LEARN_FORMAT = "learn.v1";
-/** Below the default 1 MB Server Action body limit, with room for the form around it. */
-export const IMPORT_MAX_BYTES = 800_000;
-export const IMPORT_MAX_ITEMS = 50;
 
 const MAX_ERRORS = 20;
 const ISSUES_PER_ENTRY = 3;
-
-export const IMPORT_ERRORS = {
-  tooLarge: "This import is too large. Import at most 800 KB at a time.",
-  notJson: "This is not valid JSON.",
-  notLearn: 'This is not a LeaRN export. It needs "format": "learn.v1".',
-  eitherOr: "A LeaRN export holds either items or one case study.",
-  itemCount: `Include between 1 and ${IMPORT_MAX_ITEMS} items. Split a larger set into several files.`,
-} as const;
 
 export interface ItemsEnvelope {
   format: typeof LEARN_FORMAT;
