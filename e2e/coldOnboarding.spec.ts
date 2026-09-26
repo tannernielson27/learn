@@ -25,6 +25,7 @@ const HEADLINE = "Live learning for the Next Generation NCLEX.";
 const CODE = /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{3} [23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{3}$/;
 /** The sample's multiple-choice item, which the phone answers, and its keyed option. */
 const MC = FIXTURES.multiple_choice.canonical;
+// The fixture always has option A; the fallback only satisfies the index type.
 const MC_OPTION = MC.content.options[0]?.label ?? "";
 const PHONE_NAME = "Ada Brennan";
 
@@ -68,10 +69,21 @@ async function multipleChoicePosition(
     // The row keeps the item as learn wrote it: the options sit under `content.content`.
     content: { content?: { options?: { label: string }[] } };
   }>(request, "items", `select=id,content&bank_id=eq.${bankId}&type=eq.multiple_choice`);
+  if (!session) throw new Error(`no session row for ${sessionId}`);
   const item = candidates.find((row) => row.content.content?.options?.[0]?.label === MC_OPTION);
-  const position = item && session ? session.item_set.indexOf(item.id) + 1 : 0;
+  if (!item) {
+    throw new Error(`no multiple-choice item in bank ${bankId} starts with "${MC_OPTION}"`);
+  }
+  const position = session.item_set.indexOf(item.id) + 1;
   if (position < 1) throw new Error("the sample's multiple-choice item is not in this session");
   return position;
+}
+
+/** The last path segment of a page's URL, an id; refuses a URL that ends without one. */
+function idFrom(url: string): string {
+  const id = new URL(url).pathname.split("/").at(-1);
+  if (!id) throw new Error(`no id at the end of ${url}`);
+  return id;
 }
 
 test("an outside instructor onboards cold and runs a live session a phone answers", async ({
@@ -112,7 +124,7 @@ test("an outside instructor onboards cold and runs a live session a phone answer
     page.getByRole("heading", { level: 1, name: "Sample bank", exact: true }),
   ).toBeVisible();
   const bankUrl = page.url();
-  const bankId = new URL(bankUrl).pathname.split("/").pop() ?? "";
+  const bankId = idFrom(bankUrl);
   await shoot(page, testInfo, "4-sample-bank");
 
   // ...then a class from the checklist's own link, and its invite link copied.
@@ -161,7 +173,7 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   await page.goto(bankUrl);
   await page.getByRole("button", { name: "Start a live session", exact: true }).click();
   await expect(page).toHaveURL(/\/live\/[0-9a-f-]{36}$/);
-  const sessionId = new URL(page.url()).pathname.split("/").pop() ?? "";
+  const sessionId = idFrom(page.url());
   const shownCode = page.getByRole("region", { name: "Join code", exact: true }).getByText(CODE);
   await expect(shownCode).toBeVisible();
   const code = await shownCode.innerText();
