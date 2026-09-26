@@ -38,6 +38,15 @@ describe("checklistSteps", () => {
     expect(checklistSteps({ ...EMPTY, banks: [BANK, SAMPLE] })[0]!.sampleBankId).toBe(SAMPLE.id);
   });
 
+  // #283: the sample arrives published, so no step tells the author to publish it first.
+  it("says the sample is ready to use, and asks for publishing only of the author's own items", () => {
+    const [bank, , assign] = checklistSteps({ ...EMPTY, banks: [SAMPLE] });
+    expect(bank!.hint).toContain("published, ready to assign or run live");
+    expect(bank!.hint).not.toContain("drafts");
+    expect(assign!.hint).not.toContain("Only published items are used");
+    expect(assign!.hint).toContain("The sample is ready as it is");
+  });
+
   it("links the class step to the classes page", () => {
     expect(checklistSteps(EMPTY)[1]!.href).toBe("/author/classes");
   });
