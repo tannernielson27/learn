@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-25 (Sprint 11 in progress: #264, #265, #267, #268, #269, #270 and #273 merged; #283 filed; #271 in review (#284); hosted at all 36 migrations).
+Last updated: 2026-09-26 (Sprint 11 code complete: every story merged, `main` at da34d8c; hosted at all 38 migrations; demo in docs/sprints/S11-demo.md).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -240,6 +240,8 @@ Decisions taken at kickoff, each the conservative option; say if any should chan
 7. **A practice run freezes item versions at start** (#271). Runs started before the migration keep reading the bank's current items. Stopping a share still closes every run at once.
 8. **The three font families stay, with the exception written down** (#272, #57), unless one proves unused. The Sentry bundle delta is measured with a local build and a dummy DSN, since previews have no DSN until the owner step.
 9. **The rehearsal walks a live session, not a take-home window** (#274), so it adds no real-time wait to the auth e2e job.
+
+Sprint 11 is code complete: every story is merged, including the follow-ups #283, #288 and #289 filed during the sprint. `main` is at da34d8c. The demo script, owner steps, known gaps and retro are in `docs/sprints/S11-demo.md`, and `docs/sprints/S11-rehearsal.md` is Demo 12 step for step. Both Sprint 11 migrations are applied to hosted (rows 37 and 38). Milestone 11 stays open until the owner accepts the demo.
 
 ## No milestone
 
