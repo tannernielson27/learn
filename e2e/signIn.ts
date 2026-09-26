@@ -285,16 +285,21 @@ export async function rpcAsUser<T>(
   return (await called.json()) as T;
 }
 
+/** An instructor account that exists but has not signed in yet, and the org it was put in. */
+export interface NewInstructor {
+  orgId: string;
+  email: string;
+}
+
 /**
  * A brand-new instructor alone in a brand-new org, so every list starts empty (#266). The owner's
  * steps (docs/05 §7.6) always join the first org, the seeded one; this does the same two steps but
- * points the profile at an org of its own. Returns the org's id.
+ * points the profile at an org of its own. Nobody is signed in yet (#274 signs in from `/`).
  */
-export async function signInAsInstructorInEmptyOrg(
-  page: Page,
+export async function createInstructorInEmptyOrg(
   request: APIRequestContext,
   label: string,
-): Promise<string> {
+): Promise<NewInstructor> {
   const org = await insertAsAdmin<{ id: string }>(request, "orgs", { name: `Empty ${label}` });
   const email = uniqueEmail(label);
   const userId = await createAccountWithoutRole(request, email);
@@ -302,6 +307,16 @@ export async function signInAsInstructorInEmptyOrg(
     org_id: org.id,
     role: "instructor",
   });
+  return { orgId: org.id, email };
+}
+
+/** `createInstructorInEmptyOrg`, then signed in through the emailed link. Returns the org's id. */
+export async function signInAsInstructorInEmptyOrg(
+  page: Page,
+  request: APIRequestContext,
+  label: string,
+): Promise<string> {
+  const { orgId, email } = await createInstructorInEmptyOrg(request, label);
   await page.goto("/sign-in");
   const since = new Date();
   await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
@@ -309,5 +324,5 @@ export async function signInAsInstructorInEmptyOrg(
   await expect(page.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
   await page.goto(await latestSignInLink(request, email, since));
   await expect(page).toHaveURL(/\/author$/);
-  return org.id;
+  return orgId;
 }

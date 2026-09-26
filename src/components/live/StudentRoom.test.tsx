@@ -356,6 +356,16 @@ describe("StudentRoom: answering the item", () => {
     expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
   });
 
+  it("names the sent answer as one landmark, not a region wrapped round another (#274)", async () => {
+    const room = setup();
+    room.push({ state: running(), item: KEYLESS, answered: answeredWith() });
+    await renderersLoaded();
+
+    expect(screen.getByTestId("answer-sent")).toBeInTheDocument();
+    // axe's landmark-unique: the player is already the "Your answer" landmark.
+    expect(screen.getAllByRole("region", { name: "Your answer" })).toHaveLength(1);
+  });
+
   it("does not put a sent state on the next item when the room moves while a submit is in flight", async () => {
     const user = userEvent.setup();
     let land: (ack: SubmitAck) => void = () => {};

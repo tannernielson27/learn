@@ -325,7 +325,9 @@ export function StudentRoom({
           </p>
         </section>
       ) : answering && sent && answered !== null ? (
-        <section aria-label="Your answer" className="mt-8">
+        // A plain wrapper, as in StudentPacedRoom: the player inside is already the "Your answer"
+        // landmark, and a second region of that name fails axe's landmark-unique (#274).
+        <div className="mt-8">
           <p role="status" data-testid="answer-sent" className="measure mb-4 text-sm text-ink-2">
             {SENT}
           </p>
@@ -341,7 +343,7 @@ export function StudentRoom({
             submit={refuseSecondAnswer}
             label="Your answer"
           />
-        </section>
+        </div>
       ) : answering ? (
         <div className="mt-8">
           <ItemPlayer
