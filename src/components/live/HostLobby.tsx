@@ -6,6 +6,7 @@ import { Countdown } from "@/components/live/Countdown";
 import { ItemStrip } from "@/components/live/ItemStrip";
 import { ProgressBoard } from "@/components/live/ProgressBoard";
 import { Roster } from "@/components/live/Roster";
+import { keepTally } from "@/components/live/sameTally";
 import { TimerControls } from "@/components/live/TimerControls";
 import { HostResults } from "@/components/live/results/HostResults";
 import { Button } from "@/components/ui/Button";
@@ -163,7 +164,7 @@ export function HostLobby({
     // Pushed once per item change, never once per submission (ADR 0002). The count that moves
     // while the class answers is the poll below.
     const offAggregate = console_.onAggregate((aggregate) => {
-      if (watching) setTally(aggregate);
+      if (watching) setTally(keepTally(aggregate));
     });
 
     const open = console_.open().then(
@@ -216,7 +217,8 @@ export function HostLobby({
       void console_
         .aggregate()
         .then((aggregate) => {
-          if (watching && aggregate !== null) setTally(aggregate);
+          // An unchanged tally is a new object each poll; keeping the held one skips a render.
+          if (watching && aggregate !== null) setTally(keepTally(aggregate));
         })
         .catch(() => {});
     };
