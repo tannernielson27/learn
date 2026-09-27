@@ -50,11 +50,17 @@ describe("summarizeEnv", () => {
     expect(summary.env.EMAIL_FROM).toBe(true);
   });
 
-  it("counts a SITE_URL that is not an https URL as missing (#304)", () => {
+  it("counts a production SITE_URL that is not an https URL as missing (#304)", () => {
     for (const SITE_URL of ["learn.example.test", "http://learn.example.test", " "]) {
-      expect(summarizeEnv({ ...FULL_ENV, SITE_URL }).env.SITE_URL).toBe(false);
+      const env = { ...FULL_ENV, VERCEL_ENV: "production", SITE_URL };
+      expect(summarizeEnv(env).env.SITE_URL).toBe(false);
     }
-    expect(summarizeEnv(FULL_ENV).env.SITE_URL).toBe(true);
+    expect(summarizeEnv({ ...FULL_ENV, VERCEL_ENV: "production" }).env.SITE_URL).toBe(true);
+  });
+
+  it("does not ask a preview for SITE_URL, whose links use its own address", () => {
+    const env = { ...FULL_ENV, VERCEL_ENV: "preview", SITE_URL: undefined };
+    expect(summarizeEnv(env).env.SITE_URL).toBe(true);
   });
 
   it("counts the demo account as on when either of its variables is set", () => {

@@ -54,7 +54,7 @@ function usableSecret(value: string | undefined): boolean {
 export function summarizeEnv(env: EnvSnapshot): Pick<DetailedHealth, "env" | "demoAccount"> {
   const entries = REQUIRED_ENV.map(({ name }): [RequiredEnvName, boolean] => [
     name,
-    usable(name, env[name]),
+    usable(name, env[name], env.VERCEL_ENV),
   ]);
   return {
     env: Object.fromEntries(entries) as Record<RequiredEnvName, boolean>,
@@ -62,10 +62,17 @@ export function summarizeEnv(env: EnvSnapshot): Pick<DetailedHealth, "env" | "de
   };
 }
 
-/** Set, and for the two with a shape, the right shape: a typo counts as missing. */
-function usable(name: RequiredEnvName, value: string | undefined): boolean {
+/**
+ * Set, and for the two with a shape, the right shape: a typo counts as missing. `SITE_URL` is a
+ * production variable only; a preview's links use its own address (docs/05 §7.7 step 6).
+ */
+function usable(
+  name: RequiredEnvName,
+  value: string | undefined,
+  vercelEnv: string | undefined,
+): boolean {
   if (name === "CRON_SECRET") return usableSecret(value);
-  if (name === "SITE_URL") return httpsOrigin(value) !== null;
+  if (name === "SITE_URL") return vercelEnv !== "production" || httpsOrigin(value) !== null;
   return present(value);
 }
 
