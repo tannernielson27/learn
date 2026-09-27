@@ -10,6 +10,39 @@ Phase A of `docs/sprints/PERF-AUDIT-PROMPT.md`, 2026-09-26, on `main` at `2e1d9d
 - **Most of the server findings are single round trips** (sequential `await`s that could be `Promise.all`). Locally one round trip is about 4.5 ms, which a page's TTFB noise swamps, so they are "later" until there is a measurement method that can see them (see Decisions).
 - **Several of the larger costs sit on security surfaces**, so they are noted, not built: the auto-submit loop on report and home renders (the scoring path), three token checks per `/author` and `/learn` request (auth), and `/live` falling outside the proxy's session refresh (auth).
 
+## Results (Phase C, 2026-09-26)
+
+Four of the five "yes" rows merged, and one is held for the owner's hosted push. None was closed as "no gain". Every fix was measured before and after, the same way, in its PR.
+
+| Row | Issue / PR  | What                                                                  |    Before |     After |              Change |
+| --- | ----------- | --------------------------------------------------------------------- | --------: | --------: | ------------------: |
+| #1  | #294 / #300 | `/author/banks/[bankId]` first-load JS, gzip                          | 250,777 B | 158,982 B |  −91,795 B (−36.6%) |
+| #2  | #296 / #302 | `/live/[sessionId]` first-load JS, gzip                               | 335,698 B | 333,152 B |            −2,546 B |
+| #3  | #297 / #303 | `/live/[sessionId]` first-load JS, gzip                               | 333,152 B | 330,991 B |            −2,161 B |
+| #30 | #298 / #310 | Host console commits per unchanged tally poll (results panel stubbed) |      1.00 |      0.00 | −1 render every 3 s |
+| #25 | #295 / #301 | `listBanks`, warm median of 3, realistic volume                       | 12.333 ms |  4.525 ms |                −63% |
+| #25 | #295 / #301 | `listRecentSessions`, warm median of 3                                |  6.209 ms |  1.678 ms |                −73% |
+
+Per route, the host console (`/live/[sessionId]`) went from 335,698 B to 330,991 B (−4,707 B), and the bank page from 250,777 B to 158,982 B. #2 also moved `/author/items/[itemId]` (−161 B) and `/author/case-studies/[caseStudyId]` (−164 B), because a shared chunk was split differently. No other route moved by more than the 50 B noise floor.
+
+What paid off less than expected:
+
+- **#2 saved 2.5 kB, not 5–10 kB.** The bundler had already tree-shaken most of both barrels. What really shipped was the in-memory room, the scoring code it pulls in, and part of the route handlers. Leaving the simulator in the barrel saved 0 B, so it stays.
+- **#30 does not reach zero on the full console.** The results panel sets a new object on every poll of its own (row #31), so the audit harness as written still counts one commit per poll. Render time over about 64 polls fell from 177–189 ms to 29–42 ms there. With the results panel stubbed, and a changing-tally control, commits per unchanged poll fall to 0.00.
+- **#25's before numbers needed `vacuum analyze` between runs.** Each rolled-back volume load leaves dead rows, and back-to-back unvacuumed runs drifted from 11.4 ms to 34.8 ms. Every before and after run starts with a vacuum.
+
+**The "later" list**, with the reasons given in the findings table:
+
+- #4 zod in the host results view, #5 zod and scoring on the item and case-study pages, and #6 the patient record on `/play`: each needs a new lazy boundary that changes what shows first.
+- #8 `@supabase/ssr` on the student screens: measure first; it sits next to the Realtime surface.
+- #12 the bank page's duplicate item reads: needs a shared promise between two loaders, or a stored count, which needs a migration and a product call.
+- #13–#16 single round-trip waterfalls: below local TTFB noise, and need a hosted measurement method.
+- #21 and #22, repeated zod parses and serialized history on the authoring pages: unmeasured, or they change panel behavior.
+- #26 the other 26 composite FKs without an exact index: no measured cost yet.
+- #31 the results panel and progress board polls: the next candidate, now that #30 shows the pattern. It needs its own harness number.
+- #32 polls in a hidden tab, #33–#35 re-renders in the case-study player, the student room and autosave: each changes behavior or is unmeasured.
+- #40 the landing image's `fetchPriority`: only Lighthouse can see it, and it is noisy.
+
 ## Method and noise floor
 
 **Build and bundle.** `pnpm build` (Next 16.3.4, Turbopack) in a clean worktree with no `.env.local`, as CI builds it. First-load JS per route is counted the way docs/05 §7.9 counted Sentry's cost: `rootMainFiles` from `.next/build-manifest.json` plus every chunk in the route's `entryJSFiles` in `.next/server/app/<route>/page_client-reference-manifest.js`, deduplicated, each gzipped at level 9. The script is in the appendix. Chunk contents were identified by grepping the built chunks for module strings, and import chains by a static walk of value imports (type-only imports and `"use server"` modules skipped, `import()` treated as lazy).
@@ -155,6 +188,7 @@ Build? = yes only when the row is low risk, behavior-preserving, measurable abov
 - **Build order** (expected gain over risk, highest first): #1 (bank page zod), #25 (indexes; the PR waits for the owner's push after green), #2 (host barrels), #3 (QR on the server; measure from #2's after number), #30 (tally bailout).
 - **Single round-trip waterfalls are "later", not "yes"** (#13–#16). They are real on hosted, but a local round trip is 4.5 ms median with a 24 ms p90, below the TTFB noise of a whole page, and the only exact alternative is a count of sequential round trips, which is not a timing. The conservative call is to write them down until someone picks a latency-injected or hosted measurement.
 - **#2 changes an import convention.** `src/lib/live/index.ts` says the UI imports only from the barrel. Importing from the defining modules keeps the rule's purpose (nothing Supabase-typed leaks into `src/lib/live`) and changes no behavior. If the builder prefers to keep the rule, the equivalent fix is to drop `createInMemoryRoom`/`simulate` from `src/lib/live/index.ts` and the three route exports from `src/lib/liveSupabase/index.ts`, and point their few importers (gallery, tests, API routes) at the modules directly; measure whichever lands.
+  - **Taken (#302): the barrel rule stays.** Only the barrel exports that actually shipped were dropped: `createInMemoryRoom` and the three route exports. The simulator stays, because dropping it saved 0 B. Repointing the four host components alone would not have worked, because `hostTransport.ts` itself imports `@/lib/live`.
 - **#25 is one migration for two indexes.** Both are the same concern, measured together, and one file means one hosted push. Plain `create index if not exists`, named `2026MMDDHHMMSS_perf_org_fk_indexes.sql` when it is handed out.
 - **Nothing is cached across requests.** No hot page reads data that is not per user or keyed to an answer, so Next 16's `use cache` and `unstable_cache` are not used; the app does not enable Cache Components.
 - **The database scripts stay outside the repo** and roll back, so the local database the owner uses is unchanged by this audit.
@@ -163,7 +197,7 @@ Build? = yes only when the row is low risk, behavior-preserving, measurable abov
 
 1. **Check how the hosted project signs its JWTs** (Supabase dashboard → Project Settings → JWT Keys). If it still uses the legacy HS256 secret, every `getClaims` is a round trip to the Auth server, and each `/author` and `/learn` page makes three (#20). Moving to asymmetric keys makes them local checks. This is auth, so the pass does not touch it.
 2. **`/live` and `/play` are outside the proxy matcher** (`src/proxy.ts`), so a host's session is never refreshed there. When the access token expires on `/live`, each render refreshes it and cannot save the result, since a Server Component cannot write cookies. That costs a refresh per request, and with refresh-token rotation it could sign a host out mid-session. Worth a look as an auth fix, outside this pass.
-3. **#25 needs a hosted push after it merges**, like every migration. The builder gives the exact `supabase db push` command after its own `--dry-run`.
+3. **#25 needs a hosted push after it merges**, like every migration. PR #301 is green and held until the owner can push straight after the merge, outside a live session (a plain `create index` briefly blocks writes to `items` and `participants`). Once the orchestrator has merged it and its `--dry-run` lists only `20260926020000_perf_org_fk_indexes.sql`, run `! cd /c/Users/wildd/Desktop/LeaRN && pnpm exec supabase db push --yes`.
 
 ## Out of scope, noted only
 
