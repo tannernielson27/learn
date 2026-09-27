@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page, type APIRequestContext } from "@playwright/test";
-import { latestSignInLink } from "./mailbox";
+import { latestSignInLink, openSignInLink } from "./mailbox";
 import { createAccountWithoutRole, createAuthorAccount } from "./signIn";
 
 // Needs the local Supabase stack (auth + test mailbox) and a build pointed at it; the preview
@@ -34,7 +34,7 @@ test("an author signs in from an emailed link, lands where they were going, then
   expect(axe.violations).toEqual([]);
 
   const link = await requestLink(page, request, email);
-  await page.goto(link);
+  await openSignInLink(page, link);
 
   await expect(page).toHaveURL(/\/author$/);
   await expect(page.getByRole("heading", { level: 1, name: "Item banks" })).toBeVisible();
@@ -64,7 +64,7 @@ test("an account with no role signs in to No access yet and cannot open authorin
   await page.getByRole("textbox", { name: "Email address" }).fill(email);
   await page.getByRole("button", { name: "Email me a sign-in link" }).click();
   await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
-  await page.goto(await latestSignInLink(request, email, since));
+  await openSignInLink(page, await latestSignInLink(request, email, since));
 
   await expect(page).toHaveURL(/\/author\/no-access$/);
   await expect(
@@ -117,6 +117,32 @@ test("the demo account signs in without an email and lands where the person was 
   await expect(page).toHaveURL(/\/sign-in$/);
 });
 
+test("a mail scanner that opens the link first spends nothing (#305)", async ({
+  page,
+  request,
+}, testInfo) => {
+  const email = uniqueEmail(`scanner-${testInfo.project.name}`);
+  await page.goto("/sign-in");
+  const link = await requestLink(page, request, email);
+
+  // What Safe Links and its kind do: fetch the address, follow redirects, read the page.
+  const scanned = await request.get(link);
+  expect(scanned.ok()).toBe(true);
+  expect(new URL(scanned.url()).pathname).toBe("/auth/confirm");
+  expect(await scanned.text()).toContain("Continue to LeaRN");
+
+  await page.goto(link);
+  await expect(page.getByRole("heading", { level: 1, name: "Finish signing in" })).toBeVisible();
+  const axe = await new AxeBuilder({ page }).analyze();
+  expect(axe.violations).toEqual([]);
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/finish-signing-in.png`,
+  });
+  await page.getByRole("button", { name: "Continue to LeaRN" }).click();
+  await expect(page).toHaveURL(/\/author$/);
+  await expect(page.getByTestId("signed-in-email")).toHaveText(email);
+});
+
 test("a link that was already used sends the person back with a reason", async ({
   page,
   request,
@@ -125,12 +151,12 @@ test("a link that was already used sends the person back with a reason", async (
   await page.goto("/sign-in");
   const link = await requestLink(page, request, email);
 
-  await page.goto(link);
+  await openSignInLink(page, link);
   await expect(page).toHaveURL(/\/author$/);
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
 
-  await page.goto(link);
+  await openSignInLink(page, link);
   await expect(page).toHaveURL(/\/sign-in\?error=link/);
   // Next's route announcer is also role="alert", so match the alert by its message.
   await expect(

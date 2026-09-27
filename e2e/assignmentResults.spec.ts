@@ -9,7 +9,7 @@ import {
   type TestInfo,
 } from "@playwright/test";
 import { bytesOf, expectKeyless } from "./bytes";
-import { latestSignInLink } from "./mailbox";
+import { latestSignInLink, openSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor, updateAsAdmin } from "./signIn";
 
 // #210: once an assignment closes, a student reads their best attempt's score and every item with
@@ -75,7 +75,7 @@ async function joinAsStudent(
   const since = new Date();
   await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
   await page.getByRole("button", { name: "Email me a link to join", exact: true }).click();
-  await page.goto(await latestSignInLink(request, email, since));
+  await openSignInLink(page, await latestSignInLink(request, email, since));
   await expect(page).toHaveURL(/\/learn$/);
   return { context, page, email };
 }

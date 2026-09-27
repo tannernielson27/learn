@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { latestSignInLink } from "./mailbox";
+import { latestSignInLink, openSignInLink } from "./mailbox";
 import {
   accessTokenFor,
   insertAsAdmin,
@@ -171,7 +171,7 @@ test("Your steps ranks the weakest step first and counts assignments and practic
   const since = new Date();
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
   await student.getByRole("button", { name: "Email me a link to join", exact: true }).click();
-  await student.goto(await latestSignInLink(request, email, since));
+  await openSignInLink(student, await latestSignInLink(request, email, since));
   await expect(student).toHaveURL(/\/learn$/);
   const [member] = await selectAsAdmin<{ profile_id: string }>(
     request,

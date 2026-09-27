@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type APIRequestContext, type Browser, type Page } from "@playwright/test";
 import { formatInZone } from "../src/lib/classes/timeZone";
-import { latestSignInLink } from "./mailbox";
+import { latestSignInLink, openSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor } from "./signIn";
 
 // #242: an instructor sets the class's time zone on the class page, and the student home says due
@@ -54,7 +54,7 @@ async function setUp(
   const since = new Date();
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
   await student.getByRole("button", { name: "Email me a link to join", exact: true }).click();
-  await student.goto(await latestSignInLink(request, email, since));
+  await openSignInLink(student, await latestSignInLink(request, email, since));
   await expect(student).toHaveURL(/\/learn$/);
 
   const [klass] = await selectAsAdmin<{ org_id: string }>(

@@ -1,6 +1,6 @@
 // Reads the newest sign-in email for an address from the local Supabase stack's test mailbox
 // (Mailpit on port 55324, see supabase/config.toml). Local and CI only: previews send real email.
-import { expect, type APIRequestContext } from "@playwright/test";
+import { expect, type APIRequestContext, type Page } from "@playwright/test";
 
 const MAILBOX_URL = process.env.SUPABASE_MAILBOX_URL ?? "http://127.0.0.1:55324";
 // Docker's clock and the host's can disagree by a second or two.
@@ -37,4 +37,15 @@ export async function latestSignInLink(
     )
     .toBeTruthy();
   return link!.replace(/&amp;/g, "&");
+}
+
+/**
+ * Follows a sign-in link the way a person does since #305: open it, press Continue, and wait to
+ * be sent on. Opening it alone signs nobody in, so a test that only navigated would stop on the
+ * confirm page; waiting for the page to move on keeps a following `goto` from cancelling the post.
+ */
+export async function openSignInLink(page: Page, link: string): Promise<void> {
+  await page.goto(link);
+  await page.getByRole("button", { name: "Continue to LeaRN" }).click();
+  await page.waitForURL((url) => url.pathname !== "/auth/confirm");
 }
