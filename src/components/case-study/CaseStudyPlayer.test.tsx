@@ -2,12 +2,13 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { FIXTURES, sampleCaseStudy, sampleEhr } from "@/lib/ngn/fixtures";
-import { caseStudySchema } from "@/lib/ngn/schemas";
+import { caseStudySchema, type AnyResponse } from "@/lib/ngn/schemas";
 import {
   scoreInProcess,
   scoreSubmission,
   toKeylessCaseStudy,
   type KeylessItem,
+  type ScoreReveal,
   type SubmitHandlerFor,
 } from "@/lib/ngn/submit";
 import { CaseStudyPlayer } from "./CaseStudyPlayer";
@@ -347,5 +348,39 @@ describe("CaseStudyPlayer", () => {
       expect(screen.getByRole("region", { name: "Case study results" })).toBeInTheDocument();
       expect(document.activeElement).toBe(screen.getByRole("group", { name: "Results" }));
     });
+  });
+
+  it("holds Back and Review while a step is being checked, so its result is not dropped", async () => {
+    // A check the test finishes by hand, as a slow network would.
+    let land: (() => void) | undefined;
+    const slow: SubmitHandlerFor<(typeof sixSteps.items)[number]> = (item) => (response) =>
+      new Promise<ScoreReveal>((resolve) => {
+        land = () => resolve(scoreSubmission(item, response as AnyResponse));
+      });
+    render(<CaseStudyPlayer caseStudy={sixSteps} submitFor={slow} />);
+    await renderersLoaded();
+    await userEvent.click(correct());
+    await userEvent.click(submit());
+    land!();
+    await feedbackShown();
+    await userEvent.click(next()!);
+    await renderersLoaded();
+
+    await userEvent.click(correct());
+    await userEvent.click(submit());
+    expect(screen.getByRole("button", { name: "Back" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Review" })).toBeDisabled();
+
+    land!();
+    await feedbackShown();
+    expect(screen.getByRole("button", { name: "Back" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Review" })).toBeEnabled();
+
+    // Away and back: the step reopens answered, with its marks, not open for a second answer.
+    await userEvent.click(screen.getByRole("button", { name: "Back" }));
+    await userEvent.click(next()!);
+    await renderersLoaded();
+    expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
+    expect(screen.getByRole("complementary", { name: "Score" })).toBeInTheDocument();
   });
 });
