@@ -92,6 +92,8 @@ The decision: keep all three. If the cost ever matters (a failing LCP budget on 
 
 Feedback marks need the key. An answer that has been sent but whose key has not reached the browser (a live session before the host reveals) is drawn in review mode — the choices stay selected and nothing is marked — never as feedback, which would draw every choice as incorrect.
 
+Score verdict: the score panel leads with the whole answer's verdict — "All correct" (`--correct`, check icon), "Partially correct" (ink, no icon) or "Not correct" (`--incorrect`, x icon) — with a matching left rule, then the points ("3 / 4", read as "3 of 4 points"). The verdict words are deliberately not the element words (Correct, Incorrect, Missed). Per-row "x/y" marks take the same colours. The verdict is read off the server's points, never off the marks.
+
 Highlight items: selectable spans get a faint underline at rest; selected = `--accent-soft` background with 2px bottom border; feedback uses correct/incorrect backgrounds at 25% alpha.
 
 Drag-and-drop: dragged token lifts with a 2dp shadow and 1.02 scale; valid drop targets show a dashed accent outline; drop settles with a 200ms layout animation. Tap-to-place fallback: tapping a token puts it in "armed" state (accent ring), tapping a blank places it.
