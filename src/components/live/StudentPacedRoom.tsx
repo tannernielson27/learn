@@ -228,7 +228,8 @@ export function StudentPacedRoom({
           <ItemPlayer
             key={`${entry.item.id}:sent`}
             item={entry.item}
-            initialMode="feedback"
+            // Review: no key on this phone until the reveal, so nothing to mark (StudentRoom).
+            initialMode="review"
             initialResponse={mine.response}
             progress={progress}
             submit={refuseSecondAnswer}
