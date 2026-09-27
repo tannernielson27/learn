@@ -15,6 +15,7 @@
  * memoised per server instance, so a flood that skips the CDN still reaches Supabase at most once
  * per instance every few seconds. The secret, 32+ random characters, is the boundary for the detail.
  */
+import { httpsOrigin } from "@/lib/http/siteOrigin";
 import { bearerMatches, MIN_SECRET_LENGTH } from "@/lib/reminders/cronRoute";
 import {
   DEMO_ENV,
@@ -53,12 +54,19 @@ function usableSecret(value: string | undefined): boolean {
 export function summarizeEnv(env: EnvSnapshot): Pick<DetailedHealth, "env" | "demoAccount"> {
   const entries = REQUIRED_ENV.map(({ name }): [RequiredEnvName, boolean] => [
     name,
-    name === "CRON_SECRET" ? usableSecret(env[name]) : present(env[name]),
+    usable(name, env[name]),
   ]);
   return {
     env: Object.fromEntries(entries) as Record<RequiredEnvName, boolean>,
     demoAccount: DEMO_ENV.some((name) => present(env[name])),
   };
+}
+
+/** Set, and for the two with a shape, the right shape: a typo counts as missing. */
+function usable(name: RequiredEnvName, value: string | undefined): boolean {
+  if (name === "CRON_SECRET") return usableSecret(value);
+  if (name === "SITE_URL") return httpsOrigin(value) !== null;
+  return present(value);
 }
 
 /** The deployed commit, shortened; anything that is not a SHA is reported, never echoed. */

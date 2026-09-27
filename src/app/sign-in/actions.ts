@@ -14,7 +14,7 @@ import {
   takeSignInAddress,
   takeSignInAttempt,
 } from "@/lib/auth/signInRateLimit";
-import { siteOrigin } from "@/lib/http/siteOrigin";
+import { canonicalSiteOrigin } from "@/lib/http/siteOrigin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /** The single answer to every request that was accepted — and to every one quietly refused. */
@@ -23,8 +23,8 @@ function sent(email: string): SignInState {
 }
 
 /**
- * Emails a sign-in link. The link returns to /auth/confirm on this site; Supabase only sends it
- * if that URL is on the project's redirect allow-list, so a forged Host header cannot redirect.
+ * Emails a sign-in link. The link returns to /auth/confirm on the canonical origin, never one the
+ * request names, so a forged Host header cannot redirect it.
  *
  * Once the form has been read and the caller counted, every path out of this function is the
  * same `sent` result, and that is the whole design (#139). A link really sent, an address whose
@@ -70,7 +70,9 @@ export async function requestSignInLink(
     return sent(parsed.email);
   }
 
-  const confirmUrl = new URL("/auth/confirm", siteOrigin(requestHeaders));
+  // The same origin a class invite's link uses (#304), so both land on the host Supabase's
+  // allow-list names and the session cookie is set where the person will keep using the app.
+  const confirmUrl = new URL("/auth/confirm", canonicalSiteOrigin(requestHeaders));
   confirmUrl.searchParams.set("next", parsed.next);
 
   const supabase = await createSupabaseServerClient();

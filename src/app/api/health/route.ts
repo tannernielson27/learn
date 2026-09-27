@@ -31,6 +31,7 @@ function envSnapshot() {
     SUPABASE_JWT_SIGNING_KEY: process.env.SUPABASE_JWT_SIGNING_KEY,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     EMAIL_FROM: process.env.EMAIL_FROM,
+    SITE_URL: process.env.SITE_URL,
     CRON_SECRET: process.env.CRON_SECRET,
     SENTRY_DSN: process.env.SENTRY_DSN,
     NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,

@@ -17,6 +17,7 @@ const FULL_ENV = {
   SUPABASE_JWT_SIGNING_KEY: "jwt-known",
   RESEND_API_KEY: "re_known",
   EMAIL_FROM: "LeaRN <learn@example.test>",
+  SITE_URL: "https://learn.example.test",
   CRON_SECRET: TOKEN,
   SENTRY_DSN: "https://k@o1.ingest.us.sentry.io/1",
   NEXT_PUBLIC_SENTRY_DSN: "https://k@o1.ingest.us.sentry.io/1",
@@ -47,6 +48,13 @@ describe("summarizeEnv", () => {
     expect(summary.env.RESEND_API_KEY).toBe(false);
     expect(summary.env.CRON_SECRET).toBe(false);
     expect(summary.env.EMAIL_FROM).toBe(true);
+  });
+
+  it("counts a SITE_URL that is not an https URL as missing (#304)", () => {
+    for (const SITE_URL of ["learn.example.test", "http://learn.example.test", " "]) {
+      expect(summarizeEnv({ ...FULL_ENV, SITE_URL }).env.SITE_URL).toBe(false);
+    }
+    expect(summarizeEnv(FULL_ENV).env.SITE_URL).toBe(true);
   });
 
   it("counts the demo account as on when either of its variables is set", () => {
