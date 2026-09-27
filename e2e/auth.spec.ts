@@ -130,6 +130,8 @@ test("a mail scanner that opens the link first spends nothing (#305)", async ({
   expect(scanned.ok()).toBe(true);
   expect(new URL(scanned.url()).pathname).toBe("/auth/confirm");
   expect(await scanned.text()).toContain("Continue to LeaRN");
+  // Until the button is pressed the page holds a live token: no cache may keep a copy.
+  expect(scanned.headers()["cache-control"]).toContain("no-store");
 
   await page.goto(link);
   await expect(page.getByRole("heading", { level: 1, name: "Finish signing in" })).toBeVisible();

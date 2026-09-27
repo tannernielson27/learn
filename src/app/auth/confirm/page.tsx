@@ -4,6 +4,11 @@ import { ContinueButton } from "@/components/auth/ContinueButton";
 import { readConfirmLink } from "@/lib/auth/confirm";
 import { confirmSignIn } from "./actions";
 
+// The page holds a live, unspent token until the button is pressed: render it per request, never
+// from a cache, so Next answers it with `Cache-Control: no-store` (checked on the response in
+// e2e/auth.spec.ts).
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Finish signing in",
   // The address carries the link's token hash: never send it on as a Referer, never index it.
