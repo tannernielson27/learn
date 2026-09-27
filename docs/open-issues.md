@@ -272,20 +272,27 @@ Sprint 11 is code complete: every story is merged, including the follow-ups #283
 
 ## Owner actions outside GitHub
 
-These block the live site rather than a single issue:
+These block the live site rather than a single issue.
 
-- **GitHub Actions runs again** (2026-09-22): the repo was made public, so hosted runners are free. The private plan's 2,000 minutes ran out around Sept 20 (about 3,100 minutes were used Sept 10–22), and every job was refused from Sept 21. The backlog stack is merged.
+**Go-live audit, 2026-09-26** (read-only, evidence from `supabase`, `vercel env ls`, `gh` and `pnpm golive:check` against production and `vauokqoyvewtzubqajgh`; 4 pass, 4 fail, 5 manual). Where things stand:
+
+- **No production project yet.** `supabase projects list` shows only `learn` (`vauokqoyvewtzubqajgh`), and Vercel Production still points at it. Everything below that says "done on `vauokqoyvewtzubqajgh`" has to be repeated in the production project after the §7.3 split.
+- **Done on `vauokqoyvewtzubqajgh`:** all 38 migrations applied; pg_cron and pg_net on; `learn-assignment-reminders` and `learn-rate-limit-sweep` scheduled and active; both Vault secrets (`learn_reminders_url`, `learn_cron_secret`) created; the Data API exposes only `public` and `graphql_public`.
+- **Done in Vercel:** `RESEND_API_KEY` and `EMAIL_FROM` in Production; `EMAIL_FROM` in Preview (Preview has no `RESEND_API_KEY`); `DEMO_ACCOUNT_*` removed from every scope.
+- **Missing in Vercel:** `CRON_SECRET` (the reminder route answers pg_net `503 not_configured` every 15 minutes until it is set) and all five `SENTRY_*` variables.
+- **Backups:** the age key exists and both repo secrets are set, but the first run by hand (36275256043) failed while dumping roles (`error running container: exit 1`), most likely a `PROD_DB_URL` that is not the session pooler on port 5432 or has an unencoded character in its password. Point it at the production project once that exists.
+- **Still open:** #178 (golive: `FAIL`), Realtime public access, SMTP, the magic-link template, the Auth rate limit and URLs, Sentry, the restore drill, the plan choice, and #159.
+
 - **Turn off Realtime "Allow public access"** in the Supabase project settings. It unblocks #178, which drops the last open select policy on `live.session_public_state`.
-- **Apply each Sprint 8 migration to hosted after its PR merges**, in filename order (`pnpm exec supabase db push`). Each PR lists its own.
 - **Author accounts are now created by hand** (#139, merged in #157). Sign-in no longer creates accounts, so a new instructor exists only once added under Authentication, Users, Add user. **Since #204 that is two steps**: Add user, then `select private.make_instructor('<address>');` in the SQL editor (docs/05 §7.6); without the second step the account lands on "No access yet". The sign-in form answers identically whether or not an address has an account, so a mistyped or unregistered address will appear to succeed and simply never receive a link.
-- **Sprint 9 email (#206)**: in Resend, confirm info.tannernielson.com is verified; in Supabase, set custom SMTP to Resend and raise the Auth email rate limit; in Vercel, add `RESEND_API_KEY` and `EMAIL_FROM` to Production and Preview. The exact steps are in docs/05 §7.7.
+- **Sprint 9 email (#206)**: in Resend, confirm info.tannernielson.com is verified; in Supabase, set custom SMTP to Resend and raise the Auth email rate limit. The exact steps are in docs/05 §7.7. Vercel Production has `RESEND_API_KEY` and `EMAIL_FROM` (2026-09-26); Preview still needs its own `RESEND_API_KEY`.
 - **Before any real student gets an invite**, create the production project and replay migrations (§7.3). Sprint 9 puts student emails in the database.
-- **Sprint 10 monitoring (#235)**: create a Sentry project (free tier) and add `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` and `SENTRY_AUTH_TOKEN` to Vercel Production and Preview. The steps will be in docs/05 §7.9 when #235 merges.
-- **Sprint 10 backups (#236)**: generate an `age` key pair and keep the private key off GitHub. Once the §7.3 project exists, add the repo secrets `BACKUP_AGE_RECIPIENT` (the public key) and `PROD_DB_URL`.
+- **Sprint 10 monitoring (#235)**: create a Sentry project (free tier) and add the five variables in docs/05 §7.9 (`SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`) to Vercel Production and Preview. None are set yet.
+- **Sprint 10 backups (#236)**: the age key pair exists and `BACKUP_AGE_RECIPIENT` and `PROD_DB_URL` are set (2026-09-26), but the first run failed (see the audit above). Fix `PROD_DB_URL`, point it at the §7.3 project once it exists, run it by hand, then do the restore drill (docs/05 §7.10).
 - **Choose the production plan at go-live**: Pro, or free plus the nightly dump (owner decision 2026-09-24).
 - **Decide #159**: whether to accept that four cheap IPs can hold one author's sign-in closed indefinitely, or pay for one of the mitigations listed there.
 - **Sprint 11: paste the regenerated magic-link template** (#268, merged in #278). `supabase/templates/magic_link.html` is now generated from `src/lib/email/templates/magicLink.ts`. Paste it into Authentication, Emails, Magic Link in every hosted project (docs/05 §7.7). The link is unchanged, so the old copy keeps working until then.
-- Done 2026-09-22: Vercel Production and Preview both carry `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` and `SUPABASE_JWT_SIGNING_KEY`; Production also has `DEMO_ACCOUNT_*`. The hosted demo user exists as an instructor in the seeded LeaRN org.
+- Done 2026-09-22: Vercel Production and Preview both carry `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` and `SUPABASE_JWT_SIGNING_KEY`. `DEMO_ACCOUNT_*` was removed from Production by 2026-09-26 (§7.11 step 2). The hosted demo user exists as an instructor in the seeded LeaRN org.
 - Supabase Authentication, URL Configuration: Site URL and redirect URLs for production, previews and localhost.
 - Supabase magic-link template: paste `supabase/templates/magic_link.html`. Email sign-in still needs it; the demo account (#115) works without it.
 - Done 2026-09-22 on `vauokqoyvewtzubqajgh`: migration history repaired (rows 1–3 had been applied by hand under other versions), rows 4–16 pushed with `supabase db push`, and `seed.sql` loaded. Row 17 (#149, `20260921210000_private_live_channel`) applied after #176 merged. A separate production project (below) still needs the full replay.
