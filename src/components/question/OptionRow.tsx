@@ -41,8 +41,10 @@ export function FeedbackIcon({
   state: ElementFeedback;
   className?: string;
 }) {
-  if (state === "neutral") return null;
-  const isCorrect = state === "correct" || state === "missed";
+  // Missed has no icon: a check on an option the student did not pick read as their own right
+  // answer. It has the dashed border (docs/04 §4) and the word instead.
+  if (state === "neutral" || state === "missed") return null;
+  const isCorrect = state === "correct";
   return (
     <span
       aria-hidden="true"
