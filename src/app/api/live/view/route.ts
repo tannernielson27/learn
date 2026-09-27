@@ -1,4 +1,5 @@
-import { liveRouteDeps, readParticipantView } from "@/lib/liveSupabase";
+import { liveRouteDeps } from "@/lib/liveSupabase/routeDeps";
+import { readParticipantView } from "@/lib/liveSupabase/viewRoute";
 import { secretStartingOrderSeed } from "@/lib/supabase/startingOrderSeed";
 
 /**

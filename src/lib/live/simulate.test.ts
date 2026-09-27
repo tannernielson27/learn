@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { answerAll, createInMemoryRoom, joinSimulated } from "@/lib/live";
+import { answerAll, joinSimulated } from "@/lib/live";
+import { createInMemoryRoom } from "@/lib/live/memoryRoom";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema, type AnyResponse, type Item } from "@/lib/ngn/schemas";
 

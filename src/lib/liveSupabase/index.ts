@@ -25,16 +25,6 @@ export {
 } from "./participantTransport";
 export { rosterFrom, type PresenceEntry } from "./presence";
 export {
-  LIVE_ROUTE_ERRORS,
-  liveRouteDeps,
-  participantFromCookie,
-  type LiveRouteDeps,
-  type ParticipantVerifier,
-  type VerifiedParticipant,
-} from "./routeDeps";
-export { submitSessionResponse } from "./submitRoute";
-export { readParticipantView } from "./viewRoute";
-export {
   LIVE_ROUTES,
   liveTopic,
   type AnsweredPayload,

@@ -8,7 +8,6 @@ import {
   answerAll,
   applyHostCommand,
   canRunHostCommand,
-  createInMemoryRoom,
   isLiveSessionError,
   itemAt,
   joinSimulated,
@@ -20,6 +19,7 @@ import {
   type ParticipantItem,
   type SimulatedParticipant,
 } from "@/lib/live";
+import { createInMemoryRoom } from "@/lib/live/memoryRoom";
 import type { AnyResponse, Item } from "@/lib/ngn/schemas";
 
 export interface RoomEntry {
