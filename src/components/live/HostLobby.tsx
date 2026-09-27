@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Countdown } from "@/components/live/Countdown";
 import { ItemStrip } from "@/components/live/ItemStrip";
 import { ProgressBoard } from "@/components/live/ProgressBoard";
-import { SessionQrCode } from "@/components/live/SessionQrCode";
 import { Roster } from "@/components/live/Roster";
 import { TimerControls } from "@/components/live/TimerControls";
 import { HostResults } from "@/components/live/results/HostResults";
@@ -34,6 +33,11 @@ export interface HostLobbyProps {
   code: string;
   /** The absolute address the QR code carries, built from the request the host made. */
   studentUrl: string;
+  /**
+   * The QR code for `studentUrl`, drawn by the page on the server (#297). A node rather than a
+   * component here so the encoder never ships to the host's browser or re-runs on each render.
+   */
+  qrCode: ReactNode;
   /** What the server read a moment ago. The console renders from this before it connects. */
   initial: LiveSessionState;
   /** Injectable so this can be driven without Supabase. The page passes nothing. */
@@ -119,6 +123,7 @@ export function HostLobby({
   title,
   code,
   studentUrl,
+  qrCode,
   initial,
   connect,
   tallyIntervalMs = TALLY_INTERVAL_MS,
@@ -331,11 +336,7 @@ export function HostLobby({
             >
               {formatSessionCode(code)}
             </p>
-            <SessionQrCode
-              url={studentUrl}
-              label="QR code that opens the join page for this session"
-              className="mx-auto mt-6 block h-auto w-40 rounded-sm border border-line sm:w-48"
-            />
+            {qrCode}
             <p data-testid="join-url" className="mt-3 font-mono text-sm break-all text-ink-2">
               {studentUrl}
             </p>
