@@ -22,9 +22,18 @@ import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema } from "@/lib/ngn/schemas";
 import type { Item } from "@/lib/ngn/schemas";
 import { HostLobby } from "./HostLobby";
+import { SessionQrCode } from "./SessionQrCode";
 
 const SESSION_ID = "00000000-0000-4000-8000-0000000132aa";
 const CODE = "AJ4K7P";
+
+/** What the page draws on the server and hands the console (#297). */
+const qrCode = (
+  <SessionQrCode
+    url={`https://learn.test/join/${CODE}`}
+    label="QR code that opens the join page for this session"
+  />
+);
 
 const state = (over: Partial<LiveSessionState> = {}): LiveSessionState => ({
   status: "lobby",
@@ -179,6 +188,7 @@ function setup(initial: LiveSessionState = state(), refusal?: LiveSessionError) 
       title="Cardiac basics"
       code={CODE}
       studentUrl={`https://learn.test/join/${CODE}`}
+      qrCode={qrCode}
       initial={initial}
       connect={() => fake.transport}
       tallyIntervalMs={20}
@@ -315,6 +325,7 @@ describe("HostLobby", () => {
         title="Cardiac basics"
         code={CODE}
         studentUrl={`https://learn.test/join/${CODE}`}
+        qrCode={qrCode}
         initial={state()}
         connect={() => broken}
       />,
@@ -330,6 +341,7 @@ describe("HostLobby", () => {
         title="Cardiac basics"
         code={CODE}
         studentUrl={`https://learn.test/join/${CODE}`}
+        qrCode={qrCode}
         initial={state()}
         connect={() => fake.transport}
       />,
