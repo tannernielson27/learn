@@ -12,6 +12,10 @@
  * wrappers — one function per row shape or RPC — while this is a transport: two long-lived
  * connections, a channel, a state machine and two route handlers. Keeping them apart means
  * "everything Supabase" does not become one drawer.
+ *
+ * #296: the route handlers (`routeDeps`, `submitRoute`, `viewRoute`) are not re-exported. The host
+ * console imports this barrel, and the bundler kept part of them in that client bundle. The API
+ * routes import them from their own modules.
  */
 export { createSupabaseHost, type HostTransportOptions } from "./hostTransport";
 export {
@@ -24,16 +28,6 @@ export {
   type SupabaseParticipant,
 } from "./participantTransport";
 export { rosterFrom, type PresenceEntry } from "./presence";
-export {
-  LIVE_ROUTE_ERRORS,
-  liveRouteDeps,
-  participantFromCookie,
-  type LiveRouteDeps,
-  type ParticipantVerifier,
-  type VerifiedParticipant,
-} from "./routeDeps";
-export { submitSessionResponse } from "./submitRoute";
-export { readParticipantView } from "./viewRoute";
 export {
   LIVE_ROUTES,
   liveTopic,

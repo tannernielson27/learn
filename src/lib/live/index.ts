@@ -5,6 +5,10 @@
  * ADR 0002 says the interface must not leak Supabase types; keeping the whole folder free of the
  * dependency is how that is kept true rather than remembered. Adapters live beside this one —
  * `memoryRoom.ts` today, a Supabase adapter in #131 — and the UI imports only from here.
+ *
+ * #296: `createInMemoryRoom` is not re-exported. The host console imports this barrel, and the
+ * bundler kept the in-memory room (and the scoring code it pulls in) in that client bundle. The
+ * gallery and tests import it from `./memoryRoom` directly.
  */
 export { LIVE_REFUSALS, LiveSessionError, isLiveSessionError, type LiveRefusal } from "./errors";
 export {
@@ -64,7 +68,6 @@ export {
 } from "./timer";
 export { countPresent, mergeRoster, type RosterEntry } from "./roster";
 export { waitingCopy, type WaitingCopy } from "./waiting";
-export { createInMemoryRoom, type InMemoryRoom, type InMemoryRoomOptions } from "./memoryRoom";
 export {
   answerAll,
   joinSimulated,

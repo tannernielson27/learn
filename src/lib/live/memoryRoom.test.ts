@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  createInMemoryRoom,
   initialSessionState,
   type ItemAggregate,
   type ParticipantItem,
   type SessionView,
 } from "@/lib/live";
+import { createInMemoryRoom } from "@/lib/live/memoryRoom";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema, type AnyResponse, type Item } from "@/lib/ngn/schemas";
 import { toKeylessItem } from "@/lib/ngn/submit";
