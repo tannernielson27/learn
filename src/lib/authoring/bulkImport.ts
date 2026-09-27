@@ -1,4 +1,4 @@
-import { IMPORT_ERRORS, IMPORT_MAX_BYTES } from "./transfer";
+import { IMPORT_ERRORS, IMPORT_MAX_BYTES } from "./importLimits";
 
 /**
  * Importing many files at once (#109). Each file is its own learn.v1 import, sent in its own
