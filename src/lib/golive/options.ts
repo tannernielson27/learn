@@ -16,6 +16,7 @@ export const USAGE = `Usage:
 
 Environment (never pass secrets as flags; they end up in shell history):
   GOLIVE_HEALTH_TOKEN       the deployment's CRON_SECRET, to see which variable is missing
+  SUPABASE_ACCESS_TOKEN     a personal access token, to check the hosted Auth URLs and template
 
 Read-only: it runs SELECTs and GETs, never writes, and prints no secret. Docs: docs/05 "Go-live".`;
 
@@ -31,6 +32,8 @@ export interface CliOptions {
   supabaseUrl: string | null;
   publishableKey: string | null;
   healthToken: string | null;
+  /** `SUPABASE_ACCESS_TOKEN`, for reading a hosted project's Auth config (#307). */
+  managementToken: string | null;
 }
 
 function siteUrl(value: string | undefined): string {
@@ -74,6 +77,7 @@ export function readOptions(
     strict: true,
   });
   const healthToken = blank(env.GOLIVE_HEALTH_TOKEN);
+  const managementToken = blank(env.SUPABASE_ACCESS_TOKEN);
   if (values.help) {
     return {
       help: true,
@@ -82,6 +86,7 @@ export function readOptions(
       supabaseUrl: null,
       publishableKey: null,
       healthToken,
+      managementToken,
     };
   }
   return {
@@ -91,6 +96,7 @@ export function readOptions(
     supabaseUrl: blank(values["supabase-url"]),
     publishableKey: blank(values["publishable-key"]) ?? blank(env.GOLIVE_PUBLISHABLE_KEY),
     healthToken,
+    managementToken,
   };
 }
 

@@ -20,6 +20,7 @@ const OPTIONS: GoLiveOptions = {
   publishableKey: "sb_publishable_x",
   healthToken: "t".repeat(64),
   repoMigrations: ["20260913000000", "20260914000000"],
+  authConfig: null,
 };
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
@@ -230,5 +231,48 @@ describe("formatReport", () => {
     expect(text).toContain("MANUAL  B");
     expect(text).toContain("1 pass, 0 fail, 1 manual");
     expect(text).toContain("Every automated check passes");
+  });
+});
+
+describe("runGoLiveCheck with a Management API token (#307)", () => {
+  const withToken = { ...OPTIONS, authConfig: { ref: REF, token: "sbp_" + "x".repeat(40) } };
+  const readyAuth = {
+    site_url: OPTIONS.siteUrl,
+    uri_allow_list: `${OPTIONS.siteUrl}/**`,
+    mailer_templates_magic_link_content:
+      '<a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email">x</a>{{ .Token }}',
+    mailer_otp_length: 6,
+  };
+
+  function fetchWithAuth(auth: unknown, status = 200): GoLiveDeps["fetch"] {
+    const site = readyFetch();
+    return async (input, init) =>
+      input.startsWith("https://api.supabase.com/") ? json(auth, status) : site(input, init);
+  }
+
+  it("checks the Auth URLs and the template instead of listing them as manual", async () => {
+    const results = await runGoLiveCheck(withToken, deps({ fetch: fetchWithAuth(readyAuth) }));
+    const status = statusById(results);
+    expect(status["auth-urls"]).toBe("pass");
+    expect(status["auth-template"]).toBe("pass");
+    expect(results.filter((result) => result.id === "auth-urls")).toHaveLength(1);
+    expect(exitCode(results)).toBe(0);
+  });
+
+  it("fails the #304 configuration: an allow-list that does not admit the site", async () => {
+    const results = await runGoLiveCheck(
+      withToken,
+      deps({ fetch: fetchWithAuth({ ...readyAuth, uri_allow_list: "https://old.example/**" }) }),
+    );
+    expect(statusById(results)["auth-urls"]).toBe("fail");
+    expect(exitCode(results)).not.toBe(0);
+  });
+
+  it("fails both lines, without printing the token, when the API refuses it", async () => {
+    const results = await runGoLiveCheck(withToken, deps({ fetch: fetchWithAuth({}, 401) }));
+    const status = statusById(results);
+    expect(status["auth-urls"]).toBe("fail");
+    expect(status["auth-template"]).toBe("fail");
+    expect(formatReport(results)).not.toContain(withToken.authConfig.token);
   });
 });
