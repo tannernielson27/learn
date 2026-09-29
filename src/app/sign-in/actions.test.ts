@@ -30,6 +30,11 @@ const requestHeaders = new Headers({
 
 vi.mock("next/headers", () => ({ headers: async () => requestHeaders }));
 
+// #304: the link must use the same canonical origin as a class invite, never the request's.
+vi.mock("@/lib/http/siteOrigin", () => ({
+  canonicalSiteOrigin: () => "https://canonical.example",
+}));
+
 const redirected = vi.fn();
 vi.mock("next/navigation", () => ({
   redirect: (to: string) => {
@@ -107,6 +112,17 @@ describe("requestSignInLink", () => {
     expect(signInWithOtp).toHaveBeenCalledWith(
       expect.objectContaining({
         options: expect.objectContaining({ shouldCreateUser: false }),
+      }),
+    );
+  });
+
+  it("links back on the canonical origin, not the one the request claims (#304)", async () => {
+    await requestSignInLink({ status: "idle" }, emailForm(inbox));
+    expect(signInWithOtp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        options: expect.objectContaining({
+          emailRedirectTo: "https://canonical.example/auth/confirm?next=%2Fauthor",
+        }),
       }),
     );
   });
