@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   LiveSessionError,
   NO_TIMER,
@@ -548,5 +548,54 @@ describe("HostLobby: a student-paced room (#185)", () => {
     await fake.user.click(button("Start session"));
     await waitFor(() => expect(button("Show answers")).toBeEnabled());
     expect(screen.queryByRole("button", { name: /^Next item$/ })).toBeNull();
+  });
+});
+
+describe("HostLobby: a hidden tab (#323)", () => {
+  let visibility: DocumentVisibilityState = "visible";
+  const setVisibility = (next: DocumentVisibilityState) =>
+    act(async () => {
+      visibility = next;
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+  const pause = () => new Promise((resolve) => setTimeout(resolve, 200));
+
+  beforeEach(() => {
+    visibility = "visible";
+    vi.spyOn(document, "visibilityState", "get").mockImplementation(() => visibility);
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("asks for neither the tally nor the results while hidden, and both at once on return", async () => {
+    visibility = "hidden";
+    const fake = setup(state({ status: "running", position: 1 }));
+    fake.answersIn(tallyOf(2, 3));
+    await pause();
+    expect(fake.asks()).toBe(0);
+    expect(fake.resultAsks()).toBe(0);
+
+    await setVisibility("visible");
+    await waitFor(() => expect(screen.getByText(/2 of 3/)).toBeInTheDocument());
+    expect(fake.resultAsks()).toBeGreaterThan(0);
+
+    await setVisibility("hidden");
+    await pause();
+    const settled = { tally: fake.asks(), results: fake.resultAsks() };
+    await pause();
+    expect({ tally: fake.asks(), results: fake.resultAsks() }).toEqual(settled);
+    // The Realtime channel is never touched by the tab's visibility.
+    expect(fake.transport.close).not.toHaveBeenCalled();
+  });
+
+  it("asks for no progress while hidden in a student-paced room", async () => {
+    visibility = "hidden";
+    const fake = setup(state({ mode: "student_paced", status: "running", position: 1 }));
+    const progress = vi.spyOn(fake.transport, "progress");
+    await pause();
+    expect(progress).not.toHaveBeenCalled();
+    await setVisibility("visible");
+    await waitFor(() => expect(progress).toHaveBeenCalled());
   });
 });

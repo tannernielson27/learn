@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { SessionProgress } from "@/lib/live";
+import { pollWhileVisible } from "./pollWhileVisible";
 import { keepSame } from "./sameData";
 
 export interface ProgressBoardProps {
@@ -27,7 +28,7 @@ export interface ProgressBoardProps {
  * **Asked for, not pushed.** On the tally's three-second cadence, for ADR 0002's reason: nothing
  * goes over Realtime while a class answers. A failed ask says nothing and is tried on the next
  * tick, as the results panel does. A poll that brings nothing new keeps the held board, so the
- * grid does not re-render (#318).
+ * grid does not re-render (#318). A hidden tab asks nothing and asks at once on return (#323).
  *
  * At 375px the grid scrolls sideways inside its own region, which is focusable so a keyboard can
  * scroll it too; the page itself never scrolls sideways.
@@ -45,11 +46,10 @@ export function ProgressBoard({ ask, itemCount, active, intervalMs }: ProgressBo
         })
         .catch(() => {});
     };
-    askNow();
-    const timer = setInterval(askNow, intervalMs);
+    const stop = pollWhileVisible(askNow, intervalMs);
     return () => {
       watching = false;
-      clearInterval(timer);
+      stop();
     };
   }, [active, ask, intervalMs]);
 
