@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("./actions", () => ({
   requestSignInLink: vi.fn(async () => ({ status: "idle" })),
   signInAsDemo: vi.fn(async () => ({ status: "idle" })),
+  verifySignInCode: vi.fn(async () => ({ status: "idle" })),
 }));
 vi.mock("@/lib/auth/demoAccount", () => ({ readDemoAccount: () => null }));
 

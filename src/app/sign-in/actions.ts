@@ -3,8 +3,11 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { DemoSignInState } from "@/components/auth/DemoSignIn";
+import type { EmailCodeState } from "@/components/auth/EmailCodeForm";
 import type { SignInState } from "@/components/auth/SignInForm";
 import { readDemoAccount, signInToDemo } from "@/lib/auth/demoAccount";
+import { verifyEmailCode } from "@/lib/auth/emailCode";
+import { takeSignInCode } from "@/lib/auth/signInCodeLimit";
 import { parseSignInForm } from "@/lib/auth/signInForm";
 import {
   signInAddressCeilingRefusals,
@@ -116,5 +119,25 @@ export async function signInAsDemo(
     supabase.auth.signInWithPassword(credentials),
   );
   if (!result.ok) return { status: "error", error: result.error };
+  redirect(result.next);
+}
+
+/**
+ * Signs in with the one-time code from the sign-in email (#306), on the device the code is typed
+ * on. Shared by the sign-in page and the class invite page. Counted per caller and per address
+ * before Supabase is asked; see `verifyEmailCode` for why every refusal reads the same.
+ */
+export async function verifySignInCode(
+  _previous: EmailCodeState,
+  formData: FormData,
+): Promise<EmailCodeState> {
+  const requestHeaders = await headers();
+  const supabase = await createSupabaseServerClient();
+  const result = await verifyEmailCode(formData, {
+    take: (email) => takeSignInCode(requestHeaders, email),
+    verify: (params) => supabase.auth.verifyOtp(params),
+  });
+  if (!result.ok) return { status: "error", error: result.error };
+  // Outside any try, because redirect() works by throwing.
   redirect(result.next);
 }
