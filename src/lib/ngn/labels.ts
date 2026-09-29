@@ -47,7 +47,7 @@ export const SCORING_MODEL_LABELS: Record<ScoringModel, { name: string; explanat
   plus_minus: {
     name: "+/- scoring",
     explanation:
-      "Each correct selection earns one point and each incorrect selection removes one; the item score cannot go below zero.",
+      "Each correct selection earns one point and each incorrect selection removes one. A score never goes below zero; where rows are scored separately, each row stops at zero on its own.",
   },
   rationale: {
     name: "Rationale scoring",
