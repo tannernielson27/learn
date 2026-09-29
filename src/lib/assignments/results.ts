@@ -17,7 +17,7 @@
  * Server only: it reaches `parseSubmission`, the scoring seam.
  */
 import { ehrRecordSchema, type AnyResponse, type EhrRecord, type Item } from "@/lib/ngn/schemas";
-import { parseSubmission } from "@/lib/ngn/submit";
+import { parseSubmission, withScoredReveal } from "@/lib/ngn/submit";
 import type { ScoreResult, ScoringModel } from "@/lib/ngn/types";
 import type { ExpiredFilter, StudentAssignment } from "@/lib/supabase/attempts";
 import type { MyResultRead, ResultAttempt, ResultMark } from "@/lib/supabase/results";
@@ -60,7 +60,12 @@ export type ResultOutcome =
 
 export interface ResultEntry {
   rowId: string;
-  /** The whole item, key and rationale included: this is after the close. */
+  /**
+   * The whole item, key and rationale included: this is after the close. For an answer that was
+   * marked, the key, rationale and scoring are the ones it was marked against, stored with the
+   * mark, so an author's edit since cannot draw a right answer red beside its points; otherwise
+   * (no answer, or a mark from before they were stored) the item's as it is now.
+   */
   item: Item;
   outcome: ResultOutcome;
 }
@@ -118,15 +123,23 @@ function answeredOutcome(item: Item, mark: ResultMark): ResultOutcome {
   return { kind: "answered", response: parsed.response, score };
 }
 
-function outcomeFor(
+/** One item of the set as the best attempt stands on it, drawn against the key it was marked with. */
+function entryFor(
   entry: SetItem,
   attempts: readonly ResultAttempt[],
   best: ResultAttempt | null,
-): ResultOutcome {
-  if (attempts.length === 0) return { kind: "not_attempted" };
-  if (best === null) return { kind: "unmarked" };
+): ResultEntry {
+  const unmarked = (outcome: ResultOutcome): ResultEntry => ({
+    rowId: entry.rowId,
+    item: entry.item,
+    outcome,
+  });
+  if (attempts.length === 0) return unmarked({ kind: "not_attempted" });
+  if (best === null) return unmarked({ kind: "unmarked" });
   const mark = best.marks?.find((candidate) => candidate.itemId === entry.rowId);
-  return mark ? answeredOutcome(entry.item, mark) : { kind: "not_answered" };
+  if (!mark) return unmarked({ kind: "not_answered" });
+  const item = withScoredReveal(entry.item, mark.reveal);
+  return { rowId: entry.rowId, item, outcome: answeredOutcome(item, mark) };
 }
 
 function bestOf(attempts: readonly ResultAttempt[]): ResultAttempt | null {
@@ -202,11 +215,7 @@ export async function loadResultsPage(
         ? { attemptNumber: best.number, score: best.score, maxScore: best.maxScore }
         : null,
     attemptsMade: result.attempts.length,
-    entries: set.map((entry) => ({
-      rowId: entry.rowId,
-      item: entry.item,
-      outcome: outcomeFor(entry, result.attempts, best),
-    })),
+    entries: set.map((entry) => entryFor(entry, result.attempts, best)),
     record: recordOf(result.patientRecord),
   };
 }

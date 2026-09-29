@@ -14,11 +14,12 @@
  * Two reads, however long the set: the items by id, and this participant's answers by session.
  */
 import type { StartingOrderSeedFor } from "@/lib/ngn/startingOrder";
-import { parseSubmission, toKeylessItem } from "@/lib/ngn/submit";
+import { parseSubmission, revealOf, toKeylessItem, withScoredReveal } from "@/lib/ngn/submit";
 import type { Item } from "@/lib/ngn/schemas";
 import type { ScoreResult } from "@/lib/ngn/types";
 import { fromItemRow } from "@/lib/supabase/itemRows";
 import type { LiveRouteDeps } from "./routeDeps";
+import { selectWithReveal } from "./scoredReveal";
 import type { AnsweredPayload, PacedItemPayload, RevealedPayload } from "./wire";
 
 const ITEM_COLUMNS = "id, type, cjmm_step, tags, version, content, answer_key, rationale, scoring";
@@ -36,6 +37,8 @@ interface AnswerRow {
   model?: string | null;
   breakdown?: unknown;
   groups?: unknown;
+  /** The key, rationale and scoring the answer was scored with; only read on reveal. */
+  reveal?: unknown;
 }
 
 /** Why the set could not be read: the database failed, or an item in it will not parse. */
@@ -64,11 +67,17 @@ export async function readPacedSet(
   const ordered = itemIds.map((id) => items.get(id));
   if (ordered.some((item) => item === undefined)) return { ok: false, reason: "unplayable" };
 
-  const { data: answers, error: answerError } = await deps.service
-    .from("session_responses")
-    .select(reveal ? MARKED_COLUMNS : ANSWER_COLUMNS)
-    .eq("session_id", participant.sessionId)
-    .eq("participant_id", participant.participantId);
+  const readAnswers = (columns: string) =>
+    deps.service
+      .from("session_responses")
+      .select(columns)
+      .eq("session_id", participant.sessionId)
+      .eq("participant_id", participant.participantId);
+  // Before the reveal, what they sent and nothing that was scored: not the marks, and not the key
+  // they were scored with. After it, both (`scoredReveal.ts`).
+  const { data: answers, error: answerError } = reveal
+    ? await selectWithReveal(MARKED_COLUMNS, readAnswers)
+    : await readAnswers(ANSWER_COLUMNS);
   if (answerError) return { ok: false, reason: "failed" };
   const byPosition = new Map<number, AnswerRow>();
   for (const answer of (answers ?? []) as unknown as AnswerRow[]) {
@@ -117,7 +126,8 @@ function revealedFrom(item: Item, position: number, row: AnswerRow | null): Reve
   return {
     itemId: item.id,
     position,
-    reveal: { answerKey: item.answerKey, rationale: item.rationale, scoring: item.scoring },
+    // The key their answer was scored with, not one an author has put there since.
+    reveal: revealOf(withScoredReveal(item, row?.reveal)),
     score,
   };
 }

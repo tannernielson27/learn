@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { FIXTURES, sampleCaseStudy } from "@/lib/ngn/fixtures";
 import { caseStudySchema, itemSchema, type AnyResponse, type Item } from "@/lib/ngn/schemas";
-import { scoreSubmission } from "@/lib/ngn/submit";
+import { md } from "@/lib/ngn/fixtures/types";
+import { revealOf, scoreSubmission } from "@/lib/ngn/submit";
 import type { StudentAssignment } from "@/lib/supabase/attempts";
 import type { MyResult, MyResultRead, ResultAttempt, ResultMark } from "@/lib/supabase/results";
 import type { SetItem } from "./attemptScoring";
@@ -47,6 +48,7 @@ function markOf(entry: SetItem, response: AnyResponse): ResultMark {
     model: score.model,
     breakdown: score.breakdown,
     groups: score.groups ?? null,
+    reveal: revealOf(entry.item),
   };
 }
 
@@ -219,6 +221,52 @@ describe("loadResultsPage after the close", () => {
     const bytes = JSON.stringify(view);
     for (const item of [MC, MR])
       for (const secret of secretsOf(item)) expect(bytes).toContain(secret);
+  });
+
+  it("draws a mark against the key it was scored with, not one an author has put there since", async () => {
+    const scoredWith = setOf([MC, MR]);
+    const [mc] = scoredWith;
+    if (!mc) throw new Error("no set");
+    // Ada picked opt_a, the key when she submitted. The author then moved the key to opt_c.
+    const marked = attempt(1, [markOf(mc, mcRight(MC))]);
+    const edited = itemSchema.parse({
+      ...FIXTURES.multiple_choice.canonical,
+      answerKey: { correctOptionId: "opt_c" },
+      rationale: { general: md("Rewritten after the close.") },
+    });
+    const now = setOf([edited, MR]);
+    const view = await loadResultsPage(
+      store({ kind: "released", result: result(now, [marked]) }, now),
+      ASSIGNMENT,
+      STUDENT,
+    );
+    if (view.kind !== "results") throw new Error(view.kind);
+    const [one, two] = view.entries;
+    expect(one?.outcome.kind === "answered" && one.outcome.score.points).toBe(1);
+    // The points and the key agree: both are the ones she was marked with.
+    expect(one?.item.answerKey).toEqual({ correctOptionId: "opt_a" });
+    expect(one?.item.rationale).toEqual(MC.rationale);
+    // An item with no mark has nothing to agree with, and shows the key as it is now.
+    expect(two?.item).toBe(MR);
+  });
+
+  it("falls back to the key as it is now for a mark recorded before the reveal was stored", async () => {
+    const scoredWith = setOf([MC, MR]);
+    const [mc] = scoredWith;
+    if (!mc) throw new Error("no set");
+    const marked = attempt(1, [{ ...markOf(mc, mcRight(MC)), reveal: null }]);
+    const edited = itemSchema.parse({
+      ...FIXTURES.multiple_choice.canonical,
+      answerKey: { correctOptionId: "opt_c" },
+    });
+    const now = setOf([edited, MR]);
+    const view = await loadResultsPage(
+      store({ kind: "released", result: result(now, [marked]) }, now),
+      ASSIGNMENT,
+      STUDENT,
+    );
+    if (view.kind !== "results") throw new Error(view.kind);
+    expect(view.entries[0]?.item.answerKey).toEqual({ correctOptionId: "opt_c" });
   });
 
   it("a tie goes to the earlier attempt", async () => {

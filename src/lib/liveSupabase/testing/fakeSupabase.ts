@@ -88,6 +88,8 @@ export interface FakeResponseRow {
   model: string;
   breakdown: Json;
   groups: Json | null;
+  /** The key the answer was scored with (20260928000000_scored_reveal). Null on an older row. */
+  reveal: Json | null;
   submitted_at: string;
 }
 
@@ -194,6 +196,12 @@ export class FakeSupabase {
   readonly wire: WireRecord[] = [];
   /** Every Realtime message the server sent, whoever it reached. The ADR 0002 budget counts these. */
   messagesSent = 0;
+  /**
+   * A database the scored-reveal migration has not reached yet: `session_responses` has no
+   * `reveal` column and `record_session_response` no `scored_reveal` argument, and each says so
+   * the way PostgREST does. The deploy lands before the hosted push, so the routes must cope.
+   */
+  beforeRevealMigration = false;
 
   private readonly channels = new Set<FakeChannel>();
   private readonly presence = new Map<string, Map<string, Row[]>>();
@@ -576,7 +584,10 @@ function project(row: Row, columns: string): Row {
   return Object.fromEntries(wanted.map((name) => [name, row[name]]));
 }
 
-class FakeFilter implements PromiseLike<{ data: Row | Row[] | null; error: null }> {
+type FakeError = { message: string; code?: string } | null;
+type FakeResult = { data: Row | Row[] | null; error: FakeError };
+
+class FakeFilter implements PromiseLike<FakeResult> {
   private readonly equals: [string, unknown][] = [];
 
   constructor(
@@ -584,6 +595,7 @@ class FakeFilter implements PromiseLike<{ data: Row | Row[] | null; error: null 
     private readonly rows: Row[],
     private readonly columns: string,
     private readonly patch: Row | null,
+    private readonly failure: FakeError = null,
   ) {}
 
   private readonly within: [string, Set<string>][] = [];
@@ -607,8 +619,9 @@ class FakeFilter implements PromiseLike<{ data: Row | Row[] | null; error: null 
     );
   }
 
-  private settleNow(): { data: Row | Row[] | null; error: null } {
+  private settleNow(): FakeResult {
     this.stack.touch();
+    if (this.failure !== null) return { data: null, error: this.failure };
     const found = this.matching();
     if (this.patch !== null) {
       for (const row of found) Object.assign(row, this.patch);
@@ -617,16 +630,14 @@ class FakeFilter implements PromiseLike<{ data: Row | Row[] | null; error: null 
     return { data: found.map((row) => project(row, this.columns)), error: null };
   }
 
-  async maybeSingle(): Promise<{ data: Row | null; error: null }> {
-    const { data } = this.settleNow();
+  async maybeSingle(): Promise<{ data: Row | null; error: FakeError }> {
+    const { data, error } = this.settleNow();
     const list = Array.isArray(data) ? data : [];
-    return { data: (list[0] as Row | undefined) ?? null, error: null };
+    return { data: (list[0] as Row | undefined) ?? null, error };
   }
 
-  then<TResult1 = { data: Row | Row[] | null; error: null }, TResult2 = never>(
-    onfulfilled?:
-      | ((value: { data: Row | Row[] | null; error: null }) => TResult1 | PromiseLike<TResult1>)
-      | null,
+  then<TResult1 = FakeResult, TResult2 = never>(
+    onfulfilled?: ((value: FakeResult) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
     return Promise.resolve(this.settleNow()).then(onfulfilled, onrejected);
@@ -658,7 +669,14 @@ export function createFakeClient(
   const client = {
     from(table: TableName) {
       return {
-        select: (columns: string) => new FakeFilter(stack, tableRows(table), columns, null),
+        select: (columns: string) =>
+          new FakeFilter(
+            stack,
+            tableRows(table),
+            columns,
+            null,
+            missingColumn(stack, table, columns),
+          ),
         update: (patch: Row) => new FakeUpdate(stack, table, patch),
       };
     },
@@ -686,6 +704,15 @@ export function createFakeClient(
     },
   };
   return client as unknown as SupabaseClient<Database>;
+}
+
+/** What PostgREST answers a select naming `reveal` on a database without the column. */
+function missingColumn(stack: FakeSupabase, table: TableName, columns: string): FakeError {
+  if (!stack.beforeRevealMigration || table !== "session_responses") return null;
+  const named = columns.split(",").map((name) => name.trim());
+  return named.includes("reveal")
+    ? { message: "column session_responses.reveal does not exist", code: "42703" }
+    : null;
 }
 
 /** An update to `public.sessions` goes through the guard and the two triggers, never straight in. */
@@ -877,6 +904,12 @@ function runRpc(
   }
 
   if (name === "record_session_response") {
+    if (stack.beforeRevealMigration && "scored_reveal" in args) {
+      return {
+        data: null,
+        error: { message: "Could not find the function in the schema cache", code: "PGRST202" },
+      };
+    }
     const session = stack.sessions.find((row) => row.id === String(args.target_session));
     const position = Number(args.at_position);
     if (!session || session.status === "ended") {
@@ -922,6 +955,7 @@ function runRpc(
       model: String(args.scoring_model),
       breakdown: (args.marks ?? []) as Json,
       groups: (args.row_groups ?? null) as Json | null,
+      reveal: (args.scored_reveal ?? null) as Json | null,
       submitted_at: submittedAt,
     });
     return { data: [{ refusal: null, submitted_at: submittedAt }], error: null };
