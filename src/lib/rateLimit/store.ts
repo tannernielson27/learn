@@ -29,6 +29,7 @@ export const RATE_LIMIT_BUCKETS = [
   "sign_in_address",
   // #306: one-time code tries, per caller and per address.
   "sign_in_code",
+  "sign_in_code_pair",
   "sign_in_code_address",
   "cron_denied",
   "cron_runs",

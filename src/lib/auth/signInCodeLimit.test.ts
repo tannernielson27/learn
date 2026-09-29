@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { SIGN_IN_RATE_LIMITED, SIGN_IN_UNAVAILABLE } from "./signInRateLimit";
 import {
   SIGN_IN_CODE_LIMITS,
@@ -9,18 +9,34 @@ import { RateLimitUnavailableError } from "@/lib/rateLimit/store";
 import { createMemoryRateLimitStore } from "@/lib/rateLimit/testing/memoryStore";
 
 describe("createSignInCodeLimiter (#306)", () => {
-  it("allows a handful of tries at one address, then stops them from anywhere", async () => {
+  it("gives one caller three tries at one address, leaving others theirs", async () => {
     const limiter = createSignInCodeLimiter(createMemoryRateLimitStore());
-    for (let i = 0; i < SIGN_IN_CODE_LIMITS.perAddress.attempts; i += 1) {
-      const ip = `203.0.113.${i + 1}`;
-      expect(await limiter.take(ip, "nurse@school.edu")).toEqual({ ok: true });
+    for (let i = 0; i < SIGN_IN_CODE_LIMITS.perPair.attempts; i += 1) {
+      expect(await limiter.take("203.0.113.7", "nurse@school.edu")).toEqual({ ok: true });
     }
-    expect(await limiter.take("198.51.100.9", "Nurse@School.edu")).toEqual({
+    expect(await limiter.take("203.0.113.7", "Nurse@School.edu")).toEqual({
       ok: false,
       error: SIGN_IN_CODE_TRIES_SPENT,
     });
+    // The owner, on another network, is not locked out by that caller (#306 review).
+    expect(await limiter.take("198.51.100.9", "nurse@school.edu")).toEqual({ ok: true });
+  });
+
+  it("holds a ceiling at one address across networks, and logs it without the address", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const limiter = createSignInCodeLimiter(createMemoryRateLimitStore());
+    for (let i = 0; i < SIGN_IN_CODE_LIMITS.perAddress.attempts; i += 1) {
+      expect(await limiter.take(`203.0.113.${i + 1}`, "nurse@school.edu")).toEqual({ ok: true });
+    }
+    expect(await limiter.take("198.51.100.9", "nurse@school.edu")).toEqual({
+      ok: false,
+      error: SIGN_IN_CODE_TRIES_SPENT,
+    });
+    expect(limiter.ceilingRefusals()).toBe(1);
+    expect(JSON.stringify(warn.mock.calls)).not.toContain("school.edu");
     // Another address is untouched.
     expect(await limiter.take("198.51.100.9", "other@school.edu")).toEqual({ ok: true });
+    warn.mockRestore();
   });
 
   it("caps one caller across many addresses with the network message", async () => {
@@ -36,6 +52,7 @@ describe("createSignInCodeLimiter (#306)", () => {
 
   it("still counts the address off the platform, where there is no caller", async () => {
     const limiter = createSignInCodeLimiter(createMemoryRateLimitStore());
+    vi.spyOn(console, "warn").mockImplementation(() => {});
     for (let i = 0; i < SIGN_IN_CODE_LIMITS.perAddress.attempts; i += 1) {
       await limiter.take(null, "nurse@school.edu");
     }

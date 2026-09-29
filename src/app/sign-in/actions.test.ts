@@ -385,15 +385,13 @@ describe("verifySignInCode (#306)", () => {
     expect(wrong.status).toBe("error");
   });
 
-  it("stops guessing at one address after a handful of tries, without asking Supabase", async () => {
+  it("stops one caller guessing at one address after three tries, without asking Supabase", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     verifyOtp.mockResolvedValue({ error: { status: 403, code: "otp_expired" } });
-    for (let i = 0; i < 5; i += 1) {
-      fromNewAddress();
+    for (let i = 0; i < 3; i += 1) {
       await verifySignInCode({ status: "idle" }, codeForm(inbox, `10000${i}`));
     }
     verifyOtp.mockClear();
-    fromNewAddress();
     const refused = await verifySignInCode({ status: "idle" }, codeForm(inbox, "999999"));
     expect(refused).toMatchObject({
       status: "error",
