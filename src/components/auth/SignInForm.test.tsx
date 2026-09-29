@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import type { EmailCodeFormProps } from "./EmailCodeForm";
 import { SignInForm, type SignInFormProps, type SignInState } from "./SignInForm";
 
 const LINK_ERROR =
@@ -65,5 +66,26 @@ describe("SignInForm", () => {
       LINK_ERROR,
     );
     expect(screen.getByRole("button", { name: "Email me a sign-in link" })).toBeEnabled();
+  });
+});
+
+describe("SignInForm with a code action (#306)", () => {
+  it("offers the email's code under Check your email, for the address and next it was sent for", async () => {
+    const action = vi.fn<SignInFormProps["action"]>(async () => ({
+      status: "sent",
+      email: "a@school.edu",
+    }));
+    const codeAction = vi.fn<EmailCodeFormProps["action"]>(async () => ({ status: "idle" }));
+    render(<SignInForm action={action} next="/author" codeAction={codeAction} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByRole("textbox", { name: "Email address" }), "a@school.edu");
+    await user.click(screen.getByRole("button", { name: "Email me a sign-in link" }));
+    await screen.findByRole("heading", { name: "Check your email" });
+
+    await user.type(screen.getByRole("textbox", { name: "Code from the email" }), "123456");
+    await user.click(screen.getByRole("button", { name: "Sign in with the code" }));
+    const posted = codeAction.mock.calls[0]![1];
+    expect(posted.get("email")).toBe("a@school.edu");
+    expect(posted.get("next")).toBe("/author");
   });
 });

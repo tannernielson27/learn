@@ -61,6 +61,19 @@ describe("renderEmailDocument", () => {
     expect(html).toContain("Or copy this link into your browser:");
   });
 
+  it("shows a one-time code under the link when there is one, escaped, in a large mono face", () => {
+    const withCode = renderEmailBody({
+      ...layout,
+      code: { label: "Or enter this code where you asked:", value: "12<34>56" },
+    });
+    expect(withCode).toContain("Or enter this code where you asked:");
+    expect(withCode).toContain("12&lt;34&gt;56");
+    expect(withCode).toMatch(/font-family: [^"]*monospace[^"]*; font-size: 28px/);
+    expect(withCode.indexOf("Or copy this link")).toBeLessThan(withCode.indexOf("12&lt;34&gt;56"));
+    expect(withCode.indexOf("12&lt;34&gt;56")).toBeLessThan(withCode.indexOf("A note under"));
+    expect(renderEmailBody(layout)).not.toContain("monospace");
+  });
+
   it("keeps the heading, paragraphs, notes and footer in order", () => {
     const order = [
       "Week 5 is open in LeaRN.",

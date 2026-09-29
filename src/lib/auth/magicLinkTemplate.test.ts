@@ -16,13 +16,13 @@ describe("supabase/templates/magic_link.html", () => {
 
   it("uses no other template variables, so the hosted paste cannot break on a missing one", () => {
     const variables = [...TEMPLATE.matchAll(/\{\{\s*([^}]*?)\s*\}\}/g)].map((m) => m[1]);
-    expect(new Set(variables)).toEqual(new Set([".RedirectTo", ".TokenHash"]));
+    expect(new Set(variables)).toEqual(new Set([".RedirectTo", ".TokenHash", ".Token"]));
   });
 
   it("reads right for an instructor and for a student joining a class", () => {
     expect(TEMPLATE).toContain("<title>Sign in to LeaRN</title>");
     expect(TEMPLATE).toMatch(/whether\s+you teach them or are joining one/);
-    expect(TEMPLATE).toMatch(/expires in an hour/);
+    expect(TEMPLATE).toMatch(/expire in an hour/);
   });
 
   it("is plain and accessible: a language, inline styles only, no comments, no emoji", () => {

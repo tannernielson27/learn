@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page, type APIRequestContext } from "@playwright/test";
-import { latestSignInLink, openSignInLink } from "./mailbox";
+import { latestSignInCode, latestSignInLink, openSignInLink } from "./mailbox";
 import { createAccountWithoutRole, createAuthorAccount } from "./signIn";
 
 // Needs the local Supabase stack (auth + test mailbox) and a build pointed at it; the preview
@@ -141,6 +141,36 @@ test("a mail scanner that opens the link first spends nothing (#305)", async ({
     path: `test-results/screenshots/${testInfo.project.name}/finish-signing-in.png`,
   });
   await page.getByRole("button", { name: "Continue to LeaRN" }).click();
+  await expect(page).toHaveURL(/\/author$/);
+  await expect(page.getByTestId("signed-in-email")).toHaveText(email);
+});
+
+test("an author who opened the email elsewhere signs in here with its code (#306)", async ({
+  page,
+  request,
+}, testInfo) => {
+  const email = uniqueEmail(`code-${testInfo.project.name}`);
+  await createAuthorAccount(request, email);
+  await page.goto("/author");
+  const since = new Date();
+  await page.getByRole("textbox", { name: "Email address" }).fill(email);
+  await page.getByRole("button", { name: "Email me a sign-in link" }).click();
+  await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
+
+  const code = await latestSignInCode(request, email, since);
+  const field = page.getByRole("textbox", { name: "Code from the email" });
+  await field.fill("000000");
+  await page.getByRole("button", { name: "Sign in with the code" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "That code did not work" })).toBeVisible();
+
+  const axe = await new AxeBuilder({ page }).analyze();
+  expect(axe.violations).toEqual([]);
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/sign-in-code.png`,
+  });
+
+  await field.fill(code);
+  await page.getByRole("button", { name: "Sign in with the code" }).click();
   await expect(page).toHaveURL(/\/author$/);
   await expect(page.getByTestId("signed-in-email")).toHaveText(email);
 });

@@ -51,6 +51,8 @@ export interface EmailLayout {
   /** Above the button. */
   readonly paragraphs: readonly EmailText[];
   readonly action: EmailAction;
+  /** A one-time code under the visible link, for signing in without it (#306). */
+  readonly code?: { readonly label: string; readonly value: EmailText };
   /** Smaller print under the button and the visible link. */
   readonly notes?: readonly EmailText[];
   /** Under the card: why this person got the email. */
@@ -117,6 +119,17 @@ function visibleLink(action: EmailAction): string {
   );
 }
 
+/** System monospace, so a code reads digit by digit. Single quotes, as in `EMAIL_FONT_STACK`. */
+const CODE_FONT =
+  "font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace";
+
+function codeBlock(code: NonNullable<EmailLayout["code"]>): string {
+  return (
+    `<p style="margin: 24px 0 0; font-size: 14px; color: ${C.muted}">${escapeHtml(code.label)}</p>` +
+    `<p style="margin: 4px 0 0; ${CODE_FONT}; font-size: 28px; font-weight: 700; letter-spacing: 0.15em; color: ${C.ink}">${markup(code.value)}</p>`
+  );
+}
+
 /** The layout table alone, without `<html>` or `<body>`: what a preview page renders. */
 export function renderEmailBody(layout: EmailLayout): string {
   const paragraphs = layout.paragraphs.map(
@@ -135,6 +148,7 @@ export function renderEmailBody(layout: EmailLayout): string {
     ...paragraphs,
     button(layout.action),
     visibleLink(layout.action),
+    ...(layout.code ? [codeBlock(layout.code)] : []),
     ...notes,
     "</td></tr>",
     "</table>",

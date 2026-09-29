@@ -4,7 +4,7 @@ import { SignInForm } from "@/components/auth/SignInForm";
 import { FocusHeading } from "@/components/status/FocusHeading";
 import { readDemoAccount } from "@/lib/auth/demoAccount";
 import { safeNextPath } from "@/lib/auth/nextPath";
-import { requestSignInLink, signInAsDemo } from "./actions";
+import { requestSignInLink, signInAsDemo, verifySignInCode } from "./actions";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -27,7 +27,12 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
         ) : (
           <h1 className={HEADING}>Sign in</h1>
         )}
-        <SignInForm action={requestSignInLink} next={next} linkError={linkError} />
+        <SignInForm
+          action={requestSignInLink}
+          next={next}
+          linkError={linkError}
+          codeAction={verifySignInCode}
+        />
         {readDemoAccount() ? <DemoSignIn action={signInAsDemo} next={next} /> : null}
       </div>
     </main>
