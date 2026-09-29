@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { latestSignInLink } from "./mailbox";
+import { latestSignInLink, openSignInLink } from "./mailbox";
 import { signInAsNewAuthor } from "./signIn";
 
 // #205: a class, its invite link, and a student who joins through it. Needs the local Supabase
@@ -66,7 +66,7 @@ test("a student joins a class from its invite link and the roster shows them", a
     student.getByRole("heading", { name: "Check your email", exact: true }),
   ).toBeVisible();
 
-  await student.goto(await latestSignInLink(request, email, since));
+  await openSignInLink(student, await latestSignInLink(request, email, since));
   await expect(student).toHaveURL(/\/learn$/);
   await expect(
     student.getByRole("heading", { level: 1, name: "Your classes", exact: true }),

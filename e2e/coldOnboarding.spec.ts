@@ -9,7 +9,7 @@ import {
   type TestInfo,
 } from "@playwright/test";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
-import { latestSignInLink } from "./mailbox";
+import { latestSignInLink, openSignInLink } from "./mailbox";
 import { createInstructorInEmptyOrg, selectAsAdmin } from "./signIn";
 
 // #274: Demo 12, rehearsed by a machine. An outside instructor onboards cold and runs a class
@@ -109,7 +109,7 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   await page.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
   await shoot(page, testInfo, "2-check-email");
-  await page.goto(await latestSignInLink(request, email, since));
+  await openSignInLink(page, await latestSignInLink(request, email, since));
   await expect(page).toHaveURL(/\/author$/);
 
   // 3. Get started shows three steps, none done; the sample comes in published.
@@ -156,7 +156,7 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   await expect(
     student.getByRole("heading", { name: "Check your email", exact: true }),
   ).toBeVisible();
-  await student.goto(await latestSignInLink(request, studentEmail, studentSince));
+  await openSignInLink(student, await latestSignInLink(request, studentEmail, studentSince));
   await expect(student).toHaveURL(/\/learn$/);
   await expect(student.getByRole("list", { name: "Your classes", exact: true })).toContainText(
     className,

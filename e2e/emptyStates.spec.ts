@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { latestSignInLink } from "./mailbox";
+import { latestSignInLink, openSignInLink } from "./mailbox";
 import { signInAsInstructorInEmptyOrg } from "./signIn";
 
 // #266: every empty list says what it is for and what to do next. A fresh instructor in an org of
@@ -106,7 +106,7 @@ test("a fresh instructor and their first student see what to do next on every em
   await expect(
     student.getByRole("heading", { name: "Check your email", exact: true }),
   ).toBeVisible();
-  await student.goto(await latestSignInLink(request, email, since));
+  await openSignInLink(student, await latestSignInLink(request, email, since));
   await expect(student).toHaveURL(/\/learn$/);
 
   await expect(student.getByRole("list", { name: "Your classes", exact: true })).toContainText(

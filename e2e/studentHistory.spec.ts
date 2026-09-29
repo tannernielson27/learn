@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { formatPercent, formatPoints } from "../src/lib/live/reportFormat";
 import { bytesOf } from "./bytes";
-import { latestSignInLink } from "./mailbox";
+import { latestSignInLink, openSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor } from "./signIn";
 
 // #238: the student home's History lists each closed assignment with the student's best score, and
@@ -83,7 +83,7 @@ test("History shows a closed assignment's best score, and nothing of one still o
   const since = new Date();
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
   await student.getByRole("button", { name: "Email me a link to join", exact: true }).click();
-  await student.goto(await latestSignInLink(request, email, since));
+  await openSignInLink(student, await latestSignInLink(request, email, since));
   await expect(student).toHaveURL(/\/learn$/);
 
   // Nothing has closed yet: the empty states.

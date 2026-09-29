@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { bytesOf, capturedBytes, expectKeyless } from "./bytes";
-import { latestSignInLink } from "./mailbox";
+import { latestSignInLink, openSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor, updateAsAdmin } from "./signIn";
 
 // #271: a practice run freezes its items when it starts. The student opens a bank of two items on
@@ -106,7 +106,7 @@ test("a practice run keeps an item the instructor unpublishes mid-run, with the 
   const since = new Date();
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
   await student.getByRole("button", { name: "Email me a link to join", exact: true }).click();
-  await student.goto(await latestSignInLink(request, email, since));
+  await openSignInLink(student, await latestSignInLink(request, email, since));
   await expect(student).toHaveURL(/\/learn$/);
   const practicePath = `/learn/practice/${bank.id}`;
   await student.goto(practicePath);
