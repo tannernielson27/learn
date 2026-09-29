@@ -168,6 +168,7 @@ export type Database = {
           org_id: string;
           points: number | null;
           response: Json;
+          reveal: Json | null;
           saved_at: string;
         };
         Insert: {
@@ -180,6 +181,7 @@ export type Database = {
           org_id: string;
           points?: number | null;
           response: Json;
+          reveal?: Json | null;
           saved_at?: string;
         };
         Update: {
@@ -192,6 +194,7 @@ export type Database = {
           org_id?: string;
           points?: number | null;
           response?: Json;
+          reveal?: Json | null;
           saved_at?: string;
         };
         Relationships: [
@@ -1057,6 +1060,7 @@ export type Database = {
           participant_id: string;
           points: number;
           response: Json;
+          reveal: Json | null;
           session_id: string;
           submitted_at: string;
         };
@@ -1072,6 +1076,7 @@ export type Database = {
           participant_id: string;
           points: number;
           response: Json;
+          reveal?: Json | null;
           session_id: string;
           submitted_at?: string;
         };
@@ -1087,6 +1092,7 @@ export type Database = {
           participant_id?: string;
           points?: number;
           response?: Json;
+          reveal?: Json | null;
           session_id?: string;
           submitted_at?: string;
         };
@@ -1547,6 +1553,7 @@ export type Database = {
           participant: string;
           possible: number;
           row_groups?: Json;
+          scored_reveal?: Json;
           scoring_model: string;
           target_item: string;
           target_session: string;

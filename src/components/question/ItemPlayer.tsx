@@ -151,6 +151,11 @@ export function ItemPlayer({
   // Typed with the key and rationale optional, and handed over as that: a renderer has to check
   // for either before reading it, because in answer mode neither is there (#50).
   const playerItem = toPlayerItem(fullItem, revealed ? "feedback" : "answer");
+  // The mode the renderer and shell are drawn in. Feedback with nothing revealed is drawn as
+  // review: read-only, unmarked. A renderer in feedback mode marks every choice the key does not
+  // name as incorrect, and with no key that is every choice — a live phone's sent answer showed a
+  // right pick in red until the host revealed it.
+  const shownMode: PlayerMode = mode === "feedback" && !revealed ? "review" : mode;
   // An answer can be complete before it is seen (an ordered response opens arranged), so Submit
   // also waits for the question itself to be on screen.
   const canSubmit =
@@ -202,7 +207,7 @@ export function ItemPlayer({
     <QuestionShell
       stem={item.stem}
       instructions={item.instructions}
-      mode={mode}
+      mode={shownMode}
       progress={progress}
       canSubmit={canSubmit}
       onSubmit={submit}
@@ -223,7 +228,7 @@ export function ItemPlayer({
         <Renderer
           item={playerItem}
           response={response as ResponseOf<ItemType>}
-          mode={mode}
+          mode={shownMode}
           score={result}
           onChange={(next) => {
             // Hold the answer that was sent while it is scored, so the feedback shows that answer.

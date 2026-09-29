@@ -7,6 +7,7 @@ import type { RichText } from "@/lib/ngn/schemas";
 import type { ScoreResult } from "@/lib/ngn/types";
 import { applyStagger } from "./motion";
 import type { PlayerMode } from "./types";
+import { scoreVerdict, type VerdictKind } from "./verdict";
 
 export interface QuestionShellProps {
   stem: RichText;
@@ -198,20 +199,38 @@ function ScorePanel({
   rationale?: RichText;
 }) {
   const model = SCORING_MODEL_LABELS[score.model];
+  const verdict = scoreVerdict(score);
+  const verdictId = useId();
   const pointsId = useId();
   return (
     <aside
       ref={panel}
       tabIndex={-1}
       aria-label="Score"
-      aria-describedby={pointsId}
-      className="mt-8 animate-[fade-up_var(--duration-slow)_var(--ease-out-expo)_both] rounded-md border border-line bg-surface-1 p-5"
+      aria-describedby={`${verdictId} ${pointsId}`}
+      data-verdict={verdict.kind}
+      className={`mt-8 animate-[fade-up_var(--duration-slow)_var(--ease-out-expo)_both] rounded-md border border-line bg-surface-1 p-5 ${VERDICT_RULE[verdict.kind]}`}
     >
-      <div className="flex items-baseline justify-between gap-4">
-        <h2 className="eyebrow">Score</h2>
+      <h2 className="eyebrow">Score</h2>
+      <div className="mt-1 flex items-baseline justify-between gap-4">
+        {/* Colour is never the only signal: the word leads, and the icon repeats it. */}
+        <p
+          id={verdictId}
+          className={`flex items-baseline gap-2 font-read text-xl ${VERDICT_TEXT[verdict.kind]}`}
+        >
+          {verdict.kind === "partial" ? null : (
+            <span aria-hidden="true" className="font-mono text-base">
+              {verdict.kind === "full" ? "✓" : "✕"}
+            </span>
+          )}
+          <span>{verdict.headline}</span>
+        </p>
         <p id={pointsId} className="motion-settle tabular font-mono text-2xl">
-          {score.points}
-          <span className="text-base text-ink-2"> / {score.maxPoints}</span>
+          <span className="sr-only">{verdict.detail}</span>
+          <span aria-hidden="true">
+            {score.points}
+            <span className="text-base text-ink-2"> / {score.maxPoints}</span>
+          </span>
         </p>
       </div>
       <p className="mt-2 text-sm">
@@ -228,6 +247,19 @@ function ScorePanel({
     </aside>
   );
 }
+
+/** The panel's left rule, as an option's (docs/04 §4): green for full marks, red for none. */
+const VERDICT_RULE: Record<VerdictKind, string> = {
+  full: "border-l-4 border-l-correct",
+  partial: "border-l-4 border-l-line-strong",
+  none: "border-l-4 border-l-incorrect",
+};
+
+const VERDICT_TEXT: Record<VerdictKind, string> = {
+  full: "text-correct",
+  partial: "text-ink-1",
+  none: "text-incorrect",
+};
 
 /** The rationale on its own, for a key revealed with no answer to score (#181). */
 function RationalePanel({ rationale }: { rationale: RichText }) {

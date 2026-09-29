@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { keepSame } from "@/components/live/sameData";
 import { Button } from "@/components/ui/Button";
 import type { Distribution } from "@/lib/live/results";
 import { DistributionView } from "./DistributionView";
@@ -32,7 +33,8 @@ interface Held {
  * nothing while an item is answered, so the console pulls. It asks again when the room moves or
  * the answer is shown, so a reveal marks the correct choices at once. A failed ask is not
  * repeated until the next tick and says nothing: a panel that stops moving for three seconds is
- * not worth an error on a projector.
+ * not worth an error on a projector. A poll that brings the same results keeps the held object,
+ * so the panel does not re-render (#318).
  *
  * "Hide results" is for projecting the question without the tallies. It is remembered for this
  * session in this browser, and asking carries on while hidden so showing them again is instant.
@@ -54,7 +56,7 @@ export function HostResults({
     const askNow = () => {
       void ask()
         .then((distribution) => {
-          if (watching) setHeld({ position, distribution });
+          if (watching) setHeld(keepSame<Held>({ position, distribution }));
         })
         .catch(() => {});
     };

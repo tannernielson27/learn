@@ -12,7 +12,7 @@
  */
 import { z } from "zod";
 import type { ItemType } from "./labels";
-import { responseSchema, type AnyResponse, type CaseStudy, type Item } from "./schemas";
+import { itemSchema, responseSchema, type AnyResponse, type CaseStudy, type Item } from "./schemas";
 import { scoreItem } from "./scoring";
 import { withStartingOrder } from "./startingOrder";
 import { SUBMIT_ERRORS } from "./submitErrors";
@@ -195,6 +195,45 @@ export function scoreSubmission(item: Item, response: AnyResponse): ScoreReveal 
     rationale: item.rationale,
     scoring: item.scoring,
   };
+}
+
+/**
+ * What an item reveals, read off `ANSWER_BEARING_FIELDS` rather than written out, so a fourth
+ * answer-bearing field is stored with a score as soon as the table above names it. A deep copy.
+ */
+export function revealOf(item: Item): Reveal {
+  const source = item as unknown as Record<string, unknown>;
+  const reveal: Record<string, unknown> = {};
+  for (const field of ANSWER_BEARING_FIELDS) {
+    if (field in source) reveal[field] = source[field];
+  }
+  return JSON.parse(JSON.stringify(reveal)) as Reveal;
+}
+
+/**
+ * The item as it was when an answer to it was scored: today's content with the key, rationale and
+ * scoring stored beside the score (`session_responses.reveal`, `attempt_responses.reveal`).
+ *
+ * A score and the key its marks are drawn against must come from the same item. They used to be
+ * read at different times — the score at submit, the key at the reveal — so an author's edit in
+ * between drew a correct pick in red beside its points. The stored reveal is what the score was
+ * computed from, so it wins.
+ *
+ * It falls back to `item` unchanged when there is no stored reveal (a row written before the
+ * column existed) or when the stored one no longer makes a valid item with today's content (an
+ * option it names has since been deleted, say): stored JSON is external input, and a renderer is
+ * never handed something it cannot draw. Nothing it is given is changed.
+ */
+export function withScoredReveal(item: Item, stored: unknown): Item {
+  if (typeof stored !== "object" || stored === null || Array.isArray(stored)) return item;
+  const fields = stored as Record<string, unknown>;
+  const scored: Record<string, unknown> = {};
+  for (const field of ANSWER_BEARING_FIELDS) {
+    if (field in fields) scored[field] = fields[field];
+  }
+  if (Object.keys(scored).length === 0) return item;
+  const parsed = itemSchema.safeParse({ ...JSON.parse(JSON.stringify(item)), ...scored });
+  return parsed.success ? parsed.data : item;
 }
 
 /**

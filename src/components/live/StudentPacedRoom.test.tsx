@@ -120,6 +120,9 @@ describe("StudentPacedRoom (#185)", () => {
     });
     expect(itemButton("Item 2, answered")).toBeInTheDocument();
     expect(screen.getByTestId("paced-count")).toHaveTextContent("1 of 2 answered");
+    // Sent, not marked: the key is not on this phone until the reveal.
+    expect(screen.getByRole("radio", { name: /Diaphoresis and tremor/ })).toBeChecked();
+    expect(screen.queryAllByText("Incorrect")).toHaveLength(0);
 
     // Back to the first, still open.
     await room.user.click(itemButton("Item 1, not answered"));
