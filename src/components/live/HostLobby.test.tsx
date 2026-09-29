@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -553,10 +553,11 @@ describe("HostLobby: a student-paced room (#185)", () => {
 
 describe("HostLobby: a hidden tab (#323)", () => {
   let visibility: DocumentVisibilityState = "visible";
-  const setVisibility = (next: DocumentVisibilityState) => {
-    visibility = next;
-    document.dispatchEvent(new Event("visibilitychange"));
-  };
+  const setVisibility = (next: DocumentVisibilityState) =>
+    act(async () => {
+      visibility = next;
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
   const pause = () => new Promise((resolve) => setTimeout(resolve, 200));
 
   beforeEach(() => {
@@ -575,11 +576,11 @@ describe("HostLobby: a hidden tab (#323)", () => {
     expect(fake.asks()).toBe(0);
     expect(fake.resultAsks()).toBe(0);
 
-    setVisibility("visible");
+    await setVisibility("visible");
     await waitFor(() => expect(screen.getByText(/2 of 3/)).toBeInTheDocument());
     expect(fake.resultAsks()).toBeGreaterThan(0);
 
-    setVisibility("hidden");
+    await setVisibility("hidden");
     await pause();
     const settled = { tally: fake.asks(), results: fake.resultAsks() };
     await pause();
@@ -594,7 +595,7 @@ describe("HostLobby: a hidden tab (#323)", () => {
     const progress = vi.spyOn(fake.transport, "progress");
     await pause();
     expect(progress).not.toHaveBeenCalled();
-    setVisibility("visible");
+    await setVisibility("visible");
     await waitFor(() => expect(progress).toHaveBeenCalled());
   });
 });
