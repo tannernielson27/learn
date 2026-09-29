@@ -13,6 +13,7 @@ import {
   sweepJobCheck,
   type HealthReading,
 } from "./checks.ts";
+import { authConfigChecks, readAuthConfig } from "./authConfig.ts";
 import {
   probeExposedSchemas,
   readAppliedMigrations,
@@ -38,6 +39,11 @@ export interface GoLiveOptions {
   healthToken: string | null;
   /** Versions from `supabase/migrations`. */
   repoMigrations: readonly string[];
+  /**
+   * The hosted project and a Management API token (`SUPABASE_ACCESS_TOKEN`), to check the Auth
+   * URLs and template (#307). Null keeps those lines manual.
+   */
+  authConfig: { ref: string; token: string } | null;
 }
 
 export interface GoLiveDeps {
@@ -155,7 +161,26 @@ export async function runGoLiveCheck(
         async () => backupCheck(await readLatestBackup(deps.gh), deps.now()),
       ),
   ];
+  const auth = options.authConfig;
+  const authStep = auth
+    ? [
+        () =>
+          guarded(
+            "auth-urls",
+            "Auth Site URL and redirect URLs admit the site's sign-in links",
+            "fail",
+            "Is SUPABASE_ACCESS_TOKEN a current personal access token (supabase.com/dashboard/account/tokens)?",
+            async () =>
+              authConfigChecks(
+                await readAuthConfig(deps.fetch, auth.ref, auth.token),
+                options.siteUrl,
+              ),
+          ),
+      ]
+    : [];
   const results: CheckResult[] = [];
-  for (const step of steps) results.push(...(await step()));
-  return [...results, ...MANUAL_STEPS];
+  for (const step of [...steps, ...authStep]) results.push(...(await step()));
+  // A step that ran replaces its manual line.
+  const ran = new Set(results.map((result) => result.id));
+  return [...results, ...MANUAL_STEPS.filter((step) => !ran.has(step.id))];
 }

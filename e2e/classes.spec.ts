@@ -66,7 +66,15 @@ test("a student joins a class from its invite link and the roster shows them", a
     student.getByRole("heading", { name: "Check your email", exact: true }),
   ).toBeVisible();
 
-  await openSignInLink(student, await latestSignInLink(request, email, since));
+  // #307: the emailed link is /auth/confirm on the site the student is using, carrying next.
+  // A link on another origin is how #304 broke; on the hosted project `pnpm golive:check` with
+  // SUPABASE_ACCESS_TOKEN checks the allow-list that decides it.
+  const link = new URL(await latestSignInLink(request, email, since));
+  expect(link.origin).toBe(new URL(student.url()).origin);
+  expect(link.pathname).toBe("/auth/confirm");
+  expect(link.searchParams.get("next")).toBe("/learn");
+  expect(link.searchParams.get("token_hash")).toBeTruthy();
+  await openSignInLink(student, link.toString());
   await expect(student).toHaveURL(/\/learn$/);
   await expect(
     student.getByRole("heading", { level: 1, name: "Your classes", exact: true }),

@@ -91,6 +91,10 @@ async function main(): Promise<number> {
       publishableKey: checked.publishableKey,
       healthToken: options.healthToken,
       repoMigrations: migrationVersions(readdirSync(join(ROOT, "supabase", "migrations"))),
+      authConfig:
+        options.target.kind === "hosted" && options.managementToken
+          ? { ref: options.target.ref, token: options.managementToken }
+          : null,
     },
     {
       query: queryFor(options.target),

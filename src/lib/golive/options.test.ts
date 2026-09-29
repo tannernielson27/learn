@@ -7,7 +7,11 @@ describe("readOptions", () => {
   it("reads a hosted run, ignoring pnpm's -- separator", () => {
     const options = readOptions(
       ["--", "--url", "https://site.example/some/path", "--project-ref", REF],
-      { GOLIVE_HEALTH_TOKEN: " tok ", GOLIVE_PUBLISHABLE_KEY: "sb_publishable_env" },
+      {
+        GOLIVE_HEALTH_TOKEN: " tok ",
+        GOLIVE_PUBLISHABLE_KEY: "sb_publishable_env",
+        SUPABASE_ACCESS_TOKEN: " sbp_pat ",
+      },
     );
     expect(options).toEqual({
       help: false,
@@ -16,6 +20,7 @@ describe("readOptions", () => {
       supabaseUrl: null,
       publishableKey: "sb_publishable_env",
       healthToken: "tok",
+      managementToken: "sbp_pat",
     });
   });
 
@@ -27,6 +32,7 @@ describe("readOptions", () => {
     expect(options.target).toEqual({ kind: "local" });
     expect(options.publishableKey).toBe("sb_publishable_flag");
     expect(options.healthToken).toBeNull();
+    expect(options.managementToken).toBeNull();
   });
 
   it("answers --help without other flags", () => {
