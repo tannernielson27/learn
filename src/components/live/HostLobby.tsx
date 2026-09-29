@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Countdown } from "@/components/live/Countdown";
 import { ItemStrip } from "@/components/live/ItemStrip";
+import { pollWhileVisible } from "@/components/live/pollWhileVisible";
 import { ProgressBoard } from "@/components/live/ProgressBoard";
 import { Roster } from "@/components/live/Roster";
 import { keepTally } from "@/components/live/sameTally";
@@ -201,7 +202,8 @@ export function HostLobby({
    * (ADR 0002) and "three of three answered" is exactly what a host wants before they reveal. It
    * runs only while the room is on an item — a lobby and an ended session ask for nothing — and
    * an ask that fails is simply not repeated until the next tick: a count that stops moving for
-   * three seconds is not worth an error on a projector.
+   * three seconds is not worth an error on a projector. A hidden tab asks nothing, and asks at
+   * once when it comes back (#323).
    */
   const paced = isStudentPaced(state);
   /** A student-paced room (#185) is on its whole set, never on one item; the board is its view. */
@@ -222,11 +224,10 @@ export function HostLobby({
         })
         .catch(() => {});
     };
-    ask();
-    const timer = setInterval(ask, tallyIntervalMs);
+    const stop = pollWhileVisible(ask, tallyIntervalMs);
     return () => {
       watching = false;
-      clearInterval(timer);
+      stop();
     };
   }, [onAnItem, state.position, state.reveal, tallyIntervalMs]);
 
