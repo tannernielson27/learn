@@ -13,7 +13,7 @@ import {
   sweepJobCheck,
   type HealthReading,
 } from "./checks.ts";
-import { authConfigChecks, readAuthConfig } from "./authConfig.ts";
+import { AUTH_CHECK_TITLES, authConfigChecks, readAuthConfig } from "./authConfig.ts";
 import {
   probeExposedSchemas,
   readAppliedMigrations,
@@ -109,6 +109,26 @@ function schemasStep(options: GoLiveOptions, deps: GoLiveDeps): () => Promise<Ch
     );
 }
 
+const AUTH_HINT =
+  "Is SUPABASE_ACCESS_TOKEN a current personal access token (supabase.com/dashboard/account/tokens)?";
+
+/**
+ * The Auth URLs and template lines (#307). One read feeds both, so a read that fails fails both
+ * lines rather than printing one and silently dropping the other.
+ */
+async function authConfigStep(
+  fetchImpl: FetchLike,
+  auth: { ref: string; token: string },
+  siteUrl: string,
+): Promise<CheckResult[]> {
+  try {
+    return authConfigChecks(await readAuthConfig(fetchImpl, auth.ref, auth.token), siteUrl);
+  } catch (error) {
+    const detail = `could not read the Auth config: ${redact(error)}. ${AUTH_HINT}`;
+    return AUTH_CHECK_TITLES.map(({ id, title }) => ({ id, title, status: "fail", detail }));
+  }
+}
+
 /** One check at a time, in the order the report prints them: no burst of CLI processes. */
 export async function runGoLiveCheck(
   options: GoLiveOptions,
@@ -162,22 +182,7 @@ export async function runGoLiveCheck(
       ),
   ];
   const auth = options.authConfig;
-  const authStep = auth
-    ? [
-        () =>
-          guarded(
-            "auth-urls",
-            "Auth Site URL and redirect URLs admit the site's sign-in links",
-            "fail",
-            "Is SUPABASE_ACCESS_TOKEN a current personal access token (supabase.com/dashboard/account/tokens)?",
-            async () =>
-              authConfigChecks(
-                await readAuthConfig(deps.fetch, auth.ref, auth.token),
-                options.siteUrl,
-              ),
-          ),
-      ]
-    : [];
+  const authStep = auth ? [() => authConfigStep(deps.fetch, auth, options.siteUrl)] : [];
   const results: CheckResult[] = [];
   for (const step of [...steps, ...authStep]) results.push(...(await step()));
   // A step that ran replaces its manual line.

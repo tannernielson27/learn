@@ -268,10 +268,11 @@ describe("runGoLiveCheck with a Management API token (#307)", () => {
     expect(exitCode(results)).not.toBe(0);
   });
 
-  it("fails without printing the token when the API refuses it", async () => {
+  it("fails both lines, without printing the token, when the API refuses it", async () => {
     const results = await runGoLiveCheck(withToken, deps({ fetch: fetchWithAuth({}, 401) }));
-    const line = results.find((result) => result.id === "auth-urls")!;
-    expect(line.status).toBe("fail");
+    const status = statusById(results);
+    expect(status["auth-urls"]).toBe("fail");
+    expect(status["auth-template"]).toBe("fail");
     expect(formatReport(results)).not.toContain(withToken.authConfig.token);
   });
 });

@@ -72,6 +72,12 @@ function originOf(value: string | null): string | null {
 
 const URLS_TITLE = "Auth Site URL and redirect URLs admit the site's sign-in links";
 const TEMPLATE_TITLE = "the magic-link template carries the token-hash link and the code";
+
+/** Both lines this module prints, so a failed read can fail each of them by name. */
+export const AUTH_CHECK_TITLES = [
+  { id: "auth-urls", title: URLS_TITLE },
+  { id: "auth-template", title: TEMPLATE_TITLE },
+] as const;
 const LINK = "{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email";
 const CODE = "{{ .Token }}";
 
