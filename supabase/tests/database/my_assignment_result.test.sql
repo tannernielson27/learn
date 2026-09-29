@@ -191,7 +191,10 @@ select is(
     'item_id', '00000000-0000-0000-0000-0000002100f1',
     'response', '{"type":"multiple_choice","optionId":"ada_first"}'::jsonb,
     'points', 1.00, 'max_points', 1.00, 'model', 'zero_one',
-    'breakdown', '[]'::jsonb, 'groups', null)),
+    'breakdown', '[]'::jsonb, 'groups', null,
+    -- 20260928000000_scored_reveal: the key the mark was drawn against; null on a row written
+    -- straight in, as these are, and on any marked before the column existed.
+    'reveal', null)),
   'and its saved answers with their marks'
 );
 select is(
