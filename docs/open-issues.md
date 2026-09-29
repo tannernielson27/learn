@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-26 (Sprint 11 code complete: every story merged, `main` at da34d8c; hosted at all 38 migrations; demo in docs/sprints/S11-demo.md).
+Last updated: 2026-09-29 (immediate-feedback sprint merged: #311, #313, #314, #316, #320; hosted at all 40 migrations; follow-ups #325-#328 filed).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -269,6 +269,10 @@ Sprint 11 is code complete: every story is merged, including the follow-ups #283
 | [#59](https://github.com/tannernielson27/learn/issues/59)   | fix(a11y): a disabled Submit cannot say why                                               | a11y               | Merged (#166)                                                      |
 | [#60](https://github.com/tannernielson27/learn/issues/60)   | fix(a11y): smaller screen-reader findings                                                 | a11y               | Merged (#168)                                                      |
 | [#61](https://github.com/tannernielson27/learn/issues/61)   | chore(a11y): run the case study with NVDA and VoiceOver                                   | a11y               | To do; needs a person with the screen readers                      |
+| [#325](https://github.com/tannernielson27/learn/issues/325) | feat(player): give matrix, drop-down and drag-drop marks the left-rule treatment          | player             | To do; owner reviews screenshots before merge                      |
+| [#326](https://github.com/tannernielson27/learn/issues/326) | fix(authoring): the preview keeps old marks after the answer key is edited                | authoring          | To do                                                              |
+| [#327](https://github.com/tannernielson27/learn/issues/327) | fix(assign): mark the instructor's report against the key each answer was scored with     | assign, db         | To do; builds on #320's `reveal` column                            |
+| [#328](https://github.com/tannernielson27/learn/issues/328) | docs(deploy): mark migrations 39 and 40 as applied to hosted                              | docs               | In review                                                          |
 
 ## Owner actions outside GitHub
 
