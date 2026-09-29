@@ -41,8 +41,11 @@ vi.mock("next/navigation", () => ({
 type OtpError = { status?: number; code?: string; message?: string };
 const signInWithOtp = vi.fn(async () => ({ error: null as OtpError | null }));
 const signInWithPassword = vi.fn(async () => ({ error: null as unknown }));
+const verifyOtp = vi.fn(async () => ({ error: null as OtpError | null }));
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseServerClient: async () => ({ auth: { signInWithOtp, signInWithPassword } }),
+  createSupabaseServerClient: async () => ({
+    auth: { signInWithOtp, signInWithPassword, verifyOtp },
+  }),
 }));
 
 // #234: the limiter counts in Postgres; here it counts in the in-memory fake, shared by every call.
@@ -55,7 +58,7 @@ const rateLimitStore = (
   await import("@/lib/rateLimit/postgresStore")
 ).sharedRateLimitStore() as MemoryRateLimitStore;
 
-const { requestSignInLink, signInAsDemo } = await import("./actions");
+const { requestSignInLink, signInAsDemo, verifySignInCode } = await import("./actions");
 
 function emailForm(email: string): FormData {
   const form = new FormData();
@@ -350,5 +353,54 @@ describe("when the shared rate limiter cannot answer (#234)", () => {
     expect(result).toEqual({ status: "sent", email: inbox });
     expect(signInWithOtp).not.toHaveBeenCalled();
     hit.mockRestore();
+  });
+});
+
+describe("verifySignInCode (#306)", () => {
+  function codeForm(email: string, code: string): FormData {
+    const form = new FormData();
+    form.set("email", email);
+    form.set("code", code);
+    form.set("next", "/c/tok");
+    return form;
+  }
+
+  it("signs in on this device with the code and follows next", async () => {
+    await expect(verifySignInCode({ status: "idle" }, codeForm(inbox, "123456"))).rejects.toThrow(
+      "redirect:/c/tok",
+    );
+    expect(verifyOtp).toHaveBeenCalledWith({ email: inbox, token: "123456", type: "email" });
+  });
+
+  it("answers a wrong code and an address with no account the same way", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    verifyOtp.mockResolvedValueOnce({ error: { status: 403, code: "otp_expired" } });
+    const wrong = await verifySignInCode({ status: "idle" }, codeForm(inbox, "000000"));
+    verifyOtp.mockResolvedValueOnce({ error: { status: 400, code: "otp_disabled" } });
+    const noAccount = await verifySignInCode(
+      { status: "idle" },
+      codeForm(newRecipient(), "111111"),
+    );
+    expect(wrong).toEqual(noAccount);
+    expect(wrong.status).toBe("error");
+  });
+
+  it("stops guessing at one address after a handful of tries, without asking Supabase", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    verifyOtp.mockResolvedValue({ error: { status: 403, code: "otp_expired" } });
+    for (let i = 0; i < 5; i += 1) {
+      fromNewAddress();
+      await verifySignInCode({ status: "idle" }, codeForm(inbox, `10000${i}`));
+    }
+    verifyOtp.mockClear();
+    fromNewAddress();
+    const refused = await verifySignInCode({ status: "idle" }, codeForm(inbox, "999999"));
+    expect(refused).toMatchObject({
+      status: "error",
+      error: expect.stringMatching(/Too many tries/),
+    });
+    expect(verifyOtp).not.toHaveBeenCalled();
+    verifyOtp.mockReset();
+    verifyOtp.mockResolvedValue({ error: null });
   });
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useId, useRef, useState } from "react";
+import { EmailCodeForm, type EmailCodeFormProps } from "@/components/auth/EmailCodeForm";
 import { Button } from "@/components/ui/Button";
 import { InviteUnavailable } from "./InviteUnavailable";
 
@@ -14,6 +15,10 @@ export interface InviteEmailFormProps {
   action: (state: InviteLinkState, formData: FormData) => Promise<InviteLinkState>;
   /** The class the link is for, as the server resolved it. */
   classTitle: string;
+  /** Signs in with the email's one-time code (#306); shown under "Check your email". */
+  codeAction?: EmailCodeFormProps["action"];
+  /** Where the code sends the person: this invite page, which then offers to join. */
+  codeNext?: string;
 }
 
 const INITIAL: InviteLinkState = { status: "idle" };
@@ -22,7 +27,12 @@ const INITIAL: InviteLinkState = { status: "idle" };
  * The class invite for someone not signed in (#205): one email field. The answer is the same
  * "Check your email" whether the address is new or already has an account.
  */
-export function InviteEmailForm({ action, classTitle }: InviteEmailFormProps) {
+export function InviteEmailForm({
+  action,
+  classTitle,
+  codeAction,
+  codeNext,
+}: InviteEmailFormProps) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
   const [email, setEmail] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -53,6 +63,9 @@ export function InviteEmailForm({ action, classTitle }: InviteEmailFormProps) {
           We sent a link to {state.email}. Open it to finish joining. It works once and expires in
           an hour.
         </p>
+        {codeAction && codeNext ? (
+          <EmailCodeForm action={codeAction} email={state.email} next={codeNext} />
+        ) : null}
       </section>
     );
   }

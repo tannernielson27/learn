@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { EmailCodeForm, type EmailCodeFormProps } from "./EmailCodeForm";
 
 export type SignInState =
   { status: "idle" } | { status: "sent"; email: string } | { status: "error"; error: string };
@@ -12,13 +13,15 @@ export interface SignInFormProps {
   next: string;
   /** The person arrived from a sign-in link that failed. */
   linkError?: boolean;
+  /** Signs in with the email's one-time code (#306); shown under "Check your email". */
+  codeAction?: EmailCodeFormProps["action"];
 }
 
 const LINK_ERROR =
   "That sign-in link has expired or was already used. Enter your email to get a new one.";
 const INITIAL: SignInState = { status: "idle" };
 
-export function SignInForm({ action, next, linkError = false }: SignInFormProps) {
+export function SignInForm({ action, next, linkError = false, codeAction }: SignInFormProps) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
   const [email, setEmail] = useState("");
   // The "sent" result the person chose to leave, so the form shows again without a new request.
@@ -55,6 +58,7 @@ export function SignInForm({ action, next, linkError = false }: SignInFormProps)
           We sent a sign-in link to {state.email}. It works once and expires in an hour.
         </p>
         <Button onClick={() => setDismissed(state)}>Use a different email</Button>
+        {codeAction ? <EmailCodeForm action={codeAction} email={state.email} next={next} /> : null}
       </section>
     );
   }

@@ -32,9 +32,14 @@ describe("the Supabase magic-link template", () => {
     );
   });
 
-  it("uses no Supabase variable other than the two the link needs", () => {
+  it("uses no Supabase variable other than the link's two and the one-time code", () => {
     const actions = new Set(template.match(/\{\{[^}]*\}\}/g));
-    expect([...actions].sort()).toEqual(["{{ .RedirectTo }}", "{{ .TokenHash }}"]);
+    expect([...actions].sort()).toEqual(["{{ .RedirectTo }}", "{{ .Token }}", "{{ .TokenHash }}"]);
+  });
+
+  it("carries the one-time code, for signing in on the device that asked (#306)", () => {
+    expect(template).toContain(">{{ .Token }}</p>");
+    expect(template).toMatch(/enter this code on the page where you asked/i);
   });
 
   it("gives e2e/mailbox.ts the whole link, as it did before", () => {

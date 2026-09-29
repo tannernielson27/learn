@@ -7,10 +7,11 @@ import { InviteUnavailable } from "@/components/classes/InviteUnavailable";
 import { ALREADY_INSTRUCTOR, JoinClassButton } from "@/components/classes/JoinClassButton";
 import { FocusHeading } from "@/components/status/FocusHeading";
 import { clientIp } from "@/lib/auth/signInRateLimit";
-import { STUDENT_HOME } from "@/lib/classes/classes";
+import { clipInviteToken, invitePath, STUDENT_HOME } from "@/lib/classes/classes";
 import { readViewer } from "@/lib/classes/viewer";
 import { myClasses, resolveClassInvite } from "@/lib/supabase/classInvites";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { verifySignInCode } from "@/app/sign-in/actions";
 import { joinInvitedClass, requestInviteLink } from "./actions";
 
 export const metadata: Metadata = {
@@ -85,6 +86,10 @@ export default async function ClassInvitePage({ params }: PageProps<"/c/[token]"
         <InviteEmailForm
           action={requestInviteLink.bind(null, token)}
           classTitle={invite.className}
+          codeAction={verifySignInCode}
+          // Back here signed in: a new account is already in the class, and an existing one
+          // gets the one-tap join, exactly as the emailed link does for each.
+          codeNext={invitePath(clipInviteToken(token))}
         />
       </Shell>
     );
