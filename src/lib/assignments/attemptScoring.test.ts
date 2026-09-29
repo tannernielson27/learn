@@ -36,6 +36,18 @@ describe("scoreAttempt", () => {
     expect(scored.marks[1]).toMatchObject({ points: 1, max_points: 3, model: "plus_minus" });
   });
 
+  it("stores beside each mark the key, rationale and scoring it was computed against", () => {
+    const scored = scoreAttempt(SET, {
+      "00000000-0000-0000-0000-000000000001": { type: "multiple_choice", optionId: "opt_a" },
+      // Unreadable: scored as nothing, but still against this key.
+      "00000000-0000-0000-0000-000000000002": { type: "multiple_choice", optionId: "opt_a" },
+    });
+    expect(scored.marks.map((mark) => mark.reveal)).toEqual([
+      { answerKey: MC.answerKey, rationale: MC.rationale, scoring: MC.scoring },
+      { answerKey: MR.answerKey, rationale: MR.rationale, scoring: MR.scoring },
+    ]);
+  });
+
   it("never gives an unanswered ordered response the key's own order as an answer", () => {
     const scored = scoreAttempt(SET, {});
     expect(scored.total).toBe(0);
