@@ -88,6 +88,9 @@ The decision: keep all three. If the cost ever matters (a failing LCP budget on 
 | Correct (feedback)              | `--correct` left rule + check icon; text unchanged                                 |
 | Incorrect (feedback)            | `--incorrect` left rule + x icon                                                   |
 | Missed correct (feedback)       | dashed `--correct` border                                                          |
+| Sent, not yet revealed          | Selected treatment, read-only; no correct/incorrect marks until the key arrives    |
+
+Feedback marks need the key. An answer that has been sent but whose key has not reached the browser (a live session before the host reveals) is drawn in review mode — the choices stay selected and nothing is marked — never as feedback, which would draw every choice as incorrect.
 
 Highlight items: selectable spans get a faint underline at rest; selected = `--accent-soft` background with 2px bottom border; feedback uses correct/incorrect backgrounds at 25% alpha.
 
