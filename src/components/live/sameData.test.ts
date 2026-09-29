@@ -157,6 +157,8 @@ describe("sameData on its own", () => {
     sameData({ at: new Date(0) }, { at: new Date(0) });
     // @ts-expect-error nor is a Map
     sameData(new Map(), new Map());
+    // @ts-expect-error nor is an array of dates, even nested
+    sameData({ list: [new Date(0)] }, { list: [new Date(0)] });
     expect(true).toBe(true);
   });
 });
