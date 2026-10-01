@@ -20,6 +20,8 @@ export interface QuestionShellProps {
   onSubmit?: () => void;
   /** A server is checking the answer: Submit stays in place, says so, and ignores presses. */
   submitting?: boolean;
+  /** What Submit says while `submitting`. A live room only sends the answer, so it says that. */
+  busyLabel?: string;
   /** Why the last check failed, shown beside Submit. */
   submitError?: string;
   /** Present in feedback mode. */
@@ -65,6 +67,7 @@ export function QuestionShell({
   canSubmit,
   onSubmit,
   submitting = false,
+  busyLabel = "Checking your answer",
   submitError,
   score,
   scoreNote,
@@ -178,7 +181,7 @@ export function QuestionShell({
               className="aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
               onClick={submit}
             >
-              {submitting ? "Checking your answer" : "Submit"}
+              {submitting ? busyLabel : "Submit"}
             </Button>
           </div>
         </div>

@@ -246,6 +246,8 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   );
   await shoot(phone, testInfo, "10-phone-score");
   await page.getByRole("button", { name: "End session", exact: true }).click();
+  // It asks first; the second press is the one in the question.
+  await page.getByRole("button", { name: "End session", exact: true }).click();
   await expect(phone.getByText("This session has ended.", { exact: true })).toBeVisible({
     timeout: 15_000,
   });
