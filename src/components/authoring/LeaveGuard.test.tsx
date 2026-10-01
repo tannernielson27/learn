@@ -27,7 +27,7 @@ describe("GuardedLink", () => {
     const guard = vi.fn(() => true);
     const link = setup(guard);
     expect(fireEvent.click(link)).toBe(false);
-    expect(guard).toHaveBeenCalledWith("/author");
+    expect(guard).toHaveBeenCalledWith("/author", undefined);
   });
 
   it("navigates when the guard lets it go", () => {

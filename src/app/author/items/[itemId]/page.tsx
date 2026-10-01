@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { archiveItemAction, restoreItemAction } from "@/app/author/archiveActions";
 import { duplicateItemAction } from "@/app/author/duplicateActions";
@@ -8,6 +7,7 @@ import { DuplicateButton } from "@/components/authoring/DuplicateButton";
 import { editorFor, storedItemOf } from "@/components/authoring/editorFor";
 import { historyEntries } from "@/components/authoring/historyEntries";
 import { ItemEditorWithHistory } from "@/components/authoring/ItemEditorWithHistory";
+import { GuardedLink } from "@/components/authoring/LeaveGuard";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { HISTORY_LIMIT } from "@/lib/authoring/versionHistory";
@@ -59,9 +59,9 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
   return (
     <>
       <p className="mb-2 flex flex-wrap gap-4 text-sm">
-        <Link href={`/author/banks/${row.bank_id}`} className={linkClass}>
+        <GuardedLink href={`/author/banks/${row.bank_id}`} className={linkClass}>
           Back to bank
-        </Link>
+        </GuardedLink>
         {exportable ? (
           <a href={`/author/items/${row.id}/export`} download className={linkClass}>
             Export JSON
@@ -82,15 +82,17 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
       {archived ? (
         <p className="mb-6 max-w-prose rounded-sm border border-line bg-surface-2 p-3 text-ink-1">
           This item is archived. It is out of the bank&apos;s list and cannot be played, edited or
-          placed as a case study step until it is restored.
+          placed as a case study step. Restore it to edit it.
         </p>
       ) : null}
-      {editor ? (
+      {/* The database refuses to change archived content, so an archived item offers no editor. */}
+      {archived ? null : editor ? (
         <ItemEditorWithHistory
           editor={editor}
           entries={historyEntries(row, versions.slice(0, HISTORY_LIMIT))}
           truncated={versions.length > HISTORY_LIMIT}
           loadFailed={Boolean(versionsError)}
+          published={row.status === "published"}
         />
       ) : (
         <p className="text-ink-2">
