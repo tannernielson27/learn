@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { LIVE_BUSY_LABEL, liveSubmitFailure } from "@/components/live/liveSubmit";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { SetNav } from "@/components/question/SetNav";
 import { Button } from "@/components/ui/Button";
@@ -247,6 +248,8 @@ export function StudentPacedRoom({
             }
             progress={progress}
             submit={(response) => send(entry, response)}
+            busyLabel={LIVE_BUSY_LABEL}
+            failureMessage={liveSubmitFailure}
           />
         </div>
       )}

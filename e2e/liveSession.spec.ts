@@ -101,6 +101,8 @@ test("an instructor starts a session from a bank, sees a six-character code, and
   await page.getByRole("button", { name: "Resume", exact: true }).click();
 
   await page.getByRole("button", { name: "End session", exact: true }).click();
+  // It asks first; the second press is the one in the question.
+  await page.getByRole("button", { name: "End session", exact: true }).click();
   await expect(student.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
   await student.close();
 

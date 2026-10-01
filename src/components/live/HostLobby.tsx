@@ -95,6 +95,32 @@ function labelFor(command: HostCommand, state: LiveSessionState): string {
   return command === "reveal" && isStudentPaced(state) ? "Show answers" : LABELS[command];
 }
 
+/**
+ * The moves that cannot be taken back, so the console asks first. Ending is final, and a
+ * student-paced room's "Show answers" closes answering on every item for every student at once.
+ * One item's "Show answer" does not ask: the room moves on to the next item anyway.
+ */
+type Asked = "end" | "reveal";
+
+function asksFirst(command: HostCommand, state: LiveSessionState): command is Asked {
+  return command === "end" || (command === "reveal" && isStudentPaced(state));
+}
+
+/** What the question says, and what its two buttons say. */
+function question(command: Asked, state: LiveSessionState) {
+  return command === "end"
+    ? {
+        title: "End this session?",
+        detail: "Students are disconnected and the code stops working. You can't reopen it.",
+        cancel: "Keep the session",
+      }
+    : {
+        title: `Show answers for all ${state.itemCount} ${state.itemCount === 1 ? "item" : "items"}?`,
+        detail: "Students who haven't finished can't answer any more.",
+        cancel: "Not yet",
+      };
+}
+
 /** What is in flight: a move, a timer button, a new time per item, or a jump (#183). */
 type Pending = HostCommand | TimerCommand | "set_timer" | "goto";
 
@@ -136,6 +162,7 @@ export function HostLobby({
   const [tally, setTally] = useState<ItemAggregate | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
+  const [asking, setAsking] = useState<Asked | null>(null);
   /** The current item's CJMM step, which a case study's console names (#184). */
   const [cjmmStep, setCjmmStep] = useState<number | null>(null);
 
@@ -275,6 +302,23 @@ export function HostLobby({
   const askProgress = useCallback(() => transport.current?.progress() ?? Promise.resolve(null), []);
 
   const ended = state.status === "ended";
+  // A question about a move the room no longer allows (another tab ended it) is not asked.
+  const asked = asking !== null && canRunHostCommand(state, asking) ? asking : null;
+  const askRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (asked !== null) askRef.current?.focus();
+  }, [asked]);
+
+  function press(command: HostCommand) {
+    if (asksFirst(command, state)) setAsking(command);
+    else void run(command);
+  }
+
+  function confirm(command: Asked) {
+    setAsking(null);
+    void run(command);
+  }
+
   /**
    * The tally, but only while it is about the item on the screen. A tally for the item the room
    * has just left is still in hand when `advance` lands, and "5 of 5 answered" above a question
@@ -356,14 +400,35 @@ export function HostLobby({
         </p>
       )}
 
-      {ended ? null : (
+      {ended ? null : asked !== null ? (
+        <div
+          ref={askRef}
+          role="alertdialog"
+          aria-labelledby="ask-heading"
+          tabIndex={-1}
+          className="mt-6 flex flex-col gap-3 rounded-sm border border-line bg-surface-1 p-4"
+        >
+          <p id="ask-heading" className="font-medium text-ink-1">
+            {question(asked, state).title}
+          </p>
+          <p className="text-sm text-ink-2">{question(asked, state).detail}</p>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="primary" disabled={pending !== null} onClick={() => confirm(asked)}>
+              {labelFor(asked, state)}
+            </Button>
+            <Button variant="ghost" onClick={() => setAsking(null)}>
+              {question(asked, state).cancel}
+            </Button>
+          </div>
+        </div>
+      ) : (
         <div className="mt-6 flex flex-wrap gap-2">
           {offered(state).map((command) => (
             <Button
               key={command}
               variant={command === "start" || command === "advance" ? "primary" : "secondary"}
               disabled={pending !== null || !canRunHostCommand(state, command)}
-              onClick={() => void run(command)}
+              onClick={() => press(command)}
             >
               {labelFor(command, state)}
             </Button>
@@ -407,7 +472,8 @@ export function HostLobby({
         />
       ) : null}
 
-      <Roster roster={roster} />
+      {/* An ended room has no one to wait for, and its join hint would point at a dead code. */}
+      {ended ? null : <Roster roster={roster} />}
     </>
   );
 }

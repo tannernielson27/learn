@@ -230,6 +230,8 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
   ).toHaveCount(0);
 
   await page.getByRole("button", { name: "End session", exact: true }).click();
+  // It asks first; the second press is the one in the question.
+  await page.getByRole("button", { name: "End session", exact: true }).click();
   for (const phone of [...phones, quiet]) {
     await expect(phone.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
     await phone.context().close();
@@ -381,6 +383,8 @@ test("a timed item counts down on the phone, and refuses an answer after zero", 
   });
 
   await page.getByRole("button", { name: "End session", exact: true }).click();
+  // It asks first; the second press is the one in the question.
+  await page.getByRole("button", { name: "End session", exact: true }).click();
   await expect(phone.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
   await phone.context().close();
 });
@@ -455,6 +459,8 @@ test("the host skips to an item and goes back, and the phone keeps its answer", 
     timeout: 15_000,
   });
 
+  await page.getByRole("button", { name: "End session", exact: true }).click();
+  // It asks first; the second press is the one in the question.
   await page.getByRole("button", { name: "End session", exact: true }).click();
   await expect(phone.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
   await phone.context().close();
@@ -578,6 +584,8 @@ test("a case study runs live with the patient record beside each step on the pho
   await expectNoBlockingAxeViolations(phone);
 
   await page.getByRole("button", { name: "End session", exact: true }).click();
+  // It asks first; the second press is the one in the question.
+  await page.getByRole("button", { name: "End session", exact: true }).click();
   await expect(phone.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
   await phone.context().close();
 });
@@ -665,6 +673,8 @@ test("a student-paced set: phones move at their own pace, the board fills in, on
   });
 
   await page.getByRole("button", { name: "Show answers", exact: true }).click();
+  // It asks first; the second press is the one in the question.
+  await page.getByRole("button", { name: "Show answers", exact: true }).click();
 
   // Bo is on item 2, which Bo answered: marks and the rationale.
   await expect(bo.getByRole("complementary", { name: "Score" })).toBeVisible({ timeout: 15_000 });
@@ -685,6 +695,8 @@ test("a student-paced set: phones move at their own pace, the board fills in, on
     fullPage: true,
   });
 
+  await page.getByRole("button", { name: "End session", exact: true }).click();
+  // It asks first; the second press is the one in the question.
   await page.getByRole("button", { name: "End session", exact: true }).click();
   await expect(ada.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
   await ada.context().close();
