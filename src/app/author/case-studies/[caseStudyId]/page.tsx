@@ -106,6 +106,78 @@ export default async function CaseStudyPage({
   // Assembled once: it drives both Preview case study and whether Export JSON is offered.
   const preview = assembleCaseStudy(row, "preview");
 
+  const bankHref = `/author/banks/${row.bank_id}`;
+  const header = (
+    <>
+      <p className="eyebrow mb-1">Case study</p>
+      <div className="mb-6 flex flex-wrap items-baseline gap-3">
+        <h1 className="font-read text-3xl text-ink-1">{row.title}</h1>
+        <p className="text-sm text-ink-2">{STATUS_LABELS[row.status]}</p>
+        {/* Only a case study with its record and six finished steps exports. */}
+        {preview.ok ? (
+          <a
+            href={`/author/case-studies/${row.id}/export`}
+            download
+            className="text-sm text-accent-ink underline-offset-4 hover:underline"
+          >
+            Export JSON
+          </a>
+        ) : null}
+        <DuplicateButton
+          action={duplicateCaseStudyAction.bind(null, row.id)}
+          label="Duplicate case study"
+        />
+        {/* Only a published case study can be run: start_session refuses anything else (#184). */}
+        {row.status === "published" ? (
+          <form action={startCaseStudyLiveSession.bind(null, row.id)}>
+            <Button type="submit" variant="secondary" size="sm">
+              Start a live session
+            </Button>
+          </form>
+        ) : null}
+        {/* #207: only a published case study can be assigned, as only one can be run. */}
+        {row.status === "published" ? (
+          <Link
+            href={assignmentPath({ kind: "case_study", id: row.id })}
+            className="tap-target inline-flex items-center rounded-sm border border-line bg-surface-1 px-3 text-sm font-medium text-ink-1 hover:border-line-strong hover:bg-surface-2"
+          >
+            Assign
+          </Link>
+        ) : null}
+        {row.status === "archived" ? (
+          <ArchiveButton
+            action={restoreCaseStudyAction.bind(null, row.id)}
+            label="Restore case study"
+          />
+        ) : (
+          <ArchiveButton
+            action={archiveCaseStudyAction.bind(null, row.id)}
+            label="Archive case study"
+          />
+        )}
+      </div>
+    </>
+  );
+
+  // The database refuses to change archived content, so an archived case study offers no builder:
+  // only what it is, and the way to restore it.
+  if (row.status === "archived") {
+    return (
+      <>
+        <p className="mb-2 text-sm">
+          <Link href={bankHref} className="text-accent-ink underline-offset-4 hover:underline">
+            Back to bank
+          </Link>
+        </p>
+        {header}
+        <p className="mb-6 max-w-prose rounded-sm border border-line bg-surface-2 p-3 text-ink-1">
+          This case study is archived. It is out of the bank&apos;s list, and its record, its steps
+          and their order cannot change. Restore it to edit it.
+        </p>
+      </>
+    );
+  }
+
   const blockers = caseStudyBlockers({
     titleWritten: row.title.trim().length > 0,
     recordTabCount: recordForm.tabs.length,
@@ -115,7 +187,7 @@ export default async function CaseStudyPage({
   return (
     <>
       <CaseStudyBuilder
-        back={{ href: `/author/banks/${row.bank_id}`, label: "Back to bank" }}
+        back={{ href: bankHref, label: "Back to bank" }}
         record={{
           status: recordStatus,
           panel: <EhrEditorLoader caseStudyId={row.id} initialValues={recordForm} />,
@@ -126,62 +198,10 @@ export default async function CaseStudyPage({
         preview={preview}
         publish={publishCaseStudyAction.bind(null, row.id)}
       >
-        <p className="eyebrow mb-1">Case study</p>
-        <div className="mb-6 flex flex-wrap items-baseline gap-3">
-          <h1 className="font-read text-3xl text-ink-1">{row.title}</h1>
-          <p className="text-sm text-ink-2">{STATUS_LABELS[row.status]}</p>
-          {/* Only a case study with its record and six finished steps exports. */}
-          {preview.ok ? (
-            <a
-              href={`/author/case-studies/${row.id}/export`}
-              download
-              className="text-sm text-accent-ink underline-offset-4 hover:underline"
-            >
-              Export JSON
-            </a>
-          ) : null}
-          <DuplicateButton
-            action={duplicateCaseStudyAction.bind(null, row.id)}
-            label="Duplicate case study"
-          />
-          {/* Only a published case study can be run: start_session refuses anything else (#184). */}
-          {row.status === "published" ? (
-            <form action={startCaseStudyLiveSession.bind(null, row.id)}>
-              <Button type="submit" variant="secondary" size="sm">
-                Start a live session
-              </Button>
-            </form>
-          ) : null}
-          {/* #207: only a published case study can be assigned, as only one can be run. */}
-          {row.status === "published" ? (
-            <Link
-              href={assignmentPath({ kind: "case_study", id: row.id })}
-              className="tap-target inline-flex items-center rounded-sm border border-line bg-surface-1 px-3 text-sm font-medium text-ink-1 hover:border-line-strong hover:bg-surface-2"
-            >
-              Assign
-            </Link>
-          ) : null}
-          {row.status === "archived" ? (
-            <ArchiveButton
-              action={restoreCaseStudyAction.bind(null, row.id)}
-              label="Restore case study"
-            />
-          ) : (
-            <ArchiveButton
-              action={archiveCaseStudyAction.bind(null, row.id)}
-              label="Archive case study"
-            />
-          )}
-        </div>
+        {header}
         {liveRefusal ? (
           <p role="alert" className="mb-6 text-sm text-incorrect">
             {liveRefusal}
-          </p>
-        ) : null}
-        {row.status === "archived" ? (
-          <p className="mb-6 max-w-prose rounded-sm border border-line bg-surface-2 p-3 text-ink-1">
-            This case study is archived. It is out of the bank&apos;s list, and its record, its
-            steps and their order cannot change until it is restored.
           </p>
         ) : null}
       </CaseStudyBuilder>

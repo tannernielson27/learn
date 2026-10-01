@@ -61,7 +61,8 @@ const STATUS_LABELS: Record<StepStatus, string> = {
 const PUBLISH_FAILED = "The case study could not be published. Try again.";
 
 type StepKey = "record" | CjmmStep;
-type Pending = { step: StepKey } | { href: string } | { action: "preview" | "publish" };
+type Pending =
+  { step: StepKey } | { href: string; go?: () => void } | { action: "preview" | "publish" };
 type Notice =
   | { kind: "previewBlocked"; blockers: string[] }
   | { kind: "published" }
@@ -153,9 +154,9 @@ export function CaseStudyBuilder({
   }
 
   // One guard for every way out by link: Back to bank here, and the site header's links.
-  const guardLeave = useCallback<LeaveGuard>((href) => {
+  const guardLeave = useCallback<LeaveGuard>((href, go) => {
     if (!dirty.current) return false;
-    setPending({ href });
+    setPending({ href, go });
     return true;
   }, []);
   useLeaveGuard(guardLeave);
@@ -209,7 +210,8 @@ export function CaseStudyBuilder({
     dirty.current = false;
     setPending(null);
     if ("href" in pending) {
-      router.push(pending.href);
+      if (pending.go) pending.go();
+      else router.push(pending.href);
     } else if ("action" in pending) {
       if (pending.action === "preview") startPreview();
       else void runPublish();
