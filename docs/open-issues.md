@@ -314,7 +314,7 @@ Decisions taken at kickoff, each the conservative option; say if any should chan
 1. **Owner documents never enter the repo** (#333, #339). They live in `.ai-import-samples/`, which is gitignored. The CI corpus is fictional, written for the repo.
 2. **The model never writes ids, tokens or offsets** (#337, #338). It fills a string-only draft, and pure converters build learn.v1.
 3. **Imports land in a new folder, "AI import – <date>"**, by default; the author may pick another (#348).
-4. **The cap starts at 300 pages per org per month**, reserved before each call (#340). #333 may change the number.
+4. **The cap is about $10 of estimated cost per org per month**, reserved before each call (#340). #333 measured it and proposed it in place of 300 pages, because a .docx has no reliable page count; the owner confirms it.
 5. **2–3 chunks parse at once** (#345). #333's latency may change it.
 6. **Images are not imported.** A question that relies on one is flagged (#341, #343).
 7. **Abandoned batches are deleted after 7 days** by a self-scheduling cleanup that needs no secret (#348).

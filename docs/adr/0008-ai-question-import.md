@@ -1,6 +1,6 @@
 # ADR 0008 — AI question import: Claude reads documents into reviewable learn.v1 drafts
 
-- **Status:** Proposed, 2026-10-01 (Sprint 12 kickoff). Numbers in "Cost" are estimates until #333 measures them.
+- **Status:** Proposed, 2026-10-01 (Sprint 12 kickoff). "Cost and accuracy" holds #333's measurements.
 - **Deciders:** product owner (S12 kickoff decisions), Claude (planner)
 
 ## Context
@@ -19,7 +19,7 @@ The constraints: a Vercel Hobby function per request, the 1 MB Server Action bod
 ### Model and money
 
 - **Claude Sonnet 5.5** through `@anthropic-ai/sdk`, on the owner's key (`ANTHROPIC_API_KEY`, server only, never `NEXT_PUBLIC_`). Live calls, not the Batch API, so the review screen fills in minutes.
-- **A monthly cap per org**, in pages read, reserved in Postgres _before_ each call and settled after it with the actual tokens, so concurrent chunks cannot overspend. A usage ledger records tokens and estimated cost per call. `AI_IMPORT_ENABLED=false` turns the feature off everywhere. The Anthropic console spend limit is the backstop.
+- **A monthly cap per org**, in estimated cost (starting at $10; see Cost and accuracy), reserved in Postgres _before_ each call and settled after it with the actual tokens, so concurrent chunks cannot overspend. A usage ledger records tokens and estimated cost per call. `AI_IMPORT_ENABLED=false` turns the feature off everywhere. The Anthropic console spend limit is the backstop.
 
 ### Pipeline
 
@@ -48,9 +48,35 @@ A case study keeps one `EhrRecord`, but its time points, tabs and blocks gain an
 - Document text and staged entries are scrubbed from Sentry events like answer keys (`src/lib/observability/scrub.ts`).
 - The rate limiter (`public.hit_rate_limit`) bounds batch starts and parse calls per user.
 
-## Cost (estimate; replaced by the spike's measurements)
+## Cost and accuracy (measured by #333, 2026-10-01)
 
-Sonnet 5.5 is $2 per million input tokens and $10 per million output tokens. Output dominates: about $0.01–0.025 per standalone item and $0.12–0.20 per case study, so a 40-question PDF costs about $0.70–1.00. The cap starts at 300 pages per org per month.
+`scripts/ai-import-spike.ts` ran a draft segment pass and a draft extract pass (4 questions per call, 3 calls at once) on the owner's five samples. Sonnet 5.5 is $2 per million input tokens and $10 per million output tokens.
+
+| Sample                         | Path         | Found | Importable | Cost   | Per importable item | Slowest call |
+| ------------------------------ | ------------ | ----- | ---------- | ------ | ------------------- | ------------ |
+| Ectopic (case study + bowtie)  | .docx → HTML | 7     | 7          | $0.259 | $0.024              | 36 s         |
+| Preeclampsia (case + bowtie)   | .docx → HTML | 7     | 7          | $0.253 | $0.027              | 39 s         |
+| Tuberculosis (case + trend)    | .docx → HTML | 7     | 7          | $0.242 | $0.024              | 30 s         |
+| Malnutrition (course activity) | .docx → HTML | 15    | 6          | $0.144 | $0.011              | 41 s         |
+| Malnutrition, same content     | PDF, native  | 15    | 6          | $0.238 | $0.021              | 45 s         |
+
+All five cost $1.14. **About $0.25 for a Maryland-style case study plus its standalone item**, about $0.02–0.03 per item with a chart, and about $0.01 per short multiple choice item.
+
+What the numbers change:
+
+- **The cap is kept in money, not pages.** A .docx has no reliable page count, and cost per page varies widely (a chart-heavy step is about 3 times the price of a short question). The ledger already settles real tokens, so the cap is an estimated cost per org per month, **starting at $10** (about 40 case studies or 400–900 standalone items). Before each call, a reservation estimated from the input size is taken, and it is settled to the real cost afterwards. The upload page shows it as "about N documents left this month". The batch limits (5 files, 100 PDF pages, 150 items) stay.
+- **Extract 2 questions per call, not 4.** Four chart-heavy steps took 30–45 s in one call. Two keep each call near 20 s, well inside a Hobby function, and #345 still runs 3 at once.
+- **Warm the document cache before fanning out.** The extract calls read almost nothing from the cache: the structured-output schema differs from the segment pass's, so their prefix differs, and the first three ran at once, so all three wrote it. The first extract call of a file should run alone. Input is about a quarter of the cost, so this saves roughly 15–20%.
+- **Make the "possible source error" notes shorter.** The segment pass spent about 600–700 output tokens per question, mostly on notes, many of them trivial (a missing question mark). Keep them to clinical or factual inconsistencies, at most two per question. That roughly halves the segment cost and cuts noise for the reviewer.
+
+Accuracy, read by hand against the documents:
+
+- **Types:** 26 of 28 importable questions were typed as an author would. Two were wrong: Ectopic step 6 says "Scoring Rule: Rationale" and was typed `dropdown_cloze`, not `dropdown_rationale`. The Malnutrition .docx bowtie was typed `multiple_response_grouping`, with confidence 0.55, because its bowtie shape is a drawing the .docx path drops. The PDF path typed it as a bowtie. Rules for #343: a stated rationale scoring rule or an "as evidenced by" sentence means the rationale family, and confidence below 0.7 is shown to the reviewer.
+- **Keys:** every marked key matched the source, including `*` glued and spaced, `*` in matrix cells, "Answer: ✅ B." lines, and the Preeclampsia highlight item. In that item, each highlighted cell became a selectable phrase, and the 4 keys came from the document's separate "Key" table. **No key was invented.** Every unmarked layout (two matrices and a bowtie) came back with no key.
+- **Not NGN:** all 9 open prompts, the BMI calculation, the matching exercise and the one-line recall question were marked not importable, with reasons. The instructor's "optional" add-on was recognized as an instructor note.
+- **Text** was kept word for word, including the typos it flagged.
+- **Structure:** the three case studies grouped as 6 steps plus a standalone, and growing charts were detected. **A risk:** on the Malnutrition PDF, the model labeled parts "Case Study Question 1 of 6", text that is not in the document. #342 must check that each question's opening text appears in the source (the .docx HTML, or a PDF's text layer), and #344 must take step numbers only from the source.
+- **PDF and .docx** of the same content found the same 15 questions. The PDF path reads layout (the bowtie drawing) and costs about 65% more.
 
 ## Consequences
 
