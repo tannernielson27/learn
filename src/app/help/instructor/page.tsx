@@ -46,8 +46,15 @@ export default function InstructorGuide() {
 
       <Step id="sign-in" title="Sign in">
         <p>
-          Open <Ui>Sign in</Ui>, type your email address and press <Ui>Email me a sign-in link</Ui>.
-          Open the link in that email. There is no password.
+          Open <Ui>Sign in</Ui> and type your email address and password. The first time, you have
+          no password yet: press <Ui>Forgot your password?</Ui>, then{" "}
+          <Ui>Email me a sign-in link</Ui>, and open the link in that email. It signs you in and
+          asks you to choose a password.
+        </p>
+        <p>
+          After that the password is all you need. The emailed link stays available under{" "}
+          <Ui>Sign in with an emailed link instead</Ui>, and <Ui>Password</Ui> at the top of the
+          page changes your password at any time.
         </p>
         <p>
           Accounts are by invitation. Whoever runs your LeaRN adds you as an instructor; an account

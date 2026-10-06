@@ -106,6 +106,9 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   await expect(page.getByRole("heading", { level: 1, name: "Sign in", exact: true })).toBeVisible();
   const since = new Date();
   await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await page
+    .getByRole("button", { name: "Sign in with an emailed link instead", exact: true })
+    .click();
   await page.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
   await shoot(page, testInfo, "2-check-email");

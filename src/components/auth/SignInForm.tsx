@@ -15,15 +15,28 @@ export interface SignInFormProps {
   linkError?: boolean;
   /** Signs in with the email's one-time code (#306); shown under "Check your email". */
   codeAction?: EmailCodeFormProps["action"];
+  /** The address already typed elsewhere on the page (`SignInPanel`), to start from. */
+  initialEmail?: string;
+  /** Told of every edit, so that page can carry the address back. */
+  onEmailChange?: (email: string) => void;
+  autoFocus?: boolean;
 }
 
 const LINK_ERROR =
   "That sign-in link has expired or was already used. Enter your email to get a new one.";
 const INITIAL: SignInState = { status: "idle" };
 
-export function SignInForm({ action, next, linkError = false, codeAction }: SignInFormProps) {
+export function SignInForm({
+  action,
+  next,
+  linkError = false,
+  codeAction,
+  initialEmail = "",
+  onEmailChange,
+  autoFocus = false,
+}: SignInFormProps) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   // The "sent" result the person chose to leave, so the form shows again without a new request.
   const [dismissed, setDismissed] = useState<SignInState | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -79,8 +92,12 @@ export function SignInForm({ action, next, linkError = false, codeAction }: Sign
           inputMode="email"
           required
           maxLength={254}
+          autoFocus={autoFocus}
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={(event) => {
+            setEmail(event.target.value);
+            onEmailChange?.(event.target.value);
+          }}
           aria-invalid={state.status === "error" ? true : undefined}
           aria-describedby={error ? errorId : undefined}
           className="tap-target w-full rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect"

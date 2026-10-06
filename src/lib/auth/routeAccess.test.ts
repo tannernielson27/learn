@@ -4,14 +4,17 @@ import { redirectForAccess } from "./routeAccess";
 const at = (pathAndQuery: string) => new URL(`https://learn.example${pathAndQuery}`);
 
 describe("redirectForAccess", () => {
-  it.each([["/author"], ["/author/banks/1"], ["/author/items/9?mode=preview"], ["/learn"]])(
-    "sends a signed-out visit to %s through sign-in, then back",
-    (path) => {
-      const target = redirectForAccess(at(path), false);
-      expect(target?.pathname).toBe("/sign-in");
-      expect(target?.searchParams.get("next")).toBe(path);
-    },
-  );
+  it.each([
+    ["/author"],
+    ["/author/banks/1"],
+    ["/author/items/9?mode=preview"],
+    ["/learn"],
+    ["/account/password?next=%2Flearn"],
+  ])("sends a signed-out visit to %s through sign-in, then back", (path) => {
+    const target = redirectForAccess(at(path), false);
+    expect(target?.pathname).toBe("/sign-in");
+    expect(target?.searchParams.get("next")).toBe(path);
+  });
 
   it("lets a signed-in author through", () => {
     expect(redirectForAccess(at("/author/banks/1"), true)).toBeNull();
@@ -34,6 +37,7 @@ describe("redirectForAccess", () => {
     ["/auth/confirm"],
     ["/authors"],
     ["/learning"],
+    ["/accounts"],
     // The invite page is for people who have no account yet.
     ["/c/AbC_-0123456789abcdefghijklmnopq"],
   ])("leaves a signed-out visit to %s alone", (path) => {

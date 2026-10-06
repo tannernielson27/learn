@@ -63,7 +63,8 @@ const rateLimitStore = (
   await import("@/lib/rateLimit/postgresStore")
 ).sharedRateLimitStore() as MemoryRateLimitStore;
 
-const { requestSignInLink, signInAsDemo, verifySignInCode } = await import("./actions");
+const { requestSignInLink, signInAsDemo, signInWithEmailPassword, verifySignInCode } =
+  await import("./actions");
 
 function emailForm(email: string): FormData {
   const form = new FormData();
@@ -416,5 +417,65 @@ describe("verifySignInCode (#306)", () => {
     expect(verifyOtp).not.toHaveBeenCalled();
     verifyOtp.mockReset();
     verifyOtp.mockResolvedValue({ error: null });
+  });
+});
+
+describe("signInWithEmailPassword", () => {
+  function passwordForm(email: string, password: string): FormData {
+    const form = emailForm(email);
+    form.set("password", password);
+    form.set("next", "/learn");
+    return form;
+  }
+
+  it("signs in on this device and follows next", async () => {
+    await expect(
+      signInWithEmailPassword({ status: "idle" }, passwordForm(inbox, "correct horse")),
+    ).rejects.toThrow("redirect:/learn");
+    expect(signInWithPassword).toHaveBeenCalledWith({ email: inbox, password: "correct horse" });
+  });
+
+  it("answers a wrong password and an address with no account the same way, on the password", async () => {
+    signInWithPassword.mockResolvedValue({ error: { status: 400, code: "invalid_credentials" } });
+    const wrong = await signInWithEmailPassword(
+      { status: "idle" },
+      passwordForm(inbox, "wrong horse"),
+    );
+    const noAccount = await signInWithEmailPassword(
+      { status: "idle" },
+      passwordForm(newRecipient(), "wrong horse"),
+    );
+    expect(wrong).toEqual(noAccount);
+    expect(wrong).toMatchObject({ status: "error", field: "password" });
+    signInWithPassword.mockReset();
+    signInWithPassword.mockResolvedValue({ error: null });
+  });
+
+  it("puts a malformed address on the email field, and asks Supabase nothing", async () => {
+    const result = await signInWithEmailPassword(
+      { status: "idle" },
+      passwordForm("not-an-address", "correct horse"),
+    );
+    expect(result).toEqual({ status: "error", error: SIGN_IN_EMAIL_ERROR, field: "email" });
+    expect(signInWithPassword).not.toHaveBeenCalled();
+  });
+
+  it("stops one caller guessing at one address after five tries, without asking Supabase", async () => {
+    signInWithPassword.mockResolvedValue({ error: { status: 400, code: "invalid_credentials" } });
+    for (let i = 0; i < 5; i += 1) {
+      await signInWithEmailPassword({ status: "idle" }, passwordForm(inbox, `guess number ${i}`));
+    }
+    signInWithPassword.mockClear();
+    const refused = await signInWithEmailPassword(
+      { status: "idle" },
+      passwordForm(inbox, "correct horse"),
+    );
+    expect(refused).toMatchObject({
+      status: "error",
+      error: expect.stringMatching(/Too many tries with a password/),
+    });
+    expect(signInWithPassword).not.toHaveBeenCalled();
+    signInWithPassword.mockReset();
+    signInWithPassword.mockResolvedValue({ error: null });
   });
 });

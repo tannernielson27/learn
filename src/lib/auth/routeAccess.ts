@@ -1,8 +1,9 @@
 import { safeNextPath } from "./nextPath";
 
 // Authoring, and the student home (#205). The class invite page, /c/<token>, is deliberately not
-// here: it is where someone with no account yet starts.
-const PROTECTED_PREFIXES = ["/author", "/learn"];
+// here: it is where someone with no account yet starts. /account is a signed-in person's own
+// settings, whatever their role.
+const PROTECTED_PREFIXES = ["/author", "/learn", "/account"];
 const SIGN_IN_PATH = "/sign-in";
 
 function isProtected(pathname: string): boolean {

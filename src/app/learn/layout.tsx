@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { choosePasswordPath } from "@/lib/auth/accountPaths";
 import { STUDENT_HOME } from "@/lib/classes/classes";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { signOut } from "../author/actions";
@@ -24,6 +25,12 @@ export default async function StudentLayout({ children }: LayoutProps<"/learn">)
             <p className="truncate text-sm text-ink-2" data-testid="signed-in-email">
               {email}
             </p>
+            <Link
+              href={choosePasswordPath(STUDENT_HOME)}
+              className="tap-target inline-flex items-center rounded-sm px-2 text-sm text-accent-ink transition-colors duration-fast hover:bg-accent-soft"
+            >
+              Password
+            </Link>
             <form action={signOut}>
               <Button type="submit" variant="ghost" size="sm">
                 Sign out

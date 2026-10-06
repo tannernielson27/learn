@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
 import { DemoSignIn } from "@/components/auth/DemoSignIn";
-import { SignInForm } from "@/components/auth/SignInForm";
+import { SignInPanel } from "@/components/auth/SignInPanel";
 import { FocusHeading } from "@/components/status/FocusHeading";
 import { readDemoAccount } from "@/lib/auth/demoAccount";
 import { safeNextPath } from "@/lib/auth/nextPath";
-import { requestSignInLink, signInAsDemo, verifySignInCode } from "./actions";
+import {
+  requestSignInLink,
+  signInAsDemo,
+  signInWithEmailPassword,
+  verifySignInCode,
+} from "./actions";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -27,11 +32,12 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
         ) : (
           <h1 className={HEADING}>Sign in</h1>
         )}
-        <SignInForm
-          action={requestSignInLink}
+        <SignInPanel
+          passwordAction={signInWithEmailPassword}
+          linkAction={requestSignInLink}
+          codeAction={verifySignInCode}
           next={next}
           linkError={linkError}
-          codeAction={verifySignInCode}
         />
         {readDemoAccount() ? <DemoSignIn action={signInAsDemo} next={next} /> : null}
       </div>
