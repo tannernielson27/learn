@@ -9,7 +9,11 @@ import type { SignInState } from "@/components/auth/SignInForm";
 import { readDemoAccount, signInToDemo } from "@/lib/auth/demoAccount";
 import type { ConfirmEmailState } from "@/components/auth/ConfirmEmailBanner";
 import { verifyEmailCode } from "@/lib/auth/emailCode";
-import { isEmailUnconfirmed, markEmailConfirmed } from "@/lib/auth/emailConfirmation";
+import {
+  afterConfirming,
+  isEmailUnconfirmed,
+  markEmailConfirmed,
+} from "@/lib/auth/emailConfirmation";
 import { sendConfirmationLink } from "@/lib/auth/inviteSignUp";
 import { signInWithPassword } from "@/lib/auth/password";
 import { takeSignInPassword } from "@/lib/auth/passwordLimit";
@@ -21,7 +25,7 @@ import {
   takeSignInAttempt,
 } from "@/lib/auth/signInRateLimit";
 import { canonicalSiteOrigin } from "@/lib/http/siteOrigin";
-import { confirmedDeps } from "@/lib/supabase/emailConfirmed";
+import { confirmedDeps, signedInUserId } from "@/lib/supabase/emailConfirmed";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -166,15 +170,17 @@ export async function verifySignInCode(
 ): Promise<EmailCodeState> {
   const requestHeaders = await headers();
   const supabase = await createSupabaseServerClient();
+  // Read before the code replaces it: who this browser was signed in as, if anyone.
+  const before = await signedInUserId(supabase);
   const result = await verifyEmailCode(formData, {
     take: (email) => takeSignInCode(requestHeaders, email),
     verify: (params) => supabase.auth.verifyOtp(params),
   });
   if (!result.ok) return { status: "error", error: result.error };
   // The code came from their inbox, which is the proof the address is theirs.
-  await markEmailConfirmed(confirmedDeps(supabase));
+  const confirmed = await markEmailConfirmed(confirmedDeps(supabase));
   // Outside any try, because redirect() works by throwing.
-  redirect(result.next);
+  redirect(afterConfirming(confirmed, before, result.next));
 }
 
 /**

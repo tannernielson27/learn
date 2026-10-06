@@ -68,13 +68,21 @@ describe("confirmSignIn for an account that joined with a password", () => {
     expect(refreshSession).toHaveBeenCalledTimes(1);
   });
 
+  it("shows the password page first when this browser was not signed in to the account", async () => {
+    claims = { sub: "user-9", app_metadata: { learn_email_unconfirmed: true } };
+    getClaims.mockResolvedValueOnce({ data: { claims: {} } });
+    await expect(
+      confirmSignIn(form({ token_hash: "abc", type: "email", next: "/learn" })),
+    ).rejects.toThrow("redirect:/account/password?next=%2Flearn&confirmed=1");
+    expect(updateUserById).toHaveBeenCalledTimes(1);
+  });
+
   it("confirms nothing when the link failed", async () => {
     claims = { sub: "user-9", app_metadata: { learn_email_unconfirmed: true } };
     verifyOtp.mockResolvedValueOnce({ error: new Error("Token has expired") });
     await expect(
       confirmSignIn(form({ token_hash: "old", type: "email", next: "/learn" })),
     ).rejects.toThrow("redirect:/sign-in?error=link&next=%2Flearn");
-    expect(getClaims).not.toHaveBeenCalled();
     expect(updateUserById).not.toHaveBeenCalled();
   });
 });

@@ -4,6 +4,16 @@ import { createSupabaseServiceClient } from "./service";
 
 type ServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
+/** The account this browser is signed in to, verified, or null. Never throws. */
+export async function signedInUserId(supabase: ServerClient): Promise<string | null> {
+  try {
+    const sub = (await supabase.auth.getClaims()).data?.claims?.sub;
+    return typeof sub === "string" ? sub : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * `markEmailConfirmed`'s three calls, for the cookie client an emailed link or code has just
  * signed in. The service client is made only if there is a key to remove, which for every account

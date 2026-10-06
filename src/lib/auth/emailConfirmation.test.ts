@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  afterConfirming,
   isEmailUnconfirmed,
   markEmailConfirmed,
   type MarkConfirmedDeps,
@@ -35,14 +36,14 @@ function deps(overrides: Partial<MarkConfirmedDeps> = {}): MarkConfirmedDeps {
 describe("markEmailConfirmed", () => {
   it("removes the key for that account, then refreshes this browser's token", async () => {
     const d = deps();
-    await markEmailConfirmed(d);
+    expect(await markEmailConfirmed(d)).toEqual({ userId: "user-1" });
     expect(d.clear).toHaveBeenCalledWith("user-1");
     expect(d.refresh).toHaveBeenCalledTimes(1);
   });
 
   it("does nothing for an account that was never marked", async () => {
     const d = deps({ claims: vi.fn(async () => ({ sub: "user-2", app_metadata: {} })) });
-    await markEmailConfirmed(d);
+    expect(await markEmailConfirmed(d)).toBeNull();
     expect(d.clear).not.toHaveBeenCalled();
     expect(d.refresh).not.toHaveBeenCalled();
   });
@@ -50,15 +51,34 @@ describe("markEmailConfirmed", () => {
   it("never throws, and leaves the token alone when the key could not be removed", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const failing = deps({ clear: vi.fn(async () => ({ error: { status: 500 } })) });
-    await markEmailConfirmed(failing);
+    expect(await markEmailConfirmed(failing)).toBeNull();
     expect(failing.refresh).not.toHaveBeenCalled();
     const throwing = deps({
       claims: vi.fn(async () => {
         throw new Error("network");
       }),
     });
-    await expect(markEmailConfirmed(throwing)).resolves.toBeUndefined();
+    await expect(markEmailConfirmed(throwing)).resolves.toBeNull();
     expect(error).toHaveBeenCalledTimes(2);
     error.mockRestore();
   });
+});
+
+describe("afterConfirming", () => {
+  it("goes on as planned when nothing was newly confirmed", () => {
+    expect(afterConfirming(null, null, "/learn")).toBe("/learn");
+  });
+
+  it("goes on as planned when this browser was already signed in to the account", () => {
+    expect(afterConfirming({ userId: "user-1" }, "user-1", "/learn")).toBe("/learn");
+  });
+
+  it.each([null, "someone-else"])(
+    "shows the password page first when this browser was signed in as %j",
+    (before) => {
+      expect(afterConfirming({ userId: "user-1" }, before, "/learn")).toBe(
+        "/account/password?next=%2Flearn&confirmed=1",
+      );
+    },
+  );
 });
