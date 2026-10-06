@@ -690,19 +690,25 @@ export type Database = {
       };
       orgs: {
         Row: {
+          ai_import_enabled: boolean;
           created_at: string;
           id: string;
           name: string;
+          self_registered: boolean;
         };
         Insert: {
+          ai_import_enabled?: boolean;
           created_at?: string;
           id?: string;
           name: string;
+          self_registered?: boolean;
         };
         Update: {
+          ai_import_enabled?: boolean;
           created_at?: string;
           id?: string;
           name?: string;
+          self_registered?: boolean;
         };
         Relationships: [];
       };
@@ -964,6 +970,7 @@ export type Database = {
           created_at: string;
           display_name: string | null;
           id: string;
+          onboarded_at: string | null;
           org_id: string | null;
           role: Database["public"]["Enums"]["org_role"] | null;
           updated_at: string;
@@ -972,6 +979,7 @@ export type Database = {
           created_at?: string;
           display_name?: string | null;
           id: string;
+          onboarded_at?: string | null;
           org_id?: string | null;
           role?: Database["public"]["Enums"]["org_role"] | null;
           updated_at?: string;
@@ -980,6 +988,7 @@ export type Database = {
           created_at?: string;
           display_name?: string | null;
           id?: string;
+          onboarded_at?: string | null;
           org_id?: string | null;
           role?: Database["public"]["Enums"]["org_role"] | null;
           updated_at?: string;
@@ -1391,6 +1400,7 @@ export type Database = {
           updated_at: string;
         }[];
       };
+      mark_onboarded: { Args: never; Returns: string };
       move_to_folder: {
         Args: {
           case_study_ids: string[];
@@ -1563,6 +1573,7 @@ export type Database = {
           submitted_at: string;
         }[];
       };
+      register_instructor: { Args: { p_user: string; p_workspace: string }; Returns: string };
       release_assignment_reminders: {
         Args: { retry_in_seconds?: number; targets: string[] };
         Returns: number;
