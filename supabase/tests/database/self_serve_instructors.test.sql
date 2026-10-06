@@ -10,7 +10,7 @@
 -- org" is checked next to rows that are really there.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(67);
+select plan(75);
 
 -- ---------------------------------------------------------------------------
 -- Cast, as the superuser
@@ -35,6 +35,9 @@ insert into auth.users (id, email, aud, role, raw_app_meta_data, raw_user_meta_d
   ('00000000-0000-0000-0000-0000003550a2', 'student-of-a@example.test', 'authenticated',
    'authenticated', '{"provider": "email"}', '{}'),
   ('00000000-0000-0000-0000-0000003550b2', 'student-of-b@example.test', 'authenticated',
+   'authenticated', '{"provider": "email"}', '{}'),
+  -- A colleague the owner adds after teachers have registered.
+  ('00000000-0000-0000-0000-0000003550e2', 'late-colleague@example.test', 'authenticated',
    'authenticated', '{"provider": "email"}', '{}'),
   -- An account used only to try workspace names that must be refused.
   ('00000000-0000-0000-0000-0000003550f1', 'bad-names@example.test', 'authenticated',
@@ -110,6 +113,16 @@ select ok(
   (select p.prosecdef and p.proconfig @> array['search_path=""']
      from pg_proc p where p.oid = 'public.register_instructor(uuid, text)'::regprocedure),
   'it is security definer with an empty search_path'
+);
+-- The grant list itself: a new function is executable by PUBLIC unless that is revoked, and
+-- Supabase's default privileges add anon and authenticated by name.
+select is_empty(
+  $$ select a.grantee::text
+       from pg_proc p cross join lateral aclexplode(p.proacl) a
+      where p.oid = 'public.register_instructor(uuid, text)'::regprocedure
+        and a.privilege_type = 'EXECUTE'
+        and (a.grantee = 0 or a.grantee in ('anon'::regrole::oid, 'authenticated'::regrole::oid)) $$,
+  'its grant list names neither PUBLIC, anon nor authenticated'
 );
 
 set local role anon;
@@ -264,6 +277,18 @@ select is(
   'not one profile or org changed across every refusal: no half-made org'
 );
 
+-- "The first org" is still the shared one once teachers have registered: the owner's
+-- make_instructor does not put a colleague into somebody's workspace.
+select lives_ok(
+  $$ select private.make_instructor('late-colleague@example.test') $$,
+  'make_instructor still runs after teachers have registered'
+);
+select is(
+  (select org_id from public.profiles where id = '00000000-0000-0000-0000-0000003550e2'),
+  (select org_shared from cast_orgs),
+  'and the colleague joins the shared org, not a teacher''s workspace'
+);
+
 -- 80 characters is allowed, and the limit counts what is left after trimming.
 set local role service_role;
 select lives_ok(
@@ -385,6 +410,22 @@ select is(
   1,
   'teacher A reads their own profile and nobody else''s'
 );
+-- The flags on a teacher's own org are the owner's to set, not the teacher's.
+select throws_ok(
+  $$ update public.orgs set ai_import_enabled = true $$,
+  '42501', null,
+  'teacher A cannot switch AI import on for their own workspace'
+);
+select throws_ok(
+  $$ update public.orgs set self_registered = false $$,
+  '42501', null,
+  'or pass their workspace off as one the owner made'
+);
+select throws_ok(
+  $$ insert into public.orgs (name, ai_import_enabled) values ('Another of mine', true) $$,
+  '42501', null,
+  'or make an org'
+);
 select lives_ok(
   $$ insert into public.classes (name) values ('A second class') $$,
   'teacher A creates a class by naming it'
@@ -460,6 +501,20 @@ select ok(
   and not has_column_privilege('authenticated', 'public.profiles', 'onboarded_at', 'insert')
   and not has_column_privilege('anon', 'public.profiles', 'onboarded_at', 'update'),
   'no API role may write profiles.onboarded_at directly'
+);
+select ok(
+  not has_column_privilege('authenticated', 'public.orgs', 'ai_import_enabled', 'update')
+  and not has_column_privilege('authenticated', 'public.orgs', 'self_registered', 'update')
+  and not has_column_privilege('authenticated', 'public.orgs', 'ai_import_enabled', 'insert')
+  and not has_column_privilege('anon', 'public.orgs', 'ai_import_enabled', 'update'),
+  'no API role may write the org flags either'
+);
+select is(
+  (select array_agg(p.pronargs::int) from pg_proc p
+     join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'mark_onboarded'),
+  array[0],
+  'mark_onboarded exists once and takes no argument, so a caller can name nobody but itself'
 );
 select ok(
   has_function_privilege('authenticated', 'public.mark_onboarded()', 'execute')
