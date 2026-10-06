@@ -16,7 +16,10 @@ const FIVE_MINUTES = 5 * 60_000;
  * - **perCaller**, one caller across addresses: 150 per five minutes, the invite total (#217),
  *   because a whole class signs in from one campus address in the first minutes of a session.
  *
- * Supabase Auth has no lockout of its own for a wrong password, so these are the only ones.
+ * These count tries made through this site. Supabase Auth's own endpoint takes a password too,
+ * with the publishable key any browser holds, and has no per-account lockout: only its per-address
+ * limit on sign-ins (`sign_in_sign_ups` in supabase/config.toml) and the project's password rules
+ * stand there. So the hosted project's minimum length must be 8 or more, like the local stack's.
  */
 export const SIGN_IN_PASSWORD_LIMITS = {
   perCaller: { attempts: 150, windowMs: FIVE_MINUTES },
