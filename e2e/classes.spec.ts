@@ -61,6 +61,9 @@ test("a student joins a class from its invite link and the roster shows them", a
   const email = studentEmail(project);
   const since = new Date();
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await student
+    .getByRole("button", { name: "Join with an emailed link instead", exact: true })
+    .click();
   await student.getByRole("button", { name: "Email me a link to join", exact: true }).click();
   await expect(
     student.getByRole("heading", { name: "Check your email", exact: true }),
@@ -159,4 +162,68 @@ test("an instructor who opens an invite link is told so and stays an instructor"
   await expect(
     page.getByRole("heading", { level: 1, name: "Item banks", exact: true }),
   ).toBeVisible();
+});
+
+test("a student joins with an email and a password, with no email to wait for", async ({
+  page,
+  browser,
+  request,
+}, testInfo) => {
+  const project = testInfo.project.name;
+  await signInAsNewAuthor(page, request, `classes-password-${project}`);
+  const className = `NUR 320 — Fall ${Date.now() % 100_000}`;
+  const invite = await createClass(page, className);
+
+  const phone = await browser.newContext();
+  const student = await phone.newPage();
+  await student.goto(invite);
+  const email = studentEmail(`password-${project}`);
+  const password = "correct horse battery";
+  const since = new Date();
+  await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await student.getByLabel("Password", { exact: true }).fill(password);
+  await expectNoAxeViolations(student);
+  await student.getByRole("button", { name: "Join the class", exact: true }).click();
+
+  // In the class at once, and asked, not made, to confirm the address.
+  await expect(student).toHaveURL(/\/learn$/);
+  await expect(student.getByRole("list", { name: "Your classes", exact: true })).toContainText(
+    className,
+  );
+  await expect(
+    student.getByRole("heading", { name: "Confirm your email address", exact: true }),
+  ).toBeVisible();
+  await expectNoAxeViolations(student);
+  await student.screenshot({
+    path: `test-results/screenshots/${project}/student-home-unconfirmed.png`,
+    fullPage: true,
+  });
+  await page.reload();
+  await expect(page.getByRole("list", { name: "Roster", exact: true })).toContainText(email);
+
+  // The confirmation email is the ordinary sign-in link; opening it is what confirms.
+  await openSignInLink(student, await latestSignInLink(request, email, since));
+  await expect(student).toHaveURL(/\/learn$/);
+  await expect(
+    student.getByRole("heading", { name: "Confirm your email address", exact: true }),
+  ).toHaveCount(0);
+
+  // Back another day: the password signs in on its own.
+  await student.getByRole("button", { name: "Sign out", exact: true }).click();
+  await expect(student).toHaveURL(/\/sign-in$/);
+  await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await student.getByLabel("Password", { exact: true }).fill(password);
+  await student.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(student.getByTestId("signed-in-email")).toHaveText(email);
+
+  // The same form on an invite, with someone else's password, says the address is taken.
+  await student.getByRole("button", { name: "Sign out", exact: true }).click();
+  await student.goto(invite);
+  await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await student.getByLabel("Password", { exact: true }).fill("not the password");
+  await student.getByRole("button", { name: "Join the class", exact: true }).click();
+  await expect(
+    student.getByRole("alert").filter({ hasText: "already has a LeaRN account" }),
+  ).toBeVisible();
+  await phone.close();
 });

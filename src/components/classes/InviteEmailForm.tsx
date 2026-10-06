@@ -19,6 +19,11 @@ export interface InviteEmailFormProps {
   codeAction?: EmailCodeFormProps["action"];
   /** Where the code sends the person: this invite page, which then offers to join. */
   codeNext?: string;
+  /** The address already typed elsewhere on the page (`InvitePanel`), to start from. */
+  initialEmail?: string;
+  /** Told of every edit, so that page can carry the address back. */
+  onEmailChange?: (email: string) => void;
+  autoFocus?: boolean;
 }
 
 const INITIAL: InviteLinkState = { status: "idle" };
@@ -32,9 +37,12 @@ export function InviteEmailForm({
   classTitle,
   codeAction,
   codeNext,
+  initialEmail = "",
+  onEmailChange,
+  autoFocus = false,
 }: InviteEmailFormProps) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const inputRef = useRef<HTMLInputElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const id = useId();
@@ -93,8 +101,12 @@ export function InviteEmailForm({
             inputMode="email"
             required
             maxLength={254}
+            autoFocus={autoFocus}
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              onEmailChange?.(event.target.value);
+            }}
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? `${id}-error` : undefined}
             className="tap-target w-full rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect"

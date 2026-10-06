@@ -7,7 +7,10 @@ import type { EmailCodeState } from "@/components/auth/EmailCodeForm";
 import type { PasswordSignInState } from "@/components/auth/PasswordSignInForm";
 import type { SignInState } from "@/components/auth/SignInForm";
 import { readDemoAccount, signInToDemo } from "@/lib/auth/demoAccount";
+import type { ConfirmEmailState } from "@/components/auth/ConfirmEmailBanner";
 import { verifyEmailCode } from "@/lib/auth/emailCode";
+import { isEmailUnconfirmed, markEmailConfirmed } from "@/lib/auth/emailConfirmation";
+import { sendConfirmationLink } from "@/lib/auth/inviteSignUp";
 import { signInWithPassword } from "@/lib/auth/password";
 import { takeSignInPassword } from "@/lib/auth/passwordLimit";
 import { takeSignInCode } from "@/lib/auth/signInCodeLimit";
@@ -18,7 +21,9 @@ import {
   takeSignInAttempt,
 } from "@/lib/auth/signInRateLimit";
 import { canonicalSiteOrigin } from "@/lib/http/siteOrigin";
+import { confirmedDeps } from "@/lib/supabase/emailConfirmed";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 /** The single answer to every request that was accepted — and to every one quietly refused. */
 function sent(email: string): SignInState {
@@ -166,6 +171,34 @@ export async function verifySignInCode(
     verify: (params) => supabase.auth.verifyOtp(params),
   });
   if (!result.ok) return { status: "error", error: result.error };
+  // The code came from their inbox, which is the proof the address is theirs.
+  await markEmailConfirmed(confirmedDeps(supabase));
   // Outside any try, because redirect() works by throwing.
   redirect(result.next);
+}
+
+/**
+ * Sends the confirmation link again, from the banner a not-yet-confirmed account sees. Signed-in
+ * only, and to the account's own address only, counted like any other emailed link. The answer is
+ * always `sent`, as it is for every link (#139): whether the email left is the log's to say.
+ */
+export async function resendConfirmation(): Promise<ConfirmEmailState> {
+  const supabase = await createSupabaseServerClient();
+  const claims = (await supabase.auth.getClaims()).data?.claims;
+  const email = typeof claims?.email === "string" ? claims.email : null;
+  if (!email || !isEmailUnconfirmed(claims)) return { status: "sent" };
+
+  const requestHeaders = await headers();
+  const limit = await takeSignInAttempt(requestHeaders, "email");
+  if (!limit.ok) return { status: "error", error: limit.error };
+  if ((await takeSignInAddress(requestHeaders, email)) !== "send") return { status: "sent" };
+
+  const service = createSupabaseServiceClient();
+  await sendConfirmationLink(email, canonicalSiteOrigin(requestHeaders), (params) =>
+    service.auth.signInWithOtp({
+      email: params.email,
+      options: { emailRedirectTo: params.redirectTo, shouldCreateUser: false },
+    }),
+  );
+  return { status: "sent" };
 }

@@ -111,8 +111,9 @@ export default function InstructorGuide() {
         </p>
         <List>
           <li>
-            Share the link. A student opens it, types an email address and opens the sign-in link
-            that arrives. They then appear on the roster.
+            Share the link. A student opens it, types an email address and chooses a password, and
+            is in the class at once; they appear on the roster straight away. An email asking them
+            to confirm their address follows, and nothing waits on it.
           </li>
           <li>
             Set the class’s time zone on the class page, so open and close times show in your local

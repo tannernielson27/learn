@@ -2,6 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { confirmLink } from "@/lib/auth/confirm";
+import { markEmailConfirmed } from "@/lib/auth/emailConfirmation";
+import { confirmedDeps } from "@/lib/supabase/emailConfirmed";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -19,5 +21,7 @@ export async function confirmSignIn(formData: FormData): Promise<void> {
     },
     (params) => supabase.auth.verifyOtp(params),
   );
+  // A link that worked is the proof the address is theirs; one that failed proves nothing.
+  if (!target.startsWith("/sign-in?")) await markEmailConfirmed(confirmedDeps(supabase));
   redirect(target);
 }

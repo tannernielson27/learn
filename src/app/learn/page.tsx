@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
+import { resendConfirmation } from "@/app/sign-in/actions";
 import { AssignmentHistory } from "@/components/assignments/AssignmentHistory";
 import { StudentAssignmentList } from "@/components/assignments/StudentAssignmentList";
 import { YourSteps } from "@/components/assignments/YourSteps";
+import { ConfirmEmailBanner } from "@/components/auth/ConfirmEmailBanner";
 import { StudentClassList } from "@/components/classes/StudentClassList";
 import { PracticeBankList } from "@/components/practice/PracticeBankList";
 import { historyStore } from "@/lib/assignments/attemptStore";
 import { loadStudentRecord } from "@/lib/assignments/history";
+import { isEmailUnconfirmed } from "@/lib/auth/emailConfirmation";
 import { requireStudent } from "@/lib/classes/viewer";
 import { listOpenAssignments } from "@/lib/supabase/assignments";
 import { listMyAttemptProgress } from "@/lib/supabase/attempts";
@@ -24,9 +27,12 @@ export const metadata: Metadata = { title: "Your classes" };
  * Anyone who is not a student is sent to their own home by `requireStudent`.
  */
 export default async function StudentHomePage() {
-  const { supabase, userId } = await requireStudent();
+  const { supabase, userId, email } = await requireStudent();
   const now = new Date();
-  const [classes, assignments, practice, { history, steps }] = await Promise.all([
+  const [claims, classes, assignments, practice, { history, steps }] = await Promise.all([
+    // Read from the token already verified for this request; asked here, on the home only, so
+    // the banner never sits over an assignment someone is in the middle of.
+    supabase.auth.getClaims().then(({ data }) => data?.claims),
     myClasses(supabase),
     listOpenAssignments(supabase, now),
     readMyPracticeBanks(supabase),
@@ -45,6 +51,9 @@ export default async function StudentHomePage() {
 
   return (
     <>
+      {isEmailUnconfirmed(claims) ? (
+        <ConfirmEmailBanner action={resendConfirmation} email={email} />
+      ) : null}
       <h1 className="mb-6 font-read text-3xl text-ink-1">Your classes</h1>
       {classes === null ? (
         <p role="alert" className="text-ink-2">

@@ -55,9 +55,9 @@ export default function HelpIndex() {
             Join
           </Link>{" "}
           and type the six-character code on the screen, or scan its QR code; no account is needed.
-          For take-home work, use the class invite link your instructor shares, then sign in with
-          the link emailed to you. Scores, answers and rationales for an assignment appear after it
-          closes.
+          For take-home work, open the class invite link your instructor shares, type your email
+          address and choose a password. After that, sign in with that email and password. Scores,
+          answers and rationales for an assignment appear after it closes.
         </p>
       </section>
     </article>
