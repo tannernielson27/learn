@@ -4,11 +4,14 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { DemoSignInState } from "@/components/auth/DemoSignIn";
 import type { EmailCodeState } from "@/components/auth/EmailCodeForm";
+import type { PasswordSignInState } from "@/components/auth/PasswordSignInForm";
 import type { SignInState } from "@/components/auth/SignInForm";
 import { readDemoAccount, signInToDemo } from "@/lib/auth/demoAccount";
 import { verifyEmailCode } from "@/lib/auth/emailCode";
+import { signInWithPassword } from "@/lib/auth/password";
+import { takeSignInPassword } from "@/lib/auth/passwordLimit";
 import { takeSignInCode } from "@/lib/auth/signInCodeLimit";
-import { parseSignInForm } from "@/lib/auth/signInForm";
+import { parseSignInForm, SIGN_IN_EMAIL_ERROR } from "@/lib/auth/signInForm";
 import {
   signInAddressCeilingRefusals,
   takeSignInAddress,
@@ -101,6 +104,29 @@ export async function requestSignInLink(
     });
   }
   return sent(parsed.email);
+}
+
+/**
+ * Signs in with an email address and a password, then follows the safe `next`. Counted per caller
+ * and per address before Supabase is asked; see `signInWithPassword` for why every refusal reads
+ * the same.
+ */
+export async function signInWithEmailPassword(
+  _previous: PasswordSignInState,
+  formData: FormData,
+): Promise<PasswordSignInState> {
+  const requestHeaders = await headers();
+  const supabase = await createSupabaseServerClient();
+  const result = await signInWithPassword(formData, {
+    take: (email) => takeSignInPassword(requestHeaders, email),
+    signIn: (credentials) => supabase.auth.signInWithPassword(credentials),
+  });
+  if (!result.ok) {
+    const field = result.error === SIGN_IN_EMAIL_ERROR ? "email" : "password";
+    return { status: "error", error: result.error, field };
+  }
+  // Outside any try, because redirect() works by throwing.
+  redirect(result.next);
 }
 
 /**

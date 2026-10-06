@@ -16,6 +16,9 @@ async function requestLink(page: Page, request: APIRequestContext, email: string
   await createAuthorAccount(request, email);
   const since = new Date();
   await page.getByRole("textbox", { name: "Email address" }).fill(email);
+  await page
+    .getByRole("button", { name: "Sign in with an emailed link instead", exact: true })
+    .click();
   await page.getByRole("button", { name: "Email me a sign-in link" }).click();
   await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
   return latestSignInLink(request, email, since);
@@ -62,6 +65,9 @@ test("an account with no role signs in to No access yet and cannot open authorin
   await expect(page).toHaveURL(/\/sign-in\?next=%2Fauthor$/);
   const since = new Date();
   await page.getByRole("textbox", { name: "Email address" }).fill(email);
+  await page
+    .getByRole("button", { name: "Sign in with an emailed link instead", exact: true })
+    .click();
   await page.getByRole("button", { name: "Email me a sign-in link" }).click();
   await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
   await openSignInLink(page, await latestSignInLink(request, email, since));
@@ -154,6 +160,9 @@ test("an author who opened the email elsewhere signs in here with its code (#306
   await page.goto("/author");
   const since = new Date();
   await page.getByRole("textbox", { name: "Email address" }).fill(email);
+  await page
+    .getByRole("button", { name: "Sign in with an emailed link instead", exact: true })
+    .click();
   await page.getByRole("button", { name: "Email me a sign-in link" }).click();
   await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
 
@@ -198,4 +207,63 @@ test("a link that was already used sends the person back with a reason", async (
   ).toHaveText(
     "That sign-in link has expired or was already used. Enter your email to get a new one.",
   );
+});
+
+test("an author chooses a password, then signs in with it and no email", async ({
+  page,
+  request,
+}, testInfo) => {
+  const email = uniqueEmail(`password-${testInfo.project.name}`);
+  const password = "correct horse battery";
+
+  // "Forgot your password?" is also how someone who never had one gets one: the emailed link
+  // signs them in and lands on choosing it.
+  await page.goto("/author");
+  await createAuthorAccount(request, email);
+  await page.getByRole("button", { name: "Forgot your password?", exact: true }).click();
+  const since = new Date();
+  await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await page.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
+  await openSignInLink(page, await latestSignInLink(request, email, since));
+
+  await expect(page).toHaveURL(/\/account\/password\?next=%2Fauthor$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Choose a password", exact: true }),
+  ).toBeVisible();
+  const choose = await new AxeBuilder({ page }).analyze();
+  expect(choose.violations).toEqual([]);
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/choose-password.png`,
+  });
+
+  await page.getByLabel("New password", { exact: true }).fill("short");
+  await page.getByRole("button", { name: "Save password", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Password saved", exact: true })).toHaveCount(0);
+  await page.getByLabel("New password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Save password", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Password saved", exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Continue", exact: true }).click();
+  await expect(page).toHaveURL(/\/author$/);
+
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await expect(page).toHaveURL(/\/sign-in$/);
+  const signIn = await new AxeBuilder({ page }).analyze();
+  expect(signIn.violations).toEqual([]);
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/sign-in-password.png`,
+  });
+
+  // A wrong password says so without saying whether the address has an account.
+  await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill("not the password");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "That email and password do not match." }),
+  ).toBeVisible();
+
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page).toHaveURL(/\/author$/);
+  await expect(page.getByTestId("signed-in-email")).toHaveText(email);
 });

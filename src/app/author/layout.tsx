@@ -1,5 +1,6 @@
 import { GuardedLink, LeaveGuardProvider } from "@/components/authoring/LeaveGuard";
 import { Button } from "@/components/ui/Button";
+import { choosePasswordPath } from "@/lib/auth/accountPaths";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { signOut } from "./actions";
 
@@ -34,6 +35,14 @@ export default async function AuthorLayout({ children }: LayoutProps<"/author">)
               >
                 Help
               </GuardedLink>
+              {email ? (
+                <GuardedLink
+                  href={choosePasswordPath("/author")}
+                  className="tap-target inline-flex items-center rounded-sm px-2 text-sm text-accent-ink transition-colors duration-fast hover:bg-accent-soft"
+                >
+                  Password
+                </GuardedLink>
+              ) : null}
             </nav>
             {email ? (
               <form action={signOut}>
