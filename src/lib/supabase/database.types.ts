@@ -1573,7 +1573,10 @@ export type Database = {
           submitted_at: string;
         }[];
       };
-      register_instructor: { Args: { p_user: string; p_workspace: string }; Returns: string };
+      register_instructor: {
+        Args: { p_user: string; p_workspace: string };
+        Returns: string;
+      };
       release_assignment_reminders: {
         Args: { retry_in_seconds?: number; targets: string[] };
         Returns: number;
