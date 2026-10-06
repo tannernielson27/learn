@@ -218,6 +218,8 @@ test("a student joins with an email and a password, with no email to wait for", 
 
   // The same form on an invite, with someone else's password, says the address is taken.
   await student.getByRole("button", { name: "Sign out", exact: true }).click();
+  // Wait for it: leaving at once would cancel the sign-out and find the student still in.
+  await expect(student).toHaveURL(/\/sign-in$/);
   await student.goto(invite);
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
   await student.getByLabel("Password", { exact: true }).fill("not the password");
