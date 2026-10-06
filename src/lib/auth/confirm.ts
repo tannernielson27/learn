@@ -49,14 +49,22 @@ export function readConfirmLink(fields: ConfirmFields): ReadConfirmLink {
  * `next`, so a retry lands in the same place.
  */
 export async function confirmLink(fields: ConfirmFields, verifyOtp: VerifyOtp): Promise<string> {
+  return (await spendConfirmLink(fields, verifyOtp)).target;
+}
+
+/** `confirmLink`, also saying whether the link worked, for a caller with more to do when it did. */
+export async function spendConfirmLink(
+  fields: ConfirmFields,
+  verifyOtp: VerifyOtp,
+): Promise<{ ok: boolean; target: string }> {
   const link = readConfirmLink(fields);
-  if (!link.ok) return link.failed;
+  if (!link.ok) return { ok: false, target: link.failed };
 
   try {
     const { error } = await verifyOtp({ token_hash: link.tokenHash, type: "email" });
-    if (error) return failedPath(link.next);
+    if (error) return { ok: false, target: failedPath(link.next) };
   } catch {
-    return failedPath(link.next);
+    return { ok: false, target: failedPath(link.next) };
   }
-  return link.next;
+  return { ok: true, target: link.next };
 }

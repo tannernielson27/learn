@@ -155,6 +155,9 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   const studentEmail = `student-demo12-${project}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.test`;
   const studentSince = new Date();
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(studentEmail);
+  await student
+    .getByRole("button", { name: "Join with an emailed link instead", exact: true })
+    .click();
   await student.getByRole("button", { name: "Email me a link to join", exact: true }).click();
   await expect(
     student.getByRole("heading", { name: "Check your email", exact: true }),

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { InviteEmailForm } from "@/components/classes/InviteEmailForm";
+import { InvitePanel } from "@/components/classes/InvitePanel";
 import { InviteUnavailable } from "@/components/classes/InviteUnavailable";
 import { ALREADY_INSTRUCTOR, JoinClassButton } from "@/components/classes/JoinClassButton";
 import { FocusHeading } from "@/components/status/FocusHeading";
@@ -12,7 +12,7 @@ import { readViewer } from "@/lib/classes/viewer";
 import { myClasses, resolveClassInvite } from "@/lib/supabase/classInvites";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { verifySignInCode } from "@/app/sign-in/actions";
-import { joinInvitedClass, requestInviteLink } from "./actions";
+import { joinInvitedClass, requestInviteLink, signUpWithPassword } from "./actions";
 
 export const metadata: Metadata = {
   title: "Join a class",
@@ -44,7 +44,8 @@ const PAUSED_HEADING = "This invite link cannot be opened just now";
 /**
  * A class invite link, `/c/<token>` (#205). The token is resolved on the server, counting a wrong
  * one against the caller's address; an unknown, rotated and malformed token all render the same
- * page. Then it depends on who is looking: a visitor gets the email form, a student or an account
+ * page. Then it depends on who is looking: a visitor joins with an email address and a password
+ * (or an emailed link, if they would rather), a student or an account
  * with no role gets one tap to join, and an instructor is told they already are one.
  */
 export default async function ClassInvitePage({ params }: PageProps<"/c/[token]">) {
@@ -83,8 +84,9 @@ export default async function ClassInvitePage({ params }: PageProps<"/c/[token]"
   if (viewer.status === "signed_out") {
     return (
       <Shell>
-        <InviteEmailForm
-          action={requestInviteLink.bind(null, token)}
+        <InvitePanel
+          signUpAction={signUpWithPassword.bind(null, token)}
+          linkAction={requestInviteLink.bind(null, token)}
           classTitle={invite.className}
           codeAction={verifySignInCode}
           // Back here signed in: a new account is already in the class, and an existing one

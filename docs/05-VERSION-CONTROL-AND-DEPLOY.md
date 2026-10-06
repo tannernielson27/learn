@@ -274,6 +274,16 @@ It finds the account by address (any letter case), puts it in the org (`seed.sql
 
 To check who is what: `select u.email, p.role from auth.users u join public.profiles p on p.id = u.id order by u.email;`
 
+**Passwords.** Everyone can sign in with an email address and a password. An instructor has none until they choose one: on the sign-in page, **Forgot your password?** emails them a link and then asks for a password. If email is not reaching them at all, give them a starting password yourself, in the SQL editor, and tell it to them some other way; it is the same hashing `supabase/seed-demo.sql` uses on the local stack:
+
+```sql
+update auth.users
+   set encrypted_password = extensions.crypt('a-starting-password', extensions.gen_salt('bf'))
+ where lower(email) = lower('person@example.com');
+```
+
+They sign in with it, then change it under **Password** at the top of the page, which also signs out every other device. Use at least 8 characters, and set **Minimum password length** to 8 in Authentication → Sign In / Providers → Email: the site's own rule does not cover calls made straight to Supabase Auth. Students never need this: a class invite link asks them for a password as they join.
+
 Existing accounts were not changed by #204: the demo account and every current instructor keep their role. From #205 on, a student joins through an instructor's class invite, which sets `app_metadata.learn_invite` server-side; never set a role through `user_metadata`, which the person can write themselves.
 
 A class invite never demotes anyone. An instructor who opens one is told they already are one; an account with no role that joins becomes a student, and `make_instructor` then refuses it (remove it from its classes and set the role by hand if that was a mistake). To see a class's roster from the SQL editor: `select u.email, c.name from public.class_members m join public.classes c on c.id = m.class_id join auth.users u on u.id = m.profile_id order by c.name, u.email;`

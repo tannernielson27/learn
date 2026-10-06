@@ -77,6 +77,9 @@ async function joinAsStudent(
   const email = `student-${label}-${testInfo.project.name}-${Date.now()}@example.test`;
   const since = new Date();
   await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await page
+    .getByRole("button", { name: "Join with an emailed link instead", exact: true })
+    .click();
   await page.getByRole("button", { name: "Email me a link to join", exact: true }).click();
   await openSignInLink(page, await latestSignInLink(request, email, since));
   await expect(page).toHaveURL(/\/learn$/);

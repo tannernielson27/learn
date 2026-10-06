@@ -1,7 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { confirmLink } from "@/lib/auth/confirm";
+import { spendConfirmLink } from "@/lib/auth/confirm";
+import { afterConfirming, markEmailConfirmed } from "@/lib/auth/emailConfirmation";
+import { confirmedDeps, signedInUserId } from "@/lib/supabase/emailConfirmed";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -11,7 +13,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  */
 export async function confirmSignIn(formData: FormData): Promise<void> {
   const supabase = await createSupabaseServerClient();
-  const target = await confirmLink(
+  // Read before the link replaces it: who this browser was signed in as, if anyone.
+  const before = await signedInUserId(supabase);
+  const link = await spendConfirmLink(
     {
       token_hash: formData.get("token_hash"),
       type: formData.get("type"),
@@ -19,5 +23,8 @@ export async function confirmSignIn(formData: FormData): Promise<void> {
     },
     (params) => supabase.auth.verifyOtp(params),
   );
-  redirect(target);
+  // A link that worked is the proof the address is theirs; one that failed proves nothing.
+  if (!link.ok) redirect(link.target);
+  const confirmed = await markEmailConfirmed(confirmedDeps(supabase));
+  redirect(afterConfirming(confirmed, before, link.target));
 }

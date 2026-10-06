@@ -4,8 +4,12 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import type { InviteLinkState } from "@/components/classes/InviteEmailForm";
+import type { InviteSignUpState } from "@/components/classes/InviteSignUpForm";
 import type { JoinClassState } from "@/components/classes/JoinClassButton";
 import { sendInviteLink, type InviteLinkDeps } from "@/lib/auth/inviteLink";
+import { sendConfirmationLink, signUpForInvite } from "@/lib/auth/inviteSignUp";
+import { checkNewPassword, PASSWORD_WEAK } from "@/lib/auth/password";
+import { takeSignInPassword } from "@/lib/auth/passwordLimit";
 import { parseSignInForm } from "@/lib/auth/signInForm";
 import {
   clientIp,
@@ -21,6 +25,7 @@ import { clipInviteToken, invitePath, STUDENT_HOME } from "@/lib/classes/classes
 import { readViewer } from "@/lib/classes/viewer";
 import { canonicalSiteOrigin } from "@/lib/http/siteOrigin";
 import { joinClass, resolveClassInvite, type ResolvedInvite } from "@/lib/supabase/classInvites";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 /** The same wording the join-code limit uses: it says something about the network, nothing else. */
@@ -116,6 +121,71 @@ export async function requestInviteLink(
   };
   after(() => sendInviteLink(input, adminCalls(service)));
   return sent;
+}
+
+const SIGN_UP_FAILED = "Your account could not be created just now. Try again in a moment.";
+
+/**
+ * The invite page's main form: an email address and a password, and the person is in the class
+ * with no email to wait for. See `signUpForInvite` for what happens to a new address and to one
+ * that already has an account.
+ *
+ * Counted three ways before any account is touched: the invite's own budget, exactly as the
+ * emailed link is (`takeInviteBudget`), then the password limits (`takeSignInPassword`), because
+ * for an address that has an account this is a try at its password. The confirmation email for a
+ * new account goes out in `after()` and spends the recipient's email budget like any other link.
+ */
+export async function signUpWithPassword(
+  token: string,
+  _previous: InviteSignUpState,
+  formData: FormData,
+): Promise<InviteSignUpState> {
+  const parsed = parseSignInForm(formData);
+  if (!parsed.ok) return { status: "error", error: parsed.error, field: "email" };
+  const password = checkNewPassword(formData.get("password"));
+  if (!password.ok) return { status: "error", error: password.error, field: "password" };
+
+  const requestHeaders = await headers();
+  const service = createSupabaseServiceClient();
+  const invite = await resolveClassInvite(service, token, clientIp(requestHeaders));
+  const limit = await takeInviteBudget(requestHeaders, invite);
+  if (!limit.ok) return { status: "error", error: limit.error, field: "email" };
+  if (invite.status === "invalid") return { status: "invalid" };
+  if (invite.status === "rate_limited") {
+    return { status: "error", error: LOOKUPS_LIMITED, field: "email" };
+  }
+  if (invite.status === "unavailable") {
+    return { status: "error", error: UNAVAILABLE, field: "email" };
+  }
+  const tries = await takeSignInPassword(requestHeaders, parsed.email);
+  if (!tries.ok) return { status: "error", error: tries.error, field: "password" };
+
+  const supabase = await createSupabaseServerClient();
+  const result = await signUpForInvite(
+    { email: parsed.email, password: password.password, classId: invite.classId },
+    {
+      createUser: (params) => service.auth.admin.createUser(params),
+      signIn: (credentials) => supabase.auth.signInWithPassword(credentials),
+      join: () => joinClass(supabase, token),
+    },
+  );
+
+  if (result.status === "exists") return { status: "exists", email: parsed.email };
+  if (result.status === "weak") return { status: "error", error: PASSWORD_WEAK, field: "password" };
+  if (result.status === "failed") return { status: "error", error: SIGN_UP_FAILED, field: "email" };
+  if (result.status === "signed_in") {
+    // Anything but a plain join (an instructor, a link rotated meanwhile) is the invite page's to
+    // explain, now that it knows who is looking.
+    redirect(result.joined ? STUDENT_HOME : invitePath(clipInviteToken(token)));
+  }
+
+  // A new account. The email that confirms its address follows the answer and never delays it.
+  if ((await takeSignInAddress(requestHeaders, parsed.email)) === "send") {
+    const origin = canonicalSiteOrigin(requestHeaders);
+    after(() => sendConfirmationLink(parsed.email, origin, adminCalls(service).sendLink));
+  }
+  if (result.status === "created_signed_out") return { status: "created_signed_out" };
+  redirect(STUDENT_HOME);
 }
 
 /**

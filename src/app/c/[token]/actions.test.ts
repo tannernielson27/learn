@@ -52,6 +52,11 @@ vi.mock("@/lib/supabase/service", () => ({
 
 let viewer: Record<string, unknown>;
 const joinRpc = vi.fn(async () => ({ data: "joined" as unknown, error: null }));
+// The cookie client the password sign-up signs in on, and joins an existing account through.
+const signInWithPassword = vi.fn(async () => ({ error: null as { code?: string } | null }));
+vi.mock("@/lib/supabase/server", () => ({
+  createSupabaseServerClient: async () => ({ rpc: joinRpc, auth: { signInWithPassword } }),
+}));
 vi.mock("@/lib/classes/viewer", () => ({ readViewer: async () => viewer }));
 
 // #234: the limiter counts in Postgres; here it counts in the in-memory fake, shared by every call.
@@ -64,7 +69,7 @@ const rateLimitStore = (
   await import("@/lib/rateLimit/postgresStore")
 ).sharedRateLimitStore() as MemoryRateLimitStore;
 
-const { requestInviteLink, joinInvitedClass } = await import("./actions");
+const { requestInviteLink, joinInvitedClass, signUpWithPassword } = await import("./actions");
 
 function emailForm(email: string): FormData {
   const form = new FormData();
@@ -282,6 +287,126 @@ describe("requestInviteLink", () => {
     resolveReply = { data: null, error: { code: "PT429" } };
     const answer = await requestInviteLink(TOKEN, { status: "idle" }, emailForm(newRecipient()));
     expect(answer.status).toBe("error");
+  });
+});
+
+describe("signUpWithPassword", () => {
+  function signUpForm(email: string, password = "correct horse"): FormData {
+    const form = emailForm(email);
+    form.set("password", password);
+    return form;
+  }
+  const idle = { status: "idle" } as const;
+
+  it("creates the account in the class, signs in, and goes straight to the student home", async () => {
+    const email = newRecipient();
+    await expect(signUpWithPassword(TOKEN, idle, signUpForm(email))).rejects.toThrow(
+      "redirect:/learn",
+    );
+    expect(createUser).toHaveBeenCalledWith({
+      email,
+      password: "correct horse",
+      email_confirm: true,
+      app_metadata: { learn_invite: { class_id: CLASS_ID }, learn_email_unconfirmed: true },
+    });
+    expect(signInWithPassword).toHaveBeenCalledWith({ email, password: "correct horse" });
+    // The confirmation email follows the answer; it never came before it.
+    expect(signInWithOtp).not.toHaveBeenCalled();
+    await runScheduled();
+    expect(signInWithOtp).toHaveBeenCalledWith({
+      email,
+      options: {
+        emailRedirectTo: "https://learn.example/auth/confirm?next=%2Flearn",
+        shouldCreateUser: false,
+      },
+    });
+  });
+
+  it("signs an existing account in with its own password, joins, and sends no email", async () => {
+    createUser.mockResolvedValueOnce({ error: { code: "email_exists" } });
+    await expect(signUpWithPassword(TOKEN, idle, signUpForm(newRecipient()))).rejects.toThrow(
+      "redirect:/learn",
+    );
+    expect(joinRpc).toHaveBeenCalledWith("join_class", { token: TOKEN });
+    expect(scheduled).toHaveLength(0);
+  });
+
+  it("sends an existing instructor back to the invite page, which tells them so", async () => {
+    createUser.mockResolvedValueOnce({ error: { code: "email_exists" } });
+    joinRpc.mockResolvedValueOnce({ data: "instructor", error: null });
+    await expect(signUpWithPassword(TOKEN, idle, signUpForm(newRecipient()))).rejects.toThrow(
+      `redirect:/c/${TOKEN}`,
+    );
+  });
+
+  it("says the address has an account when the password is not its own, and changes nothing", async () => {
+    createUser.mockResolvedValueOnce({ error: { code: "email_exists" } });
+    signInWithPassword.mockResolvedValueOnce({ error: { code: "invalid_credentials" } });
+    const email = newRecipient();
+    expect(await signUpWithPassword(TOKEN, idle, signUpForm(email))).toEqual({
+      status: "exists",
+      email,
+    });
+    expect(joinRpc).not.toHaveBeenCalled();
+    expect(scheduled).toHaveLength(0);
+  });
+
+  it("refuses a short password and a bad address before anything is counted or looked up", async () => {
+    expect(
+      await signUpWithPassword(TOKEN, idle, signUpForm(newRecipient(), "short")),
+    ).toMatchObject({ status: "error", field: "password" });
+    expect(await signUpWithPassword(TOKEN, idle, signUpForm("nope"))).toEqual({
+      status: "error",
+      error: SIGN_IN_EMAIL_ERROR,
+      field: "email",
+    });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(createUser).not.toHaveBeenCalled();
+  });
+
+  it("creates nothing for a token that does not resolve", async () => {
+    resolveReply = { data: [], error: null };
+    expect(await signUpWithPassword(TOKEN, idle, signUpForm(newRecipient()))).toEqual({
+      status: "invalid",
+    });
+    expect(createUser).not.toHaveBeenCalled();
+  });
+
+  it("stops one caller trying passwords at one address after five, without touching the account", async () => {
+    const email = newRecipient();
+    createUser.mockResolvedValue({ error: { code: "email_exists" } });
+    signInWithPassword.mockResolvedValue({ error: { code: "invalid_credentials" } });
+    for (let i = 0; i < 5; i += 1) {
+      await signUpWithPassword(TOKEN, idle, signUpForm(email, `guess number ${i}`));
+    }
+    createUser.mockClear();
+    expect(await signUpWithPassword(TOKEN, idle, signUpForm(email))).toMatchObject({
+      status: "error",
+      error: expect.stringMatching(/Too many tries with a password/),
+    });
+    expect(createUser).not.toHaveBeenCalled();
+    createUser.mockReset();
+    createUser.mockResolvedValue({ error: null });
+    signInWithPassword.mockReset();
+    signInWithPassword.mockResolvedValue({ error: null });
+  });
+
+  it("lets sixty students behind one campus address each join through a valid invite", async () => {
+    for (let student = 0; student < 60; student += 1) {
+      await expect(signUpWithPassword(TOKEN, idle, signUpForm(newRecipient()))).rejects.toThrow(
+        "redirect:/learn",
+      );
+    }
+    expect(createUser).toHaveBeenCalledTimes(60);
+  });
+
+  it("refuses everything when the shared rate limiter cannot answer", async () => {
+    rateLimitStore.failWith(new RateLimitUnavailableError("PGRST301"));
+    expect(await signUpWithPassword(TOKEN, idle, signUpForm(newRecipient()))).toMatchObject({
+      status: "error",
+      error: SIGN_IN_UNAVAILABLE,
+    });
+    expect(createUser).not.toHaveBeenCalled();
   });
 });
 

@@ -47,9 +47,10 @@ type OtpError = { status?: number; code?: string; message?: string };
 const signInWithOtp = vi.fn(async () => ({ error: null as OtpError | null }));
 const signInWithPassword = vi.fn(async () => ({ error: null as unknown }));
 const verifyOtp = vi.fn(async () => ({ error: null as OtpError | null }));
+const getClaims = vi.fn(async () => ({ data: { claims: { sub: "user-1", app_metadata: {} } } }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({
-    auth: { signInWithOtp, signInWithPassword, verifyOtp },
+    auth: { signInWithOtp, signInWithPassword, verifyOtp, getClaims },
   }),
 }));
 

@@ -102,6 +102,9 @@ test("a fresh instructor and their first student see what to do next on every em
   const email = `student-empty-${project}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.test`;
   const since = new Date();
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await student
+    .getByRole("button", { name: "Join with an emailed link instead", exact: true })
+    .click();
   await student.getByRole("button", { name: "Email me a link to join", exact: true }).click();
   await expect(
     student.getByRole("heading", { name: "Check your email", exact: true }),
