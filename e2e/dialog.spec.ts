@@ -51,12 +51,16 @@ test("a dialog opens over an inert page, passes axe and closes on Escape", async
   await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(dialog.getByRole("button", { name: "Archive", exact: true })).toBeFocused();
-  // Past the last button Tab leaves for the browser's own chrome and comes back to the dialog:
-  // the page behind is inert, so none of its links or buttons is a stop, and nothing is trapped.
-  await page.keyboard.press("Tab");
-  await expect(opener).not.toBeFocused();
-  await page.keyboard.press("Tab");
-  await expect(dialog.getByRole("button", { name: "Close", exact: true })).toBeFocused();
+  // Tab is never held by a key handler, and the page behind is inert: wherever focus goes next
+  // (the browser's own chrome, then the dialog again) it is never a link or button of the page.
+  for (let press = 0; press < 6; press += 1) {
+    await page.keyboard.press("Tab");
+    const where = await dialog.evaluate((el) => {
+      const active = document.activeElement;
+      return el.contains(active) || active === document.body || active === null;
+    });
+    expect(where).toBe(true);
+  }
   // A pointer cannot reach the page behind either.
   await expect(opener.click({ trial: true, timeout: 500 })).rejects.toThrow();
 

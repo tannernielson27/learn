@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useId, useRef, type ReactNode, type SyntheticEvent } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode, type SyntheticEvent } from "react";
 import { Button } from "./Button";
+import { lockScroll } from "./scrollLock";
 
 /**
  * The stepped layout: a count, Back, Next and Skip. The caller holds the step number, swaps the
@@ -59,6 +60,11 @@ const frame =
  * lands on the close button, and returns to whatever opened the dialog on closing. Page scroll is
  * locked while it is up. Tapping the scrim does nothing: a welcome is shown once, and a stray tap
  * must not spend it.
+ *
+ * Two limits. A dialog that is open on its first render has no opener, so closing it leaves focus
+ * at the top of the page. And it must not share a screen with `EhrSheet`: the sheet marks every
+ * other child of `body` inert, which would reach a dialog rendered in place and leave it on top
+ * but unreachable.
  */
 export function Dialog({
   open,
@@ -76,25 +82,30 @@ export function Dialog({
   const titleId = `${id}-title`;
   const descriptionId = `${id}-description`;
   const stepId = `${id}-step`;
+  // True from the moment this component closes the dialog itself, so the `close` event that
+  // follows, possibly after an unmount, is not mistaken for the browser's doing.
+  const closedHere = useRef(false);
+  // Bumped when the browser closes the dialog on its own, so the effect below runs again and puts
+  // it back up if the caller has not cleared `open`.
+  const [nativeCloses, setNativeCloses] = useState(0);
 
   useEffect(() => {
     const el = dialog.current;
     if (!open || !el) return;
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closedHere.current = false;
     if (!el.open) el.showModal();
     heading.current?.focus();
-
-    const root = document.documentElement;
-    const previousOverflow = root.style.overflow;
-    root.style.overflow = "hidden";
+    const unlockScroll = lockScroll();
 
     return () => {
-      root.style.overflow = previousOverflow;
+      unlockScroll();
+      closedHere.current = true;
       if (el.open) el.close();
       // Browsers hand focus back on close(); doing it here as well covers an unmount.
       if (opener?.isConnected) opener.focus();
     };
-  }, [open]);
+  }, [open, nativeCloses]);
 
   // Back is not drawn on the first step, so going back to it takes the focused button away.
   // Focus then falls out of the dialog; put it on the way forward.
@@ -107,15 +118,20 @@ export function Dialog({
   }, [open, current]);
 
   const onCancel = (event: SyntheticEvent<HTMLDialogElement>) => {
-    // Escape asks; the caller answers by clearing `open`.
+    // Escape asks; the caller answers by clearing `open`. A cancel that cannot be prevented is
+    // followed by the browser's own close, which asks instead, so the caller hears it once.
+    if (!event.cancelable) return;
     event.preventDefault();
     onClose();
   };
 
   // A close this component did not ask for: a `method="dialog"` form inside it, or a browser
-  // that stops honouring a prevented Escape. Our own close() runs after `open` is already false.
+  // that would not let Escape be prevented. The caller is asked as usual; if it leaves `open`
+  // set, the effect above shows the dialog again, so `open` is never true over a closed dialog.
   const onNativeClose = (event: SyntheticEvent<HTMLDialogElement>) => {
-    if (open && !event.currentTarget.open) onClose();
+    if (closedHere.current || !open || event.currentTarget.open) return;
+    onClose();
+    setNativeCloses((n) => n + 1);
   };
 
   const describedBy = [steps ? stepId : null, description ? descriptionId : null]

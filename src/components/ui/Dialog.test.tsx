@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState, type ReactNode } from "react";
+import { StrictMode, useState, type ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button } from "./Button";
 import { Dialog, type DialogSteps } from "./Dialog";
@@ -115,8 +115,10 @@ describe("Dialog", () => {
     const onClose = vi.fn();
     render(<Harness onClose={onClose}>Body</Harness>);
     const dialog = (await openIt()) as HTMLDialogElement;
-    dialog.close();
+    act(() => dialog.close());
     expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.documentElement.style.overflow).toBe("");
   });
 
   it("can be walked by Tab: the close button and the caller's actions are all reachable", async () => {
@@ -154,17 +156,117 @@ describe("Dialog", () => {
     expect(document.documentElement.style.overflow).toBe("clip");
   });
 
-  it("cleans up when it is unmounted while open", async () => {
-    const { unmount } = render(
-      <>
-        <button type="button">Opener</button>
-        <Dialog open onClose={() => {}} title="Welcome">
-          Body
-        </Dialog>
-      </>,
-    );
+  it("cleans up when it is unmounted while open, and says nothing more to the caller", () => {
+    const onClose = vi.fn();
+    function Page({ show }: { show: boolean }) {
+      return (
+        <>
+          <button type="button">Opener</button>
+          {show ? (
+            <Dialog open onClose={onClose} title="Welcome">
+              Body
+            </Dialog>
+          ) : null}
+        </>
+      );
+    }
+    const { rerender } = render(<Page show={false} />);
+    const opener = screen.getByRole("button", { name: "Opener" });
+    opener.focus();
+    rerender(<Page show />);
+    const dialog = screen.getByRole("dialog") as HTMLDialogElement;
     expect(document.documentElement.style.overflow).toBe("hidden");
-    unmount();
+
+    rerender(<Page show={false} />);
+    expect(dialog.open).toBe(false);
+    expect(document.documentElement.style.overflow).toBe("");
+    expect(opener).toHaveFocus();
+    // The close this unmount caused is the component's own, not news for the caller.
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("opens again after closing, and hands focus back each time", async () => {
+    const onClose = vi.fn();
+    render(<Harness onClose={onClose}>Body</Harness>);
+    const opener = screen.getByRole("button", { name: "Archive class" });
+    for (const round of [1, 2]) {
+      await openIt();
+      expect(screen.getByRole("heading", { name: "Archive this class?" })).toHaveFocus();
+      await userEvent.keyboard("{Escape}");
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(opener).toHaveFocus();
+      expect(onClose).toHaveBeenCalledTimes(round);
+    }
+  });
+
+  it("survives StrictMode's doubled effects: one open dialog, one lock, no stray onClose", async () => {
+    const onClose = vi.fn();
+    render(
+      <StrictMode>
+        <Harness onClose={onClose}>Body</Harness>
+      </StrictMode>,
+    );
+    const dialog = await openIt();
+    expect(dialog).toHaveAttribute("open");
+    expect(screen.getByRole("heading", { name: "Archive this class?" })).toHaveFocus();
+    expect(onClose).not.toHaveBeenCalled();
+    await userEvent.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(document.documentElement.style.overflow).toBe("");
+    expect(screen.getByRole("button", { name: "Archive class" })).toHaveFocus();
+  });
+
+  it("asks once when the browser will not let Escape be prevented", async () => {
+    const onClose = vi.fn();
+    render(<Harness onClose={onClose}>Body</Harness>);
+    const dialog = (await openIt()) as HTMLDialogElement;
+    // Chromium's second Escape in a row: a cancel that cannot be prevented, then its own close.
+    act(() => {
+      dialog.dispatchEvent(new Event("cancel", { cancelable: false }));
+      dialog.close();
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("goes back up if the browser closes it and the caller keeps it open", () => {
+    const onClose = vi.fn();
+    render(
+      <Dialog open onClose={onClose} title="Saving">
+        Body
+      </Dialog>,
+    );
+    const dialog = screen.getByRole("dialog") as HTMLDialogElement;
+    act(() => dialog.close());
+    expect(onClose).toHaveBeenCalledTimes(1);
+    // `open` is still true, so the dialog must be too: modal, focused and holding the scroll lock.
+    expect(dialog.open).toBe(true);
+    expect(screen.getByRole("heading", { name: "Saving" })).toHaveFocus();
+    expect(document.documentElement.style.overflow).toBe("hidden");
+  });
+
+  it("keeps the page locked until the last of two stacked dialogs closes, in either order", () => {
+    function Two({ first, second }: { first: boolean; second: boolean }) {
+      return (
+        <>
+          <Dialog open={first} onClose={() => {}} title="First" />
+          <Dialog open={second} onClose={() => {}} title="Second" />
+        </>
+      );
+    }
+    const { rerender } = render(<Two first second={false} />);
+    rerender(<Two first second />);
+    // The one that opened first closes first.
+    rerender(<Two first={false} second />);
+    expect(document.documentElement.style.overflow).toBe("hidden");
+    rerender(<Two first={false} second={false} />);
+    expect(document.documentElement.style.overflow).toBe("");
+
+    rerender(<Two first second={false} />);
+    rerender(<Two first second />);
+    rerender(<Two first second={false} />);
+    expect(document.documentElement.style.overflow).toBe("hidden");
+    rerender(<Two first={false} second={false} />);
     expect(document.documentElement.style.overflow).toBe("");
   });
 
