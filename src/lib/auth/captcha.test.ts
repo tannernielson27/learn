@@ -65,12 +65,22 @@ describe("verifyCaptcha (#359)", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it("says so in the log when the check is skipped on a production deployment", async () => {
+  it("refuses on a production deployment with both keys unset, and names them in the log", async () => {
     const { error } = quiet();
     const env = { VERCEL_ENV: "production" };
-    expect(await verifyCaptcha(null, LOCAL, { env, fetch: answer({}) })).toEqual({ ok: true });
+    const fetchImpl = answer({ success: true });
+    expect(await verifyCaptcha("a-token", LOCAL, { env, fetch: fetchImpl })).toEqual({
+      ok: false,
+      error: CAPTCHA_UNAVAILABLE,
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
     expect(error).toHaveBeenCalledTimes(1);
     expect(String(error.mock.calls[0]![0])).toContain("TURNSTILE_SECRET_KEY");
+  });
+
+  it("still skips the check on a preview deployment with both keys unset", async () => {
+    const env = { VERCEL_ENV: "preview" };
+    expect(await verifyCaptcha(null, LOCAL, { env, fetch: answer({}) })).toEqual({ ok: true });
   });
 
   it("passes a good token, posting the secret, the token and the caller to Cloudflare", async () => {
