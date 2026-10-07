@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-29 (immediate-feedback sprint merged: #311, #313, #314, #316, #320; hosted at all 40 migrations; follow-ups #325-#328 filed).
+Last updated: 2026-10-06 (Sprint 13 kickoff: registration and onboarding, #355-#367 filed, ADR 0009).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -242,6 +242,55 @@ Decisions taken at kickoff, each the conservative option; say if any should chan
 9. **The rehearsal walks a live session, not a take-home window** (#274), so it adds no real-time wait to the auth e2e job.
 
 Sprint 11 is code complete: every story is merged, including the follow-ups #283, #288 and #289 filed during the sprint. `main` is at da34d8c. The demo script, owner steps, known gaps and retro are in `docs/sprints/S11-demo.md`, and `docs/sprints/S11-rehearsal.md` is Demo 12 step for step. Both Sprint 11 migrations are applied to hosted (rows 37 and 38). Milestone 11 stays open until the owner accepts the demo.
+
+## S13: Registration + onboarding (milestone 15)
+
+Demo 14: a stranger signs up as a teacher, makes a class, and a stranger signs up as their student and joins by code, with no help from the owner.
+
+Sprint 13 closes the account loop that password sign-in (#353, #354) left open: there is no way to create an account without a class invite, and no way to become an instructor without the owner's SQL. The decision record is `docs/adr/0009-self-serve-registration.md`.
+
+| #                                                           | Title                                                                                       | Gates             | Status |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------- | ------ |
+| [#355](https://github.com/tannernielson27/learn/issues/355) | feat(db): a workspace for each self-registered teacher, and a per-account onboarding record | security, db      | To do  |
+| [#356](https://github.com/tannernielson27/learn/issues/356) | feat(classes): a short class code a student can type to join                                | security, db, e2e | To do  |
+| [#357](https://github.com/tannernielson27/learn/issues/357) | feat(ui): a Dialog primitive for popups                                                     | none              | To do  |
+| [#358](https://github.com/tannernielson27/learn/issues/358) | feat(account): ask for a name, show it, and let people change it                            | security, e2e     | To do  |
+| [#359](https://github.com/tannernielson27/learn/issues/359) | feat(auth): abuse controls for open sign-up: a CAPTCHA, a rate limit and hosted Auth checks | security          | To do  |
+| [#360](https://github.com/tannernielson27/learn/issues/360) | feat(email): a welcome email that confirms the address of a new account                     | security          | To do  |
+| [#361](https://github.com/tannernielson27/learn/issues/361) | feat(auth): a sign-up page for teachers and students                                        | security, e2e     | To do  |
+| [#362](https://github.com/tannernielson27/learn/issues/362) | feat(student): join a class by code, and a way forward for an account with no class         | security, e2e     | To do  |
+| [#363](https://github.com/tannernielson27/learn/issues/363) | fix(auth): send each person to their own home after sign-in                                 | none              | To do  |
+| [#364](https://github.com/tannernielson27/learn/issues/364) | feat(onboarding): a three-step welcome for a new teacher                                    | e2e               | To do  |
+| [#365](https://github.com/tannernielson27/learn/issues/365) | feat(onboarding): a short welcome for a new student                                         | e2e               | To do  |
+| [#366](https://github.com/tannernielson27/learn/issues/366) | docs(onboarding): put sign-up on the landing page and retire the invite-only wording        | e2e               | To do  |
+| [#367](https://github.com/tannernielson27/learn/issues/367) | test(e2e): the whole registration walk, security rows and the S13 demo                      | security, e2e     | To do  |
+
+Suggested order: #355, #356, #357, #358, #359 and #360 depend on nothing and can start at once. Then #361 (needs #355 and #359) and #362 (needs #356); then #363, #364 and #365; #366 after #361; #367 last.
+
+Parallelization: on the owner's machine, one builder at a time. Agents elsewhere can take the first six together. #358, #361 and #362 all touch the sign-in and account components, and #362 and #365 both edit the student home (`src/app/learn/page.tsx`); never build two of either group at once. #355 and #356 are the only migrations; hold each merge until the owner can push.
+
+Reserved migrations:
+
+- `20261006000000_self_serve_instructors.sql` (#355)
+- `20261006010000_class_join_code.sql` (#356)
+
+Owner decisions, 2026-10-06. They replace S9 decision 1 (invite-only) and S11 kickoff decision 1 (no sign-up on the landing page):
+
+1. **Teacher sign-up is open, and each self-registered teacher gets their own workspace** (#355, #361). The existing shared org stays as it is; `make_instructor` remains for adding a colleague to it.
+2. **A class has a short typed code as well as its link** (#356, #362), so a student can sign up first and join after.
+3. **The sign-up form may say "This email already has an account"** (#361), behind a CAPTCHA and a rate limit (#359). This relaxes #139 on that form only; sign-in still answers every address alike.
+4. **Confirming the email never blocks anything**, for teachers as for students (#360, #361).
+
+Decisions taken at kickoff, each the conservative option; say if any should change:
+
+1. **AI import is off for a self-registered workspace** until the owner turns it on (`orgs.ai_import_enabled`, #355; noted on #342), so open sign-up cannot spend the owner's API key.
+2. **The CAPTCHA is Cloudflare Turnstile** (#359): free, no npm dependency, and skipped when its keys are unset.
+3. **Hosted Supabase's own sign-up endpoint is turned off** (#359). The app creates every account through the admin API, so the public endpoint only offers a way around the site's limits.
+4. **A student who signs up without a code has no role until they join a class** (#361, #362). They land on `/welcome`, which replaces the "No access yet" dead end. No "intent" is stored.
+5. **The welcome popups show once per account, stored in the database** (`profiles.onboarded_at`, #355), and only to accounts made after this sprint. The Get started checklist stays as it is.
+6. **Live sessions stay account-free** (join code and display name), as Kahoot and Socrative do.
+7. **Google sign-in (#67) is not in this sprint.**
+8. **A student still belongs to one workspace.** A student of one teacher cannot join another teacher's class with the same account. Known gap, to be shown in the demo; fixing it means per-class rather than per-org student membership.
 
 ## No milestone
 
