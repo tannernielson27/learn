@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useId, useRef } from "react";
+import { useActionState, useEffect, useId, useRef, useState } from "react";
+import { DisplayNameField } from "@/components/auth/DisplayNameField";
 import { PasswordField } from "@/components/auth/PasswordField";
 import { Button } from "@/components/ui/Button";
 import { PASSWORD_HINT, PASSWORD_MIN_LENGTH } from "@/lib/auth/passwordRules";
@@ -10,7 +11,7 @@ import { InviteUnavailable } from "./InviteUnavailable";
 
 export type InviteSignUpState =
   | { status: "idle" }
-  | { status: "error"; error: string; field: "email" | "password" }
+  | { status: "error"; error: string; field: "displayName" | "email" | "password" }
   /** The address has an account, and the password typed is not that account's. */
   | { status: "exists"; email: string }
   /** The account was made but this browser could not be signed in to it. */
@@ -49,6 +50,8 @@ export function InviteSignUpForm({
   autoFocus = false,
 }: InviteSignUpFormProps) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
+  const [name, setName] = useState("");
+  const nameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const readyRef = useRef<HTMLHeadingElement>(null);
@@ -66,7 +69,8 @@ export function InviteSignUpForm({
     if (state.status === "created_signed_out") readyRef.current?.focus();
     if (state.status === "exists") passwordRef.current?.focus();
     if (state.status === "error") {
-      (state.field === "email" ? emailRef : passwordRef).current?.focus();
+      const fields = { displayName: nameRef, email: emailRef, password: passwordRef };
+      fields[state.field].current?.focus();
     }
   }, [state]);
 
@@ -102,10 +106,19 @@ export function InviteSignUpForm({
         Join {classTitle}
       </h1>
       <p className="mb-6 text-ink-2">
-        Enter your email address and choose a password. If you already have a LeaRN account, use its
-        password.
+        Enter your name and email address, and choose a password. If you already have a LeaRN
+        account, use its password.
       </p>
       <form action={formAction} className="flex flex-col gap-4">
+        <DisplayNameField
+          id={`${id}-name`}
+          value={name}
+          onValueChange={setName}
+          autoFocus={autoFocus}
+          inputRef={nameRef}
+          invalid={error?.field === "displayName"}
+          errorId={error?.field === "displayName" ? errorId : undefined}
+        />
         <div className="flex flex-col gap-2">
           <label htmlFor={`${id}-email`} className="text-sm font-medium text-ink-1">
             Email address
@@ -119,7 +132,6 @@ export function InviteSignUpForm({
             inputMode="email"
             required
             maxLength={254}
-            autoFocus={autoFocus}
             value={email}
             onChange={(event) => onEmailChange(event.target.value)}
             aria-invalid={error?.field === "email" ? true : undefined}

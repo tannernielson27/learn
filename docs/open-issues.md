@@ -322,6 +322,7 @@ Decisions taken at kickoff, each the conservative option; say if any should chan
 | [#326](https://github.com/tannernielson27/learn/issues/326) | fix(authoring): the preview keeps old marks after the answer key is edited                | authoring          | To do                                                              |
 | [#327](https://github.com/tannernielson27/learn/issues/327) | fix(assign): mark the instructor's report against the key each answer was scored with     | assign, db         | To do; builds on #320's `reveal` column                            |
 | [#328](https://github.com/tannernielson27/learn/issues/328) | docs(deploy): mark migrations 39 and 40 as applied to hosted                              | docs               | In review                                                          |
+| [#358](https://github.com/tannernielson27/learn/issues/358) | feat(account): ask for a name, show it, and let people change it                          | auth, account      | In review; no migration                                            |
 
 ## Owner actions outside GitHub
 

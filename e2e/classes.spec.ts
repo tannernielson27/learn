@@ -179,7 +179,10 @@ test("a student joins with an email and a password, with no email to wait for", 
   await student.goto(invite);
   const email = studentEmail(`password-${project}`);
   const password = "correct horse battery";
+  // #358: a name, which the instructor's roster shows in place of the address.
+  const name = `Ana Reyes ${Date.now() % 100_000}`;
   const since = new Date();
+  await student.getByRole("textbox", { name: "Your name", exact: true }).fill(name);
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
   await student.getByLabel("Password", { exact: true }).fill(password);
   await expectNoAxeViolations(student);
@@ -198,8 +201,12 @@ test("a student joins with an email and a password, with no email to wait for", 
     path: `test-results/screenshots/${project}/student-home-unconfirmed.png`,
     fullPage: true,
   });
+  // The header shows the name rather than the address.
+  await expect(student.getByTestId("signed-in-name")).toHaveText(name);
   await page.reload();
-  await expect(page.getByRole("list", { name: "Roster", exact: true })).toContainText(email);
+  const roster = page.getByRole("list", { name: "Roster", exact: true });
+  await expect(roster).toContainText(name);
+  await expect(roster).toContainText(email);
 
   // #360: the email is the app's welcome, not the sign-in email; opening its link is what confirms.
   const welcome = await latestEmail(request, email, since);
@@ -222,13 +229,39 @@ test("a student joins with an email and a password, with no email to wait for", 
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
   await student.getByLabel("Password", { exact: true }).fill(password);
   await student.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(student.getByTestId("signed-in-email")).toHaveText(email);
+  await expect(student.getByTestId("signed-in-name")).toHaveText(name);
+
+  // The header's Account link: the name can be changed there, and the roster follows.
+  await student.getByRole("link", { name: "Account", exact: true }).click();
+  await expect(student).toHaveURL(/\/account$/);
+  await expect(
+    student.getByRole("heading", { level: 1, name: "Your account", exact: true }),
+  ).toBeVisible();
+  const nameField = student.getByRole("textbox", { name: "Your name", exact: true });
+  await expect(nameField).toHaveValue(name);
+  await expectNoAxeViolations(student);
+  await student.screenshot({
+    path: `test-results/screenshots/${project}/account.png`,
+    fullPage: true,
+  });
+  const renamed = `${name} Lee`;
+  await nameField.fill(renamed);
+  await student.getByRole("button", { name: "Save name", exact: true }).click();
+  await expect(student.getByRole("status").filter({ hasText: "Name saved." })).toBeVisible();
+  await expect(
+    student.getByRole("link", { name: "Change your password", exact: true }),
+  ).toHaveAttribute("href", "/account/password?next=%2Faccount");
+  await student.goto("/learn");
+  await expect(student.getByTestId("signed-in-name")).toHaveText(renamed);
+  await page.reload();
+  await expect(page.getByRole("list", { name: "Roster", exact: true })).toContainText(renamed);
 
   // The same form on an invite, with someone else's password, says the address is taken.
   await student.getByRole("button", { name: "Sign out", exact: true }).click();
   // Wait for it: leaving at once would cancel the sign-out and find the student still in.
   await expect(student).toHaveURL(/\/sign-in$/);
   await student.goto(invite);
+  await student.getByRole("textbox", { name: "Your name", exact: true }).fill(name);
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
   await student.getByLabel("Password", { exact: true }).fill("not the password");
   await student.getByRole("button", { name: "Join the class", exact: true }).click();

@@ -10,6 +10,8 @@ export interface InviteSignUpInput {
   email: string;
   /** Already checked by `checkNewPassword`. */
   password: string;
+  /** Already cleaned by `displayNameRule`. Saved only on an account made here. */
+  displayName: string;
   /** Only ever a class id the server has just resolved from the token. */
   classId: string;
 }
@@ -22,7 +24,13 @@ export interface InviteSignUpDeps {
     password: string;
     email_confirm: true;
     app_metadata: { learn_invite: { class_id: string }; [EMAIL_UNCONFIRMED_KEY]: true };
-  }): Promise<{ error: AuthFailure | null }>;
+  }): Promise<{ data?: { user: { id: string } | null } | null; error: AuthFailure | null }>;
+  /**
+   * Writes `profiles.display_name` on the account just created, by its id. The service role,
+   * because the new account may not be signed in here, and the id is the one `createUser` returned,
+   * never one the request carried.
+   */
+  saveName(userId: string, displayName: string): Promise<{ error: unknown }>;
   /** `supabase.auth.signInWithPassword` on the cookie client, so the session lands here. */
   signIn(credentials: { email: string; password: string }): Promise<{ error: unknown }>;
   /** `joinClass` as the account that has just signed in. */
@@ -52,12 +60,34 @@ function log(step: string, error: unknown): void {
 }
 
 /**
+ * Puts the name on a new account. A failure is logged and passed over: the student is in the class
+ * either way, and can add the name on /account. Never throws, and never logs the name.
+ */
+async function saveNewAccountName(
+  userId: string | undefined,
+  displayName: string,
+  deps: InviteSignUpDeps,
+): Promise<void> {
+  if (!userId) {
+    log("reading the new account's id", null);
+    return;
+  }
+  try {
+    const saved = await deps.saveName(userId, displayName);
+    if (saved.error) log("saving the new account's name", saved.error);
+  } catch (error) {
+    log("saving the new account's name", error);
+  }
+}
+
+/**
  * Joins a class with an email address and a password, in one step and with no email to wait for.
  *
  * A new address gets an account at once: `app_metadata.learn_invite` makes it a student in the
  * class (`private.handle_user_invite`), and `learn_email_unconfirmed` records that nobody has yet
  * shown the address is theirs. It is created confirmed as far as Supabase is concerned, because
- * that is what lets a password sign it in; the confirmation email follows and never blocks.
+ * that is what lets a password sign it in; the confirmation email follows and never blocks. The
+ * name typed goes on its profile row (#358), which `private.handle_new_user` made with the account.
  *
  * An address that already has an account is never changed here. The password typed is tried as
  * that account's own, and if it fits, the person is signed in and joined, so one form serves the
@@ -79,6 +109,7 @@ export async function signUpForInvite(
     });
 
     if (!created.error) {
+      await saveNewAccountName(created.data?.user?.id, input.displayName, deps);
       const signedIn = await deps.signIn(credentials);
       if (!signedIn.error) return { status: "created" };
       log("signing in to the new account", signedIn.error);
