@@ -281,6 +281,8 @@ describe("MANUAL_STEPS", () => {
       "realtime",
       "smtp",
       "auth-urls",
+      "auth-signup",
+      "auth-password",
       "sentry",
     ]);
   });
