@@ -1,4 +1,3 @@
-import { STUDENT_HOME } from "@/lib/classes/classes";
 import type { JoinAnswer } from "@/lib/supabase/classInvites";
 import { EMAIL_UNCONFIRMED_KEY } from "./emailConfirmation";
 
@@ -128,31 +127,5 @@ export async function signUpForInvite(
   } catch (error) {
     log("the sign-up", error);
     return { status: "failed" };
-  }
-}
-
-/** The service role's `auth.signInWithOtp`, never creating an account. */
-export type SendLink = (params: {
-  email: string;
-  redirectTo: string;
-}) => Promise<{ error: AuthFailure | null }>;
-
-/**
- * Emails the link that confirms a new account's address. It is the ordinary sign-in link: opening
- * it is what shows the address is theirs (`markEmailConfirmed`). Runs after the response, so it
- * never throws and never delays anyone.
- */
-export async function sendConfirmationLink(
-  email: string,
-  origin: string,
-  sendLink: SendLink,
-): Promise<void> {
-  try {
-    const confirmUrl = new URL("/auth/confirm", origin);
-    confirmUrl.searchParams.set("next", STUDENT_HOME);
-    const sent = await sendLink({ email, redirectTo: confirmUrl.toString() });
-    if (sent.error) log("sending the confirmation link", sent.error);
-  } catch (error) {
-    log("the confirmation link", error);
   }
 }

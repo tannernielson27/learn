@@ -8,7 +8,7 @@ import type { InviteSignUpState } from "@/components/classes/InviteSignUpForm";
 import type { JoinClassState } from "@/components/classes/JoinClassButton";
 import { sendInviteLink, type InviteLinkDeps } from "@/lib/auth/inviteLink";
 import { parseAccountName } from "@/lib/auth/displayName";
-import { sendConfirmationLink, signUpForInvite } from "@/lib/auth/inviteSignUp";
+import { signUpForInvite } from "@/lib/auth/inviteSignUp";
 import { checkNewPassword, PASSWORD_WEAK } from "@/lib/auth/password";
 import { takeSignInPassword } from "@/lib/auth/passwordLimit";
 import { parseSignInForm } from "@/lib/auth/signInForm";
@@ -22,8 +22,11 @@ import {
   takeSignInAttempt,
   takeSignInInviteAttempt,
 } from "@/lib/auth/signInRateLimit";
+import { sendWelcomeEmail } from "@/lib/auth/welcomeEmail";
+import { takeWelcomeEmail } from "@/lib/auth/welcomeLimit";
 import { clipInviteToken, invitePath, STUDENT_HOME } from "@/lib/classes/classes";
 import { readViewer } from "@/lib/classes/viewer";
+import { getMailer } from "@/lib/email";
 import { canonicalSiteOrigin } from "@/lib/http/siteOrigin";
 import { joinClass, resolveClassInvite, type ResolvedInvite } from "@/lib/supabase/classInvites";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -133,8 +136,10 @@ const SIGN_UP_FAILED = "Your account could not be created just now. Try again in
  *
  * Counted three ways before any account is touched: the invite's own budget, exactly as the
  * emailed link is (`takeInviteBudget`), then the password limits (`takeSignInPassword`), because
- * for an address that has an account this is a try at its password. The confirmation email for a
- * new account goes out in `after()` and spends the recipient's email budget like any other link.
+ * for an address that has an account this is a try at its password. The welcome email for a new
+ * account (#360), which confirms its address, goes out in `after()` through the app mailer and
+ * spends the recipient's email budget like any other link. A failed send is logged and never
+ * changes the answer: the student home's banner offers to send it again.
  */
 export async function signUpWithPassword(
   token: string,
@@ -189,10 +194,17 @@ export async function signUpWithPassword(
     redirect(result.joined ? STUDENT_HOME : invitePath(clipInviteToken(token)));
   }
 
-  // A new account. The email that confirms its address follows the answer and never delays it.
+  // A new account. The welcome email that confirms its address follows the answer and never
+  // delays or fails it.
   if ((await takeSignInAddress(requestHeaders, parsed.email)) === "send") {
-    const origin = canonicalSiteOrigin(requestHeaders);
-    after(() => sendConfirmationLink(parsed.email, origin, adminCalls(service).sendLink));
+    after(() =>
+      sendWelcomeEmail({ email: parsed.email }, "student", {
+        requestHeaders,
+        generateLink: (params) => service.auth.admin.generateLink(params),
+        mailer: getMailer(),
+        allow: () => takeWelcomeEmail(),
+      }),
+    );
   }
   if (result.status === "created_signed_out") return { status: "created_signed_out" };
   redirect(STUDENT_HOME);
