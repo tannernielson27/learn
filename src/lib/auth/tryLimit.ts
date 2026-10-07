@@ -23,6 +23,12 @@ export interface TryLimiterConfig {
   spent: string;
   /** Names the secret in the operator's log: "code", "password". */
   what: string;
+  /** The log prefix. Sign-in's unless the limiter guards something else (#359: "sign-up"). */
+  scope?: string;
+  /** What the person reads once the caller's own budget is spent. Sign-in's by default. */
+  rateLimited?: string;
+  /** What the person reads when the store cannot answer. Sign-in's by default. */
+  unavailable?: string;
 }
 
 export interface TryLimiter {
@@ -42,7 +48,16 @@ export interface TryLimiter {
  */
 export function createTryLimiter(store: RateLimitStore, config: TryLimiterConfig): TryLimiter {
   const { buckets, limits, what } = config;
+  const scope = config.scope ?? "sign-in";
   const spent: SignInRateLimitResult = { ok: false, error: config.spent };
+  const rateLimited: SignInRateLimitResult = {
+    ok: false,
+    error: config.rateLimited ?? SIGN_IN_RATE_LIMITED,
+  };
+  const unavailable: SignInRateLimitResult = {
+    ok: false,
+    error: config.unavailable ?? SIGN_IN_UNAVAILABLE,
+  };
   let ceilingRefusals = 0;
   return {
     async take(ip, email) {
@@ -51,7 +66,7 @@ export function createTryLimiter(store: RateLimitStore, config: TryLimiterConfig
         // Narrowest first, so a caller over its own budget spends nothing shared.
         if (ip !== null) {
           if (!(await store.hit(buckets.caller, ip, limits.perCaller))) {
-            return { ok: false, error: SIGN_IN_RATE_LIMITED };
+            return rateLimited;
           }
           if (!(await store.hit(buckets.pair, `${ip}|${address}`, limits.perPair))) {
             return spent;
@@ -60,15 +75,17 @@ export function createTryLimiter(store: RateLimitStore, config: TryLimiterConfig
         if (!(await store.hit(buckets.address, address, limits.perAddress))) {
           ceilingRefusals += 1;
           // A total, never the address: who is being targeted must not leak.
-          console.warn(`[sign-in] an address reached the ${what}-try ceiling`, { ceilingRefusals });
+          console.warn(`[${scope}] an address reached the ${what}-try ceiling`, {
+            ceilingRefusals,
+          });
           return spent;
         }
         return { ok: true };
       } catch (error) {
-        console.error(`[sign-in] the shared rate limiter could not answer a ${what} try`, {
+        console.error(`[${scope}] the shared rate limiter could not answer a ${what} try`, {
           error: error instanceof Error ? error.name : "unknown",
         });
-        return { ok: false, error: SIGN_IN_UNAVAILABLE };
+        return unavailable;
       }
     },
     ceilingRefusals: () => ceilingRefusals,
