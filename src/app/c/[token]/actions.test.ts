@@ -44,10 +44,29 @@ vi.mock("next/server", () => ({ after: (task: () => Promise<void>) => scheduled.
 type Reply = { data: unknown; error: { code?: string } | null };
 let resolveReply: Reply;
 const rpc = vi.fn(async (name: string) => (name === "resolve_class_invite" ? resolveReply : null));
-const createUser = vi.fn(async () => ({ error: null as { code?: string } | null }));
+const NEW_USER_ID = "00000000-0000-4000-8000-0000000000a1";
+type Created = { data?: { user: { id: string } | null }; error: { code?: string } | null };
+const createUser = vi.fn(async (): Promise<Created> => ({
+  data: { user: { id: NEW_USER_ID } },
+  error: null,
+}));
 const signInWithOtp = vi.fn(async () => ({ error: null }));
+// #358: the new account's name, written by the service role on the id createUser returned.
+const profileEq = vi.fn<(column: string, value: string) => Promise<{ error: null }>>(async () => ({
+  error: null,
+}));
+const profileUpdate = vi.fn<(values: Record<string, unknown>) => { eq: typeof profileEq }>(() => ({
+  eq: profileEq,
+}));
+const serviceFrom = vi.fn<(table: string) => { update: typeof profileUpdate }>(() => ({
+  update: profileUpdate,
+}));
 vi.mock("@/lib/supabase/service", () => ({
-  createSupabaseServiceClient: () => ({ rpc, auth: { admin: { createUser }, signInWithOtp } }),
+  createSupabaseServiceClient: () => ({
+    rpc,
+    from: serviceFrom,
+    auth: { admin: { createUser }, signInWithOtp },
+  }),
 }));
 
 let viewer: Record<string, unknown>;
@@ -291,9 +310,14 @@ describe("requestInviteLink", () => {
 });
 
 describe("signUpWithPassword", () => {
-  function signUpForm(email: string, password = "correct horse"): FormData {
+  function signUpForm(
+    email: string,
+    password = "correct horse",
+    displayName = "  Ana   Reyes ",
+  ): FormData {
     const form = emailForm(email);
     form.set("password", password);
+    form.set("displayName", displayName);
     return form;
   }
   const idle = { status: "idle" } as const;
@@ -309,6 +333,10 @@ describe("signUpWithPassword", () => {
       email_confirm: true,
       app_metadata: { learn_invite: { class_id: CLASS_ID }, learn_email_unconfirmed: true },
     });
+    // #358: the cleaned name, on the new account's row and no other.
+    expect(serviceFrom).toHaveBeenCalledWith("profiles");
+    expect(profileUpdate).toHaveBeenCalledWith({ display_name: "Ana Reyes" });
+    expect(profileEq).toHaveBeenCalledWith("id", NEW_USER_ID);
     expect(signInWithPassword).toHaveBeenCalledWith({ email, password: "correct horse" });
     // The confirmation email follows the answer; it never came before it.
     expect(signInWithOtp).not.toHaveBeenCalled();
@@ -329,6 +357,25 @@ describe("signUpWithPassword", () => {
     );
     expect(joinRpc).toHaveBeenCalledWith("join_class", { token: TOKEN });
     expect(scheduled).toHaveLength(0);
+    // Their account is theirs: a name typed on someone's invite never renames it.
+    expect(profileUpdate).not.toHaveBeenCalled();
+  });
+
+  it("asks for a name before anything is counted or looked up", async () => {
+    for (const name of ["", "   ", "\u0000\u202e", "x".repeat(81)]) {
+      expect(
+        await signUpWithPassword(TOKEN, idle, signUpForm(newRecipient(), "correct horse", name)),
+      ).toMatchObject({ status: "error", field: "displayName" });
+    }
+    const missing = signUpForm(newRecipient());
+    missing.delete("displayName");
+    expect(await signUpWithPassword(TOKEN, idle, missing)).toEqual({
+      status: "error",
+      error: "Enter your name.",
+      field: "displayName",
+    });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(createUser).not.toHaveBeenCalled();
   });
 
   it("sends an existing instructor back to the invite page, which tells them so", async () => {
@@ -386,7 +433,7 @@ describe("signUpWithPassword", () => {
     });
     expect(createUser).not.toHaveBeenCalled();
     createUser.mockReset();
-    createUser.mockResolvedValue({ error: null });
+    createUser.mockResolvedValue({ data: { user: { id: NEW_USER_ID } }, error: null });
     signInWithPassword.mockReset();
     signInWithPassword.mockResolvedValue({ error: null });
   });
