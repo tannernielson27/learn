@@ -1,10 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  sendConfirmationLink,
-  signUpForInvite,
-  type InviteSignUpDeps,
-  type InviteSignUpInput,
-} from "./inviteSignUp";
+import { signUpForInvite, type InviteSignUpDeps, type InviteSignUpInput } from "./inviteSignUp";
 
 const INPUT: InviteSignUpInput = {
   email: "nurse@school.edu",
@@ -90,27 +85,5 @@ describe("signUpForInvite", () => {
     const text = JSON.stringify(logged.mock.calls);
     expect(text).not.toContain("school.edu");
     expect(text).not.toContain("correct horse");
-  });
-});
-
-describe("sendConfirmationLink", () => {
-  it("emails the sign-in link, landing on the student home", async () => {
-    const sendLink = vi.fn(async () => ({ error: null }));
-    await sendConfirmationLink("nurse@school.edu", "https://learn.example", sendLink);
-    expect(sendLink).toHaveBeenCalledWith({
-      email: "nurse@school.edu",
-      redirectTo: "https://learn.example/auth/confirm?next=%2Flearn",
-    });
-  });
-
-  it("never throws: a failure is logged without the address", async () => {
-    await sendConfirmationLink("nurse@school.edu", "https://learn.example", async () => ({
-      error: { status: 429, code: "over_email_send_rate_limit" },
-    }));
-    await sendConfirmationLink("nurse@school.edu", "https://learn.example", async () => {
-      throw new Error("network");
-    });
-    expect(logged).toHaveBeenCalledTimes(2);
-    expect(JSON.stringify(logged.mock.calls)).not.toContain("school.edu");
   });
 });

@@ -14,7 +14,6 @@ import {
   isEmailUnconfirmed,
   markEmailConfirmed,
 } from "@/lib/auth/emailConfirmation";
-import { sendConfirmationLink } from "@/lib/auth/inviteSignUp";
 import { signInWithPassword } from "@/lib/auth/password";
 import { takeSignInPassword } from "@/lib/auth/passwordLimit";
 import { takeSignInCode } from "@/lib/auth/signInCodeLimit";
@@ -24,6 +23,9 @@ import {
   takeSignInAddress,
   takeSignInAttempt,
 } from "@/lib/auth/signInRateLimit";
+import { sendWelcomeEmail } from "@/lib/auth/welcomeEmail";
+import { takeWelcomeEmail } from "@/lib/auth/welcomeLimit";
+import { getMailer } from "@/lib/email";
 import { canonicalSiteOrigin } from "@/lib/http/siteOrigin";
 import { confirmedDeps, signedInUserId } from "@/lib/supabase/emailConfirmed";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -184,9 +186,10 @@ export async function verifySignInCode(
 }
 
 /**
- * Sends the confirmation link again, from the banner a not-yet-confirmed account sees. Signed-in
- * only, and to the account's own address only, counted like any other emailed link. The answer is
- * always `sent`, as it is for every link (#139): whether the email left is the log's to say.
+ * Sends the welcome email again (#360), from the banner a not-yet-confirmed account sees.
+ * Signed-in only, and to the account's own address only (the verified session's, never anything
+ * the request carries), counted like any other emailed link. The answer is always `sent`, as it is
+ * for every link (#139): whether the email left is the log's to say.
  */
 export async function resendConfirmation(): Promise<ConfirmEmailState> {
   const supabase = await createSupabaseServerClient();
@@ -200,11 +203,12 @@ export async function resendConfirmation(): Promise<ConfirmEmailState> {
   if ((await takeSignInAddress(requestHeaders, email)) !== "send") return { status: "sent" };
 
   const service = createSupabaseServiceClient();
-  await sendConfirmationLink(email, canonicalSiteOrigin(requestHeaders), (params) =>
-    service.auth.signInWithOtp({
-      email: params.email,
-      options: { emailRedirectTo: params.redirectTo, shouldCreateUser: false },
-    }),
-  );
+  // The banner is on the student home, the one place an unconfirmed account is asked today.
+  await sendWelcomeEmail({ email }, "student", {
+    requestHeaders,
+    generateLink: (params) => service.auth.admin.generateLink(params),
+    mailer: getMailer(),
+    allow: () => takeWelcomeEmail(),
+  });
   return { status: "sent" };
 }

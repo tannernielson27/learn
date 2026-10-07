@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { latestSignInLink, openSignInLink } from "./mailbox";
+import { confirmLinkIn, latestEmail, latestSignInLink, openSignInLink } from "./mailbox";
 import { signInAsNewAuthor } from "./signIn";
 
 // #205: a class, its invite link, and a student who joins through it. Needs the local Supabase
@@ -201,8 +201,16 @@ test("a student joins with an email and a password, with no email to wait for", 
   await page.reload();
   await expect(page.getByRole("list", { name: "Roster", exact: true })).toContainText(email);
 
-  // The confirmation email is the ordinary sign-in link; opening it is what confirms.
-  await openSignInLink(student, await latestSignInLink(request, email, since));
+  // #360: the email is the app's welcome, not the sign-in email; opening its link is what confirms.
+  const welcome = await latestEmail(request, email, since);
+  expect(welcome.subject).toBe("Welcome to LeaRN: confirm your email address");
+  expect(welcome.body).toContain("Confirm my email address");
+  expect(welcome.body).not.toContain("sign-in page");
+  // It has a plain-text part, carrying the same link.
+  const welcomeLink = confirmLinkIn(welcome.body, email);
+  expect(welcome.text).toContain(welcomeLink);
+  expect(new URL(welcomeLink).searchParams.get("next")).toBe("/learn");
+  await openSignInLink(student, welcomeLink);
   await expect(student).toHaveURL(/\/learn$/);
   await expect(
     student.getByRole("heading", { name: "Confirm your email address", exact: true }),

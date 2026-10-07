@@ -17,8 +17,8 @@ export default function EmailPreviewPage() {
       <h1 className="mt-2 text-2xl font-semibold">Email preview</h1>
       <p className="mt-2 max-w-prose text-ink-2">
         The messages LeaRN sends, in the one layout they share. Supabase sends the sign-in link from
-        supabase/templates/magic_link.html, which is generated from the same code. Sample data is
-        fictional, and no link here works.
+        supabase/templates/magic_link.html, which is generated from the same code; the app sends the
+        rest, the welcome email included. Sample data is fictional, and no link here works.
       </p>
       <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
         {EMAIL_PREVIEWS.map((preview) => (

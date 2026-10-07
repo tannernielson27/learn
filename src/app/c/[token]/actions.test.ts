@@ -10,6 +10,8 @@ import {
 } from "@/lib/auth/signInRateLimit";
 import type { MemoryRateLimitStore } from "@/lib/rateLimit/testing/memoryStore";
 import { RateLimitUnavailableError } from "@/lib/rateLimit/store";
+import { EmailError, type EmailMessage } from "@/lib/email";
+import { WELCOME_SUBJECT } from "@/lib/email/templates/welcome";
 
 /**
  * The invite's Server Functions are wiring: the per-IP and per-recipient limits of #139/#157, the
@@ -46,8 +48,25 @@ let resolveReply: Reply;
 const rpc = vi.fn(async (name: string) => (name === "resolve_class_invite" ? resolveReply : null));
 const createUser = vi.fn(async () => ({ error: null as { code?: string } | null }));
 const signInWithOtp = vi.fn(async () => ({ error: null }));
+const TOKEN_HASH = "0123456789abcdef0123456789abcdef0123456789abcdef01234567";
+const generateLink = vi.fn(async () => ({
+  data: { properties: { hashed_token: TOKEN_HASH }, user: { id: "user-360" } },
+  error: null,
+}));
 vi.mock("@/lib/supabase/service", () => ({
-  createSupabaseServiceClient: () => ({ rpc, auth: { admin: { createUser }, signInWithOtp } }),
+  createSupabaseServiceClient: () => ({
+    rpc,
+    auth: { admin: { createUser, generateLink }, signInWithOtp },
+  }),
+}));
+
+// #360: the welcome email goes through the app mailer, never a Supabase Auth email.
+const send = vi.fn<(message: EmailMessage) => Promise<{ id: string }>>(async () => ({
+  id: "m-1",
+}));
+vi.mock("@/lib/email", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/email")>()),
+  getMailer: () => ({ send }),
 }));
 
 let viewer: Record<string, unknown>;
@@ -310,16 +329,42 @@ describe("signUpWithPassword", () => {
       app_metadata: { learn_invite: { class_id: CLASS_ID }, learn_email_unconfirmed: true },
     });
     expect(signInWithPassword).toHaveBeenCalledWith({ email, password: "correct horse" });
-    // The confirmation email follows the answer; it never came before it.
-    expect(signInWithOtp).not.toHaveBeenCalled();
+    // The welcome email follows the answer; it never came before it.
+    expect(generateLink).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
     await runScheduled();
-    expect(signInWithOtp).toHaveBeenCalledWith({
-      email,
-      options: {
-        emailRedirectTo: "https://learn.example/auth/confirm?next=%2Flearn",
-        shouldCreateUser: false,
-      },
+    // The admin API makes the link and sends nothing; the app mailer sends the welcome email.
+    expect(generateLink).toHaveBeenCalledWith({ type: "magiclink", email });
+    expect(signInWithOtp).not.toHaveBeenCalled();
+    expect(send).toHaveBeenCalledTimes(1);
+    const message = send.mock.calls[0]![0];
+    expect(message.to).toBe(email);
+    expect(message.subject).toBe(WELCOME_SUBJECT);
+    expect(message.text).toContain("you are in your class");
+    expect(message.text).toContain(
+      `https://learn.example/auth/confirm?next=%2Flearn&token_hash=${TOKEN_HASH}&type=email`,
+    );
+  });
+
+  it("still lets the student in when the welcome email cannot be sent", async () => {
+    send.mockRejectedValueOnce(new EmailError("config", "RESEND_API_KEY is not set."));
+    const email = newRecipient();
+    await expect(signUpWithPassword(TOKEN, idle, signUpForm(email))).rejects.toThrow(
+      "redirect:/learn",
+    );
+    // The send runs after the answer and swallows its own failure: nothing reaches `after()`.
+    await expect(runScheduled()).resolves.toBeUndefined();
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("still answers a sign-up that could not sign in here when the admin API fails too", async () => {
+    signInWithPassword.mockResolvedValueOnce({ error: { code: "unexpected_failure" } });
+    generateLink.mockRejectedValueOnce(new Error("network"));
+    expect(await signUpWithPassword(TOKEN, idle, signUpForm(newRecipient()))).toEqual({
+      status: "created_signed_out",
     });
+    await expect(runScheduled()).resolves.toBeUndefined();
+    expect(send).not.toHaveBeenCalled();
   });
 
   it("signs an existing account in with its own password, joins, and sends no email", async () => {
