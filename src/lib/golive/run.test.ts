@@ -98,6 +98,8 @@ describe("runGoLiveCheck", () => {
       realtime: "manual",
       smtp: "manual",
       "auth-urls": "manual",
+      "auth-signup": "manual",
+      "auth-password": "manual",
       sentry: "manual",
     });
     expect(exitCode(results)).toBe(0);
@@ -242,6 +244,8 @@ describe("runGoLiveCheck with a Management API token (#307)", () => {
     mailer_templates_magic_link_content:
       '<a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email">x</a>{{ .Token }}',
     mailer_otp_length: 6,
+    disable_signup: true,
+    password_min_length: 8,
   };
 
   function fetchWithAuth(auth: unknown, status = 200): GoLiveDeps["fetch"] {
@@ -259,6 +263,36 @@ describe("runGoLiveCheck with a Management API token (#307)", () => {
     expect(exitCode(results)).toBe(0);
   });
 
+  it("checks public sign-up and the password length instead of listing them as manual (#359)", async () => {
+    const results = await runGoLiveCheck(withToken, deps({ fetch: fetchWithAuth(readyAuth) }));
+    const status = statusById(results);
+    expect(status["auth-signup"]).toBe("pass");
+    expect(status["auth-password"]).toBe("pass");
+    expect(results.filter((result) => result.id === "auth-signup")).toHaveLength(1);
+    expect(results.filter((result) => result.id === "auth-password")).toHaveLength(1);
+  });
+
+  it("fails the run while public sign-up is on or passwords may be under 8 characters (#359)", async () => {
+    const open = await runGoLiveCheck(
+      withToken,
+      deps({ fetch: fetchWithAuth({ ...readyAuth, disable_signup: false }) }),
+    );
+    expect(statusById(open)["auth-signup"]).toBe("fail");
+    expect(exitCode(open)).not.toBe(0);
+    const short = await runGoLiveCheck(
+      withToken,
+      deps({ fetch: fetchWithAuth({ ...readyAuth, password_min_length: 6 }) }),
+    );
+    expect(statusById(short)["auth-password"]).toBe("fail");
+    expect(exitCode(short)).not.toBe(0);
+  });
+
+  it("lists both as manual without a token (#359)", async () => {
+    const status = statusById(await runGoLiveCheck(OPTIONS, deps()));
+    expect(status["auth-signup"]).toBe("manual");
+    expect(status["auth-password"]).toBe("manual");
+  });
+
   it("fails the #304 configuration: an allow-list that does not admit the site", async () => {
     const results = await runGoLiveCheck(
       withToken,
@@ -273,6 +307,8 @@ describe("runGoLiveCheck with a Management API token (#307)", () => {
     const status = statusById(results);
     expect(status["auth-urls"]).toBe("fail");
     expect(status["auth-template"]).toBe("fail");
+    expect(status["auth-signup"]).toBe("fail");
+    expect(status["auth-password"]).toBe("fail");
     expect(formatReport(results)).not.toContain(withToken.authConfig.token);
   });
 });
