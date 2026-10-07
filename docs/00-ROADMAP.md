@@ -176,9 +176,12 @@ The accounts, roles, roster and invite link shipped early, in Sprint 9.
 
 **Demo 12:** an outside instructor onboards cold and runs a class without help.
 
-### v2 (parked)
+### v2
 
-- AI item generation from uploaded documents (produces the same JSON contract as the editor).
+**Sprint 12, "AI question import"** (decided 2026-10-01, ADR 0008): upload PDF, Word, Markdown or text; Claude copies each question into a reviewable `learn.v1` draft; the batch imports all or nothing. It includes reveal-by-step for case study charts. Plan and owner decisions: docs/open-issues.md S12.
+
+Parked:
+
 - Adaptive practice, spaced repetition, LMS/LTI, billing, mobile apps.
 
 ## 6. Milestone summary
