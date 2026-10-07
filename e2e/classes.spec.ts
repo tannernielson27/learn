@@ -106,12 +106,19 @@ test("a student joins a class from its invite link and the roster shows them", a
     fullPage: true,
   });
 
+  // The class code (#356) sits beside the link: two groups of four, never a live session's 3 + 3.
+  const classCode = page.getByTestId("class-code");
+  await expect(classCode).toHaveText(/^[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$/);
+  const codeBefore = (await classCode.textContent()) ?? "";
+
   // Replacing the link kills the old one at once, and a stranger cannot tell it from nonsense.
   await page.getByRole("button", { name: "Replace the link", exact: true }).click();
   await page.getByRole("button", { name: "Replace it now", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Invite link", exact: true })).not.toHaveValue(
     invite,
   );
+  // The code is replaced with it.
+  await expect(classCode).not.toHaveText(codeBefore);
   // A replacement that worked closes the question (#256); a failed one would keep it open.
   await expect(page.getByRole("button", { name: "Replace it now", exact: true })).toHaveCount(0);
   const stranger = await (await browser.newContext()).newPage();
