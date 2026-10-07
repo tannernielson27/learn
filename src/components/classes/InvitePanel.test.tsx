@@ -23,7 +23,13 @@ function setup(result: InviteSignUpState = { status: "idle" }) {
   return { signUpAction, linkAction, user: userEvent.setup() };
 }
 
-async function fill(user: ReturnType<typeof userEvent.setup>, email: string, password: string) {
+async function fill(
+  user: ReturnType<typeof userEvent.setup>,
+  email: string,
+  password: string,
+  name = "Ana Reyes",
+) {
+  await user.type(screen.getByRole("textbox", { name: "Your name" }), name);
   await user.type(screen.getByRole("textbox", { name: "Email address" }), email);
   await user.type(screen.getByLabelText("Password"), password);
   await user.click(screen.getByRole("button", { name: "Join the class" }));
@@ -38,12 +44,36 @@ describe("InvitePanel", () => {
     expect(password).toHaveAccessibleDescription("At least 8 characters.");
   });
 
-  it("sends the email and password to the sign-up action", async () => {
+  it("asks for a name first, says who sees it, and caps it at 80 characters", () => {
+    setup();
+    const name = screen.getByRole("textbox", { name: "Your name" });
+    expect(name).toBeRequired();
+    expect(name).toHaveAttribute("autocomplete", "name");
+    expect(name).toHaveAttribute("maxlength", "80");
+    expect(name).toHaveAccessibleDescription("Your instructor sees this on the class roster.");
+    const fields = screen.getAllByRole("textbox");
+    expect(fields[0]).toBe(name);
+  });
+
+  it("sends the name, email and password to the sign-up action", async () => {
     const { signUpAction, user } = setup();
     await fill(user, "a@school.edu", "correct horse");
     const data = signUpAction.mock.calls[0]![1];
+    expect(data.get("displayName")).toBe("Ana Reyes");
     expect(data.get("email")).toBe("a@school.edu");
     expect(data.get("password")).toBe("correct horse");
+  });
+
+  it("puts a name error on the name field", async () => {
+    const { user } = setup({ status: "error", error: "Enter your name.", field: "displayName" });
+    await fill(user, "a@school.edu", "correct horse");
+    await screen.findByRole("alert");
+    const name = screen.getByRole("textbox", { name: "Your name" });
+    expect(name).toHaveFocus();
+    expect(name).toHaveAttribute("aria-invalid", "true");
+    expect(name).toHaveAccessibleDescription(
+      "Your instructor sees this on the class roster. Enter your name.",
+    );
   });
 
   it("says when the address already has an account, on the password, and offers the link", async () => {
@@ -53,6 +83,8 @@ describe("InvitePanel", () => {
     expect(alert).toHaveTextContent("a@school.edu already has a LeaRN account");
     expect(screen.getByLabelText("Password")).toHaveFocus();
     expect(screen.getByLabelText("Password")).toHaveAttribute("aria-invalid", "true");
+    // The name is kept for the next try, as the address is.
+    expect(screen.getByRole("textbox", { name: "Your name" })).toHaveValue("Ana Reyes");
     expect(
       screen.getByRole("button", { name: "Join with an emailed link instead" }),
     ).toBeInTheDocument();

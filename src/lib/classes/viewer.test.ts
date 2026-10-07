@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 let claims: Record<string, unknown> | null;
-let profile: { org_id: string | null; role: string | null } | null;
+let profile: { org_id: string | null; role: string | null; display_name?: string | null } | null;
 
 const client = {
   auth: { getClaims: async () => ({ data: claims ? { claims } : null }) },
@@ -44,6 +44,15 @@ describe("readViewer", () => {
       email: "nurse@school.edu",
       role: "student",
     });
+  });
+
+  it("reads the account's name, or none (#358)", async () => {
+    profile = { org_id: ORG, role: "student", display_name: "Ana Reyes" };
+    expect(await readViewer()).toMatchObject({ status: "signed_in", displayName: "Ana Reyes" });
+    profile = { org_id: ORG, role: "student", display_name: null };
+    expect(await readViewer()).toMatchObject({ status: "signed_in", displayName: null });
+    profile = null;
+    expect(await readViewer()).toMatchObject({ status: "signed_in", displayName: null });
   });
 
   it("reads no role as no role", async () => {

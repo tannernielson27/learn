@@ -14,6 +14,8 @@ export interface SignedInViewer {
   email: string;
   /** Null for an account nobody has given a role yet (#204). */
   role: OrgRole | null;
+  /** `profiles.display_name`, or null for an account nobody has named (#358). */
+  displayName: string | null;
 }
 
 export type Viewer = { status: "signed_out" } | SignedInViewer;
@@ -31,11 +33,18 @@ export async function readViewer(): Promise<Viewer> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("org_id, role")
+    .select("org_id, role, display_name")
     .eq("id", userId)
     .maybeSingle();
   const email = typeof data.claims.email === "string" ? data.claims.email : "";
-  return { status: "signed_in", supabase, userId, email, role: profile?.role ?? null };
+  return {
+    status: "signed_in",
+    supabase,
+    userId,
+    email,
+    role: profile?.role ?? null,
+    displayName: profile?.display_name ?? null,
+  };
 }
 
 export interface StudentSession {

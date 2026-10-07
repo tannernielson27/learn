@@ -1,3 +1,6 @@
+/** A signed-in person's own settings: their name, and the way to their password (#358). */
+export const ACCOUNT_PATH = "/account";
+
 /** Where a signed-in person chooses or changes their password. */
 export const PASSWORD_PATH = "/account/password";
 
