@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { latestSignInLink, openSignInLink } from "./mailbox";
+import { confirmLinkIn, latestEmail, latestSignInLink, openSignInLink } from "./mailbox";
 import { signInAsNewAuthor } from "./signIn";
 
 // #205: a class, its invite link, and a student who joins through it. Needs the local Supabase
@@ -179,7 +179,10 @@ test("a student joins with an email and a password, with no email to wait for", 
   await student.goto(invite);
   const email = studentEmail(`password-${project}`);
   const password = "correct horse battery";
+  // #358: a name, which the instructor's roster shows in place of the address.
+  const name = `Ana Reyes ${Date.now() % 100_000}`;
   const since = new Date();
+  await student.getByRole("textbox", { name: "Your name", exact: true }).fill(name);
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
   await student.getByLabel("Password", { exact: true }).fill(password);
   await expectNoAxeViolations(student);
@@ -198,11 +201,23 @@ test("a student joins with an email and a password, with no email to wait for", 
     path: `test-results/screenshots/${project}/student-home-unconfirmed.png`,
     fullPage: true,
   });
+  // The header shows the name rather than the address.
+  await expect(student.getByTestId("signed-in-name")).toHaveText(name);
   await page.reload();
-  await expect(page.getByRole("list", { name: "Roster", exact: true })).toContainText(email);
+  const roster = page.getByRole("list", { name: "Roster", exact: true });
+  await expect(roster).toContainText(name);
+  await expect(roster).toContainText(email);
 
-  // The confirmation email is the ordinary sign-in link; opening it is what confirms.
-  await openSignInLink(student, await latestSignInLink(request, email, since));
+  // #360: the email is the app's welcome, not the sign-in email; opening its link is what confirms.
+  const welcome = await latestEmail(request, email, since);
+  expect(welcome.subject).toBe("Welcome to LeaRN: confirm your email address");
+  expect(welcome.body).toContain("Confirm my email address");
+  expect(welcome.body).not.toContain("sign-in page");
+  // It has a plain-text part, carrying the same link.
+  const welcomeLink = confirmLinkIn(welcome.body, email);
+  expect(welcome.text).toContain(welcomeLink);
+  expect(new URL(welcomeLink).searchParams.get("next")).toBe("/learn");
+  await openSignInLink(student, welcomeLink);
   await expect(student).toHaveURL(/\/learn$/);
   await expect(
     student.getByRole("heading", { name: "Confirm your email address", exact: true }),
@@ -214,13 +229,39 @@ test("a student joins with an email and a password, with no email to wait for", 
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
   await student.getByLabel("Password", { exact: true }).fill(password);
   await student.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(student.getByTestId("signed-in-email")).toHaveText(email);
+  await expect(student.getByTestId("signed-in-name")).toHaveText(name);
+
+  // The header's Account link: the name can be changed there, and the roster follows.
+  await student.getByRole("link", { name: "Account", exact: true }).click();
+  await expect(student).toHaveURL(/\/account$/);
+  await expect(
+    student.getByRole("heading", { level: 1, name: "Your account", exact: true }),
+  ).toBeVisible();
+  const nameField = student.getByRole("textbox", { name: "Your name", exact: true });
+  await expect(nameField).toHaveValue(name);
+  await expectNoAxeViolations(student);
+  await student.screenshot({
+    path: `test-results/screenshots/${project}/account.png`,
+    fullPage: true,
+  });
+  const renamed = `${name} Lee`;
+  await nameField.fill(renamed);
+  await student.getByRole("button", { name: "Save name", exact: true }).click();
+  await expect(student.getByRole("status").filter({ hasText: "Name saved." })).toBeVisible();
+  await expect(
+    student.getByRole("link", { name: "Change your password", exact: true }),
+  ).toHaveAttribute("href", "/account/password?next=%2Faccount");
+  await student.goto("/learn");
+  await expect(student.getByTestId("signed-in-name")).toHaveText(renamed);
+  await page.reload();
+  await expect(page.getByRole("list", { name: "Roster", exact: true })).toContainText(renamed);
 
   // The same form on an invite, with someone else's password, says the address is taken.
   await student.getByRole("button", { name: "Sign out", exact: true }).click();
   // Wait for it: leaving at once would cancel the sign-out and find the student still in.
   await expect(student).toHaveURL(/\/sign-in$/);
   await student.goto(invite);
+  await student.getByRole("textbox", { name: "Your name", exact: true }).fill(name);
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
   await student.getByLabel("Password", { exact: true }).fill("not the password");
   await student.getByRole("button", { name: "Join the class", exact: true }).click();

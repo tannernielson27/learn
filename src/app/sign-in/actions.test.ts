@@ -9,6 +9,8 @@ import {
 } from "@/lib/auth/signInRateLimit";
 import type { MemoryRateLimitStore } from "@/lib/rateLimit/testing/memoryStore";
 import { RateLimitUnavailableError } from "@/lib/rateLimit/store";
+import { EmailError, type EmailMessage } from "@/lib/email";
+import { WELCOME_SUBJECT } from "@/lib/email/templates/welcome";
 
 /**
  * The Server Functions are thin: they read the request, count it against the three limits and
@@ -54,6 +56,22 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
+// #360: the banner's resend makes the link with the admin API and sends it through the app mailer.
+const generateLink = vi.fn(async () => ({
+  data: { properties: { hashed_token: "hash-360" }, user: { id: "user-1" } },
+  error: null,
+}));
+vi.mock("@/lib/supabase/service", () => ({
+  createSupabaseServiceClient: () => ({ auth: { admin: { generateLink } } }),
+}));
+const send = vi.fn<(message: EmailMessage) => Promise<{ id: string }>>(async () => ({
+  id: "m-1",
+}));
+vi.mock("@/lib/email", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/email")>()),
+  getMailer: () => ({ send }),
+}));
+
 // #234: the limiter counts in Postgres; here it counts in the in-memory fake, shared by every call.
 vi.mock("@/lib/rateLimit/postgresStore", async () => {
   const { createMemoryRateLimitStore } = await import("@/lib/rateLimit/testing/memoryStore");
@@ -64,8 +82,13 @@ const rateLimitStore = (
   await import("@/lib/rateLimit/postgresStore")
 ).sharedRateLimitStore() as MemoryRateLimitStore;
 
-const { requestSignInLink, signInAsDemo, signInWithEmailPassword, verifySignInCode } =
-  await import("./actions");
+const {
+  requestSignInLink,
+  resendConfirmation,
+  signInAsDemo,
+  signInWithEmailPassword,
+  verifySignInCode,
+} = await import("./actions");
 
 function emailForm(email: string): FormData {
   const form = new FormData();
@@ -478,5 +501,59 @@ describe("signInWithEmailPassword", () => {
     expect(signInWithPassword).not.toHaveBeenCalled();
     signInWithPassword.mockReset();
     signInWithPassword.mockResolvedValue({ error: null });
+  });
+});
+
+describe("resendConfirmation (#360)", () => {
+  function signedInAs(email: string, unconfirmed: boolean): void {
+    getClaims.mockResolvedValueOnce({
+      data: {
+        claims: {
+          sub: "user-1",
+          email,
+          app_metadata: unconfirmed ? { learn_email_unconfirmed: true } : {},
+        },
+      },
+    } as never);
+  }
+
+  it("sends the welcome email again to the session's own address, on the canonical origin", async () => {
+    signedInAs(inbox, true);
+    expect(await resendConfirmation()).toEqual({ status: "sent" });
+    expect(generateLink).toHaveBeenCalledWith({ type: "magiclink", email: inbox });
+    expect(signInWithOtp).not.toHaveBeenCalled();
+    const message = send.mock.calls[0]![0];
+    expect(message.to).toBe(inbox);
+    expect(message.subject).toBe(WELCOME_SUBJECT);
+    expect(message.text).toContain(
+      "https://canonical.example/auth/confirm?next=%2Flearn&token_hash=hash-360&type=email",
+    );
+  });
+
+  it("sends nothing to an account that has confirmed, or to nobody", async () => {
+    signedInAs(inbox, false);
+    expect(await resendConfirmation()).toEqual({ status: "sent" });
+    getClaims.mockResolvedValueOnce({ data: null } as never);
+    expect(await resendConfirmation()).toEqual({ status: "sent" });
+    expect(generateLink).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("answers sent when the mailer fails, so the banner can be pressed again", async () => {
+    signedInAs(inbox, true);
+    send.mockRejectedValueOnce(new EmailError("unavailable", "Resend answered 503."));
+    expect(await resendConfirmation()).toEqual({ status: "sent" });
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(logged.mock.calls)).not.toContain(inbox);
+  });
+
+  it("stops mailing one address after its per-caller budget, silently", async () => {
+    for (let i = 0; i < SIGN_IN_ADDRESS_LIMITS.perCaller.attempts; i += 1) {
+      signedInAs(inbox, true);
+      await resendConfirmation();
+    }
+    signedInAs(inbox, true);
+    expect(await resendConfirmation()).toEqual({ status: "sent" });
+    expect(send).toHaveBeenCalledTimes(SIGN_IN_ADDRESS_LIMITS.perCaller.attempts);
   });
 });

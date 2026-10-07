@@ -44,6 +44,8 @@ export const RATE_LIMIT_BUCKETS = [
   // #241: per student, failing open (see `src/lib/practice/limits.ts`).
   "practice_answer",
   "practice_start",
+  // #360: the welcome email, one ceiling for the whole deployment (`src/lib/auth/welcomeLimit.ts`).
+  "welcome_email",
 ] as const;
 
 export type RateLimitBucket = (typeof RATE_LIMIT_BUCKETS)[number];

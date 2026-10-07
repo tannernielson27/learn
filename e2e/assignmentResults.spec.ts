@@ -189,10 +189,13 @@ test("a student sees nothing before the close, then their score, keys and ration
     display_name: displayName,
   });
   const ofStudentA = [email, displayName, mine.id];
-  // The controls: each marker is in a response where it belongs. A's email heads A's own home, the
-  // instructor's roster names A, and a student's attempt page carries that student's attempt id.
-  expect(await bytesOf(phone, "/learn")).toContain(email);
-  expect(await bytesOf(page.context(), `/author/classes/${classId}`)).toContain(displayName);
+  // The controls: each marker is in a response where it belongs. A's name heads A's own home (#358:
+  // the header shows the name once there is one), the instructor's roster carries A's name and
+  // email, and a student's attempt page carries that student's attempt id.
+  expect(await bytesOf(phone, "/learn")).toContain(displayName);
+  const roster = await bytesOf(page.context(), `/author/classes/${classId}`);
+  expect(roster).toContain(displayName);
+  expect(roster).toContain(email);
   const classmateTaking = await bytesOf(other.context, bankPath);
   expect(classmateTaking).toContain(classmateAttempt.id);
   // And none of A's in B's attempt, B's home, or B's results before the close.
