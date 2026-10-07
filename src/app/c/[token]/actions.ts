@@ -7,6 +7,7 @@ import type { InviteLinkState } from "@/components/classes/InviteEmailForm";
 import type { InviteSignUpState } from "@/components/classes/InviteSignUpForm";
 import type { JoinClassState } from "@/components/classes/JoinClassButton";
 import { sendInviteLink, type InviteLinkDeps } from "@/lib/auth/inviteLink";
+import { parseAccountName } from "@/lib/auth/displayName";
 import { sendConfirmationLink, signUpForInvite } from "@/lib/auth/inviteSignUp";
 import { checkNewPassword, PASSWORD_WEAK } from "@/lib/auth/password";
 import { takeSignInPassword } from "@/lib/auth/passwordLimit";
@@ -126,8 +127,8 @@ export async function requestInviteLink(
 const SIGN_UP_FAILED = "Your account could not be created just now. Try again in a moment.";
 
 /**
- * The invite page's main form: an email address and a password, and the person is in the class
- * with no email to wait for. See `signUpForInvite` for what happens to a new address and to one
+ * The invite page's main form: a name, an email address and a password, and the person is in the
+ * class with no email to wait for. The name goes on a new account only (#358). See `signUpForInvite` for what happens to a new address and to one
  * that already has an account.
  *
  * Counted three ways before any account is touched: the invite's own budget, exactly as the
@@ -140,6 +141,8 @@ export async function signUpWithPassword(
   _previous: InviteSignUpState,
   formData: FormData,
 ): Promise<InviteSignUpState> {
+  const name = parseAccountName(formData.get("displayName"));
+  if (!name.ok) return { status: "error", error: name.error, field: "displayName" };
   const parsed = parseSignInForm(formData);
   if (!parsed.ok) return { status: "error", error: parsed.error, field: "email" };
   const password = checkNewPassword(formData.get("password"));
@@ -162,9 +165,16 @@ export async function signUpWithPassword(
 
   const supabase = await createSupabaseServerClient();
   const result = await signUpForInvite(
-    { email: parsed.email, password: password.password, classId: invite.classId },
+    {
+      email: parsed.email,
+      password: password.password,
+      displayName: name.name,
+      classId: invite.classId,
+    },
     {
       createUser: (params) => service.auth.admin.createUser(params),
+      saveName: async (userId, displayName) =>
+        await service.from("profiles").update({ display_name: displayName }).eq("id", userId),
       signIn: (credentials) => supabase.auth.signInWithPassword(credentials),
       join: () => joinClass(supabase, token),
     },
