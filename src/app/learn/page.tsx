@@ -4,6 +4,7 @@ import { AssignmentHistory } from "@/components/assignments/AssignmentHistory";
 import { StudentAssignmentList } from "@/components/assignments/StudentAssignmentList";
 import { YourSteps } from "@/components/assignments/YourSteps";
 import { ConfirmEmailBanner } from "@/components/auth/ConfirmEmailBanner";
+import { JoinByCodeForm } from "@/components/classes/JoinByCodeForm";
 import { StudentClassList } from "@/components/classes/StudentClassList";
 import { PracticeBankList } from "@/components/practice/PracticeBankList";
 import { historyStore } from "@/lib/assignments/attemptStore";
@@ -15,6 +16,7 @@ import { listMyAttemptProgress } from "@/lib/supabase/attempts";
 import { myClasses } from "@/lib/supabase/classInvites";
 import { readMyPracticeBanks } from "@/lib/supabase/practice";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { joinClassWithCode } from "./actions";
 
 export const metadata: Metadata = { title: "Your classes" };
 
@@ -61,6 +63,25 @@ export default async function StudentHomePage() {
         </p>
       ) : (
         <StudentClassList classes={classes} />
+      )}
+      {/* #362: the class code, typed. Open for a student with no class, since it is the next thing
+          to do; folded away for one who has classes, where it is an occasional action. */}
+      {classes !== null && classes.length > 0 ? (
+        <details className="mt-4">
+          <summary className="tap-target inline-flex cursor-pointer items-center rounded-sm text-sm font-medium text-accent-ink hover:underline">
+            Join another class
+          </summary>
+          <div className="mt-3">
+            <JoinByCodeForm action={joinClassWithCode} />
+          </div>
+        </details>
+      ) : (
+        <section aria-labelledby="join-class-heading" className="mt-6">
+          <h2 id="join-class-heading" className="mb-3 text-lg font-medium text-ink-1">
+            Join a class
+          </h2>
+          <JoinByCodeForm action={joinClassWithCode} />
+        </section>
       )}
       <section aria-labelledby="open-assignments-heading" className="mt-10">
         <h2 id="open-assignments-heading" className="mb-3 text-lg font-medium text-ink-1">

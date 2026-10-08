@@ -58,8 +58,9 @@ export default function InstructorGuide() {
         </p>
         <p>
           Accounts are by invitation. Whoever runs your LeaRN adds you as an instructor; an account
-          without that role sees “No access yet”. The form answers the same way whether or not an
-          address has an account, so if no email arrives, check the spelling with them.
+          without that role lands on a welcome page instead of your item banks. The form answers the
+          same way whether or not an address has an account, so if no email arrives, check the
+          spelling with them.
         </p>
       </Step>
 

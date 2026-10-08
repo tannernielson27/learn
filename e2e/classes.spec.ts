@@ -343,3 +343,69 @@ test("confirming from another browser retires the password the account was made 
   await second.close();
   await third.close();
 });
+
+test("an account with no role types a class code, lands in the class and is on the roster", async ({
+  page,
+  browser,
+  request,
+}, testInfo) => {
+  const project = testInfo.project.name;
+  await signInAsNewAuthor(page, request, `classes-code-${project}`);
+  const className = `NUR 340 — Fall ${Date.now() % 100_000}`;
+  await createClass(page, className);
+  const shown = (await page.getByTestId("class-code").innerText()).trim();
+  expect(shown).toMatch(/^[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$/);
+
+  // Someone signs up with no invite, so the account has no role and lands on the welcome page.
+  const phone = await browser.newContext();
+  const student = await phone.newPage();
+  const email = studentEmail(`code-${project}`);
+  const name = `Kai Ortiz ${Date.now() % 100_000}`;
+  await student.goto("/sign-up?role=student");
+  await student.getByRole("textbox", { name: "Your name", exact: true }).fill(name);
+  await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await student.getByLabel("Password", { exact: true }).fill("correct horse battery");
+  await student.getByRole("button", { name: "Create account", exact: true }).click();
+  await expect(student).toHaveURL(/\/welcome$/);
+  const code = student.getByRole("textbox", { name: "Class code", exact: true });
+  await expect(code).toBeVisible();
+  await expectNoAxeViolations(student);
+  await student.screenshot({
+    path: `test-results/screenshots/${project}/welcome-join.png`,
+    fullPage: true,
+  });
+
+  // A code nobody has says so, and nothing more.
+  await code.fill("2222-2222");
+  await student.getByRole("button", { name: "Join the class", exact: true }).click();
+  await expect(
+    student.getByRole("alert").filter({ hasText: "That class code did not work." }),
+  ).toBeVisible();
+  await expect(student).toHaveURL(/\/welcome$/);
+
+  // The real one, typed the lazy way: lower case, no hyphen.
+  await code.fill(shown.replace("-", "").toLowerCase());
+  await student.getByRole("button", { name: "Join the class", exact: true }).click();
+  await expect(student).toHaveURL(/\/learn$/);
+  await expect(student.getByRole("list", { name: "Your classes", exact: true })).toContainText(
+    className,
+  );
+
+  // Now a student, with the same form folded away for another class.
+  await student.getByText("Join another class", { exact: true }).click();
+  await expect(student.getByRole("textbox", { name: "Class code", exact: true })).toBeVisible();
+  await expectNoAxeViolations(student);
+  await student.screenshot({
+    path: `test-results/screenshots/${project}/student-home-join-another.png`,
+    fullPage: true,
+  });
+  // The welcome page is no longer theirs.
+  await student.goto("/welcome");
+  await expect(student).toHaveURL(/\/learn$/);
+
+  await page.reload();
+  const roster = page.getByRole("list", { name: "Roster", exact: true });
+  await expect(roster).toContainText(name);
+  await expect(roster).toContainText(email);
+  await phone.close();
+});

@@ -22,10 +22,10 @@ describe("landingEntry (#264)", () => {
     });
   });
 
-  it("sends an account nobody has given a role to No access yet", () => {
+  it("sends an account with no role to the welcome page (#362)", () => {
     expect(landingEntry({ status: "signed_in", role: null })).toEqual({
-      href: "/author/no-access",
-      label: "Go to your account",
+      href: "/welcome",
+      label: "Get started",
     });
   });
 });
