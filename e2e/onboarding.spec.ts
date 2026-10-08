@@ -144,12 +144,17 @@ test("the imported sample is ready to assign and to run live straight away", asy
   const project = testInfo.project.name;
   const orgId = await signInAsInstructorInEmptyOrg(page, request, `sample-live-${project}`);
   const className = `Sample class ${project} ${Date.now() % 100_000}`;
-  // The column's default calls private.new_invite_token(), which only `authenticated` may run, so
-  // the service role supplies a token of the same shape (32 base64url characters) itself.
+  // The columns' defaults call private.new_invite_token() and private.new_class_join_code(), which
+  // only `authenticated` may run, so the service role supplies a token of the same shape (32
+  // base64url characters) and a class code (#356: 8 characters, no 0/O/1/I/L) itself.
+  const codeAlphabet = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
   await insertAsAdmin(request, "classes", {
     org_id: orgId,
     name: className,
     invite_token: randomBytes(24).toString("base64url"),
+    join_code: Array.from(randomBytes(8), (byte) => codeAlphabet[byte % codeAlphabet.length]).join(
+      "",
+    ),
   });
 
   const checklist = page.getByRole("region", { name: "Get started", exact: true });

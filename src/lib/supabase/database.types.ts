@@ -477,6 +477,7 @@ export type Database = {
           created_by: string | null;
           id: string;
           invite_token: string;
+          join_code: string;
           name: string;
           org_id: string;
           time_zone: string;
@@ -487,6 +488,7 @@ export type Database = {
           created_by?: string | null;
           id?: string;
           invite_token?: string;
+          join_code?: string;
           name: string;
           org_id?: string;
           time_zone?: string;
@@ -497,6 +499,7 @@ export type Database = {
           created_by?: string | null;
           id?: string;
           invite_token?: string;
+          join_code?: string;
           name?: string;
           org_id?: string;
           time_zone?: string;
@@ -1365,6 +1368,7 @@ export type Database = {
         Returns: Json;
       };
       join_class: { Args: { token: string }; Returns: string };
+      join_class_by_code: { Args: { p_code: string }; Returns: string };
       join_session: {
         Args: { chosen_name: string; target_session: string };
         Returns: {
