@@ -36,7 +36,7 @@ The pattern: ask the role first, keep live play account-free, and tie anything t
 
 ## Consequences
 
-- **Someone can make a teacher account on an address they do not own.** They get an empty private workspace and nothing else. The real owner of the address can take it back with "Forgot your password?", which signs out other sessions. Accepted with decision 4.
+- **Someone can make a teacher account on an address they do not own.** They get an empty private workspace and nothing else. The real owner of the address takes it back by opening any email LeaRN sends to it (the welcome email, a sign-in link, or "Forgot your password?"): the first time the address is confirmed from a browser that was not signed in to the account, the password it was made with stops working, every other session is signed out, and the owner is asked for a password of their own (`endEarlierAccess`, owner decision 2026-10-07). Until then the person who made the account can use it. Accepted with decision 4.
 - **Orgs multiply.** Anything that assumed one org (the checklist's derived progress, `make_instructor`'s "first org", per-org caps) must be read per org. A teacher cannot move between workspaces or invite a colleague into theirs; that is org administration, still v2.
 - **A student belongs to one org.** A student of one teacher cannot join a class in another teacher's workspace with the same account (`admit_to_class` refuses). With one workspace per teacher this will be met in practice; it is recorded as a known gap for the sprint demo rather than solved here.
 - **Email volume grows with sign-ups.** The hosted limit is 150 Auth emails an hour and Resend's free plan allows 100 a day. The welcome email goes through the app mailer, so it counts against Resend only.

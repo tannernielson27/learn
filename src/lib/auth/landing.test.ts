@@ -29,3 +29,13 @@ describe("landingEntry (#264)", () => {
     });
   });
 });
+
+describe("signedInHome (#361)", () => {
+  it("sends each role to its own home, and an account with no role to the welcome page", async () => {
+    const { signedInHome } = await import("./landing");
+    expect(signedInHome("instructor")).toBe("/author");
+    expect(signedInHome("admin")).toBe("/author");
+    expect(signedInHome("student")).toBe("/learn");
+    expect(signedInHome(null)).toBe("/welcome");
+  });
+});

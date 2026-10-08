@@ -22,6 +22,15 @@ describe("ChoosePasswordForm", () => {
     expect(screen.getByRole("link", { name: "Not now" })).toHaveAttribute("href", "/learn");
   });
 
+  it("offers no way to skip when the earlier password has just been retired", () => {
+    const action = vi.fn<ChoosePasswordFormProps["action"]>(async () => ({ status: "idle" }));
+    render(
+      <ChoosePasswordForm action={action} email="a@school.edu" next="/learn" skippable={false} />,
+    );
+    expect(screen.getByLabelText("New password")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Not now" })).toBeNull();
+  });
+
   it("sends the password to the action, then says it is saved and where to go", async () => {
     const { action, user } = setup({ status: "saved" });
     await user.type(screen.getByLabelText("New password"), "correct horse");

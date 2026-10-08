@@ -23,7 +23,8 @@ export default async function ChoosePasswordPage({ searchParams }: PageProps<"/a
   const next =
     typeof params.next === "string" ? safeNextPath(params.next) : landingEntry(viewer).href;
   // Set by `afterConfirming`: an emailed link has just confirmed an account made with a password,
-  // in a browser that was not signed in to it. Only wording hangs on it.
+  // in a browser that was not signed in to it, and `endEarlierAccess` has retired that password.
+  // Only the wording and the "Not now" link hang on it; anyone can add it and nothing else changes.
   const justConfirmed = params.confirmed === "1";
 
   return (
@@ -34,9 +35,9 @@ export default async function ChoosePasswordPage({ searchParams }: PageProps<"/a
           <>
             <h1 className="mb-3 font-read text-3xl text-ink-1">Your email is confirmed</h1>
             <p className="mb-6 text-ink-2">
-              {viewer.email} joined a class with a password. If that was you, press Not now and
-              carry on. If it was not, choose a password here: it becomes the only one that works
-              and signs out anyone else using this account.
+              An account for {viewer.email} was made with a password before anyone had shown the
+              address was theirs. To keep it yours, that password no longer works and every other
+              device has been signed out. Choose a new password to finish.
             </p>
           </>
         ) : (
@@ -47,7 +48,12 @@ export default async function ChoosePasswordPage({ searchParams }: PageProps<"/a
             </p>
           </>
         )}
-        <ChoosePasswordForm action={choosePassword} email={viewer.email} next={next} />
+        <ChoosePasswordForm
+          action={choosePassword}
+          email={viewer.email}
+          next={next}
+          skippable={!justConfirmed}
+        />
       </div>
     </main>
   );

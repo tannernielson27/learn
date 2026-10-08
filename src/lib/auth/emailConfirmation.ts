@@ -60,18 +60,94 @@ export async function markEmailConfirmed(deps: MarkConfirmedDeps): Promise<Newly
   }
 }
 
+/** Whether the proof of the address arrived in a browser that was not signed in to the account. */
+function confirmedElsewhere(confirmed: NewlyConfirmed, signedInBefore: string | null): boolean {
+  return confirmed !== null && confirmed.userId !== signedInBefore;
+}
+
+/** What `endEarlierAccess` needs, injected so it can be tested. */
+export interface EndEarlierAccessDeps {
+  /**
+   * `supabase.auth.updateUser({ password })` on the session the link or code has just made, as
+   * `saveNewPassword` does. Not the admin API: after a password set there, the owner could save no
+   * password of their own (`e2e/classes.spec.ts` holds this), most likely because it ends every
+   * session the account has, the new one included.
+   */
+  replacePassword(password: string): Promise<{ error: unknown }>;
+  /** `supabase.auth.signOut({ scope: "others" })`: every session but the one the link just made. */
+  signOutOthers(): Promise<{ error: unknown }>;
+  /** For tests; defaults to 32 random bytes. */
+  randomPassword?: () => string;
+}
+
+/** 32 random bytes as base64url: 43 characters, inside Supabase's 72 and nobody's to guess. */
+function randomPassword(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return btoa(String.fromCharCode(...bytes))
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replaceAll("=", "");
+}
+
+function logEarlierAccess(step: string, error: unknown): void {
+  const { status, code } = (error ?? {}) as { status?: number; code?: string };
+  // Never the password, and never an error's message, which could quote the request.
+  console.error(`[account] ${step} failed`, {
+    status,
+    code,
+    error: error instanceof Error ? error.name : undefined,
+  });
+}
+
+/**
+ * Ends whatever access the account had before its address was confirmed, when the confirmation
+ * came from a browser that was not signed in to it (owner decision, 2026-10-07).
+ *
+ * An account made with a password is let in before anyone has shown the address is theirs, so the
+ * person who made it need not be the person now holding the inbox. Whoever opens the email is the
+ * owner. If they are in the browser that made the account, nothing changes. If they are not, the
+ * password the account was made with stops working (it is replaced with one nobody knows) and
+ * every other session is signed out, so the only way in is the one the inbox's owner now has.
+ * `afterConfirming` then sends them to choose a password of their own.
+ *
+ * Returns whether it applied. Never throws and never blocks the sign-in it follows: each step is
+ * tried and a failure logged. The emailed link still signs the owner in whatever happens here.
+ */
+export async function endEarlierAccess(
+  confirmed: NewlyConfirmed,
+  signedInBefore: string | null,
+  deps: EndEarlierAccessDeps,
+): Promise<boolean> {
+  if (!confirmed || !confirmedElsewhere(confirmed, signedInBefore)) return false;
+  try {
+    const password = (deps.randomPassword ?? randomPassword)();
+    const replaced = await deps.replacePassword(password);
+    if (replaced.error)
+      logEarlierAccess("replacing an unconfirmed account's password", replaced.error);
+  } catch (error) {
+    logEarlierAccess("replacing an unconfirmed account's password", error);
+  }
+  try {
+    const others = await deps.signOutOthers();
+    if (others.error) logEarlierAccess("signing out an account's earlier sessions", others.error);
+  } catch (error) {
+    logEarlierAccess("signing out an account's earlier sessions", error);
+  }
+  return true;
+}
+
 /**
  * Where to send someone whose address has just been confirmed. The account was made by whoever
- * held a class invite link and typed this address, which need not be the person now holding the
- * inbox. If this browser was already signed in to the account, it is the same person and they go
- * where they were going. If it was not, the inbox's owner is shown the password page first: they
- * can keep going, or choose a password, which signs out everyone else (`saveNewPassword`).
+ * typed this address, which need not be the person now holding the inbox. If this browser was
+ * already signed in to the account, it is the same person and they go where they were going. If
+ * it was not, `endEarlierAccess` has just retired the account's password, and the inbox's owner is
+ * sent to choose their own.
  */
 export function afterConfirming(
   confirmed: NewlyConfirmed,
   signedInBefore: string | null,
   next: string,
 ): string {
-  if (!confirmed || confirmed.userId === signedInBefore) return next;
+  if (!confirmedElsewhere(confirmed, signedInBefore)) return next;
   return `${choosePasswordPath(next)}&confirmed=1`;
 }

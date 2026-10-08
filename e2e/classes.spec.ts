@@ -277,3 +277,69 @@ test("a student joins with an email and a password, with no email to wait for", 
   ).toBeVisible();
   await phone.close();
 });
+
+test("confirming from another browser retires the password the account was made with", async ({
+  page,
+  browser,
+  request,
+}, testInfo) => {
+  const project = testInfo.project.name;
+  await signInAsNewAuthor(page, request, `classes-takeback-${project}`);
+  const invite = await createClass(page, `NUR 330 — Fall ${Date.now() % 100_000}`);
+
+  // Someone joins with an address and a password of their choosing.
+  const first = await browser.newContext();
+  const maker = await first.newPage();
+  await maker.goto(invite);
+  const email = studentEmail(`takeback-${project}`);
+  const madeWith = "correct horse battery";
+  const since = new Date();
+  await maker.getByRole("textbox", { name: "Your name", exact: true }).fill("Ana Reyes");
+  await maker.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await maker.getByLabel("Password", { exact: true }).fill(madeWith);
+  await maker.getByRole("button", { name: "Join the class", exact: true }).click();
+  await expect(maker).toHaveURL(/\/learn$/);
+
+  // The inbox's owner opens the welcome email somewhere that was never signed in to the account.
+  const welcome = await latestEmail(request, email, since);
+  const second = await browser.newContext();
+  const owner = await second.newPage();
+  await openSignInLink(owner, confirmLinkIn(welcome.body, email));
+  await expect(owner).toHaveURL(/\/account\/password\?next=%2Flearn&confirmed=1$/);
+  await expect(
+    owner.getByRole("heading", { level: 1, name: "Your email is confirmed", exact: true }),
+  ).toBeVisible();
+  // A new password is asked for, with no way to put it off.
+  await expect(owner.getByRole("link", { name: "Not now", exact: true })).toHaveCount(0);
+  await expectNoAxeViolations(owner);
+  await owner.screenshot({
+    path: `test-results/screenshots/${project}/confirmed-elsewhere.png`,
+    fullPage: true,
+  });
+
+  // The password the account was made with no longer signs anyone in.
+  const third = await browser.newContext();
+  const stranger = await third.newPage();
+  await stranger.goto("/sign-in");
+  await stranger.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await stranger.getByLabel("Password", { exact: true }).fill(madeWith);
+  await stranger.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(
+    stranger.getByRole("alert").filter({ hasText: "That email and password do not match." }),
+  ).toBeVisible();
+
+  // The owner is still signed in, chooses their own password, and it works.
+  const chosen = "a password of my own";
+  await owner.getByLabel("New password", { exact: true }).fill(chosen);
+  await owner.getByRole("button", { name: "Save password", exact: true }).click();
+  await expect(owner.getByRole("heading", { name: "Password saved", exact: true })).toBeVisible();
+  await owner.getByRole("link", { name: "Continue", exact: true }).click();
+  await expect(owner).toHaveURL(/\/learn$/);
+  await stranger.getByLabel("Password", { exact: true }).fill(chosen);
+  await stranger.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(stranger.getByTestId("signed-in-name")).toHaveText("Ana Reyes");
+
+  await first.close();
+  await second.close();
+  await third.close();
+});

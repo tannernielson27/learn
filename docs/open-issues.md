@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-10-06 (Sprint 13 kickoff: registration and onboarding, #355-#367 filed, ADR 0009).
+Last updated: 2026-10-07 (Sprint 13: the sign-up page, #361, in review; #357-#360 merged).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -253,11 +253,11 @@ Sprint 13 closes the account loop that password sign-in (#353, #354) left open: 
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------- | --------------------------- |
 | [#355](https://github.com/tannernielson27/learn/issues/355) | feat(db): a workspace for each self-registered teacher, and a per-account onboarding record | security, db      | To do                       |
 | [#356](https://github.com/tannernielson27/learn/issues/356) | feat(classes): a short class code a student can type to join                                | security, db, e2e | To do                       |
-| [#357](https://github.com/tannernielson27/learn/issues/357) | feat(ui): a Dialog primitive for popups                                                     | none              | To do                       |
-| [#358](https://github.com/tannernielson27/learn/issues/358) | feat(account): ask for a name, show it, and let people change it                            | security, e2e     | To do                       |
-| [#359](https://github.com/tannernielson27/learn/issues/359) | feat(auth): abuse controls for open sign-up: a CAPTCHA, a rate limit and hosted Auth checks | security          | To do                       |
+| [#357](https://github.com/tannernielson27/learn/issues/357) | feat(ui): a Dialog primitive for popups                                                     | none              | Merged (#370)               |
+| [#358](https://github.com/tannernielson27/learn/issues/358) | feat(account): ask for a name, show it, and let people change it                            | security, e2e     | Merged (#373); no migration |
+| [#359](https://github.com/tannernielson27/learn/issues/359) | feat(auth): abuse controls for open sign-up: a CAPTCHA, a rate limit and hosted Auth checks | security          | Merged (#371, #372)         |
 | [#360](https://github.com/tannernielson27/learn/issues/360) | feat(email): a welcome email that confirms the address of a new account                     | security          | Merged (#374); no migration |
-| [#361](https://github.com/tannernielson27/learn/issues/361) | feat(auth): a sign-up page for teachers and students                                        | security, e2e     | To do                       |
+| [#361](https://github.com/tannernielson27/learn/issues/361) | feat(auth): a sign-up page for teachers and students                                        | security, e2e     | In review; needs #355       |
 | [#362](https://github.com/tannernielson27/learn/issues/362) | feat(student): join a class by code, and a way forward for an account with no class         | security, e2e     | To do                       |
 | [#363](https://github.com/tannernielson27/learn/issues/363) | fix(auth): send each person to their own home after sign-in                                 | none              | To do                       |
 | [#364](https://github.com/tannernielson27/learn/issues/364) | feat(onboarding): a three-step welcome for a new teacher                                    | e2e               | To do                       |
