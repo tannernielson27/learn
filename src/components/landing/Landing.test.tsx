@@ -2,7 +2,12 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { Landing } from "./Landing";
 
-const SIGN_IN = { href: "/sign-in", label: "Sign in" };
+// What `landingEntry` gives a visitor (#366). The name is kept from when Sign in came first.
+const SIGN_IN = {
+  href: "/sign-up",
+  label: "Create an account",
+  also: { href: "/sign-in", label: "Sign in" },
+};
 
 describe("Landing (#264)", () => {
   // #269: the help pages are public, so the front page's footer points at them.
@@ -19,24 +24,28 @@ describe("Landing (#264)", () => {
     expect(headings[0]).toHaveTextContent("Live learning for the Next Generation NCLEX");
   });
 
-  it("offers Sign in and Join a live session, and nothing to sign up with", () => {
+  it("offers an account first, then Sign in and Join a live session, and no form or pricing", () => {
     render(<Landing entry={SIGN_IN} />);
-    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/sign-in");
-    expect(screen.getByRole("link", { name: "Join a live session" })).toHaveAttribute(
-      "href",
-      "/join",
-    );
-    expect(screen.queryByRole("link", { name: /sign up|register|pricing/i })).toBeNull();
+    const actions = screen.getAllByRole("link").slice(0, 3);
+    expect(actions.map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
+      ["Create an account", "/sign-up"],
+      ["Sign in", "/sign-in"],
+      ["Join a live session", "/join"],
+    ]);
+    expect(screen.queryByRole("link", { name: /pricing|contact/i })).toBeNull();
     expect(screen.queryByRole("textbox")).toBeNull();
     expect(screen.queryByRole("form")).toBeNull();
     expect(document.querySelector("form")).toBeNull();
   });
 
-  it("explains that accounts come from the owner and students come through a class invite", () => {
+  it("explains that anyone can sign up, and how teachers and students each get in", () => {
     render(<Landing entry={SIGN_IN} />);
     const access = screen.getByRole("region", { name: "How to get in" });
-    expect(access).toHaveTextContent(/instructor accounts are set up by the site's owner/i);
-    expect(access).toHaveTextContent(/class invite/i);
+    expect(access).toHaveTextContent(/anyone can create an account/i);
+    expect(access).toHaveTextContent(/workspace of their own/i);
+    expect(access).toHaveTextContent(/invite link, QR code or class code/i);
+    expect(access).toHaveTextContent(/needs no account/i);
+    expect(access).not.toHaveTextContent(/invite-only|by invitation|site's owner/i);
   });
 
   it("names who it is for and what it does", () => {

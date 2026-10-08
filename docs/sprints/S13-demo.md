@@ -11,7 +11,7 @@ Sprint 13 opens sign-up (ADR 0009). It covers:
 - a short welcome popup for a new teacher and a new student;
 - a CAPTCHA, a sign-up rate limit and hosted Auth checks in front of all of it.
 
-**Status:** code complete 2026-10-08 except the last two PRs, which are in review: #383 (landing page and wording) and this one.
+**Status:** code complete 2026-10-08. Every story is merged except this PR, which is in review.
 **Production:** https://learn-nine-alpha.vercel.app
 **Repo:** https://github.com/tannernielson27/learn
 
@@ -70,7 +70,7 @@ Things worth trying off the script:
 | #380 | #363  | Each person goes to their own home after sign-in                            | dbe1a19   |
 | #381 | #364  | A three-step welcome for a new teacher                                      | 1fbd9ea   |
 | #382 | #365  | A short welcome for a new student                                           | fbb1514   |
-| #383 | #366  | Sign-up on the landing page; the invite-only wording retired                | in review |
+| #383 | #366  | Sign-up on the landing page; the invite-only wording retired                | 36241c0   |
 | #384 | #367  | The registration walk, the security review and this demo                    | in review |
 
 ## Decisions made during the sprint

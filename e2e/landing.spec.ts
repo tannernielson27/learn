@@ -42,6 +42,21 @@ test("a visitor learns what LeaRN is and finds Sign in and Join, and no gallery"
   await expect(page.getByRole("heading", { level: 1, name: HEADLINE, exact: true })).toBeVisible();
   await expect(page).toHaveTitle("LeaRN: live learning for the Next Generation NCLEX");
 
+  // #366: sign-up is open, so an account is the first thing offered, with Sign in beside it.
+  await expect(page.getByRole("link", { name: "Create an account", exact: true })).toHaveAttribute(
+    "href",
+    "/sign-up",
+  );
+  await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute(
+    "href",
+    "/sign-in",
+  );
+  await expect(page.getByText("Anyone can create an account.")).toBeVisible();
+  await expect(page.getByText(/invite-only/i)).toHaveCount(0);
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+    "content",
+    /Sign up as a teacher or a student\.$/,
+  );
   await expect(
     page.getByRole("link", { name: "Join a live session", exact: true }),
   ).toHaveAttribute("href", "/join");
@@ -79,6 +94,13 @@ test("a visitor learns what LeaRN is and finds Sign in and Join, and no gallery"
   await page.getByRole("link", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
   await expect(page.getByRole("heading", { level: 1, name: "Sign in", exact: true })).toBeVisible();
+
+  await page.goto("/");
+  await page.getByRole("link", { name: "Create an account", exact: true }).click();
+  await expect(page).toHaveURL(/\/sign-up$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Create an account", exact: true }),
+  ).toBeVisible();
 });
 
 test("a signed-in instructor is offered their item banks instead of Sign in", async ({
