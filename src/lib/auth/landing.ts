@@ -1,7 +1,6 @@
 import type { Database } from "@/lib/supabase/database.types";
 import { STUDENT_HOME } from "@/lib/classes/classes";
 import { WELCOME_PATH } from "./accountPaths";
-import { NO_ACCESS_PATH } from "./noAccess";
 
 type OrgRole = Database["public"]["Enums"]["org_role"];
 
@@ -17,7 +16,8 @@ export interface LandingEntry {
 /**
  * The landing page's first link (#264). A visitor is offered Sign in; anyone already signed in is
  * offered their own home instead, so the page never asks a signed-in instructor to sign in again.
- * An account with no role goes where authoring would send it anyway: "No access yet" (#204).
+ * An account with no role goes to the welcome page (#362), where it joins a class or sets up a
+ * workspace.
  */
 export function landingEntry(visitor: LandingVisitor): LandingEntry {
   if (visitor.status === "signed_out") return { href: "/sign-in", label: "Sign in" };
@@ -28,7 +28,7 @@ export function landingEntry(visitor: LandingVisitor): LandingEntry {
     case "student":
       return { href: STUDENT_HOME, label: "Go to your classes" };
     default:
-      return { href: NO_ACCESS_PATH, label: "Go to your account" };
+      return { href: WELCOME_PATH, label: "Get started" };
   }
 }
 

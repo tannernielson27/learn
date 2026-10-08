@@ -13,7 +13,7 @@ export function StudentClassList({ classes }: StudentClassListProps) {
       <EmptyState
         level={2}
         heading="You are not in a class yet"
-        body="Open the invite link your instructor shares to join one."
+        body="Type your class code below, or open the invite link your instructor shares."
       />
     );
   }

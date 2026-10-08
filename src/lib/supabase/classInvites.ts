@@ -50,6 +50,20 @@ export async function joinClass(client: Client, token: string): Promise<JoinAnsw
   return data as JoinAnswer;
 }
 
+/**
+ * Joining by the class code someone typed (#362), as the caller. The database forgives case,
+ * spaces and hyphens, counts every try against the caller's own account, and answers as
+ * `join_class` does: an unknown code, a class in another workspace and a class the caller was
+ * removed from are all `invalid`, and a class they are already in is `joined`.
+ */
+export async function joinClassByCode(client: Client, code: string): Promise<JoinAnswer> {
+  const { data, error } = await client.rpc("join_class_by_code", { p_code: code });
+  if (error || typeof data !== "string" || !JOIN_ANSWERS.has(data as JoinAnswer)) {
+    return "unavailable";
+  }
+  return data as JoinAnswer;
+}
+
 export interface StudentClass {
   id: string;
   name: string;

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { joinClass, myClasses, resolveClassInvite } from "./classInvites";
+import { joinClass, joinClassByCode, myClasses, resolveClassInvite } from "./classInvites";
 
 type Reply = { data?: unknown; error?: { code?: string; message?: string } | null };
 type Client = Parameters<typeof resolveClassInvite>[0];
@@ -72,6 +72,24 @@ describe("joinClass", () => {
     expect(await joinClass(fakeRpc({ data: null, error: { code: "42501" } }).client, TOKEN)).toBe(
       "unavailable",
     );
+  });
+});
+
+describe("joinClassByCode (#362)", () => {
+  it.each(["joined", "instructor", "invalid", "rate_limited"] as const)(
+    "passes %s through, sending the code as typed for the database to read",
+    async (answer) => {
+      const fake = fakeRpc({ data: answer, error: null });
+      expect(await joinClassByCode(fake.client, "abcd-2345")).toBe(answer);
+      expect(fake.rpc).toHaveBeenCalledWith("join_class_by_code", { p_code: "abcd-2345" });
+    },
+  );
+
+  it("treats an answer it does not know, or an error, as unavailable", async () => {
+    const odd = fakeRpc({ data: "promoted", error: null }).client;
+    expect(await joinClassByCode(odd, "ABCD2345")).toBe("unavailable");
+    const refused = fakeRpc({ data: null, error: { code: "42501" } }).client;
+    expect(await joinClassByCode(refused, "ABCD2345")).toBe("unavailable");
   });
 });
 

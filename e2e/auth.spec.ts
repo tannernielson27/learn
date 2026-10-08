@@ -53,7 +53,7 @@ test("an author signs in from an emailed link, lands where they were going, then
   await expect(page).toHaveURL(/\/sign-in\?next=%2Fauthor$/);
 });
 
-test("an account with no role signs in to No access yet and cannot open authoring", async ({
+test("an account with no role lands on the welcome page and cannot open authoring", async ({
   page,
   request,
 }, testInfo) => {
@@ -72,29 +72,35 @@ test("an account with no role signs in to No access yet and cannot open authorin
   await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
   await openSignInLink(page, await latestSignInLink(request, email, since));
 
-  await expect(page).toHaveURL(/\/author\/no-access$/);
+  // #362: never "No access yet". The welcome page has both ways forward.
+  await expect(page).toHaveURL(/\/welcome$/);
   await expect(
-    page.getByRole("heading", { level: 1, name: "No access yet", exact: true }),
+    page.getByRole("heading", { level: 1, name: "Welcome to LeaRN", exact: true }),
   ).toBeVisible();
-  await expect(page.getByText(/invite link your instructor shares/)).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Class code", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Set up my workspace", exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 1, name: "Item banks", exact: true }),
   ).toHaveCount(0);
   const axe = await new AxeBuilder({ page }).analyze();
   expect(axe.violations).toEqual([]);
   await page.screenshot({
-    path: `test-results/screenshots/${testInfo.project.name}/no-access-yet.png`,
+    path: `test-results/screenshots/${testInfo.project.name}/welcome-no-role.png`,
     fullPage: true,
   });
 
-  // Every way into authoring comes back here, the home and a deep link alike.
+  // Every way into authoring comes back here: the home, a deep link, and the old address.
   for (const path of [
     "/author",
     "/author/sessions",
     "/author/banks/00000000-0000-4000-8000-000000000002",
+    "/author/no-access",
+    "/learn",
   ]) {
     await page.goto(path);
-    await expect(page).toHaveURL(/\/author\/no-access$/);
+    await expect(page).toHaveURL(/\/welcome$/);
   }
 
   await page.getByRole("main").getByRole("button", { name: "Sign out", exact: true }).click();
@@ -363,7 +369,7 @@ test("a new student signs up and lands on the welcome page, with no role yet", a
 
   // Signing up as a student gives no way into authoring.
   await page.goto("/author");
-  await expect(page).toHaveURL(/\/author\/no-access$/);
+  await expect(page).toHaveURL(/\/welcome$/);
 
   // Signed out, the welcome page asks for a sign-in and comes back.
   await page.goto("/welcome");
