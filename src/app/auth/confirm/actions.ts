@@ -2,8 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { spendConfirmLink } from "@/lib/auth/confirm";
-import { afterConfirming, markEmailConfirmed } from "@/lib/auth/emailConfirmation";
-import { confirmedDeps, signedInUserId } from "@/lib/supabase/emailConfirmed";
+import {
+  afterConfirming,
+  endEarlierAccess,
+  markEmailConfirmed,
+} from "@/lib/auth/emailConfirmation";
+import { confirmedDeps, earlierAccessDeps, signedInUserId } from "@/lib/supabase/emailConfirmed";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -26,5 +30,7 @@ export async function confirmSignIn(formData: FormData): Promise<void> {
   // A link that worked is the proof the address is theirs; one that failed proves nothing.
   if (!link.ok) redirect(link.target);
   const confirmed = await markEmailConfirmed(confirmedDeps(supabase));
+  // Confirmed from a browser that was not signed in to the account: whoever made it is shut out.
+  await endEarlierAccess(confirmed, before, earlierAccessDeps(supabase));
   redirect(afterConfirming(confirmed, before, link.target));
 }

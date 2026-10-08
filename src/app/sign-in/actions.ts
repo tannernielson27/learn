@@ -11,6 +11,7 @@ import type { ConfirmEmailState } from "@/components/auth/ConfirmEmailBanner";
 import { verifyEmailCode } from "@/lib/auth/emailCode";
 import {
   afterConfirming,
+  endEarlierAccess,
   isEmailUnconfirmed,
   markEmailConfirmed,
 } from "@/lib/auth/emailConfirmation";
@@ -27,7 +28,7 @@ import { sendWelcomeEmail } from "@/lib/auth/welcomeEmail";
 import { takeWelcomeEmail } from "@/lib/auth/welcomeLimit";
 import { getMailer } from "@/lib/email";
 import { canonicalSiteOrigin } from "@/lib/http/siteOrigin";
-import { confirmedDeps, signedInUserId } from "@/lib/supabase/emailConfirmed";
+import { confirmedDeps, earlierAccessDeps, signedInUserId } from "@/lib/supabase/emailConfirmed";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -181,6 +182,8 @@ export async function verifySignInCode(
   if (!result.ok) return { status: "error", error: result.error };
   // The code came from their inbox, which is the proof the address is theirs.
   const confirmed = await markEmailConfirmed(confirmedDeps(supabase));
+  // Confirmed from a browser that was not signed in to the account: whoever made it is shut out.
+  await endEarlierAccess(confirmed, before, earlierAccessDeps(supabase));
   // Outside any try, because redirect() works by throwing.
   redirect(afterConfirming(confirmed, before, result.next));
 }

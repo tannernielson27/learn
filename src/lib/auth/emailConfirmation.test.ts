@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   afterConfirming,
+  endEarlierAccess,
   isEmailUnconfirmed,
   markEmailConfirmed,
+  type EndEarlierAccessDeps,
   type MarkConfirmedDeps,
 } from "./emailConfirmation";
 
@@ -60,6 +62,72 @@ describe("markEmailConfirmed", () => {
     });
     await expect(markEmailConfirmed(throwing)).resolves.toBeNull();
     expect(error).toHaveBeenCalledTimes(2);
+    error.mockRestore();
+  });
+});
+
+function earlier(overrides: Partial<EndEarlierAccessDeps> = {}): EndEarlierAccessDeps {
+  return {
+    replacePassword: vi.fn(async () => ({ error: null })),
+    signOutOthers: vi.fn(async () => ({ error: null })),
+    ...overrides,
+  };
+}
+
+describe("endEarlierAccess", () => {
+  it("does nothing when no address was newly confirmed", async () => {
+    const d = earlier();
+    expect(await endEarlierAccess(null, null, d)).toBe(false);
+    expect(d.replacePassword).not.toHaveBeenCalled();
+    expect(d.signOutOthers).not.toHaveBeenCalled();
+  });
+
+  it("leaves the account alone when this browser was already signed in to it", async () => {
+    const d = earlier();
+    expect(await endEarlierAccess({ userId: "user-1" }, "user-1", d)).toBe(false);
+    expect(d.replacePassword).not.toHaveBeenCalled();
+    expect(d.signOutOthers).not.toHaveBeenCalled();
+  });
+
+  it.each([null, "someone-else"])(
+    "replaces the password and signs out every other session when this browser was signed in as %j",
+    async (before) => {
+      const d = earlier({ randomPassword: () => "a-password-nobody-knows" });
+      expect(await endEarlierAccess({ userId: "user-1" }, before, d)).toBe(true);
+      expect(d.replacePassword).toHaveBeenCalledWith("user-1", "a-password-nobody-knows");
+      expect(d.signOutOthers).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("makes a long random password of its own, different every time, that Supabase will take", async () => {
+    const d = earlier();
+    await endEarlierAccess({ userId: "user-1" }, null, d);
+    await endEarlierAccess({ userId: "user-1" }, null, d);
+    const [first, second] = vi.mocked(d.replacePassword).mock.calls.map((call) => call[1]);
+    expect(first).toMatch(/^[A-Za-z0-9_-]{40,72}$/);
+    expect(second).not.toBe(first);
+  });
+
+  it("never throws, still signs the others out when the password could not be replaced, and logs no password", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const refused = earlier({
+      replacePassword: vi.fn(async () => ({ error: { status: 500 } })),
+      randomPassword: () => "a-password-nobody-knows",
+    });
+    expect(await endEarlierAccess({ userId: "user-1" }, null, refused)).toBe(true);
+    expect(refused.signOutOthers).toHaveBeenCalledTimes(1);
+
+    const throwing = earlier({
+      replacePassword: vi.fn(async () => {
+        throw new Error("network");
+      }),
+      signOutOthers: vi.fn(async () => {
+        throw new Error("network");
+      }),
+    });
+    await expect(endEarlierAccess({ userId: "user-1" }, null, throwing)).resolves.toBe(true);
+    expect(error).toHaveBeenCalledTimes(3);
+    expect(JSON.stringify(error.mock.calls)).not.toContain("a-password-nobody-knows");
     error.mockRestore();
   });
 });

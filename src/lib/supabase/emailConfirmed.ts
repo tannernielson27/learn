@@ -1,4 +1,8 @@
-import { EMAIL_UNCONFIRMED_KEY, type MarkConfirmedDeps } from "@/lib/auth/emailConfirmation";
+import {
+  EMAIL_UNCONFIRMED_KEY,
+  type EndEarlierAccessDeps,
+  type MarkConfirmedDeps,
+} from "@/lib/auth/emailConfirmation";
 import type { createSupabaseServerClient } from "./server";
 import { createSupabaseServiceClient } from "./service";
 
@@ -28,5 +32,18 @@ export function confirmedDeps(supabase: ServerClient): MarkConfirmedDeps {
         app_metadata: { [EMAIL_UNCONFIRMED_KEY]: null },
       }),
     refresh: () => supabase.auth.refreshSession(),
+  };
+}
+
+/**
+ * `endEarlierAccess`'s two calls. The password is replaced with the service role, by the id the
+ * verified session carries; the other sessions are signed out on the cookie client, which keeps
+ * the one the link or code has just made.
+ */
+export function earlierAccessDeps(supabase: ServerClient): EndEarlierAccessDeps {
+  return {
+    replacePassword: (userId, password) =>
+      createSupabaseServiceClient().auth.admin.updateUserById(userId, { password }),
+    signOutOthers: () => supabase.auth.signOut({ scope: "others" }),
   };
 }
