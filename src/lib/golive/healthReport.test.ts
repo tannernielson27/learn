@@ -28,6 +28,7 @@ function deps(overrides: Partial<HealthDeps> = {}): HealthDeps {
   return {
     env: FULL_ENV,
     supabase: async () => ({ status: "ok", project: "abcdefghijklmnopqrst" }),
+    signUpCaptcha: () => "on",
     ...overrides,
   };
 }
@@ -107,6 +108,31 @@ describe("handleHealth", () => {
     const env = { ...FULL_ENV, DEMO_ACCOUNT_EMAIL: "d@x.test", DEMO_ACCOUNT_PASSWORD: "pw123456" };
     const body = await (await handleHealth(get(), deps({ env }))).json();
     expect(body.ready).toBe(false);
+  });
+
+  it.each([
+    ["missing", false],
+    ["misconfigured", false],
+    ["on", true],
+    ["skipped", true],
+  ] as const)(
+    "with the sign-up CAPTCHA %s, reports ready as %s and says nothing more to anyone",
+    async (state, ready) => {
+      const response = await handleHealth(get(), deps({ signUpCaptcha: () => state }));
+      const bytes = await response.text();
+      expect(JSON.parse(bytes).ready).toBe(ready);
+      expect(bytes).not.toMatch(/captcha|turnstile/i);
+    },
+  );
+
+  it("tells a caller holding CRON_SECRET how the sign-up CAPTCHA is set up", async () => {
+    for (const state of ["on", "skipped", "missing", "misconfigured"] as const) {
+      const response = await handleHealth(
+        get({ authorization: `Bearer ${TOKEN}` }),
+        deps({ signUpCaptcha: () => state }),
+      );
+      expect((await response.json()).signUpCaptcha).toBe(state);
+    }
   });
 
   it("answers 503 and not ready when Supabase does not answer", async () => {
