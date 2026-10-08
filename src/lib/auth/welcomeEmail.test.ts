@@ -54,6 +54,7 @@ describe("welcomeLink", () => {
   it.each([
     ["student", "/learn"],
     ["teacher", "/author"],
+    ["newcomer", "/welcome"],
   ] as const)("sends a %s to %s through /auth/confirm", (role, home) => {
     const link = new URL(welcomeLink("https://learn.example", role, TOKEN_HASH));
     expect(link.origin).toBe("https://learn.example");
@@ -89,6 +90,7 @@ describe("sendWelcomeEmail", () => {
   it.each([
     ["student", "/learn"],
     ["teacher", "/author"],
+    ["newcomer", "/welcome"],
   ] as const)("gives the %s link a next that passes safeNextPath unchanged", async (role, home) => {
     const d = deps();
     await sendWelcomeEmail(USER, role, d);

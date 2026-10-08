@@ -1,5 +1,6 @@
 import type { Database } from "@/lib/supabase/database.types";
 import { STUDENT_HOME } from "@/lib/classes/classes";
+import { WELCOME_PATH } from "./accountPaths";
 import { NO_ACCESS_PATH } from "./noAccess";
 
 type OrgRole = Database["public"]["Enums"]["org_role"];
@@ -29,4 +30,14 @@ export function landingEntry(visitor: LandingVisitor): LandingEntry {
     default:
       return { href: NO_ACCESS_PATH, label: "Go to your account" };
   }
+}
+
+/**
+ * Where a signed-in person belongs when a page is not for them (#361): sign-up for someone who has
+ * an account, the welcome page for someone who has a role. An account with no role belongs on the
+ * welcome page, which is where open sign-up leaves it.
+ */
+export function signedInHome(role: OrgRole | null): string {
+  if (role === "instructor" || role === "admin") return "/author";
+  return role === "student" ? STUDENT_HOME : WELCOME_PATH;
 }
