@@ -8,8 +8,9 @@ import {
   type Page,
   type TestInfo,
 } from "@playwright/test";
-import { latestSignInLink } from "./mailbox";
+import { latestSignInLink, openSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #241: a student practises a bank shared with their class, on a phone. A SATA answered wrong
 // shows its key and rationale straight away; the next item is answered; a reload keeps both. No
@@ -73,12 +74,16 @@ async function joinAsStudent(
     reducedMotion: "reduce",
   });
   const page = await context.newPage();
+  await skipWelcomes(page);
   await page.goto(invite);
   const email = `student-${label}-${testInfo.project.name}-${Date.now()}@example.test`;
   const since = new Date();
   await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await page
+    .getByRole("button", { name: "Join with an emailed link instead", exact: true })
+    .click();
   await page.getByRole("button", { name: "Email me a link to join", exact: true }).click();
-  await page.goto(await latestSignInLink(request, email, since));
+  await openSignInLink(page, await latestSignInLink(request, email, since));
   await expect(page).toHaveURL(/\/learn$/);
   return { context, page };
 }

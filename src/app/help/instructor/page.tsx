@@ -44,15 +44,26 @@ export default function InstructorGuide() {
         </p>
       </header>
 
-      <Step id="sign-in" title="Sign in">
+      <Step id="sign-in" title="Sign up and sign in">
         <p>
-          Open <Ui>Sign in</Ui>, type your email address and press <Ui>Email me a sign-in link</Ui>.
-          Open the link in that email. There is no password.
+          Open <Ui>Create an account</Ui>, choose <Ui>I teach</Ui>, and type your name, your email
+          address and a password. You are signed in at once, in a workspace of your own: the banks,
+          classes and results you make there are yours, and no other teacher can see them. An email
+          asks you to confirm your address; nothing waits on it, but it is what lets you back in if
+          you forget your password.
         </p>
         <p>
-          Accounts are by invitation. Whoever runs your LeaRN adds you as an instructor; an account
-          without that role sees “No access yet”. The form answers the same way whether or not an
-          address has an account, so if no email arrives, check the spelling with them.
+          After that, open <Ui>Sign in</Ui> and type your email address and password. If you forget
+          the password, press <Ui>Forgot your password?</Ui>, then <Ui>Email me a sign-in link</Ui>,
+          and open the link in that email. It signs you in and asks you to choose a new one. The
+          emailed link also stays available under <Ui>Sign in with an emailed link instead</Ui>, and{" "}
+          <Ui>Password</Ui> at the top of the page changes your password at any time.
+        </p>
+        <p>
+          If you teach alongside colleagues who should share one set of banks, whoever runs your
+          LeaRN can add you to their workspace instead; ask them before you sign up. The sign-in
+          form answers the same way whether or not an address has an account, so if no email
+          arrives, check the spelling.
         </p>
       </Step>
 
@@ -100,20 +111,28 @@ export default function InstructorGuide() {
       <Step id="classes" title="Make a class and invite students">
         <p>
           From the author home, open <Ui>Classes</Ui>, type a <Ui>Class name</Ui> and press{" "}
-          <Ui>Create class</Ui>. The class page shows an invite link and its QR code.
+          <Ui>Create class</Ui>. The class page shows an invite link, its QR code and an
+          eight-character class code.
         </p>
         <List>
           <li>
-            Share the link. A student opens it, types an email address and opens the sign-in link
-            that arrives. They then appear on the roster.
+            Share the link or the QR code. A student opens it, types their name and an email address
+            and chooses a password, and is in the class at once; they appear on the roster straight
+            away. An email asking them to confirm their address follows, and nothing waits on it.
+          </li>
+          <li>
+            Or read out the class code. A student who already has an account, or who signs up first
+            with <Ui>Create an account</Ui>, types it under <Ui>Join a class</Ui> and is in. It is
+            two groups of four, so it is not mistaken for a live session&apos;s code.
           </li>
           <li>
             Set the class’s time zone on the class page, so open and close times show in your local
             time.
           </li>
           <li>
-            A student you remove cannot rejoin with the link they have. To stop the link working for
-            everyone, replace it.
+            A student you remove cannot rejoin with the link or the code they have. To stop them
+            working for everyone, replace the link; that replaces the class code and the QR code
+            too.
           </li>
         </List>
       </Step>

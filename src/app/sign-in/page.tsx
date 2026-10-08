@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { DemoSignIn } from "@/components/auth/DemoSignIn";
-import { SignInForm } from "@/components/auth/SignInForm";
+import { SignInPanel } from "@/components/auth/SignInPanel";
 import { FocusHeading } from "@/components/status/FocusHeading";
+import { SIGN_UP_PATH } from "@/lib/auth/accountPaths";
 import { readDemoAccount } from "@/lib/auth/demoAccount";
 import { safeNextPath } from "@/lib/auth/nextPath";
-import { requestSignInLink, signInAsDemo } from "./actions";
+import {
+  requestSignInLink,
+  signInAsDemo,
+  signInWithEmailPassword,
+  verifySignInCode,
+} from "./actions";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -27,7 +34,23 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
         ) : (
           <h1 className={HEADING}>Sign in</h1>
         )}
-        <SignInForm action={requestSignInLink} next={next} linkError={linkError} />
+        <SignInPanel
+          passwordAction={signInWithEmailPassword}
+          linkAction={requestSignInLink}
+          codeAction={verifySignInCode}
+          next={next}
+          linkError={linkError}
+        />
+        {/* #361: sign-up is open, so the page that turns a stranger away says where to start. */}
+        <p className="mt-6 text-sm text-ink-2">
+          New here?{" "}
+          <Link
+            href={SIGN_UP_PATH}
+            className="tap-target inline-flex items-center font-medium text-accent-ink hover:underline"
+          >
+            Create an account
+          </Link>
+        </p>
         {readDemoAccount() ? <DemoSignIn action={signInAsDemo} next={next} /> : null}
       </div>
     </main>

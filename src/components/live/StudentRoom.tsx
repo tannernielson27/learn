@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Countdown } from "@/components/live/Countdown";
+import { LIVE_BUSY_LABEL, liveSubmitFailure } from "@/components/live/liveSubmit";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 // Module by module rather than through `@/lib/live` and `@/lib/liveSupabase`: those barrels
 // value-export the in-memory room and the host console, both of which hold items with their keys
@@ -334,10 +335,13 @@ export function StudentRoom({
           <ItemPlayer
             key={`${item.id}:sent`}
             item={item}
-            initialMode="feedback"
+            // Review, not feedback: the answer has been scored on the server, but the key stays
+            // there until the host reveals it, and with nothing to mark against a feedback render
+            // would draw a right choice as wrong.
+            initialMode="review"
             initialResponse={answered.response}
             progress={progress}
-            // Feedback mode offers no Submit, so this is never reached. It is here because the
+            // Review mode offers no Submit, so this is never reached. It is here because the
             // player's one way to have an answer checked is a handler, and a sent answer has
             // already been checked — on the server, where the key is.
             submit={refuseSecondAnswer}
@@ -353,6 +357,8 @@ export function StudentRoom({
             onResponseChange={(response) => setDraft({ itemId: item.id, response })}
             progress={progress}
             submit={send}
+            busyLabel={LIVE_BUSY_LABEL}
+            failureMessage={liveSubmitFailure}
           />
         </div>
       ) : (

@@ -159,6 +159,8 @@ test("a live SATA and a case-study step reach the phone keyless until the reveal
   );
   expectKeyless(late, [SATA_RATIONALE], LIVE_KEY_MARKERS);
   await page.getByRole("button", { name: "End session", exact: true }).click();
+  // It asks first; the second press is the one in the question.
+  await page.getByRole("button", { name: "End session", exact: true }).click();
   await expect(phone.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
 
   // Step 1 of the seeded case study, on the same phone, which joining replaces the room of.
@@ -185,6 +187,8 @@ test("a live SATA and a case-study step reach the phone keyless until the reveal
   expect(stepAfter).toContain(CASE_STEP_1_RATIONALE);
   expect(stepAfter).toContain('"answerKey"');
 
+  await page.getByRole("button", { name: "End session", exact: true }).click();
+  // It asks first; the second press is the one in the question.
   await page.getByRole("button", { name: "End session", exact: true }).click();
   await expect(phone.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
   await context.close();

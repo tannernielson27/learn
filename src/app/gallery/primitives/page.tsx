@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/Button";
 import { Surface } from "@/components/ui/Surface";
 import { PrimitivesDemo } from "./demo";
+import { DialogDemo } from "./dialog-demo";
 
 export default function PrimitivesPage() {
   return (
@@ -42,6 +43,8 @@ export default function PrimitivesPage() {
           </Surface>
         </div>
       </section>
+
+      <DialogDemo />
     </article>
   );
 }

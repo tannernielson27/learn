@@ -168,6 +168,7 @@ export type Database = {
           org_id: string;
           points: number | null;
           response: Json;
+          reveal: Json | null;
           saved_at: string;
         };
         Insert: {
@@ -180,6 +181,7 @@ export type Database = {
           org_id: string;
           points?: number | null;
           response: Json;
+          reveal?: Json | null;
           saved_at?: string;
         };
         Update: {
@@ -192,6 +194,7 @@ export type Database = {
           org_id?: string;
           points?: number | null;
           response?: Json;
+          reveal?: Json | null;
           saved_at?: string;
         };
         Relationships: [
@@ -474,6 +477,7 @@ export type Database = {
           created_by: string | null;
           id: string;
           invite_token: string;
+          join_code: string;
           name: string;
           org_id: string;
           time_zone: string;
@@ -484,6 +488,7 @@ export type Database = {
           created_by?: string | null;
           id?: string;
           invite_token?: string;
+          join_code?: string;
           name: string;
           org_id?: string;
           time_zone?: string;
@@ -494,6 +499,7 @@ export type Database = {
           created_by?: string | null;
           id?: string;
           invite_token?: string;
+          join_code?: string;
           name?: string;
           org_id?: string;
           time_zone?: string;
@@ -687,19 +693,25 @@ export type Database = {
       };
       orgs: {
         Row: {
+          ai_import_enabled: boolean;
           created_at: string;
           id: string;
           name: string;
+          self_registered: boolean;
         };
         Insert: {
+          ai_import_enabled?: boolean;
           created_at?: string;
           id?: string;
           name: string;
+          self_registered?: boolean;
         };
         Update: {
+          ai_import_enabled?: boolean;
           created_at?: string;
           id?: string;
           name?: string;
+          self_registered?: boolean;
         };
         Relationships: [];
       };
@@ -961,6 +973,7 @@ export type Database = {
           created_at: string;
           display_name: string | null;
           id: string;
+          onboarded_at: string | null;
           org_id: string | null;
           role: Database["public"]["Enums"]["org_role"] | null;
           updated_at: string;
@@ -969,6 +982,7 @@ export type Database = {
           created_at?: string;
           display_name?: string | null;
           id: string;
+          onboarded_at?: string | null;
           org_id?: string | null;
           role?: Database["public"]["Enums"]["org_role"] | null;
           updated_at?: string;
@@ -977,6 +991,7 @@ export type Database = {
           created_at?: string;
           display_name?: string | null;
           id?: string;
+          onboarded_at?: string | null;
           org_id?: string | null;
           role?: Database["public"]["Enums"]["org_role"] | null;
           updated_at?: string;
@@ -1057,6 +1072,7 @@ export type Database = {
           participant_id: string;
           points: number;
           response: Json;
+          reveal: Json | null;
           session_id: string;
           submitted_at: string;
         };
@@ -1072,6 +1088,7 @@ export type Database = {
           participant_id: string;
           points: number;
           response: Json;
+          reveal?: Json | null;
           session_id: string;
           submitted_at?: string;
         };
@@ -1087,6 +1104,7 @@ export type Database = {
           participant_id?: string;
           points?: number;
           response?: Json;
+          reveal?: Json | null;
           session_id?: string;
           submitted_at?: string;
         };
@@ -1350,6 +1368,7 @@ export type Database = {
         Returns: Json;
       };
       join_class: { Args: { token: string }; Returns: string };
+      join_class_by_code: { Args: { p_code: string }; Returns: string };
       join_session: {
         Args: { chosen_name: string; target_session: string };
         Returns: {
@@ -1385,6 +1404,7 @@ export type Database = {
           updated_at: string;
         }[];
       };
+      mark_onboarded: { Args: never; Returns: string };
       move_to_folder: {
         Args: {
           case_study_ids: string[];
@@ -1547,6 +1567,7 @@ export type Database = {
           participant: string;
           possible: number;
           row_groups?: Json;
+          scored_reveal?: Json;
           scoring_model: string;
           target_item: string;
           target_session: string;
@@ -1555,6 +1576,10 @@ export type Database = {
           refusal: string;
           submitted_at: string;
         }[];
+      };
+      register_instructor: {
+        Args: { p_user: string; p_workspace: string };
+        Returns: string;
       };
       release_assignment_reminders: {
         Args: { retry_in_seconds?: number; targets: string[] };

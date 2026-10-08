@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useEffect, useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DuplicateButton } from "./DuplicateButton";
 import { useItemEditorHost } from "./ItemEditorHost";
 import { GuardedLink, LeaveGuardProvider } from "./LeaveGuard";
 
@@ -84,6 +85,32 @@ describe("CaseStudyBuilder, leaving and starting", () => {
     expect(leave.getByText(/discard them and leave this case study/)).toBeInTheDocument();
     await user.click(leave.getByRole("button", { name: "Discard changes" }));
     expect(push).toHaveBeenCalledWith("/author");
+  });
+
+  it("asks before Duplicate replaces unsaved changes, and duplicates once discarded", async () => {
+    const duplicate = vi.fn(async () => ({ status: "idle" as const }));
+    render(
+      <LeaveGuardProvider>
+        <CaseStudyBuilder
+          back={{ href: "/author/banks/bank-1", label: "Back to bank" }}
+          record={{ status: "ready", panel: <FakeEditor label="Record field" /> }}
+          steps={steps}
+          readyLabel="1 of 6 steps ready"
+        >
+          <DuplicateButton action={duplicate} label="Duplicate case study" />
+        </CaseStudyBuilder>
+      </LeaveGuardProvider>,
+    );
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Record field"), "typed");
+    await user.click(screen.getByRole("button", { name: "Duplicate case study" }));
+    expect(duplicate).not.toHaveBeenCalled();
+    const leave = within(
+      screen.getByRole("alertdialog", { name: "The record has unsaved changes" }),
+    );
+    await user.click(leave.getByRole("button", { name: "Discard changes" }));
+    expect(duplicate).toHaveBeenCalledTimes(1);
+    expect(push).not.toHaveBeenCalled();
   });
 
   it("leaves without asking when nothing is unsaved", async () => {

@@ -24,7 +24,10 @@ import { removeStudent, renameClass, rotateInvite, setTimeZone } from "../action
 
 export const metadata: Metadata = { title: "Class" };
 
-/** One class: its name, its invite link and QR code, its roster (#205) and its time zone (#242). */
+/**
+ * One class: its name, its invite link and QR code, its roster (#205), its time zone (#242) and its
+ * class code (#356).
+ */
 export default async function ClassPage({ params }: PageProps<"/author/classes/[classId]">) {
   const { classId } = await params;
   const { supabase } = await requireAuthor(classPath(classId));
@@ -56,11 +59,12 @@ export default async function ClassPage({ params }: PageProps<"/author/classes/[
           Invite students
         </h2>
         <p className="mb-4 max-w-prose text-ink-2">
-          Anyone with this link can join the class as a student with their email address. Share it
-          with your class only.
+          Anyone with this link or class code can join the class as a student. Share them with your
+          class only.
         </p>
         <InviteLinkPanel
           url={url}
+          code={detail.joinCode}
           classTitle={detail.name}
           rotateAction={rotateInvite.bind(null, detail.id)}
         />

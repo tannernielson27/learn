@@ -54,6 +54,9 @@ export function PrimitivesDemo() {
         <div className="mt-3">
           <SegmentedControl
             label="Matrix row"
+            // Three long labels are wider than a 375px phone: scroll inside the control rather than
+            // widen the page. The padding, cancelled by the margin, keeps the focus ring unclipped.
+            className="-m-1 max-w-full overflow-x-auto p-1"
             options={COLUMNS}
             value={column}
             onChange={setColumn}

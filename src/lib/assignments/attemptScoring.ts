@@ -12,7 +12,7 @@
  */
 import { maxPoints } from "@/lib/ngn/scoring";
 import type { Item } from "@/lib/ngn/schemas";
-import { parseSubmission, scoreSubmission } from "@/lib/ngn/submit";
+import { parseSubmission, revealOf, scoreSubmission, type Reveal } from "@/lib/ngn/submit";
 import type { ScoreResult } from "@/lib/ngn/types";
 
 /** One item of an assignment's set: its row id (what `attempt_responses.item_id` holds) and itself. */
@@ -29,6 +29,12 @@ export interface AttemptMark {
   model: string;
   breakdown: unknown[];
   groups: unknown[] | null;
+  /**
+   * The key, rationale and scoring this mark was computed against, stored with it so the results
+   * page draws the marks against the same key after an author's edit. Server to database only:
+   * `attempt_responses.reveal` is granted to no student, and #210's read hands it back after close.
+   */
+  reveal: Reveal;
 }
 
 export interface AttemptScore {
@@ -62,6 +68,7 @@ function markOf(entry: SetItem, saved: unknown): AttemptMark {
     model: score === null ? entry.item.scoring.model : score.model,
     breakdown: score === null ? [] : [...score.breakdown],
     groups: score?.groups ? [...score.groups] : null,
+    reveal: revealOf(entry.item),
   };
 }
 

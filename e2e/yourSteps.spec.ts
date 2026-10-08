@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { latestSignInLink } from "./mailbox";
+import { latestSignInLink, openSignInLink } from "./mailbox";
 import {
   accessTokenFor,
   insertAsAdmin,
@@ -9,6 +9,7 @@ import {
   selectAsAdmin,
   signInAsNewAuthor,
 } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #273: the student home's "Your steps" (#239, #241) on a real page, against seeded marks: ranked
 // steps weakest first, a step under five items reads "Not enough answers yet", and a step with
@@ -166,12 +167,16 @@ test("Your steps ranks the weakest step first and counts assignments and practic
   const { viewport, isMobile, hasTouch } = testInfo.project.use;
   const phone = await browser.newContext({ viewport, isMobile, hasTouch, reducedMotion: "reduce" });
   const student = await phone.newPage();
+  await skipWelcomes(student);
   await student.goto(klass.invite);
   const email = `student-steps-${project}-${Date.now()}@example.test`;
   const since = new Date();
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await student
+    .getByRole("button", { name: "Join with an emailed link instead", exact: true })
+    .click();
   await student.getByRole("button", { name: "Email me a link to join", exact: true }).click();
-  await student.goto(await latestSignInLink(request, email, since));
+  await openSignInLink(student, await latestSignInLink(request, email, since));
   await expect(student).toHaveURL(/\/learn$/);
   const [member] = await selectAsAdmin<{ profile_id: string }>(
     request,

@@ -89,6 +89,11 @@ export function CaseStudyPlayer<T extends PlayableItem>({
   const [finished, setFinished] = useState(false);
   const [playing, setPlaying] = useState(caseStudy.id);
   const [reviewing, setReviewing] = useState(false);
+  // A step's answer is out being checked. Leaving the step unmounts its player, which then drops
+  // the score when it lands (`ItemPlayer`'s `live` guard): the answer is recorded on the server
+  // but the step reopens unanswered, and a second submit is refused. So the way off the step is
+  // held until the check comes back, which is the moment the player is waiting for too.
+  const [checking, setChecking] = useState(false);
   const step = useRef<HTMLDivElement>(null);
   // Set by every move the student makes, so focus lands on the step once it has been rendered.
   // Never set on first render: opening the case study must not take focus from the page.
@@ -148,6 +153,14 @@ export function CaseStudyPlayer<T extends PlayableItem>({
   // Picking the step already open changes no index, but closing the list still runs the effect.
   const jumpTo = (id: string) => goTo(Number(id));
 
+  const submitStep = (step: T) => {
+    const submit = submitFor(step);
+    return (response: AnyResponse) => {
+      setChecking(true);
+      return submit(response).finally(() => setChecking(false));
+    };
+  };
+
   return (
     <RecordLayout record={caseStudy.ehr}>
       <div>
@@ -155,12 +168,12 @@ export function CaseStudyPlayer<T extends PlayableItem>({
           <StepIndicator step={index + 1} total={total} />
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {index > 0 ? (
-              <Button size="sm" variant="ghost" onClick={() => goTo(index - 1)}>
+              <Button size="sm" variant="ghost" disabled={checking} onClick={() => goTo(index - 1)}>
                 Back
               </Button>
             ) : null}
             {finished && !onResults ? (
-              <Button size="sm" variant="ghost" onClick={() => goTo(total)}>
+              <Button size="sm" variant="ghost" disabled={checking} onClick={() => goTo(total)}>
                 Results
               </Button>
             ) : null}
@@ -175,6 +188,7 @@ export function CaseStudyPlayer<T extends PlayableItem>({
               size="sm"
               variant="ghost"
               className="ml-auto"
+              disabled={checking}
               aria-expanded={reviewing}
               onClick={() => setReviewing((open) => !open)}
             >
@@ -215,7 +229,7 @@ export function CaseStudyPlayer<T extends PlayableItem>({
             <ItemPlayer
               key={item.id}
               item={item}
-              submit={submitFor(item)}
+              submit={submitStep(item)}
               initialResponse={current?.response}
               initialReveal={current?.reveal}
               initialKey={current?.keyOnly}

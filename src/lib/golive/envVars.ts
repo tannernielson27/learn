@@ -12,6 +12,7 @@ export const REQUIRED_ENV = [
   { name: "SUPABASE_JWT_SIGNING_KEY", docs: "§7.3 step 6" },
   { name: "RESEND_API_KEY", docs: "§7.7 step 6" },
   { name: "EMAIL_FROM", docs: "§7.7 step 6" },
+  { name: "SITE_URL", docs: "§7.7 step 6" },
   { name: "CRON_SECRET", docs: "§7.8 step 2" },
   { name: "SENTRY_DSN", docs: "§7.9 step 5" },
   { name: "NEXT_PUBLIC_SENTRY_DSN", docs: "§7.9 step 5" },

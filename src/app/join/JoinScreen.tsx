@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { JoinForm } from "@/components/live/JoinForm";
+import { WELCOME_PATH } from "@/lib/auth/accountPaths";
 import { joinLiveSession } from "./actions";
 
 export interface JoinScreenProps {
@@ -20,6 +22,18 @@ export function JoinScreen({ code }: JoinScreenProps) {
           No account needed. Enter the code on the screen and the name the class should see.
         </p>
         <JoinForm action={joinLiveSession} code={code} />
+        {/* #362: a class code (two groups of four) is not a session code (two of three), and a
+            student holding one is in the wrong place. The welcome page sends each person on. */}
+        <p className="mt-8 text-sm text-ink-2">
+          Have a class code from your instructor, like ABCD-2345? That joins a class, not a live
+          session.{" "}
+          <Link
+            href={WELCOME_PATH}
+            className="tap-target inline-flex items-center font-medium text-accent-ink hover:underline"
+          >
+            Join your class
+          </Link>
+        </p>
       </div>
     </main>
   );

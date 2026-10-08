@@ -20,6 +20,13 @@ export interface ItemEditorHost {
    * opened with counts as unsaved changes. Read once, when the editor mounts.
    */
   savedValues?: unknown;
+  /**
+   * The item is published, so saving a draft would take it out of sessions, assignments and
+   * practice. Only a standalone item's page says; a case study's step does not.
+   */
+  published?: boolean;
+  /** Told when a save makes the item a draft, or a publish makes it published. */
+  onPublishedChange?: (published: boolean) => void;
 }
 
 const STANDALONE: ItemEditorHost = { inCaseStudy: false };

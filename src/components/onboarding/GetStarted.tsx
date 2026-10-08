@@ -8,6 +8,9 @@ export interface GetStartedProps {
   hide: () => Promise<void>;
 }
 
+/** The checklist's heading, which the teacher welcome moves focus to when it closes (#364). */
+export const GET_STARTED_HEADING_ID = "get-started-heading";
+
 const LINK =
   "tap-target inline-flex items-center text-sm font-medium text-accent-ink underline-offset-2 hover:underline";
 
@@ -20,11 +23,16 @@ export function GetStarted({ steps, importSample, hide }: GetStartedProps) {
   const done = steps.filter((step) => step.done).length;
   return (
     <section
-      aria-labelledby="get-started-heading"
+      aria-labelledby={GET_STARTED_HEADING_ID}
       className="mb-8 rounded-md border border-line bg-surface-1 px-4 py-4 sm:px-6"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 id="get-started-heading" className="font-read text-xl text-ink-1">
+        {/* Focusable from script, not a tab stop: the teacher welcome (#364) hands focus here. */}
+        <h2
+          id={GET_STARTED_HEADING_ID}
+          tabIndex={-1}
+          className="font-read text-xl text-ink-1 outline-none"
+        >
           Get started
         </h2>
         <p className="text-sm text-ink-2">

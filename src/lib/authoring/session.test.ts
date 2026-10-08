@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * The server-side author check (#204). Since sign-up is invite-only, a signed-in account with no
+ * The server-side author check (#204). A new account starts with no role, so a signed-in account with no
  * role is the ordinary case, not an edge: it must be refused here even though RLS would show it
  * nothing anyway, so the UI agrees with the database.
  */
@@ -70,9 +70,9 @@ describe("authorForRoute", () => {
 });
 
 describe("requireAuthor", () => {
-  it("sends an account with no role to No access yet", async () => {
+  it("sends an account with no role to the welcome page (#362)", async () => {
     profile = { org_id: null, role: null };
-    await expect(requireAuthor("/author")).rejects.toThrow("redirect:/author/no-access");
+    await expect(requireAuthor("/author")).rejects.toThrow("redirect:/welcome");
   });
 
   it("sends a student to the student home, not No access yet (#205)", async () => {

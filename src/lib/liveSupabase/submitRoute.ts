@@ -18,6 +18,7 @@ import { SUBMIT_ERRORS, parseSubmission, scoreSubmission } from "@/lib/ngn/submi
 import { fromItemRow } from "@/lib/supabase/itemRows";
 import type { Json } from "@/lib/supabase/database.types";
 import { LIVE_ROUTE_ERRORS, asRefusal, fail, refuse, type LiveRouteDeps } from "./routeDeps";
+import { isBeforeRevealMigration } from "./scoredReveal";
 import { NO_STORE_HEADERS, type SubmitAckPayload } from "./wire";
 
 const ITEM_COLUMNS = "type, cjmm_step, tags, version, content, answer_key, rationale, scoring";
@@ -100,20 +101,33 @@ export async function submitSessionResponse(
   }
 
   // The key, the rationale and the scoring come back with the score and stay in this function.
-  const scored = scoreSubmission(stored.value, parsed.response);
+  const { score, ...reveal } = scoreSubmission(stored.value, parsed.response);
 
-  const { data: written, error: writeError } = await deps.service.rpc("record_session_response", {
+  const args = {
     target_session: participant.sessionId,
     participant: participant.participantId,
     at_position: opening.item_position,
     target_item: opening.item_id,
     answer: parsed.response as unknown as Json,
-    earned: scored.score.points,
-    possible: scored.score.maxPoints,
-    scoring_model: scored.score.model,
-    marks: scored.score.breakdown as unknown as Json,
-    row_groups: (scored.score.groups ?? null) as unknown as Json,
+    earned: score.points,
+    possible: score.maxPoints,
+    scoring_model: score.model,
+    marks: score.breakdown as unknown as Json,
+    row_groups: (score.groups ?? null) as unknown as Json,
+  };
+  // The key the marks were computed from is written beside them, so the reveal draws them against
+  // it even if the author edits the item before then. A database without the column yet (the
+  // migration is pushed after the deploy) takes the answer without it; see `scoredReveal.ts`.
+  let { data: written, error: writeError } = await deps.service.rpc("record_session_response", {
+    ...args,
+    scored_reveal: reveal as unknown as Json,
   });
+  if (isBeforeRevealMigration(writeError)) {
+    ({ data: written, error: writeError } = await deps.service.rpc(
+      "record_session_response",
+      args,
+    ));
+  }
   if (writeError) return fail(500, LIVE_ROUTE_ERRORS.failed);
   const record = written?.[0];
   if (!record) return fail(500, LIVE_ROUTE_ERRORS.failed);

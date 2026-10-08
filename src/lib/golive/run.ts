@@ -13,6 +13,7 @@ import {
   sweepJobCheck,
   type HealthReading,
 } from "./checks.ts";
+import { AUTH_CHECK_TITLES, authConfigChecks, readAuthConfig } from "./authConfig.ts";
 import {
   probeExposedSchemas,
   readAppliedMigrations,
@@ -38,6 +39,11 @@ export interface GoLiveOptions {
   healthToken: string | null;
   /** Versions from `supabase/migrations`. */
   repoMigrations: readonly string[];
+  /**
+   * The hosted project and a Management API token (`SUPABASE_ACCESS_TOKEN`), to check the Auth
+   * URLs and template (#307). Null keeps those lines manual.
+   */
+  authConfig: { ref: string; token: string } | null;
 }
 
 export interface GoLiveDeps {
@@ -103,6 +109,26 @@ function schemasStep(options: GoLiveOptions, deps: GoLiveDeps): () => Promise<Ch
     );
 }
 
+const AUTH_HINT =
+  "Is SUPABASE_ACCESS_TOKEN a current personal access token (supabase.com/dashboard/account/tokens)?";
+
+/**
+ * The Auth URLs and template lines (#307). One read feeds both, so a read that fails fails both
+ * lines rather than printing one and silently dropping the other.
+ */
+async function authConfigStep(
+  fetchImpl: FetchLike,
+  auth: { ref: string; token: string },
+  siteUrl: string,
+): Promise<CheckResult[]> {
+  try {
+    return authConfigChecks(await readAuthConfig(fetchImpl, auth.ref, auth.token), siteUrl);
+  } catch (error) {
+    const detail = `could not read the Auth config: ${redact(error)}. ${AUTH_HINT}`;
+    return AUTH_CHECK_TITLES.map(({ id, title }) => ({ id, title, status: "fail", detail }));
+  }
+}
+
 /** One check at a time, in the order the report prints them: no burst of CLI processes. */
 export async function runGoLiveCheck(
   options: GoLiveOptions,
@@ -155,7 +181,11 @@ export async function runGoLiveCheck(
         async () => backupCheck(await readLatestBackup(deps.gh), deps.now()),
       ),
   ];
+  const auth = options.authConfig;
+  const authStep = auth ? [() => authConfigStep(deps.fetch, auth, options.siteUrl)] : [];
   const results: CheckResult[] = [];
-  for (const step of steps) results.push(...(await step()));
-  return [...results, ...MANUAL_STEPS];
+  for (const step of [...steps, ...authStep]) results.push(...(await step()));
+  // A step that ran replaces its manual line.
+  const ran = new Set(results.map((result) => result.id));
+  return [...results, ...MANUAL_STEPS.filter((step) => !ran.has(step.id))];
 }

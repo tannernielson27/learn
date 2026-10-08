@@ -21,6 +21,11 @@ export interface ResultMark {
   model: string | null;
   breakdown: unknown;
   groups: unknown;
+  /**
+   * The key, rationale and scoring the mark was computed against, unparsed. Null for a mark
+   * recorded before the column existed (and on a database the migration has not reached).
+   */
+  reveal: unknown;
 }
 
 export interface ResultAttempt {
@@ -76,6 +81,7 @@ function toMarks(value: Json | null | undefined): ResultMark[] | null {
         model: typeof entry.model === "string" ? entry.model : null,
         breakdown: entry.breakdown ?? null,
         groups: entry.groups ?? null,
+        reveal: entry.reveal ?? null,
       },
     ];
   });

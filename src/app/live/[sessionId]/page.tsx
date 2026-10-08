@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { HostLobby } from "@/components/live/HostLobby";
+import { SessionQrCode } from "@/components/live/SessionQrCode";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { joinUrl } from "@/lib/live/routes";
@@ -47,6 +48,15 @@ export default async function LiveSessionPage({ params }: PageProps<"/live/[sess
         title={session.title}
         code={session.code}
         studentUrl={studentUrl}
+        // Drawn here, on the server, and handed over as markup, so the encoder stays out of the
+        // console's bundle (#297).
+        qrCode={
+          <SessionQrCode
+            url={studentUrl}
+            label="QR code that opens the join page for this session"
+            className="mx-auto mt-6 block h-auto w-40 rounded-sm border border-line sm:w-48"
+          />
+        }
         caseStudy={session.caseStudy}
         initial={pacedState(
           {

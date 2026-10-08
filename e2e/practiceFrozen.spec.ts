@@ -1,7 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { bytesOf, capturedBytes, expectKeyless } from "./bytes";
-import { latestSignInLink } from "./mailbox";
+import { latestSignInLink, openSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor, updateAsAdmin } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #271: a practice run freezes its items when it starts. The student opens a bank of two items on
 // a phone; the instructor then unpublishes the second and saves a new key and rationale over it.
@@ -101,12 +102,16 @@ test("a practice run keeps an item the instructor unpublishes mid-run, with the 
   const { viewport, isMobile, hasTouch } = testInfo.project.use;
   const phone = await browser.newContext({ viewport, isMobile, hasTouch, reducedMotion: "reduce" });
   const student = await phone.newPage();
+  await skipWelcomes(student);
   await student.goto(klass.invite);
   const email = `student-freeze-${project}-${Date.now()}@example.test`;
   const since = new Date();
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await student
+    .getByRole("button", { name: "Join with an emailed link instead", exact: true })
+    .click();
   await student.getByRole("button", { name: "Email me a link to join", exact: true }).click();
-  await student.goto(await latestSignInLink(request, email, since));
+  await openSignInLink(student, await latestSignInLink(request, email, since));
   await expect(student).toHaveURL(/\/learn$/);
   const practicePath = `/learn/practice/${bank.id}`;
   await student.goto(practicePath);

@@ -9,8 +9,9 @@ import {
   type TestInfo,
 } from "@playwright/test";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
-import { latestSignInLink } from "./mailbox";
+import { latestSignInLink, openSignInLink } from "./mailbox";
 import { createInstructorInEmptyOrg, selectAsAdmin } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #274: Demo 12, rehearsed by a machine. An outside instructor onboards cold and runs a class
 // without help: the landing page, sign in, Get started, the sample, a class, a student through the
@@ -106,10 +107,13 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   await expect(page.getByRole("heading", { level: 1, name: "Sign in", exact: true })).toBeVisible();
   const since = new Date();
   await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await page
+    .getByRole("button", { name: "Sign in with an emailed link instead", exact: true })
+    .click();
   await page.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
   await shoot(page, testInfo, "2-check-email");
-  await page.goto(await latestSignInLink(request, email, since));
+  await openSignInLink(page, await latestSignInLink(request, email, since));
   await expect(page).toHaveURL(/\/author$/);
 
   // 3. Get started shows three steps, none done; the sample comes in published.
@@ -148,15 +152,19 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   // 4. A student opens the invite on their own phone, signs in by email, lands on their home.
   const studentPhone = await phoneContext(browser, testInfo);
   const student = await studentPhone.newPage();
+  await skipWelcomes(student);
   await student.goto(invite);
   const studentEmail = `student-demo12-${project}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.test`;
   const studentSince = new Date();
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(studentEmail);
+  await student
+    .getByRole("button", { name: "Join with an emailed link instead", exact: true })
+    .click();
   await student.getByRole("button", { name: "Email me a link to join", exact: true }).click();
   await expect(
     student.getByRole("heading", { name: "Check your email", exact: true }),
   ).toBeVisible();
-  await student.goto(await latestSignInLink(request, studentEmail, studentSince));
+  await openSignInLink(student, await latestSignInLink(request, studentEmail, studentSince));
   await expect(student).toHaveURL(/\/learn$/);
   await expect(student.getByRole("list", { name: "Your classes", exact: true })).toContainText(
     className,
@@ -188,6 +196,7 @@ test("an outside instructor onboards cold and runs a live session a phone answer
 
   const liveContext = await phoneContext(browser, testInfo);
   const phone = await liveContext.newPage();
+  await skipWelcomes(phone);
   await phone.goto("/");
   await phone.getByRole("link", { name: "Join a live session", exact: true }).click();
   await phone.getByRole("textbox", { name: "Session code", exact: true }).fill(code);
@@ -245,6 +254,8 @@ test("an outside instructor onboards cold and runs a live session a phone answer
     { timeout: 15_000 },
   );
   await shoot(phone, testInfo, "10-phone-score");
+  await page.getByRole("button", { name: "End session", exact: true }).click();
+  // It asks first; the second press is the one in the question.
   await page.getByRole("button", { name: "End session", exact: true }).click();
   await expect(phone.getByText("This session has ended.", { exact: true })).toBeVisible({
     timeout: 15_000,

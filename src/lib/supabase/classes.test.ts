@@ -40,7 +40,7 @@ function fakeRpc(reply: Reply) {
 }
 
 describe("listClasses", () => {
-  it("lists the org's classes with a member count, never a token", async () => {
+  it("lists the org's classes with a member count, never a token or a code", async () => {
     const fake = fakeQuery({
       data: [{ id: CLASS_ID, name: "NUR 310", class_members: [{ count: 3 }] }],
       error: null,
@@ -51,6 +51,7 @@ describe("listClasses", () => {
     expect(fake.from).toHaveBeenCalledWith("classes");
     const selected = fake.calls.find(([step]) => step === "select")?.[1][0];
     expect(selected).not.toContain("invite_token");
+    expect(selected).not.toContain("join_code");
   });
 
   it("returns null when the list cannot be read", async () => {
@@ -59,17 +60,24 @@ describe("listClasses", () => {
 });
 
 describe("readClass", () => {
-  it("reads one class with its token and time zone, for the author's page", async () => {
+  it("reads one class with its token, code and time zone, for the author's page", async () => {
     const fake = fakeQuery({
-      data: { id: CLASS_ID, name: "NUR 310", invite_token: TOKEN, time_zone: "America/Denver" },
+      data: {
+        id: CLASS_ID,
+        name: "NUR 310",
+        invite_token: TOKEN,
+        join_code: "ABCD2345",
+        time_zone: "America/Denver",
+      },
     });
     expect(await readClass(fake.client, CLASS_ID)).toEqual({
       id: CLASS_ID,
       name: "NUR 310",
       inviteToken: TOKEN,
+      joinCode: "ABCD2345",
       timeZone: "America/Denver",
     });
-    expect(fake.calls[0]).toEqual(["select", ["id, name, invite_token, time_zone"]]);
+    expect(fake.calls[0]).toEqual(["select", ["id, name, invite_token, join_code, time_zone"]]);
   });
 
   it("returns null for a class the author cannot see", async () => {

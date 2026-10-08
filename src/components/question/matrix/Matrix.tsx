@@ -65,8 +65,15 @@ function labelledBy(rowId: string, columnId: string, feedbackId: string, state: 
 }
 
 export function RowScoreMark({ score }: { score: RowScore }) {
+  // Coloured as the score panel's verdict; the numbers themselves carry the meaning.
+  const tone =
+    score.maxPoints > 0 && score.points >= score.maxPoints
+      ? "text-correct"
+      : score.points > 0
+        ? "text-ink-1"
+        : "text-incorrect";
   return (
-    <span className="ml-2 font-mono text-xs whitespace-nowrap text-ink-2 tabular">
+    <span className={`ml-2 font-mono text-xs whitespace-nowrap tabular ${tone}`}>
       <span className="sr-only">Row score </span>
       {score.points}/{score.maxPoints}
     </span>

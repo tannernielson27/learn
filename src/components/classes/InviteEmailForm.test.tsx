@@ -6,6 +6,7 @@ import {
   type InviteEmailFormProps,
   type InviteLinkState,
 } from "./InviteEmailForm";
+import type { EmailCodeFormProps } from "@/components/auth/EmailCodeForm";
 import { INVITE_UNAVAILABLE_HEADING } from "./InviteUnavailable";
 
 function setup(result: InviteLinkState) {
@@ -54,5 +55,32 @@ describe("InviteEmailForm", () => {
       await screen.findByRole("heading", { name: INVITE_UNAVAILABLE_HEADING }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  });
+});
+
+describe("InviteEmailForm with a code action (#306)", () => {
+  it("offers the email's code under Check your email, returning to the invite page", async () => {
+    const action = vi.fn<InviteEmailFormProps["action"]>(async () => ({
+      status: "sent",
+      email: "a@school.edu",
+    }));
+    const codeAction = vi.fn<EmailCodeFormProps["action"]>(async () => ({ status: "idle" }));
+    render(
+      <InviteEmailForm
+        action={action}
+        classTitle="NUR 310 — Fall"
+        codeAction={codeAction}
+        codeNext="/c/tok"
+      />,
+    );
+    const user = userEvent.setup();
+    await submit(user, "a@school.edu");
+    await screen.findByRole("heading", { name: "Check your email" });
+
+    await user.type(screen.getByRole("textbox", { name: "Code from the email" }), "123456");
+    await user.click(screen.getByRole("button", { name: "Sign in with the code" }));
+    const posted = codeAction.mock.calls[0]![1];
+    expect(posted.get("email")).toBe("a@school.edu");
+    expect(posted.get("next")).toBe("/c/tok");
   });
 });

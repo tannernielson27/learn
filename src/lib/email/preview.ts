@@ -7,9 +7,15 @@ import { assignmentLink, renderReminderEmail, reminderLayout } from "@/lib/remin
 import type { ReminderContent } from "@/lib/reminders/reminderEmail";
 import { renderEmailBody } from "./layout";
 import { MAGIC_LINK_SUBJECT, magicLinkEmail } from "./templates/magicLink";
+import { renderWelcomeEmail, welcomeEmail, type WelcomeRole } from "./templates/welcome";
 
 export interface EmailPreview {
-  id: "magic-link" | "reminder-opened" | "reminder-closing-soon";
+  id:
+    | "magic-link"
+    | "welcome-student"
+    | "welcome-teacher"
+    | "reminder-opened"
+    | "reminder-closing-soon";
   name: string;
   subject: string;
   /** The layout table, escaped, for rendering inside the preview page. */
@@ -47,6 +53,23 @@ function reminderPreview(
   };
 }
 
+function welcomePreview(
+  id: EmailPreview["id"],
+  name: string,
+  role: WelcomeRole,
+  next: string,
+): EmailPreview {
+  const link = `${ORIGIN}/auth/confirm?next=${encodeURIComponent(next)}&token_hash=sample-token-hash&type=email`;
+  const rendered = renderWelcomeEmail(role, link);
+  return {
+    id,
+    name,
+    subject: rendered.subject,
+    bodyHtml: renderEmailBody(welcomeEmail(role, link)),
+    text: rendered.text,
+  };
+}
+
 export const EMAIL_PREVIEWS: readonly EmailPreview[] = [
   {
     id: "magic-link",
@@ -55,6 +78,8 @@ export const EMAIL_PREVIEWS: readonly EmailPreview[] = [
     bodyHtml: renderEmailBody(magicLinkEmail(SAMPLE_SIGN_IN_LINK)),
     text: null,
   },
+  welcomePreview("welcome-student", "Welcome, student", "student", "/learn"),
+  welcomePreview("welcome-teacher", "Welcome, teacher", "teacher", "/author"),
   reminderPreview("reminder-opened", "Assignment is open", "opened"),
   reminderPreview("reminder-closing-soon", "Assignment closes soon", "closing_soon"),
 ];

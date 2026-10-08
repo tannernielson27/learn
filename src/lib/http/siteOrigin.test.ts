@@ -54,6 +54,44 @@ describe("canonicalSiteOrigin", () => {
     );
   });
 
+  it("prefers SITE_URL in production, which Supabase's allow-list names (#304)", () => {
+    const env = {
+      VERCEL_ENV: "production",
+      SITE_URL: "https://learn.example/",
+      VERCEL_PROJECT_PRODUCTION_URL: "learn-nine-alpha.vercel.app",
+      VERCEL_URL: "learn-abc123-tanner-nielsons-projects.vercel.app",
+    };
+    expect(canonicalSiteOrigin(forged, env)).toBe("https://learn.example");
+  });
+
+  it("keeps only the origin of SITE_URL, so a stray path cannot reach a link", () => {
+    const env = { VERCEL_ENV: "production", SITE_URL: " https://learn.example/auth/confirm?x=1 " };
+    expect(canonicalSiteOrigin(forged, env)).toBe("https://learn.example");
+  });
+
+  it.each(["learn.example", "http://learn.example", "not a url", ""])(
+    "ignores a SITE_URL that is not an https URL (%j) and uses Vercel's domain",
+    (SITE_URL) => {
+      const env = {
+        VERCEL_ENV: "production",
+        SITE_URL,
+        VERCEL_PROJECT_PRODUCTION_URL: "learn-nine-alpha.vercel.app",
+      };
+      expect(canonicalSiteOrigin(forged, env)).toBe("https://learn-nine-alpha.vercel.app");
+    },
+  );
+
+  it("ignores SITE_URL on a preview, whose links stay on the preview", () => {
+    const env = {
+      VERCEL_ENV: "preview",
+      SITE_URL: "https://learn.example",
+      VERCEL_URL: "learn-abc123-tanner-nielsons-projects.vercel.app",
+    };
+    expect(canonicalSiteOrigin(forged, env)).toBe(
+      "https://learn-abc123-tanner-nielsons-projects.vercel.app",
+    );
+  });
+
   it("falls back to the request only off Vercel, as in local development", () => {
     const local = new Headers({ host: "localhost:3000" });
     expect(canonicalSiteOrigin(local, {})).toBe("http://localhost:3000");

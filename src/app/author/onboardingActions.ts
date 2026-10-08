@@ -34,3 +34,19 @@ export async function hideGetStarted(): Promise<void> {
   });
   revalidatePath("/author");
 }
+
+/**
+ * Records that the signed-in teacher has seen the welcome (#364), so it never shows again on any
+ * device. `mark_onboarded` stamps the caller's own profile and nobody else's, and a second call
+ * changes nothing. A failure is logged and not shown: the welcome is already closed, and the only
+ * cost is that it shows once more.
+ */
+export async function markOnboarded(): Promise<void> {
+  const { supabase } = await requireAuthor("/author");
+  const { error } = await supabase.rpc("mark_onboarded");
+  if (error) {
+    console.error("[onboarding] the welcome could not be recorded as seen", { code: error.code });
+    return;
+  }
+  revalidatePath("/author");
+}

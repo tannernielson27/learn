@@ -3,7 +3,8 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { BankList } from "@/components/authoring/BankList";
 import { CreateBankForm } from "@/components/authoring/CreateBankForm";
-import { GetStarted } from "@/components/onboarding/GetStarted";
+import { GET_STARTED_HEADING_ID, GetStarted } from "@/components/onboarding/GetStarted";
+import { TeacherWelcome } from "@/components/onboarding/TeacherWelcome";
 import { listBanks } from "@/lib/authoring/banks";
 import { requireAuthor } from "@/lib/authoring/session";
 import { CLASSES_PATH } from "@/lib/classes/classes";
@@ -14,10 +15,15 @@ import {
   showChecklist,
 } from "@/lib/onboarding/checklist";
 import { readOrgProgress } from "@/lib/onboarding/progress";
+import {
+  readTeacherWelcomeState,
+  showTeacherWelcome,
+  teacherWelcomeSteps,
+} from "@/lib/onboarding/teacherWelcome";
 import { listSharedClassNamesByBank } from "@/lib/supabase/practiceShares";
 import { SESSIONS_PATH } from "@/lib/live/reportFormat";
 import { createBank } from "./actions";
-import { hideGetStarted, importSample } from "./onboardingActions";
+import { hideGetStarted, importSample, markOnboarded } from "./onboardingActions";
 
 export const metadata: Metadata = { title: "Item banks" };
 
@@ -30,7 +36,11 @@ export default async function AuthorHomePage() {
   ]);
   // Get started (#265): hidden on this browser, or worked out from the org's own rows.
   const hidden = hiddenFor((await cookies()).get(GET_STARTED_COOKIE)?.value, userId);
-  const progress = hidden ? null : await readOrgProgress(supabase, orgId, banks);
+  // The welcome (#364) is read alongside: shown once, to a teacher in a workspace they signed up for.
+  const [progress, welcome] = await Promise.all([
+    hidden ? null : readOrgProgress(supabase, orgId, banks),
+    readTeacherWelcomeState(supabase, userId, orgId),
+  ]);
   const steps = progress ? checklistSteps(progress) : [];
 
   return (
@@ -55,6 +65,13 @@ export default async function AuthorHomePage() {
       {/* After the h1, so the heading outline reads Item banks, then Get started. */}
       {showChecklist(steps, hidden) ? (
         <GetStarted steps={steps} importSample={importSample} hide={hideGetStarted} />
+      ) : null}
+      {welcome && showTeacherWelcome(welcome) ? (
+        <TeacherWelcome
+          steps={teacherWelcomeSteps(welcome.displayName)}
+          onDone={markOnboarded}
+          focusAfter={GET_STARTED_HEADING_ID}
+        />
       ) : null}
       <BankList
         banks={banks}

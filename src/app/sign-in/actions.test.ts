@@ -9,6 +9,8 @@ import {
 } from "@/lib/auth/signInRateLimit";
 import type { MemoryRateLimitStore } from "@/lib/rateLimit/testing/memoryStore";
 import { RateLimitUnavailableError } from "@/lib/rateLimit/store";
+import { EmailError, type EmailMessage } from "@/lib/email";
+import { WELCOME_SUBJECT } from "@/lib/email/templates/welcome";
 
 /**
  * The Server Functions are thin: they read the request, count it against the three limits and
@@ -30,6 +32,11 @@ const requestHeaders = new Headers({
 
 vi.mock("next/headers", () => ({ headers: async () => requestHeaders }));
 
+// #304: the link must use the same canonical origin as a class invite, never the request's.
+vi.mock("@/lib/http/siteOrigin", () => ({
+  canonicalSiteOrigin: () => "https://canonical.example",
+}));
+
 const redirected = vi.fn();
 vi.mock("next/navigation", () => ({
   redirect: (to: string) => {
@@ -41,8 +48,28 @@ vi.mock("next/navigation", () => ({
 type OtpError = { status?: number; code?: string; message?: string };
 const signInWithOtp = vi.fn(async () => ({ error: null as OtpError | null }));
 const signInWithPassword = vi.fn(async () => ({ error: null as unknown }));
+const verifyOtp = vi.fn(async () => ({ error: null as OtpError | null }));
+const getClaims = vi.fn(async () => ({ data: { claims: { sub: "user-1", app_metadata: {} } } }));
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseServerClient: async () => ({ auth: { signInWithOtp, signInWithPassword } }),
+  createSupabaseServerClient: async () => ({
+    auth: { signInWithOtp, signInWithPassword, verifyOtp, getClaims },
+  }),
+}));
+
+// #360: the banner's resend makes the link with the admin API and sends it through the app mailer.
+const generateLink = vi.fn(async () => ({
+  data: { properties: { hashed_token: "hash-360" }, user: { id: "user-1" } },
+  error: null,
+}));
+vi.mock("@/lib/supabase/service", () => ({
+  createSupabaseServiceClient: () => ({ auth: { admin: { generateLink } } }),
+}));
+const send = vi.fn<(message: EmailMessage) => Promise<{ id: string }>>(async () => ({
+  id: "m-1",
+}));
+vi.mock("@/lib/email", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/email")>()),
+  getMailer: () => ({ send }),
 }));
 
 // #234: the limiter counts in Postgres; here it counts in the in-memory fake, shared by every call.
@@ -55,7 +82,13 @@ const rateLimitStore = (
   await import("@/lib/rateLimit/postgresStore")
 ).sharedRateLimitStore() as MemoryRateLimitStore;
 
-const { requestSignInLink, signInAsDemo } = await import("./actions");
+const {
+  requestSignInLink,
+  resendConfirmation,
+  signInAsDemo,
+  signInWithEmailPassword,
+  verifySignInCode,
+} = await import("./actions");
 
 function emailForm(email: string): FormData {
   const form = new FormData();
@@ -104,6 +137,17 @@ describe("requestSignInLink", () => {
     expect(signInWithOtp).toHaveBeenCalledWith(
       expect.objectContaining({
         options: expect.objectContaining({ shouldCreateUser: false }),
+      }),
+    );
+  });
+
+  it("links back on the canonical origin, not the one the request claims (#304)", async () => {
+    await requestSignInLink({ status: "idle" }, emailForm(inbox));
+    expect(signInWithOtp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        options: expect.objectContaining({
+          emailRedirectTo: "https://canonical.example/auth/confirm?next=%2Fauthor",
+        }),
       }),
     );
   });
@@ -350,5 +394,166 @@ describe("when the shared rate limiter cannot answer (#234)", () => {
     expect(result).toEqual({ status: "sent", email: inbox });
     expect(signInWithOtp).not.toHaveBeenCalled();
     hit.mockRestore();
+  });
+});
+
+describe("verifySignInCode (#306)", () => {
+  function codeForm(email: string, code: string): FormData {
+    const form = new FormData();
+    form.set("email", email);
+    form.set("code", code);
+    form.set("next", "/c/tok");
+    return form;
+  }
+
+  it("signs in on this device with the code and follows next", async () => {
+    await expect(verifySignInCode({ status: "idle" }, codeForm(inbox, "123456"))).rejects.toThrow(
+      "redirect:/c/tok",
+    );
+    expect(verifyOtp).toHaveBeenCalledWith({ email: inbox, token: "123456", type: "email" });
+  });
+
+  it("answers a wrong code and an address with no account the same way", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    verifyOtp.mockResolvedValueOnce({ error: { status: 403, code: "otp_expired" } });
+    const wrong = await verifySignInCode({ status: "idle" }, codeForm(inbox, "000000"));
+    verifyOtp.mockResolvedValueOnce({ error: { status: 400, code: "otp_disabled" } });
+    const noAccount = await verifySignInCode(
+      { status: "idle" },
+      codeForm(newRecipient(), "111111"),
+    );
+    expect(wrong).toEqual(noAccount);
+    expect(wrong.status).toBe("error");
+  });
+
+  it("stops one caller guessing at one address after three tries, without asking Supabase", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    verifyOtp.mockResolvedValue({ error: { status: 403, code: "otp_expired" } });
+    for (let i = 0; i < 3; i += 1) {
+      await verifySignInCode({ status: "idle" }, codeForm(inbox, `10000${i}`));
+    }
+    verifyOtp.mockClear();
+    const refused = await verifySignInCode({ status: "idle" }, codeForm(inbox, "999999"));
+    expect(refused).toMatchObject({
+      status: "error",
+      error: expect.stringMatching(/Too many tries/),
+    });
+    expect(verifyOtp).not.toHaveBeenCalled();
+    verifyOtp.mockReset();
+    verifyOtp.mockResolvedValue({ error: null });
+  });
+});
+
+describe("signInWithEmailPassword", () => {
+  function passwordForm(email: string, password: string): FormData {
+    const form = emailForm(email);
+    form.set("password", password);
+    form.set("next", "/learn");
+    return form;
+  }
+
+  it("signs in on this device and follows next", async () => {
+    await expect(
+      signInWithEmailPassword({ status: "idle" }, passwordForm(inbox, "correct horse")),
+    ).rejects.toThrow("redirect:/learn");
+    expect(signInWithPassword).toHaveBeenCalledWith({ email: inbox, password: "correct horse" });
+  });
+
+  it("answers a wrong password and an address with no account the same way, on the password", async () => {
+    signInWithPassword.mockResolvedValue({ error: { status: 400, code: "invalid_credentials" } });
+    const wrong = await signInWithEmailPassword(
+      { status: "idle" },
+      passwordForm(inbox, "wrong horse"),
+    );
+    const noAccount = await signInWithEmailPassword(
+      { status: "idle" },
+      passwordForm(newRecipient(), "wrong horse"),
+    );
+    expect(wrong).toEqual(noAccount);
+    expect(wrong).toMatchObject({ status: "error", field: "password" });
+    signInWithPassword.mockReset();
+    signInWithPassword.mockResolvedValue({ error: null });
+  });
+
+  it("puts a malformed address on the email field, and asks Supabase nothing", async () => {
+    const result = await signInWithEmailPassword(
+      { status: "idle" },
+      passwordForm("not-an-address", "correct horse"),
+    );
+    expect(result).toEqual({ status: "error", error: SIGN_IN_EMAIL_ERROR, field: "email" });
+    expect(signInWithPassword).not.toHaveBeenCalled();
+  });
+
+  it("stops one caller guessing at one address after five tries, without asking Supabase", async () => {
+    signInWithPassword.mockResolvedValue({ error: { status: 400, code: "invalid_credentials" } });
+    for (let i = 0; i < 5; i += 1) {
+      await signInWithEmailPassword({ status: "idle" }, passwordForm(inbox, `guess number ${i}`));
+    }
+    signInWithPassword.mockClear();
+    const refused = await signInWithEmailPassword(
+      { status: "idle" },
+      passwordForm(inbox, "correct horse"),
+    );
+    expect(refused).toMatchObject({
+      status: "error",
+      error: expect.stringMatching(/Too many tries with a password/),
+    });
+    expect(signInWithPassword).not.toHaveBeenCalled();
+    signInWithPassword.mockReset();
+    signInWithPassword.mockResolvedValue({ error: null });
+  });
+});
+
+describe("resendConfirmation (#360)", () => {
+  function signedInAs(email: string, unconfirmed: boolean): void {
+    getClaims.mockResolvedValueOnce({
+      data: {
+        claims: {
+          sub: "user-1",
+          email,
+          app_metadata: unconfirmed ? { learn_email_unconfirmed: true } : {},
+        },
+      },
+    } as never);
+  }
+
+  it("sends the welcome email again to the session's own address, on the canonical origin", async () => {
+    signedInAs(inbox, true);
+    expect(await resendConfirmation()).toEqual({ status: "sent" });
+    expect(generateLink).toHaveBeenCalledWith({ type: "magiclink", email: inbox });
+    expect(signInWithOtp).not.toHaveBeenCalled();
+    const message = send.mock.calls[0]![0];
+    expect(message.to).toBe(inbox);
+    expect(message.subject).toBe(WELCOME_SUBJECT);
+    expect(message.text).toContain(
+      "https://canonical.example/auth/confirm?next=%2Flearn&token_hash=hash-360&type=email",
+    );
+  });
+
+  it("sends nothing to an account that has confirmed, or to nobody", async () => {
+    signedInAs(inbox, false);
+    expect(await resendConfirmation()).toEqual({ status: "sent" });
+    getClaims.mockResolvedValueOnce({ data: null } as never);
+    expect(await resendConfirmation()).toEqual({ status: "sent" });
+    expect(generateLink).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("answers sent when the mailer fails, so the banner can be pressed again", async () => {
+    signedInAs(inbox, true);
+    send.mockRejectedValueOnce(new EmailError("unavailable", "Resend answered 503."));
+    expect(await resendConfirmation()).toEqual({ status: "sent" });
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(logged.mock.calls)).not.toContain(inbox);
+  });
+
+  it("stops mailing one address after its per-caller budget, silently", async () => {
+    for (let i = 0; i < SIGN_IN_ADDRESS_LIMITS.perCaller.attempts; i += 1) {
+      signedInAs(inbox, true);
+      await resendConfirmation();
+    }
+    signedInAs(inbox, true);
+    expect(await resendConfirmation()).toEqual({ status: "sent" });
+    expect(send).toHaveBeenCalledTimes(SIGN_IN_ADDRESS_LIMITS.perCaller.attempts);
   });
 });

@@ -82,6 +82,7 @@ function setup(initial: LiveSessionState, caseStudy: boolean) {
       title={sampleCaseStudy.title}
       code="AJ4K7P"
       studentUrl="https://learn.test/join/AJ4K7P"
+      qrCode={null}
       initial={initial}
       caseStudy={caseStudy}
       connect={() => transport}
