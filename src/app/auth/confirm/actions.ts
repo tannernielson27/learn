@@ -9,6 +9,7 @@ import {
 } from "@/lib/auth/emailConfirmation";
 import { confirmedDeps, earlierAccessDeps, signedInUserId } from "@/lib/supabase/emailConfirmed";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { signedInTarget } from "@/lib/supabase/signedInHome";
 
 /**
  * The "Continue to LeaRN" button on `/auth/confirm` (#305): the only place a sign-in link is
@@ -32,5 +33,6 @@ export async function confirmSignIn(formData: FormData): Promise<void> {
   const confirmed = await markEmailConfirmed(confirmedDeps(supabase));
   // Confirmed from a browser that was not signed in to the account: whoever made it is shut out.
   await endEarlierAccess(confirmed, before, earlierAccessDeps(supabase));
-  redirect(afterConfirming(confirmed, before, link.target));
+  // #363: with nowhere asked for, their own home rather than authoring and a bounce.
+  redirect(afterConfirming(confirmed, before, await signedInTarget(supabase, link.target)));
 }
