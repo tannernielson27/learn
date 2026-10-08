@@ -11,13 +11,30 @@ interface MailpitSummary {
   Created: string;
 }
 
+export interface ReceivedEmail {
+  subject: string;
+  /** The HTML part, or the text part if there is no HTML. */
+  body: string;
+  /** The plain-text part, empty when the message has none. */
+  text: string;
+}
+
 /** The newest sign-in email for `email` sent since `since`, as HTML (or text, if no HTML). */
 async function latestSignInEmail(
   request: APIRequestContext,
   email: string,
   since: Date,
 ): Promise<string> {
-  let body: string | undefined;
+  return (await latestEmail(request, email, since)).body;
+}
+
+/** The newest email of any kind for `email` sent since `since`, such as the welcome email (#360). */
+export async function latestEmail(
+  request: APIRequestContext,
+  email: string,
+  since: Date,
+): Promise<ReceivedEmail> {
+  let received: ReceivedEmail | undefined;
   await expect
     .poll(
       async () => {
@@ -30,14 +47,25 @@ async function latestSignInEmail(
         );
         if (!fresh) return undefined;
         const message = await request.get(`${MAILBOX_URL}/api/v1/message/${fresh.ID}`);
-        const { HTML, Text } = (await message.json()) as { HTML: string; Text: string };
-        body = HTML || Text;
-        return body;
+        const { HTML, Text, Subject } = (await message.json()) as {
+          HTML: string;
+          Text: string;
+          Subject: string;
+        };
+        received = { subject: Subject, body: HTML || Text, text: Text ?? "" };
+        return received.body;
       },
-      { timeout: 15_000, message: `no sign-in email arrived for ${email}` },
+      { timeout: 15_000, message: `no email arrived for ${email}` },
     )
     .toBeTruthy();
-  return body!;
+  return received!;
+}
+
+/** The `/auth/confirm` link in an email body, with its HTML-escaped ampersands undone. */
+export function confirmLinkIn(body: string, email: string): string {
+  const link = body.match(/https?:\/\/[^\s"'<>]+\/auth\/confirm\?[^\s"'<>]+/)?.[0];
+  expect(link, `the email for ${email} has no /auth/confirm link`).toBeTruthy();
+  return link!.replace(/&amp;/g, "&");
 }
 
 export async function latestSignInLink(
@@ -45,10 +73,7 @@ export async function latestSignInLink(
   email: string,
   since: Date,
 ): Promise<string> {
-  const body = await latestSignInEmail(request, email, since);
-  const link = body.match(/https?:\/\/[^\s"'<>]+\/auth\/confirm\?[^\s"'<>]+/)?.[0];
-  expect(link, `the sign-in email for ${email} has no /auth/confirm link`).toBeTruthy();
-  return link!.replace(/&amp;/g, "&");
+  return confirmLinkIn(await latestSignInEmail(request, email, since), email);
 }
 
 /**

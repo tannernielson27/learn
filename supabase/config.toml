@@ -178,7 +178,13 @@ enable_refresh_token_rotation = true
 # Requires enable_refresh_token_rotation = true.
 refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
-enable_signup = true
+# Off (#359, ADR 0009): the app makes every account on its server, through the admin API
+# (`auth.admin.createUser`), behind its CAPTCHA and its rate limits, and signs people in with
+# `shouldCreateUser: false`. Supabase's own sign-up endpoint takes the publishable key any browser
+# holds, so leaving it on is a way round all of that. The admin API is not affected by this.
+# Hosted: "Allow new users to sign up" off (docs/05 §7.12 step 3); `pnpm golive:check` fails while
+# it is on.
+enable_signup = false
 # Allow/disallow anonymous sign-ins to your project.
 enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
@@ -236,6 +242,9 @@ content_path = "./supabase/templates/magic_link.html"
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
+# Leave this on. Despite its name it is the email provider's own switch (the CLI passes it to Auth
+# as GOTRUE_EXTERNAL_EMAIL_ENABLED): off, nobody could sign in with an email address at all.
+# What closes public sign-up is `enable_signup = false` under [auth] above (#359).
 enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.

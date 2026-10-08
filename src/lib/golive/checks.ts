@@ -277,6 +277,18 @@ export const MANUAL_STEPS: readonly CheckResult[] = [
     "Supabase > Authentication > URL Configuration (docs/05 §7.7 step 5)",
   ),
   line(
+    "auth-signup",
+    "Supabase's own sign-up endpoint is closed",
+    "manual",
+    'Supabase > Authentication > Sign In / Providers: "Allow new users to sign up" off (docs/05 §7.12 step 3); set SUPABASE_ACCESS_TOKEN to have this checked',
+  ),
+  line(
+    "auth-password",
+    "Supabase Auth refuses a password under 8 characters",
+    "manual",
+    "Supabase > Authentication > Sign In / Providers > Email: Minimum password length 8 or more (docs/05 §7.12 step 4); set SUPABASE_ACCESS_TOKEN to have this checked",
+  ),
+  line(
     "sentry",
     "Sentry receives a scrubbed test error and has its alert rules",
     "manual",
