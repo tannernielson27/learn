@@ -10,7 +10,11 @@
  */
 import { renderEmailDocument, type EmailLayout } from "../layout";
 
-export type WelcomeRole = "teacher" | "student";
+/**
+ * `newcomer` (#361) is an account from open sign-up that has no role yet: someone who signed up as
+ * a student and has not joined a class.
+ */
+export type WelcomeRole = "teacher" | "student" | "newcomer";
 
 export const WELCOME_SUBJECT = "Welcome to LeaRN: confirm your email address";
 
@@ -46,6 +50,16 @@ const COPY: Record<WelcomeRole, Copy> = {
     paragraphs: [
       "Your account is ready. One thing is left: confirm that this email address is yours, so you can get back in if you ever forget your password.",
       "What to do first: make a class, then share its invite link or QR code with your students. Or start with an item bank and write a few questions to run live.",
+    ],
+    notes: [
+      "The link works once and expires in an hour. If it has expired, sign in and ask for a new one.",
+      NOT_YOU,
+    ],
+  },
+  newcomer: {
+    paragraphs: [
+      "Your account is ready. One thing is left: confirm that this email address is yours, so you can get back in if you ever forget your password.",
+      "What to do first: join your class. Open the invite link your instructor shared while you are signed in, and you are in. Nothing is locked while you wait to confirm.",
     ],
     notes: [
       "The link works once and expires in an hour. If it has expired, sign in and ask for a new one.",

@@ -126,6 +126,17 @@ describe("the proxy matcher still covers the gallery", () => {
     expect((await proxy(request("/account"))).headers.get("location")).toBeNull();
   });
 
+  it("runs on sign-up and guards the welcome page (#361)", async () => {
+    expect(matcher).toContain("/sign-up");
+    expect(matcher).toContain("/welcome");
+
+    updateSession.mockResolvedValue({ response: NextResponse.next(), signedIn: false });
+    expect((await proxy(request("/sign-up"))).headers.get("location")).toBeNull();
+    expect((await proxy(request("/welcome"))).headers.get("location")).toBe(
+      "https://learn.test/sign-in?next=%2Fwelcome",
+    );
+  });
+
   it("refreshes the session on the landing page, which reads it to pick a link (#264)", () => {
     expect(matcher).toContain("/");
   });

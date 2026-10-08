@@ -8,7 +8,7 @@ const LINK =
 // A link no real token produces, carrying every character HTML gives a meaning to.
 const HOSTILE_LINK = `https://learn.example/auth/confirm?next=%2Flearn&token_hash=a"><script>alert('x')</script>&type=email`;
 
-const ROLES: readonly WelcomeRole[] = ["student", "teacher"];
+const ROLES: readonly WelcomeRole[] = ["student", "teacher", "newcomer"];
 
 describe("the welcome email", () => {
   it.each(ROLES)("renders the %s variant with an HTML and a plain-text part", (role) => {
@@ -38,6 +38,9 @@ describe("the welcome email", () => {
     expect(renderWelcomeEmail("student", LINK).text).toMatch(/Send the email again/);
     expect(renderWelcomeEmail("teacher", LINK).text).toMatch(/make a class/);
     expect(renderWelcomeEmail("teacher", LINK).text).not.toMatch(/you are in your class/);
+    // #361: an account with no class yet is told how to join one, not that it is in one.
+    expect(renderWelcomeEmail("newcomer", LINK).text).toMatch(/join your class/);
+    expect(renderWelcomeEmail("newcomer", LINK).text).not.toMatch(/you are in your class/);
   });
 
   it("escapes the link in the HTML part, button and visible copy alike", () => {

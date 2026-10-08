@@ -6,6 +6,7 @@ import {
   type DeploymentEnv,
   type RequestHeaders,
 } from "@/lib/http/siteOrigin";
+import { WELCOME_PATH } from "./accountPaths";
 import { DEFAULT_AFTER_SIGN_IN, safeNextPath } from "./nextPath";
 
 export type { WelcomeRole } from "@/lib/email/templates/welcome";
@@ -47,6 +48,7 @@ export interface WelcomeEmailDeps {
 const HOME: Record<WelcomeRole, string> = {
   student: STUDENT_HOME,
   teacher: DEFAULT_AFTER_SIGN_IN,
+  newcomer: WELCOME_PATH,
 };
 
 /**
