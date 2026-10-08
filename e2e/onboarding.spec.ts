@@ -6,6 +6,7 @@ import {
   createAccountWithoutRole,
   insertAsAdmin,
   selectAsAdmin,
+  signInAsNewAuthor,
   uniqueEmail,
   updateAsAdmin,
 } from "./signIn";
@@ -215,4 +216,66 @@ test("the imported sample is ready to assign and to run live straight away", asy
     path: `test-results/screenshots/${project}/sample-live.png`,
     fullPage: true,
   });
+});
+
+// #364: the welcome a new teacher sees once. No account is made beforehand: signing up as a
+// teacher is what makes a self-registered workspace.
+test("a new teacher is welcomed in three steps, once, and lands on the checklist", async ({
+  page,
+}, testInfo) => {
+  const project = testInfo.project.name;
+  const email = uniqueEmail(`welcome-${project}`);
+  await page.goto("/sign-up?role=teacher");
+  await page.getByRole("textbox", { name: "Your name", exact: true }).fill("Grace Hopper");
+  await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill("correct horse battery");
+  await page.getByRole("button", { name: "Create account", exact: true }).click();
+  await expect(page).toHaveURL(/\/author$/);
+
+  const dialog = page.getByRole("dialog");
+  const count = dialog.getByRole("status");
+  await expect(dialog).toHaveAccessibleName("Welcome, Grace Hopper");
+  await expect(count).toHaveText("Step 1 of 3");
+  await expect(dialog).toContainText("no other teacher can see them");
+  await expectNoAxeViolations(page);
+  await page.screenshot({ path: `test-results/screenshots/${project}/teacher-welcome-1.png` });
+
+  // With the keyboard: Next keeps the focus, so Enter walks it.
+  await dialog.getByRole("button", { name: "Next", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(dialog).toHaveAccessibleName("Start with a question bank");
+  await expect(count).toHaveText("Step 2 of 3");
+  await expectNoAxeViolations(page);
+  await page.screenshot({ path: `test-results/screenshots/${project}/teacher-welcome-2.png` });
+
+  await page.keyboard.press("Enter");
+  await expect(dialog).toHaveAccessibleName("Then a class, and your first session");
+  await expect(count).toHaveText("Step 3 of 3");
+  await expectNoAxeViolations(page);
+  await page.screenshot({ path: `test-results/screenshots/${project}/teacher-welcome-3.png` });
+
+  // Back works, and the last button is the checklist's own name.
+  await dialog.getByRole("button", { name: "Back", exact: true }).click();
+  await expect(count).toHaveText("Step 2 of 3");
+  await dialog.getByRole("button", { name: "Next", exact: true }).click();
+  await dialog.getByRole("button", { name: "Get started", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const checklist = page.getByRole("heading", { level: 2, name: "Get started", exact: true });
+  await expect(checklist).toBeFocused();
+
+  // Once per account: not after a reload, and not in another browser.
+  await page.reload();
+  await expect(checklist).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+});
+
+test("an instructor in the shared org is never shown the teacher welcome", async ({
+  page,
+  request,
+}, testInfo) => {
+  await signInAsNewAuthor(page, request, `no-welcome-${testInfo.project.name}`);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Item banks", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });
