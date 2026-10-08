@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEMO_UNAVAILABLE } from "@/lib/auth/demoAccount";
 import { SIGN_IN_EMAIL_ERROR } from "@/lib/auth/signInForm";
 import {
@@ -50,9 +50,24 @@ const signInWithOtp = vi.fn(async () => ({ error: null as OtpError | null }));
 const signInWithPassword = vi.fn(async () => ({ error: null as unknown }));
 const verifyOtp = vi.fn(async () => ({ error: null as OtpError | null }));
 const getClaims = vi.fn(async () => ({ data: { claims: { sub: "user-1", app_metadata: {} } } }));
+// The signed-in account's own profile row: where a sign-in with nowhere asked for lands (#363),
+// and which welcome to resend. An instructor unless a test says otherwise.
+let profileRole: string | null = "instructor";
+const profileMaybeSingle = vi.fn(async () => ({
+  data: { role: profileRole } as { role: string | null } | null,
+  error: null as { code: string } | null,
+}));
+const profileFrom = vi.fn<
+  (table: string) => {
+    select: () => { eq: () => { maybeSingle: typeof profileMaybeSingle } };
+  }
+>(() => ({
+  select: () => ({ eq: () => ({ maybeSingle: profileMaybeSingle }) }),
+}));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({
     auth: { signInWithOtp, signInWithPassword, verifyOtp, getClaims },
+    from: profileFrom,
   }),
 }));
 
@@ -505,6 +520,13 @@ describe("signInWithEmailPassword", () => {
 });
 
 describe("resendConfirmation (#360)", () => {
+  beforeEach(() => {
+    profileRole = "student";
+  });
+  afterEach(() => {
+    profileRole = "instructor";
+  });
+
   function signedInAs(email: string, unconfirmed: boolean): void {
     getClaims.mockResolvedValueOnce({
       data: {
@@ -528,6 +550,29 @@ describe("resendConfirmation (#360)", () => {
     expect(message.text).toContain(
       "https://canonical.example/auth/confirm?next=%2Flearn&token_hash=hash-360&type=email",
     );
+  });
+
+  it.each([
+    ["instructor", "/author", "make a class"],
+    ["admin", "/author", "make a class"],
+    ["student", "/learn", "you are in your class"],
+    [null, "/welcome", "join your class"],
+  ])("sends a %s their own welcome, landing on %s", async (role, home, said) => {
+    profileRole = role;
+    signedInAs(inbox, true);
+    expect(await resendConfirmation()).toEqual({ status: "sent" });
+    const message = send.mock.calls[0]![0];
+    expect(message.text).toContain(`next=${encodeURIComponent(home)}&`);
+    expect(message.text).toContain(said);
+  });
+
+  it("falls back to the wording that claims nothing when the role cannot be read", async () => {
+    profileMaybeSingle.mockResolvedValueOnce({ data: null, error: { code: "08006" } });
+    signedInAs(inbox, true);
+    expect(await resendConfirmation()).toEqual({ status: "sent" });
+    const message = send.mock.calls[0]![0];
+    expect(message.text).toContain("next=%2Fwelcome&");
+    expect(message.text).not.toContain("you are in your class");
   });
 
   it("sends nothing to an account that has confirmed, or to nobody", async () => {

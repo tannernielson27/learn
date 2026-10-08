@@ -170,3 +170,13 @@ describe("sendWelcomeEmail", () => {
     expect(text).not.toContain(TOKEN_HASH);
   });
 });
+
+describe("welcomeRoleFor", () => {
+  it("gives each account the welcome that is true of it", async () => {
+    const { welcomeRoleFor } = await import("./welcomeEmail");
+    expect(welcomeRoleFor("instructor")).toBe("teacher");
+    expect(welcomeRoleFor("admin")).toBe("teacher");
+    expect(welcomeRoleFor("student")).toBe("student");
+    expect(welcomeRoleFor(null)).toBe("newcomer");
+  });
+});

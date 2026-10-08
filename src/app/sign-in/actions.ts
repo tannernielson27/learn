@@ -24,7 +24,7 @@ import {
   takeSignInAddress,
   takeSignInAttempt,
 } from "@/lib/auth/signInRateLimit";
-import { sendWelcomeEmail } from "@/lib/auth/welcomeEmail";
+import { sendWelcomeEmail, welcomeRoleFor } from "@/lib/auth/welcomeEmail";
 import { takeWelcomeEmail } from "@/lib/auth/welcomeLimit";
 import { getMailer } from "@/lib/email";
 import { canonicalSiteOrigin } from "@/lib/http/siteOrigin";
@@ -208,9 +208,15 @@ export async function resendConfirmation(): Promise<ConfirmEmailState> {
   if (!limit.ok) return { status: "error", error: limit.error };
   if ((await takeSignInAddress(requestHeaders, email)) !== "send") return { status: "sent" };
 
+  // Which welcome: the account's own role, from its own profile row. A role that cannot be read
+  // gets the wording that claims nothing about a class or a workspace.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", typeof claims?.sub === "string" ? claims.sub : "")
+    .maybeSingle();
   const service = createSupabaseServiceClient();
-  // The banner is on the student home, the one place an unconfirmed account is asked today.
-  await sendWelcomeEmail({ email }, "student", {
+  await sendWelcomeEmail({ email }, welcomeRoleFor(profile?.role ?? null), {
     requestHeaders,
     generateLink: (params) => service.auth.admin.generateLink(params),
     mailer: getMailer(),
