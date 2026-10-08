@@ -1,7 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { latestSignInLink } from "./mailbox";
+import { latestSignInLink, openSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #211: an instructor watches an assignment's progress while it is open (no score anywhere, no
 // CSV), and after the close reads the report by student, item and CJMM step and downloads the CSV.
@@ -45,12 +46,16 @@ test("an instructor sees progress while open, then the report and its CSV after 
 
   const phone = await browser.newContext({ reducedMotion: "reduce" });
   const student = await phone.newPage();
+  await skipWelcomes(student);
   await student.goto(invite);
   const email = `student-report-${project}-${Date.now()}@example.test`;
   const since = new Date();
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await student
+    .getByRole("button", { name: "Join with an emailed link instead", exact: true })
+    .click();
   await student.getByRole("button", { name: "Email me a link to join", exact: true }).click();
-  await student.goto(await latestSignInLink(request, email, since));
+  await openSignInLink(student, await latestSignInLink(request, email, since));
   await expect(student).toHaveURL(/\/learn$/);
 
   // Assigned now, closing shortly, two attempts.

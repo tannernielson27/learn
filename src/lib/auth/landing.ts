@@ -1,6 +1,7 @@
 import type { Database } from "@/lib/supabase/database.types";
 import { STUDENT_HOME } from "@/lib/classes/classes";
-import { NO_ACCESS_PATH } from "./noAccess";
+import { SIGN_UP_PATH, WELCOME_PATH } from "./accountPaths";
+import { DEFAULT_AFTER_SIGN_IN } from "./nextPath";
 
 type OrgRole = Database["public"]["Enums"]["org_role"];
 
@@ -8,18 +9,30 @@ type OrgRole = Database["public"]["Enums"]["org_role"];
 export type LandingVisitor =
   { status: "signed_out" } | { status: "signed_in"; role: OrgRole | null };
 
-export interface LandingEntry {
+export interface LandingLink {
   href: string;
   label: string;
 }
 
+export interface LandingEntry extends LandingLink {
+  /** A second way in, drawn beside the first: Sign in, for a visitor. */
+  also?: LandingLink;
+}
+
 /**
- * The landing page's first link (#264). A visitor is offered Sign in; anyone already signed in is
- * offered their own home instead, so the page never asks a signed-in instructor to sign in again.
- * An account with no role goes where authoring would send it anyway: "No access yet" (#204).
+ * The landing page's first link (#264). A visitor is offered an account, with Sign in beside it
+ * (#366, ADR 0009: sign-up is open); anyone already signed in is offered their own home instead,
+ * so the page never asks a signed-in instructor to sign in again. An account with no role goes to
+ * the welcome page (#362), where it joins a class or sets up a workspace.
  */
 export function landingEntry(visitor: LandingVisitor): LandingEntry {
-  if (visitor.status === "signed_out") return { href: "/sign-in", label: "Sign in" };
+  if (visitor.status === "signed_out") {
+    return {
+      href: SIGN_UP_PATH,
+      label: "Create an account",
+      also: { href: "/sign-in", label: "Sign in" },
+    };
+  }
   switch (visitor.role) {
     case "instructor":
     case "admin":
@@ -27,6 +40,27 @@ export function landingEntry(visitor: LandingVisitor): LandingEntry {
     case "student":
       return { href: STUDENT_HOME, label: "Go to your classes" };
     default:
-      return { href: NO_ACCESS_PATH, label: "Go to your account" };
+      return { href: WELCOME_PATH, label: "Get started" };
   }
+}
+
+/**
+ * Where a signed-in person belongs when a page is not for them (#361): sign-up for someone who has
+ * an account, the welcome page for someone who has a role. An account with no role belongs on the
+ * welcome page, which is where open sign-up leaves it.
+ */
+export function signedInHome(role: OrgRole | null): string {
+  if (role === "instructor" || role === "admin") return "/author";
+  return role === "student" ? STUDENT_HOME : WELCOME_PATH;
+}
+
+/**
+ * Where to go once someone has signed in (#363). A `next` they asked for wins. With none, `target`
+ * is the default, authoring, which is only right for an author: a student sent there is bounced to
+ * the student home, and an account with no role to the welcome page. This names that home at once,
+ * so they get there in one navigation. It changes nothing about who may open what: the answer is
+ * always where authoring would have sent them anyway.
+ */
+export function afterSignInPath(target: string, role: OrgRole | null): string {
+  return target === DEFAULT_AFTER_SIGN_IN ? signedInHome(role) : target;
 }

@@ -30,7 +30,8 @@ export interface SaveResult {
 type Status =
   | { kind: "idle" }
   | { kind: "busy" }
-  | { kind: "done"; message: string }
+  // `shownWith` is the form as the message appeared; once it changes, the message is stale.
+  | { kind: "done"; message: string; shownWith: string }
   | { kind: "error"; message: string };
 
 /** Every editor's item input carries the scoring its form derives and its rationale. */
@@ -109,7 +110,8 @@ export function EditorShell<Values, Input extends ScoredInput>({
     JSON.stringify(host.savedValues ?? initialValues),
   );
   const [confirmingRemove, setConfirmingRemove] = useState(false);
-  const isDirty = JSON.stringify(values) !== savedSnapshot;
+  const valuesJson = JSON.stringify(values);
+  const isDirty = valuesJson !== savedSnapshot;
   const busy = status.kind === "busy";
   // Only a valid item has a final maximum; scoringSummary says so instead of guessing.
   const scoring = scoringSummary(input.scoring, valid);
@@ -121,6 +123,7 @@ export function EditorShell<Values, Input extends ScoredInput>({
   const parsed = valid ? itemSchema.safeParse(input) : null;
   const warnings = parsed?.success ? editorWarnings(parsed.data) : [];
   const rationaleId = `${issueIdPrefix}-rationale`;
+  const unpublishId = `${issueIdPrefix}-unpublish`;
 
   useReportDirty(isDirty);
   const { onBusyChange } = host;
@@ -181,6 +184,7 @@ export function EditorShell<Values, Input extends ScoredInput>({
     action: (current: Values) => Promise<SaveResult>,
     doneMessage: string,
     failMessage: string,
+    nowPublished: boolean,
   ) {
     setStatus({ kind: "busy" });
     const current = readValues();
@@ -195,7 +199,8 @@ export function EditorShell<Values, Input extends ScoredInput>({
     }
     if (result.ok) {
       setSavedSnapshot(JSON.stringify(current));
-      setStatus({ kind: "done", message: doneMessage });
+      setStatus({ kind: "done", message: doneMessage, shownWith: JSON.stringify(readValues()) });
+      host.onPublishedChange?.(nowPublished);
     } else {
       setStatus({ kind: "error", message: result.error ?? failMessage });
     }
@@ -390,8 +395,15 @@ export function EditorShell<Values, Input extends ScoredInput>({
           <Button
             type="button"
             disabled={busy}
+            aria-describedby={host.published ? unpublishId : undefined}
             onClick={() =>
-              run(onSaveDraft, "Draft saved.", "The draft could not be saved. Try again.")
+              run(
+                onSaveDraft,
+                // Saving a draft unpublishes the item, so the message says so.
+                host.published ? "Saved as a draft. Publish to use it again." : "Draft saved.",
+                "The draft could not be saved. Try again.",
+                false,
+              )
             }
           >
             Save draft
@@ -406,13 +418,14 @@ export function EditorShell<Values, Input extends ScoredInput>({
                 (current) => onPublish(toInput(current)),
                 "Published.",
                 "The item could not be published. Try again.",
+                true,
               );
             }}
           >
             Publish
           </Button>
           {isDirty ? <p className="text-sm text-ink-2">Unsaved changes</p> : null}
-          {status.kind === "done" ? (
+          {status.kind === "done" && status.shownWith === valuesJson ? (
             <p role="status" className="text-sm text-ink-2">
               {status.message}
             </p>
@@ -420,6 +433,12 @@ export function EditorShell<Values, Input extends ScoredInput>({
           {status.kind === "error" ? (
             <p role="alert" className="text-sm text-incorrect">
               {status.message}
+            </p>
+          ) : null}
+          {host.published ? (
+            <p id={unpublishId} className="w-full text-sm text-ink-2">
+              This item is published. Saving a draft takes it out of sessions, assignments and
+              practice until you publish again.
             </p>
           ) : null}
         </div>

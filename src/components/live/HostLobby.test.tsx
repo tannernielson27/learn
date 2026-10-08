@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   LiveSessionError,
   NO_TIMER,
@@ -22,9 +22,18 @@ import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema } from "@/lib/ngn/schemas";
 import type { Item } from "@/lib/ngn/schemas";
 import { HostLobby } from "./HostLobby";
+import { SessionQrCode } from "./SessionQrCode";
 
 const SESSION_ID = "00000000-0000-4000-8000-0000000132aa";
 const CODE = "AJ4K7P";
+
+/** What the page draws on the server and hands the console (#297). */
+const qrCode = (
+  <SessionQrCode
+    url={`https://learn.test/join/${CODE}`}
+    label="QR code that opens the join page for this session"
+  />
+);
 
 const state = (over: Partial<LiveSessionState> = {}): LiveSessionState => ({
   status: "lobby",
@@ -179,6 +188,7 @@ function setup(initial: LiveSessionState = state(), refusal?: LiveSessionError) 
       title="Cardiac basics"
       code={CODE}
       studentUrl={`https://learn.test/join/${CODE}`}
+      qrCode={qrCode}
       initial={initial}
       connect={() => fake.transport}
       tallyIntervalMs={20}
@@ -189,6 +199,12 @@ function setup(initial: LiveSessionState = state(), refusal?: LiveSessionError) 
 }
 
 const button = (name: string) => screen.getByRole("button", { name: new RegExp(`^${name}$`) });
+
+/** End session asks first; the second press is the one in the question. */
+async function endSession(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(button("End session"));
+  await user.click(button("End session"));
+}
 
 describe("HostLobby", () => {
   it("shows the code, the picture and the address a student types", () => {
@@ -281,7 +297,7 @@ describe("HostLobby", () => {
 
   it("ends the room, and then offers nothing and withdraws the code", async () => {
     const fake = setup();
-    await fake.user.click(button("End session"));
+    await endSession(fake.user);
     expect(await screen.findByText(/This session has ended\./)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^End session$/ })).toBeNull();
     expect(screen.queryByRole("img", { name: /QR code/ })).toBeNull();
@@ -289,7 +305,7 @@ describe("HostLobby", () => {
 
   it("points an ended room at its report", async () => {
     const fake = setup();
-    await fake.user.click(button("End session"));
+    await endSession(fake.user);
     expect(await screen.findByRole("link", { name: "Open the report" })).toHaveAttribute(
       "href",
       `/live/${SESSION_ID}/report`,
@@ -315,6 +331,7 @@ describe("HostLobby", () => {
         title="Cardiac basics"
         code={CODE}
         studentUrl={`https://learn.test/join/${CODE}`}
+        qrCode={qrCode}
         initial={state()}
         connect={() => broken}
       />,
@@ -330,12 +347,73 @@ describe("HostLobby", () => {
         title="Cardiac basics"
         code={CODE}
         studentUrl={`https://learn.test/join/${CODE}`}
+        qrCode={qrCode}
         initial={state()}
         connect={() => fake.transport}
       />,
     );
     view.unmount();
     expect(fake.transport.close).toHaveBeenCalled();
+  });
+});
+
+describe("HostLobby: asking before a move that cannot be taken back", () => {
+  it("asks before ending, and focuses the question", async () => {
+    const fake = setup(state({ status: "running", position: 1 }));
+    await fake.user.click(button("End session"));
+    expect(fake.ran).toEqual([]);
+    const ask = screen.getByRole("alertdialog", { name: "End this session?" });
+    expect(ask).toHaveTextContent(
+      "Students are disconnected and the code stops working. You can't reopen it.",
+    );
+    expect(ask).toHaveFocus();
+    // The other moves wait while the host decides.
+    expect(screen.queryByRole("button", { name: /^Next item$/ })).toBeNull();
+  });
+
+  it("ends the session once the host confirms", async () => {
+    const fake = setup(state({ status: "running", position: 1 }));
+    await endSession(fake.user);
+    expect(fake.ran).toEqual(["end"]);
+    expect(await screen.findByText(/This session has ended\./)).toBeInTheDocument();
+  });
+
+  it("keeps the session running when the host changes their mind", async () => {
+    const fake = setup(state({ status: "running", position: 1 }));
+    await fake.user.click(button("End session"));
+    await fake.user.click(button("Keep the session"));
+    expect(fake.ran).toEqual([]);
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(button("Next item")).toBeEnabled();
+  });
+
+  it("shows one item's answer at once, since the room moves on to the next anyway", async () => {
+    const fake = setup(state({ status: "running", position: 1 }));
+    await fake.user.click(button("Show answer"));
+    expect(fake.ran).toEqual(["reveal"]);
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  it("asks before showing a student-paced room every answer", async () => {
+    const fake = setup(state({ mode: "student_paced", status: "running", position: 1 }));
+    await fake.user.click(button("Show answers"));
+    const ask = screen.getByRole("alertdialog", { name: "Show answers for all 3 items?" });
+    expect(ask).toHaveTextContent("Students who haven't finished can't answer any more.");
+    await fake.user.click(button("Not yet"));
+    expect(fake.ran).toEqual([]);
+
+    await fake.user.click(button("Show answers"));
+    await fake.user.click(button("Show answers"));
+    expect(fake.ran).toEqual(["reveal"]);
+  });
+
+  it("puts the roster away once the session has ended", async () => {
+    const fake = setup(state({ status: "running", position: 1 }));
+    expect(screen.getByRole("heading", { name: "In the room" })).toBeInTheDocument();
+    await endSession(fake.user);
+    await screen.findByText(/This session has ended\./);
+    expect(screen.queryByRole("heading", { name: "In the room" })).toBeNull();
+    expect(screen.queryByText(/Nobody has joined yet/)).toBeNull();
   });
 });
 
@@ -380,7 +458,7 @@ describe("HostLobby: how many have answered (#133)", () => {
     const fake = setup(state({ status: "running", position: 1 }));
     fake.answersIn(tallyOf(2, 2));
     await waitFor(() => expect(fake.asks()).toBeGreaterThan(0));
-    await fake.user.click(button("End session"));
+    await endSession(fake.user);
     await waitFor(() => expect(screen.queryByTestId("answer-count")).toBeNull());
 
     const settled = fake.asks();
@@ -474,7 +552,7 @@ describe("HostLobby: the item timer (#182)", () => {
 
   it("puts the timer away once the session has ended", async () => {
     const fake = setup(timed());
-    await fake.user.click(button("End session"));
+    await endSession(fake.user);
     await waitFor(() => expect(screen.queryByRole("combobox")).toBeNull());
     expect(screen.queryByRole("timer")).toBeNull();
   });
@@ -526,6 +604,7 @@ describe("HostLobby: a student-paced room (#185)", () => {
     });
     await waitFor(() => expect(screen.getByTestId("answered-count-1")).toHaveTextContent("1 of 1"));
     await fake.user.click(button("Show answers"));
+    await fake.user.click(button("Show answers"));
     await waitFor(() => expect(screen.getByText(/answers showing/)).toBeInTheDocument());
     expect(fake.ran).toEqual(["reveal"]);
     expect(button("Show answers")).toBeDisabled();
@@ -536,5 +615,54 @@ describe("HostLobby: a student-paced room (#185)", () => {
     await fake.user.click(button("Start session"));
     await waitFor(() => expect(button("Show answers")).toBeEnabled());
     expect(screen.queryByRole("button", { name: /^Next item$/ })).toBeNull();
+  });
+});
+
+describe("HostLobby: a hidden tab (#323)", () => {
+  let visibility: DocumentVisibilityState = "visible";
+  const setVisibility = (next: DocumentVisibilityState) =>
+    act(async () => {
+      visibility = next;
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+  const pause = () => new Promise((resolve) => setTimeout(resolve, 200));
+
+  beforeEach(() => {
+    visibility = "visible";
+    vi.spyOn(document, "visibilityState", "get").mockImplementation(() => visibility);
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("asks for neither the tally nor the results while hidden, and both at once on return", async () => {
+    visibility = "hidden";
+    const fake = setup(state({ status: "running", position: 1 }));
+    fake.answersIn(tallyOf(2, 3));
+    await pause();
+    expect(fake.asks()).toBe(0);
+    expect(fake.resultAsks()).toBe(0);
+
+    await setVisibility("visible");
+    await waitFor(() => expect(screen.getByText(/2 of 3/)).toBeInTheDocument());
+    expect(fake.resultAsks()).toBeGreaterThan(0);
+
+    await setVisibility("hidden");
+    await pause();
+    const settled = { tally: fake.asks(), results: fake.resultAsks() };
+    await pause();
+    expect({ tally: fake.asks(), results: fake.resultAsks() }).toEqual(settled);
+    // The Realtime channel is never touched by the tab's visibility.
+    expect(fake.transport.close).not.toHaveBeenCalled();
+  });
+
+  it("asks for no progress while hidden in a student-paced room", async () => {
+    visibility = "hidden";
+    const fake = setup(state({ mode: "student_paced", status: "running", position: 1 }));
+    const progress = vi.spyOn(fake.transport, "progress");
+    await pause();
+    expect(progress).not.toHaveBeenCalled();
+    await setVisibility("visible");
+    await waitFor(() => expect(progress).toHaveBeenCalled());
   });
 });

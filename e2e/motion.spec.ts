@@ -33,12 +33,13 @@ test.beforeEach(({}, testInfo) => {
 test("feedback marks stagger in 40ms apart", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await submitHighlight(page);
-  // Two correct, one incorrect and one missed phrase: four marks.
-  expect(await visibleMarkDelays(page)).toEqual(["0s", "0.04s", "0.08s", "0.12s"]);
+  // Two correct and one incorrect phrase: three marks. The missed phrase has no icon (docs/04 §4),
+  // only its dashed border and the word.
+  expect(await visibleMarkDelays(page)).toEqual(["0s", "0.04s", "0.08s"]);
 });
 
 test("with reduced motion the marks appear without a stagger", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await submitHighlight(page);
-  expect(await visibleMarkDelays(page)).toEqual(["0s", "0s", "0s", "0s"]);
+  expect(await visibleMarkDelays(page)).toEqual(["0s", "0s", "0s"]);
 });

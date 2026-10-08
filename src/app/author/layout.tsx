@@ -1,12 +1,13 @@
+import { SignedInAs } from "@/components/auth/SignedInAs";
 import { GuardedLink, LeaveGuardProvider } from "@/components/authoring/LeaveGuard";
 import { Button } from "@/components/ui/Button";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ACCOUNT_PATH } from "@/lib/auth/accountPaths";
+import { readViewer } from "@/lib/classes/viewer";
 import { signOut } from "./actions";
 
 export default async function AuthorLayout({ children }: LayoutProps<"/author">) {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.auth.getClaims();
-  const email = typeof data?.claims?.email === "string" ? data.claims.email : "";
+  const viewer = await readViewer();
+  const signedIn = viewer.status === "signed_in";
 
   return (
     // The header's links ask the page first, so leaving unsaved work (in the case study builder)
@@ -21,11 +22,7 @@ export default async function AuthorLayout({ children }: LayoutProps<"/author">)
             LeaRN
           </GuardedLink>
           <div className="flex min-w-0 items-center gap-3">
-            {email ? (
-              <p className="truncate text-sm text-ink-2" data-testid="signed-in-email">
-                {email}
-              </p>
-            ) : null}
+            {signedIn ? <SignedInAs displayName={viewer.displayName} email={viewer.email} /> : null}
             {/* #269: the guides are public pages outside /author. */}
             <nav aria-label="Author">
               <GuardedLink
@@ -34,8 +31,17 @@ export default async function AuthorLayout({ children }: LayoutProps<"/author">)
               >
                 Help
               </GuardedLink>
+              {/* #358: the name, and the way to the password, are both on /account. */}
+              {signedIn ? (
+                <GuardedLink
+                  href={ACCOUNT_PATH}
+                  className="tap-target inline-flex items-center rounded-sm px-2 text-sm text-accent-ink transition-colors duration-fast hover:bg-accent-soft"
+                >
+                  Account
+                </GuardedLink>
+              ) : null}
             </nav>
-            {email ? (
+            {signedIn ? (
               <form action={signOut}>
                 <Button type="submit" variant="ghost" size="sm">
                   Sign out

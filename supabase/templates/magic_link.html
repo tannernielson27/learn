@@ -19,8 +19,9 @@
 <a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email" style="display: inline-block; padding: 12px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: 700; color: #ffffff; text-decoration: none; border-radius: 6px">Sign in</a>
 </td></tr></table>
 <p style="margin: 24px 0 0; font-size: 14px; color: #5b5e66">Or copy this link into your browser:<br /><a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email" style="color: #1f5596; text-decoration: underline; word-break: break-all">{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=email</a></p>
-<p style="margin: 16px 0 0; font-size: 14px; color: #5b5e66">The link works once and expires in an hour. You can open it on any device, such as your phone in class. If it has expired, ask for a new one on the sign-in page.</p>
-<p style="margin: 16px 0 0; font-size: 14px; color: #5b5e66">If you did not ask to sign in, you can ignore this email. Nobody can sign in without the link.</p>
+<p style="margin: 24px 0 0; font-size: 14px; color: #5b5e66">Or enter this code on the page where you asked to sign in:</p><p style="margin: 4px 0 0; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-size: 28px; font-weight: 700; letter-spacing: 0.15em; color: #1b1d22">{{ .Token }}</p>
+<p style="margin: 16px 0 0; font-size: 14px; color: #5b5e66">The link and the code work once and expire in an hour. The link signs in whichever device opens it, such as your phone in class; the code signs in the device you type it on. If they have expired, ask for a new email on the sign-in page.</p>
+<p style="margin: 16px 0 0; font-size: 14px; color: #5b5e66">If you did not ask to sign in, you can ignore this email. Nobody can sign in without the link or the code.</p>
 </td></tr>
 </table>
 <p style="margin: 16px 0 0; max-width: 480px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; line-height: 1.5; color: #5b5e66">Sent by LeaRN, an NCLEX practice app, because someone entered this address on its sign-in page.</p>

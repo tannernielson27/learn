@@ -113,6 +113,8 @@ test("a student scans the code, types a name, and comes back to the same place o
   // The host ends the session. The student is told, rather than being dropped back on a form.
   await page.goto(consoleUrl);
   await page.getByRole("button", { name: "End session", exact: true }).click();
+  // It asks first; the second press is the one in the question.
+  await page.getByRole("button", { name: "End session", exact: true }).click();
   await expect(page.getByText("This session has ended.")).toBeVisible();
   await expect(page.getByRole("img", { name: QR_LABEL })).toHaveCount(0);
 

@@ -39,11 +39,12 @@ import {
 import { readTimer } from "@/lib/live/timer";
 import type { Item } from "@/lib/ngn/schemas";
 import type { StartingOrderSeedFor } from "@/lib/ngn/startingOrder";
-import { parseSubmission, toKeylessItem, type Reveal } from "@/lib/ngn/submit";
+import { parseSubmission, revealOf, toKeylessItem, withScoredReveal } from "@/lib/ngn/submit";
 import type { ScoreResult } from "@/lib/ngn/types";
 import { fromItemRow } from "@/lib/supabase/itemRows";
 import { readPacedSet } from "./pacedView";
 import { LIVE_ROUTE_ERRORS, asRefusal, fail, refuse, type LiveRouteDeps } from "./routeDeps";
+import { selectWithReveal } from "./scoredReveal";
 import {
   NO_STORE_HEADERS,
   type AnsweredPayload,
@@ -179,13 +180,8 @@ export async function readParticipantView(
   const answered = await answerFor(deps, participant, position, stored.value);
   const revealed = state.reveal
     ? await revealFor(deps, participant.sessionId, participant.participantId, {
-        itemId: stored.value.id,
+        item: stored.value,
         position,
-        reveal: {
-          answerKey: stored.value.answerKey,
-          rationale: stored.value.rationale,
-          scoring: stored.value.scoring,
-        },
       })
     : null;
 
@@ -237,30 +233,54 @@ async function answerFor(
 /**
  * The key, plus this participant's own marks if they answered. Their marks and nobody else's: the
  * read is keyed on the participant id the token carried, so there is no query string to change.
+ *
+ * The key is the one their answer was scored with, stored beside the score, so an author's edit
+ * since cannot draw a right answer red beside its points. Someone who did not answer, and a row
+ * from before the column, get the item's key as it is now (`withScoredReveal`).
  */
 async function revealFor(
   deps: LiveRouteDeps,
   sessionId: string,
   participantId: string,
-  revealed: { itemId: string; position: number; reveal: Reveal },
+  revealed: { item: Item; position: number },
 ): Promise<RevealedPayload> {
-  const { data } = await deps.service
-    .from("session_responses")
-    .select("points, max_points, model, breakdown, groups")
-    .eq("session_id", sessionId)
-    .eq("participant_id", participantId)
-    .eq("item_position", revealed.position)
-    .maybeSingle();
+  const { data } = await selectWithReveal(MARK_COLUMNS, (columns) =>
+    deps.service
+      .from("session_responses")
+      .select(columns)
+      .eq("session_id", sessionId)
+      .eq("participant_id", participantId)
+      .eq("item_position", revealed.position)
+      .maybeSingle(),
+  );
+  const row = data as unknown as MarkRow | null;
 
-  const score: ScoreResult | null = !data
+  const score: ScoreResult | null = !row
     ? null
     : {
-        points: Number(data.points),
-        maxPoints: Number(data.max_points),
-        model: data.model as ScoreResult["model"],
-        breakdown: (data.breakdown ?? []) as unknown as ScoreResult["breakdown"],
-        ...(data.groups == null ? {} : { groups: data.groups as unknown as ScoreResult["groups"] }),
+        points: Number(row.points),
+        maxPoints: Number(row.max_points),
+        model: row.model as ScoreResult["model"],
+        breakdown: (row.breakdown ?? []) as ScoreResult["breakdown"],
+        ...(row.groups == null ? {} : { groups: row.groups as ScoreResult["groups"] }),
       };
 
-  return { ...revealed, score };
+  return {
+    itemId: revealed.item.id,
+    position: revealed.position,
+    reveal: revealOf(withScoredReveal(revealed.item, row?.reveal)),
+    score,
+  };
+}
+
+/** A participant's own marks on one item, as `revealFor` reads them. */
+const MARK_COLUMNS = "points, max_points, model, breakdown, groups";
+
+interface MarkRow {
+  points: number | string | null;
+  max_points: number | string | null;
+  model: string | null;
+  breakdown: unknown;
+  groups: unknown;
+  reveal?: unknown;
 }

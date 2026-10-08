@@ -1,6 +1,6 @@
 import { BlockList, isIP } from "node:net";
 import { expect, type APIRequestContext, type Page } from "@playwright/test";
-import { latestSignInLink } from "./mailbox";
+import { latestSignInLink, openSignInLink } from "./mailbox";
 
 // The local stack's API gateway, next to the test mailbox in mailbox.ts (see supabase/config.toml).
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:55321";
@@ -196,9 +196,12 @@ export async function signInAsNewAuthor(
   await page.goto("/sign-in");
   const since = new Date();
   await page.getByRole("textbox", { name: "Email address" }).fill(email);
+  await page
+    .getByRole("button", { name: "Sign in with an emailed link instead", exact: true })
+    .click();
   await page.getByRole("button", { name: "Email me a sign-in link" }).click();
   await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
-  await page.goto(await latestSignInLink(request, email, since));
+  await openSignInLink(page, await latestSignInLink(request, email, since));
   await expect(page).toHaveURL(/\/author$/);
   return email;
 }
@@ -320,9 +323,12 @@ export async function signInAsInstructorInEmptyOrg(
   await page.goto("/sign-in");
   const since = new Date();
   await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await page
+    .getByRole("button", { name: "Sign in with an emailed link instead", exact: true })
+    .click();
   await page.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
-  await page.goto(await latestSignInLink(request, email, since));
+  await openSignInLink(page, await latestSignInLink(request, email, since));
   await expect(page).toHaveURL(/\/author$/);
   return orgId;
 }

@@ -24,6 +24,7 @@ import PlayItemError from "./author/items/[itemId]/play/error";
 import RootError from "./error";
 import GlobalError from "./global-error";
 import HostError from "./live/[sessionId]/error";
+import ReportError from "./live/[sessionId]/report/error";
 import PlayError from "./play/[sessionId]/error";
 
 /** What a render error carries that must never reach the screen. */
@@ -32,6 +33,7 @@ const SECRET = "Cannot read properties of null (reading 'position') at /_next/st
 const BOUNDARIES: [string, ComponentType<ErrorInfo>][] = [
   ["the student room", PlayError],
   ["the host console", HostError],
+  ["a live session's report", ReportError],
   ["authoring", AuthorError],
   ["the case study builder", CaseStudyError],
   ["an item or case study being played", PlayItemError],
@@ -137,6 +139,31 @@ describe("route error boundaries", () => {
     renderInSegment(PlayError);
 
     expect(screen.getByRole("alert")).toHaveTextContent("Your place in the session is kept.");
+  });
+
+  it("the host console does not claim the session is still running, and offers the list", () => {
+    renderInSegment(HostError);
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("The session itself is not affected");
+    expect(alert).not.toHaveTextContent(/still running/);
+    expect(screen.getByRole("link", { name: "Back to live sessions" })).toHaveAttribute(
+      "href",
+      "/author/sessions",
+    );
+  });
+
+  it("a report that fails to load says the results are saved, not that the room is open", () => {
+    renderInSegment(ReportError);
+
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "The report couldn't be loaded.",
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("The session's results are saved.");
+    expect(screen.getByRole("link", { name: "Back to live sessions" })).toHaveAttribute(
+      "href",
+      "/author/sessions",
+    );
   });
 });
 

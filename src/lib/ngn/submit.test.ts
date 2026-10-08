@@ -2,6 +2,7 @@
 // never includes the key, and one item scores the same however it was submitted.
 import { describe, expect, it } from "vitest";
 import { FIXTURES, sampleCaseStudy, sampleTrendItem } from "./fixtures";
+import { md } from "./fixtures/types";
 import { ITEM_TYPES, type ItemType } from "./labels";
 import {
   caseStudySchema,
@@ -15,11 +16,13 @@ import { withStartingOrder } from "./startingOrder";
 import {
   ANSWER_BEARING_FIELDS,
   parseSubmission,
+  revealOf,
   scoreInProcess,
   scoreSubmission,
   SUBMIT_ERRORS,
   toKeylessCaseStudy,
   toKeylessItem,
+  withScoredReveal,
   type AnswerBearingField,
   type KeylessItem,
 } from "./submit";
@@ -308,5 +311,63 @@ describe("scoreInProcess", () => {
     const wrong = mc.content.options.find((o) => o.id !== mc.answerKey.correctOptionId);
     const reveal = await scoreInProcess(mc)({ type: "multiple_choice", optionId: wrong?.id });
     expect(reveal.score.points).toBe(0);
+  });
+});
+
+describe("revealOf", () => {
+  const mc = multipleChoiceItemSchema.parse(FIXTURES.multiple_choice.canonical);
+
+  it("is exactly what scoreSubmission reveals beside a score", () => {
+    const scored = scoreSubmission(mc, { type: "multiple_choice", optionId: "opt_a" });
+    expect(revealOf(mc)).toEqual({
+      answerKey: scored.answerKey,
+      rationale: scored.rationale,
+      scoring: scored.scoring,
+    });
+    expect(Object.keys(revealOf(mc)).sort()).toEqual([...ANSWER_BEARING_FIELDS].sort());
+  });
+
+  it("is a copy: changing it leaves the item alone", () => {
+    const reveal = revealOf(mc) as { answerKey: { correctOptionId: string } };
+    reveal.answerKey.correctOptionId = "opt_d";
+    expect(mc.answerKey.correctOptionId).toBe("opt_a");
+  });
+});
+
+describe("withScoredReveal", () => {
+  const scoredWith = multipleChoiceItemSchema.parse(FIXTURES.multiple_choice.canonical);
+  // The author has since moved the key from opt_a to opt_c and rewritten the rationale.
+  const editedSince = multipleChoiceItemSchema.parse({
+    ...FIXTURES.multiple_choice.canonical,
+    answerKey: { correctOptionId: "opt_c" },
+    rationale: { general: md("Rewritten after the class answered.") },
+  });
+
+  it("puts back the key, rationale and scoring the answer was scored with", () => {
+    const item = withScoredReveal(editedSince, revealOf(scoredWith));
+    expect(revealOf(item)).toEqual(revealOf(scoredWith));
+    expect(item.type).toBe("multiple_choice");
+    // Today's content is kept: only the answer-bearing fields come from the stored reveal.
+    expect(item.content).toEqual(editedSince.content);
+  });
+
+  it("falls back to the current item when nothing was stored (a row from before the column)", () => {
+    expect(withScoredReveal(editedSince, null)).toBe(editedSince);
+    expect(withScoredReveal(editedSince, undefined)).toBe(editedSince);
+    expect(withScoredReveal(editedSince, [])).toBe(editedSince);
+    expect(withScoredReveal(editedSince, "opt_a")).toBe(editedSince);
+    expect(withScoredReveal(editedSince, { stem: "not an answer field" })).toBe(editedSince);
+  });
+
+  it("falls back when the stored reveal no longer fits the item", () => {
+    const stale = { ...revealOf(scoredWith), answerKey: { correctOptionId: "opt_gone" } };
+    expect(withScoredReveal(editedSince, stale)).toBe(editedSince);
+  });
+
+  it("changes nothing it is given", () => {
+    const stored = revealOf(scoredWith);
+    const before = JSON.stringify([editedSince, stored]);
+    withScoredReveal(editedSince, stored);
+    expect(JSON.stringify([editedSince, stored])).toBe(before);
   });
 });

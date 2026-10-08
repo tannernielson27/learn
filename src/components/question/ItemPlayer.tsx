@@ -62,6 +62,13 @@ export interface ItemPlayerProps {
    * the player draws no Submit bar of its own and `submit` is never called.
    */
   showSubmit?: boolean;
+  /** What Submit says while the answer is out. Defaults to "Checking your answer". */
+  busyLabel?: string;
+  /**
+   * The sentence for a failed submit, when the caller can name what went wrong (a live room's
+   * refusal says the session moved on). Undefined falls back to "could not be checked".
+   */
+  failureMessage?: (error: unknown) => string | undefined;
 }
 
 const CHECK_FAILED = "Your answer could not be checked. Try again.";
@@ -97,6 +104,8 @@ export function ItemPlayer({
   onResponseChange,
   label,
   showSubmit = true,
+  busyLabel,
+  failureMessage,
 }: ItemPlayerProps) {
   // Only a key with no marks beside it is key-only; a reveal with a score takes precedence.
   const keyOnly = initialReveal ? undefined : initialKey;
@@ -151,6 +160,11 @@ export function ItemPlayer({
   // Typed with the key and rationale optional, and handed over as that: a renderer has to check
   // for either before reading it, because in answer mode neither is there (#50).
   const playerItem = toPlayerItem(fullItem, revealed ? "feedback" : "answer");
+  // The mode the renderer and shell are drawn in. Feedback with nothing revealed is drawn as
+  // review: read-only, unmarked. A renderer in feedback mode marks every choice the key does not
+  // name as incorrect, and with no key that is every choice — a live phone's sent answer showed a
+  // right pick in red until the host revealed it.
+  const shownMode: PlayerMode = mode === "feedback" && !revealed ? "review" : mode;
   // An answer can be complete before it is seen (an ordered response opens arranged), so Submit
   // also waits for the question itself to be on screen.
   const canSubmit =
@@ -172,10 +186,10 @@ export function ItemPlayer({
     });
   };
 
-  const fail = () => {
+  const fail = (error: unknown) => {
     pending.current = false;
     setSubmitting(false);
-    setSubmitError(CHECK_FAILED);
+    setSubmitError(failureMessage?.(error) ?? CHECK_FAILED);
   };
 
   const submit = () => {
@@ -187,8 +201,8 @@ export function ItemPlayer({
       (checked) => {
         if (live.current) finish(checked);
       },
-      () => {
-        if (live.current) fail();
+      (error: unknown) => {
+        if (live.current) fail(error);
       },
     );
   };
@@ -202,11 +216,12 @@ export function ItemPlayer({
     <QuestionShell
       stem={item.stem}
       instructions={item.instructions}
-      mode={mode}
+      mode={shownMode}
       progress={progress}
       canSubmit={canSubmit}
       onSubmit={submit}
       submitting={submitting}
+      busyLabel={busyLabel}
       submitError={submitError}
       score={result}
       scoreNote={scoreNote}
@@ -223,7 +238,7 @@ export function ItemPlayer({
         <Renderer
           item={playerItem}
           response={response as ResponseOf<ItemType>}
-          mode={mode}
+          mode={shownMode}
           score={result}
           onChange={(next) => {
             // Hold the answer that was sent while it is scored, so the feedback shows that answer.

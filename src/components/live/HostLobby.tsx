@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Countdown } from "@/components/live/Countdown";
 import { ItemStrip } from "@/components/live/ItemStrip";
+import { pollWhileVisible } from "@/components/live/pollWhileVisible";
 import { ProgressBoard } from "@/components/live/ProgressBoard";
-import { SessionQrCode } from "@/components/live/SessionQrCode";
 import { Roster } from "@/components/live/Roster";
+import { keepTally } from "@/components/live/sameTally";
 import { TimerControls } from "@/components/live/TimerControls";
 import { HostResults } from "@/components/live/results/HostResults";
 import { Button } from "@/components/ui/Button";
@@ -34,6 +35,11 @@ export interface HostLobbyProps {
   code: string;
   /** The absolute address the QR code carries, built from the request the host made. */
   studentUrl: string;
+  /**
+   * The QR code for `studentUrl`, drawn by the page on the server (#297). A node rather than a
+   * component here so the encoder never ships to the host's browser or re-runs on each render.
+   */
+  qrCode: ReactNode;
   /** What the server read a moment ago. The console renders from this before it connects. */
   initial: LiveSessionState;
   /** Injectable so this can be driven without Supabase. The page passes nothing. */
@@ -89,6 +95,32 @@ function labelFor(command: HostCommand, state: LiveSessionState): string {
   return command === "reveal" && isStudentPaced(state) ? "Show answers" : LABELS[command];
 }
 
+/**
+ * The moves that cannot be taken back, so the console asks first. Ending is final, and a
+ * student-paced room's "Show answers" closes answering on every item for every student at once.
+ * One item's "Show answer" does not ask: the room moves on to the next item anyway.
+ */
+type Asked = "end" | "reveal";
+
+function asksFirst(command: HostCommand, state: LiveSessionState): command is Asked {
+  return command === "end" || (command === "reveal" && isStudentPaced(state));
+}
+
+/** What the question says, and what its two buttons say. */
+function question(command: Asked, state: LiveSessionState) {
+  return command === "end"
+    ? {
+        title: "End this session?",
+        detail: "Students are disconnected and the code stops working. You can't reopen it.",
+        cancel: "Keep the session",
+      }
+    : {
+        title: `Show answers for all ${state.itemCount} ${state.itemCount === 1 ? "item" : "items"}?`,
+        detail: "Students who haven't finished can't answer any more.",
+        cancel: "Not yet",
+      };
+}
+
 /** What is in flight: a move, a timer button, a new time per item, or a jump (#183). */
 type Pending = HostCommand | TimerCommand | "set_timer" | "goto";
 
@@ -119,6 +151,7 @@ export function HostLobby({
   title,
   code,
   studentUrl,
+  qrCode,
   initial,
   connect,
   tallyIntervalMs = TALLY_INTERVAL_MS,
@@ -129,6 +162,7 @@ export function HostLobby({
   const [tally, setTally] = useState<ItemAggregate | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
+  const [asking, setAsking] = useState<Asked | null>(null);
   /** The current item's CJMM step, which a case study's console names (#184). */
   const [cjmmStep, setCjmmStep] = useState<number | null>(null);
 
@@ -158,7 +192,7 @@ export function HostLobby({
     // Pushed once per item change, never once per submission (ADR 0002). The count that moves
     // while the class answers is the poll below.
     const offAggregate = console_.onAggregate((aggregate) => {
-      if (watching) setTally(aggregate);
+      if (watching) setTally(keepTally(aggregate));
     });
 
     const open = console_.open().then(
@@ -195,7 +229,8 @@ export function HostLobby({
    * (ADR 0002) and "three of three answered" is exactly what a host wants before they reveal. It
    * runs only while the room is on an item — a lobby and an ended session ask for nothing — and
    * an ask that fails is simply not repeated until the next tick: a count that stops moving for
-   * three seconds is not worth an error on a projector.
+   * three seconds is not worth an error on a projector. A hidden tab asks nothing, and asks at
+   * once when it comes back (#323).
    */
   const paced = isStudentPaced(state);
   /** A student-paced room (#185) is on its whole set, never on one item; the board is its view. */
@@ -211,15 +246,15 @@ export function HostLobby({
       void console_
         .aggregate()
         .then((aggregate) => {
-          if (watching && aggregate !== null) setTally(aggregate);
+          // An unchanged tally is a new object each poll; keeping the held one skips a render.
+          if (watching && aggregate !== null) setTally(keepTally(aggregate));
         })
         .catch(() => {});
     };
-    ask();
-    const timer = setInterval(ask, tallyIntervalMs);
+    const stop = pollWhileVisible(ask, tallyIntervalMs);
     return () => {
       watching = false;
-      clearInterval(timer);
+      stop();
     };
   }, [onAnItem, state.position, state.reveal, tallyIntervalMs]);
 
@@ -267,6 +302,23 @@ export function HostLobby({
   const askProgress = useCallback(() => transport.current?.progress() ?? Promise.resolve(null), []);
 
   const ended = state.status === "ended";
+  // A question about a move the room no longer allows (another tab ended it) is not asked.
+  const asked = asking !== null && canRunHostCommand(state, asking) ? asking : null;
+  const askRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (asked !== null) askRef.current?.focus();
+  }, [asked]);
+
+  function press(command: HostCommand) {
+    if (asksFirst(command, state)) setAsking(command);
+    else void run(command);
+  }
+
+  function confirm(command: Asked) {
+    setAsking(null);
+    void run(command);
+  }
+
   /**
    * The tally, but only while it is about the item on the screen. A tally for the item the room
    * has just left is still in hand when `advance` lands, and "5 of 5 answered" above a question
@@ -331,11 +383,7 @@ export function HostLobby({
             >
               {formatSessionCode(code)}
             </p>
-            <SessionQrCode
-              url={studentUrl}
-              label="QR code that opens the join page for this session"
-              className="mx-auto mt-6 block h-auto w-40 rounded-sm border border-line sm:w-48"
-            />
+            {qrCode}
             <p data-testid="join-url" className="mt-3 font-mono text-sm break-all text-ink-2">
               {studentUrl}
             </p>
@@ -352,14 +400,35 @@ export function HostLobby({
         </p>
       )}
 
-      {ended ? null : (
+      {ended ? null : asked !== null ? (
+        <div
+          ref={askRef}
+          role="alertdialog"
+          aria-labelledby="ask-heading"
+          tabIndex={-1}
+          className="mt-6 flex flex-col gap-3 rounded-sm border border-line bg-surface-1 p-4"
+        >
+          <p id="ask-heading" className="font-medium text-ink-1">
+            {question(asked, state).title}
+          </p>
+          <p className="text-sm text-ink-2">{question(asked, state).detail}</p>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="primary" disabled={pending !== null} onClick={() => confirm(asked)}>
+              {labelFor(asked, state)}
+            </Button>
+            <Button variant="ghost" onClick={() => setAsking(null)}>
+              {question(asked, state).cancel}
+            </Button>
+          </div>
+        </div>
+      ) : (
         <div className="mt-6 flex flex-wrap gap-2">
           {offered(state).map((command) => (
             <Button
               key={command}
               variant={command === "start" || command === "advance" ? "primary" : "secondary"}
               disabled={pending !== null || !canRunHostCommand(state, command)}
-              onClick={() => void run(command)}
+              onClick={() => press(command)}
             >
               {labelFor(command, state)}
             </Button>
@@ -403,7 +472,8 @@ export function HostLobby({
         />
       ) : null}
 
-      <Roster roster={roster} />
+      {/* An ended room has no one to wait for, and its join hint would point at a dead code. */}
+      {ended ? null : <Roster roster={roster} />}
     </>
   );
 }

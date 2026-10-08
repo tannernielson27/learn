@@ -11,6 +11,8 @@ import { useItemEditorHost, useReportDirty } from "./ItemEditorHost";
 import type { ItemEditorLoaderProps } from "./ItemEditorLoader";
 import { ItemEditorWithHistory } from "./ItemEditorWithHistory";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
 // The real loader pulls in server actions; this stand-in shows what it was opened with and reports
 // itself dirty whenever it opened on something other than the saved draft.
 vi.mock("./ItemEditorLoader", () => ({

@@ -110,6 +110,33 @@ describe("the proxy matcher still covers the gallery", () => {
     expect(matcher).toContain("/c/:path*");
   });
 
+  it("guards the account pages and refreshes their session (#358)", async () => {
+    expect(matcher).toContain("/account");
+    expect(matcher).toContain("/account/:path*");
+
+    updateSession.mockResolvedValue({ response: NextResponse.next(), signedIn: false });
+    const away = await proxy(request("/account"));
+    expect(away.headers.get("location")).toBe("https://learn.test/sign-in?next=%2Faccount");
+    // The password page keeps where it was going, as the page's own check never could.
+    const password = await proxy(request("/account/password?next=%2Flearn"));
+    expect(password.headers.get("location")).toBe(
+      "https://learn.test/sign-in?next=%2Faccount%2Fpassword%3Fnext%3D%252Flearn",
+    );
+    updateSession.mockResolvedValue({ response: NextResponse.next(), signedIn: true });
+    expect((await proxy(request("/account"))).headers.get("location")).toBeNull();
+  });
+
+  it("runs on sign-up and guards the welcome page (#361)", async () => {
+    expect(matcher).toContain("/sign-up");
+    expect(matcher).toContain("/welcome");
+
+    updateSession.mockResolvedValue({ response: NextResponse.next(), signedIn: false });
+    expect((await proxy(request("/sign-up"))).headers.get("location")).toBeNull();
+    expect((await proxy(request("/welcome"))).headers.get("location")).toBe(
+      "https://learn.test/sign-in?next=%2Fwelcome",
+    );
+  });
+
   it("refreshes the session on the landing page, which reads it to pick a link (#264)", () => {
     expect(matcher).toContain("/");
   });

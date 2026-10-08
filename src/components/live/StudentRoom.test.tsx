@@ -311,6 +311,10 @@ describe("StudentRoom: answering the item", () => {
     // No Submit to press a second time, and no marks: the host has not revealed.
     expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
     expect(screen.queryByRole("complementary", { name: "Score" })).toBeNull();
+    // The sent answer is drawn as sent: still chosen, and not marked wrong for want of a key.
+    expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeChecked();
+    expect(screen.queryAllByText("Incorrect")).toHaveLength(0);
+    expect(document.querySelectorAll("[data-feedback-mark]")).toHaveLength(0);
   });
 
   it("takes a double submit the server refused as the answer already being in", async () => {

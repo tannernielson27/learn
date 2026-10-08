@@ -27,11 +27,25 @@ export const RATE_LIMIT_BUCKETS = [
   "sign_in_invite_total",
   "sign_in_address_pair",
   "sign_in_address",
+  // #306: one-time code tries, per caller and per address.
+  "sign_in_code",
+  "sign_in_code_pair",
+  "sign_in_code_address",
+  // Password tries, in the same three tiers (`src/lib/auth/passwordLimit.ts`).
+  "sign_in_password",
+  "sign_in_password_pair",
+  "sign_in_password_address",
+  // #359: sign-up tries, in the same three tiers (`src/lib/auth/signUpLimit.ts`).
+  "sign_up",
+  "sign_up_pair",
+  "sign_up_address",
   "cron_denied",
   "cron_runs",
   // #241: per student, failing open (see `src/lib/practice/limits.ts`).
   "practice_answer",
   "practice_start",
+  // #360: the welcome email, one ceiling for the whole deployment (`src/lib/auth/welcomeLimit.ts`).
+  "welcome_email",
 ] as const;
 
 export type RateLimitBucket = (typeof RATE_LIMIT_BUCKETS)[number];

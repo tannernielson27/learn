@@ -3,16 +3,35 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { DemoSignInState } from "@/components/auth/DemoSignIn";
+import type { EmailCodeState } from "@/components/auth/EmailCodeForm";
+import type { PasswordSignInState } from "@/components/auth/PasswordSignInForm";
 import type { SignInState } from "@/components/auth/SignInForm";
 import { readDemoAccount, signInToDemo } from "@/lib/auth/demoAccount";
-import { parseSignInForm } from "@/lib/auth/signInForm";
+import type { ConfirmEmailState } from "@/components/auth/ConfirmEmailBanner";
+import { verifyEmailCode } from "@/lib/auth/emailCode";
+import {
+  afterConfirming,
+  endEarlierAccess,
+  isEmailUnconfirmed,
+  markEmailConfirmed,
+} from "@/lib/auth/emailConfirmation";
+import { signInWithPassword } from "@/lib/auth/password";
+import { takeSignInPassword } from "@/lib/auth/passwordLimit";
+import { takeSignInCode } from "@/lib/auth/signInCodeLimit";
+import { parseSignInForm, SIGN_IN_EMAIL_ERROR } from "@/lib/auth/signInForm";
 import {
   signInAddressCeilingRefusals,
   takeSignInAddress,
   takeSignInAttempt,
 } from "@/lib/auth/signInRateLimit";
-import { siteOrigin } from "@/lib/http/siteOrigin";
+import { sendWelcomeEmail } from "@/lib/auth/welcomeEmail";
+import { takeWelcomeEmail } from "@/lib/auth/welcomeLimit";
+import { getMailer } from "@/lib/email";
+import { canonicalSiteOrigin } from "@/lib/http/siteOrigin";
+import { confirmedDeps, earlierAccessDeps, signedInUserId } from "@/lib/supabase/emailConfirmed";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { signedInTarget } from "@/lib/supabase/signedInHome";
 
 /** The single answer to every request that was accepted — and to every one quietly refused. */
 function sent(email: string): SignInState {
@@ -20,8 +39,8 @@ function sent(email: string): SignInState {
 }
 
 /**
- * Emails a sign-in link. The link returns to /auth/confirm on this site; Supabase only sends it
- * if that URL is on the project's redirect allow-list, so a forged Host header cannot redirect.
+ * Emails a sign-in link. The link returns to /auth/confirm on the canonical origin, never one the
+ * request names, so a forged Host header cannot redirect it.
  *
  * Once the form has been read and the caller counted, every path out of this function is the
  * same `sent` result, and that is the whole design (#139). A link really sent, an address whose
@@ -67,7 +86,9 @@ export async function requestSignInLink(
     return sent(parsed.email);
   }
 
-  const confirmUrl = new URL("/auth/confirm", siteOrigin(requestHeaders));
+  // The same origin a class invite's link uses (#304), so both land on the host Supabase's
+  // allow-list names and the session cookie is set where the person will keep using the app.
+  const confirmUrl = new URL("/auth/confirm", canonicalSiteOrigin(requestHeaders));
   confirmUrl.searchParams.set("next", parsed.next);
 
   const supabase = await createSupabaseServerClient();
@@ -99,6 +120,31 @@ export async function requestSignInLink(
 }
 
 /**
+ * Signs in with an email address and a password, then follows the safe `next`. Counted per caller
+ * and per address before Supabase is asked; see `signInWithPassword` for why every refusal reads
+ * the same.
+ */
+export async function signInWithEmailPassword(
+  _previous: PasswordSignInState,
+  formData: FormData,
+): Promise<PasswordSignInState> {
+  const requestHeaders = await headers();
+  const supabase = await createSupabaseServerClient();
+  const result = await signInWithPassword(formData, {
+    take: (email) => takeSignInPassword(requestHeaders, email),
+    signIn: (credentials) => supabase.auth.signInWithPassword(credentials),
+  });
+  if (!result.ok) {
+    const field = result.error === SIGN_IN_EMAIL_ERROR ? "email" : "password";
+    return { status: "error", error: result.error, field };
+  }
+  // #363: with nowhere asked for, their own home rather than authoring and a bounce.
+  const target = await signedInTarget(supabase, result.next);
+  // Outside any try, because redirect() works by throwing.
+  redirect(target);
+}
+
+/**
  * Signs in to the shared demo account with its server-only password, then follows the safe
  * `next`. Refuses when the demo is not configured, even if the button was forged.
  */
@@ -116,5 +162,59 @@ export async function signInAsDemo(
     supabase.auth.signInWithPassword(credentials),
   );
   if (!result.ok) return { status: "error", error: result.error };
-  redirect(result.next);
+  redirect(await signedInTarget(supabase, result.next));
+}
+
+/**
+ * Signs in with the one-time code from the sign-in email (#306), on the device the code is typed
+ * on. Shared by the sign-in page and the class invite page. Counted per caller and per address
+ * before Supabase is asked; see `verifyEmailCode` for why every refusal reads the same.
+ */
+export async function verifySignInCode(
+  _previous: EmailCodeState,
+  formData: FormData,
+): Promise<EmailCodeState> {
+  const requestHeaders = await headers();
+  const supabase = await createSupabaseServerClient();
+  // Read before the code replaces it: who this browser was signed in as, if anyone.
+  const before = await signedInUserId(supabase);
+  const result = await verifyEmailCode(formData, {
+    take: (email) => takeSignInCode(requestHeaders, email),
+    verify: (params) => supabase.auth.verifyOtp(params),
+  });
+  if (!result.ok) return { status: "error", error: result.error };
+  // The code came from their inbox, which is the proof the address is theirs.
+  const confirmed = await markEmailConfirmed(confirmedDeps(supabase));
+  // Confirmed from a browser that was not signed in to the account: whoever made it is shut out.
+  await endEarlierAccess(confirmed, before, earlierAccessDeps(supabase));
+  // Outside any try, because redirect() works by throwing.
+  redirect(afterConfirming(confirmed, before, await signedInTarget(supabase, result.next)));
+}
+
+/**
+ * Sends the welcome email again (#360), from the banner a not-yet-confirmed account sees.
+ * Signed-in only, and to the account's own address only (the verified session's, never anything
+ * the request carries), counted like any other emailed link. The answer is always `sent`, as it is
+ * for every link (#139): whether the email left is the log's to say.
+ */
+export async function resendConfirmation(): Promise<ConfirmEmailState> {
+  const supabase = await createSupabaseServerClient();
+  const claims = (await supabase.auth.getClaims()).data?.claims;
+  const email = typeof claims?.email === "string" ? claims.email : null;
+  if (!email || !isEmailUnconfirmed(claims)) return { status: "sent" };
+
+  const requestHeaders = await headers();
+  const limit = await takeSignInAttempt(requestHeaders, "email");
+  if (!limit.ok) return { status: "error", error: limit.error };
+  if ((await takeSignInAddress(requestHeaders, email)) !== "send") return { status: "sent" };
+
+  const service = createSupabaseServiceClient();
+  // The banner is on the student home, the one place an unconfirmed account is asked today.
+  await sendWelcomeEmail({ email }, "student", {
+    requestHeaders,
+    generateLink: (params) => service.auth.admin.generateLink(params),
+    mailer: getMailer(),
+    allow: () => takeWelcomeEmail(),
+  });
+  return { status: "sent" };
 }

@@ -9,8 +9,9 @@ import {
   type TestInfo,
 } from "@playwright/test";
 import { bytesOf, expectKeyless } from "./bytes";
-import { latestSignInLink } from "./mailbox";
+import { latestSignInLink, openSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor, updateAsAdmin } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #210: once an assignment closes, a student reads their best attempt's score and every item with
 // its key and rationale; before the close the results page carries none of it. A bank the student
@@ -70,12 +71,16 @@ async function joinAsStudent(
     reducedMotion: "reduce",
   });
   const page = await context.newPage();
+  await skipWelcomes(page);
   await page.goto(invite);
   const email = `student-${label}-${testInfo.project.name}-${Date.now()}@example.test`;
   const since = new Date();
   await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await page
+    .getByRole("button", { name: "Join with an emailed link instead", exact: true })
+    .click();
   await page.getByRole("button", { name: "Email me a link to join", exact: true }).click();
-  await page.goto(await latestSignInLink(request, email, since));
+  await openSignInLink(page, await latestSignInLink(request, email, since));
   await expect(page).toHaveURL(/\/learn$/);
   return { context, page, email };
 }
@@ -186,10 +191,13 @@ test("a student sees nothing before the close, then their score, keys and ration
     display_name: displayName,
   });
   const ofStudentA = [email, displayName, mine.id];
-  // The controls: each marker is in a response where it belongs. A's email heads A's own home, the
-  // instructor's roster names A, and a student's attempt page carries that student's attempt id.
-  expect(await bytesOf(phone, "/learn")).toContain(email);
-  expect(await bytesOf(page.context(), `/author/classes/${classId}`)).toContain(displayName);
+  // The controls: each marker is in a response where it belongs. A's name heads A's own home (#358:
+  // the header shows the name once there is one), the instructor's roster carries A's name and
+  // email, and a student's attempt page carries that student's attempt id.
+  expect(await bytesOf(phone, "/learn")).toContain(displayName);
+  const roster = await bytesOf(page.context(), `/author/classes/${classId}`);
+  expect(roster).toContain(displayName);
+  expect(roster).toContain(email);
   const classmateTaking = await bytesOf(other.context, bankPath);
   expect(classmateTaking).toContain(classmateAttempt.id);
   // And none of A's in B's attempt, B's home, or B's results before the close.

@@ -46,15 +46,22 @@ export async function proxy(request: NextRequest) {
 // reason: it is turned away above before any session work happens. The student home and the class
 // invite page (#205) read the session in Server Components, which cannot write the refreshed
 // cookies themselves, so the refresh has to happen here. The landing page (#264) is the same: it
-// reads the session to swap Sign in for the visitor's home. `/` matches the root alone.
+// reads the session to swap Sign in for the visitor's home. `/` matches the root alone. The
+// account pages (#358) read it too, and `redirectForAccess` already counts /account as protected,
+// which only works if the proxy runs there. Sign-up and the welcome page (#361) are the same pair:
+// /sign-up reads the session to send a signed-in visitor home, and /welcome is protected.
 export const config = {
   matcher: [
     "/",
     "/author/:path*",
     "/learn",
     "/learn/:path*",
+    "/account",
+    "/account/:path*",
     "/c/:path*",
     "/sign-in",
+    "/sign-up",
+    "/welcome",
     "/auth/:path*",
     "/gallery",
     "/gallery/:path*",

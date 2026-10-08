@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { cache } from "react";
 import type { Database } from "@/lib/supabase/database.types";
 import {
   ITEM_PAGE_SIZE,
@@ -12,6 +13,7 @@ import {
 } from "./bankSearch";
 import type { FolderView } from "./folders";
 import { hasMatch, splitHighlight, type Segment } from "./highlight";
+import { sharedWarningCounts, type WarningCountStore } from "./sharedWarningCounts";
 import { storedWarningCount } from "./storedWarnings";
 import type { TaggedRow } from "./tagFilter";
 
@@ -166,11 +168,23 @@ export async function listItems(
  * RLS. The rows, key and rationale included, never leave this function; only the counts do.
  */
 async function warningCounts(client: Client, ids: string[]): Promise<Map<string, number>> {
-  if (ids.length === 0) return new Map();
-  const { data, error } = await client.from("items").select(ITEM_ROW_COLUMNS).in("id", ids);
-  if (error) throw new AuthoringDataError("Items could not be loaded.");
-  return new Map(data.map((row) => [row.id, storedWarningCount(row)]));
+  return requestWarningCounts(client)(ids);
 }
+
+/**
+ * The item list and the tag counts run side by side and mostly list the same items, so one request
+ * reads and judges each row once, through a store per client. React's `cache` keeps it for the
+ * current server request only; outside a render every call gets a fresh store, as before.
+ */
+const requestWarningCounts = cache((client: Client) => {
+  const store: WarningCountStore = new Map();
+  return (ids: string[]) =>
+    sharedWarningCounts(store, ids, async (missing) => {
+      const { data, error } = await client.from("items").select(ITEM_ROW_COLUMNS).in("id", missing);
+      if (error) throw new AuthoringDataError("Items could not be loaded.");
+      return new Map(data.map((row) => [row.id, storedWarningCount(row)]));
+    });
+});
 
 function marked(value: string | null): Segment[] | null {
   if (typeof value !== "string") return null;
