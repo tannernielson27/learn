@@ -10,6 +10,7 @@ import {
 import { sampleCaseStudy } from "../src/lib/ngn/fixtures/case-study";
 import { fillMultipleResponse, publishOpenItem } from "./authoringHelpers";
 import { signInAsNewAuthor } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // Needs the local Supabase stack, like liveSession.spec.ts. CI runs it in the `auth-e2e` job,
 // which also starts Realtime: every move below reaches the phones over a channel.
@@ -57,6 +58,7 @@ async function join(
     reducedMotion: "reduce",
   });
   const phone = await context.newPage();
+  await skipWelcomes(phone);
   await phone.goto(`/join/${code}`);
   await phone.getByRole("textbox", { name: "Display name" }).fill(name);
   // Exact on a short button name: it has bitten this repo twice.

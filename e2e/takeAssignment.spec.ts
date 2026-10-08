@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { actionBytes, bytesOf, expectKeyless } from "./bytes";
 import { latestSignInLink, openSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #208: a student takes an assignment on a phone: answers save as they go, come back after a
 // reload, and submit; and no key, rationale or score reaches the phone before the close. Needs the
@@ -74,6 +75,7 @@ test("a student answers on a phone, reloads to find the answers, and submits", a
   const { viewport, isMobile, hasTouch } = testInfo.project.use;
   const phone = await browser.newContext({ viewport, isMobile, hasTouch, reducedMotion: "reduce" });
   const student = await phone.newPage();
+  await skipWelcomes(student);
   await student.goto(invite);
   const email = `student-take-${project}-${Date.now()}@example.test`;
   const since = new Date();

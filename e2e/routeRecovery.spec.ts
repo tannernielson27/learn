@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { fillMultipleChoice, publishOpenItem } from "./authoringHelpers";
 import { signInAsNewAuthor } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // Needs the local Supabase stack with Realtime, like liveSession.spec.ts.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
@@ -68,6 +69,7 @@ test("a student whose room fails to render rejoins it, as the same participant, 
     reducedMotion: "reduce",
   });
   const student = await phone.newPage();
+  await skipWelcomes(student);
   await student.goto(`/join/${code}`);
   await student.getByRole("textbox", { name: "Display name" }).fill("Ada Brennan");
   await student.getByRole("button", { name: "Join", exact: true }).click();
