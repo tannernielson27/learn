@@ -40,7 +40,7 @@ You are the orchestrator (TPM) for LeaRN, a Socrative-style live learning app fo
 
 **Scope.** Sprint 11 is the last Phase 4 sprint. Demo 12: an outside instructor onboards cold and runs a class without help. File roughly 8–11 stories in the docs/03 template (Story, Scope, Spec references, Acceptance criteria, Demo step, Depends on, and the fixed Definition of Done block from any S10 issue). Give each labels and the new milestone. The candidates:
 
-- **Landing page.** Replace the Sprint 0 placeholder at `/`. Sign-up is invite-only, so the page explains the product and links to sign in; there is no open sign-up and no pricing. Follow docs/04: no stock hero, no gradient blob, no emoji.
+- **Landing page.** Replace the Sprint 0 placeholder at `/`. The page explains the product and links to sign in; when this was written there was no open sign-up, and since Sprint 13 (ADR 0009, #366) it also offers Create an account. No pricing. Follow docs/04: no stock hero, no gradient blob, no emoji.
 - **Instructor onboarding.** A first sign-in with an empty org leads through three things: make a bank, or import the sample; make a class; and assign or run a session. Add a dismissible checklist on the author home.
 - **Empty states.** Every list page that can be empty says what to do next: banks, items, classes, assignments, sessions, the student home, practice.
 - **Error states.** `not-found` and `error` pages that match the design and are keyboard reachable. A friendly error for an expired or used invite and for an expired magic link. Sentry already captures the errors (#235).

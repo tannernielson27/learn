@@ -46,7 +46,7 @@ const WHAT_IT_DOES = [
 ] as const;
 
 export interface LandingProps {
-  /** Sign in for a visitor, or the signed-in visitor's own home. */
+  /** Create an account and Sign in for a visitor, or the signed-in visitor's own home. */
   entry: LandingEntry;
 }
 
@@ -69,6 +69,11 @@ export function Landing({ entry }: LandingProps) {
             <Link href={entry.href} className={PRIMARY}>
               {entry.label}
             </Link>
+            {entry.also ? (
+              <Link href={entry.also.href} className={SECONDARY}>
+                {entry.also.label}
+              </Link>
+            ) : null}
             <Link href="/join" className={SECONDARY}>
               Join a live session
             </Link>
@@ -124,9 +129,10 @@ export function Landing({ entry }: LandingProps) {
             How to get in
           </h2>
           <p className="mt-3 max-w-prose leading-relaxed text-ink-2">
-            LeaRN is invite-only. Instructor accounts are set up by the site&apos;s owner; once
-            yours exists, sign in with a link sent to your email. Students arrive through a class
-            invite from their instructor, or join a live session with the code shown in class.
+            Anyone can create an account. Teachers sign up and get a workspace of their own, private
+            to them, for their question banks and classes. Students sign up too, and join a class
+            with its invite link, QR code or class code. A live session in class needs no account:
+            enter the code your instructor shows.
           </p>
         </section>
       </div>

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * The server-side author check (#204). Since sign-up is invite-only, a signed-in account with no
+ * The server-side author check (#204). A new account starts with no role, so a signed-in account with no
  * role is the ordinary case, not an edge: it must be refused here even though RLS would show it
  * nothing anyway, so the UI agrees with the database.
  */

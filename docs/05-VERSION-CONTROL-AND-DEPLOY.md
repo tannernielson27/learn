@@ -223,7 +223,7 @@ Run from the repo root, on a machine with the repo checked out. Steps 1–2 and 
 
 5. **Create the demo account — production only.** Dashboard → Authentication → Users → Add user. Email `demo@learn.app` (any address you control), a long random password, **Auto Confirm User on**. Then make it an instructor with the one line in §7.6 — since #204 a new account has no role until you do. Never run `supabase/seed-demo.sql` against a hosted project: its password is public and local-only.
 
-   **Every author account is created here too, and only here.** #139 turned self-serve sign-up off: the sign-in form no longer creates an account, so an address that has none is answered exactly like an address that has one and is simply never mailed. To add an instructor, Add user with their address and **Auto Confirm User on** — no password is needed, they sign in from the emailed link — then run the §7.6 line for that address, then tell them to ask for a link. Until that account exists, the form will tell them to check an inbox nothing was sent to; that silence is deliberate, because any other answer would say aloud which addresses have accounts.
+   **An instructor for the shared workspace is created here too.** Since Sprint 13 anyone can sign up at `/sign-up` (ADR 0009, #361), and a teacher who does gets a workspace of their own; a colleague who should share the seeded workspace is added by hand instead. Add user with their address and **Auto Confirm User on** — no password is needed, they sign in from the emailed link — then run the §7.6 line for that address, then tell them to ask for a link. The sign-in form itself still creates no account (#139): an address that has none is answered exactly like an address that has one and is simply never mailed. That silence is deliberate, because any other answer there would say aloud which addresses have accounts.
 
 6. **Point Vercel Production at it.** Vercel → project → Settings → Environment Variables, **Production scope only**:
    - `NEXT_PUBLIC_SUPABASE_URL` = `https://<prod-ref>.supabase.co`
@@ -260,9 +260,11 @@ pnpm exec supabase db reset     # drops, recreates, applies all migrations in or
 
 `db reset` prints each migration as it applies it and stops at the first failure. It also runs `seed.sql` and `seed-demo.sql`, so a green run proves the sample content and the local demo account still load against the current schema. Afterwards `pnpm db:types` regenerates `src/lib/supabase/database.types.ts`; CI fails if the committed file differs.
 
-### 7.6 Adding an instructor (two steps, since #204)
+### 7.6 Adding a colleague to the shared workspace (two steps, since #204)
 
-Sign-up is invite-only. A new account, however it was made, gets a profile with **no org and no role**: it can sign in, lands on "No access yet", and row level security shows it nothing. Nothing makes an account an instructor automatically, so adding one is two steps:
+Accounts are self-serve since Sprint 13 (ADR 0009, #361): a teacher signs up at `/sign-up` and gets a workspace (org) of their own, and a student signs up there or through a class invite and joins a class by link, QR code or class code. None of that needs the owner. The owner steps that open sign-up are in §7.12 (#359): the Turnstile widget and its two variables, and the hosted Auth settings.
+
+What is left here is the one thing sign-up never does: putting someone in the **shared** workspace, the one `seed.sql` made, so that colleagues share one set of banks. A new account, however it was made, gets a profile with **no org and no role**: it can sign in, lands on the welcome page, and row level security shows it nothing. Do this before the colleague signs up as a teacher: `make_instructor` puts an account in the shared workspace only if it has no workspace yet, so one that has already set up its own stays where it is. Adding one is two steps:
 
 1. Dashboard → Authentication → Users → **Add user**, their address, **Auto Confirm User on**.
 2. Dashboard → SQL Editor, in the same project:
@@ -474,7 +476,7 @@ To repeat the drill locally: dump the running stack with `PROD_DB_URL=postgresql
 Before the first real student gets an invite, do these in order, then run the check until every automated line passes. Each step is written out in full in the section it names; this is the order, not the detail.
 
 1. **[ ] Production project** (§7.3 steps 1–4): create `learn-prod`, copy its ref, `db push` every migration in §7.2, load `seed.sql`. Check the replay locally first if §7.2 changed since the last one (§7.5). §7.4 is only for catching up a project that already exists.
-2. **[ ] Instructor accounts** (§7.3 step 5 and §7.6): Add user, then `select private.make_instructor('<address>');` for each instructor. **Leave the demo account out of production**: do not set `DEMO_ACCOUNT_EMAIL` or `DEMO_ACCOUNT_PASSWORD` in Vercel Production (delete them if they are there), so "Use the demo account" is not on the sign-in page students see. The check fails while either is set.
+2. **[ ] Instructor accounts in the shared workspace** (§7.3 step 5 and §7.6): Add user, then `select private.make_instructor('<address>');` for each colleague who shares it. Everyone else signs up for themselves (§7.12). **Leave the demo account out of production**: do not set `DEMO_ACCOUNT_EMAIL` or `DEMO_ACCOUNT_PASSWORD` in Vercel Production (delete them if they are there), so "Use the demo account" is not on the sign-in page students see. The check fails while either is set.
 3. **[ ] Vercel Production variables** (§7.3 step 6): the Supabase URL, publishable key, `SUPABASE_SECRET_KEY` and `SUPABASE_JWT_SIGNING_KEY`, all from the production project. Redeploy and check the ref (§7.3 step 7).
 4. **[ ] Realtime private-only** (§7.3 step 8): "Allow public access" off. Never add `live` or `private` to the Data API's exposed schemas. Then #178 can merge and be applied, which drops the last open policy on `live.session_public_state`.
 5. **[ ] Email** (§7.7 steps 1–7): Resend domain and key, custom SMTP, the magic-link template, the Auth email rate limit, the Auth URL configuration, `RESEND_API_KEY` and `EMAIL_FROM` in Vercel, and a real link to your own inbox.
