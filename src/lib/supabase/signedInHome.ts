@@ -5,19 +5,20 @@ import type { createSupabaseServerClient } from "./server";
 type ServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 /**
- * `afterSignInPath` for the cookie client that has just signed someone in (#363): the path to
- * redirect to, with the default swapped for that person's own home.
+ * `afterSignInPath` for an account whose verified id the caller already holds: `target`, with the
+ * default swapped for that person's own home.
  *
  * The role is read only when it can matter, which is when nowhere was asked for. It comes from the
- * account's own profile row, as `readViewer` reads it, by the id the verified token carries.
- * Never throws: if the role cannot be read the default stands, and authoring sends them on as it
- * always has.
+ * account's own profile row, as `readViewer` reads it. Never throws: if the role cannot be read
+ * the default stands, and authoring sends them on as it always has.
  */
-export async function signedInTarget(supabase: ServerClient, target: string): Promise<string> {
+export async function homeForAccount(
+  supabase: Pick<ServerClient, "from">,
+  userId: string,
+  target: string,
+): Promise<string> {
   if (target !== DEFAULT_AFTER_SIGN_IN) return target;
   try {
-    const userId = (await supabase.auth.getClaims()).data?.claims?.sub;
-    if (typeof userId !== "string") return target;
     const { data, error } = await supabase
       .from("profiles")
       .select("role")
@@ -25,6 +26,22 @@ export async function signedInTarget(supabase: ServerClient, target: string): Pr
       .maybeSingle();
     if (error) return target;
     return afterSignInPath(target, data?.role ?? null);
+  } catch {
+    return target;
+  }
+}
+
+/**
+ * `homeForAccount` for the cookie client that has just signed someone in (#363): the path to
+ * redirect to, by the id the verified token carries. Nothing is read, the token included, when
+ * somewhere was asked for. Never throws.
+ */
+export async function signedInTarget(supabase: ServerClient, target: string): Promise<string> {
+  if (target !== DEFAULT_AFTER_SIGN_IN) return target;
+  try {
+    const userId = (await supabase.auth.getClaims()).data?.claims?.sub;
+    if (typeof userId !== "string") return target;
+    return await homeForAccount(supabase, userId, target);
   } catch {
     return target;
   }
