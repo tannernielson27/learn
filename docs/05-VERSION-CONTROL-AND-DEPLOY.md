@@ -302,6 +302,8 @@ Until steps 2–4 are done in a project, its magic links go out through Supabase
 
 Do these in order, in **both** Supabase projects (production and `vauokqoyvewtzubqajgh`) unless a step says otherwise. Tick each one here in the PR that records it.
 
+> **Status 2026-09-26 (go-live audit):** step 6 is half done: Production has `RESEND_API_KEY` and `EMAIL_FROM`, while Preview has `EMAIL_FROM` only. Steps 1–5 and 7 happen in the dashboards and were not verified. None of this counts for the production project, which does not exist yet.
+
 1. **[ ] Resend domain verified.** Resend → Domains → `info.tannernielson.com` shows **Verified** (the SPF, DKIM and MX records it lists are at the DNS host for `tannernielson.com`). Nothing else works until this does. Then Resend → API Keys → **Create API key**, permission **Sending access**, domain `info.tannernielson.com`. Make one key per environment (`learn-production`, `learn-preview`) so either can be revoked alone. Each key is shown once.
 2. **[ ] Supabase custom SMTP.** Supabase → Authentication → Emails → **SMTP Settings** → Enable custom SMTP:
    - Sender email: `learn@info.tannernielson.com` · Sender name: `LeaRN`
@@ -328,6 +330,8 @@ The app mailer never logs a recipient's address, a message body or the key, and 
 pg_cron in the database calls the app's `POST /api/cron/assignment-reminders` every 15 minutes through pg_net, with a shared secret. Each run submits attempts left open at close (#208) and sends the reminder emails that are due: "Week 5 is open" to every class member when an assignment opens, and "Week 5 closes tomorrow at 17:00" 24 hours before close to members who have not submitted. Until these steps are done in a project nothing is scheduled: no reminder goes out, and the submit at close happens only when someone opens the assignment or its report, as before. Do them after migration 28 is applied and after §7.7 (the job sends through Resend).
 
 Until the §7.3 split there is one project and one job, pointed at the production URL. After the split, repeat steps 1–4 in the production project with its own secret, and leave the preview project unscheduled.
+
+> **Status 2026-09-26 (go-live audit):** steps 3 and 4 are done on `vauokqoyvewtzubqajgh` (both extensions on, both Vault names present, both jobs scheduled and active). Step 2 is not: `CRON_SECRET` is missing from Vercel Production, so every scheduled call gets `503 not_configured` (`net._http_response`). After the split, unschedule both jobs here (`select cron.unschedule('learn-assignment-reminders');` and the same for `learn-rate-limit-sweep`) and do steps 1–5 in the production project.
 
 1. **[ ] Make the secret.** On your own machine: `openssl rand -hex 32` (64 characters; the route refuses anything under 32). It is shown once here and pasted twice below; do not save it anywhere else.
 2. **[ ] Vercel `CRON_SECRET`.** Vercel → project → Settings → Environment Variables → `CRON_SECRET` = that value, **Production** scope, server-only (never `NEXT_PUBLIC_`). Redeploy. Until it is set the route answers every call `503 not_configured`.
