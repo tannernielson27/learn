@@ -39,3 +39,31 @@ describe("signedInHome (#361)", () => {
     expect(signedInHome(null)).toBe("/welcome");
   });
 });
+
+describe("afterSignInPath (#363)", () => {
+  it("sends each role to its own home when nowhere was asked for", async () => {
+    const { afterSignInPath } = await import("./landing");
+    expect(afterSignInPath("/author", "instructor")).toBe("/author");
+    expect(afterSignInPath("/author", "admin")).toBe("/author");
+    expect(afterSignInPath("/author", "student")).toBe("/learn");
+    expect(afterSignInPath("/author", null)).toBe("/welcome");
+  });
+
+  it("lets a next that was asked for win, whatever the role", async () => {
+    const { afterSignInPath } = await import("./landing");
+    for (const role of ["instructor", "admin", "student", null] as const) {
+      expect(afterSignInPath("/account/password?next=%2Flearn", role)).toBe(
+        "/account/password?next=%2Flearn",
+      );
+      expect(afterSignInPath("/author/banks/1", role)).toBe("/author/banks/1");
+      expect(afterSignInPath("/learn", role)).toBe("/learn");
+    }
+  });
+
+  it("is only ever given a path safeNextPath has passed, so an unsafe next is already authoring", async () => {
+    const { afterSignInPath } = await import("./landing");
+    const { safeNextPath } = await import("./nextPath");
+    expect(afterSignInPath(safeNextPath("https://evil.example"), "student")).toBe("/learn");
+    expect(afterSignInPath(safeNextPath("//evil.example"), null)).toBe("/welcome");
+  });
+});
