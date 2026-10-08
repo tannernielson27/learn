@@ -66,10 +66,18 @@ jobs:
           pnpm exec prettier --stdin-filepath src/lib/supabase/database.types.ts < "$RUNNER_TEMP/raw.ts" > "$RUNNER_TEMP/database.types.ts"
           diff -u src/lib/supabase/database.types.ts "$RUNNER_TEMP/database.types.ts" || { echo "::error::database.types.ts is stale. Run pnpm db:types and commit."; exit 1; }
 
+  # Three runners, each with its own local stack and build, each taking a third of the tests
+  # (Playwright's --shard splits them evenly). One runner took 21 to 24 of its 30 minutes, and
+  # every merge waits on it. `auth e2e` below is the one result to read.
   auth-e2e:
-    name: auth e2e
+    name: auth e2e (${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
+    strategy:
+      # A failure in one third should not hide what the other two would have said.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -89,7 +97,7 @@ jobs:
             | sed -n 's/^API_URL=/NEXT_PUBLIC_SUPABASE_URL=/p; s/^PUBLISHABLE_KEY=/NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=/p; s/^SECRET_KEY=/SUPABASE_SECRET_KEY=/p; s/^JWT_SECRET=/SUPABASE_JWT_SIGNING_KEY=/p' \
             | tr -d '"' >> "$GITHUB_ENV"
       - name: Sign in, then author banks and items
-        run: pnpm e2e e2e/auth.spec.ts e2e/authoring.spec.ts e2e/caseStudyBuilder.spec.ts e2e/transfer.spec.ts e2e/folders.spec.ts e2e/tags.spec.ts e2e/history.spec.ts e2e/duplicate.spec.ts e2e/search.spec.ts e2e/bulk-import.spec.ts e2e/warnings.spec.ts e2e/archive.spec.ts e2e/liveSession.spec.ts e2e/join.spec.ts e2e/liveAnswer.spec.ts e2e/routeRecovery.spec.ts e2e/classes.spec.ts e2e/assignments.spec.ts e2e/takeAssignment.spec.ts e2e/assignmentReport.spec.ts e2e/assignmentResults.spec.ts e2e/classTimeZone.spec.ts e2e/studentHistory.spec.ts e2e/practiceShare.spec.ts e2e/liveBytes.spec.ts e2e/practice.spec.ts e2e/landing.spec.ts e2e/emailPreview.spec.ts e2e/errorPages.spec.ts e2e/help.spec.ts e2e/onboarding.spec.ts e2e/yourSteps.spec.ts e2e/practiceFrozen.spec.ts e2e/emptyStates.spec.ts e2e/coldOnboarding.spec.ts
+        run: pnpm e2e e2e/auth.spec.ts e2e/authoring.spec.ts e2e/caseStudyBuilder.spec.ts e2e/transfer.spec.ts e2e/folders.spec.ts e2e/tags.spec.ts e2e/history.spec.ts e2e/duplicate.spec.ts e2e/search.spec.ts e2e/bulk-import.spec.ts e2e/warnings.spec.ts e2e/archive.spec.ts e2e/liveSession.spec.ts e2e/join.spec.ts e2e/liveAnswer.spec.ts e2e/routeRecovery.spec.ts e2e/classes.spec.ts e2e/assignments.spec.ts e2e/takeAssignment.spec.ts e2e/assignmentReport.spec.ts e2e/assignmentResults.spec.ts e2e/classTimeZone.spec.ts e2e/studentHistory.spec.ts e2e/practiceShare.spec.ts e2e/liveBytes.spec.ts e2e/practice.spec.ts e2e/landing.spec.ts e2e/emailPreview.spec.ts e2e/errorPages.spec.ts e2e/help.spec.ts e2e/onboarding.spec.ts e2e/yourSteps.spec.ts e2e/practiceFrozen.spec.ts e2e/emptyStates.spec.ts e2e/coldOnboarding.spec.ts e2e/registration.spec.ts --shard=${{ matrix.shard }}/3
         env:
           E2E_AUTH: "1"
           # The local-only demo account from supabase/seed-demo.sql, not a secret.
@@ -99,6 +107,8 @@ jobs:
       # e2e step just made (Playwright's webServer runs `pnpm build`, leaving .next here). Small on purpose: it proves the load script and the room still work
       # end to end, not how many students the room holds (docs/load-testing.md has the 60 run).
       - name: Load smoke (five participants)
+        # Once is enough: it needs a build and a stack, which every shard has.
+        if: matrix.shard == 1
         timeout-minutes: 4
         run: |
           test -f .next/BUILD_ID || { echo "No production build: the e2e step did not build one."; exit 1; }
@@ -113,8 +123,19 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: auth-e2e-report
+          name: auth-e2e-report-${{ matrix.shard }}
           path: |
             playwright-report
             test-results
           retention-days: 7
+
+  # The one line to read for the three shards above: green only when all three are.
+  auth-e2e-result:
+    name: auth e2e
+    needs: auth-e2e
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: All three shards passed
+        run: test "${{ needs.auth-e2e.result }}" = "success"
