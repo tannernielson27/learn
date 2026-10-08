@@ -238,8 +238,18 @@ test("a student joins with an email and a password, with no email to wait for", 
   await expect(student).toHaveURL(/\/sign-in$/);
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
   await student.getByLabel("Password", { exact: true }).fill(password);
+  // #363: with nowhere asked for, a student goes straight home, never by way of authoring.
+  // Every request counts, since a Server Function's redirect is fetched rather than navigated to.
+  const visited: string[] = [];
+  const record = (request: { url(): string }) => {
+    visited.push(new URL(request.url()).pathname);
+  };
+  student.on("request", record);
   await student.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(student).toHaveURL(/\/learn$/);
   await expect(student.getByTestId("signed-in-name")).toHaveText(name);
+  student.off("request", record);
+  expect(visited.filter((pathname) => pathname.startsWith("/author"))).toEqual([]);
 
   // The header's Account link: the name can be changed there, and the roster follows.
   await student.getByRole("link", { name: "Account", exact: true }).click();

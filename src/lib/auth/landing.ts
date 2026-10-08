@@ -1,6 +1,7 @@
 import type { Database } from "@/lib/supabase/database.types";
 import { STUDENT_HOME } from "@/lib/classes/classes";
 import { WELCOME_PATH } from "./accountPaths";
+import { DEFAULT_AFTER_SIGN_IN } from "./nextPath";
 
 type OrgRole = Database["public"]["Enums"]["org_role"];
 
@@ -40,4 +41,15 @@ export function landingEntry(visitor: LandingVisitor): LandingEntry {
 export function signedInHome(role: OrgRole | null): string {
   if (role === "instructor" || role === "admin") return "/author";
   return role === "student" ? STUDENT_HOME : WELCOME_PATH;
+}
+
+/**
+ * Where to go once someone has signed in (#363). A `next` they asked for wins. With none, `target`
+ * is the default, authoring, which is only right for an author: a student sent there is bounced to
+ * the student home, and an account with no role to the welcome page. This names that home at once,
+ * so they get there in one navigation. It changes nothing about who may open what: the answer is
+ * always where authoring would have sent them anyway.
+ */
+export function afterSignInPath(target: string, role: OrgRole | null): string {
+  return target === DEFAULT_AFTER_SIGN_IN ? signedInHome(role) : target;
 }

@@ -31,6 +31,7 @@ import { canonicalSiteOrigin } from "@/lib/http/siteOrigin";
 import { confirmedDeps, earlierAccessDeps, signedInUserId } from "@/lib/supabase/emailConfirmed";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { signedInTarget } from "@/lib/supabase/signedInHome";
 
 /** The single answer to every request that was accepted — and to every one quietly refused. */
 function sent(email: string): SignInState {
@@ -137,8 +138,10 @@ export async function signInWithEmailPassword(
     const field = result.error === SIGN_IN_EMAIL_ERROR ? "email" : "password";
     return { status: "error", error: result.error, field };
   }
+  // #363: with nowhere asked for, their own home rather than authoring and a bounce.
+  const target = await signedInTarget(supabase, result.next);
   // Outside any try, because redirect() works by throwing.
-  redirect(result.next);
+  redirect(target);
 }
 
 /**
@@ -159,7 +162,7 @@ export async function signInAsDemo(
     supabase.auth.signInWithPassword(credentials),
   );
   if (!result.ok) return { status: "error", error: result.error };
-  redirect(result.next);
+  redirect(await signedInTarget(supabase, result.next));
 }
 
 /**
@@ -185,7 +188,7 @@ export async function verifySignInCode(
   // Confirmed from a browser that was not signed in to the account: whoever made it is shut out.
   await endEarlierAccess(confirmed, before, earlierAccessDeps(supabase));
   // Outside any try, because redirect() works by throwing.
-  redirect(afterConfirming(confirmed, before, result.next));
+  redirect(afterConfirming(confirmed, before, await signedInTarget(supabase, result.next)));
 }
 
 /**
