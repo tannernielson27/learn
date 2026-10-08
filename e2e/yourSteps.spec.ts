@@ -9,6 +9,7 @@ import {
   selectAsAdmin,
   signInAsNewAuthor,
 } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #273: the student home's "Your steps" (#239, #241) on a real page, against seeded marks: ranked
 // steps weakest first, a step under five items reads "Not enough answers yet", and a step with
@@ -166,6 +167,7 @@ test("Your steps ranks the weakest step first and counts assignments and practic
   const { viewport, isMobile, hasTouch } = testInfo.project.use;
   const phone = await browser.newContext({ viewport, isMobile, hasTouch, reducedMotion: "reduce" });
   const student = await phone.newPage();
+  await skipWelcomes(student);
   await student.goto(klass.invite);
   const email = `student-steps-${project}-${Date.now()}@example.test`;
   const since = new Date();

@@ -11,6 +11,7 @@ import {
 import { FIXTURES } from "../src/lib/ngn/fixtures";
 import { latestSignInLink, openSignInLink } from "./mailbox";
 import { createInstructorInEmptyOrg, selectAsAdmin } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #274: Demo 12, rehearsed by a machine. An outside instructor onboards cold and runs a class
 // without help: the landing page, sign in, Get started, the sample, a class, a student through the
@@ -151,6 +152,7 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   // 4. A student opens the invite on their own phone, signs in by email, lands on their home.
   const studentPhone = await phoneContext(browser, testInfo);
   const student = await studentPhone.newPage();
+  await skipWelcomes(student);
   await student.goto(invite);
   const studentEmail = `student-demo12-${project}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.test`;
   const studentSince = new Date();
@@ -194,6 +196,7 @@ test("an outside instructor onboards cold and runs a live session a phone answer
 
   const liveContext = await phoneContext(browser, testInfo);
   const phone = await liveContext.newPage();
+  await skipWelcomes(phone);
   await phone.goto("/");
   await phone.getByRole("link", { name: "Join a live session", exact: true }).click();
   await phone.getByRole("textbox", { name: "Session code", exact: true }).fill(code);

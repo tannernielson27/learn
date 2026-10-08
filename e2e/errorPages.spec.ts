@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { expectKeyless, KEY_MARKERS, wireText } from "./bytes";
+import { skipWelcomes } from "./welcome";
 
 // #267: the pages someone lands on after a bad link. The invite page resolves its token with the
 // service role and sign-in reads the session in the proxy, so this needs the local Supabase stack
@@ -92,6 +93,7 @@ test("an invite link that does not work says to ask the instructor for a new one
   // A browser with no session, as a student opening an old link would have.
   const context = await browser.newContext({ reducedMotion: "reduce" });
   const page = await context.newPage();
+  await skipWelcomes(page);
   await page.goto("/c/zzzzzzzzzzzzzzzzzzzzzzzzzzzz0267");
 
   const heading = page.getByRole("heading", {

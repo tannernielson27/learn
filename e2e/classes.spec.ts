@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { confirmLinkIn, latestEmail, latestSignInLink, openSignInLink } from "./mailbox";
 import { signInAsNewAuthor } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #205: a class, its invite link, and a student who joins through it. Needs the local Supabase
 // stack (auth, the Mailpit test mailbox) and a build pointed at it, like auth.spec.ts.
@@ -48,6 +49,7 @@ test("a student joins a class from its invite link and the roster shows them", a
   // The student, on their own phone: not signed in.
   const phone = await browser.newContext();
   const student = await phone.newPage();
+  await skipWelcomes(student);
   await student.goto(invite);
   await expect(
     student.getByRole("heading", { level: 1, name: `Join ${className}`, exact: true }),
@@ -183,6 +185,7 @@ test("a student joins with an email and a password, with no email to wait for", 
 
   const phone = await browser.newContext();
   const student = await phone.newPage();
+  await skipWelcomes(student);
   await student.goto(invite);
   const email = studentEmail(`password-${project}`);
   const password = "correct horse battery";
@@ -290,6 +293,7 @@ test("confirming from another browser retires the password the account was made 
   // Someone joins with an address and a password of their choosing.
   const first = await browser.newContext();
   const maker = await first.newPage();
+  await skipWelcomes(maker);
   await maker.goto(invite);
   const email = studentEmail(`takeback-${project}`);
   const madeWith = "correct horse battery";
@@ -304,6 +308,7 @@ test("confirming from another browser retires the password the account was made 
   const welcome = await latestEmail(request, email, since);
   const second = await browser.newContext();
   const owner = await second.newPage();
+  await skipWelcomes(owner);
   await openSignInLink(owner, confirmLinkIn(welcome.body, email));
   await expect(owner).toHaveURL(/\/account\/password\?next=%2Flearn&confirmed=1$/);
   await expect(
@@ -320,6 +325,7 @@ test("confirming from another browser retires the password the account was made 
   // The password the account was made with no longer signs anyone in.
   const third = await browser.newContext();
   const stranger = await third.newPage();
+  await skipWelcomes(stranger);
   await stranger.goto("/sign-in");
   await stranger.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
   await stranger.getByLabel("Password", { exact: true }).fill(madeWith);
@@ -359,6 +365,7 @@ test("an account with no role types a class code, lands in the class and is on t
   // Someone signs up with no invite, so the account has no role and lands on the welcome page.
   const phone = await browser.newContext();
   const student = await phone.newPage();
+  await skipWelcomes(student);
   const email = studentEmail(`code-${project}`);
   const name = `Kai Ortiz ${Date.now() % 100_000}`;
   await student.goto("/sign-up?role=student");
