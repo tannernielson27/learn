@@ -102,6 +102,7 @@ describe("myClasses", () => {
           class_name: "NUR 310",
           joined_at: "2026-09-23T10:00:00Z",
           time_zone: "America/New_York",
+          workspace_name: "Ada Lovelace’s workspace",
         },
       ],
       error: null,
@@ -112,9 +113,23 @@ describe("myClasses", () => {
         name: "NUR 310",
         joinedAt: "2026-09-23T10:00:00Z",
         timeZone: "America/New_York",
+        workspaceName: "Ada Lovelace’s workspace",
       },
     ]);
     expect(fake.rpc).toHaveBeenCalledWith("my_classes");
+  });
+
+  it("leaves the workspace off while the database sends none, or a blank one", async () => {
+    const row = { class_id: CLASS_ID, class_name: "NUR 310", joined_at: "2026-09-23T10:00:00Z" };
+    const fake = fakeRpc({
+      data: [row, { ...row, workspace_name: null }, { ...row, workspace_name: "   " }],
+      error: null,
+    });
+    expect((await myClasses(fake.client))?.map((entry) => entry.workspaceName)).toEqual([
+      null,
+      null,
+      null,
+    ]);
   });
 
   it("puts a class on the default zone while the database sends none (#242)", async () => {
