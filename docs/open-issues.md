@@ -259,8 +259,8 @@ Sprint 13 closes the account loop that password sign-in (#353, #354) left open: 
 | [#360](https://github.com/tannernielson27/learn/issues/360) | feat(email): a welcome email that confirms the address of a new account                     | security          | Merged (#374); no migration |
 | [#361](https://github.com/tannernielson27/learn/issues/361) | feat(auth): a sign-up page for teachers and students                                        | security, e2e     | Merged (#377)               |
 | [#362](https://github.com/tannernielson27/learn/issues/362) | feat(student): join a class by code, and a way forward for an account with no class         | security, e2e     | Merged (#379); no migration |
-| [#363](https://github.com/tannernielson27/learn/issues/363) | fix(auth): send each person to their own home after sign-in                                 | none              | In review                   |
-| [#364](https://github.com/tannernielson27/learn/issues/364) | feat(onboarding): a three-step welcome for a new teacher                                    | e2e               | To do                       |
+| [#363](https://github.com/tannernielson27/learn/issues/363) | fix(auth): send each person to their own home after sign-in                                 | none              | Merged (#380)               |
+| [#364](https://github.com/tannernielson27/learn/issues/364) | feat(onboarding): a three-step welcome for a new teacher                                    | e2e               | In review; no migration     |
 | [#365](https://github.com/tannernielson27/learn/issues/365) | feat(onboarding): a short welcome for a new student                                         | e2e               | To do                       |
 | [#366](https://github.com/tannernielson27/learn/issues/366) | docs(onboarding): put sign-up on the landing page and retire the invite-only wording        | e2e               | In review                   |
 | [#367](https://github.com/tannernielson27/learn/issues/367) | test(e2e): the whole registration walk, security rows and the S13 demo                      | security, e2e     | To do                       |
