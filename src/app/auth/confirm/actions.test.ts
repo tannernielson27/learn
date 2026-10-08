@@ -12,9 +12,12 @@ const refreshSession = vi.fn(async () => ({ error: null }));
 const signOut = vi.fn<(options: { scope: string }) => Promise<{ error: null }>>(async () => ({
   error: null,
 }));
+const updateUser = vi.fn<(attributes: { password: string }) => Promise<{ error: null }>>(
+  async () => ({ error: null }),
+);
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({
-    auth: { verifyOtp, getClaims, refreshSession, signOut },
+    auth: { verifyOtp, getClaims, refreshSession, signOut, updateUser },
   }),
 }));
 
@@ -74,7 +77,7 @@ describe("confirmSignIn for an account that joined with a password", () => {
     });
     expect(refreshSession).toHaveBeenCalledTimes(1);
     // The same browser that made the account: its password and its sessions are left alone.
-    expect(updateUserById).toHaveBeenCalledTimes(1);
+    expect(updateUser).not.toHaveBeenCalled();
     expect(signOut).not.toHaveBeenCalled();
   });
 
@@ -84,10 +87,11 @@ describe("confirmSignIn for an account that joined with a password", () => {
     await expect(
       confirmSignIn(form({ token_hash: "abc", type: "email", next: "/learn" })),
     ).rejects.toThrow("redirect:/account/password?next=%2Flearn&confirmed=1");
-    expect(updateUserById).toHaveBeenCalledTimes(2);
-    expect(updateUserById).toHaveBeenLastCalledWith("user-9", {
+    // On the session the link has just made, never the admin API, which would end that session too.
+    expect(updateUser).toHaveBeenCalledWith({
       password: expect.stringMatching(/^[A-Za-z0-9_-]{40,72}$/),
     });
+    expect(JSON.stringify(updateUserById.mock.calls)).not.toContain("password");
     expect(signOut).toHaveBeenCalledWith({ scope: "others" });
   });
 
@@ -97,6 +101,7 @@ describe("confirmSignIn for an account that joined with a password", () => {
       confirmSignIn(form({ token_hash: "abc", type: "email", next: "/learn" })),
     ).rejects.toThrow("redirect:/learn");
     expect(updateUserById).not.toHaveBeenCalled();
+    expect(updateUser).not.toHaveBeenCalled();
     expect(signOut).not.toHaveBeenCalled();
   });
 

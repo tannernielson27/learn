@@ -36,14 +36,12 @@ export function confirmedDeps(supabase: ServerClient): MarkConfirmedDeps {
 }
 
 /**
- * `endEarlierAccess`'s two calls. The password is replaced with the service role, by the id the
- * verified session carries; the other sessions are signed out on the cookie client, which keeps
- * the one the link or code has just made.
+ * `endEarlierAccess`'s two calls, both on the cookie client an emailed link or code has just
+ * signed in: the account changes its own password, and signs out every session but this one.
  */
 export function earlierAccessDeps(supabase: ServerClient): EndEarlierAccessDeps {
   return {
-    replacePassword: (userId, password) =>
-      createSupabaseServiceClient().auth.admin.updateUserById(userId, { password }),
+    replacePassword: (password) => supabase.auth.updateUser({ password }),
     signOutOthers: () => supabase.auth.signOut({ scope: "others" }),
   };
 }

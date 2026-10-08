@@ -94,7 +94,7 @@ describe("endEarlierAccess", () => {
     async (before) => {
       const d = earlier({ randomPassword: () => "a-password-nobody-knows" });
       expect(await endEarlierAccess({ userId: "user-1" }, before, d)).toBe(true);
-      expect(d.replacePassword).toHaveBeenCalledWith("user-1", "a-password-nobody-knows");
+      expect(d.replacePassword).toHaveBeenCalledWith("a-password-nobody-knows");
       expect(d.signOutOthers).toHaveBeenCalledTimes(1);
     },
   );
@@ -103,7 +103,7 @@ describe("endEarlierAccess", () => {
     const d = earlier();
     await endEarlierAccess({ userId: "user-1" }, null, d);
     await endEarlierAccess({ userId: "user-1" }, null, d);
-    const [first, second] = vi.mocked(d.replacePassword).mock.calls.map((call) => call[1]);
+    const [first, second] = vi.mocked(d.replacePassword).mock.calls.map((call) => call[0]);
     expect(first).toMatch(/^[A-Za-z0-9_-]{40,72}$/);
     expect(second).not.toBe(first);
   });

@@ -67,8 +67,13 @@ function confirmedElsewhere(confirmed: NewlyConfirmed, signedInBefore: string | 
 
 /** What `endEarlierAccess` needs, injected so it can be tested. */
 export interface EndEarlierAccessDeps {
-  /** Sets the account's password with the service role: `auth.admin.updateUserById`. */
-  replacePassword(userId: string, password: string): Promise<{ error: unknown }>;
+  /**
+   * `supabase.auth.updateUser({ password })` on the session the link or code has just made, as
+   * `saveNewPassword` does. Not the admin API: after a password set there, the owner could save no
+   * password of their own (`e2e/classes.spec.ts` holds this), most likely because it ends every
+   * session the account has, the new one included.
+   */
+  replacePassword(password: string): Promise<{ error: unknown }>;
   /** `supabase.auth.signOut({ scope: "others" })`: every session but the one the link just made. */
   signOutOthers(): Promise<{ error: unknown }>;
   /** For tests; defaults to 32 random bytes. */
@@ -116,7 +121,7 @@ export async function endEarlierAccess(
   if (!confirmed || !confirmedElsewhere(confirmed, signedInBefore)) return false;
   try {
     const password = (deps.randomPassword ?? randomPassword)();
-    const replaced = await deps.replacePassword(confirmed.userId, password);
+    const replaced = await deps.replacePassword(password);
     if (replaced.error)
       logEarlierAccess("replacing an unconfirmed account's password", replaced.error);
   } catch (error) {
