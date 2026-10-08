@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { JoinByCodeState } from "@/components/classes/JoinByCodeForm";
 import { WELCOME_PATH } from "@/lib/auth/accountPaths";
@@ -45,4 +46,21 @@ export async function joinClassWithCode(
   if (answer === "unavailable") return { status: "error", error: UNAVAILABLE };
   // Outside every branch above, because redirect() works by throwing.
   redirect(STUDENT_HOME);
+}
+
+/**
+ * Records that the signed-in student has seen the welcome (#365), so it never shows again on any
+ * device. `mark_onboarded` stamps the caller's own profile and nobody else's, and a second call
+ * changes nothing. A failure is logged and not shown: the welcome is already closed, and the only
+ * cost is that it shows once more.
+ */
+export async function markStudentOnboarded(): Promise<void> {
+  const viewer = await readViewer();
+  if (viewer.status === "signed_out") return;
+  const { error } = await viewer.supabase.rpc("mark_onboarded");
+  if (error) {
+    console.error("[onboarding] the welcome could not be recorded as seen", { code: error.code });
+    return;
+  }
+  revalidatePath(STUDENT_HOME);
 }

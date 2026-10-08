@@ -254,6 +254,10 @@ test("an author chooses a password, then signs in with it and no email", async (
 
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
+  // The address changes before the new page's title has streamed in; axe run in that gap reports
+  // a document with no title. Wait for the page itself.
+  await expect(page.getByRole("heading", { level: 1, name: "Sign in", exact: true })).toBeVisible();
+  await expect(page).toHaveTitle(/Sign in/);
   const signIn = await new AxeBuilder({ page }).analyze();
   expect(signIn.violations).toEqual([]);
   await page.screenshot({

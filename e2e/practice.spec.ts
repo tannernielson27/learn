@@ -10,6 +10,7 @@ import {
 } from "@playwright/test";
 import { latestSignInLink, openSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #241: a student practises a bank shared with their class, on a phone. A SATA answered wrong
 // shows its key and rationale straight away; the next item is answered; a reload keeps both. No
@@ -73,6 +74,7 @@ async function joinAsStudent(
     reducedMotion: "reduce",
   });
   const page = await context.newPage();
+  await skipWelcomes(page);
   await page.goto(invite);
   const email = `student-${label}-${testInfo.project.name}-${Date.now()}@example.test`;
   const since = new Date();
