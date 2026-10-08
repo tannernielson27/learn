@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
+import { resendConfirmation } from "@/app/sign-in/actions";
+import { ConfirmEmailBanner } from "@/components/auth/ConfirmEmailBanner";
 import { BankList } from "@/components/authoring/BankList";
 import { CreateBankForm } from "@/components/authoring/CreateBankForm";
 import { GET_STARTED_HEADING_ID, GetStarted } from "@/components/onboarding/GetStarted";
 import { TeacherWelcome } from "@/components/onboarding/TeacherWelcome";
+import { isEmailUnconfirmed } from "@/lib/auth/emailConfirmation";
 import { listBanks } from "@/lib/authoring/banks";
 import { requireAuthor } from "@/lib/authoring/session";
 import { CLASSES_PATH } from "@/lib/classes/classes";
@@ -28,11 +31,14 @@ import { hideGetStarted, importSample, markOnboarded } from "./onboardingActions
 export const metadata: Metadata = { title: "Item banks" };
 
 export default async function AuthorHomePage() {
-  const { supabase, orgId, userId } = await requireAuthor("/author");
+  const { supabase, orgId, userId, email } = await requireAuthor("/author");
   // Both in one round trip: the badges are one read of the org's shares, not one per bank.
-  const [banks, sharedWith] = await Promise.all([
+  const [banks, sharedWith, claims] = await Promise.all([
     listBanks(supabase),
     listSharedClassNamesByBank(supabase),
+    // Read from the token already verified for this request. A teacher who signed up has an
+    // address nobody has confirmed yet; the home asks, as the student home does, and never blocks.
+    supabase.auth.getClaims().then(({ data }) => data?.claims),
   ]);
   // Get started (#265): hidden on this browser, or worked out from the org's own rows.
   const hidden = hiddenFor((await cookies()).get(GET_STARTED_COOKIE)?.value, userId);
@@ -62,6 +68,9 @@ export default async function AuthorHomePage() {
           </Link>
         </nav>
       </div>
+      {isEmailUnconfirmed(claims) ? (
+        <ConfirmEmailBanner action={resendConfirmation} email={email} />
+      ) : null}
       {/* After the h1, so the heading outline reads Item banks, then Get started. */}
       {showChecklist(steps, hidden) ? (
         <GetStarted steps={steps} importSample={importSample} hide={hideGetStarted} />

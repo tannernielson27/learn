@@ -44,6 +44,16 @@ export interface WelcomeEmailDeps {
   nonce?: () => string;
 }
 
+/**
+ * Which welcome an account gets, from the role on its own profile row: a teacher's for an
+ * instructor or an admin, a student's for a student, and for an account with no role the one that
+ * claims neither a class nor a workspace.
+ */
+export function welcomeRoleFor(role: "instructor" | "admin" | "student" | null): WelcomeRole {
+  if (role === "instructor" || role === "admin") return "teacher";
+  return role === "student" ? "student" : "newcomer";
+}
+
 /** Where confirming lands each role: the home it would reach after signing in. */
 const HOME: Record<WelcomeRole, string> = {
   student: STUDENT_HOME,
