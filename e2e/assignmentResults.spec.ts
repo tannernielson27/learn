@@ -11,6 +11,7 @@ import {
 import { bytesOf, expectKeyless } from "./bytes";
 import { latestSignInLink, openSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor, updateAsAdmin } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #210: once an assignment closes, a student reads their best attempt's score and every item with
 // its key and rationale; before the close the results page carries none of it. A bank the student
@@ -70,6 +71,7 @@ async function joinAsStudent(
     reducedMotion: "reduce",
   });
   const page = await context.newPage();
+  await skipWelcomes(page);
   await page.goto(invite);
   const email = `student-${label}-${testInfo.project.name}-${Date.now()}@example.test`;
   const since = new Date();

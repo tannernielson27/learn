@@ -10,15 +10,20 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
+const revalidatePath = vi.fn();
+vi.mock("next/cache", () => ({ revalidatePath }));
+
 type RpcReply = { data: unknown; error: { code?: string } | null };
-const rpc = vi.fn<(name: string, args: Record<string, unknown>) => Promise<RpcReply>>(async () => ({
-  data: "joined",
-  error: null,
-}));
+const rpc = vi.fn<(name: string, args?: Record<string, unknown>) => Promise<RpcReply>>(
+  async () => ({
+    data: "joined",
+    error: null,
+  }),
+);
 let viewer: Record<string, unknown>;
 vi.mock("@/lib/classes/viewer", () => ({ readViewer: async () => viewer }));
 
-const { joinClassWithCode } = await import("./actions");
+const { joinClassWithCode, markStudentOnboarded } = await import("./actions");
 
 const IDLE = { status: "idle" } as const;
 
@@ -93,5 +98,29 @@ describe("joinClassWithCode (#362)", () => {
       status: "error",
       error: "Joining is not working just now. Try again in a moment.",
     });
+  });
+});
+
+describe("markStudentOnboarded (#365)", () => {
+  it("stamps the caller's own profile through mark_onboarded, which takes no argument", async () => {
+    rpc.mockResolvedValueOnce({ data: "2026-10-09T12:00:00Z", error: null });
+    await markStudentOnboarded();
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith("mark_onboarded");
+    expect(revalidatePath).toHaveBeenCalledWith("/learn");
+  });
+
+  it("does nothing for a signed-out call", async () => {
+    viewer = { status: "signed_out" };
+    await expect(markStudentOnboarded()).resolves.toBeUndefined();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("never throws when the stamp fails", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "08006" } });
+    await expect(markStudentOnboarded()).resolves.toBeUndefined();
+    expect(revalidatePath).not.toHaveBeenCalled();
+    error.mockRestore();
   });
 });

@@ -4,6 +4,7 @@ import { formatPercent, formatPoints } from "../src/lib/live/reportFormat";
 import { bytesOf } from "./bytes";
 import { latestSignInLink, openSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #238: the student home's History lists each closed assignment with the student's best score, and
 // carries no score of an assignment that is still open. #239: "Your steps" counts the same closed
@@ -78,6 +79,7 @@ test("History shows a closed assignment's best score, and nothing of one still o
   const { viewport, isMobile, hasTouch } = testInfo.project.use;
   const phone = await browser.newContext({ viewport, isMobile, hasTouch, reducedMotion: "reduce" });
   const student = await phone.newPage();
+  await skipWelcomes(student);
   await student.goto(invite);
   const email = `student-history-${project}-${Date.now()}@example.test`;
   const since = new Date();

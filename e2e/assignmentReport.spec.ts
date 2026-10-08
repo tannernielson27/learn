@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { latestSignInLink, openSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #211: an instructor watches an assignment's progress while it is open (no score anywhere, no
 // CSV), and after the close reads the report by student, item and CJMM step and downloads the CSV.
@@ -45,6 +46,7 @@ test("an instructor sees progress while open, then the report and its CSV after 
 
   const phone = await browser.newContext({ reducedMotion: "reduce" });
   const student = await phone.newPage();
+  await skipWelcomes(student);
   await student.goto(invite);
   const email = `student-report-${project}-${Date.now()}@example.test`;
   const since = new Date();
