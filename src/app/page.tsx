@@ -7,7 +7,7 @@ import { readViewer } from "@/lib/classes/viewer";
 const TITLE = "LeaRN: live learning for the Next Generation NCLEX";
 const DESCRIPTION =
   "Exam-faithful NGN items, fast authoring, live sessions and take-home assignments for nursing " +
-  "instructors and their students. Invite-only.";
+  "instructors and their students. Sign up as a teacher or a student.";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 /**
  * Who is looking, only to pick the first link. Signed out, `getClaims` finds no session cookie and
  * makes no request, so a visitor costs no Supabase call. Any failure (no Supabase env on a preview,
- * an auth outage) reads as signed out: the page still renders and offers Sign in.
+ * an auth outage) reads as signed out: the page still renders and offers an account and Sign in.
  */
 async function readVisitor(): Promise<LandingVisitor> {
   try {

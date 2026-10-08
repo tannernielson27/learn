@@ -2,11 +2,18 @@ import { describe, expect, it } from "vitest";
 import { landingEntry } from "./landing";
 
 describe("landingEntry (#264)", () => {
-  it("offers Sign in to a visitor", () => {
+  it("offers a visitor an account first, and Sign in beside it (#366)", () => {
     expect(landingEntry({ status: "signed_out" })).toEqual({
-      href: "/sign-in",
-      label: "Sign in",
+      href: "/sign-up",
+      label: "Create an account",
+      also: { href: "/sign-in", label: "Sign in" },
     });
+  });
+
+  it("offers someone already signed in no second way in", () => {
+    for (const role of ["instructor", "admin", "student", null] as const) {
+      expect(landingEntry({ status: "signed_in", role }).also).toBeUndefined();
+    }
   });
 
   it("sends an instructor or an admin to authoring", () => {
