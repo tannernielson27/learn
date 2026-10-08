@@ -1,6 +1,6 @@
 import type { Database } from "@/lib/supabase/database.types";
 import { STUDENT_HOME } from "@/lib/classes/classes";
-import { WELCOME_PATH } from "./accountPaths";
+import { SIGN_UP_PATH, WELCOME_PATH } from "./accountPaths";
 import { DEFAULT_AFTER_SIGN_IN } from "./nextPath";
 
 type OrgRole = Database["public"]["Enums"]["org_role"];
@@ -9,19 +9,30 @@ type OrgRole = Database["public"]["Enums"]["org_role"];
 export type LandingVisitor =
   { status: "signed_out" } | { status: "signed_in"; role: OrgRole | null };
 
-export interface LandingEntry {
+export interface LandingLink {
   href: string;
   label: string;
 }
 
+export interface LandingEntry extends LandingLink {
+  /** A second way in, drawn beside the first: Sign in, for a visitor. */
+  also?: LandingLink;
+}
+
 /**
- * The landing page's first link (#264). A visitor is offered Sign in; anyone already signed in is
- * offered their own home instead, so the page never asks a signed-in instructor to sign in again.
- * An account with no role goes to the welcome page (#362), where it joins a class or sets up a
- * workspace.
+ * The landing page's first link (#264). A visitor is offered an account, with Sign in beside it
+ * (#366, ADR 0009: sign-up is open); anyone already signed in is offered their own home instead,
+ * so the page never asks a signed-in instructor to sign in again. An account with no role goes to
+ * the welcome page (#362), where it joins a class or sets up a workspace.
  */
 export function landingEntry(visitor: LandingVisitor): LandingEntry {
-  if (visitor.status === "signed_out") return { href: "/sign-in", label: "Sign in" };
+  if (visitor.status === "signed_out") {
+    return {
+      href: SIGN_UP_PATH,
+      label: "Create an account",
+      also: { href: "/sign-in", label: "Sign in" },
+    };
+  }
   switch (visitor.role) {
     case "instructor":
     case "admin":

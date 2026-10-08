@@ -57,11 +57,11 @@ describe("/help/items", () => {
 });
 
 describe("/help/instructor", () => {
-  it("walks from sign-in to sharing a bank for practice", () => {
+  it("walks from signing up to sharing a bank for practice", () => {
     render(<InstructorGuide />);
     const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
     expect(headings).toEqual([
-      "Sign in",
+      "Sign up and sign in",
       "Make or import a bank",
       "Write items",
       "Make a class and invite students",

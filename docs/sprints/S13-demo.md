@@ -11,7 +11,7 @@ Sprint 13 opens sign-up (ADR 0009). It covers:
 - a short welcome popup for a new teacher and a new student;
 - a CAPTCHA, a sign-up rate limit and hosted Auth checks in front of all of it.
 
-**Status:** code complete 2026-10-08 except the last two PRs, which are in review: #383 (landing page and wording) and this one.
+**Status:** code complete 2026-10-08. Every story is merged.
 **Production:** https://learn-nine-alpha.vercel.app
 **Repo:** https://github.com/tannernielson27/learn
 
@@ -54,24 +54,24 @@ Things worth trying off the script:
 
 ## What shipped
 
-| PR   | Issue | What                                                                        | Commit    |
-| ---- | ----- | --------------------------------------------------------------------------- | --------- |
-| #368 | n/a   | Sprint 13 kickoff, ADR 0009                                                 | e1a7ed9   |
-| #369 | #355  | A workspace for each self-registered teacher; a per-account onboarding mark | 55491d1   |
-| #375 | #356  | A short class code a student can type to join                               | 16b8f18   |
-| #370 | #357  | A Dialog primitive for popups                                               | a96be90   |
-| #373 | #358  | A name on the account, shown and changeable                                 | 278fa2c   |
-| #371 | #359  | A CAPTCHA, a sign-up rate limit and hosted Auth checks                      | 427891e   |
-| #372 | #359  | Sign-up refuses in production when the CAPTCHA is not set up                | 53abc1c   |
-| #374 | #360  | A welcome email that confirms the address                                   | 422c706   |
-| #377 | #361  | The sign-up page, and a welcome page for an account with no role            | 266d47c   |
-| #378 | #361  | Confirming from another browser retires the first password                  | 1d1480c   |
-| #379 | #362  | Join a class by code; "No access yet" is gone                               | b960be6   |
-| #380 | #363  | Each person goes to their own home after sign-in                            | dbe1a19   |
-| #381 | #364  | A three-step welcome for a new teacher                                      | 1fbd9ea   |
-| #382 | #365  | A short welcome for a new student                                           | fbb1514   |
-| #383 | #366  | Sign-up on the landing page; the invite-only wording retired                | in review |
-| #384 | #367  | The registration walk, the security review and this demo                    | in review |
+| PR   | Issue | What                                                                        | Commit  |
+| ---- | ----- | --------------------------------------------------------------------------- | ------- |
+| #368 | n/a   | Sprint 13 kickoff, ADR 0009                                                 | e1a7ed9 |
+| #369 | #355  | A workspace for each self-registered teacher; a per-account onboarding mark | 55491d1 |
+| #375 | #356  | A short class code a student can type to join                               | 16b8f18 |
+| #370 | #357  | A Dialog primitive for popups                                               | a96be90 |
+| #373 | #358  | A name on the account, shown and changeable                                 | 278fa2c |
+| #371 | #359  | A CAPTCHA, a sign-up rate limit and hosted Auth checks                      | 427891e |
+| #372 | #359  | Sign-up refuses in production when the CAPTCHA is not set up                | 53abc1c |
+| #374 | #360  | A welcome email that confirms the address                                   | 422c706 |
+| #377 | #361  | The sign-up page, and a welcome page for an account with no role            | 266d47c |
+| #378 | #361  | Confirming from another browser retires the first password                  | 1d1480c |
+| #379 | #362  | Join a class by code; "No access yet" is gone                               | b960be6 |
+| #380 | #363  | Each person goes to their own home after sign-in                            | dbe1a19 |
+| #381 | #364  | A three-step welcome for a new teacher                                      | 1fbd9ea |
+| #382 | #365  | A short welcome for a new student                                           | fbb1514 |
+| #383 | #366  | Sign-up on the landing page; the invite-only wording retired                | 36241c0 |
+| #384 | #367  | The registration walk, the security review and this demo                    | a81147b |
 
 ## Decisions made during the sprint
 
