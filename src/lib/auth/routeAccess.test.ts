@@ -10,6 +10,8 @@ describe("redirectForAccess", () => {
     ["/author/items/9?mode=preview"],
     ["/learn"],
     ["/account/password?next=%2Flearn"],
+    ["/welcome"],
+    ["/welcome?code=ABCD2345"],
   ])("sends a signed-out visit to %s through sign-in, then back", (path) => {
     const target = redirectForAccess(at(path), false);
     expect(target?.pathname).toBe("/sign-in");
@@ -38,6 +40,10 @@ describe("redirectForAccess", () => {
     ["/authors"],
     ["/learning"],
     ["/accounts"],
+    // Sign-up (#361) is for people who have no account yet, as the invite page is.
+    ["/sign-up"],
+    ["/sign-up?role=teacher"],
+    ["/welcomes"],
     // The invite page is for people who have no account yet.
     ["/c/AbC_-0123456789abcdefghijklmnopq"],
   ])("leaves a signed-out visit to %s alone", (path) => {

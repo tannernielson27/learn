@@ -267,3 +267,108 @@ test("an author chooses a password, then signs in with it and no email", async (
   await expect(page).toHaveURL(/\/author$/);
   await expect(page.getByTestId("signed-in-email")).toHaveText(email);
 });
+
+// #361: open sign-up. No account is made beforehand: the form is the only thing that makes one.
+test("a new teacher signs up, with the keyboard, into an empty workspace of their own", async ({
+  page,
+}, testInfo) => {
+  const email = uniqueEmail(`teacher-${testInfo.project.name}`);
+
+  await page.goto("/sign-in");
+  await page.getByRole("link", { name: "Create an account", exact: true }).click();
+  await expect(page).toHaveURL(/\/sign-up$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Create an account", exact: true }),
+  ).toBeVisible();
+  // The role comes first; nothing else is asked until it is chosen.
+  await expect(page.getByRole("textbox", { name: "Your name", exact: true })).toHaveCount(0);
+  const choice = await new AxeBuilder({ page }).analyze();
+  expect(choice.violations).toEqual([]);
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/sign-up-role.png`,
+  });
+
+  await page.getByRole("radio", { name: /^I teach/ }).focus();
+  await page.keyboard.press("Space");
+  await expect(page.getByRole("radio", { name: /^I teach/ })).toBeChecked();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("textbox", { name: "Your name", exact: true })).toBeFocused();
+  await page.keyboard.type("Ada Lovelace");
+  await page.keyboard.press("Tab");
+  await page.keyboard.type(email);
+  await page.keyboard.press("Tab");
+  await page.keyboard.type("correct horse battery");
+  const filled = await new AxeBuilder({ page }).analyze();
+  expect(filled.violations).toEqual([]);
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/sign-up-teacher.png`,
+  });
+  await page.keyboard.press("Enter");
+
+  // Signed in at once, with no email to wait for, in a workspace that holds nothing of anyone's.
+  await expect(page).toHaveURL(/\/author$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Item banks", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "No item banks yet", exact: true }),
+  ).toBeVisible();
+  // The shared org's seeded bank is not theirs to see.
+  await expect(page.getByRole("link", { name: "Samples", exact: true })).toHaveCount(0);
+
+  // Signed in, the sign-up page moves straight on.
+  await page.goto("/sign-up");
+  await expect(page).toHaveURL(/\/author$/);
+
+  // The same address again is told it has an account, and nothing else.
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await expect(page).toHaveURL(/\/sign-in$/);
+  await page.goto("/sign-up?role=teacher");
+  await expect(page.getByRole("radio", { name: /^I teach/ })).toBeChecked();
+  await page.getByRole("textbox", { name: "Your name", exact: true }).fill("Someone Else");
+  await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill("another long password");
+  await page.getByRole("button", { name: "Create account", exact: true }).click();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "This email already has an account." }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/sign-up\?role=teacher$/);
+});
+
+test("a new student signs up and lands on the welcome page, with no role yet", async ({
+  page,
+}, testInfo) => {
+  const email = uniqueEmail(`student-${testInfo.project.name}`);
+
+  await page.goto("/sign-up?role=student");
+  await expect(page.getByRole("radio", { name: /^I am a student/ })).toBeChecked();
+  await page.getByRole("textbox", { name: "Your name", exact: true }).fill("Sam Lee");
+  await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill("correct horse battery");
+  await page.getByRole("button", { name: "Create account", exact: true }).click();
+
+  await expect(page).toHaveURL(/\/welcome$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Welcome to LeaRN", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Join your class", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Signed in as Sam Lee.", { exact: true })).toBeVisible();
+  const welcome = await new AxeBuilder({ page }).analyze();
+  expect(welcome.violations).toEqual([]);
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/welcome.png`,
+  });
+
+  // Signing up as a student gives no way into authoring.
+  await page.goto("/author");
+  await expect(page).toHaveURL(/\/author\/no-access$/);
+
+  // Signed out, the welcome page asks for a sign-in and comes back.
+  await page.goto("/welcome");
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await expect(page).toHaveURL(/\/sign-in$/);
+  await page.goto("/welcome");
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fwelcome$/);
+});
