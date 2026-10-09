@@ -35,8 +35,9 @@ export async function proxy(request: NextRequest) {
 
   const { response, signedIn, homeFor } = await updateSession(request);
   // A workspace invitation's path is its secret: every answer under /w/, the page and the answer
-  // to a post alike, tells the browser to send no Referer from it.
-  for (const [name, value] of Object.entries(inviteResponseHeaders(url.pathname))) {
+  // to a post alike, tells the browser to send no Referer from it. So does a page that carries the
+  // invitation in its own `next`, as /sign-in?next=/w/<token> does.
+  for (const [name, value] of Object.entries(inviteResponseHeaders(url.pathname, url.search))) {
     response.headers.set(name, value);
   }
   const access = redirectForAccess(url, signedIn);

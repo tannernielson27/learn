@@ -59,6 +59,26 @@ describe("inviteResponseHeaders", () => {
     expect(inviteResponseHeaders("/welcome")).toEqual({});
     expect(inviteResponseHeaders("/author")).toEqual({});
   });
+
+  it("covers a page whose own address carries the invitation in `next`", () => {
+    const next = encodeURIComponent(`/w/${TOKEN}`);
+    const sent = { "Referrer-Policy": "no-referrer" };
+    expect(inviteResponseHeaders("/sign-in", `?next=${next}`)).toEqual(sent);
+    expect(inviteResponseHeaders("/sign-up", `?role=teacher&next=${next}`)).toEqual(sent);
+    // Carried one page further, inside another page's own `next`.
+    const nested = encodeURIComponent(`/account/password?next=${next}`);
+    expect(inviteResponseHeaders("/sign-in", `?next=${nested}`)).toEqual(sent);
+  });
+
+  it("adds nothing for a `next` that is not an invitation, or is not there", () => {
+    expect(inviteResponseHeaders("/sign-in", "")).toEqual({});
+    expect(inviteResponseHeaders("/sign-in", "?next=%2Fauthor")).toEqual({});
+    expect(inviteResponseHeaders("/sign-in", "?next=%2Fwelcome")).toEqual({});
+    expect(inviteResponseHeaders("/sign-in", "?next=%2Fauthor%2Fworkspace")).toEqual({});
+    expect(inviteResponseHeaders("/sign-in", `?other=%2Fw%2F${TOKEN}`)).toEqual({});
+    // A value that cannot be decoded is not an invitation path, and is not an error.
+    expect(inviteResponseHeaders("/sign-in", "?next=%25E0%25A4%25A")).toEqual({});
+  });
 });
 
 describe("maskEmail", () => {

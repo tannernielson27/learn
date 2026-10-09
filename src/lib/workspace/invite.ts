@@ -22,12 +22,39 @@ export function signInToAcceptPath(token: string): string {
   return `/sign-in?next=${encodeURIComponent(workspaceInvitePath(token))}`;
 }
 
+/** How many pages deep a `next` inside a `next` is followed. Sign-in to password page is two. */
+const NEXT_DEPTH = 4;
+
 /**
- * The headers the proxy adds to every answer under `/w/`. The token in the path is the whole
- * secret, so no Referer may carry it to another site.
+ * Whether a query string's `next` is an invitation page, or a page whose own `next` is one.
+ * "Sign in to accept" is `/sign-in?next=/w/<token>`, so the token is in that page's address too.
  */
-export function inviteResponseHeaders(pathname: string): Readonly<Record<string, string>> {
-  return isWorkspaceInvitePath(pathname) ? { "Referrer-Policy": "no-referrer" } : {};
+function nextIsWorkspaceInvite(search: string): boolean {
+  let query = search;
+  for (let depth = 0; depth < NEXT_DEPTH; depth += 1) {
+    // `URLSearchParams` never throws: a value it cannot decode is kept as it was written.
+    const next = new URLSearchParams(query).get("next");
+    if (!next) return false;
+    const mark = next.indexOf("?");
+    if (isWorkspaceInvitePath(mark < 0 ? next : next.slice(0, mark))) return true;
+    if (mark < 0) return false;
+    query = next.slice(mark);
+  }
+  return false;
+}
+
+/**
+ * The headers the proxy adds to every answer under `/w/`, and to any page it runs on whose query
+ * string carries an invitation in `next` (sign-in, and wherever sign-in passes it on). The token
+ * is the whole secret, so no Referer may carry it to another site.
+ */
+export function inviteResponseHeaders(
+  pathname: string,
+  search = "",
+): Readonly<Record<string, string>> {
+  return isWorkspaceInvitePath(pathname) || nextIsWorkspaceInvite(search)
+    ? { "Referrer-Policy": "no-referrer" }
+    : {};
 }
 
 /** Whether two addresses are the same one, as the database compares them. */
