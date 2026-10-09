@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { attemptsLabel, studentResultsPath } from "@/lib/assignments/assignments";
 import type { HistoryRow, HistoryStanding } from "@/lib/assignments/history";
+import { classLabel } from "@/lib/classes/studentClasses";
 import { DEFAULT_CLASS_TIME_ZONE } from "@/lib/classes/timeZone";
 import { formatPercent, formatPoints } from "@/lib/live/reportFormat";
 import { ClassTime } from "./ClassTime";
@@ -68,7 +69,7 @@ export function AssignmentHistory({ rows, classes }: AssignmentHistoryProps) {
               >
                 {`Results for ${row.title}`}
               </Link>
-              <span className="text-sm text-ink-2">{info?.name ?? "Your class"}</span>
+              <span className="text-sm break-words text-ink-2">{classLabel(info)}</span>
               <span className="text-sm text-ink-2">
                 Closed{" "}
                 <ClassTime

@@ -4,6 +4,7 @@ import {
   INVITE_NOT_MADE,
   INVITE_REFUSAL_MESSAGES,
   notSentMessage,
+  RESEND_RECIPIENT_LIMIT,
 } from "@/lib/workspace/invite";
 import { INVITE_ADDRESS_ERROR } from "@/lib/workspace/inviteAddress";
 
@@ -275,6 +276,7 @@ describe("inviteColleague", () => {
     "members_full",
     "invites_full",
     "rate_limited",
+    "recipient_limited",
   ] as const)("says why in plain words when the database answers %s", async (status) => {
     createAnswer = {
       data: [{ status, invite_id: null, token: null, expires_at: null }],
@@ -415,6 +417,14 @@ describe("resendInvite", () => {
     expect(await resendInvite(OLD_INVITE)).toMatchObject({ ok: false });
     expect(userClient.rpc).not.toHaveBeenCalled();
     expect(serviceClient.rpc).not.toHaveBeenCalled();
+  });
+
+  it("keeps the earlier invitation when the address has had three in the day", async () => {
+    tables.org_invites = { ...tables.org_invites, count: 3 };
+    expect(await resendInvite(OLD_INVITE)).toEqual({ ok: false, message: RESEND_RECIPIENT_LIMIT });
+    expect(userClient.rpc).not.toHaveBeenCalled();
+    expect(serviceClient.rpc).not.toHaveBeenCalled();
+    expect(serviceClient.from).not.toHaveBeenCalled();
   });
 
   it("refuses an id that is not one before reading anything", async () => {

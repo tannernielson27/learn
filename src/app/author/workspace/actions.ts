@@ -11,6 +11,7 @@ import { getMailer } from "@/lib/email";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import {
   countInvitesSince,
+  countInvitesToSince,
   createOrgInvite,
   findInvite,
   readWorkspace,
@@ -79,6 +80,7 @@ async function inviteDeps(supabase: AuthorClient): Promise<ResendDeps> {
       }),
     find: (inviteId) => findInvite(supabase, inviteId),
     recentCount: (inviterId, since) => countInvitesSince(supabase, inviterId, since),
+    recipientCount: (email, since) => countInvitesToSince(supabase, email, since),
     now: () => new Date(),
   };
 }

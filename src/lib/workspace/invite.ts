@@ -7,7 +7,12 @@ import type {
 } from "@/lib/supabase/workspace";
 import { parseInviteAddress } from "./inviteAddress";
 import type { WorkspaceInvite, WorkspaceInviteEmailResult } from "./inviteEmail";
-import { WORKSPACE_DAILY_INVITES, WORKSPACE_MEMBER_CAP, WORKSPACE_PENDING_CAP } from "./workspace";
+import {
+  WORKSPACE_DAILY_INVITES,
+  WORKSPACE_MEMBER_CAP,
+  WORKSPACE_PENDING_CAP,
+  WORKSPACE_RECIPIENT_DAILY_INVITES,
+} from "./workspace";
 
 /**
  * A workspace invitation, from both ends.
@@ -281,6 +286,11 @@ export interface ResendDeps extends InviteDeps {
   find(inviteId: string): Promise<FoundInvite>;
   /** The inviter's invitations since a moment, as `create_org_invite` counts them. */
   recentCount(inviterId: string, since: Date): Promise<number | null>;
+  /**
+   * The invitations this workspace has made to one address since a moment. `create_org_invite`
+   * counts every workspace's; the teacher's own client sees only their own.
+   */
+  recipientCount(email: string, since: Date): Promise<number | null>;
   now(): Date;
 }
 
@@ -298,6 +308,8 @@ export const INVITE_REFUSAL_MESSAGES: Record<CreateInviteRefusal, string> = {
   members_full: `This workspace has ${WORKSPACE_MEMBER_CAP} members, the most it can hold.`,
   invites_full: `This workspace has ${WORKSPACE_PENDING_CAP} pending invitations, the most it can hold at once. Revoke one to send another.`,
   rate_limited: `You have sent ${WORKSPACE_DAILY_INVITES} invitations in the last 24 hours. Try again tomorrow.`,
+  recipient_limited:
+    "This address has been invited too many times in the last 24 hours. Try again tomorrow.",
 };
 
 export const INVITE_NOT_MADE = "The invitation could not be made just now. Try again in a moment.";
@@ -337,6 +349,8 @@ export const INVITE_ACCEPTED =
 export const REVOKE_FAILED = "Could not revoke the invitation. Try again.";
 export const RESEND_FAILED = "Could not resend the invitation. Nothing was changed. Try again.";
 export const RESEND_AT_LIMIT = `You have sent ${WORKSPACE_DAILY_INVITES} invitations in the last 24 hours, so this one was not resent. The earlier invitation is unchanged.`;
+export const RESEND_RECIPIENT_LIMIT =
+  "This address has been invited too many times in the last 24 hours, so this invitation was not resent. The earlier invitation is unchanged.";
 export const RESEND_BAD_ADDRESS =
   "That address cannot be emailed. Revoke the invitation and invite your colleague again.";
 export const EARLIER_REVOKED = "The earlier invitation was revoked, and a new one was not sent.";
@@ -422,8 +436,9 @@ export async function revokeInvitation(
  * be mailed twice: the earlier invitation is revoked and a new one made for the same address,
  * which counts toward the inviter's five a day like any other.
  *
- * The count is read first. A teacher already at five would otherwise lose the invitation they
- * have and get nothing in its place; `create_org_invite` still has the last word.
+ * The counts are read first. A teacher already at five, or an address already at its three, would
+ * otherwise lose the invitation they have and get nothing in its place; `create_org_invite` still
+ * has the last word.
  */
 export async function resendInvitation(
   inviter: Inviter,
@@ -451,6 +466,18 @@ export async function resendInvitation(
   );
   if (recent === null) return { ok: false, message: RESEND_FAILED };
   if (recent >= WORKSPACE_DAILY_INVITES) return { ok: false, message: RESEND_AT_LIMIT };
+
+  // The same for the address's three a day. Only this workspace's invitations can be counted
+  // here; if other workspaces filled the three, `create_org_invite` refuses after the revoke.
+  const received = await attempt<number | null>(
+    "counting an address's invitations",
+    () => deps.recipientCount(address.email, since),
+    null,
+  );
+  if (received === null) return { ok: false, message: RESEND_FAILED };
+  if (received >= WORKSPACE_RECIPIENT_DAILY_INVITES) {
+    return { ok: false, message: RESEND_RECIPIENT_LIMIT };
+  }
 
   const revoked = await attempt<RevokedInvite>(
     "revoking an invitation",

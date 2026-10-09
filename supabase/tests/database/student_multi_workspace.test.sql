@@ -234,10 +234,9 @@ select is(
   0,
   'they still read no class row, bank or item of either workspace, so no token, code or key'
 );
-select is(
-  (select array_agg(id) from public.orgs),
-  array['00000000-0000-0000-0000-0000003990a0'::uuid],
-  'the only org row they read is still the first they joined; the rest is my_classes'' names'
+select is_empty(
+  $$ select id from public.orgs $$,
+  'they read no org row, not even the first they joined (20261010000000): the names are my_classes'''
 );
 
 reset role;

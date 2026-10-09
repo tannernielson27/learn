@@ -122,6 +122,25 @@ export async function countInvitesSince(
   return error || count === null ? null : count;
 }
 
+/**
+ * How many invitations the caller's own workspace has made to one address since `since`, revoked
+ * ones included. Row level security keeps the count to that workspace: invitations other
+ * workspaces sent the address are counted only by `create_org_invite`. Null when the count could
+ * not be read.
+ */
+export async function countInvitesToSince(
+  client: Client,
+  email: string,
+  since: Date,
+): Promise<number | null> {
+  const { count, error } = await client
+    .from("org_invites")
+    .select("id", { count: "exact", head: true })
+    .eq("email", email.trim().toLowerCase())
+    .gt("created_at", since.toISOString());
+  return error || count === null ? null : count;
+}
+
 /** `revoke_org_invite`'s three answers, and `failed` for a call that did not answer. */
 export type RevokedInvite = "revoked" | "already_accepted" | "not_found" | "failed";
 
@@ -147,6 +166,8 @@ export const INVITE_REFUSALS = [
   "members_full",
   "invites_full",
   "rate_limited",
+  // From migration 20261010000000. Before it is applied the function never answers this.
+  "recipient_limited",
 ] as const;
 
 export type InviteRefusal = (typeof INVITE_REFUSALS)[number];
