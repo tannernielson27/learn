@@ -54,6 +54,22 @@ export function captchaMode(env: CaptchaEnv = process.env): CaptchaMode {
   return site || secret ? "misconfigured" : "off";
 }
 
+/**
+ * What `verifyCaptcha` does before it looks at a token, which `/api/health` reports so that
+ * `pnpm golive:check` can say whether sign-up is refused for want of the keys (docs/05 §7.11):
+ * - `on`: both keys are set, and the token is verified.
+ * - `skipped`: neither is set, off production. Sign-up asks for no CAPTCHA.
+ * - `missing`: neither is set on a production deployment (`VERCEL_ENV`). Every sign-up is refused.
+ * - `misconfigured`: see `CaptchaMode`. Every sign-up is refused, on every deployment.
+ */
+export type CaptchaSetup = "on" | "skipped" | "missing" | "misconfigured";
+
+export function captchaSetup(env: CaptchaEnv = process.env): CaptchaSetup {
+  const mode = captchaMode(env);
+  if (mode !== "off") return mode;
+  return env.VERCEL_ENV === "production" ? "missing" : "skipped";
+}
+
 function misconfiguration(env: CaptchaEnv): string {
   if (set(env.NEXT_PUBLIC_TURNSTILE_SECRET_KEY)) {
     return "NEXT_PUBLIC_TURNSTILE_SECRET_KEY is set, which publishes the secret: remove it, and roll the key in Cloudflare";
@@ -138,18 +154,16 @@ export async function verifyCaptcha(
   options: VerifyCaptchaOptions = {},
 ): Promise<CaptchaResult> {
   const env = options.env ?? process.env;
-  const mode = captchaMode(env);
-  if (mode === "off") {
+  const setup = captchaSetup(env);
+  if (setup === "skipped") return { ok: true };
+  if (setup === "missing") {
     // Owner decision, 2026-10-07: production never signs anyone up without the CAPTCHA.
-    if (env.VERCEL_ENV === "production") {
-      console.error(
-        "[sign-up] the CAPTCHA is not set up in production, so sign-up is refused: NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY are not set (docs/05 §7.12)",
-      );
-      return UNAVAILABLE;
-    }
-    return { ok: true };
+    console.error(
+      "[sign-up] the CAPTCHA is not set up in production, so sign-up is refused: NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY are not set (docs/05 §7.12)",
+    );
+    return UNAVAILABLE;
   }
-  if (mode === "misconfigured") {
+  if (setup === "misconfigured") {
     console.error(
       `[sign-up] the CAPTCHA is set up wrongly, so sign-up is refused: ${misconfiguration(env)}`,
     );
