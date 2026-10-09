@@ -53,8 +53,9 @@ export async function joinClass(client: Client, token: string): Promise<JoinAnsw
 /**
  * Joining by the class code someone typed (#362), as the caller. The database forgives case,
  * spaces and hyphens, counts every try against the caller's own account, and answers as
- * `join_class` does: an unknown code, a class in another workspace and a class the caller was
- * removed from are all `invalid`, and a class they are already in is `joined`.
+ * `join_class` does: an unknown code and a class the caller was removed from are both `invalid`,
+ * and a class they are already in is `joined`. A student may join classes in more than one
+ * workspace with the one account.
  */
 export async function joinClassByCode(client: Client, code: string): Promise<JoinAnswer> {
   const { data, error } = await client.rpc("join_class_by_code", { p_code: code });
@@ -70,9 +71,17 @@ export interface StudentClass {
   joinedAt: string;
   /** The IANA zone the class's due times are read in (#242). */
   timeZone: string;
+  /**
+   * The name of the workspace the class belongs to. One account can be in classes of more than
+   * one workspace, so the student home says which. Null when the database sends none.
+   */
+  workspaceName: string | null;
 }
 
-/** The caller's own classes: id, name and zone, never a token (`public.my_classes`). */
+/**
+ * The caller's own classes: id, name, zone and workspace name, never a token
+ * (`public.my_classes`).
+ */
 export async function myClasses(client: Client): Promise<StudentClass[] | null> {
   const { data, error } = await client.rpc("my_classes");
   if (error || !data) return null;
@@ -82,5 +91,12 @@ export async function myClasses(client: Client): Promise<StudentClass[] | null> 
     joinedAt: row.joined_at,
     // Missing only while a deploy runs ahead of its migration.
     timeZone: row.time_zone || DEFAULT_CLASS_TIME_ZONE,
+    // The same: the generated type says a string, the database may not have the column yet.
+    workspaceName: workspaceNameOf(row.workspace_name),
   }));
+}
+
+function workspaceNameOf(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  return value.trim() === "" ? null : value;
 }
