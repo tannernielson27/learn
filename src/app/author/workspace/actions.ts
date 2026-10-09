@@ -15,6 +15,7 @@ import {
   createOrgInvite,
   findInvite,
   readWorkspace,
+  removeOrgMember,
   revokeOrgInvite,
 } from "@/lib/supabase/workspace";
 import {
@@ -29,10 +30,12 @@ import {
 import { parseInviteAddress } from "@/lib/workspace/inviteAddress";
 import { sendWorkspaceInviteEmail } from "@/lib/workspace/inviteEmail";
 import { takeWorkspaceInviteEmail } from "@/lib/workspace/inviteEmailLimit";
+import { logMembershipChange, REMOVE_REFUSED, removeColleague } from "@/lib/workspace/membership";
 import { WORKSPACE_PATH } from "@/lib/workspace/workspace";
 
 /**
- * The workspace page's three actions: invite a colleague, revoke an invitation, send one again.
+ * The workspace page's four actions: invite a colleague, revoke an invitation, send one again, and
+ * remove a colleague.
  *
  * Who is asking is never read from the request. `requireAuthor` checks the role, and then the
  * session is verified with the auth server (`getUser`), not only by the token's signature: the id
@@ -147,4 +150,23 @@ export async function resendInvite(inviteId: string): Promise<ConfirmOutcome> {
   );
   revalidatePath(WORKSPACE_PATH);
   return outcome.ok ? { ok: true } : { ok: false, message: outcome.message };
+}
+
+/**
+ * Removes one colleague from the workspace (ADR 0011). Run as the signed-in teacher:
+ * `remove_org_member` reads who is asking from the session and answers only its founder, so
+ * nothing here decides who may. The id is the page's, from the member list; for anything else the
+ * function answers `not_found` and says no more.
+ */
+export async function removeMember(memberId: string): Promise<ConfirmOutcome> {
+  const { supabase, orgId, userId } = await verifiedAuthor();
+  if (!isUuid(memberId)) return { ok: false, message: REMOVE_REFUSED.not_found };
+  const outcome = await removeColleague(memberId, {
+    remove: (id) => removeOrgMember(supabase, id),
+  });
+  if (outcome.ok) {
+    logMembershipChange("member_removed", { actor: userId, target: memberId, org: orgId });
+  }
+  revalidatePath(WORKSPACE_PATH);
+  return outcome;
 }

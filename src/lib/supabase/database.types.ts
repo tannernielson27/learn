@@ -756,6 +756,8 @@ export type Database = {
         Row: {
           ai_import_enabled: boolean;
           created_at: string;
+          emptied_at: string | null;
+          founder_id: string | null;
           id: string;
           name: string;
           self_registered: boolean;
@@ -763,6 +765,8 @@ export type Database = {
         Insert: {
           ai_import_enabled?: boolean;
           created_at?: string;
+          emptied_at?: string | null;
+          founder_id?: string | null;
           id?: string;
           name: string;
           self_registered?: boolean;
@@ -770,11 +774,21 @@ export type Database = {
         Update: {
           ai_import_enabled?: boolean;
           created_at?: string;
+          emptied_at?: string | null;
+          founder_id?: string | null;
           id?: string;
           name?: string;
           self_registered?: boolean;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "orgs_founder_id_fkey";
+            columns: ["founder_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       participants: {
         Row: {
@@ -1290,7 +1304,12 @@ export type Database = {
     };
     Functions: {
       accept_org_invite: {
-        Args: { p_user: string; token: string };
+        Args: {
+          p_confirm_move?: boolean;
+          p_leaving?: string;
+          p_user: string;
+          token: string;
+        };
         Returns: string;
       };
       archive_case_study: { Args: { target: string }; Returns: undefined };
@@ -1570,6 +1589,16 @@ export type Database = {
           started_at: string;
         }[];
       };
+      org_invite_move_preview: {
+        Args: { p_user: string; token: string };
+        Returns: {
+          bank_count: number;
+          class_count: number;
+          leaving_workspace: string;
+          leaving_workspace_id: string;
+          status: string;
+        }[];
+      };
       org_members: {
         Args: never;
         Returns: {
@@ -1670,6 +1699,7 @@ export type Database = {
         Args: { retry_in_seconds?: number; targets: string[] };
         Returns: number;
       };
+      remove_org_member: { Args: { p_member: string }; Returns: string };
       reorder_case_study_steps: {
         Args: { item_ids: string[]; target: string };
         Returns: undefined;

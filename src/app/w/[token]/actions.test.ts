@@ -7,6 +7,11 @@ import {
   INVITE_ACCEPT_UNAVAILABLE,
 } from "@/lib/workspace/acceptLimit";
 import { INVITE_UNAVAILABLE, ORG_INVITE_LIFETIME_MS } from "@/lib/workspace/invite";
+import {
+  MOVE_CONFIRM_FIELD,
+  MOVE_LEAVING_FIELD,
+  MOVE_NOT_CONFIRMED,
+} from "@/lib/workspace/membership";
 
 /**
  * The invitation page's Server Functions are wiring. What is pinned here is the wiring the
@@ -125,7 +130,8 @@ const rateLimitStore = (
   await import("@/lib/rateLimit/postgresStore")
 ).sharedRateLimitStore() as MemoryRateLimitStore;
 
-const { acceptInvitation, createAccountAndAccept, signOutToInvitation } = await import("./actions");
+const { acceptInvitation, createAccountAndAccept, moveToInvitedWorkspace, signOutToInvitation } =
+  await import("./actions");
 
 const logs = [
   vi.spyOn(console, "error").mockImplementation(() => {}),
@@ -191,6 +197,17 @@ const join = (form: FormData = new FormData()) =>
   )(TOKEN, { status: "idle" }, form);
 const create = (form: FormData = accountForm()) =>
   createAccountAndAccept(TOKEN, { status: "idle" }, form);
+const LEAVING = "00000000-0000-4000-8000-0000000000d4";
+function moveForm(ticked: boolean | string, leaving: string | null = LEAVING): FormData {
+  const form = new FormData();
+  if (ticked === true) form.set(MOVE_CONFIRM_FIELD, "on");
+  else if (typeof ticked === "string") form.set(MOVE_CONFIRM_FIELD, ticked);
+  if (leaving !== null) form.set(MOVE_LEAVING_FIELD, leaving);
+  return form;
+}
+const move = (form: FormData = moveForm(true)) =>
+  moveToInvitedWorkspace(TOKEN, { status: "idle" }, form);
+const acceptCalls = () => serviceRpc.mock.calls.filter(([name]) => name === "accept_org_invite");
 
 describe("acceptInvitation", () => {
   it("accepts for the account Supabase Auth says is signed in, with the service role", async () => {
@@ -258,6 +275,12 @@ describe("acceptInvitation", () => {
   it.each([
     ["student", { status: "refused", reason: "student" }],
     ["already_teaches", { status: "refused", reason: "already_teaches" }],
+    ["already_member", { status: "refused", reason: "already_member" }],
+    ["admin_account", { status: "refused", reason: "admin_account" }],
+    ["teaches_shared", { status: "refused", reason: "teaches_shared" }],
+    ["founder_with_members", { status: "refused", reason: "founder_with_members" }],
+    ["students_depend", { status: "refused", reason: "students_depend" }],
+    ["move_needs_confirmation", { status: "error", error: MOVE_NOT_CONFIRMED }],
     ["wrong_address", { status: "refused", reason: "wrong_address" }],
     ["shared_workspace", { status: "refused", reason: "shared_workspace" }],
     ["members_full", { status: "refused", reason: "members_full" }],
@@ -362,6 +385,176 @@ describe("acceptInvitation", () => {
     expect(JSON.stringify(answers)).not.toContain(TOKEN);
     expect(logged()).not.toContain(TOKEN);
     expect(logged()).not.toContain(INVITED);
+  });
+});
+
+describe("acceptInvitation never confirms a move", () => {
+  it("sends no confirmation, whatever the form posts", async () => {
+    await expect(join(moveForm(true))).rejects.toThrow("redirect:/author");
+    expect(acceptCalls()).toEqual([["accept_org_invite", { p_user: USER, token: TOKEN }]]);
+  });
+});
+
+describe("moveToInvitedWorkspace", () => {
+  it("accepts with the confirmation when the box was ticked, for the signed-in account", async () => {
+    await expect(move()).rejects.toThrow("redirect:/author");
+    expect(getUser).toHaveBeenCalledOnce();
+    expect(acceptCalls()).toEqual([
+      [
+        "accept_org_invite",
+        { p_user: USER, token: TOKEN, p_confirm_move: true, p_leaving: LEAVING },
+      ],
+    ]);
+    expect(cookieRpc).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["no box at all", moveForm(false)],
+    ["an empty value", moveForm("")],
+    ["a value that is not a ticked box", moveForm("true")],
+    ["a ticked box and no workspace named", moveForm(true, null)],
+    ["a ticked box and a workspace id that is not one", moveForm(true, "mine")],
+  ])("sends no confirmation with %s, and says what the database answers", async (_why, form) => {
+    acceptReply = { data: "move_needs_confirmation", error: null };
+    expect(await move(form)).toEqual({ status: "error", error: MOVE_NOT_CONFIRMED });
+    expect(acceptCalls()).toEqual([["accept_org_invite", { p_user: USER, token: TOKEN }]]);
+    expect(redirected).not.toHaveBeenCalled();
+    nothingChanged();
+  });
+
+  it("passes on the workspace the form names and lets the database judge it", async () => {
+    // Somebody else's workspace, or one the account has since left: the database answers.
+    acceptReply = { data: "move_needs_confirmation", error: null };
+    expect(await move(moveForm(true, OTHER_USER))).toEqual({
+      status: "error",
+      error: MOVE_NOT_CONFIRMED,
+    });
+    expect(acceptCalls()).toEqual([
+      [
+        "accept_org_invite",
+        { p_user: USER, token: TOKEN, p_confirm_move: true, p_leaving: OTHER_USER },
+      ],
+    ]);
+    nothingChanged();
+  });
+
+  it("signs out the account's other sessions on a move, and leaves the password alone", async () => {
+    // Confirmed, and signed in here before the invitation existed: nothing else is ended.
+    await expect(move()).rejects.toThrow("redirect:/author");
+    expect(signOut).toHaveBeenCalledOnce();
+    expect(signOut).toHaveBeenCalledWith({ scope: "others" });
+    expect(updateUser).not.toHaveBeenCalled();
+    expect(updateUserById).not.toHaveBeenCalled();
+  });
+
+  it("signs nobody out when the database did not move the account", async () => {
+    acceptReply = { data: "students_depend", error: null };
+    await move();
+    expect(signOut).not.toHaveBeenCalled();
+  });
+
+  it("logs a move once, with ids only", async () => {
+    await expect(move()).rejects.toThrow("redirect:/author");
+    const info = logs[3]!.mock.calls;
+    expect(info).toEqual([
+      ["[workspace] teacher_moved", { actor: USER, target: USER, org: LEAVING }],
+    ]);
+    expect(JSON.stringify(info)).not.toContain(INVITED);
+  });
+
+  it("logs nothing for a first acceptance or a move that was refused", async () => {
+    await expect(join()).rejects.toThrow("redirect:/author");
+    acceptReply = { data: "founder_with_members", error: null };
+    await move();
+    expect(logs[3]!.mock.calls).toEqual([]);
+  });
+
+  it("never takes the account from the request", async () => {
+    const form = moveForm(true);
+    form.set("userId", OTHER_USER);
+    form.set("p_user", OTHER_USER);
+    await expect(move(form)).rejects.toThrow("redirect:/author");
+    expect(JSON.stringify(serviceRpc.mock.calls)).not.toContain(OTHER_USER);
+  });
+
+  it("resolves the token first, counted on the platform's address, and accepts nothing closed", async () => {
+    resolveReply = { data: [{ ...PENDING, state: "revoked" }], error: null };
+    expect(await move()).toEqual({ status: "closed", state: "revoked" });
+    expect(serviceRpc.mock.calls[0]![0]).toBe("resolve_org_invite");
+    expect(serviceRpc.mock.calls[0]![1]).toMatchObject({
+      client_key: requestHeaders.get("x-vercel-forwarded-for"),
+    });
+    expect(acceptCalls()).toEqual([]);
+    nothingChanged();
+  });
+
+  it("sends a visitor back to the page, having asked the database nothing", async () => {
+    sessionUser = null;
+    await expect(move()).rejects.toThrow(`redirect:/w/${TOKEN}`);
+    expect(serviceRpc).not.toHaveBeenCalled();
+  });
+
+  it.each(["founder_with_members", "students_depend", "teaches_shared", "members_full"] as const)(
+    "on %s: says so and changes nothing, even confirmed",
+    async (reason) => {
+      signInAs({ unconfirmed: true, startedAt: ISSUED + 60_000 });
+      acceptReply = { data: reason, error: null };
+      expect(await move()).toEqual({ status: "refused", reason });
+      nothingChanged();
+    },
+  );
+
+  it("retires an earlier password on a move exactly as on a first acceptance", async () => {
+    signInAs({ unconfirmed: true });
+    await expect(move()).rejects.toThrow(`redirect:${CHOOSE_PASSWORD}`);
+    expect(updateUserById).toHaveBeenCalledWith(USER, {
+      app_metadata: { learn_email_unconfirmed: null },
+    });
+    expect(updateUser).toHaveBeenCalledOnce();
+    expect(signOut).toHaveBeenCalledWith({ scope: "others" });
+  });
+
+  it("retires it too for a confirmed account whose session is newer than the invitation", async () => {
+    signInAs({ startedAt: ISSUED + 60_000 });
+    await expect(move()).rejects.toThrow(`redirect:${CHOOSE_PASSWORD}`);
+    expect(updateUser).toHaveBeenCalledOnce();
+  });
+
+  it("falls back to the two-argument function on a database without the migration", async () => {
+    serviceRpc.mockImplementation(async (name, args) => {
+      if (name === "resolve_org_invite") return resolveReply;
+      return "p_confirm_move" in args
+        ? { data: null, error: { code: "PGRST202" } }
+        : { data: "already_teaches", error: null };
+    });
+    try {
+      expect(await move()).toEqual({ status: "refused", reason: "already_teaches" });
+      expect(acceptCalls().map(([, args]) => args)).toEqual([
+        { p_user: USER, token: TOKEN, p_confirm_move: true, p_leaving: LEAVING },
+        { p_user: USER, token: TOKEN },
+      ]);
+      nothingChanged();
+    } finally {
+      serviceRpc.mockImplementation(async (name) =>
+        name === "resolve_org_invite" ? resolveReply : acceptReply,
+      );
+    }
+  });
+
+  it("is counted per caller, on the same budget as accepting", async () => {
+    acceptReply = { data: "move_needs_confirmation", error: null };
+    for (let attempt = 0; attempt < INVITE_ACCEPT_LIMIT.attempts; attempt += 1)
+      await move(moveForm(false));
+    serviceRpc.mockClear();
+    expect(await move()).toEqual({ status: "error", error: INVITE_ACCEPT_RATE_LIMITED });
+    expect(serviceRpc).not.toHaveBeenCalled();
+  });
+
+  it("puts the token in no answer and no log", async () => {
+    acceptReply = { data: "students_depend", error: null };
+    const answer = await move();
+    expect(JSON.stringify(answer)).not.toContain(TOKEN);
+    expect(logged()).not.toContain(TOKEN);
   });
 });
 

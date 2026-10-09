@@ -6,6 +6,10 @@
 -- address, student, already teaches, expired, revoked, already accepted) and that a refusal writes
 -- nothing; the member cap, the pending cap and the daily cap.
 --
+-- Since 20261011000000 accept_org_invite takes two more arguments and may move a teacher. What a
+-- teacher is answered, and the move itself, are held in workspace_remove_and_move.test.sql; here
+-- two teachers are only shown to be refused or left where they are.
+--
 -- Not held here: the race between accept_org_invite and private.admit_to_class. Both take the
 -- profile row `for update` and read the role under it; one transaction cannot show two sessions.
 --
@@ -126,14 +130,14 @@ select ok(
   and not has_function_privilege('authenticated', 'public.create_org_invite(uuid, text)', 'execute')
   and not has_function_privilege('anon', 'public.resolve_org_invite(text, text)', 'execute')
   and not has_function_privilege('authenticated', 'public.resolve_org_invite(text, text)', 'execute')
-  and not has_function_privilege('anon', 'public.accept_org_invite(uuid, text)', 'execute')
-  and not has_function_privilege('authenticated', 'public.accept_org_invite(uuid, text)', 'execute'),
+  and not has_function_privilege('anon', 'public.accept_org_invite(uuid, text, boolean, uuid)', 'execute')
+  and not has_function_privilege('authenticated', 'public.accept_org_invite(uuid, text, boolean, uuid)', 'execute'),
   'neither anon nor authenticated holds EXECUTE on create, resolve or accept'
 );
 select ok(
   has_function_privilege('service_role', 'public.create_org_invite(uuid, text)', 'execute')
   and has_function_privilege('service_role', 'public.resolve_org_invite(text, text)', 'execute')
-  and has_function_privilege('service_role', 'public.accept_org_invite(uuid, text)', 'execute'),
+  and has_function_privilege('service_role', 'public.accept_org_invite(uuid, text, boolean, uuid)', 'execute'),
   'service_role holds all three'
 );
 select ok(
@@ -149,7 +153,7 @@ select is(
             'public.create_org_invite(uuid, text)'::regprocedure,
             'public.revoke_org_invite(uuid)'::regprocedure,
             'public.resolve_org_invite(text, text)'::regprocedure,
-            'public.accept_org_invite(uuid, text)'::regprocedure,
+            'public.accept_org_invite(uuid, text, boolean, uuid)'::regprocedure,
             'public.org_members()'::regprocedure)
       and p.prosecdef and p.proconfig @> array['search_path=""']),
   5,
@@ -498,14 +502,14 @@ select is(
 select is(
   public.accept_org_invite('00000000-0000-0000-0000-0000009100b1',
     (select token from made where name = 'grace')),
-  'already_teaches',
-  'a teacher with a workspace of their own is refused'
+  'move_needs_confirmation',
+  'a teacher alone in a workspace of their own is not moved without saying so (20261011000000)'
 );
 select is(
   public.accept_org_invite('00000000-0000-0000-0000-0000009100f1',
     (select token from made where name = 'shared-teach')),
-  'already_teaches',
-  'and so is an instructor of a workspace the owner made'
+  'teaches_shared',
+  'an instructor of a workspace the owner made is never moved'
 );
 select is(
   public.accept_org_invite('00000000-0000-0000-0000-000000910001',
@@ -558,7 +562,7 @@ select is(
   public.accept_org_invite('00000000-0000-0000-0000-000000910001',
     (select token from made where name = 'colleague')),
   'already_accepted',
-  'accepting twice is answered already_accepted, not already_teaches'
+  'accepting twice is answered already_accepted, not already_member'
 );
 select is(
   public.accept_org_invite('00000000-0000-0000-0000-000000910002',

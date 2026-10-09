@@ -6,6 +6,7 @@ import type {
   RevokedInvite,
 } from "@/lib/supabase/workspace";
 import { parseInviteAddress } from "./inviteAddress";
+import { MOVE_NOT_CONFIRMED } from "./membership";
 import type { WorkspaceInvite, WorkspaceInviteEmailResult } from "./inviteEmail";
 import {
   WORKSPACE_DAILY_INVITES,
@@ -116,11 +117,22 @@ export function inviterLabel(inviter: { name: string | null; email: string | nul
 export const INVITE_STATES = ["pending", "expired", "revoked", "accepted"] as const;
 export type InviteState = (typeof INVITE_STATES)[number];
 
-/** `accept_org_invite`'s refusals of the account itself, each of which the page explains. */
+/**
+ * `accept_org_invite`'s refusals of the account itself, each of which the page explains.
+ *
+ * `already_teaches` is what the function answered every teacher before migration 20261011000000,
+ * and what a database without that migration still answers. With it, a teacher is told which of
+ * the five after it applies, or is asked to confirm a move.
+ */
 export const INVITE_REFUSALS = [
   "wrong_address",
   "student",
   "already_teaches",
+  "already_member",
+  "admin_account",
+  "teaches_shared",
+  "founder_with_members",
+  "students_depend",
   "shared_workspace",
   "members_full",
 ] as const;
@@ -147,12 +159,24 @@ export const INVITE_REFUSED: Readonly<Record<InviteRefusal, string>> = {
     "This address is a student account, and a student account cannot become a teacher. Ask to be invited at another email address.",
   already_teaches:
     "This account already teaches in a workspace. Moving between workspaces is not available yet.",
+  already_member: "This account already teaches in this workspace. There is nothing to accept.",
+  admin_account:
+    "This account is an admin of the workspace it teaches in, and an admin cannot move to another one. Ask to be invited at another email address.",
+  teaches_shared:
+    "This account teaches in the LeaRN workspace, and an account there cannot move to another one. Ask to be invited at another email address.",
+  founder_with_members:
+    "You started the workspace you teach in now, and other teachers are still in it. Remove them on your workspace page first, or ask to be invited at another email address.",
+  students_depend:
+    "You are the only teacher in the workspace you teach in now, and it still has students in a class, an assignment that has not closed or a live session that has not ended. Leaving would leave them with no teacher. Remove the students and close those first, or ask to be invited at another email address.",
   shared_workspace: "This workspace can no longer take new teachers by invitation.",
   members_full:
     "This workspace is full. Ask the person who invited you to get in touch with LeaRN.",
 };
 
-/** Everything `accept_org_invite` answers, and `unavailable` for a database that did not. */
+/**
+ * Everything `accept_org_invite` answers, and `unavailable` for a database that did not.
+ * `move_needs_confirmation`: the account teaches elsewhere, may move, and has not said it will.
+ */
 export type AcceptInviteResult =
   | "accepted"
   | "invalid"
@@ -160,6 +184,7 @@ export type AcceptInviteResult =
   | "revoked"
   | "expired"
   | InviteRefusal
+  | "move_needs_confirmation"
   | "unavailable";
 
 /** What an invitation page shows in place of its form once the server has answered. */
@@ -197,6 +222,9 @@ export function inviteAnswerFor(result: Exclude<AcceptInviteResult, "accepted">)
       return { status: "closed", state: result };
     case "unavailable":
       return { status: "error", error: INVITE_UNAVAILABLE };
+    case "move_needs_confirmation":
+      // The form that asks is still on the page: the sentence goes beside its box.
+      return { status: "error", error: MOVE_NOT_CONFIRMED };
     default:
       return { status: "refused", reason: result };
   }
