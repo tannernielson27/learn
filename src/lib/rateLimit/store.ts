@@ -48,6 +48,10 @@ export const RATE_LIMIT_BUCKETS = [
   "practice_start",
   // #360: the welcome email, one ceiling for the whole deployment (`src/lib/auth/welcomeLimit.ts`).
   "welcome_email",
+  // Workspace invitation emails: per inviter a day, and one ceiling for the whole deployment
+  // (`src/lib/workspace/inviteEmailLimit.ts`).
+  "workspace_invite_inviter",
+  "workspace_invite_email",
 ] as const;
 
 export type RateLimitBucket = (typeof RATE_LIMIT_BUCKETS)[number];

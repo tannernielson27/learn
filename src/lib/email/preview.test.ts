@@ -8,11 +8,12 @@ function preview(id: (typeof EMAIL_PREVIEWS)[number]["id"]) {
 }
 
 describe("the email preview samples", () => {
-  it("covers every message LeaRN sends: the magic link, both welcomes and both reminders", () => {
+  it("covers every message LeaRN sends: the magic link, welcomes, invitation and reminders", () => {
     expect(EMAIL_PREVIEWS.map((p) => p.id)).toEqual([
       "magic-link",
       "welcome-student",
       "welcome-teacher",
+      "workspace-invite",
       "reminder-opened",
       "reminder-closing-soon",
     ]);
@@ -51,5 +52,16 @@ describe("the email preview samples", () => {
     expect(teacher.text).toContain("next=%2Fauthor&");
     expect(student.bodyHtml).toContain("Confirm my email address");
     expect(teacher.bodyHtml).toContain("make a class");
+  });
+
+  it("shows the workspace invitation, with its sample name escaped and out of the subject", () => {
+    const invite = preview("workspace-invite");
+    expect(invite.name).toBe("Workspace invitation");
+    expect(invite.subject).toBe("You are invited to teach in a LeaRN workspace");
+    expect(invite.bodyHtml).toContain("Accept the invitation");
+    expect(invite.bodyHtml).toContain("&quot;Adult Health &amp; &quot;Pharm&quot; team&quot;");
+    expect(invite.text).toContain(`"Adult Health & "Pharm" team"`);
+    expect(invite.text).toContain("ada.instructor@learn.example invited you");
+    expect(invite.text).toContain("https://learn.example/w/sample-invite-token-0123456789ab");
   });
 });
