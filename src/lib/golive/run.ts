@@ -41,7 +41,7 @@ export interface GoLiveOptions {
   repoMigrations: readonly string[];
   /**
    * The hosted project and a Management API token (`SUPABASE_ACCESS_TOKEN`), to check the Auth
-   * URLs and template (#307). Null keeps those lines manual.
+   * config (#307, #359). Null keeps those lines manual.
    */
   authConfig: { ref: string; token: string } | null;
 }
@@ -113,8 +113,8 @@ const AUTH_HINT =
   "Is SUPABASE_ACCESS_TOKEN a current personal access token (supabase.com/dashboard/account/tokens)?";
 
 /**
- * The Auth URLs and template lines (#307). One read feeds both, so a read that fails fails both
- * lines rather than printing one and silently dropping the other.
+ * The Auth config lines (#307, #359). One read feeds them all, so a read that fails fails every
+ * line rather than printing one and silently dropping the others.
  */
 async function authConfigStep(
   fetchImpl: FetchLike,
