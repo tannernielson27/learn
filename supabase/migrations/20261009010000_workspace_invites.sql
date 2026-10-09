@@ -212,8 +212,9 @@ declare
   member_cap constant integer := 10;
   pending_cap constant integer := 10;
   daily_cap constant integer := 5;
-  -- Clipped before the pattern below, so no caller can make it do much work.
-  address text := lower(btrim(left(coalesce(p_email, ''), 320)));
+  -- Clipped first, so no caller can make the patterns do much work. Trimmed of every kind of
+  -- white space, tabs and line ends included, which btrim alone would leave.
+  address text := lower(regexp_replace(left(coalesce(p_email, ''), 320), '^\s+|\s+$', '', 'g'));
   inviter_org uuid;
   inviter_role public.org_role;
   org_open boolean;
