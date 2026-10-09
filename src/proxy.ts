@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { redirectForAccess } from "@/lib/auth/routeAccess";
 import { galleryIsAvailable, isGalleryPath } from "@/lib/gallery/availability";
 import { updateSession } from "@/lib/supabase/proxy";
+import { inviteResponseHeaders } from "@/lib/workspace/invite";
 
 /**
  * ADR 0003 / #146: the gallery ships answer keys to the browser by design, so it is closed on the
@@ -33,6 +34,12 @@ export async function proxy(request: NextRequest) {
   }
 
   const { response, signedIn, homeFor } = await updateSession(request);
+  // A workspace invitation's path is its secret: every answer under /w/, the page and the answer
+  // to a post alike, tells the browser to send no Referer from it. So does a page that carries the
+  // invitation in its own `next`, as /sign-in?next=/w/<token> does.
+  for (const [name, value] of Object.entries(inviteResponseHeaders(url.pathname, url.search))) {
+    response.headers.set(name, value);
+  }
   const access = redirectForAccess(url, signedIn);
   if (!access) return response;
 
@@ -59,6 +66,8 @@ export async function proxy(request: NextRequest) {
 // account pages (#358) read it too, and `redirectForAccess` already counts /account as protected,
 // which only works if the proxy runs there. Sign-up and the welcome page (#361) are the same pair:
 // /sign-up reads the session to send a signed-in visitor home, and /welcome is protected.
+// A workspace invitation, /w/<token>, reads the session as the class invite does, and is also
+// here so the proxy can send its Referrer-Policy.
 export const config = {
   matcher: [
     "/",
@@ -68,6 +77,7 @@ export const config = {
     "/account",
     "/account/:path*",
     "/c/:path*",
+    "/w/:path*",
     "/sign-in",
     "/sign-up",
     "/welcome",

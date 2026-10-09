@@ -1,283 +1,230 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { CreatedInvite, FoundInvite, RevokedInvite } from "@/lib/supabase/workspace";
-import { INVITE_REFUSALS } from "@/lib/supabase/workspace";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import { safeNextPath } from "@/lib/auth/nextPath";
 import {
-  EARLIER_REVOKED,
-  INVITE_ACCEPTED,
-  INVITE_GONE,
-  INVITE_NOT_MADE,
-  INVITE_REFUSAL_MESSAGES,
-  notSentMessage,
-  resendInvitation,
-  RESEND_AT_LIMIT,
-  RESEND_BAD_ADDRESS,
-  RESEND_FAILED,
-  REVOKE_FAILED,
-  revokeInvitation,
-  sendInvitation,
-  type ResendDeps,
+  INVITE_CLOSED,
+  INVITE_NOT_VALID_HEADING,
+  INVITE_NOT_VALID_TEXT,
+  INVITE_REFUSED,
+  INVITE_UNAVAILABLE,
+  inviteResponseHeaders,
+  inviterLabel,
+  isWorkspaceInvitePath,
+  maskEmail,
+  mustEndEarlierAccess,
+  ORG_INVITE_LIFETIME_MS,
+  sameAddress,
+  sessionStartedAt,
+  signInToAcceptPath,
+  workspaceInvitePath,
 } from "./invite";
-import type { WorkspaceInviteEmailResult } from "./inviteEmail";
 
-/**
- * The three things a teacher does on the workspace page, with the database and the mailer faked.
- * What is pinned: the order of the steps, that the token goes to the mailer and nowhere else, and
- * that an email which did not go out leaves no invitation behind.
- */
-
-const INVITER = { id: "inviter-1", email: "ada@school.edu", workspaceName: "Ada's workspace" };
-const ADDRESS = "kim@school.edu";
-const INVITE = "00000000-0000-4000-8000-0000000000e1";
-const OLD_INVITE = "00000000-0000-4000-8000-0000000000e0";
 const TOKEN = "AbC_-0123456789abcdefghijklmnopq";
-const NOW = new Date("2026-10-09T12:00:00Z");
 
-const steps: string[] = [];
-let created: CreatedInvite;
-let sent: WorkspaceInviteEmailResult;
-let revoked: RevokedInvite;
-let found: FoundInvite;
-let recent: number | null;
-
-const create = vi.fn<ResendDeps["create"]>(async () => {
-  steps.push("create");
-  return created;
-});
-const revoke = vi.fn<ResendDeps["revoke"]>(async () => {
-  steps.push("revoke");
-  return revoked;
-});
-const send = vi.fn<ResendDeps["send"]>(async () => {
-  steps.push("send");
-  return sent;
-});
-const find = vi.fn<ResendDeps["find"]>(async () => {
-  steps.push("find");
-  return found;
-});
-const recentCount = vi.fn<ResendDeps["recentCount"]>(async () => {
-  steps.push("count");
-  return recent;
-});
-const deps: ResendDeps = { create, revoke, send, find, recentCount, now: () => NOW };
-
-const logged = vi.spyOn(console, "error").mockImplementation(() => {});
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  steps.length = 0;
-  created = { status: "created", inviteId: INVITE, token: TOKEN };
-  sent = "sent";
-  revoked = "revoked";
-  found = { email: ADDRESS };
-  recent = 0;
-});
-
-describe("sendInvitation", () => {
-  it("makes the invitation for the verified inviter and emails it", async () => {
-    expect(await sendInvitation(INVITER, ADDRESS, deps)).toEqual({ ok: true, email: ADDRESS });
-    expect(create).toHaveBeenCalledWith(INVITER.id, ADDRESS);
-    expect(send).toHaveBeenCalledWith({
-      inviteId: INVITE,
-      token: TOKEN,
-      to: ADDRESS,
-      inviterId: INVITER.id,
-      inviterEmail: INVITER.email,
-      workspaceName: INVITER.workspaceName,
-    });
-    expect(steps).toEqual(["create", "send"]);
+describe("the invitation's path", () => {
+  it("is /w/<token>", () => {
+    expect(workspaceInvitePath(TOKEN)).toBe(`/w/${TOKEN}`);
   });
 
-  it("never puts the token in what it returns, on any path", async () => {
-    const outcomes = [await sendInvitation(INVITER, ADDRESS, deps)];
-    for (const result of ["rate_limited", "ceiling", "failed"] as const) {
-      sent = result;
-      outcomes.push(await sendInvitation(INVITER, ADDRESS, deps));
+  it("escapes and clips what is not a token", () => {
+    expect(workspaceInvitePath("a/b?c")).toBe("/w/a%2Fb%3Fc");
+    expect(workspaceInvitePath("x".repeat(500))).toBe(`/w/${"x".repeat(64)}`);
+  });
+
+  it("sends someone through sign-in and back, by a path sign-in will follow", () => {
+    const path = signInToAcceptPath(TOKEN);
+    expect(path).toBe(`/sign-in?next=${encodeURIComponent(`/w/${TOKEN}`)}`);
+    const next = new URL(path, "https://learn.example").searchParams.get("next");
+    expect(safeNextPath(next)).toBe(`/w/${TOKEN}`);
+  });
+
+  it.each([
+    [`/w/${TOKEN}`, true],
+    ["/w/", true],
+    ["/w", false],
+    ["/welcome", false],
+    ["/author/workspace", false],
+  ])("knows whether %s is an invitation page", (pathname, expected) => {
+    expect(isWorkspaceInvitePath(pathname)).toBe(expected);
+  });
+});
+
+describe("inviteResponseHeaders", () => {
+  it("keeps the token out of every Referer", () => {
+    expect(inviteResponseHeaders(`/w/${TOKEN}`)).toEqual({ "Referrer-Policy": "no-referrer" });
+  });
+
+  it("adds nothing anywhere else", () => {
+    expect(inviteResponseHeaders("/welcome")).toEqual({});
+    expect(inviteResponseHeaders("/author")).toEqual({});
+  });
+
+  it("covers a page whose own address carries the invitation in `next`", () => {
+    const next = encodeURIComponent(`/w/${TOKEN}`);
+    const sent = { "Referrer-Policy": "no-referrer" };
+    expect(inviteResponseHeaders("/sign-in", `?next=${next}`)).toEqual(sent);
+    expect(inviteResponseHeaders("/sign-up", `?role=teacher&next=${next}`)).toEqual(sent);
+    // Carried one page further, inside another page's own `next`.
+    const nested = encodeURIComponent(`/account/password?next=${next}`);
+    expect(inviteResponseHeaders("/sign-in", `?next=${nested}`)).toEqual(sent);
+  });
+
+  it("adds nothing for a `next` that is not an invitation, or is not there", () => {
+    expect(inviteResponseHeaders("/sign-in", "")).toEqual({});
+    expect(inviteResponseHeaders("/sign-in", "?next=%2Fauthor")).toEqual({});
+    expect(inviteResponseHeaders("/sign-in", "?next=%2Fwelcome")).toEqual({});
+    expect(inviteResponseHeaders("/sign-in", "?next=%2Fauthor%2Fworkspace")).toEqual({});
+    expect(inviteResponseHeaders("/sign-in", `?other=%2Fw%2F${TOKEN}`)).toEqual({});
+    // A value that cannot be decoded is not an invitation path, and is not an error.
+    expect(inviteResponseHeaders("/sign-in", "?next=%25E0%25A4%25A")).toEqual({});
+  });
+});
+
+describe("maskEmail", () => {
+  it("shows the first letters and the ending, and no length", () => {
+    expect(maskEmail("ada.lovelace@school.edu")).toBe("a***@s***.edu");
+    expect(maskEmail("b@x.org")).toBe("b***@x***.org");
+  });
+
+  it("never shows the whole address", () => {
+    for (const email of ["ada@school.edu", "a@b.co", "someone@localhost"]) {
+      expect(maskEmail(email)).not.toBe(email);
+      expect(maskEmail(email)).not.toContain(email.split("@")[1]);
     }
-    revoked = "failed";
-    outcomes.push(await sendInvitation(INVITER, ADDRESS, deps));
-    expect(JSON.stringify(outcomes)).not.toContain(TOKEN);
-    expect(JSON.stringify(logged.mock.calls)).not.toContain(TOKEN);
   });
 
-  it.each(INVITE_REFUSALS)("says why on %s, and sends nothing", async (status) => {
-    created = { status };
-    expect(await sendInvitation(INVITER, ADDRESS, deps)).toEqual({
-      ok: false,
-      message: INVITE_REFUSAL_MESSAGES[status],
-    });
-    expect(steps).toEqual(["create"]);
-  });
-
-  it("has a different sentence for every refusal", () => {
-    const sentences = INVITE_REFUSALS.map((status) => INVITE_REFUSAL_MESSAGES[status]);
-    expect(new Set(sentences).size).toBe(INVITE_REFUSALS.length);
-    for (const sentence of sentences) expect(sentence.length).toBeGreaterThan(20);
-  });
-
-  it("says the invitation could not be made when the database does not answer", async () => {
-    created = { status: "failed" };
-    expect(await sendInvitation(INVITER, ADDRESS, deps)).toEqual({
-      ok: false,
-      message: INVITE_NOT_MADE,
-    });
-    expect(steps).toEqual(["create"]);
-  });
-
-  it.each(["rate_limited", "ceiling", "failed"] as const)(
-    "revokes the invitation it just made when the email is %s, and says it was not sent",
-    async (result) => {
-      sent = result;
-      expect(await sendInvitation(INVITER, ADDRESS, deps)).toEqual({
-        ok: false,
-        message: notSentMessage(result, true),
-      });
-      expect(revoke).toHaveBeenCalledWith(INVITE);
-      expect(steps).toEqual(["create", "send", "revoke"]);
-    },
-  );
-
-  it("says the invitation is still listed when it could not be revoked either", async () => {
-    sent = "failed";
-    revoked = "failed";
-    const outcome = await sendInvitation(INVITER, ADDRESS, deps);
-    expect(outcome).toEqual({ ok: false, message: notSentMessage("failed", false) });
-    expect(JSON.stringify(outcome)).toContain("still listed");
-  });
-
-  it("treats a mailer that throws as an email that was not sent, logging only a name", async () => {
-    send.mockRejectedValueOnce(new Error(`could not reach ${ADDRESS} with ${TOKEN}`));
-    expect(await sendInvitation(INVITER, ADDRESS, deps)).toEqual({
-      ok: false,
-      message: notSentMessage("failed", true),
-    });
-    expect(revoke).toHaveBeenCalledWith(INVITE);
-    const log = JSON.stringify(logged.mock.calls);
-    expect(log).toContain("Error");
-    expect(log).not.toContain(TOKEN);
-    expect(log).not.toContain(ADDRESS);
-  });
-
-  it("treats a database call that throws as an invitation that was not made", async () => {
-    create.mockRejectedValueOnce(new Error("SUPABASE_SECRET_KEY is not set"));
-    expect(await sendInvitation(INVITER, ADDRESS, deps)).toEqual({
-      ok: false,
-      message: INVITE_NOT_MADE,
-    });
-    expect(send).not.toHaveBeenCalled();
+  it("shows nothing of what is not an address", () => {
+    expect(maskEmail("")).toBe("***");
+    expect(maskEmail("@school.edu")).toBe("***");
+    expect(maskEmail("nobody")).toBe("***");
   });
 });
 
-describe("notSentMessage", () => {
-  it("says the email was not sent and what is left, for every send result", () => {
-    for (const result of ["rate_limited", "ceiling", "failed"] as const) {
-      expect(notSentMessage(result, true)).toMatch(/not sent|could not be sent/);
-      expect(notSentMessage(result, true)).toContain("No invitation is pending");
-      expect(notSentMessage(result, false)).toContain("Revoke it before you try again");
+describe("sameAddress", () => {
+  it("ignores case and surrounding space, as the database does", () => {
+    expect(sameAddress(" Ada@School.edu ", "ada@school.edu")).toBe(true);
+    expect(sameAddress("ada@school.edu", "ada@school.org")).toBe(false);
+  });
+});
+
+describe("inviterLabel", () => {
+  it("prefers the name, then the address, then says a colleague", () => {
+    expect(inviterLabel({ name: "Ada Lovelace", email: "ada@school.edu" })).toBe("Ada Lovelace");
+    expect(inviterLabel({ name: "  ", email: "ada@school.edu" })).toBe("ada@school.edu");
+    expect(inviterLabel({ name: null, email: null })).toBe("A colleague");
+  });
+});
+
+describe("what the page says", () => {
+  it("has one answer for a token that is not valid, naming no cause", () => {
+    expect(INVITE_NOT_VALID_HEADING).toBe("This invitation is not valid or has expired");
+    for (const word of ["unknown", "malformed", "too many", "network", "limit"]) {
+      expect(`${INVITE_NOT_VALID_HEADING} ${INVITE_NOT_VALID_TEXT}`.toLowerCase()).not.toContain(
+        word,
+      );
     }
-    expect(notSentMessage("rate_limited", true)).toContain("tomorrow");
-    expect(notSentMessage("ceiling", true)).toContain("in an hour");
+  });
+
+  it("says each refusal plainly, with no emoji and no markup", () => {
+    expect(INVITE_REFUSED.student).toMatch(/student account/);
+    expect(INVITE_REFUSED.student).toMatch(/another email address/);
+    expect(INVITE_REFUSED.already_teaches).toMatch(/already teaches in a workspace/);
+    expect(INVITE_REFUSED.already_teaches).toMatch(/not available yet/);
+    const all = [
+      ...Object.values(INVITE_REFUSED),
+      ...Object.values(INVITE_CLOSED),
+      INVITE_UNAVAILABLE,
+      INVITE_NOT_VALID_TEXT,
+    ].join(" ");
+    expect(all).not.toMatch(/\p{Extended_Pictographic}/u);
+    expect(all).not.toMatch(/[<>]/);
   });
 });
 
-describe("revokeInvitation", () => {
-  it("is ok when the function revoked it", async () => {
-    expect(await revokeInvitation(INVITE, deps)).toEqual({ ok: true });
-    expect(revoke).toHaveBeenCalledWith(INVITE);
+describe("sessionStartedAt", () => {
+  it("is the latest proof the session lists", () => {
+    const claims = {
+      amr: [
+        { method: "password", timestamp: 1_700_000_000 },
+        { method: "otp", timestamp: 1_700_000_500 },
+      ],
+    };
+    expect(sessionStartedAt(claims)).toBe(1_700_000_500_000);
   });
 
   it.each([
-    ["already_accepted", INVITE_ACCEPTED],
-    ["not_found", INVITE_GONE],
-    ["failed", REVOKE_FAILED],
-  ] as const)("says so on %s", async (answer, message) => {
-    revoked = answer;
-    expect(await revokeInvitation(INVITE, deps)).toEqual({ ok: false, message });
-  });
-
-  it("never says an invitation belongs to somebody else", async () => {
-    revoked = "not_found";
-    const outcome = await revokeInvitation(INVITE, deps);
-    expect(JSON.stringify(outcome)).not.toMatch(/not yours|another workspace|permission/i);
+    [null],
+    [{}],
+    [{ amr: [] }],
+    [{ amr: "password" }],
+    [{ amr: ["password"] }],
+    [{ amr: [{ method: "password" }] }],
+    [{ amr: [{ method: "password", timestamp: "1700000000" }] }],
+    [{ amr: [{ method: "password", timestamp: 1_700_000_000 }, null] }],
+  ])("is null when the token does not say: %j", (claims) => {
+    expect(sessionStartedAt(claims)).toBeNull();
   });
 });
 
-describe("resendInvitation", () => {
-  it("revokes the earlier invitation, then makes and emails a new one to the same address", async () => {
-    expect(await resendInvitation(INVITER, OLD_INVITE, deps)).toEqual({ ok: true, email: ADDRESS });
-    expect(steps).toEqual(["find", "count", "revoke", "create", "send"]);
-    expect(find).toHaveBeenCalledWith(OLD_INVITE);
-    expect(revoke).toHaveBeenCalledWith(OLD_INVITE);
-    expect(create).toHaveBeenCalledWith(INVITER.id, ADDRESS);
-    expect(send.mock.calls[0]![0]).toMatchObject({ inviteId: INVITE, to: ADDRESS, token: TOKEN });
+describe("mustEndEarlierAccess", () => {
+  const EXPIRES = "2026-10-16T12:00:00.000Z";
+  const issuedAt = Date.parse(EXPIRES) - ORG_INVITE_LIFETIME_MS;
+  const sessionAt = (ms: number) => ({ amr: [{ method: "password", timestamp: ms / 1000 }] });
+
+  it("is yes for an account nobody had confirmed, however old the session", () => {
+    expect(
+      mustEndEarlierAccess({
+        wasUnconfirmed: true,
+        claims: sessionAt(issuedAt - 86_400_000),
+        inviteExpiresAt: EXPIRES,
+      }),
+    ).toBe(true);
   });
 
-  it("counts the inviter's last 24 hours", async () => {
-    await resendInvitation(INVITER, OLD_INVITE, deps);
-    expect(recentCount).toHaveBeenCalledWith(INVITER.id, new Date("2026-10-08T12:00:00Z"));
+  it("is no for a confirmed account signed in before the invitation existed", () => {
+    expect(
+      mustEndEarlierAccess({
+        wasUnconfirmed: false,
+        claims: sessionAt(issuedAt - 1000),
+        inviteExpiresAt: EXPIRES,
+      }),
+    ).toBe(false);
   });
 
-  it.each([
-    ["gone", INVITE_GONE],
-    ["accepted", INVITE_ACCEPTED],
-    ["failed", RESEND_FAILED],
-  ] as const)("changes nothing when the invitation is %s", async (state, message) => {
-    found = state;
-    expect(await resendInvitation(INVITER, OLD_INVITE, deps)).toEqual({ ok: false, message });
-    expect(steps).toEqual(["find"]);
+  it("is yes for a session made once the invitation existed", () => {
+    for (const startedAt of [issuedAt, issuedAt + 1000, Date.parse(EXPIRES)]) {
+      expect(
+        mustEndEarlierAccess({
+          wasUnconfirmed: false,
+          claims: sessionAt(startedAt),
+          inviteExpiresAt: EXPIRES,
+        }),
+      ).toBe(true);
+    }
   });
 
-  it("keeps the earlier invitation when the inviter is already at five for the day", async () => {
-    recent = 5;
-    expect(await resendInvitation(INVITER, OLD_INVITE, deps)).toEqual({
-      ok: false,
-      message: RESEND_AT_LIMIT,
-    });
-    expect(steps).toEqual(["find", "count"]);
+  it("is yes whenever the answer cannot be read", () => {
+    expect(
+      mustEndEarlierAccess({ wasUnconfirmed: false, claims: null, inviteExpiresAt: EXPIRES }),
+    ).toBe(true);
+    expect(
+      mustEndEarlierAccess({
+        wasUnconfirmed: false,
+        claims: sessionAt(issuedAt - 1000),
+        inviteExpiresAt: "not a date",
+      }),
+    ).toBe(true);
   });
 
-  it("keeps the earlier invitation when the count could not be read", async () => {
-    recent = null;
-    expect(await resendInvitation(INVITER, OLD_INVITE, deps)).toEqual({
-      ok: false,
-      message: RESEND_FAILED,
-    });
-    expect(revoke).not.toHaveBeenCalled();
-  });
-
-  it("will not email a stored address the form would have refused", async () => {
-    found = { email: "kim@school.edu,eve@evil.test" };
-    expect(await resendInvitation(INVITER, OLD_INVITE, deps)).toEqual({
-      ok: false,
-      message: RESEND_BAD_ADDRESS,
-    });
-    expect(steps).toEqual(["find"]);
-  });
-
-  it.each([
-    ["already_accepted", INVITE_ACCEPTED],
-    ["not_found", INVITE_GONE],
-    ["failed", RESEND_FAILED],
-  ] as const)("makes no new invitation when revoking answers %s", async (answer, message) => {
-    revoked = answer;
-    expect(await resendInvitation(INVITER, OLD_INVITE, deps)).toEqual({ ok: false, message });
-    expect(create).not.toHaveBeenCalled();
-  });
-
-  it("says the earlier one is gone when the new one is refused", async () => {
-    created = { status: "rate_limited" };
-    expect(await resendInvitation(INVITER, OLD_INVITE, deps)).toEqual({
-      ok: false,
-      message: `${EARLIER_REVOKED} ${INVITE_REFUSAL_MESSAGES.rate_limited}`,
-    });
-  });
-
-  it("revokes the new one too when its email does not go out", async () => {
-    sent = "ceiling";
-    expect(await resendInvitation(INVITER, OLD_INVITE, deps)).toEqual({
-      ok: false,
-      message: `${EARLIER_REVOKED} ${notSentMessage("ceiling", true)}`,
-    });
-    expect(revoke.mock.calls.map(([id]) => id)).toEqual([OLD_INVITE, INVITE]);
+  it("counts the same seven days the database gives an invitation", () => {
+    const migration = readFileSync(
+      join(process.cwd(), "supabase/migrations/20261009010000_workspace_invites.sql"),
+      "utf8",
+    );
+    expect(migration).toContain(
+      "expires_at timestamptz not null default (now() + interval '7 days')",
+    );
+    expect(ORG_INVITE_LIFETIME_MS).toBe(7 * 24 * 60 * 60 * 1000);
   });
 });

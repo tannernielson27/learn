@@ -191,6 +191,10 @@ describe("scrubString", () => {
     [`reach ${EMAIL} now`, "reach [email] now"],
     [`token ${JWT}`, "token [jwt]"],
     [`/c/${INVITE_TOKEN}`, "/c/[redacted]"],
+    // A workspace invitation's token, whatever it looks like: the route is what marks it.
+    [`/w/${INVITE_TOKEN}`, "/w/[redacted]"],
+    ["https://x.app/w/abcdefghijklmnopqrstuvwxyzabcdef", "https://x.app/w/[redacted]"],
+    [`link https%3A%2F%2Fx.app%2Fw%2F${INVITE_TOKEN}`, "link https://x.app/w/[redacted]"],
     [`/join/${JOIN_CODE}`, "/join/[redacted]"],
     [`/live/${SESSION_ID}/report`, "/live/[redacted]/report"],
     [`/play/${SESSION_ID}`, "/play/[redacted]"],
@@ -215,6 +219,8 @@ describe("scrubString", () => {
   it.each([
     "app:///_next/static/chunks/app/play/[sessionId]/page-3f2a.js",
     "GET /c/[token]",
+    "GET /w/[token]",
+    "app:///_next/server/app/w/[token]/page.js",
     "/api/live/submit",
     "/api/live/view",
     "Cannot read properties of null (reading 'position')",

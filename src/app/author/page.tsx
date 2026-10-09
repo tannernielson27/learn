@@ -84,7 +84,8 @@ export default async function AuthorHomePage() {
       ) : null}
       {welcome && showTeacherWelcome(welcome) ? (
         <TeacherWelcome
-          steps={teacherWelcomeSteps(welcome.displayName)}
+          // A colleague who was invited in gets the short one: it is not a workspace of their own.
+          steps={teacherWelcomeSteps(welcome.displayName, { invited: welcome.invited })}
           onDone={markOnboarded}
           focusAfter={GET_STARTED_HEADING_ID}
         />

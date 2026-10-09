@@ -5,6 +5,8 @@ describe("safeNextPath", () => {
   it.each([
     ["/author", "/author"],
     ["/author/banks/123?tab=items#top", "/author/banks/123?tab=items#top"],
+    // A workspace invitation: where someone who had to sign in first goes back to.
+    ["/w/AbC_-0123456789abcdefghijklmnopq", "/w/AbC_-0123456789abcdefghijklmnopq"],
   ])("keeps a same-origin path: %s", (input, expected) => {
     expect(safeNextPath(input)).toBe(expected);
   });
