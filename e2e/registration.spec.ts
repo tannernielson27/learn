@@ -11,7 +11,8 @@ import { bytesOf, expectKeyless, KEY_MARKERS, wireText } from "./bytes";
 
 // #367: Sprint 13's demo, run by a machine. A stranger becomes a teacher, makes a class, and a
 // second stranger becomes their student, with nobody's help: no account is made beforehand and no
-// emailed link is opened. Then a second teacher signs up and is shown to see nothing of the first.
+// emailed link is opened. Then a second teacher signs up and is shown to see nothing of the first,
+// and the same student joins a class of theirs too: one account, two workspaces.
 // docs/sprints/S13-demo.md is the same walk for a person. Needs the local Supabase stack and a
 // build pointed at it, like auth.spec.ts. It waits out no real time.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
@@ -171,7 +172,8 @@ test("a stranger becomes a teacher, and another stranger becomes their student, 
 
   const desk = await anotherBrowser(browser, testInfo);
   const other = await desk.newPage();
-  await signUp(other, "teacher", `Grace Hopper ${stamp}`, address(`reg-other-${project}`));
+  const otherName = `Grace Hopper ${stamp}`;
+  await signUp(other, "teacher", otherName, address(`reg-other-${project}`));
   await expect(other).toHaveURL(/\/author$/);
   await other.getByRole("button", { name: "Skip", exact: true }).click();
   await expect(other.getByRole("dialog")).toHaveCount(0);
@@ -181,6 +183,51 @@ test("a stranger becomes a teacher, and another stranger becomes their student, 
   for (const path of ["/author", "/author/classes", bankPath, classPath, itemPath ?? ""]) {
     const bytes = await bytesAnyStatus(desk, path);
     for (const marker of [bankName, className, studentName, teacherName]) {
+      expect(bytes, `${path} must not carry "${marker}"`).not.toContain(marker);
+    }
+  }
+
+  // 8. The second teacher makes a class of their own, and the same student joins it with the same
+  //    account by typing its code (owner decision 2026-10-08). Their home lists both classes, each
+  //    with its teacher's workspace.
+  const otherClassName = `NUR 370 Second ${stamp}`;
+  await other.goto("/author/classes");
+  await other.getByRole("textbox", { name: "Class name", exact: true }).fill(otherClassName);
+  await other.getByRole("button", { name: "Create class", exact: true }).click();
+  await expect(
+    other.getByRole("heading", { level: 1, name: otherClassName, exact: true }),
+  ).toBeVisible();
+  const otherClassPath = new URL(other.url()).pathname;
+  const otherCode = (await other.getByTestId("class-code").innerText()).trim();
+  expect(otherCode).toMatch(CLASS_CODE);
+
+  await student.goto("/learn");
+  await student.getByText("Join another class", { exact: true }).click();
+  await student.getByRole("textbox", { name: "Class code", exact: true }).fill(otherCode);
+  await student.getByRole("button", { name: "Join the class", exact: true }).click();
+  const joined = student
+    .getByRole("list", { name: "Your classes", exact: true })
+    .getByRole("listitem");
+  await expect(joined).toHaveCount(2);
+  await expect(joined.filter({ hasText: className })).toContainText(`${teacherName}’s workspace`);
+  await expect(joined.filter({ hasText: otherClassName })).toContainText(
+    `${otherName}’s workspace`,
+  );
+  await expectNoAxeViolations(student);
+  await shoot(student, testInfo, "6-two-workspaces");
+
+  // Each teacher has the student on their own roster and still nothing of the other's workspace.
+  await other.reload();
+  await expect(other.getByRole("list", { name: "Roster", exact: true })).toContainText(studentName);
+  for (const path of ["/author", "/author/classes", otherClassPath, bankPath, classPath]) {
+    const bytes = await bytesAnyStatus(desk, path);
+    for (const marker of [bankName, className, teacherName]) {
+      expect(bytes, `${path} must not carry "${marker}"`).not.toContain(marker);
+    }
+  }
+  for (const path of ["/author", "/author/classes", classPath, otherClassPath]) {
+    const bytes = await bytesAnyStatus(page.context(), path);
+    for (const marker of [otherClassName, otherName]) {
       expect(bytes, `${path} must not carry "${marker}"`).not.toContain(marker);
     }
   }
