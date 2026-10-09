@@ -206,7 +206,7 @@ const allEnv = Object.fromEntries(
 
 const detailed = (overrides: Partial<DetailedHealth> = {}): HealthReading => ({
   kind: "detailed",
-  body: { ...publicBody(), env: allEnv, demoAccount: false, ...overrides },
+  body: { ...publicBody(), env: allEnv, demoAccount: false, signUpCaptcha: "on", ...overrides },
 });
 
 const byId = (reading: HealthReading, project = REF) =>
@@ -267,10 +267,72 @@ describe("healthChecks", () => {
     expect(lines.env.detail).toContain("refused");
   });
 
-  it("fails all three lines when health could not be read", () => {
+  it("fails all four lines when health could not be read", () => {
     const lines = healthChecks({ kind: "unreadable", reason: "HTTP 500" }, REF);
-    expect(lines.map((l) => l.status)).toEqual(["fail", "fail", "fail"]);
+    expect(lines.map((l) => l.id)).toEqual(["site", "env", "demo", "captcha"]);
+    expect(lines.map((l) => l.status)).toEqual(["fail", "fail", "fail", "fail"]);
     expect(lines[0].detail).toContain("HTTP 500");
+  });
+});
+
+describe("healthChecks: the sign-up CAPTCHA's Turnstile keys (#359)", () => {
+  it("prints the line after the demo account's, with the same title whatever it found", () => {
+    const ids = healthChecks(detailed(), REF).map((l) => l.id);
+    expect(ids).toEqual(["site", "env", "demo", "captcha"]);
+    const readings: HealthReading[] = [
+      detailed(),
+      detailed({ signUpCaptcha: "missing" }),
+      { kind: "public", body: publicBody(), tokenRefused: false },
+      { kind: "unreadable", reason: "HTTP 500" },
+    ];
+    const titles = new Set(readings.map((reading) => byId(reading).captcha.title));
+    expect(titles.size).toBe(1);
+  });
+
+  it("passes when the site reports both keys", () => {
+    expect(byId(detailed()).captcha.status).toBe("pass");
+  });
+
+  it("fails a production with neither key, where every sign-up is refused", () => {
+    const result = byId(detailed({ signUpCaptcha: "missing", ready: false })).captcha;
+    expect(result.status).toBe("fail");
+    expect(result.detail).toContain("every sign-up is refused");
+    expect(result.detail).toContain("both Turnstile variables in Vercel Production");
+    expect(result.detail).toContain("§7.12 steps 1-2");
+  });
+
+  it("fails a half-configured deployment, which refuses sign-up everywhere", () => {
+    const result = byId(detailed({ signUpCaptcha: "misconfigured", ready: false })).captcha;
+    expect(result.status).toBe("fail");
+    expect(result.detail).toContain("§7.12 step 2");
+  });
+
+  it("passes a deployment that is not production and has neither key, saying what that proves", () => {
+    const result = byId(detailed({ signUpCaptcha: "skipped" })).captcha;
+    expect(result.status).toBe("pass");
+    expect(result.detail).toContain("not a production deployment");
+  });
+
+  it.each([undefined, null, true, "ON", "off"])(
+    "fails a report of %j rather than reading it as set: a deployment older than the line",
+    (value) => {
+      const body = { signUpCaptcha: value } as unknown as Partial<DetailedHealth>;
+      const result = byId(detailed(body)).captcha;
+      expect(result.status).toBe("fail");
+      expect(result.detail).toContain("did not report");
+    },
+  );
+
+  it("is manual without the detailed view, even when the site reports ready", () => {
+    // `ready` cannot settle this: a deployment older than the line reports ready without it.
+    for (const ready of [true, false]) {
+      for (const tokenRefused of [true, false]) {
+        const result = byId({ kind: "public", body: publicBody({ ready }), tokenRefused }).captcha;
+        expect(result.status).toBe("manual");
+        expect(result.detail).toContain("GOLIVE_HEALTH_TOKEN");
+        expect(result.detail).toContain("§7.12 step 2");
+      }
+    }
   });
 });
 
@@ -283,6 +345,7 @@ describe("MANUAL_STEPS", () => {
       "auth-urls",
       "auth-signup",
       "auth-password",
+      "auth-anonymous",
       "sentry",
     ]);
   });

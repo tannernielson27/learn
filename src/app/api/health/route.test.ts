@@ -93,6 +93,37 @@ describe("GET /api/health", () => {
     expect((await (await GET(request())).json()).ready).toBe(true);
   });
 
+  it("reports a production without the Turnstile keys as not ready, and says why to the token", async () => {
+    vi.stubEnv("DEMO_ACCOUNT_EMAIL", "");
+    vi.stubEnv("DEMO_ACCOUNT_PASSWORD", "");
+    vi.stubEnv("VERCEL_ENV", "production");
+    const { GET } = await load();
+    expect((await (await GET(request())).json()).ready).toBe(false);
+    const detailed = await GET(request({ authorization: `Bearer ${KNOWN.CRON_SECRET}` }));
+    expect((await detailed.json()).signUpCaptcha).toBe("missing");
+  });
+
+  it("reads both Turnstile keys from the environment, and publishes neither", async () => {
+    vi.stubEnv("DEMO_ACCOUNT_EMAIL", "");
+    vi.stubEnv("DEMO_ACCOUNT_PASSWORD", "");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "KNOWNTURNSTILESITEf9");
+    vi.stubEnv("TURNSTILE_SECRET_KEY", "KNOWNTURNSTILESECRETg0");
+    const { GET } = await load();
+    expect((await (await GET(request())).json()).ready).toBe(true);
+    const bytes = await (
+      await GET(request({ authorization: `Bearer ${KNOWN.CRON_SECRET}` }))
+    ).text();
+    expect(JSON.parse(bytes).signUpCaptcha).toBe("on");
+    expect(bytes).not.toContain("KNOWNTURNSTILE");
+    // The secret under a public name is a misconfiguration the route must see too.
+    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SECRET_KEY", "KNOWNTURNSTILESECRETg0");
+    const again = await (
+      await load()
+    ).GET(request({ authorization: `Bearer ${KNOWN.CRON_SECRET}` }));
+    expect((await again.json()).signUpCaptcha).toBe("misconfigured");
+  });
+
   it("says not_configured, and 503, when the Supabase variables are missing", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
     const { GET } = await load();

@@ -58,6 +58,7 @@ function readyFetch(): GoLiveDeps["fetch"] {
       ready: true,
       env,
       demoAccount: false,
+      signUpCaptcha: "on",
     });
   };
 }
@@ -92,6 +93,7 @@ describe("runGoLiveCheck", () => {
       site: "pass",
       env: "pass",
       demo: "pass",
+      captcha: "pass",
       cron: "pass",
       "rate-limit-sweep": "pass",
       backup: "pass",
@@ -100,6 +102,7 @@ describe("runGoLiveCheck", () => {
       "auth-urls": "manual",
       "auth-signup": "manual",
       "auth-password": "manual",
+      "auth-anonymous": "manual",
       sentry: "manual",
     });
     expect(exitCode(results)).toBe(0);
@@ -159,7 +162,12 @@ describe("runGoLiveCheck", () => {
     };
     const results = await runGoLiveCheck(OPTIONS, deps({ fetch: fetchImpl }));
     const statuses = statusById(results);
-    expect([statuses.site, statuses.env, statuses.demo]).toEqual(["fail", "fail", "fail"]);
+    expect([statuses.site, statuses.env, statuses.demo, statuses.captcha]).toEqual([
+      "fail",
+      "fail",
+      "fail",
+      "fail",
+    ]);
     expect(results.find((result) => result.id === "site")?.detail).toContain("fetch failed");
   });
 
@@ -186,6 +194,7 @@ describe("runGoLiveCheck", () => {
             ready: false,
             env,
             demoAccount: true,
+            signUpCaptcha: "skipped",
           });
     const results = await runGoLiveCheck(
       { ...OPTIONS, expectedProject: "local" },
@@ -195,11 +204,31 @@ describe("runGoLiveCheck", () => {
     expect(byId.env.detail).toContain("RESEND_API_KEY");
     expect(byId.env.detail).toContain("SENTRY_DSN");
     expect(byId.demo.status).toBe("fail");
+    // Off production the CAPTCHA is skipped, so nothing refuses sign-up there.
+    expect(byId.captcha.status).toBe("pass");
     expect(byId["anon-state"].status).toBe("fail");
     expect(byId.cron.status).toBe("fail");
     expect(byId["rate-limit-sweep"].status).toBe("fail");
     expect(byId["rate-limit-sweep"].detail).toContain("pg_cron is not enabled");
     expect(formatReport(results)).toContain("Not ready");
+  });
+
+  it("fails the run while production lacks the Turnstile keys (#359)", async () => {
+    const site = readyFetch();
+    const fetchImpl: GoLiveDeps["fetch"] = async (input) => {
+      const response = await site(input);
+      if (!input.includes("/api/health")) return response;
+      return json({ ...(await response.json()), ready: false, signUpCaptcha: "missing" });
+    };
+    const results = await runGoLiveCheck(OPTIONS, deps({ fetch: fetchImpl }));
+    expect(statusById(results).captcha).toBe("fail");
+    expect(exitCode(results)).toBe(1);
+  });
+
+  it("lists the Turnstile keys as manual without the health token (#359)", async () => {
+    const results = await runGoLiveCheck({ ...OPTIONS, healthToken: null }, deps());
+    expect(statusById(results).captcha).toBe("manual");
+    expect(results.filter((result) => result.id === "captcha")).toHaveLength(1);
   });
 });
 
@@ -246,6 +275,7 @@ describe("runGoLiveCheck with a Management API token (#307)", () => {
     mailer_otp_length: 6,
     disable_signup: true,
     password_min_length: 8,
+    external_anonymous_users_enabled: false,
   };
 
   function fetchWithAuth(auth: unknown, status = 200): GoLiveDeps["fetch"] {
@@ -293,6 +323,23 @@ describe("runGoLiveCheck with a Management API token (#307)", () => {
     expect(status["auth-password"]).toBe("manual");
   });
 
+  it("checks anonymous sign-ins with a token, and lists them as manual without one", async () => {
+    const off = await runGoLiveCheck(withToken, deps({ fetch: fetchWithAuth(readyAuth) }));
+    expect(statusById(off)["auth-anonymous"]).toBe("pass");
+    expect(off.filter((result) => result.id === "auth-anonymous")).toHaveLength(1);
+    const on = await runGoLiveCheck(
+      withToken,
+      deps({ fetch: fetchWithAuth({ ...readyAuth, external_anonymous_users_enabled: true }) }),
+    );
+    expect(statusById(on)["auth-anonymous"]).toBe("fail");
+    expect(exitCode(on)).not.toBe(0);
+    const manual = (await runGoLiveCheck(OPTIONS, deps())).find(
+      (result) => result.id === "auth-anonymous",
+    );
+    expect(manual?.status).toBe("manual");
+    expect(manual?.detail).toContain("SUPABASE_ACCESS_TOKEN");
+  });
+
   it("fails the #304 configuration: an allow-list that does not admit the site", async () => {
     const results = await runGoLiveCheck(
       withToken,
@@ -309,6 +356,7 @@ describe("runGoLiveCheck with a Management API token (#307)", () => {
     expect(status["auth-template"]).toBe("fail");
     expect(status["auth-signup"]).toBe("fail");
     expect(status["auth-password"]).toBe("fail");
+    expect(status["auth-anonymous"]).toBe("fail");
     expect(formatReport(results)).not.toContain(withToken.authConfig.token);
   });
 });

@@ -39,6 +39,8 @@ export const RATE_LIMIT_BUCKETS = [
   "sign_up",
   "sign_up_pair",
   "sign_up_address",
+  // Class code tries, per calling address (`src/lib/auth/classCodeLimit.ts`).
+  "class_code",
   "cron_denied",
   "cron_runs",
   // #241: per student, failing open (see `src/lib/practice/limits.ts`).
