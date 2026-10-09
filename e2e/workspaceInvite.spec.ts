@@ -13,7 +13,9 @@ import { confirmLinkIn, latestEmail, openSignInLink } from "./mailbox";
 import { skipWelcomes } from "./welcome";
 
 // A teacher invites a colleague into their own workspace (owner decisions 2026-10-08, ADR 0010):
-// /author/workspace on the teacher's side, the emailed /w/<token> link on the colleague's. Every
+// /author/workspace on the teacher's side, the emailed /w/<token> link on the colleague's. The last
+// two tests are ADR 0011: the founder removes a colleague, and a teacher who already has a
+// workspace accepts by leaving it. Every
 // account here is made the way a person makes one, on /sign-up or on the invitation itself, and
 // every invitation is read out of the test mailbox. Needs the local Supabase stack and a build
 // pointed at it, like auth.spec.ts. It waits out no real time.
@@ -314,7 +316,7 @@ test("a teacher invites a colleague, who makes an account from the email and sha
   await desk.close();
 });
 
-test("a student and a teacher are refused, and a revoked invitation stops working", async ({
+test("a student is refused, a teacher is asked before moving, and a revoked invitation stops working", async ({
   browser,
   page,
   request,
@@ -375,14 +377,18 @@ test("a student and a teacher are refused, and a revoked invitation stops workin
   await student.goto("/author/workspace");
   await expect(student).toHaveURL(/\/learn$/);
 
-  // 2. So is the teacher, with their own sentence.
+  // 2. The teacher is not refused, and is not joined either: accepting would move them out of
+  //    their own workspace, so the page says so and asks. Opening it changes nothing.
   await otherTeacher.goto(teacherPath);
+  await expect(invitationHeading(otherTeacher, teacherName)).toBeVisible();
   await expect(
-    otherTeacher.getByRole("heading", { level: 1, name: INVITE_HEADING_REFUSED, exact: true }),
+    otherTeacher.getByRole("heading", {
+      level: 2,
+      name: "Joining means leaving your workspace",
+      exact: true,
+    }),
   ).toBeVisible();
-  await expect(
-    otherTeacher.getByText("This account already teaches in a workspace."),
-  ).toBeVisible();
+  await expect(otherTeacher.getByRole("checkbox")).not.toBeChecked();
   await expect(
     otherTeacher.getByRole("button", { name: "Join workspace", exact: true }),
   ).toHaveCount(0);
@@ -554,4 +560,234 @@ test("an account with no role joins with one button, and one someone else may ha
   await laptop.close();
   await elsewhere.close();
   await visitor.close();
+});
+
+test("the founder removes a colleague, who starts again in a workspace of their own", async ({
+  browser,
+  page,
+  request,
+}, testInfo) => {
+  // Two people, an invitation, an account made on it and a removal, across two browsers.
+  test.slow();
+  const project = testInfo.project.name;
+  const stamp = `${Date.now() % 1_000_000}`;
+  const founderName = `Ada Lovelace ${stamp}`;
+  const colleagueName = `Mary Seacole ${stamp}`;
+  const founderBank = `Founder bank ${stamp}`;
+  const colleagueBank = `Colleague bank ${stamp}`;
+  const colleagueEmail = address(`ws-removed-${project}`);
+
+  // 1. A founder with a bank, and a colleague who joins from the email and makes a bank too.
+  await skipWelcomes(page);
+  await signUpConfirmedTeacher(page, request, founderName, address(`ws-founder-${project}`));
+  const founderBankPath = await createBank(page, founderBank);
+  await openWorkspace(page, founderName);
+  const invitePath = await invite(page, request, colleagueEmail);
+
+  const laptop = await anotherBrowser(browser, testInfo);
+  const colleague = await laptop.newPage();
+  await skipWelcomes(colleague);
+  await colleague.goto(invitePath);
+  await colleague.getByRole("textbox", { name: "Your name", exact: true }).fill(colleagueName);
+  await colleague.getByLabel("Password", { exact: true }).fill(PASSWORD);
+  await colleague.getByRole("button", { name: "Create account and join", exact: true }).click();
+  await expect(colleague).toHaveURL(/\/author$/);
+  const colleagueBankPath = await createBank(colleague, colleagueBank);
+
+  // 2. The colleague sees who started the workspace, and has no way to remove anybody.
+  await openWorkspace(colleague, founderName);
+  await expect(members(colleague).getByRole("listitem")).toHaveCount(2);
+  await expect(
+    members(colleague).getByRole("listitem").filter({ hasText: founderName }),
+  ).toContainText("Started this workspace");
+  await expect(colleague.getByRole("button", { name: /^Remove / })).toHaveCount(0);
+
+  // 3. The founder is marked, has a Remove on the colleague's row and none on their own.
+  await page.reload();
+  await expect(members(page).getByRole("listitem")).toHaveCount(2);
+  const ownRow = members(page)
+    .getByRole("listitem")
+    .filter({ hasText: `${founderName} (you)` });
+  await expect(ownRow).toContainText("Started this workspace");
+  await expect(ownRow.getByRole("button")).toHaveCount(0);
+  const removeButton = page.getByRole("button", {
+    name: `Remove ${colleagueName} from the workspace`,
+    exact: true,
+  });
+  await expect(removeButton).toBeVisible();
+  await expectNoSidewaysScroll(page);
+
+  // 4. Pressing it only asks. The dialog says what removing does; Cancel removes nobody.
+  await removeButton.click();
+  const dialog = page.getByRole("dialog", { name: `Remove ${colleagueName}?`, exact: true });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("loses access to this workspace at once");
+  await expect(dialog).toContainText("a new, empty workspace of their own");
+  await expectNoAxeViolations(page);
+  await shoot(page, testInfo, "8-remove-dialog");
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await page.reload();
+  await expect(members(page).getByRole("listitem")).toHaveCount(2);
+
+  // 5. Confirming removes them: one member, and the count says so.
+  await page
+    .getByRole("button", { name: `Remove ${colleagueName} from the workspace`, exact: true })
+    .click();
+  await page
+    .getByRole("dialog", { name: `Remove ${colleagueName}?`, exact: true })
+    .getByRole("button", { name: "Remove from workspace", exact: true })
+    .click();
+  await expect(members(page).getByRole("listitem")).toHaveCount(1);
+  await expect(members(page)).not.toContainText(colleagueName);
+  await expect(page.getByText("1 of 10 members", { exact: true })).toBeVisible();
+  await shoot(page, testInfo, "9-removed");
+
+  // 6. The colleague's browser was never signed out, and is no longer in that workspace: the next
+  //    page it asks for is its own new one, where it is the founder and the only member.
+  await colleague.goto("/author/workspace");
+  await expect(
+    colleague.getByRole("heading", {
+      level: 1,
+      name: new RegExp(`^${colleagueName}.s workspace$`),
+    }),
+  ).toBeVisible();
+  await expect(members(colleague).getByRole("listitem")).toHaveCount(1);
+  await expect(members(colleague)).toContainText(`${colleagueName} (you)`);
+  await expect(members(colleague)).toContainText("Started this workspace");
+  await expect(colleague.getByText("1 of 10 members", { exact: true })).toBeVisible();
+  // Nothing of the workspace they left reaches them, not even the bank they made there.
+  // Control: the founder's own pages do carry the names being looked for.
+  expect(await bytesAnyStatus(page.context(), "/author")).toContain(founderBank);
+  expect(await bytesAnyStatus(page.context(), "/author")).toContain(colleagueBank);
+  for (const path of ["/author", "/author/workspace", founderBankPath, colleagueBankPath]) {
+    const bytes = await bytesAnyStatus(laptop, path);
+    for (const marker of [founderBank, colleagueBank, founderName]) {
+      expect(bytes, `${path} must not carry "${marker}"`).not.toContain(marker);
+    }
+  }
+
+  // 7. What the colleague made stays with the founder, and opens for them.
+  await page.goto(colleagueBankPath);
+  await expect(
+    page.getByRole("heading", { level: 1, name: colleagueBank, exact: true }),
+  ).toBeVisible();
+
+  await laptop.close();
+});
+
+test("a teacher with a workspace of their own confirms, and moves into the one they were invited to", async ({
+  browser,
+  page,
+  request,
+}, testInfo) => {
+  // Two teachers, a bank each, a class and an invitation, across two browsers.
+  test.slow();
+  const project = testInfo.project.name;
+  const stamp = `${Date.now() % 1_000_000}`;
+  const inviterName = `Ada Lovelace ${stamp}`;
+  const moverName = `Grace Hopper ${stamp}`;
+  const sharedBank = `Shared bank ${stamp}`;
+  const oldBank = `Old bank ${stamp}`;
+  const oldClass = `NUR 420 Old ${stamp}`;
+  const moverEmail = address(`ws-mover-${project}`);
+
+  // 1. The mover: a confirmed teacher with a workspace of their own, one bank and one class in
+  //    it, signed in to this browser before any invitation exists.
+  const desk = await anotherBrowser(browser, testInfo);
+  const mover = await desk.newPage();
+  await skipWelcomes(mover);
+  await signUpConfirmedTeacher(mover, request, moverName, moverEmail);
+  const oldBankPath = await createBank(mover, oldBank);
+  await mover.goto("/author/classes");
+  await mover.getByRole("textbox", { name: "Class name", exact: true }).fill(oldClass);
+  await mover.getByRole("button", { name: "Create class", exact: true }).click();
+  await expect(mover.getByRole("heading", { level: 1, name: oldClass, exact: true })).toBeVisible();
+
+  // 2. The inviter, with a bank, invites the mover's address.
+  await skipWelcomes(page);
+  await signUpConfirmedTeacher(page, request, inviterName, address(`ws-inviter-${project}`));
+  await createBank(page, sharedBank);
+  await openWorkspace(page, inviterName);
+  const invitePath = await invite(page, request, moverEmail);
+
+  // 3. The mover opens the link. The page names the workspace they would leave, counts what is
+  //    in it, and asks. Opening it moved nobody.
+  await mover.goto(invitePath);
+  await expect(invitationHeading(mover, inviterName)).toBeVisible();
+  await expect(mover.getByText(`You are signed in as ${moverEmail}.`)).toBeVisible();
+  await expect(
+    mover.getByRole("heading", {
+      level: 2,
+      name: "Joining means leaving your workspace",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    mover.getByText(new RegExp(`^You teach in ${moverName}.s workspace now\\.`)),
+  ).toBeVisible();
+  await expect(mover.getByText("you lose access to its 1 item bank and 1 class")).toBeVisible();
+  const box = mover.getByRole("checkbox", {
+    name: new RegExp(`^I understand that I will leave ${moverName}.s workspace`),
+  });
+  await expect(box).not.toBeChecked();
+  await expect(mover.getByRole("button", { name: "Join workspace", exact: true })).toHaveCount(0);
+  await expectNoAxeViolations(mover);
+  await expectNoSidewaysScroll(mover);
+  await shoot(mover, testInfo, "10-move-confirm");
+
+  // 4. The box is not only the browser's. Posted without it, the server moves nobody and says so.
+  await box.evaluate((input) => input.removeAttribute("required"));
+  await mover.getByRole("button", { name: "Leave and join workspace", exact: true }).click();
+  await expect(
+    mover.getByRole("alert").filter({ hasText: "Joining would move this account out of" }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(members(page).getByRole("listitem")).toHaveCount(1);
+  await expect(pending(page)).toContainText(moverEmail);
+  await openWorkspace(mover, moverName);
+
+  // 5. Ticked and posted, they are in: on the inviter's item banks, without their own.
+  await mover.goto(invitePath);
+  await mover
+    .getByRole("checkbox", {
+      name: new RegExp(`^I understand that I will leave ${moverName}.s workspace`),
+    })
+    .check();
+  await mover.getByRole("button", { name: "Leave and join workspace", exact: true }).click();
+  // Their address was confirmed and this browser was theirs before the invitation existed, so
+  // nothing of theirs is ended and nobody asks for a new password.
+  await expect(mover).toHaveURL(/\/author$/);
+  await expect(mover.getByRole("link", { name: sharedBank }).first()).toBeVisible();
+  for (const path of ["/author", "/author/classes", oldBankPath]) {
+    const bytes = await bytesAnyStatus(desk, path);
+    for (const marker of [oldBank, oldClass]) {
+      expect(bytes, `${path} must not carry "${marker}"`).not.toContain(marker);
+    }
+  }
+
+  // 6. Both are members of the inviter's workspace, on both pages. The mover started nothing
+  //    here, so they are offered no Remove; the inviter is.
+  await openWorkspace(mover, inviterName);
+  await expect(members(mover).getByRole("listitem")).toHaveCount(2);
+  await expect(members(mover)).toContainText(`${moverName} (you)`);
+  await expect(mover.getByRole("button", { name: /^Remove / })).toHaveCount(0);
+  await page.reload();
+  await expect(members(page).getByRole("listitem")).toHaveCount(2);
+  await expect(page.getByText("2 of 10 members", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 3, name: "No pending invitations", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: `Remove ${moverName} from the workspace`, exact: true }),
+  ).toBeVisible();
+
+  // 7. The link has been used.
+  await mover.goto(invitePath);
+  await expect(
+    mover.getByRole("heading", { level: 1, name: INVITE_HEADING_CLOSED, exact: true }),
+  ).toBeVisible();
+  await expect(mover.getByText("This invitation has already been used.")).toBeVisible();
+
+  await desk.close();
 });

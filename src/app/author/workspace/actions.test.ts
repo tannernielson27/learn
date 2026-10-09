@@ -7,6 +7,7 @@ import {
   RESEND_RECIPIENT_LIMIT,
 } from "@/lib/workspace/invite";
 import { INVITE_ADDRESS_ERROR } from "@/lib/workspace/inviteAddress";
+import { REMOVE_FAILED, REMOVE_REFUSED } from "@/lib/workspace/membership";
 
 /**
  * The workspace page's Server Functions, from the request to the sentence the teacher reads.
@@ -105,7 +106,9 @@ function logText(): string {
   return JSON.stringify(logs.map((spy) => spy.mock.calls));
 }
 
-const { inviteColleague, resendInvite, revokeInvite } = await import("./actions");
+const { inviteColleague, removeMember, resendInvite, revokeInvite } = await import("./actions");
+
+const MEMBER = "00000000-0000-4000-8000-0000000000b2";
 
 function form(email: unknown, extra: Record<string, string> = {}): FormData {
   const data = new FormData();
@@ -144,6 +147,7 @@ describe("who may use the workspace actions", () => {
     ["inviteColleague", () => invite(form(ADDRESS))],
     ["revokeInvite", () => revokeInvite(INVITE)],
     ["resendInvite", () => resendInvite(INVITE)],
+    ["removeMember", () => removeMember(MEMBER)],
   ];
 
   it.each(actions)("%s sends a signed-out visitor to sign in", async (_name, run) => {
@@ -430,5 +434,41 @@ describe("resendInvite", () => {
   it("refuses an id that is not one before reading anything", async () => {
     expect(await resendInvite("nope")).toEqual({ ok: false, message: INVITE_GONE });
     expect(userClient.from).not.toHaveBeenCalledWith("org_invites");
+  });
+});
+
+describe("removeMember", () => {
+  it("removes through the teacher's own client, naming only the member, and refreshes the page", async () => {
+    revokeAnswer = { data: "removed", error: null };
+    expect(await removeMember(MEMBER)).toEqual({ ok: true });
+    expect(userClient.rpc).toHaveBeenCalledTimes(1);
+    expect(userClient.rpc).toHaveBeenCalledWith("remove_org_member", { p_member: MEMBER });
+    // Who is asking is the session's: the service role, which could name anyone, is never used.
+    expect(serviceClient.rpc).not.toHaveBeenCalled();
+    expect(serviceClient.from).not.toHaveBeenCalled();
+    expect(revalidated).toHaveBeenCalledWith("/author/workspace");
+  });
+
+  it.each(["shared_workspace", "not_founder", "is_founder", "not_found"] as const)(
+    "says why when the database answers %s",
+    async (answer) => {
+      revokeAnswer = { data: answer, error: null };
+      expect(await removeMember(MEMBER)).toEqual({ ok: false, message: REMOVE_REFUSED[answer] });
+    },
+  );
+
+  it("answers a database error, or a database without the function, with a plain sentence", async () => {
+    revokeAnswer = { data: null, error: { code: "PGRST202" } };
+    expect(await removeMember(MEMBER)).toEqual({ ok: false, message: REMOVE_FAILED });
+    expect(logText()).toContain("PGRST202");
+    expect(logText()).not.toContain(MEMBER);
+  });
+
+  it("refuses an id that is not one before asking the database", async () => {
+    expect(await removeMember("nope")).toEqual({
+      ok: false,
+      message: REMOVE_REFUSED.not_found,
+    });
+    expect(userClient.rpc).not.toHaveBeenCalled();
   });
 });

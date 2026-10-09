@@ -7,7 +7,9 @@ import {
   INVITE_REFUSALS,
   listMembers,
   listOpenInvites,
+  readFounderId,
   readWorkspace,
+  removeOrgMember,
   revokeOrgInvite,
 } from "./workspace";
 
@@ -277,6 +279,51 @@ describe("createOrgInvite", () => {
     expect(await createOrgInvite(fakeRpc({ data }).client, INVITER, ADDRESS)).toEqual({
       status: "failed",
     });
+    expect(logText()).not.toContain(TOKEN);
+  });
+});
+
+describe("readFounderId", () => {
+  it("reads who started the workspace, in a read of its own", async () => {
+    const fake = fakeQuery({ data: { founder_id: INVITER } });
+    expect(await readFounderId(fake.client, ORG)).toBe(INVITER);
+    expect(fake.from).toHaveBeenCalledWith("orgs");
+    expect(fake.calls).toContainEqual(["select", ["founder_id"]]);
+    expect(fake.calls).toContainEqual(["eq", ["id", ORG]]);
+  });
+
+  it.each([
+    ["the workspace has none", { data: { founder_id: null } }],
+    ["the column is not there yet", { data: null, error: { code: "42703", message: "no column" } }],
+    ["the read finds no row", { data: null }],
+    ["the value is not an id", { data: { founder_id: 7 } }],
+  ])("is null when %s", async (_why, reply) => {
+    expect(await readFounderId(fakeQuery(reply).client, ORG)).toBeNull();
+  });
+});
+
+describe("removeOrgMember", () => {
+  it("asks remove_org_member for the member, as the caller", async () => {
+    const fake = fakeRpc({ data: "removed" });
+    expect(await removeOrgMember(fake.client, INVITER)).toBe("removed");
+    expect(fake.rpc).toHaveBeenCalledWith("remove_org_member", { p_member: INVITER });
+  });
+
+  it.each(["shared_workspace", "not_founder", "is_founder", "not_found"] as const)(
+    "hands %s back as the database said it",
+    async (answer) => {
+      expect(await removeOrgMember(fakeRpc({ data: answer }).client, INVITER)).toBe(answer);
+    },
+  );
+
+  it("fails on an error or an answer nobody knows, and logs only the code", async () => {
+    expect(await removeOrgMember(fakeRpc({ data: null, error: LEAKY }).client, INVITER)).toBe(
+      "failed",
+    );
+    expect(await removeOrgMember(fakeRpc({ data: "banished" }).client, INVITER)).toBe("failed");
+    expect(await removeOrgMember(fakeRpc({ data: null }).client, INVITER)).toBe("failed");
+    expect(logText()).toContain("42501");
+    expect(logText()).not.toContain(ADDRESS);
     expect(logText()).not.toContain(TOKEN);
   });
 });
