@@ -78,7 +78,11 @@ describe("the proxy closes the gallery on production", () => {
 
   it("leaves everything outside the gallery to the session logic", async () => {
     process.env.VERCEL_ENV = "production";
-    updateSession.mockResolvedValue({ response: NextResponse.next(), signedIn: true });
+    updateSession.mockResolvedValue({
+      response: NextResponse.next(),
+      signedIn: true,
+      homeFor: async (target: string) => target,
+    });
     for (const pathname of ["/", "/author", "/sign-in", "/play/abc", "/galleryish"]) {
       updateSession.mockClear();
       await proxy(request(pathname));
@@ -139,5 +143,74 @@ describe("the proxy matcher still covers the gallery", () => {
 
   it("refreshes the session on the landing page, which reads it to pick a link (#264)", () => {
     expect(matcher).toContain("/");
+  });
+});
+
+describe("a signed-in visit to sign-in goes to that person's own home in one redirect", () => {
+  // What `updateSession` hands over: the default swapped for the role's home, anything else kept.
+  const session = (home: string) => {
+    const homeFor = vi.fn(async (target: string) => (target === "/author" ? home : target));
+    updateSession.mockResolvedValue({ response: NextResponse.next(), signedIn: true, homeFor });
+    return homeFor;
+  };
+
+  beforeEach(() => {
+    updateSession.mockReset();
+  });
+
+  it.each([
+    ["a student", "/learn"],
+    ["an account with no role", "/welcome"],
+    ["an author", "/author"],
+  ])("sends %s straight to %s", async (_who, home) => {
+    session(home);
+    const response = await proxy(request("/sign-in"));
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(`https://learn.test${home}`);
+  });
+
+  it("still follows a next that was asked for", async () => {
+    const homeFor = session("/learn");
+    const response = await proxy(
+      request("/sign-in?next=%2Faccount%2Fpassword%3Fnext%3D%252Flearn"),
+    );
+    expect(response.headers.get("location")).toBe(
+      "https://learn.test/account/password?next=%2Flearn",
+    );
+    expect(homeFor).toHaveBeenCalledWith("/account/password?next=%2Flearn");
+  });
+
+  it("never follows a next that leaves the site", async () => {
+    session("/learn");
+    const response = await proxy(request("/sign-in?next=https%3A%2F%2Fevil.example"));
+    expect(response.headers.get("location")).toBe("https://learn.test/learn");
+  });
+
+  it("asks for a home on no other request, signed in or out", async () => {
+    const homeFor = session("/learn");
+    for (const pathname of ["/", "/author", "/author/banks/1", "/learn", "/account", "/sign-up"]) {
+      const response = await proxy(request(pathname));
+      expect(response.headers.get("location"), pathname).toBeNull();
+    }
+    expect(homeFor).not.toHaveBeenCalled();
+
+    updateSession.mockResolvedValue({ response: NextResponse.next(), signedIn: false, homeFor });
+    expect((await proxy(request("/sign-in"))).headers.get("location")).toBeNull();
+    expect((await proxy(request("/learn"))).headers.get("location")).toBe(
+      "https://learn.test/sign-in?next=%2Flearn",
+    );
+    expect(homeFor).not.toHaveBeenCalled();
+  });
+
+  it("carries refreshed session cookies onto the redirect", async () => {
+    const refreshed = NextResponse.next();
+    refreshed.cookies.set("sb-session", "fresh");
+    updateSession.mockResolvedValue({
+      response: refreshed,
+      signedIn: true,
+      homeFor: async () => "/learn",
+    });
+    const response = await proxy(request("/sign-in"));
+    expect(response.cookies.get("sb-session")?.value).toBe("fresh");
   });
 });

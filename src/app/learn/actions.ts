@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { JoinByCodeState } from "@/components/classes/JoinByCodeForm";
 import { WELCOME_PATH } from "@/lib/auth/accountPaths";
+import { takeClassCodeAttempt } from "@/lib/auth/classCodeLimit";
 import { isClassCode, normalizeClassCode } from "@/lib/classes/classCode";
 import { STUDENT_HOME } from "@/lib/classes/classes";
 import { readViewer } from "@/lib/classes/viewer";
@@ -26,6 +28,10 @@ const UNAVAILABLE = "Joining is not working just now. Try again in a moment.";
  * instructor, and makes an account with no role a student of the class's workspace. A code that
  * is not eight characters of the code alphabet is turned back here without spending a try: its
  * shape is public, so that says nothing about any class.
+ *
+ * Accounts are cheap since open sign-up, so every try is also counted against the address the
+ * request came from (`takeClassCodeAttempt`), which making another account does not reset. It
+ * answers in the words the account's own limit already uses.
  */
 export async function joinClassWithCode(
   _previous: JoinByCodeState,
@@ -39,6 +45,12 @@ export async function joinClassWithCode(
   const typed = formData.get("code");
   const code = normalizeClassCode(typeof typed === "string" ? typed : "");
   if (!isClassCode(code)) return { status: "error", error: CODE_INCOMPLETE };
+
+  // Before the database is asked, so a refused address looks nothing up and spends nothing of the
+  // account's own budget. Counted whatever the code is, so the refusal says nothing about it.
+  const allowed = await takeClassCodeAttempt(await headers());
+  if (allowed === "rate_limited") return { status: "error", error: CODES_LIMITED };
+  if (allowed === "unavailable") return { status: "error", error: UNAVAILABLE };
 
   const answer = await joinClassByCode(viewer.supabase, code);
   if (answer === "instructor") return { status: "instructor" };

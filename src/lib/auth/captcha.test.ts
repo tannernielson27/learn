@@ -5,9 +5,11 @@ import {
   CAPTCHA_UNAVAILABLE,
   CAPTCHA_VERIFY_URL,
   captchaMode,
+  captchaSetup,
   captchaTokenFrom,
   verifyCaptcha,
   type CaptchaEnv,
+  type CaptchaSetup,
 } from "./captcha";
 import { CAPTCHA_FIELD_NAME, captchaSiteKey } from "./turnstile";
 
@@ -55,6 +57,62 @@ describe("captchaMode (#359)", () => {
     expect(captchaMode({ ...KEYS, NEXT_PUBLIC_TURNSTILE_SECRET_KEY: SECRET })).toBe(
       "misconfigured",
     );
+  });
+});
+
+const SETUPS: readonly [string, CaptchaEnv, CaptchaSetup][] = [
+  ["neither key, off Vercel", {}, "skipped"],
+  ["neither key, on a preview", { VERCEL_ENV: "preview" }, "skipped"],
+  ["neither key, in production", { VERCEL_ENV: "production" }, "missing"],
+  [
+    "blank keys, in production",
+    { VERCEL_ENV: "production", NEXT_PUBLIC_TURNSTILE_SITE_KEY: " ", TURNSTILE_SECRET_KEY: "" },
+    "missing",
+  ],
+  ["both keys, in production", { VERCEL_ENV: "production", ...KEYS }, "on"],
+  ["both keys, on a preview", { VERCEL_ENV: "preview", ...KEYS }, "on"],
+  ["the site key alone", { NEXT_PUBLIC_TURNSTILE_SITE_KEY: SITE_KEY }, "misconfigured"],
+  [
+    "the secret alone, in production",
+    { VERCEL_ENV: "production", TURNSTILE_SECRET_KEY: SECRET },
+    "misconfigured",
+  ],
+  [
+    "the secret under a NEXT_PUBLIC_ name",
+    { ...KEYS, NEXT_PUBLIC_TURNSTILE_SECRET_KEY: SECRET },
+    "misconfigured",
+  ],
+];
+
+describe("captchaSetup: what /api/health reports, and golive:check reads (#359)", () => {
+  it.each(SETUPS)("reads %s as %j", (_name, env, expected) => {
+    expect(captchaSetup(env)).toBe(expected);
+  });
+
+  // The go-live line is only honest while it agrees with what sign-up itself does.
+  it.each(SETUPS)(
+    "is missing or misconfigured exactly when verifyCaptcha refuses a token unasked: %s",
+    async (_name, env, expected) => {
+      quiet();
+      const fetchImpl = answer({ success: true });
+      const result = await verifyCaptcha("a-token", LOCAL, { env, fetch: fetchImpl });
+      const refusedForSetup = !result.ok && result.error === CAPTCHA_UNAVAILABLE;
+      expect(refusedForSetup).toBe(expected === "missing" || expected === "misconfigured");
+      // Only a deployment with both keys asks Cloudflare.
+      expect(fetchImpl).toHaveBeenCalledTimes(expected === "on" ? 1 : 0);
+    },
+  );
+
+  it("reads the process's own environment by default", () => {
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "");
+    vi.stubEnv("TURNSTILE_SECRET_KEY", "");
+    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SECRET_KEY", "");
+    expect(captchaSetup()).toBe("missing");
+    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", SITE_KEY);
+    vi.stubEnv("TURNSTILE_SECRET_KEY", SECRET);
+    expect(captchaSetup()).toBe("on");
+    vi.unstubAllEnvs();
   });
 });
 
