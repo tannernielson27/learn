@@ -25,6 +25,7 @@ import {
 } from "@/lib/onboarding/teacherWelcome";
 import { listSharedClassNamesByBank } from "@/lib/supabase/practiceShares";
 import { SESSIONS_PATH } from "@/lib/live/reportFormat";
+import { WORKSPACE_PATH } from "@/lib/workspace/workspace";
 import { createBank } from "./actions";
 import { hideGetStarted, importSample, markOnboarded } from "./onboardingActions";
 
@@ -65,6 +66,12 @@ export default async function AuthorHomePage() {
             className="tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline"
           >
             Live sessions and reports
+          </Link>
+          <Link
+            href={WORKSPACE_PATH}
+            className="tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline"
+          >
+            Workspace
           </Link>
         </nav>
       </div>
