@@ -23,6 +23,12 @@ const rpc = vi.fn<(name: string, args?: Record<string, unknown>) => Promise<RpcR
 let viewer: Record<string, unknown>;
 vi.mock("@/lib/classes/viewer", () => ({ readViewer: async () => viewer }));
 
+const requestHeaders = new Headers({ "x-vercel-id": "iad1::abc", "x-real-ip": "203.0.113.7" });
+vi.mock("next/headers", () => ({ headers: async () => requestHeaders }));
+// The per-address count, in front of the database's per-account one.
+const takeClassCodeAttempt = vi.fn<(headers: unknown) => Promise<string>>(async () => "ok");
+vi.mock("@/lib/auth/classCodeLimit", () => ({ takeClassCodeAttempt }));
+
 const { joinClassWithCode, markStudentOnboarded } = await import("./actions");
 
 const IDLE = { status: "idle" } as const;
@@ -97,6 +103,61 @@ describe("joinClassWithCode (#362)", () => {
     expect(await joinClassWithCode(IDLE, form("ABCD2345"))).toEqual({
       status: "error",
       error: "Joining is not working just now. Try again in a moment.",
+    });
+  });
+});
+
+describe("joinClassWithCode counts the caller's address before the account", () => {
+  it("counts one try from this request's address, then asks the database", async () => {
+    await expect(joinClassWithCode(IDLE, form("ABCD2345"))).rejects.toThrow("redirect:/learn");
+    expect(takeClassCodeAttempt).toHaveBeenCalledTimes(1);
+    expect(takeClassCodeAttempt).toHaveBeenCalledWith(requestHeaders);
+    expect(takeClassCodeAttempt.mock.invocationCallOrder[0]).toBeLessThan(
+      rpc.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it("refuses an address that has tried too many codes, whichever account asks, before any lookup", async () => {
+    takeClassCodeAttempt.mockResolvedValue("rate_limited");
+    const states = [];
+    for (const userId of ["user-1", "user-2", "user-3"]) {
+      viewer = { ...viewer, userId };
+      states.push(await joinClassWithCode(IDLE, form("ABCD2345")));
+    }
+    takeClassCodeAttempt.mockResolvedValue("ok");
+    // The words the account's own limit already uses: nothing new to tell apart.
+    for (const state of states) {
+      expect(state).toEqual({
+        status: "error",
+        error: "Too many class codes tried. Wait a few minutes, then try again.",
+      });
+    }
+    expect(rpc).not.toHaveBeenCalled();
+    expect(redirected).not.toHaveBeenCalled();
+  });
+
+  it("fails closed, without a lookup, when the address cannot be counted", async () => {
+    takeClassCodeAttempt.mockResolvedValueOnce("unavailable");
+    expect(await joinClassWithCode(IDLE, form("ABCD2345"))).toEqual({
+      status: "error",
+      error: "Joining is not working just now. Try again in a moment.",
+    });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("spends no try on a signed-out call or on a code of the wrong shape", async () => {
+    await joinClassWithCode(IDLE, form("ABC"));
+    viewer = { status: "signed_out" };
+    await expect(joinClassWithCode(IDLE, form("ABCD2345"))).rejects.toThrow("redirect:/sign-in");
+    expect(takeClassCodeAttempt).not.toHaveBeenCalled();
+  });
+
+  it("gives a wrong code the one answer it always had, counted or not", async () => {
+    rpc.mockResolvedValueOnce({ data: "invalid", error: null });
+    expect(await joinClassWithCode(IDLE, form("ABCD2345"))).toEqual({
+      status: "error",
+      error:
+        "That class code did not work. Check it with your instructor. If you were removed from the class, only they can add you back.",
     });
   });
 });
