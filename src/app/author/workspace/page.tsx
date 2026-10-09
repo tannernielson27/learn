@@ -77,10 +77,12 @@ export default async function WorkspacePage() {
               Invite a colleague
             </h2>
             <p className="mb-4 max-w-prose text-ink-2">
-              They join this workspace as a teacher and can see and change everything in it: every
-              bank, class and report. A workspace holds up to {WORKSPACE_MEMBER_CAP} teachers, and
-              you can send {WORKSPACE_DAILY_INVITES} invitations a day. An account that is already a
-              student, or already teaches in another workspace, cannot accept.
+              They join this workspace as a teacher with the same access as you: they can see and
+              edit every bank, class and assignment, see every student&apos;s name, email address
+              and results, run live sessions, and send or revoke invitations themselves. A colleague
+              cannot be removed once they join. A workspace holds up to {WORKSPACE_MEMBER_CAP}{" "}
+              teachers, and you can send {WORKSPACE_DAILY_INVITES} invitations a day. An account
+              that is already a student, or already teaches in another workspace, cannot accept.
             </p>
             <InviteColleagueForm action={inviteColleague} />
           </section>
