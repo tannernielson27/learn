@@ -14,7 +14,7 @@
 -- stored times.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(100);
+select plan(113);
 
 -- ---------------------------------------------------------------------------
 -- Cast, as the superuser
@@ -257,6 +257,34 @@ select is(
   (select status from public.create_org_invite('00000000-0000-0000-0000-0000009100a1', null)),
   'invalid_email',
   'and so is no address at all'
+);
+-- Anything a mail provider could read as more than one bare address: a display name, a list, a
+-- comment, a quoted part, a control character. One assertion per row, twelve in all.
+select is(
+  (select status from public.create_org_invite('00000000-0000-0000-0000-0000009100a1', v.address)),
+  'invalid_email',
+  'refused as not one bare address: ' || v.label
+)
+from (values
+  (1, 'x<newcomer@inv.test>', 'a display name and angle brackets'),
+  (2, 'new<comer@inv.test', 'a left angle bracket'),
+  (3, 'new>comer@inv.test', 'a right angle bracket'),
+  (4, 'new,comer@inv.test', 'a comma'),
+  (5, 'new;comer@inv.test', 'a semicolon'),
+  (6, '"new"comer@inv.test', 'a double quote'),
+  (7, 'new(comer@inv.test', 'a left parenthesis'),
+  (8, 'new)comer@inv.test', 'a right parenthesis'),
+  (9, 'new\comer@inv.test', 'a backslash'),
+  (10, E'new\x01comer@inv.test', 'a control character'),
+  (11, E'new\x7Fcomer@inv.test', 'the delete character'),
+  (12, repeat('a', 246) || '@inv.test', '255 characters')
+) as v(ord, address, label)
+order by v.ord;
+select is(
+  (select count(*)::integer from public.org_invites i
+    where i.email ~ '[<>",;()\\[:cntrl:]]' or length(i.email) > 254),
+  0,
+  'and none of those refusals stored an invitation'
 );
 select is(
   (select row(status, invite_id, token, expires_at)::text from public.create_org_invite(

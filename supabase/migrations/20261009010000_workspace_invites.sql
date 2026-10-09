@@ -29,7 +29,8 @@
 --   token, returned this once and stored nowhere: put it in the email (`/w/<token>`) and nowhere
 --   else. On every status but 'created' the other three columns are null.
 --     'created'           the invitation exists; send the email.
---     'invalid_email'     `p_email` is not an address.
+--     'invalid_email'     `p_email` is not one bare address: no `local@domain.tld` shape, over 254
+--                         characters, or holding any of < > " , ; ( ) \ or a control character.
 --     'shared_workspace'  the inviter's workspace is not self-registered.
 --     'unconfirmed'       the inviter has not confirmed their own address yet.
 --     'already_member'    the address already belongs to a member of this workspace.
@@ -237,7 +238,12 @@ begin
     from public.orgs o where o.id = inviter_org
     for no key update;
 
+  -- One bare address and nothing else. The characters refused outright are the ones a mail
+  -- provider reads as structure around an address (a display name, a list, a comment, a quoted
+  -- part): `x<a@b.com>` or `a,b@c.com` could otherwise be delivered somewhere other than the
+  -- address the invitation is stored under. Control characters go with them.
   if length(address) > 254
+     or address ~ '[<>",;()\\[:cntrl:]\u0001-\u001F\u007F-\u009F]'
      or address !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' then
     refusal := 'invalid_email';
   elsif not coalesce(org_open, false) then
