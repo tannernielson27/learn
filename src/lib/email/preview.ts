@@ -8,12 +8,18 @@ import type { ReminderContent } from "@/lib/reminders/reminderEmail";
 import { renderEmailBody } from "./layout";
 import { MAGIC_LINK_SUBJECT, magicLinkEmail } from "./templates/magicLink";
 import { renderWelcomeEmail, welcomeEmail, type WelcomeRole } from "./templates/welcome";
+import {
+  renderWorkspaceInviteEmail,
+  workspaceInviteEmail,
+  type WorkspaceInviteContent,
+} from "./templates/workspaceInvite";
 
 export interface EmailPreview {
   id:
     | "magic-link"
     | "welcome-student"
     | "welcome-teacher"
+    | "workspace-invite"
     | "reminder-opened"
     | "reminder-closing-soon";
   name: string;
@@ -70,6 +76,24 @@ function welcomePreview(
   };
 }
 
+// The name carries an ampersand and quotes, so the preview shows the escaping at work.
+const SAMPLE_WORKSPACE_INVITE: WorkspaceInviteContent = {
+  workspaceName: `Adult Health & "Pharm" team`,
+  inviterEmail: "ada.instructor@learn.example",
+  link: `${ORIGIN}/w/sample-invite-token-0123456789ab`,
+};
+
+function workspaceInvitePreview(): EmailPreview {
+  const rendered = renderWorkspaceInviteEmail(SAMPLE_WORKSPACE_INVITE);
+  return {
+    id: "workspace-invite",
+    name: "Workspace invitation",
+    subject: rendered.subject,
+    bodyHtml: renderEmailBody(workspaceInviteEmail(SAMPLE_WORKSPACE_INVITE)),
+    text: rendered.text,
+  };
+}
+
 export const EMAIL_PREVIEWS: readonly EmailPreview[] = [
   {
     id: "magic-link",
@@ -80,6 +104,7 @@ export const EMAIL_PREVIEWS: readonly EmailPreview[] = [
   },
   welcomePreview("welcome-student", "Welcome, student", "student", "/learn"),
   welcomePreview("welcome-teacher", "Welcome, teacher", "teacher", "/author"),
+  workspaceInvitePreview(),
   reminderPreview("reminder-opened", "Assignment is open", "opened"),
   reminderPreview("reminder-closing-soon", "Assignment closes soon", "closing_soon"),
 ];
