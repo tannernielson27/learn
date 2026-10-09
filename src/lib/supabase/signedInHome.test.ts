@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { signedInTarget } from "./signedInHome";
+import { homeForAccount, signedInTarget } from "./signedInHome";
 
 type Client = Parameters<typeof signedInTarget>[0];
 
@@ -55,5 +55,37 @@ describe("signedInTarget (#363)", () => {
     expect(await signedInTarget(client({ sub: undefined }).supabase, "/author")).toBe("/author");
     const refused = client({ error: { code: "08006" } });
     expect(await signedInTarget(refused.supabase, "/author")).toBe("/author");
+  });
+});
+
+describe("homeForAccount", () => {
+  it.each([
+    ["instructor", "/author"],
+    ["student", "/learn"],
+    [null, "/welcome"],
+  ])("names the home of a %s whose id is already known", async (role, home) => {
+    const fake = client({ profile: { role } });
+    expect(await homeForAccount(fake.supabase, "user-7", "/author")).toBe(home);
+    expect(fake.eq).toHaveBeenCalledWith("id", "user-7");
+    // The caller has verified the token already; it is not verified a second time.
+    expect(fake.getClaims).not.toHaveBeenCalled();
+  });
+
+  it("reads nothing when somewhere was asked for", async () => {
+    const fake = client({ profile: { role: "student" } });
+    expect(await homeForAccount(fake.supabase, "user-7", "/author/banks/1")).toBe(
+      "/author/banks/1",
+    );
+    expect(fake.from).not.toHaveBeenCalled();
+  });
+
+  it("never throws: the default stands when the role cannot be read", async () => {
+    const refused = client({ error: { code: "08006" } });
+    expect(await homeForAccount(refused.supabase, "user-7", "/author")).toBe("/author");
+    const broken = client({});
+    broken.from.mockImplementation(() => {
+      throw new Error("network");
+    });
+    expect(await homeForAccount(broken.supabase, "user-7", "/author")).toBe("/author");
   });
 });
