@@ -5,6 +5,7 @@ import { AccountNameForm } from "@/components/auth/AccountNameForm";
 import { ACCOUNT_PATH, choosePasswordPath } from "@/lib/auth/accountPaths";
 import { landingEntry } from "@/lib/auth/landing";
 import { readViewer } from "@/lib/classes/viewer";
+import { WORKSPACE_PATH } from "@/lib/workspace/workspace";
 import { saveDisplayName } from "./actions";
 
 export const metadata: Metadata = { title: "Your account" };
@@ -41,6 +42,18 @@ export default async function AccountPage() {
             Change your password
           </Link>
         </section>
+        {/* A teacher's workspace is under /author, which checks the role again. */}
+        {viewer.role === "instructor" || viewer.role === "admin" ? (
+          <section aria-labelledby="account-workspace" className="mt-8 border-t border-line pt-6">
+            <h2 id="account-workspace" className="mb-2 text-xl font-medium text-ink-1">
+              Workspace
+            </h2>
+            <p className="mb-3 text-ink-2">See who teaches in your workspace.</p>
+            <Link href={WORKSPACE_PATH} className={LINK}>
+              Members and invitations
+            </Link>
+          </section>
+        ) : null}
         <p className="mt-8">
           <Link href={home.href} className={LINK}>
             {home.label}

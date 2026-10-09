@@ -52,6 +52,8 @@ export const RATE_LIMIT_BUCKETS = [
   // (`src/lib/workspace/inviteEmailLimit.ts`).
   "workspace_invite_inviter",
   "workspace_invite_email",
+  // Posts to an invitation page, per calling address (`src/lib/workspace/acceptLimit.ts`).
+  "workspace_invite_accept",
 ] as const;
 
 export type RateLimitBucket = (typeof RATE_LIMIT_BUCKETS)[number];

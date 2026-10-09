@@ -25,6 +25,7 @@ import {
 } from "@/lib/onboarding/teacherWelcome";
 import { listSharedClassNamesByBank } from "@/lib/supabase/practiceShares";
 import { SESSIONS_PATH } from "@/lib/live/reportFormat";
+import { WORKSPACE_PATH } from "@/lib/workspace/workspace";
 import { createBank } from "./actions";
 import { hideGetStarted, importSample, markOnboarded } from "./onboardingActions";
 
@@ -66,6 +67,12 @@ export default async function AuthorHomePage() {
           >
             Live sessions and reports
           </Link>
+          <Link
+            href={WORKSPACE_PATH}
+            className="tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline"
+          >
+            Workspace
+          </Link>
         </nav>
       </div>
       {isEmailUnconfirmed(claims) ? (
@@ -77,7 +84,8 @@ export default async function AuthorHomePage() {
       ) : null}
       {welcome && showTeacherWelcome(welcome) ? (
         <TeacherWelcome
-          steps={teacherWelcomeSteps(welcome.displayName)}
+          // A colleague who was invited in gets the short one: it is not a workspace of their own.
+          steps={teacherWelcomeSteps(welcome.displayName, { invited: welcome.invited })}
           onDone={markOnboarded}
           focusAfter={GET_STARTED_HEADING_ID}
         />

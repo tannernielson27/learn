@@ -46,7 +46,20 @@ describe("redirectForAccess", () => {
     ["/welcomes"],
     // The invite page is for people who have no account yet.
     ["/c/AbC_-0123456789abcdefghijklmnopq"],
+    // A workspace invitation is too: the colleague may have no account.
+    ["/w/AbC_-0123456789abcdefghijklmnopq"],
   ])("leaves a signed-out visit to %s alone", (path) => {
     expect(redirectForAccess(at(path), false)).toBeNull();
+  });
+
+  it("leaves a signed-in visit to a workspace invitation alone, whoever it is", () => {
+    expect(redirectForAccess(at("/w/AbC_-0123456789abcdefghijklmnopq"), true)).toBeNull();
+  });
+
+  it("sends someone who signed in to accept an invitation back to it", () => {
+    const next = encodeURIComponent("/w/AbC_-0123456789abcdefghijklmnopq");
+    expect(redirectForAccess(at(`/sign-in?next=${next}`), true)?.toString()).toBe(
+      "https://learn.example/w/AbC_-0123456789abcdefghijklmnopq",
+    );
   });
 });

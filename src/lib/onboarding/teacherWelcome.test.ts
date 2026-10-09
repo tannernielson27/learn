@@ -5,17 +5,26 @@ import { readTeacherWelcomeState, showTeacherWelcome, teacherWelcomeSteps } from
 type Client = Parameters<typeof readTeacherWelcomeState>[0];
 type Reply = { data: Record<string, unknown> | null; error: { code: string } | null };
 
-function client(replies: { profiles: Reply; orgs: Reply }) {
+type ListReply = { data: { id: string }[] | null; error: { code: string } | null };
+
+function client(replies: { profiles: Reply; orgs: Reply; org_invites?: ListReply }) {
   const asked: { table: string; column: string; value: string }[] = [];
-  const from = vi.fn((table: "profiles" | "orgs") => ({
-    select: () => ({
-      eq: (column: string, value: string) => {
-        asked.push({ table, column, value });
-        return { maybeSingle: async () => replies[table] };
-      },
-    }),
+  const selected: { table: string; columns: string }[] = [];
+  const from = vi.fn((table: "profiles" | "orgs" | "org_invites") => ({
+    select: (columns: string) => {
+      selected.push({ table, columns });
+      return {
+        eq: (column: string, value: string) => {
+          asked.push({ table, column, value });
+          if (table === "org_invites") {
+            return { limit: async () => replies.org_invites ?? { data: [], error: null } };
+          }
+          return { maybeSingle: async () => replies[table] };
+        },
+      };
+    },
   }));
-  return { client: { from } as unknown as Client, asked };
+  return { client: { from } as unknown as Client, asked, selected };
 }
 
 describe("teacherWelcomeSteps (#364)", () => {
@@ -53,7 +62,44 @@ describe("teacherWelcomeSteps (#364)", () => {
   });
 });
 
-const NEW = { selfRegistered: true, onboardedAt: null, displayName: "Ada Lovelace" };
+describe("teacherWelcomeSteps for a colleague who was invited", () => {
+  const steps = teacherWelcomeSteps("Grace Hopper", { invited: true });
+  const copy = steps.flatMap((step) => [step.title, ...step.body]).join(" ");
+
+  it("is the short welcome: two steps, greeting them by name", () => {
+    expect(steps.map((step) => step.title)).toEqual(["Welcome, Grace Hopper", "Where to start"]);
+    expect(teacherWelcomeSteps(null, { invited: true })[0]!.title).toBe("Welcome to LeaRN");
+  });
+
+  it("says the workspace is shared, and never that nobody else can see it", () => {
+    expect(copy).toMatch(/shared workspace/);
+    expect(copy).toMatch(/the other teachers in it see and work on the same ones/);
+    expect(copy).not.toMatch(/no other teacher/);
+    expect(copy).not.toMatch(/your workspace/i);
+  });
+
+  it("leaves the sample bank out: the workspace is not theirs to fill", () => {
+    expect(copy).not.toMatch(/sample bank/i);
+    expect(copy).not.toMatch(/import/i);
+  });
+
+  it("has no emoji and no markup in its copy", () => {
+    expect(copy).not.toMatch(/\p{Extended_Pictographic}/u);
+    expect(copy).not.toMatch(/[<>]/);
+  });
+
+  it("is not what a teacher in a workspace of their own sees", () => {
+    expect(teacherWelcomeSteps("Grace Hopper", { invited: false })).toHaveLength(3);
+    expect(teacherWelcomeSteps("Grace Hopper")).toHaveLength(3);
+  });
+});
+
+const NEW = {
+  selfRegistered: true,
+  onboardedAt: null,
+  displayName: "Ada Lovelace",
+  invited: false,
+};
 
 describe("showTeacherWelcome (#364)", () => {
   it("shows once, to a teacher in a workspace they signed up for", () => {
@@ -83,6 +129,7 @@ describe("readTeacherWelcomeState (#364)", () => {
       selfRegistered: true,
       onboardedAt: null,
       displayName: "Ada Lovelace",
+      invited: false,
     });
     expect(fake.asked).toEqual(
       expect.arrayContaining([
@@ -90,6 +137,35 @@ describe("readTeacherWelcomeState (#364)", () => {
         { table: "orgs", column: "id", value: "org-1" },
       ]),
     );
+  });
+
+  it("knows a colleague who came in by invitation, from the invitation they accepted", async () => {
+    const fake = client({
+      profiles: { data: { onboarded_at: null, display_name: "Grace Hopper" }, error: null },
+      orgs: { data: { self_registered: true }, error: null },
+      org_invites: { data: [{ id: "invite-1" }], error: null },
+    });
+    expect(await readTeacherWelcomeState(fake.client, "user-2", "org-1")).toMatchObject({
+      invited: true,
+    });
+    expect(fake.asked).toContainEqual({
+      table: "org_invites",
+      column: "accepted_by",
+      value: "user-2",
+    });
+    // `token_hash` has no grant: a `*` here would be refused.
+    expect(fake.selected).toContainEqual({ table: "org_invites", columns: "id" });
+  });
+
+  it("still welcomes a new teacher when the invitations cannot be read", async () => {
+    const fake = client({
+      profiles: { data: { onboarded_at: null, display_name: "Ada Lovelace" }, error: null },
+      orgs: { data: { self_registered: true }, error: null },
+      org_invites: { data: null, error: { code: "42P01" } },
+    });
+    const state = await readTeacherWelcomeState(fake.client, "user-1", "org-1");
+    expect(state).toMatchObject({ invited: false });
+    expect(showTeacherWelcome(state)).toBe(true);
   });
 
   it.each([

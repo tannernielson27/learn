@@ -144,6 +144,58 @@ describe("the proxy matcher still covers the gallery", () => {
   it("refreshes the session on the landing page, which reads it to pick a link (#264)", () => {
     expect(matcher).toContain("/");
   });
+
+  it("runs on a workspace invitation and keeps its token out of every Referer", async () => {
+    expect(matcher).toContain("/w/:path*");
+
+    for (const signedIn of [false, true]) {
+      updateSession.mockResolvedValue({ response: NextResponse.next(), signedIn });
+      const response = await proxy(request("/w/AbC_-0123456789abcdefghijklmnopq"));
+      // Never sent to sign-in: the colleague may have no account yet.
+      expect(response.headers.get("location")).toBeNull();
+      expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+    }
+
+    // Nowhere else: the rest of the site keeps the browser's default.
+    updateSession.mockResolvedValue({ response: NextResponse.next(), signedIn: true });
+    for (const pathname of ["/", "/author", "/c/AbC_-0123456789abcdefghijklmnopq", "/welcome"]) {
+      expect((await proxy(request(pathname))).headers.get("referrer-policy"), pathname).toBeNull();
+    }
+  });
+
+  it("keeps the token out of every Referer from a page it is sent through", async () => {
+    // "Sign in to accept" is /sign-in?next=/w/<token>: the token is in that page's own address,
+    // and in the address of any page the same `next` is carried on to.
+    const token = "AbC_-0123456789abcdefghijklmnopq";
+    const next = encodeURIComponent(`/w/${token}`);
+    const nested = encodeURIComponent(`/account/password?next=${next}`);
+    // A response of its own for each request: the header is set on the response handed over.
+    updateSession.mockImplementation(async () => ({
+      response: NextResponse.next(),
+      signedIn: false,
+    }));
+    for (const pathname of [
+      `/sign-in?next=${next}`,
+      `/sign-up?next=${next}`,
+      `/sign-in?error=1&next=${next}`,
+      `/sign-in?next=${nested}`,
+    ]) {
+      const response = await proxy(request(pathname));
+      expect(response.headers.get("location"), pathname).toBeNull();
+      expect(response.headers.get("referrer-policy"), pathname).toBe("no-referrer");
+    }
+
+    // Sign-in with nowhere asked for, or somewhere else, keeps the browser's default.
+    for (const pathname of [
+      "/sign-in",
+      "/sign-in?next=%2Fauthor",
+      "/sign-in?next=%2Fwelcome",
+      "/sign-in?next=%2Fc%2FAbC_-0123456789abcdefghijklmnopq",
+      "/sign-up?role=teacher",
+    ]) {
+      expect((await proxy(request(pathname))).headers.get("referrer-policy"), pathname).toBeNull();
+    }
+  });
 });
 
 describe("a signed-in visit to sign-in goes to that person's own home in one redirect", () => {

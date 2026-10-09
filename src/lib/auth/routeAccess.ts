@@ -4,6 +4,10 @@ import { safeNextPath } from "./nextPath";
 // here: it is where someone with no account yet starts. /account is a signed-in person's own
 // settings, whatever their role. /welcome (#361) is where a signed-in account with no role lands.
 // /sign-up is not here for the reason /c is not; a signed-in visitor is sent home by the page.
+// A workspace invitation, /w/<token>, is not here either: the colleague it was sent to may have no
+// account yet, and the page itself answers a visitor, the invited account and anyone else apart.
+// Sign-in may send someone back to it (`safeNextPath` keeps it), which is how an invited person
+// who already has an account accepts.
 const PROTECTED_PREFIXES = ["/author", "/learn", "/account", "/welcome"];
 const SIGN_IN_PATH = "/sign-in";
 

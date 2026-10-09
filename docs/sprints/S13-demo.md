@@ -84,9 +84,17 @@ The four owner decisions of 2026-10-06 are in ADR 0009. These came after:
 
 ## Known gaps
 
-- **A student belongs to one workspace.** A student of one teacher cannot join another teacher's class with the same account; the code is answered as "did not work". Recorded in ADR 0009.
-- **Resending the confirmation email uses the student wording for a teacher too** (`resendConfirmation`, from the #374 review).
-- **A signed-in person who opens `/sign-in` directly** still goes by way of authoring to their own home (#380 left the proxy unchanged).
-- **A teacher cannot invite a colleague into their workspace**, and nobody can move between workspaces. Adding a colleague to the shared workspace is still the owner's two steps (docs/05 §7.6), and must be done before that colleague signs up as a teacher.
-- **Abandoned workspaces are never removed.**
-- **The class code limit is per account**, not per address (docs/audits/S10-security.md).
+Closed after the sprint, on 2026-10-08 and 09:
+
+- **One student account in classes of more than one workspace** (#392, migration `20261009000000`).
+- **A teacher invites a colleague into their own workspace** (ADR 0010; #393 with migration `20261009010000`, #394, and the pages and walk in #397).
+- **Resending the confirmation email is worded for the account's role** (#385).
+- **A signed-in person who opens `/sign-in` goes straight to their own home** (#387).
+- **Typed class codes are also limited per address** (#390).
+
+Still open:
+
+- **Nobody can move between workspaces, and a colleague cannot be removed in the app.** An account that already teaches cannot accept an invitation. The shared workspace is still the owner's steps (docs/05 §7.6).
+- **Abandoned workspaces are never removed.** A sweep must first deal with students whose first workspace it would delete (ADR 0009).
+- **The workspace name shows only in a student's class list.** Assignment, history and practice rows show the class name alone.
+- **A student can still read the row of the first workspace they joined** after leaving every class in it (from the #392 security review; which columns are granted was not checked).
