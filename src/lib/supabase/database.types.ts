@@ -691,6 +691,67 @@ export type Database = {
           },
         ];
       };
+      org_invites: {
+        Row: {
+          accepted_at: string | null;
+          accepted_by: string | null;
+          created_at: string;
+          email: string;
+          expires_at: string;
+          id: string;
+          invited_by: string | null;
+          org_id: string;
+          revoked_at: string | null;
+          token_hash: string;
+        };
+        Insert: {
+          accepted_at?: string | null;
+          accepted_by?: string | null;
+          created_at?: string;
+          email: string;
+          expires_at?: string;
+          id?: string;
+          invited_by?: string | null;
+          org_id: string;
+          revoked_at?: string | null;
+          token_hash: string;
+        };
+        Update: {
+          accepted_at?: string | null;
+          accepted_by?: string | null;
+          created_at?: string;
+          email?: string;
+          expires_at?: string;
+          id?: string;
+          invited_by?: string | null;
+          org_id?: string;
+          revoked_at?: string | null;
+          token_hash?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "org_invites_accepted_by_fkey";
+            columns: ["accepted_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "org_invites_invited_by_fkey";
+            columns: ["invited_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "org_invites_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "orgs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       orgs: {
         Row: {
           ai_import_enabled: boolean;
@@ -1228,6 +1289,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      accept_org_invite: {
+        Args: { p_user: string; token: string };
+        Returns: string;
+      };
       archive_case_study: { Args: { target: string }; Returns: undefined };
       archive_item: { Args: { target: string }; Returns: undefined };
       assignment_report_rows: {
@@ -1311,6 +1376,15 @@ export type Database = {
       complete_assignment_reminder: {
         Args: { message_id?: string; target: string };
         Returns: boolean;
+      };
+      create_org_invite: {
+        Args: { p_email: string; p_inviter: string };
+        Returns: {
+          expires_at: string;
+          invite_id: string;
+          status: string;
+          token: string;
+        }[];
       };
       duplicate_case_study: {
         Args: { source_case_study: string };
@@ -1495,6 +1569,16 @@ export type Database = {
           started_at: string;
         }[];
       };
+      org_members: {
+        Args: never;
+        Returns: {
+          display_name: string;
+          email: string;
+          joined_at: string;
+          profile_id: string;
+          role: Database["public"]["Enums"]["org_role"];
+        }[];
+      };
       place_case_study_step: {
         Args: { step_item: string; step_position: number; target: string };
         Returns: undefined;
@@ -1596,6 +1680,17 @@ export type Database = {
           class_name: string;
         }[];
       };
+      resolve_org_invite: {
+        Args: { client_key?: string; token: string };
+        Returns: {
+          expires_at: string;
+          invited_email: string;
+          inviter_email: string;
+          inviter_name: string;
+          state: string;
+          workspace_name: string;
+        }[];
+      };
       resolve_session_code: {
         Args: { client_key?: string; session_code: string };
         Returns: {
@@ -1622,6 +1717,7 @@ export type Database = {
           session_title: string;
         }[];
       };
+      revoke_org_invite: { Args: { p_invite: string }; Returns: string };
       rotate_class_invite: { Args: { target_class: string }; Returns: string };
       save_attempt_response: {
         Args: { answer: Json; target_attempt: string; target_item: string };
