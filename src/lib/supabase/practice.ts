@@ -160,6 +160,11 @@ export interface PracticeBank {
   itemCount: number;
   /** How many items the student's newest run has answered. */
   answered: number;
+  /**
+   * The name of the workspace the bank belongs to, which is the workspace of the class it is
+   * shared with. Null when the database sends none.
+   */
+  workspaceName: string | null;
 }
 
 export async function readMyPracticeBanks(client: Client): Promise<PracticeBank[] | null> {
@@ -170,7 +175,14 @@ export async function readMyPracticeBanks(client: Client): Promise<PracticeBank[
     name: row.bank_name,
     itemCount: row.item_count,
     answered: row.answered,
+    // The generated type says a string; a database without 20261011010000 sends no such column.
+    workspaceName: workspaceNameOf(row.workspace_name),
   }));
+}
+
+function workspaceNameOf(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  return value.trim() === "" ? null : value;
 }
 
 /** numeric over PostgREST is a number, but a driver may hand back a string. */

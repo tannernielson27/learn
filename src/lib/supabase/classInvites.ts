@@ -76,11 +76,16 @@ export interface StudentClass {
    * one workspace, so the student home says which. Null when the database sends none.
    */
   workspaceName: string | null;
+  /**
+   * Which of the caller's own workspaces the class is in: 1, 2, 3 ..., the same for two classes
+   * of one workspace. Not the workspace's id. Null when the database sends none.
+   */
+  workspaceNumber: number | null;
 }
 
 /**
- * The caller's own classes: id, name, zone and workspace name, never a token
- * (`public.my_classes`).
+ * The caller's own classes: id, name, zone, workspace name and workspace number, never a token
+ * or the workspace's id (`public.my_classes`).
  */
 export async function myClasses(client: Client): Promise<StudentClass[] | null> {
   const { data, error } = await client.rpc("my_classes");
@@ -93,7 +98,13 @@ export async function myClasses(client: Client): Promise<StudentClass[] | null> 
     timeZone: row.time_zone || DEFAULT_CLASS_TIME_ZONE,
     // The same: the generated type says a string, the database may not have the column yet.
     workspaceName: workspaceNameOf(row.workspace_name),
+    // The same again, for 20261011010000.
+    workspaceNumber: workspaceNumberOf(row.workspace_number),
   }));
+}
+
+function workspaceNumberOf(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function workspaceNameOf(value: unknown): string | null {
