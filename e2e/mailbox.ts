@@ -9,6 +9,7 @@ const CLOCK_SKEW_MS = 5_000;
 interface MailpitSummary {
   ID: string;
   Created: string;
+  Subject: string;
 }
 
 export interface ReceivedEmail {
@@ -28,11 +29,18 @@ async function latestSignInEmail(
   return (await latestEmail(request, email, since)).body;
 }
 
-/** The newest email of any kind for `email` sent since `since`, such as the welcome email (#360). */
+/**
+ * The newest email of any kind for `email` sent since `since`, such as the welcome email (#360).
+ *
+ * With `subject`, only an email with exactly that subject line. An address that signed up and was
+ * then invited holds two emails seconds apart, inside the clock skew allowed for below, so "the
+ * newest since" alone could hand back the welcome while the invitation is still on its way.
+ */
 export async function latestEmail(
   request: APIRequestContext,
   email: string,
   since: Date,
+  subject?: string,
 ): Promise<ReceivedEmail> {
   let received: ReceivedEmail | undefined;
   await expect
@@ -43,7 +51,9 @@ export async function latestEmail(
         });
         const { messages } = (await list.json()) as { messages: MailpitSummary[] };
         const fresh = messages.find(
-          (message) => new Date(message.Created).getTime() >= since.getTime() - CLOCK_SKEW_MS,
+          (message) =>
+            new Date(message.Created).getTime() >= since.getTime() - CLOCK_SKEW_MS &&
+            (subject === undefined || message.Subject === subject),
         );
         if (!fresh) return undefined;
         const message = await request.get(`${MAILBOX_URL}/api/v1/message/${fresh.ID}`);
@@ -55,7 +65,10 @@ export async function latestEmail(
         received = { subject: Subject, body: HTML || Text, text: Text ?? "" };
         return received.body;
       },
-      { timeout: 15_000, message: `no email arrived for ${email}` },
+      {
+        timeout: 15_000,
+        message: `no email${subject ? ` "${subject}"` : ""} arrived for ${email}`,
+      },
     )
     .toBeTruthy();
   return received!;
