@@ -1530,6 +1530,7 @@ export type Database = {
           joined_at: string;
           time_zone: string;
           workspace_name: string;
+          workspace_number: number;
         }[];
       };
       my_practice_banks: {
@@ -1539,6 +1540,7 @@ export type Database = {
           bank_id: string;
           bank_name: string;
           item_count: number;
+          workspace_name: string;
         }[];
       };
       my_practice_step_marks: {

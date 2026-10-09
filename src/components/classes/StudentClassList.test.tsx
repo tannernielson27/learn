@@ -10,6 +10,7 @@ function entry(id: string, name: string, workspaceName: string | null): StudentC
     joinedAt: "2026-09-23T10:00:00Z",
     timeZone: "America/Denver",
     workspaceName,
+    workspaceNumber: null,
   };
 }
 

@@ -11,7 +11,7 @@ import { PracticeBankList } from "@/components/practice/PracticeBankList";
 import { historyStore } from "@/lib/assignments/attemptStore";
 import { loadStudentRecord } from "@/lib/assignments/history";
 import { isEmailUnconfirmed } from "@/lib/auth/emailConfirmation";
-import { studentClassInfo } from "@/lib/classes/studentClasses";
+import { spansWorkspaces, studentClassInfo } from "@/lib/classes/studentClasses";
 import { requireStudent } from "@/lib/classes/viewer";
 import {
   readStudentWelcomeState,
@@ -35,6 +35,7 @@ const STUDENT_HOME_HEADING_ID = "student-home-heading";
  * every closed assignment in their current classes with their best score, linking to its results
  * (#210), and (#239) their clinical judgment steps, weakest first, from the same closed work and
  * (#241) their practice. Practice lists the banks shared with their classes, each opening a run.
+ * A student whose classes span more than one workspace reads the workspace on every such row.
  * Anyone who is not a student is sent to their own home by `requireStudent`.
  */
 export default async function StudentHomePage() {
@@ -52,8 +53,10 @@ export default async function StudentHomePage() {
     readStudentWelcomeState(supabase, userId),
   ]);
   // #242: due times are shown in each class's zone, not the device's. A student whose classes
-  // span more than one workspace also gets the workspace beside each class name.
+  // span more than one workspace also gets the workspace beside each class name, and on each
+  // practice bank, which names no class.
   const classInfo = studentClassInfo(classes);
+  const acrossWorkspaces = spansWorkspaces(classes);
   // #208: how this student's attempts stand at each; a failed read just leaves the counts off.
   const progress =
     (await listMyAttemptProgress(
@@ -136,7 +139,7 @@ export default async function StudentHomePage() {
             Your practice could not be loaded. Reload the page to try again.
           </p>
         ) : (
-          <PracticeBankList banks={practice} />
+          <PracticeBankList banks={practice} showWorkspace={acrossWorkspaces} />
         )}
       </section>
       <section aria-labelledby="history-heading" className="mt-10">

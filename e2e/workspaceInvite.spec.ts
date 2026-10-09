@@ -555,3 +555,79 @@ test("an account with no role joins with one button, and one someone else may ha
   await elsewhere.close();
   await visitor.close();
 });
+
+/** Revokes the pending invitation to `email` from the workspace page, through its confirmation. */
+async function revoke(page: Page, email: string): Promise<void> {
+  await page
+    .getByRole("button", { name: `Revoke the invitation to ${email}`, exact: true })
+    .click();
+  await page.getByRole("button", { name: "Revoke invitation", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: `Revoke the invitation to ${email}`, exact: true }),
+  ).toHaveCount(0);
+}
+
+test("an address is refused its fourth invitation in a day, whichever workspace asks", async ({
+  browser,
+  page,
+  request,
+}, testInfo) => {
+  // Two sign-ups, each with its welcome email opened, and three invitations read from the mailbox.
+  test.slow();
+  const project = testInfo.project.name;
+  const stamp = `${Date.now() % 1_000_000}`;
+  const firstName = `Ada Lovelace ${stamp}`;
+  const secondName = `Grace Hopper ${stamp}`;
+  const invited = address(`ws-often-${project}`);
+  const refusal =
+    "This address has been invited too many times in the last 24 hours. Try again tomorrow.";
+
+  // 1. The first workspace invites the address, revokes, and invites again: two sent, one pending.
+  //    A revoked invitation still counts toward what the address was sent.
+  await skipWelcomes(page);
+  await signUpConfirmedTeacher(page, request, firstName, address(`ws-first-${project}`));
+  await openWorkspace(page, firstName);
+  await invite(page, request, invited);
+  await revoke(page, invited);
+  await invite(page, request, invited);
+  await expect(pending(page).getByRole("listitem")).toHaveCount(1);
+
+  // 2. A second workspace, which has invited nobody, sends the third.
+  const desk = await anotherBrowser(browser, testInfo);
+  const second = await desk.newPage();
+  await skipWelcomes(second);
+  await signUpConfirmedTeacher(second, request, secondName, address(`ws-second-${project}`));
+  await openWorkspace(second, secondName);
+  await invite(second, request, invited);
+  await revoke(second, invited);
+  await expect(
+    second.getByRole("heading", { level: 3, name: "No pending invitations", exact: true }),
+  ).toBeVisible();
+
+  // 3. Its second invitation would be the address's fourth, and is refused: this teacher has sent
+  //    one, far inside their own five a day, so it is the address's count that refuses.
+  await second
+    .getByRole("textbox", { name: "Colleague's email address", exact: true })
+    .fill(invited);
+  await second.getByRole("button", { name: "Send invitation", exact: true }).click();
+  await expect(second.getByRole("alert").filter({ hasText: refusal })).toHaveText(refusal);
+  await expect(second.getByRole("status").filter({ hasText: "Invitation sent to" })).toHaveCount(0);
+  await expectNoAxeViolations(second);
+  await shoot(second, testInfo, "8-recipient-limited");
+
+  // Nothing was made: nothing is pending there, after a reload too.
+  await second.reload();
+  await expect(
+    second.getByRole("heading", { level: 3, name: "No pending invitations", exact: true }),
+  ).toBeVisible();
+
+  // Another address is not refused: the count is the address's, not the workspace's.
+  await invite(second, request, address(`ws-fresh-${project}`));
+
+  // The first workspace's invitation is untouched.
+  await page.reload();
+  await expect(pending(page).getByRole("listitem")).toHaveCount(1);
+  await expect(pending(page)).toContainText(invited);
+
+  await desk.close();
+});
