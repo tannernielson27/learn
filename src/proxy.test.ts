@@ -144,6 +144,24 @@ describe("the proxy matcher still covers the gallery", () => {
   it("refreshes the session on the landing page, which reads it to pick a link (#264)", () => {
     expect(matcher).toContain("/");
   });
+
+  it("runs on a workspace invitation and keeps its token out of every Referer", async () => {
+    expect(matcher).toContain("/w/:path*");
+
+    for (const signedIn of [false, true]) {
+      updateSession.mockResolvedValue({ response: NextResponse.next(), signedIn });
+      const response = await proxy(request("/w/AbC_-0123456789abcdefghijklmnopq"));
+      // Never sent to sign-in: the colleague may have no account yet.
+      expect(response.headers.get("location")).toBeNull();
+      expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+    }
+
+    // Nowhere else: the rest of the site keeps the browser's default.
+    updateSession.mockResolvedValue({ response: NextResponse.next(), signedIn: true });
+    for (const pathname of ["/", "/author", "/c/AbC_-0123456789abcdefghijklmnopq", "/welcome"]) {
+      expect((await proxy(request(pathname))).headers.get("referrer-policy"), pathname).toBeNull();
+    }
+  });
 });
 
 describe("a signed-in visit to sign-in goes to that person's own home in one redirect", () => {
