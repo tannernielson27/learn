@@ -32,9 +32,18 @@ export async function proxy(request: NextRequest) {
     return galleryIsAvailable() ? NextResponse.next() : galleryClosed();
   }
 
-  const { response, signedIn } = await updateSession(request);
-  const target = redirectForAccess(url, signedIn);
-  if (!target) return response;
+  const { response, signedIn, homeFor } = await updateSession(request);
+  const access = redirectForAccess(url, signedIn);
+  if (!access) return response;
+
+  // The one redirect a signed-in request is ever given is the one off /sign-in. With nowhere
+  // asked for it used to name authoring, which sent a student on to /learn and an account with no
+  // role on to /welcome: two hops. `homeFor` names that same home here, in one. It decides nothing
+  // about access: the pages still check, and it only ever answers where they would have sent the
+  // person anyway. It reads one profile row, on this request alone.
+  const target = signedIn
+    ? new URL(await homeFor(`${access.pathname}${access.search}${access.hash}`), url.origin)
+    : access;
 
   // Carry any refreshed session cookies onto the redirect.
   const redirect = NextResponse.redirect(target);

@@ -125,6 +125,23 @@ export function EditorShell<Values, Input extends ScoredInput>({
   const rationaleId = `${issueIdPrefix}-rationale`;
   const unpublishId = `${issueIdPrefix}-unpublish`;
 
+  // The player keeps what its last submit revealed and draws its marks from that, not from the
+  // item it is handed (#326). So once the key, rationale or scoring behind a shown score has been
+  // edited, the preview starts a new round: a fresh player, back in answer mode. Nothing else
+  // remounts it, and an edit made before any submit leaves the answer being tried where it is.
+  const scoredFields = JSON.stringify([
+    (input as { answerKey?: unknown }).answerKey,
+    input.rationale,
+    input.scoring,
+  ]);
+  const [preview, setPreview] = useState<{ round: number; scoredWith: string | null }>({
+    round: 0,
+    scoredWith: null,
+  });
+  if (preview.scoredWith !== null && preview.scoredWith !== scoredFields) {
+    setPreview({ round: preview.round + 1, scoredWith: null });
+  }
+
   useReportDirty(isDirty);
   const { onBusyChange } = host;
   useEffect(() => {
@@ -457,12 +474,15 @@ export function EditorShell<Values, Input extends ScoredInput>({
               <EhrPreview record={previewedRecord} />
             </div>
           ) : null}
-          {/* The same player students use, unkeyed so it updates in place. The author's own
-              browser scores the preview (ADR 0003, amended 2026-09-13): they may read their own
-              org's keys, and this route sits behind requireAuthor. */}
+          {/* The same player students use. Its key holds still while the author types, so it
+              updates in place; it changes only to drop a score the item no longer agrees with
+              (#326). The author's own browser scores the preview (ADR 0003, amended 2026-09-13):
+              they may read their own org's keys, and this route sits behind requireAuthor. */}
           <ItemPlayer
+            key={preview.round}
             item={input as unknown as Item}
             submit={scoreInProcess(input as unknown as Item)}
+            onSubmitted={() => setPreview((now) => ({ ...now, scoredWith: scoredFields }))}
           />
         </div>
       </section>

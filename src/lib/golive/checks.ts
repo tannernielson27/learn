@@ -2,7 +2,13 @@
  * The judgements behind `pnpm golive:check` (#237). Each takes what was read and returns one line;
  * nothing here touches the network, so every pass and fail path is a plain unit test.
  */
-import { REQUIRED_ENV, type DetailedHealth, type PublicHealth } from "./envVars.ts";
+import {
+  REQUIRED_ENV,
+  SIGN_UP_CAPTCHA_STATES,
+  type DetailedHealth,
+  type PublicHealth,
+  type SignUpCaptcha,
+} from "./envVars.ts";
 import type {
   BackupRun,
   CheckResult,
@@ -197,10 +203,16 @@ export function healthChecks(reading: HealthReading, expectedProject: string): C
       line("site", "the site's /api/health answers", "fail", reason),
       line("env", "every required variable is set on the site", "fail", "health unreadable"),
       line("demo", "the demo account is off", "fail", "health unreadable"),
+      line("captcha", CAPTCHA_TITLE, "fail", "health unreadable"),
     ];
   }
   const { body } = reading;
-  return [siteCheck(body, expectedProject), envCheck(reading), demoCheck(reading)];
+  return [
+    siteCheck(body, expectedProject),
+    envCheck(reading),
+    demoCheck(reading),
+    captchaCheck(reading),
+  ];
 }
 
 function siteCheck(body: PublicHealth, expectedProject: string): CheckResult {
@@ -256,6 +268,53 @@ function demoCheck(reading: Exclude<HealthReading, { kind: "unreadable" }>): Che
   return line("demo", title, "manual", `cannot tell without the token; ${TOKEN_HINT}`);
 }
 
+const CAPTCHA_TITLE =
+  "the sign-up CAPTCHA has both Turnstile keys (production refuses sign-up without them)";
+
+// The variables are not named here: only src/lib/auth/captcha.ts may name the secret
+// (noClientCaptcha.test.ts). docs/05 §7.12 step 2 names both.
+const CAPTCHA_FIX = "set both Turnstile variables in Vercel Production, redeploy";
+
+const CAPTCHA_DETAIL: Record<SignUpCaptcha, string> = {
+  on: "both are set; whether Cloudflare accepts them shows on /sign-up (docs/05 §7.12 step 5)",
+  skipped:
+    "neither is set, and this is not a production deployment, so sign-up asks for no CAPTCHA here; production refuses sign-up without both (docs/05 §7.12 step 2)",
+  missing: `neither is set, so every sign-up is refused; ${CAPTCHA_FIX} (docs/05 §7.12 steps 1-2)`,
+  misconfigured:
+    'one is set without the other, or the secret has a NEXT_PUBLIC_ name, so every sign-up is refused; the log line "[sign-up] the CAPTCHA is set up wrongly" names which (docs/05 §7.12 step 2)',
+};
+
+const isSignUpCaptcha = (value: unknown): value is SignUpCaptcha =>
+  SIGN_UP_CAPTCHA_STATES.some((state) => state === value);
+
+/**
+ * #359: production refuses every sign-up until both Turnstile variables are set, and any deployment
+ * does while only one is. Only the site knows, so it says so in the detailed view. Without that
+ * view the line is manual even when the site reports ready: a deployment older than this line
+ * reports ready without having looked.
+ */
+function captchaCheck(reading: Exclude<HealthReading, { kind: "unreadable" }>): CheckResult {
+  if (reading.kind !== "detailed") {
+    return line(
+      "captcha",
+      CAPTCHA_TITLE,
+      "manual",
+      "Vercel > Settings > Environment Variables, Production: both Turnstile variables (docs/05 §7.12 step 2); set GOLIVE_HEALTH_TOKEN to the deployment's CRON_SECRET to have this checked",
+    );
+  }
+  const state: unknown = reading.body.signUpCaptcha;
+  if (!isSignUpCaptcha(state)) {
+    return line(
+      "captcha",
+      CAPTCHA_TITLE,
+      "fail",
+      "the site did not report how its CAPTCHA is set up: the deployment is older than this line. Deploy main, then run the check again",
+    );
+  }
+  const refused = state === "missing" || state === "misconfigured";
+  return line("captcha", CAPTCHA_TITLE, refused ? "fail" : "pass", CAPTCHA_DETAIL[state]);
+}
+
 /** What no script can see: each names the docs/05 step that settles it. */
 export const MANUAL_STEPS: readonly CheckResult[] = [
   line(
@@ -287,6 +346,12 @@ export const MANUAL_STEPS: readonly CheckResult[] = [
     "Supabase Auth refuses a password under 8 characters",
     "manual",
     "Supabase > Authentication > Sign In / Providers > Email: Minimum password length 8 or more (docs/05 §7.12 step 4); set SUPABASE_ACCESS_TOKEN to have this checked",
+  ),
+  line(
+    "auth-anonymous",
+    "Supabase anonymous sign-ins are off",
+    "manual",
+    'Supabase > Authentication > Sign In / Providers: "Allow anonymous sign-ins" off (docs/05 §7.12 step 3); set SUPABASE_ACCESS_TOKEN to have this checked',
   ),
   line(
     "sentry",
