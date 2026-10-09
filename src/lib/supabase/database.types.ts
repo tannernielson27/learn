@@ -1529,6 +1529,7 @@ export type Database = {
           class_name: string;
           joined_at: string;
           time_zone: string;
+          workspace_name: string;
         }[];
       };
       my_practice_banks: {

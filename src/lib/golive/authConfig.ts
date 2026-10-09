@@ -18,6 +18,8 @@ export interface AuthConfig {
   disable_signup?: unknown;
   /** The shortest password Supabase Auth accepts (#359). */
   password_min_length?: unknown;
+  /** True when "Allow anonymous sign-ins" is on (#359). */
+  external_anonymous_users_enabled?: unknown;
 }
 
 export const AUTH_CONFIG_URL = (ref: string): string =>
@@ -79,6 +81,7 @@ const TEMPLATE_TITLE = "the magic-link template carries the token-hash link and 
 
 const SIGNUP_TITLE = "Supabase's own sign-up endpoint is closed";
 const PASSWORD_TITLE = "Supabase Auth refuses a password under 8 characters";
+const ANONYMOUS_TITLE = "Supabase anonymous sign-ins are off";
 /** The site's own rule (`src/lib/auth/passwordRules.ts`); Supabase must not accept less. */
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -88,6 +91,7 @@ export const AUTH_CHECK_TITLES = [
   { id: "auth-template", title: TEMPLATE_TITLE },
   { id: "auth-signup", title: SIGNUP_TITLE },
   { id: "auth-password", title: PASSWORD_TITLE },
+  { id: "auth-anonymous", title: ANONYMOUS_TITLE },
 ] as const;
 const LINK = "{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email";
 const CODE = "{{ .Token }}";
@@ -178,7 +182,25 @@ function passwordLengthCheck(config: AuthConfig): CheckResult {
 }
 
 /**
- * Four lines: the URLs (the #304 failure), the template the app's sign-in depends on, and the two
+ * #359: an anonymous sign-in is a signed-in session, with the `authenticated` role, for anyone
+ * holding the publishable key: no address, no CAPTCHA, none of the app's limits. Nothing in the app
+ * uses one (`enable_anonymous_sign_ins = false` in supabase/config.toml). Only a literal `false`
+ * passes: a missing field is not "off".
+ */
+function anonymousSignInCheck(config: AuthConfig): CheckResult {
+  if (config.external_anonymous_users_enabled === false) {
+    return line("auth-anonymous", ANONYMOUS_TITLE, true, "every session belongs to an account");
+  }
+  return line(
+    "auth-anonymous",
+    ANONYMOUS_TITLE,
+    false,
+    'anyone holding the publishable key can get a signed-in session without an account, past the CAPTCHA and the limits; turn off "Allow anonymous sign-ins" (docs/05 §7.12 step 3)',
+  );
+}
+
+/**
+ * Five lines: the URLs (the #304 failure), the template the app's sign-in depends on, and the three
  * settings open sign-up leans on (#359).
  */
 export function authConfigChecks(config: AuthConfig, site: string): CheckResult[] {
@@ -187,5 +209,6 @@ export function authConfigChecks(config: AuthConfig, site: string): CheckResult[
     templateCheck(config),
     signUpCheck(config),
     passwordLengthCheck(config),
+    anonymousSignInCheck(config),
   ];
 }

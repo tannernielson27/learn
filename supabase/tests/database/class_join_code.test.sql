@@ -201,19 +201,22 @@ select is(public.join_class_by_code('ZZZZ-ZZZZ'), 'instructor',
   'and is told the same for any code, so the answer says nothing about which codes exist');
 
 select pg_temp.act_as('00000000-0000-0000-0000-0000003560d3');
-select is(public.join_class_by_code(pg_temp.typed('-')), 'invalid',
-  'a student of another org is refused');
+select is(public.join_class_by_code(pg_temp.typed('-')), 'joined',
+  'a student of another org joins with the same account');
 
 reset role;
 select ok(
   not exists (select 1 from public.class_members
-               where profile_id in ('00000000-0000-0000-0000-0000003560a1',
-                                    '00000000-0000-0000-0000-0000003560d3'))
+               where profile_id = '00000000-0000-0000-0000-0000003560a1')
   and (select role::text from public.profiles where id = '00000000-0000-0000-0000-0000003560a1')
       = 'instructor'
-  and (select org_id from public.profiles where id = '00000000-0000-0000-0000-0000003560d3')
-      = '00000000-0000-0000-0000-0000003560b0',
-  'neither the instructor nor the other org''s student was moved or added'
+  and exists (select 1 from public.class_members
+               where class_id = '00000000-0000-0000-0000-0000003560c1'
+                 and profile_id = '00000000-0000-0000-0000-0000003560d3')
+  and (select row(org_id, role)::text from public.profiles
+        where id = '00000000-0000-0000-0000-0000003560d3')
+      = row('00000000-0000-0000-0000-0000003560b0'::uuid, 'student'::public.org_role)::text,
+  'the instructor was neither moved nor added; the other org''s student was added and not moved'
 );
 
 -- ---------------------------------------------------------------------------
