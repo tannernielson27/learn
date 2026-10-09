@@ -82,6 +82,18 @@ describe("AssignmentHistory (#238)", () => {
     expect(screen.getByRole("listitem")).toHaveTextContent("1 of 1 attempt used");
   });
 
+  it("puts the workspace beside the class only when one is carried", () => {
+    renderRows([ROW]);
+    expect(screen.getByRole("listitem")).not.toHaveTextContent("workspace");
+    render(
+      <AssignmentHistory
+        rows={[{ ...ROW, id: "a2" }]}
+        classes={new Map([[CLASS_ID, { ...NUR_310, workspaceName: "Ada's workspace" }]])}
+      />,
+    );
+    expect(screen.getAllByRole("listitem")[1]).toHaveTextContent("NUR 310, Ada's workspace");
+  });
+
   it("names a class it does not know, on the default zone", () => {
     render(<AssignmentHistory rows={[{ ...ROW, classId: "other" }]} classes={new Map()} />);
     const row = screen.getByRole("listitem");

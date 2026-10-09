@@ -12,6 +12,7 @@ import {
   RESEND_AT_LIMIT,
   RESEND_BAD_ADDRESS,
   RESEND_FAILED,
+  RESEND_RECIPIENT_LIMIT,
   REVOKE_FAILED,
   revokeInvitation,
   sendInvitation,
@@ -38,6 +39,7 @@ let sent: WorkspaceInviteEmailResult;
 let revoked: RevokedInvite;
 let found: FoundInvite;
 let recent: number | null;
+let received: number | null;
 
 const create = vi.fn<ResendDeps["create"]>(async () => {
   steps.push("create");
@@ -59,7 +61,19 @@ const recentCount = vi.fn<ResendDeps["recentCount"]>(async () => {
   steps.push("count");
   return recent;
 });
-const deps: ResendDeps = { create, revoke, send, find, recentCount, now: () => NOW };
+const recipientCount = vi.fn<ResendDeps["recipientCount"]>(async () => {
+  steps.push("recipient");
+  return received;
+});
+const deps: ResendDeps = {
+  create,
+  revoke,
+  send,
+  find,
+  recentCount,
+  recipientCount,
+  now: () => NOW,
+};
 
 const logged = vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -71,6 +85,7 @@ beforeEach(() => {
   revoked = "revoked";
   found = { email: ADDRESS };
   recent = 0;
+  received = 1;
 });
 
 describe("sendInvitation", () => {
@@ -205,7 +220,7 @@ describe("revokeInvitation", () => {
 describe("resendInvitation", () => {
   it("revokes the earlier invitation, then makes and emails a new one to the same address", async () => {
     expect(await resendInvitation(INVITER, OLD_INVITE, deps)).toEqual({ ok: true, email: ADDRESS });
-    expect(steps).toEqual(["find", "count", "revoke", "create", "send"]);
+    expect(steps).toEqual(["find", "count", "recipient", "revoke", "create", "send"]);
     expect(find).toHaveBeenCalledWith(OLD_INVITE);
     expect(revoke).toHaveBeenCalledWith(OLD_INVITE);
     expect(create).toHaveBeenCalledWith(INVITER.id, ADDRESS);
@@ -243,6 +258,40 @@ describe("resendInvitation", () => {
       message: RESEND_FAILED,
     });
     expect(revoke).not.toHaveBeenCalled();
+  });
+
+  it("counts the address's last 24 hours too", async () => {
+    await resendInvitation(INVITER, OLD_INVITE, deps);
+    expect(recipientCount).toHaveBeenCalledWith(ADDRESS, new Date("2026-10-08T12:00:00Z"));
+  });
+
+  it("keeps the earlier invitation when the address is already at three for the day", async () => {
+    received = 3;
+    expect(await resendInvitation(INVITER, OLD_INVITE, deps)).toEqual({
+      ok: false,
+      message: RESEND_RECIPIENT_LIMIT,
+    });
+    expect(RESEND_RECIPIENT_LIMIT).toContain("The earlier invitation is unchanged");
+    expect(steps).toEqual(["find", "count", "recipient"]);
+  });
+
+  it("keeps the earlier invitation when the address's count could not be read", async () => {
+    received = null;
+    expect(await resendInvitation(INVITER, OLD_INVITE, deps)).toEqual({
+      ok: false,
+      message: RESEND_FAILED,
+    });
+    expect(revoke).not.toHaveBeenCalled();
+  });
+
+  it("says the earlier one is gone when other workspaces filled the address's three", async () => {
+    // Only the database can count other workspaces' invitations, and it answers after the revoke.
+    created = { status: "recipient_limited" };
+    expect(await resendInvitation(INVITER, OLD_INVITE, deps)).toEqual({
+      ok: false,
+      message: `${EARLIER_REVOKED} ${INVITE_REFUSAL_MESSAGES.recipient_limited}`,
+    });
+    expect(send).not.toHaveBeenCalled();
   });
 
   it("will not email a stored address the form would have refused", async () => {

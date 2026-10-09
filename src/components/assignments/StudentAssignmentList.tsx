@@ -4,21 +4,18 @@ import {
   studentAssignmentPath,
   type AttemptProgress,
 } from "@/lib/assignments/assignments";
+import { classLabel, type StudentClassInfo } from "@/lib/classes/studentClasses";
 import { DEFAULT_CLASS_TIME_ZONE } from "@/lib/classes/timeZone";
 import type { AssignmentSummary } from "@/lib/supabase/assignments";
 import { ClassTime } from "./ClassTime";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 /** What a student's lists need to know about each of their classes. */
-export interface StudentClassInfo {
-  name: string;
-  /** The zone its due times are shown in (#242). */
-  timeZone: string;
-}
+export type { StudentClassInfo };
 
 export interface StudentAssignmentListProps {
   assignments: readonly AssignmentSummary[];
-  /** Class id to name and zone, from the student's own classes. */
+  /** Class id to name, zone and (across workspaces) workspace: `studentClassInfo`. */
   classes: ReadonlyMap<string, StudentClassInfo>;
   /** This student's attempts per assignment (#208); an assignment with none is absent. */
   progress?: ReadonlyMap<string, AttemptProgress>;
@@ -57,8 +54,9 @@ export function StudentAssignmentList({
           >
             {entry.title}
           </Link>
-          <span className="text-sm text-ink-2">
-            {classes.get(entry.classId)?.name ?? "Your class"} ·{" "}
+          {/* The workspace is beside the class only for a student in more than one workspace. */}
+          <span className="text-sm break-words text-ink-2">
+            {classLabel(classes.get(entry.classId))} ·{" "}
             {attemptProgressLabel(entry.maxAttempts, progress.get(entry.id))}
           </span>
           <span className="text-sm text-ink-2">

@@ -41,6 +41,32 @@ describe("StudentAssignmentList", () => {
     expect(item).toHaveTextContent("2 attempts");
   });
 
+  it("puts the workspace beside the class for a student in more than one workspace", () => {
+    const other = "00000000-0000-4000-8000-0000000000c2";
+    render(
+      <StudentAssignmentList
+        assignments={[ENTRY, { ...ENTRY, id: "a2", classId: other }, { ...ENTRY, id: "a3" }]}
+        classes={
+          new Map([
+            [CLASS_ID, { ...NUR_310, workspaceName: "Ada's workspace" }],
+            [other, { ...NUR_310, workspaceName: "Grace's workspace" }],
+          ])
+        }
+      />,
+    );
+    const [first, second] = screen.getAllByRole("listitem");
+    expect(first).toHaveTextContent("NUR 310, Ada's workspace · 2 attempts");
+    expect(second).toHaveTextContent("NUR 310, Grace's workspace · 2 attempts");
+  });
+
+  it("shows the class name alone when no workspace is carried", () => {
+    render(
+      <StudentAssignmentList assignments={[ENTRY]} classes={new Map([[CLASS_ID, NUR_310]])} />,
+    );
+    expect(screen.getByRole("listitem")).toHaveTextContent("NUR 310 · 2 attempts");
+    expect(screen.getByRole("listitem")).not.toHaveTextContent("workspace");
+  });
+
   it("links each to the page that takes it, and says how the student's attempts stand (#208)", () => {
     render(
       <StudentAssignmentList

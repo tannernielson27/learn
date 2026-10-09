@@ -20,6 +20,8 @@ Sprint 13 opens sign-up (ADR 0009). It covers:
 > - **Row 41, `20261006000000_self_serve_instructors` (#355, PR #369).** `orgs.self_registered`, `orgs.ai_import_enabled`, `profiles.onboarded_at`, `register_instructor`, `mark_onboarded`.
 > - **Row 42, `20261006010000_class_join_code` (#356, PR #375).** `classes.join_code` and `join_class_by_code`.
 >
+> After the sprint: rows 43 and 44 (`20261009000000_student_multi_workspace`, `20261009010000_workspace_invites`) were applied on 2026-10-09. **Row 45, `20261010000000_workspace_follow_ups`, is not applied yet.**
+>
 > Both were first pushed from a checkout that was behind `main`, which applies nothing and says "up to date". Pull `main` in the folder you push from, and read the push output: it must name the migrations.
 
 ## Demo script (6 steps)
@@ -91,10 +93,14 @@ Closed after the sprint, on 2026-10-08 and 09:
 - **Resending the confirmation email is worded for the account's role** (#385).
 - **A signed-in person who opens `/sign-in` goes straight to their own home** (#387).
 - **Typed class codes are also limited per address** (#390).
+- **A student reads no workspace row** (migration `20261010000000`). The policy keyed on the first workspace a student joined, which never changes; every column of `orgs` was granted. No student page read it, so the policy is now the authors' alone.
+- **An address is sent at most three invitations in 24 hours, from every workspace together** (migration `20261010000000`, ADR 0010).
+- **The workspace name sits beside the class name on a student's open assignments and history**, for a student whose classes span more than one workspace. No database change.
 
 Still open:
 
 - **Nobody can move between workspaces, and a colleague cannot be removed in the app.** An account that already teaches cannot accept an invitation. The shared workspace is still the owner's steps (docs/05 §7.6).
 - **Abandoned workspaces are never removed.** A sweep must first deal with students whose first workspace it would delete (ADR 0009).
-- **The workspace name shows only in a student's class list.** Assignment, history and practice rows show the class name alone.
-- **A student can still read the row of the first workspace they joined** after leaving every class in it (from the #392 security review; which columns are granted was not checked).
+- **Migration `20261010000000_workspace_follow_ups` is not on hosted yet** (docs/05 §7.2 row 45). The app works without it; until it is pushed a student can still read the row of the first workspace they joined, and nothing caps invitations per address except a resend's own check.
+- **Practice rows name no class or workspace.** `my_practice_banks()` returns the bank and no class, so two banks with one name from two workspaces look alike; telling them apart needs a database change. The assignment and results pages show no class name either.
+- **Two workspaces with the same name look like one to a student.** `my_classes()` gives the workspace's name and no id.

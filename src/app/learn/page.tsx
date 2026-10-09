@@ -11,6 +11,7 @@ import { PracticeBankList } from "@/components/practice/PracticeBankList";
 import { historyStore } from "@/lib/assignments/attemptStore";
 import { loadStudentRecord } from "@/lib/assignments/history";
 import { isEmailUnconfirmed } from "@/lib/auth/emailConfirmation";
+import { studentClassInfo } from "@/lib/classes/studentClasses";
 import { requireStudent } from "@/lib/classes/viewer";
 import {
   readStudentWelcomeState,
@@ -50,10 +51,9 @@ export default async function StudentHomePage() {
     // #365: three columns of the student's own profile, for a welcome shown once.
     readStudentWelcomeState(supabase, userId),
   ]);
-  // #242: due times are shown in each class's zone, not the device's.
-  const classInfo = new Map(
-    (classes ?? []).map((entry) => [entry.id, { name: entry.name, timeZone: entry.timeZone }]),
-  );
+  // #242: due times are shown in each class's zone, not the device's. A student whose classes
+  // span more than one workspace also gets the workspace beside each class name.
+  const classInfo = studentClassInfo(classes);
   // #208: how this student's attempts stand at each; a failed read just leaves the counts off.
   const progress =
     (await listMyAttemptProgress(

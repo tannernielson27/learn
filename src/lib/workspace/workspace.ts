@@ -15,6 +15,9 @@ export const WORKSPACE_PENDING_CAP = 10;
 /** Invitations one person makes in 24 hours. Revoked ones count. */
 export const WORKSPACE_DAILY_INVITES = 5;
 
+/** Invitations one address receives in 24 hours, from every workspace. Revoked ones count. */
+export const WORKSPACE_RECIPIENT_DAILY_INVITES = 3;
+
 /** How long an invitation can be accepted. */
 export const WORKSPACE_INVITE_DAYS = 7;
 

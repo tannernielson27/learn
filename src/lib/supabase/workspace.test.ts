@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   countInvitesSince,
+  countInvitesToSince,
   createOrgInvite,
   findInvite,
   INVITE_REFUSALS,
@@ -178,6 +179,31 @@ describe("countInvitesSince", () => {
     ).toBeNull();
     expect(
       await countInvitesSince(fakeQuery({ count: null }).client, INVITER, new Date()),
+    ).toBeNull();
+  });
+});
+
+describe("countInvitesToSince", () => {
+  it("counts the invitations made to one address since a moment, without reading a row", async () => {
+    const fake = fakeQuery({ count: 2, error: null });
+    const since = new Date("2026-10-08T12:00:00Z");
+    expect(await countInvitesToSince(fake.client, "  Kim@School.edu ", since)).toBe(2);
+    expect(fake.from).toHaveBeenCalledWith("org_invites");
+    expect(fake.calls).toContainEqual(["select", ["id", { count: "exact", head: true }]]);
+    expect(fake.calls).toContainEqual(["eq", ["email", ADDRESS]]);
+    expect(fake.calls).toContainEqual(["gt", ["created_at", "2026-10-08T12:00:00.000Z"]]);
+  });
+
+  it("is null when the count could not be read", async () => {
+    expect(
+      await countInvitesToSince(
+        fakeQuery({ count: null, error: LEAKY }).client,
+        ADDRESS,
+        new Date(),
+      ),
+    ).toBeNull();
+    expect(
+      await countInvitesToSince(fakeQuery({ count: null }).client, ADDRESS, new Date()),
     ).toBeNull();
   });
 });
