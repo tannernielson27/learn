@@ -38,6 +38,7 @@ describe("InviteAnswerView", () => {
     "student",
     "already_teaches",
     "already_member",
+    "admin_account",
     "teaches_shared",
     "founder_with_members",
     "students_depend",
@@ -186,7 +187,12 @@ describe("AcceptInviteForm", () => {
   });
 });
 
-const PREVIEW = { leavingWorkspace: "Grace’s workspace", bankCount: 2, classCount: 0 };
+const PREVIEW = {
+  leavingWorkspace: "Grace’s workspace",
+  leavingWorkspaceId: "00000000-0000-4000-8000-0000000000d4",
+  bankCount: 2,
+  classCount: 0,
+};
 const MOVE_BOX =
   "I understand that I will leave Grace’s workspace and lose access to everything in it.";
 
@@ -230,6 +236,8 @@ describe("MoveWorkspaceForm", () => {
     expect(action).toHaveBeenCalledOnce();
     const form = action.mock.calls[0]![1];
     expect(form.get("confirmMove")).toBe("on");
+    // And says which workspace the box was about, from the preview, not from anything typed.
+    expect(form.get("leaving")).toBe("00000000-0000-4000-8000-0000000000d4");
   });
 
   it("shows the server's sentence beside the box, and keeps the form", async () => {

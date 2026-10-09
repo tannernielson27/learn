@@ -309,7 +309,7 @@ describe("removeOrgMember", () => {
     expect(fake.rpc).toHaveBeenCalledWith("remove_org_member", { p_member: INVITER });
   });
 
-  it.each(["shared_workspace", "not_founder", "is_founder", "not_found"] as const)(
+  it.each(["shared_workspace", "not_founder", "is_founder", "not_found", "is_admin"] as const)(
     "hands %s back as the database said it",
     async (answer) => {
       expect(await removeOrgMember(fakeRpc({ data: answer }).client, INVITER)).toBe(answer);

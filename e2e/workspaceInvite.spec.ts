@@ -623,6 +623,7 @@ test("the founder removes a colleague, who starts again in a workspace of their 
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText("loses access to this workspace at once");
   await expect(dialog).toContainText("a new, empty workspace of their own");
+  await expect(dialog).toContainText("Any teacher still in this workspace can invite them back.");
   await expectNoAxeViolations(page);
   await shoot(page, testInfo, "8-remove-dialog");
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -643,9 +644,20 @@ test("the founder removes a colleague, who starts again in a workspace of their 
   await expect(page.getByText("1 of 10 members", { exact: true })).toBeVisible();
   await shoot(page, testInfo, "9-removed");
 
-  // 6. The colleague's browser was never signed out, and is no longer in that workspace: the next
-  //    page it asks for is its own new one, where it is the founder and the only member.
+  // 6. The colleague is no longer in that workspace. Removing them ended their sign-in sessions,
+  //    so a browser whose token the auth server is asked about is sent to sign in again, with
+  //    the password it always had; one whose token is checked without asking keeps working until
+  //    the token runs out. Either way the next page is their own new workspace, where they are
+  //    the founder and the only member.
   await colleague.goto("/author/workspace");
+  if (new URL(colleague.url()).pathname === "/sign-in") {
+    await colleague
+      .getByRole("textbox", { name: "Email address", exact: true })
+      .fill(colleagueEmail);
+    await colleague.getByLabel("Password", { exact: true }).fill(PASSWORD);
+    await colleague.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(colleague).toHaveURL(/\/author\/workspace$/);
+  }
   await expect(
     colleague.getByRole("heading", {
       level: 1,

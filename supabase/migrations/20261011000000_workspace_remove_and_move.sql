@@ -21,6 +21,7 @@
 --      caller says it has confirmed.
 --   5. `public.org_invite_move_preview(p_user, token)`: what that move would be, for the page that
 --      asks the person to confirm it.
+--   6. `private.admit_to_class`: a class of a workspace marked emptied admits nobody.
 --
 -- ---------------------------------------------------------------------------
 -- The contract, for the pages
@@ -31,18 +32,26 @@
 --     'removed'           the member is out. In the same transaction they became the founder of
 --                         a new, empty workspace of their own, exactly as a sign-up makes one,
 --                         named from their display name. Everything they authored stays where it
---                         was. Every live session they were hosting in the workspace is ended, and
---                         every pending invitation they had sent from it is revoked.
+--                         was. Every live session they were hosting in the workspace is ended,
+--                         every pending invitation they had sent from it is revoked, and so is
+--                         every pending invitation into it addressed to their own email. Their
+--                         sign-in sessions are ended (see "Sessions" below).
 --     'shared_workspace'  the caller's workspace is not self-registered.
 --     'not_founder'       the caller did not found the workspace they are in.
 --     'is_founder'        `p_member` is the caller: the founder cannot be removed, by anyone.
 --     'not_found'         no such teacher in the caller's workspace (never "not yours").
+--     'is_admin'          the member is an admin. Nothing in the app makes one in a
+--                         self-registered workspace; one put there by hand is not demoted here.
 --   They are checked in that order. Raises 42501 for a caller who is not an author.
+--   Any teacher still in the workspace may invite the removed colleague again; that is ADR 0010's
+--   rule and is unchanged.
 --
--- public.accept_org_invite(p_user uuid, token text, p_confirm_move boolean default false)
---                                                                            SERVICE ROLE ONLY
+-- public.accept_org_invite(p_user uuid, token text, p_confirm_move boolean default false,
+--                          p_leaving uuid default null)                      SERVICE ROLE ONLY
 --   returns text. Replaces accept_org_invite(uuid, text), which is dropped: a call that names two
---   arguments reaches this one with `p_confirm_move` false.
+--   arguments reaches this one with `p_confirm_move` false. `p_leaving` is the id of the
+--   workspace the person was shown they would leave (org_invite_move_preview's
+--   `leaving_workspace_id`): a confirmation counts only for that workspace.
 --     'accepted'                the account is now an instructor of the inviting workspace.
 --     'invalid'                 no such token.
 --     'already_accepted'        the invitation was used, by this account or any other.
@@ -51,6 +60,9 @@
 --     'wrong_address'           the account's address is not the invited one.
 --     'student'                 the account is a student, in any workspace.
 --     'already_member'          the account already teaches in the inviting workspace. NEW.
+--     'admin_account'           the account is an admin of the workspace it is in. Nothing in
+--                               the app makes one in a self-registered workspace; one put there
+--                               by hand is not moved, and so not demoted. NEW.
 --     'teaches_shared'          the account teaches in a workspace that is not self-registered
 --                               (the shared LeaRN workspace). It is never moved. NEW.
 --     'founder_with_members'    the account founded the workspace it is in, and other teachers
@@ -62,7 +74,8 @@
 --     'shared_workspace'        the inviting workspace stopped being self-registered.
 --     'members_full'            the inviting workspace reached 10 members.
 --     'move_needs_confirmation' the account teaches elsewhere, every check above passed, and
---                               `p_confirm_move` is not true. Nothing was written. NEW.
+--                               `p_confirm_move` is not true, or `p_leaving` is not the workspace
+--                               the account teaches in at this moment. Nothing was written. NEW.
 --   They are checked in that order. 'already_teaches' is no longer answered. Nothing is written
 --   on any answer but 'accepted'. Raises P0002 when no account has that id.
 --
@@ -74,17 +87,17 @@
 --   with no teacher in it, and `emptied_at` is set.
 --
 -- public.org_invite_move_preview(p_user uuid, token text)                    SERVICE ROLE ONLY
---   returns table (status text, leaving_workspace text, bank_count integer, class_count integer):
---   one row. `p_user` is the signed-in account the server has just verified. It reads and locks
+--   returns table (status text, leaving_workspace text, leaving_workspace_id uuid,
+--                  bank_count integer, class_count integer): one row. `p_user` is the signed-in account the server has just verified. It reads and locks
 --   nothing, and counts no misses: resolve the token first.
 --     'invalid'                 no such token, or no such account.
 --     'wrong_address'           the account's address is not the invited one.
 --     'not_teaching'            the account has no role, or is a student: there is no move.
---     'already_member', 'teaches_shared', 'founder_with_members', 'students_depend'
---                               as accept_org_invite would answer.
+--     'already_member', 'admin_account', 'teaches_shared', 'founder_with_members',
+--     'students_depend'         as accept_org_invite would answer.
 --     'move_needs_confirmation' accepting would move the account. Only on this answer are the
---                               other three columns set: the name of the workspace it would leave,
---                               and how many item banks and classes that workspace holds.
+--                               other four columns set: the name and id of the workspace it would
+--                               leave, and how many item banks and classes that workspace holds.
 --   It says nothing about the invitation's own state or the inviting workspace's caps; the page
 --   has resolved the token already and accept_org_invite has the last word.
 --
@@ -94,8 +107,38 @@
 --
 -- `private.current_org_id()` and `private.is_author()` read `public.profiles` for `auth.uid()`
 -- each time a policy runs, and the app's own check (`authorForRoute`) reads the same row on every
--- request. No token carries an org or a role. So a removed or moved teacher's other sessions stop
--- reaching the workspace they left with the UPDATE below, and nobody has to be signed out.
+-- request. No token carries an org or a role. So every request, table read and function call a
+-- removed or moved teacher makes after the UPDATE below is answered for the workspace they are
+-- in now, on every session they have.
+--
+-- ---------------------------------------------------------------------------
+-- Sessions: what does outlive the UPDATE, and for how long
+-- ---------------------------------------------------------------------------
+--
+-- One thing is not asked on every request. A Realtime socket that has already joined a private
+-- `live:<session>` channel was authorised when it joined ("an author watches their org's session
+-- channels", 20260921210000) and is not asked again until its access token is replaced. A
+-- teacher who has left could therefore keep receiving presence and broadcast for a colleague's
+-- live session on a socket they opened beforehand. Their own sessions are ended above, so this
+-- is about sessions other teachers are hosting. What flows there is the room's public state and
+-- who is present, never an answer key.
+--
+-- What is done about it:
+--   * Removal: `remove_org_member` deletes the member's rows in `auth.sessions`, which is what
+--     Supabase Auth's own global sign-out does. Their refresh tokens go with the sessions, so no
+--     browser of theirs can get a new access token; each has to sign in again, with the password
+--     it has (nothing about the password changes). If this role may not delete from
+--     `auth.sessions`, the removal still happens and only this step is skipped.
+--   * A move: the database ends nothing, because the session that is accepting must go on
+--     working. The app signs out every OTHER session of the account, with the session's own
+--     `signOut({ scope: 'others' })`, as #378 does.
+--
+-- What remains: an access token already issued is valid until it expires (`jwt_expiry`, one hour
+-- here and by default on a hosted project). Until then a socket joined before the change may
+-- stay joined; it cannot outlive that token for a removed teacher or for a mover's other
+-- sessions, and for the mover's own accepting session it is re-authorised, and refused, the next
+-- time its token is refreshed. Table reads, pages and actions are not affected by any of this:
+-- they are answered from the profile row at once.
 --
 -- ---------------------------------------------------------------------------
 -- Locks
@@ -108,10 +151,18 @@
 -- that workspace's row lock, so "the last teacher", "other members" and the member cap are each
 -- read against a membership that cannot change underneath them.
 --
+-- `private.admit_to_class` now takes the class's org row `for share`, after the profile row. A
+-- share lock is the weakest row lock that conflicts with `for no key update` (`for key share`
+-- conflicts only with `for update`), and students joining at the same moment do not block each
+-- other with it. So a student joining a class and that class's last teacher moving away are one
+-- after the other: either the student is in and the move is refused (`students_depend`), or the
+-- workspace is marked emptied and the student is refused (`invalid`).
+--
 -- Safe to replay on a fresh project, and safe to run twice: the columns are added only if
 -- missing and the backfill runs only in the statement that adds `founder_id`, the index is made
 -- only if missing, the old accept function is dropped only if it exists, and every function is
--- `create or replace` with its grants restated. Depends on 20261009010000 (`org_invites`).
+-- `create or replace` with its grants restated. Depends on 20261009010000 (`org_invites`) and on
+-- 20261009000000 (`admit_to_class` as it stood, restated here with the two additions).
 
 -- ---------------------------------------------------------------------------
 -- Columns
@@ -189,6 +240,10 @@ revoke all on function private.default_workspace_name(text)
 -- it as an instructor. The org and the role are set in one UPDATE, which is all that
 -- `profiles_org_and_role_together` allows. Callers check who the account is and hold its profile
 -- row locked; this checks nothing.
+--
+-- It sets the role to `instructor`. Its two callers pass it only an account with no role
+-- (register_instructor) or an instructor (remove_org_member, which answers 'is_admin' before it
+-- gets here), so it never demotes anyone.
 create or replace function private.found_workspace(p_user uuid, p_workspace text) returns uuid
 language plpgsql security definer set search_path = ''
 as $$
@@ -286,6 +341,7 @@ declare
   member_org uuid;
   member_role public.org_role;
   member_name text;
+  member_email text;
 begin
   if caller is null or not (select private.is_author()) then
     raise exception 'only an author can remove a colleague' using errcode = '42501';
@@ -334,9 +390,31 @@ begin
      or member_role not in ('instructor', 'admin') then
     return 'not_found';
   end if;
+  if member_role = 'admin' then
+    return 'is_admin';
+  end if;
 
   perform private.found_workspace(p_member, private.default_workspace_name(member_name));
   perform private.close_departed_teacher(p_member, caller_org);
+
+  -- An invitation into this workspace still waiting at the removed teacher's own address would
+  -- undo the removal with one press. A colleague may invite them again; that is a new decision.
+  select lower(u.email::text) into member_email from auth.users u where u.id = p_member;
+  update public.org_invites
+     set revoked_at = now()
+   where org_id = caller_org
+     and email = member_email
+     and accepted_at is null
+     and revoked_at is null;
+
+  -- See "Sessions" in the header. Supabase Auth's global sign-out is this delete. A role that may
+  -- not make it leaves the removal standing: the profile row is what decides every request.
+  begin
+    delete from auth.sessions where user_id = p_member;
+  exception when insufficient_privilege then
+    raise warning 'remove_org_member could not end the removed member''s sessions';
+  end;
+
   return 'removed';
 end;
 $$;
@@ -361,6 +439,11 @@ declare
 begin
   if p_from = p_to then
     return 'already_member';
+  end if;
+
+  -- Accepting makes an instructor. An admin is only ever made by hand, and is not demoted here.
+  if exists (select 1 from public.profiles p where p.id = p_user and p.role = 'admin') then
+    return 'admin_account';
   end if;
 
   select o.self_registered, o.founder_id into from_open, from_founder
@@ -403,8 +486,18 @@ revoke all on function private.org_move_refusal(uuid, uuid, uuid)
 -- Moving between workspaces: what the page says before asking
 -- ---------------------------------------------------------------------------
 
+-- Dropped first: a function's result columns cannot be changed in place, and a replay of this
+-- file must work over an earlier draft of it.
+drop function if exists public.org_invite_move_preview(uuid, text);
+
 create or replace function public.org_invite_move_preview(p_user uuid, token text)
-returns table (status text, leaving_workspace text, bank_count integer, class_count integer)
+returns table (
+  status text,
+  leaving_workspace text,
+  leaving_workspace_id uuid,
+  bank_count integer,
+  class_count integer
+)
 language plpgsql stable security definer set search_path = ''
 as $$
 #variable_conflict use_column
@@ -447,13 +540,14 @@ begin
   end if;
 
   if answer <> 'move_needs_confirmation' then
-    return query select answer, null::text, null::integer, null::integer;
+    return query select answer, null::text, null::uuid, null::integer, null::integer;
     return;
   end if;
 
   return query
     select answer,
            o.name,
+           o.id,
            (select count(*)::integer from public.item_banks b where b.org_id = o.id),
            (select count(*)::integer from public.classes c where c.org_id = o.id)
       from public.orgs o
@@ -472,11 +566,13 @@ grant execute on function public.org_invite_move_preview(uuid, text) to service_
 -- One function under one name: two with the same named arguments could not be told apart by a
 -- call that names only `p_user` and `token`.
 drop function if exists public.accept_org_invite(uuid, text);
+drop function if exists public.accept_org_invite(uuid, text, boolean);
 
 create or replace function public.accept_org_invite(
   p_user uuid,
   token text,
-  p_confirm_move boolean default false
+  p_confirm_move boolean default false,
+  p_leaving uuid default null
 ) returns text
 language plpgsql security definer set search_path = ''
 as $$
@@ -567,7 +663,10 @@ begin
   ) >= member_cap then
     return 'members_full';
   end if;
-  if from_org is not null and p_confirm_move is not true then
+  -- The confirmation is for one workspace, the one the page named. An account that has since
+  -- been removed from it, or moved, is in another now and has confirmed nothing about that one.
+  if from_org is not null
+     and (p_confirm_move is not true or p_leaving is distinct from from_org) then
     return 'move_needs_confirmation';
   end if;
 
@@ -596,6 +695,71 @@ begin
 end;
 $$;
 
-revoke all on function public.accept_org_invite(uuid, text, boolean)
+revoke all on function public.accept_org_invite(uuid, text, boolean, uuid)
   from public, anon, authenticated;
-grant execute on function public.accept_org_invite(uuid, text, boolean) to service_role;
+grant execute on function public.accept_org_invite(uuid, text, boolean, uuid) to service_role;
+
+-- ---------------------------------------------------------------------------
+-- Joining a class: not in a workspace nobody teaches in
+-- ---------------------------------------------------------------------------
+
+-- 20261009000000's function with two additions, both marked. Every way into a class goes through
+-- it: the invite link (join_class), the typed code (join_class_by_code) and the invited sign-up
+-- trigger. So a class of a workspace whose last teacher moved away admits nobody by any of them,
+-- and the answer is the one a link that leads nowhere already gets.
+--
+-- 'joined'     the account is (now, or already was) a member.
+-- 'instructor' the account is an instructor or admin; nothing changed. Never demoted.
+-- 'invalid'    no such class, no such profile, a student an author removed from this class, or
+--              a class of a workspace marked emptied; nothing changed.
+create or replace function private.admit_to_class(account uuid, target_class uuid) returns text
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  class_org uuid;
+  org_emptied timestamptz;
+  account_role public.org_role;
+begin
+  select c.org_id into class_org from public.classes c where c.id = target_class;
+  if class_org is null then
+    return 'invalid';
+  end if;
+
+  select p.role into account_role
+    from public.profiles p where p.id = account
+    for update;
+  if not found then
+    return 'invalid';
+  end if;
+
+  if account_role in ('instructor', 'admin') then
+    return 'instructor';
+  end if;
+
+  -- Added: profile, then org, the order accept_org_invite takes them in. Held to the end of the
+  -- transaction, so the last teacher's move either sees this student or is seen by them.
+  select o.emptied_at into org_emptied
+    from public.orgs o where o.id = class_org
+    for share;
+  if not found or org_emptied is not null then
+    return 'invalid';
+  end if;
+
+  -- Taken off this class by an author: the link they still hold no longer lets them in.
+  if exists (select 1 from private.class_removals r
+             where r.class_id = target_class and r.profile_id = account) then
+    return 'invalid';
+  end if;
+  if account_role is null then
+    update public.profiles set org_id = class_org, role = 'student' where id = account;
+  end if;
+
+  insert into public.class_members (class_id, profile_id)
+  values (target_class, account)
+  on conflict do nothing;
+  return 'joined';
+end;
+$$;
+
+revoke all on function private.admit_to_class(uuid, uuid)
+  from public, anon, authenticated, service_role;

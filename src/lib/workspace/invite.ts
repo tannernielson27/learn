@@ -122,13 +122,14 @@ export type InviteState = (typeof INVITE_STATES)[number];
  *
  * `already_teaches` is what the function answered every teacher before migration 20261011000000,
  * and what a database without that migration still answers. With it, a teacher is told which of
- * the four after it applies, or is asked to confirm a move.
+ * the five after it applies, or is asked to confirm a move.
  */
 export const INVITE_REFUSALS = [
   "wrong_address",
   "student",
   "already_teaches",
   "already_member",
+  "admin_account",
   "teaches_shared",
   "founder_with_members",
   "students_depend",
@@ -159,6 +160,8 @@ export const INVITE_REFUSED: Readonly<Record<InviteRefusal, string>> = {
   already_teaches:
     "This account already teaches in a workspace. Moving between workspaces is not available yet.",
   already_member: "This account already teaches in this workspace. There is nothing to accept.",
+  admin_account:
+    "This account is an admin of the workspace it teaches in, and an admin cannot move to another one. Ask to be invited at another email address.",
   teaches_shared:
     "This account teaches in the LeaRN workspace, and an account there cannot move to another one. Ask to be invited at another email address.",
   founder_with_members:

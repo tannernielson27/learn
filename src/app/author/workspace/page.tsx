@@ -102,7 +102,8 @@ export default async function WorkspacePage() {
               edit every bank, class and assignment, see every student&apos;s name, email address
               and results, run live sessions, and send or revoke invitations themselves. Only the
               person who started the workspace can remove a colleague, with Remove beside their name
-              above. A workspace holds up to {WORKSPACE_MEMBER_CAP} teachers, and you can send{" "}
+              above, and any teacher in the workspace can invite a removed colleague back. A
+              workspace holds up to {WORKSPACE_MEMBER_CAP} teachers, and you can send{" "}
               {WORKSPACE_DAILY_INVITES} invitations a day. An account that is already a student
               cannot accept. An account that already teaches in another workspace can accept only by
               leaving that workspace, and is asked to confirm it first.

@@ -61,7 +61,16 @@ let reply: Reply;
 let preview: Reply;
 const NO_SUCH_FUNCTION: Reply = { data: null, error: { code: "PGRST202" } };
 const previewOf = (status: string, over: Record<string, unknown> = {}): Reply => ({
-  data: [{ status, leaving_workspace: null, bank_count: null, class_count: null, ...over }],
+  data: [
+    {
+      status,
+      leaving_workspace: null,
+      leaving_workspace_id: null,
+      bank_count: null,
+      class_count: null,
+      ...over,
+    },
+  ],
   error: null,
 });
 
@@ -276,10 +285,15 @@ describe("/w/[token]: someone signed in", () => {
     signedIn({ role: "instructor" });
     preview = previewOf("move_needs_confirmation", {
       leaving_workspace: "Grace’s workspace",
+      leaving_workspace_id: "00000000-0000-4000-8000-0000000000d4",
       bank_count: 3,
       class_count: 1,
     });
-    await renderPage();
+    const { container } = await renderPage();
+    // The form carries which workspace the sentence is about.
+    expect(container.querySelector('input[type="hidden"][name="leaving"]')).toHaveValue(
+      "00000000-0000-4000-8000-0000000000d4",
+    );
     expect(
       screen.getByRole("heading", {
         level: 1,
@@ -303,6 +317,7 @@ describe("/w/[token]: someone signed in", () => {
     signedIn({ role: "instructor" });
     preview = previewOf("move_needs_confirmation", {
       leaving_workspace: "<img src=x onerror=alert(1)><b>Mine</b>",
+      leaving_workspace_id: "00000000-0000-4000-8000-0000000000d4",
       bank_count: 0,
       class_count: 0,
     });
@@ -311,17 +326,20 @@ describe("/w/[token]: someone signed in", () => {
     expect(container.querySelector("img, b")).toBeNull();
   });
 
-  it.each(["already_member", "teaches_shared", "founder_with_members", "students_depend"] as const)(
-    "as a teacher who may not move (%s): told why, with no button",
-    async (reason) => {
-      signedIn({ role: "admin" });
-      preview = previewOf(reason);
-      await renderPage();
-      expect(screen.getByText(INVITE_REFUSED[reason])).toBeVisible();
-      expect(screen.queryByRole("button")).toBeNull();
-      expect(screen.queryByRole("checkbox")).toBeNull();
-    },
-  );
+  it.each([
+    "already_member",
+    "admin_account",
+    "teaches_shared",
+    "founder_with_members",
+    "students_depend",
+  ] as const)("as a teacher who may not move (%s): told why, with no button", async (reason) => {
+    signedIn({ role: "admin" });
+    preview = previewOf(reason);
+    await renderPage();
+    expect(screen.getByText(INVITE_REFUSED[reason])).toBeVisible();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
 
   it.each([
     ["the database does not have the function yet", NO_SUCH_FUNCTION],

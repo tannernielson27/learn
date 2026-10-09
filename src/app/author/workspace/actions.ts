@@ -30,7 +30,7 @@ import {
 import { parseInviteAddress } from "@/lib/workspace/inviteAddress";
 import { sendWorkspaceInviteEmail } from "@/lib/workspace/inviteEmail";
 import { takeWorkspaceInviteEmail } from "@/lib/workspace/inviteEmailLimit";
-import { REMOVE_REFUSED, removeColleague } from "@/lib/workspace/membership";
+import { logMembershipChange, REMOVE_REFUSED, removeColleague } from "@/lib/workspace/membership";
 import { WORKSPACE_PATH } from "@/lib/workspace/workspace";
 
 /**
@@ -159,11 +159,14 @@ export async function resendInvite(inviteId: string): Promise<ConfirmOutcome> {
  * function answers `not_found` and says no more.
  */
 export async function removeMember(memberId: string): Promise<ConfirmOutcome> {
-  const { supabase } = await verifiedAuthor();
+  const { supabase, orgId, userId } = await verifiedAuthor();
   if (!isUuid(memberId)) return { ok: false, message: REMOVE_REFUSED.not_found };
   const outcome = await removeColleague(memberId, {
     remove: (id) => removeOrgMember(supabase, id),
   });
+  if (outcome.ok) {
+    logMembershipChange("member_removed", { actor: userId, target: memberId, org: orgId });
+  }
   revalidatePath(WORKSPACE_PATH);
   return outcome;
 }

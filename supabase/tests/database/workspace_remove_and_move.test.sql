@@ -11,17 +11,22 @@
 --      teacher, and the caller passes the confirmation. Without it nothing is written.
 --      org_invite_move_preview says the same things and counts what would be lost.
 --   3. A move deletes nothing. A workspace that lost its last teacher gets `emptied_at` and has
---      its pending invitations revoked; no other path sets `emptied_at`.
+--      its pending invitations revoked; no other path sets `emptied_at`. A class of such a
+--      workspace admits nobody, by the link or by private.admit_to_class itself.
+--   4. From the security review of #399: a confirmation counts only for the workspace it names;
+--      an admin is neither removed nor moved; a removal also revokes an invitation waiting at
+--      the removed teacher's own address, and ends their sign-in sessions and nobody else's.
 --
 -- Not held here: the backfill of `founder_id` for workspaces that existed before the migration
 -- (it runs once, in the statement that adds the column, before any test fixture exists), and two
--- of these calls racing (one transaction cannot show two sessions; see "Locks" in the migration).
+-- of these calls racing, a student joining against the last teacher leaving included (one
+-- transaction cannot show two sessions; see "Locks" in the migration).
 --
 -- now() does not move inside a transaction, so "two days ago" is made by moving created_at.
 -- Fixture ids of its own (…4200…).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(100);
+select plan(110);
 
 -- ---------------------------------------------------------------------------
 -- Cast, as the superuser
@@ -113,6 +118,13 @@ insert into public.item_banks (id, org_id, name)
                  ('00000000-0000-0000-0000-0000004200db'::uuid, 'D bank two')) as v (id, name);
 insert into public.classes (id, org_id, name)
   select '00000000-0000-0000-0000-0000004200dc', org_d, 'NUR 421' from cast_orgs;
+
+-- The invite token of Dee's class, for the signed-in join. A student cannot read public.classes
+-- of a workspace they are not in.
+create temporary table cast_class_d as
+  select c.invite_token from public.classes c
+   where c.id = '00000000-0000-0000-0000-0000004200dc';
+grant select on cast_class_d to authenticated;
 
 -- Every invitation this test makes through create_org_invite, by a name, with its raw token.
 create temporary table made (
@@ -214,9 +226,9 @@ select is(
   'there is one accept_org_invite: the two-argument function is gone'
 );
 select ok(
-  not has_function_privilege('anon', 'public.accept_org_invite(uuid, text, boolean)', 'execute')
+  not has_function_privilege('anon', 'public.accept_org_invite(uuid, text, boolean, uuid)', 'execute')
   and not has_function_privilege(
-    'authenticated', 'public.accept_org_invite(uuid, text, boolean)', 'execute')
+    'authenticated', 'public.accept_org_invite(uuid, text, boolean, uuid)', 'execute')
   and not has_function_privilege('anon', 'public.org_invite_move_preview(uuid, text)', 'execute')
   and not has_function_privilege(
     'authenticated', 'public.org_invite_move_preview(uuid, text)', 'execute')
@@ -226,7 +238,7 @@ select ok(
   'neither anon nor authenticated holds EXECUTE on accept, the move preview or register'
 );
 select ok(
-  has_function_privilege('service_role', 'public.accept_org_invite(uuid, text, boolean)', 'execute')
+  has_function_privilege('service_role', 'public.accept_org_invite(uuid, text, boolean, uuid)', 'execute')
   and has_function_privilege('service_role', 'public.org_invite_move_preview(uuid, text)', 'execute')
   and has_function_privilege('service_role', 'public.register_instructor(uuid, text)', 'execute'),
   'service_role holds all three'
@@ -244,14 +256,16 @@ select ok(
   and not has_function_privilege(
     'authenticated', 'private.org_move_refusal(uuid, uuid, uuid)', 'execute')
   and not has_function_privilege(
-    'authenticated', 'private.default_workspace_name(text)', 'execute'),
-  'the private helpers are nobody''s to call'
+    'authenticated', 'private.default_workspace_name(text)', 'execute')
+  and not has_function_privilege('authenticated', 'private.admit_to_class(uuid, uuid)', 'execute')
+  and not has_function_privilege('service_role', 'private.admit_to_class(uuid, uuid)', 'execute'),
+  'the private helpers are nobody''s to call, admit_to_class as before'
 );
 select is(
   (select count(*)::int from pg_proc p
     where p.oid in (
             'public.remove_org_member(uuid)'::regprocedure,
-            'public.accept_org_invite(uuid, text, boolean)'::regprocedure,
+            'public.accept_org_invite(uuid, text, boolean, uuid)'::regprocedure,
             'public.org_invite_move_preview(uuid, text)'::regprocedure,
             'public.register_instructor(uuid, text)'::regprocedure,
             'private.found_workspace(uuid, text)'::regprocedure,
@@ -366,6 +380,24 @@ select pg_temp.act_as_nobody();
 update public.orgs set founder_id = '00000000-0000-0000-0000-0000004200a1'
  where id = (select org_a from cast_orgs);
 
+-- Nothing in the app makes an admin in a self-registered workspace. One made by hand stays one.
+update public.profiles set role = 'admin' where id = '00000000-0000-0000-0000-000000420002';
+set local role authenticated;
+select pg_temp.act_as('00000000-0000-0000-0000-0000004200a1');
+select is(
+  public.remove_org_member('00000000-0000-0000-0000-000000420002'),
+  'is_admin',
+  'an admin put in the workspace by hand is not removed, and so not demoted'
+);
+reset role;
+select pg_temp.act_as_nobody();
+select is(
+  pg_temp.account('00000000-0000-0000-0000-000000420002'),
+  (select row(org_a, 'admin'::public.org_role)::text from cast_orgs),
+  'they are an admin of the workspace still'
+);
+update public.profiles set role = 'instructor' where id = '00000000-0000-0000-0000-000000420002';
+
 select is(
   pg_temp.snapshot(),
   (select snapshot from before_refused_removals),
@@ -404,6 +436,21 @@ select is(
   'lobby',
   'the colleague is hosting a session that has not ended'
 );
+
+-- Two invitations are waiting at Mia's own address: one into this workspace (put there by hand;
+-- create_org_invite refuses a member's address) and one into Ben's.
+insert into public.org_invites (id, org_id, email, token_hash, invited_by)
+  select '00000000-0000-0000-0000-0000004200a7', org_a, 'mia@rm.test', repeat('a', 64),
+         '00000000-0000-0000-0000-0000004200a1'
+    from cast_orgs;
+insert into public.org_invites (id, org_id, email, token_hash, invited_by)
+  select '00000000-0000-0000-0000-0000004200b7', org_b, 'mia@rm.test', repeat('b', 64), null
+    from cast_orgs;
+-- Mia is signed in on two browsers, and Ada on one.
+insert into auth.sessions (id, user_id) values
+  ('00000000-0000-0000-0000-0000004205a1', '00000000-0000-0000-0000-000000420001'),
+  ('00000000-0000-0000-0000-0000004205a2', '00000000-0000-0000-0000-000000420001'),
+  ('00000000-0000-0000-0000-0000004205a3', '00000000-0000-0000-0000-0000004200a1');
 
 set local role authenticated;
 select pg_temp.act_as('00000000-0000-0000-0000-0000004200a1');
@@ -464,6 +511,22 @@ select is(
   'so nobody joins on the removed teacher''s invitation'
 );
 select is(
+  (select array_agg(i.revoked_at is not null order by i.id) from public.org_invites i
+    where i.id in ('00000000-0000-0000-0000-0000004200a7',
+                   '00000000-0000-0000-0000-0000004200b7')),
+  array[true, false],
+  'an invitation into this workspace waiting at their own address is revoked; another workspace''s is not'
+);
+select is(
+  (select array[
+     (select count(*)::int from auth.sessions
+       where user_id = '00000000-0000-0000-0000-000000420001'),
+     (select count(*)::int from auth.sessions
+       where user_id = '00000000-0000-0000-0000-0000004200a1')]),
+  array[0, 1],
+  'every sign-in session of theirs is ended, and nobody else''s'
+);
+select is(
   (select row(o.founder_id, o.emptied_at)::text from public.orgs o
     where o.id = (select org_a from cast_orgs)),
   row('00000000-0000-0000-0000-0000004200a1'::uuid, null::timestamptz)::text,
@@ -517,6 +580,8 @@ select pg_temp.act_as_nobody();
 -- Moving: what the preview says
 -- ---------------------------------------------------------------------------
 
+delete from public.org_invites where id = '00000000-0000-0000-0000-0000004200b7';
+
 -- Ben invites five teachers. An inviter makes five invitations a day, so these are then aged.
 insert into made
   select v.name, c.*
@@ -548,19 +613,21 @@ set local role service_role;
 select is(
   (select row(p.*)::text from public.org_invite_move_preview(
      '00000000-0000-0000-0000-0000004200d1', (select token from made where name = 'dee')) as p),
-  row('move_needs_confirmation'::text, 'Dee workspace 420'::text, 2, 1)::text,
-  'a teacher alone in an empty workspace may move: its name, its banks and its classes'
+  (select row('move_needs_confirmation'::text, 'Dee workspace 420'::text, org_d, 2, 1)::text
+     from cast_orgs),
+  'a teacher alone in an empty workspace may move: its name, its id, its banks and its classes'
 );
 select is(
   (select row(p.*)::text from public.org_invite_move_preview(
      '00000000-0000-0000-0000-000000420002', (select token from made where name = 'max-b')) as p),
-  row('move_needs_confirmation'::text, 'Ada workspace 420'::text, 2, 0)::text,
+  (select row('move_needs_confirmation'::text, 'Ada workspace 420'::text, org_a, 2, 0)::text
+     from cast_orgs),
   'a colleague who did not found the workspace may move while others stay'
 );
 select is(
   (select row(p.*)::text from public.org_invite_move_preview(
      '00000000-0000-0000-0000-0000004200c1', (select token from made where name = 'cy')) as p),
-  row('students_depend'::text, null::text, null::integer, null::integer)::text,
+  row('students_depend'::text, null::text, null::uuid, null::integer, null::integer)::text,
   'the only teacher of a workspace with a student in a class may not, and nothing is counted'
 );
 select is(
@@ -594,7 +661,7 @@ select is(
 select is(
   (select row(p.*)::text from public.org_invite_move_preview(
      '00000000-0000-0000-0000-0000004200d1', (select token from made where name = 'cy')) as p),
-  row('wrong_address'::text, null::text, null::integer, null::integer)::text,
+  row('wrong_address'::text, null::text, null::uuid, null::integer, null::integer)::text,
   'somebody else''s invitation says nothing about the caller''s workspace'
 );
 select is(
@@ -627,26 +694,40 @@ select is(
   'a teacher who may move is not moved by a call that does not say it is confirmed'
 );
 select is(
+  (select array[
+     public.accept_org_invite('00000000-0000-0000-0000-0000004200d1',
+       (select token from made where name = 'dee'), true),
+     public.accept_org_invite('00000000-0000-0000-0000-0000004200d1',
+       (select token from made where name = 'dee'), true, (select org_a from cast_orgs)),
+     public.accept_org_invite('00000000-0000-0000-0000-0000004200d1',
+       (select token from made where name = 'dee'), true, (select org_b from cast_orgs)),
+     public.accept_org_invite('00000000-0000-0000-0000-0000004200d1',
+       (select token from made where name = 'dee'), false, (select org_d from cast_orgs))]),
+  array['move_needs_confirmation', 'move_needs_confirmation', 'move_needs_confirmation',
+        'move_needs_confirmation'],
+  'a confirmation counts only with the id of the workspace the account teaches in now'
+);
+select is(
   public.accept_org_invite('00000000-0000-0000-0000-0000004200c1',
-    (select token from made where name = 'cy'), true),
+    (select token from made where name = 'cy'), true, (select org_c from cast_orgs)),
   'students_depend',
   'confirming does not move the only teacher of a class with a student in it'
 );
 select is(
   public.accept_org_invite('00000000-0000-0000-0000-0000004200a1',
-    (select token from made where name = 'ada'), true),
+    (select token from made where name = 'ada'), true, (select org_a from cast_orgs)),
   'founder_with_members',
   'nor a founder away from the colleagues they invited'
 );
 select is(
   public.accept_org_invite('00000000-0000-0000-0000-0000004200f1',
-    (select token from made where name = 'eve'), true),
+    (select token from made where name = 'eve'), true, '00000000-0000-0000-0000-0000004200f0'),
   'teaches_shared',
   'nor a teacher out of the shared workspace'
 );
 select is(
   public.accept_org_invite('00000000-0000-0000-0000-0000004200e1',
-    (select token from made where name = 'pat'), true),
+    (select token from made where name = 'pat'), true, (select org_b from cast_orgs)),
   'already_member',
   'nor a teacher into the workspace they are in'
 );
@@ -658,11 +739,25 @@ select is(
 );
 select is(
   public.accept_org_invite('00000000-0000-0000-0000-0000004200d1',
-    (select token from made where name = 'cy'), true),
+    (select token from made where name = 'cy'), true, (select org_c from cast_orgs)),
   'wrong_address',
   'the link still works only for the invited address'
 );
 reset role;
+
+-- An admin, made by hand, is not moved: accepting would make them an instructor.
+update public.profiles set role = 'admin' where id = '00000000-0000-0000-0000-000000420002';
+select is(
+  (select array[
+     (select p.status from public.org_invite_move_preview(
+        '00000000-0000-0000-0000-000000420002',
+        (select token from made where name = 'max-b')) as p),
+     public.accept_org_invite('00000000-0000-0000-0000-000000420002',
+       (select token from made where name = 'max-b'), true, (select org_a from cast_orgs))]),
+  array['admin_account', 'admin_account'],
+  'an admin is told so by the preview and is not moved, confirmed or not'
+);
+update public.profiles set role = 'instructor' where id = '00000000-0000-0000-0000-000000420002';
 
 -- The other two things that hold the last teacher: an assignment that has not closed, and a
 -- session that has not ended. Each is put in place alone.
@@ -680,7 +775,7 @@ insert into public.assignments (id, org_id, class_id, bank_id, title, opens_at, 
     from cast_orgs;
 select is(
   public.accept_org_invite('00000000-0000-0000-0000-0000004200c1',
-    (select token from made where name = 'cy'), true),
+    (select token from made where name = 'cy'), true, (select org_c from cast_orgs)),
   'students_depend',
   'an assignment that has not closed holds them, one not yet open included'
 );
@@ -693,7 +788,7 @@ reset role;
 select pg_temp.act_as_nobody();
 select is(
   public.accept_org_invite('00000000-0000-0000-0000-0000004200c1',
-    (select token from made where name = 'cy'), true),
+    (select token from made where name = 'cy'), true, (select org_c from cast_orgs)),
   'students_depend',
   'and so does a live session that has not ended'
 );
@@ -730,7 +825,7 @@ insert into made
 set local role service_role;
 select is(
   public.accept_org_invite('00000000-0000-0000-0000-000000420002',
-    (select token from made where name = 'max-b'), true),
+    (select token from made where name = 'max-b'), true, (select org_a from cast_orgs)),
   'accepted',
   'a colleague who confirms is moved'
 );
@@ -770,7 +865,7 @@ select is(
 );
 select is(
   public.accept_org_invite('00000000-0000-0000-0000-000000420002',
-    (select token from made where name = 'max-b'), true),
+    (select token from made where name = 'max-b'), true, (select org_a from cast_orgs)),
   'already_accepted',
   'accepting twice is answered already_accepted'
 );
@@ -820,7 +915,7 @@ update public.org_invites set invited_by = null
 set local role service_role;
 select is(
   public.accept_org_invite('00000000-0000-0000-0000-0000004200d1',
-    (select token from made where name = 'dee'), true),
+    (select token from made where name = 'dee'), true, (select org_d from cast_orgs)),
   'accepted',
   'the only teacher of an empty workspace, confirming, is moved'
 );
@@ -862,6 +957,40 @@ select is(
   'and nobody teaches there'
 );
 
+-- Its class still has a link and a code. Neither lets anybody in.
+select is(
+  (select array[
+     private.admit_to_class('00000000-0000-0000-0000-000000420005',
+       '00000000-0000-0000-0000-0000004200dc'),
+     private.admit_to_class('00000000-0000-0000-0000-000000420003',
+       '00000000-0000-0000-0000-0000004200dc')]),
+  array['invalid', 'invalid'],
+  'a class of an emptied workspace admits nobody: not an account with no role, not a student'
+);
+set local role authenticated;
+select pg_temp.act_as('00000000-0000-0000-0000-000000420004');
+select is(
+  public.join_class((select c.invite_token from cast_class_d c)),
+  'invalid',
+  'and its invite link answers a signed-in student as a link that leads nowhere does'
+);
+reset role;
+select pg_temp.act_as_nobody();
+select is(
+  (select row(
+     (select count(*) from public.class_members m
+       where m.class_id = '00000000-0000-0000-0000-0000004200dc'),
+     pg_temp.account('00000000-0000-0000-0000-000000420005'))::text),
+  row(0::bigint, row(null::uuid, null::public.org_role)::text)::text,
+  'nobody is in it, and the account with no role still has none'
+);
+select is(
+  private.admit_to_class('00000000-0000-0000-0000-000000420005',
+    '00000000-0000-0000-0000-0000004200cc'),
+  'joined',
+  'a class of a workspace that still has its teacher admits as before'
+);
+
 set local role authenticated;
 select pg_temp.act_as('00000000-0000-0000-0000-0000004200d1');
 select is(
@@ -882,12 +1011,13 @@ set local role service_role;
 select is(
   (select row(p.*)::text from public.org_invite_move_preview(
      '00000000-0000-0000-0000-0000004200a1', (select token from made where name = 'ada')) as p),
-  row('move_needs_confirmation'::text, 'Ada workspace 420'::text, 2, 0)::text,
+  (select row('move_needs_confirmation'::text, 'Ada workspace 420'::text, org_a, 2, 0)::text
+     from cast_orgs),
   'a founder whose colleagues have all gone may move'
 );
 select is(
   public.accept_org_invite('00000000-0000-0000-0000-0000004200a1',
-    (select token from made where name = 'ada'), true),
+    (select token from made where name = 'ada'), true, (select org_a from cast_orgs)),
   'accepted',
   'and, confirming, is moved'
 );

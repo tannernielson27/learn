@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import type { JoinWorkspaceState } from "@/lib/workspace/invite";
 import {
   MOVE_CONFIRM_FIELD,
+  MOVE_LEAVING_FIELD,
   moveConfirmLabel,
   type MovePreview,
   moveWarning,
@@ -30,8 +31,9 @@ const INITIAL: JoinWorkspaceState = { status: "idle" };
  * leave, counts what they lose access to, and has them tick a box that says so.
  *
  * The box is `required`, which is the browser being helpful. What makes it count is the server:
- * the action sends the database whether the box was ticked, and the database answers a move that
- * was not confirmed with `move_needs_confirmation` and writes nothing.
+ * the action sends the database whether the box was ticked and which workspace the page named,
+ * and the database answers a move that was not confirmed for the workspace the account is in with
+ * `move_needs_confirmation` and writes nothing.
  */
 export function MoveWorkspaceForm({ action, heading, email, preview }: MoveWorkspaceFormProps) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
@@ -51,6 +53,8 @@ export function MoveWorkspaceForm({ action, heading, email, preview }: MoveWorks
         <p className="break-words text-ink-2">{moveWarning(preview)}</p>
       </div>
       <form action={formAction} className="flex flex-col gap-4">
+        {/* Which workspace the sentence above is about: the confirmation counts only for it. */}
+        <input type="hidden" name={MOVE_LEAVING_FIELD} value={preview.leavingWorkspaceId} />
         <label className="tap-target flex items-start gap-3 break-words text-ink-1">
           <input
             type="checkbox"

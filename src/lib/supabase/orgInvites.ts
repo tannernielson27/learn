@@ -6,7 +6,7 @@ import {
   INVITE_STATES,
   type InviteState,
 } from "@/lib/workspace/invite";
-import type { MovePreview } from "@/lib/workspace/membership";
+import type { ConfirmedMove, MovePreview } from "@/lib/workspace/membership";
 import type { Database } from "./database.types";
 
 type Client = SupabaseClient<Database>;
@@ -98,27 +98,29 @@ const NO_SUCH_FUNCTION = "PGRST202";
  * server has just verified (`auth.getUser()`) or just made; it is never read from a request.
  * The database counts no misses here, so the caller resolves the token first.
  *
- * `confirmMove` is the person's own statement, posted with the form, that they accept leaving the
- * workspace they teach in. It matters only for an account that teaches: without it the database
- * answers `move_needs_confirmation` and writes nothing.
+ * `move` is the person's own statement, posted with the form, that they accept leaving the
+ * workspace with that id. It matters only for an account that teaches: without it, or when the
+ * id is not the workspace the account teaches in at that moment, the database answers
+ * `move_needs_confirmation` and writes nothing.
  *
- * The argument is sent only when it is true. A database without migration 20261011000000 has the
- * two-argument function, which a call naming two arguments reaches on either side of the
- * migration. If a confirmed call finds no three-argument function, it is made again without the
- * confirmation, and that older function answers a teacher `already_teaches`, as it always did.
+ * The two extra arguments are sent only for a confirmed move. A database without migration
+ * 20261011000000 has the two-argument function, which a call naming two arguments reaches on
+ * either side of the migration. If a confirmed call finds no function taking four, it is made
+ * again without the confirmation, and that older function answers a teacher `already_teaches`,
+ * as it always did.
  */
 export async function acceptOrgInvite(
   service: Client,
   userId: string,
   token: string,
-  confirmMove = false,
+  move: ConfirmedMove | null = null,
 ): Promise<AcceptOrgInviteResult> {
   const args = { p_user: userId, token: clipInviteToken(token) };
   let { data, error } = await service.rpc(
     "accept_org_invite",
-    confirmMove ? { ...args, p_confirm_move: true } : args,
+    move ? { ...args, p_confirm_move: true, p_leaving: move.leaving } : args,
   );
-  if (confirmMove && error?.code === NO_SUCH_FUNCTION) {
+  if (move && error?.code === NO_SUCH_FUNCTION) {
     ({ data, error } = await service.rpc("accept_org_invite", args));
   }
   if (error || typeof data !== "string" || !ACCEPT_RESULTS.has(data)) {
@@ -146,6 +148,7 @@ export type OrgMovePreview =
 const MOVE_REFUSALS = [
   "wrong_address",
   "already_member",
+  "admin_account",
   "teaches_shared",
   "founder_with_members",
   "students_depend",
@@ -183,10 +186,17 @@ export async function previewOrgMove(
   if (
     row?.status === "move_needs_confirmation" &&
     typeof row.leaving_workspace === "string" &&
+    typeof row.leaving_workspace_id === "string" &&
     bankCount !== null &&
     classCount !== null
   ) {
-    return { status: "move", leavingWorkspace: row.leaving_workspace, bankCount, classCount };
+    return {
+      status: "move",
+      leavingWorkspace: row.leaving_workspace,
+      leavingWorkspaceId: row.leaving_workspace_id,
+      bankCount,
+      classCount,
+    };
   }
   if (row?.status !== "invalid") logFailure("reading a move preview", null);
   return { status: "unknown" };

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  logMembershipChange,
   MOVE_CONFIRM_FIELD,
+  MOVE_LEAVING_FIELD,
   moveConfirmed,
   moveConfirmLabel,
   moveLossCounts,
@@ -25,13 +27,17 @@ describe("removeColleague", () => {
     expect(remove).toHaveBeenCalledWith(MEMBER);
   });
 
-  it.each(["shared_workspace", "not_founder", "is_founder", "not_found", "failed"] as const)(
-    "gives %s its own sentence",
-    async (answer) => {
-      const outcome = await removeColleague(MEMBER, { remove: async () => answer });
-      expect(outcome).toEqual({ ok: false, message: REMOVE_REFUSED[answer] });
-    },
-  );
+  it.each([
+    "shared_workspace",
+    "not_founder",
+    "is_founder",
+    "not_found",
+    "is_admin",
+    "failed",
+  ] as const)("gives %s its own sentence", async (answer) => {
+    const outcome = await removeColleague(MEMBER, { remove: async () => answer });
+    expect(outcome).toEqual({ ok: false, message: REMOVE_REFUSED[answer] });
+  });
 
   it("has a sentence for every answer the database gives, each different", () => {
     const refusals = REMOVE_ANSWERS.filter((answer) => answer !== "removed");
@@ -68,11 +74,19 @@ describe("removeWarning", () => {
     expect(warning).toContain("a new, empty workspace of their own");
     expect(warning).toContain("Any live session they are running ends now");
     expect(warning).toContain("revoked");
+    expect(warning).toContain("and so is any still waiting for them");
+    expect(warning).toContain("They are signed out everywhere");
+    expect(warning).toContain("Any teacher still in this workspace can invite them back.");
   });
 });
 
 describe("what a move costs", () => {
-  const preview = { leavingWorkspace: "Grace’s workspace", bankCount: 3, classCount: 1 };
+  const preview = {
+    leavingWorkspace: "Grace’s workspace",
+    leavingWorkspaceId: "00000000-0000-4000-8000-0000000000d4",
+    bankCount: 3,
+    classCount: 1,
+  };
 
   it.each([
     [0, 0, "0 item banks and 0 classes"],
@@ -98,17 +112,56 @@ describe("what a move costs", () => {
 });
 
 describe("moveConfirmed", () => {
-  function posted(value?: string): FormData {
+  const LEAVING = "00000000-0000-4000-8000-0000000000d4";
+  function posted(value?: string, leaving: string | null = LEAVING): FormData {
     const form = new FormData();
     if (value !== undefined) form.set(MOVE_CONFIRM_FIELD, value);
+    if (leaving !== null) form.set(MOVE_LEAVING_FIELD, leaving);
     return form;
   }
 
-  it("is true only for a ticked box", () => {
-    expect(moveConfirmed(posted("on"))).toBe(true);
+  it("is the workspace named, only for a ticked box", () => {
+    expect(moveConfirmed(posted("on"))).toEqual({ leaving: LEAVING });
   });
 
-  it.each([undefined, "", "off", "true", "1", "ON"])("is false for %s", (value) => {
-    expect(moveConfirmed(posted(value))).toBe(false);
+  it.each([undefined, "", "off", "true", "1", "ON"])("is nothing for a box that is %s", (value) => {
+    expect(moveConfirmed(posted(value))).toBeNull();
+  });
+
+  it.each([null, "", "mine", LEAVING + "0", "' or 1=1 --"])(
+    "is nothing for a ticked box with the workspace given as %s",
+    (leaving) => {
+      expect(moveConfirmed(posted("on", leaving))).toBeNull();
+    },
+  );
+
+  it("is nothing when a file is posted in the id's place", () => {
+    const form = posted("on", null);
+    form.set(MOVE_LEAVING_FIELD, new Blob(["x"]));
+    expect(moveConfirmed(form)).toBeNull();
+  });
+});
+
+describe("logMembershipChange", () => {
+  it("writes one line with the three ids and nothing else", () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    logMembershipChange("member_removed", { actor: "a-1", target: "t-2", org: "o-3" });
+    expect(info.mock.calls).toEqual([
+      ["[workspace] member_removed", { actor: "a-1", target: "t-2", org: "o-3" }],
+    ]);
+    info.mockRestore();
+  });
+
+  it("carries nothing it was not given: no name and no address can ride along", () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    logMembershipChange("teacher_moved", {
+      actor: "a-1",
+      target: "a-1",
+      org: "o-3",
+      email: "mary@school.edu",
+      name: "Mary Seacole",
+    } as Parameters<typeof logMembershipChange>[1]);
+    expect(JSON.stringify(info.mock.calls)).not.toMatch(/mary|Seacole/);
+    info.mockRestore();
   });
 });

@@ -3,6 +3,8 @@ import { acceptOrgInvite, previewOrgMove, resolveOrgInvite } from "./orgInvites"
 
 const TOKEN = "AbC_-0123456789abcdefghijklmnopq";
 const USER = "00000000-0000-4000-8000-0000000000a1";
+const LEAVING = "00000000-0000-4000-8000-0000000000d4";
+const MOVE = { leaving: LEAVING };
 const ROW = {
   state: "pending",
   workspace_name: "Ada’s workspace",
@@ -106,6 +108,7 @@ describe("acceptOrgInvite", () => {
     "student",
     "already_teaches",
     "already_member",
+    "admin_account",
     "teaches_shared",
     "founder_with_members",
     "students_depend",
@@ -120,34 +123,40 @@ describe("acceptOrgInvite", () => {
   it("names two arguments unless a move is confirmed, so either function answers", async () => {
     reply = { data: "move_needs_confirmation", error: null };
     await acceptOrgInvite(service, USER, TOKEN);
-    await acceptOrgInvite(service, USER, TOKEN, false);
+    await acceptOrgInvite(service, USER, TOKEN, null);
     expect(rpc.mock.calls).toEqual([
       ["accept_org_invite", { p_user: USER, token: TOKEN }],
       ["accept_org_invite", { p_user: USER, token: TOKEN }],
     ]);
   });
 
-  it("sends the confirmation when the person gave it", async () => {
+  it("sends the confirmation, and the workspace it is for, when the person gave it", async () => {
     reply = { data: "accepted", error: null };
-    expect(await acceptOrgInvite(service, USER, TOKEN, true)).toBe("accepted");
+    expect(await acceptOrgInvite(service, USER, TOKEN, MOVE)).toBe("accepted");
     expect(rpc.mock.calls).toEqual([
-      ["accept_org_invite", { p_user: USER, token: TOKEN, p_confirm_move: true }],
+      [
+        "accept_org_invite",
+        { p_user: USER, token: TOKEN, p_confirm_move: true, p_leaving: LEAVING },
+      ],
     ]);
   });
 
-  it("asks the older function when the database has no three-argument one", async () => {
+  it("asks the older function when the database has none that takes the confirmation", async () => {
     rpc.mockImplementationOnce(async () => ({ data: null, error: { code: "PGRST202" } }));
     reply = { data: "already_teaches", error: null };
-    expect(await acceptOrgInvite(service, USER, TOKEN, true)).toBe("already_teaches");
+    expect(await acceptOrgInvite(service, USER, TOKEN, MOVE)).toBe("already_teaches");
     expect(rpc.mock.calls).toEqual([
-      ["accept_org_invite", { p_user: USER, token: TOKEN, p_confirm_move: true }],
+      [
+        "accept_org_invite",
+        { p_user: USER, token: TOKEN, p_confirm_move: true, p_leaving: LEAVING },
+      ],
       ["accept_org_invite", { p_user: USER, token: TOKEN }],
     ]);
   });
 
   it("does not ask twice for any other error, or for an unconfirmed call", async () => {
     reply = { data: null, error: { code: "08006" } };
-    expect(await acceptOrgInvite(service, USER, TOKEN, true)).toBe("unavailable");
+    expect(await acceptOrgInvite(service, USER, TOKEN, MOVE)).toBe("unavailable");
     reply = { data: null, error: { code: "PGRST202" } };
     expect(await acceptOrgInvite(service, USER, TOKEN)).toBe("unavailable");
     expect(rpc).toHaveBeenCalledTimes(2);
@@ -165,24 +174,27 @@ describe("acceptOrgInvite", () => {
 });
 
 describe("previewOrgMove", () => {
-  const MOVE = {
+  const ROW = {
     status: "move_needs_confirmation",
     leaving_workspace: "Grace’s workspace",
+    leaving_workspace_id: LEAVING,
     bank_count: 3,
     class_count: 1,
   };
   const only = (status: string) => ({
     status,
     leaving_workspace: null,
+    leaving_workspace_id: null,
     bank_count: null,
     class_count: null,
   });
 
   it("asks for the account the server names, and reads what a move would cost", async () => {
-    reply = { data: [MOVE], error: null };
+    reply = { data: [ROW], error: null };
     expect(await previewOrgMove(service, USER, TOKEN)).toEqual({
       status: "move",
       leavingWorkspace: "Grace’s workspace",
+      leavingWorkspaceId: LEAVING,
       bankCount: 3,
       classCount: 1,
     });
@@ -201,6 +213,7 @@ describe("previewOrgMove", () => {
   it.each([
     "wrong_address",
     "already_member",
+    "admin_account",
     "teaches_shared",
     "founder_with_members",
     "students_depend",
@@ -230,9 +243,10 @@ describe("previewOrgMove", () => {
     ["an error", { data: null, error: { code: "08006", message: `no route for ${TOKEN}` } }],
     ["no row", { data: [], error: null }],
     ["an answer nobody knows", { data: [only("promoted")], error: null }],
-    ["a move with no name", { data: [{ ...MOVE, leaving_workspace: null }], error: null }],
-    ["a move with no count", { data: [{ ...MOVE, bank_count: null }], error: null }],
-    ["a count that is not one", { data: [{ ...MOVE, class_count: -1 }], error: null }],
+    ["a move with no name", { data: [{ ...ROW, leaving_workspace: null }], error: null }],
+    ["a move with no id", { data: [{ ...ROW, leaving_workspace_id: null }], error: null }],
+    ["a move with no count", { data: [{ ...ROW, bank_count: null }], error: null }],
+    ["a count that is not one", { data: [{ ...ROW, class_count: -1 }], error: null }],
   ])("is unknown on %s, and logs neither id nor token", async (_what, answer) => {
     reply = answer;
     expect(await previewOrgMove(service, USER, TOKEN)).toEqual({ status: "unknown" });

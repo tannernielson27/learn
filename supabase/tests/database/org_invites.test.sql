@@ -6,7 +6,7 @@
 -- address, student, already teaches, expired, revoked, already accepted) and that a refusal writes
 -- nothing; the member cap, the pending cap and the daily cap.
 --
--- Since 20261011000000 accept_org_invite takes a third argument and may move a teacher. What a
+-- Since 20261011000000 accept_org_invite takes two more arguments and may move a teacher. What a
 -- teacher is answered, and the move itself, are held in workspace_remove_and_move.test.sql; here
 -- two teachers are only shown to be refused or left where they are.
 --
@@ -130,14 +130,14 @@ select ok(
   and not has_function_privilege('authenticated', 'public.create_org_invite(uuid, text)', 'execute')
   and not has_function_privilege('anon', 'public.resolve_org_invite(text, text)', 'execute')
   and not has_function_privilege('authenticated', 'public.resolve_org_invite(text, text)', 'execute')
-  and not has_function_privilege('anon', 'public.accept_org_invite(uuid, text, boolean)', 'execute')
-  and not has_function_privilege('authenticated', 'public.accept_org_invite(uuid, text, boolean)', 'execute'),
+  and not has_function_privilege('anon', 'public.accept_org_invite(uuid, text, boolean, uuid)', 'execute')
+  and not has_function_privilege('authenticated', 'public.accept_org_invite(uuid, text, boolean, uuid)', 'execute'),
   'neither anon nor authenticated holds EXECUTE on create, resolve or accept'
 );
 select ok(
   has_function_privilege('service_role', 'public.create_org_invite(uuid, text)', 'execute')
   and has_function_privilege('service_role', 'public.resolve_org_invite(text, text)', 'execute')
-  and has_function_privilege('service_role', 'public.accept_org_invite(uuid, text, boolean)', 'execute'),
+  and has_function_privilege('service_role', 'public.accept_org_invite(uuid, text, boolean, uuid)', 'execute'),
   'service_role holds all three'
 );
 select ok(
@@ -153,7 +153,7 @@ select is(
             'public.create_org_invite(uuid, text)'::regprocedure,
             'public.revoke_org_invite(uuid)'::regprocedure,
             'public.resolve_org_invite(text, text)'::regprocedure,
-            'public.accept_org_invite(uuid, text, boolean)'::regprocedure,
+            'public.accept_org_invite(uuid, text, boolean, uuid)'::regprocedure,
             'public.org_members()'::regprocedure)
       and p.prosecdef and p.proconfig @> array['search_path=""']),
   5,

@@ -176,6 +176,7 @@ export default async function WorkspaceInvitePage({ params }: PageProps<"/w/[tok
             email={viewer.email}
             preview={{
               leavingWorkspace: move.leavingWorkspace,
+              leavingWorkspaceId: move.leavingWorkspaceId,
               bankCount: move.bankCount,
               classCount: move.classCount,
             }}

@@ -106,6 +106,8 @@ function logText(): string {
   return JSON.stringify(logs.map((spy) => spy.mock.calls));
 }
 
+const info = vi.spyOn(console, "info").mockImplementation(() => {});
+
 const { inviteColleague, removeMember, resendInvite, revokeInvite } = await import("./actions");
 
 const MEMBER = "00000000-0000-4000-8000-0000000000b2";
@@ -449,13 +451,23 @@ describe("removeMember", () => {
     expect(revalidated).toHaveBeenCalledWith("/author/workspace");
   });
 
-  it.each(["shared_workspace", "not_founder", "is_founder", "not_found"] as const)(
-    "says why when the database answers %s",
+  it.each(["shared_workspace", "not_founder", "is_founder", "not_found", "is_admin"] as const)(
+    "says why when the database answers %s, and logs no removal",
     async (answer) => {
       revokeAnswer = { data: answer, error: null };
       expect(await removeMember(MEMBER)).toEqual({ ok: false, message: REMOVE_REFUSED[answer] });
+      expect(info).not.toHaveBeenCalled();
     },
   );
+
+  it("logs a removal once, with the three ids and no name or address", async () => {
+    revokeAnswer = { data: "removed", error: null };
+    await removeMember(MEMBER);
+    expect(info.mock.calls).toEqual([
+      ["[workspace] member_removed", { actor: USER, target: MEMBER, org: ORG }],
+    ]);
+    expect(JSON.stringify(info.mock.calls)).not.toContain(INVITER_EMAIL);
+  });
 
   it("answers a database error, or a database without the function, with a plain sentence", async () => {
     revokeAnswer = { data: null, error: { code: "PGRST202" } };

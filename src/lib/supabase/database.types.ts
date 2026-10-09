@@ -1304,7 +1304,12 @@ export type Database = {
     };
     Functions: {
       accept_org_invite: {
-        Args: { p_confirm_move?: boolean; p_user: string; token: string };
+        Args: {
+          p_confirm_move?: boolean;
+          p_leaving?: string;
+          p_user: string;
+          token: string;
+        };
         Returns: string;
       };
       archive_case_study: { Args: { target: string }; Returns: undefined };
@@ -1590,6 +1595,7 @@ export type Database = {
           bank_count: number;
           class_count: number;
           leaving_workspace: string;
+          leaving_workspace_id: string;
           status: string;
         }[];
       };

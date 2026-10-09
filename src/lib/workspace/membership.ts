@@ -11,13 +11,14 @@
 // Removing a colleague
 // ---------------------------------------------------------------------------
 
-/** `remove_org_member`'s five answers, and `failed` for a call that did not answer. */
+/** `remove_org_member`'s six answers, and `failed` for a call that did not answer. */
 export const REMOVE_ANSWERS = [
   "removed",
   "shared_workspace",
   "not_founder",
   "is_founder",
   "not_found",
+  "is_admin",
 ] as const;
 export type RemovedMember = (typeof REMOVE_ANSWERS)[number] | "failed";
 
@@ -32,12 +33,13 @@ export const REMOVE_REFUSED: Readonly<Record<Exclude<RemovedMember, "removed">, 
   is_founder: "The person who started a workspace cannot be removed from it.",
   not_found:
     "That person is no longer a member of this workspace. Reload the page to see the list.",
+  is_admin: "An admin of a workspace cannot be removed here. Get in touch with LeaRN.",
   failed: REMOVE_FAILED,
 };
 
 /** What the founder reads before they confirm. `name` is the colleague's own words: text only. */
 export function removeWarning(name: string): string {
-  return `${name} loses access to this workspace at once: every bank, class, assignment and result in it. Everything they made here stays here. They keep their account and start again in a new, empty workspace of their own. Any live session they are running ends now, and invitations they sent that nobody has accepted are revoked. To bring them back, invite them again.`;
+  return `${name} loses access to this workspace at once: every bank, class, assignment and result in it. Everything they made here stays here. They keep their account and start again in a new, empty workspace of their own. Any live session they are running ends now. Invitations they sent that nobody has accepted are revoked, and so is any still waiting for them. They are signed out everywhere and sign in again with the password they have. Any teacher still in this workspace can invite them back.`;
 }
 
 export interface RemoveDeps {
@@ -71,6 +73,8 @@ export async function removeColleague(memberId: string, deps: RemoveDeps): Promi
 export interface MovePreview {
   /** The workspace they would leave, as its founder named it. Text only. */
   leavingWorkspace: string;
+  /** That workspace's id. Posted back with the confirmation, which counts only for it. */
+  leavingWorkspaceId: string;
   bankCount: number;
   classCount: number;
 }
@@ -97,11 +101,35 @@ export function moveConfirmLabel(preview: Pick<MovePreview, "leavingWorkspace">)
 /** The name of the box in the form the page posts. */
 export const MOVE_CONFIRM_FIELD = "confirmMove";
 
-/** Whether the posted form has the box ticked. Anything but a ticked box is no. */
-export function moveConfirmed(formData: FormData): boolean {
-  return formData.get(MOVE_CONFIRM_FIELD) === "on";
+/** The name of the hidden field that carries the id of the workspace the page named. */
+export const MOVE_LEAVING_FIELD = "leaving";
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** A confirmed move: the person ticked the box, for the workspace with this id. */
+export interface ConfirmedMove {
+  leaving: string;
+}
+
+/**
+ * What the posted form confirms: the workspace it names, when the box is ticked and the form
+ * carries that workspace's id; otherwise null. The database has the last word on both: it moves
+ * nobody unless the id is the workspace the account teaches in at that moment.
+ */
+export function moveConfirmed(formData: FormData): ConfirmedMove | null {
+  if (formData.get(MOVE_CONFIRM_FIELD) !== "on") return null;
+  const leaving = formData.get(MOVE_LEAVING_FIELD);
+  return typeof leaving === "string" && UUID.test(leaving) ? { leaving } : null;
 }
 
 /** The database's answer when a teacher's accept arrives without the confirmation. */
 export const MOVE_NOT_CONFIRMED =
   "Joining would move this account out of the workspace it teaches in now. Reload the page, read what that means and tick the box to confirm.";
+
+/** One line for the server log when a membership changes. Ids only: no name and no address. */
+export function logMembershipChange(
+  event: "member_removed" | "teacher_moved",
+  ids: { actor: string; target: string; org: string },
+): void {
+  console.info(`[workspace] ${event}`, { actor: ids.actor, target: ids.target, org: ids.org });
+}
