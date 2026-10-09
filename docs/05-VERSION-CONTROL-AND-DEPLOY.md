@@ -261,11 +261,25 @@ pnpm exec supabase db reset     # drops, recreates, applies all migrations in or
 
 `db reset` prints each migration as it applies it and stops at the first failure. It also runs `seed.sql` and `seed-demo.sql`, so a green run proves the sample content and the local demo account still load against the current schema. Afterwards `pnpm db:types` regenerates `src/lib/supabase/database.types.ts`; CI fails if the committed file differs.
 
-### 7.6 Adding a colleague to the shared workspace (two steps, since #204)
+### 7.6 Adding a colleague: by invitation in the app, or by hand to the shared workspace
 
 Accounts are self-serve since Sprint 13 (ADR 0009, #361): a teacher signs up at `/sign-up` and gets a workspace (org) of their own, and a student signs up there or through a class invite and joins a class by link, QR code or class code. None of that needs the owner. The owner steps that open sign-up are in §7.12 (#359): the Turnstile widget and its two variables, and the hosted Auth settings.
 
-What is left here is the one thing sign-up never does: putting someone in the **shared** workspace, the one `seed.sql` made, so that colleagues share one set of banks. A new account, however it was made, gets a profile with **no org and no role**: it can sign in, lands on the welcome page, and row level security shows it nothing. Do this before the colleague signs up as a teacher: `make_instructor` puts an account in the shared workspace only if it has no workspace yet, so one that has already set up its own stays where it is. Adding one is two steps:
+**What the app does now (ADR 0010).** A teacher in a workspace they made by signing up adds a colleague themselves, with no owner step:
+
+1. On **Item banks → Workspace** (`/author/workspace`) they type the colleague's address and press **Send invitation**. The inviter's own address must be confirmed first (the link in their welcome email).
+2. The colleague gets an email with a link, `/w/<token>`, that lasts 7 days and works only for that address. With no account they choose a name and a password on that page; with an account that has no role they sign in and press **Join workspace**. Either way they become a teacher (instructor) in the inviter's workspace and share everything in it.
+3. The page lists the members and the invitations still pending, each with **Revoke** and **Resend**. Resend revokes the earlier link and emails a new one.
+
+The limits, all enforced in the database (`20261009010000_workspace_invites`): 10 members and 10 pending invitations per workspace, 5 invitations per teacher per 24 hours (a resend counts), and 50 invitation emails an hour for the whole deployment. An account that is already a student, or that already teaches in any workspace, is refused and told why; it needs another address. This needs migration 44 pushed to the hosted project (§7.2); until then the Workspace page cannot load its members and no invitation can be made.
+
+**What is still by hand.**
+
+- **The shared workspace.** Nobody can be invited into the shared LeaRN workspace, the one `seed.sql` made: it has AI import on, so who joins it stays the owner's decision. Its Workspace page shows the members and says so. The two steps below are the only way in.
+- **Removing a colleague.** There is no removal in the app in this version, from either kind of workspace, and no written procedure yet. A member who should lose access is an owner step in the SQL editor; write it down here the first time it is needed.
+- **Moving a teacher between workspaces**, and raising a workspace past 10 members: not available.
+
+**The shared workspace: two steps, since #204.** A new account, however it was made, gets a profile with **no org and no role**: it can sign in, lands on the welcome page, and row level security shows it nothing. Do this before the colleague signs up as a teacher: `make_instructor` puts an account in the shared workspace only if it has no workspace yet, so one that has already set up its own stays where it is. Adding one is two steps:
 
 1. Dashboard → Authentication → Users → **Add user**, their address, **Auto Confirm User on**.
 2. Dashboard → SQL Editor, in the same project:
