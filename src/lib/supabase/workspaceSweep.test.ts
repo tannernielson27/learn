@@ -51,13 +51,45 @@ describe("sweepAbandonedWorkspaces", () => {
     });
   });
 
-  it.each(["PGRST202", "42883"])(
-    "says `not_available` when the database has no such function (%s)",
+  it.each([
+    [
+      "PGRST202",
+      "Could not find the function public.sweep_abandoned_workspaces in the schema cache",
+    ],
+    ["PGRST202", ""],
+    ["42883", "function public.sweep_abandoned_workspaces(boolean, integer) does not exist"],
+  ])("says `not_available` when the database has no such function (%s)", async (code, message) => {
+    const fake = fakeRpc({ data: null, error: { code, message } });
+    expect(await sweepAbandonedWorkspaces(fake.client, { delete: true, limit: 20 })).toEqual({
+      status: "not_available",
+    });
+  });
+
+  it.each([
+    "function private.workspace_sweep_rule(uuid) does not exist",
+    "function num_nonnulls(timestamp with time zone) does not exist",
+    "",
+    undefined,
+  ])(
+    "treats a function missing inside the sweep as a failure, not a quiet 200 (%j)",
+    async (message) => {
+      const fake = fakeRpc({ data: null, error: { code: "42883", message } });
+      await expect(
+        sweepAbandonedWorkspaces(fake.client, { delete: true, limit: 20 }),
+      ).rejects.toThrow("sweep_abandoned_workspaces: 42883");
+    },
+  );
+
+  it.each(["42P01", "42703", "PGRST203", "PGRST301", "57014", undefined])(
+    "rejects on any other error (%j)",
     async (code) => {
-      const fake = fakeRpc({ data: null, error: { code, message: "could not find the function" } });
-      expect(await sweepAbandonedWorkspaces(fake.client, { delete: true, limit: 20 })).toEqual({
-        status: "not_available",
+      const fake = fakeRpc({
+        data: null,
+        error: { code, message: "sweep_abandoned_workspaces went wrong" },
       });
+      await expect(
+        sweepAbandonedWorkspaces(fake.client, { delete: false, limit: 20 }),
+      ).rejects.toThrow(`sweep_abandoned_workspaces: ${code ?? "unknown"}`);
     },
   );
 

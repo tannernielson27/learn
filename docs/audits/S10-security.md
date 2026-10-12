@@ -465,13 +465,30 @@ someone else's address (ADR 0009's accepted risk) and abandoning it gets that ac
 after 90 days, which is the better outcome for the address's owner. The memberless rule needs the
 workspace's own last teacher to have moved away through a confirmed invitation (ADR 0011).
 
-**Before and after the migration.** Without it the RPC answers PGRST202 (or 42883);
+**Before and after the migration.** Without it the RPC answers PGRST202;
 `sweepAbandonedWorkspaces` returns `not_available`, the route answers `200` with that word and logs
-`[workspace-sweep] not available`. A 42501 is not taken for a missing function. Unit tests pin each.
+`[workspace-sweep] not available`. A 42883 counts only when its message names
+`sweep_abandoned_workspaces`; one about any other function is a helper missing inside the sweep and
+is a failed run (`500`), as is a 42501 and every other code (review of #401, L4). Unit tests pin
+each.
+
+**From the review of #401.** M1: the never-used deletion also locks the teachers' `auth.sessions`
+rows `for update nowait` before it reads the rule again, because a token refresh updates the
+session row and never `auth.users`; a refresh in flight makes it skip (`locked`). M2: never used
+now also means no practice run, no practice share and no `private.class_removals` row for any of
+the workspace's classes, so a student who joined, practised and left blocks the rule (pgTAP, one
+assertion each). L1: only the lock statements are `nowait`; the writes can wait, so a deletion
+sets `lock_timeout = 2s` and a 55P03 from either is reported `locked` (pgTAP raises 55P03 from a
+trigger, since one session cannot time out against itself). L5: the function pg_cron runs sends
+the secret to an `https://` URL only. The move confirmation on `/w/[token]` now says an emptied
+workspace is deleted after 30 days.
 
 **Not verified by any test:** two sweeps at once, or a sweep against a student joining or a
 teacher accepting (argued from the `nowait` locks and the lock each of those paths takes on the
-org row; `locked` and `changed` are never produced in pgTAP); **the lock on and delete from
+org row; `changed` is never produced in pgTAP, and `locked` only from a trigger that raises
+55P03, never from a real second session); the `https://` check of
+`private.call_workspace_sweep_route` (the local stack has no Vault secret to read, so pgTAP only
+sees it answer a "not set up" word); **the lock on and delete from
 `auth.users` on the hosted project** (pgTAP holds it on the local stack; if the role may not, each
 never-used workspace is skipped with `error_42501` and rolled back; check with
 `select has_table_privilege('postgres', 'auth.users', 'delete');`); and the shape of

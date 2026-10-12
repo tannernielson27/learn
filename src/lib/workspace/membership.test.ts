@@ -101,7 +101,10 @@ describe("what a move costs", () => {
     const warning = moveWarning(preview);
     expect(warning).toContain("You teach in Grace’s workspace now.");
     expect(warning).toContain("you lose access to its 3 item banks and 1 class");
-    expect(warning).toContain("Nothing is deleted, and nothing comes with you.");
+    expect(warning).toContain("Nothing comes with you.");
+    // ADR 0012: the page no longer says nothing is deleted, because an emptied workspace is.
+    expect(warning).not.toContain("Nothing is deleted");
+    expect(warning).toContain("If no teacher is left in it, it is deleted after 30 days.");
   });
 
   it("labels the box with the workspace it gives up", () => {

@@ -5,7 +5,8 @@
 --   2. Each rule at its edges: emptied 29 days ago against 31; made 89 days ago against 91; a
 --      teacher who confirmed against one who did not; a sign-in 89 days ago against 91; a
 --      sign-in session still in use; an assignment, a live session, a student in a class, a bank
---      touched lately. A workspace that is not self-registered matches neither rule.
+--      touched lately; a student who practised, a bank shared for practice, a student taken
+--      off a class. A workspace that is not self-registered matches neither rule.
 --   3. A dry run reports and changes nothing, whatever the limit; `p_delete` null is a dry run.
 --   4. The limit counts deletions, not skips, oldest first.
 --   5. A deletion: the workspace and every row of it are gone; a student whose profile named it
@@ -13,8 +14,9 @@
 --      no student account is deleted; a never-used workspace's teacher account is; a teacher who
 --      only used to be in an emptied workspace is not.
 --   6. Skips: a class with a student in it; a student who could be pointed nowhere; a teacher
---      named by another workspace's rows; and a deletion that raises, which is rolled back
---      whole while the workspaces after it are still deleted.
+--      named by another workspace's rows; a deletion that raises, which is rolled back
+--      whole while the workspaces after it are still deleted; and one that raises 55P03, as a
+--      wait past `lock_timeout` does, which is reported 'locked'.
 --
 -- Not held here: two sweeps at once, or a sweep against someone joining (one transaction cannot
 -- show two sessions; see "Locks" in the migration), so 'locked' and 'changed' are never answered
@@ -24,7 +26,7 @@
 -- Fixture ids of its own (…43xxxx).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(60);
+select plan(63);
 
 create function pg_temp.u(suffix text) returns uuid
 language sql immutable as $$
@@ -93,7 +95,7 @@ select v.label, pg_temp.u(v.suffix)
     ('n7', '0a07'),
     ('n8', '0a08'), ('n9', '0a09'), ('n10', '0a10'), ('n12', '0a12'), ('n13', '0a13'),
     ('m1', '0b01'), ('m2', '0b02'), ('m3', '0b03'), ('m4', '0b04'), ('m5', '0b05'),
-    ('m6', '0b06'), ('m7', '0b07'), ('m8', '0b08'),
+    ('m6', '0b06'), ('m7', '0b07'), ('m8', '0b08'), ('m9', '0b09'),
     ('c1', '0c01'), ('c2', '0c02')
   ) as v (label, suffix);
 grant select on cast_orgs to authenticated, anon, service_role;
@@ -125,6 +127,8 @@ select pg_temp.org(v.label), 'Sweep ' || v.label, v.is_open,
     ('m6', true, 200, 60),
     ('m7', true, 200, 50),
     ('m8', true, 200, 70),
+    -- Emptied at the same moment as M1; its id sorts after M1's.
+    ('m9', true, 200, 31),
     -- Not self-registered: one emptied and teacherless, one with a teacher who never confirmed.
     ('c1', false, 200, 100),
     ('c2', false, 200, null)
@@ -249,10 +253,12 @@ insert into public.org_invites (id, org_id, email, token_hash, invited_by, revok
   (pg_temp.u('8b01'), pg_temp.org('m1'), 'late@sweep.test', repeat('2', 64), pg_temp.u('1b01'),
    now());
 
--- M4: a class with students in it. M8: a class whose deletion raises (the trigger below).
+-- M4: a class with students in it. M8 and M9: a class whose deletion raises (the trigger
+-- below).
 insert into public.classes (id, org_id, name) values
   (pg_temp.u('6b04'), pg_temp.org('m4'), 'M4 class'),
-  (pg_temp.u('6b08'), pg_temp.org('m8'), 'M8 class');
+  (pg_temp.u('6b08'), pg_temp.org('m8'), 'M8 class'),
+  (pg_temp.u('6b09'), pg_temp.org('m9'), 'M9 class');
 insert into public.item_banks (id, org_id, name) values
   (pg_temp.u('3b08'), pg_temp.org('m8'), 'M8 bank');
 
@@ -310,15 +316,21 @@ insert into public.session_responses
 -- Mona leaves M1, which is what marked it emptied.
 update public.profiles set org_id = null, role = null where id = pg_temp.u('1b01');
 
--- M8's class cannot be deleted: a failure in the middle of one workspace's deletion.
+-- M8's class cannot be deleted: a failure in the middle of one workspace's deletion. M9's
+-- raises what a wait past `lock_timeout` raises (55P03), which one session cannot make happen.
 create function public.sweep_test_refuse_delete() returns trigger
 language plpgsql as $$
 begin
+  if old.id = '00000000-0000-0000-0000-000000436b09'::uuid then
+    raise exception 'canceling statement due to lock timeout' using errcode = '55P03';
+  end if;
   raise exception 'this class is not deleted in this test' using errcode = 'P0001';
 end;
 $$;
 create trigger sweep_test_refuse_delete before delete on public.classes
-  for each row when (old.id = '00000000-0000-0000-0000-000000436b08'::uuid)
+  for each row
+  when (old.id in ('00000000-0000-0000-0000-000000436b08'::uuid,
+                   '00000000-0000-0000-0000-000000436b09'::uuid))
   execute function public.sweep_test_refuse_delete();
 
 -- Every run of the sweep this file makes, in the order the rows came back.
@@ -424,6 +436,36 @@ select is(private.workspace_sweep_rule(pg_temp.org('n2')), null,
 update public.orgs set created_at = now() - interval '91 days' where id = pg_temp.org('n2');
 select is(private.workspace_sweep_rule(pg_temp.org('n2')), 'never_used',
   'the same workspace made 91 days ago: never used');
+
+-- Still N2 at 91 days: never used by a student either. Each row is taken away again.
+insert into public.item_banks (id, org_id, name, created_at, updated_at) values
+  (pg_temp.u('3a02'), pg_temp.org('n2'), 'N2 bank', now() - interval '120 days',
+   now() - interval '120 days');
+insert into public.classes (id, org_id, name, created_at, updated_at) values
+  (pg_temp.u('6a02'), pg_temp.org('n2'), 'N2 class', now() - interval '120 days',
+   now() - interval '120 days');
+insert into private.class_removals (class_id, profile_id, removed_at) values
+  (pg_temp.u('6a02'), pg_temp.u('2002'), now() - interval '110 days');
+select is(private.workspace_sweep_rule(pg_temp.org('n2')), null,
+  'a student who joined a class and was taken off it used the workspace');
+delete from private.class_removals where class_id = pg_temp.u('6a02');
+
+insert into public.bank_practice_shares (id, org_id, bank_id, class_id, shared_at) values
+  (pg_temp.u('aa02'), pg_temp.org('n2'), pg_temp.u('3a02'), pg_temp.u('6a02'),
+   now() - interval '110 days');
+select is(private.workspace_sweep_rule(pg_temp.org('n2')), null,
+  'a bank shared with a class for practice is use');
+delete from public.bank_practice_shares where id = pg_temp.u('aa02');
+
+insert into public.practice_runs (id, org_id, student_id, bank_id, started_at) values
+  (pg_temp.u('ab02'), pg_temp.org('n2'), pg_temp.u('2002'), pg_temp.u('3a02'),
+   now() - interval '110 days');
+select is(private.workspace_sweep_rule(pg_temp.org('n2')), null,
+  'a student''s practice run is use, however long ago and whether or not they are in a class now');
+delete from public.practice_runs where id = pg_temp.u('ab02');
+delete from public.classes where id = pg_temp.u('6a02');
+delete from public.item_banks where id = pg_temp.u('3a02');
+
 update public.orgs set created_at = now() - interval '89 days' where id = pg_temp.org('n2');
 
 select is(private.workspace_sweep_rule(pg_temp.org('n4')), null,
@@ -512,6 +554,7 @@ select is(
     'm4 memberless skipped enrolled_students',
     'm5 memberless skipped student_unsafe',
     'm1 memberless would_delete',
+    'm9 memberless would_delete',
     'n12 never_used skipped teacher_tied_elsewhere',
     'n1 never_used would_delete'
   ],
@@ -606,10 +649,11 @@ select is(
     'm4 memberless skipped enrolled_students',
     'm5 memberless skipped student_unsafe',
     'm1 memberless deleted',
+    'm9 memberless skipped locked',
     'n12 never_used skipped teacher_tied_elsewhere',
     'n1 never_used deleted'
   ],
-  'a deleting run deletes what the dry run said it would, and skips what it said it would'
+  'a deleting run deletes what the dry run said it would and skips what it said it would; a write that gives up waiting for a lock (55P03) is reported locked'
 );
 select is(
   (select array_agg(c.label order by c.label)
@@ -741,6 +785,7 @@ select is(
     'm8 memberless skipped error_P0001',
     'm4 memberless skipped enrolled_students',
     'm5 memberless skipped student_unsafe',
+    'm9 memberless skipped locked',
     'n12 never_used skipped teacher_tied_elsewhere'
   ],
   'a second run finds nothing more to delete and skips the same workspaces for the same reasons'
@@ -759,6 +804,7 @@ select is(
     'm8 memberless skipped error_P0001',
     'm4 memberless deleted',
     'm5 memberless deleted',
+    'm9 memberless skipped locked',
     'n12 never_used skipped teacher_tied_elsewhere'
   ],
   'once nobody is in its class a memberless workspace goes, and so does the one that waited on it'

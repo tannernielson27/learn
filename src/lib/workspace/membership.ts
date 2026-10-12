@@ -88,9 +88,15 @@ export function moveLossCounts(preview: Pick<MovePreview, "bankCount" | "classCo
   return `${counted(preview.bankCount, "item bank", "item banks")} and ${counted(preview.classCount, "class", "classes")}`;
 }
 
+/**
+ * What becomes of the workspace left (ADR 0012). Worded as a condition because the preview does
+ * not say whether another teacher stays: the database decides that when the move happens.
+ */
+export const MOVE_DELETION_NOTICE = "If no teacher is left in it, it is deleted after 30 days.";
+
 /** What the page says above the box a moving teacher must tick. */
 export function moveWarning(preview: MovePreview): string {
-  return `You teach in ${preview.leavingWorkspace} now. An account teaches in one workspace at a time, so joining means leaving it: you lose access to its ${moveLossCounts(preview)}, and to everything else in it. Nothing is deleted, and nothing comes with you.`;
+  return `You teach in ${preview.leavingWorkspace} now. An account teaches in one workspace at a time, so joining means leaving it: you lose access to its ${moveLossCounts(preview)}, and to everything else in it. Nothing comes with you. ${MOVE_DELETION_NOTICE}`;
 }
 
 /** The label of that box. It names the workspace, so ticking it is not ticking "I agree". */

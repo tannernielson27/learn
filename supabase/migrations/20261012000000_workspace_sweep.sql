@@ -25,8 +25,9 @@
 --                   * has an account older than 90 days whose last sign-in is older than 90 days,
 --                     and no sign-in session made, updated or refreshed in the last 90 days;
 --                 and the workspace has no class with a student in it, no assignment and no live
---                 session, ever; and no bank, item, case study or class was made or changed in
---                 the last 90 days.
+--                 session, ever; no student ever used it either (no practice run, no bank shared
+--                 for practice, and no student ever taken off one of its classes); and no bank,
+--                 item, case study or class was made or changed in the last 90 days.
 --
 -- An account with no mark counts as confirmed, an account with no creation time counts as new,
 -- and a session with no times at all counts as recent: what cannot be read stops the rule.
@@ -46,7 +47,8 @@
 --                             of another workspace: a session they hosted, anything they made,
 --                             an invitation they sent or accepted, a workspace they founded, or
 --                             student work. Deleting the account would delete or change it.
---   'locked'                  a row the deletion needs was locked by someone else just then.
+--   'locked'                  a row the deletion needs was locked by someone else just then, or
+--                             a write waited more than 2 seconds for one (SQLSTATE 55P03).
 --   'changed'                 the workspace no longer matched its rule once locked.
 --   'error_<sqlstate>'        the deletion raised; everything it had done was rolled back.
 --
@@ -76,10 +78,22 @@
 -- Locks
 -- ---------------------------------------------------------------------------
 --
--- Every lock here is taken NOWAIT: the org row FOR UPDATE, then every profile naming it, then
--- (for 'never_used') the teachers' `auth.users` rows. A sweep therefore never waits for anyone,
--- so it can be in no deadlock, and a workspace somebody is touching is skipped ('locked') and
--- met again tomorrow. Every other path into a workspace takes a lock on the org row that
+-- The locks a deletion takes first are NOWAIT: the org row FOR UPDATE, then every profile
+-- naming it, then (for 'never_used') the teachers' `auth.users` rows and their `auth.sessions`
+-- rows. A workspace somebody is touching is therefore skipped ('locked') and met again tomorrow,
+-- rather than waited for. The sessions are locked because a browser that is still signed in
+-- refreshes its token by updating its `auth.sessions` row and never touches `auth.users`: with
+-- the row locked, a refresh in flight makes the sweep skip, and one that starts later waits and
+-- then finds the session gone.
+--
+-- The writes that follow are ordinary statements and can wait: a delete for a row another
+-- transaction holds, and the foreign key check of a student pointed at another workspace for
+-- that workspace's row. So a deletion sets `lock_timeout` to 2 seconds first. A wait longer than
+-- that, a deadlock included (Postgres looks for one after 1 second by default and would
+-- otherwise raise 40P01, which is reported as 'error_40P01'), ends as 55P03: the workspace is
+-- reported 'locked' and everything done for it is rolled back.
+--
+-- Every other path into a workspace takes a lock on the org row that
 -- conflicts with FOR UPDATE: `private.admit_to_class` asks for it FOR SHARE, `accept_org_invite`
 -- FOR NO KEY UPDATE, and any insert or update that names the org takes the foreign key's FOR KEY
 -- SHARE. So once the org row is held nothing can join it, and both rules are read again under
@@ -149,6 +163,15 @@ as $$
          )
          and not exists (select 1 from public.assignments a where a.org_id = o.id)
          and not exists (select 1 from public.sessions s where s.org_id = o.id)
+         -- Never used by a student either: one who joined, practised and left has no class
+         -- membership now, and still used it.
+         and not exists (select 1 from public.practice_runs r where r.org_id = o.id)
+         and not exists (select 1 from public.bank_practice_shares bs where bs.org_id = o.id)
+         and not exists (
+           select 1 from private.class_removals cr
+             join public.classes c on c.id = cr.class_id
+            where c.org_id = o.id
+         )
          and not exists (
            select 1 from public.item_banks b
             where b.org_id = o.id
@@ -287,14 +310,13 @@ begin
   end if;
   perform 1 from public.profiles p where p.org_id = p_org order by p.id for update nowait;
   if p_rule = 'never_used' then
-    perform 1
-       from auth.users u
-      where u.id in (
-              select p.id from public.profiles p
-               where p.org_id = p_org and p.role in ('instructor', 'admin')
-            )
-      order by u.id
-        for update nowait;
+    -- The membership is fixed now: the org row and every profile naming it are held.
+    select coalesce(array_agg(p.id), '{}') into teachers
+      from public.profiles p
+     where p.org_id = p_org and p.role in ('instructor', 'admin');
+    perform 1 from auth.users u where u.id = any (teachers) order by u.id for update nowait;
+    -- A token refresh updates the session's row and not the user's. See "Locks".
+    perform 1 from auth.sessions s where s.user_id = any (teachers) order by s.id for update nowait;
   end if;
 
   -- Read again, now that nothing can change underneath.
@@ -305,6 +327,9 @@ begin
   if blocker is not null then
     raise exception using errcode = 'WS001', message = blocker;
   end if;
+
+  -- Nothing below waits long for anybody. See "Locks" in the header.
+  perform set_config('lock_timeout', '2s', true);
 
   -- 1. Students: to the workspace of the class they joined earliest, among workspaces that are
   --    not marked emptied; the rest (in no class anywhere, or the blocker would have answered)
@@ -330,10 +355,7 @@ begin
    where p.org_id = p_org and p.role = 'student';
 
   -- 2. Teachers. 'memberless' has none: the rule was just read under the lock.
-  if p_rule = 'never_used' then
-    select coalesce(array_agg(p.id), '{}') into teachers
-      from public.profiles p
-     where p.org_id = p_org and p.role in ('instructor', 'admin');
+  if cardinality(teachers) > 0 then
     update public.profiles p
        set org_id = null, role = null
      where p.id = any (teachers);
@@ -460,7 +482,9 @@ comment on function public.sweep_abandoned_workspaces(boolean, integer) is
 -- 20260924060000's private.call_reminder_route, for the sweep's route: POSTs to
 -- `learn_workspace_sweep_url` (the deployment's full URL of /api/cron/workspace-sweep) with the
 -- same `learn_cron_secret`, both read from Vault at run time. Answers 'no_pg_net', 'no_vault',
--- 'not_configured' or 'queued' and never raises. Nobody but the superuser may call it.
+-- 'not_configured' or 'queued' and never raises. Nobody but the superuser may call it. Unlike
+-- that function it takes an https URL only: the secret behind this call can start a deletion,
+-- and is never sent in the clear.
 create or replace function private.call_workspace_sweep_route() returns text
 language plpgsql security definer set search_path = ''
 as $$
@@ -480,7 +504,7 @@ begin
   execute 'select decrypted_secret from vault.decrypted_secrets where name = $1 order by created_at desc limit 1'
     into secret using 'learn_cron_secret';
 
-  if target_url is null or target_url !~ '^https?://[^\s]+$'
+  if target_url is null or target_url !~ '^https://[^\s]+$'
      or secret is null or length(secret) < 32 then
     return 'not_configured';
   end if;

@@ -219,7 +219,12 @@ describe("MoveWorkspaceForm", () => {
     expect(screen.getByText(/You are signed in as grace@school\.edu\./)).toBeVisible();
     expect(screen.getByText(/You teach in Grace’s workspace now\./)).toBeVisible();
     expect(screen.getByText(/its 2 item banks and 0 classes/)).toBeVisible();
-    expect(screen.getByText(/Nothing is deleted, and nothing comes with you\./)).toBeVisible();
+    expect(screen.getByText(/Nothing comes with you\./)).toBeVisible();
+    // ADR 0012: said before the box is ticked, and never "nothing is deleted".
+    expect(
+      screen.getByText(/If no teacher is left in it, it is deleted after 30 days\./),
+    ).toBeVisible();
+    expect(screen.queryByText(/Nothing is deleted/)).toBeNull();
   });
 
   it("starts with the box unticked, and it is required", () => {

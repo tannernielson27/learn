@@ -4,11 +4,18 @@ import type { Database } from "./database.types";
 
 type Client = SupabaseClient<Database>;
 
+const SWEEP_FUNCTION = "sweep_abandoned_workspaces";
+
 /**
- * PostgREST's "no function with that name and those arguments", and Postgres's own. Either means
- * migration 20261012000000 is not applied to this database yet.
+ * Whether the error says migration 20261012000000 is not applied to this database yet: PostgREST
+ * found no function with that name and those arguments (PGRST202), or Postgres itself says the
+ * sweep function does not exist. A 42883 about anything else is a function missing INSIDE the
+ * sweep, which is a real failure and must not be answered as "not available".
  */
-const NO_SUCH_FUNCTION: ReadonlySet<string> = new Set(["PGRST202", "42883"]);
+function sweepIsMissing(error: { code?: string; message?: string }): boolean {
+  if (error.code === "PGRST202") return true;
+  return error.code === "42883" && (error.message ?? "").includes(SWEEP_FUNCTION);
+}
 
 /**
  * `public.sweep_abandoned_workspaces` (ADR 0012), with the service role: the function is granted
@@ -20,13 +27,13 @@ export async function sweepAbandonedWorkspaces(
   service: Client,
   options: { delete: boolean; limit: number },
 ): Promise<SweepResult> {
-  const { data, error } = await service.rpc("sweep_abandoned_workspaces", {
+  const { data, error } = await service.rpc(SWEEP_FUNCTION, {
     p_delete: options.delete,
     p_limit: options.limit,
   });
   if (error) {
-    if (error.code && NO_SUCH_FUNCTION.has(error.code)) return { status: "not_available" };
-    throw new Error(`sweep_abandoned_workspaces: ${error.code ?? "unknown"}`);
+    if (sweepIsMissing(error)) return { status: "not_available" };
+    throw new Error(`${SWEEP_FUNCTION}: ${error.code ?? "unknown"}`);
   }
   return {
     status: "ok",
