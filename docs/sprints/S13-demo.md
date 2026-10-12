@@ -96,6 +96,9 @@ Closed after the sprint, on 2026-10-08 and 09:
 - **A student reads no workspace row** (migration `20261010000000`). The policy keyed on the first workspace a student joined, which never changes; every column of `orgs` was granted. No student page read it, so the policy is now the authors' alone.
 - **An address is sent at most three invitations in 24 hours, from every workspace together** (migration `20261010000000`, ADR 0010).
 - **The workspace name sits beside the class name on a student's open assignments and history**, for a student whose classes span more than one workspace. No database change.
+- **Practice rows name their workspace too**, under the same rule (migration `20261011010000`: `my_practice_banks()` returns the workspace's name).
+- **Two workspaces with the same name are told apart** (migration `20261011010000`: `my_classes()` numbers the student's own workspaces 1, 2, 3; it still returns no workspace id). Both are named on the student's rows.
+- **The walks #398 lacked are in e2e**: the workspace on open-assignment, history and practice rows for a student in two workspaces and none for a student in one (`e2e/studentWorkspaces.spec.ts`), and the fourth invitation to one address refused (`e2e/workspaceInvite.spec.ts`).
 
 - **The teacher who started a workspace can remove a colleague, and a teacher who already has a workspace can accept an invitation by leaving it** (ADR 0011, migration `20261011000000`). The removed colleague starts again in an empty workspace of their own; a move is asked for first, with what it costs, and is refused where it would leave students without a teacher.
 
@@ -108,5 +111,5 @@ Still open:
 - **Abandoned workspaces are not removed yet, though the sweep that removes them is built (ADR 0012).** Migration `20261012000000_workspace_sweep` is not on hosted, the daily job is not scheduled, and `WORKSPACE_SWEEP` is set nowhere, so every run would be a dry run. The owner's steps, reading a dry run first, are in docs/05 §7.13. Until they are done a workspace whose last teacher moved away is marked (`orgs.emptied_at`) and kept.
 - **The sweep leaves three kinds of workspace for the owner:** one with no teacher and no `emptied_at` (its founder's account was deleted by hand), one whose never-confirmed teacher is named by another workspace's rows (`teacher_tied_elsewhere`), and the empty workspace of a removed teacher who did confirm their address. Nobody is emailed before a workspace or an unconfirmed account is deleted.
 - **Migration `20261010000000_workspace_follow_ups` is not on hosted yet** (docs/05 §7.2 row 45). The app works without it; until it is pushed a student can still read the row of the first workspace they joined, and nothing caps invitations per address except a resend's own check.
-- **Practice rows name no class or workspace.** `my_practice_banks()` returns the bank and no class, so two banks with one name from two workspaces look alike; telling them apart needs a database change. The assignment and results pages show no class name either.
-- **Two workspaces with the same name look like one to a student.** `my_classes()` gives the workspace's name and no id.
+- **Migration `20261011010000_practice_workspace_name` is not on hosted yet.** The app works without it; until it is pushed practice rows name no workspace, and two workspaces with the same name still look like one to a student.
+- **Practice rows name no class**, only the workspace: a bank can be shared with several of a student's classes. The assignment and results pages show no class name either.

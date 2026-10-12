@@ -103,6 +103,7 @@ describe("myClasses", () => {
           joined_at: "2026-09-23T10:00:00Z",
           time_zone: "America/New_York",
           workspace_name: "Ada Lovelace’s workspace",
+          workspace_number: 1,
         },
       ],
       error: null,
@@ -114,6 +115,7 @@ describe("myClasses", () => {
         joinedAt: "2026-09-23T10:00:00Z",
         timeZone: "America/New_York",
         workspaceName: "Ada Lovelace’s workspace",
+        workspaceNumber: 1,
       },
     ]);
     expect(fake.rpc).toHaveBeenCalledWith("my_classes");
@@ -129,6 +131,28 @@ describe("myClasses", () => {
       null,
       null,
       null,
+    ]);
+  });
+
+  it("leaves the workspace number off while the database sends none, or not a number", async () => {
+    // 20261011010000 adds `workspace_number`; the app is deployed before it is applied.
+    const row = { class_id: CLASS_ID, class_name: "NUR 310", joined_at: "2026-09-23T10:00:00Z" };
+    const fake = fakeRpc({
+      data: [
+        row,
+        { ...row, workspace_number: null },
+        { ...row, workspace_number: "2" },
+        { ...row, workspace_number: Number.NaN },
+        { ...row, workspace_number: 2 },
+      ],
+      error: null,
+    });
+    expect((await myClasses(fake.client))?.map((entry) => entry.workspaceNumber)).toEqual([
+      null,
+      null,
+      null,
+      null,
+      2,
     ]);
   });
 

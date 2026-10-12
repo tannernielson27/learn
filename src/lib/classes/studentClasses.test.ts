@@ -5,6 +5,11 @@ function entry(id: string, name: string, workspaceName: string | null, timeZone 
   return { id, name, timeZone, workspaceName };
 }
 
+/** A class as `my_classes()` sends it since 20261011010000: with its workspace's number. */
+function numbered(id: string, name: string, workspaceName: string | null, workspaceNumber: number) {
+  return { ...entry(id, name, workspaceName), workspaceNumber };
+}
+
 describe("spansWorkspaces", () => {
   it("is false for no classes, one class, and several classes of one workspace", () => {
     expect(spansWorkspaces([])).toBe(false);
@@ -37,7 +42,60 @@ describe("spansWorkspaces", () => {
   });
 });
 
+describe("spansWorkspaces, by the workspace's number", () => {
+  it("is true for two workspaces that share a name", () => {
+    expect(
+      spansWorkspaces([
+        numbered("c1", "NUR 301", "Nursing", 1),
+        numbered("c2", "NUR 301", "Nursing", 2),
+      ]),
+    ).toBe(true);
+  });
+
+  it("is false for several classes of one workspace", () => {
+    expect(
+      spansWorkspaces([
+        numbered("c1", "NUR 301", "Nursing", 1),
+        numbered("c2", "NUR 302", "Nursing", 1),
+      ]),
+    ).toBe(false);
+  });
+
+  it("counts a numbered workspace whose name did not arrive", () => {
+    expect(
+      spansWorkspaces([
+        numbered("c1", "NUR 301", "Nursing", 1),
+        numbered("c2", "NUR 302", null, 2),
+      ]),
+    ).toBe(true);
+  });
+
+  it("goes by name, as before, while the database sends no number", () => {
+    // Deployed ahead of 20261011010000: same-named workspaces still count as one.
+    const before = [
+      { ...entry("c1", "NUR 301", "Nursing"), workspaceNumber: null },
+      { ...entry("c2", "NUR 301", "Nursing"), workspaceNumber: null },
+    ];
+    expect(spansWorkspaces(before)).toBe(false);
+    expect(
+      spansWorkspaces([
+        { ...entry("c1", "NUR 301", "Ada's workspace"), workspaceNumber: null },
+        entry("c2", "NUR 301", "Grace's workspace"),
+      ]),
+    ).toBe(true);
+  });
+});
+
 describe("studentClassInfo", () => {
+  it("carries both names when two workspaces share one", () => {
+    const info = studentClassInfo([
+      numbered("c1", "NUR 301", "Nursing", 1),
+      numbered("c2", "NUR 301", "Nursing", 2),
+    ]);
+    expect(info.get("c1")?.workspaceName).toBe("Nursing");
+    expect(info.get("c2")?.workspaceName).toBe("Nursing");
+  });
+
   it("keeps the name and zone, and leaves the workspace off within one workspace", () => {
     const info = studentClassInfo([
       entry("c1", "NUR 301", "Ada's workspace", "America/Denver"),
