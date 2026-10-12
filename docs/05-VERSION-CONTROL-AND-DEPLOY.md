@@ -566,6 +566,51 @@ Locally none of this needs setting up: with both Turnstile variables empty the c
 
 If Cloudflare cannot be reached, sign-up is refused ("Signing up is not working just now") rather than let through; sign-in and class invites do not use the CAPTCHA and are not affected. The CAPTCHA cannot be taken off in production: with both variables deleted there, sign-up is refused as well. The app sends no Content-Security-Policy today; if one is added, it must allow `https://challenges.cloudflare.com` in `script-src` and `frame-src` (`TURNSTILE_CSP_SOURCES` in `src/lib/auth/turnstile.ts`).
 
+### 7.13 Abandoned workspaces: reading a dry run, and turning deletion on (ADR 0012)
+
+Once a day pg_cron can call `POST /api/cron/workspace-sweep`, which asks the database for abandoned self-registered workspaces: ones whose last teacher moved away more than 30 days ago (`memberless`), and ones made more than 90 days ago by a teacher who never confirmed their address, has not signed in for 90 days and never used it (`never_used`). The shared LeaRN workspace is never a candidate. **Nothing is deleted until step 5.** Until then every run is a dry run: it reports what it would delete and changes nothing. ADR 0012 lists exactly what a deletion removes; it cannot be undone except from the nightly backup (§7.10).
+
+Needs migration `20261012000000_workspace_sweep` pushed to the hosted project, and §7.8 steps 1–3 done there (`CRON_SECRET` in Vercel, pg_cron and pg_net on). Before the migration the route answers `{"status":"not_available"}` and nothing else is affected.
+
+1. **[ ] Look first, with no schedule and no route.** Supabase → SQL Editor:
+
+   ```sql
+   select * from public.sweep_abandoned_workspaces(false, 100);
+   ```
+
+   One row per workspace looked at: `org_id`, `rule` (`memberless` or `never_used`), `outcome` and `reason`. With `false` it writes nothing. `would_delete` is what a deleting run would remove. `skipped` is a workspace that matched a rule and was left, with why:
+
+   | `reason`                 | What it means, and what to do                                                                                                                                                                                                         |
+   | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `enrolled_students`      | A class in it still has a student. Never deleted while that is so. A memberless workspace should not have one; look at it.                                                                                                            |
+   | `student_unsafe`         | A student whose first workspace this was is only in classes of workspaces that are themselves emptied. Look at that student's classes.                                                                                                |
+   | `teacher_tied_elsewhere` | Its teacher is named by rows in another workspace (they were once a member there), and deleting the account would change those. Left for you: delete the workspace by hand if you want it gone, or leave it.                          |
+   | `locked`, `changed`      | Someone was using it at that moment. It is looked at again the next day.                                                                                                                                                              |
+   | `error_<code>`           | The deletion raised that Postgres error and was rolled back whole. `error_42501` on every `never_used` row means the database role may not delete from `auth.users`; the memberless rule is unaffected. Anything else is worth a bug. |
+
+   To see what a row is before trusting it: `select name, created_at, emptied_at, founder_id from public.orgs where id = '<org_id>';` and, for its teachers, `select u.email, u.created_at, u.last_sign_in_at, u.raw_app_meta_data -> 'learn_email_unconfirmed' as unconfirmed from public.profiles p join auth.users u on u.id = p.id where p.org_id = '<org_id>';`
+
+2. **[ ] Store the route's URL in Vault and schedule the job.** In the production project only, the same project and secret as §7.8 step 4 (`learn_cron_secret` is already there; do not create it again):
+
+   ```sql
+   select vault.create_secret('https://learn-tanner-nielsons-projects.vercel.app/api/cron/workspace-sweep', 'learn_workspace_sweep_url');
+   select cron.schedule('learn-workspace-sweep', '17 9 * * *', $$select private.call_workspace_sweep_route()$$);
+   ```
+
+   Use the same host as `learn_reminders_url`. 09:17 UTC is the small hours in Denver; any time of day works. `select jobname, schedule, active from cron.job;` then lists three jobs, not the two of §7.8 step 5.
+
+3. **[ ] Check the call.** `select private.call_workspace_sweep_route();` answers `queued` (otherwise `no_pg_net`, `no_vault` or `not_configured`, as in §7.8 step 5). A few seconds later `select status_code, content from net._http_response order by created desc limit 1;` shows `200` and counts only, such as `{"status":"ok","mode":"dry_run","counts":{"memberless":{"would_delete":2,"deleted":0,"skipped":0},"never_used":{"would_delete":1,"deleted":0,"skipped":0}}}`. `"mode":"dry_run"` is the thing to read: it must say that until step 5. `{"status":"not_available"}` means the migration is not applied; `401`, the secrets differ; `503`, `CRON_SECRET` is missing; `429`, more than 6 runs in an hour.
+
+4. **[ ] Read dry runs for a while.** Vercel → project → Logs, search `[workspace-sweep]`. Each run writes one line: the mode, the counts, and the ids under `wouldDelete`, `deleted` and `skipped` (ids only, never a name or an address). Look each `wouldDelete` id up with the queries in step 1 until the list is one you would delete yourself. A run looks at no more than 20 deletable workspaces, oldest first.
+
+5. **[ ] Turn deletion on.** Only when step 4 reads right. Vercel → project → Settings → Environment Variables → `WORKSPACE_SWEEP` = `delete`, **Production** scope only, then redeploy. The value must be exactly `delete`: lower case, no spaces, no quotes. Any other value, a trailing space included, is a dry run. The next scheduled run's log line says `mode: "delete"` and lists what went under `deleted`; at most 20 workspaces go per run.
+
+**Turning it off again:** delete `WORKSPACE_SWEEP` (or set it to anything else) and redeploy: dry runs resume. To stop the calls as well: `select cron.unschedule('learn-workspace-sweep');`. Never set `WORKSPACE_SWEEP` in the Preview scope: until the §7.3 split a preview shares production's database.
+
+**What is never swept:** a workspace that is not self-registered; one with a student in any class; one whose teacher confirmed their address or signed in within 90 days; and a workspace with no teacher and no `emptied_at` (its founder's account was deleted by hand). For that last kind, `update public.orgs set emptied_at = now() where id = '<org_id>';` starts its 30 days.
+
+**Students.** No student account is ever deleted. A student whose first workspace is deleted is pointed at the workspace of a class they are in; one who is in no class at all goes back to having no role and sees the Welcome page, where a class code makes them a student again.
+
 ## 8. Working together day to day
 
 - Pick a story from the sprint milestone, assign yourself, branch, PR. Two people never work on the same story.
