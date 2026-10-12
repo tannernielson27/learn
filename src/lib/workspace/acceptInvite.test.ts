@@ -83,6 +83,12 @@ describe("acceptAsSignedIn", () => {
     "wrong_address",
     "student",
     "already_teaches",
+    "already_member",
+    "admin_account",
+    "teaches_shared",
+    "founder_with_members",
+    "students_depend",
+    "move_needs_confirmation",
     "shared_workspace",
     "members_full",
     "unavailable",
@@ -200,6 +206,47 @@ function createDeps(result: AcceptOrgInviteResult = "accepted") {
 }
 
 const NEW = { email: "grace@school.edu", password: "correct horse battery", displayName: "Grace" };
+
+describe("acceptAsSignedIn, for a move", () => {
+  it("signs out the other sessions and nothing else, for an account plainly its owner's", async () => {
+    const { deps, calls } = signedInDeps();
+    expect(await acceptAsSignedIn(input({ move: true }), deps)).toEqual({
+      result: "accepted",
+      next: "/author",
+      endedEarlierAccess: false,
+    });
+    expect(calls).toEqual(["accept", "refresh", "signOutOthers"]);
+    expect(deps.earlierAccess.replacePassword).not.toHaveBeenCalled();
+  });
+
+  it("signs them out once, with the password, when earlier access is ended too", async () => {
+    const { deps, calls } = signedInDeps();
+    const outcome = await acceptAsSignedIn(input({ move: true, claims: NEW_SESSION }), deps);
+    expect(outcome).toMatchObject({ result: "accepted", endedEarlierAccess: true });
+    expect(calls.filter((call) => call === "signOutOthers")).toHaveLength(1);
+    expect(deps.earlierAccess.replacePassword).toHaveBeenCalledOnce();
+  });
+
+  it("signs nobody out when the database did not move the account", async () => {
+    const { deps, calls } = signedInDeps("students_depend");
+    await acceptAsSignedIn(input({ move: true }), deps);
+    expect(calls).toEqual(["accept"]);
+  });
+
+  it("still lands the teacher when signing the others out fails or throws", async () => {
+    for (const failure of [
+      async () => ({ error: { status: 500 } }),
+      async () => Promise.reject(new Error("down")),
+    ]) {
+      const { deps } = signedInDeps();
+      deps.earlierAccess.signOutOthers.mockImplementationOnce(failure as never);
+      expect(await acceptAsSignedIn(input({ move: true }), deps)).toMatchObject({
+        result: "accepted",
+        next: "/author",
+      });
+    }
+  });
+});
 
 describe("createAndAccept", () => {
   it("makes the account, names it, accepts for the id it was given and signs in", async () => {

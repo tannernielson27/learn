@@ -15,28 +15,37 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("./actions", () => ({
   inviteColleague: vi.fn(async () => ({ status: "idle" })),
+  removeMember: vi.fn(async () => ({ ok: true })),
   revokeInvite: vi.fn(async () => ({ ok: true })),
   resendInvite: vi.fn(async () => ({ ok: true })),
 }));
 
 const USER = "00000000-0000-4000-8000-0000000000a1";
 const ORG = "00000000-0000-4000-8000-000000000001";
+const COLLEAGUE = "00000000-0000-4000-8000-0000000000b2";
 
 type Reply = { data?: unknown; error?: { code?: string } | null };
 
 let claims: Record<string, unknown> | null;
 let tables: Record<string, Reply>;
 let members: Reply;
+/** What the read of `orgs.founder_id` answers. It is a read of its own, apart from the name. */
+let founder: Reply;
 const selected: [table: string, columns: unknown][] = [];
 
 function builderFor(table: string) {
   const builder: Record<string, unknown> = {};
+  let asked: unknown;
   for (const step of ["eq", "is", "order", "limit"]) builder[step] = () => builder;
   builder.select = (columns: unknown) => {
+    asked = columns;
     selected.push([table, columns]);
     return builder;
   };
-  builder.maybeSingle = async () => tables[table] ?? { data: null, error: null };
+  builder.maybeSingle = async () =>
+    table === "orgs" && asked === "founder_id"
+      ? founder
+      : (tables[table] ?? { data: null, error: null });
   builder.then = (resolve: (value: Reply) => unknown) =>
     resolve(tables[table] ?? { data: null, error: null });
   return builder;
@@ -86,7 +95,25 @@ beforeEach(() => {
     ],
     error: null,
   };
+  founder = { data: { founder_id: USER }, error: null };
 });
+
+/** The workspace with a second teacher in it, who came in by invitation. */
+function withColleague() {
+  members = {
+    data: [
+      ...(members.data as unknown[]),
+      {
+        profile_id: COLLEAGUE,
+        display_name: "Mary Seacole",
+        email: "mary@school.edu",
+        role: "instructor",
+        joined_at: "2026-10-09T10:00:00Z",
+      },
+    ],
+    error: null,
+  };
+}
 
 describe("who reaches /author/workspace", () => {
   it("sends a signed-out visitor to sign in, and back here afterwards", async () => {
@@ -178,9 +205,72 @@ describe("a self-registered workspace", () => {
   });
 });
 
+describe("removing a colleague", () => {
+  const removeMary = { name: "Remove Mary Seacole from the workspace" };
+
+  it("marks who started the workspace and gives them a Remove on a colleague's row", async () => {
+    withColleague();
+    await renderPage();
+    const rows = within(screen.getByRole("list", { name: "Members" })).getAllByRole("listitem");
+    expect(rows[0]).toHaveTextContent("Started this workspace");
+    expect(within(rows[0]!).queryByRole("button")).not.toBeInTheDocument();
+    expect(rows[1]).not.toHaveTextContent("Started this workspace");
+    expect(within(rows[1]!).getByRole("button", removeMary)).toBeVisible();
+  });
+
+  it("gives a colleague who did not start it no Remove, and still says who did", async () => {
+    withColleague();
+    founder = { data: { founder_id: COLLEAGUE }, error: null };
+    await renderPage();
+    const rows = within(screen.getByRole("list", { name: "Members" })).getAllByRole("listitem");
+    expect(rows[1]).toHaveTextContent("Started this workspace");
+    expect(screen.queryByRole("button", { name: /^Remove / })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["the column is not in the database yet", { data: null, error: { code: "42703" } }],
+    ["the workspace has no founder on record", { data: { founder_id: null }, error: null }],
+    ["the read finds no row", { data: null, error: null }],
+  ])("draws the whole page with no Remove and nobody marked when %s", async (_why, reply) => {
+    withColleague();
+    founder = reply;
+    await renderPage();
+    expect(screen.getByRole("heading", { level: 1, name: "Ada's workspace" })).toBeVisible();
+    expect(
+      within(screen.getByRole("list", { name: "Members" })).getAllByRole("listitem"),
+    ).toHaveLength(2);
+    expect(screen.queryByText("Started this workspace")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Remove / })).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Colleague's email address" })).toBeVisible();
+  });
+
+  it("reads the founder apart from the name, so one failing does not take the other", async () => {
+    await renderPage();
+    const columns = selected.filter(([table]) => table === "orgs").map(([, c]) => String(c));
+    expect(columns.sort()).toEqual(["founder_id", "name, self_registered"]);
+  });
+
+  it("tells the inviter who can remove a colleague, and that a teacher elsewhere may move", async () => {
+    await renderPage();
+    const copy = screen.getByText(/They join this workspace as a teacher/);
+    expect(copy).toHaveTextContent(
+      "Only the person who started the workspace can remove a colleague",
+    );
+    expect(copy).toHaveTextContent("can accept only by leaving that workspace");
+    expect(copy).not.toHaveTextContent("cannot be removed once they join");
+  });
+});
+
 describe("a workspace that is not self-registered", () => {
   beforeEach(() => {
     tables.orgs = { data: { name: "LeaRN", self_registered: false }, error: null };
+  });
+
+  it("offers no Remove and marks nobody, even with a founder on record", async () => {
+    withColleague();
+    await renderPage();
+    expect(screen.queryByText("Started this workspace")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
   it("shows the members and one sentence, and no way to invite", async () => {

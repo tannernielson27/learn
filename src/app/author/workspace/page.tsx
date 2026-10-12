@@ -4,14 +4,19 @@ import { InviteColleagueForm } from "@/components/workspace/InviteColleagueForm"
 import { MemberList } from "@/components/workspace/MemberList";
 import { PendingInvites } from "@/components/workspace/PendingInvites";
 import { requireAuthor } from "@/lib/authoring/session";
-import { listMembers, listOpenInvites, readWorkspace } from "@/lib/supabase/workspace";
+import {
+  listMembers,
+  listOpenInvites,
+  readFounderId,
+  readWorkspace,
+} from "@/lib/supabase/workspace";
 import {
   memberCountLabel,
   WORKSPACE_DAILY_INVITES,
   WORKSPACE_MEMBER_CAP,
   WORKSPACE_PATH,
 } from "@/lib/workspace/workspace";
-import { inviteColleague, resendInvite, revokeInvite } from "./actions";
+import { inviteColleague, removeMember, resendInvite, revokeInvite } from "./actions";
 
 export const metadata: Metadata = { title: "Workspace" };
 
@@ -23,15 +28,22 @@ export const metadata: Metadata = { title: "Workspace" };
  * read. Every read runs as the teacher: `org_members()` and row level security answer only for
  * their own workspace. The shared LeaRN workspace shows its members and no way to invite; joining
  * it stays the owner's step (docs/05 section 7.6), and `create_org_invite` refuses it regardless.
+ *
+ * The teacher who started a workspace is marked, and is the only one given a Remove on each
+ * colleague's row (ADR 0011). That is a courtesy of the page: `remove_org_member` checks the
+ * founder itself. The founder is read on its own, so a database that does not have the column yet
+ * still draws the page, with nobody marked and no Remove.
  */
 export default async function WorkspacePage() {
   const { supabase, orgId, userId } = await requireAuthor(WORKSPACE_PATH);
-  const [workspace, members, invites] = await Promise.all([
+  const [workspace, members, invites, founderId] = await Promise.all([
     readWorkspace(supabase, orgId),
     listMembers(supabase),
     listOpenInvites(supabase),
+    readFounderId(supabase, orgId),
   ]);
   const canInvite = workspace?.selfRegistered === true;
+  const canRemove = canInvite && founderId === userId;
 
   return (
     <>
@@ -54,7 +66,8 @@ export default async function WorkspacePage() {
 
       <section aria-labelledby="members-heading" className="mb-10">
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4">
-          <h2 id="members-heading" className="text-lg font-medium text-ink-1">
+          {/* Focusable from script only: removing a colleague sends focus here. */}
+          <h2 id="members-heading" tabIndex={-1} className="text-lg font-medium text-ink-1">
             Members
           </h2>
           {canInvite && members ? (
@@ -66,7 +79,15 @@ export default async function WorkspacePage() {
             The members could not be loaded. Reload the page to try again.
           </p>
         ) : (
-          <MemberList members={members} viewerId={userId} />
+          <MemberList
+            members={members}
+            viewerId={userId}
+            founderId={canInvite ? founderId : null}
+            removeActionFor={
+              canRemove ? (memberId) => removeMember.bind(null, memberId) : undefined
+            }
+            focusAfterRemove="members-heading"
+          />
         )}
       </section>
 
@@ -79,10 +100,13 @@ export default async function WorkspacePage() {
             <p className="mb-4 max-w-prose text-ink-2">
               They join this workspace as a teacher with the same access as you: they can see and
               edit every bank, class and assignment, see every student&apos;s name, email address
-              and results, run live sessions, and send or revoke invitations themselves. A colleague
-              cannot be removed once they join. A workspace holds up to {WORKSPACE_MEMBER_CAP}{" "}
-              teachers, and you can send {WORKSPACE_DAILY_INVITES} invitations a day. An account
-              that is already a student, or already teaches in another workspace, cannot accept.
+              and results, run live sessions, and send or revoke invitations themselves. Only the
+              person who started the workspace can remove a colleague, with Remove beside their name
+              above, and any teacher in the workspace can invite a removed colleague back. A
+              workspace holds up to {WORKSPACE_MEMBER_CAP} teachers, and you can send{" "}
+              {WORKSPACE_DAILY_INVITES} invitations a day. An account that is already a student
+              cannot accept. An account that already teaches in another workspace can accept only by
+              leaving that workspace, and is asked to confirm it first.
             </p>
             <InviteColleagueForm action={inviteColleague} />
           </section>

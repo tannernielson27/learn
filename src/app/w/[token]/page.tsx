@@ -7,9 +7,10 @@ import { FocusHeading } from "@/components/status/FocusHeading";
 import { AcceptInviteForm } from "@/components/workspaceInvite/AcceptInviteForm";
 import { InviteAnswerView, InviteNotValid } from "@/components/workspaceInvite/InviteAnswerView";
 import { JoinWorkspaceButton } from "@/components/workspaceInvite/JoinWorkspaceButton";
+import { MoveWorkspaceForm } from "@/components/workspaceInvite/MoveWorkspaceForm";
 import { clientIp } from "@/lib/auth/signInRateLimit";
 import { readViewer } from "@/lib/classes/viewer";
-import { resolveOrgInvite } from "@/lib/supabase/orgInvites";
+import { previewOrgMove, resolveOrgInvite } from "@/lib/supabase/orgInvites";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import {
   INVITE_UNAVAILABLE,
@@ -18,7 +19,12 @@ import {
   sameAddress,
   signInToAcceptPath,
 } from "@/lib/workspace/invite";
-import { acceptInvitation, createAccountAndAccept, signOutToInvitation } from "./actions";
+import {
+  acceptInvitation,
+  createAccountAndAccept,
+  moveToInvitedWorkspace,
+  signOutToInvitation,
+} from "./actions";
 
 export const metadata: Metadata = {
   title: "Workspace invitation",
@@ -60,15 +66,19 @@ function Shell({ children }: { children: ReactNode }) {
  * button, or is told why that account cannot join. Someone signed in as anybody else is told to
  * sign out, and sees the invited address only in part.
  *
+ * A teacher signed in as the invited address is a move (ADR 0011). The database is asked what
+ * accepting would do (`org_invite_move_preview`, for the id this request's session belongs to):
+ * either why this account may not leave the workspace it is in, or the name of that workspace and
+ * what it holds, which the page puts above a box to tick. When the database cannot say, which is
+ * every time until migration 20261011000000 is applied, the page says what it always said: this
+ * account already teaches.
+ *
  * The workspace's name and the inviter's are another person's words: they are rendered as text.
  */
 export default async function WorkspaceInvitePage({ params }: PageProps<"/w/[token]">) {
   const { token } = await params;
-  const invite = await resolveOrgInvite(
-    createSupabaseServiceClient(),
-    token,
-    clientIp(await headers()),
-  );
+  const service = createSupabaseServiceClient();
+  const invite = await resolveOrgInvite(service, token, clientIp(await headers()));
 
   if (invite.status === "invalid") {
     return (
@@ -146,13 +156,40 @@ export default async function WorkspaceInvitePage({ params }: PageProps<"/w/[tok
     );
   }
 
+  if (viewer.role === "student") {
+    return (
+      <Shell>
+        <InviteAnswerView answer={{ status: "refused", reason: "student" }} />
+      </Shell>
+    );
+  }
+
   if (viewer.role !== null) {
+    // The id is the verified session's, never the request's: the answer describes that account.
+    const move = await previewOrgMove(service, viewer.userId, token);
+    if (move.status === "move") {
+      return (
+        <Shell>
+          <MoveWorkspaceForm
+            action={moveToInvitedWorkspace.bind(null, token)}
+            heading={heading}
+            email={viewer.email}
+            preview={{
+              leavingWorkspace: move.leavingWorkspace,
+              leavingWorkspaceId: move.leavingWorkspaceId,
+              bankCount: move.bankCount,
+              classCount: move.classCount,
+            }}
+          />
+        </Shell>
+      );
+    }
     return (
       <Shell>
         <InviteAnswerView
           answer={{
             status: "refused",
-            reason: viewer.role === "student" ? "student" : "already_teaches",
+            reason: move.status === "refused" ? move.reason : "already_teaches",
           }}
         />
       </Shell>

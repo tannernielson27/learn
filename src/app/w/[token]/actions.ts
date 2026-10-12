@@ -21,6 +21,7 @@ import {
   type JoinWorkspaceState,
   workspaceInvitePath,
 } from "@/lib/workspace/invite";
+import { type ConfirmedMove, logMembershipChange, moveConfirmed } from "@/lib/workspace/membership";
 
 const ACCOUNT_FAILED = "Your account could not be created just now. Try again in a moment.";
 
@@ -58,10 +59,19 @@ async function pendingInvite(
  * (`auth.getUser()`), never an id the request carries. That also hands over the account's stored
  * `learn_email_unconfirmed`, read before anything is changed. Both database calls are made with
  * the service role, which is the only role granted them. What follows `accepted` is
- * `acceptAsSignedIn`'s. Bound to the token by the page; the form state and data React passes
- * after it are not needed, and nothing is read from them.
+ * `acceptAsSignedIn`'s.
+ *
+ * `move` is passed to the database and decides nothing here. It matters only for an account
+ * that already teaches: `accept_org_invite` moves such an account only when the move is
+ * confirmed for the workspace it teaches in at that moment, and otherwise answers
+ * `move_needs_confirmation` having written nothing (ADR 0011). Every protection above holds for a
+ * move exactly as for a first acceptance, the #378 password retirement included, and a move also
+ * signs out the account's other sessions (`acceptAsSignedIn`).
  */
-export async function acceptInvitation(token: string): Promise<JoinWorkspaceState> {
+async function acceptAsThisAccount(
+  token: string,
+  move: ConfirmedMove | null,
+): Promise<JoinWorkspaceState> {
   const requestHeaders = await headers();
   const allowed = await takeInviteAcceptAttempt(requestHeaders);
   if (!allowed.ok) return { status: "error", error: allowed.error };
@@ -84,9 +94,10 @@ export async function acceptInvitation(token: string): Promise<JoinWorkspaceStat
       // Only this account's own session says when it signed in.
       claims: claims?.sub === user.id ? claims : null,
       inviteExpiresAt: invite.expiresAt,
+      move: move !== null,
     },
     {
-      accept: (userId) => acceptOrgInvite(service, userId, token),
+      accept: (userId) => acceptOrgInvite(service, userId, token, move),
       clearUnconfirmed: (userId) =>
         service.auth.admin.updateUserById(userId, {
           // Null removes the one key; Supabase Auth leaves the rest of app_metadata as it is.
@@ -97,8 +108,36 @@ export async function acceptInvitation(token: string): Promise<JoinWorkspaceStat
     },
   );
   if (outcome.result !== "accepted") return inviteAnswerFor(outcome.result);
+  // The workspace left, by id. The one joined is on the invitation row `accepted_by` now names.
+  if (move)
+    logMembershipChange("teacher_moved", { actor: user.id, target: user.id, org: move.leaving });
   // Outside any try, because redirect() works by throwing.
   redirect(outcome.next);
+}
+
+/**
+ * "Join workspace", for a signed-in account with no role. Bound to the token by the page; the
+ * form state and data React passes after it are not needed, and nothing is read from them. It
+ * never confirms a move: an account that came to teach somewhere between the page and the press
+ * is told to reload, and nothing is changed.
+ */
+export async function acceptInvitation(token: string): Promise<JoinWorkspaceState> {
+  return acceptAsThisAccount(token, null);
+}
+
+/**
+ * "Leave and join workspace", for a signed-in account that already teaches in a workspace of its
+ * own. Two things are read from the form: whether the box that names the workspace being left
+ * was ticked, and that workspace's id, which the page put there from the preview. A post without
+ * either reaches the database as an unconfirmed accept, which it refuses; one with an id that is
+ * not the account's workspace at that moment is refused the same way.
+ */
+export async function moveToInvitedWorkspace(
+  token: string,
+  _previous: JoinWorkspaceState,
+  formData: FormData,
+): Promise<JoinWorkspaceState> {
+  return acceptAsThisAccount(token, moveConfirmed(formData));
 }
 
 /**

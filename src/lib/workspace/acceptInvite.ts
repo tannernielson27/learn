@@ -31,6 +31,11 @@ export interface AcceptAsSignedInInput {
   claims: { amr?: unknown } | null | undefined;
   /** `resolve_org_invite`'s `expires_at`. */
   inviteExpiresAt: string;
+  /**
+   * True when this accept is a confirmed move out of another workspace. The account's other
+   * sessions are then signed out even where nothing else of its earlier access is ended.
+   */
+  move?: boolean;
 }
 
 /** The calls `acceptAsSignedIn` makes, injected so it can be tested. */
@@ -73,6 +78,12 @@ export type AcceptOutcome =
  *    every other session is signed out, exactly as `endEarlierAccess` does for an emailed link
  *    opened elsewhere, and the person goes to choose a password of their own.
  *
+ * A fourth thing follows a move (ADR 0011). The account's other sessions may hold a Realtime
+ * socket joined to a live session of the workspace it has just left, and such a socket is not
+ * asked again who it is until its token is replaced. So every session but this one is signed out,
+ * with the session's own call as in step 3 and never the admin API, which would end this one too.
+ * The password is left alone unless step 3 applies as well.
+ *
  * Never throws. A step after `accepted` that fails is logged and the rest still run: the person is
  * a teacher either way, and a failure here must not leave them on a page that says otherwise.
  */
@@ -105,6 +116,14 @@ export async function acceptAsSignedIn(
   }
 
   if (!mustEndEarlierAccess(input)) {
+    if (input.move) {
+      try {
+        const others = await deps.earlierAccess.signOutOthers();
+        if (others.error) log("signing out a moved teacher's other sessions", others.error);
+      } catch (error) {
+        log("signing out a moved teacher's other sessions", error);
+      }
+    }
     return { result, next: DEFAULT_AFTER_SIGN_IN, endedEarlierAccess: false };
   }
   // `null` for "signed in before": whoever held this account before is not taken on trust.

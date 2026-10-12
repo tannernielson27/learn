@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { REMOVE_ANSWERS, type RemovedMember } from "@/lib/workspace/membership";
 import type { Database } from "./database.types";
 
 type Client = SupabaseClient<Database>;
@@ -51,6 +52,24 @@ export async function readWorkspace(client: Client, orgId: string): Promise<Work
     .maybeSingle();
   if (error || !data) return null;
   return { name: data.name, selfRegistered: data.self_registered };
+}
+
+/**
+ * `orgs.founder_id`: the teacher who made the workspace, and the only one who may remove a
+ * colleague (migration 20261011000000). Null for the shared workspace, for a workspace whose
+ * founder's account is gone, and whenever the read fails. That last case includes a database the
+ * migration has not reached, where the column does not exist: the page then marks no founder and
+ * offers no Remove, which is how it stood before. A read of its own, so that such a database
+ * still answers `readWorkspace`.
+ */
+export async function readFounderId(client: Client, orgId: string): Promise<string | null> {
+  const { data, error } = await client
+    .from("orgs")
+    .select("founder_id")
+    .eq("id", orgId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return typeof data.founder_id === "string" ? data.founder_id : null;
 }
 
 /** The instructors and admins of the caller's workspace, oldest first, or null on a failure. */
@@ -210,4 +229,18 @@ export async function createOrgInvite(
   if (isRefusal(row?.status)) return { status: row.status };
   console.error("[workspace] create_org_invite gave an answer the page does not know");
   return { status: "failed" };
+}
+
+/**
+ * Removes one colleague from the caller's workspace, as the caller: `remove_org_member` checks
+ * that they founded it. `failed` for a call that did not answer, which includes a database
+ * without migration 20261011000000.
+ */
+export async function removeOrgMember(client: Client, memberId: string): Promise<RemovedMember> {
+  const { data, error } = await client.rpc("remove_org_member", { p_member: memberId });
+  if (error) {
+    console.error("[workspace] a colleague could not be removed", { code: error.code });
+    return "failed";
+  }
+  return REMOVE_ANSWERS.find((known) => known === data) ?? "failed";
 }

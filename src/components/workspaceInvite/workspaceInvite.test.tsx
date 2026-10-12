@@ -17,6 +17,7 @@ import {
 } from "./AcceptInviteForm";
 import { InviteAnswerView } from "./InviteAnswerView";
 import { JoinWorkspaceButton, type JoinWorkspaceButtonProps } from "./JoinWorkspaceButton";
+import { MoveWorkspaceForm, type MoveWorkspaceFormProps } from "./MoveWorkspaceForm";
 
 const HEADING = "Ada Lovelace invited you to teach in Ada’s workspace";
 const SIGN_IN = "/sign-in?next=%2Fw%2FAbC_-0123456789abcdefghijklmnopq";
@@ -36,6 +37,11 @@ describe("InviteAnswerView", () => {
   it.each([
     "student",
     "already_teaches",
+    "already_member",
+    "admin_account",
+    "teaches_shared",
+    "founder_with_members",
+    "students_depend",
     "wrong_address",
     "shared_workspace",
     "members_full",
@@ -178,5 +184,92 @@ describe("AcceptInviteForm", () => {
     await fillAndSubmit(user);
     expect(await screen.findByText(INVITE_REFUSED.members_full)).toBeVisible();
     expect(screen.queryByRole("button", { name: "Create account and join" })).toBeNull();
+  });
+});
+
+const PREVIEW = {
+  leavingWorkspace: "Grace’s workspace",
+  leavingWorkspaceId: "00000000-0000-4000-8000-0000000000d4",
+  bankCount: 2,
+  classCount: 0,
+};
+const MOVE_BOX =
+  "I understand that I will leave Grace’s workspace and lose access to everything in it.";
+
+function setupMove(result: JoinWorkspaceState) {
+  const action = vi.fn<MoveWorkspaceFormProps["action"]>(async () => result);
+  render(
+    <MoveWorkspaceForm
+      action={action}
+      heading={HEADING}
+      email="grace@school.edu"
+      preview={PREVIEW}
+    />,
+  );
+  return { action, user: userEvent.setup() };
+}
+
+describe("MoveWorkspaceForm", () => {
+  it("names the workspace left, counts what is lost, and says who is signed in", () => {
+    setupMove({ status: "idle" });
+    expect(screen.getByRole("heading", { level: 1, name: HEADING })).toBeVisible();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Joining means leaving your workspace" }),
+    ).toBeVisible();
+    expect(screen.getByText(/You are signed in as grace@school\.edu\./)).toBeVisible();
+    expect(screen.getByText(/You teach in Grace’s workspace now\./)).toBeVisible();
+    expect(screen.getByText(/its 2 item banks and 0 classes/)).toBeVisible();
+    expect(screen.getByText(/Nothing is deleted, and nothing comes with you\./)).toBeVisible();
+  });
+
+  it("starts with the box unticked, and it is required", () => {
+    setupMove({ status: "idle" });
+    const box = screen.getByRole("checkbox", { name: MOVE_BOX });
+    expect(box).not.toBeChecked();
+    expect(box).toBeRequired();
+  });
+
+  it("posts the ticked box under the name the action reads", async () => {
+    const { action, user } = setupMove({ status: "idle" });
+    await user.click(screen.getByRole("checkbox", { name: MOVE_BOX }));
+    await user.click(screen.getByRole("button", { name: "Leave and join workspace" }));
+    expect(action).toHaveBeenCalledOnce();
+    const form = action.mock.calls[0]![1];
+    expect(form.get("confirmMove")).toBe("on");
+    // And says which workspace the box was about, from the preview, not from anything typed.
+    expect(form.get("leaving")).toBe("00000000-0000-4000-8000-0000000000d4");
+  });
+
+  it("shows the server's sentence beside the box, and keeps the form", async () => {
+    const { user } = setupMove({ status: "error", error: "Tick the box to confirm." });
+    await user.click(screen.getByRole("checkbox", { name: MOVE_BOX }));
+    await user.click(screen.getByRole("button", { name: "Leave and join workspace" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Tick the box to confirm.");
+    expect(screen.getByRole("checkbox", { name: MOVE_BOX })).toBeVisible();
+  });
+
+  it("gives way to the refusal when the server will not move the account", async () => {
+    const { user } = setupMove({ status: "refused", reason: "students_depend" });
+    await user.click(screen.getByRole("checkbox", { name: MOVE_BOX }));
+    await user.click(screen.getByRole("button", { name: "Leave and join workspace" }));
+    expect(
+      await screen.findByRole("heading", { level: 1, name: INVITE_REFUSED_HEADING }),
+    ).toBeVisible();
+    expect(screen.getByText(INVITE_REFUSED.students_depend)).toBeVisible();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+
+  it("draws the workspace's name as text", () => {
+    const action = vi.fn<MoveWorkspaceFormProps["action"]>(async () => ({ status: "idle" }));
+    const { container } = render(
+      <MoveWorkspaceForm
+        action={action}
+        heading={HEADING}
+        email="grace@school.edu"
+        preview={{ ...PREVIEW, leavingWorkspace: "<b>Mine</b><script>x</script>" }}
+      />,
+    );
+    expect(container.textContent).toContain("<b>Mine</b><script>x</script>");
+    expect(container.querySelector("b, script")).toBeNull();
   });
 });
