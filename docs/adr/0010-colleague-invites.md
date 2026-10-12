@@ -1,6 +1,6 @@
 # ADR 0010 — A teacher invites a colleague into their own workspace
 
-- **Status:** Accepted, 2026-10-08 (owner decisions of that day). Changes one consequence of ADR 0009: "a teacher cannot invite a colleague into theirs".
+- **Status:** Accepted, 2026-10-08 (owner decisions of that day). Changes one consequence of ADR 0009: "a teacher cannot invite a colleague into theirs". Two decisions below, "no removal in the app" and "only an account with no role can accept", were changed on 2026-10-09 by ADR 0011.
 - **Deciders:** product owner (the decisions below), Claude (orchestrator)
 
 ## Context

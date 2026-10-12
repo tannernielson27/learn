@@ -35,7 +35,7 @@ const FOOTER =
   "Sent by LeaRN, an NCLEX practice app, because a teacher invited this address to their workspace.";
 const NOTES = [
   "The invitation is only for this email address and expires in 7 days. Sign in or make an account with this address to accept it.",
-  "An account that is already a student, or that already teaches in LeaRN, cannot accept it.",
+  "An account that is already a student cannot accept it. One that already teaches in LeaRN is asked first, because accepting means leaving the workspace it teaches in.",
   "If you do not know the sender, you can ignore this email. Nothing happens unless you accept.",
 ] as const;
 

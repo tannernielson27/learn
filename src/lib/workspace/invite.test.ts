@@ -6,8 +6,10 @@ import {
   INVITE_CLOSED,
   INVITE_NOT_VALID_HEADING,
   INVITE_NOT_VALID_TEXT,
+  INVITE_REFUSALS,
   INVITE_REFUSED,
   INVITE_UNAVAILABLE,
+  inviteAnswerFor,
   inviteResponseHeaders,
   inviterLabel,
   isWorkspaceInvitePath,
@@ -19,6 +21,7 @@ import {
   signInToAcceptPath,
   workspaceInvitePath,
 } from "./invite";
+import { MOVE_NOT_CONFIRMED } from "./membership";
 
 const TOKEN = "AbC_-0123456789abcdefghijklmnopq";
 
@@ -131,6 +134,14 @@ describe("what the page says", () => {
     expect(INVITE_REFUSED.student).toMatch(/another email address/);
     expect(INVITE_REFUSED.already_teaches).toMatch(/already teaches in a workspace/);
     expect(INVITE_REFUSED.already_teaches).toMatch(/not available yet/);
+    expect(INVITE_REFUSED.already_member).toMatch(/already teaches in this workspace/);
+    expect(INVITE_REFUSED.teaches_shared).toMatch(/LeaRN workspace/);
+    expect(INVITE_REFUSED.teaches_shared).toMatch(/another email address/);
+    expect(INVITE_REFUSED.founder_with_members).toMatch(/You started the workspace/);
+    expect(INVITE_REFUSED.founder_with_members).toMatch(/Remove them/);
+    expect(INVITE_REFUSED.students_depend).toMatch(/only teacher/);
+    expect(INVITE_REFUSED.students_depend).toMatch(/students in a class/);
+    expect(new Set(Object.values(INVITE_REFUSED)).size).toBe(INVITE_REFUSALS.length);
     const all = [
       ...Object.values(INVITE_REFUSED),
       ...Object.values(INVITE_CLOSED),
@@ -226,5 +237,26 @@ describe("mustEndEarlierAccess", () => {
       "expires_at timestamptz not null default (now() + interval '7 days')",
     );
     expect(ORG_INVITE_LIFETIME_MS).toBe(7 * 24 * 60 * 60 * 1000);
+  });
+});
+
+describe("inviteAnswerFor", () => {
+  it.each(INVITE_REFUSALS)("shows %s as a refusal with its own sentence", (reason) => {
+    expect(inviteAnswerFor(reason)).toEqual({ status: "refused", reason });
+  });
+
+  it("shows an unconfirmed move as the form's own error, not as a refusal", () => {
+    expect(inviteAnswerFor("move_needs_confirmation")).toEqual({
+      status: "error",
+      error: MOVE_NOT_CONFIRMED,
+    });
+  });
+
+  it("shows the rest as it always did", () => {
+    expect(inviteAnswerFor("invalid")).toEqual({ status: "invalid" });
+    expect(inviteAnswerFor("already_accepted")).toEqual({ status: "closed", state: "accepted" });
+    expect(inviteAnswerFor("revoked")).toEqual({ status: "closed", state: "revoked" });
+    expect(inviteAnswerFor("expired")).toEqual({ status: "closed", state: "expired" });
+    expect(inviteAnswerFor("unavailable")).toEqual({ status: "error", error: INVITE_UNAVAILABLE });
   });
 });

@@ -100,10 +100,15 @@ Closed after the sprint, on 2026-10-08 and 09:
 - **Two workspaces with the same name are told apart** (migration `20261011010000`: `my_classes()` numbers the student's own workspaces 1, 2, 3; it still returns no workspace id). Both are named on the student's rows.
 - **The walks #398 lacked are in e2e**: the workspace on open-assignment, history and practice rows for a student in two workspaces and none for a student in one (`e2e/studentWorkspaces.spec.ts`), and the fourth invitation to one address refused (`e2e/workspaceInvite.spec.ts`).
 
+- **The teacher who started a workspace can remove a colleague, and a teacher who already has a workspace can accept an invitation by leaving it** (ADR 0011, migration `20261011000000`). The removed colleague starts again in an empty workspace of their own; a move is asked for first, with what it costs, and is refused where it would leave students without a teacher.
+
 Still open:
 
-- **Nobody can move between workspaces, and a colleague cannot be removed in the app.** An account that already teaches cannot accept an invitation. The shared workspace is still the owner's steps (docs/05 §7.6).
-- **Abandoned workspaces are never removed.** A sweep must first deal with students whose first workspace it would delete (ADR 0009).
+- **Migration `20261011000000_workspace_remove_and_move` is not on hosted yet** (docs/05 §7.2 row 46). The app works without it; until it is pushed nobody can remove a colleague, and a teacher who opens an invitation is told moving is not available.
+- **A founder cannot hand their workspace to someone else, and cannot leave it while colleagues are in it.** A teacher of the shared workspace cannot move at all. The shared workspace is still the owner's steps (docs/05 §7.6).
+- **A removed colleague is not told by email, and takes nothing with them.** What they made stays in the workspace; there is no export on the way out.
+- **The last teacher of a workspace with students, an assignment that has not closed or a live session cannot move** until those are gone.
+- **Abandoned workspaces are never removed.** One whose last teacher moved away is now marked (`orgs.emptied_at`) and kept. A sweep must first deal with students whose first workspace it would delete (ADR 0009).
 - **Migration `20261010000000_workspace_follow_ups` is not on hosted yet** (docs/05 §7.2 row 45). The app works without it; until it is pushed a student can still read the row of the first workspace they joined, and nothing caps invitations per address except a resend's own check.
 - **Migration `20261011010000_practice_workspace_name` is not on hosted yet.** The app works without it; until it is pushed practice rows name no workspace, and two workspaces with the same name still look like one to a student.
 - **Practice rows name no class**, only the workspace: a bank can be shared with several of a student's classes. The assignment and results pages show no class name either.

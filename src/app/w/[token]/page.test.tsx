@@ -15,6 +15,7 @@ type Reply = { data: unknown; error: { code?: string } | null };
 const mocks = vi.hoisted(() => ({
   acceptInvitation: vi.fn(async () => ({ status: "idle" as const })),
   createAccountAndAccept: vi.fn(async () => ({ status: "idle" as const })),
+  moveToInvitedWorkspace: vi.fn(async () => ({ status: "idle" as const })),
   signOutToInvitation: vi.fn(async () => undefined),
   rpc: vi.fn(),
   admin: {
@@ -31,6 +32,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("./actions", () => ({
   acceptInvitation: mocks.acceptInvitation,
   createAccountAndAccept: mocks.createAccountAndAccept,
+  moveToInvitedWorkspace: mocks.moveToInvitedWorkspace,
   signOutToInvitation: mocks.signOutToInvitation,
 }));
 vi.mock("next/headers", () => ({ headers: async () => mocks.requestHeaders }));
@@ -55,6 +57,22 @@ const PENDING = {
 };
 
 let reply: Reply;
+/** What `org_invite_move_preview` answers. By default: a database that does not have it yet. */
+let preview: Reply;
+const NO_SUCH_FUNCTION: Reply = { data: null, error: { code: "PGRST202" } };
+const previewOf = (status: string, over: Record<string, unknown> = {}): Reply => ({
+  data: [
+    {
+      status,
+      leaving_workspace: null,
+      leaving_workspace_id: null,
+      bank_count: null,
+      class_count: null,
+      ...over,
+    },
+  ],
+  error: null,
+});
 
 async function renderPage(token = TOKEN) {
   const page = await WorkspaceInvitePage({
@@ -78,7 +96,11 @@ function signedIn(over: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   reply = { data: [PENDING], error: null };
-  mocks.rpc.mockImplementation(async () => reply);
+  preview = NO_SUCH_FUNCTION;
+  mocks.rpc.mockImplementation(async (name: string) =>
+    name === "org_invite_move_preview" ? preview : reply,
+  );
+  vi.spyOn(console, "error").mockImplementation(() => {});
   mocks.viewer.current = { status: "signed_out" };
   mocks.requestHeaders = new Headers({
     "x-vercel-id": "iad1::test",
@@ -241,6 +263,95 @@ describe("/w/[token]: someone signed in", () => {
     signedIn({ role });
     await renderPage();
     expect(screen.getByText(message)).toBeVisible();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("asks about a move for the session's own account, and only for a teacher", async () => {
+    signedIn({ role: "instructor", userId: "teacher-9" });
+    await renderPage();
+    expect(mocks.rpc).toHaveBeenCalledWith("org_invite_move_preview", {
+      p_user: "teacher-9",
+      token: TOKEN,
+    });
+    mocks.rpc.mockClear();
+    for (const role of [null, "student"]) {
+      signedIn({ role });
+      (await renderPage()).unmount();
+    }
+    expect(mocks.rpc.mock.calls.map(([name]) => name)).toEqual(Array(2).fill("resolve_org_invite"));
+  });
+
+  it("as a teacher who may move: names the workspace left, counts what is lost, and asks", async () => {
+    signedIn({ role: "instructor" });
+    preview = previewOf("move_needs_confirmation", {
+      leaving_workspace: "Grace’s workspace",
+      leaving_workspace_id: "00000000-0000-4000-8000-0000000000d4",
+      bank_count: 3,
+      class_count: 1,
+    });
+    const { container } = await renderPage();
+    // The form carries which workspace the sentence is about.
+    expect(container.querySelector('input[type="hidden"][name="leaving"]')).toHaveValue(
+      "00000000-0000-4000-8000-0000000000d4",
+    );
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Ada Lovelace invited you to teach in Ada’s workspace",
+      }),
+    ).toBeVisible();
+    expect(screen.getByText(/You teach in Grace’s workspace now\./)).toBeVisible();
+    expect(screen.getByText(/lose access to its 3 item banks and 1 class/)).toBeVisible();
+    const box = screen.getByRole("checkbox", {
+      name: "I understand that I will leave Grace’s workspace and lose access to everything in it.",
+    });
+    expect(box).not.toBeChecked();
+    expect(box).toBeRequired();
+    expect(screen.getByRole("button", { name: "Leave and join workspace" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Join workspace" })).toBeNull();
+    // Opening the page moved nobody.
+    expect(mocks.moveToInvitedWorkspace).not.toHaveBeenCalled();
+  });
+
+  it("draws the name of the workspace left as text", async () => {
+    signedIn({ role: "instructor" });
+    preview = previewOf("move_needs_confirmation", {
+      leaving_workspace: "<img src=x onerror=alert(1)><b>Mine</b>",
+      leaving_workspace_id: "00000000-0000-4000-8000-0000000000d4",
+      bank_count: 0,
+      class_count: 0,
+    });
+    const { container } = await renderPage();
+    expect(container.textContent).toContain("<img src=x onerror=alert(1)><b>Mine</b>");
+    expect(container.querySelector("img, b")).toBeNull();
+  });
+
+  it.each([
+    "already_member",
+    "admin_account",
+    "teaches_shared",
+    "founder_with_members",
+    "students_depend",
+  ] as const)("as a teacher who may not move (%s): told why, with no button", async (reason) => {
+    signedIn({ role: "admin" });
+    preview = previewOf(reason);
+    await renderPage();
+    expect(screen.getByText(INVITE_REFUSED[reason])).toBeVisible();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+
+  it.each([
+    ["the database does not have the function yet", NO_SUCH_FUNCTION],
+    ["the database cannot answer", { data: null, error: { code: "08006" } }],
+    ["the answer is one nobody knows", previewOf("promoted")],
+    ["the counts are missing", previewOf("move_needs_confirmation", { leaving_workspace: "X" })],
+    ["the account turned out not to teach", previewOf("not_teaching")],
+  ])("offers a teacher no move when %s", async (_why, answer) => {
+    signedIn({ role: "instructor" });
+    preview = answer;
+    await renderPage();
+    expect(screen.getByText(INVITE_REFUSED.already_teaches)).toBeVisible();
     expect(screen.queryByRole("button")).toBeNull();
   });
 
