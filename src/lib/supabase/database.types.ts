@@ -1781,6 +1781,15 @@ export type Database = {
         Returns: string;
       };
       stop_item_timer: { Args: { target: string }; Returns: undefined };
+      sweep_abandoned_workspaces: {
+        Args: { p_delete?: boolean; p_limit?: number };
+        Returns: {
+          org_id: string;
+          outcome: string;
+          reason: string;
+          rule: string;
+        }[];
+      };
       take_rate_limit: { Args: { action_name: string }; Returns: boolean };
     };
     Enums: {

@@ -428,6 +428,73 @@ Realtime's own token check; the window above is stated, not measured); and **the
 `select has_table_privilege('postgres', 'auth.sessions', 'delete');` before relying on it: if it
 is false the function warns, removes the member anyway, and their sessions run out on their own.
 
+## Abandoned workspace sweep (ADR 0012)
+
+Added 2026-10-12 for the PR that adds the sweep (migration `20261012000000_workspace_sweep`, pgTAP
+`workspace_sweep.test.sql`). This is the first code in the repo that deletes a workspace or an
+account, so the rows say what bounds it. The rows follow the columns of the sections above.
+
+**Off until the owner turns it on.** The route passes `p_delete = true` only when
+`process.env.WORKSPACE_SWEEP === "delete"`, compared untrimmed; the variable is set nowhere.
+Nothing in the request reaches that decision or the limit (unit test: a query, a header and a body
+that all ask for deletion still give a dry run). With `p_delete` anything but true the function
+writes nothing and takes no lock (pgTAP: a snapshot of every table it could touch is unchanged).
+
+**Functions** (all security definer, `search_path = ''`, none executable by anon or authenticated).
+
+| Function                                                                            | Who               | Returns                                  | Enforcing line                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Verdict |
+| ----------------------------------------------------------------------------------- | ----------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| public.sweep_abandoned_workspaces(delete, limit)                                    | service role only | per workspace: id, rule, outcome, reason | revoked from public, anon and authenticated. Candidates are `orgs.self_registered` rows only; `private.workspace_sweep_rule` answers null for any other org before it reads anything else, so the shared workspace cannot be matched. `p_limit` is clamped to 0..100 and counts deletions. Each deletion runs in its own block: `lock_not_available` becomes `locked`, anything else `error_<SQLSTATE>` (the state only, never the message), and that workspace's writes are rolled back. Returns ids and fixed words, never a name or an address                                                                                                                                                                                                   | OK      |
+| private.sweep_one_workspace(org, rule)                                              | internal          | nothing, or raises                       | not executable by any API role. Locks the org row `for update nowait`, then every profile naming it, then (never used) the teachers' `auth.users` rows; reads the rule and the blockers again under those locks; only then writes. Every check precedes the first write, and a refusal is raised (`WS001`) so the caller's block rolls back and releases the locks. Students are repointed or cleared before the org row goes, so `profiles_org_and_role_together` is never asked to hold a role with no org; if any profile still named the org the delete would fail on that constraint and roll back. `auth.users` rows are deleted only for the teachers of a never-used workspace, and only after `sweep_account_tied_elsewhere` found nothing | OK      |
+| private.workspace_sweep_rule, workspace_sweep_blocker, sweep_account_tied_elsewhere | internal          | a rule, a reason, a boolean              | not executable by any API role; `stable`, read only. A null anywhere in "unconfirmed and gone for 90 days" fails that teacher, which stops the rule (`coalesce(..., false)`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | OK      |
+| private.call_workspace_sweep_route()                                                | superuser only    | `queued`, or what is missing             | `private.call_reminder_route` with another Vault name (`learn_workspace_sweep_url`); `net` and `vault` are reached through dynamic SQL; never raises; not executable by any API role                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | OK      |
+
+**Route.**
+
+| Where                          | Who                       | Enforcing line                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Verdict                                                                                                                                                                                              |
+| ------------------------------ | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST /api/cron/workspace-sweep | the holder of CRON_SECRET | `handleWorkspaceSweep` (`src/lib/workspaceSweep/sweepRoute.ts`): the reminder route's own `bearerMatches` (both sides hashed, `timingSafeEqual`) and its 32-character minimum (`503 not_configured` under it). A wrong secret is counted per caller in `cron_denied`; an authorised run in `cron_runs` under its own key, 6 an hour, and a run that cannot be counted does not run (503). POST only (the module exports `POST` and `maxDuration`), `Cache-Control: no-store`, counts only in the body. The service client is built after the secret check. `summarize` drops any row whose id is not a uuid or whose words are not the known ones before logging | OK. **LOW, accepted:** `CRON_SECRET` now also starts a deletion when `WORKSPACE_SWEEP=delete`, where before it could only send reminders and read health booleans. Bounded by the rules and 20 a run |
+
+**What a holder of `CRON_SECRET` can do with deletion on.** Run the sweep up to 6 times an hour,
+20 workspaces a run. They choose nothing: the candidates are whatever already matches a rule, so
+the worst case is that abandoned workspaces go sooner than the daily schedule would take them.
+
+**What an outsider can do to cause a deletion.** Nothing that is not already theirs to lose. The
+never-used rule needs an account nobody confirmed or signed in to for 90 days; signing up on
+someone else's address (ADR 0009's accepted risk) and abandoning it gets that account deleted
+after 90 days, which is the better outcome for the address's owner. The memberless rule needs the
+workspace's own last teacher to have moved away through a confirmed invitation (ADR 0011).
+
+**Before and after the migration.** Without it the RPC answers PGRST202;
+`sweepAbandonedWorkspaces` returns `not_available`, the route answers `200` with that word and logs
+`[workspace-sweep] not available`. A 42883 counts only when its message names
+`sweep_abandoned_workspaces`; one about any other function is a helper missing inside the sweep and
+is a failed run (`500`), as is a 42501 and every other code (review of #401, L4). Unit tests pin
+each.
+
+**From the review of #401.** M1: the never-used deletion also locks the teachers' `auth.sessions`
+rows `for update nowait` before it reads the rule again, because a token refresh updates the
+session row and never `auth.users`; a refresh in flight makes it skip (`locked`). M2: never used
+now also means no practice run, no practice share and no `private.class_removals` row for any of
+the workspace's classes, so a student who joined, practised and left blocks the rule (pgTAP, one
+assertion each). L1: only the lock statements are `nowait`; the writes can wait, so a deletion
+sets `lock_timeout = 2s` and a 55P03 from either is reported `locked` (pgTAP raises 55P03 from a
+trigger, since one session cannot time out against itself). L5: the function pg_cron runs sends
+the secret to an `https://` URL only. The move confirmation on `/w/[token]` now says an emptied
+workspace is deleted after 30 days.
+
+**Not verified by any test:** two sweeps at once, or a sweep against a student joining or a
+teacher accepting (argued from the `nowait` locks and the lock each of those paths takes on the
+org row; `changed` is never produced in pgTAP, and `locked` only from a trigger that raises
+55P03, never from a real second session); the `https://` check of
+`private.call_workspace_sweep_route` (the local stack has no Vault secret to read, so pgTAP only
+sees it answer a "not set up" word); **the lock on and delete from
+`auth.users` on the hosted project** (pgTAP holds it on the local stack; if the role may not, each
+never-used workspace is skipped with `error_42501` and rolled back; check with
+`select has_table_privilege('postgres', 'auth.users', 'delete');`); and the shape of
+`auth.sessions` on hosted (`created_at`, `updated_at`, `refreshed_at`), which the never-used rule
+reads.
+
 ## Still open
 
 - **#178**: drop the open select policy on `live.session_public_state`. It is blocked on the owner
