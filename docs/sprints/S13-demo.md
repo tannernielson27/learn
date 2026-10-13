@@ -20,7 +20,7 @@ Sprint 13 opens sign-up (ADR 0009). It covers:
 > - **Row 41, `20261006000000_self_serve_instructors` (#355, PR #369).** `orgs.self_registered`, `orgs.ai_import_enabled`, `profiles.onboarded_at`, `register_instructor`, `mark_onboarded`.
 > - **Row 42, `20261006010000_class_join_code` (#356, PR #375).** `classes.join_code` and `join_class_by_code`.
 >
-> After the sprint: rows 43 and 44 (`20261009000000_student_multi_workspace`, `20261009010000_workspace_invites`) were applied on 2026-10-09. **Row 45, `20261010000000_workspace_follow_ups`, is not applied yet.**
+> After the sprint: rows 43 and 44 (`20261009000000_student_multi_workspace`, `20261009010000_workspace_invites`) were applied on 2026-10-09. Rows 45 to 48 (`20261010000000_workspace_follow_ups`, `20261011000000_workspace_remove_and_move`, `20261011010000_practice_workspace_name`, `20261012000000_workspace_sweep`) were applied on 2026-10-13.
 >
 > Both were first pushed from a checkout that was behind `main`, which applies nothing and says "up to date". Pull `main` in the folder you push from, and read the push output: it must name the migrations.
 
@@ -104,12 +104,9 @@ Closed after the sprint, on 2026-10-08 and 09:
 
 Still open:
 
-- **Migration `20261011000000_workspace_remove_and_move` is not on hosted yet** (docs/05 §7.2 row 46). The app works without it; until it is pushed nobody can remove a colleague, and a teacher who opens an invitation is told moving is not available.
 - **A founder cannot hand their workspace to someone else, and cannot leave it while colleagues are in it.** A teacher of the shared workspace cannot move at all. The shared workspace is still the owner's steps (docs/05 §7.6).
 - **A removed colleague is not told by email, and takes nothing with them.** What they made stays in the workspace; there is no export on the way out.
 - **The last teacher of a workspace with students, an assignment that has not closed or a live session cannot move** until those are gone.
-- **Abandoned workspaces are not removed yet, though the sweep that removes them is built (ADR 0012).** Migration `20261012000000_workspace_sweep` is not on hosted, the daily job is not scheduled, and `WORKSPACE_SWEEP` is set nowhere, so every run would be a dry run. The owner's steps, reading a dry run first, are in docs/05 §7.13. Until they are done a workspace whose last teacher moved away is marked (`orgs.emptied_at`) and kept.
+- **Abandoned workspaces are not removed yet, though the sweep that removes them is built (ADR 0012).** Migration `20261012000000_workspace_sweep` is on hosted (2026-10-13), but the daily job is not scheduled and `WORKSPACE_SWEEP` is set nowhere, so every run would be a dry run. The owner's steps, reading a dry run first, are in docs/05 §7.13. Until they are done a workspace whose last teacher moved away is marked (`orgs.emptied_at`) and kept.
 - **The sweep leaves three kinds of workspace for the owner:** one with no teacher and no `emptied_at` (its founder's account was deleted by hand), one whose never-confirmed teacher is named by another workspace's rows (`teacher_tied_elsewhere`), and the empty workspace of a removed teacher who did confirm their address. Nobody is emailed before a workspace or an unconfirmed account is deleted.
-- **Migration `20261010000000_workspace_follow_ups` is not on hosted yet** (docs/05 §7.2 row 45). The app works without it; until it is pushed a student can still read the row of the first workspace they joined, and nothing caps invitations per address except a resend's own check.
-- **Migration `20261011010000_practice_workspace_name` is not on hosted yet.** The app works without it; until it is pushed practice rows name no workspace, and two workspaces with the same name still look like one to a student.
 - **Practice rows name no class**, only the workspace: a bank can be shared with several of a student's classes. The assignment and results pages show no class name either.
