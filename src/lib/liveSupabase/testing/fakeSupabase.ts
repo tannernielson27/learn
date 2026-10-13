@@ -472,8 +472,10 @@ export class FakeChannel {
   }
 
   mayRead(table: string, orgId: string | null): boolean {
-    // `session_public_state` is readable by anyone holding a session id; the aggregates are the
-    // host's, inside the host's org. Exactly the two policies in the migration.
+    // `session_public_state` goes to every socket that got into the room; the aggregates are the
+    // host's, inside the host's org. Since #178 the database scopes the state by the same claim
+    // `mayJoin` checks, so a joined socket is one that may read it (pinned in pgTAP,
+    // `live_private_channel.test.sql`); this fake leaves that to the join.
     if (table === "session_public_state") return true;
     return this.identity.role === "authenticated" && this.identity.orgId === orgId;
   }
@@ -587,6 +589,26 @@ function project(row: Row, columns: string): Row {
 type FakeError = { message: string; code?: string } | null;
 type FakeResult = { data: Row | Row[] | null; error: FakeError };
 
+/**
+ * PostgREST's `max_rows` (supabase/config.toml): the most rows one read answers with, whatever was
+ * asked for and without saying so. A read that does not page loses the rest in silence (#406), so
+ * the fake cuts where the real stack cuts.
+ */
+export const FAKE_MAX_ROWS = 1000;
+
+/** Orders two rows by the columns an `.order()` chain named, the first named first. */
+function byColumns(columns: readonly string[]): (a: Row, b: Row) => number {
+  return (a, b) => {
+    for (const column of columns) {
+      const [left, right] = [a[column], b[column]];
+      if (left === right) continue;
+      if (typeof left === "number" && typeof right === "number") return left - right;
+      return String(left) < String(right) ? -1 : 1;
+    }
+    return 0;
+  };
+}
+
 class FakeFilter implements PromiseLike<FakeResult> {
   private readonly equals: [string, unknown][] = [];
 
@@ -599,6 +621,37 @@ class FakeFilter implements PromiseLike<FakeResult> {
   ) {}
 
   private readonly within: [string, Set<string>][] = [];
+  private readonly ordering: string[] = [];
+  private window: [number, number] | null = null;
+
+  /** `.order(column)`, ascending. Chained calls order by each column in turn, as PostgREST does. */
+  order(column: string): this {
+    this.ordering.push(column);
+    return this;
+  }
+
+  /** `.range(from, to)`, both ends included. `max_rows` still caps what comes back. */
+  range(from: number, to: number): this {
+    this.window = [from, to];
+    return this;
+  }
+
+  /**
+   * The rows one request answers with: ordered, windowed, and never more than `max_rows`.
+   *
+   * Postgres promises no order it was not asked for, and none between two requests: a paged read
+   * with no `ORDER BY`, or with one that leaves ties, can hand a row back twice and another not at
+   * all. So every other page of a `.range()` read starts from the rows the other way round, and
+   * only an `.order()` chain that leaves no ties reads the same from page to page. A read with no
+   * `.range()` keeps the order the rows were written in, as every test before #406 assumed.
+   */
+  private page(found: Row[]): Row[] {
+    const [from, to] = this.window ?? [0, FAKE_MAX_ROWS - 1];
+    const flipped = this.window !== null && Math.floor(from / FAKE_MAX_ROWS) % 2 === 1;
+    const heap = flipped ? [...found].reverse() : found;
+    const ordered = this.ordering.length === 0 ? heap : [...heap].sort(byColumns(this.ordering));
+    return ordered.slice(from, Math.min(to + 1, from + FAKE_MAX_ROWS));
+  }
 
   eq(column: string, value: unknown): this {
     this.equals.push([column, value]);
@@ -627,7 +680,7 @@ class FakeFilter implements PromiseLike<FakeResult> {
       for (const row of found) Object.assign(row, this.patch);
       return { data: null, error: null };
     }
-    return { data: found.map((row) => project(row, this.columns)), error: null };
+    return { data: this.page(found).map((row) => project(row, this.columns)), error: null };
   }
 
   async maybeSingle(): Promise<{ data: Row | null; error: FakeError }> {

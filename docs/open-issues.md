@@ -135,7 +135,7 @@ Phase 4 splits across two sprints. Sprint 10 covers what real students need: har
 | [#236](https://github.com/tannernielson27/learn/issues/236) | chore(infra): a nightly encrypted database dump, with restore steps                           | security, db              | Merged (#250); no migration; owner sets secrets (docs/05 §7.10), hosted restore drill pending   |
 | [#237](https://github.com/tannernielson27/learn/issues/237) | chore(infra): a go-live check that proves production is ready for students                    | security                  | Merged (#252); no migration; run it per docs/05 §7.11                                           |
 | [#219](https://github.com/tannernielson27/learn/issues/219) | fix(player): an ordered-response item starts in the author's order, which is often the answer | player                    | Merged (#249); no migration; start order is keyed server-side                                   |
-| [#178](https://github.com/tannernielson27/learn/issues/178) | fix(live): drop the open select policy on live.session_public_state                           | live, security            | Blocked: owner turns off Realtime "Allow public access"                                         |
+| [#178](https://github.com/tannernielson27/learn/issues/178) | fix(live): drop the open select policy on live.session_public_state                           | live, security            | Merged (#419); `20261013000000_drop_open_state_policy` applied to hosted 2026-10-13             |
 | [#238](https://github.com/tannernielson27/learn/issues/238) | feat(student): a history of my assignments and best scores                                    | security, db, e2e         | Merged (#254); `20260925030000_student_history` applied to hosted                               |
 | [#239](https://github.com/tannernielson27/learn/issues/239) | feat(student): my weakest clinical judgment steps                                             | security                  | Merged (#258); `20260925060000_student_steps` applied to hosted                                 |
 | [#240](https://github.com/tannernielson27/learn/issues/240) | feat(authoring): share a bank with a class for practice, and warn on graded reuse             | security, db, e2e         | Merged (#255); `20260925040000_practice_shares` applied to hosted                               |
@@ -292,7 +292,7 @@ Decisions taken at kickoff, each the conservative option; say if any should chan
 7. **Google sign-in (#67) is not in this sprint.**
 8. **A student still belongs to one workspace.** A student of one teacher cannot join another teacher's class with the same account. Known gap, to be shown in the demo; fixing it means per-class rather than per-org student membership.
 
-## S14: Stakeholder feedback
+## S14: Stakeholder feedback (milestone 16)
 
 Only the stories this file has been told about are listed here; the milestone on GitHub has the rest.
 
@@ -301,6 +301,7 @@ Only the stories this file has been told about are listed here; the milestone on
 | [#334](https://github.com/tannernielson27/learn/issues/334) | feat(ngn): reveal and lock a case study's chart step by step (fromStep, stepAccess, recordAtStep) | none          | In review; no migration; owner confirms hidden/locked/open |
 | [#335](https://github.com/tannernielson27/learn/issues/335) | feat(player): serve each case study step only the chart it has reached                            | security, e2e | To do; needs #334                                          |
 | [#336](https://github.com/tannernielson27/learn/issues/336) | feat(authoring): set when each tab of a case study's chart appears and opens                      | e2e           | To do; needs #334                                          |
+| [#406](https://github.com/tannernielson27/learn/issues/406) | fix(live): page the progress board read past 1,000 answers                                        | none          | Merged (#422); no migration                                |
 
 Until #335 merges, every student-facing page still sends a case study's whole record, so `fromStep` and `stepAccess` hide nothing yet. Until #336 merges, the record editor does not carry either field, so saving a staged record from the builder drops them; they arrive by JSON import only.
 

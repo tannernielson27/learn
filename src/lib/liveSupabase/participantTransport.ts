@@ -475,6 +475,15 @@ export function createSupabaseParticipant(
       if (gone || !postgresChangesReady(payload)) return;
       void refresh(true).catch(() => {});
     });
+    /**
+     * Why a phone still *receives* presence (#408). Being seen by the host needs only `track`
+     * below; this listener is what makes Realtime send the room's presence to this socket at all
+     * (realtime-js joins with `presence.enabled` true when a presence listener is bound). It
+     * stays because the waiting screen shows how many are in the room, and a listener cannot be
+     * added or dropped once the channel has subscribed. The screens no longer render for a sync
+     * they do not draw (`RoomCount`); dropping the messages themselves means taking that count
+     * from somewhere else first.
+     */
     opened.on("presence", { event: "sync" }, () => {
       if (gone) return;
       const roster = rosterNow();
