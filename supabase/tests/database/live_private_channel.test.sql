@@ -166,22 +166,17 @@ reset role;
 -- The session's public state over `postgres_changes`
 -- ---------------------------------------------------------------------------
 
--- Today, the `true` policy still stands beside the new ones: this migration only adds (see its
--- header for the rollout order). This pins that state, so the follow-up that drops it has to
--- change this test on purpose.
+-- #178 dropped the original `using (true)` policy (`20261013000000_drop_open_state_policy`),
+-- the last step of #149's rollout. Only the two scoped policies are left; a new policy on this
+-- table has to change this test on purpose.
 select policies_are(
   'live', 'session_public_state',
   array[
-    'a subscriber may read the public state of a session it names',
     'a participant reads their own session''s public state',
     'an author reads the public state of their org''s sessions'
   ],
-  'the public state carries the old open policy and the two scoped ones'
+  'the public state carries the two scoped policies and no open one'
 );
-
--- What the scoped policies do once it is gone: drop it here, inside this rolled-back transaction.
-drop policy "a subscriber may read the public state of a session it names"
-  on live.session_public_state;
 
 set local role anon;
 select pg_temp.as_participant_of_a();
