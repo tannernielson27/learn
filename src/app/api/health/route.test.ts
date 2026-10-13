@@ -10,13 +10,11 @@ const KNOWN = {
   EMAIL_FROM: "KNOWNSENDER <sender-a1@example.test>",
   SITE_URL: "https://knownsite-d7.example.test",
   CRON_SECRET: "KNOWNCRON".padEnd(64, "x"),
-  SENTRY_DSN: "https://KNOWNDSNKEYb5@o1.ingest.us.sentry.io/1",
-  NEXT_PUBLIC_SENTRY_DSN: "https://KNOWNDSNKEYc6@o1.ingest.us.sentry.io/1",
   DEMO_ACCOUNT_EMAIL: "known-demo-d7@example.test",
   DEMO_ACCOUNT_PASSWORD: "KNOWNDEMOPASSWORDe8",
 };
 
-/** The substrings of each value worth searching for (the DSN's key, not its common host). */
+/** The substrings of each value worth searching for. */
 const NEEDLES = [
   "KNOWNPUB7c1",
   "KNOWNSECRET8d2",
@@ -25,8 +23,6 @@ const NEEDLES = [
   "sender-a1",
   "knownsite-d7",
   "KNOWNCRON",
-  "KNOWNDSNKEYb5",
-  "KNOWNDSNKEYc6",
   "known-demo-d7",
   "KNOWNDEMOPASSWORDe8",
 ];
@@ -81,7 +77,9 @@ describe("GET /api/health", () => {
     const body = JSON.parse(bytes);
     // Positive control: the values were really set and really read.
     expect(body.env.RESEND_API_KEY).toBe(true);
-    expect(body.env.SENTRY_DSN).toBe(true);
+    expect(body.env.CRON_SECRET).toBe(true);
+    // Error reporting is optional, so the report does not name its variables.
+    expect(bytes).not.toContain("SENTRY");
     expect(body.demoAccount).toBe(true);
     expect(Object.values(body.env).every((v) => v === true)).toBe(true);
   });

@@ -19,8 +19,6 @@ const FULL_ENV = {
   EMAIL_FROM: "LeaRN <learn@example.test>",
   SITE_URL: "https://learn.example.test",
   CRON_SECRET: TOKEN,
-  SENTRY_DSN: "https://k@o1.ingest.us.sentry.io/1",
-  NEXT_PUBLIC_SENTRY_DSN: "https://k@o1.ingest.us.sentry.io/1",
   VERCEL_GIT_COMMIT_SHA: "0123456789abcdef0123456789abcdef01234567",
 };
 
@@ -97,11 +95,17 @@ describe("handleHealth", () => {
   });
 
   it("is not ready when a variable is missing, without saying which", async () => {
-    const response = await handleHealth(get(), deps({ env: { ...FULL_ENV, SENTRY_DSN: "" } }));
+    const response = await handleHealth(get(), deps({ env: { ...FULL_ENV, RESEND_API_KEY: "" } }));
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ready).toBe(false);
-    expect(JSON.stringify(body)).not.toContain("SENTRY");
+    expect(JSON.stringify(body)).not.toContain("RESEND");
+  });
+
+  it("is ready without the Sentry DSNs, which are optional", async () => {
+    expect(FULL_ENV).not.toHaveProperty("SENTRY_DSN");
+    const response = await handleHealth(get(), deps());
+    expect((await response.json()).ready).toBe(true);
   });
 
   it("is not ready while the demo account is on", async () => {

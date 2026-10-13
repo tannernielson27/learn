@@ -353,10 +353,4 @@ export const MANUAL_STEPS: readonly CheckResult[] = [
     "manual",
     'Supabase > Authentication > Sign In / Providers: "Allow anonymous sign-ins" off (docs/05 §7.12 step 3); set SUPABASE_ACCESS_TOKEN to have this checked',
   ),
-  line(
-    "sentry",
-    "Sentry receives a scrubbed test error and has its alert rules",
-    "manual",
-    "docs/05 §7.9 steps 2, 6-7",
-  ),
 ];

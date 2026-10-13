@@ -222,11 +222,11 @@ describe("healthChecks", () => {
   });
 
   it("names each missing variable with the step that sets it", () => {
-    const env = { ...allEnv, RESEND_API_KEY: false, SENTRY_DSN: false };
+    const env = { ...allEnv, RESEND_API_KEY: false, CRON_SECRET: false };
     const lines = byId(detailed({ env, ready: false }));
     expect(lines.env.status).toBe("fail");
     expect(lines.env.detail).toContain("RESEND_API_KEY (§7.7 step 6)");
-    expect(lines.env.detail).toContain("SENTRY_DSN (§7.9 step 5)");
+    expect(lines.env.detail).toContain("CRON_SECRET (§7.8 step 2)");
   });
 
   it("treats a variable the site did not report as missing", () => {
@@ -346,7 +346,6 @@ describe("MANUAL_STEPS", () => {
       "auth-signup",
       "auth-password",
       "auth-anonymous",
-      "sentry",
     ]);
   });
 });

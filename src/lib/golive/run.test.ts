@@ -103,7 +103,6 @@ describe("runGoLiveCheck", () => {
       "auth-signup": "manual",
       "auth-password": "manual",
       "auth-anonymous": "manual",
-      sentry: "manual",
     });
     expect(exitCode(results)).toBe(0);
   });
@@ -182,7 +181,7 @@ describe("runGoLiveCheck", () => {
       [VAULT_NAMES_SQL, [{ vault_names: 0 }]],
     ]);
     const env = Object.fromEntries(
-      REQUIRED_ENV.map(({ name }) => [name, !/RESEND|SENTRY|EMAIL/.test(name)]),
+      REQUIRED_ENV.map(({ name }) => [name, !/RESEND|EMAIL/.test(name)]),
     );
     const fetchImpl: GoLiveDeps["fetch"] = async (input) =>
       input.includes("/rest/v1/")
@@ -202,7 +201,7 @@ describe("runGoLiveCheck", () => {
     );
     const byId = Object.fromEntries(results.map((result) => [result.id, result]));
     expect(byId.env.detail).toContain("RESEND_API_KEY");
-    expect(byId.env.detail).toContain("SENTRY_DSN");
+    expect(byId.env.detail).toContain("EMAIL_FROM");
     expect(byId.demo.status).toBe("fail");
     // Off production the CAPTCHA is skipped, so nothing refuses sign-up there.
     expect(byId.captcha.status).toBe("pass");
