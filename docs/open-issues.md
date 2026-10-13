@@ -292,6 +292,12 @@ Decisions taken at kickoff, each the conservative option; say if any should chan
 7. **Google sign-in (#67) is not in this sprint.**
 8. **A student still belongs to one workspace.** A student of one teacher cannot join another teacher's class with the same account. Known gap, to be shown in the demo; fixing it means per-class rather than per-org student membership.
 
+## S14: Stakeholder feedback (milestone 16)
+
+| #                                                           | Title                                                      | Gates | Status                  |
+| ----------------------------------------------------------- | ---------------------------------------------------------- | ----- | ----------------------- |
+| [#406](https://github.com/tannernielson27/learn/issues/406) | fix(live): page the progress board read past 1,000 answers | none  | In review; no migration |
+
 ## No milestone
 
 | #                                                           | Title                                                                                     | Area               | Status                                                             |
