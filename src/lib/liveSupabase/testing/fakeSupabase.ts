@@ -472,8 +472,10 @@ export class FakeChannel {
   }
 
   mayRead(table: string, orgId: string | null): boolean {
-    // `session_public_state` is readable by anyone holding a session id; the aggregates are the
-    // host's, inside the host's org. Exactly the two policies in the migration.
+    // `session_public_state` goes to every socket that got into the room; the aggregates are the
+    // host's, inside the host's org. Since #178 the database scopes the state by the same claim
+    // `mayJoin` checks, so a joined socket is one that may read it (pinned in pgTAP,
+    // `live_private_channel.test.sql`); this fake leaves that to the join.
     if (table === "session_public_state") return true;
     return this.identity.role === "authenticated" && this.identity.orgId === orgId;
   }
