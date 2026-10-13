@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Countdown } from "@/components/live/Countdown";
 import { LIVE_BUSY_LABEL, liveSubmitFailure } from "@/components/live/liveSubmit";
+import { createPresentCount, RoomCount } from "@/components/live/RoomCount";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 // Module by module rather than through `@/lib/live` and `@/lib/liveSupabase`: those barrels
 // value-export the in-memory room and the host console, both of which hold items with their keys
@@ -104,7 +105,8 @@ export function StudentRoom({
   const [item, setItem] = useState<ParticipantItem | null>(null);
   const [answered, setAnswered] = useState<AnsweredPayload | null>(null);
   const [revealed, setRevealed] = useState<ItemReveal | null>(null);
-  const [present, setPresent] = useState(1);
+  /** Not state: a join or a leave elsewhere in the room must not render this screen (#408). */
+  const [present] = useState(createPresentCount);
   const [connection, setConnection] = useState<RoomConnection>("connecting");
   /**
    * What this phone has selected but not yet sent.
@@ -192,7 +194,7 @@ export function StudentRoom({
       setConnection("live");
     });
     const offPresence = joined.onPresence((roster) => {
-      if (watching) setPresent(roster.length);
+      if (watching) present.set(roster.length);
     });
     const offConnection = joined.onConnection((status, rejoined) => {
       if (!watching) return;
@@ -223,7 +225,7 @@ export function StudentRoom({
       // page into an unhandled rejection in a student's browser.
       void joined.leave().catch(() => {});
     };
-  }, [dial, router, me]);
+  }, [dial, router, me, present]);
 
   /**
    * Whether the item is on this phone at all.
@@ -373,9 +375,7 @@ export function StudentRoom({
             <p className="measure mt-2 text-ink-2">{copy.detail}</p>
           </section>
 
-          <p data-testid="room-count" className="tabular mt-8 text-sm text-ink-2">
-            {present} in the room
-          </p>
+          <RoomCount present={present} />
         </>
       )}
     </>
