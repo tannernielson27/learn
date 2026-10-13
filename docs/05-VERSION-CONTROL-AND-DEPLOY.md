@@ -190,10 +190,10 @@ Everything in `supabase/migrations/` today, in filename order — this is the re
 | 42  | `20261006010000_class_join_code`               | an eight-character class code to type; Replace the link replaces it too (#356)     | applied (seen 2026-10-08)  |
 | 43  | `20261009000000_student_multi_workspace`       | one student account in classes of more than one workspace; `my_classes` names each | applied (2026-10-09)       |
 | 44  | `20261009010000_workspace_invites`             | a teacher invites a colleague into their own workspace: invitations and members    | applied (2026-10-09)       |
-| 45  | `20261010000000_workspace_follow_ups`          | only an author reads their org row; three invitations per address in 24 hours      | not applied                |
-| 46  | `20261011000000_workspace_remove_and_move`     | a founder removes a colleague; a teacher moves by accepting an invitation          | not applied                |
-| 47  | `20261011010000_practice_workspace_name`       | a practice bank's workspace name; a number per workspace in a student's class list | not applied                |
-| 48  | `20261012000000_workspace_sweep`               | the sweep of abandoned workspaces; a dry run until the owner turns it on (§7.13)   | not applied                |
+| 45  | `20261010000000_workspace_follow_ups`          | only an author reads their org row; three invitations per address in 24 hours      | applied (2026-10-13)       |
+| 46  | `20261011000000_workspace_remove_and_move`     | a founder removes a colleague; a teacher moves by accepting an invitation          | applied (2026-10-13)       |
+| 47  | `20261011010000_practice_workspace_name`       | a practice bank's workspace name; a number per workspace in a student's class list | applied (2026-10-13)       |
+| 48  | `20261012000000_workspace_sweep`               | the sweep of abandoned workspaces; a dry run until the owner turns it on (§7.13)   | applied (2026-10-13)       |
 
 Checked 2026-09-24 with `pnpm exec supabase migration list --linked`: rows 1–38 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged, row 23 straight after #220, row 24 straight after #222, row 25 straight after #224, row 26 straight after #226, row 27 straight after #228, row 28 straight after #230, row 29 straight after #245, row 30 after #247 and row 31 after #251 and row 32 after #254 and row 33 after #255 and row 34 after #257 and row 35 after #258 and row 36 after #261, all on 2026-09-24; the owner pushed row 37 (#284) on 2026-09-26, about a day after its merge, because the permission classifier refused the orchestrator's push, and row 38 straight after #286 the same day). Checked 2026-09-26. Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
 
