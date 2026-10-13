@@ -18,6 +18,7 @@ Next.js 16.3 (App Router) · React 19.2 · TypeScript 5.9 · Tailwind 4.3 · Zod
 - Every item type is a triplet: `src/lib/ngn/schemas/<type>.ts` + `src/lib/ngn/fixtures/<type>.ts` + `src/components/question/<type>/` (+ `src/components/authoring/<type>/` from Phase 2), registered in `src/lib/ngn/registry.ts`.
 - Answer keys never reach a student client before reveal. Scoring runs server-side outside the gallery.
 - Design: follow `docs/04-DESIGN-DIRECTION.md`. No emoji in product UI. Motion uses transform/opacity only and respects reduced motion. 375px first.
+- Wording: `docs/glossary.md` says what each thing is called in the interface (Quiz, Question, Live session, Join code, Teacher). Code names differ on purpose; do not rename them.
 - Never commit secrets, `.env.local`, or real patient data. EHR content is fictional.
 - Tests first (see `docs/03-AGENT-WORKFLOW.md`). Fixtures drive unit tests, the gallery, and screenshots.
 

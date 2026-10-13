@@ -2,6 +2,8 @@
 
 The player should feel like a serious, modern assessment tool: closer to a well-designed exam interface than to a quiz game. Students should build muscle memory for the real NCLEX layout while enjoying a calmer, cleaner surface than Pearson VUE.
 
+The words on that surface are set in [`glossary.md`](glossary.md): one name for each thing a teacher or a student sees. This page says "item" where the glossary says "question", because it describes the NGN layout.
+
 ## 1. Direction in one paragraph
 
 Light-mode primary. Warm off-white paper surfaces, near-black ink, one deep clinical blue used **only** for interactive and selected states, and a restrained semantic set (correct green, incorrect red, flagged amber) that appears only in feedback mode. Generous line-height for reading-heavy stems and EHR notes. Hierarchy from type scale and spacing rhythm, not from boxes and shadows. Motion is short, eased, and explanatory.
