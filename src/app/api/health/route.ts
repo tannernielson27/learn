@@ -35,8 +35,6 @@ function envSnapshot() {
     SITE_URL: process.env.SITE_URL,
     VERCEL_ENV: process.env.VERCEL_ENV,
     CRON_SECRET: process.env.CRON_SECRET,
-    SENTRY_DSN: process.env.SENTRY_DSN,
-    NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
     DEMO_ACCOUNT_EMAIL: process.env.DEMO_ACCOUNT_EMAIL,
     DEMO_ACCOUNT_PASSWORD: process.env.DEMO_ACCOUNT_PASSWORD,
     VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA,

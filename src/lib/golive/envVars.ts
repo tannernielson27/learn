@@ -4,6 +4,9 @@
  * reads that report. Shared by both, so the list cannot drift between them.
  *
  * Each entry names the docs/05 section that sets it, so a failing line can say what to do.
+ *
+ * The Sentry DSNs are not here: error reporting is optional (owner decision, 2026-10-13), and the
+ * app does nothing with Sentry until a DSN is set (docs/05 §7.9).
  */
 export const REQUIRED_ENV = [
   { name: "NEXT_PUBLIC_SUPABASE_URL", docs: "§7.3 step 6" },
@@ -14,8 +17,6 @@ export const REQUIRED_ENV = [
   { name: "EMAIL_FROM", docs: "§7.7 step 6" },
   { name: "SITE_URL", docs: "§7.7 step 6" },
   { name: "CRON_SECRET", docs: "§7.8 step 2" },
-  { name: "SENTRY_DSN", docs: "§7.9 step 5" },
-  { name: "NEXT_PUBLIC_SENTRY_DSN", docs: "§7.9 step 5" },
 ] as const;
 
 export type RequiredEnvName = (typeof REQUIRED_ENV)[number]["name"];
