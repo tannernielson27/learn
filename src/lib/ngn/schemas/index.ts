@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ITEM_TYPES, type ItemType } from "../labels";
-import { ehrRecordSchema, idSchema } from "./common";
+import { CASE_STUDY_STEP_COUNT, ehrRecordSchema, idSchema } from "./common";
 import {
   dragdropClozeItemSchema,
   dragdropClozeResponseSchema,
@@ -118,7 +118,7 @@ export const caseStudySchema = z
     title: z.string().min(1),
     tags: z.array(z.string()).default([]),
     ehr: ehrRecordSchema,
-    items: z.array(itemSchema).length(6, "a case study has exactly six items"),
+    items: z.array(itemSchema).length(CASE_STUDY_STEP_COUNT, "a case study has exactly six items"),
   })
   .superRefine((cs, ctx) => {
     cs.items.forEach((item, index) => {

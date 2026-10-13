@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-10-08 (Sprint 13: join by class code, #362, in review; #355-#361 merged).
+Last updated: 2026-10-13 (Sprint 14: the chart reveal model, #334, in review).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -294,9 +294,16 @@ Decisions taken at kickoff, each the conservative option; say if any should chan
 
 ## S14: Stakeholder feedback (milestone 16)
 
-| #                                                           | Title                                                      | Gates | Status                  |
-| ----------------------------------------------------------- | ---------------------------------------------------------- | ----- | ----------------------- |
-| [#406](https://github.com/tannernielson27/learn/issues/406) | fix(live): page the progress board read past 1,000 answers | none  | In review; no migration |
+Only the stories this file has been told about are listed here; the milestone on GitHub has the rest.
+
+| #                                                           | Title                                                                                             | Gates         | Status                                                     |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------- |
+| [#334](https://github.com/tannernielson27/learn/issues/334) | feat(ngn): reveal and lock a case study's chart step by step (fromStep, stepAccess, recordAtStep) | none          | In review; no migration; owner confirms hidden/locked/open |
+| [#335](https://github.com/tannernielson27/learn/issues/335) | feat(player): serve each case study step only the chart it has reached                            | security, e2e | To do; needs #334                                          |
+| [#336](https://github.com/tannernielson27/learn/issues/336) | feat(authoring): set when each tab of a case study's chart appears and opens                      | e2e           | To do; needs #334                                          |
+| [#406](https://github.com/tannernielson27/learn/issues/406) | fix(live): page the progress board read past 1,000 answers                                        | none          | Merged (#422); no migration                                |
+
+Until #335 merges, every student-facing page still sends a case study's whole record, so `fromStep` and `stepAccess` hide nothing yet. Until #336 merges, the record editor does not carry either field, so saving a staged record from the builder drops them; they arrive by JSON import only.
 
 ## No milestone
 
