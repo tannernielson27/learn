@@ -21,6 +21,28 @@ interface AnswerRow {
   item_position: number;
 }
 
+interface PersonRow {
+  id: string;
+  display_name: string;
+  joined_at: string;
+}
+
+/**
+ * Everyone who has joined, or null when the read failed, whether it answered with an error or
+ * never answered at all. One read: a session holds at most 300 people, well under `max_rows`.
+ */
+async function readRoster(client: Client, sessionId: string): Promise<PersonRow[] | null> {
+  try {
+    const { data, error } = await client
+      .from("participants")
+      .select("id, display_name, joined_at")
+      .eq("session_id", sessionId);
+    return error ? null : (data ?? []);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Every answer in the session, or null when a read failed.
  *
@@ -30,7 +52,11 @@ interface AnswerRow {
  * under the cap. The roster needs none of this: a session holds at most 300 people.
  *
  * Ordered by the columns of `session_responses_once`, which no two of a session's rows share, so
- * the pages neither overlap nor leave a gap while nothing is written between them.
+ * every row has one place in the order and the pages are cut from the same list each time. An
+ * answer written between two page reads can only push later rows further along: a row may then
+ * come back on two pages (`positionsByPerson` counts it once), but none is passed over. Only a
+ * delete between pages could pull a row back past the cursor, and nothing deletes an answer while
+ * its session is live.
  */
 async function readAnswers(client: Client, sessionId: string): Promise<AnswerRow[] | null> {
   try {
@@ -52,8 +78,9 @@ async function readAnswers(client: Client, sessionId: string): Promise<AnswerRow
 
 /**
  * The items each person has answered, keyed by person. A set, not a count: an answer written
- * between two page reads moves the rows after it along by one, and the next page then opens with a
- * row the last one closed on. Counted from sets, that row is still one answer.
+ * between two page reads, at a place the cursor has already passed, moves the rows after it along
+ * by one, and the next page then opens with the row the last one closed on. Counted from sets,
+ * that row is still one answer. The new answer itself is not in this read; the next poll has it.
  */
 function positionsByPerson(
   answers: readonly AnswerRow[],
@@ -84,13 +111,13 @@ export async function readProgress(
   itemCount: number,
 ): Promise<SessionProgress | null> {
   const [people, answers] = await Promise.all([
-    client.from("participants").select("id, display_name, joined_at").eq("session_id", sessionId),
+    readRoster(client, sessionId),
     readAnswers(client, sessionId),
   ]);
-  if (people.error || answers === null) return null;
+  if (people === null || answers === null) return null;
 
   const byPerson = positionsByPerson(answers, itemCount);
-  const rows: ProgressRow[] = [...(people.data ?? [])]
+  const rows: ProgressRow[] = [...people]
     .sort((a, b) => Date.parse(a.joined_at) - Date.parse(b.joined_at) || a.id.localeCompare(b.id))
     .map((person) => ({
       participantId: person.id,

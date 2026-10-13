@@ -634,10 +634,20 @@ class FakeFilter implements PromiseLike<FakeResult> {
     return this;
   }
 
-  /** The rows one request answers with: ordered, windowed, and never more than `max_rows`. */
+  /**
+   * The rows one request answers with: ordered, windowed, and never more than `max_rows`.
+   *
+   * Postgres promises no order it was not asked for, and none between two requests: a paged read
+   * with no `ORDER BY`, or with one that leaves ties, can hand a row back twice and another not at
+   * all. So every other page of a `.range()` read starts from the rows the other way round, and
+   * only an `.order()` chain that leaves no ties reads the same from page to page. A read with no
+   * `.range()` keeps the order the rows were written in, as every test before #406 assumed.
+   */
   private page(found: Row[]): Row[] {
-    const ordered = this.ordering.length === 0 ? found : [...found].sort(byColumns(this.ordering));
     const [from, to] = this.window ?? [0, FAKE_MAX_ROWS - 1];
+    const flipped = this.window !== null && Math.floor(from / FAKE_MAX_ROWS) % 2 === 1;
+    const heap = flipped ? [...found].reverse() : found;
+    const ordered = this.ordering.length === 0 ? heap : [...heap].sort(byColumns(this.ordering));
     return ordered.slice(from, Math.min(to + 1, from + FAKE_MAX_ROWS));
   }
 
