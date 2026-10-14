@@ -173,13 +173,26 @@ export function fail(status: number, error: string): Response {
  * A call to the database did not come back (#407): a timeout, a dropped connection, a 5xx from
  * the Data API. Nothing was decided about this request, so the answer is 503 — try again — and
  * never 401, which a phone reads as having left the room, nor 500, which says the app is broken.
- * `Retry-After` is one second; the phone adds its own jitter (`participantTransport.ts`).
+ * `Retry-After` is there for any other client; the phone keeps its own short, jittered waits
+ * (`participantTransport.ts`).
  */
 export function unavailable(): Response {
   return Response.json(
     { error: LIVE_ROUTE_ERRORS.failed, retryable: true },
     { status: 503, headers: { ...NO_STORE_HEADERS, "Retry-After": "1" } },
   );
+}
+
+/**
+ * The answer to a database call that came back as an error, by the HTTP status the Data API gave
+ * it. No answer at all (0), a 5xx, or no status to read is `unavailable`: it may work next time.
+ * A 4xx is the database refusing the call itself (PostgREST answers a bad cast, a missing grant
+ * or a raised exception that way), which will fail the same way however often it is asked. That
+ * is a 500, which the phone does not retry: a class must not hammer a call that cannot succeed.
+ */
+export function faultResponse(status: number | undefined): Response {
+  const refusedByDatabase = typeof status === "number" && status >= 400 && status < 500;
+  return refusedByDatabase ? fail(500, LIVE_ROUTE_ERRORS.failed) : unavailable();
 }
 
 /** One failed call, as the log is told about it. */

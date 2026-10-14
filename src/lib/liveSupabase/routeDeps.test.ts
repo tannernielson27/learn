@@ -6,7 +6,7 @@ import {
   type ParticipantToken,
 } from "@/lib/live/participantToken";
 import type { Database } from "@/lib/supabase/database.types";
-import { describeFault, participantFromCookie, unavailable } from "./routeDeps";
+import { describeFault, faultResponse, participantFromCookie, unavailable } from "./routeDeps";
 
 /**
  * The seam #133 closed: one identity for a participant, and it is #129's cookie.
@@ -176,6 +176,25 @@ describe("what a failed call leaves in the log (#407)", () => {
     expect(describeFault({ code: "XX000", message: "m".repeat(5_000) }).message).toHaveLength(300);
     expect(describeFault("boom")).toEqual({ code: null, message: "boom", cause: null });
     expect(describeFault(null)).toEqual({ code: null, message: "null", cause: null });
+  });
+});
+
+describe("the answer to a call the database refused (#407)", () => {
+  it("is retryable when the call did not get through, or the Data API was failing", () => {
+    for (const status of [0, 500, 502, 503, 504, undefined]) {
+      expect(faultResponse(status).status).toBe(503);
+    }
+  });
+
+  it("is a fault, not something to try again, when the database refused the call itself", () => {
+    // A bad cast, a missing grant, a raised exception: PostgREST answers these 4xx, and they
+    // fail the same way every time. A class retrying one is four hundred calls for nothing.
+    for (const status of [400, 403, 404, 409]) {
+      const response = faultResponse(status);
+      expect(response.status).toBe(500);
+      expect(response.headers.get("retry-after")).toBeNull();
+      expect(response.headers.get("cache-control")).toBe("no-store");
+    }
   });
 });
 

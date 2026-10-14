@@ -28,6 +28,7 @@ import {
   LIVE_ROUTE_ERRORS,
   asRefusal,
   fail,
+  faultResponse,
   refuse,
   reportLiveFault,
   routeOf,
@@ -78,7 +79,7 @@ export async function issueChannelToken(
       error,
       status,
     });
-    return unavailable();
+    return faultResponse(status);
   }
   const session = opened?.[0];
   if (!session) return fail(401, LIVE_ROUTE_ERRORS.signedOut);

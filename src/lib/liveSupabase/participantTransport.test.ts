@@ -557,6 +557,31 @@ describe("a view that did not get through (#407)", () => {
     expect(live.asks()).toBe(2);
   });
 
+  it("keeps what the later request said when a retried read lands after a newer one", async () => {
+    // Request 2 (the first move's read) fails and waits. Request 3 (the second move's read) is
+    // answered meanwhile. Then request 2 is tried again as request 4, and the server, asked
+    // last, says the most. A read numbered by when it began would be thrown away here.
+    let release: () => void = () => {};
+    const SHOWN = { ...ON_TWO, state: { ...ON_TWO.state, reveal: true } };
+    const live = phone([ON_ONE, ON_TWO, SHOWN], undefined, {
+      failing: (asked) => (asked === 2 ? 503 : null),
+      pause: () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+        }),
+    });
+    await live.enter();
+    live.socket.deliver({ new: stateRow({ item_position: 2 }) });
+    await vi.waitFor(() => expect(live.asks()).toBe(2));
+    live.socket.deliver({ new: stateRow({ item_position: 2, reveal: true }) });
+    await vi.waitFor(() => expect(live.recorded.states.at(-1)).toMatchObject({ position: 2 }));
+    expect(live.recorded.states.at(-1)).toMatchObject({ reveal: false });
+
+    release();
+    await vi.waitFor(() => expect(live.asks()).toBe(4));
+    await vi.waitFor(() => expect(live.recorded.states.at(-1)).toMatchObject({ reveal: true }));
+  });
+
   it("tells the page when the room could not be read on the way in, after trying", async () => {
     const { live, waits } = waiting(() => 503);
     await expect(live.enter()).rejects.toThrow("The session could not be reached.");

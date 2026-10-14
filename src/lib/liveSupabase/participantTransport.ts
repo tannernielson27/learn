@@ -349,17 +349,22 @@ export function createSupabaseParticipant(
    *
    * It stops the moment this connection has left the room. When the tries run out it throws, as
    * a read that failed always did, and the next move the host makes asks again.
+   *
+   * `sending` is called just before each request goes out, the first and every further try, so
+   * a caller that orders reads by when they were sent orders them by the try that was answered.
    */
-  async function requestView(): Promise<ParticipantViewPayload> {
+  async function requestView(sending: () => void = () => {}): Promise<ParticipantViewPayload> {
     if (me === null) throw new LiveSessionError("not_joined");
     const mine = generation;
     let sentAt = Date.now();
+    sending();
     let response = await askForView();
     for (const wait of VIEW_RETRY_WAITS_MS) {
       if (response !== null) break;
       await pause(wait * (0.5 + random()));
       if (gone || mine !== generation) throw new LiveSessionError("not_joined");
       sentAt = Date.now();
+      sending();
       response = await askForView();
     }
     if (response === null) throw new Error("The session could not be reached.");
@@ -410,11 +415,17 @@ export function createSupabaseParticipant(
   /**
    * Reads the view, and says whether it is still the newest read to come back. A read that lost
    * the race is not announced; the caller answers from `held`, which the newer one has set.
+   *
+   * Numbered by the request that was answered, not by when the read began (#407): a read that
+   * failed and was tried again a second later has seen a later room than a read begun in between,
+   * and must not be put behind it.
    */
   async function readView(): Promise<{ payload: ParticipantViewPayload; newest: boolean }> {
-    readsSent += 1;
-    const sent = readsSent;
-    const payload = await requestView();
+    let sent = 0;
+    const payload = await requestView(() => {
+      readsSent += 1;
+      sent = readsSent;
+    });
     const newest = sent > newestShown;
     if (newest) newestShown = sent;
     return { payload, newest };

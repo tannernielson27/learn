@@ -21,6 +21,7 @@ import {
   LIVE_ROUTE_ERRORS,
   asRefusal,
   fail,
+  faultResponse,
   refuse,
   reportLiveFault,
   routeOf,
@@ -56,7 +57,7 @@ export async function submitSessionResponse(
       error,
       status,
     });
-    return unavailable();
+    return faultResponse(status);
   };
 
   // A declared oversized body is refused before it is read; the parsed check below catches a

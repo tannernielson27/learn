@@ -453,6 +453,25 @@ describe("when the database does not answer (#407)", () => {
     );
   });
 
+  it("answers 500, which the phone does not retry, when the database refuses the call itself", async () => {
+    const { live, ada } = await startedRoom("instructor_paced");
+    const rpc = vi.fn(async () => ({
+      data: null,
+      error: { code: "22P02", message: "invalid input syntax for type uuid" },
+      status: 400,
+    }));
+    const response = await readParticipantView(viewRequest(live, ada), {
+      ...depsFor(live),
+      service: { rpc } as unknown as SupabaseClient<Database>,
+    });
+    expect(response.status).toBe(500);
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(logged).toHaveBeenCalledWith(
+      "[live] a database call failed",
+      expect.objectContaining({ call: "open_session_view", code: "22P02", status: 400 }),
+    );
+  });
+
   // The route as it runs before the migration is pushed. Each of its four calls, dropped in turn.
   it.each([
     ["rpc:resume_participant", "resume_participant"],

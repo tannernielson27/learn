@@ -60,6 +60,7 @@ import {
   LIVE_ROUTE_ERRORS,
   asRefusal,
   fail,
+  faultResponse,
   readParticipantToken,
   refuse,
   reportLiveFault,
@@ -79,6 +80,12 @@ import { NO_STORE_HEADERS, type ParticipantViewPayload } from "./wire";
  * where the barrel would carry `node:crypto` into a browser bundle.
  */
 export interface ViewRouteDeps extends LiveRouteDeps {
+  /**
+   * Only the fallback asks this (#407). On `open_session_view` the token in the cookie is checked
+   * by the function itself, in SQL, and `verify` is not called: a different verifier passed here
+   * changes who the route lets in only against a database without the function.
+   */
+  verify: LiveRouteDeps["verify"];
   startingOrderSeed: StartingOrderSeedFor;
   /** The server's clock, for remembering a missing function. Injectable for the tests. */
   now?: () => number;
@@ -148,7 +155,7 @@ export async function readParticipantView(
         error,
         status,
       });
-      return unavailable();
+      return faultResponse(status);
     }
     rows = selected.rows;
   }
@@ -266,7 +273,7 @@ function faulted(
   failure: { error: unknown; status: number },
 ): Opened {
   reportLiveFault({ route: routeOf(request), call, sessionId: who.sessionId, ...failure });
-  return { ok: false, response: unavailable() };
+  return { ok: false, response: faultResponse(failure.status) };
 }
 
 /**
