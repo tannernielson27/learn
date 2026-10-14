@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import Link from "next/link";
+
 import { notFound } from "next/navigation";
 import { deleteAssignment, editAssignment } from "@/app/author/assignments/actions";
 import { AssignmentList } from "@/components/assignments/AssignmentList";
@@ -13,7 +13,7 @@ import { shareClassWithBank, stopSharing } from "@/app/author/practice/actions";
 import { listBanks } from "@/lib/authoring/banks";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
-import { classPath, CLASSES_PATH, inviteUrl } from "@/lib/classes/classes";
+import { classPath, inviteUrl } from "@/lib/classes/classes";
 import { supportedTimeZones, timeZoneChoices } from "@/lib/classes/timeZone";
 import { canonicalSiteOrigin } from "@/lib/http/siteOrigin";
 import { stopSharingWarning } from "@/lib/practice/shares";
@@ -46,12 +46,7 @@ export default async function ClassPage({ params }: PageProps<"/author/classes/[
 
   return (
     <>
-      <Link
-        href={CLASSES_PATH}
-        className="tap-target mb-4 inline-flex items-center text-sm font-medium text-accent-ink hover:underline"
-      >
-        All classes
-      </Link>
+      {/* The way back to every class is the layout's navigation (#412). */}
       <h1 className="mb-6 font-read text-3xl break-words text-ink-1">{detail.name}</h1>
 
       <section aria-labelledby="invite-heading" className="mb-10">
@@ -59,8 +54,7 @@ export default async function ClassPage({ params }: PageProps<"/author/classes/[
           Invite students
         </h2>
         <p className="mb-4 max-w-prose text-ink-2">
-          Anyone with this link or class code can join the class as a student. Share them with your
-          class only.
+          Anyone with the link or the class code can join. Share them with your class only.
         </p>
         <InviteLinkPanel
           url={url}
@@ -95,23 +89,23 @@ export default async function ClassPage({ params }: PageProps<"/author/classes/[
       <div className="mb-10">
         <PracticeSection
           headingClassName="text-lg font-medium text-ink-1"
-          intro="Students in this class can practice the published items of a bank shared here, seeing each answer and rationale as soon as they answer it."
+          intro="The class sees each answer and rationale as it practices a shared quiz."
           shares={shares}
           options={banks}
           list={{
-            label: "Banks shared for practice",
+            label: "Quizzes shared for practice",
             stopActionFor: (bankId) => stopSharing.bind(null, bankId, detail.id),
             stopLabelFor: (entry) => `Stop sharing ${entry.name}`,
             warningFor: (entry) => stopSharingWarning(detail.name, entry.name),
-            emptyMessage: "No bank is shared with this class for practice.",
+            emptyMessage: "No quiz is shared with this class.",
           }}
           form={{
             action: shareClassWithBank.bind(null, detail.id),
-            label: "Bank",
+            label: "Quiz",
             emptyMessage:
               banks && banks.length === 0
-                ? "There is no bank to share yet."
-                : "Every bank is shared with this class.",
+                ? "No quizzes to share yet."
+                : "Every quiz is shared with this class.",
           }}
         />
       </div>

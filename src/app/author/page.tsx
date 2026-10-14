@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import Link from "next/link";
+
 import { resendConfirmation } from "@/app/sign-in/actions";
 import { ConfirmEmailBanner } from "@/components/auth/ConfirmEmailBanner";
 import { BankList } from "@/components/authoring/BankList";
@@ -10,7 +10,7 @@ import { TeacherWelcome } from "@/components/onboarding/TeacherWelcome";
 import { isEmailUnconfirmed } from "@/lib/auth/emailConfirmation";
 import { listBanks } from "@/lib/authoring/banks";
 import { requireAuthor } from "@/lib/authoring/session";
-import { CLASSES_PATH } from "@/lib/classes/classes";
+
 import {
   checklistSteps,
   GET_STARTED_COOKIE,
@@ -24,12 +24,11 @@ import {
   teacherWelcomeSteps,
 } from "@/lib/onboarding/teacherWelcome";
 import { listSharedClassNamesByBank } from "@/lib/supabase/practiceShares";
-import { SESSIONS_PATH } from "@/lib/live/reportFormat";
-import { WORKSPACE_PATH } from "@/lib/workspace/workspace";
+
 import { createBank } from "./actions";
 import { hideGetStarted, importSample, markOnboarded } from "./onboardingActions";
 
-export const metadata: Metadata = { title: "Item banks" };
+export const metadata: Metadata = { title: "Library" };
 
 export default async function AuthorHomePage() {
   const { supabase, orgId, userId, email } = await requireAuthor("/author");
@@ -52,33 +51,12 @@ export default async function AuthorHomePage() {
 
   return (
     <>
-      <div className="mb-6 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-        <h1 className="font-read text-3xl text-ink-1">Item banks</h1>
-        <nav aria-label="More" className="flex flex-wrap gap-x-4">
-          <Link
-            href={CLASSES_PATH}
-            className="tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline"
-          >
-            Classes
-          </Link>
-          <Link
-            href={SESSIONS_PATH}
-            className="tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline"
-          >
-            Live sessions and reports
-          </Link>
-          <Link
-            href={WORKSPACE_PATH}
-            className="tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline"
-          >
-            Workspace
-          </Link>
-        </nav>
-      </div>
+      {/* Classes, live sessions and the workspace are in the layout's navigation (#412). */}
+      <h1 className="mb-6 font-read text-3xl text-ink-1">Library</h1>
       {isEmailUnconfirmed(claims) ? (
         <ConfirmEmailBanner action={resendConfirmation} email={email} />
       ) : null}
-      {/* After the h1, so the heading outline reads Item banks, then Get started. */}
+      {/* After the h1, so the heading outline reads Library, then Get started. */}
       {showChecklist(steps, hidden) ? (
         <GetStarted steps={steps} importSample={importSample} hide={hideGetStarted} />
       ) : null}
@@ -93,11 +71,11 @@ export default async function AuthorHomePage() {
       <BankList
         banks={banks}
         sharedWith={sharedWith}
-        emptyAction={{ href: "#new-bank-heading", label: "Create a bank" }}
+        emptyAction={{ href: "#new-bank-heading", label: "New quiz" }}
       />
       <section aria-labelledby="new-bank-heading" className="mt-10 border-t border-line pt-6">
         <h2 id="new-bank-heading" className="mb-3 text-lg font-medium text-ink-1">
-          New bank
+          New quiz
         </h2>
         <CreateBankForm action={createBank} />
       </section>

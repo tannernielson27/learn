@@ -27,7 +27,7 @@ export function joinNames(names: readonly string[]): string {
 export function practiceWarning(exposure: PracticeExposure): string | null {
   if (exposure.classNames.length === 0 || exposure.exposedItems <= 0) return null;
   const answers = exposure.exposedItems === 1 ? "the answer" : "the answers";
-  return `Students in ${joinNames(exposure.classNames)} can see ${answers} to ${exposure.exposedItems} of these items in practice.`;
+  return `Students in ${joinNames(exposure.classNames)} can see ${answers} to ${exposure.exposedItems} of these questions in practice.`;
 }
 
 /** The bank list's and bank page's badge, or null for a bank shared with nobody. */
@@ -49,9 +49,9 @@ export function parseShareTarget(formData: FormData): { ok: true; id: string } |
 }
 
 const REFUSALS: Readonly<Record<ShareFailure, string>> = {
-  gone: "That bank or class no longer exists. Reload the page.",
+  gone: "That quiz or class no longer exists. Reload the page.",
   rate_limited: "That is too many changes in a minute. Wait a moment and try again.",
-  failed: "The bank could not be shared. Try again.",
+  failed: "The quiz could not be shared. Try again.",
 };
 
 export function shareRefusal(reason: ShareFailure): string {

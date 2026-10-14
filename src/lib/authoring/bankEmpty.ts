@@ -1,9 +1,9 @@
-import type { EmptyStateContent } from "@/lib/emptyState";
-import { isSearching, NO_BANK_FILTER, type BankFilter } from "./bankSearch";
+import type { EmptyStateAction, EmptyStateContent } from "@/lib/emptyState";
+import { isSearching, NO_BANK_FILTER, NO_SEARCH, type BankFilter } from "./bankSearch";
 import type { FolderView } from "./folders";
-import { bankViewHref, isFiltering } from "./tagFilter";
+import { bankViewHref, isFiltering, withoutTags } from "./tagFilter";
 
-/** What the bank page is showing when a list comes back empty. */
+/** What the quiz page is showing when a list comes back empty. */
 export interface BankEmptyView {
   readonly bankId: string;
   readonly view: FolderView;
@@ -15,90 +15,72 @@ export interface BankEmptyView {
 const onlyArchived = (filter: BankFilter): boolean =>
   filter.status === "archived" && !filter.query && !filter.type;
 
-const CLEAR_SEARCH = "Try other words or another status, or clear the search above.";
+/**
+ * A quiz with nothing in it yet. The lists fall back to these when a page passes them no reason of
+ * its own, so the words are written once.
+ */
+export const NO_QUESTIONS_YET: EmptyStateContent = { heading: "No questions yet" };
+export const NO_CASE_STUDIES_YET: EmptyStateContent = { heading: "No case studies yet" };
+
+/** The same view with the search taken off, keeping the folder and any tag filter. */
+const clearSearch = ({ bankId, view, filter }: BankEmptyView): EmptyStateAction => ({
+  href: bankViewHref(bankId, view, { ...filter, ...NO_SEARCH }),
+  label: "Clear search",
+});
 
 /**
- * What an empty item list says on the bank page (#266), most specific reason first. A search or a
- * filter already has its own Clear control above the list, and a page past the end has the
- * pager's First page link, so neither gets a second link of the same kind here.
+ * What an empty question list says on the quiz page (#266), most specific reason first. One line
+ * and one action each (#412): the line says why the list is empty, and the action is the way out.
+ * A page past the end has the pager's First page link beside it, and the Archived view has nothing
+ * to do next, so neither carries an action.
  */
-export function bankItemsEmpty({ bankId, view, filter, page }: BankEmptyView): EmptyStateContent {
-  if (page > 1) {
-    return { heading: "No items on this page", body: "The list ends before this page." };
-  }
+export function bankItemsEmpty(empty: BankEmptyView): EmptyStateContent {
+  const { bankId, view, filter, page } = empty;
+  if (page > 1) return { heading: "No questions on this page" };
   if (isFiltering(filter)) {
     return {
       heading: filter.warnings
-        ? "No items here match every chosen filter"
-        : "No items here carry every chosen tag",
-      body: "Remove a filter, or clear them all above.",
+        ? "No questions here match every filter"
+        : "No questions here carry every tag",
+      action: { href: bankViewHref(bankId, view, withoutTags(filter)), label: "Clear filters" },
     };
   }
-  if (onlyArchived(filter)) {
-    return {
-      heading: "No archived items here",
-      body: "Items you archive are kept here, and you can restore them.",
-    };
-  }
+  if (onlyArchived(filter)) return { heading: "No archived questions here" };
   if (isSearching(filter)) {
-    return { heading: "No items here match the search", body: CLEAR_SEARCH };
+    return { heading: "No questions here match the search", action: clearSearch(empty) };
   }
-  const allItems = {
+  // "All questions" while a quiz still has folders of its own; #417 retires them.
+  const allQuestions = {
     href: bankViewHref(bankId, { kind: "all" }, NO_BANK_FILTER),
-    label: "See all items",
+    label: "All questions",
   };
   if (view.kind === "folder") {
-    return {
-      heading: "No items in this folder",
-      body: "Select items in another view and move them here, or import them into this folder.",
-      action: allItems,
-    };
+    return { heading: "No questions in this folder", action: allQuestions };
   }
   if (view.kind === "unfiled") {
-    return {
-      heading: "No unfiled items",
-      body: "Every item in this bank is in a folder.",
-      action: allItems,
-    };
+    return { heading: "Every question is in a folder", action: allQuestions };
   }
   return {
-    heading: "No items in this bank yet",
-    body: "Choose New item to write one, or import JSON below.",
-    action: { href: `/author/banks/${bankId}/new`, label: "Write the first item" },
+    ...NO_QUESTIONS_YET,
+    action: { href: `/author/banks/${bankId}/new`, label: "New question" },
   };
 }
 
 /**
- * What an empty case study list says on the bank page (#266). Case studies carry no tags or type,
- * so the page shows its own note for those filters instead of this.
+ * What an empty case study list says on the quiz page (#266). Case studies carry no tags or type,
+ * so the page shows its own note for those filters instead of this. The form that starts one sits
+ * right under the list, so an empty quiz needs no link to it.
  */
-export function bankCaseStudiesEmpty({ view, filter }: BankEmptyView): EmptyStateContent {
+export function bankCaseStudiesEmpty(empty: BankEmptyView): EmptyStateContent {
+  const { view, filter } = empty;
   if (filter.query) {
-    return { heading: "No case study titles match the search", body: CLEAR_SEARCH };
+    return { heading: "No case study titles match the search", action: clearSearch(empty) };
   }
-  if (onlyArchived(filter)) {
-    return {
-      heading: "No archived case studies here",
-      body: "Case studies you archive are kept here, and you can restore them.",
-    };
-  }
+  if (onlyArchived(filter)) return { heading: "No archived case studies here" };
   if (isSearching(filter)) {
-    return { heading: "No case studies here have that status", body: CLEAR_SEARCH };
+    return { heading: "No case studies here have that status", action: clearSearch(empty) };
   }
-  if (view.kind === "folder") {
-    return {
-      heading: "No case studies in this folder",
-      body: "Select case studies in another view and move them here.",
-    };
-  }
-  if (view.kind === "unfiled") {
-    return {
-      heading: "No unfiled case studies",
-      body: "Every case study in this bank is in a folder.",
-    };
-  }
-  return {
-    heading: "No case studies in this bank yet",
-    body: "Name one below to start building it.",
-  };
+  if (view.kind === "folder") return { heading: "No case studies in this folder" };
+  if (view.kind === "unfiled") return { heading: "Every case study is in a folder" };
+  return NO_CASE_STUDIES_YET;
 }

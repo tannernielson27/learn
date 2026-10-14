@@ -44,7 +44,7 @@ export function memberRoleLabel(role: string): string {
   return role === "admin" ? "Admin" : "Teacher";
 }
 
-/** "3 of 10 members". */
+/** "3 of 10 teachers". */
 export function memberCountLabel(count: number): string {
-  return `${count} of ${WORKSPACE_MEMBER_CAP} members`;
+  return `${count} of ${WORKSPACE_MEMBER_CAP} teachers`;
 }

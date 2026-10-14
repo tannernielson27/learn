@@ -441,14 +441,22 @@ const SCREENS: Screen[] = [
     name: "/author/classes/[classId]",
     title: classPage.metadata.title,
     counted: true,
-    draw: () => classPage.default({ params: Promise.resolve({ classId: CLASS }) }),
+    draw: () =>
+      classPage.default({
+        params: Promise.resolve({ classId: CLASS }),
+        searchParams: Promise.resolve({}),
+      }),
   },
   {
     name: "/author/classes/[classId], new class",
     title: classPage.metadata.title,
     counted: true,
     setup: empty,
-    draw: () => classPage.default({ params: Promise.resolve({ classId: CLASS }) }),
+    draw: () =>
+      classPage.default({
+        params: Promise.resolve({ classId: CLASS }),
+        searchParams: Promise.resolve({}),
+      }),
   },
 ];
 

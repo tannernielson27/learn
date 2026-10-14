@@ -23,7 +23,7 @@ export default async function ClassesPage() {
       ) : (
         <ClassList
           classes={classes}
-          emptyAction={{ href: "#new-class-heading", label: "Create a class" }}
+          emptyAction={{ href: "#new-class-heading", label: "New class" }}
         />
       )}
       <section aria-labelledby="new-class-heading" className="mt-10 border-t border-line pt-6">

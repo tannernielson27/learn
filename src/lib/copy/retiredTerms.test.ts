@@ -78,6 +78,17 @@ describe("visibleWordCount", () => {
     expect(visibleWordCount("<div></div>")).toBe(0);
   });
 
+  it("counts a closed disclosure's summary and not its body, and all of an open one", () => {
+    const body = "<summary>Rename quiz</summary><p>Quiz name here</p>";
+    expect(visibleWordCount(`<details class="x">${body}</details>`)).toBe(2);
+    expect(visibleWordCount(`<details open="">${body}</details>`)).toBe(5);
+  });
+
+  it("leaves out a dialog that is not open", () => {
+    expect(visibleWordCount("<p>One</p><dialog><p>Are you sure</p></dialog>")).toBe(1);
+    expect(visibleWordCount('<dialog open=""><p>Are you sure</p></dialog>')).toBe(3);
+  });
+
   it("leaves out the choices inside a select", () => {
     expect(
       visibleWordCount("<label>Time zone</label><select><option>Denver time</option></select>"),

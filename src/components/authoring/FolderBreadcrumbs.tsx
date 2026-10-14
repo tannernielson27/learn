@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { FolderRow, FolderView } from "@/lib/authoring/folders";
+import { NOT_IN_A_FOLDER, type FolderRow, type FolderView } from "@/lib/authoring/folders";
 
 export interface FolderBreadcrumbsProps {
   bankId: string;
@@ -18,10 +18,10 @@ interface Crumb {
 function crumbsFor({ bankId, bankName, trail, view }: FolderBreadcrumbsProps): Crumb[] {
   const base = `/author/banks/${bankId}`;
   const crumbs: Crumb[] = [
-    { label: "Item banks", href: "/author" },
+    { label: "Library", href: "/author" },
     { label: bankName, href: view.kind === "all" ? undefined : base },
   ];
-  if (view.kind === "unfiled") return [...crumbs, { label: "Unfiled" }];
+  if (view.kind === "unfiled") return [...crumbs, { label: NOT_IN_A_FOLDER }];
   if (view.kind === "folder") {
     return [
       ...crumbs,
@@ -34,7 +34,7 @@ function crumbsFor({ bankId, bankName, trail, view }: FolderBreadcrumbsProps): C
   return crumbs;
 }
 
-/** Where the open view sits: bank list, bank, then each folder down to the open one. */
+/** Where the open view sits: the library, the quiz, then each folder down to the open one. */
 export function FolderBreadcrumbs(props: FolderBreadcrumbsProps) {
   const crumbs = crumbsFor(props);
   return (

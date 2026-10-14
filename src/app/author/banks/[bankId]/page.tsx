@@ -32,7 +32,12 @@ import {
 } from "@/lib/authoring/bankSearch";
 import { listCaseStudies, listItems, listTaggedRows } from "@/lib/authoring/banks";
 import { listFolders } from "@/lib/authoring/folderData";
-import { folderTrail, MAX_FOLDER_DEPTH, parseFolderView } from "@/lib/authoring/folders";
+import {
+  folderTrail,
+  MAX_FOLDER_DEPTH,
+  NOT_IN_A_FOLDER,
+  parseFolderView,
+} from "@/lib/authoring/folders";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { bankViewHref, isFiltering, parseTagFilter, tagFacets } from "@/lib/authoring/tagFilter";
@@ -49,7 +54,7 @@ import {
   renameFolderInBank,
 } from "../../actions";
 
-export const metadata: Metadata = { title: "Item bank" };
+export const metadata: Metadata = { title: "Quiz" };
 
 const MOVE_FORM_ID = "move-to-folder";
 
@@ -57,9 +62,9 @@ const MOVE_FORM_ID = "move-to-folder";
 function liveStartMessage(value: string | string[] | undefined): string | undefined {
   const reason = Array.isArray(value) ? value[0] : value;
   if (reason === undefined) return undefined;
-  if (reason === "empty") return "Publish an item in this bank before starting a live session.";
-  if (reason === "gone") return "That bank no longer exists.";
-  return "The session could not be started. Try again.";
+  if (reason === "empty") return "Publish a question in this quiz before starting a live session.";
+  if (reason === "gone") return "That quiz no longer exists.";
+  return "The live session could not be started. Try again.";
 }
 
 export default async function BankPage({
@@ -108,7 +113,7 @@ export default async function BankPage({
   // A folder id that is not one of this bank's folders reads as not found.
   if (view.kind === "folder" && trail.length === 0) notFound();
   const folder = trail.at(-1);
-  const heading = folder?.name ?? (view.kind === "unfiled" ? "Unfiled" : bank.name);
+  const heading = folder?.name ?? (view.kind === "unfiled" ? NOT_IN_A_FOLDER : bank.name);
   const hasContent = items.length > 0 || caseStudies.length > 0;
   // #266: what each list says when it is empty, most specific reason first.
   const emptyView = { bankId: bank.id, view, filter, page };
@@ -127,12 +132,12 @@ export default async function BankPage({
           action={startLiveSession.bind(null, bank.id)}
           className="flex flex-wrap items-center gap-x-4 gap-y-2"
         >
-          {/* #185: how the room is paced. Instructor-paced stays the default and comes first. */}
+          {/* #185: how the live session is paced. Teacher-paced is the default and comes first. */}
           <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <legend className="sr-only">Pacing</legend>
             <label className="tap-target inline-flex items-center gap-2 text-sm text-ink-1">
               <input type="radio" name="pacing" value="instructor_paced" defaultChecked />
-              Instructor-paced
+              Teacher-paced
             </label>
             <label className="tap-target inline-flex items-center gap-2 text-sm text-ink-1">
               <input type="radio" name="pacing" value="student_paced" />
@@ -154,7 +159,7 @@ export default async function BankPage({
           href={`/author/banks/${bank.id}/new`}
           className="tap-target inline-flex items-center rounded-sm border border-accent bg-accent px-4 font-medium text-accent-contrast hover:bg-accent-ink"
         >
-          New item
+          New question
         </Link>
       </div>
       {liveRefusal ? (
@@ -172,7 +177,7 @@ export default async function BankPage({
               key={`new-${folder?.id ?? "top"}`}
               action={createFolderInBank.bind(null, bank.id, folder?.id ?? null)}
               label="Folder name"
-              hint={folder ? `Creates it inside ${folder.name}.` : undefined}
+              hint={folder ? `Inside ${folder.name}.` : undefined}
               submitLabel="Create folder"
             />
           ) : (
@@ -204,7 +209,7 @@ export default async function BankPage({
         <div className="flex min-w-0 flex-col gap-10">
           <section aria-labelledby="items-heading" className="flex flex-col gap-4">
             <h2 id="items-heading" className="font-read text-2xl text-ink-1">
-              {archived ? "Archived items" : "Items"}
+              {archived ? "Archived questions" : "Questions"}
             </h2>
             <BankSearchForm bankId={bank.id} view={view} filter={filter} />
             <TagFilterBar bankId={bank.id} view={view} filter={filter} facets={facets} />
@@ -240,8 +245,8 @@ export default async function BankPage({
             {tagFiltered || search.type ? (
               <p className="text-ink-2">
                 {tagFiltered
-                  ? "Tag filters list items only. Clear the filters to see case studies."
-                  : "A type filter lists items only. Choose Any type to see case studies."}
+                  ? "Tag filters list questions only. Clear them to see case studies."
+                  : "A type filter lists questions only. Choose Any type to see case studies."}
               </p>
             ) : (
               <CaseStudyList
@@ -255,7 +260,7 @@ export default async function BankPage({
           </section>
           <PracticeSection
             headingClassName="font-read text-2xl text-ink-1"
-            intro="Share this bank with a class, and its students can practice the published items, seeing each answer and rationale as soon as they answer it. Assigning these items as graded work later shows a warning."
+            intro="A class you share with sees each answer and rationale as it practices."
             shares={shares}
             options={classes}
             list={{
@@ -270,23 +275,26 @@ export default async function BankPage({
               label: "Class",
               emptyMessage:
                 classes && classes.length === 0
-                  ? "Create a class to share this bank with."
+                  ? "Create a class to share this quiz with."
                   : "Shared with every class.",
             }}
           />
-          <section aria-labelledby="import-heading" className="flex flex-col gap-4">
-            <h2 id="import-heading" className="font-read text-2xl text-ink-1">
-              Import JSON
-            </h2>
-            <ImportJsonForm
-              action={importIntoBank.bind(null, bank.id)}
-              folders={folders}
-              defaultFolderId={folder?.id}
-            />
-          </section>
+          {/* Closed until asked for (#412): most visits to a quiz are not to import into it. */}
           <details className="border-t border-line pt-6">
             <summary className="tap-target flex cursor-pointer items-center text-sm font-medium text-ink-2">
-              Rename bank
+              Import JSON
+            </summary>
+            <div className="mt-3">
+              <ImportJsonForm
+                action={importIntoBank.bind(null, bank.id)}
+                folders={folders}
+                defaultFolderId={folder?.id}
+              />
+            </div>
+          </details>
+          <details className="border-t border-line pt-6">
+            <summary className="tap-target flex cursor-pointer items-center text-sm font-medium text-ink-2">
+              Rename quiz
             </summary>
             <div className="mt-3">
               <CreateBankForm

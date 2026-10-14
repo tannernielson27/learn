@@ -97,13 +97,23 @@ export function findRetiredTerms(...sources: readonly string[]): RetiredTermHit[
   return hits;
 }
 
+/** A closed `<details>` shows its summary and nothing else. Not written for nested ones. */
+function withoutClosedDetails(html: string): string {
+  return html.replace(
+    /<details(?![^>]*\sopen[\s>=])[^>]*>([\s\S]*?)<\/details>/gi,
+    (_all, inside: string) => /<summary[\s>][\s\S]*?<\/summary>/i.exec(inside)?.[0] ?? " ",
+  );
+}
+
 /**
- * How many words a person sees on the screen: the text of the HTML, without the read attributes
- * and without the choices folded inside a closed `<select>`. Text for screen readers only is still
- * counted, since the markup alone does not say what is hidden.
+ * How many words a person sees on the screen as it first draws: the text of the HTML, without the
+ * read attributes and without what is folded away, which is the choices inside a `<select>`, the
+ * body of a closed `<details>` and a `<dialog>` that is not open. Text for screen readers only is
+ * still counted, since the markup alone does not say what is hidden.
  */
 export function visibleWordCount(html: string): number {
-  const shown = html
+  const shown = withoutClosedDetails(html)
+    .replace(/<dialog(?![^>]*\sopen[\s>=])[^>]*>[\s\S]*?<\/dialog>/gi, " ")
     .replace(/<option[\s>][\s\S]*?<\/option>/gi, " ")
     .replace(/\s(?:aria-label|title|placeholder|alt)="[^"]*"/gi, "");
   const [text] = readableStrings(shown);
