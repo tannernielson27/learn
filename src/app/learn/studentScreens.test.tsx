@@ -365,6 +365,8 @@ const REPORT_INPUT: AssignmentReportInput = {
   students: [
     { id: "s-ava", displayName: "Ava" },
     { id: "s-ben", displayName: "Ben" },
+    // Taken off the class after attempting (#242): shown in a group of their own.
+    { id: "s-gone", displayName: "Gil", membership: "removed" },
   ],
   attempts: [
     {
@@ -392,8 +394,7 @@ const REPORT_INPUT: AssignmentReportInput = {
       ],
     },
   ],
-  removed: [{ id: "s-gone", displayName: "Gil" }],
-} as AssignmentReportInput;
+};
 
 const reportView = (view: "students" | "items" | "steps", released = true, untagged = false) => (
   <AssignmentReportView
