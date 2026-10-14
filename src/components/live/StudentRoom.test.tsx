@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { act } from "react";
-import { describe, expect, it, vi, type Mock } from "vitest";
+import { act, Profiler } from "react";
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import type {
   ItemReveal,
   LiveSessionState,
@@ -19,8 +19,16 @@ import type {
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema, type AnyResponse } from "@/lib/ngn/schemas";
 import { toKeylessItem } from "@/lib/ngn/submit";
+import { waitingCopy } from "@/lib/live/waiting";
 import { StudentRoom } from "./StudentRoom";
 import { renderersLoaded } from "@/components/question/testing/renderers";
+
+// The real sentences, behind a spy. `StudentRoom` asks for them once per render of its own body,
+// so the call count is how many times the room itself rendered (#408).
+vi.mock("@/lib/live/waiting", async (original) => {
+  const real = await original<typeof import("@/lib/live/waiting")>();
+  return { ...real, waitingCopy: vi.fn(real.waitingCopy) };
+});
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
@@ -145,29 +153,30 @@ describe("StudentRoom: waiting", () => {
 
   it("waits in the lobby with the sentence every other screen uses", () => {
     setup();
-    expect(screen.getByText("You are in.")).toBeInTheDocument();
-    expect(screen.getByText(/your instructor starts the session/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "You are in. Wait for your teacher to start." }),
+    ).toBeInTheDocument();
   });
 
   it("says when the session has ended, and shows no item", () => {
     const room = setup();
     room.push({ state: state({ status: "ended", position: 4 }), item: KEYLESS });
-    expect(screen.getByText("This session has ended.")).toBeInTheDocument();
+    expect(screen.getByText("This live session has ended.")).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Options" })).toBeNull();
   });
 
   it("says when the room is paused, without losing the place", () => {
     const room = setup();
     room.push({ state: state({ status: "paused", position: 4 }), item: null });
-    expect(screen.getByText("The session is paused.")).toBeInTheDocument();
-    expect(screen.getByText("Item 4 of 12")).toBeInTheDocument();
+    expect(screen.getByText("The live session is paused.")).toBeInTheDocument();
+    expect(screen.getByText("Question 4 of 12")).toBeInTheDocument();
   });
 
   it("takes the item off the screen while the room is paused, because no answer is taken", () => {
     const room = setup();
     room.push({ state: running({ status: "paused" }), item: KEYLESS });
     // A Submit that `canSubmit` is certain to refuse is worse than a screen that says why.
-    expect(screen.getByText("The session is paused.")).toBeInTheDocument();
+    expect(screen.getByText("The live session is paused.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
   });
 
@@ -199,7 +208,7 @@ describe("StudentRoom: waiting", () => {
       { participantId: "p-1", displayName: "Sam Okafor", joinedAt: 1000 },
       { participantId: "p-2", displayName: "Ada", joinedAt: 1001 },
     ]);
-    expect(screen.getByTestId("room-count")).toHaveTextContent("2 in the room");
+    expect(screen.getByTestId("room-count")).toHaveTextContent("2 in this session");
   });
 
   it("says so while the connection is down, and stops saying so when it is back", () => {
@@ -245,7 +254,9 @@ describe("StudentRoom: waiting", () => {
         connect={() => room.transport}
       />,
     );
-    expect(screen.getByRole("heading", { name: "This session has ended." })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "This live session has ended." }),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/Reconnecting/)).toBeNull();
   });
 
@@ -458,7 +469,9 @@ describe("StudentRoom: the reveal", () => {
     });
     await renderersLoaded();
 
-    expect(screen.getByTestId("not-answered")).toHaveTextContent("You did not answer this item.");
+    expect(screen.getByTestId("not-answered")).toHaveTextContent(
+      "You did not answer this question.",
+    );
     expect(screen.getByRole("complementary", { name: "Rationale" })).toHaveTextContent(
       /Tachypnea, hypoxemia/,
     );
@@ -561,5 +574,96 @@ describe("StudentRoom: the item timer (#182)", () => {
     await renderersLoaded();
     expect(screen.queryByTestId("answer-late")).toBeNull();
     expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeChecked();
+  });
+});
+
+describe("StudentRoom: someone else joins or leaves (#408)", () => {
+  /** A roster of `count` phones, as a presence sync would hand it over. */
+  const rosterOf = (count: number): Participant[] =>
+    Array.from({ length: count }, (_, index) => ({
+      participantId: `p-${index}`,
+      displayName: `Student ${index}`,
+      joinedAt: 1000 + index,
+    }));
+
+  const commits = vi.fn();
+  beforeEach(() => commits.mockClear());
+
+  /** The room inside a React Profiler, so every commit anywhere on the screen is counted. */
+  function profiled() {
+    const room = fakeTransport(async (itemId) => ({ itemId, submittedAt: 1_700_000_000_000 }));
+    render(
+      <Profiler id="student-room" onRender={commits}>
+        <StudentRoom
+          sessionId="00000000-0000-4000-8000-0000000132aa"
+          title="Cardiac basics"
+          displayName="Sam Okafor"
+          participantId="00000000-0000-4000-8000-0000000132bb"
+          joinedAt={1000}
+          initial={state()}
+          channel={CHANNEL}
+          connect={() => room.transport}
+        />
+      </Profiler>,
+    );
+    return room;
+  }
+
+  it("commits nothing for 50 joins while an item is on the screen; a move still commits", async () => {
+    const room = profiled();
+    room.push({ state: running(), item: KEYLESS });
+    await renderersLoaded();
+    commits.mockClear();
+
+    for (let count = 2; count <= 51; count += 1) room.roster(rosterOf(count));
+    expect(commits).toHaveBeenCalledTimes(0);
+
+    // The control: the same screen does commit when the room moves to another item.
+    const next = { ...KEYLESS, id: "mr_sample_2" } as ParticipantItem;
+    room.push({ state: running({ position: 2 }), item: next });
+    expect(commits.mock.calls.length).toBeGreaterThan(0);
+
+    // And the count was kept, not dropped: it is right the moment there is somewhere to show it.
+    room.push({ state: running({ status: "paused", position: 2 }), item: next });
+    expect(screen.getByTestId("room-count")).toHaveTextContent("51 in this session");
+  });
+
+  it("commits nothing for 50 leaves either", async () => {
+    const room = profiled();
+    room.push({ state: running(), item: KEYLESS });
+    await renderersLoaded();
+    room.roster(rosterOf(51));
+    commits.mockClear();
+
+    for (let count = 50; count >= 1; count -= 1) room.roster(rosterOf(count));
+    expect(commits).toHaveBeenCalledTimes(0);
+  });
+
+  it("redraws only the count while waiting, not the room around it", () => {
+    const room = profiled();
+    const renders = vi.mocked(waitingCopy);
+    renders.mockClear();
+    commits.mockClear();
+
+    for (let count = 2; count <= 51; count += 1) room.roster(rosterOf(count));
+
+    // The count is on this screen, so each join is drawn: one commit each, of one line.
+    expect(screen.getByTestId("room-count")).toHaveTextContent("51 in this session");
+    expect(commits).toHaveBeenCalledTimes(50);
+    expect(renders).toHaveBeenCalledTimes(0);
+
+    // The control: a move renders the room itself.
+    room.push({ state: state({ status: "paused", position: 4 }), item: null });
+    expect(renders.mock.calls.length).toBeGreaterThan(0);
+  });
+
+  it("commits nothing for a sync that leaves the count where it was", () => {
+    const room = profiled();
+    room.roster(rosterOf(3));
+    commits.mockClear();
+
+    // A phone re-tracking after a reconnect: a new roster array, the same number of people.
+    for (let again = 0; again < 50; again += 1) room.roster(rosterOf(3));
+    expect(commits).toHaveBeenCalledTimes(0);
   });
 });

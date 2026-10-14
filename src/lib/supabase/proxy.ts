@@ -2,11 +2,22 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./database.types";
 import { readSupabasePublicEnv } from "./env";
+import { homeForAccount } from "./signedInHome";
 
 export interface SessionUpdate {
   response: NextResponse;
   signedIn: boolean;
+  /**
+   * `target`, with the default after sign-in swapped for this person's own home (`homeForAccount`).
+   * The token says who someone is and not what they are, so this is the one thing here that reads
+   * the database: one profile row, and only when it is called with the default. The proxy calls it
+   * for a signed-in visit to /sign-in and for nothing else, so no other request pays for it.
+   * Signed out, it returns `target` untouched.
+   */
+  homeFor: (target: string) => Promise<string>;
 }
+
+const unchanged = async (target: string) => target;
 
 /**
  * Refreshes the Supabase session cookies for this request, before anything renders, and reports
@@ -19,7 +30,7 @@ export async function updateSession(request: NextRequest): Promise<SessionUpdate
   try {
     env = readSupabasePublicEnv();
   } catch {
-    return { response, signedIn: false };
+    return { response, signedIn: false, homeFor: unchanged };
   }
 
   const supabase = createServerClient<Database>(env.url, env.publishableKey, {
@@ -40,8 +51,16 @@ export async function updateSession(request: NextRequest): Promise<SessionUpdate
   // rather than every auth route returning a 500.
   try {
     const { data } = await supabase.auth.getClaims();
-    return { response, signedIn: Boolean(data?.claims?.sub) };
+    const userId = data?.claims?.sub;
+    if (typeof userId !== "string" || userId === "") {
+      return { response, signedIn: false, homeFor: unchanged };
+    }
+    return {
+      response,
+      signedIn: true,
+      homeFor: (target) => homeForAccount(supabase, userId, target),
+    };
   } catch {
-    return { response, signedIn: false };
+    return { response, signedIn: false, homeFor: unchanged };
   }
 }

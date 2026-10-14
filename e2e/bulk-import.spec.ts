@@ -3,6 +3,8 @@ import { expect, test, type Page } from "@playwright/test";
 import { ITEM_PAGE_SIZE } from "../src/lib/authoring/bankSearch";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
 import { signInAsNewAuthor } from "./signIn";
+import { openImport } from "./authoringHelpers";
+import { giveQuizAnInQuizFolder } from "./inQuizFolders";
 
 // Needs the local Supabase stack, like auth.spec.ts. CI runs it in the `auth-e2e` job.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
@@ -33,7 +35,7 @@ function exportFile(file: number, { broken = false } = {}) {
 }
 
 const itemLinks = (page: Page) =>
-  page.getByRole("list", { name: "Items" }).getByRole("link", { name: /^Cardiac bulk/ });
+  page.getByRole("list", { name: "Questions" }).getByRole("link", { name: /^Cardiac bulk/ });
 
 test("an author imports three files of 120 items into Cardiac; the broken file is reported and the others land", async ({
   page,
@@ -45,14 +47,15 @@ test("an author imports three files of 120 items into Cardiac; the broken file i
   const bankName = `Bulk ${testInfo.project.name} ${Date.now()}`;
 
   await page.goto("/author");
-  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
-  await page.getByRole("textbox", { name: "Folder name", exact: true }).fill("Cardiac");
-  await page.getByRole("button", { name: "Create folder", exact: true }).click();
+  // #411: a new quiz has no folders inside it, so it is given one the way an older quiz had.
+  await giveQuizAnInQuizFolder(page, request, "Cardiac");
   const folders = page.getByRole("navigation", { name: "Folders" });
-  await expect(folders.getByRole("link", { name: "Cardiac", exact: true })).toBeVisible();
+
+  await openImport(page);
 
   await page
     .getByLabel("JSON files")
@@ -65,13 +68,13 @@ test("an author imports three files of 120 items into Cardiac; the broken file i
   ).toContainText("1 was refused.");
   const imported = page.getByRole("list", { name: "Imported files" }).getByRole("listitem");
   await expect(imported).toHaveText([
-    "cardiac-1.learn.json: Imported 40 items as drafts.",
-    "cardiac-3.learn.json: Imported 40 items as drafts.",
+    "cardiac-1.learn.json: Imported 40 questions as drafts.",
+    "cardiac-3.learn.json: Imported 40 questions as drafts.",
   ]);
   // Filtered: Next's route announcer is also an alert.
   const refused = page.getByRole("alert").filter({ hasText: "cardiac-2.learn.json" });
   await expect(refused).toContainText("cardiac-2.learn.json: Nothing was imported.");
-  await expect(refused).toContainText(`Item ${BROKEN_ENTRY}: "stem.value" is not valid.`);
+  await expect(refused).toContainText(`Question ${BROKEN_ENTRY}: "stem.value" is not valid.`);
   // The report names the file, entry and field, never the file's own text.
   await expect(refused).not.toContainText("Cardiac bulk");
   await expectNoAxeViolations(page);
@@ -94,7 +97,9 @@ test("an author imports three files of 120 items into Cardiac; the broken file i
   await expect(itemLinks(page)).toHaveCount(2 * ITEMS_PER_FILE - ITEM_PAGE_SIZE);
   await expect(itemLinks(page).filter({ hasText: "Cardiac bulk 2." })).toHaveCount(0);
   await expect(itemLinks(page).filter({ hasNotText: "Draft" })).toHaveCount(0);
-  await folders.getByRole("link", { name: "Unfiled", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "No unfiled items", exact: true })).toBeVisible();
+  await folders.getByRole("link", { name: "Not in a folder", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Every question is in a folder", exact: true }),
+  ).toBeVisible();
   await expectNoAxeViolations(page);
 });

@@ -43,6 +43,26 @@ describe("createMailer", () => {
     expect(vi.mocked(fetchImpl).mock.calls[0][0]).toBe("http://mailpit:8025/api/v1/send");
   });
 
+  it("uses Mailpit in a local production build when SUPABASE_MAILBOX_URL names it, as e2e does", async () => {
+    const fetchImpl = ok("m-1");
+    await createMailer(
+      { NODE_ENV: "production", SUPABASE_MAILBOX_URL: "http://127.0.0.1:55324" },
+      fetchImpl,
+    ).send(MESSAGE);
+    expect(vi.mocked(fetchImpl).mock.calls[0][0]).toBe("http://127.0.0.1:55324/api/v1/send");
+  });
+
+  it("never uses Mailpit on Vercel, even when SUPABASE_MAILBOX_URL is set", async () => {
+    const fetchImpl = ok("x");
+    const mailer = createMailer(
+      { NODE_ENV: "production", VERCEL: "1", SUPABASE_MAILBOX_URL: "http://mailpit:8025" },
+      fetchImpl,
+    );
+    const error = await mailer.send(MESSAGE).catch((e: unknown) => e);
+    expect((error as EmailError).kind).toBe("config");
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["a production build", { NODE_ENV: "production" }],
     ["any Vercel deployment", { NODE_ENV: "development", VERCEL: "1" }],

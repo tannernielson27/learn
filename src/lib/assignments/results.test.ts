@@ -88,7 +88,6 @@ const header: StudentAssignment = {
   maxAttempts: 2,
   shuffleOptions: true,
   itemSet: [rowId(1), rowId(2)],
-  patientRecord: null,
 };
 
 function store(

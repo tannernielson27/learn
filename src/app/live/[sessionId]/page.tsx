@@ -9,7 +9,9 @@ import { requireAuthor } from "@/lib/authoring/session";
 import { joinUrl } from "@/lib/live/routes";
 import { pacedState } from "@/lib/live/state";
 import { siteOrigin } from "@/lib/http/siteOrigin";
+import { readSessionRecord } from "@/lib/supabase/sessionRecord";
 import { readHostSession } from "@/lib/supabase/sessions";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const metadata: Metadata = { title: "Live session" };
 
@@ -31,6 +33,11 @@ export default async function LiveSessionPage({ params }: PageProps<"/live/[sess
   const { supabase } = await requireAuthor(`/live/${sessionId}`);
   const session = await readHostSession(supabase, sessionId);
   if (!session) notFound();
+  // #335: the whole record, for the instructor, with a marker for the class's step. Read with the
+  // service role only now that row level security has said the session is this host's.
+  const record = session.caseStudy
+    ? await readSessionRecord(createSupabaseServiceClient(), session.id)
+    : null;
 
   // Built from the request the host made, so a preview deployment's own address ends up in the
   // picture without anything being configured.
@@ -38,9 +45,16 @@ export default async function LiveSessionPage({ params }: PageProps<"/live/[sess
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
-      <p className="mb-2 text-sm text-ink-2">
+      <p className="mb-2 flex flex-wrap justify-between gap-x-4 text-sm text-ink-2">
         <Link href="/author" className="tap-target inline-flex items-center hover:text-ink-1">
-          Back to banks
+          Back to library
+        </Link>
+        {/* #414: what each control does is in the guide, not in a paragraph under the control. */}
+        <Link
+          href="/help/instructor#live"
+          className="tap-target inline-flex items-center hover:text-ink-1"
+        >
+          Help
         </Link>
       </p>
       <HostLobby
@@ -53,11 +67,12 @@ export default async function LiveSessionPage({ params }: PageProps<"/live/[sess
         qrCode={
           <SessionQrCode
             url={studentUrl}
-            label="QR code that opens the join page for this session"
+            label="QR code for joining this live session"
             className="mx-auto mt-6 block h-auto w-40 rounded-sm border border-line sm:w-48"
           />
         }
         caseStudy={session.caseStudy}
+        {...(record === null ? {} : { record })}
         initial={pacedState(
           {
             status: session.status,

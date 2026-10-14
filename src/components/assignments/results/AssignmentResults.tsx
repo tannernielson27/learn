@@ -16,7 +16,7 @@ export interface AssignmentResultsProps {
   best: BestResult | null;
   attemptsMade: number;
   entries: readonly ResultEntry[];
-  /** The case study's patient record snapshot; null for a bank. */
+  /** The case study's patient record snapshot; null for a quiz. */
   record: EhrRecord | null;
 }
 
@@ -30,19 +30,19 @@ const points = (value: number): string => String(Math.round(value * 100) / 100);
 const NOTES: Record<Exclude<ResultOutcome["kind"], "answered">, string> = {
   not_attempted: "You did not attempt this.",
   not_answered: "You did not answer this.",
-  unmarked: "Your attempt has not been marked yet.",
-  unreadable: "Your answer to this could not be shown.",
+  unmarked: "Not marked yet.",
+  unreadable: "Your answer could not be shown.",
 };
 
-function totalLine(best: BestResult | null, attemptsMade: number): string {
+/** What the total needs said beside it. One attempt needs nothing: the score is that attempt's. */
+function totalLine(best: BestResult | null, attemptsMade: number): string | null {
   if (attemptsMade === 0) return "You did not attempt this assignment.";
-  if (best === null) return "Your attempt has not been marked yet. Reload the page in a moment.";
-  return attemptsMade === 1
-    ? "From your one attempt."
-    : `Your best attempt counts: attempt ${best.attemptNumber} of ${attemptsMade}.`;
+  if (best === null) return "Not marked yet. Reload the page in a moment.";
+  return attemptsMade === 1 ? null : `Your best: attempt ${best.attemptNumber} of ${attemptsMade}.`;
 }
 
 function Total({ best, attemptsMade }: Pick<AssignmentResultsProps, "best" | "attemptsMade">) {
+  const line = totalLine(best, attemptsMade);
   return (
     <section
       aria-labelledby="results-total-heading"
@@ -56,7 +56,7 @@ function Total({ best, attemptsMade }: Pick<AssignmentResultsProps, "best" | "at
           {`${points(best.score)} of ${points(best.maxScore)}`}
         </p>
       ) : null}
-      <p className="mt-2 text-sm text-ink-2">{totalLine(best, attemptsMade)}</p>
+      {line ? <p className="mt-2 text-sm text-ink-2">{line}</p> : null}
     </section>
   );
 }
@@ -68,8 +68,7 @@ const keyOf = (entry: ResultEntry): Reveal => ({
 });
 
 /** One item in the review view: the student's answer marked against the key, or the key alone. */
-function ResultItem({ entry, index, total }: { entry: ResultEntry; index: number; total: number }) {
-  const progress = { index, total };
+function ResultItem({ entry }: { entry: ResultEntry }) {
   const { outcome } = entry;
   if (outcome.kind === "answered") {
     return (
@@ -78,7 +77,6 @@ function ResultItem({ entry, index, total }: { entry: ResultEntry; index: number
         item={entry.item}
         initialResponse={outcome.response}
         initialReveal={{ ...keyOf(entry), score: outcome.score }}
-        progress={progress}
         submit={nothingToSend}
         label="Your answer"
       />
@@ -93,7 +91,6 @@ function ResultItem({ entry, index, total }: { entry: ResultEntry; index: number
         key={`${entry.rowId}:key`}
         item={entry.item}
         initialKey={keyOf(entry)}
-        progress={progress}
         submit={nothingToSend}
         label="Answer key"
       />
@@ -120,7 +117,7 @@ export function AssignmentResults({ best, attemptsMade, entries, record }: Assig
     return (
       <>
         <Total best={best} attemptsMade={attemptsMade} />
-        <p className="measure mt-6 text-ink-2">This assignment has no items to show.</p>
+        <p className="measure mt-6 text-ink-2">This assignment has no questions.</p>
       </>
     );
   }
@@ -138,18 +135,18 @@ export function AssignmentResults({ best, attemptsMade, entries, record }: Assig
         onSelect={setIndex}
       />
       <div className="mt-8">
-        <ResultItem key={entry.rowId} entry={entry} index={at} total={entries.length} />
+        <ResultItem key={entry.rowId} entry={entry} />
       </div>
       <div className="mt-2 flex flex-wrap justify-between gap-2">
         <Button variant="secondary" disabled={at === 0} onClick={() => setIndex(at - 1)}>
-          Previous item
+          Previous
         </Button>
         <Button
           variant="secondary"
           disabled={at === entries.length - 1}
           onClick={() => setIndex(at + 1)}
         >
-          Next item
+          Next
         </Button>
       </div>
     </>

@@ -28,10 +28,10 @@ describe("/help/items", () => {
     }
   });
 
-  it("covers the case study, the Trend item and all six clinical judgment steps", () => {
+  it("covers the case study, the Trend question and all six clinical judgment steps", () => {
     render(<ItemGuide />);
     expect(screen.getByRole("heading", { level: 3, name: "Case study" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 3, name: "Trend item" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "Trend question" })).toBeInTheDocument();
     for (const [step, label] of Object.entries(CJMM_STEP_LABELS)) {
       expect(screen.getByRole("heading", { level: 3, name: `${step}. ${label}` })).toBeVisible();
     }
@@ -57,19 +57,64 @@ describe("/help/items", () => {
 });
 
 describe("/help/instructor", () => {
-  it("walks from sign-in to sharing a bank for practice", () => {
+  const SECTIONS = [
+    ["sign-in", "Sign up and sign in"],
+    ["banks", "Create or import a quiz"],
+    ["items", "Write questions"],
+    ["classes", "Create a class and invite students"],
+    ["assign", "Assign a quiz"],
+    ["live", "Start a live session"],
+    ["reports", "Read the reports"],
+    ["practice", "Share a quiz for practice"],
+  ] as const;
+
+  it("walks from signing up to sharing a quiz for practice", () => {
     render(<InstructorGuide />);
     const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
-    expect(headings).toEqual([
-      "Sign in",
-      "Make or import a bank",
-      "Write items",
-      "Make a class and invite students",
-      "Assign take-home work",
-      "Run a live session",
-      "Read the reports",
-      "Share a bank for practice",
+    expect(headings).toEqual(SECTIONS.map(([, title]) => title));
+  });
+
+  // Other pages link to these, so an id outlives a change of title (#416).
+  it("keeps each section's anchor, and lists them all in its contents", () => {
+    const { container } = render(<InstructorGuide />);
+    const contents = screen.getByRole("navigation", { name: "On this page" });
+    for (const [id, title] of SECTIONS) {
+      const section = container.querySelector(`section#${id}`) as HTMLElement;
+      expect(section, `no section#${id}`).not.toBeNull();
+      expect(within(section).getByRole("heading", { level: 2 })).toHaveTextContent(title);
+      expect(within(contents).getByRole("link", { name: title })).toHaveAttribute("href", `#${id}`);
+    }
+  });
+
+  it("gives each topic a screen might link to an anchor of its own", () => {
+    const { container } = render(<InstructorGuide />);
+    const topics = [...container.querySelectorAll("section [data-help-topic]")].map((el) => el.id);
+    expect(topics).toEqual([
+      "sign-up",
+      "password",
+      "colleagues",
+      "import",
+      "folders",
+      "publish",
+      "history",
+      "case-studies",
+      "invite",
+      "class-code",
+      "time-zone",
+      "remove",
+      "assign-students",
+      "assign-close",
+      "reminders",
+      "pacing",
+      "live-results",
+      "timer",
+      "practice-answers",
     ]);
+    expect(new Set(topics).size).toBe(topics.length);
+    for (const id of topics) {
+      const topic = container.querySelector(`#${id}`) as HTMLElement;
+      expect(within(topic).getByRole("heading", { level: 3 })).toBeInTheDocument();
+    }
   });
 
   it("gives every image alt text and its size", () => {
@@ -84,14 +129,22 @@ describe("/help/instructor", () => {
 describe("/help", () => {
   it("links to both guides and has a paragraph for students", () => {
     render(<HelpIndex />);
-    expect(screen.getByRole("link", { name: "Instructor guide" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Teacher guide" })).toHaveAttribute(
       "href",
       "/help/instructor",
     );
-    expect(screen.getByRole("link", { name: "Item-writing guide" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Question guide" })).toHaveAttribute(
       "href",
       "/help/items",
     );
     expect(screen.getByRole("heading", { level: 2, name: "For students" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Join" })).toHaveAttribute("href", "/join");
+    expect(screen.getByRole("link", { name: "create an account" })).toHaveAttribute(
+      "href",
+      "/sign-up",
+    );
+    for (const id of ["students", "students-live", "students-class", "students-results"]) {
+      expect(document.getElementById(id), `no #${id}`).not.toBeNull();
+    }
   });
 });

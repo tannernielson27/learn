@@ -6,7 +6,8 @@ type Client = SupabaseClient<Database>;
 
 /**
  * The author's side of classes (#205), as the signed-in author: row level security keeps every
- * read and write to the author's own org, and the token is only ever read by `readClass`.
+ * read and write to the author's own org, and the token and the join code are only ever read by
+ * `readClass`.
  */
 
 /** A cap so the list is never unbounded; an org has a handful of classes a term. */
@@ -22,6 +23,8 @@ export interface ClassDetail {
   id: string;
   name: string;
   inviteToken: string;
+  /** The eight characters a student types to join (#356), as stored: no hyphen. */
+  joinCode: string;
   /** The IANA zone the class's due times are read in (#242). */
   timeZone: string;
 }
@@ -49,11 +52,11 @@ export async function listClasses(client: Client): Promise<ClassSummary[] | null
   }));
 }
 
-/** One class and its invite token, or null when the author cannot see it. Throws on an error. */
+/** One class with its invite token and join code, or null when the author cannot see it. Throws on an error. */
 export async function readClass(client: Client, classId: string): Promise<ClassDetail | null> {
   const { data, error } = await client
     .from("classes")
-    .select("id, name, invite_token, time_zone")
+    .select("id, name, invite_token, join_code, time_zone")
     .eq("id", classId)
     .maybeSingle();
   if (error) throw new Error("The class could not be read.");
@@ -62,6 +65,7 @@ export async function readClass(client: Client, classId: string): Promise<ClassD
     id: data.id,
     name: data.name,
     inviteToken: data.invite_token,
+    joinCode: data.join_code,
     timeZone: data.time_zone,
   };
 }
@@ -118,7 +122,7 @@ export async function setClassTimeZone(
   return (data?.length ?? 0) > 0 ? "saved" : "gone";
 }
 
-/** A new token; the old link stops working as this returns. */
+/** A new token and a new join code; the old link and code stop working as this returns. */
 export async function rotateInvite(client: Client, classId: string): Promise<ConfirmedWrite> {
   const { error } = await client.rpc("rotate_class_invite", { target_class: classId });
   return error ? failedWrite(error) : { ok: true, changed: true };

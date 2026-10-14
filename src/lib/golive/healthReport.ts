@@ -2,14 +2,15 @@
  * `GET /api/health` (#237). Anyone may ask whether a deployment is ready; only a caller holding
  * `CRON_SECRET` learns which variable is missing.
  *
- * Public view: `{supabase, project, version, ready}`. `ready` folds every required variable and the
- * demo account into one boolean, so an anonymous caller cannot tell which secret a deployment lacks
- * (the conservative option: a list of missing names says which feature is broken and where to
- * look). It is briefly cacheable, so a CDN absorbs a flood.
+ * Public view: `{supabase, project, version, ready}`. `ready` folds every required variable, the
+ * demo account and the sign-up CAPTCHA's setup into one boolean, so an anonymous caller cannot tell
+ * which secret a deployment lacks (the conservative option: a list of missing names says which
+ * feature is broken and where to look). It is briefly cacheable, so a CDN absorbs a flood.
  *
- * Detailed view, with `Authorization: Bearer <CRON_SECRET>`: adds a boolean per variable and
- * whether the demo account is on. Never a value, never cached. The secret is compared in constant
- * time (`bearerMatches`); a wrong one gets 401 before anything else runs.
+ * Detailed view, with `Authorization: Bearer <CRON_SECRET>`: adds a boolean per variable, whether
+ * the demo account is on, and how the sign-up CAPTCHA is set up (`signUpCaptcha`). Never a value,
+ * never cached. The secret is compared in constant time (`bearerMatches`); a wrong one gets 401
+ * before anything else runs.
  *
  * No rate limit: the route reads no table, and its one network call (Supabase's auth health) is
  * memoised per server instance, so a flood that skips the CDN still reaches Supabase at most once
@@ -23,6 +24,7 @@ import {
   type DetailedHealth,
   type PublicHealth,
   type RequiredEnvName,
+  type SignUpCaptcha,
 } from "./envVars";
 
 export type EnvSnapshot = Readonly<Record<string, string | undefined>>;
@@ -35,6 +37,11 @@ export interface SupabaseStatus {
 export interface HealthDeps {
   env: EnvSnapshot;
   supabase: () => Promise<SupabaseStatus>;
+  /**
+   * `captchaSetup` from src/lib/auth/captcha.ts, the same reading sign-up acts on (#359). Handed
+   * in, not read from `env`: that file alone names the Turnstile secret (`noClientCaptcha.test.ts`).
+   */
+  signUpCaptcha: () => SignUpCaptcha;
 }
 
 const PUBLIC_CACHE = "public, max-age=5, s-maxage=5";
@@ -49,6 +56,9 @@ function present(value: string | undefined): boolean {
 function usableSecret(value: string | undefined): boolean {
   return (value ?? "").length >= MIN_SECRET_LENGTH;
 }
+
+/** The two setups in which every sign-up is refused (#359). */
+const SIGN_UP_REFUSED: readonly SignUpCaptcha[] = ["missing", "misconfigured"];
 
 /** Booleans only. CRON_SECRET counts only when the cron route would accept it (32+ characters). */
 export function summarizeEnv(env: EnvSnapshot): Pick<DetailedHealth, "env" | "demoAccount"> {
@@ -103,8 +113,12 @@ export async function handleHealth(request: Request, deps: HealthDeps): Promise<
 
   const { status, project } = await deps.supabase();
   const summary = summarizeEnv(deps.env);
+  const signUpCaptcha = deps.signUpCaptcha();
   const ready =
-    status === "ok" && Object.values(summary.env).every(Boolean) && !summary.demoAccount;
+    status === "ok" &&
+    Object.values(summary.env).every(Boolean) &&
+    !summary.demoAccount &&
+    !SIGN_UP_REFUSED.includes(signUpCaptcha);
   const body: PublicHealth = {
     supabase: status,
     project,
@@ -113,7 +127,7 @@ export async function handleHealth(request: Request, deps: HealthDeps): Promise<
   };
   const httpStatus = status === "ok" ? 200 : 503;
   if (!wantsDetail) return reply(body, httpStatus, PUBLIC_CACHE);
-  const detailed: DetailedHealth = { ...body, ...summary };
+  const detailed: DetailedHealth = { ...body, ...summary, signUpCaptcha };
   return reply(detailed, httpStatus, PRIVATE);
 }
 

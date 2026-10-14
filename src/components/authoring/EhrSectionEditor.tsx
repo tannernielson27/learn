@@ -48,7 +48,7 @@ export interface EhrSectionEditorProps {
   onBlockChange: (blockIndex: number, block: EhrBlockForm) => void;
 }
 
-/** One section of the record: what it is, its title, when it was charted, and its blocks. */
+/** One tab of the patient record: what it is, its title, when it was charted, and its blocks. */
 export function EhrSectionEditor({
   tab,
   index,
@@ -76,12 +76,12 @@ export function EhrSectionEditor({
 
   return (
     <fieldset className="flex flex-col gap-4 rounded-sm border border-line p-4">
-      <legend className="px-1 text-sm font-medium text-ink-1">Section {number}</legend>
+      <legend className="px-1 text-sm font-medium text-ink-1">Tab {number}</legend>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="flex min-w-0 flex-col gap-1">
           <label htmlFor={fields.idFor(`${path}.kind`)} className="text-sm text-ink-1">
-            <Sr>{`Section ${number}, `}</Sr>
+            <Sr>{`Tab ${number}, `}</Sr>
             Kind
           </label>
           <select
@@ -99,7 +99,7 @@ export function EhrSectionEditor({
         </div>
         <div className="flex min-w-0 flex-col gap-1">
           <label htmlFor={fields.idFor(`${path}.title`)} className="text-sm text-ink-1">
-            <Sr>{`Section ${number}, `}</Sr>
+            <Sr>{`Tab ${number}, `}</Sr>
             Title
           </label>
           <input
@@ -112,7 +112,7 @@ export function EhrSectionEditor({
         </div>
         <div className="flex min-w-0 flex-col gap-1">
           <label htmlFor={fields.idFor(`${path}.timePointId`)} className="text-sm text-ink-1">
-            <Sr>{`Section ${number}, `}</Sr>
+            <Sr>{`Tab ${number}, `}</Sr>
             Time
           </label>
           <select
@@ -156,7 +156,7 @@ export function EhrSectionEditor({
                 }}
               >
                 Remove block
-                <Sr>{` ${blockIndex + 1} from section ${number}`}</Sr>
+                <Sr>{` ${blockIndex + 1} from tab ${number}`}</Sr>
               </Button>
             </div>
           ) : null}
@@ -173,7 +173,7 @@ export function EhrSectionEditor({
               onClick={() => onAddBlock(kind)}
             >
               Add {BLOCK_LABELS[kind].toLowerCase()}
-              <Sr>{` to section ${number}`}</Sr>
+              <Sr>{` to tab ${number}`}</Sr>
             </Button>
           ))}
         </div>
@@ -188,7 +188,7 @@ export function EhrSectionEditor({
             onClick={() => onMove(-1)}
           >
             Move
-            <Sr>{` section ${number}`}</Sr> up
+            <Sr>{` tab ${number}`}</Sr> up
           </Button>
         ) : null}
         {index < total - 1 ? (
@@ -199,11 +199,11 @@ export function EhrSectionEditor({
             onClick={() => onMove(1)}
           >
             Move
-            <Sr>{` section ${number}`}</Sr> down
+            <Sr>{` tab ${number}`}</Sr> down
           </Button>
         ) : null}
         <Button size="sm" variant="ghost" onClick={onRemove}>
-          Remove section
+          Remove tab
           <Sr>{` ${number}`}</Sr>
         </Button>
       </div>

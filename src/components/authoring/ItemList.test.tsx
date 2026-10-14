@@ -51,7 +51,7 @@ describe("ItemList", () => {
         .getAllByRole("listitem")
         .map((tag) => tag.textContent),
     ).toEqual(["Step 3: Prioritize Hypotheses", "Physiological Adaptation", "sepsis"]);
-    const untitled = screen.getByRole("link", { name: /^Untitled item/ });
+    const untitled = screen.getByRole("link", { name: /^Untitled question/ });
     expect(within(untitled).queryByRole("list", { name: "Tags" })).not.toBeInTheDocument();
   });
 
@@ -67,15 +67,15 @@ describe("ItemList", () => {
 
   it("names an item with no stem yet", () => {
     render(<ItemList items={items} />);
-    // Anchored: the published item's Play link is named "Play Untitled item".
-    const second = screen.getByRole("link", { name: /^Untitled item/ });
+    // Anchored: the published item's Play link is named "Play Untitled question".
+    const second = screen.getByRole("link", { name: /^Untitled question/ });
     expect(within(second).getByText("Matrix Multiple Choice")).toBeInTheDocument();
     expect(within(second).getByText("Published")).toBeInTheDocument();
   });
 
   it("offers Play for a published item only, named for the item", () => {
     render(<ItemList items={items} />);
-    expect(screen.getByRole("link", { name: "Play Untitled item" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Play Untitled question" })).toHaveAttribute(
       "href",
       "/author/items/i2/play",
     );
@@ -87,7 +87,7 @@ describe("ItemList", () => {
     const [first, , third] = screen.getAllByRole("link", { name: /^(Which findings|Untitled)/ });
     expect(within(first).getByText("3 points")).toBeInTheDocument();
     expect(within(third).getByText("1 point")).toBeInTheDocument();
-    const untitled = screen.getByRole("link", { name: /^Untitled item/ });
+    const untitled = screen.getByRole("link", { name: /^Untitled question/ });
     expect(within(untitled).queryByText(/point/)).not.toBeInTheDocument();
   });
 
@@ -96,30 +96,29 @@ describe("ItemList", () => {
     expect(screen.getByText("future_type")).toBeInTheDocument();
   });
 
-  it("says what to do when the bank is empty", () => {
-    render(<ItemList items={[]} />);
+  it("says so in one line when the quiz is empty", () => {
+    const { container } = render(<ItemList items={[]} />);
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { level: 3, name: "No items in this bank yet" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/Choose New item to write one/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "No questions yet" })).toBeInTheDocument();
+    // One line (#412): no sentence under the heading, and no link unless the page passes one.
+    expect(container.querySelector("p")).toBeNull();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
-  it("says what the page passes when a view holds no items, with its link", () => {
+  it("says what the page passes when a view holds no questions, with its link", () => {
     render(
       <ItemList
         items={[]}
         empty={{
-          heading: "No items in this folder",
-          body: "Move items here.",
-          action: { href: "/author/banks/b1", label: "See all items" },
+          heading: "No questions in this folder",
+          action: { href: "/author/banks/b1", label: "All questions" },
         }}
       />,
     );
     expect(
-      screen.getByRole("heading", { level: 3, name: "No items in this folder" }),
+      screen.getByRole("heading", { level: 3, name: "No questions in this folder" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "See all items" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "All questions" })).toHaveAttribute(
       "href",
       "/author/banks/b1",
     );
@@ -137,7 +136,7 @@ describe("ItemList", () => {
     expect(first).toHaveAttribute("name", "item");
     expect(first).toHaveAttribute("value", "i1");
     expect(first.closest("a")).toBeNull();
-    expect(screen.getByRole("checkbox", { name: "Select Untitled item" })).toHaveAttribute(
+    expect(screen.getByRole("checkbox", { name: "Select Untitled question" })).toHaveAttribute(
       "value",
       "i2",
     );
@@ -184,7 +183,7 @@ describe("ItemList", () => {
       />,
     );
     const link = screen.getByRole("link", { name: /Which action comes first\?/ });
-    expect(link).toHaveTextContent("In the item: Recheck the serum lactate");
+    expect(link).toHaveTextContent("In the question: Recheck the serum lactate");
     expect(link.querySelector("mark")).toHaveTextContent("lactate");
   });
 
@@ -205,7 +204,7 @@ describe("ItemList", () => {
     const restore = screen.getByRole("button", { name: "Restore Which findings need follow-up?" });
     expect(restore).toHaveTextContent("Restore");
     expect(restore.closest("a")).toBeNull();
-    expect(screen.getByRole("button", { name: "Restore Untitled item" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Restore Untitled question" })).toBeInTheDocument();
     expect(restoreAction).toHaveBeenCalledWith("i1");
     expect(restoreAction).toHaveBeenCalledWith("i2");
     expect(screen.queryByRole("link", { name: /^Play/ })).not.toBeInTheDocument();

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { redirectForAccess } from "@/lib/auth/routeAccess";
 import { galleryIsAvailable, isGalleryPath } from "@/lib/gallery/availability";
 import { updateSession } from "@/lib/supabase/proxy";
+import { inviteResponseHeaders } from "@/lib/workspace/invite";
 
 /**
  * ADR 0003 / #146: the gallery ships answer keys to the browser by design, so it is closed on the
@@ -32,9 +33,24 @@ export async function proxy(request: NextRequest) {
     return galleryIsAvailable() ? NextResponse.next() : galleryClosed();
   }
 
-  const { response, signedIn } = await updateSession(request);
-  const target = redirectForAccess(url, signedIn);
-  if (!target) return response;
+  const { response, signedIn, homeFor } = await updateSession(request);
+  // A workspace invitation's path is its secret: every answer under /w/, the page and the answer
+  // to a post alike, tells the browser to send no Referer from it. So does a page that carries the
+  // invitation in its own `next`, as /sign-in?next=/w/<token> does.
+  for (const [name, value] of Object.entries(inviteResponseHeaders(url.pathname, url.search))) {
+    response.headers.set(name, value);
+  }
+  const access = redirectForAccess(url, signedIn);
+  if (!access) return response;
+
+  // The one redirect a signed-in request is ever given is the one off /sign-in. With nowhere
+  // asked for it used to name authoring, which sent a student on to /learn and an account with no
+  // role on to /welcome: two hops. `homeFor` names that same home here, in one. It decides nothing
+  // about access: the pages still check, and it only ever answers where they would have sent the
+  // person anyway. It reads one profile row, on this request alone.
+  const target = signedIn
+    ? new URL(await homeFor(`${access.pathname}${access.search}${access.hash}`), url.origin)
+    : access;
 
   // Carry any refreshed session cookies onto the redirect.
   const redirect = NextResponse.redirect(target);
@@ -46,15 +62,25 @@ export async function proxy(request: NextRequest) {
 // reason: it is turned away above before any session work happens. The student home and the class
 // invite page (#205) read the session in Server Components, which cannot write the refreshed
 // cookies themselves, so the refresh has to happen here. The landing page (#264) is the same: it
-// reads the session to swap Sign in for the visitor's home. `/` matches the root alone.
+// reads the session to swap Sign in for the visitor's home. `/` matches the root alone. The
+// account pages (#358) read it too, and `redirectForAccess` already counts /account as protected,
+// which only works if the proxy runs there. Sign-up and the welcome page (#361) are the same pair:
+// /sign-up reads the session to send a signed-in visitor home, and /welcome is protected.
+// A workspace invitation, /w/<token>, reads the session as the class invite does, and is also
+// here so the proxy can send its Referrer-Policy.
 export const config = {
   matcher: [
     "/",
     "/author/:path*",
     "/learn",
     "/learn/:path*",
+    "/account",
+    "/account/:path*",
     "/c/:path*",
+    "/w/:path*",
     "/sign-in",
+    "/sign-up",
+    "/welcome",
     "/auth/:path*",
     "/gallery",
     "/gallery/:path*",

@@ -11,6 +11,7 @@ import {
 import { bytesOf, expectKeyless } from "./bytes";
 import { latestSignInLink, openSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor, updateAsAdmin } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #210: once an assignment closes, a student reads their best attempt's score and every item with
 // its key and rationale; before the close the results page carries none of it. A bank the student
@@ -70,6 +71,7 @@ async function joinAsStudent(
     reducedMotion: "reduce",
   });
   const page = await context.newPage();
+  await skipWelcomes(page);
   await page.goto(invite);
   const email = `student-${label}-${testInfo.project.name}-${Date.now()}@example.test`;
   const since = new Date();
@@ -170,7 +172,7 @@ test("a student sees nothing before the close, then their score, keys and ration
   const status = student.getByTestId("save-status");
   await student.getByRole("radio", { name: /Auscultate the lungs/ }).click();
   await expect(status).toHaveText("Saved", { timeout: 15_000 });
-  await student.getByRole("button", { name: "Next item", exact: true }).click();
+  await student.getByRole("button", { name: "Next", exact: true }).click();
   await student.getByRole("checkbox", { name: /Respiratory rate 28 breaths/ }).click();
   await student.getByRole("checkbox", { name: /Oxygen saturation 89%/ }).click();
   await expect(status).toHaveText("Saved", { timeout: 15_000 });
@@ -189,10 +191,13 @@ test("a student sees nothing before the close, then their score, keys and ration
     display_name: displayName,
   });
   const ofStudentA = [email, displayName, mine.id];
-  // The controls: each marker is in a response where it belongs. A's email heads A's own home, the
-  // instructor's roster names A, and a student's attempt page carries that student's attempt id.
-  expect(await bytesOf(phone, "/learn")).toContain(email);
-  expect(await bytesOf(page.context(), `/author/classes/${classId}`)).toContain(displayName);
+  // The controls: each marker is in a response where it belongs. A's name heads A's own home (#358:
+  // the header shows the name once there is one), the instructor's roster carries A's name and
+  // email, and a student's attempt page carries that student's attempt id.
+  expect(await bytesOf(phone, "/learn")).toContain(displayName);
+  const roster = await bytesOf(page.context(), `/author/classes/${classId}`);
+  expect(roster).toContain(displayName);
+  expect(roster).toContain(email);
   const classmateTaking = await bytesOf(other.context, bankPath);
   expect(classmateTaking).toContain(classmateAttempt.id);
   // And none of A's in B's attempt, B's home, or B's results before the close.
@@ -223,7 +228,7 @@ test("a student sees nothing before the close, then their score, keys and ration
 
   await student.goto(bankResults);
   await expect(student.getByTestId("results-pending")).toHaveText(
-    "Your results will be shown when the assignment closes.",
+    "Results show when the assignment closes.",
   );
   expectKeyless(await bytesOf(phone, bankResults), [MC_RATIONALE, MR_RATIONALE]);
   expectKeyless(await bytesOf(phone, caseResults), [STEP_6_RATIONALE]);
@@ -244,7 +249,8 @@ test("a student sees nothing before the close, then their score, keys and ration
 
   const total = student.getByRole("region", { name: "Your score", exact: true });
   await expect(total.getByTestId("results-total")).toHaveText(/^\d+(\.\d+)? of \d+(\.\d+)?$/);
-  await expect(total).toContainText("From your one attempt.");
+  // One attempt: the total stands alone, with nothing restating it.
+  await expect(total.locator("p")).toHaveCount(1);
   await expect(student.getByText(MC_RATIONALE, { exact: false }).first()).toBeVisible();
   // Right and wrong in words, on each option's own name, beside the icon and the colour.
   await expect(student.getByRole("radio", { name: /Auscultate the lungs/ })).toHaveAccessibleName(
@@ -254,7 +260,7 @@ test("a student sees nothing before the close, then their score, keys and ration
   await student.screenshot({ path: shot("assignment-results-bank"), fullPage: true });
 
   // The SATA: the missed option named in words, not only in colour.
-  await student.getByRole("button", { name: "Next item", exact: true }).click();
+  await student.getByRole("button", { name: "Next", exact: true }).click();
   await expect(
     student.getByRole("checkbox", { name: /New confusion per family/ }),
   ).toHaveAccessibleName(/Missed/);
@@ -292,7 +298,7 @@ test("a student sees nothing before the close, then their score, keys and ration
   await expect(
     student
       .getByRole("button", { name: "Patient record", exact: true })
-      .or(student.getByRole("tablist", { name: "Patient record sections", exact: true }))
+      .or(student.getByRole("tablist", { name: "Patient record tabs", exact: true }))
       .first(),
   ).toBeVisible();
   await expect(

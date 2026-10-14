@@ -62,7 +62,7 @@ describe("PracticePlayer (#241)", () => {
     expect(ui.answer).toHaveBeenCalledWith(RUN, ROW_1, CORRECT);
     expect(await screen.findByText(MC_RATIONALE)).toBeInTheDocument();
     expect(screen.getByTestId("practice-count")).toHaveTextContent("1 of 2 done");
-    expect(screen.getByRole("button", { name: "Item 1, answered" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Question 1, answered" })).toBeInTheDocument();
   });
 
   it("reopens an item this run has answered in feedback, with no Submit", async () => {
@@ -90,13 +90,13 @@ describe("PracticePlayer (#241)", () => {
     const ui = setup();
     await renderersLoaded();
     await ui.user.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
-    await ui.user.click(screen.getByRole("button", { name: "Next item" }));
+    await ui.user.click(screen.getByRole("button", { name: "Next" }));
     await renderersLoaded();
-    expect(screen.getByRole("button", { name: "Item 2, not answered" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Question 2, not answered" })).toHaveAttribute(
       "aria-current",
       "step",
     );
-    await ui.user.click(screen.getByRole("button", { name: "Previous item" }));
+    await ui.user.click(screen.getByRole("button", { name: "Previous" }));
     await renderersLoaded();
     expect(screen.getByRole("radio", { name: /Auscultate the lungs/ })).toBeChecked();
   });
@@ -152,20 +152,29 @@ describe("PracticePlayer (#241)", () => {
     expect(await screen.findByText(MC_RATIONALE)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
     expect(screen.getByTestId("practice-count")).toHaveTextContent("1 of 2 done");
-    expect(screen.getByRole("button", { name: "Item 1, answered" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Question 1, answered" })).toBeInTheDocument();
   });
 
   it("plays a case study step by step, each answer naming that step's own row", async () => {
-    const steps = CASE.items.map((item, i) => ({
-      itemId: stepRow(i + 1),
-      item: toKeylessItem(item),
-      answered: null,
-    }));
+    // #335: the run has reached step 1 only, so step 1 is all it was sent.
+    const steps = [
+      { itemId: stepRow(1), item: toKeylessItem(CASE.items[0] as Item), answered: null },
+    ];
     const first = CASE.items[0] as Item;
+    refresh.mockClear();
     const ui = setup(
       view({
-        total: steps.length,
-        entries: [{ kind: "case_study", id: CASE_ID, title: CASE.title, ehr: CASE.ehr, steps }],
+        total: 6,
+        entries: [
+          {
+            kind: "case_study",
+            id: CASE_ID,
+            title: CASE.title,
+            records: [CASE.ehr],
+            stepCount: 6,
+            steps,
+          },
+        ],
       }),
       async () => scoreSubmission(first, { type: "highlight_text", spanIds: ["sp_sob"] } as never),
     );
@@ -181,13 +190,21 @@ describe("PracticePlayer (#241)", () => {
         expect.objectContaining({ type: "highlight_text" }),
       ),
     );
-    expect(await screen.findByRole("button", { name: "Next step" })).toBeInTheDocument();
+    // Step 2 is not on the page until it is read again, which the answer asks for.
+    expect(await screen.findByRole("button", { name: "Next question" })).toBeDisabled();
+    expect(refresh).toHaveBeenCalled();
+    // Said, with a way to ask again, in case the read that brings it failed.
+    expect(screen.getByText("Loading the next question.")).toHaveAttribute("role", "status");
+    refresh.mockClear();
+    await ui.user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 
   it("reopens a case study's answered step with its marks", async () => {
     const first = CASE.items[0] as Item;
     const response = { type: "highlight_text" as const, spanIds: ["sp_sob"] };
-    const steps = CASE.items.map((item, i) => ({
+    // Step 1 answered, so the run has reached step 2 and was sent both.
+    const steps = CASE.items.slice(0, 2).map((item, i) => ({
       itemId: stepRow(i + 1),
       item: toKeylessItem(item),
       answered:
@@ -197,13 +214,22 @@ describe("PracticePlayer (#241)", () => {
     }));
     setup(
       view({
-        total: steps.length,
+        total: 6,
         answered: 1,
-        entries: [{ kind: "case_study", id: CASE_ID, title: CASE.title, ehr: CASE.ehr, steps }],
+        entries: [
+          {
+            kind: "case_study",
+            id: CASE_ID,
+            title: CASE.title,
+            records: [CASE.ehr, CASE.ehr],
+            stepCount: 6,
+            steps,
+          },
+        ],
       }),
     );
     await renderersLoaded();
-    expect(screen.getByRole("button", { name: "Next step" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next question" })).toBeEnabled();
     expect(screen.getByTestId("practice-count")).toHaveTextContent("1 of 6 done");
   });
 
@@ -211,7 +237,7 @@ describe("PracticePlayer (#241)", () => {
     const ui = setup();
     await ui.user.click(screen.getByRole("button", { name: "Start over" }));
     expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
-    expect(screen.getByText(/Your answers so far are set aside/)).toBeInTheDocument();
+    expect(screen.getByText(/Your first answers still count/)).toBeInTheDocument();
     await ui.user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.getByRole("button", { name: "Start over" })).toHaveFocus();
 
@@ -220,8 +246,8 @@ describe("PracticePlayer (#241)", () => {
     await waitFor(() => expect(ui.startOver).toHaveBeenCalledTimes(1));
   });
 
-  it("says when a bank has nothing to practise", () => {
+  it("says when a quiz has nothing to practise", () => {
     setup(view({ entries: [], total: 0 }));
-    expect(screen.getByText("This bank has no items to practise yet.")).toBeInTheDocument();
+    expect(screen.getByText("This quiz has no questions yet.")).toBeInTheDocument();
   });
 });

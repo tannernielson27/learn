@@ -236,7 +236,7 @@ describe("assembleCaseStudy", () => {
   it("names what a preview still needs", () => {
     expect(assembleCaseStudy(storedCaseStudy(5), "preview")).toEqual({
       ok: false,
-      blockers: ["Step 6 (Evaluate Outcomes) has no item yet."],
+      blockers: ["Step 6 (Evaluate Outcomes) has no question yet."],
     });
   });
 
@@ -250,7 +250,7 @@ describe("assembleCaseStudy", () => {
     };
     expect(assembleCaseStudy(firstDraft, "publish")).toEqual({
       ok: false,
-      blockers: ["Step 1 (Recognize Cues) needs its item finished and published."],
+      blockers: ["Step 1 (Recognize Cues) needs its question finished and published."],
     });
     expect(assembleCaseStudy(row, "publish").ok).toBe(true);
   });
@@ -268,7 +268,7 @@ describe("assembleCaseStudy", () => {
     expect(stepItemPublishable(null)).toBe(false);
     expect(assembleCaseStudy(noRationale, "publish")).toEqual({
       ok: false,
-      blockers: ["Step 3 (Prioritize Hypotheses) needs its item finished and published."],
+      blockers: ["Step 3 (Prioritize Hypotheses) needs its question finished and published."],
     });
     // A preview does not need one.
     expect(assembleCaseStudy(noRationale, "preview").ok).toBe(true);
@@ -413,8 +413,8 @@ describe("publishCaseStudy", () => {
       ok: false,
       error: CASE_STUDY_ERRORS.notReady,
       blockers: [
-        "Step 5 (Take Action) has no item yet.",
-        "Step 6 (Evaluate Outcomes) has no item yet.",
+        "Step 5 (Take Action) has no question yet.",
+        "Step 6 (Evaluate Outcomes) has no question yet.",
       ],
     });
     expect(fake.calls.some((call) => call.method === "update")).toBe(false);

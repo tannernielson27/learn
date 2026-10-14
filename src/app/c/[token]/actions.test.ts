@@ -10,6 +10,8 @@ import {
 } from "@/lib/auth/signInRateLimit";
 import type { MemoryRateLimitStore } from "@/lib/rateLimit/testing/memoryStore";
 import { RateLimitUnavailableError } from "@/lib/rateLimit/store";
+import { EmailError, type EmailMessage } from "@/lib/email";
+import { WELCOME_SUBJECT } from "@/lib/email/templates/welcome";
 
 /**
  * The invite's Server Functions are wiring: the per-IP and per-recipient limits of #139/#157, the
@@ -44,10 +46,43 @@ vi.mock("next/server", () => ({ after: (task: () => Promise<void>) => scheduled.
 type Reply = { data: unknown; error: { code?: string } | null };
 let resolveReply: Reply;
 const rpc = vi.fn(async (name: string) => (name === "resolve_class_invite" ? resolveReply : null));
-const createUser = vi.fn(async () => ({ error: null as { code?: string } | null }));
+const NEW_USER_ID = "00000000-0000-4000-8000-0000000000a1";
+type Created = { data?: { user: { id: string } | null }; error: { code?: string } | null };
+const createUser = vi.fn(async (): Promise<Created> => ({
+  data: { user: { id: NEW_USER_ID } },
+  error: null,
+}));
 const signInWithOtp = vi.fn(async () => ({ error: null }));
+const TOKEN_HASH = "0123456789abcdef0123456789abcdef0123456789abcdef01234567";
+const generateLink = vi.fn(async () => ({
+  data: { properties: { hashed_token: TOKEN_HASH }, user: { id: "user-360" } },
+  error: null,
+}));
+// #358: the new account's name, written by the service role on the id createUser returned.
+const profileEq = vi.fn<(column: string, value: string) => Promise<{ error: null }>>(async () => ({
+  error: null,
+}));
+const profileUpdate = vi.fn<(values: Record<string, unknown>) => { eq: typeof profileEq }>(() => ({
+  eq: profileEq,
+}));
+const serviceFrom = vi.fn<(table: string) => { update: typeof profileUpdate }>(() => ({
+  update: profileUpdate,
+}));
 vi.mock("@/lib/supabase/service", () => ({
-  createSupabaseServiceClient: () => ({ rpc, auth: { admin: { createUser }, signInWithOtp } }),
+  createSupabaseServiceClient: () => ({
+    rpc,
+    from: serviceFrom,
+    auth: { admin: { createUser, generateLink }, signInWithOtp },
+  }),
+}));
+
+// #360: the welcome email goes through the app mailer, never a Supabase Auth email.
+const send = vi.fn<(message: EmailMessage) => Promise<{ id: string }>>(async () => ({
+  id: "m-1",
+}));
+vi.mock("@/lib/email", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/email")>()),
+  getMailer: () => ({ send }),
 }));
 
 let viewer: Record<string, unknown>;
@@ -291,9 +326,14 @@ describe("requestInviteLink", () => {
 });
 
 describe("signUpWithPassword", () => {
-  function signUpForm(email: string, password = "correct horse"): FormData {
+  function signUpForm(
+    email: string,
+    password = "correct horse",
+    displayName = "  Ana   Reyes ",
+  ): FormData {
     const form = emailForm(email);
     form.set("password", password);
+    form.set("displayName", displayName);
     return form;
   }
   const idle = { status: "idle" } as const;
@@ -309,17 +349,47 @@ describe("signUpWithPassword", () => {
       email_confirm: true,
       app_metadata: { learn_invite: { class_id: CLASS_ID }, learn_email_unconfirmed: true },
     });
+    // #358: the cleaned name, on the new account's row and no other.
+    expect(serviceFrom).toHaveBeenCalledWith("profiles");
+    expect(profileUpdate).toHaveBeenCalledWith({ display_name: "Ana Reyes" });
+    expect(profileEq).toHaveBeenCalledWith("id", NEW_USER_ID);
     expect(signInWithPassword).toHaveBeenCalledWith({ email, password: "correct horse" });
-    // The confirmation email follows the answer; it never came before it.
-    expect(signInWithOtp).not.toHaveBeenCalled();
+    // The welcome email follows the answer; it never came before it.
+    expect(generateLink).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
     await runScheduled();
-    expect(signInWithOtp).toHaveBeenCalledWith({
-      email,
-      options: {
-        emailRedirectTo: "https://learn.example/auth/confirm?next=%2Flearn",
-        shouldCreateUser: false,
-      },
+    // The admin API makes the link and sends nothing; the app mailer sends the welcome email.
+    expect(generateLink).toHaveBeenCalledWith({ type: "magiclink", email });
+    expect(signInWithOtp).not.toHaveBeenCalled();
+    expect(send).toHaveBeenCalledTimes(1);
+    const message = send.mock.calls[0]![0];
+    expect(message.to).toBe(email);
+    expect(message.subject).toBe(WELCOME_SUBJECT);
+    expect(message.text).toContain("you are in your class");
+    expect(message.text).toContain(
+      `https://learn.example/auth/confirm?next=%2Flearn&token_hash=${TOKEN_HASH}&type=email`,
+    );
+  });
+
+  it("still lets the student in when the welcome email cannot be sent", async () => {
+    send.mockRejectedValueOnce(new EmailError("config", "RESEND_API_KEY is not set."));
+    const email = newRecipient();
+    await expect(signUpWithPassword(TOKEN, idle, signUpForm(email))).rejects.toThrow(
+      "redirect:/learn",
+    );
+    // The send runs after the answer and swallows its own failure: nothing reaches `after()`.
+    await expect(runScheduled()).resolves.toBeUndefined();
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("still answers a sign-up that could not sign in here when the admin API fails too", async () => {
+    signInWithPassword.mockResolvedValueOnce({ error: { code: "unexpected_failure" } });
+    generateLink.mockRejectedValueOnce(new Error("network"));
+    expect(await signUpWithPassword(TOKEN, idle, signUpForm(newRecipient()))).toEqual({
+      status: "created_signed_out",
     });
+    await expect(runScheduled()).resolves.toBeUndefined();
+    expect(send).not.toHaveBeenCalled();
   });
 
   it("signs an existing account in with its own password, joins, and sends no email", async () => {
@@ -329,6 +399,25 @@ describe("signUpWithPassword", () => {
     );
     expect(joinRpc).toHaveBeenCalledWith("join_class", { token: TOKEN });
     expect(scheduled).toHaveLength(0);
+    // Their account is theirs: a name typed on someone's invite never renames it.
+    expect(profileUpdate).not.toHaveBeenCalled();
+  });
+
+  it("asks for a name before anything is counted or looked up", async () => {
+    for (const name of ["", "   ", "\u0000\u202e", "x".repeat(81)]) {
+      expect(
+        await signUpWithPassword(TOKEN, idle, signUpForm(newRecipient(), "correct horse", name)),
+      ).toMatchObject({ status: "error", field: "displayName" });
+    }
+    const missing = signUpForm(newRecipient());
+    missing.delete("displayName");
+    expect(await signUpWithPassword(TOKEN, idle, missing)).toEqual({
+      status: "error",
+      error: "Enter your name.",
+      field: "displayName",
+    });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(createUser).not.toHaveBeenCalled();
   });
 
   it("sends an existing instructor back to the invite page, which tells them so", async () => {
@@ -386,7 +475,7 @@ describe("signUpWithPassword", () => {
     });
     expect(createUser).not.toHaveBeenCalled();
     createUser.mockReset();
-    createUser.mockResolvedValue({ error: null });
+    createUser.mockResolvedValue({ data: { user: { id: NEW_USER_ID } }, error: null });
     signInWithPassword.mockReset();
     signInWithPassword.mockResolvedValue({ error: null });
   });

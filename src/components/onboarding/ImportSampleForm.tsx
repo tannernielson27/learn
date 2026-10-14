@@ -17,7 +17,7 @@ export function ImportSampleForm({ action }: ImportSampleFormProps) {
   return (
     <form action={formAction} className="flex flex-col items-start gap-2">
       <Button type="submit" variant="primary" size="sm" disabled={pending} aria-busy={pending}>
-        Import the sample bank
+        Import the sample quiz
       </Button>
       {pending ? (
         <p role="status" className="text-sm text-ink-2">

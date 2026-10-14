@@ -11,6 +11,7 @@ import {
 import { FIXTURES } from "../src/lib/ngn/fixtures";
 import { latestSignInLink, openSignInLink } from "./mailbox";
 import { createInstructorInEmptyOrg, selectAsAdmin } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #274: Demo 12, rehearsed by a machine. An outside instructor onboards cold and runs a class
 // without help: the landing page, sign in, Get started, the sample, a class, a student through the
@@ -49,7 +50,7 @@ async function phoneContext(browser: Browser, testInfo: TestInfo): Promise<Brows
 }
 
 /**
- * Which "Go to item" button holds the sample's multiple-choice item. The sample's rows are written
+ * Which "Go to question" button holds the sample's multiple-choice item. The sample's rows are written
  * in one transaction, so they share a `created_at` and the room's order falls to their ids: it is
  * not the same twice. A person answers whatever is on screen; a script has to know what it is
  * answering, so this reads the room's item order and the strip does the rest, as a host would.
@@ -121,7 +122,7 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   await expect(checklist.getByText("0 of 3 done", { exact: true })).toBeVisible();
   await expectNoAxeViolations(page);
   await shoot(page, testInfo, "3-get-started");
-  await checklist.getByRole("button", { name: "Import the sample bank", exact: true }).click();
+  await checklist.getByRole("button", { name: "Import the sample quiz", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/banks\/[0-9a-f-]{36}$/);
   await expect(
     page.getByRole("heading", { level: 1, name: "Sample bank", exact: true }),
@@ -151,6 +152,7 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   // 4. A student opens the invite on their own phone, signs in by email, lands on their home.
   const studentPhone = await phoneContext(browser, testInfo);
   const student = await studentPhone.newPage();
+  await skipWelcomes(student);
   await student.goto(invite);
   const studentEmail = `student-demo12-${project}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.test`;
   const studentSince = new Date();
@@ -183,24 +185,20 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   const shownCode = page.getByRole("region", { name: "Join code", exact: true }).getByText(CODE);
   await expect(shownCode).toBeVisible();
   const code = await shownCode.innerText();
-  await expect(
-    page.getByText(
-      "Nobody has joined yet. Read the code out, or leave the QR code on the screen.",
-      {
-        exact: true,
-      },
-    ),
-  ).toBeVisible();
+  await expect(page.getByText("Nobody has joined yet.", { exact: true })).toBeVisible();
 
   const liveContext = await phoneContext(browser, testInfo);
   const phone = await liveContext.newPage();
+  await skipWelcomes(phone);
   await phone.goto("/");
   await phone.getByRole("link", { name: "Join a live session", exact: true }).click();
-  await phone.getByRole("textbox", { name: "Session code", exact: true }).fill(code);
+  await phone.getByRole("textbox", { name: "Join code", exact: true }).fill(code);
   await phone.getByRole("textbox", { name: "Display name", exact: true }).fill(PHONE_NAME);
   await phone.getByRole("button", { name: "Join", exact: true }).click();
   await expect(phone).toHaveURL(/\/play\/[0-9a-f-]{36}$/);
-  await expect(phone.getByText("You are in.", { exact: true })).toBeVisible();
+  await expect(
+    phone.getByText("You are in. Wait for your teacher to start.", { exact: true }),
+  ).toBeVisible();
 
   // Presence arrives on the console with no reload.
   await expect(page.getByText(PHONE_NAME, { exact: true })).toBeVisible({ timeout: 15_000 });
@@ -208,9 +206,9 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   await expectNoAxeViolations(page);
   await shoot(page, testInfo, "7-lobby");
 
-  await page.getByRole("button", { name: "Start session", exact: true }).click();
+  await page.getByRole("button", { name: "Start", exact: true }).click();
   const position = await multipleChoicePosition(request, sessionId, bankId);
-  const goTo = page.getByRole("button", { name: `Go to item ${position}`, exact: true });
+  const goTo = page.getByRole("button", { name: `Go to question ${position}`, exact: true });
   if (position > 1) await goTo.click();
   await expect(goTo).toHaveAttribute("aria-current", "step");
   await expect(page.getByText("0 of 1 answered", { exact: true })).toBeVisible({ timeout: 15_000 });
@@ -223,11 +221,7 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   await expect(option).toBeVisible({ timeout: 15_000 });
   await option.click();
   await phone.getByRole("button", { name: "Submit", exact: true }).click();
-  await expect(
-    phone.getByText("Answer sent. Your instructor will show the answer at the front.", {
-      exact: true,
-    }),
-  ).toBeVisible();
+  await expect(phone.getByText("Answer sent.", { exact: true })).toBeVisible();
   await expectNoAxeViolations(phone);
   await shoot(phone, testInfo, "8-phone-answered");
 
@@ -251,19 +245,17 @@ test("an outside instructor onboards cold and runs a live session a phone answer
     { timeout: 15_000 },
   );
   await shoot(phone, testInfo, "10-phone-score");
-  await page.getByRole("button", { name: "End session", exact: true }).click();
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
   // It asks first; the second press is the one in the question.
-  await page.getByRole("button", { name: "End session", exact: true }).click();
-  await expect(phone.getByText("This session has ended.", { exact: true })).toBeVisible({
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
+  await expect(phone.getByText("This live session has ended.", { exact: true })).toBeVisible({
     timeout: 15_000,
   });
   await liveContext.close();
 
   // Every Get started step is done, so the author home no longer shows the checklist.
   await page.goto("/author");
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Item banks", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Library", exact: true })).toBeVisible();
   await expect(checklist).toHaveCount(0);
   await shoot(page, testInfo, "11-author-home-done");
 });

@@ -75,7 +75,9 @@ describe("assignmentReportCsvDownload", () => {
     authorForRoute.mockResolvedValue({ status: "signed_out" });
     expect((await assignmentReportCsvDownload(fromPage(), ASSIGNMENT)).status).toBe(401);
     authorForRoute.mockResolvedValue({ status: "forbidden" });
-    expect((await assignmentReportCsvDownload(fromPage(), ASSIGNMENT)).status).toBe(403);
+    const refused = await assignmentReportCsvDownload(fromPage(), ASSIGNMENT);
+    expect(refused.status).toBe(403);
+    expect(await refused.text()).toContain("Only teachers can download reports.");
     expect(loadAssignmentReport).not.toHaveBeenCalled();
     expect(assignmentReportStore).not.toHaveBeenCalled();
   });

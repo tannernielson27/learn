@@ -6,7 +6,7 @@ import { describeIssues, type EditorIssue } from "./issueMessages";
 /** The form field every editor keeps its general rationale in. */
 export const RATIONALE_FIELD = "rationaleGeneral";
 
-const RATIONALE_MESSAGE = "Write the rationale. An item needs one before it can be published.";
+const RATIONALE_MESSAGE = "Write the rationale. A question needs one to be published.";
 
 /**
  * The editor field a warning points at. Content and key paths are the ones the schema reports

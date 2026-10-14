@@ -58,6 +58,12 @@ export default defineConfig({
     ? undefined
     : {
         command: "pnpm build && pnpm start --port 3100",
+        // #360: with the local stack, the app's own mail (the welcome email) goes to its Mailpit,
+        // where e2e/mailbox.ts reads it. A production build sends to Mailpit only when told to.
+        env:
+          process.env.E2E_AUTH === "1"
+            ? { SUPABASE_MAILBOX_URL: process.env.SUPABASE_MAILBOX_URL ?? "http://127.0.0.1:55324" }
+            : undefined,
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 240_000,

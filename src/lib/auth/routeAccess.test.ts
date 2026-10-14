@@ -10,6 +10,8 @@ describe("redirectForAccess", () => {
     ["/author/items/9?mode=preview"],
     ["/learn"],
     ["/account/password?next=%2Flearn"],
+    ["/welcome"],
+    ["/welcome?code=ABCD2345"],
   ])("sends a signed-out visit to %s through sign-in, then back", (path) => {
     const target = redirectForAccess(at(path), false);
     expect(target?.pathname).toBe("/sign-in");
@@ -38,9 +40,26 @@ describe("redirectForAccess", () => {
     ["/authors"],
     ["/learning"],
     ["/accounts"],
+    // Sign-up (#361) is for people who have no account yet, as the invite page is.
+    ["/sign-up"],
+    ["/sign-up?role=teacher"],
+    ["/welcomes"],
     // The invite page is for people who have no account yet.
     ["/c/AbC_-0123456789abcdefghijklmnopq"],
+    // A workspace invitation is too: the colleague may have no account.
+    ["/w/AbC_-0123456789abcdefghijklmnopq"],
   ])("leaves a signed-out visit to %s alone", (path) => {
     expect(redirectForAccess(at(path), false)).toBeNull();
+  });
+
+  it("leaves a signed-in visit to a workspace invitation alone, whoever it is", () => {
+    expect(redirectForAccess(at("/w/AbC_-0123456789abcdefghijklmnopq"), true)).toBeNull();
+  });
+
+  it("sends someone who signed in to accept an invitation back to it", () => {
+    const next = encodeURIComponent("/w/AbC_-0123456789abcdefghijklmnopq");
+    expect(redirectForAccess(at(`/sign-in?next=${next}`), true)?.toString()).toBe(
+      "https://learn.example/w/AbC_-0123456789abcdefghijklmnopq",
+    );
   });
 });

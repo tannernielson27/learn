@@ -23,7 +23,7 @@ export function Roster({ roster }: RosterProps) {
     <section aria-labelledby="roster-heading" className="mt-8">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 id="roster-heading" className="font-read text-xl text-ink-1">
-          In the room
+          In this session
         </h2>
         <p data-testid="present-count" aria-live="polite" className="tabular text-sm text-ink-2">
           {present} {present === 1 ? "phone" : "phones"} connected
@@ -31,9 +31,7 @@ export function Roster({ roster }: RosterProps) {
       </div>
 
       {roster.length === 0 ? (
-        <p className="mt-3 text-sm text-ink-2">
-          Nobody has joined yet. Read the code out, or leave the QR code on the screen.
-        </p>
+        <p className="mt-3 text-sm text-ink-2">Nobody has joined yet.</p>
       ) : (
         <ul className="mt-3 flex flex-col gap-px overflow-hidden rounded-sm border border-line">
           {roster.map((entry) => (

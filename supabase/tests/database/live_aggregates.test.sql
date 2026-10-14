@@ -3,7 +3,7 @@
 -- Runs with `pnpm exec supabase test db`. Uses its own fixture ids so it never counts the seed's.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(52);
+select plan(53);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures, as the superuser
@@ -451,8 +451,8 @@ select is(
 select is(
   (select count(*)::int from live.session_public_state
     where session_id = '00000000-0000-0000-0000-0000000131d1'),
-  1,
-  'but may read the four public facts about a session they are in'
+  0,
+  'nor the public mirror with their own sign-in: the play page presents a channel token (#178)'
 );
 
 reset role;
@@ -493,9 +493,24 @@ select throws_ok(
 select is(
   (select count(*)::int from live.session_public_state
     where session_id = '00000000-0000-0000-0000-0000000131d1'),
-  1,
-  'anon may read the public mirror, which is how a student who is not signed in follows the room'
+  0,
+  'the publishable key alone reads no public mirror: a session id is not enough (#178)'
 );
+
+-- With the channel token #149 mints for this session, the same role reads this row and no other.
+select set_config('request.jwt.claims', json_build_object(
+  'role', 'anon',
+  'sub', '00000000-0000-0000-0000-0000000131f9',
+  'live_session_id', '00000000-0000-0000-0000-0000000131d1',
+  'iat', 1, 'exp', 4102444800)::text, true);
+
+select results_eq(
+  $$ select session_id from live.session_public_state $$,
+  $$ values ('00000000-0000-0000-0000-0000000131d1'::uuid) $$,
+  'a participant''s channel token reads its own session''s mirror, which is how a phone follows the room'
+);
+
+select set_config('request.jwt.claims', '{"role":"anon"}', true);
 
 select throws_ok(
   $$ update live.session_public_state set status = 'running' $$,

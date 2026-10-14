@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-10-06 (Sprint 13 kickoff: registration and onboarding, #355-#367 filed, ADR 0009).
+Last updated: 2026-10-13 (Sprint 14: the chart reveal model, #334, in review).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -135,7 +135,7 @@ Phase 4 splits across two sprints. Sprint 10 covers what real students need: har
 | [#236](https://github.com/tannernielson27/learn/issues/236) | chore(infra): a nightly encrypted database dump, with restore steps                           | security, db              | Merged (#250); no migration; owner sets secrets (docs/05 §7.10), hosted restore drill pending   |
 | [#237](https://github.com/tannernielson27/learn/issues/237) | chore(infra): a go-live check that proves production is ready for students                    | security                  | Merged (#252); no migration; run it per docs/05 §7.11                                           |
 | [#219](https://github.com/tannernielson27/learn/issues/219) | fix(player): an ordered-response item starts in the author's order, which is often the answer | player                    | Merged (#249); no migration; start order is keyed server-side                                   |
-| [#178](https://github.com/tannernielson27/learn/issues/178) | fix(live): drop the open select policy on live.session_public_state                           | live, security            | Blocked: owner turns off Realtime "Allow public access"                                         |
+| [#178](https://github.com/tannernielson27/learn/issues/178) | fix(live): drop the open select policy on live.session_public_state                           | live, security            | Merged (#419); `20261013000000_drop_open_state_policy` applied to hosted 2026-10-13             |
 | [#238](https://github.com/tannernielson27/learn/issues/238) | feat(student): a history of my assignments and best scores                                    | security, db, e2e         | Merged (#254); `20260925030000_student_history` applied to hosted                               |
 | [#239](https://github.com/tannernielson27/learn/issues/239) | feat(student): my weakest clinical judgment steps                                             | security                  | Merged (#258); `20260925060000_student_steps` applied to hosted                                 |
 | [#240](https://github.com/tannernielson27/learn/issues/240) | feat(authoring): share a bank with a class for practice, and warn on graded reuse             | security, db, e2e         | Merged (#255); `20260925040000_practice_shares` applied to hosted                               |
@@ -249,21 +249,21 @@ Demo 14: a stranger signs up as a teacher, makes a class, and a stranger signs u
 
 Sprint 13 closes the account loop that password sign-in (#353, #354) left open: there is no way to create an account without a class invite, and no way to become an instructor without the owner's SQL. The decision record is `docs/adr/0009-self-serve-registration.md`.
 
-| #                                                           | Title                                                                                       | Gates             | Status |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------- | ------ |
-| [#355](https://github.com/tannernielson27/learn/issues/355) | feat(db): a workspace for each self-registered teacher, and a per-account onboarding record | security, db      | To do  |
-| [#356](https://github.com/tannernielson27/learn/issues/356) | feat(classes): a short class code a student can type to join                                | security, db, e2e | To do  |
-| [#357](https://github.com/tannernielson27/learn/issues/357) | feat(ui): a Dialog primitive for popups                                                     | none              | To do  |
-| [#358](https://github.com/tannernielson27/learn/issues/358) | feat(account): ask for a name, show it, and let people change it                            | security, e2e     | To do  |
-| [#359](https://github.com/tannernielson27/learn/issues/359) | feat(auth): abuse controls for open sign-up: a CAPTCHA, a rate limit and hosted Auth checks | security          | To do  |
-| [#360](https://github.com/tannernielson27/learn/issues/360) | feat(email): a welcome email that confirms the address of a new account                     | security          | To do  |
-| [#361](https://github.com/tannernielson27/learn/issues/361) | feat(auth): a sign-up page for teachers and students                                        | security, e2e     | To do  |
-| [#362](https://github.com/tannernielson27/learn/issues/362) | feat(student): join a class by code, and a way forward for an account with no class         | security, e2e     | To do  |
-| [#363](https://github.com/tannernielson27/learn/issues/363) | fix(auth): send each person to their own home after sign-in                                 | none              | To do  |
-| [#364](https://github.com/tannernielson27/learn/issues/364) | feat(onboarding): a three-step welcome for a new teacher                                    | e2e               | To do  |
-| [#365](https://github.com/tannernielson27/learn/issues/365) | feat(onboarding): a short welcome for a new student                                         | e2e               | To do  |
-| [#366](https://github.com/tannernielson27/learn/issues/366) | docs(onboarding): put sign-up on the landing page and retire the invite-only wording        | e2e               | To do  |
-| [#367](https://github.com/tannernielson27/learn/issues/367) | test(e2e): the whole registration walk, security rows and the S13 demo                      | security, e2e     | To do  |
+| #                                                           | Title                                                                                       | Gates             | Status                      |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------- | --------------------------- |
+| [#355](https://github.com/tannernielson27/learn/issues/355) | feat(db): a workspace for each self-registered teacher, and a per-account onboarding record | security, db      | Merged (#369); pushed       |
+| [#356](https://github.com/tannernielson27/learn/issues/356) | feat(classes): a short class code a student can type to join                                | security, db, e2e | Merged (#375); needs push   |
+| [#357](https://github.com/tannernielson27/learn/issues/357) | feat(ui): a Dialog primitive for popups                                                     | none              | Merged (#370)               |
+| [#358](https://github.com/tannernielson27/learn/issues/358) | feat(account): ask for a name, show it, and let people change it                            | security, e2e     | Merged (#373); no migration |
+| [#359](https://github.com/tannernielson27/learn/issues/359) | feat(auth): abuse controls for open sign-up: a CAPTCHA, a rate limit and hosted Auth checks | security          | Merged (#371, #372)         |
+| [#360](https://github.com/tannernielson27/learn/issues/360) | feat(email): a welcome email that confirms the address of a new account                     | security          | Merged (#374); no migration |
+| [#361](https://github.com/tannernielson27/learn/issues/361) | feat(auth): a sign-up page for teachers and students                                        | security, e2e     | Merged (#377)               |
+| [#362](https://github.com/tannernielson27/learn/issues/362) | feat(student): join a class by code, and a way forward for an account with no class         | security, e2e     | Merged (#379); no migration |
+| [#363](https://github.com/tannernielson27/learn/issues/363) | fix(auth): send each person to their own home after sign-in                                 | none              | Merged (#380)               |
+| [#364](https://github.com/tannernielson27/learn/issues/364) | feat(onboarding): a three-step welcome for a new teacher                                    | e2e               | Merged (#381); no migration |
+| [#365](https://github.com/tannernielson27/learn/issues/365) | feat(onboarding): a short welcome for a new student                                         | e2e               | Merged (#382); no migration |
+| [#366](https://github.com/tannernielson27/learn/issues/366) | docs(onboarding): put sign-up on the landing page and retire the invite-only wording        | e2e               | Merged (#383)               |
+| [#367](https://github.com/tannernielson27/learn/issues/367) | test(e2e): the whole registration walk, security rows and the S13 demo                      | security, e2e     | Merged (#384)               |
 
 Suggested order: #355, #356, #357, #358, #359 and #360 depend on nothing and can start at once. Then #361 (needs #355 and #359) and #362 (needs #356); then #363, #364 and #365; #366 after #361; #367 last.
 
@@ -291,6 +291,27 @@ Decisions taken at kickoff, each the conservative option; say if any should chan
 6. **Live sessions stay account-free** (join code and display name), as Kahoot and Socrative do.
 7. **Google sign-in (#67) is not in this sprint.**
 8. **A student still belongs to one workspace.** A student of one teacher cannot join another teacher's class with the same account. Known gap, to be shown in the demo; fixing it means per-class rather than per-org student membership.
+
+## S14: Stakeholder feedback (milestone 16)
+
+Only the stories this file has been told about are listed here; the milestone on GitHub has the rest.
+
+| #                                                           | Title                                                                                             | Gates             | Status                                                                                        |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------- | --------------------------------------------------------------------------------------------- |
+| [#334](https://github.com/tannernielson27/learn/issues/334) | feat(ngn): reveal and lock a case study's chart step by step (fromStep, stepAccess, recordAtStep) | none              | In review; no migration; owner confirms hidden/locked/open                                    |
+| [#335](https://github.com/tannernielson27/learn/issues/335) | feat(player): serve each case study step only the chart it has reached                            | security, e2e     | In review (#435); apply `20261014200000_assignment_record_column_grant` after the app deploys |
+| [#336](https://github.com/tannernielson27/learn/issues/336) | feat(authoring): set when each tab of a case study's chart appears and opens                      | e2e               | To do; needs #334                                                                             |
+| [#406](https://github.com/tannernielson27/learn/issues/406) | fix(live): page the progress board read past 1,000 answers                                        | none              | Merged (#422); no migration                                                                   |
+| [#407](https://github.com/tannernielson27/learn/issues/407) | perf(live): fewer round trips when the host advances                                              | security, db      | In review; apply `20261013120000_open_session_view`; load run at 100 still owed               |
+| [#411](https://github.com/tannernielson27/learn/issues/411) | feat(authoring): library folders that hold quizzes                                                | db, e2e           | Merged (#433); owner pushes `20261014000000_library_folders`                                  |
+| [#412](https://github.com/tannernielson27/learn/issues/412) | feat(authoring): rename and trim, teacher home and quiz page                                      | e2e               | Merged (#429); no migration; leftovers in the wording cleanup PR                              |
+| [#413](https://github.com/tannernielson27/learn/issues/413) | feat(authoring): rename and trim, editors and case study builder                                  | e2e               | Merged (#434); no migration                                                                   |
+| [#414](https://github.com/tannernielson27/learn/issues/414) | feat(live): rename and trim, host console, join and student room                                  | e2e               | Merged (#431); no migration; leftovers in the wording cleanup PR                              |
+| [#415](https://github.com/tannernielson27/learn/issues/415) | feat(student): rename and trim, student home, practice and assignments                            | e2e               | Merged (#432); no migration; class components fixed in the wording cleanup PR                 |
+| [#416](https://github.com/tannernielson27/learn/issues/416) | docs(help): rename and trim, landing, onboarding, help and emails                                 | e2e               | Merged (#430); owner re-pastes `magic_link.html`; "Sample bank" name open                     |
+| [#417](https://github.com/tannernielson27/learn/issues/417) | feat(authoring): move questions between quizzes, and turn a folder into a quiz                    | db, e2e, security | In review (#437); owner pushes `20261014300000_move_between_quizzes` after `20261014000000`   |
+
+With #335 (PR #435) a student is sent the chart of each step they have reached and nothing later: live, by the play page and every view the phone fetches when the host moves; practice and take-home, the steps up to the first unanswered one and each one's chart. Until its migration is pushed, a student's own client can still select `assignments.patient_record` directly. Until #336 merges, the record editor does not carry either field, so saving a staged record from the builder drops them; they arrive by JSON import only.
 
 ## No milestone
 
@@ -322,23 +343,32 @@ Decisions taken at kickoff, each the conservative option; say if any should chan
 | [#326](https://github.com/tannernielson27/learn/issues/326) | fix(authoring): the preview keeps old marks after the answer key is edited                | authoring          | To do                                                              |
 | [#327](https://github.com/tannernielson27/learn/issues/327) | fix(assign): mark the instructor's report against the key each answer was scored with     | assign, db         | To do; builds on #320's `reveal` column                            |
 | [#328](https://github.com/tannernielson27/learn/issues/328) | docs(deploy): mark migrations 39 and 40 as applied to hosted                              | docs               | In review                                                          |
+| [#356](https://github.com/tannernielson27/learn/issues/356) | feat(classes): a short class code a student can type to join                              | classes, db        | In review; `20261006010000_class_join_code`, after #369; db push   |
+| [#358](https://github.com/tannernielson27/learn/issues/358) | feat(account): ask for a name, show it, and let people change it                          | auth, account      | In review; no migration                                            |
 
 ## Owner actions outside GitHub
 
-These block the live site rather than a single issue:
+These block the live site rather than a single issue.
 
-- **GitHub Actions runs again** (2026-09-22): the repo was made public, so hosted runners are free. The private plan's 2,000 minutes ran out around Sept 20 (about 3,100 minutes were used Sept 10–22), and every job was refused from Sept 21. The backlog stack is merged.
+**Go-live audit, 2026-09-26** (read-only, evidence from `supabase`, `vercel env ls`, `gh` and `pnpm golive:check` against production and `vauokqoyvewtzubqajgh`; 4 pass, 4 fail, 5 manual). Where things stand:
+
+- **No production project yet.** `supabase projects list` shows only `learn` (`vauokqoyvewtzubqajgh`), and Vercel Production still points at it. Everything below that says "done on `vauokqoyvewtzubqajgh`" has to be repeated in the production project after the §7.3 split.
+- **Done on `vauokqoyvewtzubqajgh`:** all 38 migrations applied; pg_cron and pg_net on; `learn-assignment-reminders` and `learn-rate-limit-sweep` scheduled and active; both Vault secrets (`learn_reminders_url`, `learn_cron_secret`) created; the Data API exposes only `public` and `graphql_public`.
+- **Done in Vercel:** `RESEND_API_KEY` and `EMAIL_FROM` in Production; `EMAIL_FROM` in Preview (Preview has no `RESEND_API_KEY`); `DEMO_ACCOUNT_*` removed from every scope.
+- **Missing in Vercel:** `CRON_SECRET` (the reminder route answers pg_net `503 not_configured` every 15 minutes until it is set) and all five `SENTRY_*` variables.
+- **Backups:** the age key exists and both repo secrets are set, but the first run by hand (36275256043) failed while dumping roles (`error running container: exit 1`), most likely a `PROD_DB_URL` that is not the session pooler on port 5432 or has an unencoded character in its password. Point it at the production project once that exists.
+- **Still open:** #178 (golive: `FAIL`), Realtime public access, SMTP, the magic-link template, the Auth rate limit and URLs, Sentry, the restore drill, the plan choice, and #159.
+
 - **Turn off Realtime "Allow public access"** in the Supabase project settings. It unblocks #178, which drops the last open select policy on `live.session_public_state`.
-- **Apply each Sprint 8 migration to hosted after its PR merges**, in filename order (`pnpm exec supabase db push`). Each PR lists its own.
 - **Author accounts are now created by hand** (#139, merged in #157). Sign-in no longer creates accounts, so a new instructor exists only once added under Authentication, Users, Add user. **Since #204 that is two steps**: Add user, then `select private.make_instructor('<address>');` in the SQL editor (docs/05 §7.6); without the second step the account lands on "No access yet". The sign-in form answers identically whether or not an address has an account, so a mistyped or unregistered address will appear to succeed and simply never receive a link.
-- **Sprint 9 email (#206)**: in Resend, confirm info.tannernielson.com is verified; in Supabase, set custom SMTP to Resend and raise the Auth email rate limit; in Vercel, add `RESEND_API_KEY` and `EMAIL_FROM` to Production and Preview. The exact steps are in docs/05 §7.7.
+- **Sprint 9 email (#206)**: in Resend, confirm info.tannernielson.com is verified; in Supabase, set custom SMTP to Resend and raise the Auth email rate limit. The exact steps are in docs/05 §7.7. Vercel Production has `RESEND_API_KEY` and `EMAIL_FROM` (2026-09-26); Preview still needs its own `RESEND_API_KEY`.
 - **Before any real student gets an invite**, create the production project and replay migrations (§7.3). Sprint 9 puts student emails in the database.
-- **Sprint 10 monitoring (#235)**: create a Sentry project (free tier) and add `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` and `SENTRY_AUTH_TOKEN` to Vercel Production and Preview. The steps will be in docs/05 §7.9 when #235 merges.
-- **Sprint 10 backups (#236)**: generate an `age` key pair and keep the private key off GitHub. Once the §7.3 project exists, add the repo secrets `BACKUP_AGE_RECIPIENT` (the public key) and `PROD_DB_URL`.
+- **Sprint 10 monitoring (#235)**: create a Sentry project (free tier) and add the five variables in docs/05 §7.9 (`SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`) to Vercel Production and Preview. None are set yet.
+- **Sprint 10 backups (#236)**: the age key pair exists and `BACKUP_AGE_RECIPIENT` and `PROD_DB_URL` are set (2026-09-26), but the first run failed (see the audit above). Fix `PROD_DB_URL`, point it at the §7.3 project once it exists, run it by hand, then do the restore drill (docs/05 §7.10).
 - **Choose the production plan at go-live**: Pro, or free plus the nightly dump (owner decision 2026-09-24).
 - **Decide #159**: whether to accept that four cheap IPs can hold one author's sign-in closed indefinitely, or pay for one of the mitigations listed there.
 - **Sprint 11: paste the regenerated magic-link template** (#268, merged in #278). `supabase/templates/magic_link.html` is now generated from `src/lib/email/templates/magicLink.ts`. Paste it into Authentication, Emails, Magic Link in every hosted project (docs/05 §7.7). The link is unchanged, so the old copy keeps working until then.
-- Done 2026-09-22: Vercel Production and Preview both carry `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` and `SUPABASE_JWT_SIGNING_KEY`; Production also has `DEMO_ACCOUNT_*`. The hosted demo user exists as an instructor in the seeded LeaRN org.
+- Done 2026-09-22: Vercel Production and Preview both carry `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` and `SUPABASE_JWT_SIGNING_KEY`. `DEMO_ACCOUNT_*` was removed from Production by 2026-09-26 (§7.11 step 2). The hosted demo user exists as an instructor in the seeded LeaRN org.
 - Supabase Authentication, URL Configuration: Site URL and redirect URLs for production, previews and localhost.
 - Supabase magic-link template: paste `supabase/templates/magic_link.html`. Email sign-in still needs it; the demo account (#115) works without it.
 - Done 2026-09-22 on `vauokqoyvewtzubqajgh`: migration history repaired (rows 1–3 had been applied by hand under other versions), rows 4–16 pushed with `supabase db push`, and `seed.sql` loaded. Row 17 (#149, `20260921210000_private_live_channel`) applied after #176 merged. A separate production project (below) still needs the full replay.

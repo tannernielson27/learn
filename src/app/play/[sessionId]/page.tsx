@@ -9,12 +9,13 @@ import { PARTICIPANT_COOKIE, parseParticipantToken } from "@/lib/live/participan
 import { JOIN_PATH } from "@/lib/live/routes";
 import { pacedState } from "@/lib/live/state";
 import { mintChannelToken, readChannelSigningKey } from "@/lib/supabase/channelToken";
-import { resumeParticipant } from "@/lib/supabase/participants";
+import { roomRecord } from "@/lib/liveSupabase/viewEntries";
+import { checkParticipant } from "@/lib/supabase/participants";
 import { readSessionRecord } from "@/lib/supabase/sessionRecord";
 import { readPublicSessionState } from "@/lib/supabase/sessions";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
-export const metadata: Metadata = { title: "Session" };
+export const metadata: Metadata = { title: "Live session" };
 
 /**
  * Where a participant lands, and where a reload — and every reconnect — brings them back to.
@@ -37,7 +38,9 @@ export const metadata: Metadata = { title: "Session" };
  * #184 adds one thing, for a session run from a case study: the patient record it was started
  * with, which the phone shows beside every step. A record is not answer-bearing (the six steps'
  * keys live on their items and still arrive one step at a time, at the reveal), and
- * `readSessionRecord` reads that one column and parses it before it leaves the server.
+ * `readSessionRecord` reads that one column and parses it before it leaves the server. Since #335
+ * the page is handed only the chart at the room's step; each later step's arrives in the view the
+ * phone fetches when the host moves.
  */
 export default async function PlaySessionPage({ params }: PageProps<"/play/[sessionId]">) {
   const { sessionId } = await params;
@@ -49,8 +52,15 @@ export default async function PlaySessionPage({ params }: PageProps<"/play/[sess
   if (!token || token.sessionId !== sessionId) redirect(JOIN_PATH);
 
   const service = createSupabaseServiceClient();
-  const participant = await resumeParticipant(service, token);
-  if (!participant) redirect(JOIN_PATH);
+  const checked = await checkParticipant(service, token);
+  // #407: a database that did not answer has not said this person left the room. Sending them to
+  // the join form for it took a student out of a class over one timed-out request; thrown, it
+  // lands on this route's error screen, whose "Try again" runs this render once more.
+  if (!checked.ok && checked.reason === "unavailable") {
+    throw new Error("The session could not be reached to check a participant.");
+  }
+  if (!checked.ok) redirect(JOIN_PATH);
+  const { participant } = checked;
 
   // Only ever after the token has been checked: this read does no checking of its own.
   const read = await readPublicSessionState(service, sessionId);
@@ -59,8 +69,10 @@ export default async function PlaySessionPage({ params }: PageProps<"/play/[sess
   // study always runs instructor-paced (`sessions_student_paced_bank_only`).
   const state = pacedState(read, participant.mode);
   const Room = participant.mode === "student_paced" ? StudentPacedRoom : StudentRoom;
-  // Also only after the token has been checked. Null for a session run from a bank.
-  const record = await readSessionRecord(service, sessionId);
+  // Also only after the token has been checked. Null for a session run from a bank. #335: cut to
+  // the step the room is on by `roomRecord`, the same function the view route uses, so what an
+  // author holds back for a later step is not in this page's HTML or its Flight payload.
+  const record = roomRecord(await readSessionRecord(service, sessionId), read.position) ?? null;
 
   // #149: the token this phone's socket opens the session's private channel with. Minted only
   // here, after `resume_participant` has matched the cookie, and only for the session and the

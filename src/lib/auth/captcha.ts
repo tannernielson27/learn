@@ -32,6 +32,8 @@ export type CaptchaResult = { ok: true } | { ok: false; error: string };
 
 /**
  * - `off`: neither key is set. The check is skipped: local runs, e2e, a preview without keys.
+ *   On a production deployment `verifyCaptcha` refuses instead: sign-up is never open there
+ *   without the CAPTCHA.
  * - `on`: both are set.
  * - `misconfigured`: one without the other, or the secret under a `NEXT_PUBLIC_` name. Every
  *   request is refused, on every deployment, until it is fixed. A site key alone would draw a
@@ -50,6 +52,22 @@ export function captchaMode(env: CaptchaEnv = process.env): CaptchaMode {
   const secret = set(env.TURNSTILE_SECRET_KEY);
   if (site && secret) return "on";
   return site || secret ? "misconfigured" : "off";
+}
+
+/**
+ * What `verifyCaptcha` does before it looks at a token, which `/api/health` reports so that
+ * `pnpm golive:check` can say whether sign-up is refused for want of the keys (docs/05 §7.11):
+ * - `on`: both keys are set, and the token is verified.
+ * - `skipped`: neither is set, off production. Sign-up asks for no CAPTCHA.
+ * - `missing`: neither is set on a production deployment (`VERCEL_ENV`). Every sign-up is refused.
+ * - `misconfigured`: see `CaptchaMode`. Every sign-up is refused, on every deployment.
+ */
+export type CaptchaSetup = "on" | "skipped" | "missing" | "misconfigured";
+
+export function captchaSetup(env: CaptchaEnv = process.env): CaptchaSetup {
+  const mode = captchaMode(env);
+  if (mode !== "off") return mode;
+  return env.VERCEL_ENV === "production" ? "missing" : "skipped";
 }
 
 function misconfiguration(env: CaptchaEnv): string {
@@ -124,7 +142,8 @@ function judge(body: unknown, action: string | undefined): CaptchaResult {
  *   });
  *   if (!captcha.ok) return { status: "error", error: captcha.error };
  *
- * It never throws. With both keys unset it answers `{ ok: true }` without asking anyone. With them
+ * It never throws. With both keys unset it answers `{ ok: true }` without asking anyone, except on
+ * a production deployment (`VERCEL_ENV`), where it refuses until the keys are there. With them
  * set, a missing token, a refused token, a wrong action, a timeout, an unreachable verifier, an
  * error status and an answer that is not JSON all refuse: nothing but a literal `success: true`
  * from a 2xx passes. A half-configured deployment refuses everything (see `CaptchaMode`).
@@ -135,16 +154,16 @@ export async function verifyCaptcha(
   options: VerifyCaptchaOptions = {},
 ): Promise<CaptchaResult> {
   const env = options.env ?? process.env;
-  const mode = captchaMode(env);
-  if (mode === "off") {
-    if (env.VERCEL_ENV === "production") {
-      console.error(
-        "[sign-up] the CAPTCHA is off in production: NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY are not set (docs/05 §7.12)",
-      );
-    }
-    return { ok: true };
+  const setup = captchaSetup(env);
+  if (setup === "skipped") return { ok: true };
+  if (setup === "missing") {
+    // Owner decision, 2026-10-07: production never signs anyone up without the CAPTCHA.
+    console.error(
+      "[sign-up] the CAPTCHA is not set up in production, so sign-up is refused: NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY are not set (docs/05 §7.12)",
+    );
+    return UNAVAILABLE;
   }
-  if (mode === "misconfigured") {
+  if (setup === "misconfigured") {
     console.error(
       `[sign-up] the CAPTCHA is set up wrongly, so sign-up is refused: ${misconfiguration(env)}`,
     );

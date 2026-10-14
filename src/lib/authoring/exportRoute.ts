@@ -32,7 +32,7 @@ export async function exportDownload(
     return Response.json({ error: "Sign in to export." }, { status: 401 });
   }
   if (author.status === "forbidden") {
-    return Response.json({ error: "Only authors can export." }, { status: 403 });
+    return Response.json({ error: "Only teachers can export." }, { status: 403 });
   }
 
   const result =

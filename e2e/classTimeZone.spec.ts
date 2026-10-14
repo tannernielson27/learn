@@ -3,6 +3,7 @@ import { expect, test, type APIRequestContext, type Browser, type Page } from "@
 import { formatInZone } from "../src/lib/classes/timeZone";
 import { latestSignInLink, openSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #242: an instructor sets the class's time zone on the class page, and the student home says due
 // times in it; and a student removed after attempting an assignment still shows in its report,
@@ -49,6 +50,7 @@ async function setUp(
 
   const phone = await browser.newContext({ reducedMotion: "reduce" });
   const student = await phone.newPage();
+  await skipWelcomes(student);
   await student.goto(invite);
   const email = `student-${label}-${Date.now()}@example.test`;
   const since = new Date();

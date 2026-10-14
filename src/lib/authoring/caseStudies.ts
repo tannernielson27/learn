@@ -24,10 +24,10 @@ export type CaseStudyResult<T = undefined> =
 export const CASE_STUDY_ERRORS = {
   gone: "This case study no longer exists.",
   failed: "The case study could not be saved. Try again.",
-  tooLarge: "This case study is too large to save. Shorten the longest record text.",
-  wrongBank: "That item is in another bank. Use an item from this case study's bank.",
-  alreadyStep: "That item is already a step in this case study. Choose a different item.",
-  badOrder: "The steps could not be reordered. Reload the page and try again.",
+  tooLarge: "This case study is too large to save. Shorten the longest patient record text.",
+  wrongBank: "That question is in another quiz. Use a question from this case study's quiz.",
+  alreadyStep: "That question is already in this case study. Choose a different question.",
+  badOrder: "The questions could not be reordered. Reload the page and try again.",
   notReady: "The case study is not ready to publish yet.",
 } as const;
 
@@ -265,7 +265,7 @@ export function assembleCaseStudy(
   });
   return validated.ok
     ? { ok: true, caseStudy: validated.value }
-    : { ok: false, blockers: ["Check each step and the record, then try again."] };
+    : { ok: false, blockers: ["Check each step and the patient record, then try again."] };
 }
 
 /**

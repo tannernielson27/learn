@@ -8,11 +8,11 @@ import { fromItemRow } from "@/lib/supabase/itemRows";
 const NO_STORE = { "Cache-Control": "no-store" };
 
 export const SCORE_ROUTE_ERRORS = {
-  notFound: "This item could not be found.",
-  signedOut: "Sign in to play this item.",
-  forbidden: "You do not have access to this item.",
+  notFound: "This question could not be found.",
+  signedOut: "Sign in to play this question.",
+  forbidden: "You do not have access to this question.",
   tooLarge: "That answer is too large to check.",
-  unplayable: "This item has a problem and cannot be played. Open it in the editor.",
+  unplayable: "This question has a problem and cannot be played. Open it in the editor.",
   failed: "The answer could not be checked. Try again.",
 } as const;
 

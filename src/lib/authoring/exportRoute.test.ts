@@ -46,7 +46,9 @@ describe("exportDownload", () => {
     authorForRoute.mockResolvedValue({ status: "signed_out" });
     expect((await exportDownload(fromPage(), "item", ITEM_ID)).status).toBe(401);
     authorForRoute.mockResolvedValue({ status: "forbidden" });
-    expect((await exportDownload(fromPage(), "item", ITEM_ID)).status).toBe(403);
+    const refused = await exportDownload(fromPage(), "item", ITEM_ID);
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toEqual({ error: "Only teachers can export." });
     expect(readItemExport).not.toHaveBeenCalled();
   });
 
@@ -77,13 +79,13 @@ describe("exportDownload", () => {
       ok: false,
       status: 409,
       error: "Finish every step of this case study before exporting it.",
-      blockers: ["Step 6 (Evaluate Outcomes) has no item yet."],
+      blockers: ["Step 6 (Evaluate Outcomes) has no question yet."],
     });
     const response = await exportDownload(fromPage(), "caseStudy", ITEM_ID);
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({
       error: "Finish every step of this case study before exporting it.",
-      blockers: ["Step 6 (Evaluate Outcomes) has no item yet."],
+      blockers: ["Step 6 (Evaluate Outcomes) has no question yet."],
     });
   });
 });

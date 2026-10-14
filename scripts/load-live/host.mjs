@@ -31,10 +31,12 @@ export async function openHostedSession({ options, credentials }) {
   if (signedIn.error)
     throw new Error(`The host could not sign in (${signedIn.error.status ?? "error"}).`);
 
-  const args =
+  const source =
     options.source.kind === "bank"
       ? { source_bank: options.source.id }
       : { source_case_study: options.source.id };
+  // #404: named only when it is not the default, as `startSession` in src/lib/supabase does.
+  const args = options.paced ? { ...source, paced: "student_paced" } : source;
   const started = await client.rpc("start_session", args);
   if (started.error) throw new Error(`start_session refused: ${started.error.message}`);
   const sessionId = started.data;
@@ -62,6 +64,7 @@ export async function openHostedSession({ options, credentials }) {
       // Realtime completes a moment after SUBSCRIBED; #187's first run lost its first step that
       // way once, and it was not reproduced after. See docs/load-testing.md.
       await sleep(options.lobbyMs);
+      if (options.paced) return this.runPaced({ settled, expected, onStep, stopped });
       for (let position = 1; position <= this.itemCount && !stopped(); position += 1) {
         const opened = Date.now();
         await set({ status: "running", current_position: position, reveal: false });
@@ -77,6 +80,34 @@ export async function openHostedSession({ options, credentials }) {
         onStep({ position, settled: settled(position), expected, answeredMs });
         await sleep(options.revealMs);
       }
+    },
+
+    /**
+     * A student-paced room (#404): opens the whole set, waits until every participant has answered
+     * or passed every item (or the set times out, a step's timeout for each item), then shows the
+     * answers. Reported as one step, position 0: the room is never on one item.
+     */
+    async runPaced({ settled, expected, onStep, stopped }) {
+      const all = () => {
+        let total = 0;
+        for (let position = 1; position <= this.itemCount; position += 1)
+          total += settled(position);
+        return total;
+      };
+      const wanted = expected * this.itemCount;
+      const opened = Date.now();
+      await set({ status: "running", current_position: 1, reveal: false });
+      while (
+        all() < wanted &&
+        Date.now() - opened < options.stepTimeoutMs * this.itemCount &&
+        !stopped()
+      ) {
+        await sleep(100);
+      }
+      const answeredMs = Date.now() - opened;
+      await set({ reveal: true });
+      onStep({ position: 0, settled: all(), expected: wanted, answeredMs });
+      await sleep(options.revealMs);
     },
 
     async end() {

@@ -26,6 +26,10 @@ pnpm load:live --host --participants 60
 
 # Against another port, a bank instead of the case study, and a repeatable run.
 pnpm load:live --base http://127.0.0.1:3107 --host --bank <bank id> --seed 187
+
+# The same bank student-paced (#404): the host opens the whole set, each phone works through it,
+# and the host shows the answers once every phone has answered or passed every item.
+pnpm load:live --host --bank <bank id> --paced
 ```
 
 `pnpm load:live --help` lists every flag: class size, think time, join ramp, blank share, lobby and
@@ -93,6 +97,154 @@ registering a new channel's `postgres_changes` (which completes a moment after S
 real phone in the second case would sit in the lobby until the next move. `--host` waits
 `--lobby-ms` (3 s by default) before Start, as a person at the console does, and `stalled steps`
 makes it visible if it happens.
+
+## One hundred and one hundred and fifty, on a production build (#404)
+
+**The pass line, written before the first run.** A class of 100 passes when, on a production build
+(`pnpm build`, then `next start`):
+
+1. every participant joins (joined = asked for);
+2. there are no refusals, expected or not;
+3. every step reaches every phone (no stalled step, and every step settles at the full class);
+4. `view` p95 is under 2 s.
+
+**What was measured.** Commit `c0aae84d42eed58accc160c45dbce73109d2b77b` (`main` on 2026-10-13,
+before #422 paged the progress board's read and before #423 stopped a join re-rendering every
+student screen, so this is the "before" baseline for both). `pnpm build`, then
+`pnpm exec next start -p 3107 -H 127.0.0.1`, on the local Supabase stack with migrations 1 to 49
+applied. The quiz is the demo workspace's seeded "Samples" bank, 21 items, one of each kind. Default
+think time (1–6 s), ramp (5 s), blank share (0.1), lobby pause (3 s) and step timeout (30 s);
+seed 404.
+
+The machine: a laptop, Windows 11 Home, 16 GB (15.7 GB visible), Intel Core i7-1360P, Docker
+Desktop 28.5.2 on WSL 2. The load script, the Next server and the whole Supabase stack shared it,
+with a browser, Slack and other sessions open. Only the database, PostgREST, Realtime, Auth and
+the gateway containers were running; the rest of the stack was stopped to make room. Free memory
+is the figure Windows reports just before and just after each run. **The numbers are indicative,
+not a capacity figure**: the hosted run is #405.
+
+```sh
+# Instructor-paced: the host opens each of the 21 items, waits, reveals, moves on.
+pnpm load:live --base http://127.0.0.1:3107 --host --bank 00000000-0000-4000-8000-000000000002 --participants 100 --seed 404
+pnpm load:live --base http://127.0.0.1:3107 --host --bank 00000000-0000-4000-8000-000000000002 --participants 150 --seed 404
+
+# Student-paced: the host opens the set, every phone works through it, the host shows the answers.
+pnpm load:live --base http://127.0.0.1:3107 --host --bank 00000000-0000-4000-8000-000000000002 --paced --participants 100 --seed 404
+pnpm load:live --base http://127.0.0.1:3107 --host --bank 00000000-0000-4000-8000-000000000002 --paced --participants 150 --seed 404
+```
+
+Each run also had `--out <a file per run>`. `--paced` is new with this run: until #404 the script
+could only drive an instructor-paced room. It starts the bank with `paced => 'student_paced'`,
+and each phone answers the set one item after another, naming the item's position as the real
+phone does, with its own think time before each.
+
+| run            | joined    | join ms p50 / p95 | view ms p50 / p95 (n) | submit ms p50 / p95 | answers              | refusals                                                        | stalled steps | realtime msgs per participant (min / median / max) | free GB before / after |
+| -------------- | --------- | ----------------- | --------------------- | ------------------- | -------------------- | --------------------------------------------------------------- | ------------- | -------------------------------------------------- | ---------------------- |
+| 100 instructor | 100 / 100 | 42 / 246          | 3731 / 9034 (4300)    | 79 / 1020           | 1837 sent, 228 blank | view: 247 × 500, 57 × 401                                       | 8 of 21       | 128 / 168 / 244                                    | 1.29 / 0.71            |
+| 100 student    | 100 / 100 | 91 / 155          | 2865 / 5048 (257)     | 106 / 589           | 1872 sent, 228 blank | none                                                            | 0             | 72 / 141 / 201                                     | 2.16 / 0.72            |
+| 150 instructor | 150 / 150 | 2193 / 3614       | 3562 / 8965 (6570)    | 82 / 363            | 2071 sent, 222 blank | view: 1680 × 401, 1317 × 500; submit: 1 × 500, 1 × `not_joined` | 21 of 21      | 80 / 135 / 231                                     | 1.21 / 1.99            |
+| 150 student    | 150 / 150 | 559 / 830         | 576 / 1430 (553)      | 25 / 55             | 1639 sent, 188 blank | view: 92 × 401, 87 × 500                                        | the set       | 18 / 86 / 160                                      | 2.73 / 1.00            |
+
+The first three runs ran one after another between 17:28 and 17:57 local time. The 150
+student-paced run is its second attempt, 18:32 to 18:43, with the Next server restarted from the
+same build. Its first attempt overlapped three other build sessions that started on the machine at
+about 18:00; free memory fell to about 0.7 GB and it was stopped at ten minutes with nothing
+written, so it is not in the table. No recorded run overlapped those builds, but the machine was
+quieter for the last run than for the first three, and its latencies are lower for that reason as
+much as any other: do not read 150 student-paced as faster than 100.
+
+**Does 100 pass? No, in either pacing.**
+
+- _Instructor-paced, 100._ Everyone joined, and that is the only line it meets. 304 `view` reads
+  were refused (247 with a 500, 57 with a 401), 8 of the 21 steps timed out short of the full
+  class (88 to 99 of 100 settled), and `view` p95 was 9.0 s against a line of 2 s. Its median was
+  3.7 s.
+- _Student-paced, 100._ Everyone joined, nothing was refused and all 2,100 answers or passes
+  arrived, in 99 s. `view` p95 was 5.0 s, so it fails the fourth line. It reads `view` three times
+  per phone rather than forty-three, which is why it holds where the other mode does not; each
+  read carries all 21 items.
+- _Instructor-paced, 150._ Everyone joined; every one of the 21 steps stalled (65 to 133 of 150
+  settled) and 2,999 requests were refused.
+- _Student-paced, 150._ Everyone joined. When the host opened the set, 87 phones read it and worked
+  through all 21 items; the other 63 had that one `view` refused (92 × 401 and 87 × 500 across the
+  run) and, having no later move to try again on, sat with nothing until the set timed out at
+  630 s with 1,827 of 3,150 settled.
+
+**What gave first: `POST /api/live/view`.** It was the slowest route in every run and the only
+one refused at 100. Join and submit stayed quick (submit p50 79–106 ms). An instructor-paced
+room sends every phone to `view` on every move, so 100 phones made 4,300 reads in seven minutes,
+a hundred of them in the same instant each time.
+
+What the refusals were, as far as these runs show: the local gateway's log has only 200s for
+every database call in the 100 instructor-paced run and in the 150 student-paced run (the other
+two were not checked). The route gives a refusal from the database its own name, and answers 401
+when the participant check comes back empty and 500 when `begin_session_view` comes back as an
+error. So these were not the database refusing: the likeliest reading is that the Next server's
+own calls to Supabase failed before the gateway answered them. The route logs nothing when this
+happens, so the cause (the server's outbound connections, Docker Desktop's port forwarding, or
+the machine itself) is **not identified**, and whether a hosted deployment does the same is
+#405's question. A phone told it is signed out in the middle of a session is the worse of the two
+for a student.
+
+**The "first step reached no phone" stall did not recur at 100.** Step 1 settled 100 of 100 in
+7.7 s instructor-paced, and the student-paced set opened for all 100. At 150 step 1 settled 123
+of 150, but not for that reason: Realtime delivered every move to every phone in both
+instructor-paced runs (state changes received total exactly 43 per phone: 4,300 at 100 and 6,450
+at 150), and all three moves to every phone in the 150 student-paced run (450). The phones that
+missed a step had the move and were refused the item by `view`.
+
+**The progress board's read is truncated at 100 × 21.** The script's host does not make that
+read, so it was made by hand after the 100 student-paced run: the same two-column select
+`readProgress` sends, as the signed-in host, for that session. PostgREST answered 206 with
+`Content-Range: 0-999/1872`: 1,000 of the 1,872 answers. Counted from those rows, items 15 to 21
+show 1, 5, 1, 0, 0, 10 and 0 answered when about 89 of 100 had answered each. That is #422's bug,
+seen on this commit.
+
+**A script fault found on the way.** The first 100 student-paced attempt sent answers without
+their position and all 1,872 were refused `wrong_item`; that attempt is discarded and the row
+above is the run after the fix.
+
+**Not exercised here.** Per-IP rate limits (the limiter only runs on Vercel, and every simulated
+phone shares one address anyway); hosted Realtime's connection and message limits; a real
+network, real phones and a browser rendering each move; Vercel's function concurrency and cold
+starts. The sample case study was not run at 100 or 150: the bank runs took the time and memory
+there was. A student-paced `view` count (n = 257) is short of three per phone because reads
+still in flight when the phones hang up are not counted.
+
+### What #407 changed in `view`, and what is not yet measured
+
+**No run has been made since.** The numbers above are the "before"; the "after" at 100 is still
+owed, and nothing here claims a faster `view` until it exists. What changed is counted, not timed:
+
+| one `view`, in database round trips | before (#404's commit) | after, migration applied | after, migration not yet pushed |
+| ----------------------------------- | ---------------------- | ------------------------ | ------------------------------- |
+| a step the host moved to            | 4, 2 of them writes    | 1, 1 write               | 4 (2 in a row, then 2 together) |
+| after the reveal                    | 5, 2 of them writes    | 1, 1 write               | 4                               |
+| a student-paced set                 | 4, 2 of them writes    | 1, 1 write               | 4                               |
+
+So a move in a class of 100 is 100 calls and 100 writes where it was 400 to 500 calls and 200
+writes. The counts are asserted in `src/lib/liveSupabase/viewRoute.test.ts` against a fake
+database that lists every request it is sent; the "before" column was read from `main` with the
+same counter. The one write left is the per-participant rate limit's.
+
+Two things the next run should know:
+
+- **A refused `view` is now a 503, and it is in the server's log.** Reading the route as it was
+  at that commit: for a phone whose participant row and session both still exist, the only way to
+  a 401 was the `resume_participant` call coming back as an error, which the route read as "not
+  a participant". So the 401s above were failed calls, not phones that had left. A 500 was
+  `begin_session_view` or the item read coming back as an error (or a fault the route does not
+  catch); which, the runs cannot say, because nothing was written down. supabase-js does not
+  retry a function call, which is a POST, and does retry a table read up to three times, waiting
+  1, 2 and 4 seconds, which would also lengthen a `view` without failing it. **Why** the calls
+  failed is still not identified. Every such failure is now a 503 with a
+  `[live] a database call failed` line naming the route, the call, the session and the socket
+  error, so the next run can read the cause off the log.
+- **The script's phones do not retry, and a real phone now does.** A phone tries a `view` that
+  did not get through up to three more times over about four seconds. `scripts/load-live`
+  simulates the phone itself and gives up on the first failure, so it will count a 503 a real
+  phone would have recovered from. Either teach it the same retry before the run, or read its
+  refusal count as an upper bound.
 
 ## In CI
 

@@ -1,15 +1,14 @@
 import Link from "next/link";
+import { SignedInAs } from "@/components/auth/SignedInAs";
 import { Button } from "@/components/ui/Button";
-import { choosePasswordPath } from "@/lib/auth/accountPaths";
+import { ACCOUNT_PATH } from "@/lib/auth/accountPaths";
 import { STUDENT_HOME } from "@/lib/classes/classes";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { readViewer } from "@/lib/classes/viewer";
 import { signOut } from "../author/actions";
 
 /** The student side's frame (#205): the same header as authoring, pointing at the student home. */
 export default async function StudentLayout({ children }: LayoutProps<"/learn">) {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.auth.getClaims();
-  const email = typeof data?.claims?.email === "string" ? data.claims.email : "";
+  const viewer = await readViewer();
 
   return (
     <div className="flex flex-1 flex-col">
@@ -20,16 +19,14 @@ export default async function StudentLayout({ children }: LayoutProps<"/learn">)
         >
           LeaRN
         </Link>
-        {email ? (
+        {viewer.status === "signed_in" ? (
           <div className="flex min-w-0 items-center gap-3">
-            <p className="truncate text-sm text-ink-2" data-testid="signed-in-email">
-              {email}
-            </p>
+            <SignedInAs displayName={viewer.displayName} email={viewer.email} />
             <Link
-              href={choosePasswordPath(STUDENT_HOME)}
+              href={ACCOUNT_PATH}
               className="tap-target inline-flex items-center rounded-sm px-2 text-sm text-accent-ink transition-colors duration-fast hover:bg-accent-soft"
             >
-              Password
+              Account
             </Link>
             <form action={signOut}>
               <Button type="submit" variant="ghost" size="sm">

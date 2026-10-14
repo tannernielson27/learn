@@ -7,8 +7,8 @@ export const PRACTICE_REFUSALS = {
   malformed: "That answer could not be read. Try again.",
   too_large: "That answer is too large to send.",
   rate_limited: "You are answering very quickly. Wait a minute, then try again.",
-  not_found: "This practice is no longer available. Go back to your classes to see what is shared.",
-  answered: "You have already answered this item. Start over to answer it again.",
+  not_found: "This practice is no longer shared. Go back to your classes.",
+  answered: "You already answered this question. Start over to answer it again.",
   failed: "Your answer could not be checked. Try again.",
 } as const;
 

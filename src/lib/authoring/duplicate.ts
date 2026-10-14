@@ -8,8 +8,8 @@ type Client = SupabaseClient<Database>;
 export type DuplicateResult = { ok: true; value: { id: string } } | { ok: false; error: string };
 
 export const DUPLICATE_ERRORS = {
-  itemGone: "This item no longer exists.",
-  itemFailed: "The item could not be duplicated. Try again.",
+  itemGone: "This question no longer exists.",
+  itemFailed: "The question could not be duplicated. Try again.",
   caseStudyGone: "This case study no longer exists.",
   caseStudyFailed: "The case study could not be duplicated. Try again.",
 } as const;

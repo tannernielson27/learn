@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/Button";
 import {
   TIMER_CHOICES,
   canRunHostCommand,
-  hasClock,
   type LiveSessionState,
   type TimerChoice,
   type TimerCommand,
@@ -57,7 +56,7 @@ export function TimerControls({ state, busy, onChoose, onCommand }: TimerControl
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <div className="flex min-w-0 flex-col gap-1">
           <label htmlFor="timer-seconds" className="text-sm text-ink-1">
-            Time per item
+            Time per question
           </label>
           <select
             id="timer-seconds"
@@ -96,10 +95,8 @@ export function TimerControls({ state, busy, onChoose, onCommand }: TimerControl
       </div>
       <p id="timer-hint" className="mt-2 text-sm text-ink-2">
         {onItem
-          ? hasClock(state.timer)
-            ? "A new time applies from the next item. When time is up, answers stop being taken; the room does not move on by itself."
-            : "No timer on this item. A new time applies from the next item."
-          : "Each item gets this long once the session starts. When time is up, answers stop being taken; you still move the room on."}
+          ? "A new time applies from the next question."
+          : "When time is up, answers stop. You still move the class on."}
       </p>
     </section>
   );

@@ -12,6 +12,12 @@
 export const TURNSTILE_SCRIPT_URL =
   "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 
+/**
+ * What the sign-up form's widget says its token is for (#361). The server refuses a token issued
+ * for anything else, so `CaptchaField` and `verifyCaptcha` must be given the same word.
+ */
+export const SIGN_UP_CAPTCHA_ACTION = "sign-up";
+
 /** The hidden input the widget adds to the form it sits in, holding the token. */
 export const CAPTCHA_FIELD_NAME = "cf-turnstile-response";
 

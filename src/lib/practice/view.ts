@@ -24,8 +24,11 @@ import {
   type Reveal,
 } from "@/lib/ngn/submit";
 import { secretStartingOrderSeed } from "@/lib/supabase/startingOrderSeed";
+import { reachedStep, recordsThrough } from "@/lib/ngn/chartReveal";
+import type { CjmmStep } from "@/lib/ngn/types";
 import {
   itemsOf,
+  sizeOf,
   type PracticeAnswered,
   type PracticeEntry,
   type PracticeItemEntry,
@@ -129,13 +132,19 @@ function caseStudyEntry(
     .sort((a, b) => (a.step ?? 0) - (b.step ?? 0))
     .map((slot) => entryOf(slot, items, input));
   // A case study is played whole or not at all: a missing step would renumber the rest.
-  if (steps.some((step) => step === null)) return null;
+  if (steps.length === 0 || steps.some((step) => step === null)) return null;
+  const all = steps as PracticeItemEntry[];
+  // #335: the student is sent the steps they have reached and the chart at each, and nothing
+  // later. Reached is the step after an unbroken run of answers from step 1, so a later step and
+  // what its chart reveals arrive only once every step before it has been answered.
+  const reached = Math.min(reachedStep(all.map((step) => step.answered !== null)), all.length);
   return {
     kind: "case_study",
     id,
     title: row.title,
-    ehr: ehr.data,
-    steps: steps as PracticeItemEntry[],
+    records: recordsThrough(ehr.data, reached as CjmmStep),
+    steps: all.slice(0, reached),
+    stepCount: all.length,
   };
 }
 
@@ -164,7 +173,8 @@ export function buildPracticeView(input: PracticeViewInput): PracticeView {
   return {
     runId: input.run.runId,
     bankName: input.run.bankName,
-    total: all.length,
+    // Every step counts toward the total, the ones not yet reached as well.
+    total: entries.reduce((sum, entry) => sum + sizeOf(entry), 0),
     answered: all.filter((entry) => entry.answered !== null).length,
     entries,
   };

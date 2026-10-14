@@ -1,0 +1,138 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/database.types";
+import { checklistSteps } from "./checklist";
+
+type Client = SupabaseClient<Database>;
+
+/**
+ * The welcome a new teacher sees once, the first time they reach the author home (#364). It sits
+ * next to the Get started checklist (`checklist.ts`) on purpose: the welcome says what the three
+ * checklist steps are, in the same order, and is written from the checklist's own titles, so the
+ * two cannot drift into saying different things. It adds only what the checklist does not say.
+ */
+
+export interface WelcomeStep {
+  title: string;
+  /** Short paragraphs, plain text. */
+  body: readonly string[];
+}
+
+/** The last step's button: it closes the welcome and hands over to the checklist. */
+export const TEACHER_WELCOME_FINISH = "Get started";
+
+const CHECKLIST = checklistSteps({ banks: [], hasClass: false, hasAssignmentOrSession: false });
+type ChecklistId = (typeof CHECKLIST)[number]["id"];
+const stepOf = (id: ChecklistId) => CHECKLIST.find((step) => step.id === id)!;
+const titleOf = (id: ChecklistId): string => stepOf(id).title;
+const hintOf = (id: ChecklistId): string => stepOf(id).hint;
+/** A checklist title in the middle of a sentence. */
+const lower = (title: string): string => title.charAt(0).toLowerCase() + title.slice(1);
+
+const STUDENTS_SEE =
+  "Students see only what you assign, share for practice or use in a live session.";
+
+/**
+ * What a colleague who came in by invitation sees instead: two steps. They did not make this
+ * workspace and are not alone in it, so "no other teacher can see them" would be untrue, and the
+ * sample bank is the workspace's to import or not, which the Get started list still offers.
+ */
+function invitedWelcomeSteps(name: string | undefined): WelcomeStep[] {
+  return [
+    {
+      title: name ? `Welcome, ${name}` : "Welcome to LeaRN",
+      body: [
+        "You have joined a shared workspace. You and the other teachers in it see and work on the same quizzes, classes and results.",
+        STUDENTS_SEE,
+      ],
+    },
+    {
+      title: "Where to start",
+      body: [
+        "Open a quiz to see what is already here, or write your own.",
+        `${titleOf("class")} and share its class code or invite link. Then ${lower(titleOf("assign"))}.`,
+      ],
+    },
+  ];
+}
+
+/**
+ * The three steps, greeting the teacher by name when they have one. A teacher who was invited into
+ * a colleague's workspace gets the two of `invitedWelcomeSteps` instead.
+ */
+export function teacherWelcomeSteps(
+  displayName: string | null,
+  options: { invited?: boolean } = {},
+): WelcomeStep[] {
+  const name = displayName?.trim();
+  if (options.invited) return invitedWelcomeSteps(name);
+  return [
+    {
+      title: name ? `Welcome, ${name}` : "Welcome to LeaRN",
+      body: [
+        "This is your workspace. Its quizzes, classes and results are yours: no other teacher can see them.",
+        STUDENTS_SEE,
+      ],
+    },
+    {
+      title: titleOf("bank"),
+      body: ["A quiz holds your questions and case studies.", hintOf("bank")],
+    },
+    {
+      title: "Then a class, and your first live session",
+      body: [
+        `${titleOf("class")} and share its class code or invite link.`,
+        `${titleOf("assign")}, and watch the answers come in.`,
+      ],
+    },
+  ];
+}
+
+/** What decides whether the welcome shows. */
+export interface TeacherWelcomeState {
+  /** `orgs.self_registered`: the teacher made this workspace by signing up. */
+  selfRegistered: boolean;
+  /** `profiles.onboarded_at`: null until the welcome has been finished or skipped. */
+  onboardedAt: string | null;
+  /** `profiles.display_name`, for the greeting. */
+  displayName: string | null;
+  /** They came into this workspace by accepting a colleague's invitation (`org_invites`). */
+  invited: boolean;
+}
+
+/**
+ * Only a teacher in a workspace they signed up for, who has not seen it yet. The instructors who
+ * were already in the shared org are never interrupted, with no data step needed to mark them.
+ */
+export function showTeacherWelcome(state: TeacherWelcomeState | null): boolean {
+  return state !== null && state.selfRegistered && state.onboardedAt === null;
+}
+
+/**
+ * Reads what `showTeacherWelcome` needs: the caller's own profile row and their own org row, both
+ * under RLS. Null when either read fails or finds nothing, so the page shows no welcome rather
+ * than one that might be wrong or might repeat.
+ *
+ * Whether they were invited is a third read, of the invitation they accepted, which an author may
+ * read in their own workspace. If it fails they count as not invited: before the invitations
+ * migration is applied the table is not there and nobody has been invited, and that must not take
+ * the welcome away from every new teacher.
+ */
+export async function readTeacherWelcomeState(
+  client: Client,
+  userId: string,
+  orgId: string,
+): Promise<TeacherWelcomeState | null> {
+  const [profile, org, accepted] = await Promise.all([
+    client.from("profiles").select("onboarded_at, display_name").eq("id", userId).maybeSingle(),
+    client.from("orgs").select("self_registered").eq("id", orgId).maybeSingle(),
+    // The column is named: `token_hash` has no grant, so `select("*")` would be refused.
+    client.from("org_invites").select("id").eq("accepted_by", userId).limit(1),
+  ]);
+  if (profile.error || org.error || !profile.data || !org.data) return null;
+  return {
+    selfRegistered: org.data.self_registered,
+    onboardedAt: profile.data.onboarded_at,
+    displayName: profile.data.display_name,
+    invited: !accepted.error && (accepted.data?.length ?? 0) > 0,
+  };
+}

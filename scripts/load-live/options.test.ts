@@ -83,6 +83,14 @@ describe("readOptions", () => {
     expect(readOptions(["--host", "--bank", "b"], ENV).source).toEqual({ kind: "bank", id: "b" });
   });
 
+  it("runs a bank student-paced only when asked (#404)", () => {
+    expect(readOptions(["--host", "--bank", "b"], ENV).paced).toBe(false);
+    expect(readOptions(["--host", "--bank", "b", "--paced"], ENV)).toMatchObject({
+      paced: true,
+      source: { kind: "bank", id: "b" },
+    });
+  });
+
   it.each([
     [[], /--code/],
     [["--code", "ABC234", "--host"], /either --code or --host/],
@@ -92,6 +100,9 @@ describe("readOptions", () => {
     [["--code", "ABC234", "--blank", "1.5"], /--blank/],
     [["--code", "ABC234", "--think", "5-1"], /--think/],
     [["--host", "--bank", "a", "--case-study", "b"], /not both/],
+    [["--host", "--paced"], /--paced needs --host and --bank/],
+    [["--host", "--paced", "--case-study", "b"], /--paced needs --host and --bank/],
+    [["--code", "ABC234", "--paced"], /--paced needs --host and --bank/],
     [["--code", "ABC234", "--nonsense"], /nonsense/],
   ])("refuses %j", (argv, message) => {
     expect(() => readOptions(argv, ENV)).toThrow(message);

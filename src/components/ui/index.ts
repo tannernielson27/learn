@@ -1,4 +1,5 @@
 export { Button, type ButtonProps } from "./Button";
+export { Dialog, type DialogProps, type DialogSteps } from "./Dialog";
 export {
   SegmentedControl,
   type SegmentedControlProps,

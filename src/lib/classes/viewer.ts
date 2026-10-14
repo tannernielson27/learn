@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { NO_ACCESS_PATH } from "@/lib/auth/noAccess";
+import { WELCOME_PATH } from "@/lib/auth/accountPaths";
 import type { Database } from "@/lib/supabase/database.types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { STUDENT_HOME } from "./classes";
@@ -14,6 +14,8 @@ export interface SignedInViewer {
   email: string;
   /** Null for an account nobody has given a role yet (#204). */
   role: OrgRole | null;
+  /** `profiles.display_name`, or null for an account nobody has named (#358). */
+  displayName: string | null;
 }
 
 export type Viewer = { status: "signed_out" } | SignedInViewer;
@@ -31,11 +33,18 @@ export async function readViewer(): Promise<Viewer> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("org_id, role")
+    .select("org_id, role, display_name")
     .eq("id", userId)
     .maybeSingle();
   const email = typeof data.claims.email === "string" ? data.claims.email : "";
-  return { status: "signed_in", supabase, userId, email, role: profile?.role ?? null };
+  return {
+    status: "signed_in",
+    supabase,
+    userId,
+    email,
+    role: profile?.role ?? null,
+    displayName: profile?.display_name ?? null,
+  };
 }
 
 export interface StudentSession {
@@ -46,7 +55,7 @@ export interface StudentSession {
 
 /**
  * The student home's check. A student stays; everyone else goes to their own home: a visitor to
- * sign in (and back here), an author to authoring, an account with no role to "No access yet".
+ * sign in (and back here), an author to authoring, an account with no role to the welcome page (#362).
  */
 export async function requireStudent(): Promise<StudentSession> {
   const viewer = await readViewer();
@@ -54,7 +63,7 @@ export async function requireStudent(): Promise<StudentSession> {
     redirect(`/sign-in?next=${encodeURIComponent(STUDENT_HOME)}`);
   }
   if (viewer.role === "instructor" || viewer.role === "admin") redirect("/author");
-  if (viewer.role !== "student") redirect(NO_ACCESS_PATH);
+  if (viewer.role !== "student") redirect(WELCOME_PATH);
   const { supabase, userId, email } = viewer;
   return { supabase, userId, email };
 }

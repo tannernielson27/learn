@@ -2,6 +2,8 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
 import { signInAsNewAuthor } from "./signIn";
+import { openImport } from "./authoringHelpers";
+import { giveQuizAnInQuizFolder } from "./inQuizFolders";
 
 // Needs the local Supabase stack, like auth.spec.ts. CI runs it in the `auth-e2e` job.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
@@ -35,14 +37,14 @@ async function moveItems(page: Page, names: string[], folder: string) {
     await page.getByRole("checkbox", { name: `Select ${name}`, exact: true }).check();
   }
   await page.getByRole("combobox", { name: "Move selected to" }).selectOption({ label: folder });
-  await page.getByRole("button", { name: "Move selected", exact: true }).click();
+  await page.getByRole("button", { name: "Move", exact: true }).click();
   await expect(
-    page.getByRole("status").filter({ hasText: `Moved ${names.length} items to ${folder}.` }),
+    page.getByRole("status").filter({ hasText: `Moved ${names.length} questions to ${folder}.` }),
   ).toBeVisible();
 }
 
 const itemLinks = (page: Page) =>
-  page.getByRole("list", { name: "Items" }).getByRole("link", { name: /^Folder demo item/ });
+  page.getByRole("list", { name: "Questions" }).getByRole("link", { name: /^Folder demo item/ });
 
 test("an author sorts ten items into Cardiac and Respiratory and opens a folder", async ({
   page,
@@ -54,23 +56,28 @@ test("an author sorts ten items into Cardiac and Respiratory and opens a folder"
   const bankName = `Folders ${testInfo.project.name} ${Date.now()}`;
 
   await page.goto("/author");
-  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
+
+  await openImport(page);
 
   await page.getByRole("textbox", { name: "Or paste JSON", exact: true }).fill(tenItems());
   await page.getByRole("button", { name: "Import", exact: true }).click();
   await expect(itemLinks(page)).toHaveCount(10);
 
-  await createFolder(page, "Cardiac");
+  // #411: a new quiz has no folders inside it, so it is given its first the way an older one had.
+  await giveQuizAnInQuizFolder(page, request, "Cardiac");
   await createFolder(page, "Respiratory");
   await moveItems(page, stems.slice(0, 5), "Cardiac");
   await moveItems(page, stems.slice(5), "Respiratory");
 
   // Nothing is left unfiled, and moving left every item a draft.
   const folders = page.getByRole("navigation", { name: "Folders" });
-  await folders.getByRole("link", { name: "Unfiled", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "No unfiled items", exact: true })).toBeVisible();
+  await folders.getByRole("link", { name: "Not in a folder", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Every question is in a folder", exact: true }),
+  ).toBeVisible();
 
   // Open Cardiac from the keyboard.
   const cardiac = folders.getByRole("link", { name: "Cardiac", exact: true });
@@ -99,8 +106,8 @@ test("an author sorts ten items into Cardiac and Respiratory and opens a folder"
   await page.getByRole("button", { name: "Delete folder", exact: true }).click();
   // Filtered: Next's route announcer is also an alert.
   await expect(
-    page.getByRole("alert").filter({ hasText: '"Cardiac" holds 5 items.' }),
-  ).toContainText('"Cardiac" holds 5 items. Move or delete them first.');
+    page.getByRole("alert").filter({ hasText: '"Cardiac" holds 5 questions.' }),
+  ).toContainText('"Cardiac" holds 5 questions. Move them out first.');
 
   // A folder inside Cardiac: breadcrumbs follow, and an empty folder can be renamed and deleted.
   await createFolder(page, "Heart failure");

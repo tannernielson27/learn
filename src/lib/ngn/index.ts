@@ -3,6 +3,7 @@ export * from "./schemas";
 export * from "./results";
 export * from "./scoring";
 export * from "./presentation";
+export * from "./chartReveal";
 export * from "./validate";
 export * from "./quality";
 export * from "./registry";

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { CopyLinkButton } from "./CopyLinkButton";
+import { CopyLinkButton, CopyTextButton } from "./CopyLinkButton";
 
 const URL_TEXT = "https://learn.example/c/AbC_-0123456789abcdefghijklmnopq";
 
@@ -21,5 +21,28 @@ describe("CopyLinkButton", () => {
     render(<CopyLinkButton url={URL_TEXT} />);
     await user.click(screen.getByRole("button", { name: "Copy invite link" }));
     expect(await screen.findByRole("status")).toHaveTextContent(/copy it from the box/);
+  });
+});
+
+describe("CopyTextButton", () => {
+  it("copies exactly the text it is given, under its own label", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
+    render(
+      <CopyTextButton text="ABCD2345" label="Copy class code" failedMessage="Copy by hand." />,
+    );
+    await user.click(screen.getByRole("button", { name: "Copy class code" }));
+    expect(writeText).toHaveBeenCalledWith("ABCD2345");
+    expect(await screen.findByRole("status")).toHaveTextContent("Copied.");
+  });
+
+  it("says its own message when the clipboard refuses", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(navigator.clipboard, "writeText").mockRejectedValue(new Error("denied"));
+    render(
+      <CopyTextButton text="ABCD2345" label="Copy class code" failedMessage="Copy by hand." />,
+    );
+    await user.click(screen.getByRole("button", { name: "Copy class code" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Copy by hand.");
   });
 });

@@ -4,9 +4,10 @@ import { formatPercent, formatPoints } from "../src/lib/live/reportFormat";
 import { bytesOf } from "./bytes";
 import { latestSignInLink, openSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #238: the student home's History lists each closed assignment with the student's best score, and
-// carries no score of an assignment that is still open. #239: "Your steps" counts the same closed
+// carries no score of an assignment that is still open. #239: "Your clinical judgment steps" counts the same closed
 // work, from the best attempt only: the seeded MC is a Take Action item, answered in the open
 // assignment and twice in the closing one, so after the close exactly one item stands behind it. One assignment closes during the test
 // (two attempts, the first one better); another stays open with a submitted, scored attempt. Needs
@@ -78,6 +79,7 @@ test("History shows a closed assignment's best score, and nothing of one still o
   const { viewport, isMobile, hasTouch } = testInfo.project.use;
   const phone = await browser.newContext({ viewport, isMobile, hasTouch, reducedMotion: "reduce" });
   const student = await phone.newPage();
+  await skipWelcomes(student);
   await student.goto(invite);
   const email = `student-history-${project}-${Date.now()}@example.test`;
   const since = new Date();
@@ -90,11 +92,11 @@ test("History shows a closed assignment's best score, and nothing of one still o
   await expect(student).toHaveURL(/\/learn$/);
 
   // Nothing has closed yet: the empty states.
-  // #266: the Your steps empty state's heading; the bytes check below looks for it too.
-  const noSteps = "Nothing to show yet";
+  // #266: the steps' empty state heading; the bytes check below looks for it too.
+  const noSteps = "No answers yet";
   await expect(student.getByRole("heading", { name: noSteps, exact: true })).toBeVisible();
   await expect(
-    student.getByRole("heading", { name: "Nothing has closed yet", exact: true }),
+    student.getByRole("heading", { name: "No closed assignments yet", exact: true }),
   ).toBeVisible();
 
   // One closing shortly with two attempts, one open for a day with one; the clock starts now.
@@ -166,7 +168,8 @@ test("History shows a closed assignment's best score, and nothing of one still o
   // #239: no step has a mark of either assignment while both are open.
   expect(before).toContain(noSteps);
   expect(before).not.toContain("Not enough answers yet");
-  expect(before).not.toContain("Your clinical judgment steps");
+  // The ranked list itself, not the section heading, which is there either way.
+  expect(before).not.toContain(`aria-label="Your clinical judgment steps"`);
 
   // After the close (and its two seconds of grace).
   await student.waitForTimeout(Math.max(0, closesAt + 3_000 - Date.now()));
@@ -203,13 +206,13 @@ test("History shows a closed assignment's best score, and nothing of one still o
     "Take Action",
     "Evaluate Outcomes",
   ]);
-  await expect(stepRows.nth(4)).toContainText("Not enough answers yet (1 item)");
+  await expect(stepRows.nth(4)).toContainText("Not enough answers yet (1 question)");
   await expect(stepRows.filter({ hasText: "No answers yet" })).toHaveCount(5);
 
   await expectNoAxeViolations(student);
   await student.screenshot({ path: shot("student-history"), fullPage: true });
   await student
-    .getByRole("region", { name: "Your steps", exact: true })
+    .getByRole("region", { name: "Your clinical judgment steps", exact: true })
     .screenshot({ path: shot("student-steps") });
 
   // On the wire now: the closed one's score, and still nothing of the open one's.
@@ -217,9 +220,9 @@ test("History shows a closed assignment's best score, and nothing of one still o
   expect(after).toContain("history-score");
   expect(after).toContain(figure);
   expect(after).not.toContain(`Results for ${openTitle}`);
-  expect(after).toContain("Not enough answers yet (1 item)");
-  expect(after).not.toContain("(2 items)");
-  expect(after).not.toContain("(3 items)");
+  expect(after).toContain("Not enough answers yet (1 question)");
+  expect(after).not.toContain("(2 questions)");
+  expect(after).not.toContain("(3 questions)");
 
   // Keyboard: the row's link is reachable and opens the results.
   const link = history.getByRole("link", { name: `Results for ${closingTitle}`, exact: true });

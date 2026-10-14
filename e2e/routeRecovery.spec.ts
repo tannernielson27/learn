@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { fillMultipleChoice, publishOpenItem } from "./authoringHelpers";
 import { signInAsNewAuthor } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // Needs the local Supabase stack with Realtime, like liveSession.spec.ts.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
@@ -38,11 +39,11 @@ test("a student whose room fails to render rejoins it, as the same participant, 
   await signInAsNewAuthor(page, request, testInfo.project.name);
 
   const bankName = `Recovery ${testInfo.project.name} ${Date.now()}`;
-  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank", exact: true }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
-  await page.getByRole("link", { name: "New item", exact: true }).click();
+  await page.getByRole("link", { name: "New question", exact: true }).click();
   await page.getByRole("button", { name: "Multiple Choice", exact: true }).click();
   await fillMultipleChoice(
     page,
@@ -51,7 +52,7 @@ test("a student whose room fails to render rejoins it, as the same participant, 
     1,
   );
   await publishOpenItem(page);
-  await page.getByRole("link", { name: "Back to bank", exact: true }).click();
+  await page.getByRole("link", { name: "Back to quiz", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
   await page.getByRole("button", { name: "Start a live session", exact: true }).click();
@@ -68,12 +69,15 @@ test("a student whose room fails to render rejoins it, as the same participant, 
     reducedMotion: "reduce",
   });
   const student = await phone.newPage();
+  await skipWelcomes(student);
   await student.goto(`/join/${code}`);
   await student.getByRole("textbox", { name: "Display name" }).fill("Ada Brennan");
   await student.getByRole("button", { name: "Join", exact: true }).click();
   await expect(student).toHaveURL(/\/play\/[0-9a-f-]{36}$/);
   const roomUrl = student.url();
-  await expect(student.getByText("You are in.", { exact: true })).toBeVisible();
+  await expect(
+    student.getByText("You are in. Wait for your teacher to start.", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByTestId("present-count")).toHaveText("1 phone connected", {
     timeout: 15_000,
   });
@@ -92,16 +96,14 @@ test("a student whose room fails to render rejoins it, as the same participant, 
     await route.fulfill({ response });
   });
 
-  await page.getByRole("button", { name: "Start session", exact: true }).click();
+  await page.getByRole("button", { name: "Start", exact: true }).click();
 
   // The room's boundary, not a blank page and not the error.
   await expect(
     student.getByRole("heading", { level: 1, name: "This screen stopped working.", exact: true }),
   ).toBeVisible({ timeout: 15_000 });
   // Next's route announcer is an alert too, so the boundary's is picked out by what it says.
-  await expect(
-    student.getByRole("alert").filter({ hasText: "Your place in the session is kept." }),
-  ).toBeVisible();
+  await expect(student.getByRole("alert").filter({ hasText: "Your place is kept." })).toBeVisible();
   await expect(student.getByText(/Cannot read|TypeError|null|digest/)).toHaveCount(0);
   expect(broken).toBe(true);
   await expectNoAxeViolations(student);

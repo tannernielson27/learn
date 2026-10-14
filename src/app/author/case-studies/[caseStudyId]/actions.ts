@@ -52,7 +52,7 @@ export async function startStepItem(
     return { error: "That step does not exist." };
   }
   if (!(ITEM_TYPES as readonly string[]).includes(type)) {
-    return { error: "That item type cannot be authored yet." };
+    return { error: "That format cannot be written here yet." };
   }
 
   const { supabase } = await requireAuthor(`/author/case-studies/${caseStudyId}`);

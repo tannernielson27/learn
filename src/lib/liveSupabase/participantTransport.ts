@@ -59,6 +59,7 @@ import type {
   SessionView,
   Unsubscribe,
 } from "@/lib/live/transport";
+import type { EhrRecordView } from "@/lib/ngn/chartReveal";
 import type { ChannelTokenSource } from "./channelTokenSource";
 import { rosterFrom, type PresenceEntry } from "./presence";
 import type { Database } from "@/lib/supabase/database.types";
@@ -115,6 +116,11 @@ export interface StudentView extends SessionView<ParticipantItem> {
    * student-paced and running or paused.
    */
   paced?: PacedItemPayload[];
+  /**
+   * A case-study room's patient record at the step the room is on (#335), as the server cut it.
+   * Absent for a room run from a bank.
+   */
+  record?: EhrRecordView;
 }
 
 /**
@@ -153,9 +159,24 @@ export interface ParticipantTransportOptions {
   fetch?: typeof globalThis.fetch;
   /** Prefixed onto the route paths. Empty in a browser, where they are same-origin. */
   baseUrl?: string;
+  /** Waits between tries of a view that did not get through. Injectable for the tests. */
+  pause?: (ms: number) => Promise<void>;
+  /** The jitter on those waits, in [0, 1). Injectable for the tests. */
+  random?: () => number;
 }
 
 const STATUSES = new Set<string>(SESSION_STATUSES);
+
+/**
+ * How long to wait before each further try of a view that did not get through (#407), before
+ * jitter: each is scaled by a factor between 0.5 and 1.5, so the tries fall at 0.2–0.6 s,
+ * 0.4–1.2 s and 0.8–2.4 s after the failure before them. Four tries in all, and at most 4.2 s of
+ * waiting, which is inside the time a class waits for a slow phone anyway.
+ */
+export const VIEW_RETRY_WAITS_MS: readonly number[] = [400, 800, 1600];
+
+/** The answers that mean "not now" rather than "no": see `askForView`. */
+const RETRYABLE_STATUSES: ReadonlySet<number> = new Set([502, 503, 504]);
 
 /**
  * Reads a `live.session_public_state` row off the wire, or null.
@@ -207,8 +228,8 @@ export function postgresChangesReady(payload: unknown): boolean {
  * purpose: it differs on every read and is only ever used for the clock offset.
  */
 function sameView(a: ParticipantViewPayload, b: ParticipantViewPayload): boolean {
-  const shown = ({ state, item, answered, revealed, set }: ParticipantViewPayload) =>
-    JSON.stringify([state, item, answered, revealed, set ?? null]);
+  const shown = ({ state, item, answered, revealed, set, record }: ParticipantViewPayload) =>
+    JSON.stringify([state, item, answered, revealed, set ?? null, record ?? null]);
   return shown(a) === shown(b);
 }
 
@@ -245,6 +266,9 @@ export function createSupabaseParticipant(
 ): SupabaseParticipant {
   const call = options.fetch ?? globalThis.fetch;
   const base = options.baseUrl ?? "";
+  const pause =
+    options.pause ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  const random = options.random ?? Math.random;
 
   const views = new Set<(view: SessionView<ParticipantItem>) => void>();
   const students = new Set<(view: StudentView) => void>();
@@ -297,17 +321,59 @@ export function createSupabaseParticipant(
     return rosterFrom(channel?.presenceState<PresenceEntry>() ?? {}, self);
   }
 
-  async function requestView(): Promise<ParticipantViewPayload> {
+  /**
+   * One request for the view, or null when it is worth asking again (#407): the request never
+   * got an answer, or the server said it could not reach the database (503) or could not be
+   * reached itself (502, 504). Everything else is an answer and is not asked for twice: a 401
+   * is the server saying this phone is not in the room, a 429 that it should stop asking, and a
+   * 500 that something is broken which asking again will not mend.
+   */
+  async function askForView(): Promise<Response | null> {
+    try {
+      const response = await call(`${base}${LIVE_ROUTES.view}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        // The participant cookie is httpOnly, so the browser is what attaches it. Said explicitly
+        // rather than left to the default, because it is the whole of this request's authority.
+        credentials: "same-origin",
+        body: "{}",
+      });
+      return RETRYABLE_STATUSES.has(response.status) ? null : response;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Reads the view, trying again a few times when the read did not get through (#407).
+   *
+   * Every phone in the room makes this request in the same instant, because the host's move
+   * reaches them all at once. So a moment when the server cannot answer is a moment it cannot
+   * answer a whole class, and a read that simply gave up left that phone on the last item until
+   * the host's next move. The waits are short, there are three of them, and each is scaled by a
+   * random factor: a class that failed together must not come back together.
+   *
+   * It stops the moment this connection has left the room. When the tries run out it throws, as
+   * a read that failed always did, and the next move the host makes asks again.
+   *
+   * `sending` is called just before each request goes out, the first and every further try, so
+   * a caller that orders reads by when they were sent orders them by the try that was answered.
+   */
+  async function requestView(sending: () => void = () => {}): Promise<ParticipantViewPayload> {
     if (me === null) throw new LiveSessionError("not_joined");
-    const sentAt = Date.now();
-    const response = await call(`${base}${LIVE_ROUTES.view}`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      // The participant cookie is httpOnly, so the browser is what attaches it. Said explicitly
-      // rather than left to the default, because it is the whole of this request's authority.
-      credentials: "same-origin",
-      body: "{}",
-    });
+    const mine = generation;
+    let sentAt = Date.now();
+    sending();
+    let response = await askForView();
+    for (const wait of VIEW_RETRY_WAITS_MS) {
+      if (response !== null) break;
+      await pause(wait * (0.5 + random()));
+      if (gone || mine !== generation) throw new LiveSessionError("not_joined");
+      sentAt = Date.now();
+      sending();
+      response = await askForView();
+    }
+    if (response === null) throw new Error("The session could not be reached.");
     if (!response.ok) throw await asError(response);
     const payload = (await response.json()) as ParticipantViewPayload;
     if (typeof payload.serverNow === "number" && Number.isFinite(payload.serverNow)) {
@@ -355,11 +421,17 @@ export function createSupabaseParticipant(
   /**
    * Reads the view, and says whether it is still the newest read to come back. A read that lost
    * the race is not announced; the caller answers from `held`, which the newer one has set.
+   *
+   * Numbered by the request that was answered, not by when the read began (#407): a read that
+   * failed and was tried again a second later has seen a later room than a read begun in between,
+   * and must not be put behind it.
    */
   async function readView(): Promise<{ payload: ParticipantViewPayload; newest: boolean }> {
-    readsSent += 1;
-    const sent = readsSent;
-    const payload = await requestView();
+    let sent = 0;
+    const payload = await requestView(() => {
+      readsSent += 1;
+      sent = readsSent;
+    });
     const newest = sent > newestShown;
     if (newest) newestShown = sent;
     return { payload, newest };
@@ -475,6 +547,15 @@ export function createSupabaseParticipant(
       if (gone || !postgresChangesReady(payload)) return;
       void refresh(true).catch(() => {});
     });
+    /**
+     * Why a phone still *receives* presence (#408). Being seen by the host needs only `track`
+     * below; this listener is what makes Realtime send the room's presence to this socket at all
+     * (realtime-js joins with `presence.enabled` true when a presence listener is bound). It
+     * stays because the waiting screen shows how many are in the room, and a listener cannot be
+     * added or dropped once the channel has subscribed. The screens no longer render for a sync
+     * they do not draw (`RoomCount`); dropping the messages themselves means taking that count
+     * from somewhere else first.
+     */
     opened.on("presence", { event: "sync" }, () => {
       if (gone) return;
       const roster = rosterNow();
@@ -566,6 +647,7 @@ export function createSupabaseParticipant(
     ...(payload.set === undefined
       ? {}
       : { set: payload.set.map((entry) => entry.item), paced: payload.set }),
+    ...(payload.record === undefined ? {} : { record: payload.record }),
   });
 
   function snapshot(joined: ParticipantCredentials, view: StudentView): ParticipantSnapshot {

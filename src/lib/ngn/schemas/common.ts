@@ -19,6 +19,9 @@ export const cjmmStepSchema = z.union([
   z.literal(6),
 ]);
 
+/** A case study has one item per clinical judgment step, so this is also how long one runs. */
+export const CASE_STUDY_STEP_COUNT = 6;
+
 export const scoringModelSchema = z.enum(["zero_one", "plus_minus", "rationale"]);
 
 /** A selectable option / row / column / token with a display label. */
@@ -32,12 +35,24 @@ export type Labeled = z.infer<typeof labeledSchema>;
 // Electronic health record (fictional content only)
 // ---------------------------------------------------------------------------
 
-const markdownBlockSchema = z.object({ kind: z.literal("markdown"), value: z.string().min(1) });
+/**
+ * The case study step a time point or a block first appears at (#334). Absent means step 1, so a
+ * record written before the field existed reads as it always did. Case studies only: see
+ * `standaloneEhrRecordSchema`.
+ */
+const fromStepSchema = cjmmStepSchema.optional();
+
+const markdownBlockSchema = z.object({
+  kind: z.literal("markdown"),
+  value: z.string().min(1),
+  fromStep: fromStepSchema,
+});
 
 const tableBlockSchema = z.object({
   kind: z.literal("table"),
   columns: z.array(z.string()).min(1),
   rows: z.array(z.array(z.string())).min(1),
+  fromStep: fromStepSchema,
 });
 
 const vitalsBlockSchema = z.object({
@@ -52,6 +67,7 @@ const vitalsBlockSchema = z.object({
       }),
     )
     .min(1),
+  fromStep: fromStepSchema,
 });
 
 export const ehrBlockSchema = z.discriminatedUnion("kind", [
@@ -72,15 +88,34 @@ export const ehrTabKindSchema = z.enum([
   "custom",
 ]);
 
+/** What a student can do with a tab at one step: not see it, see its name, or read it. */
+export const tabAccessSchema = z.enum(["hidden", "locked", "open"]);
+export type TabAccess = z.infer<typeof tabAccessSchema>;
+
+/**
+ * A tab's access at each step of a case study, first step first (#334). Absent means open at
+ * every step. Exactly one value per step, so a list can never run out before the case does.
+ */
+export const stepAccessSchema = z
+  .array(tabAccessSchema)
+  .length(CASE_STUDY_STEP_COUNT, "stepAccess has exactly six values, one per step");
+
 export const ehrTabSchema = z.object({
   id: idSchema,
   kind: ehrTabKindSchema,
   title: z.string().min(1),
   blocks: z.array(ehrBlockSchema).min(1),
   timePointId: idSchema.optional(),
+  stepAccess: stepAccessSchema.optional(),
 });
 
 export type EhrTab = z.infer<typeof ehrTabSchema>;
+
+export const ehrTimePointSchema = labeledSchema.extend({ fromStep: fromStepSchema });
+export type EhrTimePoint = z.infer<typeof ehrTimePointSchema>;
+
+/** The step a time point or block with no `fromStep` appears at. */
+export const FIRST_STEP = 1;
 
 export const ehrRecordSchema = z
   .object({
@@ -91,7 +126,7 @@ export const ehrRecordSchema = z
       setting: z.string().min(1),
       admissionDate: z.string().optional(),
     }),
-    timePoints: z.array(labeledSchema).min(1),
+    timePoints: z.array(ehrTimePointSchema).min(1),
     tabs: z.array(ehrTabSchema).min(1),
   })
   .superRefine((record, ctx) => {
@@ -107,8 +142,45 @@ export const ehrRecordSchema = z
         });
       }
     });
+    // The time selector opens on a time point, so step 1 needs one to open on.
+    if (!record.timePoints.some((point) => (point.fromStep ?? FIRST_STEP) === FIRST_STEP)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "at least one time point must be there from step 1",
+        path: ["timePoints"],
+      });
+    }
   });
 export type EhrRecord = z.infer<typeof ehrRecordSchema>;
+
+type StagedField = "fromStep" | "stepAccess";
+
+/**
+ * The record a standalone or trend item carries. It has no steps to unfold over, so `fromStep`
+ * and `stepAccess` are refused by name rather than silently dropped: an author who wrote them
+ * meant something, and a chart that ignored them would show what they meant to hold back. A case
+ * study's record is `ehrRecordSchema` itself.
+ */
+export const standaloneEhrRecordSchema = ehrRecordSchema.superRefine((record, ctx) => {
+  const refuse = (field: StagedField, owner: (string | number)[]) =>
+    ctx.addIssue({
+      code: "custom",
+      message: `${field} is allowed only on a case study's record`,
+      path: [...owner, field],
+    });
+
+  record.timePoints.forEach((point, index) => {
+    if (point.fromStep !== undefined) refuse("fromStep", ["timePoints", index]);
+  });
+  record.tabs.forEach((tab, tabIndex) => {
+    if (tab.stepAccess !== undefined) refuse("stepAccess", ["tabs", tabIndex]);
+    tab.blocks.forEach((block, blockIndex) => {
+      if (block.fromStep !== undefined) {
+        refuse("fromStep", ["tabs", tabIndex, "blocks", blockIndex]);
+      }
+    });
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Item envelope (shared by every item type)
@@ -146,7 +218,7 @@ export const envelopeFields = {
   difficulty: z.enum(["easy", "medium", "hard"]).optional(),
   stem: richTextSchema,
   instructions: z.string().optional(),
-  ehr: ehrRecordSchema.optional(),
+  ehr: standaloneEhrRecordSchema.optional(),
   rationale: rationaleSchema.default({}),
   scoring: scoringMetaSchema,
   meta: itemMetaSchema.default({}),

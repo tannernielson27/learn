@@ -109,7 +109,7 @@ describe("importSample", () => {
 
   it("refuses an account with no role", async () => {
     profile = { org_id: null, role: null };
-    await expect(importSample()).rejects.toThrow("redirect:/author/no-access");
+    await expect(importSample()).rejects.toThrow("redirect:/welcome");
     expect(written).toEqual([]);
     expect(rpc).not.toHaveBeenCalled();
   });

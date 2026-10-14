@@ -1,11 +1,13 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderersLoaded } from "@/components/question/testing/renderers";
 import type { AttemptItemPayload } from "@/lib/assignments/attemptView";
 import type { SaveResult } from "@/lib/assignments/autosave";
 import { FIXTURES } from "@/lib/ngn/fixtures";
-import { itemSchema, type AnyResponse, type Item } from "@/lib/ngn/schemas";
+import { recordsThrough } from "@/lib/ngn/chartReveal";
+import { stagedEhr } from "@/lib/ngn/fixtures/chart-reveal";
+import { ehrRecordSchema, itemSchema, type AnyResponse, type Item } from "@/lib/ngn/schemas";
 import { toKeylessItem } from "@/lib/ngn/submit";
 import { AttemptPlayer } from "./AttemptPlayer";
 
@@ -54,7 +56,7 @@ describe("AttemptPlayer (#208)", () => {
     const view = setup();
     await renderersLoaded();
     expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
-    expect(screen.getByTestId("save-status")).toHaveTextContent("Your answers save as you go.");
+    expect(screen.getByTestId("save-status")).toHaveTextContent("Answers save as you go.");
 
     await view.user.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
     expect(screen.getByTestId("save-status")).toHaveTextContent("Saving");
@@ -66,7 +68,7 @@ describe("AttemptPlayer (#208)", () => {
       optionId: "opt_a",
     });
     expect(screen.getByTestId("answered-count")).toHaveTextContent("1 of 2 answered");
-    expect(screen.getByRole("button", { name: "Item 1, answered" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Question 1, answered" })).toBeInTheDocument();
   });
 
   it("says Not saved, retrying when a save fails", async () => {
@@ -89,15 +91,15 @@ describe("AttemptPlayer (#208)", () => {
   it("moves through the set with the list, Next and Previous, keeping each answer", async () => {
     const view = setup();
     await renderersLoaded();
-    expect(screen.getByRole("button", { name: "Previous item" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
     await view.user.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
-    await view.user.click(screen.getByRole("button", { name: "Next item" }));
+    await view.user.click(screen.getByRole("button", { name: "Next" }));
     await renderersLoaded();
-    expect(screen.getByRole("button", { name: "Item 2, not answered" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Question 2, not answered" })).toHaveAttribute(
       "aria-current",
       "step",
     );
-    await view.user.click(screen.getByRole("button", { name: "Item 1, answered" }));
+    await view.user.click(screen.getByRole("button", { name: "Question 1, answered" }));
     expect(screen.getByRole("radio", { name: /Auscultate the lungs/ })).toBeChecked();
   });
 
@@ -107,9 +109,7 @@ describe("AttemptPlayer (#208)", () => {
     await view.user.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
     await view.user.click(screen.getByRole("button", { name: "Submit assignment" }));
     expect(screen.getByRole("heading", { name: "Submit attempt 1?" })).toBeInTheDocument();
-    expect(
-      screen.getByText(/1 of 2 answered\. You cannot change your answers/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/1 of 2 answered\. You cannot change answers/)).toBeInTheDocument();
 
     await view.user.click(screen.getByRole("button", { name: "Submit now" }));
     await waitFor(() => expect(view.submit).toHaveBeenCalledWith(ATTEMPT));
@@ -149,5 +149,45 @@ describe("AttemptPlayer (#208)", () => {
     await waitFor(() => expect(refresh).toHaveBeenCalled(), { timeout: 3000 });
     expect(screen.getByTestId("save-status")).toHaveTextContent("This assignment has closed.");
     expect(screen.getByRole("button", { name: "Submit assignment" })).toBeDisabled();
+  });
+});
+
+describe("AttemptPlayer, a case study's chart per step (#335)", () => {
+  const staged = ehrRecordSchema.parse(stagedEhr);
+  const labs = () =>
+    within(screen.getByRole("complementary", { name: "Patient record" })).queryByRole("tab", {
+      name: /^Lab Results/,
+    });
+
+  it("shows the chart of the step on screen, and reads the page again once the last step it holds is saved", async () => {
+    refresh.mockClear();
+    const items = payload({ type: "multiple_choice", optionId: "opt_a" });
+    const user = userEvent.setup();
+    render(
+      <AttemptPlayer
+        attemptId={ATTEMPT}
+        attemptNumber={1}
+        items={items}
+        total={6}
+        records={recordsThrough(staged, 2)}
+        submit={vi.fn(async () => undefined)}
+        save={async () => ({ ok: true })}
+      />,
+    );
+    await renderersLoaded();
+    expect(screen.getByTestId("answered-count")).toHaveTextContent("1 of 6 answered");
+    expect(labs()).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(labs()).toHaveAccessibleName("Lab Results Locked");
+    // The last step this page holds, answered: the page is read for step 3.
+    // An option of the question, not one of the patient record's times.
+    const second = SECOND as Extract<Item, { type: "multiple_choice" }>;
+    const label = second.content.options[0]?.label ?? "";
+    await user.click(screen.getByRole("radio", { name: new RegExp(label.slice(0, 20)) }));
+    await waitFor(() => expect(refresh).toHaveBeenCalled(), { timeout: 3000 });
+
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+    expect(labs()).toBeNull();
   });
 });

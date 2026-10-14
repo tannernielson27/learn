@@ -155,8 +155,7 @@ export function EhrRecordFields({
   return (
     <>
       <p className="rounded-sm border border-line bg-surface-1 px-4 py-3 text-sm text-ink-1">
-        Every record here is fictional. Never enter real patient information: no names, dates or
-        details from a real chart.
+        Fictional patients only. Never enter real names, dates or details.
       </p>
 
       <fieldset className="flex flex-col gap-3">
@@ -194,8 +193,7 @@ export function EhrRecordFields({
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-1 text-sm font-medium text-ink-1">Time points</legend>
         <p className="text-sm text-ink-2">
-          A section charted at one time appears only then. With two or more times, the record shows
-          a time selector.
+          With two or more time points, the patient record gets a time selector.
         </p>
         {values.timePoints.map((point, index) => {
           const field = `timePoints.${index}.label`;
@@ -251,13 +249,9 @@ export function EhrRecordFields({
 
       <section aria-labelledby={`${idPrefix}-sections`} className="flex flex-col gap-4">
         <SectionsHeading id={`${idPrefix}-sections`} className="text-sm font-medium text-ink-1">
-          Sections
+          Tabs
         </SectionsHeading>
-        {values.tabs.length === 0 ? (
-          <p className="text-sm text-ink-2">
-            No sections yet. Most records start with a History &amp; Physical.
-          </p>
-        ) : null}
+        {values.tabs.length === 0 ? <p className="text-sm text-ink-2">No tabs yet.</p> : null}
         {values.tabs.map((tab, index) => (
           <EhrSectionEditor
             key={tab.id}
@@ -287,7 +281,7 @@ export function EhrRecordFields({
           <div className="flex flex-wrap items-end gap-2">
             <div className="flex min-w-0 flex-col gap-1">
               <label htmlFor={fields.idFor("tabs")} className="text-sm text-ink-1">
-                New section kind
+                Tab kind
               </label>
               <select
                 id={fields.idFor("tabs")}
@@ -304,9 +298,7 @@ export function EhrRecordFields({
                 ))}
               </select>
             </div>
-            <Button onClick={() => change((current) => addTab(current, newKind))}>
-              Add section
-            </Button>
+            <Button onClick={() => change((current) => addTab(current, newKind))}>Add tab</Button>
           </div>
         ) : null}
       </section>

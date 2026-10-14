@@ -9,7 +9,9 @@ import { ProgressBoard } from "@/components/live/ProgressBoard";
 import { Roster } from "@/components/live/Roster";
 import { keepTally } from "@/components/live/sameTally";
 import { TimerControls } from "@/components/live/TimerControls";
+import { HostRecord } from "@/components/live/HostRecord";
 import { HostResults } from "@/components/live/results/HostResults";
+import type { EhrRecord } from "@/lib/ngn/schemas";
 import { Button } from "@/components/ui/Button";
 import {
   canRunHostCommand,
@@ -51,6 +53,11 @@ export interface HostLobbyProps {
   tallyIntervalMs?: number;
   /** Whether the session runs a case study, so the position names the CJMM step (#184). */
   caseStudy?: boolean;
+  /**
+   * The whole patient record a case-study room was started with (#335), shown to the instructor
+   * with a marker for the step the class is on. Absent for a bank.
+   */
+  record?: EhrRecord;
 }
 
 /**
@@ -68,17 +75,17 @@ export const TALLY_INTERVAL_MS = 3_000;
 
 /** The moves, in the order a host reaches for them, with the word each button says. */
 const LABELS: Record<HostCommand, string> = {
-  start: "Start session",
+  start: "Start",
   reveal: "Show answer",
-  advance: "Next item",
+  advance: "Next question",
   pause: "Pause",
   resume: "Resume",
-  end: "End session",
+  end: "End live session",
 };
 
 /**
  * Which buttons are on the screen at all. The rest is `canRunHostCommand` greying them out. A
- * student-paced room (#185) has no "Next item": every phone moves through the set by itself.
+ * student-paced room (#185) has no "Next question": every phone moves through the set by itself.
  */
 function offered(state: LiveSessionState): HostCommand[] {
   if (state.status === "ended") return [];
@@ -110,12 +117,12 @@ function asksFirst(command: HostCommand, state: LiveSessionState): command is As
 function question(command: Asked, state: LiveSessionState) {
   return command === "end"
     ? {
-        title: "End this session?",
-        detail: "Students are disconnected and the code stops working. You can't reopen it.",
-        cancel: "Keep the session",
+        title: "End this live session?",
+        detail: "Students are disconnected and the join code stops working. You can't reopen it.",
+        cancel: "Keep it open",
       }
     : {
-        title: `Show answers for all ${state.itemCount} ${state.itemCount === 1 ? "item" : "items"}?`,
+        title: `Show answers for all ${questions(state.itemCount)}?`,
         detail: "Students who haven't finished can't answer any more.",
         cancel: "Not yet",
       };
@@ -124,9 +131,10 @@ function question(command: Asked, state: LiveSessionState) {
 /** What is in flight: a move, a timer button, a new time per item, or a jump (#183). */
 type Pending = HostCommand | TimerCommand | "set_timer" | "goto";
 
-const OFFLINE =
-  "Live updates are not running. The room still works, but this screen will not move by itself — " +
-  "reload it to catch up.";
+const OFFLINE = "Live updates stopped. The live session is still open. Reload to catch up.";
+
+/** "1 question", "3 questions". */
+const questions = (count: number): string => (count === 1 ? "1 question" : `${count} questions`);
 const FAILED = "That did not go through. Try again.";
 
 /**
@@ -156,6 +164,7 @@ export function HostLobby({
   connect,
   tallyIntervalMs = TALLY_INTERVAL_MS,
   caseStudy = false,
+  record,
 }: HostLobbyProps) {
   const [state, setState] = useState<LiveSessionState>(initial);
   const [roster, setRoster] = useState<RosterEntry[]>([]);
@@ -332,7 +341,7 @@ export function HostLobby({
     <>
       <h1 className="font-read text-3xl break-words text-ink-1">{title}</h1>
       <p className="mt-1 text-sm text-ink-2">
-        {STATUS_LABEL[state.status]} · {state.itemCount} {state.itemCount === 1 ? "item" : "items"}
+        {STATUS_LABEL[state.status]} · {questions(state.itemCount)}
         {paced ? <> · Student-paced</> : null}
         {position === null ? null : <> · {position}</>}
         {state.reveal ? <> · {paced ? "answers showing" : "answer showing"}</> : null}
@@ -362,10 +371,6 @@ export function HostLobby({
             <p data-testid="join-code" className="mt-3 font-mono text-3xl text-ink-2 line-through">
               {formatSessionCode(code)}
             </p>
-            <p className="mt-3 text-sm text-ink-2">
-              This session has ended. The code no longer works, and an ended session cannot be
-              reopened. Start a new one from the bank.
-            </p>
             <p className="mt-4">
               <Link
                 href={reportPath(sessionId)}
@@ -386,9 +391,6 @@ export function HostLobby({
             {qrCode}
             <p data-testid="join-url" className="mt-3 font-mono text-sm break-all text-ink-2">
               {studentUrl}
-            </p>
-            <p className="mt-3 text-sm text-ink-2">
-              Students join with this code. It stops working the moment the session ends.
             </p>
           </>
         )}
@@ -453,6 +455,8 @@ export function HostLobby({
           onCommand={(command) => void run(command)}
         />
       )}
+
+      {record === undefined ? null : <HostRecord record={record} position={state.position} />}
 
       <HostResults
         sessionId={sessionId}

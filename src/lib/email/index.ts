@@ -3,7 +3,8 @@
  * from a Client Component. `noClientEmail.test.ts` fails the build if a browser bundle reaches it.
  *
  * Magic links do not come through here: Supabase Auth sends those itself, over Resend's SMTP
- * (docs/05 §7.7). This is for the app's own transactional mail, such as reminders (#212).
+ * (docs/05 §7.7). This is for the app's own transactional mail: reminders (#212) and the welcome
+ * email that confirms a new account's address (#360).
  */
 import { parseSender, readEmailConfig } from "./config";
 import { createMailpitMailer } from "./mailpit";
@@ -32,10 +33,14 @@ const LOCAL_SENDER = { name: "LeaRN", email: "learn@learn.test" };
  * - RESEND_API_KEY set: Resend, from EMAIL_FROM.
  * - No key, local development or tests (not a production build, not on Vercel): the local stack's
  *   Mailpit, where the magic links already land.
+ * - No key, a production build off Vercel that names SUPABASE_MAILBOX_URL: that Mailpit. This is
+ *   the e2e run (#360), which serves `next start` against the local stack and reads the welcome
+ *   email from the same mailbox as the sign-in links.
  * - No key anywhere else: every send fails with a `config` EmailError naming RESEND_API_KEY.
  */
 export function createMailer(env: MailerEnv, fetchImpl: typeof fetch = fetch): Mailer {
-  const isLocal = env.NODE_ENV !== "production" && !env.VERCEL;
+  const namedMailbox = Boolean(env.SUPABASE_MAILBOX_URL?.trim());
+  const isLocal = !env.VERCEL && (env.NODE_ENV !== "production" || namedMailbox);
   if (!env.RESEND_API_KEY?.trim() && isLocal) {
     return createMailpitMailer(
       {

@@ -9,6 +9,7 @@ import {
   folderWriteError,
   MAX_FOLDER_DEPTH,
   moveSummary,
+  NOT_IN_A_FOLDER,
   type FolderRow,
 } from "./folders";
 
@@ -23,6 +24,9 @@ const FAILED = {
   delete: "The folder could not be deleted. Try again.",
   move: "The selection could not be moved. Try again.",
 } as const;
+
+/** Said to a quiz with no folders inside it, where a new folder is no longer made (#411). */
+export const IN_THE_LIBRARY = "Folders now go in the library, and hold quizzes.";
 
 const fail = <T>(error: string): FolderWrite<T> => ({ ok: false, error });
 
@@ -51,6 +55,15 @@ export async function createFolder(
   client: Client,
   folder: NewFolder,
 ): Promise<FolderWrite<{ id: string }>> {
+  // #411: a quiz with no folders inside it gets none. Its page offers no control for one, and
+  // this holds the same line for a stale page or a hand-made request.
+  const { count, error: countError } = await client
+    .from("bank_folders")
+    .select("id", { count: "exact", head: true })
+    .eq("bank_id", folder.bankId);
+  if (countError) return fail(FAILED.create);
+  if (!count) return fail(IN_THE_LIBRARY);
+
   if (folder.parentId) {
     // The database refuses a fifth level too; checking first gives the plain reason every time.
     const { data: parent, error } = await client
@@ -163,7 +176,7 @@ export async function moveToFolder(
   move: FolderMove,
 ): Promise<FolderWrite<{ message: string }>> {
   // The destination's path names it in the summary; an unknown folder is refused before moving.
-  let destination = "Unfiled";
+  let destination = NOT_IN_A_FOLDER;
   if (move.folderId) {
     let folders: FolderRow[];
     try {

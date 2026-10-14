@@ -97,7 +97,7 @@ describe("EhrContent", () => {
 
   it("is a tablist whose panel is labelled by its tab", () => {
     render(<Harness />);
-    const list = screen.getByRole("tablist", { name: "Patient record sections" });
+    const list = screen.getByRole("tablist", { name: "Patient record tabs" });
     expect(within(list).getAllByRole("tab")).toHaveLength(4);
     const panel = screen.getByRole("tabpanel", { name: "History & Physical" });
     expect(within(panel).getByText(/total hip arthroplasty/)).toBeInTheDocument();
@@ -180,6 +180,6 @@ describe("EhrContent", () => {
         onSelectTime={() => {}}
       />,
     );
-    expect(screen.getByText(/Nothing was charted/)).toBeInTheDocument();
+    expect(screen.getByText(/No entries at this time/)).toBeInTheDocument();
   });
 });

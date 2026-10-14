@@ -15,14 +15,24 @@ export interface ChoosePasswordFormProps {
   email: string;
   /** Where to go afterwards, already made safe by the page. */
   next: string;
+  /**
+   * Offers "Not now". False when the account's earlier password has just been retired
+   * (`endEarlierAccess`), so the person in front of the page has no password until they choose one.
+   */
+  skippable?: boolean;
 }
 
 const INITIAL: ChoosePasswordState = { status: "idle" };
 const LINK =
   "tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline";
 
-/** Chooses or changes the signed-in person's password. Always skippable: the emailed link still works. */
-export function ChoosePasswordForm({ action, email, next }: ChoosePasswordFormProps) {
+/** Chooses or changes the signed-in person's password. Skippable unless told otherwise: the emailed link still works. */
+export function ChoosePasswordForm({
+  action,
+  email,
+  next,
+  skippable = true,
+}: ChoosePasswordFormProps) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
   const inputRef = useRef<HTMLInputElement>(null);
   const savedRef = useRef<HTMLHeadingElement>(null);
@@ -88,9 +98,11 @@ export function ChoosePasswordForm({ action, email, next }: ChoosePasswordFormPr
       <Button type="submit" variant="primary" disabled={pending} aria-disabled={pending}>
         {pending ? "Saving…" : "Save password"}
       </Button>
-      <Link href={next} className={LINK}>
-        Not now
-      </Link>
+      {skippable ? (
+        <Link href={next} className={LINK}>
+          Not now
+        </Link>
+      ) : null}
     </form>
   );
 }

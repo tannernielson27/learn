@@ -14,11 +14,11 @@ async function expectNoAxeViolations(page: Page): Promise<void> {
 }
 
 async function addPublishedItem(page: Page, bankName: string, stem: string): Promise<void> {
-  await page.getByRole("link", { name: "New item", exact: true }).click();
+  await page.getByRole("link", { name: "New question", exact: true }).click();
   await page.getByRole("button", { name: "Multiple Choice", exact: true }).click();
   await fillMultipleChoice(page, stem, ["Bradycardia", "Tachycardia", "Hypotension", "Edema"], 1);
   await publishOpenItem(page);
-  await page.getByRole("link", { name: "Back to bank", exact: true }).click();
+  await page.getByRole("link", { name: "Back to quiz", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName, exact: true })).toBeVisible();
 }
 
@@ -39,8 +39,8 @@ test("share a bank for practice, be warned on assigning it, and stop sharing", a
 
   await page.goto("/author");
   const bankName = `Cardiac week ${project} ${Date.now()}`;
-  await page.getByRole("textbox", { name: "Bank name", exact: true }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank", exact: true }).click();
+  await page.getByRole("textbox", { name: "Quiz name", exact: true }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName, exact: true })).toBeVisible();
   await addPublishedItem(page, bankName, "Which finding is expected in heart failure?");
   await addPublishedItem(page, bankName, "Which finding needs follow-up first?");
@@ -67,7 +67,7 @@ test("share a bank for practice, be warned on assigning it, and stop sharing", a
   // The bank list carries the badge.
   await page.goto("/author");
   const bankLink = page
-    .getByRole("list", { name: "Item banks", exact: true })
+    .getByRole("list", { name: "Quizzes", exact: true })
     .getByRole("link")
     .filter({ hasText: bankName });
   await expect(bankLink.getByText(badge, { exact: true })).toBeVisible();
@@ -78,7 +78,7 @@ test("share a bank for practice, be warned on assigning it, and stop sharing", a
   await page.getByRole("link", { name: "Assign", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/banks\/[0-9a-f-]{36}\/assign$/);
   await expect(page.getByRole("note")).toHaveText(
-    `Students in ${className} can see the answers to 2 of these items in practice.`,
+    `Students in ${className} can see the answers to 2 of these questions in practice.`,
   );
   await page
     .getByRole("combobox", { name: "Class", exact: true })
@@ -94,7 +94,7 @@ test("share a bank for practice, be warned on assigning it, and stop sharing", a
   // Stop sharing from the class page, by keyboard; the confirmation says seen answers stay seen.
   const classPractice = page.getByRole("region", { name: "Practice", exact: true });
   await expect(
-    classPractice.getByRole("list", { name: "Banks shared for practice", exact: true }),
+    classPractice.getByRole("list", { name: "Quizzes shared for practice", exact: true }),
   ).toContainText(bankName);
   const stop = classPractice.getByRole("button", {
     name: `Stop sharing ${bankName}`,
@@ -119,7 +119,7 @@ test("share a bank for practice, be warned on assigning it, and stop sharing", a
   ).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(
-    classPractice.getByText("No bank is shared with this class for practice.", { exact: true }),
+    classPractice.getByText("No quiz is shared with this class.", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 2, name: "Practice", exact: true }),
