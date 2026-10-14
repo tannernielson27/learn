@@ -61,10 +61,10 @@ export function AssignmentHistory({ rows, classes }: AssignmentHistoryProps) {
                 href={studentResultsPath(row.id)}
                 className="tap-target inline-flex items-center font-medium break-words text-ink-1 underline decoration-line-strong underline-offset-4 hover:decoration-accent"
               >
-                {row.title}
+                {`Results for ${row.title}`}
               </Link>
               <span className="text-sm break-words text-ink-2">
-                {classLabel(info)} · Closed{" "}
+                <span>{classLabel(info)}</span> · Closed{" "}
                 <ClassTime
                   iso={row.closesAt}
                   timeZone={info?.timeZone ?? DEFAULT_CLASS_TIME_ZONE}

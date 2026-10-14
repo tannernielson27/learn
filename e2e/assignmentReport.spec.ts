@@ -130,13 +130,13 @@ test("an instructor sees progress while open, then the report and its CSV after 
   await page.screenshot({ path: shot("assignment-report-students"), fullPage: true });
 
   const views = page.getByRole("navigation", { name: "Report views", exact: true });
-  await views.getByRole("link", { name: "Items", exact: true }).click();
+  await views.getByRole("link", { name: "Questions", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${reportPath}\\?view=items$`));
   await expect(page.getByRole("columnheader", { name: "Correct", exact: true })).toBeVisible();
   await expectNoAxeViolations(page);
   await page.screenshot({ path: shot("assignment-report-items"), fullPage: true });
 
-  await views.getByRole("link", { name: "CJMM steps", exact: true }).click();
+  await views.getByRole("link", { name: "Clinical judgment steps", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${reportPath}\\?view=steps$`));
   await expectNoAxeViolations(page);
   await page.screenshot({ path: shot("assignment-report-steps"), fullPage: true });

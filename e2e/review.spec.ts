@@ -23,7 +23,7 @@ test("a flagged step can be found again and returned to", async ({ page }, testI
 
   await page.getByRole("button", { name: /sudden shortness of breath/ }).click();
   await page.getByRole("button", { name: "Submit" }).click();
-  await page.getByRole("button", { name: "Next step" }).click();
+  await page.getByRole("button", { name: "Next question" }).click();
   await expect(page.locator("[data-step-indicator]")).toContainText("Step 2 of 6");
 
   await page.getByRole("button", { name: "Review" }).click();

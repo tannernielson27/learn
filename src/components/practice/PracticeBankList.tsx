@@ -37,7 +37,11 @@ export function PracticeBankList({ banks, showWorkspace = false }: PracticeBankL
               {bank.name}
             </Link>
             <span className="tabular text-sm break-words text-ink-2">
-              {workspace ? `${workspace} · ` : null}
+              {workspace ? (
+                <>
+                  <span>{workspace}</span> ·{" "}
+                </>
+              ) : null}
               {practiceProgressLabel(bank)}
             </span>
           </li>
