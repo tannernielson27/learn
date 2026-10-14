@@ -1,3 +1,4 @@
+import { DRAFTS, isDraftType, type DraftType } from "./draft";
 import { FIXTURES } from "./fixtures";
 import { ITEM_TYPE_LABELS, ITEM_TYPES, SCORING_MODEL_LABELS, type ItemType } from "./labels";
 import { ITEM_SCHEMAS } from "./schemas";
@@ -16,6 +17,7 @@ export const NGN_REGISTRY = Object.fromEntries(
       schema: ITEM_SCHEMAS[type],
       score: SCORERS[type],
       fixture: FIXTURES[type],
+      draft: isDraftType(type) ? DRAFTS[type] : undefined,
     },
   ]),
 ) as {
@@ -25,5 +27,7 @@ export const NGN_REGISTRY = Object.fromEntries(
     schema: (typeof ITEM_SCHEMAS)[T];
     score: (typeof SCORERS)[T];
     fixture: (typeof FIXTURES)[T];
+    /** The AI draft shape and its converters (#337, #338); undefined until the type has one. */
+    draft: T extends DraftType ? (typeof DRAFTS)[T] : undefined;
   };
 };
