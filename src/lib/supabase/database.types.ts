@@ -528,6 +528,7 @@ export type Database = {
           created_by: string | null;
           folder_path: string;
           id: string;
+          library_folder_id: string | null;
           name: string;
           org_id: string;
           updated_at: string;
@@ -537,6 +538,7 @@ export type Database = {
           created_by?: string | null;
           folder_path?: string;
           id?: string;
+          library_folder_id?: string | null;
           name: string;
           org_id: string;
           updated_at?: string;
@@ -546,6 +548,7 @@ export type Database = {
           created_by?: string | null;
           folder_path?: string;
           id?: string;
+          library_folder_id?: string | null;
           name?: string;
           org_id?: string;
           updated_at?: string;
@@ -557,6 +560,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "item_banks_library_folder_fkey";
+            columns: ["library_folder_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "library_folders";
+            referencedColumns: ["id", "org_id"];
           },
           {
             foreignKeyName: "item_banks_org_id_fkey";
@@ -688,6 +698,58 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "bank_folders";
             referencedColumns: ["id", "bank_id"];
+          },
+        ];
+      };
+      library_folders: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          depth: number;
+          id: string;
+          name: string;
+          org_id: string;
+          parent_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          depth?: number;
+          id?: string;
+          name: string;
+          org_id: string;
+          parent_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          depth?: number;
+          id?: string;
+          name?: string;
+          org_id?: string;
+          parent_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "library_folders_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "library_folders_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "orgs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "library_folders_parent_fkey";
+            columns: ["parent_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "library_folders";
+            referencedColumns: ["id", "org_id"];
           },
         ];
       };

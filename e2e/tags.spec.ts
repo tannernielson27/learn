@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
 import { signInAsNewAuthor } from "./signIn";
 import { openImport } from "./authoringHelpers";
+import { giveQuizAnInQuizFolder } from "./inQuizFolders";
 
 // Needs the local Supabase stack, like auth.spec.ts. CI runs it in the `auth-e2e` job.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
@@ -55,6 +56,8 @@ test("an author tags items, then filters the bank to Physiological Adaptation pl
   await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
   await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
+  // #411: folder views exist only in a quiz that has a folder inside it, as older quizzes do.
+  await giveQuizAnInQuizFolder(page, request, "Week 1");
 
   await openImport(page);
 

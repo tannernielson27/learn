@@ -15,8 +15,8 @@ export interface MoveToFolderFormProps {
 const INITIAL: FolderFormState = { status: "idle" };
 
 /**
- * Moves the checked questions and case studies to a folder, or out of every folder. Moving changes
- * only where content is filed.
+ * Moves what is checked to a folder, or out of every folder: questions and case studies inside a
+ * quiz, or quizzes in the library (#411). Moving changes only where they are filed.
  */
 export function MoveToFolderForm({ id, folders, action }: MoveToFolderFormProps) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
