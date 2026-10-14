@@ -1,11 +1,16 @@
 import {
+  CASE_STUDY_STEP_COUNT,
+  FIRST_STEP,
   ehrBlockSchema,
   ehrRecordSchema,
   ehrTabSchema,
+  tabAccessSchema,
   type EhrBlock,
   type EhrRecord,
   type EhrTab,
+  type TabAccess,
 } from "@/lib/ngn/schemas";
+import type { CjmmStep } from "@/lib/ngn/types";
 import { isRecord, storedString, storedStrings } from "./storedValues";
 
 /** Enough for any teaching record; the draft schema refuses more. */
@@ -52,13 +57,21 @@ export interface EhrVitalsRowForm {
   flag: EhrFlag;
 }
 
-export type EhrTableBlockForm = { kind: "table"; columns: string[]; rows: string[][] };
-export type EhrVitalsBlockForm = { kind: "vitals"; rows: EhrVitalsRowForm[] };
+/**
+ * The case study step a time point or block first shows at (#336). Absent means Step 1, and the
+ * form never holds 1, so a record nobody staged saves exactly as it did before the field existed.
+ */
+export interface FromStep {
+  fromStep?: CjmmStep;
+}
+
+export type EhrTableBlockForm = { kind: "table"; columns: string[]; rows: string[][] } & FromStep;
+export type EhrVitalsBlockForm = { kind: "vitals"; rows: EhrVitalsRowForm[] } & FromStep;
 export type EhrBlockForm =
-  { kind: "markdown"; value: string } | EhrTableBlockForm | EhrVitalsBlockForm;
+  ({ kind: "markdown"; value: string } & FromStep) | EhrTableBlockForm | EhrVitalsBlockForm;
 export type EhrBlockKind = EhrBlockForm["kind"];
 
-export interface EhrTimePointForm {
+export interface EhrTimePointForm extends FromStep {
   id: string;
   label: string;
 }
@@ -70,6 +83,8 @@ export interface EhrTabForm {
   /** "" when the section is charted at every time. */
   timePointId: string;
   blocks: EhrBlockForm[];
+  /** Hidden, locked or open at each step; absent means open at every step (#336). */
+  stepAccess?: TabAccess[];
 }
 
 export interface EhrFormValues {
@@ -90,18 +105,47 @@ function unusedId(prefix: string, taken: readonly string[]): string {
 }
 
 // ---------------------------------------------------------------------------
+// Steps (#336): carried as they are, with Step 1 and Open at every step as nothing
+// ---------------------------------------------------------------------------
+
+/** `{ fromStep }` when it is a whole step after the first, and nothing otherwise. */
+export function fromStepField(fromStep: unknown): FromStep {
+  return typeof fromStep === "number" &&
+    Number.isInteger(fromStep) &&
+    fromStep > FIRST_STEP &&
+    fromStep <= CASE_STUDY_STEP_COUNT
+    ? { fromStep: fromStep as CjmmStep }
+    : {};
+}
+
+/** `{ stepAccess }` when it is one value per step and not open at every one; nothing otherwise. */
+export function stepAccessField(stepAccess: unknown): { stepAccess?: TabAccess[] } {
+  if (!Array.isArray(stepAccess) || stepAccess.length !== CASE_STUDY_STEP_COUNT) return {};
+  const access = stepAccess.map((value) => tabAccessSchema.safeParse(value).data);
+  if (access.some((value) => value === undefined)) return {};
+  return access.every((value) => value === "open") ? {} : { stepAccess: access as TabAccess[] };
+}
+
+/** A time point, with its step only when it has one past the first. */
+function timePointOf({ id, label, fromStep }: { id: string; label: string; fromStep?: unknown }) {
+  return { id, label, ...fromStepField(fromStep) };
+}
+
+// ---------------------------------------------------------------------------
 // Record <-> form
 // ---------------------------------------------------------------------------
 
 function blockToForm(block: EhrBlock): EhrBlockForm {
+  const step = fromStepField(block.fromStep);
   switch (block.kind) {
     case "markdown":
-      return { kind: "markdown", value: block.value };
+      return { kind: "markdown", value: block.value, ...step };
     case "table":
       return {
         kind: "table",
         columns: [...block.columns],
         rows: block.rows.map((row) => [...row]),
+        ...step,
       };
     case "vitals":
       return {
@@ -112,6 +156,7 @@ function blockToForm(block: EhrBlock): EhrBlockForm {
           unit: row.unit ?? "",
           flag: row.flag ?? "",
         })),
+        ...step,
       };
   }
 }
@@ -126,28 +171,37 @@ export function toEhrForm(record: EhrRecord): EhrFormValues {
       setting: header.setting,
       admissionDate: header.admissionDate ?? "",
     },
-    timePoints: record.timePoints.map(({ id, label }) => ({ id, label })),
+    timePoints: record.timePoints.map(timePointOf),
     tabs: record.tabs.map((tab) => ({
       id: tab.id,
       kind: tab.kind,
       title: tab.title,
       timePointId: tab.timePointId ?? "",
       blocks: tab.blocks.map(blockToForm),
+      ...stepAccessField(tab.stepAccess),
     })),
   };
 }
 
 function blockFromForm(block: EhrBlockForm): unknown {
-  if (block.kind !== "vitals") return block;
-  return {
-    kind: "vitals",
-    rows: block.rows.map((row) => ({
-      label: row.label,
-      value: row.value,
-      ...(row.unit ? { unit: row.unit } : {}),
-      ...(row.flag ? { flag: row.flag } : {}),
-    })),
-  };
+  const step = fromStepField(block.fromStep);
+  switch (block.kind) {
+    case "markdown":
+      return { kind: "markdown", value: block.value, ...step };
+    case "table":
+      return { kind: "table", columns: block.columns, rows: block.rows, ...step };
+    case "vitals":
+      return {
+        kind: "vitals",
+        rows: block.rows.map((row) => ({
+          label: row.label,
+          value: row.value,
+          ...(row.unit ? { unit: row.unit } : {}),
+          ...(row.flag ? { flag: row.flag } : {}),
+        })),
+        ...step,
+      };
+  }
 }
 
 function tabFromForm(tab: EhrTabForm, blocks: unknown[]) {
@@ -157,6 +211,7 @@ function tabFromForm(tab: EhrTabForm, blocks: unknown[]) {
     title: tab.title,
     blocks,
     ...(tab.timePointId ? { timePointId: tab.timePointId } : {}),
+    ...stepAccessField(tab.stepAccess),
   };
 }
 
@@ -176,7 +231,7 @@ export function fromEhrForm(values: EhrFormValues): unknown {
       setting: patient.setting,
       ...(patient.admissionDate.trim() ? { admissionDate: patient.admissionDate } : {}),
     },
-    timePoints: values.timePoints.map(({ id, label }) => ({ id, label })),
+    timePoints: values.timePoints.map(timePointOf),
     tabs: values.tabs.map((tab) => tabFromForm(tab, tab.blocks.map(blockFromForm))),
   };
 }
@@ -193,9 +248,31 @@ export function emptyEhrForm(): EhrFormValues {
 // A record on a standalone item (#89)
 // ---------------------------------------------------------------------------
 
+/**
+ * A record with no steps in it. An item's record cannot have them (`standaloneEhrRecordSchema`)
+ * and its editor offers no control for them, so an item's form never holds them.
+ */
+export function withoutSteps(values: EhrFormValues): EhrFormValues {
+  return {
+    ...values,
+    timePoints: values.timePoints.map(({ id, label }) => ({ id, label })),
+    tabs: values.tabs.map((tab) => ({
+      id: tab.id,
+      kind: tab.kind,
+      title: tab.title,
+      timePointId: tab.timePointId,
+      blocks: tab.blocks.map((block) => {
+        const copy = { ...block };
+        delete copy.fromStep;
+        return copy;
+      }),
+    })),
+  };
+}
+
 /** An item's record as its form holds it: in the record editor's shape, or not at all. */
 export function recordFormOf(ehr: EhrRecord | undefined): { ehr?: EhrFormValues } {
-  return ehr ? { ehr: toEhrForm(ehr) } : {};
+  return ehr ? { ehr: withoutSteps(toEhrForm(ehr)) } : {};
 }
 
 /**
@@ -210,7 +287,7 @@ export function recordInputOf(ehr: EhrFormValues | undefined): { ehr?: EhrRecord
 export function storedRecordFormOf(stored: Record<string, unknown>): { ehr?: EhrFormValues } {
   return stored.ehr === undefined || stored.ehr === null
     ? {}
-    : { ehr: ehrFormFromStored(stored.ehr) };
+    : { ehr: withoutSteps(ehrFormFromStored(stored.ehr)) };
 }
 
 // ---------------------------------------------------------------------------
@@ -406,6 +483,11 @@ export function updateVitalsRow(
 
 function blockFromStored(value: unknown): EhrBlockForm | null {
   if (!isRecord(value)) return null;
+  const block = blockShapeFromStored(value);
+  return block ? { ...block, ...fromStepField(value.fromStep) } : null;
+}
+
+function blockShapeFromStored(value: Record<string, unknown>): EhrBlockForm | null {
   if (value.kind === "markdown" && typeof value.value === "string") {
     return { kind: "markdown", value: value.value };
   }
@@ -471,10 +553,13 @@ export function ehrFormFromStored(stored: unknown): EhrFormValues {
   const pointIds = claimIds(storedPoints, "t");
   const timePoints =
     storedPoints.length > 0
-      ? storedPoints.map((point, at) => ({
-          id: pointIds[at]!,
-          label: storedString((point as Record<string, unknown>).label),
-        }))
+      ? storedPoints.map((point, at) =>
+          timePointOf({
+            id: pointIds[at]!,
+            label: storedString((point as Record<string, unknown>).label),
+            fromStep: (point as Record<string, unknown>).fromStep,
+          }),
+        )
       : empty.timePoints;
   const times = new Set(timePoints.map((point) => point.id));
 
@@ -493,6 +578,7 @@ export function ehrFormFromStored(stored: unknown): EhrFormValues {
         .map(blockFromStored)
         .filter((block): block is EhrBlockForm => block !== null)
         .slice(0, EHR_LIMITS.blocks),
+      ...stepAccessField(tab.stepAccess),
     };
   });
 
@@ -516,10 +602,9 @@ export function previewRecord(values: EhrFormValues): EhrRecord | null {
   const header = ehrRecordSchema.shape.patientHeader.safeParse(input.patientHeader);
   if (!header.success) return null;
 
-  const timePoints = values.timePoints.map((point, at) => ({
-    id: point.id,
-    label: point.label.trim() ? point.label : `Time ${at + 1}`,
-  }));
+  const timePoints = values.timePoints.map((point, at) =>
+    timePointOf({ ...point, label: point.label.trim() ? point.label : `Time ${at + 1}` }),
+  );
   const times = new Set(timePoints.map((point) => point.id));
   const tabs = values.tabs.flatMap((tab) => {
     if (tab.timePointId && !times.has(tab.timePointId)) return [];

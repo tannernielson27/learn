@@ -68,6 +68,16 @@ describe("a patient record in an item editor", () => {
     expect(onSaveDraft.mock.calls[0]![0].ehr).toStrictEqual(emptyEhrForm());
   }, 30_000);
 
+  // #336: an item's record cannot have steps, so only a case study's record editor offers them.
+  it("offers no step controls on an item's record", async () => {
+    setup(trend());
+    expect(screen.getByLabelText("Age in years")).toBeInTheDocument();
+    expect(screen.queryByText(/Shows from/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Open at Steps/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Preview at")).not.toBeInTheDocument();
+    expect(document.querySelector("[id*='stepAccess'], [id*='fromStep']")).toBeNull();
+  }, 30_000);
+
   it("asks before removing the record, and keeps it when the author says so", async () => {
     const { onSaveDraft, user } = setup(trend());
     await user.click(button("Remove patient record"));

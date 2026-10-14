@@ -20,8 +20,10 @@ import {
   type EhrSex,
   type EhrTabKind,
 } from "@/lib/authoring/forms/ehr";
+import { setTabStepAccess, setTimePointFromStep } from "@/lib/authoring/forms/ehrSteps";
 import { Sr, fieldClass, type FieldHelpers, type FocusLater } from "./EhrBlockEditors";
 import { EhrSectionEditor, moveButtonId, type SectionPatch } from "./EhrSectionEditor";
+import { FromStepSelect } from "./EhrStepControls";
 import { issueMessageId } from "./issueIds";
 
 const SEXES: { value: EhrSex; label: string }[] = [
@@ -40,7 +42,22 @@ export function recordFieldId(idPrefix: string, field: string): string {
 export function focusRecordField(idPrefix: string, field: string): void {
   const byPath = (path: string) => document.getElementById(recordFieldId(idPrefix, path));
   // A vitals block's own problem ("needs at least one row") has no field of its own.
-  (byPath(field) ?? byPath(`${field}.rows.0.label`) ?? byPath("patient.age"))?.focus();
+  const target = byPath(field) ?? byPath(`${field}.rows.0.label`) ?? byPath("patient.age");
+  // A tab's step row is folded away until opened (#336).
+  const folded = target?.closest("details");
+  if (folded && !folded.open) folded.open = true;
+  target?.focus();
+}
+
+/**
+ * How a tab's step controls are named ("Lab Results, Step 3"): its title, with its number when
+ * another tab has the same title, or "Tab 3" until it has one, so no two controls share a name.
+ */
+function stepRowName(tabs: readonly { title: string }[], index: number): string {
+  const title = tabs[index]!.title.trim();
+  if (!title) return `Tab ${index + 1}`;
+  const shared = tabs.filter((tab) => tab.title.trim() === title).length > 1;
+  return shared ? `${title} (tab ${index + 1})` : title;
 }
 
 export interface EhrRecordFieldsProps {
@@ -57,6 +74,11 @@ export interface EhrRecordFieldsProps {
   issueFieldPrefix?: string;
   /** "h3" when the record sits under its own heading, as it does inside an item editor. */
   sectionsHeading?: "h2" | "h3";
+  /**
+   * A case study's record (#336): when each time point, tab and block shows. Never on an item's
+   * record, which cannot have steps.
+   */
+  steps?: boolean;
 }
 
 /**
@@ -72,6 +94,7 @@ export function EhrRecordFields({
   issueIdPrefix,
   issueFieldPrefix = "",
   sectionsHeading: SectionsHeading = "h2",
+  steps = false,
 }: EhrRecordFieldsProps) {
   const [newKind, setNewKind] = useState<EhrTabKind>("history_physical");
 
@@ -157,6 +180,21 @@ export function EhrRecordFields({
       <p className="rounded-sm border border-line bg-surface-1 px-4 py-3 text-sm text-ink-1">
         Fictional patients only. Never enter real names, dates or details.
       </p>
+      {steps ? (
+        <p className="text-sm text-ink-2">
+          Set when students see each time point, tab and block.{" "}
+          {/* A new tab, so the patient record being written stays open. Underlined, as a link
+              inside a line of text must be (axe link-in-text-block). */}
+          <a
+            href="/help/items#case-study"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-accent-ink underline underline-offset-4"
+          >
+            How a case study unfolds<span className="sr-only"> (opens in a new tab)</span>
+          </a>
+        </p>
+      ) : null}
 
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-1 text-sm font-medium text-ink-1">Patient</legend>
@@ -222,6 +260,19 @@ export function EhrRecordFields({
                   }}
                 />
               </div>
+              {steps ? (
+                <div className="w-36">
+                  <FromStepSelect
+                    field={`timePoints.${index}.fromStep`}
+                    where={`Time point ${index + 1}, `}
+                    fromStep={point.fromStep}
+                    fields={fields}
+                    onChange={(step) =>
+                      change((current) => setTimePointFromStep(current, index, step))
+                    }
+                  />
+                </div>
+              ) : null}
               {values.timePoints.length > 1 ? (
                 <Button
                   size="sm"
@@ -274,6 +325,13 @@ export function EhrRecordFields({
             }
             onBlockChange={(blockIndex, block) =>
               change((current) => updateBlock(current, index, blockIndex, block))
+            }
+            stepRowName={stepRowName(values.tabs, index)}
+            onStepAccess={
+              steps
+                ? (step, access) =>
+                    change((current) => setTabStepAccess(current, index, step, access))
+                : undefined
             }
           />
         ))}

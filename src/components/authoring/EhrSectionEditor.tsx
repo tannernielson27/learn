@@ -11,6 +11,10 @@ import {
   type EhrTabKind,
   type EhrTimePointForm,
 } from "@/lib/authoring/forms/ehr";
+import { setBlockFromStep } from "@/lib/authoring/forms/ehrSteps";
+import type { TabAccess } from "@/lib/ngn/schemas";
+import type { CjmmStep } from "@/lib/ngn/types";
+import { FromStepSelect, TabStepAccess } from "./EhrStepControls";
 import {
   EhrBlockEditor,
   Sr,
@@ -46,6 +50,10 @@ export interface EhrSectionEditorProps {
   onAddBlock: (kind: EhrBlockKind) => void;
   onRemoveBlock: (blockIndex: number) => void;
   onBlockChange: (blockIndex: number, block: EhrBlockForm) => void;
+  /** A case study's record (#336): the tab's step row and each block's "Shows from". */
+  onStepAccess?: (step: CjmmStep, access: TabAccess) => void;
+  /** What the step row's controls are named by: the tab's title, unique among the tabs. */
+  stepRowName?: string;
 }
 
 /** One tab of the patient record: what it is, its title, when it was charted, and its blocks. */
@@ -63,8 +71,11 @@ export function EhrSectionEditor({
   onAddBlock,
   onRemoveBlock,
   onBlockChange,
+  onStepAccess,
+  stepRowName,
 }: EhrSectionEditorProps) {
   const number = index + 1;
+  const steps = onStepAccess !== undefined;
   const path = `tabs.${index}`;
   const control = (part: string) => ({
     id: fields.idFor(`${path}.${part}`),
@@ -131,11 +142,32 @@ export function EhrSectionEditor({
         </div>
       </div>
 
+      {onStepAccess ? (
+        <TabStepAccess
+          path={path}
+          name={stepRowName ?? `Tab ${number}`}
+          stepAccess={tab.stepAccess}
+          fields={fields}
+          onChange={onStepAccess}
+        />
+      ) : null}
+
       {tab.blocks.map((block, blockIndex) => (
         <div key={blockIndex} className="flex flex-col gap-2 border-t border-line pt-3">
           <p className="text-sm font-medium text-ink-1">
             Block {blockIndex + 1}: {BLOCK_LABELS[block.kind]}
           </p>
+          {steps ? (
+            <div className="max-w-48">
+              <FromStepSelect
+                field={`${path}.blocks.${blockIndex}.fromStep`}
+                where={`Tab ${number}, block ${blockIndex + 1}, `}
+                fromStep={block.fromStep}
+                fields={fields}
+                onChange={(step) => onBlockChange(blockIndex, setBlockFromStep(block, step))}
+              />
+            </div>
+          ) : null}
           <EhrBlockEditor
             block={block}
             path={`${path}.blocks.${blockIndex}`}

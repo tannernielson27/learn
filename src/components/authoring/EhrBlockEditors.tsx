@@ -86,7 +86,7 @@ function TextBlockEditor({
         value={block.value}
         aria-invalid={fields.invalid(path)}
         aria-describedby={[hint, fields.describedBy(path)].filter(Boolean).join(" ")}
-        onChange={(event) => onChange({ kind: "markdown", value: event.target.value })}
+        onChange={(event) => onChange({ ...block, value: event.target.value })}
       />
       <p id={hint} className="text-xs text-ink-2">
         A blank line between paragraphs; &quot;- &quot; for a list; &quot;0800: &quot; for a timed
