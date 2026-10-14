@@ -95,8 +95,8 @@ export function folderOptions(rows: readonly FolderRow[]): FolderOption[] {
 
 /**
  * Whether a quiz shows folders inside it (#411). Folders now live in the library and hold quizzes;
- * a new quiz offers none. A quiz that already has one keeps them, read and write, until #417
- * turns them into quizzes. When its last one is deleted, the controls go too.
+ * a new quiz offers none. A quiz that already has one keeps them, read and write, until they are
+ * deleted or turned into quizzes (#417). When its last one goes, the controls go too.
  */
 export function offersInQuizFolders(folders: readonly FolderRow[]): boolean {
   return folders.length > 0;
@@ -131,6 +131,15 @@ export function parseMoveForm(formData: FormData): MoveFormResult {
   else if (typeof folder === "string" && isUuid(folder)) folderId = folder;
   else return { ok: false, error: "Choose a folder to move to." };
 
+  const selection = parseSelection(formData);
+  return selection.ok ? { ...selection, folderId } : selection;
+}
+
+export type SelectionResult =
+  { ok: true; itemIds: string[]; caseStudyIds: string[] } | { ok: false; error: string };
+
+/** Reads the selected `item` and `caseStudy` ids of a move, at most MOVE_LIMIT of them. */
+export function parseSelection(formData: FormData): SelectionResult {
   const rawItems = formData.getAll("item");
   const rawCaseStudies = formData.getAll("caseStudy");
   // Bounded before any id is read, so a flood of fields costs no more than counting them.
@@ -145,7 +154,7 @@ export function parseMoveForm(formData: FormData): MoveFormResult {
   if (itemIds.length + caseStudyIds.length === 0) {
     return { ok: false, error: "Select at least one question or case study to move." };
   }
-  return { ok: true, folderId, itemIds, caseStudyIds };
+  return { ok: true, itemIds, caseStudyIds };
 }
 
 function readIds(values: FormDataEntryValue[]): string[] | null {

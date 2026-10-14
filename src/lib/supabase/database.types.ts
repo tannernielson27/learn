@@ -1569,6 +1569,15 @@ export type Database = {
         };
         Returns: Json;
       };
+      move_to_quiz: {
+        Args: {
+          case_study_ids: string[];
+          item_ids: string[];
+          source_bank: string;
+          target_bank: string;
+        };
+        Returns: Json;
+      };
       my_assignment_history: {
         Args: never;
         Returns: {
@@ -1874,6 +1883,7 @@ export type Database = {
         }[];
       };
       take_rate_limit: { Args: { action_name: string }; Returns: boolean };
+      turn_folder_into_quiz: { Args: { target_folder: string }; Returns: Json };
     };
     Enums: {
       content_status: "draft" | "published" | "archived";
