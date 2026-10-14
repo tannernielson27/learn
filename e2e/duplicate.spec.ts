@@ -67,7 +67,7 @@ test("an author duplicates a case study, changes step 3 in the copy, and the ori
 
   // Change step 3 in the copy.
   const rail = page.getByRole("navigation", { name: "Case study steps" });
-  const step3 = rail.getByRole("button", { name: /^Step 3:/ });
+  const step3 = rail.getByRole("button", { name: /^Step 3 of 6:/ });
   const stem = page.getByRole("textbox", { name: "Question stem", exact: true });
   await step3.click();
   await expect(stem).toHaveValue(originalStep3);
@@ -81,7 +81,7 @@ test("an author duplicates a case study, changes step 3 in the copy, and the ori
   await expect(copy).toContainText("6 of 6 steps");
   await original.click();
   await expect(page.getByRole("heading", { level: 1, name: title, exact: true })).toBeVisible();
-  await rail.getByRole("button", { name: /^Step 3:/ }).click();
+  await rail.getByRole("button", { name: /^Step 3 of 6:/ }).click();
   await expect(stem).toHaveValue(originalStep3);
 });
 

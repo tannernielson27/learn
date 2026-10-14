@@ -332,11 +332,15 @@ export function EditorShell<Values, Input extends ScoredInput>({
               <>
                 <p className="text-sm text-ink-2">
                   For a Trend question or a bowtie.{" "}
+                  {/* A new tab, so the question being written stays open. Underlined, as a link
+                      inside a line of text must be (axe link-in-text-block). */}
                   <a
                     href="/help/items#trend"
-                    className="text-accent-ink underline-offset-4 hover:underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent-ink underline underline-offset-4"
                   >
-                    How Trend works
+                    How Trend works<span className="sr-only"> (opens in a new tab)</span>
                   </a>
                 </p>
                 <div>

@@ -192,7 +192,9 @@ export function EhrRecordFields({
 
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-1 text-sm font-medium text-ink-1">Time points</legend>
-        <p className="text-sm text-ink-2">Two or more add a time selector.</p>
+        <p className="text-sm text-ink-2">
+          With two or more time points, the patient record gets a time selector.
+        </p>
         {values.timePoints.map((point, index) => {
           const field = `timePoints.${index}.label`;
           return (

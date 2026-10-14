@@ -589,7 +589,7 @@ test("an author writes a case study's patient record and reads it at two times",
   await page.reload();
   await expect(textbox("Tab 3, block 1, row 1, Value")).toHaveValue("118");
   const rail = page.getByRole("navigation", { name: "Case study steps" });
-  await expect(rail.getByRole("button", { name: /^Record/ })).toContainText("Ready");
+  await expect(rail.getByRole("button", { name: /^Patient record/ })).toContainText("Ready");
 });
 
 test("an author gives a matrix item a record at two times, publishes it, and plays it with the record", async ({
@@ -700,7 +700,7 @@ test("an author starts case study steps by type, edits them in place, and is ask
 
   // The record opens first.
   const rail = page.getByRole("navigation", { name: "Case study steps" });
-  await expect(rail.getByRole("button", { name: /^Record/ })).toHaveAttribute(
+  await expect(rail.getByRole("button", { name: /^Patient record/ })).toHaveAttribute(
     "aria-current",
     "step",
   );

@@ -92,3 +92,62 @@ describe("StepItemPanel", () => {
     expect(startStepItem).toHaveBeenCalledWith(CASE_ID, 2, "bowtie");
   });
 });
+
+// #413: a step's editor warns before a draft unpublishes its question, as a question's page does.
+describe("StepItemPanel and the step's editor", () => {
+  async function renderWithProbe(published: boolean) {
+    const { ItemEditorHostContext, useItemEditorHost } = await import("./ItemEditorHost");
+    const onDirtyChange = vi.fn();
+    const onStepStarted = vi.fn();
+    const seen: unknown[] = [];
+    function Probe() {
+      const host = useItemEditorHost();
+      seen.push(host);
+      return (
+        <>
+          <p>{host.published ? "Warned" : "Not warned"}</p>
+          <button type="button" onClick={() => host.onPublishedChange?.(false)}>
+            Save draft
+          </button>
+        </>
+      );
+    }
+    render(
+      <ItemEditorHostContext.Provider
+        value={{ inCaseStudy: true, record: null, onDirtyChange, onStepStarted }}
+      >
+        <StepItemPanel
+          caseStudyId={CASE_ID}
+          position={2}
+          typeLabel="Multiple Choice"
+          published={published}
+        >
+          <Probe />
+        </StepItemPanel>
+      </ItemEditorHostContext.Provider>,
+    );
+    return { lastHost: () => seen.at(-1), onDirtyChange, onStepStarted };
+  }
+
+  it("tells the editor its question is published, keeping the builder's own host", async () => {
+    const { lastHost, onDirtyChange, onStepStarted } = await renderWithProbe(true);
+    expect(screen.getByText("Warned")).toBeInTheDocument();
+    expect(lastHost()).toMatchObject({
+      inCaseStudy: true,
+      record: null,
+      onDirtyChange,
+      onStepStarted,
+    });
+  });
+
+  it("stops warning once a saved draft has unpublished it", async () => {
+    await renderWithProbe(true);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Save draft" }));
+    expect(screen.getByText("Not warned")).toBeInTheDocument();
+  });
+
+  it("does not warn for a draft question", async () => {
+    await renderWithProbe(false);
+    expect(screen.getByText("Not warned")).toBeInTheDocument();
+  });
+});

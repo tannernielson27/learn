@@ -4,7 +4,7 @@ import type { ReactElement } from "react";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { findRetiredTerms, visibleWordCount, type RetiredTermHit } from "@/lib/copy/retiredTerms";
 import { emptyEhrForm, ehrFormFromStored } from "@/lib/authoring/forms/ehr";
-import { allFixtures, sampleCaseStudy, sampleTrendItem } from "@/lib/ngn/fixtures";
+import { allFixtures, FIXTURES, sampleCaseStudy, sampleTrendItem } from "@/lib/ngn/fixtures";
 import type { ItemType } from "@/lib/ngn/labels";
 import type { CjmmStep } from "@/lib/ngn/types";
 import { validateCaseStudy, validateItem } from "@/lib/ngn/validate";
@@ -255,7 +255,7 @@ const SCREENS: Screen[] = [
     title: itemPage.metadata.title,
     counted: true,
     setup: () => {
-      state.itemRow = itemRow(allFixtures[0]!.canonical);
+      state.itemRow = itemRow(FIXTURES.multiple_choice.canonical);
     },
     draw: drawItemPage,
   },
@@ -264,7 +264,7 @@ const SCREENS: Screen[] = [
     title: itemPage.metadata.title,
     counted: true,
     setup: () => {
-      state.itemRow = itemRow(allFixtures[0]!.canonical, "archived");
+      state.itemRow = itemRow(FIXTURES.multiple_choice.canonical, "archived");
     },
     draw: drawItemPage,
   },
@@ -281,7 +281,7 @@ const SCREENS: Screen[] = [
     name: "/author/items/[itemId], with no patient record",
     title: itemPage.metadata.title,
     setup: () => {
-      state.itemRow = itemRow(allFixtures[3]!.canonical, "draft");
+      state.itemRow = itemRow(FIXTURES.matrix_multiple_choice.canonical, "draft");
     },
     draw: drawItemPage,
   },
@@ -290,7 +290,7 @@ const SCREENS: Screen[] = [
     title: playPage.metadata.title,
     counted: true,
     setup: () => {
-      state.itemRow = itemRow(allFixtures[0]!.canonical);
+      state.itemRow = itemRow(FIXTURES.multiple_choice.canonical);
     },
     draw: () =>
       playPage.default({
@@ -301,7 +301,7 @@ const SCREENS: Screen[] = [
     name: "/author/items/[itemId]/play, cannot be played",
     title: playPage.metadata.title,
     setup: () => {
-      state.itemRow = { ...itemRow(allFixtures[0]!.canonical), content: {} };
+      state.itemRow = { ...itemRow(FIXTURES.multiple_choice.canonical), content: {} };
     },
     draw: () =>
       playPage.default({
@@ -385,7 +385,7 @@ const SCREENS: Screen[] = [
 const counts: [screen: string, words: number][] = [];
 
 beforeEach(() => {
-  state.itemRow = itemRow(allFixtures[0]!.canonical);
+  state.itemRow = itemRow(FIXTURES.multiple_choice.canonical);
   state.caseRow = caseRow();
 });
 afterEach(cleanup);

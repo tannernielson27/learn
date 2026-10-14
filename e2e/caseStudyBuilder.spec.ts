@@ -83,7 +83,7 @@ test("an author builds a complete case study from an empty bank, previews it, an
   await textbox("Tab 2, block 1, row 1, Value").fill("112");
   await page.getByRole("button", { name: "Save patient record" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Patient record saved." })).toBeVisible();
-  await expect(rail.getByRole("button", { name: /^Record/ })).toContainText("Ready");
+  await expect(rail.getByRole("button", { name: /^Patient record/ })).toContainText("Ready");
   await expectNoAxeViolations(page);
 
   // Six steps of mixed types, each written and published in place.
