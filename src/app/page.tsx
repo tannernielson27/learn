@@ -6,8 +6,8 @@ import { readViewer } from "@/lib/classes/viewer";
 
 const TITLE = "LeaRN: live learning for the Next Generation NCLEX";
 const DESCRIPTION =
-  "Exam-faithful NGN items, fast authoring, live sessions and take-home assignments for nursing " +
-  "instructors and their students. Sign up as a teacher or a student.";
+  "Quizzes in every Next Generation NCLEX question format, with live sessions, assignments and " +
+  "practice. For nursing teachers and their students.";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },

@@ -47,8 +47,8 @@ const LINK =
   "tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline";
 
 const ROLES: readonly { value: SignUpRole; label: string; detail: string }[] = [
-  { value: "teacher", label: "I teach", detail: "Write questions and run them with a class." },
-  { value: "student", label: "I am a student", detail: "Join your instructor’s class." },
+  { value: "teacher", label: "I teach", detail: "Write quizzes and run them with a class." },
+  { value: "student", label: "I am a student", detail: "Join your teacher’s class." },
 ];
 
 const NAME_HINT: Record<SignUpRole, string> = {
@@ -111,9 +111,7 @@ export function SignUpForm({ action, initialRole, classCode, captchaSiteKey }: S
         >
           Your account is ready
         </h2>
-        <p className="mb-4 text-ink-2">
-          Sign in with the email address and password you just chose.
-        </p>
+        <p className="mb-4 text-ink-2">Sign in with the password you just chose.</p>
         <Link href={`/sign-in?next=${encodeURIComponent(state.next)}`} className={LINK}>
           Sign in
         </Link>

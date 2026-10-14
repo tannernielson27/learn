@@ -83,7 +83,7 @@ function StepActions({
     <div className="mt-1 flex flex-wrap items-start gap-x-4 gap-y-2">
       {step.sampleBankId ? (
         <Link href={`/author/banks/${step.sampleBankId}`} className={LINK}>
-          Open the sample bank
+          Open the sample quiz
         </Link>
       ) : (
         <ImportSampleForm action={importSample} />
