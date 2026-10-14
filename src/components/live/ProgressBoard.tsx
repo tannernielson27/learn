@@ -63,7 +63,7 @@ export function ProgressBoard({ ask, itemCount, active, intervalMs }: ProgressBo
         Progress
       </h2>
       <p className="mt-1 text-sm text-ink-2">
-        Who has answered each item. Nobody is marked right or wrong until you show answers.
+        Nothing is marked right or wrong until you show answers.
       </p>
       {rows.length === 0 ? (
         <p className="mt-3 text-sm text-ink-2">Nobody has joined yet.</p>
@@ -86,7 +86,7 @@ export function ProgressBoard({ ask, itemCount, active, intervalMs }: ProgressBo
                     scope="col"
                     className="tabular px-2 py-2 font-medium text-ink-2"
                   >
-                    <span className="sr-only">Item {position}</span>
+                    <span className="sr-only">Question {position}</span>
                     <span aria-hidden="true">{position}</span>
                   </th>
                 ))}

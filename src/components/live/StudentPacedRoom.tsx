@@ -28,8 +28,9 @@ import { createSupabaseChannelClient } from "@/lib/supabase/browser";
 /** The same props `StudentRoom` takes: the play page picks one of the two by the session's mode. */
 export type StudentPacedRoomProps = StudentRoomProps;
 
-const SENT = "Answer sent. Your instructor will show the answers when the class is done.";
-const SHOWING = "The answers are showing. Go through each item to see how you did.";
+const SENT = "Answer sent.";
+const SHOWING = "The answers are showing.";
+const LOADING = "Loading the questions.";
 
 /**
  * A student's phone in a student-paced room (#185): the whole set, worked through at this
@@ -140,7 +141,7 @@ export function StudentPacedRoom({
    */
   const send = async (target: PacedItemPayload, response: AnyResponse): Promise<ScoreReveal> => {
     const joined = room.current;
-    if (joined === null) throw new Error("This phone is not in a room.");
+    if (joined === null) throw new Error("This phone is not in a live session.");
     const itemId = target.item.id;
     try {
       const ack = await joined.submit(itemId, response);
@@ -160,14 +161,13 @@ export function StudentPacedRoom({
 
   const header = (
     <>
-      <p className="eyebrow mb-2">Live session</p>
       <h1 className="font-read text-3xl break-words text-ink-1">{title}</h1>
       <p className="mt-4 text-sm text-ink-2">
         Joined as <span className="font-medium break-words text-ink-1">{displayName}</span>
       </p>
       {connection === "reconnecting" ? (
         <p role="status" className="mt-4 text-sm text-ink-2">
-          Reconnecting. Stay on this page — your place is kept.
+          Reconnecting. Stay on this page.
         </p>
       ) : null}
     </>
@@ -180,11 +180,8 @@ export function StudentPacedRoom({
         {header}
         <section aria-labelledby="waiting-heading" className="mt-8">
           <h2 id="waiting-heading" className="font-read text-2xl text-ink-1">
-            {copy.headline}
+            {state.status === "running" ? LOADING : copy.headline}
           </h2>
-          <p className="measure mt-2 text-ink-2">
-            {state.status === "running" ? "Loading the items." : copy.detail}
-          </p>
         </section>
         <RoomCount present={present} />
       </>
@@ -256,14 +253,14 @@ export function StudentPacedRoom({
 
       <div className="mt-6 flex flex-wrap justify-between gap-2">
         <Button variant="secondary" disabled={at === 0} onClick={() => setIndex(at - 1)}>
-          Previous item
+          Previous question
         </Button>
         <Button
           variant="secondary"
           disabled={at === set.length - 1}
           onClick={() => setIndex(at + 1)}
         >
-          Next item
+          Next question
         </Button>
       </div>
     </>

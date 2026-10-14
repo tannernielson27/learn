@@ -112,7 +112,9 @@ const itemButton = (name: string) => screen.getByRole("button", { name });
 describe("StudentPacedRoom (#185)", () => {
   it("waits in the lobby with the sentence every other screen uses", () => {
     setup();
-    expect(screen.getByText("You are in.")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "You are in. Wait for your teacher to start." }),
+    ).toBeInTheDocument();
   });
 
   it("lists every item, moves with Next and Previous, and answers any of them", async () => {
@@ -120,10 +122,10 @@ describe("StudentPacedRoom (#185)", () => {
     room.push({ state: state(), paced: [entry(FIRST, 1), entry(SECOND, 2)] });
     await renderersLoaded();
     expect(itemButton("Item 1, not answered")).toHaveAttribute("aria-current", "step");
-    expect(screen.getByRole("button", { name: "Previous item" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Previous question" })).toBeDisabled();
 
     // Straight to the second item, and answer it first.
-    await room.user.click(screen.getByRole("button", { name: "Next item" }));
+    await room.user.click(screen.getByRole("button", { name: "Next question" }));
     expect(itemButton("Item 2, not answered")).toHaveAttribute("aria-current", "step");
     await room.user.click(screen.getByRole("radio", { name: /Diaphoresis and tremor/ }));
     await room.user.click(screen.getByRole("button", { name: /^Submit$/ }));
@@ -148,8 +150,8 @@ describe("StudentPacedRoom (#185)", () => {
     room.push({ state: state(), paced: [entry(FIRST, 1), entry(SECOND, 2)] });
     await renderersLoaded();
     await room.user.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
-    await room.user.click(screen.getByRole("button", { name: "Next item" }));
-    await room.user.click(screen.getByRole("button", { name: "Previous item" }));
+    await room.user.click(screen.getByRole("button", { name: "Next question" }));
+    await room.user.click(screen.getByRole("button", { name: "Previous question" }));
     expect(screen.getByRole("radio", { name: /Auscultate the lungs/ })).toBeChecked();
   });
 
@@ -181,9 +183,9 @@ describe("StudentPacedRoom (#185)", () => {
   it("takes the set off the screen while paused, and says why", () => {
     const room = setup();
     room.push({ state: state({ status: "paused" }), paced: [entry(FIRST, 1)] });
-    expect(screen.getByText("The session is paused.")).toBeInTheDocument();
+    expect(screen.getByText("The live session is paused.")).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Items" })).toBeNull();
-    expect(screen.queryByText(/Item 1 of/)).toBeNull();
+    expect(screen.queryByText(/Question 1 of/)).toBeNull();
   });
 
   it("shows every item's key after Show answers, with marks where this phone answered", async () => {
@@ -203,7 +205,7 @@ describe("StudentPacedRoom (#185)", () => {
     expect(screen.getByRole("complementary", { name: "Score" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
 
-    await room.user.click(screen.getByRole("button", { name: "Next item" }));
+    await room.user.click(screen.getByRole("button", { name: "Next question" }));
     expect(screen.getByTestId("not-answered")).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Answer key" })).toBeInTheDocument();
   });
@@ -238,19 +240,19 @@ describe("StudentPacedRoom: someone else joins or leaves (#408)", () => {
     expect(commits).toHaveBeenCalledTimes(0);
 
     // The control: this phone moving to its next item does commit.
-    await room.user.click(screen.getByRole("button", { name: "Next item" }));
+    await room.user.click(screen.getByRole("button", { name: "Next question" }));
     expect(commits.mock.calls.length).toBeGreaterThan(0);
 
     // And the count was kept, not dropped: a paused room shows it at once.
     room.push({ state: state({ status: "paused" }), paced: set });
-    expect(screen.getByTestId("room-count")).toHaveTextContent("51 in the room");
+    expect(screen.getByTestId("room-count")).toHaveTextContent("51 in this session");
   });
 
   it("still counts the phones in the room while waiting", () => {
     const room = setup();
     room.roster(rosterOf(2));
-    expect(screen.getByTestId("room-count")).toHaveTextContent("2 in the room");
+    expect(screen.getByTestId("room-count")).toHaveTextContent("2 in this session");
     room.roster(rosterOf(1));
-    expect(screen.getByTestId("room-count")).toHaveTextContent("1 in the room");
+    expect(screen.getByTestId("room-count")).toHaveTextContent("1 in this session");
   });
 });

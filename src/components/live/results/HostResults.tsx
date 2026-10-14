@@ -87,11 +87,9 @@ export function HostResults({
         className="mt-4 rounded-sm border border-line bg-surface-1 px-4 py-5 sm:px-6"
       >
         {hidden ? (
-          <p className="text-base text-ink-2">
-            Results are hidden. The answer count above still updates.
-          </p>
+          <p className="text-base text-ink-2">Results are hidden.</p>
         ) : current === null ? (
-          <p className="text-base text-ink-2">Results appear here as answers come in.</p>
+          <p className="text-base text-ink-2">No answers yet.</p>
         ) : (
           <DistributionView distribution={current} revealed={revealed} />
         )}

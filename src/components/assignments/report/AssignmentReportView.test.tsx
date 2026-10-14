@@ -119,7 +119,7 @@ describe("AssignmentReportView, once closed", () => {
 
   it("shows items with the percent fully correct", () => {
     renderView("items");
-    const region = screen.getByRole("region", { name: "Results by item" });
+    const region = screen.getByRole("region", { name: "Results by question" });
     expect(within(region).getByRole("columnheader", { name: "Correct" })).toBeInTheDocument();
     const first = within(region).getByRole("row", { name: /^Q1 mc-hf/ });
     expect(within(first).getAllByText("100%").length).toBeGreaterThan(0);
@@ -127,7 +127,9 @@ describe("AssignmentReportView, once closed", () => {
 
   it("shows the CJMM steps", () => {
     renderView("steps");
-    expect(screen.getByRole("region", { name: "Results by CJMM step" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Results by clinical judgment step" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Step 1: Recognize Cues")).toBeInTheDocument();
   });
 });
