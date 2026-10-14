@@ -41,6 +41,8 @@ The model copies; it never invents. A missing key is `needs_answer` and can only
 
 Reveal-by-step was planned here and shipped first, in Sprint 14 (#334–#336, PRs #424, #435, #438). A case study keeps one `EhrRecord`; its time points and blocks carry an optional **`fromStep`** (1–6), and each tab an optional **`stepAccess`** (`hidden`, `locked` or `open` at each step). The pure `recordAtStep(record, step)` in `src/lib/ngn/chartReveal.ts` returns what a student may see at a step. The player, live sessions, assignments and practice serve that view **filtered on the server**, so a later step's chart never reaches a phone early, and the case study builder sets both. The importer (#344) only has to reconstruct `fromStep` by comparing each step's chart with the one before; it leaves `stepAccess` unset (open at every step) for the teacher to change. A record with no `fromStep` behaves as before.
 
+Updated 2026-10-14 (#338): the comparison is `recordFromCharts` in `src/lib/ngn/draft/chart.ts`. The model copies the whole chart with each step; the converter keeps each note, row, column and result once, at the step it first appears (`fromStep`), and turns a table column that arrives later into a time point named by its heading, which is how `recordAtStep` hides it. It sets `stepAccess` only where the source itself shows it: a tab listed with nothing in it is `locked` at that step, and a tab a later step leaves out is `hidden` there. Every other tab has none, as above. A cell a later chart contradicts keeps its first value and is flagged `needs_fix`.
+
 ### Safety
 
 - Document text is data. The model has no tools that act on anything. Its output is JSON that must pass the Zod schemas, and it is rendered through the existing components, never as HTML.

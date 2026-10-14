@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { FIXTURES } from "../fixtures";
 import { NGN_REGISTRY } from "../registry";
-import { ITEM_SCHEMAS, itemSchema, type Item } from "../schemas";
+import { ITEM_SCHEMAS, ITEM_TYPES, itemSchema, type Item } from "../schemas";
 import {
+  caseStudyChartsJsonSchema,
   DEFAULT_DRAFT_ITEM_ID,
   DRAFT_TYPES,
   draftJsonSchema,
@@ -25,6 +26,12 @@ const ID_FIELDS = new Set([
   "actionIds",
   "conditionId",
   "parameterIds",
+  "blankId",
+  "correctChoiceId",
+  "correctTokenId",
+  "anchorBlankId",
+  "spanId",
+  "correctSpanIds",
 ]);
 
 /**
@@ -37,7 +44,7 @@ function withCanonicalIds(item: Item): unknown {
     if (Array.isArray(node)) return node.forEach(collect);
     if (node === null || typeof node !== "object") return;
     for (const [key, value] of Object.entries(node)) {
-      if (key === "id" && typeof value === "string" && !order.has(value)) {
+      if ((key === "id" || key === "spanId") && typeof value === "string" && !order.has(value)) {
         order.set(value, `#${order.size}`);
       }
       collect(value);
@@ -85,18 +92,8 @@ describe("round trip: fromDraft(toDraft(fixture))", () => {
     expect(withCanonicalIds(parsed)).toEqual(expected);
   });
 
-  it("covers the seven #337 types", () => {
-    expect([...DRAFT_TYPES].sort()).toEqual(
-      [
-        "bowtie",
-        "matrix_multiple_choice",
-        "matrix_multiple_response",
-        "multiple_choice",
-        "multiple_response",
-        "multiple_response_grouping",
-        "ordered_response",
-      ].sort(),
-    );
+  it("covers every item type (#337 and #338)", () => {
+    expect([...DRAFT_TYPES].sort()).toEqual([...ITEM_TYPES].sort());
   });
 });
 
@@ -132,8 +129,8 @@ describe("fromDraft context", () => {
 });
 
 describe("itemDraftSchema", () => {
-  it("refuses a type that has no draft yet", () => {
-    expect(itemDraftSchema.safeParse({ type: "dropdown_cloze", stem: "x" }).success).toBe(false);
+  it("refuses a type it does not know", () => {
+    expect(itemDraftSchema.safeParse({ type: "case_study", stem: "x" }).success).toBe(false);
   });
 
   it("refuses a draft missing its options", () => {
@@ -142,7 +139,8 @@ describe("itemDraftSchema", () => {
 
   it("isDraftType tells drafted types from the rest", () => {
     expect(isDraftType("bowtie")).toBe(true);
-    expect(isDraftType("dropdown_cloze")).toBe(false);
+    expect(isDraftType("dropdown_cloze")).toBe(true);
+    expect(isDraftType("case_study")).toBe(false);
     expect(isDraftType("toString")).toBe(false);
   });
 });
@@ -157,29 +155,35 @@ describe("draftJsonSchema", () => {
     }
   };
 
-  it.each([undefined, ...DRAFT_TYPES] as (DraftType | undefined)[])(
-    "%s: fits Claude's structured outputs and asks for no ids",
-    (type) => {
-      const schema = draftJsonSchema(type);
-      const keys: string[] = [];
-      const propertyNames: string[] = [];
-      walk(schema, (key, value) => {
-        keys.push(key);
-        if (key === "properties") propertyNames.push(...Object.keys(value as object));
-        if (
-          value !== null &&
-          typeof value === "object" &&
-          (value as { type?: unknown }).type === "object"
-        ) {
-          expect((value as { additionalProperties?: unknown }).additionalProperties).toBe(false);
-        }
-      });
-      expect(keys).not.toContain("oneOf");
-      expect(keys).not.toContain("$schema");
-      expect(propertyNames.filter((name) => /id/i.test(name))).toEqual([]);
-      expect(keys).toContain("description");
-    },
-  );
+  const schemas: [string, () => Record<string, unknown>][] = [
+    ["any draft", () => draftJsonSchema()],
+    ...DRAFT_TYPES.map((type): [string, () => Record<string, unknown>] => [
+      type,
+      () => draftJsonSchema(type as DraftType),
+    ]),
+    ["case study charts", caseStudyChartsJsonSchema],
+  ];
+
+  it.each(schemas)("%s: fits Claude's structured outputs and asks for no ids", (_name, build) => {
+    const schema = build();
+    const keys: string[] = [];
+    const propertyNames: string[] = [];
+    walk(schema, (key, value) => {
+      keys.push(key);
+      if (key === "properties") propertyNames.push(...Object.keys(value as object));
+      if (
+        value !== null &&
+        typeof value === "object" &&
+        (value as { type?: unknown }).type === "object"
+      ) {
+        expect((value as { additionalProperties?: unknown }).additionalProperties).toBe(false);
+      }
+    });
+    expect(keys).not.toContain("oneOf");
+    expect(keys).not.toContain("$schema");
+    expect(propertyNames.filter((name) => /id/i.test(name))).toEqual([]);
+    expect(keys).toContain("description");
+  });
 
   it("offers every draft type when no type is named", () => {
     const schema = draftJsonSchema() as { anyOf: unknown[] };
@@ -188,10 +192,9 @@ describe("draftJsonSchema", () => {
 });
 
 describe("registry", () => {
-  it("carries the draft for each drafted type and nothing for the rest", () => {
-    for (const type of DRAFT_TYPES) {
+  it("carries the draft for every type", () => {
+    for (const type of ITEM_TYPES) {
       expect(NGN_REGISTRY[type].draft?.fromDraft).toBeTypeOf("function");
     }
-    expect(NGN_REGISTRY.dropdown_cloze.draft).toBeUndefined();
   });
 });
