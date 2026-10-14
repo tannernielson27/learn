@@ -15,7 +15,8 @@ import { ImportJsonForm } from "@/components/authoring/ImportJsonForm";
 import { ItemList } from "@/components/authoring/ItemList";
 import { PracticeBadge } from "@/components/practice/PracticeBadge";
 import { PracticeSection } from "@/components/practice/PracticeSection";
-import { MoveToFolderForm } from "@/components/authoring/MoveToFolderForm";
+import { QuizMoveForm } from "@/components/authoring/QuizMoveForm";
+import { TurnFolderIntoQuizButton } from "@/components/authoring/TurnFolderIntoQuizButton";
 import { Pager } from "@/components/authoring/Pager";
 import { TagFilterBar } from "@/components/authoring/TagFilterBar";
 import { Button } from "@/components/ui/Button";
@@ -41,6 +42,8 @@ import {
   type FolderView,
 } from "@/lib/authoring/folders";
 import { quizLibraryTrail } from "@/lib/authoring/libraryData";
+import { newQuizName, staysBehind } from "@/lib/authoring/quizMove";
+import { readMoveContext } from "@/lib/authoring/quizMoveData";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { bankViewHref, isFiltering, parseTagFilter, tagFacets } from "@/lib/authoring/tagFilter";
@@ -56,6 +59,7 @@ import {
   renameBank,
   renameFolderInBank,
 } from "../../actions";
+import { moveToQuizAction, turnFolderIntoQuizAction } from "../../quizMoveActions";
 
 export const metadata: Metadata = { title: "Quiz" };
 
@@ -104,6 +108,7 @@ export default async function BankPage({
     quizLibraryTrail(supabase, bank.id),
     listBankShares(supabase, bank.id),
     listClasses(supabase),
+    readMoveContext(supabase, bank.id),
   ]);
   // Awaited below; this only keeps a failure from going unobserved if the page stops first.
   besideFolders.catch(() => undefined);
@@ -114,15 +119,16 @@ export default async function BankPage({
 
   // The filter and search run in the database, under RLS; the tag counts come from the view's
   // items within the search.
-  const [[libraryTrail, shares, classes], itemPage, caseStudies, taggedRows] = await Promise.all([
-    besideFolders,
-    listItems(supabase, bank.id, view, filter, page),
-    // Case studies carry no item tags or type, so a tag or type filter lists none of them.
-    tagFiltered || search.type
-      ? Promise.resolve([])
-      : listCaseStudies(supabase, bank.id, view, search),
-    listTaggedRows(supabase, bank.id, view, search),
-  ]);
+  const [[libraryTrail, shares, classes, moveContext], itemPage, caseStudies, taggedRows] =
+    await Promise.all([
+      besideFolders,
+      listItems(supabase, bank.id, view, filter, page),
+      // Case studies carry no item tags or type, so a tag or type filter lists none of them.
+      tagFiltered || search.type
+        ? Promise.resolve([])
+        : listCaseStudies(supabase, bank.id, view, search),
+      listTaggedRows(supabase, bank.id, view, search),
+    ]);
   const { items } = itemPage;
   const facets = tagFacets(taggedRows, filter);
   const trail = view.kind === "folder" ? folderTrail(folders, view.id) : [];
@@ -130,8 +136,19 @@ export default async function BankPage({
   if (view.kind === "folder" && trail.length === 0) notFound();
   const folder = trail.at(-1);
   const heading = folder?.name ?? (view.kind === "unfiled" ? NOT_IN_A_FOLDER : bank.name);
-  // Moving between in-quiz folders, only where there are some.
-  const canMove = inQuizFolders && (items.length > 0 || caseStudies.length > 0);
+  // #417: moving to another quiz, and turning a folder into one, are offered only when the confirm
+  // step can say everything that stays with this quiz: its assignments, live sessions and shares.
+  const knowsUses = moveContext !== null && shares !== null;
+  const otherQuizzes = moveContext?.quizzes ?? [];
+  const keptLines = staysBehind({
+    assignments: moveContext?.uses.assignments ?? 0,
+    liveSessions: moveContext?.uses.liveSessions ?? 0,
+    practiceClasses: (shares ?? []).map((entry) => entry.name),
+  });
+  const hasContent = items.length > 0 || caseStudies.length > 0;
+  // Moving between in-quiz folders, only where there are some; to another quiz, where there is one.
+  const canMoveToQuiz = knowsUses && otherQuizzes.length > 0 && hasContent;
+  const canMove = (inQuizFolders && hasContent) || canMoveToQuiz;
   // #266: what each list says when it is empty, most specific reason first.
   const emptyView = { bankId: bank.id, view, filter, page };
   const liveRefusal = liveStartMessage(query.live);
@@ -228,6 +245,19 @@ export default async function BankPage({
                   key={`delete-${folder.id}`}
                   action={deleteFolderInBank.bind(null, bank.id, folder.id)}
                 />
+                {knowsUses ? (
+                  <TurnFolderIntoQuizButton
+                    key={`turn-${folder.id}`}
+                    action={turnFolderIntoQuizAction.bind(null, bank.id, folder.id, folder.name)}
+                    folderName={folder.name}
+                    quizName={newQuizName(folder.name, [
+                      bank.name,
+                      ...otherQuizzes.map((quiz) => quiz.name),
+                    ])}
+                    hasSubfolders={folders.some((row) => row.parentId === folder.id)}
+                    staysBehind={keptLines}
+                  />
+                ) : null}
               </section>
             ) : null}
           </aside>
@@ -246,11 +276,14 @@ export default async function BankPage({
               </p>
             ) : null}
             {canMove ? (
-              <MoveToFolderForm
+              <QuizMoveForm
                 key={`move-${folder?.id ?? view.kind}`}
                 id={MOVE_FORM_ID}
-                folders={folders}
-                action={moveToFolderInBank.bind(null, bank.id)}
+                folders={inQuizFolders ? folders : []}
+                moveToFolder={moveToFolderInBank.bind(null, bank.id)}
+                quizzes={canMoveToQuiz ? otherQuizzes : []}
+                moveToQuiz={moveToQuizAction.bind(null, bank.id)}
+                staysBehind={keptLines}
               />
             ) : null}
             <ItemList
