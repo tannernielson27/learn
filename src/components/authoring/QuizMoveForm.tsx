@@ -67,13 +67,14 @@ export function QuizMoveForm({
   const [folderState, folderAction, folderPending] = useActionState(moveToFolder ?? idle, INITIAL);
   const [quizState, quizAction, quizPending] = useActionState(moveToQuiz ?? idle, INITIAL);
   const [asking, setAsking] = useState<Asking | null>(null);
-  const [problem, setProblem] = useState<string | undefined>(undefined);
+  // A refusal before asking: which field it is about, so only that one is marked invalid.
+  const [problem, setProblem] = useState<{ quiz: boolean; message: string } | undefined>(undefined);
   const formRef = useRef<HTMLFormElement>(null);
   const uid = useId();
   const byFolder = folders.length > 0 && moveToFolder !== undefined;
   const byQuiz = quizzes.length > 0 && moveToQuiz !== undefined;
   const folderError = folderState.status === "error";
-  const quizError = problem !== undefined || quizState.status === "error";
+  const quizError = problem?.quiz === true || (!problem && quizState.status === "error");
 
   // Submitting by hand, as MoveToFolderForm does: the form, and the checkboxes that joined it, are
   // reset only once a move is done, never when one is refused.
@@ -92,9 +93,12 @@ export function QuizMoveForm({
       items: data.getAll("item").length,
       caseStudies: data.getAll("caseStudy").length,
     };
-    if (!quiz) return setProblem("Choose a quiz to move to.");
+    if (!quiz) return setProblem({ quiz: true, message: "Choose a quiz to move to." });
     if (counts.items + counts.caseStudies === 0) {
-      return setProblem("Select at least one question or case study to move.");
+      return setProblem({
+        quiz: false,
+        message: "Select at least one question or case study to move.",
+      });
     }
     setProblem(undefined);
     setAsking({ title: `Move ${selectionLabel(counts)} to ${quiz.name}?`, data });
@@ -107,9 +111,13 @@ export function QuizMoveForm({
     startTransition(() => quizAction(data));
   }
 
+  // Each on its own state, so a later refusal of the other move never clears a new selection.
   useEffect(() => {
-    if (folderState.status === "done" || quizState.status === "done") formRef.current?.reset();
-  }, [folderState, quizState]);
+    if (folderState.status === "done") formRef.current?.reset();
+  }, [folderState]);
+  useEffect(() => {
+    if (quizState.status === "done") formRef.current?.reset();
+  }, [quizState]);
 
   if (!byFolder && !byQuiz) return null;
 
@@ -159,6 +167,7 @@ export function QuizMoveForm({
                 id={`${uid}-quiz`}
                 name="quiz"
                 defaultValue=""
+                onChange={() => setProblem(undefined)}
                 aria-invalid={quizError || undefined}
                 aria-describedby={quizError ? `${uid}-quiz-error` : undefined}
                 className={selectClass}
@@ -177,7 +186,7 @@ export function QuizMoveForm({
               Move to quiz
             </Button>
           </div>
-          <Outcome id={`${uid}-quiz-error`} state={quizState} problem={problem} />
+          <Outcome id={`${uid}-quiz-error`} state={quizState} problem={problem?.message} />
           <Dialog
             open={asking !== null}
             onClose={() => setAsking(null)}

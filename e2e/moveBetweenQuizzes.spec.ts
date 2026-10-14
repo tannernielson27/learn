@@ -169,7 +169,12 @@ test("a quiz with two folders inside it becomes two quizzes, each running only i
     .getByRole("dialog", { name: 'Turn "Renal" into a quiz?' })
     .getByRole("button", { name: "Turn into a quiz", exact: true })
     .click();
+  // The folder's page has the same heading, so wait for the new quiz's address first.
+  await expect(page).not.toHaveURL(new RegExp(original));
   await expect(page.getByRole("heading", { level: 1, name: "Renal", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("list", { name: "Questions" }).getByRole("link", { name: /^Split / }),
+  ).toHaveCount(1);
   await page.getByRole("button", { name: "Start a live session", exact: true }).click();
   expect(await sessionItems(page, request)).toEqual(idsOf(renalStems));
 
