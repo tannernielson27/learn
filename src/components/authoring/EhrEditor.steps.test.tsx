@@ -129,7 +129,8 @@ describe("step controls in the case study's patient record editor (#336)", () =>
 
   it("previews the patient record at a step as a student at that step sees it", async () => {
     const form = toEhrForm(stagedEhr);
-    const { user } = setup({ ...form, tabs: form.tabs.slice(0, 4) });
+    // History & Physical and the labs tab only: a smaller form keeps this quick under a full run.
+    const { user } = setup({ ...form, tabs: [form.tabs[0]!, form.tabs[3]!] });
     // The whole patient record first, as before.
     expect(select("Preview at")).toHaveValue("");
     expect(preview().getByRole("radio", { name: "0400" })).toBeInTheDocument();
