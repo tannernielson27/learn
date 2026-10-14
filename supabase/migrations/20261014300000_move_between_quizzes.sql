@@ -103,6 +103,7 @@ begin
   -- same order, so neither "placing an archived item" nor "changing an archived case study" is
   -- happening, and the lookups below would only read rows the same statement is moving.
   if tg_op = 'UPDATE'
+     and new.bank_id is distinct from old.bank_id
      and (new.case_study_id, new.position, new.item_id, new.org_id)
          is not distinct from (old.case_study_id, old.position, old.item_id, old.org_id) then
     return new;
@@ -128,8 +129,12 @@ revoke all on function private.guard_archived_step() from public, anon, authenti
 -- ---------------------------------------------------------------------------
 
 -- Moves questions and case studies (with their steps) from one quiz to another, all or nothing.
--- The callers have checked both quizzes. Locks are taken steps first and questions second, the
--- order place_case_study_step and reorder_case_study_steps take them.
+-- The callers have checked both quizzes. Locks are taken steps first, then case studies, then
+-- questions, each in id order: place_case_study_step and reorder_case_study_steps lock steps
+-- before anything else, and two overlapping moves take rows in the same order.
+-- Granted to authenticated only because the two invoker functions call it as the caller. The Data
+-- API does not expose `private`; a direct SQL caller would skip the 200 line and the charge, which
+-- is why the same-quiz check is restated here.
 create function private.move_quiz_content(
   source_bank uuid,
   target_bank uuid,
@@ -157,25 +162,35 @@ declare
   moved_items integer;
   chosen_items integer;
 begin
+  if source_bank is not distinct from target_bank then
+    raise exception 'choose another quiz to move to' using errcode = '22023', hint = 'same';
+  end if;
+
+  perform 1 from public.case_study_items csi
+   where csi.case_study_id = any (wanted_cases) and csi.bank_id = source_bank
+   order by csi.case_study_id, csi.position
+     for update of csi;
+
   select count(*) into found_count
     from (select cs.id from public.case_studies cs
            where cs.bank_id = source_bank and cs.id = any (wanted_cases)
+           order by cs.id
              for update of cs) locked;
   if found_count <> cardinality(wanted_cases) then
     raise exception 'a case study chosen is no longer in this quiz'
       using errcode = 'P0002', hint = 'content';
   end if;
 
-  select coalesce(array_agg(locked.item_id), '{}') into step_ids
-    from (select csi.item_id from public.case_study_items csi
-           where csi.case_study_id = any (wanted_cases)
-             for update of csi) locked;
+  select coalesce(array_agg(csi.item_id), '{}') into step_ids
+    from public.case_study_items csi
+   where csi.case_study_id = any (wanted_cases);
 
-  -- A step moves only with its case study.
+  -- A step moves only with its case study, and so does a step a moving case study shares with one
+  -- that stays.
   select csi.position, cs.title into lone_position, lone_title
     from public.case_study_items csi
     join public.case_studies cs on cs.id = csi.case_study_id
-   where csi.item_id = any (wanted_items)
+   where csi.item_id = any (wanted_items || step_ids)
      and not (csi.case_study_id = any (wanted_cases))
    order by cs.title, cs.id
    limit 1;
@@ -188,6 +203,7 @@ begin
   select count(*) into found_count
     from (select i.id from public.items i
            where i.bank_id = source_bank and i.id = any (all_items)
+           order by i.id
              for update of i) locked;
   if found_count <> cardinality(all_items) then
     raise exception 'a question chosen is no longer in this quiz'
@@ -315,8 +331,10 @@ begin
     raise exception 'that folder does not exist' using errcode = 'P0002', hint = 'folder';
   end if;
 
-  -- The folder and every folder inside it, locked: nothing can be filed in them, and no folder
-  -- made inside them, until this commits (both take a key share on the folder row).
+  -- The folder first, so no folder can be made inside it while the tree is read; then every folder
+  -- inside it, in id order. Nothing can be filed in them, and no folder made inside them, until
+  -- this commits (both take a key share on the folder row).
+  perform 1 from public.bank_folders f where f.id = target_folder for update of f;
   with recursive inside (id) as (
     select target_folder
     union all
@@ -324,7 +342,7 @@ begin
      where f.bank_id = source_bank
   )
   select array_agg(id) into tree from inside;
-  perform 1 from public.bank_folders f where f.id = any (tree) for update of f;
+  perform 1 from public.bank_folders f where f.id = any (tree) order by f.id for update of f;
 
   select b.library_folder_id into filed_in from public.item_banks b where b.id = source_bank;
 
