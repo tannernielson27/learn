@@ -153,7 +153,7 @@ test("a folder is renamed, holds one more level of folders and no deeper, and an
     page.getByRole("heading", { level: 1, name: "Pediatrics", exact: true }),
   ).toBeVisible();
 
-  await page.getByText("Rename folder", { exact: true }).click();
+  await page.locator("summary").filter({ hasText: "Rename folder" }).click();
   await page.getByRole("textbox", { name: "New name", exact: true }).fill("Peds");
   await page.getByRole("button", { name: "Rename folder", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Peds", exact: true })).toBeVisible();
