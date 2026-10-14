@@ -1,5 +1,5 @@
 import { parseSignInForm } from "./signInForm";
-import type { SignInRateLimitResult } from "./signInRateLimit";
+import { SIGN_IN_RATE_LIMITED, type SignInRateLimitResult } from "./signInRateLimit";
 
 import {
   PASSWORD_MAX_BYTES,
@@ -83,6 +83,9 @@ export async function signInWithPassword(
     if (code !== "invalid_credentials") {
       console.error("[sign-in] Supabase did not accept a password sign-in", { status, code });
     }
+    // Supabase's own per-address limit (#409), counted on this server's address, not the
+    // person's: says nothing about the account, and the password may well be right.
+    if (status === 429) return { ok: false, error: SIGN_IN_RATE_LIMITED };
   } catch (error) {
     console.error("[sign-in] signing in with a password failed", {
       error: error instanceof Error ? error.name : "unknown",

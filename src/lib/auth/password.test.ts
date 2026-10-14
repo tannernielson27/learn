@@ -15,6 +15,7 @@ import {
   type SavePasswordDeps,
 } from "./password";
 import { SIGN_IN_EMAIL_ERROR } from "./signInForm";
+import { SIGN_IN_RATE_LIMITED } from "./signInRateLimit";
 
 function form(fields: Record<string, string>): FormData {
   const data = new FormData();
@@ -109,6 +110,19 @@ describe("signInWithPassword", () => {
       error: PASSWORD_SIGN_IN_FAILED,
     });
     expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+
+  it("says to wait, not that the password was wrong, when Supabase is rate limiting (#409)", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const d = signInDeps({
+      signIn: vi.fn(async () => ({ error: { status: 429, code: "over_request_rate_limit" } })),
+    });
+    expect(await signInWithPassword(form(GOOD), d)).toEqual({
+      ok: false,
+      error: SIGN_IN_RATE_LIMITED,
+    });
+    expect(JSON.stringify(error.mock.calls)).not.toContain("school.edu");
     error.mockRestore();
   });
 

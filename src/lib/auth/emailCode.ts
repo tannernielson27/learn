@@ -1,5 +1,5 @@
 import { parseSignInForm } from "./signInForm";
-import type { SignInRateLimitResult } from "./signInRateLimit";
+import { SIGN_IN_RATE_LIMITED, type SignInRateLimitResult } from "./signInRateLimit";
 
 export const EMAIL_CODE_FORMAT = "Enter the code from the email. It is 6 to 10 digits.";
 /** One answer for a wrong, expired or used code, and for an address with no account (#139). */
@@ -51,6 +51,9 @@ export async function verifyEmailCode(
     if (!error) return { ok: true, next: parsed.next };
     const { status, code } = error as { status?: number; code?: string };
     console.error("[sign-in] Supabase did not accept a sign-in code", { status, code });
+    // Supabase's own per-address limit (#409), counted on this server's address, not the
+    // person's: says nothing about the account, and the code may well be right.
+    if (status === 429) return { ok: false, error: SIGN_IN_RATE_LIMITED };
   } catch (error) {
     console.error("[sign-in] verifying a sign-in code failed", {
       error: error instanceof Error ? error.name : "unknown",
