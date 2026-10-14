@@ -553,8 +553,8 @@ describe("resendConfirmation (#360)", () => {
   });
 
   it.each([
-    ["instructor", "/author", "make a class"],
-    ["admin", "/author", "make a class"],
+    ["instructor", "/author", "create a class"],
+    ["admin", "/author", "create a class"],
     ["student", "/learn", "you are in your class"],
     [null, "/welcome", "join your class"],
   ])("sends a %s their own welcome, landing on %s", async (role, home, said) => {

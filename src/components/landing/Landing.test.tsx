@@ -38,31 +38,41 @@ describe("Landing (#264)", () => {
     expect(document.querySelector("form")).toBeNull();
   });
 
-  it("explains that anyone can sign up, and how teachers and students each get in", () => {
+  it("says how teachers and students each get in, one line each", () => {
     render(<Landing entry={SIGN_IN} />);
     const access = screen.getByRole("region", { name: "How to get in" });
-    expect(access).toHaveTextContent(/anyone can create an account/i);
-    expect(access).toHaveTextContent(/workspace of their own/i);
-    expect(access).toHaveTextContent(/invite link, QR code or class code/i);
-    expect(access).toHaveTextContent(/needs no account/i);
+    expect(within(access).getByText("Teachers").nextElementSibling).toHaveTextContent(
+      "Create an account. You get a workspace of your own.",
+    );
+    expect(within(access).getByText("Students").nextElementSibling).toHaveTextContent(
+      /join your class with its invite link or class code/,
+    );
     expect(access).not.toHaveTextContent(/invite-only|by invitation|site's owner/i);
   });
 
   it("names who it is for and what it does", () => {
     render(<Landing entry={SIGN_IN} />);
     const what = screen.getByRole("region", { name: "What LeaRN does" });
-    for (const phrase of [/exam-faithful/i, /authoring/i, /live sessions/i, /take-home/i]) {
+    for (const phrase of [/every nclex format/i, /quizzes/i, /live sessions/i, /assignments/i]) {
       expect(what).toHaveTextContent(phrase);
     }
-    expect(screen.getByRole("region", { name: "Who it is for" })).toHaveTextContent(
-      /nursing instructors/i,
-    );
+    expect(what).toHaveTextContent(/join code.*no account needed/i);
+    expect(screen.getByText(/for nursing teachers and their students/i)).toBeInTheDocument();
+  });
+
+  // #416: the page says each thing once.
+  it("has two sections under the headline and no third", () => {
+    render(<Landing entry={SIGN_IN} />);
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
+      "What LeaRN does",
+      "How to get in",
+    ]);
   });
 
   it("swaps Sign in for the signed-in visitor's own home", () => {
-    render(<Landing entry={{ href: "/author", label: "Go to your item banks" }} />);
+    render(<Landing entry={{ href: "/author", label: "Go to your quizzes" }} />);
     expect(screen.queryByRole("link", { name: "Sign in" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Go to your item banks" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Go to your quizzes" })).toHaveAttribute(
       "href",
       "/author",
     );

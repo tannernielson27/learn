@@ -79,7 +79,7 @@ function welcomePreview(
 // The name carries an ampersand and quotes, so the preview shows the escaping at work.
 const SAMPLE_WORKSPACE_INVITE: WorkspaceInviteContent = {
   workspaceName: `Adult Health & "Pharm" team`,
-  inviterEmail: "ada.instructor@learn.example",
+  inviterEmail: "ada.lovelace@learn.example",
   link: `${ORIGIN}/w/sample-invite-token-0123456789ab`,
 };
 

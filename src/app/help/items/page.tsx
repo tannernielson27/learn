@@ -12,7 +12,7 @@ import {
 import { ITEM_TYPES, ITEM_TYPE_LABELS, type ItemType } from "@/lib/ngn/labels";
 import { CJMM_STEP_LABELS, type CjmmStep } from "@/lib/ngn/types";
 
-export const metadata: Metadata = { title: "Item guide" };
+export const metadata: Metadata = { title: "Question guide" };
 
 const STEPS = Object.keys(CJMM_STEP_LABELS).map(Number) as CjmmStep[];
 
@@ -31,11 +31,11 @@ const TYPE_FIGURES: Partial<Record<ItemType, { figure: Figure; caption: string }
 const COMPOSITE_FIGURES: Record<string, { figure: Figure; caption: string }> = {
   "case-study": {
     figure: HELP_FIGURES.caseStudy,
-    caption: "Step 1 of a case study, with the patient record beside the item.",
+    caption: "Step 1 of a case study, with the patient record beside the question.",
   },
   trend: {
     figure: HELP_FIGURES.trend,
-    caption: "The time selector above the record is what makes this a Trend item.",
+    caption: "The time selector above the patient record makes this a Trend question.",
   },
 };
 
@@ -45,7 +45,7 @@ const COMPOSITE_FIGURES: Record<string, { figure: Figure; caption: string }> = {
 const MODELS: { name: string; rule: string }[] = [
   {
     name: "0/1",
-    rule: "Each scorable part (an option, a row, a blank, a slot) earns 1 if correct, else 0. The item’s score is the sum.",
+    rule: "Each scorable part (an option, a row, a blank, a slot) earns 1 if correct, else 0. The question’s score is the sum.",
   },
   {
     name: "+/-",
@@ -135,11 +135,11 @@ export default function ItemGuide() {
       <header>
         <p className="eyebrow">Help</p>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink-1 sm:text-3xl">
-          Item guide
+          Question guide
         </h1>
         <p className="measure mt-3 text-lg text-ink-2">
-          Every item format LeaRN supports: what it tests, how it is scored, and one tip for writing
-          it well. Scores are whole numbers from 0 to the item’s maximum.
+          Every question format: what it tests, how it is scored, and one tip for writing it. Scores
+          are whole numbers from 0 to the question’s maximum.
         </p>
       </header>
 
@@ -157,14 +157,14 @@ export default function ItemGuide() {
       </section>
 
       <section aria-labelledby="formats" className="flex flex-col gap-8">
-        <SectionHeading id="formats">Item formats</SectionHeading>
+        <SectionHeading id="formats">Question formats</SectionHeading>
         {ITEM_TYPES.map((type) => (
           <ItemSection key={type} type={type} />
         ))}
       </section>
 
       <section aria-labelledby="composites" className="flex flex-col gap-8">
-        <SectionHeading id="composites">Case studies and Trend items</SectionHeading>
+        <SectionHeading id="composites">Case studies and Trend questions</SectionHeading>
         {COMPOSITE_GUIDE.map((entry) => {
           const figure = COMPOSITE_FIGURES[entry.id];
           return (
@@ -187,8 +187,8 @@ export default function ItemGuide() {
       <section aria-labelledby="steps" className="flex flex-col gap-6">
         <SectionHeading id="steps">The six clinical judgment steps</SectionHeading>
         <p className="measure text-ink-1">
-          The NCSBN Clinical Judgment Measurement Model. A case study has one item for each step, in
-          this order. Tag a standalone item with the step it exercises.
+          From the NCSBN Clinical Judgment Measurement Model. A case study has one question for each
+          step, in this order. Tag any other question with the step it tests.
         </p>
         {STEPS.map((step) => (
           <section key={step} id={`step-${step}`} className="scroll-mt-4">
