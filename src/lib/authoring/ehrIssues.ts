@@ -1,10 +1,10 @@
 import type { EditorIssue, SchemaIssue } from "./issueMessages";
 
-const FALLBACK = "Something in this record needs attention. Check each section.";
+const FALLBACK = "Something in this patient record needs attention. Check each tab.";
 
 const place = (index: string) => Number(index) + 1;
 
-/** One `ehrRecordSchema` issue in the record editor's words, pointing at the field to fix. */
+/** One `ehrRecordSchema` issue in the patient record editor's words, pointing at the field to fix. */
 export function describeEhrIssue(issue: SchemaIssue): EditorIssue {
   const [area, first, part, blockIndex, blockPart, rowIndex, rowPart] = issue.path.map(String);
 
@@ -32,21 +32,21 @@ export function describeEhrIssue(issue: SchemaIssue): EditorIssue {
 
   if (area === "tabs") {
     if (first === undefined) {
-      return { field: "tabs", message: "Add at least one section to the record." };
+      return { field: "tabs", message: "Add at least one tab." };
     }
-    const section = `Section ${place(first)}`;
+    const section = `Tab ${place(first)}`;
     if (part === "title")
       return { field: `tabs.${first}.title`, message: `${section} needs a title.` };
     if (part === "kind") {
       return {
         field: `tabs.${first}.kind`,
-        message: `Choose a kind for section ${place(first)}.`,
+        message: `Choose a kind for tab ${place(first)}.`,
       };
     }
     if (part === "timePointId") {
       return {
         field: `tabs.${first}.timePointId`,
-        message: `${section} is charted at a time the record no longer has. Choose another time.`,
+        message: `${section} is set to a time point that was removed. Choose another time.`,
       };
     }
     if (part === "blocks") {
@@ -74,7 +74,7 @@ export function describeEhrIssue(issue: SchemaIssue): EditorIssue {
   return { field: "record", message: FALLBACK };
 }
 
-/** Plain-language problems for a record, one per field, in the order the form shows them. */
+/** Plain-language problems for a patient record, one per field, in the order the form shows them. */
 export function describeEhrIssues(issues: readonly SchemaIssue[]): EditorIssue[] {
   const seen = new Set<string>();
   const described: EditorIssue[] = [];

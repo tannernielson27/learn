@@ -159,8 +159,7 @@ export function TagFields({
           Add topic tags
         </label>
         <p id={ids.hint} className="text-sm text-ink-2">
-          Separate several with commas. Up to {TAG_LIMITS.count} tags in all, each up to{" "}
-          {TAG_LIMITS.length} characters.
+          Separate with commas. Up to {TAG_LIMITS.count} tags of {TAG_LIMITS.length} characters.
         </p>
         <div className="flex gap-2">
           <input

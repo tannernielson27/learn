@@ -304,7 +304,7 @@ export function ClozeEditor<T extends ClozeType>({
           Sentence
         </label>
         <p id={`${ids}-sentence-help`} className="text-sm text-ink-2">
-          Each blank appears as its name in double braces. Place the cursor and choose Insert blank.
+          Place the cursor and choose Insert blank.
         </p>
         <textarea
           id={`${ids}-sentence`}

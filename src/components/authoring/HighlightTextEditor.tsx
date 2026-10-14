@@ -135,7 +135,7 @@ export function HighlightTextEditor({
           Passage
         </label>
         <p id={`${ids}-passage-help`} className="text-sm text-ink-2">
-          Select a phrase and choose Mark span. A span is written as [[phrase|id]].
+          Select a phrase and choose Mark span.
         </p>
         <textarea
           id={`${ids}-passage`}

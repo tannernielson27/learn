@@ -30,7 +30,7 @@ type Describer = (
   context: IssueContext,
 ) => EditorIssue | undefined;
 
-const FALLBACK = "Something in this item needs attention. Check the highlighted field.";
+const FALLBACK = "Something in this question needs attention. Check the highlighted field.";
 
 const letter = (index: number) => String.fromCharCode(65 + index);
 
@@ -337,7 +337,7 @@ const describeDragDrop: Describer = (issue, path, context) => {
         };
   }
   if (at === "answerKey") {
-    return { field: "blanks", message: "Every blank needs its correct word from the bank." };
+    return { field: "blanks", message: "Every blank needs its correct word from the word bank." };
   }
   return describeCloze(issue, path, context);
 };

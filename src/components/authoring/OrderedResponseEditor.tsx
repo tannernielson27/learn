@@ -146,9 +146,7 @@ export function OrderedResponseEditor({
         <legend id={`${ids}-steps-legend`} className="text-sm font-medium text-ink-1">
           Steps in the correct order
         </legend>
-        <p className="text-sm text-ink-2">
-          Students see these steps shuffled and put them back in this order.
-        </p>
+        <p className="text-sm text-ink-2">Students see them shuffled.</p>
         <ol className="flex flex-col gap-3">
           {values.steps.map((step, index) => (
             <li key={step.id} className="flex flex-col gap-2 rounded-sm border border-line p-3">
