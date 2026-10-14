@@ -32,8 +32,9 @@ export default async function ConfirmPage({ searchParams }: PageProps<"/auth/con
         <p className="mb-2 font-mono text-sm tracking-wide text-ink-2 uppercase">LeaRN</p>
         <h1 className="mb-3 font-read text-3xl text-ink-1">Finish signing in</h1>
         <p className="mb-6 text-ink-2">
-          This signs you in on this device, and the link works once. To sign in on the device where
-          you asked instead, type the code from the email there.
+          Pressing the button signs you in on this device, even if you asked for the link on another
+          one. The link works once. To sign in on the device where you asked instead, type the code
+          from the email there.
         </p>
         <form action={confirmSignIn}>
           <input type="hidden" name="token_hash" value={link.tokenHash} />

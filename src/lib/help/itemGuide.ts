@@ -112,7 +112,7 @@ export const ITEM_GUIDE: Record<ItemType, ItemGuideEntry> = {
       "The drop-down rationale sentence, answered from a word bank: a dyad (2 blanks) or a triad (3 blanks).",
     model: "rationale",
     scoring:
-      "Rationale scoring, the same as Drop-Down Rationale: a dyad earns 1 point, a triad up to 2.",
+      "Rationale scoring, as for Drop-Down Rationale. Dyad: 1 point only if both are correct. Triad: 2 points max, and 0 if the anchor is wrong.",
     tip: "Put plausible wrong words in the word bank for both the condition and the evidence, so neither blank can be solved alone.",
   },
   ordered_response: {

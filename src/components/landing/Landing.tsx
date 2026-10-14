@@ -25,9 +25,9 @@ const SECONDARY =
 /** One line each (#416). Every claim is something the product does today. */
 const WHAT_IT_DOES = [
   {
-    term: "Every NCLEX format",
+    term: "NCLEX question formats",
     detail:
-      "Matrix, drop-down, highlight, drag-and-drop, bowtie and trend questions, and six-step case studies.",
+      "Multiple choice, select all that apply, matrix, drop-down, highlight, drag-and-drop, ordered response and bowtie, with six-step case studies.",
   },
   {
     term: "Quizzes",

@@ -17,6 +17,7 @@ describe("findRetiredTerms", () => {
     ["Join your instructor’s class.", "instructor"],
     ["Fast authoring", "author"],
     ["Press End session when you are done.", "session alone"],
+    ["Type the live session code on the screen.", "session alone"],
     ["Instructor-paced: you move the room.", "room"],
     ["Read by Students, Items and CJMM steps", "CJMM"],
     ["with the chart beside the question", "chart"],

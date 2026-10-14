@@ -37,7 +37,11 @@ export const RETIRED_TERMS: readonly RetiredTerm[] = [
   { term: "item", use: "question", pattern: /\bitems?\b/ },
   { term: "instructor", use: "teacher", pattern: /\binstructors?\b/ },
   { term: "author", use: "teacher, or library", pattern: /\bauthor(?:s|ed|ing)?\b/ },
-  { term: "session alone", use: "live session, or join code", pattern: /\bsessions?\b/ },
+  {
+    term: "session alone",
+    use: "live session, or join code",
+    pattern: /\bsessions?\b|\u2039live\u203a codes?\b/,
+  },
   { term: "room", use: "live session, or in this session", pattern: /\brooms?\b/ },
   { term: "console", use: "live session", pattern: /\bconsole\b/ },
   { term: "host", use: "live session", pattern: /\bhost(?:s|ed|ing)?\b/ },

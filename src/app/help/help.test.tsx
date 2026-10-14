@@ -88,7 +88,7 @@ describe("/help/instructor", () => {
 
   it("gives each topic a screen might link to an anchor of its own", () => {
     const { container } = render(<InstructorGuide />);
-    const topics = [...container.querySelectorAll("section section[id]")].map((el) => el.id);
+    const topics = [...container.querySelectorAll("section [data-help-topic]")].map((el) => el.id);
     expect(topics).toEqual([
       "sign-up",
       "password",
@@ -112,7 +112,7 @@ describe("/help/instructor", () => {
     ]);
     expect(new Set(topics).size).toBe(topics.length);
     for (const id of topics) {
-      const topic = container.querySelector(`section#${id}`) as HTMLElement;
+      const topic = container.querySelector(`#${id}`) as HTMLElement;
       expect(within(topic).getByRole("heading", { level: 3 })).toBeInTheDocument();
     }
   });

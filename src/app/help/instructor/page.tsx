@@ -36,19 +36,16 @@ function Section({ id, children }: { id: SectionId; children: ReactNode }) {
   );
 }
 
-/** One topic inside a section, with an id of its own for a screen to link to. */
+/**
+ * One topic inside a section, with an id of its own for a screen to link to. Not a `section`:
+ * nineteen more named regions would bury the eight that matter to a screen reader.
+ */
 function Topic({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
-    <section
-      id={id}
-      aria-labelledby={`${id}-title`}
-      className="mt-2 flex scroll-mt-4 flex-col gap-2"
-    >
-      <h3 id={`${id}-title`} className="font-semibold text-ink-1">
-        {title}
-      </h3>
+    <div id={id} data-help-topic className="mt-2 flex scroll-mt-4 flex-col gap-2">
+      <h3 className="font-semibold text-ink-1">{title}</h3>
       {children}
-    </section>
+    </div>
   );
 }
 
@@ -231,8 +228,8 @@ export default function InstructorGuide() {
         </Topic>
         <Topic id="class-code" title="Class code">
           <p>
-            A student who has an account types it under <Ui>Join a class</Ui>. It is two groups of
-            four, so it is not mistaken for a live session&apos;s join code.
+            A student who has an account, or creates one first, types it under <Ui>Join a class</Ui>
+            . It is two groups of four, so it is not mistaken for a live session&apos;s join code.
           </p>
         </Topic>
         <Topic id="time-zone" title="Time zone">

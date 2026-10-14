@@ -52,7 +52,7 @@ export function studentWelcomeSteps(
       title: "Results and live sessions",
       body: [
         "When an assignment closes, it moves to History with your score, the answers and the rationales.",
-        "A live session needs no sign-in: open Join and type the join code your teacher shows.",
+        "A live session needs no sign-in: go to the join page and type the join code your teacher shows.",
       ],
     },
   ];

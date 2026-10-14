@@ -53,7 +53,12 @@ describe("Landing (#264)", () => {
   it("names who it is for and what it does", () => {
     render(<Landing entry={SIGN_IN} />);
     const what = screen.getByRole("region", { name: "What LeaRN does" });
-    for (const phrase of [/every nclex format/i, /quizzes/i, /live sessions/i, /assignments/i]) {
+    for (const phrase of [
+      /nclex question formats/i,
+      /quizzes/i,
+      /live sessions/i,
+      /assignments/i,
+    ]) {
       expect(what).toHaveTextContent(phrase);
     }
     expect(what).toHaveTextContent(/join code.*no account needed/i);
