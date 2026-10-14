@@ -322,7 +322,13 @@ const SCREENS: Screen[] = [
     draw: () => layout.default({ children: null, params: Promise.resolve({}) }),
   },
   { name: "/author", title: home.metadata.title, counted: true, draw: () => home.default() },
-  { name: "/author, no quizzes", title: home.metadata.title, setup: empty, draw: home.default },
+  {
+    name: "/author, no quizzes",
+    title: home.metadata.title,
+    counted: true,
+    setup: empty,
+    draw: home.default,
+  },
   {
     name: "/author/banks/[bankId]",
     title: bank.metadata.title,
@@ -434,6 +440,7 @@ const SCREENS: Screen[] = [
   {
     name: "/author/classes, no classes",
     title: classes.metadata.title,
+    counted: true,
     setup: empty,
     draw: () => classes.default(),
   },

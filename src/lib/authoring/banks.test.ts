@@ -283,7 +283,7 @@ describe("listItems", () => {
   it("throws a plain error when the list cannot be read", async () => {
     const fake = fakeClient({ data: null, error: { message: "permission denied" } });
     await expect(listItems(fake.client, BANK)).rejects.toThrow(
-      new AuthoringDataError("Items could not be loaded."),
+      new AuthoringDataError("Questions could not be loaded."),
     );
   });
 });

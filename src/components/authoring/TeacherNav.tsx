@@ -6,8 +6,8 @@ import { GuardedLink } from "./LeaveGuard";
 
 const linkClass =
   "tap-target inline-flex items-center border-b-2 border-transparent px-2 text-sm text-ink-1 " +
-  "transition-colors duration-fast hover:bg-surface-2 data-current:border-accent " +
-  "data-current:font-medium data-current:text-accent-ink";
+  "transition-colors duration-fast hover:bg-surface-2 aria-[current]:border-accent " +
+  "aria-[current]:font-medium aria-[current]:text-accent-ink";
 
 /**
  * The teacher's navigation (#412), under the header of every teacher page: the library, classes,
@@ -24,12 +24,7 @@ export function TeacherNav() {
           const current = teacherNavCurrent(item, pathname);
           return (
             <li key={item.id}>
-              <GuardedLink
-                href={item.href}
-                aria-current={current}
-                data-current={current ? "" : undefined}
-                className={linkClass}
-              >
+              <GuardedLink href={item.href} aria-current={current} className={linkClass}>
                 {item.label}
               </GuardedLink>
             </li>

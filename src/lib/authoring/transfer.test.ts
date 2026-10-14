@@ -84,7 +84,7 @@ describe("export then import", () => {
         items: [{ ...FIXTURES.multiple_choice.canonical, tags }],
       }),
     );
-    expect(parsed).toEqual({ ok: false, errors: ['Item 1: "tags" is not valid.'] });
+    expect(parsed).toEqual({ ok: false, errors: ['Question 1: "tags" is not valid.'] });
   });
 
   it("a case study survives with its record and six steps, in order", () => {
@@ -150,7 +150,7 @@ describe("export then import", () => {
     const parsed = parseImport(JSON.stringify({ format: "learn.v1", items: [staged] }));
     expect(parsed.ok).toBe(false);
     expect(!parsed.ok && parsed.errors[0]).toBe(
-      'Item 1: "ehr.timePoints.2.fromStep" is not valid.',
+      'Question 1: "ehr.timePoints.2.fromStep" is not valid.',
     );
   });
 });
@@ -181,7 +181,7 @@ describe("refusing an import", () => {
   it("refuses an export holding both items and a case study, or neither", () => {
     const expected = {
       ok: false,
-      errors: ["A LeaRN export holds either items or one case study."],
+      errors: ["A LeaRN export holds either questions or one case study."],
     };
     expect(parseImport(JSON.stringify({ format: "learn.v1" }))).toEqual(expected);
     expect(
@@ -192,7 +192,7 @@ describe("refusing an import", () => {
   it("refuses an empty item list, or more items than one import takes", () => {
     const expected = {
       ok: false,
-      errors: ["Include between 1 and 50 items. Split a larger set into several files."],
+      errors: ["Include between 1 and 50 questions. Split a larger set into several files."],
     };
     expect(parseImport(JSON.stringify({ format: "learn.v1", items: [] }))).toEqual(expected);
     const many = Array.from({ length: 51 }, () => good());
@@ -204,8 +204,8 @@ describe("refusing an import", () => {
     const result = parseImport(JSON.stringify({ format: "learn.v1", items: [good(), bad] }));
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.errors).toContain('Item 2: "stem.value" is not valid.');
-    expect(result.errors.some((error) => error.startsWith("Item 1"))).toBe(false);
+    expect(result.errors).toContain('Question 2: "stem.value" is not valid.');
+    expect(result.errors.some((error) => error.startsWith("Question 1"))).toBe(false);
   });
 
   it("names a case study step by its number", () => {
@@ -237,10 +237,10 @@ describe("importSummary", () => {
   it("says what was imported, always as drafts", () => {
     const a = item(FIXTURES.multiple_choice.canonical);
     expect(importSummary({ ok: true, kind: "items", items: [a] })).toBe(
-      "Imported 1 item as a draft.",
+      "Imported 1 question as a draft.",
     );
     expect(importSummary({ ok: true, kind: "items", items: [a, a] })).toBe(
-      "Imported 2 items as drafts.",
+      "Imported 2 questions as drafts.",
     );
     const caseStudy = sample();
     expect(importSummary({ ok: true, kind: "caseStudy", caseStudy })).toBe(

@@ -182,7 +182,7 @@ describe("parseMoveForm", () => {
   it("asks for a selection when nothing is selected", () => {
     expect(parseMoveForm(form([["folder", CARDIAC]]))).toEqual({
       ok: false,
-      error: "Select at least one item or case study to move.",
+      error: "Select at least one question or case study to move.",
     });
   });
 
@@ -232,28 +232,30 @@ describe("folderContentsMessage", () => {
 
   it("says what is inside, with each count named", () => {
     expect(folderContentsMessage("Cardiac", { items: 3, caseStudies: 1, folders: 2 })).toBe(
-      '"Cardiac" holds 3 items, 1 case study and 2 folders. Move or delete them first.',
+      '"Cardiac" holds 3 questions, 1 case study and 2 folders. Empty it first.',
     );
   });
 
   it("names only what is there", () => {
     expect(folderContentsMessage("Cardiac", { items: 1, caseStudies: 0, folders: 0 })).toBe(
-      '"Cardiac" holds 1 item. Move or delete it first.',
+      '"Cardiac" holds 1 question. Empty it first.',
     );
     expect(folderContentsMessage("Cardiac", { items: 0, caseStudies: 2, folders: 1 })).toBe(
-      '"Cardiac" holds 2 case studies and 1 folder. Move or delete them first.',
+      '"Cardiac" holds 2 case studies and 1 folder. Empty it first.',
     );
   });
 });
 
 describe("moveSummary", () => {
-  it("says how many items moved and where", () => {
-    expect(moveSummary({ items: 5, caseStudies: 0 }, "Cardiac")).toBe("Moved 5 items to Cardiac.");
+  it("says how many questions moved and where", () => {
+    expect(moveSummary({ items: 5, caseStudies: 0 }, "Cardiac")).toBe(
+      "Moved 5 questions to Cardiac.",
+    );
   });
 
-  it("names items and case studies together, and Unfiled as a destination", () => {
-    expect(moveSummary({ items: 1, caseStudies: 2 }, "Unfiled")).toBe(
-      "Moved 1 item and 2 case studies to Unfiled.",
+  it("names questions and case studies together, and Not in a folder as a destination", () => {
+    expect(moveSummary({ items: 1, caseStudies: 2 }, "Not in a folder")).toBe(
+      "Moved 1 question and 2 case studies to Not in a folder.",
     );
   });
 

@@ -40,7 +40,7 @@ test("an author signs in from an emailed link, lands where they were going, then
   await openSignInLink(page, link);
 
   await expect(page).toHaveURL(/\/author$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Item banks" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Library" })).toBeVisible();
   await expect(page.getByTestId("signed-in-email")).toHaveText(email);
 
   // Signed in, the sign-in page moves straight on.
@@ -81,9 +81,9 @@ test("an account with no role lands on the welcome page and cannot open authorin
   await expect(
     page.getByRole("button", { name: "Set up my workspace", exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Item banks", exact: true }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1, name: "Library", exact: true })).toHaveCount(
+    0,
+  );
   const axe = await new AxeBuilder({ page }).analyze();
   expect(axe.violations).toEqual([]);
   await page.screenshot({
@@ -120,7 +120,7 @@ test("the demo account signs in without an email and lands where the person was 
 
   await page.getByRole("button", { name: "Use the demo account" }).click();
   await expect(page).toHaveURL(/\/author$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Item banks" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Library" })).toBeVisible();
   await expect(page.getByTestId("signed-in-email")).toHaveText(
     process.env.DEMO_ACCOUNT_EMAIL!.trim().toLowerCase(),
   );
@@ -323,11 +323,9 @@ test("a new teacher signs up, with the keyboard, into an empty workspace of thei
   ).toBeVisible();
   await page.getByRole("button", { name: "Skip", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1, name: "Library", exact: true })).toBeVisible();
   await expect(
-    page.getByRole("heading", { level: 1, name: "Item banks", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { level: 2, name: "No item banks yet", exact: true }),
+    page.getByRole("heading", { level: 2, name: "No quizzes yet", exact: true }),
   ).toBeVisible();
   // The shared org's seeded bank is not theirs to see.
   await expect(page.getByRole("link", { name: "Samples", exact: true })).toHaveCount(0);

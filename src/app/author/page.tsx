@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-
 import { resendConfirmation } from "@/app/sign-in/actions";
 import { ConfirmEmailBanner } from "@/components/auth/ConfirmEmailBanner";
 import { BankList } from "@/components/authoring/BankList";
@@ -10,7 +9,6 @@ import { TeacherWelcome } from "@/components/onboarding/TeacherWelcome";
 import { isEmailUnconfirmed } from "@/lib/auth/emailConfirmation";
 import { listBanks } from "@/lib/authoring/banks";
 import { requireAuthor } from "@/lib/authoring/session";
-
 import {
   checklistSteps,
   GET_STARTED_COOKIE,
@@ -24,7 +22,6 @@ import {
   teacherWelcomeSteps,
 } from "@/lib/onboarding/teacherWelcome";
 import { listSharedClassNamesByBank } from "@/lib/supabase/practiceShares";
-
 import { createBank } from "./actions";
 import { hideGetStarted, importSample, markOnboarded } from "./onboardingActions";
 

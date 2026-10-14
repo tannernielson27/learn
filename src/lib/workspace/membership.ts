@@ -83,7 +83,7 @@ function counted(count: number, one: string, many: string): string {
   return `${count} ${count === 1 ? one : many}`;
 }
 
-/** "3 item banks and 1 class". */
+/** "3 quizzes and 1 class". */
 export function moveLossCounts(preview: Pick<MovePreview, "bankCount" | "classCount">): string {
   return `${counted(preview.bankCount, "quiz", "quizzes")} and ${counted(preview.classCount, "class", "classes")}`;
 }

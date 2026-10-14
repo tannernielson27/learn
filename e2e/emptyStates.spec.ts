@@ -20,8 +20,8 @@ async function expectEmptyState(page: Page, level: number, name: string): Promis
   await expect(heading).toBeVisible();
   const region = page.locator("[data-empty-state]").filter({ has: heading });
   await expect(region).toHaveCount(1);
-  // Heading, one sentence under it: never a blank frame.
-  await expect(region.locator("p")).not.toHaveText("");
+  // One line, and at most one sentence under it (#412): never a blank frame, never a paragraph.
+  expect(await region.locator("p").count()).toBeLessThanOrEqual(1);
 }
 
 async function shoot(page: Page, project: string, name: string): Promise<void> {
@@ -40,8 +40,8 @@ test("a fresh instructor and their first student see what to do next on every em
   await signInAsInstructorInEmptyOrg(page, request, `empty-${project}`);
 
   // Author home: no banks yet, with a link down to the form that makes one.
-  await expectEmptyState(page, 2, "No item banks yet");
-  await expect(page.getByRole("link", { name: "Create a bank", exact: true })).toHaveAttribute(
+  await expectEmptyState(page, 2, "No quizzes yet");
+  await expect(page.getByRole("link", { name: "New quiz", exact: true })).toHaveAttribute(
     "href",
     "#new-bank-heading",
   );
@@ -49,7 +49,7 @@ test("a fresh instructor and their first student see what to do next on every em
   await shoot(page, project, "author-home-empty");
 
   // Live sessions: none yet, with a link back to the banks they start from.
-  await page.getByRole("link", { name: "Live sessions and reports", exact: true }).click();
+  await page.getByRole("link", { name: "Live sessions", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/sessions$/);
   await expectEmptyState(page, 2, "No live sessions yet");
   await expect(
@@ -61,7 +61,7 @@ test("a fresh instructor and their first student see what to do next on every em
   // Classes: none yet, with a link to the New class form below; keyboard reaches it.
   await page.goto("/author/classes");
   await expectEmptyState(page, 2, "No classes yet");
-  const createClass = page.getByRole("link", { name: "Create a class", exact: true });
+  const createClass = page.getByRole("link", { name: "New class", exact: true });
   await expect(createClass).toHaveAttribute("href", "#new-class-heading");
   await createClass.focus();
   await page.keyboard.press("Enter");
@@ -85,15 +85,15 @@ test("a fresh instructor and their first student see what to do next on every em
   // A new bank: no items and no case studies, the first linking to writing one.
   await page.goto("/author");
   const bankName = `Empty bank ${Date.now() % 100_000}`;
-  await page.getByRole("textbox", { name: "Bank name", exact: true }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank", exact: true }).click();
+  await page.getByRole("textbox", { name: "Quiz name", exact: true }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/banks\/[0-9a-f-]{36}$/);
   const bankPath = new URL(page.url()).pathname;
-  await expectEmptyState(page, 3, "No items in this bank yet");
+  await expectEmptyState(page, 3, "No questions yet");
   await expect(
-    page.getByRole("link", { name: "Write the first item", exact: true }),
+    page.getByRole("link", { name: "Write the first question", exact: true }),
   ).toHaveAttribute("href", `${bankPath}/new`);
-  await expectEmptyState(page, 3, "No case studies in this bank yet");
+  await expectEmptyState(page, 3, "No case studies yet");
   await expectNoAxeViolations(page);
 
   // The student joins through the invite link and finds nothing assigned yet.

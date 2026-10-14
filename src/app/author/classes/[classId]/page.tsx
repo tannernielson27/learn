@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-
 import { notFound } from "next/navigation";
 import { deleteAssignment, editAssignment } from "@/app/author/assignments/actions";
 import { AssignmentList } from "@/components/assignments/AssignmentList";

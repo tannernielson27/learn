@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-
 import { InviteColleagueForm } from "@/components/workspace/InviteColleagueForm";
 import { MemberList } from "@/components/workspace/MemberList";
 import { PendingInvites } from "@/components/workspace/PendingInvites";
@@ -137,7 +136,6 @@ export default async function WorkspacePage() {
                 now={new Date()}
                 revokeActionFor={(inviteId) => revokeInvite.bind(null, inviteId)}
                 resendActionFor={(inviteId) => resendInvite.bind(null, inviteId)}
-
                 focusAfterChange="pending-heading"
               />
             )}

@@ -52,7 +52,7 @@ describe("archiveItem", () => {
       error: stepArchiveRefusal("Heart failure", "3"),
     });
     expect(stepArchiveRefusal("Heart failure", "3")).toBe(
-      'This item is step 3 of the case study "Heart failure". Archive the case study instead, or give that step another item first.',
+      'This question is step 3 of the case study "Heart failure". Archive the case study instead, or give that step another question first.',
     );
   });
 
@@ -63,7 +63,7 @@ describe("archiveItem", () => {
       error: stepArchiveRefusal(undefined, undefined),
     });
     expect(stepArchiveRefusal(undefined, undefined)).toBe(
-      "This item is a step in a case study. Archive the case study instead, or give that step another item first.",
+      "This question is a step in a case study. Archive the case study instead, or give that step another question first.",
     );
   });
 

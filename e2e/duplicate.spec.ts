@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
 import { sampleCaseStudy } from "../src/lib/ngn/fixtures/case-study";
 import { signInAsNewAuthor } from "./signIn";
+import { openImport } from "./authoringHelpers";
 
 // Needs the local Supabase stack, like auth.spec.ts. CI runs it in the `auth-e2e` job.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
@@ -13,6 +14,7 @@ async function expectNoAxeViolations(page: Page) {
 }
 
 async function importJson(page: Page, text: string) {
+  await openImport(page);
   await page.getByRole("textbox", { name: "Or paste JSON", exact: true }).fill(text);
   await page.getByRole("button", { name: "Import", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Imported" })).toBeVisible();
@@ -34,8 +36,8 @@ test("an author duplicates a case study, changes step 3 in the copy, and the ori
   const bankName = `Duplicate ${testInfo.project.name} ${Date.now()}`;
 
   await page.goto("/author");
-  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   const bankUrl = page.url();
 
@@ -91,8 +93,8 @@ test("an author duplicates an item and the copy opens as a draft marked (copy)",
   const bankName = `Duplicate item ${testInfo.project.name} ${Date.now()}`;
 
   await page.goto("/author");
-  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   const bankUrl = page.url();
 
@@ -102,7 +104,7 @@ test("an author duplicates an item and the copy opens as a draft marked (copy)",
     stem: { kind: "markdown", value: itemStem },
   };
   await importJson(page, JSON.stringify({ format: "learn.v1", items: [item] }));
-  const items = page.getByRole("list", { name: "Items" });
+  const items = page.getByRole("list", { name: "Questions" });
   await items.getByRole("link", { name: new RegExp(`^${itemStem}`) }).click();
   await expect(page.getByRole("textbox", { name: "Question stem", exact: true })).toHaveValue(
     itemStem,

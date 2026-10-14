@@ -36,20 +36,19 @@ describe("CaseStudyList", () => {
     expect(screen.getByRole("list", { name: "Case studies" })).toBeInTheDocument();
   });
 
-  it("says when the bank has no case studies", () => {
-    render(<CaseStudyList caseStudies={[]} />);
+  it("says so in one line when the quiz has no case studies", () => {
+    const { container } = render(<CaseStudyList caseStudies={[]} />);
     expect(
-      screen.getByRole("heading", { level: 3, name: "No case studies in this bank yet" }),
+      screen.getByRole("heading", { level: 3, name: "No case studies yet" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/Name one below/)).toBeInTheDocument();
+    // One line (#412): the form that starts one sits right under the list.
+    expect(container.querySelector("p")).toBeNull();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("says what the page passes when a folder holds no case studies", () => {
     render(
-      <CaseStudyList
-        caseStudies={[]}
-        empty={{ heading: "No case studies in this folder", body: "Move one here." }}
-      />,
+      <CaseStudyList caseStudies={[]} empty={{ heading: "No case studies in this folder" }} />,
     );
     expect(
       screen.getByRole("heading", { level: 3, name: "No case studies in this folder" }),

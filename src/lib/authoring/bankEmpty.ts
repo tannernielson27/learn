@@ -62,7 +62,8 @@ export function bankItemsEmpty(empty: BankEmptyView): EmptyStateContent {
   }
   return {
     ...NO_QUESTIONS_YET,
-    action: { href: `/author/banks/${bankId}/new`, label: "New question" },
+    // Not "New question": that is the page's own button, and two links should not share a name.
+    action: { href: `/author/banks/${bankId}/new`, label: "Write the first question" },
   };
 }
 
