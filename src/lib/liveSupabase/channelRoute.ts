@@ -24,7 +24,16 @@
  */
 import type { ChannelSigningKey } from "@/lib/supabase/channelToken";
 import { mintChannelToken } from "@/lib/supabase/channelToken";
-import { LIVE_ROUTE_ERRORS, asRefusal, fail, refuse, type LiveRouteDeps } from "./routeDeps";
+import {
+  LIVE_ROUTE_ERRORS,
+  asRefusal,
+  fail,
+  refuse,
+  reportLiveFault,
+  routeOf,
+  unavailable,
+  type LiveRouteDeps,
+} from "./routeDeps";
 import { NO_STORE_HEADERS, type ChannelCredential } from "./wire";
 
 export interface ChannelRouteDeps extends LiveRouteDeps {
@@ -42,14 +51,35 @@ export async function issueChannelToken(
     return refuse("malformed");
   }
 
-  const participant = await deps.verify(request);
-  if (participant === null) return fail(401, LIVE_ROUTE_ERRORS.signedOut);
+  // #407: a database that did not answer is a 503, never a 401. The phone's token source reads a
+  // 401 as final, closes the socket and reloads the page (`channelTokenSource.ts`), so calling a
+  // timeout "signed out" took a student out of the room; a 503 it simply tries again.
+  const verified = await deps.verify(request);
+  if (!verified.ok) {
+    return verified.reason === "unavailable"
+      ? unavailable()
+      : fail(401, LIVE_ROUTE_ERRORS.signedOut);
+  }
+  const { participant } = verified;
 
-  const { data: opened, error } = await deps.service.rpc("begin_session_view", {
+  const {
+    data: opened,
+    error,
+    status,
+  } = await deps.service.rpc("begin_session_view", {
     target_session: participant.sessionId,
     participant: participant.participantId,
   });
-  if (error) return fail(500, LIVE_ROUTE_ERRORS.failed);
+  if (error) {
+    reportLiveFault({
+      route: routeOf(request),
+      call: "begin_session_view",
+      sessionId: participant.sessionId,
+      error,
+      status,
+    });
+    return unavailable();
+  }
   const session = opened?.[0];
   if (!session) return fail(401, LIVE_ROUTE_ERRORS.signedOut);
   const refusal = asRefusal(session.refusal);

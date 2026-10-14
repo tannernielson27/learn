@@ -1591,6 +1591,27 @@ export type Database = {
           started_at: string;
         }[];
       };
+      open_session_view: {
+        Args: {
+          presented_secret: string;
+          target_participant: string;
+          target_session: string;
+        };
+        Returns: {
+          refusal: string;
+          server_now: string;
+          session_ends_at: string;
+          session_items: Json;
+          session_mode: Database["public"]["Enums"]["session_mode"];
+          session_position: number;
+          session_remaining_ms: number;
+          session_reveal: boolean;
+          session_status: Database["public"]["Enums"]["session_status"];
+          session_timer_seconds: number;
+          view_answers: Json;
+          view_items: Json;
+        }[];
+      };
       org_invite_move_preview: {
         Args: { p_user: string; token: string };
         Returns: {

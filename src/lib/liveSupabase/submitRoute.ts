@@ -17,7 +17,16 @@ import { MAX_ITEM_PAYLOAD_BYTES, withinItemSizeLimit } from "@/lib/authoring/pay
 import { SUBMIT_ERRORS, parseSubmission, scoreSubmission } from "@/lib/ngn/submit";
 import { fromItemRow } from "@/lib/supabase/itemRows";
 import type { Json } from "@/lib/supabase/database.types";
-import { LIVE_ROUTE_ERRORS, asRefusal, fail, refuse, type LiveRouteDeps } from "./routeDeps";
+import {
+  LIVE_ROUTE_ERRORS,
+  asRefusal,
+  fail,
+  refuse,
+  reportLiveFault,
+  routeOf,
+  unavailable,
+  type LiveRouteDeps,
+} from "./routeDeps";
 import { isBeforeRevealMigration } from "./scoredReveal";
 import { NO_STORE_HEADERS, type SubmitAckPayload } from "./wire";
 
@@ -32,8 +41,23 @@ export async function submitSessionResponse(
     return refuse("malformed");
   }
 
-  const participant = await deps.verify(request);
-  if (participant === null) return refuse("not_joined");
+  // #407: a database that did not answer has not said this person left the room, so that is a
+  // 503 and not the `not_joined` a phone would show as "you have not joined this session".
+  const verified = await deps.verify(request);
+  if (!verified.ok) {
+    return verified.reason === "unavailable" ? unavailable() : refuse("not_joined");
+  }
+  const { participant } = verified;
+  const faulted = (call: string, error: unknown, status: number): Response => {
+    reportLiveFault({
+      route: routeOf(request),
+      call,
+      sessionId: participant.sessionId,
+      error,
+      status,
+    });
+    return unavailable();
+  };
 
   // A declared oversized body is refused before it is read; the parsed check below catches a
   // truthful content-length that still describes something enormous.
@@ -67,12 +91,16 @@ export async function submitSessionResponse(
 
   // Charges this participant's rate limit and answers what the room is on, in one round trip. A
   // flood of unreadable answers costs a counter update rather than a scoring pass.
-  const { data: opened, error: openError } = await deps.service.rpc("begin_session_submission", {
+  const {
+    data: opened,
+    error: openError,
+    status: openStatus,
+  } = await deps.service.rpc("begin_session_submission", {
     target_session: participant.sessionId,
     participant: participant.participantId,
     ...(position === undefined ? {} : { requested_position: position }),
   });
-  if (openError) return fail(500, LIVE_ROUTE_ERRORS.failed);
+  if (openError) return faulted("begin_session_submission", openError, openStatus);
   const opening = opened?.[0];
   if (!opening) return fail(500, LIVE_ROUTE_ERRORS.failed);
   const openingRefusal = asRefusal(opening.refusal);
@@ -82,12 +110,12 @@ export async function submitSessionResponse(
   // nulls here, whatever the type says.
   if (!opening.item_id || !opening.item_position) return refuse("wrong_item");
 
-  const { data: row, error: itemError } = await deps.service
-    .from("items")
-    .select(ITEM_COLUMNS)
-    .eq("id", opening.item_id)
-    .maybeSingle();
-  if (itemError) return fail(500, LIVE_ROUTE_ERRORS.failed);
+  const {
+    data: row,
+    error: itemError,
+    status: itemStatus,
+  } = await deps.service.from("items").select(ITEM_COLUMNS).eq("id", opening.item_id).maybeSingle();
+  if (itemError) return faulted("items", itemError, itemStatus);
   if (!row) return fail(409, LIVE_ROUTE_ERRORS.unplayable);
   const stored = fromItemRow(row);
   if (!stored.ok) return fail(409, LIVE_ROUTE_ERRORS.unplayable);
@@ -118,17 +146,22 @@ export async function submitSessionResponse(
   // The key the marks were computed from is written beside them, so the reveal draws them against
   // it even if the author edits the item before then. A database without the column yet (the
   // migration is pushed after the deploy) takes the answer without it; see `scoredReveal.ts`.
-  let { data: written, error: writeError } = await deps.service.rpc("record_session_response", {
+  let {
+    data: written,
+    error: writeError,
+    status: writeStatus,
+  } = await deps.service.rpc("record_session_response", {
     ...args,
     scored_reveal: reveal as unknown as Json,
   });
   if (isBeforeRevealMigration(writeError)) {
-    ({ data: written, error: writeError } = await deps.service.rpc(
-      "record_session_response",
-      args,
-    ));
+    ({
+      data: written,
+      error: writeError,
+      status: writeStatus,
+    } = await deps.service.rpc("record_session_response", args));
   }
-  if (writeError) return fail(500, LIVE_ROUTE_ERRORS.failed);
+  if (writeError) return faulted("record_session_response", writeError, writeStatus);
   const record = written?.[0];
   if (!record) return fail(500, LIVE_ROUTE_ERRORS.failed);
   const writeRefusal = asRefusal(record.refusal);
