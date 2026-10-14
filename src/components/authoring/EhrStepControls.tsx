@@ -55,6 +55,26 @@ export function FromStepSelect({ field, where, fromStep, fields, onChange }: Fro
   );
 }
 
+/** Lucide's chevron-down, turned up while the row is open. Not animated. */
+function ChevronDown() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="shrink-0 text-ink-2 group-open:rotate-180"
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
 export interface TabStepAccessProps {
   /** Form path of the tab, e.g. "tabs.2". */
   path: string;
@@ -74,8 +94,9 @@ export interface TabStepAccessProps {
 export function TabStepAccess({ path, name, stepAccess, fields, onChange }: TabStepAccessProps) {
   const access = stepAccessOf(stepAccess);
   return (
-    <details className="rounded-sm border border-line">
+    <details className="group rounded-sm border border-line">
       <summary className="tap-target flex cursor-pointer items-center gap-2 px-3 text-sm text-ink-1 hover:bg-surface-2">
+        <ChevronDown />
         <Sr>{`${name}: `}</Sr>
         <span>{describeStepAccess(stepAccess)}</span>
       </summary>
