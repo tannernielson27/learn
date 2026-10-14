@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FIXTURES, sampleCaseStudy } from "@/lib/ngn/fixtures";
+import { stagedCaseStudy, stagedEhr } from "@/lib/ngn/fixtures/chart-reveal";
 import { sampleTrendItem } from "@/lib/ngn/fixtures/trend";
 import { ITEM_TYPES } from "@/lib/ngn/labels";
 import type { Item } from "@/lib/ngn/schemas";
@@ -101,6 +102,56 @@ describe("export then import", () => {
       const back = storedAs(row);
       expect(back.ok && back.value).toEqual({ ...original.items[index], id: NEW_ID, version: 1 });
     });
+  });
+
+  it("a case study keeps its chart's fromStep and stepAccess (#334)", () => {
+    const staged = validateCaseStudy(stagedCaseStudy);
+    if (!staged.ok) throw new Error("the staged case study must be valid");
+    const parsed = parseImport(JSON.stringify(caseStudyEnvelope(staged.value)));
+    if (!parsed.ok || parsed.kind !== "caseStudy") throw new Error("the export should import");
+    expect(parsed.caseStudy.ehr).toEqual(stagedEhr);
+    expect(parsed.caseStudy.ehr.timePoints.map((point) => point.fromStep)).toEqual([
+      undefined,
+      undefined,
+      3,
+      4,
+      6,
+    ]);
+    expect(parsed.caseStudy.ehr.tabs[1]?.blocks.map((block) => block.fromStep)).toEqual([
+      undefined,
+      undefined,
+      3,
+      4,
+      6,
+    ]);
+    expect(parsed.caseStudy.ehr.tabs[3]?.stepAccess).toEqual([
+      "hidden",
+      "locked",
+      "open",
+      "open",
+      "open",
+      "open",
+    ]);
+    // And what the import writes is that same record, fields and all.
+    expect(importRowsFor(parsed).caseStudy?.ehr).toEqual(stagedEhr);
+  });
+
+  it("an export written before those fields existed still imports, with neither added", () => {
+    const old = JSON.stringify({ format: "learn.v1", caseStudy: sampleCaseStudy });
+    expect(old).not.toMatch(/fromStep|stepAccess/);
+    const parsed = parseImport(old);
+    if (!parsed.ok || parsed.kind !== "caseStudy") throw new Error("the old export should import");
+    expect(parsed.caseStudy.ehr).toEqual(sampleCaseStudy.ehr);
+    expect(JSON.stringify(importRowsFor(parsed))).not.toMatch(/fromStep|stepAccess/);
+  });
+
+  it("refuses a standalone item whose record is staged, naming the field", () => {
+    const staged = { ...sampleTrendItem, ehr: stagedEhr };
+    const parsed = parseImport(JSON.stringify({ format: "learn.v1", items: [staged] }));
+    expect(parsed.ok).toBe(false);
+    expect(!parsed.ok && parsed.errors[0]).toBe(
+      'Item 1: "ehr.timePoints.2.fromStep" is not valid.',
+    );
   });
 });
 

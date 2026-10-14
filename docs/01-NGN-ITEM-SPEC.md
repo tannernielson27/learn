@@ -149,13 +149,33 @@ CaseStudy {
 }
 EhrRecord {
   patientHeader: { name?, age, sex, setting, admissionDate? },   // fictional; never real PHI
-  timePoints: [{ id, label }],                                    // ≥1; Trend items use several
+  timePoints: [{ id, label, fromStep?: 1..6 }],                   // ≥1; Trend items use several
   tabs: [{ id, kind: "history_physical" | "nurses_notes" | "vital_signs" | "lab_results" | "orders" | "mar" | "diagnostics" | "custom",
-           title, blocks: [ RichTextBlock | TableBlock | VitalsBlock ], timePointId? }]
+           title, blocks: [ RichTextBlock | TableBlock | VitalsBlock ],   // each block: fromStep?: 1..6
+           timePointId?,
+           stepAccess?: ["hidden" | "locked" | "open" × 6] }]             // one per step, first step first
 }
 ```
 
 The EHR panel is shown beside (desktop) or above/tabbed (mobile) every item in the case. Items may reference `ehr.tabs[].id` to auto-open a tab.
+
+#### A chart that grows with the case (#334)
+
+A case study's record may hold parts of itself back until the case reaches them. Both fields are optional, and a record with neither reads the same at every step, as every record did before them.
+
+- **`fromStep`** on a time point or a block: the step (1 to 6) it first appears at. Absent means step 1. At least one time point must be there from step 1.
+- **`stepAccess`** on a tab: exactly six values, one per step. `hidden` leaves the tab out, `locked` shows its name in the tab bar and nothing else, `open` shows it whole. Absent means open at every step.
+- **Case studies only.** A standalone or trend item (§4.2, §4.3) has no steps, so its record is refused if it carries either field, at that field's path (`ehr.tabs.2.stepAccess`).
+
+`recordAtStep(record, step)` in `src/lib/ngn/chartReveal.ts` is the one reader of both fields. It returns the student's view of the record at a step (`EhrRecordView`):
+
+- a time point or block whose `fromStep` is later is left out, and so is a tab charted (`timePointId`) at a time point that is left out;
+- a table block loses each column whose heading is the label of a hidden time point, which is how a vitals flow sheet is written; a table with no column left is left out. The heading is the only link a column has to a time, so this is a convention the author keeps: the heading must be the label itself (case and surrounding space aside). A column headed anything else, or a table with times down its rows, is not recognized and needs `fromStep` on its block. Where a hidden and a visible time point share a label, the column stays hidden until both are out;
+- a tab that is `hidden` at the step is left out, and so is an open tab with no blocks left;
+- a tab that is `locked` at the step keeps `id`, `kind`, `title` and `timePointId` and is marked `locked: true`. It has no `blocks` field, so its text is not in the view at all. A locked tab is listed whether or not any of its blocks has arrived;
+- the view carries no `fromStep` and no `stepAccess`, so it says nothing about what arrives later.
+
+`stepAccess` may go back as well as forward (open at step 2, locked at step 3); the schema does not forbid it. Serving the view to students is #335 and the builder controls are #336; until #335, every student-facing page still sends the whole record.
 
 ### 4.2 Trend item
 

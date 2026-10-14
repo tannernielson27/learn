@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LIVE_BUSY_LABEL, liveSubmitFailure } from "@/components/live/liveSubmit";
+import { createPresentCount, RoomCount } from "@/components/live/RoomCount";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { SetNav } from "@/components/question/SetNav";
 import { Button } from "@/components/ui/Button";
@@ -65,7 +66,8 @@ export function StudentPacedRoom({
   const router = useRouter();
   const [state, setState] = useState<LiveSessionState>(initial);
   const [set, setSet] = useState<PacedItemPayload[] | null>(null);
-  const [present, setPresent] = useState(1);
+  /** Not state, so that a join or a leave does not render the set (#408); see `RoomCount`. */
+  const [present] = useState(createPresentCount);
   const [connection, setConnection] = useState<RoomConnection>("connecting");
   /** Where this phone is in the set, counting from 0. Its own, never the room's. */
   const [index, setIndex] = useState(0);
@@ -110,7 +112,7 @@ export function StudentPacedRoom({
       setConnection("live");
     });
     const offPresence = joined.onPresence((roster) => {
-      if (watching) setPresent(roster.length);
+      if (watching) present.set(roster.length);
     });
     const offConnection = joined.onConnection((status, rejoined) => {
       if (!watching) return;
@@ -129,7 +131,7 @@ export function StudentPacedRoom({
       room.current = null;
       void joined.leave().catch(() => {});
     };
-  }, [dial, router, me]);
+  }, [dial, router, me, present]);
 
   /**
    * Sends one answer, to the item it was given for. As in `StudentRoom`, the promise is left
@@ -184,9 +186,7 @@ export function StudentPacedRoom({
             {state.status === "running" ? "Loading the items." : copy.detail}
           </p>
         </section>
-        <p data-testid="room-count" className="tabular mt-8 text-sm text-ink-2">
-          {present} in the room
-        </p>
+        <RoomCount present={present} />
       </>
     );
   }

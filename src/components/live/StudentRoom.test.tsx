@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { act } from "react";
-import { describe, expect, it, vi, type Mock } from "vitest";
+import { act, Profiler } from "react";
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import type {
   ItemReveal,
   LiveSessionState,
@@ -19,8 +19,16 @@ import type {
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema, type AnyResponse } from "@/lib/ngn/schemas";
 import { toKeylessItem } from "@/lib/ngn/submit";
+import { waitingCopy } from "@/lib/live/waiting";
 import { StudentRoom } from "./StudentRoom";
 import { renderersLoaded } from "@/components/question/testing/renderers";
+
+// The real sentences, behind a spy. `StudentRoom` asks for them once per render of its own body,
+// so the call count is how many times the room itself rendered (#408).
+vi.mock("@/lib/live/waiting", async (original) => {
+  const real = await original<typeof import("@/lib/live/waiting")>();
+  return { ...real, waitingCopy: vi.fn(real.waitingCopy) };
+});
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
@@ -561,5 +569,96 @@ describe("StudentRoom: the item timer (#182)", () => {
     await renderersLoaded();
     expect(screen.queryByTestId("answer-late")).toBeNull();
     expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeChecked();
+  });
+});
+
+describe("StudentRoom: someone else joins or leaves (#408)", () => {
+  /** A roster of `count` phones, as a presence sync would hand it over. */
+  const rosterOf = (count: number): Participant[] =>
+    Array.from({ length: count }, (_, index) => ({
+      participantId: `p-${index}`,
+      displayName: `Student ${index}`,
+      joinedAt: 1000 + index,
+    }));
+
+  const commits = vi.fn();
+  beforeEach(() => commits.mockClear());
+
+  /** The room inside a React Profiler, so every commit anywhere on the screen is counted. */
+  function profiled() {
+    const room = fakeTransport(async (itemId) => ({ itemId, submittedAt: 1_700_000_000_000 }));
+    render(
+      <Profiler id="student-room" onRender={commits}>
+        <StudentRoom
+          sessionId="00000000-0000-4000-8000-0000000132aa"
+          title="Cardiac basics"
+          displayName="Sam Okafor"
+          participantId="00000000-0000-4000-8000-0000000132bb"
+          joinedAt={1000}
+          initial={state()}
+          channel={CHANNEL}
+          connect={() => room.transport}
+        />
+      </Profiler>,
+    );
+    return room;
+  }
+
+  it("commits nothing for 50 joins while an item is on the screen; a move still commits", async () => {
+    const room = profiled();
+    room.push({ state: running(), item: KEYLESS });
+    await renderersLoaded();
+    commits.mockClear();
+
+    for (let count = 2; count <= 51; count += 1) room.roster(rosterOf(count));
+    expect(commits).toHaveBeenCalledTimes(0);
+
+    // The control: the same screen does commit when the room moves to another item.
+    const next = { ...KEYLESS, id: "mr_sample_2" } as ParticipantItem;
+    room.push({ state: running({ position: 2 }), item: next });
+    expect(commits.mock.calls.length).toBeGreaterThan(0);
+
+    // And the count was kept, not dropped: it is right the moment there is somewhere to show it.
+    room.push({ state: running({ status: "paused", position: 2 }), item: next });
+    expect(screen.getByTestId("room-count")).toHaveTextContent("51 in the room");
+  });
+
+  it("commits nothing for 50 leaves either", async () => {
+    const room = profiled();
+    room.push({ state: running(), item: KEYLESS });
+    await renderersLoaded();
+    room.roster(rosterOf(51));
+    commits.mockClear();
+
+    for (let count = 50; count >= 1; count -= 1) room.roster(rosterOf(count));
+    expect(commits).toHaveBeenCalledTimes(0);
+  });
+
+  it("redraws only the count while waiting, not the room around it", () => {
+    const room = profiled();
+    const renders = vi.mocked(waitingCopy);
+    renders.mockClear();
+    commits.mockClear();
+
+    for (let count = 2; count <= 51; count += 1) room.roster(rosterOf(count));
+
+    // The count is on this screen, so each join is drawn: one commit each, of one line.
+    expect(screen.getByTestId("room-count")).toHaveTextContent("51 in the room");
+    expect(commits).toHaveBeenCalledTimes(50);
+    expect(renders).toHaveBeenCalledTimes(0);
+
+    // The control: a move renders the room itself.
+    room.push({ state: state({ status: "paused", position: 4 }), item: null });
+    expect(renders.mock.calls.length).toBeGreaterThan(0);
+  });
+
+  it("commits nothing for a sync that leaves the count where it was", () => {
+    const room = profiled();
+    room.roster(rosterOf(3));
+    commits.mockClear();
+
+    // A phone re-tracking after a reconnect: a new roster array, the same number of people.
+    for (let again = 0; again < 50; again += 1) room.roster(rosterOf(3));
+    expect(commits).toHaveBeenCalledTimes(0);
   });
 });
