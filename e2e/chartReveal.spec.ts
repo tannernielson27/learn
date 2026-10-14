@@ -34,9 +34,10 @@ import { skipWelcomes } from "./welcome";
 // stack with Realtime; CI runs it in the `auth-e2e` job.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
 
-const NOTE_0115 = "0115: Pain now 8/10";
-const NOTE_0130 = "0130: Pale and diaphoretic";
-const NOTE_0200 = "0200: Second large-bore IV";
+// Each note's own words, without its time: the player draws "0130:" as a time of its own.
+const NOTE_0115 = "Pain now 8/10 and constant";
+const NOTE_0130 = "Pale and diaphoretic";
+const NOTE_0200 = "Second large-bore IV placed";
 /** The labs tab's own text: in the record, never in a view where the tab is hidden or locked. */
 const LABS_TEXT = "Serum hCG";
 const DISPLAY_NAME = "Chart Phone";
@@ -151,12 +152,17 @@ async function openChart(page: Page): Promise<void> {
 }
 
 async function closeChart(page: Page): Promise<void> {
+  // The phone's sheet is modal: the chip under it is inert, so it is closed with Escape.
+  const sheet = page.getByRole("dialog", { name: "Patient record" });
+  if (await sheet.isVisible()) {
+    await page.keyboard.press("Escape");
+    await expect(sheet).toBeHidden();
+    return;
+  }
   const chip = page.getByRole("button", { name: "Patient record", exact: true });
   if ((await chip.isVisible()) && (await chip.getAttribute("aria-expanded")) === "true") {
     await chip.click();
   }
-  const sheet = page.getByRole("dialog", { name: "Patient record" });
-  if (await sheet.isVisible()) await page.keyboard.press("Escape");
 }
 
 const labsTab = (page: Page) => page.getByRole("tab", { name: /^Lab Results/ });
