@@ -52,6 +52,8 @@ export interface EhrSectionEditorProps {
   onBlockChange: (blockIndex: number, block: EhrBlockForm) => void;
   /** A case study's record (#336): the tab's step row and each block's "Shows from". */
   onStepAccess?: (step: CjmmStep, access: TabAccess) => void;
+  /** What the step row's controls are named by: the tab's title, unique among the tabs. */
+  stepRowName?: string;
 }
 
 /** One tab of the patient record: what it is, its title, when it was charted, and its blocks. */
@@ -70,6 +72,7 @@ export function EhrSectionEditor({
   onRemoveBlock,
   onBlockChange,
   onStepAccess,
+  stepRowName,
 }: EhrSectionEditorProps) {
   const number = index + 1;
   const steps = onStepAccess !== undefined;
@@ -142,7 +145,7 @@ export function EhrSectionEditor({
       {onStepAccess ? (
         <TabStepAccess
           path={path}
-          name={tab.title.trim() || `Tab ${number}`}
+          name={stepRowName ?? `Tab ${number}`}
           stepAccess={tab.stepAccess}
           fields={fields}
           onChange={onStepAccess}

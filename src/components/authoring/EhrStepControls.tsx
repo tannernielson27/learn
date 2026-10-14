@@ -100,35 +100,38 @@ export function TabStepAccess({ path, name, stepAccess, fields, onChange }: TabS
         <Sr>{`${name}: `}</Sr>
         <span>{describeStepAccess(stepAccess)}</span>
       </summary>
-      <fieldset className="@container border-t border-line p-3">
+      <fieldset className="border-t border-line p-3">
         <legend className="sr-only">{`${name}, Steps 1 to 6`}</legend>
-        <div className="grid grid-cols-2 gap-2 @sm:grid-cols-3 @2xl:grid-cols-6">
-          {CASE_STUDY_STEPS.map((step) => {
-            const field = `${path}.stepAccess.${step - 1}`;
-            const id = fields.idFor(field);
-            return (
-              <div key={step} className="flex min-w-0 flex-col gap-1">
-                <label htmlFor={id} className="text-sm text-ink-1">
-                  <Sr>{`${name}, `}</Sr>
-                  Step {step}
-                </label>
-                <select
-                  id={id}
-                  className={`tap-target ${fieldClass}`}
-                  value={access[step - 1]}
-                  aria-invalid={fields.invalid(field)}
-                  aria-describedby={fields.describedBy(field)}
-                  onChange={(event) => onChange(step, event.target.value as TabAccess)}
-                >
-                  {TAB_ACCESSES.map((value) => (
-                    <option key={value} value={value}>
-                      {TAB_ACCESS_LABELS[value]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            );
-          })}
+        {/* The container is a div: a fieldset is not a dependable query container everywhere. */}
+        <div className="@container">
+          <div className="grid grid-cols-2 gap-2 @sm:grid-cols-3 @2xl:grid-cols-6">
+            {CASE_STUDY_STEPS.map((step) => {
+              const field = `${path}.stepAccess.${step - 1}`;
+              const id = fields.idFor(field);
+              return (
+                <div key={step} className="flex min-w-0 flex-col gap-1">
+                  <label htmlFor={id} className="text-sm text-ink-1">
+                    <Sr>{`${name}, `}</Sr>
+                    Step {step}
+                  </label>
+                  <select
+                    id={id}
+                    className={`tap-target ${fieldClass}`}
+                    value={access[step - 1]}
+                    aria-invalid={fields.invalid(field)}
+                    aria-describedby={fields.describedBy(field)}
+                    onChange={(event) => onChange(step, event.target.value as TabAccess)}
+                  >
+                    {TAB_ACCESSES.map((value) => (
+                      <option key={value} value={value}>
+                        {TAB_ACCESS_LABELS[value]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </fieldset>
     </details>

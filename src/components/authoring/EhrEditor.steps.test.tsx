@@ -82,6 +82,13 @@ describe("step controls in the case study's patient record editor (#336)", () =>
     ]);
   }, 30_000);
 
+  it("names two tabs with the same title apart", () => {
+    const form = twoTabs();
+    setup({ ...form, tabs: [form.tabs[1]!, { ...form.tabs[1]!, id: "tab_notes_again" }] });
+    expect(select("Nurses' Notes (tab 1), Step 2")).toBeInTheDocument();
+    expect(select("Nurses' Notes (tab 2), Step 2")).toBeInTheDocument();
+  }, 30_000);
+
   it("says a tab's steps in words on its row, without opening it", async () => {
     const { user } = setup(twoTabs());
     expect(screen.getAllByText("Open at Steps 1–6", { selector: "summary *" })).toHaveLength(2);

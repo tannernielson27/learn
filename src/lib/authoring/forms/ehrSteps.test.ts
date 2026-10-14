@@ -8,6 +8,8 @@ import {
   emptyEhrForm,
   fromEhrForm,
   previewRecord,
+  recordFormOf,
+  storedRecordFormOf,
   toEhrForm,
   updateBlock,
   type EhrFormValues,
@@ -67,6 +69,15 @@ describe("a staged patient record survives the form (#336)", () => {
     stored.tabs[0].stepAccess = Array(6).fill("open");
     stored.tabs[0].blocks[0].fromStep = 1;
     expect(fromEhrForm(ehrFormFromStored(stored))).toStrictEqual(sampleEhr);
+  });
+
+  it("an item's record form never holds steps, which an item's record cannot have", () => {
+    const fromParsed = recordFormOf(stagedEhr).ehr!;
+    const fromStored = storedRecordFormOf({ ehr: stagedEhr }).ehr!;
+    for (const form of [fromParsed, fromStored]) {
+      expect(JSON.stringify(form)).not.toMatch(/fromStep|stepAccess/);
+      expect(form.tabs).toHaveLength(stagedEhr.tabs.length);
+    }
   });
 
   it("the draft schema refuses step values the record cannot hold", () => {

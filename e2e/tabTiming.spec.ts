@@ -90,6 +90,9 @@ test("an author sets when a note and a tab show, and previews the patient record
   await labs.click();
   await expect(preview.getByText("Potassium")).toBeVisible();
   await preview.screenshot({ path: `${shots}/tab-timing-preview-step-4.png` });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
 
   // Saved, not just shown: the choices are there after a reload.
   await page.reload();

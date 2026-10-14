@@ -49,6 +49,17 @@ export function focusRecordField(idPrefix: string, field: string): void {
   target?.focus();
 }
 
+/**
+ * How a tab's step controls are named ("Lab Results, Step 3"): its title, with its number when
+ * another tab has the same title, or "Tab 3" until it has one, so no two controls share a name.
+ */
+function stepRowName(tabs: readonly { title: string }[], index: number): string {
+  const title = tabs[index]!.title.trim();
+  if (!title) return `Tab ${index + 1}`;
+  const shared = tabs.filter((tab) => tab.title.trim() === title).length > 1;
+  return shared ? `${title} (tab ${index + 1})` : title;
+}
+
 export interface EhrRecordFieldsProps {
   values: EhrFormValues;
   /** Applies a change to the latest record. */
@@ -315,6 +326,7 @@ export function EhrRecordFields({
             onBlockChange={(blockIndex, block) =>
               change((current) => updateBlock(current, index, blockIndex, block))
             }
+            stepRowName={stepRowName(values.tabs, index)}
             onStepAccess={
               steps
                 ? (step, access) =>
