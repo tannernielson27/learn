@@ -27,7 +27,7 @@ test("an author creates a bank, starts an item by type, and finds the draft in t
   await expectNoAxeViolations(page);
 
   await page.getByRole("link", { name: "New question" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "New item" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "New question" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Bowtie" })).not.toHaveAttribute(
     "aria-disabled",
     "true",
@@ -39,7 +39,7 @@ test("an author creates a bank, starts an item by type, and finds the draft in t
   // Exact: the preview's question region is headed "Extended Multiple Response question" (#60).
   await expect(page.getByText("Extended Multiple Response", { exact: true })).toBeVisible();
 
-  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Back to quiz" }).click();
   await expect(page.getByRole("link", { name: /Untitled question/ })).toContainText("Draft");
 
   await page
@@ -102,7 +102,7 @@ test("an author writes a multiple choice item beside its preview, saves a draft,
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
 
-  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Back to quiz" }).click();
   // Anchored: a published item also has a link named "Play <stem>".
   const editLink = page.getByRole("link", { name: /^Which action should the nurse take first\?/ });
   await expect(editLink).toContainText("Published");
@@ -115,10 +115,10 @@ test("an author writes a multiple choice item beside its preview, saves a draft,
   await expect(page.getByRole("radio", { name: "Option A is correct" })).toBeChecked();
 
   // Play it from the bank: the page carries no key, and the server scores the answer.
-  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Back to quiz" }).click();
   await page.getByRole("link", { name: "Play Which action should the nurse take first?" }).click();
   await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}\/play$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Play item" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Play question" })).toBeVisible();
   const html = await page.content();
   expect(html).not.toContain("correctOptionId");
   expect(html).not.toContain("answerKey");
@@ -198,7 +198,7 @@ test("an author writes a select-all-that-apply item, marks three answers, and pu
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
 
-  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Back to quiz" }).click();
   const listed = page.getByRole("link", { name: /^Which findings require immediate follow-up\?/ });
   await expect(listed).toContainText("Published");
   await expect(listed).toContainText("3 points");
@@ -257,7 +257,7 @@ test("an author writes a matrix item, marks one column per row, and publishes", 
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
 
-  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Back to quiz" }).click();
   await expect(
     page.getByRole("link", { name: /^For each finding, indicate whether/ }),
   ).toContainText("Published");
@@ -306,12 +306,12 @@ test("an author writes a highlight item, marks phrases, publishes, and plays it"
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
 
-  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Back to quiz" }).click();
   await expect(page.getByRole("link", { name: /^Highlight the findings that need/ })).toContainText(
     "Published",
   );
   await page.getByRole("link", { name: `Play ${stem}` }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Play item" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Play question" })).toBeVisible();
   expect(await page.content()).not.toContain("correctSpanIds");
 
   await page.getByRole("button", { name: "Heart rate 118" }).click();
@@ -380,9 +380,9 @@ test("an author writes a drag-and-drop rationale item from a word bank, publishe
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
 
-  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Back to quiz" }).click();
   await page.getByRole("link", { name: `Play ${stem}` }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Play item" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Play question" })).toBeVisible();
   expect(await page.content()).not.toContain("correctTokenId");
 
   // Tap to place: choose a word, then the blank it fills.
@@ -462,9 +462,9 @@ test("an author writes a bowtie, marks the correct choices, publishes, and plays
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
 
-  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Back to quiz" }).click();
   await page.getByRole("link", { name: `Play ${stem}` }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Play item" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Play question" })).toBeVisible();
   expect(await page.content()).not.toContain("actionIds");
 
   // Tap a choice, then its slot.
@@ -514,7 +514,7 @@ test("an author starts a case study in a bank and finds it listed as a draft", a
   await expect(page.getByText("Step 1 (Recognize Cues) has no question yet.")).toBeVisible();
   await expectNoAxeViolations(page);
 
-  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Back to quiz" }).click();
   const listed = page
     .getByRole("list", { name: "Case studies" })
     .getByRole("link", { name: /^Post-operative day two/ });
@@ -537,8 +537,8 @@ test("an author writes a case study's patient record and reads it at two times",
   await expect(page).toHaveURL(/\/author\/case-studies\/[0-9a-f-]{36}$/);
 
   // The record is the builder's first step, open when the case study opens.
-  await expect(page.getByRole("region", { name: "Record", exact: true })).toBeVisible();
-  await expect(page.getByText(/never enter real patient information/i)).toBeVisible();
+  await expect(page.getByRole("region", { name: "Patient record", exact: true })).toBeVisible();
+  await expect(page.getByText(/never enter real names/i)).toBeVisible();
 
   const textbox = (name: string) => page.getByRole("textbox", { name, exact: true });
   const select = (name: string) => page.getByRole("combobox", { name, exact: true });
@@ -550,28 +550,28 @@ test("an author writes a case study's patient record and reads it at two times",
   await page.getByRole("button", { name: "Add time point" }).click();
   await textbox("Time point 2, Label").fill("1200");
 
-  await select("New section kind").selectOption("history_physical");
-  await page.getByRole("button", { name: "Add section", exact: true }).click();
-  await textbox("Section 1, block 1, Text").fill("Admitted with community-acquired pneumonia.");
+  await select("Tab kind").selectOption("history_physical");
+  await page.getByRole("button", { name: "Add tab", exact: true }).click();
+  await textbox("Tab 1, block 1, Text").fill("Admitted with community-acquired pneumonia.");
 
   // A new case study's first time point is t1; the one just added is t2.
   for (const [section, time, rate] of [
     [2, "t1", "96"],
     [3, "t2", "118"],
   ] as const) {
-    await select("New section kind").selectOption("vital_signs");
-    await page.getByRole("button", { name: "Add section", exact: true }).click();
-    await select(`Section ${section}, Time`).selectOption(time);
-    const row = `Section ${section}, block 1, row 1`;
+    await select("Tab kind").selectOption("vital_signs");
+    await page.getByRole("button", { name: "Add tab", exact: true }).click();
+    await select(`Tab ${section}, Time`).selectOption(time);
+    const row = `Tab ${section}, block 1, row 1`;
     await textbox(`${row}, Measure`).fill("Heart rate");
     await textbox(`${row}, Value`).fill(rate);
     await textbox(`${row}, Unit`).fill("beats/min");
   }
-  await select("Section 3, block 1, row 1, Flag").selectOption("H");
+  await select("Tab 3, block 1, row 1, Flag").selectOption("H");
 
   await expect(page.getByRole("region", { name: "Problems to fix" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Save record" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Record saved." })).toBeVisible();
+  await page.getByRole("button", { name: "Save patient record" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Patient record saved." })).toBeVisible();
 
   const preview = page.getByRole("region", { name: "Preview" });
   await expect(preview.getByRole("heading", { name: "68-year-old male" })).toBeVisible();
@@ -587,7 +587,7 @@ test("an author writes a case study's patient record and reads it at two times",
 
   // The saved record reopens as it was written.
   await page.reload();
-  await expect(textbox("Section 3, block 1, row 1, Value")).toHaveValue("118");
+  await expect(textbox("Tab 3, block 1, row 1, Value")).toHaveValue("118");
   const rail = page.getByRole("navigation", { name: "Case study steps" });
   await expect(rail.getByRole("button", { name: /^Record/ })).toContainText("Ready");
 });
@@ -627,7 +627,7 @@ test("an author gives a matrix item a record at two times, publishes it, and pla
   // The record opens with focus on its first field.
   await page.getByRole("button", { name: "Add patient record" }).click();
   await expect(textbox("Age in years")).toBeFocused();
-  await expect(page.getByText(/never enter real patient information/i)).toBeVisible();
+  await expect(page.getByText(/never enter real names/i)).toBeVisible();
   await textbox("Age in years").fill("68");
   await select("Sex").selectOption("male");
   await textbox("Care setting").fill("Medical unit");
@@ -639,14 +639,14 @@ test("an author gives a matrix item a record at two times, publishes it, and pla
     [1, "t1", "96"],
     [2, "t2", "118"],
   ] as const) {
-    await select("New section kind").selectOption("vital_signs");
-    await page.getByRole("button", { name: "Add section", exact: true }).click();
-    await select(`Section ${section}, Time`).selectOption(time);
-    const row = `Section ${section}, block 1, row 1`;
+    await select("Tab kind").selectOption("vital_signs");
+    await page.getByRole("button", { name: "Add tab", exact: true }).click();
+    await select(`Tab ${section}, Time`).selectOption(time);
+    const row = `Tab ${section}, block 1, row 1`;
     await textbox(`${row}, Measure`).fill("Heart rate");
     await textbox(`${row}, Value`).fill(rate);
   }
-  await select("Section 2, block 1, row 1, Flag").selectOption("H");
+  await select("Tab 2, block 1, row 1, Flag").selectOption("H");
   // Publishing needs a rationale (spec §6).
   await page
     .getByRole("textbox", { name: "Rationale", exact: true })
@@ -667,9 +667,9 @@ test("an author gives a matrix item a record at two times, publishes it, and pla
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
 
-  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Back to quiz" }).click();
   await page.getByRole("link", { name: `Play ${stem}` }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Play item" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Play question" })).toBeVisible();
   expect(await page.content()).not.toContain("correctColumnId");
 
   // Below 1024px the record sits behind the Patient record chip; wider, it is always open.
@@ -708,9 +708,9 @@ test("an author starts case study steps by type, edits them in place, and is ask
   await expectNoAxeViolations(page);
 
   // A step starts from its type, and its editor opens in place, with no record of its own.
-  await rail.getByRole("button", { name: /^Step 1: Recognize Cues/ }).click();
+  await rail.getByRole("button", { name: /^Step 1 of 6: Recognize Cues/ }).click();
   await expect(
-    page.getByRole("heading", { level: 2, name: "Step 1: Recognize Cues" }),
+    page.getByRole("heading", { level: 2, name: "Step 1 of 6: Recognize Cues" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Multiple Choice", exact: true }).click();
   const stem = page.getByRole("textbox", { name: "Question stem" });
@@ -720,32 +720,34 @@ test("an author starts case study steps by type, edits them in place, and is ask
 
   // Leaving with unsaved changes asks first.
   await stem.fill("Which finding needs follow-up first?");
-  await rail.getByRole("button", { name: /^Step 2: Analyze Cues/ }).click();
+  await rail.getByRole("button", { name: /^Step 2 of 6: Analyze Cues/ }).click();
   const ask = page.getByRole("alertdialog", { name: "Step 1 has unsaved changes" });
   await expect(ask).toBeVisible();
-  await ask.getByRole("button", { name: "Stay on this step" }).click();
+  await ask.getByRole("button", { name: "Keep editing" }).click();
   await expect(stem).toHaveValue("Which finding needs follow-up first?");
   await page.getByRole("button", { name: "Save draft" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Draft saved." })).toBeVisible();
 
-  await rail.getByRole("button", { name: /^Step 2: Analyze Cues/ }).click();
+  await rail.getByRole("button", { name: /^Step 2 of 6: Analyze Cues/ }).click();
   await expect(ask).toHaveCount(0);
-  await expect(page.getByRole("heading", { level: 2, name: "Step 2: Analyze Cues" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Step 2 of 6: Analyze Cues" }),
+  ).toBeVisible();
   await expectNoAxeViolations(page);
 
   // The saved draft reopens, and changing its type warns before anything is lost.
-  await rail.getByRole("button", { name: /^Step 1: Recognize Cues/ }).click();
+  await rail.getByRole("button", { name: /^Step 1 of 6: Recognize Cues/ }).click();
   await expect(stem).toHaveValue("Which finding needs follow-up first?");
-  await page.getByRole("button", { name: "Change type" }).click();
+  await page.getByRole("button", { name: "Change format" }).click();
   await expect(
     page.getByText(
-      "Changing the type starts a new item for this step. Its question and answers will be lost.",
+      "A new format starts a new question for Step 1. This one's text and answers will be lost.",
     ),
   ).toBeVisible();
   await expectNoAxeViolations(page);
-  await page.getByRole("button", { name: "Choose another type" }).click();
+  await page.getByRole("button", { name: "Choose another format" }).click();
   await page.getByRole("button", { name: "Ordered Response", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Change type" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Change format" })).toBeVisible();
   await expect(stem).toHaveValue("");
   await page.screenshot({
     path: `test-results/screenshots/${testInfo.project.name}/case-study-builder.png`,

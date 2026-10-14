@@ -45,7 +45,7 @@ test("an instructor starts a session from a bank, sees a six-character code, and
     1,
   );
   await publishOpenItem(page);
-  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Back to quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
   await page.getByRole("button", { name: "Start a live session", exact: true }).click();

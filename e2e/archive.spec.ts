@@ -59,9 +59,9 @@ test("an author archives an item, finds it in the Archived view, and restores it
   await expect(page.getByRole("textbox", { name: "Question stem", exact: true })).toHaveValue(
     FILED,
   );
-  await page.getByRole("button", { name: "Archive item", exact: true }).click();
-  await expect(page.getByText("This item is archived.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Restore item", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Archive question", exact: true }).click();
+  await expect(page.getByText("This question is archived.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Restore question", exact: true })).toBeVisible();
   await expectNoAxeViolations(page);
 
   // It has left the bank's list; the other item is still there.

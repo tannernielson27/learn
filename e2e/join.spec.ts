@@ -53,7 +53,7 @@ test("a student scans the code, types a name, and comes back to the same place o
     1,
   );
   await publishOpenItem(page);
-  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Back to quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
   await page.getByRole("button", { name: "Start a live session", exact: true }).click();
