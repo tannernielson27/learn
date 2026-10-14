@@ -25,11 +25,11 @@ test("the site header asks before leaving unsaved work in the builder, as Back t
 }, testInfo) => {
   await signInAsNewAuthor(page, request, testInfo.project.name);
   await page
-    .getByRole("textbox", { name: "Bank name" })
+    .getByRole("textbox", { name: "Quiz name" })
     .fill(`Guard ${testInfo.project.name} ${Date.now()}`);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await page.getByRole("textbox", { name: "Case study title" }).fill("Unsaved record");
-  await page.getByRole("button", { name: "New case study" }).click();
+  await page.getByRole("button", { name: "Create case study" }).click();
   await expect(page).toHaveURL(/\/author\/case-studies\/[0-9a-f-]{36}$/);
   const builderUrl = page.url();
 
@@ -55,13 +55,13 @@ test("an author builds a complete case study from an empty bank, previews it, an
   const started = Date.now();
 
   await page
-    .getByRole("textbox", { name: "Bank name" })
+    .getByRole("textbox", { name: "Quiz name" })
     .fill(`Case ${testInfo.project.name} ${Date.now()}`);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await page
     .getByRole("textbox", { name: "Case study title" })
     .fill("Heart failure, admission day");
-  await page.getByRole("button", { name: "New case study" }).click();
+  await page.getByRole("button", { name: "Create case study" }).click();
   await expect(page).toHaveURL(/\/author\/case-studies\/[0-9a-f-]{36}$/);
 
   const rail = page.getByRole("navigation", { name: "Case study steps" });

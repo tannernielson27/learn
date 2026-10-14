@@ -16,14 +16,7 @@ function studentCount(count: number): string {
 export function ClassList({ classes, emptyAction }: ClassListProps) {
   if (classes.length === 0) {
     // Right under the Classes page's h1.
-    return (
-      <EmptyState
-        level={2}
-        heading="No classes yet"
-        body="Create one to get an invite link for your students."
-        action={emptyAction}
-      />
-    );
+    return <EmptyState level={2} heading="No classes yet" action={emptyAction} />;
   }
 
   return (

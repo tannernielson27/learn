@@ -89,18 +89,18 @@ describe("what a move costs", () => {
   };
 
   it.each([
-    [0, 0, "0 item banks and 0 classes"],
-    [1, 1, "1 item bank and 1 class"],
-    [3, 1, "3 item banks and 1 class"],
-    [1, 12, "1 item bank and 12 classes"],
-  ])("counts %i banks and %i classes", (bankCount, classCount, said) => {
+    [0, 0, "0 quizzes and 0 classes"],
+    [1, 1, "1 quiz and 1 class"],
+    [3, 1, "3 quizzes and 1 class"],
+    [1, 12, "1 quiz and 12 classes"],
+  ])("counts %i quizzes and %i classes", (bankCount, classCount, said) => {
     expect(moveLossCounts({ bankCount, classCount })).toBe(said);
   });
 
   it("names the workspace left and counts what is lost", () => {
     const warning = moveWarning(preview);
     expect(warning).toContain("You teach in Grace’s workspace now.");
-    expect(warning).toContain("you lose access to its 3 item banks and 1 class");
+    expect(warning).toContain("you lose access to its 3 quizzes and 1 class");
     expect(warning).toContain("Nothing comes with you.");
     // ADR 0012: the page no longer says nothing is deleted, because an emptied workspace is.
     expect(warning).not.toContain("Nothing is deleted");

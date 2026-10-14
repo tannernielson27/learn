@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
 import { signInAsNewAuthor } from "./signIn";
+import { openImport } from "./authoringHelpers";
 
 // Needs the local Supabase stack, like auth.spec.ts. CI runs it in the `auth-e2e` job.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
@@ -27,7 +28,7 @@ function threeItems(): string {
 }
 
 const itemLinks = (page: Page) =>
-  page.getByRole("list", { name: "Items" }).getByRole("link", { name: /^Warnings demo/ });
+  page.getByRole("list", { name: "Questions" }).getByRole("link", { name: /^Warnings demo/ });
 const filterBar = (page: Page) => page.getByRole("region", { name: "Filter by tag" });
 
 test("an author filters the bank to Has warnings, adds a rationale, and the warning clears", async ({
@@ -39,10 +40,12 @@ test("an author filters the bank to Has warnings, adds a rationale, and the warn
   const bankName = `Warnings ${testInfo.project.name} ${Date.now()}`;
 
   await page.goto("/author");
-  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   const bankUrl = page.url();
+
+  await openImport(page);
 
   await page.getByRole("textbox", { name: "Or paste JSON", exact: true }).fill(threeItems());
   await page.getByRole("button", { name: "Import", exact: true }).click();
@@ -55,7 +58,9 @@ test("an author filters the bank to Has warnings, adds a rationale, and the warn
   expect(html).not.toContain("answerKey");
 
   // Has warnings lists only the two items with warnings, and the URL keeps it.
-  await filterBar(page).getByRole("link", { name: "Has warnings, 2 items", exact: true }).click();
+  await filterBar(page)
+    .getByRole("link", { name: "Has warnings, 2 questions", exact: true })
+    .click();
   await expect(page).toHaveURL(/\?warnings=1$/);
   await expect(itemLinks(page)).toHaveCount(2);
   await expect(itemLinks(page).filter({ hasText: CLEAN })).toHaveCount(0);

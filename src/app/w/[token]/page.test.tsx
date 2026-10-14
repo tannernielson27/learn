@@ -301,7 +301,7 @@ describe("/w/[token]: someone signed in", () => {
       }),
     ).toBeVisible();
     expect(screen.getByText(/You teach in Grace’s workspace now\./)).toBeVisible();
-    expect(screen.getByText(/lose access to its 3 item banks and 1 class/)).toBeVisible();
+    expect(screen.getByText(/lose access to its 3 quizzes and 1 class/)).toBeVisible();
     const box = screen.getByRole("checkbox", {
       name: "I understand that I will leave Grace’s workspace and lose access to everything in it.",
     });

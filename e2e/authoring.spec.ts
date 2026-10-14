@@ -15,20 +15,18 @@ test("an author creates a bank, starts an item by type, and finds the draft in t
   request,
 }, testInfo) => {
   await signInAsNewAuthor(page, request, testInfo.project.name);
-  await expect(page.getByRole("heading", { level: 1, name: "Item banks" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Library" })).toBeVisible();
   await expectNoAxeViolations(page);
 
   const bankName = `Cardiac ${testInfo.project.name} ${Date.now()}`;
-  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz" }).click();
 
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "No items in this bank yet", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No questions yet", exact: true })).toBeVisible();
   await expectNoAxeViolations(page);
 
-  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("link", { name: "New question" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "New item" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Bowtie" })).not.toHaveAttribute(
     "aria-disabled",
@@ -42,10 +40,13 @@ test("an author creates a bank, starts an item by type, and finds the draft in t
   await expect(page.getByText("Extended Multiple Response", { exact: true })).toBeVisible();
 
   await page.getByRole("link", { name: "Back to bank" }).click();
-  await expect(page.getByRole("link", { name: /Untitled item/ })).toContainText("Draft");
+  await expect(page.getByRole("link", { name: /Untitled question/ })).toContainText("Draft");
 
-  await page.getByRole("link", { name: "Item banks" }).click();
-  await expect(page.getByRole("link", { name: new RegExp(bankName) })).toContainText("1 item");
+  await page
+    .getByRole("navigation", { name: "Breadcrumb" })
+    .getByRole("link", { name: "Library" })
+    .click();
+  await expect(page.getByRole("link", { name: new RegExp(bankName) })).toContainText("1 question");
 });
 
 test("an author writes a multiple choice item beside its preview, saves a draft, then publishes", async ({
@@ -54,10 +55,10 @@ test("an author writes a multiple choice item beside its preview, saves a draft,
 }, testInfo) => {
   await signInAsNewAuthor(page, request, testInfo.project.name);
   await page
-    .getByRole("textbox", { name: "Bank name" })
+    .getByRole("textbox", { name: "Quiz name" })
     .fill(`Editor ${testInfo.project.name} ${Date.now()}`);
-  await page.getByRole("button", { name: "Create bank" }).click();
-  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("button", { name: "Create quiz" }).click();
+  await page.getByRole("link", { name: "New question" }).click();
   await page.getByRole("button", { name: "Multiple Choice", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
 
@@ -149,10 +150,10 @@ test("an author writes a select-all-that-apply item, marks three answers, and pu
 }, testInfo) => {
   await signInAsNewAuthor(page, request, testInfo.project.name);
   await page
-    .getByRole("textbox", { name: "Bank name" })
+    .getByRole("textbox", { name: "Quiz name" })
     .fill(`SATA ${testInfo.project.name} ${Date.now()}`);
-  await page.getByRole("button", { name: "Create bank" }).click();
-  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("button", { name: "Create quiz" }).click();
+  await page.getByRole("link", { name: "New question" }).click();
   await page.getByRole("button", { name: "Extended Multiple Response", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
 
@@ -209,10 +210,10 @@ test("an author writes a matrix item, marks one column per row, and publishes", 
 }, testInfo) => {
   await signInAsNewAuthor(page, request, testInfo.project.name);
   await page
-    .getByRole("textbox", { name: "Bank name" })
+    .getByRole("textbox", { name: "Quiz name" })
     .fill(`Matrix ${testInfo.project.name} ${Date.now()}`);
-  await page.getByRole("button", { name: "Create bank" }).click();
-  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("button", { name: "Create quiz" }).click();
+  await page.getByRole("link", { name: "New question" }).click();
   await page.getByRole("button", { name: "Matrix Multiple Choice", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
 
@@ -268,10 +269,10 @@ test("an author writes a highlight item, marks phrases, publishes, and plays it"
 }, testInfo) => {
   await signInAsNewAuthor(page, request, testInfo.project.name);
   await page
-    .getByRole("textbox", { name: "Bank name" })
+    .getByRole("textbox", { name: "Quiz name" })
     .fill(`Highlight ${testInfo.project.name} ${Date.now()}`);
-  await page.getByRole("button", { name: "Create bank" }).click();
-  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("button", { name: "Create quiz" }).click();
+  await page.getByRole("link", { name: "New question" }).click();
   await page.getByRole("button", { name: "Highlight Text", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
 
@@ -332,10 +333,10 @@ test("an author writes a drag-and-drop rationale item from a word bank, publishe
 }, testInfo) => {
   await signInAsNewAuthor(page, request, testInfo.project.name);
   await page
-    .getByRole("textbox", { name: "Bank name" })
+    .getByRole("textbox", { name: "Quiz name" })
     .fill(`Drag ${testInfo.project.name} ${Date.now()}`);
-  await page.getByRole("button", { name: "Create bank" }).click();
-  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("button", { name: "Create quiz" }).click();
+  await page.getByRole("link", { name: "New question" }).click();
   await page.getByRole("button", { name: "Drag-and-Drop Rationale", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
 
@@ -408,10 +409,10 @@ test("an author writes a bowtie, marks the correct choices, publishes, and plays
 }, testInfo) => {
   await signInAsNewAuthor(page, request, testInfo.project.name);
   await page
-    .getByRole("textbox", { name: "Bank name" })
+    .getByRole("textbox", { name: "Quiz name" })
     .fill(`Bowtie ${testInfo.project.name} ${Date.now()}`);
-  await page.getByRole("button", { name: "Create bank" }).click();
-  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("button", { name: "Create quiz" }).click();
+  await page.getByRole("link", { name: "New question" }).click();
   await page.getByRole("button", { name: "Bowtie", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
 
@@ -494,15 +495,15 @@ test("an author starts a case study in a bank and finds it listed as a draft", a
 }, testInfo) => {
   await signInAsNewAuthor(page, request, testInfo.project.name);
   await page
-    .getByRole("textbox", { name: "Bank name" })
+    .getByRole("textbox", { name: "Quiz name" })
     .fill(`Cases ${testInfo.project.name} ${Date.now()}`);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("button", { name: "Create quiz" }).click();
 
   await expect(
-    page.getByRole("heading", { name: "No case studies in this bank yet", exact: true }),
+    page.getByRole("heading", { name: "No case studies yet", exact: true }),
   ).toBeVisible();
   await page.getByRole("textbox", { name: "Case study title" }).fill("Post-operative day two");
-  await page.getByRole("button", { name: "New case study" }).click();
+  await page.getByRole("button", { name: "Create case study" }).click();
 
   // A new case study opens with nothing placed, and says what publishing still needs.
   await expect(page).toHaveURL(/\/author\/case-studies\/[0-9a-f-]{36}$/);
@@ -528,11 +529,11 @@ test("an author writes a case study's patient record and reads it at two times",
 }, testInfo) => {
   await signInAsNewAuthor(page, request, testInfo.project.name);
   await page
-    .getByRole("textbox", { name: "Bank name" })
+    .getByRole("textbox", { name: "Quiz name" })
     .fill(`Records ${testInfo.project.name} ${Date.now()}`);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await page.getByRole("textbox", { name: "Case study title" }).fill("Pneumonia turning septic");
-  await page.getByRole("button", { name: "New case study" }).click();
+  await page.getByRole("button", { name: "Create case study" }).click();
   await expect(page).toHaveURL(/\/author\/case-studies\/[0-9a-f-]{36}$/);
 
   // The record is the builder's first step, open when the case study opens.
@@ -597,10 +598,10 @@ test("an author gives a matrix item a record at two times, publishes it, and pla
 }, testInfo) => {
   await signInAsNewAuthor(page, request, testInfo.project.name);
   await page
-    .getByRole("textbox", { name: "Bank name" })
+    .getByRole("textbox", { name: "Quiz name" })
     .fill(`Trend ${testInfo.project.name} ${Date.now()}`);
-  await page.getByRole("button", { name: "Create bank" }).click();
-  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("button", { name: "Create quiz" }).click();
+  await page.getByRole("link", { name: "New question" }).click();
   await page.getByRole("button", { name: "Matrix Multiple Choice", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
 
@@ -690,11 +691,11 @@ test("an author starts case study steps by type, edits them in place, and is ask
 }, testInfo) => {
   await signInAsNewAuthor(page, request, testInfo.project.name);
   await page
-    .getByRole("textbox", { name: "Bank name" })
+    .getByRole("textbox", { name: "Quiz name" })
     .fill(`Builder ${testInfo.project.name} ${Date.now()}`);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await page.getByRole("textbox", { name: "Case study title" }).fill("Heart failure, day one");
-  await page.getByRole("button", { name: "New case study" }).click();
+  await page.getByRole("button", { name: "Create case study" }).click();
   await expect(page).toHaveURL(/\/author\/case-studies\/[0-9a-f-]{36}$/);
 
   // The record opens first.

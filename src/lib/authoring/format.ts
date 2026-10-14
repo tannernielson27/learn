@@ -6,5 +6,5 @@ export function formatEdited(iso: string): string {
 }
 
 export function itemCountLabel(count: number): string {
-  return count === 1 ? "1 item" : `${count} items`;
+  return count === 1 ? "1 question" : `${count} questions`;
 }

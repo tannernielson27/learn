@@ -25,15 +25,21 @@ function setup(result: FolderFormState) {
 }
 
 describe("MoveToFolderForm", () => {
-  it("offers Unfiled and every folder by path, in tree order", () => {
+  it("offers Not in a folder and every folder by path, in tree order", () => {
     setup({ status: "idle" });
     const select = screen.getByRole("combobox", { name: "Move selected to" });
     expect(
       within(select)
         .getAllByRole("option")
         .map((option) => option.textContent),
-    ).toEqual(["Choose a folder", "Unfiled", "Cardiac", "Cardiac/Heart failure", "Respiratory"]);
-    expect(screen.getByRole("button", { name: "Move selected" })).toBeEnabled();
+    ).toEqual([
+      "Choose a folder",
+      "Not in a folder",
+      "Cardiac",
+      "Cardiac/Heart failure",
+      "Respiratory",
+    ]);
+    expect(screen.getByRole("button", { name: "Move" })).toBeEnabled();
   });
 
   it("sends the chosen folder and the checked content that joined the form", async () => {
@@ -43,7 +49,7 @@ describe("MoveToFolderForm", () => {
       screen.getByRole("combobox", { name: "Move selected to" }),
       "Cardiac/Heart failure",
     );
-    await user.click(screen.getByRole("button", { name: "Move selected" }));
+    await user.click(screen.getByRole("button", { name: "Move" }));
     const sent = action.mock.calls[0][1];
     expect(sent.get("folder")).toBe("f3");
     expect(sent.getAll("item")).toEqual(["i2"]);
@@ -55,32 +61,32 @@ describe("MoveToFolderForm", () => {
     const select = screen.getByRole("combobox", { name: "Move selected to" });
     await user.click(box);
     await user.selectOptions(select, "Cardiac");
-    await user.click(screen.getByRole("button", { name: "Move selected" }));
+    await user.click(screen.getByRole("button", { name: "Move" }));
     await screen.findByRole("alert");
     expect(box).toBeChecked();
     expect(select).toHaveValue("f1");
   });
 
   it("clears the selection once a move is done", async () => {
-    const { user } = setup({ status: "done", message: "Moved 1 item to Cardiac." });
+    const { user } = setup({ status: "done", message: "Moved 1 question to Cardiac." });
     const box = screen.getByRole("checkbox", { name: "Select item 1" });
     await user.click(box);
     await user.selectOptions(screen.getByRole("combobox", { name: "Move selected to" }), "Cardiac");
-    await user.click(screen.getByRole("button", { name: "Move selected" }));
+    await user.click(screen.getByRole("button", { name: "Move" }));
     await screen.findByRole("status");
     expect(box).not.toBeChecked();
   });
 
   it("announces a finished move", async () => {
-    const { user } = setup({ status: "done", message: "Moved 2 items to Cardiac." });
-    await user.click(screen.getByRole("button", { name: "Move selected" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("Moved 2 items to Cardiac.");
+    const { user } = setup({ status: "done", message: "Moved 2 questions to Cardiac." });
+    await user.click(screen.getByRole("button", { name: "Move" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Moved 2 questions to Cardiac.");
   });
 
   it("ties a refused move's reason to the folder choice", async () => {
-    const message = "Select at least one item or case study to move.";
+    const message = "Select at least one question or case study to move.";
     const { user } = setup({ status: "error", error: message });
-    await user.click(screen.getByRole("button", { name: "Move selected" }));
+    await user.click(screen.getByRole("button", { name: "Move" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(message);
     expect(screen.getByRole("combobox", { name: "Move selected to" })).toHaveAccessibleDescription(
       message,

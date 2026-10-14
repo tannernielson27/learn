@@ -17,13 +17,19 @@ const link = (name: string) => within(tree()).getByRole("link", { name });
 describe("FolderTree", () => {
   it("links to everything, to unfiled content, and to each folder", () => {
     render(<FolderTree bankId={BANK} folders={folders} view={{ kind: "all" }} />);
-    expect(link("All content")).toHaveAttribute("href", "/author/banks/b1");
-    expect(link("Unfiled")).toHaveAttribute("href", "/author/banks/b1?folder=unfiled");
+    expect(link("All questions")).toHaveAttribute("href", "/author/banks/b1");
+    expect(link("Not in a folder")).toHaveAttribute("href", "/author/banks/b1?folder=unfiled");
     expect(link("Cardiac")).toHaveAttribute("href", "/author/banks/b1?folder=f1");
     const names = within(tree())
       .getAllByRole("link")
       .map((element) => element.textContent);
-    expect(names).toEqual(["All content", "Unfiled", "Cardiac", "Heart failure", "Respiratory"]);
+    expect(names).toEqual([
+      "All questions",
+      "Not in a folder",
+      "Cardiac",
+      "Heart failure",
+      "Respiratory",
+    ]);
   });
 
   it("keeps a tag filter when another folder is opened", () => {
@@ -35,8 +41,8 @@ describe("FolderTree", () => {
         filter={{ tags: ["sepsis"], step: 2 }}
       />,
     );
-    expect(link("All content")).toHaveAttribute("href", "/author/banks/b1?tag=sepsis&step=2");
-    expect(link("Unfiled")).toHaveAttribute(
+    expect(link("All questions")).toHaveAttribute("href", "/author/banks/b1?tag=sepsis&step=2");
+    expect(link("Not in a folder")).toHaveAttribute(
       "href",
       "/author/banks/b1?folder=unfiled&tag=sepsis&step=2",
     );
@@ -55,8 +61,8 @@ describe("FolderTree", () => {
   });
 
   it.each([
-    [{ kind: "all" } as const, "All content"],
-    [{ kind: "unfiled" } as const, "Unfiled"],
+    [{ kind: "all" } as const, "All questions"],
+    [{ kind: "unfiled" } as const, "Not in a folder"],
     [{ kind: "folder", id: "f3" } as const, "Heart failure"],
   ])("marks the open view as the current page: %j", (view, current) => {
     render(<FolderTree bankId={BANK} folders={folders} view={view} />);

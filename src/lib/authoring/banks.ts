@@ -95,7 +95,7 @@ export async function listBanks(client: Client): Promise<BankSummary[]> {
     .select("id, name, updated_at, items(count)")
     .order("updated_at", { ascending: false })
     .limit(BANK_LIST_LIMIT);
-  if (error) throw new AuthoringDataError("Item banks could not be loaded.");
+  if (error) throw new AuthoringDataError("Quizzes could not be loaded.");
   return data.map((bank) => ({
     id: bank.id,
     name: bank.name,
@@ -133,7 +133,7 @@ export async function listItems(
     page_size: scanning ? WARNING_SCAN_LIMIT : ITEM_PAGE_SIZE,
     page_offset: scanning ? 0 : offset,
   });
-  if (error) throw new AuthoringDataError("Items could not be loaded.");
+  if (error) throw new AuthoringDataError("Questions could not be loaded.");
   const counts = await warningCounts(
     client,
     data.map((item) => item.id),
@@ -181,7 +181,7 @@ const requestWarningCounts = cache((client: Client) => {
   return (ids: string[]) =>
     sharedWarningCounts(store, ids, async (missing) => {
       const { data, error } = await client.from("items").select(ITEM_ROW_COLUMNS).in("id", missing);
-      if (error) throw new AuthoringDataError("Items could not be loaded.");
+      if (error) throw new AuthoringDataError("Questions could not be loaded.");
       return new Map(data.map((row) => [row.id, storedWarningCount(row)]));
     });
 });

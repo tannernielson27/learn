@@ -38,11 +38,11 @@ test("a student scans the code, types a name, and comes back to the same place o
   await signInAsNewAuthor(page, request, testInfo.project.name);
 
   const bankName = `Join ${testInfo.project.name} ${Date.now()}`;
-  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
-  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("link", { name: "New question" }).click();
   await page.getByRole("button", { name: "Multiple Choice", exact: true }).click();
   // Four blank option fields, every label required: filling fewer leaves the item invalid and
   // publishOpenItem refuses (the thing that failed CI on #128).

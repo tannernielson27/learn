@@ -16,19 +16,12 @@ const NOBODY: readonly string[] = [];
 
 export function BankList({ banks, sharedWith, emptyAction }: BankListProps) {
   if (banks.length === 0) {
-    // Right under the author home's h1.
-    return (
-      <EmptyState
-        level={2}
-        heading="No item banks yet"
-        body="Create one to start writing items."
-        action={emptyAction}
-      />
-    );
+    // Right under the library's h1.
+    return <EmptyState level={2} heading="No quizzes yet" action={emptyAction} />;
   }
 
   return (
-    <ul aria-label="Item banks" className="flex flex-col divide-y divide-line border-y border-line">
+    <ul aria-label="Quizzes" className="flex flex-col divide-y divide-line border-y border-line">
       {banks.map((bank) => (
         <li key={bank.id}>
           <Link

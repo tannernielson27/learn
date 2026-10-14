@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { EmptyState, type EmptyStateContent } from "@/components/ui/EmptyState";
+import { NO_CASE_STUDIES_YET } from "@/lib/authoring/bankEmpty";
 import type { CaseStudySummary } from "@/lib/authoring/banks";
 import { formatEdited } from "@/lib/authoring/format";
 import { ArchiveButton, type ArchiveButtonProps } from "./ArchiveButton";
@@ -7,7 +8,7 @@ import { SelectForMove } from "./SelectForMove";
 
 export interface CaseStudyListProps {
   caseStudies: readonly CaseStudySummary[];
-  /** What an empty list says, under the page's Case studies h2; defaults to the empty-bank hint. */
+  /** What an empty list says, under the page's Case studies h2; defaults to the empty quiz's line. */
   empty?: EmptyStateContent;
   /** The id of a move form: each case study gets a checkbox that joins it. */
   moveFormId?: string;
@@ -21,15 +22,10 @@ const STATUS_LABELS: Record<CaseStudySummary["status"], string> = {
   archived: "Archived",
 };
 
-const EMPTY_BANK: EmptyStateContent = {
-  heading: "No case studies in this bank yet",
-  body: "Name one below to start building it.",
-};
-
-/** A bank's case studies, each linking to its page, with how many of its six steps are placed. */
+/** A quiz's case studies, each linking to its page, with how many of its six steps are placed. */
 export function CaseStudyList({
   caseStudies,
-  empty = EMPTY_BANK,
+  empty = NO_CASE_STUDIES_YET,
   moveFormId,
   restoreAction,
 }: CaseStudyListProps) {

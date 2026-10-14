@@ -170,7 +170,7 @@ test("a practice run keeps an item the instructor unpublishes mid-run, with the 
     .click();
   await classPractice.getByRole("button", { name: "Stop sharing", exact: true }).click();
   await expect(
-    classPractice.getByText("No bank is shared with this class for practice.", { exact: true }),
+    classPractice.getByText("No quiz is shared with this class.", { exact: true }),
   ).toBeVisible();
 
   const stopped = await phone.request.get(practicePath);
