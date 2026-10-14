@@ -232,16 +232,28 @@ describe("folderContentsMessage", () => {
 
   it("says what is inside, with each count named", () => {
     expect(folderContentsMessage("Cardiac", { items: 3, caseStudies: 1, folders: 2 })).toBe(
-      '"Cardiac" holds 3 questions, 1 case study and 2 folders. Empty it first.',
+      '"Cardiac" holds 3 questions, 1 case study and 2 folders. Move the rest out and delete the folders inside first.',
+    );
+  });
+
+  it("tells a folder that holds only folders to delete them", () => {
+    expect(folderContentsMessage("Cardiac", { items: 0, caseStudies: 0, folders: 1 })).toBe(
+      '"Cardiac" holds 1 folder. Delete it first.',
+    );
+    expect(folderContentsMessage("Cardiac", { items: 0, caseStudies: 0, folders: 2 })).toBe(
+      '"Cardiac" holds 2 folders. Delete them first.',
+    );
+    expect(folderContentsMessage("Cardiac", { items: 2, caseStudies: 0, folders: 0 })).toBe(
+      '"Cardiac" holds 2 questions. Move them out first.',
     );
   });
 
   it("names only what is there", () => {
     expect(folderContentsMessage("Cardiac", { items: 1, caseStudies: 0, folders: 0 })).toBe(
-      '"Cardiac" holds 1 question. Empty it first.',
+      '"Cardiac" holds 1 question. Move it out first.',
     );
     expect(folderContentsMessage("Cardiac", { items: 0, caseStudies: 2, folders: 1 })).toBe(
-      '"Cardiac" holds 2 case studies and 1 folder. Empty it first.',
+      '"Cardiac" holds 2 case studies and 1 folder. Move the rest out and delete the folders inside first.',
     );
   });
 });

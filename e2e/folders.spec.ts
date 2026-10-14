@@ -105,7 +105,7 @@ test("an author sorts ten items into Cardiac and Respiratory and opens a folder"
   // Filtered: Next's route announcer is also an alert.
   await expect(
     page.getByRole("alert").filter({ hasText: '"Cardiac" holds 5 questions.' }),
-  ).toContainText('"Cardiac" holds 5 questions. Empty it first.');
+  ).toContainText('"Cardiac" holds 5 questions. Move them out first.');
 
   // A folder inside Cardiac: breadcrumbs follow, and an empty folder can be renamed and deleted.
   await createFolder(page, "Heart failure");

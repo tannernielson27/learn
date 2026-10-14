@@ -39,6 +39,8 @@ function drawnHtml(page: Page): Promise<string> {
   return page.evaluate(() => {
     const body = document.body.cloneNode(true) as HTMLElement;
     body.querySelector('[aria-labelledby="get-started-heading"]')?.remove();
+    // The signed-in name is the account's own: this helper's addresses start with "author-".
+    body.querySelector('[data-testid^="signed-in-"]')?.remove();
     return body.innerHTML;
   });
 }

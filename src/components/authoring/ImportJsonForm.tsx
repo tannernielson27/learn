@@ -147,8 +147,9 @@ export function ImportJsonForm({ action, folders, defaultFolderId }: ImportJsonF
         </select>
       </div>
       <p id={`${id}-hint`} className="text-sm text-ink-2">
-        Everything arrives as a new draft. Up to {IMPORT_MAX_FILES} files, each at most 800 KB with{" "}
-        {IMPORT_MAX_ITEMS} questions or one case study.
+        Everything arrives as a new draft, and a file imports whole or not at all. Up to{" "}
+        {IMPORT_MAX_FILES} files, each at most 800 KB with {IMPORT_MAX_ITEMS} questions or one case
+        study.
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={running !== null}>

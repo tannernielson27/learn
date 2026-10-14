@@ -146,6 +146,17 @@ function readIds(values: FormDataEntryValue[]): string[] | null {
   return [...new Set(values)];
 }
 
+/**
+ * What to do before a folder can be deleted. Questions and case studies are moved, never deleted;
+ * a folder inside it is deleted in its turn.
+ */
+function emptyFolderFirst(contents: FolderContents): string {
+  const content = contents.items + contents.caseStudies;
+  if (contents.folders === 0) return `Move ${content === 1 ? "it" : "them"} out first.`;
+  if (content === 0) return `Delete ${contents.folders === 1 ? "it" : "them"} first.`;
+  return "Move the rest out and delete the folders inside first.";
+}
+
 /** Why a folder cannot be deleted, naming what is inside; null when it is empty. */
 export function folderContentsMessage(name: string, contents: FolderContents): string | null {
   const parts = [
@@ -156,7 +167,7 @@ export function folderContentsMessage(name: string, contents: FolderContents): s
   if (parts.length === 0) return null;
   const list =
     parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`;
-  return `"${name}" holds ${list}. Empty it first.`;
+  return `"${name}" holds ${list}. ${emptyFolderFirst(contents)}`;
 }
 
 /** What a move did, or that nothing moved. `destination` is a folder path or "Not in a folder". */
