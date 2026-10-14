@@ -7,6 +7,12 @@ export interface TabItem {
   id: string;
   label: string;
   content: ReactNode;
+  /**
+   * Listed but not openable (#335): a patient record tab locked at this step. Drawn with a lock
+   * and the word "Locked", announced as unavailable, skipped by the arrow keys, and given no panel,
+   * so there is nothing behind it to show. `content` is not rendered for a locked tab.
+   */
+  locked?: boolean;
 }
 
 export interface TabsProps {
@@ -100,21 +106,26 @@ export function Tabs({
   };
 
   const select = (id: string) => {
+    if (tabs.find((tab) => tab.id === id)?.locked) return;
     if (value === undefined) setInternal(id);
     onChange?.(id);
   };
 
+  // The arrow keys move between the tabs that can be opened; a locked one is passed over.
+  const openable = tabs.filter((tab) => !tab.locked);
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const index = tabs.findIndex((t) => t.id === selected);
+    const index = openable.findIndex((t) => t.id === selected);
     if (index < 0) return;
+    const count = openable.length;
     let nextIndex: number | null = null;
-    if (event.key === "ArrowRight") nextIndex = (index + 1) % tabs.length;
-    if (event.key === "ArrowLeft") nextIndex = (index - 1 + tabs.length) % tabs.length;
+    if (event.key === "ArrowRight") nextIndex = (index + 1) % count;
+    if (event.key === "ArrowLeft") nextIndex = (index - 1 + count) % count;
     if (event.key === "Home") nextIndex = 0;
-    if (event.key === "End") nextIndex = tabs.length - 1;
+    if (event.key === "End") nextIndex = count - 1;
     if (nextIndex === null) return;
     event.preventDefault();
-    const next = tabs[nextIndex];
+    const next = openable[nextIndex];
+    if (!next) return;
     select(next.id);
     document.getElementById(`${baseId}-tab-${next.id}`)?.focus();
   };
@@ -136,6 +147,8 @@ export function Tabs({
           className="no-scrollbar -my-1 flex min-w-0 flex-1 snap-x snap-mandatory gap-1 overflow-x-auto py-1"
         >
           {tabs.map((tab) => {
+            if (tab.locked)
+              return <LockedTab key={tab.id} id={`${baseId}-tab-${tab.id}`} tab={tab} />;
             const isSelected = tab.id === selected;
             return (
               <button
@@ -163,7 +176,7 @@ export function Tabs({
           <StripArrow direction="end" disabled={reach.atEnd} onClick={() => page(1)} />
         ) : null}
       </div>
-      {tabs.map((tab) => (
+      {openable.map((tab) => (
         <div
           key={tab.id}
           id={`${baseId}-panel-${tab.id}`}
@@ -177,6 +190,53 @@ export function Tabs({
         </div>
       ))}
     </div>
+  );
+}
+
+/**
+ * A tab that is there but cannot be opened (#335). `aria-disabled` rather than `disabled`, so a
+ * screen reader still finds it in the list and says it is unavailable; the word "Locked" beside
+ * the lock says the same to everyone else, so neither the icon nor the dimming is the only sign.
+ * It controls no panel, takes no focus from the arrow keys, and a press does nothing.
+ */
+function LockedTab({ id, tab }: { id: string; tab: TabItem }) {
+  return (
+    <button
+      id={id}
+      data-tab-id={tab.id}
+      type="button"
+      role="tab"
+      aria-selected={false}
+      aria-disabled="true"
+      tabIndex={-1}
+      className="tap-target -mb-px inline-flex shrink-0 cursor-not-allowed snap-start items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-3 text-sm font-medium text-ink-2"
+    >
+      {tab.label}{" "}
+      <span className="inline-flex items-center gap-1 text-xs font-normal">
+        <LockIcon />
+        Locked
+      </span>
+    </button>
+  );
+}
+
+/** Lucide's "lock", at 16px beside the chip's text, stroke 1.75 (docs/04 §7). */
+function LockIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
   );
 }
 

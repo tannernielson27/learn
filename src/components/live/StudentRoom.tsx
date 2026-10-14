@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Countdown } from "@/components/live/Countdown";
 import { LIVE_BUSY_LABEL, liveSubmitFailure } from "@/components/live/liveSubmit";
+import { useShowLiveRecord } from "@/components/live/LiveRecord";
 import { createPresentCount, RoomCount } from "@/components/live/RoomCount";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 // Module by module rather than through `@/lib/live` and `@/lib/liveSupabase`: those barrels
@@ -100,6 +101,7 @@ export function StudentRoom({
   connect,
 }: StudentRoomProps) {
   const router = useRouter();
+  const showRecord = useShowLiveRecord();
   const [state, setState] = useState<LiveSessionState>(initial);
   const [item, setItem] = useState<ParticipantItem | null>(null);
   const [answered, setAnswered] = useState<AnsweredPayload | null>(null);
@@ -184,6 +186,8 @@ export function StudentRoom({
 
     const offView = joined.onStudentView((view: StudentView) => {
       if (!watching) return;
+      // #335: the chart at the room's step, as the server cut it, for the layout around this room.
+      if (view.record !== undefined) showRecord?.(view.record);
       setState(view.state);
       setItem(view.item);
       setAnswered(view.answered);
@@ -224,7 +228,7 @@ export function StudentRoom({
       // page into an unhandled rejection in a student's browser.
       void joined.leave().catch(() => {});
     };
-  }, [dial, router, me, present]);
+  }, [dial, router, me, present, showRecord]);
 
   /**
    * Whether the item is on this phone at all.
