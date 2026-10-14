@@ -154,7 +154,7 @@ export default async function AuthorHomePage({ searchParams }: PageProps<"/autho
       {library.ready ? (
         <div className="mt-6 flex flex-col gap-4 border-t border-line pt-6">
           {trail.length < LIBRARY_FOLDER_MAX_DEPTH ? (
-            <details>
+            <details key={`new-folder-details-${folder?.id ?? "top"}`}>
               <summary className={SUMMARY_CLASS}>New folder</summary>
               <div className="mt-3 sm:max-w-md">
                 <FolderNameForm
@@ -169,7 +169,7 @@ export default async function AuthorHomePage({ searchParams }: PageProps<"/autho
           ) : null}
           {folder ? (
             <>
-              <details>
+              <details key={`rename-details-${folder.id}`}>
                 <summary className={SUMMARY_CLASS}>Rename folder</summary>
                 <div className="mt-3 sm:max-w-md">
                   <FolderNameForm
