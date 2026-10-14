@@ -2,7 +2,8 @@
  * The shapes of a practice run as a student's browser holds it (#241), and nothing else: no
  * scoring, no key-reading code. Built on the server by `view.ts`; read by the player.
  */
-import type { AnyResponse, EhrRecord } from "@/lib/ngn/schemas";
+import type { EhrRecordView } from "@/lib/ngn/chartReveal";
+import type { AnyResponse } from "@/lib/ngn/schemas";
 import type { KeylessItem, Reveal, ScoreReveal } from "@/lib/ngn/submit";
 
 /** How an answered item reopens: with its marks, or (a stored answer that no longer parses) its key. */
@@ -16,9 +17,25 @@ export interface PracticeItemEntry {
   answered: PracticeAnswered | null;
 }
 
-export type PracticeEntry =
-  | ({ kind: "item" } & PracticeItemEntry)
-  | { kind: "case_study"; id: string; title: string; ehr: EhrRecord; steps: PracticeItemEntry[] };
+/**
+ * A case study as far as this run has reached it (#335): the steps up to and including the first
+ * one not yet answered, and the patient record's view at each of them, step 1 first. A step past
+ * that, and its chart, are not in the payload at all; they arrive on the next read of the page,
+ * once the step before them has been answered.
+ */
+export interface PracticeCaseStudyEntry {
+  kind: "case_study";
+  id: string;
+  title: string;
+  /** `recordAtStep` at step 1, 2, ... one per reached step, in step order. */
+  records: EhrRecordView[];
+  /** The reached steps, in step order. */
+  steps: PracticeItemEntry[];
+  /** How many steps the case study has, reached or not. */
+  stepCount: number;
+}
+
+export type PracticeEntry = ({ kind: "item" } & PracticeItemEntry) | PracticeCaseStudyEntry;
 
 export interface PracticeView {
   runId: string;
@@ -29,7 +46,12 @@ export interface PracticeView {
   entries: PracticeEntry[];
 }
 
-/** Every item of an entry: the item itself, or a case study's steps. */
+/** How many items an entry counts for: one, or every step of a case study, reached or not. */
+export function sizeOf(entry: PracticeEntry): number {
+  return entry.kind === "item" ? 1 : entry.stepCount;
+}
+
+/** Every item of an entry that is in the payload: the item itself, or a case study's reached steps. */
 export function itemsOf(entry: PracticeEntry): PracticeItemEntry[] {
   return entry.kind === "item" ? [entry] : entry.steps;
 }

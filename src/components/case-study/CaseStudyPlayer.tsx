@@ -6,7 +6,8 @@ import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { FlagToggle } from "@/components/review/FlagToggle";
 import { ReviewList } from "@/components/review/ReviewList";
 import { Button } from "@/components/ui/Button";
-import type { AnyResponse } from "@/lib/ngn/schemas";
+import { isStagedRecord, type EhrRecordView } from "@/lib/ngn/chartReveal";
+import type { AnyResponse, EhrRecord } from "@/lib/ngn/schemas";
 import type {
   PlayableCaseStudy,
   PlayableItem,
@@ -51,7 +52,19 @@ export interface CaseStudyPlayerProps<T extends PlayableItem> {
    * step's key arrives with that step's own score (ADR 0003, #46). The gallery and the authoring
    * preview pass a parsed `CaseStudy`, because the handler they pass scores it in this browser.
    */
-  caseStudy: PlayableCaseStudy<T>;
+  caseStudy: Omit<PlayableCaseStudy<T>, "ehr"> & {
+    /** The whole patient record, for an author or an instructor. A student is sent `records`. */
+    ehr?: EhrRecord;
+  };
+  /**
+   * A student's patient record, one view per step they have reached, step 1 first (#335): each is
+   * `recordAtStep` of the record, cut on the server. The step on screen shows its own chart, so
+   * going back a step shows that step's chart again. When this is given, `caseStudy.items` holds
+   * only the reached steps and `stepCount` says how many there are in all.
+   */
+  records?: readonly EhrRecordView[];
+  /** How many steps the case study has, reached or not. `caseStudy.items.length` when absent. */
+  stepCount?: number;
   /**
    * Builds the submit handler for a step, since each step is its own item (#56). Sessions and
    * assignments pass one that goes to the server; the gallery and the authoring preview pass
@@ -79,13 +92,18 @@ export function CaseStudyPlayer<T extends PlayableItem>({
   submitFor,
   onFinished,
   initialSteps,
+  records,
+  stepCount,
 }: CaseStudyPlayerProps<T>) {
-  const total = caseStudy.items.length;
+  const total = stepCount ?? caseStudy.items.length;
   // 0 to total - 1 while working; `total` once the student has reached the results.
   const [index, setIndex] = useState(0);
-  const [steps, setSteps] = useState<StepState[]>(() =>
-    caseStudy.items.map((_item, i) => ({ ...initialSteps?.[i] })),
+  const [held, setSteps] = useState<StepState[]>(() =>
+    Array.from({ length: total }, (_step, i) => ({ ...initialSteps?.[i] })),
   );
+  // A step reached since mount (#335: the page was read again once the step before it had been
+  // answered) is not in what was held, so what the server says about it is read here as well.
+  const steps = held.map((step, i) => ({ ...initialSteps?.[i], ...step }));
   const [finished, setFinished] = useState(false);
   const [playing, setPlaying] = useState(caseStudy.id);
   const [reviewing, setReviewing] = useState(false);
@@ -117,7 +135,7 @@ export function CaseStudyPlayer<T extends PlayableItem>({
   if (caseStudy.id !== playing) {
     setPlaying(caseStudy.id);
     setIndex(0);
-    setSteps(caseStudy.items.map(() => ({})));
+    setSteps(Array.from({ length: total }, () => ({})));
     setFinished(false);
     setReviewing(false);
   }
@@ -126,11 +144,21 @@ export function CaseStudyPlayer<T extends PlayableItem>({
   const item = caseStudy.items[index];
   const current = steps[index];
   const isLastStep = index === total - 1;
+  // The next step is not here until the page has been read again after this one's answer (#335).
+  const nextArrived = isLastStep || caseStudy.items[index + 1] !== undefined;
+  // The chart of the step on screen, and on the results the last reached step's. Where there is no
+  // student (the gallery, an author's preview) the whole record, marked as such when it is staged.
+  const record = records?.[Math.min(index, records.length - 1)] ?? caseStudy.ehr;
+  const note =
+    records === undefined && caseStudy.ehr !== undefined && isStagedRecord(caseStudy.ehr)
+      ? `Full patient record. A student at step ${Math.min(index + 1, total)} sees only what that step has reached.`
+      : undefined;
 
   const update = (at: number, change: StepState) =>
     setSteps((prev) => prev.map((step, i) => (i === at ? { ...step, ...change } : step)));
 
   const advance = () => {
+    if (!nextArrived) return;
     const next = index + 1;
     goTo(next);
     // Reading the last step again and coming forward is not a second attempt, and onFinished is
@@ -143,6 +171,7 @@ export function CaseStudyPlayer<T extends PlayableItem>({
     }
   };
 
+  // The reached steps only: one not yet sent has nothing to jump to (#335).
   const entries = caseStudy.items.map((_item, i) => ({
     id: String(i),
     label: `Step ${i + 1}: ${CJMM_STEP_LABELS[(i + 1) as CjmmStep]}`,
@@ -161,8 +190,8 @@ export function CaseStudyPlayer<T extends PlayableItem>({
     };
   };
 
-  return (
-    <RecordLayout record={caseStudy.ehr}>
+  const page = (
+    <>
       <div>
         <header className="mb-6">
           <StepIndicator step={index + 1} total={total} />
@@ -244,12 +273,20 @@ export function CaseStudyPlayer<T extends PlayableItem>({
       {!onResults && !reviewing && isAnswered(current) ? (
         <div className="fixed inset-x-0 bottom-0 border-t border-line bg-surface-1/95 px-5 py-3 backdrop-blur-sm [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
           <div className="mx-auto flex max-w-3xl items-center justify-end">
-            <Button variant="primary" onClick={advance}>
+            <Button variant="primary" disabled={!nextArrived} onClick={advance}>
               {isLastStep ? "See results" : "Next question"}
             </Button>
           </div>
         </div>
       ) : null}
+    </>
+  );
+
+  return record === undefined ? (
+    page
+  ) : (
+    <RecordLayout record={record} note={note}>
+      {page}
     </RecordLayout>
   );
 }
