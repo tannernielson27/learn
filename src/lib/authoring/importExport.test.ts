@@ -199,7 +199,7 @@ describe("readCaseStudyExport", () => {
       ok: false,
       status: 409,
       error: TRANSFER_ERRORS.unfinishedCaseStudy,
-      blockers: ["Step 6 (Evaluate Outcomes) has no item yet."],
+      blockers: ["Step 6 (Evaluate Outcomes) has no question yet."],
     });
   });
 });

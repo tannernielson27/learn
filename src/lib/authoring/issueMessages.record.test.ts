@@ -20,10 +20,10 @@ describe("record problems on an item", () => {
     expect(issues).toStrictEqual([
       { field: "stem", message: "Write the question stem." },
       { field: "ehr.patient.sex", message: "Choose the patient's sex." },
-      { field: "ehr.tabs.0.blocks.0", message: "Section 1, block 1 needs text." },
+      { field: "ehr.tabs.0.blocks.0", message: "Tab 1, block 1 needs text." },
       {
         field: "ehr.record",
-        message: "Something in this record needs attention. Check each section.",
+        message: "Something in this patient record needs attention. Check each tab.",
       },
     ]);
   });

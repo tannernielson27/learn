@@ -22,7 +22,7 @@ type Status =
   | { kind: "done"; message: string }
   | { kind: "error"; message: string };
 
-const SAVE_FAILED = "The record could not be saved. Try again.";
+const SAVE_FAILED = "The patient record could not be saved. Try again.";
 
 /**
  * A case study's patient record on its own page: the record's fields, what it still needs, Save,
@@ -63,7 +63,7 @@ export function EhrEditor({ initialValues, onSave }: EhrEditorProps) {
     }
     if (result.ok) {
       setSavedSnapshot(JSON.stringify(current));
-      setStatus({ kind: "done", message: "Record saved." });
+      setStatus({ kind: "done", message: "Patient record saved." });
     } else {
       setStatus({ kind: "error", message: result.error ?? SAVE_FAILED });
     }
@@ -90,7 +90,7 @@ export function EhrEditor({ initialValues, onSave }: EhrEditorProps) {
             aria-label="Problems to fix"
             className="rounded-sm border border-line bg-surface-1 p-4"
           >
-            <h2 className="mb-2 text-sm font-medium text-ink-1">Before this record is complete</h2>
+            <h2 className="mb-2 text-sm font-medium text-ink-1">Problems to fix</h2>
             <ul className="flex flex-col gap-1">
               {issues.map((issue) => (
                 <li key={issue.field}>
@@ -110,7 +110,7 @@ export function EhrEditor({ initialValues, onSave }: EhrEditorProps) {
 
         <div className="flex flex-wrap items-center gap-3 border-t border-line pt-4">
           <Button variant="primary" disabled={busy} onClick={() => void save()}>
-            Save record
+            Save patient record
           </Button>
           {isDirty ? <p className="text-sm text-ink-2">Unsaved changes</p> : null}
           {status.kind === "done" ? (

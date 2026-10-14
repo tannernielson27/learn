@@ -18,7 +18,7 @@ async function addPublishedItem(page: Page, bankName: string, stem: string): Pro
   await page.getByRole("button", { name: "Multiple Choice", exact: true }).click();
   await fillMultipleChoice(page, stem, ["Bradycardia", "Tachycardia", "Hypotension", "Edema"], 1);
   await publishOpenItem(page);
-  await page.getByRole("link", { name: "Back to bank", exact: true }).click();
+  await page.getByRole("link", { name: "Back to quiz", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName, exact: true })).toBeVisible();
 }
 

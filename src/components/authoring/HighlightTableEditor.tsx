@@ -231,9 +231,7 @@ export function HighlightTableEditor({
 
       <div className="flex flex-col gap-4">
         <p className="text-sm font-medium text-ink-1">Rows</p>
-        <p className="text-sm text-ink-2">
-          Select a phrase in a cell and choose Mark span. A span is written as [[phrase|id]].
-        </p>
+        <p className="text-sm text-ink-2">Select a phrase in a cell and choose Mark span.</p>
         {values.rows.map((row, rowIndex) => {
           const legendId = `${ids}-row-${rowIndex}-legend`;
           return (

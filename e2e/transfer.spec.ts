@@ -77,11 +77,11 @@ test("an author exports a case study and imports the copy into another bank as a
 
   await listedCase().click();
   const rail = page.getByRole("navigation", { name: "Case study steps" });
-  await expect(rail.getByRole("button", { name: /^Record/ })).toContainText("Ready");
+  await expect(rail.getByRole("button", { name: /^Patient record/ })).toContainText("Ready");
   for (const step of [1, 2, 3, 4, 5, 6]) {
-    await expect(rail.getByRole("button", { name: new RegExp(`^Step ${step}:`) })).toContainText(
-      "Draft",
-    );
+    await expect(
+      rail.getByRole("button", { name: new RegExp(`^Step ${step} of 6:`) }),
+    ).toContainText("Draft");
   }
   await expectNoAxeViolations(page);
   await page.screenshot({

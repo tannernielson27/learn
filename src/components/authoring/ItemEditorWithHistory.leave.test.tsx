@@ -51,8 +51,8 @@ function setup() {
   const duplicate = vi.fn<DuplicateButtonProps["action"]>(async () => ({ status: "idle" }));
   render(
     <LeaveGuardProvider>
-      <GuardedLink href={BANK_HREF}>Back to bank</GuardedLink>
-      <DuplicateButton action={duplicate} label="Duplicate item" />
+      <GuardedLink href={BANK_HREF}>Back to quiz</GuardedLink>
+      <DuplicateButton action={duplicate} label="Duplicate question" />
       <ItemEditorWithHistory editor={editor} entries={entries} truncated={false} />
     </LeaveGuardProvider>,
   );
@@ -68,24 +68,24 @@ async function makeUnsavedChanges(user: ReturnType<typeof userEvent.setup>) {
 describe("leaving a standalone item with unsaved changes", () => {
   it("leaves at once when nothing is unsaved", () => {
     setup();
-    expect(fireEvent.click(screen.getByRole("link", { name: "Back to bank" }))).toBe(true);
+    expect(fireEvent.click(screen.getByRole("link", { name: "Back to quiz" }))).toBe(true);
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
   it("asks first, and focuses the question so it is seen", async () => {
     const { user } = setup();
     await makeUnsavedChanges(user);
-    expect(fireEvent.click(screen.getByRole("link", { name: "Back to bank" }))).toBe(false);
+    expect(fireEvent.click(screen.getByRole("link", { name: "Back to quiz" }))).toBe(false);
 
-    const ask = screen.getByRole("alertdialog", { name: "This item has unsaved changes" });
-    expect(ask).toHaveTextContent("Stay to save them, or discard them and leave this item.");
+    const ask = screen.getByRole("alertdialog", { name: "This question has unsaved changes" });
+    expect(ask).toHaveTextContent("Stay to save them, or discard them and leave.");
     expect(ask).toHaveFocus();
   });
 
   it("goes where the link pointed once the author discards", async () => {
     const { user } = setup();
     await makeUnsavedChanges(user);
-    fireEvent.click(screen.getByRole("link", { name: "Back to bank" }));
+    fireEvent.click(screen.getByRole("link", { name: "Back to quiz" }));
     await user.click(screen.getByRole("button", { name: "Discard changes" }));
     expect(push).toHaveBeenCalledWith(BANK_HREF);
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
@@ -94,8 +94,8 @@ describe("leaving a standalone item with unsaved changes", () => {
   it("stays, with the changes kept, when the author chooses to", async () => {
     const { user } = setup();
     await makeUnsavedChanges(user);
-    fireEvent.click(screen.getByRole("link", { name: "Back to bank" }));
-    await user.click(screen.getByRole("button", { name: "Stay on this item" }));
+    fireEvent.click(screen.getByRole("link", { name: "Back to quiz" }));
+    await user.click(screen.getByRole("button", { name: "Stay on this question" }));
     expect(push).not.toHaveBeenCalled();
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(screen.getByText("Editing with opt_a")).toBeInTheDocument();
@@ -104,7 +104,7 @@ describe("leaving a standalone item with unsaved changes", () => {
   it("asks before Duplicate copies the saved version, and copies it once discarded", async () => {
     const { duplicate, user } = setup();
     await makeUnsavedChanges(user);
-    await user.click(screen.getByRole("button", { name: "Duplicate item" }));
+    await user.click(screen.getByRole("button", { name: "Duplicate question" }));
     expect(duplicate).not.toHaveBeenCalled();
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
 
