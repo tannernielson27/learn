@@ -176,7 +176,7 @@ export default async function AuthorHomePage({ searchParams }: PageProps<"/autho
                     key={`rename-${folder.id}`}
                     action={renameLibraryFolderAction.bind(null, folder.id)}
                     label="New name"
-                    submitLabel="Save name"
+                    submitLabel="Rename folder"
                     initialName={folder.name}
                   />
                 </div>

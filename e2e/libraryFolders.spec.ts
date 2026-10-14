@@ -135,3 +135,42 @@ test("a teacher makes a folder, moves two quizzes into it, and starts a live ses
   await expect(page).toHaveURL(/\/live\/[0-9a-f-]{36}$/);
   await expect(page.getByTestId("join-code")).toBeVisible();
 });
+
+test("a folder is renamed, holds one more level of folders and no deeper, and an empty one is deleted", async ({
+  page,
+  request,
+}, testInfo) => {
+  test.slow();
+  await signInAsInstructorInEmptyOrg(page, request, `library-tree-${testInfo.project.name}`);
+
+  await page.getByText("New folder", { exact: true }).click();
+  await page.getByRole("textbox", { name: "Folder name", exact: true }).fill("Pediatrics");
+  await page.getByRole("button", { name: "Create folder", exact: true }).click();
+  await folderList(page)
+    .getByRole("link", { name: /^Pediatrics/ })
+    .click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Pediatrics", exact: true }),
+  ).toBeVisible();
+
+  await page.getByText("Rename folder", { exact: true }).click();
+  await page.getByRole("textbox", { name: "New name", exact: true }).fill("Peds");
+  await page.getByRole("button", { name: "Rename folder", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Peds", exact: true })).toBeVisible();
+
+  // One level of folders inside it; inside that, none.
+  await page.getByText("New folder", { exact: true }).click();
+  await page.getByRole("textbox", { name: "Folder name", exact: true }).fill("Week 1");
+  await page.getByRole("button", { name: "Create folder", exact: true }).click();
+  await folderList(page)
+    .getByRole("link", { name: /^Week 1/ })
+    .click();
+  await expect(page.getByRole("heading", { level: 1, name: "Week 1", exact: true })).toBeVisible();
+  await expect(page.getByText("New folder", { exact: true })).toHaveCount(0);
+  await expectNoAxeViolations(page);
+
+  // An empty folder is deleted, and its parent opens.
+  await page.getByRole("button", { name: "Delete folder", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Peds", exact: true })).toBeVisible();
+  await expect(folderList(page)).toHaveCount(0);
+});

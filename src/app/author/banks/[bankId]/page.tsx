@@ -99,6 +99,14 @@ export default async function BankPage({
 
   // #411: a quiz offers folders inside it only if it already has one. Without any, every view is
   // the whole quiz, so a stale "Not in a folder" link still lists everything.
+  // The reads that do not depend on the view start now, beside the folders.
+  const besideFolders = Promise.all([
+    quizLibraryTrail(supabase, bank.id),
+    listBankShares(supabase, bank.id),
+    listClasses(supabase),
+  ]);
+  // Awaited below; this only keeps a failure from going unobserved if the page stops first.
+  besideFolders.catch(() => undefined);
   const folders = await listFolders(supabase, bank.id);
   const inQuizFolders = offersInQuizFolders(folders);
   const view: FolderView = inQuizFolders ? askedView : { kind: "all" };
@@ -106,16 +114,14 @@ export default async function BankPage({
 
   // The filter and search run in the database, under RLS; the tag counts come from the view's
   // items within the search.
-  const [libraryTrail, itemPage, caseStudies, taggedRows, shares, classes] = await Promise.all([
-    quizLibraryTrail(supabase, bank.id),
+  const [[libraryTrail, shares, classes], itemPage, caseStudies, taggedRows] = await Promise.all([
+    besideFolders,
     listItems(supabase, bank.id, view, filter, page),
     // Case studies carry no item tags or type, so a tag or type filter lists none of them.
     tagFiltered || search.type
       ? Promise.resolve([])
       : listCaseStudies(supabase, bank.id, view, search),
     listTaggedRows(supabase, bank.id, view, search),
-    listBankShares(supabase, bank.id),
-    listClasses(supabase),
   ]);
   const { items } = itemPage;
   const facets = tagFacets(taggedRows, filter);
