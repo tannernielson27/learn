@@ -193,6 +193,11 @@ describe("PracticePlayer (#241)", () => {
     // Step 2 is not on the page until it is read again, which the answer asks for.
     expect(await screen.findByRole("button", { name: "Next question" })).toBeDisabled();
     expect(refresh).toHaveBeenCalled();
+    // Said, with a way to ask again, in case the read that brings it failed.
+    expect(screen.getByText("Loading the next question.")).toHaveAttribute("role", "status");
+    refresh.mockClear();
+    await ui.user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 
   it("reopens a case study's answered step with its marks", async () => {

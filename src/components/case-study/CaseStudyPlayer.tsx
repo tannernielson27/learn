@@ -66,6 +66,11 @@ export interface CaseStudyPlayerProps<T extends PlayableItem> {
   /** How many steps the case study has, reached or not. `caseStudy.items.length` when absent. */
   stepCount?: number;
   /**
+   * Asks the server again for the next step (#335), offered as "Try again" while an answered
+   * step's successor has not arrived: the read that brings it may have failed.
+   */
+  onReloadNext?: () => void;
+  /**
    * Builds the submit handler for a step, since each step is its own item (#56). Sessions and
    * assignments pass one that goes to the server; the gallery and the authoring preview pass
    * `scoreInProcess`, which is why only they may pass a case study that still has its keys.
@@ -94,6 +99,7 @@ export function CaseStudyPlayer<T extends PlayableItem>({
   initialSteps,
   records,
   stepCount,
+  onReloadNext,
 }: CaseStudyPlayerProps<T>) {
   const total = stepCount ?? caseStudy.items.length;
   // 0 to total - 1 while working; `total` once the student has reached the results.
@@ -272,7 +278,19 @@ export function CaseStudyPlayer<T extends PlayableItem>({
       {/* Takes the place of the shell's submit bar, which is gone once the step has been answered. */}
       {!onResults && !reviewing && isAnswered(current) ? (
         <div className="fixed inset-x-0 bottom-0 border-t border-line bg-surface-1/95 px-5 py-3 backdrop-blur-sm [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
-          <div className="mx-auto flex max-w-3xl items-center justify-end">
+          <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-end gap-3">
+            {nextArrived ? null : (
+              <>
+                <p role="status" className="text-sm text-ink-2">
+                  Loading the next question.
+                </p>
+                {onReloadNext ? (
+                  <Button variant="ghost" size="sm" onClick={onReloadNext}>
+                    Try again
+                  </Button>
+                ) : null}
+              </>
+            )}
             <Button variant="primary" disabled={!nextArrived} onClick={advance}>
               {isLastStep ? "See results" : "Next question"}
             </Button>

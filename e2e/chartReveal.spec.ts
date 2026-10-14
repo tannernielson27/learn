@@ -37,6 +37,8 @@ const NOTE_0200 = "0200: Second large-bore IV";
 /** The labs tab's own text: in the record, never in a view where the tab is hidden or locked. */
 const LABS_TEXT = "Serum hCG";
 const DISPLAY_NAME = "Chart Phone";
+/** The labs tab named and locked in a view, whatever other keys sit between the two. */
+const LOCKED_LABS = /"title":"Lab Results"[^}]*"locked":true/;
 
 function expectAbsent(bytes: string, texts: readonly string[]): void {
   for (const text of texts) expect(bytes, `"${text}" should not be sent yet`).not.toContain(text);
@@ -149,6 +151,8 @@ async function openChart(page: Page): Promise<void> {
   if ((await chip.isVisible()) && (await chip.getAttribute("aria-expanded")) === "false") {
     await chip.click();
   }
+  // A tab every step has, so what is asserted next is asserted on a chart that has been drawn.
+  await expect(page.getByRole("tab", { name: "Nurses' Notes", exact: true })).toBeVisible();
 }
 
 async function closeChart(page: Page): Promise<void> {
@@ -275,7 +279,7 @@ test("a live case study: the phone's chart moves with the room and nothing later
 
   // The instructor's console shows the whole record, marked with the class's step.
   const hostRecord = page.getByTestId("host-record");
-  await hostRecord.getByText("Patient record").click();
+  await hostRecord.locator("summary").click();
   await expect(hostRecord.getByTestId("record-note")).toContainText("The class is on step 4");
 
   await page.getByRole("button", { name: "End live session", exact: true }).click();
@@ -365,7 +369,7 @@ test("practice and take-home send each step's chart only once the steps before i
   // Step 1 answered: step 2 reached, and the labs tab is named and locked, its text not sent.
   await practise(1);
   const practiceStep2 = await bytesOf(student.context(), practicePath);
-  expectPresent(practiceStep2, ['"title":"Lab Results","locked":true']);
+  expect(practiceStep2).toMatch(LOCKED_LABS);
   expectAbsent(practiceStep2, [LABS_TEXT, NOTE_0130, NOTE_0200]);
   // The control: steps 1 to 3 answered, so step 4 is reached and its chart carries both.
   await practise(2);
@@ -441,7 +445,8 @@ test("practice and take-home send each step's chart only once the steps before i
   };
   await save(1);
   const takeStep2 = await bytesOf(student.context(), takePath);
-  expectPresent(takeStep2, ['"title":"Lab Results","locked":true', "Chart step 2: which action"]);
+  expect(takeStep2).toMatch(LOCKED_LABS);
+  expectPresent(takeStep2, ["Chart step 2: which action"]);
   expectAbsent(takeStep2, [LABS_TEXT, NOTE_0130, NOTE_0200]);
   // The control: steps 1 to 3 saved, so step 4 is reached.
   await save(2);

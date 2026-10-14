@@ -182,6 +182,7 @@ export function PracticePlayer({
               }}
               records={entry.records}
               stepCount={entry.stepCount}
+              onReloadNext={() => router.refresh()}
               initialSteps={entry.steps.map((step) => initialStep(done[step.itemId]))}
               submitFor={submitStep}
             />

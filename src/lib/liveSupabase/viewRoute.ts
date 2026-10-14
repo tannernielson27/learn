@@ -218,6 +218,11 @@ type Chart =
  * The room's chart at its step (#335), the same on `open_session_view` and on the calls it
  * replaced: neither reads the record, so both ask `readCachedSessionRecord`, which each server
  * process answers from the database once per room, and both cut it with `roomRecord`.
+ *
+ * Whether a room has a record is only known by reading it, so a bank room pays the one read too,
+ * and a failure of that first read is a 503 for it as well. Accepted: the phone retries a 503,
+ * the read is cached once it succeeds, and guessing "no record" on a failure could show a
+ * case-study room with no chart at all.
  */
 async function chartOf(
   service: ViewRouteDeps["service"],

@@ -230,6 +230,17 @@ export function AttemptPlayer({
           Next
         </Button>
       </div>
+      {/* #335: the next step is read from the server once this one's answer is saved. */}
+      {waitingForNext && at === items.length - 1 ? (
+        <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+          <p role="status" className="text-sm text-ink-2">
+            Loading the next question.
+          </p>
+          <Button variant="ghost" size="sm" onClick={() => router.refresh()}>
+            Try again
+          </Button>
+        </div>
+      ) : null}
 
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-surface-1/95 px-4 py-3 backdrop-blur-sm [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
         <div className="mx-auto flex max-w-3xl flex-col gap-2">
