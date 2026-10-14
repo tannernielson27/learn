@@ -128,24 +128,27 @@ export function ImportJsonForm({ action, folders, defaultFolderId }: ImportJsonF
           className={`${fieldClass} font-mono text-sm`}
         />
       </div>
-      <div className="flex min-w-0 flex-col gap-2">
-        <label htmlFor={`${id}-folder`} className="text-sm font-medium text-ink-1">
-          Import into
-        </label>
-        <select
-          id={`${id}-folder`}
-          name="folder"
-          defaultValue={defaultFolderId ?? UNFILED}
-          className="tap-target max-w-full rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 hover:border-line-strong"
-        >
-          <option value={UNFILED}>{NOT_IN_A_FOLDER}</option>
-          {options.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.path}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* #411: a quiz with no folders inside it imports into the quiz itself, unasked. */}
+      {options.length > 0 ? (
+        <div className="flex min-w-0 flex-col gap-2">
+          <label htmlFor={`${id}-folder`} className="text-sm font-medium text-ink-1">
+            Import into
+          </label>
+          <select
+            id={`${id}-folder`}
+            name="folder"
+            defaultValue={defaultFolderId ?? UNFILED}
+            className="tap-target max-w-full rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 hover:border-line-strong"
+          >
+            <option value={UNFILED}>{NOT_IN_A_FOLDER}</option>
+            {options.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.path}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
       <p id={`${id}-hint`} className="text-sm text-ink-2">
         Everything arrives as a new draft, and a file imports whole or not at all. Up to{" "}
         {IMPORT_MAX_FILES} files, each at most 800 KB with {IMPORT_MAX_ITEMS} questions or one case

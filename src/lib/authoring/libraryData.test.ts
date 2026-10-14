@@ -10,6 +10,7 @@ import {
   readLibrary,
   renameLibraryFolder,
 } from "./libraryData";
+import { createFolder, IN_THE_LIBRARY } from "./folderData";
 import { FOLDERS_NOT_READY } from "./libraryFolders";
 
 const MED_SURG = "5d3c3f7e-1a2b-4c3d-8e4f-0a1b2c3d4e01";
@@ -354,5 +355,22 @@ describe("createQuizInFolder", () => {
         folderId: MED_SURG,
       }),
     ).toEqual({ ok: false, error: FOLDERS_NOT_READY });
+  });
+});
+
+describe("in-quiz folders (#411)", () => {
+  const folder = { bankId: QUIZ_1, orgId: ORG, userId: "u", parentId: null, name: "Cardiac" };
+
+  it("are not made in a quiz that has none", async () => {
+    const { client, calls } = fakeClient(() => ({ count: 0 }));
+    expect(await createFolder(client, folder)).toEqual({ ok: false, error: IN_THE_LIBRARY });
+    expect(calls.some((call) => has(call, "insert"))).toBe(false);
+  });
+
+  it("are still made in a quiz that already has one", async () => {
+    const { client } = fakeClient((call) =>
+      has(call, "insert") ? { data: { id: MED_SURG } } : { count: 1 },
+    );
+    expect(await createFolder(client, folder)).toEqual({ ok: true, value: { id: MED_SURG } });
   });
 });
