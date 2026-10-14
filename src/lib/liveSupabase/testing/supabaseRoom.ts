@@ -31,6 +31,7 @@ import {
 import { normalizeSessionCode } from "@/lib/live/sessionCode";
 import type { ConformanceRoom, ConformanceRoomOptions } from "@/lib/live/roomConformance";
 import type { Item } from "@/lib/ngn/schemas";
+import type { Json } from "@/lib/supabase/database.types";
 import { toItemRow } from "@/lib/supabase/itemRows";
 import { issueChannelToken } from "../channelRoute";
 import { createChannelTokenSource } from "../channelTokenSource";
@@ -83,7 +84,12 @@ function rowId(index: number): string {
   return `00000000-0000-0000-0000-${String(index + 1).padStart(12, "0")}`;
 }
 
-export function createFakeRoom(options: ConformanceRoomOptions): FakeRoom {
+export interface FakeRoomOptions extends ConformanceRoomOptions {
+  /** A case study's record, as `start_session` would have snapshotted it (#184, #335). */
+  patientRecord?: Json;
+}
+
+export function createFakeRoom(options: FakeRoomOptions): FakeRoom {
   const stack = new FakeSupabase();
   const items: readonly Item[] = options.items;
 
@@ -106,6 +112,7 @@ export function createFakeRoom(options: ConformanceRoomOptions): FakeRoom {
     item_ends_at: null,
     timer_remaining_ms: null,
     closed_at: null,
+    ...(options.patientRecord === undefined ? {} : { patient_record: options.patientRecord }),
   };
   stack.sessions.push(session);
   // What `sessions_mirror_public_state` writes on INSERT. Nobody is subscribed yet, so no message.

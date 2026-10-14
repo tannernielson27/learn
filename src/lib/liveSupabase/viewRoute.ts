@@ -69,7 +69,9 @@ import {
   type LiveRouteDeps,
   type VerifiedParticipant,
 } from "./routeDeps";
-import { viewEntries, type WantedItem } from "./viewEntries";
+import type { EhrRecordView } from "@/lib/ngn/chartReveal";
+import { readCachedSessionRecord } from "@/lib/supabase/sessionRecord";
+import { roomRecord, viewEntries, type WantedItem } from "./viewEntries";
 import { selectViewRows, type ViewRows } from "./viewReads";
 import { NO_STORE_HEADERS, type ParticipantViewPayload } from "./wire";
 
@@ -134,8 +136,19 @@ export async function readParticipantView(
   const { state, itemSet, serverNow } = read;
   const { wanted, wholeSet } = wantedItems(itemSet, state);
 
+  // #335: a case-study room's chart, cut to the room's step. A student-paced room is always run
+  // from a bank (`sessions_student_paced_bank_only`), so it has no record to read.
+  const chart = wholeSet
+    ? ({ ok: true, record: undefined } as const)
+    : await chartOf(deps.service, participant.sessionId, state.position);
+  if (!chart.ok) {
+    reportLiveFault({ route: routeOf(request), sessionId: participant.sessionId, ...chart.fault });
+    return faultResponse(chart.fault.status);
+  }
+  const record = chart.record === undefined ? {} : { record: chart.record };
+
   if (!wholeSet && wanted.length === 0) {
-    return answer({ state, item: null, answered: null, revealed: null, serverNow });
+    return answer({ state, item: null, answered: null, revealed: null, ...record, serverNow });
   }
 
   let rows = opened.rows;
@@ -188,12 +201,37 @@ export async function readParticipantView(
     item,
     answered: only?.answered ?? null,
     revealed: only?.revealed ?? null,
+    ...record,
     serverNow,
   });
 }
 
 function answer(payload: ParticipantViewPayload): Response {
   return Response.json(payload, { headers: NO_STORE_HEADERS });
+}
+
+type Chart =
+  | { ok: true; record: EhrRecordView | undefined }
+  | { ok: false; fault: { call: string; error: unknown; status: number } };
+
+/**
+ * The room's chart at its step (#335), the same on `open_session_view` and on the calls it
+ * replaced: neither reads the record, so both ask `readCachedSessionRecord`, which each server
+ * process answers from the database once per room, and both cut it with `roomRecord`.
+ */
+async function chartOf(
+  service: ViewRouteDeps["service"],
+  sessionId: string,
+  position: number | null,
+): Promise<Chart> {
+  const read = await readCachedSessionRecord(service, sessionId);
+  if (!read.ok) {
+    return {
+      ok: false,
+      fault: { call: "select:sessions.patient_record", error: read.error, status: read.status },
+    };
+  }
+  return { ok: true, record: roomRecord(read.record, position) };
 }
 
 /**

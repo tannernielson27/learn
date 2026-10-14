@@ -19,6 +19,7 @@ import type { LiveRefusal } from "@/lib/live";
 import type { SessionMode, SessionStatus } from "@/lib/live";
 import type { ParticipantItem } from "@/lib/live";
 import type { ItemTimer } from "@/lib/live/timer";
+import type { EhrRecordView } from "@/lib/ngn/chartReveal";
 import type { AnyResponse } from "@/lib/ngn/schemas";
 import type { Reveal } from "@/lib/ngn/submit";
 import type { ScoreResult } from "@/lib/ngn/types";
@@ -142,6 +143,13 @@ export interface ParticipantViewPayload {
    * `item`, `answered` and `revealed` above are then null: there is no one item the room is on.
    */
   set?: PacedItemPayload[];
+  /**
+   * For a room run from a case study, its patient record as it stands at the step the room is on
+   * (#335): `recordAtStep` of the record the room started with, built by `roomRecord`. Nothing a
+   * later step reveals, and no tab locked at this step beyond its name. Absent for a room run from
+   * a bank, which has no record. Re-sent with every view, so the phone's chart moves with the host.
+   */
+  record?: EhrRecordView;
   /**
    * The database's `now()` as it read the room, epoch ms (#182). What a phone measures its own
    * clock against, so a countdown is right on a phone whose clock is not. See `clockOffset`.
