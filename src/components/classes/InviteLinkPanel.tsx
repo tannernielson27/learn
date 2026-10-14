@@ -47,10 +47,7 @@ export function InviteLinkPanel({ url, code, classTitle, rotateAction }: InviteL
         >
           {formatClassCode(code)}
         </p>
-        <p className="max-w-prose text-sm text-ink-2">
-          Read it out or write it on the board. Students type it after signing in, and it joins the
-          same class as the link.
-        </p>
+        <p className="max-w-prose text-sm text-ink-2">Students type it after signing in.</p>
       </div>
       <CopyTextButton
         text={normalizeClassCode(code)}

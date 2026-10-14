@@ -35,7 +35,7 @@ export function MemberList({
 }: MemberListProps) {
   const viewerIsFounder = founderId !== null && founderId === viewerId;
   return (
-    <ul aria-label="Members" className="flex flex-col divide-y divide-line border-y border-line">
+    <ul aria-label="Teachers" className="flex flex-col divide-y divide-line border-y border-line">
       {members.map((member) => {
         const joined = formatWorkspaceDate(member.joinedAt);
         const isFounder = founderId !== null && member.profileId === founderId;

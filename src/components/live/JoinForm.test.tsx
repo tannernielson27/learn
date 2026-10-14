@@ -10,7 +10,7 @@ function setup(result: JoinState, code = "") {
   return { action, user: userEvent.setup() };
 }
 
-const codeField = () => screen.getByRole("textbox", { name: "Session code" });
+const codeField = () => screen.getByRole("textbox", { name: "Join code" });
 const nameField = () => screen.getByRole("textbox", { name: "Display name" });
 // Anchored, because "Join" is a prefix of the heading and the hint text around it.
 const joinButton = () => screen.getByRole("button", { name: /^Join$/ });
@@ -48,7 +48,7 @@ describe("JoinForm", () => {
   });
 
   it("ties a code error to the code field, announces it and moves focus there", async () => {
-    const message = "Enter the six-character code on the screen.";
+    const message = "Enter the six-character join code on the screen.";
     const { user } = setup({ status: "error", field: "code", error: message });
     await user.type(codeField(), "nope");
     await user.type(nameField(), "Sam");
@@ -89,12 +89,8 @@ describe("JoinForm", () => {
 
   it("describes each field while nothing is wrong, so the hints are read out", () => {
     setup({ status: "idle" });
-    expect(codeField()).toHaveAccessibleDescription(
-      "Six characters, from the screen at the front.",
-    );
-    expect(nameField()).toHaveAccessibleDescription(
-      `The rest of the class sees this. Up to ${DISPLAY_NAME_MAX_LENGTH} characters.`,
-    );
+    expect(codeField()).toHaveAccessibleDescription("Six characters, on the screen at the front.");
+    expect(nameField()).toHaveAccessibleDescription("The class sees this.");
   });
 
   it("uses no emoji anywhere, per docs/04 §7", () => {

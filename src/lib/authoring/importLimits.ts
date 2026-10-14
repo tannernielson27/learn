@@ -11,6 +11,6 @@ export const IMPORT_ERRORS = {
   tooLarge: "This import is too large. Import at most 800 KB at a time.",
   notJson: "This is not valid JSON.",
   notLearn: 'This is not a LeaRN export. It needs "format": "learn.v1".',
-  eitherOr: "A LeaRN export holds either items or one case study.",
-  itemCount: `Include between 1 and ${IMPORT_MAX_ITEMS} items. Split a larger set into several files.`,
+  eitherOr: "A LeaRN export holds either questions or one case study.",
+  itemCount: `Include between 1 and ${IMPORT_MAX_ITEMS} questions. Split a larger set into several files.`,
 } as const;

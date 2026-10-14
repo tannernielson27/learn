@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { InviteColleagueForm } from "@/components/workspace/InviteColleagueForm";
 import { MemberList } from "@/components/workspace/MemberList";
 import { PendingInvites } from "@/components/workspace/PendingInvites";
@@ -47,12 +46,7 @@ export default async function WorkspacePage() {
 
   return (
     <>
-      <Link
-        href="/author"
-        className="tap-target mb-4 inline-flex items-center text-sm font-medium text-accent-ink hover:underline"
-      >
-        Item banks
-      </Link>
+      {/* The way back to the library is the layout's navigation (#412). */}
       <p className="mb-1 font-mono text-sm tracking-wide text-ink-2 uppercase">Workspace</p>
       {/* The name is a teacher's own words: text, never markup. */}
       <h1 className="mb-8 font-read text-3xl break-words text-ink-1">
@@ -68,7 +62,7 @@ export default async function WorkspacePage() {
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4">
           {/* Focusable from script only: removing a colleague sends focus here. */}
           <h2 id="members-heading" tabIndex={-1} className="text-lg font-medium text-ink-1">
-            Members
+            Teachers
           </h2>
           {canInvite && members ? (
             <p className="font-mono text-sm text-ink-2">{memberCountLabel(members.length)}</p>
@@ -76,7 +70,7 @@ export default async function WorkspacePage() {
         </div>
         {members === null ? (
           <p role="alert" className="text-ink-2">
-            The members could not be loaded. Reload the page to try again.
+            The teachers could not be loaded. Reload the page to try again.
           </p>
         ) : (
           <MemberList
@@ -97,17 +91,33 @@ export default async function WorkspacePage() {
             <h2 id="invite-heading" className="mb-2 text-lg font-medium text-ink-1">
               Invite a colleague
             </h2>
-            <p className="mb-4 max-w-prose text-ink-2">
-              They join this workspace as a teacher with the same access as you: they can see and
-              edit every bank, class and assignment, see every student&apos;s name, email address
-              and results, run live sessions, and send or revoke invitations themselves. Only the
-              person who started the workspace can remove a colleague, with Remove beside their name
-              above, and any teacher in the workspace can invite a removed colleague back. A
-              workspace holds up to {WORKSPACE_MEMBER_CAP} teachers, and you can send{" "}
-              {WORKSPACE_DAILY_INVITES} invitations a day. An account that is already a student
-              cannot accept. An account that already teaches in another workspace can accept only by
-              leaving that workspace, and is asked to confirm it first.
+            <p className="mb-2 max-w-prose text-ink-2">
+              They join as a teacher with the same access as you.
             </p>
+            {/* Everything a teacher needs before inviting, kept and closed (#412). */}
+            <details className="mb-4 max-w-prose text-sm text-ink-2">
+              <summary className="tap-target inline-flex cursor-pointer items-center font-medium">
+                What a colleague can do
+              </summary>
+              <ul className="mt-1 flex list-disc flex-col gap-1 pl-5">
+                <li>
+                  See and edit every quiz, class and assignment, see every student&apos;s name,
+                  email address and results, start live sessions, and send or revoke invitations.
+                </li>
+                <li>
+                  Only the person who started the workspace can remove a colleague. Any teacher can
+                  invite them back.
+                </li>
+                <li>
+                  A workspace holds up to {WORKSPACE_MEMBER_CAP} teachers, and you can send{" "}
+                  {WORKSPACE_DAILY_INVITES} invitations a day.
+                </li>
+                <li>
+                  A student account cannot accept. A teacher in another workspace can accept only by
+                  leaving that workspace, and is asked to confirm first.
+                </li>
+              </ul>
+            </details>
             <InviteColleagueForm action={inviteColleague} />
           </section>
 
@@ -126,7 +136,6 @@ export default async function WorkspacePage() {
                 now={new Date()}
                 revokeActionFor={(inviteId) => revokeInvite.bind(null, inviteId)}
                 resendActionFor={(inviteId) => resendInvite.bind(null, inviteId)}
-                emptyAction={{ href: "#invite-heading", label: "Invite a colleague" }}
                 focusAfterChange="pending-heading"
               />
             )}
@@ -138,8 +147,7 @@ export default async function WorkspacePage() {
             Invite a colleague
           </h2>
           <p className="max-w-prose text-ink-2">
-            Inviting colleagues is not available in this workspace. LeaRN adds its teachers
-            directly.
+            Your LeaRN administrator adds teachers to this workspace.
           </p>
         </section>
       ) : null}

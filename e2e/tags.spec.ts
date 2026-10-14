@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
 import { signInAsNewAuthor } from "./signIn";
+import { openImport } from "./authoringHelpers";
 
 // Needs the local Supabase stack, like auth.spec.ts. CI runs it in the `auth-e2e` job.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
@@ -38,7 +39,7 @@ function tenItems(): string {
 }
 
 const itemLinks = (page: Page) =>
-  page.getByRole("list", { name: "Items" }).getByRole("link", { name: /^Tag demo item/ });
+  page.getByRole("list", { name: "Questions" }).getByRole("link", { name: /^Tag demo item/ });
 const filterBar = (page: Page) => page.getByRole("region", { name: "Filter by tag" });
 
 test("an author tags items, then filters the bank to Physiological Adaptation plus sepsis", async ({
@@ -51,9 +52,11 @@ test("an author tags items, then filters the bank to Physiological Adaptation pl
   const bankName = `Tags ${testInfo.project.name} ${Date.now()}`;
 
   await page.goto("/author");
-  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
+
+  await openImport(page);
 
   await page.getByRole("textbox", { name: "Or paste JSON", exact: true }).fill(tenItems());
   await page.getByRole("button", { name: "Import", exact: true }).click();
@@ -83,23 +86,23 @@ test("an author tags items, then filters the bank to Physiological Adaptation pl
 
   // Physiological Adaptation, then sepsis: only items carrying both are left.
   await filterBar(page)
-    .getByRole("link", { name: `${PA}, 7 items`, exact: true })
+    .getByRole("link", { name: `${PA}, 7 questions`, exact: true })
     .click();
   await expect(itemLinks(page)).toHaveCount(7);
-  await filterBar(page).getByRole("link", { name: "sepsis, 5 items", exact: true }).click();
+  await filterBar(page).getByRole("link", { name: "sepsis, 5 questions", exact: true }).click();
   await expect(page).toHaveURL(/\?tag=Physiological\+Adaptation&tag=sepsis$/);
   await expect(itemLinks(page)).toHaveCount(5);
   for (const stem of ["Tag demo item 1", "Tag demo item 4", "Tag demo item 9"]) {
     await expect(itemLinks(page).filter({ hasText: stem })).toHaveCount(1);
   }
-  await expect(filterBar(page)).toContainText(`5 items have all of: ${PA}, sepsis.`);
+  await expect(filterBar(page)).toContainText(`5 questions have all of: ${PA}, sepsis.`);
 
   // The URL keeps the filter, and it combines with the folder view.
   await page.reload();
   await expect(itemLinks(page)).toHaveCount(5);
   await page
     .getByRole("navigation", { name: "Folders" })
-    .getByRole("link", { name: "Unfiled", exact: true })
+    .getByRole("link", { name: "Not in a folder", exact: true })
     .click();
   await expect(page).toHaveURL(/\?folder=unfiled&tag=Physiological\+Adaptation&tag=sepsis$/);
   await expect(itemLinks(page)).toHaveCount(5);
@@ -110,7 +113,7 @@ test("an author tags items, then filters the bank to Physiological Adaptation pl
   });
 
   // Removing one tag widens the list; clearing shows everything again.
-  await filterBar(page).getByRole("link", { name: "Remove filter sepsis, 5 items" }).click();
+  await filterBar(page).getByRole("link", { name: "Remove filter sepsis, 5 questions" }).click();
   await expect(itemLinks(page)).toHaveCount(7);
   await filterBar(page).getByRole("link", { name: "Clear filters" }).click();
   await expect(page).toHaveURL(/\?folder=unfiled$/);

@@ -14,7 +14,7 @@ import {
 type Client = SupabaseClient<Database>;
 
 export const TRANSFER_ERRORS = {
-  bankGone: "That bank no longer exists.",
+  bankGone: "That quiz no longer exists.",
   folderGone: "That folder no longer exists.",
   importFailed: "The import could not be saved, so nothing was imported. Try again.",
   notFound: "That no longer exists.",

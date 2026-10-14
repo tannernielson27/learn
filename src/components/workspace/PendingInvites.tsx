@@ -37,14 +37,8 @@ export function PendingInvites({
   focusAfterChange,
 }: PendingInvitesProps) {
   if (invites.length === 0) {
-    return (
-      <EmptyState
-        level={3}
-        heading="No pending invitations"
-        body="An invitation is listed here from when it is sent until your colleague accepts it."
-        action={emptyAction}
-      />
-    );
+    // One line (#412). The invite form is the section right above, so a link to it is optional.
+    return <EmptyState level={3} heading="No pending invitations" action={emptyAction} />;
   }
 
   return (

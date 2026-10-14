@@ -13,45 +13,45 @@ function view(overrides: Partial<BankEmptyView> = {}): BankEmptyView {
 const withFilter = (patch: Partial<BankFilter>): BankFilter => ({ ...NO_BANK_FILTER, ...patch });
 
 describe("bankItemsEmpty (#266)", () => {
-  it("an empty bank links to writing its first item", () => {
+  it("an empty quiz links to writing its first question", () => {
     expect(bankItemsEmpty(view())).toEqual({
-      heading: "No items in this bank yet",
-      body: "Choose New item to write one, or import JSON below.",
-      action: { href: `/author/banks/${BANK}/new`, label: "Write the first item" },
+      heading: "No questions yet",
+      action: { href: `/author/banks/${BANK}/new`, label: "Write the first question" },
     });
   });
 
-  it("an empty folder says so and links back to every item", () => {
+  it("an empty folder says so and links back to every question", () => {
     const empty = bankItemsEmpty(view({ view: FOLDER }));
-    expect(empty.heading).toBe("No items in this folder");
-    expect(empty.action).toEqual({ href: `/author/banks/${BANK}`, label: "See all items" });
+    expect(empty.heading).toBe("No questions in this folder");
+    expect(empty.body).toBeUndefined();
+    expect(empty.action).toEqual({ href: `/author/banks/${BANK}`, label: "All questions" });
   });
 
-  it("an empty Unfiled view says every item is in a folder", () => {
+  it("an empty Not in a folder view says every question is in a folder", () => {
     const empty = bankItemsEmpty(view({ view: { kind: "unfiled" } }));
-    expect(empty.heading).toBe("No unfiled items");
-    expect(empty.action?.href).toBe(`/author/banks/${BANK}`);
+    expect(empty.heading).toBe("Every question is in a folder");
+    expect(empty.action).toEqual({ href: `/author/banks/${BANK}`, label: "All questions" });
   });
 
-  it("a search with no results points at the clear control, with no second link", () => {
+  it("a search with no results says so in one line and offers to clear the search", () => {
     const empty = bankItemsEmpty(view({ filter: withFilter({ query: "heparin" }) }));
-    expect(empty.heading).toBe("No items here match the search");
-    expect(empty.body).toMatch(/clear the search/);
-    expect(empty.action).toBeUndefined();
+    expect(empty.heading).toBe("No questions here match the search");
+    expect(empty.body).toBeUndefined();
+    expect(empty.action).toEqual({ href: `/author/banks/${BANK}`, label: "Clear search" });
   });
 
   it("a tag filter with no results names tags, or filters once warnings are on", () => {
-    expect(bankItemsEmpty(view({ filter: withFilter({ tags: ["Cardiac"] }) })).heading).toBe(
-      "No items here carry every chosen tag",
-    );
+    const tagged = bankItemsEmpty(view({ filter: withFilter({ tags: ["Cardiac"] }) }));
+    expect(tagged.heading).toBe("No questions here carry every tag");
+    expect(tagged.action).toEqual({ href: `/author/banks/${BANK}`, label: "Clear filters" });
     expect(bankItemsEmpty(view({ filter: withFilter({ warnings: true }) })).heading).toBe(
-      "No items here match every chosen filter",
+      "No questions here match every filter",
     );
   });
 
   it("the Archived view says what it holds", () => {
     const empty = bankItemsEmpty(view({ filter: withFilter({ status: "archived" }) }));
-    expect(empty.heading).toBe("No archived items here");
+    expect(empty.heading).toBe("No archived questions here");
     expect(empty.action).toBeUndefined();
   });
 
@@ -59,22 +59,19 @@ describe("bankItemsEmpty (#266)", () => {
     const empty = bankItemsEmpty(
       view({ filter: withFilter({ status: "archived", query: "heparin" }) }),
     );
-    expect(empty.heading).toBe("No items here match the search");
+    expect(empty.heading).toBe("No questions here match the search");
   });
 
   it("a page past the end says so first", () => {
     const empty = bankItemsEmpty(view({ page: 3, filter: withFilter({ query: "heparin" }) }));
-    expect(empty.heading).toBe("No items on this page");
+    expect(empty.heading).toBe("No questions on this page");
     expect(empty.action).toBeUndefined();
   });
 });
 
 describe("bankCaseStudiesEmpty (#266)", () => {
-  it("an empty bank points at the form below", () => {
-    expect(bankCaseStudiesEmpty(view())).toEqual({
-      heading: "No case studies in this bank yet",
-      body: "Name one below to start building it.",
-    });
+  it("an empty quiz says so in one line; the form below needs no link", () => {
+    expect(bankCaseStudiesEmpty(view())).toEqual({ heading: "No case studies yet" });
   });
 
   it("a search by words matches titles", () => {
@@ -95,12 +92,12 @@ describe("bankCaseStudiesEmpty (#266)", () => {
     );
   });
 
-  it("a folder and Unfiled each say so; the items section above carries the link back", () => {
+  it("a folder and Not in a folder each say so; the questions section above carries the link back", () => {
     const folder = bankCaseStudiesEmpty(view({ view: FOLDER }));
     expect(folder.heading).toBe("No case studies in this folder");
     expect(folder.action).toBeUndefined();
     expect(bankCaseStudiesEmpty(view({ view: { kind: "unfiled" } })).heading).toBe(
-      "No unfiled case studies",
+      "Every case study is in a folder",
     );
   });
 });

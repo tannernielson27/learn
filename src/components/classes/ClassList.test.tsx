@@ -18,17 +18,15 @@ describe("ClassList", () => {
     expect(screen.getByRole("link", { name: /NUR 320/ })).toHaveTextContent("12 students");
   });
 
-  it("says there are none yet", () => {
-    render(
-      <ClassList
-        classes={[]}
-        emptyAction={{ href: "#new-class-heading", label: "Create a class" }}
-      />,
+  it("says there are none yet, in one line with the way to a new class", () => {
+    const { container } = render(
+      <ClassList classes={[]} emptyAction={{ href: "#new-class-heading", label: "New class" }} />,
     );
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "No classes yet" })).toBeInTheDocument();
-    expect(screen.getByText(/invite link/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Create a class" })).toHaveAttribute(
+    // One line and one action (#412): no sentence under the heading.
+    expect(container.querySelector("p")).toBeNull();
+    expect(screen.getByRole("link", { name: "New class" })).toHaveAttribute(
       "href",
       "#new-class-heading",
     );

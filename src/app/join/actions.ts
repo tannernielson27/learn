@@ -4,7 +4,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { JoinState } from "@/components/live/JoinForm";
 import { clientIp } from "@/lib/auth/signInRateLimit";
-import { parseJoinForm } from "@/lib/live/joinForm";
+import { JOIN_REFUSALS, parseJoinForm } from "@/lib/live/joinForm";
 import {
   formatParticipantToken,
   PARTICIPANT_COOKIE,
@@ -21,15 +21,14 @@ import { resolveSessionCode } from "@/lib/supabase/sessions";
  * `resolve_session_code` answers both with no rows on purpose, so that a script cannot harvest
  * live codes by watching which refusals differ; saying so here would give that back.
  */
-const UNKNOWN_CODE = "That code does not match a session that is open. Check it and try again.";
+const UNKNOWN_CODE = JOIN_REFUSALS.unknown;
 
 /** The same wording the sign-in limit uses, for the same reason: it names nothing. */
-const RATE_LIMITED =
-  "Too many join attempts from this network. Wait a few minutes, then try again.";
+const RATE_LIMITED = JOIN_REFUSALS.rateLimited;
 
-const UNAVAILABLE = "Joining is not working just now. Try again in a moment.";
+const UNAVAILABLE = JOIN_REFUSALS.unavailable;
 
-const SESSION_FULL = "That session is full.";
+const SESSION_FULL = JOIN_REFUSALS.full;
 
 /**
  * Joins a session, or comes back to the one this browser is already in.

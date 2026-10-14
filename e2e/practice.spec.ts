@@ -248,7 +248,7 @@ test("a student practises a shared bank on a phone, sees each key as they answer
   await classPractice.getByRole("button", { name: "Stop sharing Samples", exact: true }).click();
   await classPractice.getByRole("button", { name: "Stop sharing", exact: true }).click();
   await expect(
-    classPractice.getByText("No bank is shared with this class for practice.", { exact: true }),
+    classPractice.getByText("No quiz is shared with this class.", { exact: true }),
   ).toBeVisible();
 
   const stopped = await bytesOf(phone.context, practicePath);

@@ -33,7 +33,7 @@ export default function PlayError({ error, retry }: ErrorInfo) {
     <main className="mx-auto w-full max-w-lg flex-1 px-4 py-12">
       <RouteRecovery
         headline="This screen stopped working."
-        detail="Your place in the session is kept. Try again to rejoin the room; an answer you had not sent may need choosing again."
+        detail="Your place is kept. Try again to rejoin; an answer you had not sent may need choosing again."
         onRetry={retry}
         digest={errorDigest(error)}
       />

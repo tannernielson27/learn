@@ -84,7 +84,7 @@ export function ItemStrip({ state, tally, busy, onGoto }: ItemStripProps) {
   return (
     <nav aria-labelledby="items-heading" className="mt-6">
       <h2 id="items-heading" className="font-read text-xl text-ink-1">
-        Items
+        Questions
       </h2>
       <ol className="mt-3 flex flex-wrap gap-2">
         {positions.map((position) => {
@@ -95,7 +95,7 @@ export function ItemStrip({ state, tally, busy, onGoto }: ItemStripProps) {
             <li key={position}>
               <button
                 type="button"
-                aria-label={`Go to item ${position}`}
+                aria-label={`Go to question ${position}`}
                 aria-current={current ? "step" : undefined}
                 aria-describedby={detail === "" ? undefined : detailId}
                 disabled={busy || !canGoTo(state, position)}

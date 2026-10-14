@@ -41,7 +41,7 @@ export async function createBank(
     .insert({ name: parsed.name, org_id: orgId, created_by: userId })
     .select("id")
     .single();
-  if (error) return { status: "error", error: "The bank could not be created. Try again." };
+  if (error) return { status: "error", error: "The quiz could not be created. Try again." };
 
   revalidatePath("/author");
   redirect(`/author/banks/${data.id}`);
@@ -52,7 +52,7 @@ export async function renameBank(
   _previous: BankFormState,
   formData: FormData,
 ): Promise<BankFormState> {
-  if (!isUuid(bankId)) return { status: "error", error: "That bank no longer exists." };
+  if (!isUuid(bankId)) return { status: "error", error: "That quiz no longer exists." };
   const parsed = parseBankForm(formData);
   if (!parsed.ok) return { status: "error", error: parsed.error };
 
@@ -62,8 +62,8 @@ export async function renameBank(
     .update({ name: parsed.name })
     .eq("id", bankId)
     .select("id");
-  if (error) return { status: "error", error: "The bank could not be renamed. Try again." };
-  if (data.length === 0) return { status: "error", error: "That bank no longer exists." };
+  if (error) return { status: "error", error: "The quiz could not be renamed. Try again." };
+  if (data.length === 0) return { status: "error", error: "That quiz no longer exists." };
 
   revalidatePath("/author");
   revalidatePath(`/author/banks/${bankId}`);
@@ -76,7 +76,7 @@ export async function createCaseStudyInBank(
   _previous: CaseStudyFormState,
   formData: FormData,
 ): Promise<CaseStudyFormState> {
-  if (!isUuid(bankId)) return { status: "error", error: "That bank no longer exists." };
+  if (!isUuid(bankId)) return { status: "error", error: "That quiz no longer exists." };
   const parsed = parseCaseStudyTitle(formData);
   if (!parsed.ok) return { status: "error", error: parsed.error };
 
@@ -133,7 +133,7 @@ export async function createFolderInBank(
   _previous: FolderFormState,
   formData: FormData,
 ): Promise<FolderFormState> {
-  if (!isUuid(bankId)) return { status: "error", error: "That bank no longer exists." };
+  if (!isUuid(bankId)) return { status: "error", error: "That quiz no longer exists." };
   if (parentId !== null && !isUuid(parentId)) return FOLDER_GONE;
   const parsed = parseFolderName(formData);
   if (!parsed.ok) return { status: "error", error: parsed.error };
@@ -195,7 +195,7 @@ export async function moveToFolderInBank(
   _previous: FolderFormState,
   formData: FormData,
 ): Promise<FolderFormState> {
-  if (!isUuid(bankId)) return { status: "error", error: "That bank no longer exists." };
+  if (!isUuid(bankId)) return { status: "error", error: "That quiz no longer exists." };
   const parsed = parseMoveForm(formData);
   if (!parsed.ok) return { status: "error", error: parsed.error };
 
@@ -213,9 +213,9 @@ export interface CreateItemResult {
 
 /** Starts a draft of the chosen type and opens it in the editor. */
 export async function createItem(bankId: string, type: ItemType): Promise<CreateItemResult> {
-  if (!isUuid(bankId)) return { error: "That bank no longer exists." };
+  if (!isUuid(bankId)) return { error: "That quiz no longer exists." };
   if (!(ITEM_TYPES as readonly string[]).includes(type) || !isEditorReady(type)) {
-    return { error: "That item type cannot be authored yet." };
+    return { error: "That question type cannot be written yet." };
   }
 
   const { supabase, orgId, userId } = await requireAuthor(`/author/banks/${bankId}/new`);
@@ -234,7 +234,7 @@ export async function createItem(bankId: string, type: ItemType): Promise<Create
     })
     .select("id")
     .single();
-  if (error) return { error: "The item could not be created. Try again." };
+  if (error) return { error: "The question could not be created. Try again." };
 
   revalidatePath(`/author/banks/${bankId}`);
   redirect(`/author/items/${data.id}`);
