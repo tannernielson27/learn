@@ -42,16 +42,16 @@ export function caseStudyBlockers(
   for (const position of POSITIONS) {
     const step = byPosition.get(position);
     if (!step || step.itemId === null) {
-      reasons.push(`${stepName(position)} has no item yet.`);
+      reasons.push(`${stepName(position)} has no question yet.`);
     } else if (step.wrongStep) {
       reasons.push(
-        `${stepName(position)}'s item is set to a different clinical judgment step. Place it again.`,
+        `${stepName(position)}'s question is set to another clinical judgment step. Place it again.`,
       );
     } else if (!step.itemReady) {
       reasons.push(
         purpose === "preview"
-          ? `${stepName(position)} needs its item finished.`
-          : `${stepName(position)} needs its item finished and published.`,
+          ? `${stepName(position)} needs its question finished.`
+          : `${stepName(position)} needs its question finished and published.`,
       );
     }
   }

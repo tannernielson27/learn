@@ -42,15 +42,15 @@ import type { Item } from "@/lib/ngn/schemas";
 import type { Json } from "@/lib/supabase/database.types";
 import { toItemRow } from "@/lib/supabase/itemRows";
 
-const GONE: SaveResult = { ok: false, error: "This item no longer exists." };
+const GONE: SaveResult = { ok: false, error: "This question no longer exists." };
 const TOO_LARGE: SaveResult = {
   ok: false,
-  error: "This item is too large to save. Shorten the longest text, or split it into two items.",
+  error: "This question is too large to save. Shorten the longest text, or split it in two.",
 };
 const SAVE_FAILED: SaveResult = { ok: false, error: "The draft could not be saved. Try again." };
 const PUBLISH_FAILED: SaveResult = {
   ok: false,
-  error: "The item could not be published. Try again.",
+  error: "The question could not be published. Try again.",
 };
 /** The database refuses to change archived content (see the archive migration). */
 const ARCHIVED: SaveResult = { ok: false, error: ARCHIVE_ERRORS.itemArchived };
@@ -170,7 +170,7 @@ async function publish(itemId: string, type: ItemType, input: unknown): Promise<
   if (versionError) {
     return {
       ok: false,
-      error: "The item was published, but its version history was not recorded. Publish again.",
+      error: "The question was published, but its version history was not recorded. Publish again.",
     };
   }
 

@@ -43,7 +43,7 @@ test("an author publishes twice, previews version 1 and restores it as a draft",
   await page.getByRole("textbox", { name: "Or paste JSON", exact: true }).fill(oneItem());
   await page.getByRole("button", { name: "Import", exact: true }).click();
   await page.getByRole("list", { name: "Questions" }).getByRole("link", { name: STEM }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Edit item" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Edit question" })).toBeVisible();
 
   // Version 1 keys option A; version 2 keys option B.
   await expect(isCorrect(page, "A")).toBeChecked();

@@ -115,17 +115,15 @@ export function ItemEditorWithHistory({
           className="mb-4 flex flex-col gap-3 rounded-sm border border-line bg-surface-1 p-4"
         >
           <p id={askId} className="text-sm font-medium text-ink-1">
-            This item has unsaved changes
+            This question has unsaved changes
           </p>
-          <p className="text-sm text-ink-2">
-            Stay to save them, or discard them and leave this item.
-          </p>
+          <p className="text-sm text-ink-2">Stay to save them, or discard them and leave.</p>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" onClick={discardAndLeave}>
               Discard changes
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setLeaving(null)}>
-              Stay on this item
+              Stay on this question
             </Button>
           </div>
         </div>
@@ -142,7 +140,7 @@ export function ItemEditorWithHistory({
         <p ref={status} role="status" tabIndex={-1} className="mb-4 text-sm text-ink-1">
           {/* Once saved (or if it was never different), the version simply is the draft. */}
           {dirty
-            ? `Version ${restored.version} is loaded as unsaved changes. Save draft or publish to keep it; publishing adds a new version.`
+            ? `Version ${restored.version} is loaded as unsaved changes. Save draft or Publish to keep it.`
             : `Version ${restored.version} matches the saved draft.`}
         </p>
       ) : null}

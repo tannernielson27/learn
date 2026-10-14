@@ -92,11 +92,17 @@ export default async function CaseStudyPage({
       status,
       panel: (
         // Keyed by item, so a new item after a type change opens with the panel reset.
-        <StepItemPanel key={item.id} caseStudyId={row.id} position={position} typeLabel={typeLabel}>
+        <StepItemPanel
+          key={item.id}
+          caseStudyId={row.id}
+          position={position}
+          typeLabel={typeLabel}
+          published={item.status === "published"}
+        >
           {editor ? (
             <ItemEditorLoader {...editor} />
           ) : (
-            <p className="text-ink-2">This item&apos;s type cannot be edited here.</p>
+            <p className="text-ink-2">This format cannot be edited here.</p>
           )}
         </StepItemPanel>
       ),
@@ -113,7 +119,7 @@ export default async function CaseStudyPage({
       <div className="mb-6 flex flex-wrap items-baseline gap-3">
         <h1 className="font-read text-3xl text-ink-1">{row.title}</h1>
         <p className="text-sm text-ink-2">{STATUS_LABELS[row.status]}</p>
-        {/* Only a case study with its record and six finished steps exports. */}
+        {/* Only a case study with its patient record and six finished steps exports. */}
         {preview.ok ? (
           <a
             href={`/author/case-studies/${row.id}/export`}
@@ -166,13 +172,13 @@ export default async function CaseStudyPage({
       <>
         <p className="mb-2 text-sm">
           <Link href={bankHref} className="text-accent-ink underline-offset-4 hover:underline">
-            Back to bank
+            Back to quiz
           </Link>
         </p>
         {header}
         <p className="mb-6 max-w-prose rounded-sm border border-line bg-surface-2 p-3 text-ink-1">
-          This case study is archived. It is out of the bank&apos;s list, and its record, its steps
-          and their order cannot change. Restore it to edit it.
+          This case study is archived. It is out of the quiz, and its patient record and questions
+          cannot change. Restore it to edit it.
         </p>
       </>
     );
@@ -187,7 +193,7 @@ export default async function CaseStudyPage({
   return (
     <>
       <CaseStudyBuilder
-        back={{ href: bankHref, label: "Back to bank" }}
+        back={{ href: bankHref, label: "Back to quiz" }}
         record={{
           status: recordStatus,
           panel: <EhrEditorLoader caseStudyId={row.id} initialValues={recordForm} />,
@@ -212,7 +218,7 @@ export default async function CaseStudyPage({
           className="mt-8 rounded-sm border border-line p-4"
         >
           <h2 id="blockers-heading" className="mb-2 text-sm font-medium text-ink-1">
-            Before this case study can be published
+            Before publishing
           </h2>
           <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-ink-1">
             {blockers.map((blocker) => (
@@ -221,7 +227,7 @@ export default async function CaseStudyPage({
           </ul>
         </section>
       ) : (
-        <p className="mt-8 text-ink-1">Every step is ready to publish.</p>
+        <p className="mt-8 text-ink-1">Ready to publish.</p>
       )}
     </>
   );

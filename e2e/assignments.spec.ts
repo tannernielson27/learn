@@ -61,7 +61,7 @@ test("an instructor assigns a bank to a class and sees it listed in local time",
     1,
   );
   await publishOpenItem(page);
-  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Back to quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   const bankUrl = page.url();
 

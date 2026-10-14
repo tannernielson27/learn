@@ -11,16 +11,16 @@ const steps = [1, 2, 3, 4, 5, 6].map((position) => ({
 describe("caseStudyBlockers for a preview", () => {
   it("asks for an unfinished step's item to be finished, not published", () => {
     expect(caseStudyBlockers({ titleWritten: true, recordTabCount: 1, steps }, "preview")).toEqual([
-      "Step 3 (Prioritize Hypotheses) needs its item finished.",
+      "Step 3 (Prioritize Hypotheses) needs its question finished.",
     ]);
   });
 
   it("still asks for it to be published when publishing", () => {
     expect(caseStudyBlockers({ titleWritten: true, recordTabCount: 1, steps })).toEqual([
-      "Step 3 (Prioritize Hypotheses) needs its item finished and published.",
+      "Step 3 (Prioritize Hypotheses) needs its question finished and published.",
     ]);
     expect(caseStudyBlockers({ titleWritten: true, recordTabCount: 1, steps }, "publish")).toEqual([
-      "Step 3 (Prioritize Hypotheses) needs its item finished and published.",
+      "Step 3 (Prioritize Hypotheses) needs its question finished and published.",
     ]);
   });
 });

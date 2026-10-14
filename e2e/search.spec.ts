@@ -125,7 +125,7 @@ test("an author searches a bank for lactate, then narrows to published Matrix Mu
 
   // Publish one of the matrix items, then come back to the same search.
   await rising.click();
-  await expect(page.getByRole("heading", { level: 1, name: "Edit item" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Edit question" })).toBeVisible();
   await publishOpenItem(page);
   await page.goto(`${bankUrl}?q=lactate`);
   await expect(rows(page)).toHaveCount(5);

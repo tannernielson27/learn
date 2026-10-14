@@ -276,7 +276,9 @@ export function EditorShell<Values, Input extends ScoredInput>({
               <>
                 {confirmingRemove ? (
                   <div className="flex flex-col gap-3 rounded-sm border border-line bg-surface-1 p-4">
-                    <p className="text-sm text-ink-1">Remove the patient record from this item?</p>
+                    <p className="text-sm text-ink-1">
+                      Remove the patient record from this question?
+                    </p>
                     <div className="flex flex-wrap gap-2">
                       <Button
                         size="sm"
@@ -286,7 +288,7 @@ export function EditorShell<Values, Input extends ScoredInput>({
                           onRecordChange(undefined);
                         }}
                       >
-                        Remove record
+                        Yes, remove it
                       </Button>
                       <Button
                         id={`${recordIds}-keep`}
@@ -297,7 +299,7 @@ export function EditorShell<Values, Input extends ScoredInput>({
                           setConfirmingRemove(false);
                         }}
                       >
-                        Keep record
+                        Keep patient record
                       </Button>
                     </div>
                   </div>
@@ -329,8 +331,17 @@ export function EditorShell<Values, Input extends ScoredInput>({
             ) : (
               <>
                 <p className="text-sm text-ink-2">
-                  Give a Trend item or a standalone bowtie a record to read from. With two or more
-                  time points, the record gets a time selector.
+                  For a Trend question or a bowtie.{" "}
+                  {/* A new tab, so the question being written stays open. Underlined, as a link
+                      inside a line of text must be (axe link-in-text-block). */}
+                  <a
+                    href="/help/items#trend"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent-ink underline underline-offset-4"
+                  >
+                    How Trend works<span className="sr-only"> (opens in a new tab)</span>
+                  </a>
                 </p>
                 <div>
                   <Button
@@ -356,13 +367,9 @@ export function EditorShell<Values, Input extends ScoredInput>({
           >
             {/* Inside a case study the step's own heading is the h2 above this. */}
             {host.inCaseStudy ? (
-              <h3 className="mb-2 text-sm font-medium text-ink-1">
-                Before this item can be published
-              </h3>
+              <h3 className="mb-2 text-sm font-medium text-ink-1">Problems to fix</h3>
             ) : (
-              <h2 className="mb-2 text-sm font-medium text-ink-1">
-                Before this item can be published
-              </h2>
+              <h2 className="mb-2 text-sm font-medium text-ink-1">Problems to fix</h2>
             )}
             <ul className="flex flex-col gap-1">
               {problems.map((issue) => (
@@ -391,7 +398,7 @@ export function EditorShell<Values, Input extends ScoredInput>({
             ) : (
               <h2 className="text-sm font-medium text-ink-1">Worth a second look</h2>
             )}
-            <p className="mb-2 text-sm text-ink-2">These do not stop you publishing.</p>
+            <p className="mb-2 text-sm text-ink-2">These do not stop publishing.</p>
             <ul className="flex flex-col gap-1">
               {warnings.map((warning) => (
                 <li key={warning.field}>
@@ -434,7 +441,7 @@ export function EditorShell<Values, Input extends ScoredInput>({
               void run(
                 (current) => onPublish(toInput(current)),
                 "Published.",
-                "The item could not be published. Try again.",
+                "The question could not be published. Try again.",
                 true,
               );
             }}
@@ -454,8 +461,8 @@ export function EditorShell<Values, Input extends ScoredInput>({
           ) : null}
           {host.published ? (
             <p id={unpublishId} className="w-full text-sm text-ink-2">
-              This item is published. Saving a draft takes it out of sessions, assignments and
-              practice until you publish again.
+              This question is published. Saving a draft takes it out of live sessions, assignments
+              and practice until you publish again.
             </p>
           ) : null}
         </div>

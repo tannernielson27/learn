@@ -14,7 +14,7 @@ import { HISTORY_LIMIT } from "@/lib/authoring/versionHistory";
 import { ITEM_TYPE_LABELS, ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 import { fromItemRow } from "@/lib/supabase/itemRows";
 
-export const metadata: Metadata = { title: "Edit item" };
+export const metadata: Metadata = { title: "Edit question" };
 
 const STATUS_LABELS = { draft: "Draft", published: "Published", archived: "Archived" } as const;
 const linkClass = "text-accent-ink underline-offset-4 hover:underline";
@@ -60,7 +60,7 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
     <>
       <p className="mb-2 flex flex-wrap gap-4 text-sm">
         <GuardedLink href={`/author/banks/${row.bank_id}`} className={linkClass}>
-          Back to bank
+          Back to quiz
         </GuardedLink>
         {exportable ? (
           <a href={`/author/items/${row.id}/export`} download className={linkClass}>
@@ -70,19 +70,22 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
       </p>
       <p className="eyebrow mb-1">{label}</p>
       <div className="mb-6 flex flex-wrap items-baseline gap-3">
-        <h1 className="font-read text-3xl text-ink-1">Edit item</h1>
+        <h1 className="font-read text-3xl text-ink-1">Edit question</h1>
         <p className="text-sm text-ink-2">{STATUS_LABELS[row.status]}</p>
-        <DuplicateButton action={duplicateItemAction.bind(null, row.id)} label="Duplicate item" />
+        <DuplicateButton
+          action={duplicateItemAction.bind(null, row.id)}
+          label="Duplicate question"
+        />
         {archived ? (
-          <ArchiveButton action={restoreItemAction.bind(null, row.id)} label="Restore item" />
+          <ArchiveButton action={restoreItemAction.bind(null, row.id)} label="Restore question" />
         ) : (
-          <ArchiveButton action={archiveItemAction.bind(null, row.id)} label="Archive item" />
+          <ArchiveButton action={archiveItemAction.bind(null, row.id)} label="Archive question" />
         )}
       </div>
       {archived ? (
         <p className="mb-6 max-w-prose rounded-sm border border-line bg-surface-2 p-3 text-ink-1">
-          This item is archived. It is out of the bank&apos;s list and cannot be played, edited or
-          placed as a case study step. Restore it to edit it.
+          This question is archived. It is out of the quiz and cannot be played, edited or used in a
+          case study. Restore it to edit it.
         </p>
       ) : null}
       {/* The database refuses to change archived content, so an archived item offers no editor. */}
@@ -95,9 +98,7 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
           published={row.status === "published"}
         />
       ) : (
-        <p className="text-ink-2">
-          The editor for this item type arrives in a later story this sprint.
-        </p>
+        <p className="text-ink-2">This format cannot be edited here yet.</p>
       )}
     </>
   );

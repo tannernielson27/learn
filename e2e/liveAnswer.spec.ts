@@ -102,7 +102,7 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
   await page.getByRole("button", { name: "Extended Multiple Response", exact: true }).click();
   await fillMultipleResponse(page, STEM, OPTIONS, CORRECT);
   await publishOpenItem(page);
-  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Back to quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
   await page.getByRole("button", { name: "Start a live session", exact: true }).click();
@@ -321,7 +321,7 @@ test("a timed item counts down on the phone, and refuses an answer after zero", 
   await page.getByRole("button", { name: "Extended Multiple Response", exact: true }).click();
   await fillMultipleResponse(page, STEM, OPTIONS, CORRECT);
   await publishOpenItem(page);
-  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Back to quiz" }).click();
   await page.getByRole("button", { name: "Start a live session", exact: true }).click();
   await expect(page).toHaveURL(/\/live\/[0-9a-f-]{36}$/);
 
@@ -415,7 +415,7 @@ test("the host skips to an item and goes back, and the phone keeps its answer", 
     await page.getByRole("button", { name: "Extended Multiple Response", exact: true }).click();
     await fillMultipleResponse(page, stem, OPTIONS, CORRECT);
     await publishOpenItem(page);
-    await page.getByRole("link", { name: "Back to bank" }).click();
+    await page.getByRole("link", { name: "Back to quiz" }).click();
     await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   }
   await page.getByRole("button", { name: "Start a live session", exact: true }).click();
@@ -617,7 +617,7 @@ test("a student-paced set: phones move at their own pace, the board fills in, on
     await page.getByRole("button", { name: "Extended Multiple Response", exact: true }).click();
     await fillMultipleResponse(page, stem, OPTIONS, CORRECT);
     await publishOpenItem(page);
-    await page.getByRole("link", { name: "Back to bank" }).click();
+    await page.getByRole("link", { name: "Back to quiz" }).click();
     await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   }
   await page.getByRole("radio", { name: "Student-paced", exact: true }).check();

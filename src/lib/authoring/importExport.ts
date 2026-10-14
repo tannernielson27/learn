@@ -18,7 +18,8 @@ export const TRANSFER_ERRORS = {
   folderGone: "That folder no longer exists.",
   importFailed: "The import could not be saved, so nothing was imported. Try again.",
   notFound: "That no longer exists.",
-  unfinishedItem: "Finish this item before exporting it. Only a valid item can be exported.",
+  unfinishedItem:
+    "Finish this question before exporting it. Only a finished question can be exported.",
   unfinishedCaseStudy: "Finish every step of this case study before exporting it.",
 } as const;
 

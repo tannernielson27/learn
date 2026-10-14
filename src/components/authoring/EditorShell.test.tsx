@@ -55,7 +55,7 @@ describe("EditorShell when a save or publish request itself fails", () => {
 
     await user.click(screen.getByRole("button", { name: "Publish" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "The item could not be published. Try again.",
+      "The question could not be published. Try again.",
     );
     expect(screen.getByRole("button", { name: "Publish" })).not.toHaveAttribute(
       "aria-disabled",

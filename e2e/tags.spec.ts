@@ -67,7 +67,7 @@ test("an author tags items, then filters the bank to Physiological Adaptation pl
 
   // Tag item 9 in its editor: a client need, a topic typed in another case, and a CJMM step.
   await itemLinks(page).filter({ hasText: "Tag demo item 9" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Edit item" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Edit question" })).toBeVisible();
   await page.getByRole("checkbox", { name: PA, exact: true }).check();
   await page.getByRole("textbox", { name: "Add topic tags" }).fill("Sepsis");
   await page.getByRole("textbox", { name: "Add topic tags" }).press("Enter");
@@ -80,7 +80,7 @@ test("an author tags items, then filters the bank to Physiological Adaptation pl
   await expectNoAxeViolations(page);
   await page.getByRole("button", { name: "Save draft", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Draft saved." })).toBeVisible();
-  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Back to quiz" }).click();
 
   // The list shows the step as a tag.
   await expect(itemLinks(page).filter({ hasText: "Tag demo item 9" })).toContainText(

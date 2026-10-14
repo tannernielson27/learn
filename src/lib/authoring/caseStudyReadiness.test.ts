@@ -19,8 +19,8 @@ describe("caseStudyBlockers", () => {
   it("names each missing step by number and clinical judgment step, in order", () => {
     const steps = allReady().filter((step) => step.position !== 3 && step.position !== 5);
     expect(caseStudyBlockers({ titleWritten: true, recordTabCount: 1, steps })).toEqual([
-      "Step 3 (Prioritize Hypotheses) has no item yet.",
-      "Step 5 (Take Action) has no item yet.",
+      "Step 3 (Prioritize Hypotheses) has no question yet.",
+      "Step 5 (Take Action) has no question yet.",
     ]);
   });
 
@@ -29,7 +29,7 @@ describe("caseStudyBlockers", () => {
       step.position === 1 ? { ...step, itemId: null, itemReady: false } : step,
     );
     expect(caseStudyBlockers({ titleWritten: true, recordTabCount: 1, steps })).toEqual([
-      "Step 1 (Recognize Cues) has no item yet.",
+      "Step 1 (Recognize Cues) has no question yet.",
     ]);
   });
 
@@ -38,7 +38,7 @@ describe("caseStudyBlockers", () => {
       step.position === 2 ? { ...step, itemReady: false } : step,
     );
     expect(caseStudyBlockers({ titleWritten: true, recordTabCount: 1, steps })).toEqual([
-      "Step 2 (Analyze Cues) needs its item finished and published.",
+      "Step 2 (Analyze Cues) needs its question finished and published.",
     ]);
   });
 
@@ -46,12 +46,12 @@ describe("caseStudyBlockers", () => {
     expect(caseStudyBlockers({ titleWritten: false, recordTabCount: 0, steps: [] })).toEqual([
       "Give the case study a title.",
       "Add at least one tab to the patient record.",
-      "Step 1 (Recognize Cues) has no item yet.",
-      "Step 2 (Analyze Cues) has no item yet.",
-      "Step 3 (Prioritize Hypotheses) has no item yet.",
-      "Step 4 (Generate Solutions) has no item yet.",
-      "Step 5 (Take Action) has no item yet.",
-      "Step 6 (Evaluate Outcomes) has no item yet.",
+      "Step 1 (Recognize Cues) has no question yet.",
+      "Step 2 (Analyze Cues) has no question yet.",
+      "Step 3 (Prioritize Hypotheses) has no question yet.",
+      "Step 4 (Generate Solutions) has no question yet.",
+      "Step 5 (Take Action) has no question yet.",
+      "Step 6 (Evaluate Outcomes) has no question yet.",
     ]);
   });
 });
@@ -62,7 +62,7 @@ describe("caseStudyBlockers for an item set to another step", () => {
       step.position === 4 ? { ...step, wrongStep: true } : step,
     );
     expect(caseStudyBlockers({ titleWritten: true, recordTabCount: 1, steps })).toEqual([
-      "Step 4 (Generate Solutions)'s item is set to a different clinical judgment step. Place it again.",
+      "Step 4 (Generate Solutions)'s question is set to another clinical judgment step. Place it again.",
     ]);
     expect(stepsReadyLabel(steps)).toBe("5 of 6 steps ready");
   });

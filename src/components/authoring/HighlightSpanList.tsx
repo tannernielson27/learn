@@ -46,11 +46,7 @@ export function HighlightSpanList({
       <legend id={legendId} className="text-sm font-medium text-ink-1">
         Selectable phrases
       </legend>
-      {spans.length === 0 ? (
-        <p className="text-sm text-ink-2">
-          No phrases marked yet. Select a phrase and choose Mark span.
-        </p>
-      ) : null}
+      {spans.length === 0 ? <p className="text-sm text-ink-2">No phrases marked yet.</p> : null}
       {spans.map((span, index) => (
         // Position is part of the key: a hand-typed duplicate id must not share React state.
         <div
