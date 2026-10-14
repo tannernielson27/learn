@@ -317,6 +317,9 @@ insert into public.item_banks (id, org_id, name, library_folder_id) values
   ('00000000-0000-0000-0000-000000411b04', '00000000-0000-0000-0000-000000411f03', 'Filed',
    '00000000-0000-0000-0000-000000411d02');
 
+-- In the sweep's order (sweep_one_workspace): the quizzes, then the workspace. Deleting the org
+-- alone would rely on which of its two cascades fires first.
+delete from public.item_banks where org_id = '00000000-0000-0000-0000-000000411f03';
 select lives_ok(
   $$ delete from public.orgs where id = '00000000-0000-0000-0000-000000411f03' $$,
   'a workspace with folders and filed quizzes can be deleted'
