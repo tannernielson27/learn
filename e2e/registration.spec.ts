@@ -103,7 +103,7 @@ test("a stranger becomes a teacher, and another stranger becomes their student, 
   await expectNoAxeViolations(page);
 
   // 2. The sample bank comes in, and a bank of their own is named.
-  await checklist.getByRole("button", { name: "Import the sample bank", exact: true }).click();
+  await checklist.getByRole("button", { name: "Import the sample quiz", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/banks\/[0-9a-f-]{36}$/);
   await expect(
     page.getByRole("heading", { level: 1, name: "Sample bank", exact: true }),

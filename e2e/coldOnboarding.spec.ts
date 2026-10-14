@@ -122,7 +122,7 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   await expect(checklist.getByText("0 of 3 done", { exact: true })).toBeVisible();
   await expectNoAxeViolations(page);
   await shoot(page, testInfo, "3-get-started");
-  await checklist.getByRole("button", { name: "Import the sample bank", exact: true }).click();
+  await checklist.getByRole("button", { name: "Import the sample quiz", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/banks\/[0-9a-f-]{36}$/);
   await expect(
     page.getByRole("heading", { level: 1, name: "Sample bank", exact: true }),

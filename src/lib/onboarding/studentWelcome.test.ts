@@ -27,7 +27,7 @@ describe("studentWelcomeSteps (#365)", () => {
     ]);
     expect(steps[0]!.body[0]).toBe("You are in NUR 310.");
     expect(steps[1]!.body.join(" ")).toMatch(/your class’s time zone/);
-    expect(steps[2]!.body.join(" ")).toMatch(/enter the code your instructor shows/);
+    expect(steps[2]!.body.join(" ")).toMatch(/type the join code your teacher shows/);
   });
 
   it.each([

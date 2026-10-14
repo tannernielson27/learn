@@ -36,7 +36,7 @@ export function landingEntry(visitor: LandingVisitor): LandingEntry {
   switch (visitor.role) {
     case "instructor":
     case "admin":
-      return { href: "/author", label: "Go to your item banks" };
+      return { href: "/author", label: "Go to your quizzes" };
     case "student":
       return { href: STUDENT_HOME, label: "Go to your classes" };
     default:

@@ -92,7 +92,7 @@ describe("the workspace invitation email", () => {
   it("says what accepting does, who can, and that ignoring it is safe", () => {
     const { text } = renderWorkspaceInviteEmail(CONTENT);
     expect(text).toMatch(/^You are invited to a LeaRN workspace\n/);
-    expect(text).toMatch(/instructor/);
+    expect(text).toMatch(/makes you a teacher in that workspace/);
     expect(text).toMatch(/only for this email address/);
     expect(text).toMatch(/7 days/);
     expect(text).toMatch(/ignore this email/);

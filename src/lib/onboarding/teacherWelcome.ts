@@ -7,8 +7,8 @@ type Client = SupabaseClient<Database>;
 /**
  * The welcome a new teacher sees once, the first time they reach the author home (#364). It sits
  * next to the Get started checklist (`checklist.ts`) on purpose: the welcome says what the three
- * checklist steps are, in the same order, and names the checklist's own titles, so the two cannot
- * drift into saying different things.
+ * checklist steps are, in the same order, and is written from the checklist's own titles, so the
+ * two cannot drift into saying different things. It adds only what the checklist does not say.
  */
 
 export interface WelcomeStep {
@@ -21,8 +21,15 @@ export interface WelcomeStep {
 export const TEACHER_WELCOME_FINISH = "Get started";
 
 const CHECKLIST = checklistSteps({ banks: [], hasClass: false, hasAssignmentOrSession: false });
-const titleOf = (id: (typeof CHECKLIST)[number]["id"]): string =>
-  CHECKLIST.find((step) => step.id === id)!.title;
+type ChecklistId = (typeof CHECKLIST)[number]["id"];
+const stepOf = (id: ChecklistId) => CHECKLIST.find((step) => step.id === id)!;
+const titleOf = (id: ChecklistId): string => stepOf(id).title;
+const hintOf = (id: ChecklistId): string => stepOf(id).hint;
+/** A checklist title in the middle of a sentence. */
+const lower = (title: string): string => title.charAt(0).toLowerCase() + title.slice(1);
+
+const STUDENTS_SEE =
+  "Students see only what you assign, share for practice or use in a live session.";
 
 /**
  * What a colleague who came in by invitation sees instead: two steps. They did not make this
@@ -34,15 +41,15 @@ function invitedWelcomeSteps(name: string | undefined): WelcomeStep[] {
     {
       title: name ? `Welcome, ${name}` : "Welcome to LeaRN",
       body: [
-        "You have joined a shared workspace. Its question banks, classes and results belong to the workspace: you and the other teachers in it see and work on the same ones.",
-        "Students see only what is assigned to their class or run live.",
+        "You have joined a shared workspace. You and the other teachers in it see and work on the same quizzes, classes and results.",
+        STUDENTS_SEE,
       ],
     },
     {
       title: "Where to start",
       body: [
-        "Open a question bank to see what is already here, or write questions of your own.",
-        "Make a class and share its class code or invite link; students join with either. Then assign a bank as take-home work, or run it live and watch the answers come in.",
+        "Open a quiz to see what is already here, or write your own.",
+        `${titleOf("class")} and share its class code or invite link. Then ${lower(titleOf("assign"))}.`,
       ],
     },
   ];
@@ -62,22 +69,19 @@ export function teacherWelcomeSteps(
     {
       title: name ? `Welcome, ${name}` : "Welcome to LeaRN",
       body: [
-        "This is your workspace. The question banks, classes and results you make here are yours: no other teacher can see them.",
-        "Students see only what you assign to their class or run live.",
+        "This is your workspace. Its quizzes, classes and results are yours: no other teacher can see them.",
+        STUDENTS_SEE,
       ],
     },
     {
-      title: "Start with a question bank",
-      body: [
-        "A bank holds your questions and case studies. Write your own, or import the sample bank: one question of every type and a case study, published and ready to use.",
-        `On the Get started list this is “${titleOf("bank")}”.`,
-      ],
+      title: titleOf("bank"),
+      body: ["A quiz holds your questions and case studies.", hintOf("bank")],
     },
     {
-      title: "Then a class, and your first session",
+      title: "Then a class, and your first live session",
       body: [
-        "Make a class and share its class code or invite link; students join with either. Then assign a bank as take-home work, or run it live and watch the answers come in.",
-        `On the Get started list these are “${titleOf("class")}” and “${titleOf("assign")}”.`,
+        `${titleOf("class")} and share its class code or invite link.`,
+        `${titleOf("assign")}, and watch the answers come in.`,
       ],
     },
   ];

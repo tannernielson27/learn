@@ -34,14 +34,14 @@ describe("TeacherWelcome (#364)", () => {
   it("walks forward and back through the three steps", async () => {
     const { user, onDone } = setup();
     await user.click(button("Next"));
-    expect(dialog()).toHaveAccessibleName("Start with a question bank");
+    expect(dialog()).toHaveAccessibleName("Create a quiz or import the sample");
     expect(screen.getByRole("status")).toHaveTextContent("Step 2 of 3");
     await user.click(button("Next"));
-    expect(dialog()).toHaveAccessibleName("Then a class, and your first session");
+    expect(dialog()).toHaveAccessibleName("Then a class, and your first live session");
     expect(screen.getByRole("status")).toHaveTextContent("Step 3 of 3");
     expect(screen.queryByRole("button", { name: "Next" })).toBeNull();
     await user.click(button("Back"));
-    expect(dialog()).toHaveAccessibleName("Start with a question bank");
+    expect(dialog()).toHaveAccessibleName("Create a quiz or import the sample");
     await user.click(button("Back"));
     expect(dialog()).toHaveAccessibleName("Welcome, Ada Lovelace");
     expect(onDone).not.toHaveBeenCalled();
