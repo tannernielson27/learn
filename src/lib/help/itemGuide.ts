@@ -40,8 +40,7 @@ export const ITEM_GUIDE: Record<ItemType, ItemGuideEntry> = {
     tests:
       "Recognizing every finding or action that applies. Select all that apply (SATA) has 5 to 10 options with at least one correct; Select N asks for exactly N.",
     model: "plus_minus",
-    scoring:
-      "+/-: +1 for each correct selection, -1 for each incorrect selection, and the score never goes below 0. Max = the number of correct options.",
+    scoring: "+/-. Max = the number of correct options.",
     tip: "Write a rationale for each option. The editor warns when every option is correct, or when an option has no rationale of its own.",
   },
   multiple_response_grouping: {
@@ -91,8 +90,7 @@ export const ITEM_GUIDE: Record<ItemType, ItemGuideEntry> = {
     tests:
       "Recognizing cues in a passage. You mark the phrases a student can select; the rest of the text cannot be selected.",
     model: "plus_minus",
-    scoring:
-      "+/-: +1 for each correct phrase selected, -1 for each incorrect one, never below 0. Max = the number of correct phrases.",
+    scoring: "+/-. Max = the number of correct phrases.",
     tip: "Give it at least 2 selectable phrases with at least 1 correct. The editor warns when more than 60% of them are correct.",
   },
   highlight_table: {
@@ -114,7 +112,7 @@ export const ITEM_GUIDE: Record<ItemType, ItemGuideEntry> = {
       "The drop-down rationale sentence, answered from a word bank: a dyad (2 blanks) or a triad (3 blanks).",
     model: "rationale",
     scoring:
-      "Rationale scoring. Dyad: 1 point only if both are correct. Triad: 2 points max; the anchor must be correct, and each of the two supporting blanks then earns 1. Anchor wrong: 0.",
+      "Rationale scoring, the same as Drop-Down Rationale: a dyad earns 1 point, a triad up to 2.",
     tip: "Put plausible wrong words in the word bank for both the condition and the evidence, so neither blank can be solved alone.",
   },
   ordered_response: {
@@ -154,7 +152,7 @@ export const COMPOSITE_GUIDE: CompositeGuideEntry[] = [
     id: "trend",
     title: "Trend question",
     body: [
-      "Not a separate format: any question outside a case study becomes a Trend question when its patient record is charted at two or more times. The patient record then offers a time selector.",
+      "Not a separate format: any question outside a case study becomes a Trend question when its patient record is charted at two or more times, which adds a time selector.",
       "Use it to ask what changed, for example whether each finding improved, stayed the same or declined over a shift.",
     ],
     scoring: "Scored by the rule of the format it uses.",

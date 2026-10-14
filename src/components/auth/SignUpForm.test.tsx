@@ -38,7 +38,7 @@ describe("SignUpForm (#361)", () => {
     const { user } = setup({ status: "idle" });
     await user.click(screen.getByRole("radio", { name: /I teach/ }));
     expect(screen.getByRole("textbox", { name: "Your name" })).toHaveAccessibleDescription(
-      /name of your workspace/,
+      /in your workspace’s name/,
     );
     await user.click(screen.getByRole("radio", { name: /I am a student/ }));
     expect(screen.getByRole("textbox", { name: "Your name" })).toHaveAccessibleDescription(

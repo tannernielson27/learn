@@ -47,12 +47,12 @@ const LINK =
   "tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline";
 
 const ROLES: readonly { value: SignUpRole; label: string; detail: string }[] = [
-  { value: "teacher", label: "I teach", detail: "Write quizzes and run them with a class." },
+  { value: "teacher", label: "I teach", detail: "Write quizzes for your classes." },
   { value: "student", label: "I am a student", detail: "Join your teacher’s class." },
 ];
 
 const NAME_HINT: Record<SignUpRole, string> = {
-  teacher: "Shown at the top of each page, and in the name of your workspace.",
+  teacher: "Shown on each page and in your workspace’s name.",
   student: ACCOUNT_NAME_HINT,
 };
 

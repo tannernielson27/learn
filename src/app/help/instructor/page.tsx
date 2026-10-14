@@ -94,7 +94,7 @@ export default function InstructorGuide() {
           Teacher guide
         </h1>
         <p className="measure mt-3 text-lg text-ink-2">
-          In the order you will need it. For how each question format works and is scored, see the{" "}
+          For how each format is scored, see the{" "}
           <Link href="/help/items" className="text-accent-ink underline underline-offset-4">
             question guide
           </Link>
@@ -112,13 +112,10 @@ export default function InstructorGuide() {
             </li>
             <li>Type your name, your email address and a password.</li>
           </Steps>
+          <p>You are signed in at once, in a workspace no other teacher can see.</p>
           <p>
-            You are signed in at once, in a workspace of your own. No other teacher can see its
-            quizzes, classes and results.
-          </p>
-          <p>
-            An email asks you to confirm your address. Nothing waits on it, but it is what lets you
-            back in if you forget your password.
+            Confirm your address from the email that follows. It is what lets you back in if you
+            forget your password.
           </p>
         </Topic>
         <Topic id="password" title="Sign in, or reset your password">
@@ -138,16 +135,16 @@ export default function InstructorGuide() {
               .
             </li>
             <li>
-              The form answers the same way whether or not an address has an account. If no email
-              arrives, check the spelling.
+              If no email arrives, check the spelling. The form never says whether an address has an
+              account.
             </li>
           </List>
         </Topic>
         <Topic id="colleagues" title="Share a workspace with colleagues">
           <p>
-            Colleagues who share one set of quizzes, classes and results work in one workspace.
-            Invite a colleague by email from your workspace page, which you reach from{" "}
-            <Ui>Account</Ui>. If you are joining theirs, ask for the invitation before you sign up.
+            To share quizzes, classes and results, work in one workspace. Invite a colleague by
+            email from your workspace page, under <Ui>Account</Ui>. If you are joining theirs, ask
+            for the invitation before you sign up.
           </p>
         </Topic>
       </Section>
@@ -228,9 +225,8 @@ export default function InstructorGuide() {
         <p>The class page shows an invite link, its QR code and an eight-character class code.</p>
         <Topic id="invite" title="Invite link and QR code">
           <p>
-            A student opens the link, types their name and an email address and chooses a password.
-            They are in the class, and on its roster, at once. An email asking them to confirm their
-            address follows; nothing waits on it.
+            A student opens the link, types their name and email address and chooses a password.
+            They are on the roster at once; confirming their address can wait.
           </p>
         </Topic>
         <Topic id="class-code" title="Class code">
@@ -240,16 +236,12 @@ export default function InstructorGuide() {
           </p>
         </Topic>
         <Topic id="time-zone" title="Time zone">
-          <p>
-            Set the class&apos;s time zone on the class page. Open and close times then show in your
-            local time.
-          </p>
+          <p>Set it on the class page, so open and close times show in your local time.</p>
         </Topic>
         <Topic id="remove" title="Remove a student">
           <p>
-            A student you remove cannot rejoin with the link or the code they have. To stop the link
-            and the code working for everyone, replace the link; that replaces the class code and
-            the QR code too.
+            A removed student cannot rejoin with the link or code they have. To stop both working
+            for everyone, replace the link: the class code and QR code change too.
           </p>
         </Topic>
       </Section>
@@ -332,7 +324,7 @@ export default function InstructorGuide() {
           </List>
           <HelpFigure
             figure={HELP_FIGURES.liveResults}
-            caption="Live results before the answer is shown: counts and percentages, with nothing marked correct."
+            caption="Live results before the answer is shown."
           />
         </Topic>
         <Topic id="timer" title="Timer">
@@ -378,9 +370,9 @@ export default function InstructorGuide() {
         </p>
         <Topic id="practice-answers" title="Practice shows the answers">
           <p>
-            Students in that class can see the answers to a shared quiz&apos;s questions, so do not
-            grade them on those questions. If you assign from a shared quiz, the form warns you how
-            many of its questions the class can see the answers to.
+            Students in that class can see the answers to a shared quiz, so do not grade them on its
+            questions. If you assign from it, the form warns you how many answers the class can
+            already see.
           </p>
         </Topic>
       </Section>

@@ -53,7 +53,7 @@ function paragraphsFor(content: WorkspaceInviteContent): string[] {
   const inviter = oneLine(content.inviterEmail, ADDRESS_LIMIT);
   const workspace = oneLine(content.workspaceName, NAME_LIMIT);
   return [
-    `${inviter} invited you to teach with them in the workspace "${workspace}" on LeaRN, an NCLEX practice app.`,
+    `${inviter} invited you to teach with them in the workspace "${workspace}" on LeaRN.`,
     "Accepting makes you a teacher in that workspace: you share its quizzes, classes and results.",
   ];
 }

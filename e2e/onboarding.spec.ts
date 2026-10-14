@@ -72,9 +72,9 @@ test("a new instructor imports the sample from Get started, then hides it", asyn
   const steps = checklist.getByRole("list", { name: "Steps", exact: true }).getByRole("listitem");
   await expect(steps).toHaveCount(3);
   for (const title of [
-    "Make a bank or import the sample",
-    "Make a class",
-    "Assign work or run a live session",
+    "Create a quiz or import the sample",
+    "Create a class",
+    "Assign a quiz or start a live session",
   ]) {
     await expect(stepRow(checklist, title).getByText("Not done", { exact: true })).toBeVisible();
   }
@@ -85,7 +85,7 @@ test("a new instructor imports the sample from Get started, then hides it", asyn
     fullPage: true,
   });
 
-  await checklist.getByRole("button", { name: "Import the sample bank", exact: true }).click();
+  await checklist.getByRole("button", { name: "Import the sample quiz", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/banks\/[0-9a-f-]{36}$/);
   await expect(
     page.getByRole("heading", { level: 1, name: "Sample bank", exact: true }),
@@ -108,15 +108,15 @@ test("a new instructor imports the sample from Get started, then hides it", asyn
   expect(new Set(items.map((item) => item.org_id))).toEqual(new Set([orgId]));
 
   await page.goto("/author");
-  const bankStep = stepRow(checklist, "Make a bank or import the sample");
+  const bankStep = stepRow(checklist, "Create a quiz or import the sample");
   await expect(bankStep.getByText("Done", { exact: true })).toBeVisible();
   await expect(checklist.getByText("1 of 3 done", { exact: true })).toBeVisible();
   // A second import is a link to the same bank, not another copy.
   await expect(
-    checklist.getByRole("button", { name: "Import the sample bank", exact: true }),
+    checklist.getByRole("button", { name: "Import the sample quiz", exact: true }),
   ).toHaveCount(0);
   await expect(
-    checklist.getByRole("link", { name: "Open the sample bank", exact: true }),
+    checklist.getByRole("link", { name: "Open the sample quiz", exact: true }),
   ).toHaveAttribute("href", `/author/banks/${bankId}`);
   await expectNoAxeViolations(page);
   await page.screenshot({
@@ -159,13 +159,9 @@ test("the imported sample is ready to assign and to run live straight away", asy
   });
 
   const checklist = page.getByRole("region", { name: "Get started", exact: true });
-  await expect(
-    checklist.getByText("published, ready to assign or run live", { exact: false }),
-  ).toBeVisible();
-  await expect(checklist.getByText("Only published items are used", { exact: false })).toHaveCount(
-    0,
-  );
-  await checklist.getByRole("button", { name: "Import the sample bank", exact: true }).click();
+  await expect(checklist.getByText("published and ready to use", { exact: false })).toBeVisible();
+  await expect(checklist.getByText(/only published/i)).toHaveCount(0);
+  await checklist.getByRole("button", { name: "Import the sample quiz", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/banks\/[0-9a-f-]{36}$/);
   const bankUrl = page.url();
   const bankId = bankUrl.split("/").pop();
@@ -243,13 +239,13 @@ test("a new teacher is welcomed in three steps, once, and lands on the checklist
   // With the keyboard: Next keeps the focus, so Enter walks it.
   await dialog.getByRole("button", { name: "Next", exact: true }).focus();
   await page.keyboard.press("Enter");
-  await expect(dialog).toHaveAccessibleName("Start with a question bank");
+  await expect(dialog).toHaveAccessibleName("Create a quiz or import the sample");
   await expect(count).toHaveText("Step 2 of 3");
   await expectNoAxeViolations(page);
   await page.screenshot({ path: `test-results/screenshots/${project}/teacher-welcome-2.png` });
 
   await page.keyboard.press("Enter");
-  await expect(dialog).toHaveAccessibleName("Then a class, and your first session");
+  await expect(dialog).toHaveAccessibleName("Then a class, and your first live session");
   await expect(count).toHaveText("Step 3 of 3");
   await expectNoAxeViolations(page);
   await page.screenshot({ path: `test-results/screenshots/${project}/teacher-welcome-3.png` });

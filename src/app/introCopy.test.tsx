@@ -45,6 +45,7 @@ vi.mock("./learn/actions", () => ({ joinClassWithCode: action() }));
 // The class code form belongs to the classes pass (#412), which renames it under the same glossary.
 vi.mock("@/components/classes/JoinByCodeForm", () => ({ JoinByCodeForm: () => null }));
 
+import { ConfirmEmailBanner } from "@/components/auth/ConfirmEmailBanner";
 import { SignInForm } from "@/components/auth/SignInForm";
 import { SignUpForm } from "@/components/auth/SignUpForm";
 import { Landing } from "@/components/landing/Landing";
@@ -207,6 +208,10 @@ async function signUpPages(): Promise<Surface[]> {
     text("Sign up, name hint for a student", [ACCOUNT_NAME_HINT]),
     await page("Welcome", welcome, titleOf(welcomeMetadata)),
     await page("Welcome, workspace not set up", welcomeRetry, titleOf(welcomeMetadata)),
+    await page(
+      "Confirm your email banner",
+      <ConfirmEmailBanner action={idle} email="sam@learn.example" />,
+    ),
   ];
 }
 

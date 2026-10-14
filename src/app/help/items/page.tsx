@@ -138,8 +138,8 @@ export default function ItemGuide() {
           Question guide
         </h1>
         <p className="measure mt-3 text-lg text-ink-2">
-          Every question format: what it tests, how it is scored, and one tip for writing it. Scores
-          are whole numbers from 0 to the question’s maximum.
+          What each question format tests, how it is scored, and one tip. Scores are whole numbers
+          from 0 to the question’s maximum.
         </p>
       </header>
 
