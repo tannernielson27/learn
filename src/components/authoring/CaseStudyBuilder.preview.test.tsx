@@ -42,7 +42,7 @@ function setup(overrides: Partial<BuilderProps> = {}) {
   const publish = vi.fn<NonNullable<BuilderProps["publish"]>>(async () => ({ ok: true }));
   render(
     <CaseStudyBuilder
-      back={{ href: "/author/banks/bank-1", label: "Back to bank" }}
+      back={{ href: "/author/banks/bank-1", label: "Back to quiz" }}
       record={{ status: "ready", panel: <FakeEditor label="Record field" /> }}
       steps={[1, 2, 3, 4, 5, 6].map((position) => ({
         position: position as CjmmStep,
@@ -87,7 +87,9 @@ describe("previewing a case study", () => {
     const { user } = setup();
     await user.type(screen.getByLabelText("Record field"), "typed");
     await user.click(screen.getByRole("button", { name: "Preview case study" }));
-    const ask = within(screen.getByRole("alertdialog", { name: "The record has unsaved changes" }));
+    const ask = within(
+      screen.getByRole("alertdialog", { name: "The patient record has unsaved changes" }),
+    );
     await user.click(ask.getByRole("button", { name: "Discard changes" }));
     expect(screen.getByRole("button", { name: "Back to editing" })).toBeInTheDocument();
   });
@@ -163,8 +165,10 @@ describe("publishing a case study", () => {
     await user.type(screen.getByLabelText("Record field"), "typed");
     await user.click(screen.getByRole("button", { name: "Publish case study" }));
     expect(publish).not.toHaveBeenCalled();
-    const ask = within(screen.getByRole("alertdialog", { name: "The record has unsaved changes" }));
-    await user.click(ask.getByRole("button", { name: "Stay on this step" }));
+    const ask = within(
+      screen.getByRole("alertdialog", { name: "The patient record has unsaved changes" }),
+    );
+    await user.click(ask.getByRole("button", { name: "Keep editing" }));
     expect(screen.getByLabelText("Record field")).toHaveValue("typed");
   });
 });

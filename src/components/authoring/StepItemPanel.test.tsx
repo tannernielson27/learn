@@ -70,23 +70,23 @@ describe("StepItemPanel", () => {
 
   it("warns that changing the type loses the step's answers, and keeps the item when asked", async () => {
     const user = setup();
-    await user.click(screen.getByRole("button", { name: "Change type" }));
+    await user.click(screen.getByRole("button", { name: "Change format" }));
     expect(
       screen.getByText(
-        "Changing the type starts a new item for this step. Its question and answers will be lost.",
+        "A new format starts a new question for Step 2. This one's text and answers will be lost.",
       ),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Keep this item" })).toHaveFocus();
-    await user.click(screen.getByRole("button", { name: "Keep this item" }));
+    expect(screen.getByRole("button", { name: "Keep this question" })).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "Keep this question" }));
     expect(screen.getByText("The step item editor")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Change type" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Change format" })).toHaveFocus();
   });
 
   it("offers the types once the author confirms", async () => {
     startStepItem.mockResolvedValue({ error: "" });
     const user = setup();
-    await user.click(screen.getByRole("button", { name: "Change type" }));
-    await user.click(screen.getByRole("button", { name: "Choose another type" }));
+    await user.click(screen.getByRole("button", { name: "Change format" }));
+    await user.click(screen.getByRole("button", { name: "Choose another format" }));
     expect(screen.queryByText("The step item editor")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Bowtie" }));
     expect(startStepItem).toHaveBeenCalledWith(CASE_ID, 2, "bowtie");

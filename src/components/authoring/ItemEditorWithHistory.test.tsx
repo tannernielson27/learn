@@ -76,7 +76,7 @@ describe("ItemEditorWithHistory", () => {
     expect(screen.getByText("Editing with opt_a, saved opt_b")).toBeInTheDocument();
     const status = screen.getByRole("status");
     expect(status).toHaveTextContent(
-      "Version 1 is loaded as unsaved changes. Save draft or publish to keep it; publishing adds a new version.",
+      "Version 1 is loaded as unsaved changes. Save draft or Publish to keep it.",
     );
     expect(status).toHaveFocus();
   });
