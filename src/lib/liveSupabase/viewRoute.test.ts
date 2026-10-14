@@ -323,7 +323,7 @@ describe("who may read the room (#407)", () => {
       depsFor(live),
     );
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ error: "You have not joined this session." });
+    expect(await response.json()).toEqual({ error: "You have not joined this live session." });
     expect(logged).not.toHaveBeenCalled();
   });
 
@@ -398,7 +398,7 @@ describe("when the database does not answer (#407)", () => {
     expect(response.headers.get("retry-after")).toBe("1");
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(await response.json()).toEqual({
-      error: "The session could not be reached. Try again.",
+      error: "The live session could not be reached. Try again.",
       retryable: true,
     });
     // Not answered by falling back either: a dropped call is not a missing function.

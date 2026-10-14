@@ -31,12 +31,12 @@ export interface RoomEntry {
 const CLASS = ["Amara", "Bo", "Chidi", "Dara", "Eli", "Farrah", "Gus", "Hana"];
 
 const COMMAND_LABELS: Record<HostCommand, string> = {
-  start: "Start session",
-  advance: "Next item",
-  reveal: "Reveal answer",
+  start: "Start",
+  advance: "Next question",
+  reveal: "Show answer",
   pause: "Pause",
   resume: "Resume",
-  end: "End session",
+  end: "End live session",
 };
 
 const STATUS_LABELS = {
@@ -213,7 +213,7 @@ export function FakeRoom({ set }: { set: RoomEntry[] }) {
           </div>
           <p aria-live="polite" className="text-sm text-ink-2">
             {STATUS_LABELS[state.status]}
-            {state.position === null ? null : ` · item ${state.position} of ${state.itemCount}`}
+            {state.position === null ? null : ` · question ${state.position} of ${state.itemCount}`}
             {state.reveal ? " · answer showing" : null}
           </p>
         </div>
@@ -335,7 +335,7 @@ export function FakeRoom({ set }: { set: RoomEntry[] }) {
         </Surface>
 
         <Surface padding="md">
-          <h2 className="eyebrow">In the room ({roster.length})</h2>
+          <h2 className="eyebrow">In this session ({roster.length})</h2>
           {seedError === null ? null : (
             <p role="alert" className="mt-2 text-sm text-ink-2">
               {seedError}

@@ -103,9 +103,7 @@ test("an invite link that does not work says to ask the instructor for a new one
   });
   await expect(heading).toBeVisible();
   await expect(heading).toBeFocused();
-  await expect(
-    page.getByText("Ask your instructor for a new link.", { exact: false }),
-  ).toBeVisible();
+  await expect(page.getByText("Ask your teacher for a new link.", { exact: false })).toBeVisible();
   await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute(
     "href",
     "/sign-in",

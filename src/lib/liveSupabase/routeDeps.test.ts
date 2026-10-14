@@ -205,7 +205,7 @@ describe("the answer to a call that did not come back (#407)", () => {
     expect(response.headers.get("retry-after")).toBe("1");
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(await response.json()).toEqual({
-      error: "The session could not be reached. Try again.",
+      error: "The live session could not be reached. Try again.",
       retryable: true,
     });
   });

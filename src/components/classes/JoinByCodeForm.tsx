@@ -16,7 +16,7 @@ export interface JoinByCodeFormProps {
 }
 
 const INITIAL: JoinByCodeState = { status: "idle" };
-const HINT = "Eight letters and numbers, like ABCD-2345. Your instructor has it.";
+const HINT = "Eight letters and numbers, like ABCD-2345. Your teacher has it.";
 
 /**
  * One field for a class code (#362). It takes the code however it is typed: with or without the
@@ -44,7 +44,7 @@ export function JoinByCodeForm({ action, initialCode = "" }: JoinByCodeFormProps
           href="/author"
           className="tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline"
         >
-          Go to your item banks
+          Go to your quizzes
         </Link>
       </div>
     );
