@@ -25,8 +25,8 @@ export function DemoSignIn({ action, next }: DemoSignInProps) {
         Try the demo
       </h2>
       <p id={`${id}-note`} className="mb-4 text-sm text-ink-2">
-        Signs you in to a shared instructor account, no email needed. Everyone using the demo sees
-        and changes the same banks.
+        A shared teacher account, no email needed. Everyone using the demo sees and changes the same
+        quizzes.
       </p>
       <form action={formAction}>
         <input type="hidden" name="next" value={next} />

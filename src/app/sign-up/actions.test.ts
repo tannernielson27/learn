@@ -191,7 +191,7 @@ describe("createAccount: a teacher (#361)", () => {
     const message = send.mock.calls[0]![0];
     expect(message.to).toBe(EMAIL);
     expect(message.subject).toBe(WELCOME_SUBJECT);
-    expect(message.text).toContain("make a class");
+    expect(message.text).toContain("create a class");
     expect(message.text).toContain("next=%2Fauthor");
   });
 

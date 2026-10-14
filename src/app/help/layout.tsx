@@ -2,8 +2,8 @@ import Link from "next/link";
 
 const NAV = [
   { href: "/help", label: "Help" },
-  { href: "/help/instructor", label: "Instructor guide" },
-  { href: "/help/items", label: "Item guide" },
+  { href: "/help/instructor", label: "Teacher guide" },
+  { href: "/help/items", label: "Question guide" },
 ] as const;
 
 const linkClass =

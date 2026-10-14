@@ -51,7 +51,7 @@ describe("the email preview samples", () => {
     );
     expect(teacher.text).toContain("next=%2Fauthor&");
     expect(student.bodyHtml).toContain("Confirm my email address");
-    expect(teacher.bodyHtml).toContain("make a class");
+    expect(teacher.bodyHtml).toContain("create a class");
   });
 
   it("shows the workspace invitation, with its sample name escaped and out of the subject", () => {
@@ -61,7 +61,7 @@ describe("the email preview samples", () => {
     expect(invite.bodyHtml).toContain("Accept the invitation");
     expect(invite.bodyHtml).toContain("&quot;Adult Health &amp; &quot;Pharm&quot; team&quot;");
     expect(invite.text).toContain(`"Adult Health & "Pharm" team"`);
-    expect(invite.text).toContain("ada.instructor@learn.example invited you");
+    expect(invite.text).toContain("ada.lovelace@learn.example invited you");
     expect(invite.text).toContain("https://learn.example/w/sample-invite-token-0123456789ab");
   });
 });

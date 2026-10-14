@@ -39,12 +39,23 @@ describe("checklistSteps", () => {
   });
 
   // #283: the sample arrives published, so no step tells the author to publish it first.
-  it("says the sample is ready to use, and asks for publishing only of the author's own items", () => {
+  it("says the sample is ready to use, and asks for publishing only of the teacher's own questions", () => {
     const [bank, , assign] = checklistSteps({ ...EMPTY, banks: [SAMPLE] });
-    expect(bank!.hint).toContain("published, ready to assign or run live");
+    expect(bank!.hint).toContain("published and ready to use");
     expect(bank!.hint).not.toContain("drafts");
-    expect(assign!.hint).not.toContain("Only published items are used");
-    expect(assign!.hint).toContain("The sample is ready as it is");
+    expect(assign!.hint).not.toMatch(/only published/i);
+    expect(assign!.hint).toContain("Questions you write are used once you publish them");
+  });
+
+  // #416: one line a step, in the glossary's words.
+  it("names each step with the glossary's verbs: create, assign, start", () => {
+    expect(checklistSteps(EMPTY).map((step) => step.title)).toEqual([
+      "Create a quiz or import the sample",
+      "Create a class",
+      "Assign a quiz or start a live session",
+    ]);
+    expect(checklistSteps(EMPTY)[0]!.linkLabel).toBe("Write your own");
+    expect(checklistSteps(EMPTY)[2]!.hint).toBe("You need a quiz first.");
   });
 
   it("links the class step to the classes page", () => {

@@ -50,7 +50,7 @@ describe("InvitePanel", () => {
     expect(name).toBeRequired();
     expect(name).toHaveAttribute("autocomplete", "name");
     expect(name).toHaveAttribute("maxlength", "80");
-    expect(name).toHaveAccessibleDescription("Your instructor sees this on the class roster.");
+    expect(name).toHaveAccessibleDescription("Your teacher sees this on the class roster.");
     const fields = screen.getAllByRole("textbox");
     expect(fields[0]).toBe(name);
   });
@@ -72,7 +72,7 @@ describe("InvitePanel", () => {
     expect(name).toHaveFocus();
     expect(name).toHaveAttribute("aria-invalid", "true");
     expect(name).toHaveAccessibleDescription(
-      "Your instructor sees this on the class roster. Enter your name.",
+      "Your teacher sees this on the class roster. Enter your name.",
     );
   });
 

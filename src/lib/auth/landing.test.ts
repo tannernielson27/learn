@@ -17,7 +17,7 @@ describe("landingEntry (#264)", () => {
   });
 
   it("sends an instructor or an admin to authoring", () => {
-    const home = { href: "/author", label: "Go to your item banks" };
+    const home = { href: "/author", label: "Go to your quizzes" };
     expect(landingEntry({ status: "signed_in", role: "instructor" })).toEqual(home);
     expect(landingEntry({ status: "signed_in", role: "admin" })).toEqual(home);
   });

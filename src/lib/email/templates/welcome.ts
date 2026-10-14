@@ -34,32 +34,31 @@ const BUTTON = "Confirm my email address";
 const FOOTER =
   "Sent by LeaRN, an NCLEX practice app, because an account was made with this address.";
 const NOT_YOU = "If you did not make a LeaRN account with this address, you can ignore this email.";
+const CONFIRM =
+  "Confirm that this email address is yours, so you can get back in if you forget your password.";
+/** Both homes, the teacher's and the student's, carry the banner with this button. */
+const SEND_AGAIN =
+  "The link works once and expires in an hour. If it has expired, sign in and press Send the email again.";
 
 const COPY: Record<WelcomeRole, Copy> = {
   student: {
     paragraphs: [
-      "Your account is ready and you are in your class. One thing is left: confirm that this email address is yours, so you can get back in if you ever forget your password.",
-      "What to do first: open LeaRN and start whatever your instructor has set. Your classes and assignments are on your home page. Nothing is locked while you wait to confirm.",
+      `Your account is ready and you are in your class. ${CONFIRM}`,
+      "Your classes and assignments are on your home page. Nothing is locked while you wait to confirm.",
     ],
-    notes: [
-      "The link works once and expires in an hour. If it has expired, sign in and choose Send the email again on your home page.",
-      NOT_YOU,
-    ],
+    notes: [SEND_AGAIN, NOT_YOU],
   },
   teacher: {
     paragraphs: [
-      "Your account is ready. One thing is left: confirm that this email address is yours, so you can get back in if you ever forget your password.",
-      "What to do first: make a class, then share its invite link or QR code with your students. Or start with an item bank and write a few questions to run live.",
+      `Your account is ready. ${CONFIRM}`,
+      "To start, create a quiz or import the sample. Then create a class and share its invite link.",
     ],
-    notes: [
-      "The link works once and expires in an hour. If it has expired, sign in and ask for a new one.",
-      NOT_YOU,
-    ],
+    notes: [SEND_AGAIN, NOT_YOU],
   },
   newcomer: {
     paragraphs: [
-      "Your account is ready. One thing is left: confirm that this email address is yours, so you can get back in if you ever forget your password.",
-      "What to do first: join your class. Open the invite link your instructor shared while you are signed in, and you are in. Nothing is locked while you wait to confirm.",
+      `Your account is ready. ${CONFIRM}`,
+      "To start, join your class: open your teacher’s invite link while you are signed in. Nothing is locked while you wait to confirm.",
     ],
     notes: [
       "The link works once and expires in an hour. If it has expired, sign in and ask for a new one.",

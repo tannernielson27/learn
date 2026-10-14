@@ -38,21 +38,21 @@ export function studentWelcomeSteps(
       title: name ? `Welcome, ${name}` : "Welcome to LeaRN",
       body: [
         inClasses(classNames),
-        "This page is your home: your classes are at the top, and everything your instructor gives you appears below them.",
+        "Your classes are at the top of this page. Everything your teacher gives you is below them.",
       ],
     },
     {
       title: "Assignments and practice",
       body: [
-        "Open assignments lists the work that is due, with the time it closes. Due times are shown in your class’s time zone, which may not be your own.",
-        "Practice lists the question banks your instructor has shared. Practice is not graded.",
+        "Open assignments lists what is due and when it closes, in your class’s time zone.",
+        "Practice lists the quizzes your teacher has shared. Practice is not graded.",
       ],
     },
     {
       title: "Results and live sessions",
       body: [
-        "When an assignment closes, it moves to History with your score, the answers and the reasons behind them.",
-        "A live session in class needs no sign-in: go to the join page and enter the code your instructor shows.",
+        "When an assignment closes, it moves to History with your score, the answers and the rationales.",
+        "A live session needs no sign-in: go to the join page and type the join code your teacher shows.",
       ],
     },
   ];

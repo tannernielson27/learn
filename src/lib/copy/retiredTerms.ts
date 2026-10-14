@@ -26,6 +26,8 @@ export const RETIRED_TERMS: readonly RetiredTerm[] = [
   // "Live session" in full; "in this session" is the one approved short form.
   { say: "live session", pattern: /(?<!\blive )(?<!\bin this )\bsessions?\b/i },
   { say: "live session", pattern: /\b(?:rooms?|console|hosts?)\b/i },
+  // Caught even after "live", which the line above lets through: "live session code" is retired too.
+  { say: "join code", pattern: /\bsession codes?\b/i },
   { say: "clinical judgment step", pattern: /\bCJMM\b/ },
   { say: "patient record", pattern: /\b(?:EHR|charts?)\b/i },
   { say: "assignment", pattern: /\b(?:take-home work|graded work|homework)\b/i },
