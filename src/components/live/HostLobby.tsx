@@ -9,7 +9,9 @@ import { ProgressBoard } from "@/components/live/ProgressBoard";
 import { Roster } from "@/components/live/Roster";
 import { keepTally } from "@/components/live/sameTally";
 import { TimerControls } from "@/components/live/TimerControls";
+import { HostRecord } from "@/components/live/HostRecord";
 import { HostResults } from "@/components/live/results/HostResults";
+import type { EhrRecord } from "@/lib/ngn/schemas";
 import { Button } from "@/components/ui/Button";
 import {
   canRunHostCommand,
@@ -51,6 +53,11 @@ export interface HostLobbyProps {
   tallyIntervalMs?: number;
   /** Whether the session runs a case study, so the position names the CJMM step (#184). */
   caseStudy?: boolean;
+  /**
+   * The whole patient record a case-study room was started with (#335), shown to the instructor
+   * with a marker for the step the class is on. Absent for a bank.
+   */
+  record?: EhrRecord;
 }
 
 /**
@@ -157,6 +164,7 @@ export function HostLobby({
   connect,
   tallyIntervalMs = TALLY_INTERVAL_MS,
   caseStudy = false,
+  record,
 }: HostLobbyProps) {
   const [state, setState] = useState<LiveSessionState>(initial);
   const [roster, setRoster] = useState<RosterEntry[]>([]);
@@ -447,6 +455,8 @@ export function HostLobby({
           onCommand={(command) => void run(command)}
         />
       )}
+
+      {record === undefined ? null : <HostRecord record={record} position={state.position} />}
 
       <HostResults
         sessionId={sessionId}
