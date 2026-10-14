@@ -163,6 +163,6 @@ describe("HostResults (#180)", () => {
     );
     await waitFor(() => expect(ask).toHaveBeenCalled());
     expect(screen.queryByRole("alert")).toBeNull();
-    expect(screen.getByText(/Results appear here/)).toBeInTheDocument();
+    expect(screen.getByText("No answers yet.")).toBeInTheDocument();
   });
 });

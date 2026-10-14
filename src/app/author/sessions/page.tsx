@@ -16,7 +16,7 @@ export default async function SessionsPage() {
       <h1 className="mb-6 font-read text-3xl text-ink-1">Live sessions</h1>
       {sessions === null ? (
         <p role="alert" className="text-ink-2">
-          The session list could not be loaded. Reload the page to try again.
+          Live sessions could not be loaded. Reload the page to try again.
         </p>
       ) : (
         <SessionList sessions={sessions} />

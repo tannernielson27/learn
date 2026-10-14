@@ -42,12 +42,12 @@ export function createPresentCount(): PresentCount {
   };
 }
 
-/** "12 in the room", on the waiting screen of both student rooms. */
+/** "12 in this session", on the waiting screen of both student rooms. */
 export function RoomCount({ present }: { present: PresentCount }) {
   const count = useSyncExternalStore(present.subscribe, present.read, present.read);
   return (
     <p data-testid="room-count" className="tabular mt-8 text-sm text-ink-2">
-      {count} in the room
+      {count} in this session
     </p>
   );
 }

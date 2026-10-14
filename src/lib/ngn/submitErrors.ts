@@ -14,5 +14,5 @@
  */
 export const SUBMIT_ERRORS = {
   malformed: "That answer could not be read. Reload the page and try again.",
-  wrongType: "That answer does not match this item. Reload the page and try again.",
+  wrongType: "That answer does not match this question. Reload the page and try again.",
 } as const;

@@ -18,8 +18,8 @@ export default function HostError({ error, retry }: ErrorInfo) {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
       <RouteRecovery
-        headline="The session console stopped working."
-        detail="The session itself is not affected; students who joined stay in the room. Try again to bring the console back."
+        headline="This page stopped working."
+        detail="The live session is not affected, and students stay in it. Try again."
         onRetry={retry}
         digest={errorDigest(error)}
       >
