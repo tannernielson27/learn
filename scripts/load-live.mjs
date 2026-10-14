@@ -142,6 +142,7 @@ function results({ options, project, code, joined, tally, steps, startedAt }) {
     project,
     code,
     mode: options.host ? "host" : "code",
+    paced: options.paced ? "student_paced" : "instructor_paced",
     seed: options.seed,
     participants: options.participants,
     joined: joined.length,
@@ -215,8 +216,9 @@ async function main() {
             answeredMs: step.answeredMs,
             stalled: step.settled < step.expected,
           });
+          const label = step.position === 0 ? "whole set" : `step ${step.position}`;
           say(
-            `  step ${step.position}: ${step.settled}/${step.expected} settled in ${step.answeredMs} ms, revealed`,
+            `  ${label}:${step.settled}/${step.expected} settled in ${step.answeredMs} ms, revealed`,
           );
         },
       });
