@@ -96,13 +96,13 @@ describe("HostLobby running a case study (#184)", () => {
   it("names the CJMM step with the position, and moves with the room", async () => {
     const user = setup(initialSessionState(6), true);
 
-    await user.click(screen.getByRole("button", { name: "Start session" }));
+    await user.click(screen.getByRole("button", { name: "Start" }));
     expect(await screen.findByText(/Step 1 of 6: Recognize Cues/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Show answer" }));
-    await user.click(screen.getByRole("button", { name: "Next item" }));
+    await user.click(screen.getByRole("button", { name: "Next question" }));
     expect(await screen.findByText(/Step 2 of 6: Analyze Cues/)).toBeInTheDocument();
-    expect(screen.queryByText(/Item 2 of 6/)).toBeNull();
+    expect(screen.queryByText(/Question 2 of 6/)).toBeNull();
   });
 
   it("names the step the room is already on when the console opens", async () => {
@@ -110,9 +110,9 @@ describe("HostLobby running a case study (#184)", () => {
     expect(await screen.findByText(/Step 4 of 6: Generate Solutions/)).toBeInTheDocument();
   });
 
-  it("keeps saying Item in a bank session, even for an item tagged with a step", async () => {
+  it("says Question in a quiz session, even for a question tagged with a step", async () => {
     setup({ ...initialSessionState(6), status: "running", position: 2 }, false);
-    expect(await screen.findByText(/Item 2 of 6/)).toBeInTheDocument();
+    expect(await screen.findByText(/Question 2 of 6/)).toBeInTheDocument();
     expect(screen.queryByText(/Analyze Cues/)).toBeNull();
   });
 });

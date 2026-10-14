@@ -78,7 +78,7 @@ describe("the host's moves in a student-paced room", () => {
     }
     expect(canRunHostCommand(running(), "advance")).toBe(false);
     expect(canGoTo(running(), 2)).toBe(false);
-    expect(LIVE_REFUSALS.student_paced).toBe("Students work through this set at their own pace.");
+    expect(LIVE_REFUSALS.student_paced).toBe("Students work through this quiz at their own pace.");
   });
 
   it("says an ended room has ended before it says anything about pacing", () => {

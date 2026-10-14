@@ -21,7 +21,7 @@ describe("ProgressBoard (#185)", () => {
     expect(screen.getByTestId("answered-count-1")).toHaveTextContent("2 of 2");
     expect(screen.getByTestId("answered-count-2")).toHaveTextContent("0 of 2");
     expect(screen.getByTestId("answered-count-3")).toHaveTextContent("1 of 2");
-    expect(screen.getByRole("columnheader", { name: "Item 2" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Question 2" })).toBeInTheDocument();
   });
 
   it("never says right or wrong", async () => {

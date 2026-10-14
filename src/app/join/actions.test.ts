@@ -145,7 +145,7 @@ describe("joinLiveSession", () => {
     expect(refused).toEqual({
       status: "error",
       field: "code",
-      error: "That code does not match a session that is open. Check it and try again.",
+      error: "That join code does not match an open live session. Check it and try again.",
     });
     expect(joinSession).not.toHaveBeenCalled();
   });
@@ -230,7 +230,7 @@ describe("joinLiveSession", () => {
     joinSession.mockResolvedValue({ ok: false, reason: "full" });
     expect(await joinLiveSession({ status: "idle" }, form("7KQ2MZ", "Sam"))).toEqual({
       status: "error",
-      error: "That session is full.",
+      error: "That live session is full.",
     });
     expect(jar.has(PARTICIPANT_COOKIE)).toBe(false);
   });
@@ -241,7 +241,7 @@ describe("joinLiveSession", () => {
       expect(await joinLiveSession({ status: "idle" }, form("7KQ2MZ", "Sam"))).toEqual({
         status: "error",
         field: "code",
-        error: "That code does not match a session that is open. Check it and try again.",
+        error: "That join code does not match an open live session. Check it and try again.",
       });
     }
   });
