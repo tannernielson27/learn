@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
 import { signInAsNewAuthor } from "./signIn";
 import { openImport } from "./authoringHelpers";
+import { giveQuizAnInQuizFolder } from "./inQuizFolders";
 
 // Needs the local Supabase stack, like auth.spec.ts. CI runs it in the `auth-e2e` job.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
@@ -65,7 +66,8 @@ test("an author sorts ten items into Cardiac and Respiratory and opens a folder"
   await page.getByRole("button", { name: "Import", exact: true }).click();
   await expect(itemLinks(page)).toHaveCount(10);
 
-  await createFolder(page, "Cardiac");
+  // #411: a new quiz has no folders inside it, so it is given its first the way an older one had.
+  await giveQuizAnInQuizFolder(page, request, "Cardiac");
   await createFolder(page, "Respiratory");
   await moveItems(page, stems.slice(0, 5), "Cardiac");
   await moveItems(page, stems.slice(5), "Respiratory");
