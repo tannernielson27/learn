@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { sampleEhr } from "@/lib/ngn/fixtures/case-study";
+import { stagedEhr } from "@/lib/ngn/fixtures/chart-reveal";
 import { ehrRecordSchema } from "@/lib/ngn/schemas";
-import { describeEhrIssues } from "./ehrIssues";
+import { describeEhrIssues, describeEmptySteps } from "./ehrIssues";
 import { addTab, addTimePoint, emptyEhrForm, fromEhrForm, type EhrFormValues } from "./forms/ehr";
 
 const issuesFor = (values: EhrFormValues) => {
@@ -59,6 +61,52 @@ describe("describeEhrIssues", () => {
         message: "Tab 1 is set to a time point that was removed. Choose another time.",
       },
     ]);
+  });
+
+  it("says where a step is wrong, and that one time point must show from Step 1 (#336)", () => {
+    expect(
+      describeEhrIssues([
+        { code: "custom", path: ["timePoints"], message: "" },
+        { code: "invalid_union", path: ["timePoints", 1, "fromStep"], message: "" },
+        { code: "too_small", path: ["tabs", 2, "stepAccess"], message: "" },
+        { code: "invalid_union", path: ["tabs", 0, "blocks", 1, "fromStep"], message: "" },
+      ]),
+    ).toStrictEqual([
+      {
+        field: "timePoints.0.fromStep",
+        message: "One time point must show from Step 1. Set time point 1 to Step 1.",
+      },
+      {
+        field: "timePoints.1.fromStep",
+        message: "Time point 2 must show from one of Steps 1 to 6.",
+      },
+      {
+        field: "tabs.2.stepAccess.0",
+        message: "Tab 3 needs Hidden, Locked or Open for each of Steps 1 to 6.",
+      },
+      {
+        field: "tabs.0.blocks.1.fromStep",
+        message: "Tab 1, block 2 must show from one of Steps 1 to 6.",
+      },
+    ]);
+  });
+
+  it("names each step at which students would see no tab (#336)", () => {
+    const record = ehrRecordSchema.parse({
+      ...sampleEhr,
+      tabs: [
+        {
+          ...sampleEhr.tabs[0]!,
+          stepAccess: ["open", "hidden", "locked", "open", "hidden", "open"],
+        },
+      ],
+    });
+    expect(describeEmptySteps(record)).toStrictEqual([
+      { field: "tabs.0.stepAccess.1", message: "At Step 2, students see no tab." },
+      { field: "tabs.0.stepAccess.4", message: "At Step 5, students see no tab." },
+    ]);
+    // A locked tab is a tab students see; the staged sample shows something at every step.
+    expect(describeEmptySteps(ehrRecordSchema.parse(stagedEhr))).toStrictEqual([]);
   });
 
   it("gives one message per field, and a general one for anything unexpected", () => {

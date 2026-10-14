@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import { EhrContent, sectionOf, tabsAtTime } from "@/components/ehr/EhrContent";
-import type { EhrRecord } from "@/lib/ngn/schemas";
+import type { EhrRecordView } from "@/lib/ngn/chartReveal";
 
 export interface EhrPreviewProps {
-  /** Null until there is enough of the record to show. */
-  record: EhrRecord | null;
+  /**
+   * Null until there is enough of the record to show. A whole record, or a case study's record
+   * at one step (`recordAtStep`, #336), drawn with the player's own locked tabs.
+   */
+  record: EhrRecordView | null;
 }
 
 /**
