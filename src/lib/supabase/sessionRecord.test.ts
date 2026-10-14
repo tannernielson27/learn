@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sampleCaseStudy, sampleEhr } from "@/lib/ngn/fixtures";
-import { readSessionRecord } from "./sessionRecord";
+import { forgetSessionRecords, readCachedSessionRecord, readSessionRecord } from "./sessionRecord";
 
 type Reply = { data?: unknown; error?: { code?: string } | null };
 type Client = Parameters<typeof readSessionRecord>[0];
@@ -23,6 +23,10 @@ function answerBearingText(): string {
     sampleCaseStudy.items.map((item) => [item.answerKey, item.rationale, item.scoring]),
   );
 }
+
+beforeEach(() => {
+  forgetSessionRecords();
+});
 
 describe("readSessionRecord (#184)", () => {
   it("reads the snapshotted record, and selects that one column and nothing else", async () => {
@@ -62,14 +66,44 @@ describe("readSessionRecord (#184)", () => {
     expect(
       await readSessionRecord(fakeRow({ data: { patient_record: null } }).client, SESSION),
     ).toBe(null);
+    forgetSessionRecords();
     expect(
       await readSessionRecord(fakeRow({ data: { patient_record: { tabs: [] } } }).client, SESSION),
     ).toBeNull();
+    forgetSessionRecords();
     expect(
       await readSessionRecord(fakeRow({ data: null, error: null }).client, SESSION),
     ).toBeNull();
     expect(
       await readSessionRecord(fakeRow({ error: { code: "42501" } }).client, SESSION),
     ).toBeNull();
+  });
+});
+
+describe("readCachedSessionRecord (#335)", () => {
+  it("reads a room's record once per process, a bank room's null as well", async () => {
+    const staged = fakeRow({ data: { patient_record: sampleEhr }, error: null });
+    await readCachedSessionRecord(staged.client, SESSION);
+    const again = await readCachedSessionRecord(staged.client, SESSION);
+    expect(again).toEqual({ ok: true, record: sampleEhr, found: true });
+    expect(staged.from).toHaveBeenCalledTimes(1);
+
+    const bank = fakeRow({ data: { patient_record: null }, error: null });
+    const BANK = "00000000-0000-4000-8000-0000000000b2";
+    await readCachedSessionRecord(bank.client, BANK);
+    await readCachedSessionRecord(bank.client, BANK);
+    expect(bank.from).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks again after a failed read or a row that was not there", async () => {
+    const failed = fakeRow({ error: { code: "08000" } });
+    expect((await readCachedSessionRecord(failed.client, SESSION)).ok).toBe(false);
+    await readCachedSessionRecord(failed.client, SESSION);
+    expect(failed.from).toHaveBeenCalledTimes(2);
+
+    const missing = fakeRow({ data: null, error: null });
+    await readCachedSessionRecord(missing.client, SESSION);
+    await readCachedSessionRecord(missing.client, SESSION);
+    expect(missing.from).toHaveBeenCalledTimes(2);
   });
 });
