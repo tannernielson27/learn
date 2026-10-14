@@ -46,9 +46,7 @@ describe("an item editor inside a case study", () => {
         />
       </ItemEditorHostContext.Provider>,
     );
-    expect(
-      screen.getByRole("heading", { level: 3, name: "Before this item can be published" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "Problems to fix" })).toBeInTheDocument();
   });
 
   it("previews the question with the case study's record", async () => {

@@ -1,6 +1,6 @@
 # ADR 0008 — AI question import: Claude reads documents into reviewable learn.v1 drafts
 
-- **Status:** Proposed, 2026-10-01 (Sprint 12 kickoff). Numbers in "Cost" are estimates until #333 measures them.
+- **Status:** Proposed, 2026-10-01 (Sprint 12 kickoff); brought up to date 2026-10-14, after Sprints 13 and 14. Numbers in "Cost" are estimates until #333 measures them.
 - **Deciders:** product owner (S12 kickoff decisions), Claude (planner)
 
 ## Context
@@ -19,7 +19,7 @@ The constraints: a Vercel Hobby function per request, the 1 MB Server Action bod
 ### Model and money
 
 - **Claude Sonnet 5.5** through `@anthropic-ai/sdk`, on the owner's key (`ANTHROPIC_API_KEY`, server only, never `NEXT_PUBLIC_`). Live calls, not the Batch API, so the review screen fills in minutes.
-- **A monthly cap per org**, in pages read, reserved in Postgres _before_ each call and settled after it with the actual tokens, so concurrent chunks cannot overspend. A usage ledger records tokens and estimated cost per call. `AI_IMPORT_ENABLED=false` turns the feature off everywhere. The Anthropic console spend limit is the backstop.
+- **A monthly cap per org**, in pages read, reserved in Postgres _before_ each call and settled after it with the actual tokens, so concurrent chunks cannot overspend. A usage ledger records tokens and estimated cost per call. `AI_IMPORT_ENABLED=false` turns the feature off everywhere, and `orgs.ai_import_enabled` (Sprint 13, #355) keeps it off for a self-registered workspace until the owner turns it on. The Anthropic console spend limit is the backstop.
 
 ### Pipeline
 
@@ -30,16 +30,16 @@ The constraints: a Vercel Hobby function per request, the 1 MB Server Action bod
 5. **Pass 2, extract:** per question (or a case study's step), Claude fills a **draft**: a loose per-type shape of plain strings with marked blanks, highlightable phrases and keys. It never writes ids, tokens or offsets.
 6. **Normalize, validate, repair:** `src/lib/ngn/draft/<type>.ts` turns a draft into a `learn.v1` item deterministically (pure, fixture-tested, inside the 90% gate). The result must pass `itemSchema`, then `itemQualityWarnings` runs. On failure Claude gets one repair attempt with the error paths; after that the entry is kept as `needs_fix`.
 7. **Stage:** every question becomes a staged entry: `ready`, `needs_answer` (no key in the source), `needs_fix`, or `not_importable` (open prompts, matching, recall, anything without an NGN type), with the reason and the source excerpt.
-8. **Review:** the author sees each entry rendered by the real question components, its warnings, and its source side by side. They can change its type (one re-extract), edit it with the existing editors (`EditorShell`'s `onSaveDraft` points at the staged entry), or drop it.
-9. **Import:** one call writes every accepted entry and case study as new drafts in one transaction, all or nothing, into a chosen folder (default: a new folder "AI import – <date>"). The stored files are then deleted. Batches abandoned in review are deleted after 7 days.
+8. **Review:** the teacher sees each entry rendered by the real question components, its warnings, and its source side by side. They can change its type (one re-extract), edit it with the existing editors (`EditorShell`'s `onSaveDraft` points at the staged entry), or drop it.
+9. **Import:** one call writes every accepted entry and case study as new drafts in one transaction, all or nothing, into a chosen quiz (default: a new quiz, "AI import – <date>"; since #411 a folder holds quizzes, not questions). The stored files are then deleted. Batches abandoned in review are deleted after 7 days.
 
 ### Extract only
 
-The model copies; it never invents. A missing key is `needs_answer` and can only be filled in by the author. A missing rationale is the existing publish blocker. A stated scoring rule is kept when the spec allows it for the type, and flagged when it does not. Errors in the source are kept word for word, with a "possible source error" note for the reviewer. Instructor notes, author blocks, objectives, references, QR codes and links are not question content.
+The model copies; it never invents. A missing key is `needs_answer` and can only be filled in by the teacher. A missing rationale is the existing publish blocker. A stated scoring rule is kept when the spec allows it for the type, and flagged when it does not. Errors in the source are kept word for word, with a "possible source error" note for the reviewer. Instructor notes, author blocks, objectives, references, QR codes and links are not question content.
 
 ### Case studies and the growing chart
 
-A case study keeps one `EhrRecord`, but its time points, tabs and blocks gain an optional **`fromStep`** (1–6). A pure `recordAtStep(record, step)` returns what a student may see at a step. The player, live sessions, assignments and practice serve that view **filtered on the server**, so a later step's chart never reaches a phone early. The builder gets a "from step" picker. The importer reconstructs `fromStep` by comparing each step's chart with the one before. A record with no `fromStep` behaves exactly as today.
+Reveal-by-step was planned here and shipped first, in Sprint 14 (#334–#336, PRs #424, #435, #438). A case study keeps one `EhrRecord`; its time points and blocks carry an optional **`fromStep`** (1–6), and each tab an optional **`stepAccess`** (`hidden`, `locked` or `open` at each step). The pure `recordAtStep(record, step)` in `src/lib/ngn/chartReveal.ts` returns what a student may see at a step. The player, live sessions, assignments and practice serve that view **filtered on the server**, so a later step's chart never reaches a phone early, and the case study builder sets both. The importer (#344) only has to reconstruct `fromStep` by comparing each step's chart with the one before; it leaves `stepAccess` unset (open at every step) for the teacher to change. A record with no `fromStep` behaves as before.
 
 ### Safety
 
@@ -58,4 +58,4 @@ Sonnet 5.5 is $2 per million input tokens and $10 per million output tokens. Out
 - **Accuracy is measured, not assumed.** `pnpm eval:ai-import` runs the corpus against the real API by hand and reports type accuracy, key accuracy and field accuracy. Any prompt change runs it before merge.
 - **Images do not import.** LeaRN has no image support, so a question that relies on an image is flagged.
 - **A new external dependency at runtime.** If Anthropic is down, AI import fails with a clear message and everything else works. Failed chunks retry with backoff and can be resumed.
-- **Two migrations**, each pushed by the owner at merge: the import tables, bucket and cap (`20261001000000_ai_import`), and the import function (`20261001010000_ai_import_commit`). `20261001020000_*` is reserved in case reveal-by-step needs SQL.
+- **Two migrations**, each pushed by the owner at merge: the import tables, bucket and cap (`20261015000000_ai_import`), and the import function (`20261015010000_ai_import_commit`). Each must sort after the newest migration on `main` when it merges, so renumber if needed. Reveal-by-step's own migration shipped with #335.

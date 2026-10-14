@@ -1,7 +1,12 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { emptyEhrForm, toEhrForm, type EhrFormValues } from "@/lib/authoring/forms/ehr";
+import {
+  emptyEhrForm,
+  fromEhrForm,
+  toEhrForm,
+  type EhrFormValues,
+} from "@/lib/authoring/forms/ehr";
 import { sampleEhr } from "@/lib/ngn/fixtures/case-study";
 import { sampleTrendEhr } from "@/lib/ngn/fixtures/trend";
 import type { SaveResult } from "./EditorShell";
@@ -34,14 +39,24 @@ const button = (name: string) => {
 };
 
 describe("EhrEditor", () => {
+  // #413 renamed the editor's sections to tabs on screen only: what is saved keeps its shape.
+  it("saves an untouched patient record as the same JSON it opened with", async () => {
+    const { onSave, user } = setup(toEhrForm(sampleEhr));
+    await user.click(button("Save patient record"));
+    expect(onSave).toHaveBeenCalledTimes(1);
+    const saved = fromEhrForm(onSave.mock.calls[0]![0]);
+    expect(JSON.stringify(saved)).toBe(JSON.stringify(fromEhrForm(toEhrForm(sampleEhr))));
+    expect(saved).toEqual(sampleEhr);
+  }, 30_000);
+
   it("warns that every record is fictional", () => {
     setup();
-    expect(screen.getByText(/fictional/i)).toHaveTextContent(/never enter real patient/i);
+    expect(screen.getByText(/fictional/i)).toHaveTextContent(/never enter real names/i);
   });
 
   it("writes a header, an H&P and vital signs at two times, and previews them at either time", async () => {
     const { user } = setup();
-    expect(within(preview()).getByText(/the preview appears once/i)).toBeInTheDocument();
+    expect(within(preview()).getByText(/shows once the patient has/i)).toBeInTheDocument();
 
     await user.type(textbox("Age in years"), "68");
     await user.selectOptions(select("Sex"), "male");
@@ -52,18 +67,18 @@ describe("EhrEditor", () => {
     await user.click(button("Add time point"));
     await user.type(textbox("Time point 2, Label"), "1200");
 
-    await user.selectOptions(select("New section kind"), "history_physical");
-    await user.click(button("Add section"));
-    await user.type(textbox("Section 1, block 1, Text"), "Admitted with pneumonia.");
+    await user.selectOptions(select("Tab kind"), "history_physical");
+    await user.click(button("Add tab"));
+    await user.type(textbox("Tab 1, block 1, Text"), "Admitted with pneumonia.");
 
     for (const [section, time, rate, flag] of [
       [2, "t1", "88", ""],
       [3, "t2", "118", "H"],
     ] as const) {
-      await user.selectOptions(select("New section kind"), "vital_signs");
-      await user.click(button("Add section"));
-      await user.selectOptions(select(`Section ${section}, Time`), time);
-      const row = `Section ${section}, block 1, row 1`;
+      await user.selectOptions(select("Tab kind"), "vital_signs");
+      await user.click(button("Add tab"));
+      await user.selectOptions(select(`Tab ${section}, Time`), time);
+      const row = `Tab ${section}, block 1, row 1`;
       await user.type(textbox(`${row}, Measure`), "Heart rate");
       await user.type(textbox(`${row}, Value`), rate);
       await user.type(textbox(`${row}, Unit`), "beats/min");
@@ -93,10 +108,10 @@ describe("EhrEditor", () => {
       ...toEhrForm(sampleTrendEhr),
       tabs: toEhrForm(sampleTrendEhr).tabs.slice(0, 4),
     });
-    // Section 4 is the 1600 nurses' note.
-    expect(select("Section 4, Time")).toHaveValue("tp_1600");
+    // Tab 4 is the 1600 nurses' note.
+    expect(select("Tab 4, Time")).toHaveValue("tp_1600");
     await user.click(button("Remove time point 3"));
-    expect(select("Section 4, Time")).toHaveValue("");
+    expect(select("Tab 4, Time")).toHaveValue("");
     expect(screen.queryByLabelText("Time point 3, Label")).not.toBeInTheDocument();
     expect(problems()).not.toBeInTheDocument();
   }, 30_000);
@@ -108,24 +123,24 @@ describe("EhrEditor", () => {
     const gone = (name: string) =>
       expect(screen.queryByRole("textbox", { name })).not.toBeInTheDocument();
 
-    await user.click(named("Add section"));
-    await user.click(named("Add table to section 1"));
-    const block = "Section 1, block 2";
+    await user.click(named("Add tab"));
+    await user.click(named("Add table to tab 1"));
+    const block = "Tab 1, block 2";
     expect(field(`${block}, Column 1 heading`)).toBeInTheDocument();
     expect(field(`${block}, Row 1, column 2`)).toBeInTheDocument();
 
-    await user.click(named("Add column to section 1, block 2"));
+    await user.click(named("Add column to tab 1, block 2"));
     expect(field(`${block}, Column 3 heading`)).toBeInTheDocument();
     expect(field(`${block}, Row 1, column 3`)).toBeInTheDocument();
-    await user.click(named("Add row to section 1, block 2"));
+    await user.click(named("Add row to tab 1, block 2"));
     expect(field(`${block}, Row 2, column 3`)).toBeInTheDocument();
 
-    await user.click(named("Remove column 3 from section 1, block 2"));
+    await user.click(named("Remove column 3 from tab 1, block 2"));
     gone(`${block}, Row 2, column 3`);
-    await user.click(named("Remove row 2 from section 1, block 2"));
+    await user.click(named("Remove row 2 from tab 1, block 2"));
     gone(`${block}, Row 2, column 1`);
 
-    await user.click(named("Remove block 2 from section 1"));
+    await user.click(named("Remove block 2 from tab 1"));
     gone(`${block}, Column 1 heading`);
   }, 30_000);
 
@@ -135,25 +150,25 @@ describe("EhrEditor", () => {
     await user.click(button("Remove time point 2"));
     expect(button("Add time point")).toHaveFocus();
 
-    await user.click(button("Add section"));
-    await user.click(button("Add table to section 1"));
-    await user.click(button("Add row to section 1, block 2"));
-    await user.click(button("Remove row 2 from section 1, block 2"));
-    expect(button("Add row to section 1, block 2")).toHaveFocus();
-    await user.click(button("Add column to section 1, block 2"));
-    await user.click(button("Remove column 3 from section 1, block 2"));
-    expect(button("Add column to section 1, block 2")).toHaveFocus();
+    await user.click(button("Add tab"));
+    await user.click(button("Add table to tab 1"));
+    await user.click(button("Add row to tab 1, block 2"));
+    await user.click(button("Remove row 2 from tab 1, block 2"));
+    expect(button("Add row to tab 1, block 2")).toHaveFocus();
+    await user.click(button("Add column to tab 1, block 2"));
+    await user.click(button("Remove column 3 from tab 1, block 2"));
+    expect(button("Add column to tab 1, block 2")).toHaveFocus();
 
-    await user.click(button("Add vitals to section 1"));
-    await user.click(button("Add measure to section 1, block 3"));
-    await user.click(button("Remove measure 2 from section 1, block 3"));
-    expect(button("Add measure to section 1, block 3")).toHaveFocus();
+    await user.click(button("Add vitals to tab 1"));
+    await user.click(button("Add measure to tab 1, block 3"));
+    await user.click(button("Remove measure 2 from tab 1, block 3"));
+    expect(button("Add measure to tab 1, block 3")).toHaveFocus();
 
-    await user.click(button("Remove block 3 from section 1"));
-    expect(button("Add text to section 1")).toHaveFocus();
+    await user.click(button("Remove block 3 from tab 1"));
+    expect(button("Add text to tab 1")).toHaveFocus();
 
-    await user.click(button("Remove section 1"));
-    expect(select("New section kind")).toHaveFocus();
+    await user.click(button("Remove tab 1"));
+    expect(select("Tab kind")).toHaveFocus();
   }, 30_000);
 
   it("lists problems in plain words, and a problem takes the author to its field", async () => {
@@ -166,9 +181,7 @@ describe("EhrEditor", () => {
     );
     expect(textbox("Age in years")).toHaveFocus();
     expect(textbox("Age in years")).toHaveAttribute("aria-invalid", "true");
-    expect(
-      list.getByRole("button", { name: "Add at least one section to the record." }),
-    ).toBeInTheDocument();
+    expect(list.getByRole("button", { name: "Add at least one tab." })).toBeInTheDocument();
   });
 
   it("moves a section, keeping focus on its move buttons", async () => {
@@ -177,11 +190,11 @@ describe("EhrEditor", () => {
       ...toEhrForm(sampleTrendEhr),
       tabs: toEhrForm(sampleTrendEhr).tabs.slice(0, 4),
     });
-    await user.click(button("Move section 2 up"));
-    expect(textbox("Section 1, Title")).toHaveValue("Nurses' Notes");
-    expect(textbox("Section 2, Title")).toHaveValue("History & Physical");
+    await user.click(button("Move tab 2 up"));
+    expect(textbox("Tab 1, Title")).toHaveValue("Nurses' Notes");
+    expect(textbox("Tab 2, Title")).toHaveValue("History & Physical");
     // At the top there is no Move up, so focus goes to the same section's other button.
-    expect(button("Move section 1 down")).toHaveFocus();
+    expect(button("Move tab 1 down")).toHaveFocus();
   }, 30_000);
 
   it("saves the form, and tracks changes made since the last save", async () => {
@@ -191,12 +204,12 @@ describe("EhrEditor", () => {
 
     await user.type(textbox("Care setting"), " B");
     expect(screen.getByText("Unsaved changes")).toBeInTheDocument();
-    await user.click(button("Save record"));
+    await user.click(button("Save patient record"));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]![0].patient.setting).toBe("Orthopedic unit B");
     // The record's time selector has its own status region, so find the message by its text.
-    expect(await screen.findByText("Record saved.")).toHaveAttribute("role", "status");
+    expect(await screen.findByText("Patient record saved.")).toHaveAttribute("role", "status");
     expect(screen.queryByText("Unsaved changes")).not.toBeInTheDocument();
   }, 30_000);
 
@@ -205,7 +218,7 @@ describe("EhrEditor", () => {
       ok: false,
       error: "This case study is gone.",
     }));
-    await user.click(button("Save record"));
+    await user.click(button("Save patient record"));
     expect(await screen.findByText("This case study is gone.")).toHaveAttribute("role", "alert");
   }, 30_000);
 
@@ -213,11 +226,10 @@ describe("EhrEditor", () => {
     const { user } = setup(toEhrForm(sampleEhr), async () => {
       throw new Error("offline");
     });
-    await user.click(button("Save record"));
-    expect(await screen.findByText("The record could not be saved. Try again.")).toHaveAttribute(
-      "role",
-      "alert",
-    );
-    expect(button("Save record")).not.toBeDisabled();
+    await user.click(button("Save patient record"));
+    expect(
+      await screen.findByText("The patient record could not be saved. Try again."),
+    ).toHaveAttribute("role", "alert");
+    expect(button("Save patient record")).not.toBeDisabled();
   }, 30_000);
 });

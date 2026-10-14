@@ -113,9 +113,9 @@ test("a live SATA and a case-study step reach the phone keyless until the reveal
   await expect(page.getByTestId("present-count")).toHaveText("1 phone connected", {
     timeout: 15_000,
   });
-  await page.getByRole("button", { name: "Start session", exact: true }).click();
+  await page.getByRole("button", { name: "Start", exact: true }).click();
   await expect(phone.getByText(MC_STEM)).toBeVisible({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Next item", exact: true }).click();
+  await page.getByRole("button", { name: "Next question", exact: true }).click();
   await expect(phone.getByText(SATA_STEM)).toBeVisible({ timeout: 15_000 });
 
   // Before the reveal: the page, the view, and the phone's own submit carry no key or mark.
@@ -158,8 +158,10 @@ test("a live SATA and a case-study step reach the phone keyless until the reveal
     }),
   );
   expectKeyless(late, [SATA_RATIONALE], LIVE_KEY_MARKERS);
-  await page.getByRole("button", { name: "End session", exact: true }).click();
-  await expect(phone.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
+  // It asks first; the second press is the one in the question.
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
+  await expect(phone.getByText("This live session has ended.")).toBeVisible({ timeout: 15_000 });
 
   // Step 1 of the seeded case study, on the same phone, which joining replaces the room of.
   const caseCode = await startRoom(page, `/author/case-studies/${SAMPLE_CASE_STUDY}`);
@@ -167,7 +169,7 @@ test("a live SATA and a case-study step reach the phone keyless until the reveal
   await expect(page.getByTestId("present-count")).toHaveText("1 phone connected", {
     timeout: 15_000,
   });
-  await page.getByRole("button", { name: "Start session", exact: true }).click();
+  await page.getByRole("button", { name: "Start", exact: true }).click();
   await expect(phone.getByText(CASE_STEP_1_STEM)).toBeVisible({ timeout: 15_000 });
 
   // The page carries the patient record, which is not answer-bearing, and no step's key.
@@ -185,7 +187,9 @@ test("a live SATA and a case-study step reach the phone keyless until the reveal
   expect(stepAfter).toContain(CASE_STEP_1_RATIONALE);
   expect(stepAfter).toContain('"answerKey"');
 
-  await page.getByRole("button", { name: "End session", exact: true }).click();
-  await expect(phone.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
+  // It asks first; the second press is the one in the question.
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
+  await expect(phone.getByText("This live session has ended.")).toBeVisible({ timeout: 15_000 });
   await context.close();
 });

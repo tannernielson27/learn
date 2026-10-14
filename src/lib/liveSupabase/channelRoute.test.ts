@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   CHANNEL_SESSION_CLAIM,
@@ -7,6 +7,7 @@ import {
 } from "@/lib/supabase/channelToken";
 import type { Database } from "@/lib/supabase/database.types";
 import { issueChannelToken, type ChannelRouteDeps } from "./channelRoute";
+import type { Verification } from "./routeDeps";
 import type { ChannelCredential } from "./wire";
 
 const ME = { sessionId: "00000000-0000-4000-8000-00000000000a", participantId: "p-1" };
@@ -18,12 +19,18 @@ type Answer = { data: unknown; error: unknown };
 
 function deps(
   answer: Answer,
-  verified: typeof ME | null = ME,
+  verified: typeof ME | null | "unavailable" = ME,
   signingKey: ChannelRouteDeps["signingKey"] = () => readChannelSigningKey(SECRET),
 ): ChannelRouteDeps & { rpc: ReturnType<typeof vi.fn> } {
   const rpc = vi.fn(async () => answer);
+  const verification: Verification =
+    verified === null
+      ? { ok: false, reason: "signed_out" }
+      : verified === "unavailable"
+        ? { ok: false, reason: "unavailable" }
+        : { ok: true, participant: verified };
   return {
-    verify: async () => verified,
+    verify: async () => verification,
     service: { rpc } as unknown as SupabaseClient<Database>,
     signingKey,
     now: () => NOW,
@@ -53,6 +60,10 @@ function claimsOf(token: string): Record<string, unknown> {
     unknown
   >;
 }
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("POST /api/live/channel", () => {
   it("mints a token for the session the cookie names, and for no other", async () => {
@@ -107,9 +118,31 @@ describe("POST /api/live/channel", () => {
     expect(response.status).toBe(500);
   });
 
-  it("answers a database error with a fault, not a token", async () => {
+  it("answers a database error with something to try again, not a token", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     const response = await issueChannelToken(post(), deps({ data: null, error: { code: "XX" } }));
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(503);
+    expect(logged).toHaveBeenCalledWith(
+      "[live] a database call failed",
+      expect.objectContaining({
+        route: "/api/live/channel",
+        call: "begin_session_view",
+        sessionId: ME.sessionId,
+        code: "XX",
+      }),
+    );
+  });
+
+  // #407. The phone reads 401 from this route as final: it closes the socket and reloads the page
+  // (`channelTokenSource.ts`). A check that could not be made is not that.
+  it("does not tell a phone it has left when the participant check could not be made", async () => {
+    const signingKey = vi.fn(() => readChannelSigningKey(SECRET));
+    const d = deps(room("running"), "unavailable", signingKey);
+    const response = await issueChannelToken(post(), d);
+    expect(response.status).toBe(503);
+    expect(response.headers.get("retry-after")).toBe("1");
+    expect(d.rpc).not.toHaveBeenCalled();
+    expect(signingKey).not.toHaveBeenCalled();
   });
 
   it("gives an ended room no token: there is nothing left to watch", async () => {

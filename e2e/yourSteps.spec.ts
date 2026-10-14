@@ -9,8 +9,9 @@ import {
   selectAsAdmin,
   signInAsNewAuthor,
 } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
-// #273: the student home's "Your steps" (#239, #241) on a real page, against seeded marks: ranked
+// #273: the student home's "Your clinical judgment steps" (#239, #241) on a real page, against seeded marks: ranked
 // steps weakest first, a step under five items reads "Not enough answers yet", and a step with
 // marks from both sources shows its assignment and practice counts apart. Needs the local Supabase
 // stack; CI runs it in the `auth-e2e` job.
@@ -117,7 +118,7 @@ async function createClass(page: Page, name: string): Promise<{ id: string; invi
   return { id, invite };
 }
 
-test("Your steps ranks the weakest step first and counts assignments and practice apart", async ({
+test("Your clinical judgment steps ranks the weakest step first and counts assignments and practice apart", async ({
   page,
   browser,
   request,
@@ -166,10 +167,14 @@ test("Your steps ranks the weakest step first and counts assignments and practic
   const { viewport, isMobile, hasTouch } = testInfo.project.use;
   const phone = await browser.newContext({ viewport, isMobile, hasTouch, reducedMotion: "reduce" });
   const student = await phone.newPage();
+  await skipWelcomes(student);
   await student.goto(klass.invite);
   const email = `student-steps-${project}-${Date.now()}@example.test`;
   const since = new Date();
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await student
+    .getByRole("button", { name: "Join with an emailed link instead", exact: true })
+    .click();
   await student.getByRole("button", { name: "Email me a link to join", exact: true }).click();
   await openSignInLink(student, await latestSignInLink(request, email, since));
   await expect(student).toHaveURL(/\/learn$/);
@@ -280,9 +285,9 @@ test("Your steps ranks the weakest step first and counts assignments and practic
 
   // Still open: practice counts already, the open assignment's marks do not.
   await student.goto("/learn");
-  await expect(row("Recognize Cues")).toContainText("5 items");
+  await expect(row("Recognize Cues")).toContainText("5 questions");
   await expect(row("Analyze Cues")).toContainText("No answers yet");
-  await expect(row("Generate Solutions")).toContainText("Not enough answers yet (3 items)");
+  await expect(row("Generate Solutions")).toContainText("Not enough answers yet (3 questions)");
 
   // After the close (and its grace): the assignment's marks join the ranking.
   await student.waitForTimeout(Math.max(0, closesAt + GRACE_MS - Date.now()));
@@ -300,19 +305,19 @@ test("Your steps ranks the weakest step first and counts assignments and practic
   // Ranked, weakest first, each with its percent; the mixed step counts its sources apart.
   await expect(row("Generate Solutions")).toContainText("33%");
   await expect(
-    row("Generate Solutions").getByText("6 items: 3 from assignments, 3 from practice", {
+    row("Generate Solutions").getByText("6 questions: 3 from assignments, 3 from practice", {
       exact: true,
     }),
   ).toBeVisible();
   await expect(row("Recognize Cues")).toContainText("60%");
-  await expect(row("Recognize Cues").getByText("5 items", { exact: true })).toBeVisible();
+  await expect(row("Recognize Cues").getByText("5 questions", { exact: true })).toBeVisible();
   await expect(row("Analyze Cues")).toContainText("80%");
-  await expect(row("Analyze Cues").getByText("5 items", { exact: true })).toBeVisible();
+  await expect(row("Analyze Cues").getByText("5 questions", { exact: true })).toBeVisible();
 
   // Under five items: no percent, however well it went.
   const evaluate = row("Evaluate Outcomes");
   await expect(
-    evaluate.getByText("Not enough answers yet (2 items)", { exact: true }),
+    evaluate.getByText("Not enough answers yet (2 questions)", { exact: true }),
   ).toBeVisible();
   await expect(evaluate).not.toContainText("%");
   for (const label of ["Prioritize Hypotheses", "Take Action"]) {
@@ -320,7 +325,7 @@ test("Your steps ranks the weakest step first and counts assignments and practic
   }
 
   await student
-    .getByRole("region", { name: "Your steps", exact: true })
+    .getByRole("region", { name: "Your clinical judgment steps", exact: true })
     .screenshot({ path: shot("student-steps-ranked") });
   await phone.close();
 });

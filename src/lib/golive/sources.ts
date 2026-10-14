@@ -130,13 +130,18 @@ export function migrationVersions(filenames: readonly string[]): string[] {
     .sort();
 }
 
-/** Asks PostgREST for a schema that cannot exist; its refusal names the exposed ones. */
+/**
+ * Asks PostgREST for a schema that cannot exist; its refusal names the exposed ones. It asks for
+ * a table path, because hosted Supabase answers the root `/rest/v1/` for a publishable key with
+ * 401 "Secret API key required" before PostgREST reads the profile. The table need not exist:
+ * the unknown profile is refused first.
+ */
 export async function probeExposedSchemas(
   fetchImpl: FetchLike,
   supabaseUrl: string,
   publishableKey: string,
 ): Promise<string[] | null> {
-  const response = await fetchImpl(`${supabaseUrl.replace(/\/+$/, "")}/rest/v1/`, {
+  const response = await fetchImpl(`${supabaseUrl.replace(/\/+$/, "")}/rest/v1/golive_probe`, {
     headers: { apikey: publishableKey, "Accept-Profile": "golive_probe_schema" },
     redirect: "error",
     signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),

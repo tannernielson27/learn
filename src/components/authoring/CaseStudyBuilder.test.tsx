@@ -52,7 +52,7 @@ function setup() {
     <LeaveGuardProvider>
       <GuardedLink href="/author">LeaRN</GuardedLink>
       <CaseStudyBuilder
-        back={{ href: "/author/banks/bank-1", label: "Back to bank" }}
+        back={{ href: "/author/banks/bank-1", label: "Back to quiz" }}
         record={{ status: "ready", panel: <FakeEditor label="Record field" /> }}
         steps={steps}
         readyLabel="1 of 6 steps ready"
@@ -66,21 +66,21 @@ describe("CaseStudyBuilder, leaving and starting", () => {
   it("asks before leaving the case study with unsaved changes", async () => {
     const user = setup();
     await user.type(screen.getByLabelText("Record field"), "typed");
-    await user.click(screen.getByRole("link", { name: "Back to bank" }));
+    await user.click(screen.getByRole("link", { name: "Back to quiz" }));
     expect(push).not.toHaveBeenCalled();
     const leave = within(
-      screen.getByRole("alertdialog", { name: "The record has unsaved changes" }),
+      screen.getByRole("alertdialog", { name: "The patient record has unsaved changes" }),
     );
     await user.click(leave.getByRole("button", { name: "Discard changes" }));
     expect(push).toHaveBeenCalledWith("/author/banks/bank-1");
   });
 
-  it("asks before a site header link leaves unsaved changes, as Back to bank does", async () => {
+  it("asks before a site header link leaves unsaved changes, as Back to quiz does", async () => {
     const user = setup();
     await user.type(screen.getByLabelText("Record field"), "typed");
     await user.click(screen.getByRole("link", { name: "LeaRN" }));
     const leave = within(
-      screen.getByRole("alertdialog", { name: "The record has unsaved changes" }),
+      screen.getByRole("alertdialog", { name: "The patient record has unsaved changes" }),
     );
     expect(leave.getByText(/discard them and leave this case study/)).toBeInTheDocument();
     await user.click(leave.getByRole("button", { name: "Discard changes" }));
@@ -92,7 +92,7 @@ describe("CaseStudyBuilder, leaving and starting", () => {
     render(
       <LeaveGuardProvider>
         <CaseStudyBuilder
-          back={{ href: "/author/banks/bank-1", label: "Back to bank" }}
+          back={{ href: "/author/banks/bank-1", label: "Back to quiz" }}
           record={{ status: "ready", panel: <FakeEditor label="Record field" /> }}
           steps={steps}
           readyLabel="1 of 6 steps ready"
@@ -106,7 +106,7 @@ describe("CaseStudyBuilder, leaving and starting", () => {
     await user.click(screen.getByRole("button", { name: "Duplicate case study" }));
     expect(duplicate).not.toHaveBeenCalled();
     const leave = within(
-      screen.getByRole("alertdialog", { name: "The record has unsaved changes" }),
+      screen.getByRole("alertdialog", { name: "The patient record has unsaved changes" }),
     );
     await user.click(leave.getByRole("button", { name: "Discard changes" }));
     expect(duplicate).toHaveBeenCalledTimes(1);
@@ -115,7 +115,7 @@ describe("CaseStudyBuilder, leaving and starting", () => {
 
   it("leaves without asking when nothing is unsaved", async () => {
     const user = setup();
-    await user.click(screen.getByRole("link", { name: "Back to bank" }));
+    await user.click(screen.getByRole("link", { name: "Back to quiz" }));
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(push).toHaveBeenCalledWith("/author/banks/bank-1");
   });
@@ -124,7 +124,7 @@ describe("CaseStudyBuilder, leaving and starting", () => {
     const user = setup();
     await user.click(railButton(/^Step 6/));
     await user.click(screen.getByRole("button", { name: "Start this step" }));
-    expect(screen.getByRole("region", { name: "Step 6: Evaluate Outcomes" })).toHaveFocus();
+    expect(screen.getByRole("region", { name: "Step 6 of 6: Evaluate Outcomes" })).toHaveFocus();
   });
 });
 
@@ -135,22 +135,22 @@ const ask = () => within(screen.getByRole("alertdialog", { name: "Step 1 has uns
 describe("CaseStudyBuilder", () => {
   it("lists the record and all six steps, each with its status in words", () => {
     setup();
-    expect(railButton(/^Record/)).toHaveTextContent("Ready");
-    expect(railButton(/^Step 1: Recognize Cues/)).toHaveTextContent("Ready");
-    expect(railButton(/^Step 2: Analyze Cues/)).toHaveTextContent("Draft");
-    expect(railButton(/^Step 3: Prioritize Hypotheses/)).toHaveTextContent("Not started");
-    expect(railButton(/^Step 5: Take Action/)).toHaveTextContent("Needs attention");
+    expect(railButton(/^Patient record/)).toHaveTextContent("Ready");
+    expect(railButton(/^Step 1 of 6: Recognize Cues/)).toHaveTextContent("Ready");
+    expect(railButton(/^Step 2 of 6: Analyze Cues/)).toHaveTextContent("Draft");
+    expect(railButton(/^Step 3 of 6: Prioritize Hypotheses/)).toHaveTextContent("Not started");
+    expect(railButton(/^Step 5 of 6: Take Action/)).toHaveTextContent("Needs attention");
     expect(screen.getByText("1 of 6 steps ready")).toBeInTheDocument();
   });
 
   it("opens the record first, and any step in any order", async () => {
     const user = setup();
     expect(screen.getByLabelText("Record field")).toBeInTheDocument();
-    expect(railButton(/^Record/)).toHaveAttribute("aria-current", "step");
+    expect(railButton(/^Patient record/)).toHaveAttribute("aria-current", "step");
     await user.click(railButton(/^Step 4/));
     expect(screen.getByText("Choose a type for step 4")).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { level: 2, name: "Step 4: Generate Solutions" }),
+      screen.getByRole("heading", { level: 2, name: "Step 4 of 6: Generate Solutions" }),
     ).toBeInTheDocument();
     await user.click(railButton(/^Step 2/));
     expect(screen.getByLabelText("Step 2 field")).toBeInTheDocument();
@@ -163,7 +163,7 @@ describe("CaseStudyBuilder", () => {
     await user.type(screen.getByLabelText("Step 1 field"), "typed");
 
     await user.click(railButton(/^Step 2/));
-    await user.click(ask().getByRole("button", { name: "Stay on this step" }));
+    await user.click(ask().getByRole("button", { name: "Keep editing" }));
     expect(screen.getByLabelText("Step 1 field")).toHaveValue("typed");
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
 

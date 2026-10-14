@@ -165,12 +165,26 @@ describe("probeExposedSchemas", () => {
       probeExposedSchemas(fetchImpl, "https://abc.supabase.co/", "sb_publishable_x"),
     ).resolves.toEqual(["public", "graphql_public"]);
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe("https://abc.supabase.co/rest/v1/");
+    // A table path, not the root: hosted Supabase refuses /rest/v1/ to a publishable key
+    // with 401 "Secret API key required" before PostgREST sees the profile.
+    expect(url).toBe("https://abc.supabase.co/rest/v1/golive_probe");
     expect(init.headers).toEqual({
       apikey: "sb_publishable_x",
       "Accept-Profile": "golive_probe_schema",
     });
     expect(init.redirect).toBe("error");
+  });
+
+  it("returns null when the gateway refuses the key instead of naming schemas", async () => {
+    const fetchImpl = async () =>
+      json(
+        {
+          message: "Secret API key required",
+          hint: "Only secret API keys can be used for this endpoint.",
+        },
+        401,
+      );
+    await expect(probeExposedSchemas(fetchImpl, "https://a", "k")).resolves.toBeNull();
   });
 
   it("returns null for a body that is not JSON", async () => {

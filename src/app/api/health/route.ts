@@ -1,3 +1,4 @@
+import { captchaSetup } from "@/lib/auth/captcha";
 import { createSupabaseMemo, handleHealth, type SupabaseStatus } from "@/lib/golive/healthReport";
 import { readSupabasePublicEnv } from "@/lib/supabase/env";
 import { checkSupabaseHealth } from "@/lib/supabase/health";
@@ -34,8 +35,6 @@ function envSnapshot() {
     SITE_URL: process.env.SITE_URL,
     VERCEL_ENV: process.env.VERCEL_ENV,
     CRON_SECRET: process.env.CRON_SECRET,
-    SENTRY_DSN: process.env.SENTRY_DSN,
-    NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
     DEMO_ACCOUNT_EMAIL: process.env.DEMO_ACCOUNT_EMAIL,
     DEMO_ACCOUNT_PASSWORD: process.env.DEMO_ACCOUNT_PASSWORD,
     VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA,
@@ -46,7 +45,14 @@ function envSnapshot() {
  * Whether this deployment can reach Supabase, which project that is (ADR 0006), which commit it
  * runs, and whether it is ready for students (#237). Per-variable booleans need
  * `Authorization: Bearer <CRON_SECRET>`; values never leave. See `handleHealth`.
+ *
+ * The sign-up CAPTCHA's setup comes from `captchaSetup`, reading the environment the way sign-up
+ * does, so the two cannot disagree about whether sign-up is refused (#359).
  */
 export async function GET(request: Request): Promise<Response> {
-  return handleHealth(request, { env: envSnapshot(), supabase });
+  return handleHealth(request, {
+    env: envSnapshot(),
+    supabase,
+    signUpCaptcha: () => captchaSetup(),
+  });
 }

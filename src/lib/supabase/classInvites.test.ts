@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { joinClass, myClasses, resolveClassInvite } from "./classInvites";
+import { joinClass, joinClassByCode, myClasses, resolveClassInvite } from "./classInvites";
 
 type Reply = { data?: unknown; error?: { code?: string; message?: string } | null };
 type Client = Parameters<typeof resolveClassInvite>[0];
@@ -75,6 +75,24 @@ describe("joinClass", () => {
   });
 });
 
+describe("joinClassByCode (#362)", () => {
+  it.each(["joined", "instructor", "invalid", "rate_limited"] as const)(
+    "passes %s through, sending the code as typed for the database to read",
+    async (answer) => {
+      const fake = fakeRpc({ data: answer, error: null });
+      expect(await joinClassByCode(fake.client, "abcd-2345")).toBe(answer);
+      expect(fake.rpc).toHaveBeenCalledWith("join_class_by_code", { p_code: "abcd-2345" });
+    },
+  );
+
+  it("treats an answer it does not know, or an error, as unavailable", async () => {
+    const odd = fakeRpc({ data: "promoted", error: null }).client;
+    expect(await joinClassByCode(odd, "ABCD2345")).toBe("unavailable");
+    const refused = fakeRpc({ data: null, error: { code: "42501" } }).client;
+    expect(await joinClassByCode(refused, "ABCD2345")).toBe("unavailable");
+  });
+});
+
 describe("myClasses", () => {
   it("lists the caller's classes by id, name and time zone", async () => {
     const fake = fakeRpc({
@@ -84,6 +102,8 @@ describe("myClasses", () => {
           class_name: "NUR 310",
           joined_at: "2026-09-23T10:00:00Z",
           time_zone: "America/New_York",
+          workspace_name: "Ada Lovelace’s workspace",
+          workspace_number: 1,
         },
       ],
       error: null,
@@ -94,9 +114,46 @@ describe("myClasses", () => {
         name: "NUR 310",
         joinedAt: "2026-09-23T10:00:00Z",
         timeZone: "America/New_York",
+        workspaceName: "Ada Lovelace’s workspace",
+        workspaceNumber: 1,
       },
     ]);
     expect(fake.rpc).toHaveBeenCalledWith("my_classes");
+  });
+
+  it("leaves the workspace off while the database sends none, or a blank one", async () => {
+    const row = { class_id: CLASS_ID, class_name: "NUR 310", joined_at: "2026-09-23T10:00:00Z" };
+    const fake = fakeRpc({
+      data: [row, { ...row, workspace_name: null }, { ...row, workspace_name: "   " }],
+      error: null,
+    });
+    expect((await myClasses(fake.client))?.map((entry) => entry.workspaceName)).toEqual([
+      null,
+      null,
+      null,
+    ]);
+  });
+
+  it("leaves the workspace number off while the database sends none, or not a number", async () => {
+    // 20261011010000 adds `workspace_number`; the app is deployed before it is applied.
+    const row = { class_id: CLASS_ID, class_name: "NUR 310", joined_at: "2026-09-23T10:00:00Z" };
+    const fake = fakeRpc({
+      data: [
+        row,
+        { ...row, workspace_number: null },
+        { ...row, workspace_number: "2" },
+        { ...row, workspace_number: Number.NaN },
+        { ...row, workspace_number: 2 },
+      ],
+      error: null,
+    });
+    expect((await myClasses(fake.client))?.map((entry) => entry.workspaceNumber)).toEqual([
+      null,
+      null,
+      null,
+      null,
+      2,
+    ]);
   });
 
   it("puts a class on the default zone while the database sends none (#242)", async () => {

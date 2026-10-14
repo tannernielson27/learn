@@ -2,9 +2,12 @@
 
 import { useEffect, useId, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { describeEhrIssues } from "@/lib/authoring/ehrIssues";
+import { describeEhrIssues, describeEmptySteps } from "@/lib/authoring/ehrIssues";
 import { fromEhrForm, previewRecord, type EhrFormValues } from "@/lib/authoring/forms/ehr";
+import { CASE_STUDY_STEPS } from "@/lib/authoring/forms/ehrSteps";
+import { recordAtStep } from "@/lib/ngn/chartReveal";
 import { ehrRecordSchema } from "@/lib/ngn/schemas";
+import type { CjmmStep } from "@/lib/ngn/types";
 import type { SaveResult } from "./EditorShell";
 import { EhrPreview } from "./EhrPreview";
 import { EhrRecordFields, focusRecordField } from "./EhrRecordFields";
@@ -22,7 +25,11 @@ type Status =
   | { kind: "done"; message: string }
   | { kind: "error"; message: string };
 
-const SAVE_FAILED = "The record could not be saved. Try again.";
+const SAVE_FAILED = "The patient record could not be saved. Try again.";
+
+/** The record fields' look, sized to its words rather than the column. */
+const selectClass =
+  "rounded-sm border border-line bg-surface-1 px-3 py-2 text-base text-ink-1 hover:border-line-strong";
 
 /**
  * A case study's patient record on its own page: the record's fields, what it still needs, Save,
@@ -41,8 +48,16 @@ export function EhrEditor({ initialValues, onSave }: EhrEditorProps) {
   const { inCaseStudy } = useItemEditorHost();
   const busy = status.kind === "busy";
 
+  // "" is the full patient record; a step is what a student at that step sees (#336).
+  const [previewStep, setPreviewStep] = useState("");
+
   const parsed = ehrRecordSchema.safeParse(fromEhrForm(values));
-  const issues = parsed.success ? [] : describeEhrIssues(parsed.error.issues);
+  const issues = parsed.success
+    ? describeEmptySteps(parsed.data)
+    : describeEhrIssues(parsed.error.issues);
+  const preview = previewRecord(values);
+  const shown =
+    preview && previewStep ? recordAtStep(preview, Number(previewStep) as CjmmStep) : preview;
 
   useEffect(() => {
     if (!isDirty) return;
@@ -63,7 +78,7 @@ export function EhrEditor({ initialValues, onSave }: EhrEditorProps) {
     }
     if (result.ok) {
       setSavedSnapshot(JSON.stringify(current));
-      setStatus({ kind: "done", message: "Record saved." });
+      setStatus({ kind: "done", message: "Patient record saved." });
     } else {
       setStatus({ kind: "error", message: result.error ?? SAVE_FAILED });
     }
@@ -83,6 +98,7 @@ export function EhrEditor({ initialValues, onSave }: EhrEditorProps) {
           idPrefix={ids}
           issueIdPrefix={ids}
           sectionsHeading={inCaseStudy ? "h3" : "h2"}
+          steps
         />
 
         {issues.length > 0 ? (
@@ -90,7 +106,7 @@ export function EhrEditor({ initialValues, onSave }: EhrEditorProps) {
             aria-label="Problems to fix"
             className="rounded-sm border border-line bg-surface-1 p-4"
           >
-            <h2 className="mb-2 text-sm font-medium text-ink-1">Before this record is complete</h2>
+            <h2 className="mb-2 text-sm font-medium text-ink-1">Problems to fix</h2>
             <ul className="flex flex-col gap-1">
               {issues.map((issue) => (
                 <li key={issue.field}>
@@ -110,7 +126,7 @@ export function EhrEditor({ initialValues, onSave }: EhrEditorProps) {
 
         <div className="flex flex-wrap items-center gap-3 border-t border-line pt-4">
           <Button variant="primary" disabled={busy} onClick={() => void save()}>
-            Save record
+            Save patient record
           </Button>
           {isDirty ? <p className="text-sm text-ink-2">Unsaved changes</p> : null}
           {status.kind === "done" ? (
@@ -127,9 +143,29 @@ export function EhrEditor({ initialValues, onSave }: EhrEditorProps) {
       </form>
 
       <section aria-label="Preview" className="min-w-0 lg:sticky lg:top-4 lg:self-start">
-        <p className="eyebrow mb-2">Preview</p>
+        <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
+          <p className="eyebrow">Preview</p>
+          <div className="flex items-center gap-2">
+            <label htmlFor={`${ids}-preview-step`} className="text-sm text-ink-1">
+              Preview at
+            </label>
+            <select
+              id={`${ids}-preview-step`}
+              className={`tap-target ${selectClass}`}
+              value={previewStep}
+              onChange={(event) => setPreviewStep(event.target.value)}
+            >
+              <option value="">Full patient record</option>
+              {CASE_STUDY_STEPS.map((step) => (
+                <option key={step} value={String(step)}>
+                  Step {step}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
         <div className="rounded-sm border border-line bg-surface-1 p-4">
-          <EhrPreview record={previewRecord(values)} />
+          <EhrPreview record={shown} />
         </div>
       </section>
     </div>

@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FIXTURES, sampleCaseStudy } from "@/lib/ngn/fixtures";
-import { caseStudySchema, itemSchema, type Item } from "@/lib/ngn/schemas";
+import { recordAtStep } from "@/lib/ngn/chartReveal";
+import { stagedEhr } from "@/lib/ngn/fixtures/chart-reveal";
+import { caseStudySchema, ehrRecordSchema, itemSchema, type Item } from "@/lib/ngn/schemas";
+import type { CjmmStep } from "@/lib/ngn/types";
 import { shuffleItem, shuffleSeed } from "@/lib/ngn/shuffle";
 import { withStartingOrder, startingOrderSeed } from "@/lib/ngn/startingOrder";
 import { toKeylessItem } from "@/lib/ngn/submit";
@@ -61,7 +64,7 @@ afterEach(() => {
 });
 
 describe("buildPracticeView, on the bytes a student is handed", () => {
-  it("carries every item and step with no key, rationale or scoring before anything is answered", () => {
+  it("carries every item and the first step with no key, rationale or scoring before anything is answered", () => {
     const source = input();
     // The control: what the builder is given does carry every secret.
     const given = JSON.stringify(source);
@@ -70,9 +73,11 @@ describe("buildPracticeView, on the bytes a student is handed", () => {
 
     const bytes = JSON.stringify(buildPracticeView(source));
     for (const item of [MC, MR, ...STEPS]) {
-      expect(bytes).toContain(item.id);
       for (const secret of secretsOf(item)) expect(bytes).not.toContain(secret);
     }
+    // #335: the steps not yet reached are not sent at all.
+    for (const item of [MC, MR, STEPS[0] as Item]) expect(bytes).toContain(item.id);
+    for (const item of STEPS.slice(1)) expect(bytes).not.toContain(`"id":"${item.id}"`);
     for (const field of ['"answerKey"', '"rationale"', '"scoring"', '"points"', RUN.seed]) {
       expect(bytes).not.toContain(field);
     }
@@ -112,14 +117,23 @@ describe("buildPracticeView, on the bytes a student is handed", () => {
     expect(bytes.match(/"answerKey"/g)).toHaveLength(1);
   });
 
-  it("groups a case study's steps under it, in step order, with its record", () => {
-    const view = buildPracticeView(input());
+  it("groups a case study's reached steps under it, in step order, with each one's record", () => {
+    const answers = { [rowId(100)]: { type: "bowtie" }, [rowId(101)]: { type: "bowtie" } };
+    const view = buildPracticeView(input({ answers }));
     expect(view.entries.map((entry) => entry.kind)).toEqual(["item", "item", "case_study"]);
     const study = view.entries[2];
     if (study?.kind !== "case_study") throw new Error("expected a case study");
     expect(study.title).toBe(CASE.title);
-    expect(study.ehr).toEqual(CASE.ehr);
-    expect(study.steps.map((step) => step.itemId)).toEqual(STEPS.map((_, i) => rowId(100 + i)));
+    // A record with neither field reads the same at every step.
+    expect(study.records).toEqual([CASE.ehr, CASE.ehr, CASE.ehr]);
+    expect(study.steps.map((step) => step.itemId)).toEqual([0, 1, 2].map((i) => rowId(100 + i)));
+    expect(study.stepCount).toBe(STEPS.length);
+    expect(view.total).toBe(2 + STEPS.length);
+    expect(view.answered).toBe(2);
+  });
+
+  it("counts every step toward the total before any is reached", () => {
+    const view = buildPracticeView(input());
     expect(view.total).toBe(2 + STEPS.length);
     expect(view.answered).toBe(0);
     expect(view.runId).toBe(RUN.runId);
@@ -181,6 +195,76 @@ describe("buildPracticeView, on the bytes a student is handed", () => {
     );
     expect(view.entries).toHaveLength(1);
     expect(view.total).toBe(1);
+  });
+
+  describe("a chart that grows with the case (#335)", () => {
+    const staged = { id: CASE_ID, title: CASE.title, ehr: stagedEhr };
+    const NOTE_0200 = "0200: Second large-bore IV";
+    const LABS = "Serum hCG";
+    /** The run with the first `count` steps answered. */
+    const after = (count: number) =>
+      JSON.stringify(
+        buildPracticeView(
+          input({
+            caseStudies: [staged],
+            answers: Object.fromEntries(
+              STEPS.slice(0, count).map((step, i) => [rowId(100 + i), { type: step.type }]),
+            ),
+          }),
+        ),
+      );
+
+    it("sends step 1's chart and nothing a later step reveals", () => {
+      const bytes = after(0);
+      expect(bytes).toContain("0115: Pain now 8/10");
+      for (const later of [
+        NOTE_0200,
+        "0130: Pale",
+        LABS,
+        "Lab Results",
+        "fromStep",
+        "stepAccess",
+      ]) {
+        expect(bytes).not.toContain(later);
+      }
+    });
+
+    it("names a tab locked at a reached step and sends none of its text", () => {
+      const bytes = after(1);
+      expect(bytes).toContain('"title":"Lab Results","locked":true');
+      expect(bytes).not.toContain(LABS);
+    });
+
+    it("sends each part at the step that reveals it, and keeps the earlier steps' charts", () => {
+      // The controls: step 3 opens the labs, step 4 brings the 0200 note.
+      expect(after(2)).toContain(LABS);
+      expect(after(2)).not.toContain(NOTE_0200);
+      const reached4 = buildPracticeView(
+        input({
+          caseStudies: [staged],
+          answers: Object.fromEntries(
+            STEPS.slice(0, 3).map((step, i) => [rowId(100 + i), { type: step.type }]),
+          ),
+        }),
+      );
+      const study = reached4.entries[2];
+      if (study?.kind !== "case_study") throw new Error("expected a case study");
+      const record = ehrRecordSchema.parse(stagedEhr);
+      expect(study.records).toEqual(
+        [1, 2, 3, 4].map((step) => recordAtStep(record, step as CjmmStep)),
+      );
+      expect(JSON.stringify(study.records[3])).toContain(NOTE_0200);
+    });
+
+    it("reaches nothing with an answer past a gap", () => {
+      const view = buildPracticeView(
+        input({ caseStudies: [staged], answers: { [rowId(103)]: { type: STEPS[3]!.type } } }),
+      );
+      const study = view.entries[2];
+      if (study?.kind !== "case_study") throw new Error("expected a case study");
+      expect(study.steps).toHaveLength(1);
+      expect(JSON.stringify(view)).not.toContain(NOTE_0200);
+    });
   });
 
   it("changes nothing it is given", () => {

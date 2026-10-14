@@ -1,0 +1,23 @@
+-- The last open policy on a session's public state goes (#178).
+--
+-- Step 4 of the rollout written in `20260921210000_private_live_channel.sql`. That migration added
+-- two scoped select policies beside the original `using (true)` one and dropped nothing, because
+-- dropping it before every browser presented a channel token, and before Realtime refused public
+-- channels, would have silenced phones already in a room. Both are now true: the private-channel
+-- code has shipped since #149, and the owner turned "Allow public access" off on 2026-10-13.
+--
+-- What is left on `live.session_public_state` after this:
+--
+--   * "a participant reads their own session's public state" (anon): the channel token's
+--     `live_session_id` claim names the row.
+--   * "an author reads the public state of their org's sessions" (authenticated): through
+--     `public.sessions`' own row level security.
+--
+-- So the publishable key and a session id are no longer enough to watch a room's status, position,
+-- reveal flag and timer over `postgres_changes`. A signed-in student is not an exception: the play
+-- page's client presents the channel token, not the student's own session.
+--
+-- The grants stay as they are. `anon` and `authenticated` keep `select`, which the two scoped
+-- policies need; nobody has ever had insert, update or delete.
+drop policy "a subscriber may read the public state of a session it names"
+  on live.session_public_state;

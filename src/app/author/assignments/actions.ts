@@ -32,7 +32,7 @@ function createRefusal(source: AssignmentSource, reason: AssignmentWriteFailure)
   switch (reason) {
     case "unavailable":
       return source.kind === "bank"
-        ? "Publish an item in this bank before assigning it."
+        ? "Publish a question in this quiz before assigning it."
         : "Publish the case study and every step before assigning it.";
     case "gone":
       return "That class or source no longer exists. Reload the page.";

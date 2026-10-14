@@ -27,10 +27,7 @@ describe("AssignmentHistory (#238)", () => {
   it("says so when nothing has closed", () => {
     renderRows([]);
     expect(
-      screen.getByRole("heading", { level: 3, name: "Nothing has closed yet" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Your scores appear here once an assignment closes."),
+      screen.getByRole("heading", { level: 3, name: "No closed assignments yet" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("list")).toBeNull();
   });
@@ -80,6 +77,18 @@ describe("AssignmentHistory (#238)", () => {
     ]);
     expect(screen.getByTestId("history-score")).toHaveTextContent(/^Best score 0 of 0$/);
     expect(screen.getByRole("listitem")).toHaveTextContent("1 of 1 attempt used");
+  });
+
+  it("puts the workspace beside the class only when one is carried", () => {
+    renderRows([ROW]);
+    expect(screen.getByRole("listitem")).not.toHaveTextContent("workspace");
+    render(
+      <AssignmentHistory
+        rows={[{ ...ROW, id: "a2" }]}
+        classes={new Map([[CLASS_ID, { ...NUR_310, workspaceName: "Ada's workspace" }]])}
+      />,
+    );
+    expect(screen.getAllByRole("listitem")[1]).toHaveTextContent("NUR 310, Ada's workspace");
   });
 
   it("names a class it does not know, on the default zone", () => {

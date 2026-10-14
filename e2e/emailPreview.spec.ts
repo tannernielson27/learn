@@ -8,6 +8,9 @@ import { expect, test } from "@playwright/test";
 
 const MESSAGES = [
   { id: "magic-link", name: "Sign-in link", button: "Sign in" },
+  { id: "welcome-student", name: "Welcome, student", button: "Confirm my email address" },
+  { id: "welcome-teacher", name: "Welcome, teacher", button: "Confirm my email address" },
+  { id: "workspace-invite", name: "Workspace invitation", button: "Accept the invitation" },
   { id: "reminder-opened", name: "Assignment is open", button: "Open the assignment" },
   { id: "reminder-closing-soon", name: "Assignment closes soon", button: "Finish the assignment" },
 ] as const;
@@ -35,6 +38,18 @@ test("the email preview renders every message, readable at this width", async ({
   const text = page.locator('[data-email-text="reminder-opened"]');
   await expect(text).toContainText("Week 5: Heart failure & fluid balance is open in LeaRN.");
   await expect(text).toContainText("https://learn.example/learn/assignments/");
+
+  // #360: so does the welcome email's, with its confirm link.
+  const welcome = page.locator('[data-email-text="welcome-student"]');
+  await expect(welcome).toContainText("Welcome to LeaRN");
+  await expect(welcome).toContainText("https://learn.example/auth/confirm?next=%2Flearn&");
+
+  // The workspace invitation shows a name its teacher chose as text, never as markup.
+  const invite = page.locator('[data-email="workspace-invite"]');
+  await expect(invite).toContainText('in the workspace "Adult Health & "Pharm" team" on LeaRN');
+  await expect(page.locator('[data-email-text="workspace-invite"]')).toContainText(
+    "https://learn.example/w/sample-invite-token-0123456789ab",
+  );
 
   // Nothing in an email is wider than a phone.
   const overflow = await page.evaluate(

@@ -2,7 +2,7 @@
 
 import { startTransition, useActionState, useEffect, useId, useRef, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
-import { folderOptions, UNFILED, type FolderRow } from "@/lib/authoring/folders";
+import { folderOptions, NOT_IN_A_FOLDER, UNFILED, type FolderRow } from "@/lib/authoring/folders";
 import type { FolderFormState } from "./FolderNameForm";
 
 export interface MoveToFolderFormProps {
@@ -15,8 +15,8 @@ export interface MoveToFolderFormProps {
 const INITIAL: FolderFormState = { status: "idle" };
 
 /**
- * Moves the checked items and case studies to a folder, or to Unfiled. Moving changes only where
- * content is filed.
+ * Moves what is checked to a folder, or out of every folder: questions and case studies inside a
+ * quiz, or quizzes in the library (#411). Moving changes only where they are filed.
  */
 export function MoveToFolderForm({ id, folders, action }: MoveToFolderFormProps) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
@@ -55,7 +55,7 @@ export function MoveToFolderForm({ id, folders, action }: MoveToFolderFormProps)
             <option value="" disabled>
               Choose a folder
             </option>
-            <option value={UNFILED}>Unfiled</option>
+            <option value={UNFILED}>{NOT_IN_A_FOLDER}</option>
             {folderOptions(folders).map((option) => (
               <option key={option.id} value={option.id}>
                 {option.path}
@@ -64,7 +64,7 @@ export function MoveToFolderForm({ id, folders, action }: MoveToFolderFormProps)
           </select>
         </div>
         <Button type="submit" size="sm" disabled={pending}>
-          Move selected
+          Move
         </Button>
       </div>
       {error ? (

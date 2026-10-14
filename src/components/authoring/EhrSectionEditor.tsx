@@ -11,6 +11,10 @@ import {
   type EhrTabKind,
   type EhrTimePointForm,
 } from "@/lib/authoring/forms/ehr";
+import { setBlockFromStep } from "@/lib/authoring/forms/ehrSteps";
+import type { TabAccess } from "@/lib/ngn/schemas";
+import type { CjmmStep } from "@/lib/ngn/types";
+import { FromStepSelect, TabStepAccess } from "./EhrStepControls";
 import {
   EhrBlockEditor,
   Sr,
@@ -46,9 +50,13 @@ export interface EhrSectionEditorProps {
   onAddBlock: (kind: EhrBlockKind) => void;
   onRemoveBlock: (blockIndex: number) => void;
   onBlockChange: (blockIndex: number, block: EhrBlockForm) => void;
+  /** A case study's record (#336): the tab's step row and each block's "Shows from". */
+  onStepAccess?: (step: CjmmStep, access: TabAccess) => void;
+  /** What the step row's controls are named by: the tab's title, unique among the tabs. */
+  stepRowName?: string;
 }
 
-/** One section of the record: what it is, its title, when it was charted, and its blocks. */
+/** One tab of the patient record: what it is, its title, when it was charted, and its blocks. */
 export function EhrSectionEditor({
   tab,
   index,
@@ -63,8 +71,11 @@ export function EhrSectionEditor({
   onAddBlock,
   onRemoveBlock,
   onBlockChange,
+  onStepAccess,
+  stepRowName,
 }: EhrSectionEditorProps) {
   const number = index + 1;
+  const steps = onStepAccess !== undefined;
   const path = `tabs.${index}`;
   const control = (part: string) => ({
     id: fields.idFor(`${path}.${part}`),
@@ -76,12 +87,12 @@ export function EhrSectionEditor({
 
   return (
     <fieldset className="flex flex-col gap-4 rounded-sm border border-line p-4">
-      <legend className="px-1 text-sm font-medium text-ink-1">Section {number}</legend>
+      <legend className="px-1 text-sm font-medium text-ink-1">Tab {number}</legend>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="flex min-w-0 flex-col gap-1">
           <label htmlFor={fields.idFor(`${path}.kind`)} className="text-sm text-ink-1">
-            <Sr>{`Section ${number}, `}</Sr>
+            <Sr>{`Tab ${number}, `}</Sr>
             Kind
           </label>
           <select
@@ -99,7 +110,7 @@ export function EhrSectionEditor({
         </div>
         <div className="flex min-w-0 flex-col gap-1">
           <label htmlFor={fields.idFor(`${path}.title`)} className="text-sm text-ink-1">
-            <Sr>{`Section ${number}, `}</Sr>
+            <Sr>{`Tab ${number}, `}</Sr>
             Title
           </label>
           <input
@@ -112,7 +123,7 @@ export function EhrSectionEditor({
         </div>
         <div className="flex min-w-0 flex-col gap-1">
           <label htmlFor={fields.idFor(`${path}.timePointId`)} className="text-sm text-ink-1">
-            <Sr>{`Section ${number}, `}</Sr>
+            <Sr>{`Tab ${number}, `}</Sr>
             Time
           </label>
           <select
@@ -131,11 +142,32 @@ export function EhrSectionEditor({
         </div>
       </div>
 
+      {onStepAccess ? (
+        <TabStepAccess
+          path={path}
+          name={stepRowName ?? `Tab ${number}`}
+          stepAccess={tab.stepAccess}
+          fields={fields}
+          onChange={onStepAccess}
+        />
+      ) : null}
+
       {tab.blocks.map((block, blockIndex) => (
         <div key={blockIndex} className="flex flex-col gap-2 border-t border-line pt-3">
           <p className="text-sm font-medium text-ink-1">
             Block {blockIndex + 1}: {BLOCK_LABELS[block.kind]}
           </p>
+          {steps ? (
+            <div className="max-w-48">
+              <FromStepSelect
+                field={`${path}.blocks.${blockIndex}.fromStep`}
+                where={`Tab ${number}, block ${blockIndex + 1}, `}
+                fromStep={block.fromStep}
+                fields={fields}
+                onChange={(step) => onBlockChange(blockIndex, setBlockFromStep(block, step))}
+              />
+            </div>
+          ) : null}
           <EhrBlockEditor
             block={block}
             path={`${path}.blocks.${blockIndex}`}
@@ -156,7 +188,7 @@ export function EhrSectionEditor({
                 }}
               >
                 Remove block
-                <Sr>{` ${blockIndex + 1} from section ${number}`}</Sr>
+                <Sr>{` ${blockIndex + 1} from tab ${number}`}</Sr>
               </Button>
             </div>
           ) : null}
@@ -173,7 +205,7 @@ export function EhrSectionEditor({
               onClick={() => onAddBlock(kind)}
             >
               Add {BLOCK_LABELS[kind].toLowerCase()}
-              <Sr>{` to section ${number}`}</Sr>
+              <Sr>{` to tab ${number}`}</Sr>
             </Button>
           ))}
         </div>
@@ -188,7 +220,7 @@ export function EhrSectionEditor({
             onClick={() => onMove(-1)}
           >
             Move
-            <Sr>{` section ${number}`}</Sr> up
+            <Sr>{` tab ${number}`}</Sr> up
           </Button>
         ) : null}
         {index < total - 1 ? (
@@ -199,11 +231,11 @@ export function EhrSectionEditor({
             onClick={() => onMove(1)}
           >
             Move
-            <Sr>{` section ${number}`}</Sr> down
+            <Sr>{` tab ${number}`}</Sr> down
           </Button>
         ) : null}
         <Button size="sm" variant="ghost" onClick={onRemove}>
-          Remove section
+          Remove tab
           <Sr>{` ${number}`}</Sr>
         </Button>
       </div>

@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import { NO_ACCESS_PATH, noAccessRedirect } from "./noAccess";
 
 describe("noAccessRedirect", () => {
-  it("keeps an account with no role on the page", () => {
-    expect(noAccessRedirect("forbidden")).toBeNull();
+  it("sends an account with no role to the welcome page, where it has a way forward (#362)", () => {
+    expect(noAccessRedirect("forbidden")).toBe("/welcome");
+    expect(noAccessRedirect("forbidden", null)).toBe("/welcome");
   });
 
-  it("sends a student to the student home rather than leaving them on No access yet (#205)", () => {
+  it("sends a student to the student home (#205)", () => {
     expect(noAccessRedirect("forbidden", "student")).toBe("/learn");
-    expect(noAccessRedirect("forbidden", null)).toBeNull();
   });
 
   it("sends an author home, since the page is not about them", () => {
@@ -19,7 +19,7 @@ describe("noAccessRedirect", () => {
     expect(noAccessRedirect("signed_out")).toBe("/sign-in?next=%2Fauthor");
   });
 
-  it("names the page requireAuthor sends people to", () => {
+  it("keeps the old address, for anyone who saved it", () => {
     expect(NO_ACCESS_PATH).toBe("/author/no-access");
   });
 });

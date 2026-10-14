@@ -25,7 +25,7 @@ describe("DuplicateButton", () => {
   });
 
   it("says why a copy was not made, and focuses the message", async () => {
-    const message = "The item could not be duplicated. Try again.";
+    const message = "The question could not be duplicated. Try again.";
     const { user } = setup({ status: "error", error: message });
     await user.click(screen.getByRole("button", { name: "Duplicate item" }));
     const alert = await screen.findByRole("alert");

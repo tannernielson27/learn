@@ -8,7 +8,7 @@ import type { RateLimit, RateLimitBucket, RateLimitStore } from "@/lib/rateLimit
  * resolved (#217): see `SIGN_IN_INVITE_LIMIT`.
  *
  * The per-IP counter bounds what one caller spends. That is the right limit for what it is for,
- * but it counts the person asking, not the address being mailed: thirty attempts an IP, from as
+ * but it counts the person asking, not the address being mailed: a budget per IP, from as
  * many IPs as a script cares to use, is still an inbox full of links nobody asked for. So #139
  * added counting on the recipient, and turned `shouldCreateUser` off — the larger half of that
  * fix, because an address with no account is now not mailed at all. What the counters cover is
@@ -82,11 +82,14 @@ export type RequestHeaders = Pick<Headers, "get" | "has">;
 const FIVE_MINUTES = 5 * 60_000;
 
 /**
- * email 30: a person needs one link, or two or three after a typo. Thirty leaves a school or
- * campus address room for a group arriving together — the case this must not break — while
- * cutting a script from thousands to thirty. Deliberately not lower: Supabase's own ceiling is 30
- * in the same window, and a smaller number would make this site the thing that refuses a real
- * class first, with nothing gained.
+ * email 150 (#409, was 30): a person needs one link, or two or three after a typo, but a computer
+ * lab is a hundred people behind one public address, each a different account. 150 lets a class
+ * of 100 through with a retry for half of them. It does not do the work against guessing or
+ * flooding one inbox: the two counters on the recipient do (`SIGN_IN_ADDRESS_LIMITS`, 3 per
+ * caller and address, 12 per address), and #409 left both alone. What 150 bounds is breadth, how
+ * many different account holders one network can have mailed in five minutes; Supabase's
+ * project-wide email limit (docs/05 §7.7 step 4) bounds the total. Supabase's own per-address
+ * sign-in limit must be raised to match (§7.7 step 4), or it refuses the class first.
  * demo 20: one shared account that exists to be demonstrated. A room of visitors on one wifi each
  * clicking once fits inside twenty; a browser holding the button down does not.
  *
@@ -96,7 +99,7 @@ const FIVE_MINUTES = 5 * 60_000;
  * #111's does.
  */
 export const SIGN_IN_LIMITS = {
-  email: { attempts: 30, windowMs: FIVE_MINUTES },
+  email: { attempts: 150, windowMs: FIVE_MINUTES },
   demo: { attempts: 20, windowMs: FIVE_MINUTES },
 } as const satisfies Record<SignInAction, SignInLimit>;
 
@@ -104,7 +107,7 @@ export const SIGN_IN_LIMITS = {
  * The two counters on the recipient (#139).
  *
  * `perCaller` 3, keyed on the caller and the address together. An email address is one person's
- * inbox, so the argument that set the per-IP email budget at 30 — a class or a campus arriving
+ * inbox, so the argument that set the per-IP email budget at 150 — a class or a campus arriving
  * together behind one address — does not transfer. One person needs one link, or two or three
  * after a typo or a slow inbox. This is the counter that answers #139's scenario, one caller
  * mailing a stranger over and over, and it can be kept this tight precisely because spending it
@@ -121,11 +124,11 @@ export const SIGN_IN_LIMITS = {
  * higher ceiling would buy a flooder no extra mail at all — only more of the deployment's shared
  * Supabase auth budget spent on one address.
  *
- * The three numbers are meant to be read in order: 3 per caller and address, 12 per address, 30
+ * The three numbers are meant to be read in order: 3 per caller and address, 12 per address, 150
  * per caller across every address (`SIGN_IN_LIMITS.email`). One caller hammering one address
  * meets the first, a flood on one address meets the second, and the third still bounds what any
  * one caller spends in total. It also means a caller needs four addresses of its own to hold one
- * ceiling down, and each of the four keeps paying against its own 30 (120 per class, 150 in all,
+ * ceiling down, and each of the four keeps paying against its own 150 (120 per class, 150 in all,
  * while it holds a live class invite: see `SIGN_IN_INVITE_LIMIT`).
  *
  * Fixed windows, like the two above, with the same back-to-back-across-the-boundary cost.
@@ -142,7 +145,9 @@ export const SIGN_IN_ADDRESS_LIMITS = {
  * Why the invite path needs its own: a class on campus Wi-Fi reaches this server from one public
  * address (NAT), so the thirty-first student to open the link in the same five minutes was refused
  * — on the first day, which is when it matters. Thirty was set for plain sign-in, where an address
- * with no account is not mailed at all; it was never meant to admit a whole class at once.
+ * with no account is not mailed at all; it was never meant to admit a whole class at once. (#409
+ * later raised the plain budget to 150 for a computer lab; this one is still kept per class, so
+ * one class's link cannot spend another's.)
  *
  * 120: a sixty-student class with a retry each. Earned only by a token `resolve_class_invite` has
  * just matched, so a caller with no valid token never sees it — an unknown, rotated, malformed or
@@ -150,20 +155,22 @@ export const SIGN_IN_ADDRESS_LIMITS = {
  * `app/c/[token]/actions.ts`). What a larger budget hands to someone who holds a real link (a
  * student can forward it) is recorded here because it is the price of the fix:
  *
- * - Up to 120 addresses mailed per class per caller in five minutes, instead of 30. Each address is
+ * - Up to 120 addresses mailed per class per caller in five minutes. Each address is
  *   still bounded by `SIGN_IN_ADDRESS_LIMITS` (3 per caller, 12 overall), which this does not touch,
  *   so no one inbox gets more than it did. What grows is the number of strangers one holder can
  *   reach, and the number of never-signed-in student accounts they can leave on that class's roster
  *   — the invite path is the one that creates accounts (#205).
- * - Rotating the invite ends it: the old token stops resolving, and its holder is back on 30.
- * - Supabase's own Auth email limit (docs/05 §7.7 step 4, 150 an hour in production) is shared by
+ * - Rotating the invite ends it: the old token stops resolving, and its holder is back on the plain
+ *   per-IP budget.
+ * - Supabase's own Auth email limit (docs/05 §7.7 step 4, 300 an hour in production) is shared by
  *   the whole deployment and is the next ceiling a large class meets; it is what really bounds a
- *   holder spraying addresses, and a class of sixty spends a good part of it at once.
+ *   holder spraying addresses, and a class of a hundred spends a third of it at once.
  * - The lockout of #159 keeps its shape: one address's ceiling is still 12 and one caller's share
  *   of it is still 3, so holding any one address down still takes four callers. What changes is
- *   breadth. A caller's 3 per address against 30 in total let four callers hold about ten
- *   addresses down at once; against 120 it is about forty — but only while they hold a live invite,
- *   and only until it is rotated. A caller with no valid token is exactly where #159 left them.
+ *   breadth. A caller's 3 per address against its total budget is how many addresses four callers
+ *   can hold down at once: about ten against the old 30, about forty against 120 here, and, since
+ *   #409 raised the plain budget to 150 for a computer lab, about fifty without any invite at all.
+ *   An account with a password (#353) still has a way in that this counter does not touch.
  */
 export const SIGN_IN_INVITE_LIMIT = {
   attempts: 120,

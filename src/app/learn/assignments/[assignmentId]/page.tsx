@@ -5,7 +5,6 @@ import { AttemptPlayer } from "@/components/assignments/AttemptPlayer";
 import { AttemptSummary } from "@/components/assignments/AttemptSummary";
 import { ClassTime } from "@/components/assignments/ClassTime";
 import { StartAttemptForm } from "@/components/assignments/StartAttemptForm";
-import { RecordLayout } from "@/components/ehr/RecordLayout";
 import { loadAttemptPage, type AssignmentHeader } from "@/lib/assignments/attemptPage";
 import { attemptPageStore } from "@/lib/assignments/attemptStore";
 import { attemptsLabel, studentResultsPath } from "@/lib/assignments/assignments";
@@ -65,7 +64,7 @@ export default async function StudentAssignmentPage({
   if (view.kind === "failed") {
     return (
       <p role="alert" className="text-ink-2">
-        This assignment could not be loaded. Reload the page to try again.
+        This assignment did not load. Reload the page.
       </p>
     );
   }
@@ -78,15 +77,17 @@ export default async function StudentAssignmentPage({
         attemptId={view.attempt.id}
         attemptNumber={view.attempt.number}
         items={view.items}
+        total={view.total}
+        // #335: one chart per reached step, never the whole record; the player shows the one for
+        // the step on screen.
+        {...(view.records === null ? {} : { records: view.records })}
         submit={submitAssignmentAttempt.bind(null, view.assignment.id)}
       />
     );
     return (
       <>
         <Header assignment={view.assignment} timeZone={timeZone} />
-        <div className="mt-6">
-          {view.record ? <RecordLayout record={view.record}>{player}</RecordLayout> : player}
-        </div>
+        <div className="mt-6">{player}</div>
       </>
     );
   }
@@ -112,7 +113,7 @@ export default async function StudentAssignmentPage({
         </>
       ) : submitted ? (
         <p role="status" data-testid="submitted-notice" className="measure mt-6 text-ink-1">
-          Submitted. Your results will be shown when the assignment closes.
+          Submitted. Results show when the assignment closes.
         </p>
       ) : null}
       <AttemptSummary attempts={view.attempts} closed={view.closed} />

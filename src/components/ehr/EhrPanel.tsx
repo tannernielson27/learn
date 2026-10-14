@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useMediaQuery } from "@/components/ui/useMediaQuery";
-import type { EhrRecord } from "@/lib/ngn/schemas";
-import { EhrContent, sectionOf, tabsAtTime } from "./EhrContent";
+import type { EhrRecordView } from "@/lib/ngn/chartReveal";
+import { EhrContent, openTabsAtTime, sectionOf } from "./EhrContent";
 import { EhrSheet } from "./EhrSheet";
 
 const LABEL = "Patient record";
@@ -13,9 +13,16 @@ const DRAWER_QUERY = "(min-width: 768px)";
 const PANE_QUERY = "(min-width: 1024px)";
 
 export interface EhrPanelProps {
-  record: EhrRecord;
+  /**
+   * A student's view of the record at the step on screen (#335), or the whole record for an
+   * author or an instructor. It may change under the panel: a live room moves on, a student goes
+   * back a step. The tab and the time being read are kept when the new chart still has them.
+   */
+  record: EhrRecordView;
   /** Section to open by id, so an item can point the reader at the chart it needs. */
   openTabId?: string;
+  /** A line under the patient's name, for an instructor's "full record" marker. */
+  note?: string;
   /** Extra classes for the desktop pane. */
   className?: string;
 }
@@ -29,18 +36,26 @@ export interface EhrPanelProps {
  * tables use. The open tab lives here, so the reader never loses their place when the layout
  * changes underneath them.
  */
-export function EhrPanel({ record, openTabId, className = "" }: EhrPanelProps) {
+export function EhrPanel({ record, openTabId, note, className = "" }: EhrPanelProps) {
   // Pointing at a section charted once also sets the clock, since it is only there at its own
   // time. A section charted at every time gives no reason to move it.
   const timeOf = (tabId: string | undefined) =>
     record.tabs.find((tab) => tab.id === tabId)?.timePointId;
 
-  const firstTime = record.timePoints[0]!.id;
-  const [selectedTimeId, setSelectedTimeId] = useState(() => timeOf(openTabId) ?? firstTime);
+  const firstTime = record.timePoints[0]?.id ?? "";
+  const [chosenTimeId, setSelectedTimeId] = useState(() => timeOf(openTabId) ?? firstTime);
   const [selectedTabId, setSelectedTabId] = useState(
     () =>
-      openTabId ?? tabsAtTime(record, timeOf(openTabId) ?? firstTime)[0]?.id ?? record.tabs[0]!.id,
+      openTabId ??
+      openTabsAtTime(record, timeOf(openTabId) ?? firstTime)[0]?.id ??
+      record.tabs[0]?.id ??
+      "",
   );
+  // A time the chart no longer has (a student gone back to a step before it, #335) reads as the
+  // first time, without forgetting the one chosen: going forward again lands back on it.
+  const selectedTimeId = record.timePoints.some((point) => point.id === chosenTimeId)
+    ? chosenTimeId
+    : firstTime;
   const [pointedAt, setPointedAt] = useState(openTabId);
   const [open, setOpen] = useState(false);
   const chip = useRef<HTMLButtonElement>(null);
@@ -74,7 +89,7 @@ export function EhrPanel({ record, openTabId, className = "" }: EhrPanelProps) {
   const selectTime = (timeId: string) => {
     setSelectedTimeId(timeId);
     const open = record.tabs.find((tab) => tab.id === selectedTabId);
-    const available = tabsAtTime(record, timeId);
+    const available = openTabsAtTime(record, timeId);
     const sameSection = open && available.find((tab) => sectionOf(tab) === sectionOf(open));
     setSelectedTabId((sameSection ?? available[0])?.id ?? selectedTabId);
   };
@@ -82,6 +97,7 @@ export function EhrPanel({ record, openTabId, className = "" }: EhrPanelProps) {
   const content = (
     <EhrContent
       record={record}
+      note={note}
       selectedTabId={selectedTabId}
       onSelectTab={setSelectedTabId}
       selectedTimeId={selectedTimeId}

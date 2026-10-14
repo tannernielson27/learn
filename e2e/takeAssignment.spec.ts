@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { actionBytes, bytesOf, expectKeyless } from "./bytes";
 import { latestSignInLink, openSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #208: a student takes an assignment on a phone: answers save as they go, come back after a
 // reload, and submit; and no key, rationale or score reaches the phone before the close. Needs the
@@ -74,10 +75,14 @@ test("a student answers on a phone, reloads to find the answers, and submits", a
   const { viewport, isMobile, hasTouch } = testInfo.project.use;
   const phone = await browser.newContext({ viewport, isMobile, hasTouch, reducedMotion: "reduce" });
   const student = await phone.newPage();
+  await skipWelcomes(student);
   await student.goto(invite);
   const email = `student-take-${project}-${Date.now()}@example.test`;
   const since = new Date();
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await student
+    .getByRole("button", { name: "Join with an emailed link instead", exact: true })
+    .click();
   await student.getByRole("button", { name: "Email me a link to join", exact: true }).click();
   await openSignInLink(student, await latestSignInLink(request, email, since));
   await expect(student).toHaveURL(/\/learn$/);
@@ -113,7 +118,7 @@ test("a student answers on a phone, reloads to find the answers, and submits", a
   const status = student.getByTestId("save-status");
   await student.getByRole("radio", { name: /Auscultate the lungs/ }).click();
   await expect(status).toHaveText("Saved", { timeout: 15_000 });
-  await student.getByRole("button", { name: "Next item", exact: true }).click();
+  await student.getByRole("button", { name: "Next", exact: true }).click();
   await student.getByRole("checkbox", { name: /Respiratory rate 28 breaths/ }).click();
   await expect(status).toHaveText("Saved", { timeout: 15_000 });
   await expect(student.getByTestId("answered-count")).toHaveText(/^2 of \d+ answered$/);
@@ -131,7 +136,7 @@ test("a student answers on a phone, reloads to find the answers, and submits", a
   // Close the tab and come back: both answers are there.
   await student.reload();
   await expect(student.getByRole("radio", { name: /Auscultate the lungs/ })).toBeChecked();
-  await student.getByRole("button", { name: "Item 2, answered", exact: true }).click();
+  await student.getByRole("button", { name: "Question 2, answered", exact: true }).click();
   await expect(
     student.getByRole("checkbox", { name: /Respiratory rate 28 breaths/ }),
   ).toBeChecked();
@@ -166,14 +171,16 @@ test("a student answers on a phone, reloads to find the answers, and submits", a
   await expect(
     student
       .getByRole("button", { name: "Patient record", exact: true })
-      .or(student.getByRole("tablist", { name: "Patient record sections", exact: true }))
+      .or(student.getByRole("tablist", { name: "Patient record tabs", exact: true }))
       .first(),
   ).toBeVisible();
   await expectNoAxeViolations(student);
   await student.screenshot({ path: shot("assignment-case-study"), fullPage: true });
   expect(await bytesOf(page.context(), `/author/items/${CASE_STEP_6}`)).toContain(STEP_6_RATIONALE);
   const caseBytes = await bytesOf(phone, `/learn/assignments/${caseAssignment}`);
-  expect(caseBytes).toContain("cs_hip_6");
+  // #335: an attempt with nothing saved has reached step 1, and is sent step 1 and no later step.
+  expect(caseBytes).toContain("cs_hip_1");
+  expect(caseBytes).not.toContain("cs_hip_6");
   expectKeyless(caseBytes, [STEP_6_RATIONALE]);
 
   await phone.close();

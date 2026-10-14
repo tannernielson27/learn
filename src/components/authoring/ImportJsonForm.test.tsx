@@ -8,7 +8,7 @@ import { ImportJsonForm } from "./ImportJsonForm";
 const CARDIAC = "00000000-0000-4000-8000-000000000031";
 const folders: FolderRow[] = [{ id: CARDIAC, parentId: null, name: "Cardiac" }];
 
-const DONE: FileImportResult = { status: "done", message: "Imported 40 items as drafts." };
+const DONE: FileImportResult = { status: "done", message: "Imported 40 questions as drafts." };
 
 function setup(
   results: FileImportResult | ((data: FormData) => Promise<FileImportResult>),
@@ -36,7 +36,7 @@ describe("ImportJsonForm", () => {
       within(folder)
         .getAllByRole("option")
         .map((option) => option.textContent),
-    ).toEqual(["Unfiled", "Cardiac"]);
+    ).toEqual(["Not in a folder", "Cardiac"]);
     expect(folder).toHaveValue("unfiled");
   });
 
@@ -65,7 +65,7 @@ describe("ImportJsonForm", () => {
   it("reports each file: a refused one names its problems and never stops the others", async () => {
     const { action, user } = setup(async (data) =>
       (data.get("file") as File).name === "broken.json"
-        ? { status: "error", errors: ['Item 7: "stem.value" is not valid.'] }
+        ? { status: "error", errors: ['Question 7: "stem.value" is not valid.'] }
         : DONE,
     );
     await user.upload(screen.getByLabelText("JSON files"), [
@@ -81,12 +81,12 @@ describe("ImportJsonForm", () => {
         .getAllByRole("listitem")
         .map((item) => item.textContent),
     ).toEqual([
-      "one.json: Imported 40 items as drafts.",
-      "three.json: Imported 40 items as drafts.",
+      "one.json: Imported 40 questions as drafts.",
+      "three.json: Imported 40 questions as drafts.",
     ]);
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent("broken.json: Nothing was imported.");
-    expect(alert).toHaveTextContent('Item 7: "stem.value" is not valid.');
+    expect(alert).toHaveTextContent('Question 7: "stem.value" is not valid.');
     expect(screen.getByText("Imported 2 of 3 files. 1 was refused.")).toBeInTheDocument();
     expect(action).toHaveBeenCalledTimes(3);
   });
@@ -118,19 +118,19 @@ describe("ImportJsonForm", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("could not be sent");
     expect(action).toHaveBeenCalledTimes(2);
     expect(screen.getByRole("list", { name: "Imported files" })).toHaveTextContent(
-      "b.json: Imported 40 items as drafts.",
+      "b.json: Imported 40 questions as drafts.",
     );
   });
 
   it("sends what was pasted, and clears it once it has been imported", async () => {
-    const { action, user } = setup({ status: "done", message: "Imported 1 item as a draft." });
+    const { action, user } = setup({ status: "done", message: "Imported 1 question as a draft." });
     const box = screen.getByRole("textbox", { name: "Or paste JSON" });
     await user.click(box);
     await user.paste('{"format":"learn.v1","items":[]}');
     await user.click(screen.getByRole("button", { name: "Import" }));
 
     expect(await screen.findByRole("list", { name: "Imported files" })).toHaveTextContent(
-      "Pasted JSON: Imported 1 item as a draft.",
+      "Pasted JSON: Imported 1 question as a draft.",
     );
     const sent = action.mock.calls[0]![0];
     expect(sent.get("json")).toBe('{"format":"learn.v1","items":[]}');

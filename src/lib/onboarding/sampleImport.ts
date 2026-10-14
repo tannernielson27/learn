@@ -7,7 +7,7 @@ import { SAMPLE_BANK_NAME, sampleImport } from "./sampleBank";
 type Client = SupabaseClient<Database>;
 
 export const SAMPLE_IMPORT_ERRORS = {
-  failed: "The sample bank could not be imported. Try again.",
+  failed: "The sample quiz could not be imported. Try again.",
 } as const;
 
 export type SampleImportResult =

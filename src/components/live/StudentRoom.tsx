@@ -3,6 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Countdown } from "@/components/live/Countdown";
+import { LIVE_BUSY_LABEL, liveSubmitFailure } from "@/components/live/liveSubmit";
+import { useShowLiveRecord } from "@/components/live/LiveRecord";
+import { createPresentCount, RoomCount } from "@/components/live/RoomCount";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 // Module by module rather than through `@/lib/live` and `@/lib/liveSupabase`: those barrels
 // value-export the in-memory room and the host console, both of which hold items with their keys
@@ -43,10 +46,9 @@ export interface StudentRoomProps {
   connect?: () => SupabaseParticipant;
 }
 
-const SENT = "Answer sent. Your instructor will show the answer at the front.";
-const LATE =
-  "Your answer was not taken: the time for this item ran out. Your instructor will move the room on.";
-const NOT_ANSWERED = "You did not answer this item. Here is the answer your instructor is showing.";
+const SENT = "Answer sent.";
+const LATE = "Your answer was not taken.";
+const NOT_ANSWERED = "You did not answer this question.";
 
 /**
  * A student's phone during a live session (#132, #133).
@@ -99,11 +101,13 @@ export function StudentRoom({
   connect,
 }: StudentRoomProps) {
   const router = useRouter();
+  const showRecord = useShowLiveRecord();
   const [state, setState] = useState<LiveSessionState>(initial);
   const [item, setItem] = useState<ParticipantItem | null>(null);
   const [answered, setAnswered] = useState<AnsweredPayload | null>(null);
   const [revealed, setRevealed] = useState<ItemReveal | null>(null);
-  const [present, setPresent] = useState(1);
+  /** Not state: a join or a leave elsewhere in the room must not render this screen (#408). */
+  const [present] = useState(createPresentCount);
   const [connection, setConnection] = useState<RoomConnection>("connecting");
   /**
    * What this phone has selected but not yet sent.
@@ -182,6 +186,8 @@ export function StudentRoom({
 
     const offView = joined.onStudentView((view: StudentView) => {
       if (!watching) return;
+      // #335: the chart at the room's step, as the server cut it, for the layout around this room.
+      if (view.record !== undefined) showRecord?.(view.record);
       setState(view.state);
       setItem(view.item);
       setAnswered(view.answered);
@@ -191,7 +197,7 @@ export function StudentRoom({
       setConnection("live");
     });
     const offPresence = joined.onPresence((roster) => {
-      if (watching) setPresent(roster.length);
+      if (watching) present.set(roster.length);
     });
     const offConnection = joined.onConnection((status, rejoined) => {
       if (!watching) return;
@@ -222,7 +228,7 @@ export function StudentRoom({
       // page into an unhandled rejection in a student's browser.
       void joined.leave().catch(() => {});
     };
-  }, [dial, router, me]);
+  }, [dial, router, me, present, showRecord]);
 
   /**
    * Whether the item is on this phone at all.
@@ -275,7 +281,8 @@ export function StudentRoom({
   const send: SubmitHandler = async (response: AnyResponse) => {
     const joined = room.current;
     const current = item;
-    if (joined === null || current === null) throw new Error("This phone is not in a room.");
+    if (joined === null || current === null)
+      throw new Error("This phone is not in a live session.");
     try {
       const ack = await joined.submit(current.id, response);
       setAnswered({ itemId: current.id, submittedAt: ack.submittedAt, response });
@@ -299,7 +306,6 @@ export function StudentRoom({
 
   return (
     <>
-      <p className="eyebrow mb-2">Live session</p>
       <h1 className="font-read text-3xl break-words text-ink-1">{title}</h1>
       <p className="mt-4 text-sm text-ink-2">
         Joined as <span className="font-medium break-words text-ink-1">{displayName}</span>
@@ -307,7 +313,7 @@ export function StudentRoom({
 
       {connection === "reconnecting" ? (
         <p role="status" className="mt-4 text-sm text-ink-2">
-          Reconnecting. Stay on this page — your place is kept.
+          Reconnecting. Stay on this page.
         </p>
       ) : null}
 
@@ -356,6 +362,8 @@ export function StudentRoom({
             onResponseChange={(response) => setDraft({ itemId: item.id, response })}
             progress={progress}
             submit={send}
+            busyLabel={LIVE_BUSY_LABEL}
+            failureMessage={liveSubmitFailure}
           />
         </div>
       ) : (
@@ -367,12 +375,9 @@ export function StudentRoom({
             <h2 id="waiting-heading" className="font-read text-2xl text-ink-1">
               {copy.headline}
             </h2>
-            <p className="measure mt-2 text-ink-2">{copy.detail}</p>
           </section>
 
-          <p data-testid="room-count" className="tabular mt-8 text-sm text-ink-2">
-            {present} in the room
-          </p>
+          <RoomCount present={present} />
         </>
       )}
     </>
@@ -441,5 +446,5 @@ export function RevealedItem({
 
 /** A player opened on an answer already given has nothing to send. */
 export const refuseSecondAnswer: SubmitHandler = async () => {
-  throw new Error("This item has already been answered.");
+  throw new Error("This question has already been answered.");
 };

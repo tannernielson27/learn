@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FIXTURES, sampleCaseStudy } from "@/lib/ngn/fixtures";
+import { stagedCaseStudy, stagedEhr } from "@/lib/ngn/fixtures/chart-reveal";
 import { sampleTrendItem } from "@/lib/ngn/fixtures/trend";
 import { ITEM_TYPES } from "@/lib/ngn/labels";
 import type { Item } from "@/lib/ngn/schemas";
@@ -83,7 +84,7 @@ describe("export then import", () => {
         items: [{ ...FIXTURES.multiple_choice.canonical, tags }],
       }),
     );
-    expect(parsed).toEqual({ ok: false, errors: ['Item 1: "tags" is not valid.'] });
+    expect(parsed).toEqual({ ok: false, errors: ['Question 1: "tags" is not valid.'] });
   });
 
   it("a case study survives with its record and six steps, in order", () => {
@@ -101,6 +102,56 @@ describe("export then import", () => {
       const back = storedAs(row);
       expect(back.ok && back.value).toEqual({ ...original.items[index], id: NEW_ID, version: 1 });
     });
+  });
+
+  it("a case study keeps its chart's fromStep and stepAccess (#334)", () => {
+    const staged = validateCaseStudy(stagedCaseStudy);
+    if (!staged.ok) throw new Error("the staged case study must be valid");
+    const parsed = parseImport(JSON.stringify(caseStudyEnvelope(staged.value)));
+    if (!parsed.ok || parsed.kind !== "caseStudy") throw new Error("the export should import");
+    expect(parsed.caseStudy.ehr).toEqual(stagedEhr);
+    expect(parsed.caseStudy.ehr.timePoints.map((point) => point.fromStep)).toEqual([
+      undefined,
+      undefined,
+      3,
+      4,
+      6,
+    ]);
+    expect(parsed.caseStudy.ehr.tabs[1]?.blocks.map((block) => block.fromStep)).toEqual([
+      undefined,
+      undefined,
+      3,
+      4,
+      6,
+    ]);
+    expect(parsed.caseStudy.ehr.tabs[3]?.stepAccess).toEqual([
+      "hidden",
+      "locked",
+      "open",
+      "open",
+      "open",
+      "open",
+    ]);
+    // And what the import writes is that same record, fields and all.
+    expect(importRowsFor(parsed).caseStudy?.ehr).toEqual(stagedEhr);
+  });
+
+  it("an export written before those fields existed still imports, with neither added", () => {
+    const old = JSON.stringify({ format: "learn.v1", caseStudy: sampleCaseStudy });
+    expect(old).not.toMatch(/fromStep|stepAccess/);
+    const parsed = parseImport(old);
+    if (!parsed.ok || parsed.kind !== "caseStudy") throw new Error("the old export should import");
+    expect(parsed.caseStudy.ehr).toEqual(sampleCaseStudy.ehr);
+    expect(JSON.stringify(importRowsFor(parsed))).not.toMatch(/fromStep|stepAccess/);
+  });
+
+  it("refuses a standalone item whose record is staged, naming the field", () => {
+    const staged = { ...sampleTrendItem, ehr: stagedEhr };
+    const parsed = parseImport(JSON.stringify({ format: "learn.v1", items: [staged] }));
+    expect(parsed.ok).toBe(false);
+    expect(!parsed.ok && parsed.errors[0]).toBe(
+      'Question 1: "ehr.timePoints.2.fromStep" is not valid.',
+    );
   });
 });
 
@@ -130,7 +181,7 @@ describe("refusing an import", () => {
   it("refuses an export holding both items and a case study, or neither", () => {
     const expected = {
       ok: false,
-      errors: ["A LeaRN export holds either items or one case study."],
+      errors: ["A LeaRN export holds either questions or one case study."],
     };
     expect(parseImport(JSON.stringify({ format: "learn.v1" }))).toEqual(expected);
     expect(
@@ -141,7 +192,7 @@ describe("refusing an import", () => {
   it("refuses an empty item list, or more items than one import takes", () => {
     const expected = {
       ok: false,
-      errors: ["Include between 1 and 50 items. Split a larger set into several files."],
+      errors: ["Include between 1 and 50 questions. Split a larger set into several files."],
     };
     expect(parseImport(JSON.stringify({ format: "learn.v1", items: [] }))).toEqual(expected);
     const many = Array.from({ length: 51 }, () => good());
@@ -153,8 +204,8 @@ describe("refusing an import", () => {
     const result = parseImport(JSON.stringify({ format: "learn.v1", items: [good(), bad] }));
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.errors).toContain('Item 2: "stem.value" is not valid.');
-    expect(result.errors.some((error) => error.startsWith("Item 1"))).toBe(false);
+    expect(result.errors).toContain('Question 2: "stem.value" is not valid.');
+    expect(result.errors.some((error) => error.startsWith("Question 1"))).toBe(false);
   });
 
   it("names a case study step by its number", () => {
@@ -186,10 +237,10 @@ describe("importSummary", () => {
   it("says what was imported, always as drafts", () => {
     const a = item(FIXTURES.multiple_choice.canonical);
     expect(importSummary({ ok: true, kind: "items", items: [a] })).toBe(
-      "Imported 1 item as a draft.",
+      "Imported 1 question as a draft.",
     );
     expect(importSummary({ ok: true, kind: "items", items: [a, a] })).toBe(
-      "Imported 2 items as drafts.",
+      "Imported 2 questions as drafts.",
     );
     const caseStudy = sample();
     expect(importSummary({ ok: true, kind: "caseStudy", caseStudy })).toBe(

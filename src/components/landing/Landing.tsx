@@ -13,8 +13,8 @@ const SAMPLE = {
   height: 634,
   alt:
     "A sample case study step. On the left, the patient record for a 74-year-old woman one day " +
-    "after hip surgery. On the right, step 1 of 6, Recognize Cues: a highlight item asking which " +
-    "findings in the 1400 nurses' note need immediate follow-up.",
+    "after hip surgery. On the right, step 1 of 6, Recognize Cues: a highlight question asking " +
+    "which findings in the 1400 nurses' note need immediate follow-up.",
 } as const;
 
 const PRIMARY =
@@ -22,31 +22,53 @@ const PRIMARY =
 const SECONDARY =
   "tap-target inline-flex items-center justify-center rounded-sm border border-line-strong bg-surface-1 px-5 font-medium text-ink-1 transition-colors duration-fast hover:bg-surface-2";
 
+/** One line each (#416). Every claim is something the product does today. */
 const WHAT_IT_DOES = [
   {
-    term: "Exam-faithful items",
+    term: "NCLEX question formats",
     detail:
-      "Every Next Generation NCLEX format, from matrix and drop-down cloze to bowtie and trend, laid out and scored the way the exam does it, with six-step case studies beside a patient record.",
+      "Multiple choice, select all that apply, matrix, drop-down, highlight, drag-and-drop, ordered response and bowtie, with six-step case studies.",
   },
   {
-    term: "Fast authoring",
-    detail:
-      "Write an item in the same layout students will see, check it as you go, and keep it in banks with folders, tags and version history.",
+    term: "Quizzes",
+    detail: "Write questions in the layout students see, and group them into quizzes.",
   },
   {
     term: "Live sessions",
     detail:
-      "Run a class from the front of the room. Students join from their phones with a code, answer, and see the rationale when you reveal it.",
+      "Students join on their phones with a join code and answer in class. No account needed.",
   },
   {
-    term: "Take-home work",
-    detail:
-      "Set assignments with a due time for a class, and share banks for practice with instant feedback.",
+    term: "Assignments and practice",
+    detail: "Assign a quiz with a due time, or share it for practice with instant feedback.",
   },
 ] as const;
 
+const HOW_TO_GET_IN = [
+  { term: "Teachers", detail: "Create an account. You get a workspace of your own." },
+  {
+    term: "Students",
+    detail: "Create an account, then join your class with its invite link or class code.",
+  },
+] as const;
+
+type Row = { term: string; detail: string };
+
+function Rows({ rows }: { rows: readonly Row[] }) {
+  return (
+    <dl className="mt-6 grid gap-x-10 gap-y-6 sm:grid-cols-2">
+      {rows.map(({ term, detail }) => (
+        <div key={term}>
+          <dt className="font-medium text-ink-1">{term}</dt>
+          <dd className="mt-1 max-w-prose leading-relaxed text-ink-2">{detail}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 export interface LandingProps {
-  /** Sign in for a visitor, or the signed-in visitor's own home. */
+  /** Create an account and Sign in for a visitor, or the signed-in visitor's own home. */
   entry: LandingEntry;
 }
 
@@ -62,13 +84,18 @@ export function Landing({ entry }: LandingProps) {
             Live learning for the Next Generation NCLEX.
           </h1>
           <p className="mt-5 max-w-prose text-lg leading-relaxed text-ink-2">
-            Clinical judgment practice that looks and scores like the exam, run live in class or
-            taken home. Built for phones in the lecture hall and laptops at home.
+            Quizzes in every NCLEX question format, scored like the exam. For nursing teachers and
+            their students.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <Link href={entry.href} className={PRIMARY}>
               {entry.label}
             </Link>
+            {entry.also ? (
+              <Link href={entry.also.href} className={SECONDARY}>
+                {entry.also.label}
+              </Link>
+            ) : null}
             <Link href="/join" className={SECONDARY}>
               Join a live session
             </Link>
@@ -88,8 +115,7 @@ export function Landing({ entry }: LandingProps) {
             className="h-auto w-full rounded-md border border-line"
           />
           <figcaption className="mt-3 text-sm text-ink-2">
-            Step 1 of a six-step case study, with the chart beside the question. The patient is
-            fictional.
+            Step 1 of a case study, with the patient record beside the question.
           </figcaption>
         </figure>
       </div>
@@ -98,42 +124,19 @@ export function Landing({ entry }: LandingProps) {
         <h2 id="what-heading" className="text-xl font-semibold text-ink-1">
           What LeaRN does
         </h2>
-        <dl className="mt-6 grid gap-x-10 gap-y-6 sm:grid-cols-2">
-          {WHAT_IT_DOES.map(({ term, detail }) => (
-            <div key={term}>
-              <dt className="font-medium text-ink-1">{term}</dt>
-              <dd className="mt-1 max-w-prose leading-relaxed text-ink-2">{detail}</dd>
-            </div>
-          ))}
-        </dl>
+        <Rows rows={WHAT_IT_DOES} />
       </section>
 
-      <div className="mt-12 grid gap-12 border-t border-line pt-8 sm:grid-cols-2 sm:gap-10">
-        <section aria-labelledby="who-heading">
-          <h2 id="who-heading" className="text-xl font-semibold text-ink-1">
-            Who it is for
-          </h2>
-          <p className="mt-3 max-w-prose leading-relaxed text-ink-2">
-            Nursing instructors who teach toward the NCLEX, and their students. Instructors write
-            and run the items; students answer them in class and practice between classes.
-          </p>
-        </section>
-
-        <section aria-labelledby="access-heading">
-          <h2 id="access-heading" className="text-xl font-semibold text-ink-1">
-            How to get in
-          </h2>
-          <p className="mt-3 max-w-prose leading-relaxed text-ink-2">
-            LeaRN is invite-only. Instructor accounts are set up by the site&apos;s owner; once
-            yours exists, sign in with a link sent to your email. Students arrive through a class
-            invite from their instructor, or join a live session with the code shown in class.
-          </p>
-        </section>
-      </div>
+      <section aria-labelledby="access-heading" className="mt-12 border-t border-line pt-8">
+        <h2 id="access-heading" className="text-xl font-semibold text-ink-1">
+          How to get in
+        </h2>
+        <Rows rows={HOW_TO_GET_IN} />
+      </section>
 
       <div className="mt-16 flex flex-col gap-2 text-sm text-ink-2 sm:flex-row sm:items-center sm:justify-between">
-        <p>Every patient and chart shown in LeaRN is fictional.</p>
-        {/* #269: the instructor and item guides are public. */}
+        <p>Every patient shown in LeaRN is fictional.</p>
+        {/* #269: the teacher and question guides are public. */}
         <nav aria-label="Footer">
           <Link
             href="/help"

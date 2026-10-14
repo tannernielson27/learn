@@ -15,7 +15,7 @@ describe("DemoSignIn", () => {
     expect(screen.getByRole("heading", { name: "Try the demo" })).toBeInTheDocument();
     const button = screen.getByRole("button", { name: "Use the demo account" });
     expect(button).toBeEnabled();
-    expect(button).toHaveAccessibleDescription(/shared instructor account/);
+    expect(button).toHaveAccessibleDescription(/shared teacher account/);
   });
 
   it("sends the next path to the action", async () => {
@@ -33,6 +33,6 @@ describe("DemoSignIn", () => {
     );
     expect(
       screen.getByRole("button", { name: "Use the demo account" }),
-    ).toHaveAccessibleDescription(/^The demo account could not sign in\. Signs you in/);
+    ).toHaveAccessibleDescription(/^The demo account could not sign in\. A shared teacher account/);
   });
 });

@@ -189,4 +189,48 @@
   .motion-enter {
     animation: fade-up var(--duration-base) var(--ease-out-expo) both;
   }
+
+  /* The Dialog primitive (#357) arriving and leaving: a fade and the same short lift, on opacity
+     and transform alone. `display` and `overlay` are in the list only so the dialog stays painted,
+     and in the top layer, until the fade is over; they flip at the end rather than animate. A
+     browser without `@starting-style` or `allow-discrete` shows and hides it at once. */
+  .motion-dialog {
+    opacity: 0;
+    transform: translateY(var(--motion-shift));
+    transition:
+      opacity var(--duration-base) var(--ease-out-expo),
+      transform var(--duration-base) var(--ease-out-expo),
+      display var(--duration-base) allow-discrete,
+      overlay var(--duration-base) allow-discrete;
+  }
+  .motion-dialog[open] {
+    opacity: 1;
+    transform: none;
+  }
+  .motion-dialog::backdrop {
+    opacity: 0;
+    transition:
+      opacity var(--duration-base) var(--ease-out-expo),
+      display var(--duration-base) allow-discrete,
+      overlay var(--duration-base) allow-discrete;
+  }
+  .motion-dialog[open]::backdrop {
+    opacity: 1;
+  }
+  @starting-style {
+    .motion-dialog[open] {
+      opacity: 0;
+      transform: translateY(var(--motion-shift));
+    }
+    .motion-dialog[open]::backdrop {
+      opacity: 0;
+    }
+  }
+  /* Reduced motion: no motion at all here, not the short fade the tokens would leave. */
+  @media (prefers-reduced-motion: reduce) {
+    .motion-dialog,
+    .motion-dialog::backdrop {
+      transition: none;
+    }
+  }
 }

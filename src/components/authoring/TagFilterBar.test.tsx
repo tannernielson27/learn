@@ -29,12 +29,12 @@ describe("TagFilterBar", () => {
     const step = within(
       within(bar).getByRole("group", { name: "Clinical judgment step" }),
     ).getByRole("link");
-    expect(step).toHaveAccessibleName("Step 1: Recognize Cues, 2 items");
+    expect(step).toHaveAccessibleName("Step 1: Recognize Cues, 2 questions");
     expect(step).toHaveAttribute("href", `${base}?step=1`);
 
     const needs = within(bar).getByRole("group", { name: "Client needs" });
     expect(within(needs).getByRole("link")).toHaveAccessibleName(
-      "Physiological Adaptation, 2 items",
+      "Physiological Adaptation, 2 questions",
     );
 
     const topics = within(within(bar).getByRole("group", { name: "Topics" })).getAllByRole("link");
@@ -42,7 +42,7 @@ describe("TagFilterBar", () => {
       `${base}?tag=sepsis`,
       `${base}?tag=renal`,
     ]);
-    expect(topics[1]).toHaveAccessibleName("renal, 1 item");
+    expect(topics[1]).toHaveAccessibleName("renal, 1 question");
     expect(within(bar).queryByRole("link", { name: "Clear filters" })).not.toBeInTheDocument();
   });
 
@@ -52,19 +52,19 @@ describe("TagFilterBar", () => {
       { kind: "folder", id: FOLDER },
     );
     const chosen = within(bar).getByRole("link", {
-      name: "Remove filter Physiological Adaptation, 2 items",
+      name: "Remove filter Physiological Adaptation, 2 questions",
     });
     expect(chosen).toHaveAttribute("href", `${base}?folder=${FOLDER}`);
     expect(chosen).toHaveAttribute("aria-current", "true");
-    expect(within(bar).getByRole("link", { name: "sepsis, 1 item" })).toHaveAttribute(
+    expect(within(bar).getByRole("link", { name: "sepsis, 1 question" })).toHaveAttribute(
       "href",
       `${base}?folder=${FOLDER}&tag=Physiological+Adaptation&tag=sepsis`,
     );
   });
 
-  it("says how many items carry every chosen tag, and clears them in one step", () => {
+  it("says how many questions carry every chosen tag, and clears them in one step", () => {
     const bar = setup({ tags: ["Physiological Adaptation", "sepsis"], step: null });
-    expect(bar).toHaveTextContent("1 item has all of: Physiological Adaptation, sepsis.");
+    expect(bar).toHaveTextContent("1 question has all of: Physiological Adaptation, sepsis.");
     expect(within(bar).getByRole("link", { name: "Clear filters" })).toHaveAttribute("href", base);
   });
 
@@ -86,7 +86,7 @@ describe("TagFilterBar", () => {
     );
     const bar = screen.getByRole("region", { name: "Filter by tag" });
     expect(
-      within(bar).getByRole("link", { name: "Remove filter sepsis, 2 items" }),
+      within(bar).getByRole("link", { name: "Remove filter sepsis, 2 questions" }),
     ).toHaveAttribute("href", `${base}?q=lactate&status=published`);
     expect(within(bar).getByRole("link", { name: "Clear filters" })).toHaveAttribute(
       "href",
@@ -94,9 +94,9 @@ describe("TagFilterBar", () => {
     );
   });
 
-  it("names the step among what the items have", () => {
+  it("names the step among what the questions have", () => {
     const bar = setup({ tags: [], step: 1 });
-    expect(bar).toHaveTextContent("2 items have all of: Step 1: Recognize Cues.");
+    expect(bar).toHaveTextContent("2 questions have all of: Step 1: Recognize Cues.");
   });
 
   it("offers Has warnings with its count, kept in the URL with the tags", () => {
@@ -114,7 +114,7 @@ describe("TagFilterBar", () => {
       />,
     );
     const quality = screen.getByRole("group", { name: "Quality" });
-    expect(within(quality).getByRole("link")).toHaveAccessibleName("Has warnings, 1 item");
+    expect(within(quality).getByRole("link")).toHaveAccessibleName("Has warnings, 1 question");
     expect(within(quality).getByRole("link")).toHaveAttribute(
       "href",
       `${base}?tag=sepsis&warnings=1`,
@@ -133,8 +133,8 @@ describe("TagFilterBar", () => {
       />,
     );
     const bar = screen.getByRole("region", { name: "Filter by tag" });
-    expect(bar).toHaveTextContent("1 item has all of: Has warnings.");
-    const chip = within(bar).getByRole("link", { name: "Remove filter Has warnings, 1 item" });
+    expect(bar).toHaveTextContent("1 question has all of: Has warnings.");
+    const chip = within(bar).getByRole("link", { name: "Remove filter Has warnings, 1 question" });
     expect(chip).toHaveAttribute("href", base);
     expect(chip).toHaveAttribute("aria-current", "true");
   });

@@ -8,7 +8,7 @@ import { ITEM_TYPE_LABELS } from "@/lib/ngn/labels";
 import { toKeylessItem } from "@/lib/ngn/submit";
 import { fromItemRow } from "@/lib/supabase/itemRows";
 
-export const metadata: Metadata = { title: "Play item" };
+export const metadata: Metadata = { title: "Play question" };
 
 const linkClass = "text-accent-ink underline-offset-4 hover:underline";
 
@@ -33,24 +33,24 @@ export default async function PlayItemPage({ params }: PageProps<"/author/items/
     <>
       <p className="mb-2 flex flex-wrap gap-4 text-sm">
         <Link href={`/author/banks/${row.bank_id}`} className={linkClass}>
-          Back to bank
+          Back to quiz
         </Link>
         <Link href={`/author/items/${row.id}`} className={linkClass}>
-          Edit item
+          Edit question
         </Link>
       </p>
       {stored.ok ? (
         <>
           <p className="eyebrow mb-1">{ITEM_TYPE_LABELS[stored.value.type]}</p>
-          <h1 className="mb-6 font-read text-3xl text-ink-1">Play item</h1>
+          <h1 className="mb-6 font-read text-3xl text-ink-1">Play question</h1>
           {/* The only item data that reaches the browser: no key, no rationale (ADR 0003). */}
           <PlayItem itemId={row.id} item={toKeylessItem(stored.value)} />
         </>
       ) : (
         <>
-          <h1 className="mb-2 font-read text-3xl text-ink-1">Play item</h1>
+          <h1 className="mb-2 font-read text-3xl text-ink-1">Play question</h1>
           <p className="text-ink-2">
-            This item has a problem and cannot be played. Open it in the editor to fix it.
+            This question has a problem and cannot be played. Open it in the editor to fix it.
           </p>
         </>
       )}

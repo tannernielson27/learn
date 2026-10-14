@@ -31,7 +31,7 @@ const { stopSharing } = await import("./actions");
 
 const BANK = "00000000-0000-4000-8000-0000000000e0";
 const CLASS = "00000000-0000-4000-8000-0000000000c1";
-const FAILED = { ok: false, message: "Could not stop sharing this bank. Try again." };
+const FAILED = { ok: false, message: "Could not stop sharing this quiz. Try again." };
 
 beforeEach(() => {
   revalidated.mockClear();

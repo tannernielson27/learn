@@ -16,7 +16,9 @@ export const USAGE = `Usage:
 
 Environment (never pass secrets as flags; they end up in shell history):
   GOLIVE_HEALTH_TOKEN       the deployment's CRON_SECRET, to see which variable is missing
-  SUPABASE_ACCESS_TOKEN     a personal access token, to check the hosted Auth URLs and template
+                            and whether the sign-up CAPTCHA has both Turnstile keys
+  SUPABASE_ACCESS_TOKEN     a personal access token, to check the hosted Auth URLs, template,
+                            public sign-up, password length and anonymous sign-ins
 
 Read-only: it runs SELECTs and GETs, never writes, and prints no secret. Docs: docs/05 "Go-live".`;
 

@@ -19,8 +19,6 @@ const FULL_ENV = {
   EMAIL_FROM: "LeaRN <learn@example.test>",
   SITE_URL: "https://learn.example.test",
   CRON_SECRET: TOKEN,
-  SENTRY_DSN: "https://k@o1.ingest.us.sentry.io/1",
-  NEXT_PUBLIC_SENTRY_DSN: "https://k@o1.ingest.us.sentry.io/1",
   VERCEL_GIT_COMMIT_SHA: "0123456789abcdef0123456789abcdef01234567",
 };
 
@@ -28,6 +26,7 @@ function deps(overrides: Partial<HealthDeps> = {}): HealthDeps {
   return {
     env: FULL_ENV,
     supabase: async () => ({ status: "ok", project: "abcdefghijklmnopqrst" }),
+    signUpCaptcha: () => "on",
     ...overrides,
   };
 }
@@ -96,17 +95,48 @@ describe("handleHealth", () => {
   });
 
   it("is not ready when a variable is missing, without saying which", async () => {
-    const response = await handleHealth(get(), deps({ env: { ...FULL_ENV, SENTRY_DSN: "" } }));
+    const response = await handleHealth(get(), deps({ env: { ...FULL_ENV, RESEND_API_KEY: "" } }));
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ready).toBe(false);
-    expect(JSON.stringify(body)).not.toContain("SENTRY");
+    expect(JSON.stringify(body)).not.toContain("RESEND");
+  });
+
+  it("is ready without the Sentry DSNs, which are optional", async () => {
+    expect(FULL_ENV).not.toHaveProperty("SENTRY_DSN");
+    const response = await handleHealth(get(), deps());
+    expect((await response.json()).ready).toBe(true);
   });
 
   it("is not ready while the demo account is on", async () => {
     const env = { ...FULL_ENV, DEMO_ACCOUNT_EMAIL: "d@x.test", DEMO_ACCOUNT_PASSWORD: "pw123456" };
     const body = await (await handleHealth(get(), deps({ env }))).json();
     expect(body.ready).toBe(false);
+  });
+
+  it.each([
+    ["missing", false],
+    ["misconfigured", false],
+    ["on", true],
+    ["skipped", true],
+  ] as const)(
+    "with the sign-up CAPTCHA %s, reports ready as %s and says nothing more to anyone",
+    async (state, ready) => {
+      const response = await handleHealth(get(), deps({ signUpCaptcha: () => state }));
+      const bytes = await response.text();
+      expect(JSON.parse(bytes).ready).toBe(ready);
+      expect(bytes).not.toMatch(/captcha|turnstile/i);
+    },
+  );
+
+  it("tells a caller holding CRON_SECRET how the sign-up CAPTCHA is set up", async () => {
+    for (const state of ["on", "skipped", "missing", "misconfigured"] as const) {
+      const response = await handleHealth(
+        get({ authorization: `Bearer ${TOKEN}` }),
+        deps({ signUpCaptcha: () => state }),
+      );
+      expect((await response.json()).signUpCaptcha).toBe(state);
+    }
   });
 
   it("answers 503 and not ready when Supabase does not answer", async () => {

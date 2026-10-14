@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  AUTH_CHECK_TITLES,
   AUTH_CONFIG_URL,
   allowListMatches,
   authConfigChecks,
@@ -16,6 +17,9 @@ const READY: AuthConfig = {
   uri_allow_list: `${SITE}/**,https://learn-*-team.vercel.app/**,http://localhost:3000/**`,
   mailer_templates_magic_link_content: TEMPLATE,
   mailer_otp_length: 6,
+  disable_signup: true,
+  password_min_length: 8,
+  external_anonymous_users_enabled: false,
 };
 
 const byId = (config: AuthConfig) =>
@@ -49,6 +53,9 @@ describe("authConfigChecks (#307)", () => {
     const lines = byId(READY);
     expect(lines["auth-urls"]!.status).toBe("pass");
     expect(lines["auth-template"]!.status).toBe("pass");
+    expect(lines["auth-signup"]!.status).toBe("pass");
+    expect(lines["auth-password"]!.status).toBe("pass");
+    expect(lines["auth-anonymous"]!.status).toBe("pass");
   });
 
   it("fails a Site URL that is not the site: where Supabase sends a refused redirect", () => {
@@ -85,6 +92,89 @@ describe("authConfigChecks (#307)", () => {
     const lines = byId({});
     expect(lines["auth-urls"]!.status).toBe("fail");
     expect(lines["auth-template"]!.status).toBe("fail");
+    expect(lines["auth-signup"]!.status).toBe("fail");
+    expect(lines["auth-password"]!.status).toBe("fail");
+    expect(lines["auth-anonymous"]!.status).toBe("fail");
+  });
+});
+
+describe("authConfigChecks: public sign-up and the password length (#359)", () => {
+  it("prints the five lines in a fixed order, matching AUTH_CHECK_TITLES", () => {
+    const lines = authConfigChecks(READY, SITE);
+    expect(lines.map((line) => line.id)).toEqual([
+      "auth-urls",
+      "auth-template",
+      "auth-signup",
+      "auth-password",
+      "auth-anonymous",
+    ]);
+    expect(AUTH_CHECK_TITLES.map(({ id, title }) => ({ id, title }))).toEqual(
+      lines.map(({ id, title }) => ({ id, title })),
+    );
+  });
+
+  it("fails while Supabase's own sign-up endpoint is open, and says where to close it", () => {
+    const open = byId({ ...READY, disable_signup: false })["auth-signup"]!;
+    expect(open.status).toBe("fail");
+    expect(open.detail).toContain("Allow new users to sign up");
+    expect(open.detail).toContain("§7.12 step 3");
+  });
+
+  it.each([undefined, null, "true", 1])(
+    "fails a disable_signup of %j rather than reading it as closed",
+    (value) => {
+      expect(byId({ ...READY, disable_signup: value })["auth-signup"]!.status).toBe("fail");
+    },
+  );
+
+  it.each([
+    [8, "pass"],
+    [12, "pass"],
+    [7, "fail"],
+    [6, "fail"],
+    [0, "fail"],
+    [8.5, "fail"],
+    ["8", "fail"],
+    [undefined, "fail"],
+  ])("judges a minimum password length of %j as %s", (value, expected) => {
+    const result = byId({ ...READY, password_min_length: value })["auth-password"]!;
+    expect(result.status).toBe(expected);
+    if (expected === "fail") expect(result.detail).toContain("§7.12 step 4");
+  });
+
+  it("names the length it found", () => {
+    expect(byId({ ...READY, password_min_length: 6 })["auth-password"]!.detail).toContain("is 6");
+    expect(byId({ ...READY, password_min_length: 10 })["auth-password"]!.detail).toContain("10");
+  });
+});
+
+describe("authConfigChecks: anonymous sign-ins (#359)", () => {
+  it("passes while anonymous sign-ins are off", () => {
+    expect(byId(READY)["auth-anonymous"]).toMatchObject({
+      status: "pass",
+      title: "Supabase anonymous sign-ins are off",
+    });
+  });
+
+  it("fails while they are on, and says where to turn them off", () => {
+    const on = byId({ ...READY, external_anonymous_users_enabled: true })["auth-anonymous"]!;
+    expect(on.status).toBe("fail");
+    expect(on.detail).toContain("Allow anonymous sign-ins");
+    expect(on.detail).toContain("§7.12 step 3");
+  });
+
+  it.each([undefined, null, "false", 0])(
+    "fails an external_anonymous_users_enabled of %j rather than reading it as off",
+    (value) => {
+      const result = byId({ ...READY, external_anonymous_users_enabled: value })["auth-anonymous"]!;
+      expect(result.status).toBe("fail");
+    },
+  );
+
+  it("does not change the lines beside it", () => {
+    const lines = byId({ ...READY, external_anonymous_users_enabled: true });
+    expect(lines["auth-signup"]!.status).toBe("pass");
+    expect(lines["auth-password"]!.status).toBe("pass");
   });
 });
 

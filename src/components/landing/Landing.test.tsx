@@ -2,7 +2,12 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { Landing } from "./Landing";
 
-const SIGN_IN = { href: "/sign-in", label: "Sign in" };
+// What `landingEntry` gives a visitor (#366). The name is kept from when Sign in came first.
+const SIGN_IN = {
+  href: "/sign-up",
+  label: "Create an account",
+  also: { href: "/sign-in", label: "Sign in" },
+};
 
 describe("Landing (#264)", () => {
   // #269: the help pages are public, so the front page's footer points at them.
@@ -19,41 +24,60 @@ describe("Landing (#264)", () => {
     expect(headings[0]).toHaveTextContent("Live learning for the Next Generation NCLEX");
   });
 
-  it("offers Sign in and Join a live session, and nothing to sign up with", () => {
+  it("offers an account first, then Sign in and Join a live session, and no form or pricing", () => {
     render(<Landing entry={SIGN_IN} />);
-    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/sign-in");
-    expect(screen.getByRole("link", { name: "Join a live session" })).toHaveAttribute(
-      "href",
-      "/join",
-    );
-    expect(screen.queryByRole("link", { name: /sign up|register|pricing/i })).toBeNull();
+    const actions = screen.getAllByRole("link").slice(0, 3);
+    expect(actions.map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
+      ["Create an account", "/sign-up"],
+      ["Sign in", "/sign-in"],
+      ["Join a live session", "/join"],
+    ]);
+    expect(screen.queryByRole("link", { name: /pricing|contact/i })).toBeNull();
     expect(screen.queryByRole("textbox")).toBeNull();
     expect(screen.queryByRole("form")).toBeNull();
     expect(document.querySelector("form")).toBeNull();
   });
 
-  it("explains that accounts come from the owner and students come through a class invite", () => {
+  it("says how teachers and students each get in, one line each", () => {
     render(<Landing entry={SIGN_IN} />);
     const access = screen.getByRole("region", { name: "How to get in" });
-    expect(access).toHaveTextContent(/instructor accounts are set up by the site's owner/i);
-    expect(access).toHaveTextContent(/class invite/i);
+    expect(within(access).getByText("Teachers").nextElementSibling).toHaveTextContent(
+      "Create an account. You get a workspace of your own.",
+    );
+    expect(within(access).getByText("Students").nextElementSibling).toHaveTextContent(
+      /join your class with its invite link or class code/,
+    );
+    expect(access).not.toHaveTextContent(/invite-only|by invitation|site's owner/i);
   });
 
   it("names who it is for and what it does", () => {
     render(<Landing entry={SIGN_IN} />);
     const what = screen.getByRole("region", { name: "What LeaRN does" });
-    for (const phrase of [/exam-faithful/i, /authoring/i, /live sessions/i, /take-home/i]) {
+    for (const phrase of [
+      /nclex question formats/i,
+      /quizzes/i,
+      /live sessions/i,
+      /assignments/i,
+    ]) {
       expect(what).toHaveTextContent(phrase);
     }
-    expect(screen.getByRole("region", { name: "Who it is for" })).toHaveTextContent(
-      /nursing instructors/i,
-    );
+    expect(what).toHaveTextContent(/join code.*no account needed/i);
+    expect(screen.getByText(/for nursing teachers and their students/i)).toBeInTheDocument();
+  });
+
+  // #416: the page says each thing once.
+  it("has two sections under the headline and no third", () => {
+    render(<Landing entry={SIGN_IN} />);
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
+      "What LeaRN does",
+      "How to get in",
+    ]);
   });
 
   it("swaps Sign in for the signed-in visitor's own home", () => {
-    render(<Landing entry={{ href: "/author", label: "Go to your item banks" }} />);
+    render(<Landing entry={{ href: "/author", label: "Go to your quizzes" }} />);
     expect(screen.queryByRole("link", { name: "Sign in" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Go to your item banks" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Go to your quizzes" })).toHaveAttribute(
       "href",
       "/author",
     );

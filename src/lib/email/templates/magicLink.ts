@@ -34,14 +34,12 @@ export function magicLinkEmail(
   return {
     title: MAGIC_LINK_SUBJECT,
     heading: "Sign in to LeaRN",
-    paragraphs: [
-      "Use the button below to sign in. It takes you straight to your classes, whether you teach them or are joining one.",
-    ],
+    paragraphs: ["Use the button below to sign in."],
     action: { label: "Sign in", href: link, text: linkText },
     code: { label: "Or enter this code on the page where you asked to sign in:", value: code },
     notes: [
-      "The link and the code work once and expire in an hour. The link signs in whichever device opens it, such as your phone in class; the code signs in the device you type it on. If they have expired, ask for a new email on the sign-in page.",
-      "If you did not ask to sign in, you can ignore this email. Nobody can sign in without the link or the code.",
+      "The link and the code work once and expire in an hour. The link signs in the device that opens it; the code signs in the device you type it on. After that, ask for a new email on the sign-in page.",
+      "If you did not ask to sign in, ignore this email. Nobody can sign in without the link or the code.",
     ],
     footer:
       "Sent by LeaRN, an NCLEX practice app, because someone entered this address on its sign-in page.",

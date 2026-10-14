@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 let claims: Record<string, unknown> | null;
-let profile: { org_id: string | null; role: string | null } | null;
+let profile: { org_id: string | null; role: string | null; display_name?: string | null } | null;
 
 const client = {
   auth: { getClaims: async () => ({ data: claims ? { claims } : null }) },
@@ -46,6 +46,15 @@ describe("readViewer", () => {
     });
   });
 
+  it("reads the account's name, or none (#358)", async () => {
+    profile = { org_id: ORG, role: "student", display_name: "Ana Reyes" };
+    expect(await readViewer()).toMatchObject({ status: "signed_in", displayName: "Ana Reyes" });
+    profile = { org_id: ORG, role: "student", display_name: null };
+    expect(await readViewer()).toMatchObject({ status: "signed_in", displayName: null });
+    profile = null;
+    expect(await readViewer()).toMatchObject({ status: "signed_in", displayName: null });
+  });
+
   it("reads no role as no role", async () => {
     profile = { org_id: null, role: null };
     expect(await readViewer()).toMatchObject({ status: "signed_in", role: null });
@@ -70,8 +79,8 @@ describe("requireStudent", () => {
     await expect(requireStudent()).rejects.toThrow("redirect:/author");
   });
 
-  it("sends an account with no role to No access yet", async () => {
+  it("sends an account with no role to the welcome page (#362)", async () => {
     profile = { org_id: null, role: null };
-    await expect(requireStudent()).rejects.toThrow("redirect:/author/no-access");
+    await expect(requireStudent()).rejects.toThrow("redirect:/welcome");
   });
 });

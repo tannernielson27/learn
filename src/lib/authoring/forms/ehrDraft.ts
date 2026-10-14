@@ -1,19 +1,24 @@
 import { z } from "zod";
-import { ehrTabKindSchema, idSchema } from "@/lib/ngn/schemas";
+import { cjmmStepSchema, ehrTabKindSchema, idSchema, stepAccessSchema } from "@/lib/ngn/schemas";
 import { DRAFT_ERROR, type DraftParseResult } from "./draft";
 import { EHR_LIMITS, type EhrFormValues } from "./ehr";
 
 const text = (max: number) => z.string().max(max);
 
+/** A case study's steps (#336): the record's own schemas, so Save keeps what the record can hold. */
+const fromStep = cjmmStepSchema.optional();
+
 const blockDraftSchema = z.discriminatedUnion("kind", [
-  z.strictObject({ kind: z.literal("markdown"), value: text(20_000) }),
+  z.strictObject({ kind: z.literal("markdown"), value: text(20_000), fromStep }),
   z.strictObject({
     kind: z.literal("table"),
     columns: z.array(text(200)).max(EHR_LIMITS.tableColumns),
     rows: z.array(z.array(text(1_000)).max(EHR_LIMITS.tableColumns)).max(EHR_LIMITS.tableRows),
+    fromStep,
   }),
   z.strictObject({
     kind: z.literal("vitals"),
+    fromStep,
     rows: z
       .array(
         z.strictObject({
@@ -40,7 +45,7 @@ export const ehrFormDraftSchema = z.strictObject({
     admissionDate: text(100),
   }),
   timePoints: z
-    .array(z.strictObject({ id: idSchema, label: text(100) }))
+    .array(z.strictObject({ id: idSchema, label: text(100), fromStep }))
     .min(1)
     .max(EHR_LIMITS.timePoints),
   tabs: z
@@ -51,6 +56,7 @@ export const ehrFormDraftSchema = z.strictObject({
         title: text(200),
         timePointId: z.union([z.literal(""), idSchema]),
         blocks: z.array(blockDraftSchema).max(EHR_LIMITS.blocks),
+        stepAccess: stepAccessSchema.optional(),
       }),
     )
     .max(EHR_LIMITS.tabs),

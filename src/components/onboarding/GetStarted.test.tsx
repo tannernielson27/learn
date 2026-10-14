@@ -32,32 +32,32 @@ describe("GetStarted", () => {
     }
   });
 
-  it("marks the bank step done with words, not colour alone", () => {
+  it("marks the quiz step done with words, not colour alone", () => {
     setup({ ...EMPTY, banks: [{ id: "b", name: "Cardiac" }] });
-    expect(within(stepRow("Make a bank")).getByText("Done", { exact: true })).toBeInTheDocument();
-    expect(within(stepRow("Make a class")).getByText("Not done", { exact: true })).toBeVisible();
+    expect(within(stepRow("Create a quiz")).getByText("Done", { exact: true })).toBeInTheDocument();
+    expect(within(stepRow("Create a class")).getByText("Not done", { exact: true })).toBeVisible();
     expect(screen.getByText("1 of 3 done")).toBeInTheDocument();
   });
 
   it("offers the sample import and sends it to the action", async () => {
     const { importSample, user } = setup(EMPTY);
-    await user.click(screen.getByRole("button", { name: "Import the sample bank" }));
+    await user.click(screen.getByRole("button", { name: "Import the sample quiz" }));
     expect(importSample).toHaveBeenCalledTimes(1);
   });
 
   it("announces an import that failed", async () => {
     const { user } = setup(EMPTY, {
       status: "error",
-      error: "The sample bank could not be imported. Try again.",
+      error: "The sample quiz could not be imported. Try again.",
     });
-    await user.click(screen.getByRole("button", { name: "Import the sample bank" }));
+    await user.click(screen.getByRole("button", { name: "Import the sample quiz" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("could not be imported");
   });
 
-  it("links to the existing Sample bank instead of offering a second import", () => {
+  it("links to the existing sample quiz instead of offering a second import", () => {
     setup({ ...EMPTY, banks: [SAMPLE] });
-    expect(screen.queryByRole("button", { name: "Import the sample bank" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Open the sample bank" })).toHaveAttribute(
+    expect(screen.queryByRole("button", { name: "Import the sample quiz" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Open the sample quiz" })).toHaveAttribute(
       "href",
       `/author/banks/${SAMPLE.id}`,
     );

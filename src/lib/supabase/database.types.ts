@@ -477,6 +477,7 @@ export type Database = {
           created_by: string | null;
           id: string;
           invite_token: string;
+          join_code: string;
           name: string;
           org_id: string;
           time_zone: string;
@@ -487,6 +488,7 @@ export type Database = {
           created_by?: string | null;
           id?: string;
           invite_token?: string;
+          join_code?: string;
           name: string;
           org_id?: string;
           time_zone?: string;
@@ -497,6 +499,7 @@ export type Database = {
           created_by?: string | null;
           id?: string;
           invite_token?: string;
+          join_code?: string;
           name?: string;
           org_id?: string;
           time_zone?: string;
@@ -525,6 +528,7 @@ export type Database = {
           created_by: string | null;
           folder_path: string;
           id: string;
+          library_folder_id: string | null;
           name: string;
           org_id: string;
           updated_at: string;
@@ -534,6 +538,7 @@ export type Database = {
           created_by?: string | null;
           folder_path?: string;
           id?: string;
+          library_folder_id?: string | null;
           name: string;
           org_id: string;
           updated_at?: string;
@@ -543,6 +548,7 @@ export type Database = {
           created_by?: string | null;
           folder_path?: string;
           id?: string;
+          library_folder_id?: string | null;
           name?: string;
           org_id?: string;
           updated_at?: string;
@@ -554,6 +560,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "item_banks_library_folder_fkey";
+            columns: ["library_folder_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "library_folders";
+            referencedColumns: ["id", "org_id"];
           },
           {
             foreignKeyName: "item_banks_org_id_fkey";
@@ -688,23 +701,156 @@ export type Database = {
           },
         ];
       };
-      orgs: {
+      library_folders: {
         Row: {
           created_at: string;
+          created_by: string | null;
+          depth: number;
           id: string;
           name: string;
+          org_id: string;
+          parent_id: string | null;
         };
         Insert: {
           created_at?: string;
+          created_by?: string | null;
+          depth?: number;
           id?: string;
           name: string;
+          org_id: string;
+          parent_id?: string | null;
         };
         Update: {
           created_at?: string;
+          created_by?: string | null;
+          depth?: number;
           id?: string;
           name?: string;
+          org_id?: string;
+          parent_id?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "library_folders_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "library_folders_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "orgs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "library_folders_parent_fkey";
+            columns: ["parent_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "library_folders";
+            referencedColumns: ["id", "org_id"];
+          },
+        ];
+      };
+      org_invites: {
+        Row: {
+          accepted_at: string | null;
+          accepted_by: string | null;
+          created_at: string;
+          email: string;
+          expires_at: string;
+          id: string;
+          invited_by: string | null;
+          org_id: string;
+          revoked_at: string | null;
+          token_hash: string;
+        };
+        Insert: {
+          accepted_at?: string | null;
+          accepted_by?: string | null;
+          created_at?: string;
+          email: string;
+          expires_at?: string;
+          id?: string;
+          invited_by?: string | null;
+          org_id: string;
+          revoked_at?: string | null;
+          token_hash: string;
+        };
+        Update: {
+          accepted_at?: string | null;
+          accepted_by?: string | null;
+          created_at?: string;
+          email?: string;
+          expires_at?: string;
+          id?: string;
+          invited_by?: string | null;
+          org_id?: string;
+          revoked_at?: string | null;
+          token_hash?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "org_invites_accepted_by_fkey";
+            columns: ["accepted_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "org_invites_invited_by_fkey";
+            columns: ["invited_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "org_invites_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "orgs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      orgs: {
+        Row: {
+          ai_import_enabled: boolean;
+          created_at: string;
+          emptied_at: string | null;
+          founder_id: string | null;
+          id: string;
+          name: string;
+          self_registered: boolean;
+        };
+        Insert: {
+          ai_import_enabled?: boolean;
+          created_at?: string;
+          emptied_at?: string | null;
+          founder_id?: string | null;
+          id?: string;
+          name: string;
+          self_registered?: boolean;
+        };
+        Update: {
+          ai_import_enabled?: boolean;
+          created_at?: string;
+          emptied_at?: string | null;
+          founder_id?: string | null;
+          id?: string;
+          name?: string;
+          self_registered?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "orgs_founder_id_fkey";
+            columns: ["founder_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       participants: {
         Row: {
@@ -964,6 +1110,7 @@ export type Database = {
           created_at: string;
           display_name: string | null;
           id: string;
+          onboarded_at: string | null;
           org_id: string | null;
           role: Database["public"]["Enums"]["org_role"] | null;
           updated_at: string;
@@ -972,6 +1119,7 @@ export type Database = {
           created_at?: string;
           display_name?: string | null;
           id: string;
+          onboarded_at?: string | null;
           org_id?: string | null;
           role?: Database["public"]["Enums"]["org_role"] | null;
           updated_at?: string;
@@ -980,6 +1128,7 @@ export type Database = {
           created_at?: string;
           display_name?: string | null;
           id?: string;
+          onboarded_at?: string | null;
           org_id?: string | null;
           role?: Database["public"]["Enums"]["org_role"] | null;
           updated_at?: string;
@@ -1216,6 +1365,15 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      accept_org_invite: {
+        Args: {
+          p_confirm_move?: boolean;
+          p_leaving?: string;
+          p_user: string;
+          token: string;
+        };
+        Returns: string;
+      };
       archive_case_study: { Args: { target: string }; Returns: undefined };
       archive_item: { Args: { target: string }; Returns: undefined };
       assignment_report_rows: {
@@ -1300,6 +1458,15 @@ export type Database = {
         Args: { message_id?: string; target: string };
         Returns: boolean;
       };
+      create_org_invite: {
+        Args: { p_email: string; p_inviter: string };
+        Returns: {
+          expires_at: string;
+          invite_id: string;
+          status: string;
+          token: string;
+        }[];
+      };
       duplicate_case_study: {
         Args: { source_case_study: string };
         Returns: string;
@@ -1356,6 +1523,7 @@ export type Database = {
         Returns: Json;
       };
       join_class: { Args: { token: string }; Returns: string };
+      join_class_by_code: { Args: { p_code: string }; Returns: string };
       join_session: {
         Args: { chosen_name: string; target_session: string };
         Returns: {
@@ -1391,12 +1559,22 @@ export type Database = {
           updated_at: string;
         }[];
       };
+      mark_onboarded: { Args: never; Returns: string };
       move_to_folder: {
         Args: {
           case_study_ids: string[];
           item_ids: string[];
           target_bank: string;
           target_folder?: string;
+        };
+        Returns: Json;
+      };
+      move_to_quiz: {
+        Args: {
+          case_study_ids: string[];
+          item_ids: string[];
+          source_bank: string;
+          target_bank: string;
         };
         Returns: Json;
       };
@@ -1441,6 +1619,8 @@ export type Database = {
           class_name: string;
           joined_at: string;
           time_zone: string;
+          workspace_name: string;
+          workspace_number: number;
         }[];
       };
       my_practice_banks: {
@@ -1450,6 +1630,7 @@ export type Database = {
           bank_id: string;
           bank_name: string;
           item_count: number;
+          workspace_name: string;
         }[];
       };
       my_practice_step_marks: {
@@ -1479,6 +1660,47 @@ export type Database = {
           run_id: string;
           seed: string;
           started_at: string;
+        }[];
+      };
+      open_session_view: {
+        Args: {
+          presented_secret: string;
+          target_participant: string;
+          target_session: string;
+        };
+        Returns: {
+          refusal: string;
+          server_now: string;
+          session_ends_at: string;
+          session_items: Json;
+          session_mode: Database["public"]["Enums"]["session_mode"];
+          session_position: number;
+          session_remaining_ms: number;
+          session_reveal: boolean;
+          session_status: Database["public"]["Enums"]["session_status"];
+          session_timer_seconds: number;
+          view_answers: Json;
+          view_items: Json;
+        }[];
+      };
+      org_invite_move_preview: {
+        Args: { p_user: string; token: string };
+        Returns: {
+          bank_count: number;
+          class_count: number;
+          leaving_workspace: string;
+          leaving_workspace_id: string;
+          status: string;
+        }[];
+      };
+      org_members: {
+        Args: never;
+        Returns: {
+          display_name: string;
+          email: string;
+          joined_at: string;
+          profile_id: string;
+          role: Database["public"]["Enums"]["org_role"];
         }[];
       };
       place_case_study_step: {
@@ -1563,10 +1785,15 @@ export type Database = {
           submitted_at: string;
         }[];
       };
+      register_instructor: {
+        Args: { p_user: string; p_workspace: string };
+        Returns: string;
+      };
       release_assignment_reminders: {
         Args: { retry_in_seconds?: number; targets: string[] };
         Returns: number;
       };
+      remove_org_member: { Args: { p_member: string }; Returns: string };
       reorder_case_study_steps: {
         Args: { item_ids: string[]; target: string };
         Returns: undefined;
@@ -1576,6 +1803,17 @@ export type Database = {
         Returns: {
           class_id: string;
           class_name: string;
+        }[];
+      };
+      resolve_org_invite: {
+        Args: { client_key?: string; token: string };
+        Returns: {
+          expires_at: string;
+          invited_email: string;
+          inviter_email: string;
+          inviter_name: string;
+          state: string;
+          workspace_name: string;
         }[];
       };
       resolve_session_code: {
@@ -1604,6 +1842,7 @@ export type Database = {
           session_title: string;
         }[];
       };
+      revoke_org_invite: { Args: { p_invite: string }; Returns: string };
       rotate_class_invite: { Args: { target_class: string }; Returns: string };
       save_attempt_response: {
         Args: { answer: Json; target_attempt: string; target_item: string };
@@ -1634,7 +1873,17 @@ export type Database = {
         Returns: string;
       };
       stop_item_timer: { Args: { target: string }; Returns: undefined };
+      sweep_abandoned_workspaces: {
+        Args: { p_delete?: boolean; p_limit?: number };
+        Returns: {
+          org_id: string;
+          outcome: string;
+          reason: string;
+          rule: string;
+        }[];
+      };
       take_rate_limit: { Args: { action_name: string }; Returns: boolean };
+      turn_folder_into_quiz: { Args: { target_folder: string }; Returns: Json };
     };
     Enums: {
       content_status: "draft" | "published" | "archived";

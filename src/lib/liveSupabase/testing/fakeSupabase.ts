@@ -42,6 +42,8 @@ export interface FakeSessionRow {
   item_ends_at: string | null;
   timer_remaining_ms: number | null;
   closed_at: string | null;
+  /** The case study's record the room started with (#184); absent or null for a bank room. */
+  patient_record?: Json | null;
 }
 
 export interface FakeItemRow {
@@ -202,6 +204,24 @@ export class FakeSupabase {
    * the way PostgREST does. The deploy lands before the hosted push, so the routes must cope.
    */
   beforeRevealMigration = false;
+  /**
+   * A database the #407 migration has not reached yet: PostgREST has never heard of
+   * `open_session_view` and says so with PGRST202, having run nothing. The same order of events
+   * as above, and the view route must cope the same way.
+   */
+  beforeViewMigration = false;
+  /**
+   * Every request the database was sent, in order: `rpc:<function>` or `select:<table>`. What
+   * a route costs is counted from here (#407), so the count is of calls made, not of calls the
+   * route says it makes.
+   */
+  readonly roundTrips: string[] = [];
+  /**
+   * Calls that do not come back, by the same labels: a dropped connection, as supabase-js reports
+   * one. It resolves with an error and status 0 rather than throwing, and its `details` carry
+   * the socket error (#407).
+   */
+  readonly unreachable = new Set<string>();
 
   private readonly channels = new Set<FakeChannel>();
   private readonly presence = new Map<string, Map<string, Row[]>>();
@@ -245,6 +265,13 @@ export class FakeSupabase {
 
   touch(): void {
     this.operations += 1;
+  }
+
+  /** Counts one request to the database, and says whether it is one that does not come back. */
+  sent(label: string): FakeNetworkError | null {
+    this.operations += 1;
+    this.roundTrips.push(label);
+    return this.unreachable.has(label) ? { ...FAKE_NETWORK_ERROR } : null;
   }
 
   record(entry: WireRecord): void {
@@ -472,8 +499,10 @@ export class FakeChannel {
   }
 
   mayRead(table: string, orgId: string | null): boolean {
-    // `session_public_state` is readable by anyone holding a session id; the aggregates are the
-    // host's, inside the host's org. Exactly the two policies in the migration.
+    // `session_public_state` goes to every socket that got into the room; the aggregates are the
+    // host's, inside the host's org. Since #178 the database scopes the state by the same claim
+    // `mayJoin` checks, so a joined socket is one that may read it (pinned in pgTAP,
+    // `live_private_channel.test.sql`); this fake leaves that to the join.
     if (table === "session_public_state") return true;
     return this.identity.role === "authenticated" && this.identity.orgId === orgId;
   }
@@ -584,8 +613,42 @@ function project(row: Row, columns: string): Row {
   return Object.fromEntries(wanted.map((name) => [name, row[name]]));
 }
 
-type FakeError = { message: string; code?: string } | null;
-type FakeResult = { data: Row | Row[] | null; error: FakeError };
+type FakeError = { message: string; code?: string; details?: string; hint?: string } | null;
+type FakeResult = { data: Row | Row[] | null; error: FakeError; status?: number };
+
+/**
+ * A request that never reached the Data API, as postgrest-js 2.x hands it back: no code, the
+ * fetch error as the message, and its cause (with a stack) in `details`.
+ */
+export const FAKE_NETWORK_ERROR = {
+  message: "TypeError: fetch failed",
+  details:
+    "TypeError: fetch failed\n\nCaused by: Error: read ECONNRESET (ECONNRESET)\n" +
+    "Error: read ECONNRESET\n    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)",
+  hint: "",
+  code: "",
+} as const;
+type FakeNetworkError = { message: string; details: string; hint: string; code: string };
+
+/**
+ * PostgREST's `max_rows` (supabase/config.toml): the most rows one read answers with, whatever was
+ * asked for and without saying so. A read that does not page loses the rest in silence (#406), so
+ * the fake cuts where the real stack cuts.
+ */
+export const FAKE_MAX_ROWS = 1000;
+
+/** Orders two rows by the columns an `.order()` chain named, the first named first. */
+function byColumns(columns: readonly string[]): (a: Row, b: Row) => number {
+  return (a, b) => {
+    for (const column of columns) {
+      const [left, right] = [a[column], b[column]];
+      if (left === right) continue;
+      if (typeof left === "number" && typeof right === "number") return left - right;
+      return String(left) < String(right) ? -1 : 1;
+    }
+    return 0;
+  };
+}
 
 class FakeFilter implements PromiseLike<FakeResult> {
   private readonly equals: [string, unknown][] = [];
@@ -596,9 +659,41 @@ class FakeFilter implements PromiseLike<FakeResult> {
     private readonly columns: string,
     private readonly patch: Row | null,
     private readonly failure: FakeError = null,
+    private readonly label: string = "select",
   ) {}
 
   private readonly within: [string, Set<string>][] = [];
+  private readonly ordering: string[] = [];
+  private window: [number, number] | null = null;
+
+  /** `.order(column)`, ascending. Chained calls order by each column in turn, as PostgREST does. */
+  order(column: string): this {
+    this.ordering.push(column);
+    return this;
+  }
+
+  /** `.range(from, to)`, both ends included. `max_rows` still caps what comes back. */
+  range(from: number, to: number): this {
+    this.window = [from, to];
+    return this;
+  }
+
+  /**
+   * The rows one request answers with: ordered, windowed, and never more than `max_rows`.
+   *
+   * Postgres promises no order it was not asked for, and none between two requests: a paged read
+   * with no `ORDER BY`, or with one that leaves ties, can hand a row back twice and another not at
+   * all. So every other page of a `.range()` read starts from the rows the other way round, and
+   * only an `.order()` chain that leaves no ties reads the same from page to page. A read with no
+   * `.range()` keeps the order the rows were written in, as every test before #406 assumed.
+   */
+  private page(found: Row[]): Row[] {
+    const [from, to] = this.window ?? [0, FAKE_MAX_ROWS - 1];
+    const flipped = this.window !== null && Math.floor(from / FAKE_MAX_ROWS) % 2 === 1;
+    const heap = flipped ? [...found].reverse() : found;
+    const ordered = this.ordering.length === 0 ? heap : [...heap].sort(byColumns(this.ordering));
+    return ordered.slice(from, Math.min(to + 1, from + FAKE_MAX_ROWS));
+  }
 
   eq(column: string, value: unknown): this {
     this.equals.push([column, value]);
@@ -620,14 +715,15 @@ class FakeFilter implements PromiseLike<FakeResult> {
   }
 
   private settleNow(): FakeResult {
-    this.stack.touch();
+    const dropped = this.stack.sent(this.label);
+    if (dropped !== null) return { data: null, error: dropped, status: 0 };
     if (this.failure !== null) return { data: null, error: this.failure };
     const found = this.matching();
     if (this.patch !== null) {
       for (const row of found) Object.assign(row, this.patch);
       return { data: null, error: null };
     }
-    return { data: found.map((row) => project(row, this.columns)), error: null };
+    return { data: this.page(found).map((row) => project(row, this.columns)), error: null };
   }
 
   async maybeSingle(): Promise<{ data: Row | null; error: FakeError }> {
@@ -676,12 +772,14 @@ export function createFakeClient(
             columns,
             null,
             missingColumn(stack, table, columns),
+            `select:${table}`,
           ),
         update: (patch: Row) => new FakeUpdate(stack, table, patch),
       };
     },
     rpc(name: string, args: Record<string, unknown>) {
-      stack.touch();
+      const dropped = stack.sent(`rpc:${name}`);
+      if (dropped !== null) return Promise.resolve({ data: null, error: dropped, status: 0 });
       return Promise.resolve(runRpc(stack, name, args));
     },
     channel(
@@ -856,6 +954,8 @@ function runRpc(
     };
   }
 
+  if (name === "open_session_view") return openSessionView(stack, args);
+
   if (name === "begin_session_submission") {
     const session = stack.sessions.find((row) => row.id === String(args.target_session));
     if (!session || session.status === "ended") {
@@ -989,6 +1089,92 @@ function runRpc(
   }
 
   return { data: null, error: { message: `unknown function ${name}` } };
+}
+
+/**
+ * `public.open_session_view` (#407, 20261013120000_open_session_view.sql), said the way the
+ * migration says it: the token is matched first, then the room is read, then the item or the set
+ * the room is on and this participant's own answers for it. The marks and the key an answer was
+ * scored with are in an answer row only once the room has revealed. Like `begin_session_view`
+ * above, the counter is not stood in for; pgTAP holds it (`live_open_view.test.sql`).
+ *
+ * The item rows carry their keys, as the real function's do. That is the point of the tests that
+ * read the response bytes: the route is what has to strip them.
+ */
+function openSessionView(
+  stack: FakeSupabase,
+  args: Record<string, unknown>,
+): { data: unknown; error: { message: string; code?: string } | null } {
+  if (stack.beforeViewMigration) {
+    return {
+      data: null,
+      error: {
+        message: "Could not find the function public.open_session_view in the schema cache",
+        code: "PGRST202",
+      },
+    };
+  }
+  const held = stack.participants.find(
+    (row) =>
+      row.id === String(args.target_participant) &&
+      row.session_id === String(args.target_session) &&
+      row.rejoin_secret === String(args.presented_secret ?? ""),
+  );
+  const session = held && stack.sessions.find((row) => row.id === held.session_id);
+  if (!held || !session) return { data: [], error: null };
+
+  const open = session.status === "running" || session.status === "paused";
+  const wholeSet = open && session.mode === "student_paced";
+  const onItems = open && (wholeSet || session.current_position !== null);
+  const shown = !onItems
+    ? []
+    : wholeSet
+      ? session.item_set
+      : session.item_set.slice((session.current_position ?? 0) - 1, session.current_position ?? 0);
+  const items = stack.items
+    .filter((row) => shown.includes(row.id))
+    .map((row) =>
+      project(
+        row as unknown as Row,
+        "id, type, cjmm_step, tags, version, content, answer_key, rationale, scoring",
+      ),
+    );
+  const answers = !onItems
+    ? []
+    : stack.responses
+        .filter(
+          (row) =>
+            row.session_id === session.id &&
+            row.participant_id === held.id &&
+            (wholeSet || row.item_position === session.current_position),
+        )
+        .map((row) =>
+          project(
+            row as unknown as Row,
+            session.reveal
+              ? "item_position, response, submitted_at, points, max_points, model, breakdown, groups, reveal"
+              : "item_position, response, submitted_at",
+          ),
+        );
+  return {
+    data: [
+      {
+        refusal: null,
+        session_status: session.status,
+        session_mode: session.mode,
+        session_position: session.current_position,
+        session_reveal: session.reveal,
+        session_items: session.item_set,
+        session_timer_seconds: session.timer_seconds,
+        session_ends_at: session.item_ends_at,
+        session_remaining_ms: session.timer_remaining_ms,
+        server_now: new Date(stack.peek()).toISOString(),
+        view_items: items,
+        view_answers: answers,
+      },
+    ],
+    error: null,
+  };
 }
 
 /**

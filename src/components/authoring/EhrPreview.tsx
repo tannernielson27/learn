@@ -2,17 +2,20 @@
 
 import { useState } from "react";
 import { EhrContent, sectionOf, tabsAtTime } from "@/components/ehr/EhrContent";
-import type { EhrRecord } from "@/lib/ngn/schemas";
+import type { EhrRecordView } from "@/lib/ngn/chartReveal";
 
 export interface EhrPreviewProps {
-  /** Null until there is enough of the record to show. */
-  record: EhrRecord | null;
+  /**
+   * Null until there is enough of the record to show. A whole record, or a case study's record
+   * at one step (`recordAtStep`, #336), drawn with the player's own locked tabs.
+   */
+  record: EhrRecordView | null;
 }
 
 /**
- * The record as the player's panel shows it, with its own open section and time. It renders the
+ * The record as the player's panel shows it, with its own open tab and time. It renders the
  * panel's content rather than `EhrPanel`, whose pane, drawer and sheet belong to a page layout.
- * Sections and times the author removes fall back to the first, as the panel's content does.
+ * Tabs and times the teacher removes fall back to the first, as the panel's content does.
  */
 export function EhrPreview({ record }: EhrPreviewProps) {
   const [timeId, setTimeId] = useState<string>();
@@ -21,8 +24,7 @@ export function EhrPreview({ record }: EhrPreviewProps) {
   if (!record) {
     return (
       <p className="text-sm text-ink-2">
-        The preview appears once the patient has an age, sex and care setting, and one section is
-        written.
+        Shows once the patient has an age, sex, care setting and one tab.
       </p>
     );
   }

@@ -199,19 +199,22 @@ select ok(
   'or puts one on a roster'
 );
 
--- A student of another org is not moved across by an invite.
+-- A student whose first workspace is another org joins this org's class with the same account
+-- (20261009000000_student_multi_workspace.sql), and their profile is not moved across.
 update public.profiles set org_id = '00000000-0000-0000-0000-0000002050b0'
   where id = '00000000-0000-0000-0000-0000002050d2';
 update auth.users
    set raw_app_meta_data = raw_app_meta_data
          || '{"learn_invite": {"class_id": "00000000-0000-0000-0000-0000002050c1"}}'
  where id = '00000000-0000-0000-0000-0000002050d2';
-select is(
+select ok(
   (select count(*)::int from public.class_members
     where profile_id = '00000000-0000-0000-0000-0000002050d2'
-      and class_id = '00000000-0000-0000-0000-0000002050c1'),
-  0,
-  'a student of another org is not added to this org''s class'
+      and class_id = '00000000-0000-0000-0000-0000002050c1') = 1
+  and (select row(org_id, role)::text from public.profiles
+        where id = '00000000-0000-0000-0000-0000002050d2')
+      = row('00000000-0000-0000-0000-0000002050b0'::uuid, 'student'::public.org_role)::text,
+  'a student of another org is added to this org''s class and keeps the org they first joined'
 );
 delete from public.class_members where profile_id = '00000000-0000-0000-0000-0000002050d2';
 update public.profiles set org_id = (select org_id from public.classes
@@ -235,7 +238,8 @@ begin
       -- Their own profile, their own memberships and their own org's name are theirs to read.
       and c.relname not in ('profiles', 'class_members', 'orgs')
   loop
-    if has_table_privilege(format('public.%I', t.relname), 'select') then
+    -- Any column (#335): assignments is granted by column and must still be counted.
+    if has_any_column_privilege(format('public.%I', t.relname), 'select') then
       execute format('select count(*) from public.%I', t.relname) into n;
       total := total + n;
     end if;

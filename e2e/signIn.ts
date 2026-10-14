@@ -1,5 +1,5 @@
 import { BlockList, isIP } from "node:net";
-import { expect, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, type APIRequestContext, type APIResponse, type Page } from "@playwright/test";
 import { latestSignInLink, openSignInLink } from "./mailbox";
 
 // The local stack's API gateway, next to the test mailbox in mailbox.ts (see supabase/config.toml).
@@ -196,6 +196,9 @@ export async function signInAsNewAuthor(
   await page.goto("/sign-in");
   const since = new Date();
   await page.getByRole("textbox", { name: "Email address" }).fill(email);
+  await page
+    .getByRole("button", { name: "Sign in with an emailed link instead", exact: true })
+    .click();
   await page.getByRole("button", { name: "Email me a sign-in link" }).click();
   await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
   await openSignInLink(page, await latestSignInLink(request, email, since));
@@ -285,6 +288,22 @@ export async function rpcAsUser<T>(
   return (await called.json()) as T;
 }
 
+/**
+ * A select as the user whose access token this is, through the publishable key, the way their own
+ * browser's client would ask (#335 checks a column the student is not granted). Returns the raw
+ * response so a refusal can be asserted.
+ */
+export async function selectAsUser(
+  request: APIRequestContext,
+  accessToken: string,
+  table: string,
+  query: string,
+): Promise<APIResponse> {
+  return request.get(`${localStackUrl()}/rest/v1/${table}?${query}`, {
+    headers: { apikey: localPublishableKey(), Authorization: `Bearer ${accessToken}` },
+  });
+}
+
 /** An instructor account that exists but has not signed in yet, and the org it was put in. */
 export interface NewInstructor {
   orgId: string;
@@ -320,6 +339,9 @@ export async function signInAsInstructorInEmptyOrg(
   await page.goto("/sign-in");
   const since = new Date();
   await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await page
+    .getByRole("button", { name: "Sign in with an emailed link instead", exact: true })
+    .click();
   await page.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
   await openSignInLink(page, await latestSignInLink(request, email, since));

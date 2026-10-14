@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { latestSignInLink, openSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #211: an instructor watches an assignment's progress while it is open (no score anywhere, no
 // CSV), and after the close reads the report by student, item and CJMM step and downloads the CSV.
@@ -45,10 +46,14 @@ test("an instructor sees progress while open, then the report and its CSV after 
 
   const phone = await browser.newContext({ reducedMotion: "reduce" });
   const student = await phone.newPage();
+  await skipWelcomes(student);
   await student.goto(invite);
   const email = `student-report-${project}-${Date.now()}@example.test`;
   const since = new Date();
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await student
+    .getByRole("button", { name: "Join with an emailed link instead", exact: true })
+    .click();
   await student.getByRole("button", { name: "Email me a link to join", exact: true }).click();
   await openSignInLink(student, await latestSignInLink(request, email, since));
   await expect(student).toHaveURL(/\/learn$/);
@@ -125,13 +130,13 @@ test("an instructor sees progress while open, then the report and its CSV after 
   await page.screenshot({ path: shot("assignment-report-students"), fullPage: true });
 
   const views = page.getByRole("navigation", { name: "Report views", exact: true });
-  await views.getByRole("link", { name: "Items", exact: true }).click();
+  await views.getByRole("link", { name: "Questions", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${reportPath}\\?view=items$`));
   await expect(page.getByRole("columnheader", { name: "Correct", exact: true })).toBeVisible();
   await expectNoAxeViolations(page);
   await page.screenshot({ path: shot("assignment-report-items"), fullPage: true });
 
-  await views.getByRole("link", { name: "CJMM steps", exact: true }).click();
+  await views.getByRole("link", { name: "Clinical judgment steps", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${reportPath}\\?view=steps$`));
   await expectNoAxeViolations(page);
   await page.screenshot({ path: shot("assignment-report-steps"), fullPage: true });

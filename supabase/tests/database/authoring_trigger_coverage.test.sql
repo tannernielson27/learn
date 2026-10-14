@@ -151,6 +151,10 @@ insert into uncharged_allowlist (schema_name, table_name, reason) values
    'Folders are outside the four authoring actions, as #123 says of item_banks and bank_folders '
    'together. Updates are limited to the name column; moving content between folders writes '
    'items and case_studies, which are charged.'),
+  ('public', 'library_folders',
+   'Library folders (#411) hold quizzes, and are outside the four authoring actions as item_banks '
+   'and bank_folders are. Insert is limited to org, parent and name, update to the name; filing a '
+   'quiz writes item_banks, which is a container and uncounted too.'),
   ('public', 'profiles',
    'Not authoring. A user may rename themselves (update of display_name only, own row only); no '
    'insert or delete. It holds one row per user and has nothing to amplify.'),

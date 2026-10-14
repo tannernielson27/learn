@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { bytesOf, capturedBytes, expectKeyless } from "./bytes";
 import { latestSignInLink, openSignInLink } from "./mailbox";
 import { insertAsAdmin, selectAsAdmin, signInAsNewAuthor, updateAsAdmin } from "./signIn";
+import { skipWelcomes } from "./welcome";
 
 // #271: a practice run freezes its items when it starts. The student opens a bank of two items on
 // a phone; the instructor then unpublishes the second and saves a new key and rationale over it.
@@ -101,10 +102,14 @@ test("a practice run keeps an item the instructor unpublishes mid-run, with the 
   const { viewport, isMobile, hasTouch } = testInfo.project.use;
   const phone = await browser.newContext({ viewport, isMobile, hasTouch, reducedMotion: "reduce" });
   const student = await phone.newPage();
+  await skipWelcomes(student);
   await student.goto(klass.invite);
   const email = `student-freeze-${project}-${Date.now()}@example.test`;
   const since = new Date();
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await student
+    .getByRole("button", { name: "Join with an emailed link instead", exact: true })
+    .click();
   await student.getByRole("button", { name: "Email me a link to join", exact: true }).click();
   await openSignInLink(student, await latestSignInLink(request, email, since));
   await expect(student).toHaveURL(/\/learn$/);
@@ -131,7 +136,7 @@ test("a practice run keeps an item the instructor unpublishes mid-run, with the 
   await expect(student.getByTestId("practice-count")).toHaveText("0 of 2 done");
 
   // Answered with the option the edited key would mark right: the reveal is the recorded version.
-  await student.getByRole("button", { name: "Item 2, not answered", exact: true }).click();
+  await student.getByRole("button", { name: "Question 2, not answered", exact: true }).click();
   await expect(student.getByText(SATA_STEM, { exact: false })).toBeVisible();
   await student.getByRole("checkbox", { name: /Temperature 37\.2/ }).click();
   const reveal = await capturedBytes(
@@ -165,7 +170,7 @@ test("a practice run keeps an item the instructor unpublishes mid-run, with the 
     .click();
   await classPractice.getByRole("button", { name: "Stop sharing", exact: true }).click();
   await expect(
-    classPractice.getByText("No bank is shared with this class for practice.", { exact: true }),
+    classPractice.getByText("No quiz is shared with this class.", { exact: true }),
   ).toBeVisible();
 
   const stopped = await phone.request.get(practicePath);

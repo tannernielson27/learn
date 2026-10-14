@@ -23,17 +23,17 @@ test("an instructor starts a session from a bank, sees a six-character code, and
   await signInAsNewAuthor(page, request, testInfo.project.name);
 
   const bankName = `Live ${testInfo.project.name} ${Date.now()}`;
-  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
   // A bank with nothing published cannot be run, and says so rather than failing quietly.
   await page.getByRole("button", { name: "Start a live session", exact: true }).click();
   await expect(
-    page.getByText("Publish an item in this bank before starting a live session."),
+    page.getByText("Publish a question in this quiz before starting a live session."),
   ).toBeVisible();
 
-  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("link", { name: "New question" }).click();
   await page.getByRole("button", { name: "Multiple Choice", exact: true }).click();
   // A new item starts with four blank option fields and every label is required, so filling only
   // two leaves the item invalid on options C and D. publishOpenItem asserts the editor lists no
@@ -45,7 +45,7 @@ test("an instructor starts a session from a bank, sees a six-character code, and
     1,
   );
   await publishOpenItem(page);
-  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Back to quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
   await page.getByRole("button", { name: "Start a live session", exact: true }).click();
@@ -54,16 +54,18 @@ test("an instructor starts a session from a bank, sees a six-character code, and
 
   const code = page.getByTestId("join-code");
   await expect(code).toHaveText(CODE);
-  await expect(page.getByRole("region", { name: "Join code" })).toContainText(
-    "Students join with this code.",
-  );
+  await expect(
+    page
+      .getByRole("region", { name: "Join code" })
+      .getByRole("img", { name: "QR code for joining this live session" }),
+  ).toBeVisible();
   // The three Playwright projects are 375, 768 and 1280, so this runs at each breakpoint; the code
   // has to be visible and whole at every one.
   await expect(code).toBeVisible();
   // An empty lobby says so, and offers only the move an empty lobby can make.
   await expect(page.getByText("Nobody has joined yet.")).toBeVisible();
   await expect(page.getByTestId("present-count")).toHaveText("0 phones connected");
-  await expect(page.getByRole("button", { name: "Start session", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Start", exact: true })).toBeEnabled();
   await expectNoAxeViolations(page);
 
   // A phone joins. From here the two pages are a room: nothing below reloads either of them.
@@ -72,7 +74,7 @@ test("an instructor starts a session from a bank, sees a six-character code, and
   await student.getByRole("textbox", { name: "Display name" }).fill("Ada Brennan");
   await student.getByRole("button", { name: "Join", exact: true }).click();
   await expect(student).toHaveURL(/\/play\/[0-9a-f-]{36}$/);
-  await expect(student.getByText("You are in.")).toBeVisible();
+  await expect(student.getByText("You are in. Wait for your teacher to start.")).toBeVisible();
   await expectNoAxeViolations(student);
 
   // Presence, not a reload and not a database read: the name and the count arrive on the host's
@@ -81,7 +83,7 @@ test("an instructor starts a session from a bank, sees a six-character code, and
   await expect(page.getByTestId("present-count")).toHaveText("1 phone connected");
 
   // Starting the room moves the phone. The bank holds one item, so this is also the last one.
-  await page.getByRole("button", { name: "Start session", exact: true }).click();
+  await page.getByRole("button", { name: "Start", exact: true }).click();
   // Since #133 the phone shows the item itself rather than a waiting screen. Answering it is
   // liveAnswer.spec.ts; what matters here is that the room's move reached the phone.
   await expect(student.getByText("Which finding is expected?")).toBeVisible({ timeout: 15_000 });
@@ -89,7 +91,7 @@ test("an instructor starts a session from a bank, sees a six-character code, and
   await expectNoAxeViolations(student);
   await expectNoAxeViolations(page);
   // Nothing to advance to, and the console says so by greying the button rather than by refusing.
-  await expect(page.getByRole("button", { name: "Next item", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Next question", exact: true })).toBeDisabled();
 
   await page.getByRole("button", { name: "Show answer", exact: true }).click();
   // A phone that did not answer is shown the key too (#181).
@@ -97,18 +99,22 @@ test("an instructor starts a session from a bank, sees a six-character code, and
   await expect(page.getByRole("button", { name: "Show answer", exact: true })).toBeDisabled();
 
   await page.getByRole("button", { name: "Pause", exact: true }).click();
-  await expect(student.getByText("The session is paused.")).toBeVisible({ timeout: 15_000 });
+  await expect(student.getByText("The live session is paused.")).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: "Resume", exact: true }).click();
 
-  await page.getByRole("button", { name: "End session", exact: true }).click();
-  await expect(student.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
+  // It asks first; the second press is the one in the question.
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
+  await expect(student.getByText("This live session has ended.")).toBeVisible({ timeout: 15_000 });
   await student.close();
 
-  await expect(page.getByText("This session has ended.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "End session", exact: true })).toHaveCount(0);
+  // The ended page strikes the code through and points at the report.
+  await expect(page.getByRole("link", { name: "Open the report", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "End live session", exact: true })).toHaveCount(0);
   await expectNoAxeViolations(page);
 
   // An ended session cannot be reopened, however the page is reached again.
   await page.goto(consoleUrl);
-  await expect(page.getByText("This session has ended.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open the report", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start", exact: true })).toHaveCount(0);
 });

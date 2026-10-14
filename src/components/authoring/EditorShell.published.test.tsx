@@ -12,7 +12,7 @@ const saved = () =>
   toMultipleChoiceForm(multipleChoiceItemSchema.parse(FIXTURES.multiple_choice.canonical));
 
 const WARNING =
-  "This item is published. Saving a draft takes it out of sessions, assignments and practice until you publish again.";
+  "This question is published. Saving a draft takes it out of live sessions, assignments and practice until you publish again.";
 
 // The host owns whether the item is published, as ItemEditorWithHistory does.
 function Hosted({ published: initial }: { published: boolean }) {

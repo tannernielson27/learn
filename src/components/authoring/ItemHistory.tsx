@@ -77,9 +77,7 @@ export function ItemHistory({
               The history could not be loaded. Reload the page to try again.
             </p>
           ) : entries.length === 0 ? (
-            <p className="text-sm text-ink-2">
-              Nothing published yet. Each publish adds a version here.
-            </p>
+            <p className="text-sm text-ink-2">Nothing published yet.</p>
           ) : (
             <>
               <ul aria-label="Published versions" className="flex flex-wrap gap-2">

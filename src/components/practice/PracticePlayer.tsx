@@ -95,7 +95,7 @@ export function PracticePlayer({
   const [notice, setNotice] = useState<string | null>(null);
 
   if (view.entries.length === 0) {
-    return <p className="measure text-ink-2">This bank has no items to practise yet.</p>;
+    return <p className="measure text-ink-2">This quiz has no questions yet.</p>;
   }
 
   const fromServer = serverDone(view.entries);
@@ -123,9 +123,14 @@ export function PracticePlayer({
   const rowOf = new Map<string, string>(
     entry.kind === "case_study" ? entry.steps.map((step) => [step.item.id, step.itemId]) : [],
   );
-  const submitStep = (item: KeylessItem) => (response: AnyResponse) => {
+  // #335: the next step and its chart are not on this page until the server has the answer to this
+  // one, so a checked step reads the page again. A refresh keeps the player and where it is.
+  const submitStep = (item: KeylessItem) => async (response: AnyResponse) => {
     const row = rowOf.get(item.id);
-    return row === undefined ? Promise.reject(new Error("unknown step")) : check(row, response);
+    if (row === undefined) throw new Error("unknown step");
+    const reveal = await check(row, response);
+    router.refresh();
+    return reveal;
   };
 
   return (
@@ -157,7 +162,6 @@ export function PracticePlayer({
             entry={entry}
             done={done[entry.itemId]}
             draft={drafts[entry.itemId]}
-            progress={{ index: at, total: view.entries.length }}
             onDraft={(response) => setDrafts((held) => ({ ...held, [entry.itemId]: response }))}
             check={(response) => check(entry.itemId, response)}
           />
@@ -167,15 +171,18 @@ export function PracticePlayer({
               {entry.title}
             </h2>
             <CaseStudyPlayer
-              // Remounted when a refresh brings back a step answered elsewhere.
-              key={`${view.runId}:${entry.id}:${entry.steps.filter((step) => fromServer[step.itemId]).length}`}
+              // Not remounted when a refresh brings a step: it takes the reached steps as they
+              // grow, and reads a step answered elsewhere from `initialSteps` (#335).
+              key={`${view.runId}:${entry.id}`}
               caseStudy={{
                 id: entry.id,
                 title: entry.title,
                 tags: [],
-                ehr: entry.ehr,
                 items: entry.steps.map((step) => step.item),
               }}
+              records={entry.records}
+              stepCount={entry.stepCount}
+              onReloadNext={() => router.refresh()}
               initialSteps={entry.steps.map((step) => initialStep(done[step.itemId]))}
               submitFor={submitStep}
             />
@@ -185,14 +192,14 @@ export function PracticePlayer({
 
       <div className="mt-6 flex flex-wrap justify-between gap-2">
         <Button variant="secondary" disabled={at === 0} onClick={() => setIndex(at - 1)}>
-          Previous item
+          Previous
         </Button>
         <Button
           variant="secondary"
           disabled={at === view.entries.length - 1}
           onClick={() => setIndex(at + 1)}
         >
-          Next item
+          Next
         </Button>
       </div>
 
@@ -205,35 +212,30 @@ interface PracticeItemProps {
   entry: PracticeItemEntry;
   done: PracticeAnswered | undefined;
   draft: AnyResponse | undefined;
-  progress: { index: number; total: number };
   onDraft: (response: AnyResponse) => void;
   check: (response: AnyResponse) => Promise<ScoreReveal>;
 }
 
 /** One standalone item: open for an answer, or in feedback with what the server sent back. */
-function PracticeItem({ entry, done, draft, progress, onDraft, check }: PracticeItemProps) {
+function PracticeItem({ entry, done, draft, onDraft, check }: PracticeItemProps) {
   if (done?.kind === "scored") {
     return (
       <ItemPlayer
         item={entry.item}
         initialResponse={done.response}
         initialReveal={done.reveal}
-        progress={progress}
         submit={check}
       />
     );
   }
   if (done?.kind === "key") {
-    return (
-      <ItemPlayer item={entry.item} initialKey={done.key} progress={progress} submit={check} />
-    );
+    return <ItemPlayer item={entry.item} initialKey={done.key} submit={check} />;
   }
   return (
     <ItemPlayer
       item={entry.item}
       initialResponse={draft}
       onResponseChange={onDraft}
-      progress={progress}
       submit={check}
     />
   );

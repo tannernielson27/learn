@@ -34,14 +34,13 @@ export const ITEM_GUIDE: Record<ItemType, ItemGuideEntry> = {
     tests: "Choosing the one best answer from 4 to 6 options.",
     model: "zero_one",
     scoring: "0/1, max 1: the correct option earns 1 point, anything else earns 0.",
-    tip: "Take-home assignments can shuffle the options. An option that points at others or at a position, such as “All of the above”, stays where you put it.",
+    tip: "An assignment can shuffle the options. An option that points at others or at a position, such as “All of the above”, stays where you put it.",
   },
   multiple_response: {
     tests:
       "Recognizing every finding or action that applies. Select all that apply (SATA) has 5 to 10 options with at least one correct; Select N asks for exactly N.",
     model: "plus_minus",
-    scoring:
-      "+/-: +1 for each correct selection, -1 for each incorrect selection, and the score never goes below 0. Max = the number of correct options.",
+    scoring: "+/-. Max = the number of correct options.",
     tip: "Write a rationale for each option. The editor warns when every option is correct, or when an option has no rationale of its own.",
   },
   multiple_response_grouping: {
@@ -57,7 +56,7 @@ export const ITEM_GUIDE: Record<ItemType, ItemGuideEntry> = {
     model: "zero_one",
     scoring:
       "0/1 per row: each row earns 1 point when its one selection is correct. Max = the number of rows. An unanswered row earns 0.",
-    tip: "Use 2 to 8 rows. Rows can be shuffled in take-home work; the columns never move, because they are a scale.",
+    tip: "Use 2 to 8 rows. Rows can be shuffled in an assignment; the columns never move, because they are a scale.",
   },
   matrix_multiple_response: {
     tests:
@@ -85,21 +84,20 @@ export const ITEM_GUIDE: Record<ItemType, ItemGuideEntry> = {
     tests: "Making one choice per row of a table, where one column holds a drop-down in each row.",
     model: "zero_one",
     scoring: "0/1 per row: each row earns 1 point when its choice is correct.",
-    tip: "Rows and each row's choices can be shuffled in take-home work; the column headings stay put.",
+    tip: "Rows and each row's choices can be shuffled in an assignment; the column headings stay put.",
   },
   highlight_text: {
     tests:
       "Recognizing cues in a passage. You mark the phrases a student can select; the rest of the text cannot be selected.",
     model: "plus_minus",
-    scoring:
-      "+/-: +1 for each correct phrase selected, -1 for each incorrect one, never below 0. Max = the number of correct phrases.",
+    scoring: "+/-. Max = the number of correct phrases.",
     tip: "Give it at least 2 selectable phrases with at least 1 correct. The editor warns when more than 60% of them are correct.",
   },
   highlight_table: {
     tests:
       "Recognizing cues in a table, such as Assessment / Findings: the selectable phrases sit inside the cells.",
     model: "plus_minus",
-    scoring: "+/-, over the whole item, or per row when “Score each row separately” is on.",
+    scoring: "+/-, over the whole question, or per row when “Score each row separately” is on.",
     tip: "The table is never shuffled, because where a finding sits is part of the answer.",
   },
   dragdrop_cloze: {
@@ -114,14 +112,14 @@ export const ITEM_GUIDE: Record<ItemType, ItemGuideEntry> = {
       "The drop-down rationale sentence, answered from a word bank: a dyad (2 blanks) or a triad (3 blanks).",
     model: "rationale",
     scoring:
-      "Rationale scoring. Dyad: 1 point only if both are correct. Triad: 2 points max; the anchor must be correct, and each of the two supporting blanks then earns 1. Anchor wrong: 0.",
-    tip: "Put plausible wrong words in the bank for both the condition and the evidence, so neither blank can be solved alone.",
+      "Rationale scoring, as for Drop-Down Rationale. Dyad: 1 point only if both are correct. Triad: 2 points max, and 0 if the anchor is wrong.",
+    tip: "Put plausible wrong words in the word bank for both the condition and the evidence, so neither blank can be solved alone.",
   },
   ordered_response: {
     tests: "Putting 4 to 6 steps in order, by dragging or with up and down buttons.",
     model: "zero_one",
     scoring:
-      "0/1 for the whole item: 1 point only for the exact order. With “Give a point for each step in the right place” on, each step in its correct position earns 1 instead. It is off by default.",
+      "0/1 for the whole question: 1 point only for the exact order. With “Give a point for each step in the right place” on, each step in its correct position earns 1 instead. It is off by default.",
     tip: "Type the steps in their correct order. Students always start from a scrambled order that is never the answer.",
   },
   bowtie: {
@@ -145,16 +143,16 @@ export const COMPOSITE_GUIDE: CompositeGuideEntry[] = [
     id: "case-study",
     title: "Case study",
     body: [
-      "Six items, one for each clinical judgment step, in the fixed order below. The patient record sits beside every item: a pane on a laptop, a sheet on a phone.",
-      "Build one with New case study in a bank. It needs exactly 6 items, steps 1 to 6 in order, and a record with at least one section.",
+      "Six questions, one for each clinical judgment step, in the fixed order below. The patient record sits beside every question: a pane on a laptop, a sheet on a phone.",
+      "Build one in a quiz with Create case study. It needs exactly 6 questions, steps 1 to 6 in order, and a patient record with at least one tab.",
     ],
-    scoring: "Each step is an ordinary item, scored by its own format’s rule.",
+    scoring: "Each step’s question is scored by its own format’s rule.",
   },
   {
     id: "trend",
-    title: "Trend item",
+    title: "Trend question",
     body: [
-      "Not a separate format: any standalone item becomes a Trend item when its patient record is charted at two or more times. The record then offers a time selector.",
+      "Not a separate format: any question outside a case study becomes a Trend question when its patient record is charted at two or more times, which adds a time selector.",
       "Use it to ask what changed, for example whether each finding improved, stayed the same or declined over a shift.",
     ],
     scoring: "Scored by the rule of the format it uses.",
@@ -170,7 +168,7 @@ export interface CjmmGuideEntry {
 
 export const CJMM_GUIDE: Record<CjmmStep, CjmmGuideEntry> = {
   1: {
-    asks: "Which information in the record matters, and which is noise?",
+    asks: "Which information in the patient record matters, and which is noise?",
     formats: "Highlight Text or Table, select all that apply, Matrix Multiple Response.",
   },
   2: {
@@ -216,34 +214,34 @@ export const HELP_FIGURES = {
     baseline: "desktop-1280/dropdown-rationale.png",
     width: 1280,
     height: 1327,
-    alt: "A Drop-Down Rationale item: a postpartum client’s findings, then the sentence “The client is most likely experiencing __ as evidenced by __ and __” with three unanswered drop-downs.",
+    alt: "A Drop-Down Rationale question: a postpartum client’s findings, then the sentence “The client is most likely experiencing __ as evidenced by __ and __” with three unanswered drop-downs.",
   },
   bowtie: {
     src: "help/bowtie.png",
     baseline: "desktop-1280/bowtie.png",
     width: 1280,
     height: 1327,
-    alt: "A Bowtie item: empty slots for two actions to take, one potential condition and two parameters to monitor, with the choices for each listed below them.",
+    alt: "A Bowtie question: empty slots for two actions to take, one potential condition and two parameters to monitor, with the choices for each listed below them.",
   },
   caseStudy: {
     src: "help/case-study.png",
     baseline: "desktop-1280/case-study.png",
     width: 1280,
     height: 1327,
-    alt: "Step 1 of 6 of a case study, Recognize Cues: the patient record on the left and a Highlight Text item on the right.",
+    alt: "Step 1 of 6 of a case study, Recognize Cues: the patient record on the left and a Highlight Text question on the right.",
   },
   trend: {
     src: "help/trend.png",
     baseline: "desktop-1280/trend.png",
     width: 1280,
     height: 1327,
-    alt: "A Trend item: a patient record with a time selector for 0800, 1200 and 1600, beside a matrix asking whether each finding improved, is unchanged or declined.",
+    alt: "A Trend question: a patient record with a time selector for 0800, 1200 and 1600, beside a matrix asking whether each finding improved, is unchanged or declined.",
   },
   liveResults: {
     src: "help/live-results-sata.png",
     baseline: "desktop-1280/live-results-sata.png",
     width: 928,
     height: 469,
-    alt: "Live results for a select-all-that-apply item: each option with a bar and a count such as 3 of 5, 60%, and a note that 1 student chose no option. Nothing is marked correct.",
+    alt: "Live results for a select-all-that-apply question: each option with a bar and a count such as 3 of 5, 60%, and a note that 1 student chose no option. Nothing is marked correct.",
   },
 } as const satisfies Record<string, HelpFigure>;

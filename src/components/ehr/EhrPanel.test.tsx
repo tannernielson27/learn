@@ -100,9 +100,9 @@ describe("EhrPanel", () => {
       await userEvent.click(chip());
       // A drawer, not a sheet: nothing is modal and nothing traps focus.
       expect(screen.queryByRole("dialog")).toBeNull();
-      expect(screen.getAllByRole("tablist", { name: "Patient record sections" })).toHaveLength(2);
+      expect(screen.getAllByRole("tablist", { name: "Patient record tabs" })).toHaveLength(2);
       await userEvent.click(chip());
-      expect(screen.getAllByRole("tablist", { name: "Patient record sections" })).toHaveLength(1);
+      expect(screen.getAllByRole("tablist", { name: "Patient record tabs" })).toHaveLength(1);
     });
 
     it("closes on Escape from the chip and leaves focus there", async () => {
@@ -110,7 +110,7 @@ describe("EhrPanel", () => {
       render(<EhrPanel record={sampleEhr} />);
       await userEvent.click(chip());
       await userEvent.keyboard("{Escape}");
-      expect(screen.getAllByRole("tablist", { name: "Patient record sections" })).toHaveLength(1);
+      expect(screen.getAllByRole("tablist", { name: "Patient record tabs" })).toHaveLength(1);
       expect(chip()).toHaveFocus();
     });
   });

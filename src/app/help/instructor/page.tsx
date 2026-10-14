@@ -4,16 +4,48 @@ import type { ReactNode } from "react";
 import { HelpFigure } from "@/components/help/HelpFigure";
 import { HELP_FIGURES } from "@/lib/help/itemGuide";
 
-export const metadata: Metadata = { title: "Instructor guide" };
+export const metadata: Metadata = { title: "Teacher guide" };
 
-function Step({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+/**
+ * The guide's sections, in the order a teacher needs them. The ids are what other pages link to,
+ * so they do not change when a title does: `banks` and `items` are the quiz and question sections.
+ */
+const SECTIONS = [
+  { id: "sign-in", title: "Sign up and sign in" },
+  { id: "banks", title: "Create or import a quiz" },
+  { id: "items", title: "Write questions" },
+  { id: "classes", title: "Create a class and invite students" },
+  { id: "assign", title: "Assign a quiz" },
+  { id: "live", title: "Start a live session" },
+  { id: "reports", title: "Read the reports" },
+  { id: "practice", title: "Share a quiz for practice" },
+] as const;
+
+type SectionId = (typeof SECTIONS)[number]["id"];
+
+const titleOf = (id: SectionId): string => SECTIONS.find((section) => section.id === id)!.title;
+
+function Section({ id, children }: { id: SectionId; children: ReactNode }) {
   return (
     <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-4">
-      <h2 id={`${id}-title`} className="text-xl font-semibold text-ink-1">
-        {title}
+      <h2 id={`${id}-title`} className="border-b border-line pb-2 text-xl font-semibold text-ink-1">
+        {titleOf(id)}
       </h2>
       <div className="measure mt-3 flex flex-col gap-3 text-ink-1">{children}</div>
     </section>
+  );
+}
+
+/**
+ * One topic inside a section, with an id of its own for a screen to link to. Not a `section`:
+ * nineteen more named regions would bury the eight that matter to a screen reader.
+ */
+function Topic({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+  return (
+    <div id={id} data-help-topic className="mt-2 flex scroll-mt-4 flex-col gap-2">
+      <h3 className="font-semibold text-ink-1">{title}</h3>
+      {children}
+    </div>
   );
 }
 
@@ -22,8 +54,32 @@ function Ui({ children }: { children: ReactNode }) {
   return <strong className="font-semibold">{children}</strong>;
 }
 
+function Steps({ children }: { children: ReactNode }) {
+  return <ol className="flex list-decimal flex-col gap-2 pl-5">{children}</ol>;
+}
+
 function List({ children }: { children: ReactNode }) {
   return <ul className="flex list-disc flex-col gap-2 pl-5">{children}</ul>;
+}
+
+function Contents() {
+  return (
+    <nav aria-label="On this page" className="rounded-md border border-line bg-surface-1 p-4">
+      <p className="eyebrow">On this page</p>
+      <ol className="mt-2 grid list-inside list-decimal gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
+        {SECTIONS.map((section) => (
+          <li key={section.id}>
+            <a
+              href={`#${section.id}`}
+              className="text-accent-ink underline-offset-4 hover:underline"
+            >
+              {section.title}
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
 }
 
 export default function InstructorGuide() {
@@ -32,151 +88,256 @@ export default function InstructorGuide() {
       <header>
         <p className="eyebrow">Help</p>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink-1 sm:text-3xl">
-          Instructor guide
+          Teacher guide
         </h1>
         <p className="measure mt-3 text-lg text-ink-2">
-          Running a class on LeaRN, in the order you will need it. For how each item format works
-          and is scored, see the{" "}
+          For how each format is scored, see the{" "}
           <Link href="/help/items" className="text-accent-ink underline underline-offset-4">
-            item guide
+            question guide
           </Link>
           .
         </p>
       </header>
 
-      <Step id="sign-in" title="Sign in">
-        <p>
-          Open <Ui>Sign in</Ui>, type your email address and press <Ui>Email me a sign-in link</Ui>.
-          Open the link in that email. There is no password.
-        </p>
-        <p>
-          Accounts are by invitation. Whoever runs your LeaRN adds you as an instructor; an account
-          without that role sees “No access yet”. The form answers the same way whether or not an
-          address has an account, so if no email arrives, check the spelling with them.
-        </p>
-      </Step>
+      <Contents />
 
-      <Step id="banks" title="Make or import a bank">
-        <p>
-          A bank holds your items and case studies. On the author home, type a <Ui>Bank name</Ui>{" "}
-          and press <Ui>Create bank</Ui>.
-        </p>
-        <List>
-          <li>Sort a large bank into folders, tag items, and search by text or tag.</li>
-          <li>
-            To bring items in, choose one or more LeaRN JSON files, or paste JSON, pick a folder
-            under <Ui>Import into</Ui>, and press <Ui>Import</Ui>. Imported items arrive as drafts,
-            and a file that fails is reported without stopping the others.
-          </li>
-        </List>
-      </Step>
+      <Section id="sign-in">
+        <Topic id="sign-up" title="Create your account">
+          <Steps>
+            <li>
+              Open <Ui>Create an account</Ui> and choose <Ui>I teach</Ui>.
+            </li>
+            <li>Type your name, your email address and a password.</li>
+          </Steps>
+          <p>You are signed in at once, in a workspace no other teacher can see.</p>
+          <p>
+            Confirm your address from the email that follows. It is what lets you back in if you
+            forget your password.
+          </p>
+        </Topic>
+        <Topic id="password" title="Sign in, or reset your password">
+          <p>
+            Open <Ui>Sign in</Ui> and type your email address and password.
+          </p>
+          <List>
+            <li>
+              Forgot it? Press <Ui>Forgot your password?</Ui>, then <Ui>Email me a sign-in link</Ui>
+              . The link signs you in and asks for a new password.
+            </li>
+            <li>
+              <Ui>Sign in with an emailed link instead</Ui> signs you in without a password.
+            </li>
+            <li>
+              To change your password, open <Ui>Account</Ui> and press <Ui>Change your password</Ui>
+              .
+            </li>
+            <li>
+              If no email arrives, check the spelling. The form never says whether an address has an
+              account.
+            </li>
+          </List>
+        </Topic>
+        <Topic id="colleagues" title="Share a workspace with colleagues">
+          <p>
+            To share quizzes, classes and results, work in one workspace. Invite a colleague by
+            email from <Ui>Workspace</Ui>. If you are joining theirs, ask for the invitation before
+            you sign up.
+          </p>
+        </Topic>
+      </Section>
 
-      <Step id="items" title="Write items">
-        <p>
-          In a bank, press <Ui>New item</Ui> and pick a format. Write the question stem, the choices
-          and the answer, then the rationale: why the answer is right.
-        </p>
-        <List>
+      <Section id="banks">
+        <p>A quiz holds your questions and case studies.</p>
+        <Steps>
           <li>
-            <Ui>Save draft</Ui> keeps your work. Only published items go into live sessions,
-            assignments and practice, so press <Ui>Publish</Ui> when an item is ready. Publishing
-            needs a general rationale; the editor lists anything missing under{" "}
-            <Ui>Problems to fix</Ui>.
+            On your library, under <Ui>New quiz</Ui>, type a name.
           </li>
           <li>
-            Quality warnings, such as a select-all-that-apply item with every option correct, are
-            advice and never block you.
+            Press <Ui>Create quiz</Ui>.
           </li>
-          <li>
-            Every item keeps its version history, and can be duplicated, archived and restored.
-          </li>
-          <li>
-            For a six-step case study, press <Ui>New case study</Ui>, write the patient record, and
-            add one item for each clinical judgment step.
-          </li>
-        </List>
-      </Step>
+        </Steps>
+        <Topic id="import" title="Import questions">
+          <Steps>
+            <li>Choose one or more LeaRN JSON files, or paste JSON.</li>
+            <li>
+              Pick a folder under <Ui>Import into</Ui> and press <Ui>Import</Ui>.
+            </li>
+          </Steps>
+          <p>
+            Imported questions arrive as drafts. A file that fails is reported without stopping the
+            others.
+          </p>
+        </Topic>
+        <Topic id="folders" title="Folders, tags and search">
+          <p>Sort a large quiz into folders, tag questions, and search by text or tag.</p>
+        </Topic>
+      </Section>
 
-      <Step id="classes" title="Make a class and invite students">
-        <p>
-          From the author home, open <Ui>Classes</Ui>, type a <Ui>Class name</Ui> and press{" "}
-          <Ui>Create class</Ui>. The class page shows an invite link and its QR code.
-        </p>
-        <List>
+      <Section id="items">
+        <Steps>
           <li>
-            Share the link. A student opens it, types an email address and opens the sign-in link
-            that arrives. They then appear on the roster.
+            In a quiz, press <Ui>New question</Ui> and pick a format.
           </li>
+          <li>Write the question text, the choices and the answer.</li>
+          <li>Write the rationale: why the answer is right.</li>
           <li>
-            Set the class’s time zone on the class page, so open and close times show in your local
-            time.
+            Press <Ui>Save draft</Ui> to keep your work, or <Ui>Publish</Ui> when it is ready.
           </li>
-          <li>
-            A student you remove cannot rejoin with the link they have. To stop the link working for
-            everyone, replace it.
-          </li>
-        </List>
-      </Step>
+        </Steps>
+        <Topic id="publish" title="Drafts and publishing">
+          <List>
+            <li>Only published questions go into live sessions, assignments and practice.</li>
+            <li>
+              Publishing needs a general rationale. The editor lists anything missing under{" "}
+              <Ui>Problems to fix</Ui>.
+            </li>
+            <li>
+              Quality warnings, such as a select-all-that-apply question with every option correct,
+              are advice and never block you.
+            </li>
+          </List>
+        </Topic>
+        <Topic id="history" title="History, duplicate and archive">
+          <p>
+            Every question keeps its version history, and can be duplicated, archived and restored.
+          </p>
+        </Topic>
+        <Topic id="case-studies" title="Case studies">
+          <p>
+            In a quiz, type a <Ui>Case study title</Ui> and press <Ui>Create case study</Ui>. Then
+            write the patient record, and add one question for each of the six clinical judgment
+            steps.
+          </p>
+        </Topic>
+      </Section>
 
-      <Step id="assign" title="Assign take-home work">
-        <p>
-          In a bank or a case study, press <Ui>Assign</Ui>. Choose the class, when it opens and
-          closes, and how many attempts each student has: 1 by default, up to 3, and the best
-          attempt counts. <Ui>Shuffle answer options</Ui> reorders options per student where the
-          format allows it.
-        </p>
-        <List>
+      <Section id="classes">
+        <Steps>
           <li>
-            Students see it under <Ui>Open assignments</Ui> on their home. Answers save as they go,
-            and they can resume on any device.
+            Open <Ui>Classes</Ui>.
           </li>
           <li>
-            Scores, answers and rationales stay hidden from students until the assignment closes. An
-            attempt still open at the close is submitted with what it saved.
+            Type a <Ui>Class name</Ui> and press <Ui>Create class</Ui>.
           </li>
-          <li>Once an assignment has closed, its close time cannot move.</li>
-          <li>
-            When email is set up for your site, students get a reminder when it opens and a day
-            before it closes. Anyone who has already submitted is skipped.
-          </li>
-        </List>
-      </Step>
+        </Steps>
+        <p>The class page shows an invite link, its QR code and an eight-character class code.</p>
+        <Topic id="invite" title="Invite link and QR code">
+          <p>
+            A student opens the link, types their name and email address and chooses a password.
+            They are on the roster at once; confirming their address can wait.
+          </p>
+        </Topic>
+        <Topic id="class-code" title="Class code">
+          <p>
+            A student who has an account, or creates one first, types it under <Ui>Join a class</Ui>
+            . It is two groups of four, so it is not mistaken for a live session&apos;s join code.
+          </p>
+        </Topic>
+        <Topic id="time-zone" title="Time zone">
+          <p>Set it on the class page, so open and close times show in your local time.</p>
+        </Topic>
+        <Topic id="remove" title="Remove a student">
+          <p>
+            A removed student cannot rejoin with the link or code they have. To stop both working
+            for everyone, replace the link: the class code and QR code change too.
+          </p>
+        </Topic>
+      </Section>
 
-      <Step id="live" title="Run a live session">
+      <Section id="assign">
+        <Steps>
+          <li>
+            In a quiz or a case study, press <Ui>Assign</Ui>.
+          </li>
+          <li>Choose the class, and when the assignment opens and closes.</li>
+          <li>
+            Choose how many attempts each student has: 1 by default, up to 3. The best attempt
+            counts.
+          </li>
+        </Steps>
         <p>
-          In a bank or a case study, choose <Ui>Instructor-paced</Ui> or <Ui>Student-paced</Ui> and
-          press <Ui>Start a live session</Ui>. Put the lobby on the projector: students open{" "}
-          <Ui>Join</Ui>, type the six-character code or scan the QR code, and give a display name.
-          They need no account. Set <Ui>Time per item</Ui> if you want a timer, then press{" "}
-          <Ui>Start session</Ui>.
+          <Ui>Shuffle answer options</Ui> reorders options for each student where the format allows
+          it.
         </p>
-        <List>
-          <li>
-            <Ui>Instructor-paced:</Ui> you move the room. Results build as students answer, with
-            nothing marked correct, so the screen is safe to project. <Ui>Hide results</Ui> takes
-            them off the screen. <Ui>Show answer</Ui> sends the key and rationale to every phone.
-            Press <Ui>Next item</Ui>, or pick any item on the strip to skip ahead or go back.
-          </li>
-          <li>
-            <Ui>Student-paced:</Ui> each phone moves through the set alone, and you watch a progress
-            board. <Ui>Show answers</Ui> opens every item’s key at once.
-          </li>
-          <li>When the timer runs out the item stops taking answers; the room does not move on.</li>
-          <li>
-            Press <Ui>End session</Ui> when you are done.
-          </li>
-        </List>
-        <HelpFigure
-          figure={HELP_FIGURES.liveResults}
-          caption="Live results before the answer is shown: counts and percentages, with nothing marked correct."
-        />
-      </Step>
+        <Topic id="assign-students" title="What students see">
+          <List>
+            <li>
+              The assignment is under <Ui>Open assignments</Ui> on their home. Answers save as they
+              go, and they can resume on any device.
+            </li>
+            <li>Scores, answers and rationales stay hidden until the assignment closes.</li>
+            <li>An attempt still open at the close is submitted with what it saved.</li>
+          </List>
+        </Topic>
+        <Topic id="assign-close" title="Close time">
+          <p>Once an assignment has closed, its close time cannot move.</p>
+        </Topic>
+        <Topic id="reminders" title="Email reminders">
+          <p>
+            When email is set up for your site, students get a reminder when an assignment opens and
+            a day before it closes. Anyone who has already submitted is skipped.
+          </p>
+        </Topic>
+      </Section>
 
-      <Step id="reports" title="Read the reports">
+      <Section id="live">
+        <Steps>
+          <li>
+            In a quiz or a case study, choose <Ui>Teacher-paced</Ui> or <Ui>Student-paced</Ui> and
+            press <Ui>Start a live session</Ui>.
+          </li>
+          <li>
+            Put the lobby on the projector. Students go to the join page, type the six-character
+            join code or scan the QR code, and give a display name. They need no account.
+          </li>
+          <li>
+            Set <Ui>Time per question</Ui> if you want a timer, then press <Ui>Start</Ui>.
+          </li>
+          <li>
+            Press <Ui>End live session</Ui> when you are done.
+          </li>
+        </Steps>
+        <Topic id="pacing" title="Teacher-paced and student-paced">
+          <List>
+            <li>
+              <Ui>Teacher-paced:</Ui> you move the class on. Press <Ui>Next question</Ui>, or pick
+              any question on the strip to skip ahead or go back.
+            </li>
+            <li>
+              <Ui>Student-paced:</Ui> each phone moves through the quiz alone, and you watch a
+              progress board.
+            </li>
+          </List>
+        </Topic>
+        <Topic id="live-results" title="Results and answers">
+          <List>
+            <li>
+              Teacher-paced results build as students answer, with nothing marked correct, so the
+              screen is safe to project. <Ui>Hide results</Ui> takes them off the screen.
+            </li>
+            <li>
+              <Ui>Show answer</Ui> sends the answer and rationale to every phone. In a student-paced
+              live session, <Ui>Show answers</Ui> opens every question&apos;s answer at once.
+            </li>
+          </List>
+          <HelpFigure
+            figure={HELP_FIGURES.liveResults}
+            caption="Live results before the answer is shown."
+          />
+        </Topic>
+        <Topic id="timer" title="Timer">
+          <p>
+            When the timer runs out the question stops taking answers. The live session does not
+            move on.
+          </p>
+        </Topic>
+      </Section>
+
+      <Section id="reports">
         <List>
           <li>
-            <Ui>Live sessions:</Ui> press <Ui>Open the report</Ui> after ending a session. Past
-            sessions are listed under <Ui>Live sessions and reports</Ui> on the author home.
+            <Ui>Live sessions:</Ui> press <Ui>Open the report</Ui> after you end a live session.
+            Earlier ones are under <Ui>Live sessions</Ui>.
           </li>
           <li>
             <Ui>Assignments:</Ui> <Ui>View progress</Ui> shows who has started and submitted while
@@ -184,30 +345,35 @@ export default function InstructorGuide() {
             closes.
           </li>
           <li>
-            Each report can be read by <Ui>Students</Ui>, <Ui>Items</Ui> and <Ui>CJMM steps</Ui>,
-            and <Ui>Download CSV</Ui> exports it.
+            Read a report by <Ui>Students</Ui>, <Ui>Questions</Ui> or{" "}
+            <Ui>Clinical judgment steps</Ui>. <Ui>Download CSV</Ui> exports it.
           </li>
         </List>
-      </Step>
+      </Section>
 
-      <Step id="practice" title="Share a bank for practice">
+      <Section id="practice">
         <p>
-          Practice lets students answer a bank on their own, seeing the answer and rationale right
-          after each item. Open the bank’s <Ui>Practice</Ui> section, choose{" "}
-          <Ui>Share for practice</Ui> and pick a class. Students find it under <Ui>Practice</Ui> on
-          their home.
+          In practice, students answer a quiz on their own and see the answer and rationale after
+          each question. It is not graded.
         </p>
-        <List>
+        <Steps>
           <li>
-            <Ui>Stop sharing</Ui> closes practice at once, including runs already started.
+            In the quiz, under <Ui>Practice</Ui>, choose <Ui>Share for practice</Ui>.
           </li>
-          <li>
-            Students in that class can see the answers to a shared bank’s items, so do not grade
-            them on those items. If you assign from a shared bank, the form warns you how many of
-            its items the class can see the answers to in practice.
-          </li>
-        </List>
-      </Step>
+          <li>Pick a class.</li>
+        </Steps>
+        <p>
+          Students find it under <Ui>Practice</Ui> on their home. <Ui>Stop sharing</Ui> closes it at
+          once, including for students part-way through.
+        </p>
+        <Topic id="practice-answers" title="Practice shows the answers">
+          <p>
+            Students in that class can see the answers to a shared quiz, so do not grade them on its
+            questions. If you assign from it, the form warns you how many answers the class can
+            already see.
+          </p>
+        </Topic>
+      </Section>
     </article>
   );
 }

@@ -31,7 +31,7 @@ const CODE = "AJ4K7P";
 const qrCode = (
   <SessionQrCode
     url={`https://learn.test/join/${CODE}`}
-    label="QR code that opens the join page for this session"
+    label="QR code for joining this live session"
   />
 );
 
@@ -200,6 +200,12 @@ function setup(initial: LiveSessionState = state(), refusal?: LiveSessionError) 
 
 const button = (name: string) => screen.getByRole("button", { name: new RegExp(`^${name}$`) });
 
+/** End live session asks first; the second press is the one in the question. */
+async function endSession(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(button("End live session"));
+  await user.click(button("End live session"));
+}
+
 describe("HostLobby", () => {
   it("shows the code, the picture and the address a student types", () => {
     setup();
@@ -210,9 +216,9 @@ describe("HostLobby", () => {
 
   it("offers only the moves the room can make from the lobby", () => {
     setup();
-    expect(button("Start session")).toBeEnabled();
-    expect(button("End session")).toBeEnabled();
-    expect(screen.queryByRole("button", { name: /^Next item$/ })).toBeNull();
+    expect(button("Start")).toBeEnabled();
+    expect(button("End live session")).toBeEnabled();
+    expect(screen.queryByRole("button", { name: /^Next question$/ })).toBeNull();
   });
 
   it("says the room is empty before anyone joins", () => {
@@ -248,22 +254,22 @@ describe("HostLobby", () => {
 
   it("starts the room and then offers the moves a running room can make", async () => {
     const fake = setup();
-    await fake.user.click(button("Start session"));
-    expect(await screen.findByRole("button", { name: /^Next item$/ })).toBeEnabled();
+    await fake.user.click(button("Start"));
+    expect(await screen.findByRole("button", { name: /^Next question$/ })).toBeEnabled();
     expect(fake.ran).toEqual(["start"]);
     expect(button("Show answer")).toBeEnabled();
     expect(button("Pause")).toBeEnabled();
-    expect(screen.queryByRole("button", { name: /^Start session$/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Start$/ })).toBeNull();
   });
 
   it("names the item the room is on", async () => {
     setup(state({ status: "running", position: 2 }));
-    expect(await screen.findByText(/Item 2 of 3/)).toBeInTheDocument();
+    expect(await screen.findByText(/Question 2 of 3/)).toBeInTheDocument();
   });
 
   it("refuses to offer another item once the room is on the last one", () => {
     setup(state({ status: "running", position: 3 }));
-    expect(button("Next item")).toBeDisabled();
+    expect(button("Next question")).toBeDisabled();
   });
 
   it("will not show an answer twice", () => {
@@ -274,7 +280,7 @@ describe("HostLobby", () => {
   it("takes the room through the moves a running room has", async () => {
     const fake = setup(state({ status: "running", position: 1 }));
     await fake.user.click(button("Show answer"));
-    await fake.user.click(button("Next item"));
+    await fake.user.click(button("Next question"));
     await fake.user.click(button("Pause"));
     expect(fake.ran).toEqual(["reveal", "advance", "pause"]);
     // Advancing puts the next question up, so whatever was showing is no longer its answer.
@@ -291,15 +297,15 @@ describe("HostLobby", () => {
 
   it("ends the room, and then offers nothing and withdraws the code", async () => {
     const fake = setup();
-    await fake.user.click(button("End session"));
-    expect(await screen.findByText(/This session has ended\./)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^End session$/ })).toBeNull();
+    await endSession(fake.user);
+    expect(await screen.findByRole("link", { name: "Open the report" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^End live session$/ })).toBeNull();
     expect(screen.queryByRole("img", { name: /QR code/ })).toBeNull();
   });
 
   it("points an ended room at its report", async () => {
     const fake = setup();
-    await fake.user.click(button("End session"));
+    await endSession(fake.user);
     expect(await screen.findByRole("link", { name: "Open the report" })).toHaveAttribute(
       "href",
       `/live/${SESSION_ID}/report`,
@@ -308,8 +314,8 @@ describe("HostLobby", () => {
 
   it("shows the room's own sentence when a move is refused", async () => {
     const fake = setup(state(), new LiveSessionError("not_open"));
-    await fake.user.click(button("Start session"));
-    expect(await screen.findByRole("alert")).toHaveTextContent("This session has ended.");
+    await fake.user.click(button("Start"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("This live session has ended.");
   });
 
   it("says so when the console cannot reach the room at all", async () => {
@@ -330,7 +336,7 @@ describe("HostLobby", () => {
         connect={() => broken}
       />,
     );
-    expect(await screen.findByRole("alert")).toHaveTextContent("Live updates are not running");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Live updates stopped");
   });
 
   it("closes the console when the screen goes away", () => {
@@ -348,6 +354,66 @@ describe("HostLobby", () => {
     );
     view.unmount();
     expect(fake.transport.close).toHaveBeenCalled();
+  });
+});
+
+describe("HostLobby: asking before a move that cannot be taken back", () => {
+  it("asks before ending, and focuses the question", async () => {
+    const fake = setup(state({ status: "running", position: 1 }));
+    await fake.user.click(button("End live session"));
+    expect(fake.ran).toEqual([]);
+    const ask = screen.getByRole("alertdialog", { name: "End this live session?" });
+    expect(ask).toHaveTextContent(
+      "Students are disconnected and the join code stops working. You can't reopen it.",
+    );
+    expect(ask).toHaveFocus();
+    // The other moves wait while the host decides.
+    expect(screen.queryByRole("button", { name: /^Next question$/ })).toBeNull();
+  });
+
+  it("ends the session once the host confirms", async () => {
+    const fake = setup(state({ status: "running", position: 1 }));
+    await endSession(fake.user);
+    expect(fake.ran).toEqual(["end"]);
+    expect(await screen.findByRole("link", { name: "Open the report" })).toBeInTheDocument();
+  });
+
+  it("keeps the session running when the host changes their mind", async () => {
+    const fake = setup(state({ status: "running", position: 1 }));
+    await fake.user.click(button("End live session"));
+    await fake.user.click(button("Keep it open"));
+    expect(fake.ran).toEqual([]);
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(button("Next question")).toBeEnabled();
+  });
+
+  it("shows one item's answer at once, since the room moves on to the next anyway", async () => {
+    const fake = setup(state({ status: "running", position: 1 }));
+    await fake.user.click(button("Show answer"));
+    expect(fake.ran).toEqual(["reveal"]);
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  it("asks before showing a student-paced room every answer", async () => {
+    const fake = setup(state({ mode: "student_paced", status: "running", position: 1 }));
+    await fake.user.click(button("Show answers"));
+    const ask = screen.getByRole("alertdialog", { name: "Show answers for all 3 questions?" });
+    expect(ask).toHaveTextContent("Students who haven't finished can't answer any more.");
+    await fake.user.click(button("Not yet"));
+    expect(fake.ran).toEqual([]);
+
+    await fake.user.click(button("Show answers"));
+    await fake.user.click(button("Show answers"));
+    expect(fake.ran).toEqual(["reveal"]);
+  });
+
+  it("puts the roster away once the session has ended", async () => {
+    const fake = setup(state({ status: "running", position: 1 }));
+    expect(screen.getByRole("heading", { name: "In this session" })).toBeInTheDocument();
+    await endSession(fake.user);
+    await screen.findByRole("link", { name: "Open the report" });
+    expect(screen.queryByRole("heading", { name: "In this session" })).toBeNull();
+    expect(screen.queryByText(/Nobody has joined yet/)).toBeNull();
   });
 });
 
@@ -384,7 +450,7 @@ describe("HostLobby: how many have answered (#133)", () => {
 
     // "3 of 3 answered" over a question nobody has seen yet is worse than showing nothing.
     fake.answersIn(null);
-    await fake.user.click(button("Next item"));
+    await fake.user.click(button("Next question"));
     await waitFor(() => expect(screen.queryByTestId("answer-count")).toBeNull());
   });
 
@@ -392,7 +458,7 @@ describe("HostLobby: how many have answered (#133)", () => {
     const fake = setup(state({ status: "running", position: 1 }));
     fake.answersIn(tallyOf(2, 2));
     await waitFor(() => expect(fake.asks()).toBeGreaterThan(0));
-    await fake.user.click(button("End session"));
+    await endSession(fake.user);
     await waitFor(() => expect(screen.queryByTestId("answer-count")).toBeNull());
 
     const settled = fake.asks();
@@ -441,7 +507,7 @@ describe("HostLobby: the item timer (#182)", () => {
 
   it("offers a time per item from the lobby, and says what running out does", async () => {
     const fake = setup();
-    const select = screen.getByRole("combobox", { name: "Time per item" });
+    const select = screen.getByRole("combobox", { name: "Time per question" });
     expect([...(select as HTMLSelectElement).options].map((option) => option.textContent)).toEqual([
       "Off",
       "30 seconds",
@@ -449,7 +515,7 @@ describe("HostLobby: the item timer (#182)", () => {
       "90 seconds",
       "2 minutes",
     ]);
-    expect(screen.getByText(/you still move the room on/)).toBeInTheDocument();
+    expect(screen.getByText(/You still move the class on/)).toBeInTheDocument();
 
     await fake.user.selectOptions(select, "30 seconds");
     await waitFor(() => expect(fake.ran).toEqual(["set_timer:30"]));
@@ -486,7 +552,7 @@ describe("HostLobby: the item timer (#182)", () => {
 
   it("puts the timer away once the session has ended", async () => {
     const fake = setup(timed());
-    await fake.user.click(button("End session"));
+    await endSession(fake.user);
     await waitFor(() => expect(screen.queryByRole("combobox")).toBeNull());
     expect(screen.queryByRole("timer")).toBeNull();
   });
@@ -500,14 +566,14 @@ describe("HostLobby: skipping an item or going back (#183)", () => {
 
   it("jumps the room to the item chosen on the strip, and back", async () => {
     const { user, ran } = setup(state({ status: "running", position: 1 }));
-    await user.click(screen.getByRole("button", { name: "Go to item 3" }));
-    await waitFor(() => expect(screen.getByText(/Item 3 of 3/)).toBeInTheDocument());
-    expect(screen.getByRole("button", { name: "Go to item 3" })).toHaveAttribute(
+    await user.click(screen.getByRole("button", { name: "Go to question 3" }));
+    await waitFor(() => expect(screen.getByText(/Question 3 of 3/)).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Go to question 3" })).toHaveAttribute(
       "aria-current",
       "step",
     );
-    await user.click(screen.getByRole("button", { name: "Go to item 1" }));
-    await waitFor(() => expect(screen.getByText(/Item 1 of 3/)).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Go to question 1" }));
+    await waitFor(() => expect(screen.getByText(/Question 1 of 3/)).toBeInTheDocument());
     expect(ran).toEqual(["goto:3", "goto:1"]);
   });
 });
@@ -520,13 +586,13 @@ describe("HostLobby: a student-paced room (#185)", () => {
     setup(paced());
     expect(button("Show answers")).toBeEnabled();
     expect(button("Pause")).toBeEnabled();
-    expect(button("End session")).toBeEnabled();
-    expect(screen.queryByRole("button", { name: /^Next item$/ })).toBeNull();
+    expect(button("End live session")).toBeEnabled();
+    expect(screen.queryByRole("button", { name: /^Next question$/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Show answer$/ })).toBeNull();
     expect(screen.queryByRole("navigation", { name: "Items" })).toBeNull();
     expect(screen.queryByRole("combobox")).toBeNull();
     expect(screen.queryByRole("heading", { name: "Results" })).toBeNull();
-    expect(screen.queryByText(/Item 1 of 3/)).toBeNull();
+    expect(screen.queryByText(/Question 1 of 3/)).toBeNull();
     expect(screen.getByText(/Student-paced/)).toBeInTheDocument();
   });
 
@@ -538,6 +604,7 @@ describe("HostLobby: a student-paced room (#185)", () => {
     });
     await waitFor(() => expect(screen.getByTestId("answered-count-1")).toHaveTextContent("1 of 1"));
     await fake.user.click(button("Show answers"));
+    await fake.user.click(button("Show answers"));
     await waitFor(() => expect(screen.getByText(/answers showing/)).toBeInTheDocument());
     expect(fake.ran).toEqual(["reveal"]);
     expect(button("Show answers")).toBeDisabled();
@@ -545,9 +612,9 @@ describe("HostLobby: a student-paced room (#185)", () => {
 
   it("starts from the lobby with the same Start button", async () => {
     const fake = setup(state({ mode: "student_paced" }));
-    await fake.user.click(button("Start session"));
+    await fake.user.click(button("Start"));
     await waitFor(() => expect(button("Show answers")).toBeEnabled());
-    expect(screen.queryByRole("button", { name: /^Next item$/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Next question$/ })).toBeNull();
   });
 });
 

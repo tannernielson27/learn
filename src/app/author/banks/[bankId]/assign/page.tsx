@@ -8,7 +8,7 @@ import { requireAuthor } from "@/lib/authoring/session";
 import { listClasses } from "@/lib/supabase/classes";
 import { readPracticeExposure } from "@/lib/supabase/practiceShares";
 
-export const metadata: Metadata = { title: "Assign a bank" };
+export const metadata: Metadata = { title: "Assign a quiz" };
 
 /** Assign a bank to a class (#207). */
 export default async function AssignBankPage({
@@ -34,7 +34,7 @@ export default async function AssignBankPage({
     <AssignPanel
       sourceName={bank.name}
       backHref={`/author/banks/${bank.id}`}
-      backLabel="Back to bank"
+      backLabel="Back to quiz"
       classes={classes}
       exposure={exposure}
       action={assignSource.bind(null, source)}

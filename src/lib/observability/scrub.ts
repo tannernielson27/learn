@@ -4,7 +4,8 @@
  *
  * The owner decision is "no student data leaves the app". Sentry's own `sendDefaultPii: false`
  * is the first layer; this is the second, and the one that knows what this app's secrets look
- * like: invite tokens in `/c/<token>`, join codes in `/join/<code>` and in prose, session ids in
+ * like: invite tokens in `/c/<token>` and `/w/<token>`, join codes in `/join/<code>` and in prose,
+ * session ids in
  * `/live/...` and `/play/...`, and the answer keys and rationales a student must not see.
  *
  * The rules fail towards removing too much. A debug detail lost is cheap; a student's email in a
@@ -70,7 +71,7 @@ const JWT = /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g;
  * next segment is an action name, so it is matched and given back unchanged. A segment that opens
  * with `[` is a route pattern such as `[token]` in a transaction name or a chunk path, not a value.
  */
-const SECRET_SEGMENT = /(\/api)?\/(c|join|live|play)\/([^/?#\s"'<>[\]][^/?#\s"'<>]*)/g;
+const SECRET_SEGMENT = /(\/api)?\/(c|w|join|live|play)\/([^/?#\s"'<>[\]][^/?#\s"'<>]*)/g;
 
 /** A query string or fragment that carries parameters. Both are dropped whole. */
 const QUERY = /\?[^\s#"'<>]*=[^\s#"'<>]*/g;

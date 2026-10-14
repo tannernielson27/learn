@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-09-29 (immediate-feedback sprint merged: #311, #313, #314, #316, #320; hosted at all 40 migrations; follow-ups #325-#328 filed).
+Last updated: 2026-10-13 (Sprint 14: the chart reveal model, #334, in review).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -135,7 +135,7 @@ Phase 4 splits across two sprints. Sprint 10 covers what real students need: har
 | [#236](https://github.com/tannernielson27/learn/issues/236) | chore(infra): a nightly encrypted database dump, with restore steps                           | security, db              | Merged (#250); no migration; owner sets secrets (docs/05 §7.10), hosted restore drill pending   |
 | [#237](https://github.com/tannernielson27/learn/issues/237) | chore(infra): a go-live check that proves production is ready for students                    | security                  | Merged (#252); no migration; run it per docs/05 §7.11                                           |
 | [#219](https://github.com/tannernielson27/learn/issues/219) | fix(player): an ordered-response item starts in the author's order, which is often the answer | player                    | Merged (#249); no migration; start order is keyed server-side                                   |
-| [#178](https://github.com/tannernielson27/learn/issues/178) | fix(live): drop the open select policy on live.session_public_state                           | live, security            | Blocked: owner turns off Realtime "Allow public access"                                         |
+| [#178](https://github.com/tannernielson27/learn/issues/178) | fix(live): drop the open select policy on live.session_public_state                           | live, security            | Merged (#419); `20261013000000_drop_open_state_policy` applied to hosted 2026-10-13             |
 | [#238](https://github.com/tannernielson27/learn/issues/238) | feat(student): a history of my assignments and best scores                                    | security, db, e2e         | Merged (#254); `20260925030000_student_history` applied to hosted                               |
 | [#239](https://github.com/tannernielson27/learn/issues/239) | feat(student): my weakest clinical judgment steps                                             | security                  | Merged (#258); `20260925060000_student_steps` applied to hosted                                 |
 | [#240](https://github.com/tannernielson27/learn/issues/240) | feat(authoring): share a bank with a class for practice, and warn on graded reuse             | security, db, e2e         | Merged (#255); `20260925040000_practice_shares` applied to hosted                               |
@@ -245,81 +245,81 @@ Sprint 11 is code complete: every story is merged, including the follow-ups #283
 
 ## S12: AI question import (milestone 14)
 
-Demo 13: an instructor uploads a Word case study and a PDF of questions, reviews what the AI found, fills in a missing answer, and imports the batch as drafts. The imported case study's chart grows step by step, live on a phone.
+Status, 2026-10-14: not started beyond the #333 spike (PR #352). Sprints 13 and 14 ran first. Reveal-by-step for case study charts (#334–#336), planned here at kickoff, moved to S14 and is merged (PRs #424, #435, #438), so this sprint builds on it.
+
+Demo 13: a teacher uploads a Word case study and a PDF of questions, reviews what the AI found, fills in a missing answer, and imports the batch as drafts into a quiz. The imported case study's patient record grows step by step, live on a phone.
 
 The plan is ADR 0008. The AI copies questions that exist in a document. It never writes a key or a rationale.
 
 Owner decisions (2026-10-01):
 
-1. **Review first.** Parsed questions are staged; nothing reaches the bank until the author imports the batch, all or nothing.
-2. **Extract only.** A missing key or rationale is flagged for the author, never generated.
-3. **Case studies are in this sprint, with reveal-by-step** (#334–#336): a case study's chart may grow as the case unfolds, as the owner's Maryland samples do.
-4. **Claude Sonnet 5.5 on the owner's key**, live calls, a monthly page cap per org.
+1. **Review first.** Parsed questions are staged; nothing reaches a quiz until the teacher imports the batch, all or nothing.
+2. **Extract only.** A missing key or rationale is flagged for the teacher, never generated.
+3. **Case studies are in this sprint.** A case study's chart may grow as the case unfolds, as the owner's Maryland samples do. Reveal-by-step itself shipped in S14 (`fromStep`, `stepAccess`, `recordAtStep`); #344 sets `fromStep` on what it imports.
+4. **Claude Sonnet 5.5 on the owner's key**, live calls, a monthly cap per org (see kickoff decision 4).
 5. **Formats:** PDF (text and scanned), .docx, .md, .txt.
 6. **Uploaded files are deleted** once the batch is imported or discarded.
 7. **A rights checkbox at upload**, which also confirms there is no real patient information.
-8. **A batch is up to 5 files, 100 pages and 150 items.**
+8. **A batch is up to 5 files, 100 pages and 150 questions.**
 
-| #                                                           | Title                                                                                          | Gates             | Status |
-| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------- | ------ |
-| [#333](https://github.com/tannernielson27/learn/issues/333) | chore(ai-import): measure cost and accuracy on the owner's sample documents                    | none              | Open   |
-| [#334](https://github.com/tannernielson27/learn/issues/334) | feat(ngn): reveal a case study's chart step by step (fromStep and recordAtStep)                | none              | Open   |
-| [#335](https://github.com/tannernielson27/learn/issues/335) | feat(player): serve each case study step only the chart revealed so far                        | security, e2e     | Open   |
-| [#336](https://github.com/tannernielson27/learn/issues/336) | feat(authoring): set when each part of a case study's chart appears                            | e2e               | Open   |
-| [#337](https://github.com/tannernielson27/learn/issues/337) | feat(ngn): AI draft shapes and converters for the selection, ordered and bowtie types          | none              | Open   |
-| [#338](https://github.com/tannernielson27/learn/issues/338) | feat(ngn): AI draft shapes and converters for cloze, highlight, drag-and-drop and case studies | none              | Open   |
-| [#339](https://github.com/tannernielson27/learn/issues/339) | test(ai-import): a fictional golden corpus and an accuracy eval                                | none              | Open   |
-| [#340](https://github.com/tannernielson27/learn/issues/340) | feat(db): AI import batches, staged entries, a private upload bucket and a monthly cap         | security, db      | Open   |
-| [#341](https://github.com/tannernielson27/learn/issues/341) | feat(ai-import): check uploaded files and prepare them for Claude                              | security          | Open   |
-| [#342](https://github.com/tannernielson27/learn/issues/342) | feat(ai-import): Claude client, segment pass, usage ledger and cap                             | security          | Open   |
-| [#343](https://github.com/tannernielson27/learn/issues/343) | feat(ai-import): extract each question into a draft, validate it, and repair once              | security          | Open   |
-| [#344](https://github.com/tannernielson27/learn/issues/344) | feat(ai-import): assemble case studies with a chart that grows by step                         | none              | Open   |
-| [#345](https://github.com/tannernielson27/learn/issues/345) | feat(authoring): upload documents for AI import and watch them parse                           | security, e2e     | Open   |
-| [#346](https://github.com/tannernielson27/learn/issues/346) | feat(authoring): review an AI import batch before anything reaches the bank                    | security, e2e     | Open   |
-| [#347](https://github.com/tannernielson27/learn/issues/347) | feat(authoring): fix staged questions and case studies with the existing editors               | e2e               | Open   |
-| [#348](https://github.com/tannernielson27/learn/issues/348) | feat(authoring): import a reviewed batch all at once, or discard it                            | security, db, e2e | Open   |
-| [#349](https://github.com/tannernielson27/learn/issues/349) | docs(help): AI import guide, end-to-end tests, security rows and the S12 demo                  | e2e               | Open   |
+| #                                                           | Title                                                                                          | Gates             | Status           |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------- | ---------------- |
+| [#333](https://github.com/tannernielson27/learn/issues/333) | chore(ai-import): measure cost and accuracy on the owner's sample documents                    | none              | In review (#352) |
+| [#337](https://github.com/tannernielson27/learn/issues/337) | feat(ngn): AI draft shapes and converters for the selection, ordered and bowtie types          | none              | Open             |
+| [#338](https://github.com/tannernielson27/learn/issues/338) | feat(ngn): AI draft shapes and converters for cloze, highlight, drag-and-drop and case studies | none              | Open             |
+| [#339](https://github.com/tannernielson27/learn/issues/339) | test(ai-import): a fictional golden corpus and an accuracy eval                                | none              | Open             |
+| [#340](https://github.com/tannernielson27/learn/issues/340) | feat(db): AI import batches, staged entries, a private upload bucket and a monthly cap         | security, db      | Open             |
+| [#341](https://github.com/tannernielson27/learn/issues/341) | feat(ai-import): check uploaded files and prepare them for Claude                              | security          | Open             |
+| [#342](https://github.com/tannernielson27/learn/issues/342) | feat(ai-import): Claude client, segment pass, usage ledger and cap                             | security          | Open             |
+| [#343](https://github.com/tannernielson27/learn/issues/343) | feat(ai-import): extract each question into a draft, validate it, and repair once              | security          | Open             |
+| [#344](https://github.com/tannernielson27/learn/issues/344) | feat(ai-import): assemble case studies with a chart that grows by step                         | none              | Open             |
+| [#345](https://github.com/tannernielson27/learn/issues/345) | feat(authoring): upload documents for AI import and watch them parse                           | security, e2e     | Open             |
+| [#346](https://github.com/tannernielson27/learn/issues/346) | feat(authoring): review an AI import batch before anything reaches the bank                    | security, e2e     | Open             |
+| [#347](https://github.com/tannernielson27/learn/issues/347) | feat(authoring): fix staged questions and case studies with the existing editors               | e2e               | Open             |
+| [#348](https://github.com/tannernielson27/learn/issues/348) | feat(authoring): import a reviewed batch all at once, or discard it                            | security, db, e2e | Open             |
+| [#349](https://github.com/tannernielson27/learn/issues/349) | docs(help): AI import guide, end-to-end tests, security rows and the S12 demo                  | e2e               | Open             |
+
+#334, #335 and #336 are in S14 below. Issue titles keep the words they were filed with; the interface follows docs/glossary.md ("quiz", not "bank"; "question", not "item").
 
 Suggested order, one builder at a time (two heavy builders run this machine out of memory):
 
 1. #333 spike. First the owner adds `ANTHROPIC_API_KEY` to `.env.local` and puts the samples in `.ai-import-samples/`.
-2. #334 reveal schema, then the #337 and #338 drafts (all pure `src/lib/ngn`).
+2. The #337 and #338 drafts (pure `src/lib/ngn`).
 3. #340 db (heavy; hold the merge until the owner can push), then #341 files.
 4. #339 eval, then #342 segment, then #343 extract. **Checkpoint:** a .md of multiple choice and select-all questions becomes staged entries.
-5. #335 serve and #336 builder. Reveal-by-step can ship on its own from here.
-6. #344 case study assembly.
-7. #345 upload, #346 review, #347 edit, then #348 import (hold the merge for its push).
-8. #349 last.
+5. #344 case study assembly.
+6. #345 upload, #346 review, #347 edit, then #348 import (hold the merge for its push).
+7. #349 last.
 
-**Cut line:** if the sprint runs late, #344 and the case-study half of #347 move to S13. Standalone items still ship whole.
+**Cut line:** if the sprint runs late, #344 and the case-study half of #347 move to a later sprint. Standalone questions still ship whole.
 
 Parallelization map. Never build two stories at once that edit the same files:
 
-- **`src/lib/ngn/schemas/common.ts` and the item spec:** #334 only. #338 builds on it.
-- **`src/lib/ngn/registry.ts`:** #337, then #338.
-- **Case study builder** (`CaseStudyBuilder`, `EhrBlockEditors`): #336, then #347.
-- **Bank page** (`src/app/author/banks/[bankId]/page.tsx`): #345 only (the Import with AI link).
+- **`src/lib/ngn/registry.ts`:** #337, then #338. #338's case study draft reuses the `fromStep` and `stepAccess` schema that S14 shipped in `src/lib/ngn/schemas/common.ts`; it should not change it.
+- **Case study builder** (`CaseStudyBuilder`, `EhrBlockEditors`): #347 only.
+- **Quiz page** (`src/app/author/banks/[bankId]/page.tsx`): #345 only (the Import with AI link).
 - **`src/lib/aiImport/claude.ts` and the prompts:** #342, then #343, then #344.
 - **`src/lib/observability/scrub.ts`:** #342 only.
 - **docs/audits/S10-security.md:** several stories add rows. The orchestrator resolves it at merge; keep both.
 
-Migrations, reserved ahead of time in merge order:
+Migrations, reserved in merge order. They must sort after the newest migration on `main` (on 2026-10-14, `20261014300000_move_between_quizzes`); if `main` gains a later one before a story merges, renumber it:
 
-- `20261001000000_ai_import` (#340).
-- `20261001010000_ai_import_commit` (#348).
-- `20261001020000_*`, reserved for #335 in case reveal-by-step needs SQL. The conservative choice is none.
+- `20261015000000_ai_import` (#340).
+- `20261015010000_ai_import_commit` (#348).
+
+Reveal-by-step needed one migration, `20261014200000_assignment_record_column_grant` (#335, S14), so no spare is reserved for it here.
 
 Decisions taken at kickoff, each the conservative option; say if any should change:
 
 1. **Owner documents never enter the repo** (#333, #339). They live in `.ai-import-samples/`, which is gitignored. The CI corpus is fictional, written for the repo.
 2. **The model never writes ids, tokens or offsets** (#337, #338). It fills a string-only draft, and pure converters build learn.v1.
-3. **Imports land in a new folder, "AI import – <date>"**, by default; the author may pick another (#348).
-4. **The cap starts at 300 pages per org per month**, reserved before each call (#340). #333 may change the number.
+3. **Imports land in a new quiz, "AI import – <date>"**, by default; the teacher may pick an existing quiz instead (#348). Updated 2026-10-14: the kickoff said "a new folder", but since #411 a folder holds quizzes, not questions. The owner confirms.
+4. **The cap starts at 300 pages per org per month**, reserved before each call (#340). #333 may change the number. AI import is also off for a self-registered workspace until the owner turns it on (`orgs.ai_import_enabled`, S13 kickoff decision 1).
 5. **2–3 chunks parse at once** (#345). #333's latency may change it.
 6. **Images are not imported.** A question that relies on one is flagged (#341, #343).
 7. **Abandoned batches are deleted after 7 days** by a self-scheduling cleanup that needs no secret (#348).
 8. **Source errors are kept word for word**, with a note for the reviewer (#343).
-9. **A group that is not exactly six steps imports as standalone items** (#344).
+9. **A group that is not exactly six steps imports as standalone questions** (#344).
 
 Edge cases the owner's samples showed, each covered by an acceptance criterion or a corpus case in #339:
 
@@ -330,6 +330,77 @@ Edge cases the owner's samples showed, each covered by an acceptance criterion o
 - Open discussion prompts, calculations, matching and one-line recall, which have no NGN type.
 - Errors in the source; an embedded clinical image and a copyrighted form; the same document as both .pdf and .docx.
 - Character damage in a PDF's text layer (degree signs, superscripts).
+
+## S13: Registration + onboarding (milestone 15)
+
+Demo 14: a stranger signs up as a teacher, makes a class, and a stranger signs up as their student and joins by code, with no help from the owner.
+
+Sprint 13 closes the account loop that password sign-in (#353, #354) left open: there is no way to create an account without a class invite, and no way to become an instructor without the owner's SQL. The decision record is `docs/adr/0009-self-serve-registration.md`.
+
+| #                                                           | Title                                                                                       | Gates             | Status                      |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------- | --------------------------- |
+| [#355](https://github.com/tannernielson27/learn/issues/355) | feat(db): a workspace for each self-registered teacher, and a per-account onboarding record | security, db      | Merged (#369); pushed       |
+| [#356](https://github.com/tannernielson27/learn/issues/356) | feat(classes): a short class code a student can type to join                                | security, db, e2e | Merged (#375); needs push   |
+| [#357](https://github.com/tannernielson27/learn/issues/357) | feat(ui): a Dialog primitive for popups                                                     | none              | Merged (#370)               |
+| [#358](https://github.com/tannernielson27/learn/issues/358) | feat(account): ask for a name, show it, and let people change it                            | security, e2e     | Merged (#373); no migration |
+| [#359](https://github.com/tannernielson27/learn/issues/359) | feat(auth): abuse controls for open sign-up: a CAPTCHA, a rate limit and hosted Auth checks | security          | Merged (#371, #372)         |
+| [#360](https://github.com/tannernielson27/learn/issues/360) | feat(email): a welcome email that confirms the address of a new account                     | security          | Merged (#374); no migration |
+| [#361](https://github.com/tannernielson27/learn/issues/361) | feat(auth): a sign-up page for teachers and students                                        | security, e2e     | Merged (#377)               |
+| [#362](https://github.com/tannernielson27/learn/issues/362) | feat(student): join a class by code, and a way forward for an account with no class         | security, e2e     | Merged (#379); no migration |
+| [#363](https://github.com/tannernielson27/learn/issues/363) | fix(auth): send each person to their own home after sign-in                                 | none              | Merged (#380)               |
+| [#364](https://github.com/tannernielson27/learn/issues/364) | feat(onboarding): a three-step welcome for a new teacher                                    | e2e               | Merged (#381); no migration |
+| [#365](https://github.com/tannernielson27/learn/issues/365) | feat(onboarding): a short welcome for a new student                                         | e2e               | Merged (#382); no migration |
+| [#366](https://github.com/tannernielson27/learn/issues/366) | docs(onboarding): put sign-up on the landing page and retire the invite-only wording        | e2e               | Merged (#383)               |
+| [#367](https://github.com/tannernielson27/learn/issues/367) | test(e2e): the whole registration walk, security rows and the S13 demo                      | security, e2e     | Merged (#384)               |
+
+Suggested order: #355, #356, #357, #358, #359 and #360 depend on nothing and can start at once. Then #361 (needs #355 and #359) and #362 (needs #356); then #363, #364 and #365; #366 after #361; #367 last.
+
+Parallelization: on the owner's machine, one builder at a time. Agents elsewhere can take the first six together. #358, #361 and #362 all touch the sign-in and account components, and #362 and #365 both edit the student home (`src/app/learn/page.tsx`); never build two of either group at once. #355 and #356 are the only migrations; hold each merge until the owner can push.
+
+Reserved migrations:
+
+- `20261006000000_self_serve_instructors.sql` (#355)
+- `20261006010000_class_join_code.sql` (#356)
+
+Owner decisions, 2026-10-06. They replace S9 decision 1 (invite-only) and S11 kickoff decision 1 (no sign-up on the landing page):
+
+1. **Teacher sign-up is open, and each self-registered teacher gets their own workspace** (#355, #361). The existing shared org stays as it is; `make_instructor` remains for adding a colleague to it.
+2. **A class has a short typed code as well as its link** (#356, #362), so a student can sign up first and join after.
+3. **The sign-up form may say "This email already has an account"** (#361), behind a CAPTCHA and a rate limit (#359). This relaxes #139 on that form only; sign-in still answers every address alike.
+4. **Confirming the email never blocks anything**, for teachers as for students (#360, #361).
+
+Decisions taken at kickoff, each the conservative option; say if any should change:
+
+1. **AI import is off for a self-registered workspace** until the owner turns it on (`orgs.ai_import_enabled`, #355; noted on #342), so open sign-up cannot spend the owner's API key.
+2. **The CAPTCHA is Cloudflare Turnstile** (#359): free, no npm dependency, and skipped when its keys are unset.
+3. **Hosted Supabase's own sign-up endpoint is turned off** (#359). The app creates every account through the admin API, so the public endpoint only offers a way around the site's limits.
+4. **A student who signs up without a code has no role until they join a class** (#361, #362). They land on `/welcome`, which replaces the "No access yet" dead end. No "intent" is stored.
+5. **The welcome popups show once per account, stored in the database** (`profiles.onboarded_at`, #355), and only to accounts made after this sprint. The Get started checklist stays as it is.
+6. **Live sessions stay account-free** (join code and display name), as Kahoot and Socrative do.
+7. **Google sign-in (#67) is not in this sprint.**
+8. **A student still belongs to one workspace.** A student of one teacher cannot join another teacher's class with the same account. Known gap, to be shown in the demo; fixing it means per-class rather than per-org student membership.
+
+## S14: Stakeholder feedback (milestone 16)
+
+Only the stories this file has been told about are listed here; the milestone on GitHub has the rest.
+
+| #                                                           | Title                                                                                             | Gates             | Status                                                                                     |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------ |
+| [#334](https://github.com/tannernielson27/learn/issues/334) | feat(ngn): reveal and lock a case study's chart step by step (fromStep, stepAccess, recordAtStep) | none              | Merged (#424); no migration; owner confirms hidden/locked/open                             |
+| [#335](https://github.com/tannernielson27/learn/issues/335) | feat(player): serve each case study step only the chart it has reached                            | security, e2e     | Merged (#435); apply `20261014200000_assignment_record_column_grant` after the app deploys |
+| [#336](https://github.com/tannernielson27/learn/issues/336) | feat(authoring): set when each tab of a case study's chart appears and opens                      | e2e               | Merged (#438); no migration                                                                |
+| [#406](https://github.com/tannernielson27/learn/issues/406) | fix(live): page the progress board read past 1,000 answers                                        | none              | Merged (#422); no migration                                                                |
+| [#407](https://github.com/tannernielson27/learn/issues/407) | perf(live): fewer round trips when the host advances                                              | security, db      | In review; apply `20261013120000_open_session_view`; load run at 100 still owed            |
+| [#409](https://github.com/tannernielson27/learn/issues/409) | fix(auth): a full class signing in from one network                                               | security          | In review; no migration; owner sets the hosted Auth rate limits (docs/05 §7.7 step 4)      |
+| [#411](https://github.com/tannernielson27/learn/issues/411) | feat(authoring): library folders that hold quizzes                                                | db, e2e           | Merged (#433); owner pushes `20261014000000_library_folders`                               |
+| [#412](https://github.com/tannernielson27/learn/issues/412) | feat(authoring): rename and trim, teacher home and quiz page                                      | e2e               | Merged (#429); no migration; leftovers in the wording cleanup PR                           |
+| [#413](https://github.com/tannernielson27/learn/issues/413) | feat(authoring): rename and trim, editors and case study builder                                  | e2e               | Merged (#434); no migration                                                                |
+| [#414](https://github.com/tannernielson27/learn/issues/414) | feat(live): rename and trim, host console, join and student room                                  | e2e               | Merged (#431); no migration; leftovers in the wording cleanup PR                           |
+| [#415](https://github.com/tannernielson27/learn/issues/415) | feat(student): rename and trim, student home, practice and assignments                            | e2e               | Merged (#432); no migration; class components fixed in the wording cleanup PR              |
+| [#416](https://github.com/tannernielson27/learn/issues/416) | docs(help): rename and trim, landing, onboarding, help and emails                                 | e2e               | Merged (#430); owner re-pastes `magic_link.html`; "Sample bank" name open                  |
+| [#417](https://github.com/tannernielson27/learn/issues/417) | feat(authoring): move questions between quizzes, and turn a folder into a quiz                    | db, e2e, security | Merged (#437); owner pushes `20261014300000_move_between_quizzes` after `20261014000000`   |
+
+With #335 (PR #435) a student is sent the chart of each step they have reached and nothing later: live, by the play page and every view the phone fetches when the host moves; practice and take-home, the steps up to the first unanswered one and each one's chart. Until its migration is pushed, a student's own client can still select `assignments.patient_record` directly. With #336 (PR #438) the case study's patient record editor sets both, step by step, and saving a staged record keeps them.
 
 ## No milestone
 
@@ -361,23 +432,32 @@ Edge cases the owner's samples showed, each covered by an acceptance criterion o
 | [#326](https://github.com/tannernielson27/learn/issues/326) | fix(authoring): the preview keeps old marks after the answer key is edited                | authoring          | To do                                                              |
 | [#327](https://github.com/tannernielson27/learn/issues/327) | fix(assign): mark the instructor's report against the key each answer was scored with     | assign, db         | To do; builds on #320's `reveal` column                            |
 | [#328](https://github.com/tannernielson27/learn/issues/328) | docs(deploy): mark migrations 39 and 40 as applied to hosted                              | docs               | In review                                                          |
+| [#356](https://github.com/tannernielson27/learn/issues/356) | feat(classes): a short class code a student can type to join                              | classes, db        | In review; `20261006010000_class_join_code`, after #369; db push   |
+| [#358](https://github.com/tannernielson27/learn/issues/358) | feat(account): ask for a name, show it, and let people change it                          | auth, account      | In review; no migration                                            |
 
 ## Owner actions outside GitHub
 
-These block the live site rather than a single issue:
+These block the live site rather than a single issue.
 
-- **GitHub Actions runs again** (2026-09-22): the repo was made public, so hosted runners are free. The private plan's 2,000 minutes ran out around Sept 20 (about 3,100 minutes were used Sept 10–22), and every job was refused from Sept 21. The backlog stack is merged.
+**Go-live audit, 2026-09-26** (read-only, evidence from `supabase`, `vercel env ls`, `gh` and `pnpm golive:check` against production and `vauokqoyvewtzubqajgh`; 4 pass, 4 fail, 5 manual). Where things stand:
+
+- **No production project yet.** `supabase projects list` shows only `learn` (`vauokqoyvewtzubqajgh`), and Vercel Production still points at it. Everything below that says "done on `vauokqoyvewtzubqajgh`" has to be repeated in the production project after the §7.3 split.
+- **Done on `vauokqoyvewtzubqajgh`:** all 38 migrations applied; pg_cron and pg_net on; `learn-assignment-reminders` and `learn-rate-limit-sweep` scheduled and active; both Vault secrets (`learn_reminders_url`, `learn_cron_secret`) created; the Data API exposes only `public` and `graphql_public`.
+- **Done in Vercel:** `RESEND_API_KEY` and `EMAIL_FROM` in Production; `EMAIL_FROM` in Preview (Preview has no `RESEND_API_KEY`); `DEMO_ACCOUNT_*` removed from every scope.
+- **Missing in Vercel:** `CRON_SECRET` (the reminder route answers pg_net `503 not_configured` every 15 minutes until it is set) and all five `SENTRY_*` variables.
+- **Backups:** the age key exists and both repo secrets are set, but the first run by hand (36275256043) failed while dumping roles (`error running container: exit 1`), most likely a `PROD_DB_URL` that is not the session pooler on port 5432 or has an unencoded character in its password. Point it at the production project once that exists.
+- **Still open:** #178 (golive: `FAIL`), Realtime public access, SMTP, the magic-link template, the Auth rate limit and URLs, Sentry, the restore drill, the plan choice, and #159.
+
 - **Turn off Realtime "Allow public access"** in the Supabase project settings. It unblocks #178, which drops the last open select policy on `live.session_public_state`.
-- **Apply each Sprint 8 migration to hosted after its PR merges**, in filename order (`pnpm exec supabase db push`). Each PR lists its own.
 - **Author accounts are now created by hand** (#139, merged in #157). Sign-in no longer creates accounts, so a new instructor exists only once added under Authentication, Users, Add user. **Since #204 that is two steps**: Add user, then `select private.make_instructor('<address>');` in the SQL editor (docs/05 §7.6); without the second step the account lands on "No access yet". The sign-in form answers identically whether or not an address has an account, so a mistyped or unregistered address will appear to succeed and simply never receive a link.
-- **Sprint 9 email (#206)**: in Resend, confirm info.tannernielson.com is verified; in Supabase, set custom SMTP to Resend and raise the Auth email rate limit; in Vercel, add `RESEND_API_KEY` and `EMAIL_FROM` to Production and Preview. The exact steps are in docs/05 §7.7.
+- **Sprint 9 email (#206)**: in Resend, confirm info.tannernielson.com is verified; in Supabase, set custom SMTP to Resend and raise the Auth email rate limit. The exact steps are in docs/05 §7.7. Vercel Production has `RESEND_API_KEY` and `EMAIL_FROM` (2026-09-26); Preview still needs its own `RESEND_API_KEY`.
 - **Before any real student gets an invite**, create the production project and replay migrations (§7.3). Sprint 9 puts student emails in the database.
-- **Sprint 10 monitoring (#235)**: create a Sentry project (free tier) and add `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` and `SENTRY_AUTH_TOKEN` to Vercel Production and Preview. The steps will be in docs/05 §7.9 when #235 merges.
-- **Sprint 10 backups (#236)**: generate an `age` key pair and keep the private key off GitHub. Once the §7.3 project exists, add the repo secrets `BACKUP_AGE_RECIPIENT` (the public key) and `PROD_DB_URL`.
+- **Sprint 10 monitoring (#235)**: create a Sentry project (free tier) and add the five variables in docs/05 §7.9 (`SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`) to Vercel Production and Preview. None are set yet.
+- **Sprint 10 backups (#236)**: the age key pair exists and `BACKUP_AGE_RECIPIENT` and `PROD_DB_URL` are set (2026-09-26), but the first run failed (see the audit above). Fix `PROD_DB_URL`, point it at the §7.3 project once it exists, run it by hand, then do the restore drill (docs/05 §7.10).
 - **Choose the production plan at go-live**: Pro, or free plus the nightly dump (owner decision 2026-09-24).
 - **Decide #159**: whether to accept that four cheap IPs can hold one author's sign-in closed indefinitely, or pay for one of the mitigations listed there.
 - **Sprint 11: paste the regenerated magic-link template** (#268, merged in #278). `supabase/templates/magic_link.html` is now generated from `src/lib/email/templates/magicLink.ts`. Paste it into Authentication, Emails, Magic Link in every hosted project (docs/05 §7.7). The link is unchanged, so the old copy keeps working until then.
-- Done 2026-09-22: Vercel Production and Preview both carry `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` and `SUPABASE_JWT_SIGNING_KEY`; Production also has `DEMO_ACCOUNT_*`. The hosted demo user exists as an instructor in the seeded LeaRN org.
+- Done 2026-09-22: Vercel Production and Preview both carry `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` and `SUPABASE_JWT_SIGNING_KEY`. `DEMO_ACCOUNT_*` was removed from Production by 2026-09-26 (§7.11 step 2). The hosted demo user exists as an instructor in the seeded LeaRN org.
 - Supabase Authentication, URL Configuration: Site URL and redirect URLs for production, previews and localhost.
 - Supabase magic-link template: paste `supabase/templates/magic_link.html`. Email sign-in still needs it; the demo account (#115) works without it.
 - Done 2026-09-22 on `vauokqoyvewtzubqajgh`: migration history repaired (rows 1–3 had been applied by hand under other versions), rows 4–16 pushed with `supabase db push`, and `seed.sql` loaded. Row 17 (#149, `20260921210000_private_live_channel`) applied after #176 merged. A separate production project (below) still needs the full replay.

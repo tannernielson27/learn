@@ -12,11 +12,14 @@
 
 const COOKIE_NAME = "learn_participant";
 
-/** The sentences `src/app/join/actions.ts` refuses with, and the code the report counts. */
+/**
+ * The sentences the join form refuses with (`JOIN_REFUSALS` in `src/lib/live/joinForm.ts`), and
+ * the code the report counts. Change the two together.
+ */
 const REFUSAL_TEXT = [
-  ["That code does not match a session that is open.", "unknown_code"],
+  ["That join code does not match an open live session.", "unknown_code"],
   ["Too many join attempts from this network.", "rate_limited"],
-  ["That session is full.", "full"],
+  ["That live session is full.", "full"],
   ["Joining is not working just now.", "unavailable"],
 ];
 

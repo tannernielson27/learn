@@ -74,35 +74,66 @@ function joinReason(error: PostgrestError): "gone" | "ended" | "full" | "failed"
 }
 
 /**
- * Turns a participant token back into the participant it names, and marks them seen. Null covers
- * every way a token can fail — unknown, tampered, belonging to another session, or naming a
- * participant that no longer exists — because the caller's answer is the same for all of them:
- * join again.
+ * What checking a participant token came to. Three answers, because there are three things to do
+ * about it (#407):
  *
- * Fails closed. A database that cannot answer is not a reason to let someone in.
+ *   * `ok` — this is that participant.
+ *   * `unknown` — the database answered, and the token names nobody: unknown, tampered, belonging
+ *     to another session, or naming a participant that no longer exists. The caller cannot tell
+ *     those apart and the answer to all of them is the same: join again.
+ *   * `unavailable` — the database did not answer. Nothing is known about this token at all, so
+ *     the person is neither let in **nor told they are out**. Reading this as `unknown` is what
+ *     sent a phone to the join form in the middle of a class because one request timed out.
+ */
+export type ParticipantCheck =
+  | { ok: true; participant: ResumedParticipant }
+  | { ok: false; reason: "unknown" }
+  | { ok: false; reason: "unavailable"; error: PostgrestError; status: number };
+
+/**
+ * Turns a participant token back into the participant it names, and marks them seen.
+ *
+ * Fails closed either way: nothing but `ok` lets anyone in.
+ */
+export async function checkParticipant(
+  client: Client,
+  token: ParticipantToken,
+): Promise<ParticipantCheck> {
+  const { data, error, status } = await client.rpc("resume_participant", {
+    target_participant: token.participantId,
+    target_session: token.sessionId,
+    presented_secret: token.secret,
+  });
+  if (error) return { ok: false, reason: "unavailable", error, status };
+
+  const row = data?.[0];
+  if (!row) return { ok: false, reason: "unknown" };
+  // A timestamptz arrives as a string. An unparseable one would poison the roster's ordering with
+  // a NaN, so it falls back to the epoch: the earliest possible seat, and never a crash.
+  const joinedAt = Date.parse(row.participant_joined_at);
+  return {
+    ok: true,
+    participant: {
+      participantId: row.participant_id,
+      displayName: row.participant_name,
+      joinedAt: Number.isNaN(joinedAt) ? 0 : joinedAt,
+      sessionStatus: row.session_status,
+      mode: row.session_mode,
+      title: row.session_title,
+    },
+  };
+}
+
+/**
+ * `checkParticipant` for a caller with one thing to do about every failure. Null covers a token
+ * that names nobody **and** a database that did not answer, so only use it where "not known to be
+ * a participant" is all that is being asked — joining, where the answer to both is a fresh join.
+ * Anything that would tell a person they have left the room must use `checkParticipant`.
  */
 export async function resumeParticipant(
   client: Client,
   token: ParticipantToken,
 ): Promise<ResumedParticipant | null> {
-  const { data, error } = await client.rpc("resume_participant", {
-    target_participant: token.participantId,
-    target_session: token.sessionId,
-    presented_secret: token.secret,
-  });
-  if (error) return null;
-
-  const row = data?.[0];
-  if (!row) return null;
-  // A timestamptz arrives as a string. An unparseable one would poison the roster's ordering with
-  // a NaN, so it falls back to the epoch: the earliest possible seat, and never a crash.
-  const joinedAt = Date.parse(row.participant_joined_at);
-  return {
-    participantId: row.participant_id,
-    displayName: row.participant_name,
-    joinedAt: Number.isNaN(joinedAt) ? 0 : joinedAt,
-    sessionStatus: row.session_status,
-    mode: row.session_mode,
-    title: row.session_title,
-  };
+  const checked = await checkParticipant(client, token);
+  return checked.ok ? checked.participant : null;
 }

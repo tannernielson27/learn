@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReportItemInput } from "@/lib/live/report";
+import { FIXTURES } from "@/lib/ngn/fixtures";
+import { itemSchema } from "@/lib/ngn/schemas";
 import type { AssignmentReportRows, ReportAssignment } from "@/lib/supabase/assignmentReport";
+import { scoreAttempt } from "./attemptScoring";
 import {
   AUTO_SUBMIT_BATCH,
   loadAssignmentReport,
@@ -140,6 +143,42 @@ describe("loadAssignmentReport", () => {
       "[assignment-report] the submit at close failed",
       expect.objectContaining({ assignmentId: ASSIGNMENT.id, message: "service down" }),
     );
+  });
+
+  // #327. The report holds no key to disagree with: its item read is the name, type and step only
+  // (`readReportItems`), and every figure comes from the points stored with the answer at submit.
+  it("marks an answer as it was scored, whatever the item's key has since become", async () => {
+    const rowId = ASSIGNMENT.itemSet[0]!;
+    const keyA = itemSchema.parse(FIXTURES.multiple_choice.canonical);
+    const keyB = itemSchema.parse({ ...keyA, answerKey: { correctOptionId: "opt_c" } });
+    const answers = { [rowId]: { type: "multiple_choice", optionId: "opt_a" } };
+    const scored = scoreAttempt([{ rowId, item: keyA }], answers);
+    // The control: the same answer against today's key earns nothing.
+    expect(scored.total).toBe(1);
+    expect(scoreAttempt([{ rowId, item: keyB }], answers).total).toBe(0);
+
+    const rows: AssignmentReportRows = {
+      ...ROWS,
+      attempts: [
+        {
+          ...ROWS.attempts[0]!,
+          score: scored.total,
+          maxScore: scored.possible,
+          marks: scored.marks.map((mark) => ({
+            itemId: mark.item_id,
+            points: mark.points,
+            maxPoints: mark.max_points,
+          })),
+        },
+      ],
+    };
+    // The item is key B by the time the report is read; `items` is all the report asks of it.
+    const { store } = fakeStore({ rows: vi.fn(async () => rows) });
+    const loaded = await loadAssignmentReport(store, ASSIGNMENT.id, CLOSED);
+
+    expect(loaded?.report.students[0]?.scores).toEqual([{ points: 1, maxPoints: 1 }]);
+    expect(loaded?.report.students[0]?.best).toMatchObject({ score: 1, maxScore: 1, percent: 100 });
+    expect(loaded?.report.items[0]).toMatchObject({ full: 1, none: 0, percentCorrect: 100 });
   });
 
   it("lets a failed read throw, so half a report is never shown", async () => {

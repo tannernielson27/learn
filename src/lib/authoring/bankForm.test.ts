@@ -29,6 +29,6 @@ describe("parseBankForm", () => {
   });
 
   it("says what to do in the message", () => {
-    expect(BANK_NAME_ERROR).toBe("Give the bank a name of up to 120 characters.");
+    expect(BANK_NAME_ERROR).toBe("Give the quiz a name of up to 120 characters.");
   });
 });

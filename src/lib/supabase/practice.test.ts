@@ -204,14 +204,46 @@ describe("recordPracticeResponse", () => {
 describe("the student's own reads", () => {
   it("lists the practice banks", async () => {
     const { client, rpc } = rpcClient({
-      data: [{ bank_id: BANK, bank_name: "Cardiac week", item_count: 21, answered: 2 }],
+      data: [
+        {
+          bank_id: BANK,
+          bank_name: "Cardiac week",
+          item_count: 21,
+          answered: 2,
+          workspace_name: "Ada's workspace",
+        },
+      ],
       error: null,
     });
     expect(await readMyPracticeBanks(client)).toEqual([
-      { bankId: BANK, name: "Cardiac week", itemCount: 21, answered: 2 },
+      {
+        bankId: BANK,
+        name: "Cardiac week",
+        itemCount: 21,
+        answered: 2,
+        workspaceName: "Ada's workspace",
+      },
     ]);
     expect(rpc).toHaveBeenCalledWith("my_practice_banks");
     expect(await readMyPracticeBanks(rpcClient({ data: null, error: {} }).client)).toBeNull();
+  });
+
+  it("lists the banks with no workspace while the database sends none, or a blank one", async () => {
+    // 20261011010000 adds `workspace_name`; the app is deployed before it is applied.
+    const row = { bank_id: BANK, bank_name: "Cardiac week", item_count: 21, answered: 2 };
+    const { client } = rpcClient({
+      data: [row, { ...row, workspace_name: null }, { ...row, workspace_name: "  " }],
+      error: null,
+    });
+    const banks = await readMyPracticeBanks(client);
+    expect(banks?.map((bank) => bank.workspaceName)).toEqual([null, null, null]);
+    expect(banks?.[0]).toEqual({
+      bankId: BANK,
+      name: "Cardiac week",
+      itemCount: 21,
+      answered: 2,
+      workspaceName: null,
+    });
   });
 
   it("reads practice marks, leaving out any that are not numbers", async () => {

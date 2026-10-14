@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { attemptsLabel, studentResultsPath } from "@/lib/assignments/assignments";
 import type { HistoryRow, HistoryStanding } from "@/lib/assignments/history";
+import { classLabel } from "@/lib/classes/studentClasses";
 import { DEFAULT_CLASS_TIME_ZONE } from "@/lib/classes/timeZone";
 import { formatPercent, formatPoints } from "@/lib/live/reportFormat";
 import { ClassTime } from "./ClassTime";
@@ -40,13 +41,7 @@ function Standing({ standing }: { standing: HistoryStanding }) {
 export function AssignmentHistory({ rows, classes }: AssignmentHistoryProps) {
   if (rows.length === 0) {
     // Under the student home's History h2.
-    return (
-      <EmptyState
-        level={3}
-        heading="Nothing has closed yet"
-        body="Your scores appear here once an assignment closes."
-      />
-    );
+    return <EmptyState level={3} heading="No closed assignments yet" />;
   }
 
   return (
@@ -68,9 +63,8 @@ export function AssignmentHistory({ rows, classes }: AssignmentHistoryProps) {
               >
                 {`Results for ${row.title}`}
               </Link>
-              <span className="text-sm text-ink-2">{info?.name ?? "Your class"}</span>
-              <span className="text-sm text-ink-2">
-                Closed{" "}
+              <span className="text-sm break-words text-ink-2">
+                <span>{classLabel(info)}</span> · Closed{" "}
                 <ClassTime
                   iso={row.closesAt}
                   timeZone={info?.timeZone ?? DEFAULT_CLASS_TIME_ZONE}

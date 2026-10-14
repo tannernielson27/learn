@@ -37,7 +37,7 @@ describe("EditorShell and a missing rationale", () => {
 
     const problems = screen.getByRole("region", { name: "Problems to fix" });
     const message = within(problems).getByRole("button", {
-      name: "Write the rationale. An item needs one before it can be published.",
+      name: "Write the rationale. A question needs one to be published.",
     });
     const publish = screen.getByRole("button", { name: "Publish" });
     expect(publish).toHaveAttribute("aria-disabled", "true");
@@ -102,7 +102,7 @@ describe("EditorShell quality warnings", () => {
     );
 
     const warnings = screen.getByRole("region", { name: "Quality warnings" });
-    expect(within(warnings).getByText(/do not stop you publishing/)).toBeInTheDocument();
+    expect(within(warnings).getByText(/do not stop publishing/)).toBeInTheDocument();
     await user.click(
       within(warnings).getByRole("button", { name: /Every option is marked correct/ }),
     );
