@@ -30,8 +30,6 @@ export interface StudentAssignment {
   shuffleOptions: boolean;
   /** Row ids of the items, in the set's order. */
   itemSet: string[];
-  /** The case study's patient record snapshot, unparsed; null for a bank. */
-  patientRecord: Json | null;
 }
 
 /** One of this student's attempts, without its score: the column grant has none to give. */
@@ -59,8 +57,12 @@ export interface ExpiredAttempt extends SubmissionInput {
   assignmentId: string;
 }
 
+/**
+ * Not `patient_record` (#335): the student's own client is no longer granted that column, and the
+ * page is handed the record cut to the steps the student has reached, read by `readAssignmentRecord`.
+ */
 const ASSIGNMENT_COLUMNS =
-  "id, class_id, title, opens_at, closes_at, max_attempts, shuffle_options, item_set, patient_record";
+  "id, class_id, title, opens_at, closes_at, max_attempts, shuffle_options, item_set";
 const ATTEMPT_COLUMNS = "id, number, started_at, submitted_at, auto_submitted";
 const ITEM_COLUMNS = "id, type, cjmm_step, tags, version, content, answer_key, rationale, scoring";
 
@@ -101,8 +103,28 @@ export async function readStudentAssignment(
     maxAttempts: data.max_attempts,
     shuffleOptions: data.shuffle_options,
     itemSet: toItemSet(data.item_set),
-    patientRecord: data.patient_record,
   };
+}
+
+/**
+ * A take-home case study's patient record as stored, whole, for the server to cut (#335). Null
+ * for a bank; `{ ok: false }` when the read failed.
+ *
+ * Service role, and so only ever called with an assignment id the student's own client has just
+ * read under row level security (`readStudentAssignment`): this does no checking of its own. The
+ * whole record never leaves the server; `loadAttemptPage` sends `recordsThrough` of it.
+ */
+export async function readAssignmentRecord(
+  service: Client,
+  assignmentId: string,
+): Promise<{ ok: true; record: Json | null } | { ok: false }> {
+  const { data, error } = await service
+    .from("assignments")
+    .select("patient_record")
+    .eq("id", assignmentId)
+    .maybeSingle();
+  if (error || !data) return { ok: false };
+  return { ok: true, record: data.patient_record ?? null };
 }
 
 /** This student's attempts at one assignment, oldest first. Null on an error. */

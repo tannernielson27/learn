@@ -36,6 +36,17 @@ language sql as $$
     json_build_object('sub', account, 'role', 'authenticated')::text, true);
 $$;
 
+-- #335: `authenticated` is no longer granted `patient_record`, so the snapshot is read as the
+-- superuser who owns this function, by whichever role is asking.
+create function pg_temp.record_of(target_title text) returns jsonb
+language sql security definer as $$
+  select patient_record from public.assignments where title = target_title;
+$$;
+create function pg_temp.record_of_case(target_case uuid) returns jsonb
+language sql security definer as $$
+  select patient_record from public.assignments where case_study_id = target_case;
+$$;
+
 -- Org A: two classes, a bank with two published items and a draft, an empty bank, a case study.
 insert into public.classes (id, org_id, name)
   select '00000000-0000-0000-0000-0000002070c1', org_id, 'NUR 310'
@@ -98,7 +109,7 @@ select is(
   'the item set is the bank''s published items, oldest first, snapshotted as ids'
 );
 select is(
-  (select row(max_attempts, shuffle_options, patient_record is null)::text
+  (select row(max_attempts, shuffle_options, pg_temp.record_of('Open 207') is null)::text
      from public.assignments where title = 'Open 207'),
   row(1, true, true)::text,
   'one attempt and shuffled options by default, and a bank carries no patient record'
@@ -127,7 +138,7 @@ select lives_ok(
   'an author assigns a case study, leaving the title blank'
 );
 select is(
-  (select row(item_set, patient_record -> 'patientHeader' ->> 'setting')::text
+  (select row(item_set, pg_temp.record_of_case(case_study_id) -> 'patientHeader' ->> 'setting')::text
      from public.assignments where case_study_id = '00000000-0000-0000-0000-0000002070a5'),
   row('["00000000-0000-0000-0000-0000002070f2"]'::jsonb, 'Ward')::text,
   'a case study snapshots its steps and its patient record'
@@ -243,8 +254,7 @@ select is(
   'publishing another item in the bank does not change an assignment''s items'
 );
 select is(
-  (select patient_record -> 'patientHeader' ->> 'setting' from public.assignments
-    where case_study_id = '00000000-0000-0000-0000-0000002070a5'),
+  pg_temp.record_of_case('00000000-0000-0000-0000-0000002070a5') -> 'patientHeader' ->> 'setting',
   'Ward',
   'and editing the case study''s record does not change its snapshot'
 );
@@ -359,7 +369,9 @@ select ok(
   'control: the assigned items do carry the key'
 );
 select ok(
-  (select not bool_or(to_jsonb(a)::text like '%secret_key_207%') from public.assignments a
+  (select not bool_or(jsonb_build_object('title', a.title, 'item_set', a.item_set)::text
+                        like '%secret_key_207%')
+     from public.assignments a
     where a.class_id = '00000000-0000-0000-0000-0000002070c1'),
   'no assignment row carries an answer key'
 );
@@ -388,7 +400,9 @@ select results_eq(
   'a student in the class sees its open assignments, and not one before it opens'
 );
 select ok(
-  (select not bool_or(to_jsonb(a)::text like '%secret_key_207%') from public.assignments a),
+  (select not bool_or(jsonb_build_object('title', a.title, 'item_set', a.item_set)::text
+                        like '%secret_key_207%')
+     from public.assignments a),
   'what a student reads carries no answer key'
 );
 select throws_ok(

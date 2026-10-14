@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { FIXTURES, sampleCaseStudy } from "@/lib/ngn/fixtures";
+import { stagedCaseStudy, stagedEhr } from "@/lib/ngn/fixtures/chart-reveal";
 import { caseStudySchema, itemSchema, type Item } from "@/lib/ngn/schemas";
 import type { AttemptSummary, StudentAssignment } from "@/lib/supabase/attempts";
 import { loadAttemptPage, type AttemptPageStore } from "./attemptPage";
@@ -27,7 +28,6 @@ function assignment(over: Partial<StudentAssignment> = {}): StudentAssignment {
     maxAttempts: 2,
     shuffleOptions: true,
     itemSet: [rowId(1), rowId(2)],
-    patientRecord: null,
     ...over,
   };
 }
@@ -46,6 +46,10 @@ function store(over: Partial<AttemptPageStore> = {}, set: SetItem[] = setOf([MC,
     attempts: vi.fn(async () => [openAttempt]),
     answers: vi.fn(async () => ({ [rowId(1)]: { type: "multiple_choice", optionId: "opt_b" } })),
     items: vi.fn(async () => set),
+    record: vi.fn(async (): Promise<{ ok: true; record: unknown } | { ok: false }> => ({
+      ok: true,
+      record: null,
+    })),
     autoSubmit: vi.fn(async () => 0),
     ...over,
   } satisfies AttemptPageStore;
@@ -81,44 +85,102 @@ describe("loadAttemptPage, on what the student's page is handed before close", (
     expect(fake.autoSubmit).not.toHaveBeenCalled();
   });
 
-  it("a case study: six steps and the patient record, and no step's key", async () => {
-    const fake = store(
+  /** A case study assignment holding `record`, with the first `answered` steps saved. */
+  function caseStore(record: unknown, answered = 0) {
+    const study = caseStudySchema.parse(stagedCaseStudy);
+    return store(
       {
         assignment: vi.fn(async () =>
           assignment({
-            itemSet: CASE.items.map((_, index) => rowId(index + 1)),
-            patientRecord: JSON.parse(JSON.stringify(CASE.ehr)),
+            itemSet: study.items.map((_, index) => rowId(index + 1)),
             shuffleOptions: false,
           }),
         ),
-        answers: vi.fn(async () => ({})),
+        answers: vi.fn(async () =>
+          Object.fromEntries(
+            study.items.slice(0, answered).map((step, index) => [rowId(index + 1), savedFor(step)]),
+          ),
+        ),
+        record: vi.fn(async () => ({ ok: true as const, record })),
       },
-      setOf(CASE.items),
+      setOf(study.items),
     );
+  }
+
+  it("a case study: the reached steps and each one's chart, and no step's key", async () => {
+    const fake = caseStore(JSON.parse(JSON.stringify(CASE.ehr)), 1);
     const held = JSON.stringify(await fake.items([]));
     expect(held).toContain('"answerKey"');
 
     const view = await loadAttemptPage(fake, ASSIGNMENT, STUDENT, NOW);
     if (view.kind !== "taking") throw new Error(`expected taking, got ${view.kind}`);
-    expect(view.record?.patientHeader.setting).toBe(CASE.ehr.patientHeader.setting);
-    expect(view.items).toHaveLength(6);
+    expect(fake.record).toHaveBeenCalledWith(ASSIGNMENT);
+    // Step 1 saved, so step 2 is reached: two steps, two charts, and six in all.
+    expect(view.items).toHaveLength(2);
+    expect(view.total).toBe(6);
+    expect(view.records).toEqual([CASE.ehr, CASE.ehr]);
     const bytes = JSON.stringify(view);
-    for (const step of CASE.items) {
-      expect(bytes).toContain(step.id);
-      for (const secret of secretsOf(step)) expect(bytes).not.toContain(secret);
-    }
     expect(bytes).not.toContain('"answerKey"');
     expect(bytes).not.toContain('"rationale"');
   });
 
+  describe("a chart that grows with the case (#335)", () => {
+    const NOTE_0200 = "0200: Second large-bore IV";
+    const LABS = "Serum hCG";
+    const pageAfter = async (answered: number) =>
+      JSON.stringify(
+        await loadAttemptPage(caseStore(stagedEhr, answered), ASSIGNMENT, STUDENT, NOW),
+      );
+
+    it("sends step 1's chart and nothing a later step reveals", async () => {
+      const bytes = await pageAfter(0);
+      expect(bytes).toContain("0115: Pain now 8/10");
+      for (const later of [
+        NOTE_0200,
+        "0130: Pale",
+        LABS,
+        "Lab Results",
+        "fromStep",
+        "stepAccess",
+      ]) {
+        expect(bytes).not.toContain(later);
+      }
+      // Nor the steps not yet reached.
+      const study = caseStudySchema.parse(stagedCaseStudy);
+      for (const step of study.items.slice(1)) expect(bytes).not.toContain(`"id":"${step.id}"`);
+    });
+
+    it("names a tab locked at a reached step and sends none of its text", async () => {
+      const bytes = await pageAfter(1);
+      expect(bytes).toContain('"title":"Lab Results","locked":true');
+      expect(bytes).not.toContain(LABS);
+    });
+
+    it("sends each part at the step that reveals it: the controls", async () => {
+      expect(await pageAfter(2)).toContain(LABS);
+      expect(await pageAfter(2)).not.toContain(NOTE_0200);
+      expect(await pageAfter(3)).toContain(NOTE_0200);
+    });
+  });
+
   it("a record that does not parse is left off rather than breaking the page", async () => {
     const fake = store({
-      assignment: vi.fn(async () => assignment({ patientRecord: { nonsense: true } })),
+      record: vi.fn(async () => ({ ok: true as const, record: { nonsense: 1 } })),
     });
     const view = await loadAttemptPage(fake, ASSIGNMENT, STUDENT, NOW);
-    expect(view.kind === "taking" && view.record).toBeNull();
+    expect(view.kind === "taking" && view.records).toBeNull();
+  });
+
+  it("a record that could not be read fails the page rather than showing it without one", async () => {
+    const fake = store({ record: vi.fn(async () => ({ ok: false as const })) });
+    expect((await loadAttemptPage(fake, ASSIGNMENT, STUDENT, NOW)).kind).toBe("failed");
   });
 });
+
+/** An answer of the step's own type, so it reads back as saved. */
+function savedFor(step: Item): unknown {
+  return FIXTURES[step.type].cases[0]?.response;
+}
 
 describe("loadAttemptPage, the header", () => {
   it("names the assignment's class, so the page can say the close in its zone (#242)", async () => {
