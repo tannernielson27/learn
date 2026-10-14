@@ -166,9 +166,7 @@ describe("EhrEditor", () => {
     );
     expect(textbox("Age in years")).toHaveFocus();
     expect(textbox("Age in years")).toHaveAttribute("aria-invalid", "true");
-    expect(
-      list.getByRole("button", { name: "Add at least one section to the record." }),
-    ).toBeInTheDocument();
+    expect(list.getByRole("button", { name: "Add at least one tab." })).toBeInTheDocument();
   });
 
   it("moves a section, keeping focus on its move buttons", async () => {
@@ -214,10 +212,9 @@ describe("EhrEditor", () => {
       throw new Error("offline");
     });
     await user.click(button("Save record"));
-    expect(await screen.findByText("The record could not be saved. Try again.")).toHaveAttribute(
-      "role",
-      "alert",
-    );
+    expect(
+      await screen.findByText("The patient record could not be saved. Try again."),
+    ).toHaveAttribute("role", "alert");
     expect(button("Save record")).not.toBeDisabled();
   }, 30_000);
 });

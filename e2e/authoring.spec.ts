@@ -178,7 +178,7 @@ test("an author writes a select-all-that-apply item, marks three answers, and pu
   }
   // The summary asks for answers until one is marked, then follows every mark.
   const scoring = page.getByRole("region", { name: "Scoring", exact: true });
-  await expect(scoring).toContainText("Finish the item to see its score.");
+  await expect(scoring).toContainText("Finish the question to see its score.");
   for (const letter of ["A", "B"]) {
     await page.getByRole("checkbox", { name: `Option ${letter} is correct` }).check();
   }
@@ -511,7 +511,7 @@ test("an author starts a case study in a bank and finds it listed as a draft", a
     page.getByRole("heading", { level: 1, name: "Post-operative day two" }),
   ).toBeVisible();
   await expect(page.getByText("0 of 6 steps ready")).toBeVisible();
-  await expect(page.getByText("Step 1 (Recognize Cues) has no item yet.")).toBeVisible();
+  await expect(page.getByText("Step 1 (Recognize Cues) has no question yet.")).toBeVisible();
   await expectNoAxeViolations(page);
 
   await page.getByRole("link", { name: "Back to bank" }).click();

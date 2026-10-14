@@ -72,12 +72,14 @@ describe("previewing a case study", () => {
 
   it("says what a preview still needs instead of opening", async () => {
     const { user } = setup({
-      preview: { ok: false, blockers: ["Step 6 (Evaluate Outcomes) has no item yet."] },
+      preview: { ok: false, blockers: ["Step 6 (Evaluate Outcomes) has no question yet."] },
     });
     await user.click(screen.getByRole("button", { name: "Preview case study" }));
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent("This case study cannot be previewed yet.");
-    expect(within(alert).getByText("Step 6 (Evaluate Outcomes) has no item yet.")).toBeVisible();
+    expect(
+      within(alert).getByText("Step 6 (Evaluate Outcomes) has no question yet."),
+    ).toBeVisible();
     expect(screen.getByRole("navigation", { name: "Case study steps" })).toBeInTheDocument();
   });
 
@@ -103,7 +105,7 @@ describe("keeping the author oriented around preview and publish", () => {
       publish: vi.fn(async () => ({
         ok: false,
         error: "The case study is not ready to publish yet.",
-        blockers: ["Step 4 (Generate Solutions) has no item yet."],
+        blockers: ["Step 4 (Generate Solutions) has no question yet."],
       })),
     });
     await user.click(screen.getByRole("button", { name: "Publish case study" }));
@@ -144,8 +146,8 @@ describe("publishing a case study", () => {
         ok: false,
         error: "The case study is not ready to publish yet.",
         blockers: [
-          "Step 3 (Prioritize Hypotheses) needs its item finished and published.",
-          "Step 4 (Generate Solutions) has no item yet.",
+          "Step 3 (Prioritize Hypotheses) needs its question finished and published.",
+          "Step 4 (Generate Solutions) has no question yet.",
         ],
       })),
     });

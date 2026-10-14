@@ -47,7 +47,7 @@ describe("scoring summary in the editor", () => {
   it("asks the author to finish the item instead of a number while it is incomplete", () => {
     setup(emptyMultipleResponseForm("mr_new"));
     expect(screen.getByRole("region", { name: "Scoring" })).toHaveTextContent(
-      "Finish the item to see its score.",
+      "Finish the question to see its score.",
     );
     expect(screen.getByRole("region", { name: "Scoring" })).not.toHaveTextContent(/Worth/);
   });
@@ -56,7 +56,7 @@ describe("scoring summary in the editor", () => {
   it("does not ask for answers when they are marked but something else is missing", () => {
     setup({ ...sata(), stem: "" });
     const scoring = screen.getByRole("region", { name: "Scoring" });
-    expect(scoring).toHaveTextContent("Finish the item to see its score.");
+    expect(scoring).toHaveTextContent("Finish the question to see its score.");
     expect(scoring).not.toHaveTextContent(/Mark the correct answers/);
   });
 });
