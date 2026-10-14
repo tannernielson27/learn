@@ -9,7 +9,7 @@ import { PARTICIPANT_COOKIE, parseParticipantToken } from "@/lib/live/participan
 import { JOIN_PATH } from "@/lib/live/routes";
 import { pacedState } from "@/lib/live/state";
 import { mintChannelToken, readChannelSigningKey } from "@/lib/supabase/channelToken";
-import { resumeParticipant } from "@/lib/supabase/participants";
+import { checkParticipant } from "@/lib/supabase/participants";
 import { readSessionRecord } from "@/lib/supabase/sessionRecord";
 import { readPublicSessionState } from "@/lib/supabase/sessions";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -49,8 +49,15 @@ export default async function PlaySessionPage({ params }: PageProps<"/play/[sess
   if (!token || token.sessionId !== sessionId) redirect(JOIN_PATH);
 
   const service = createSupabaseServiceClient();
-  const participant = await resumeParticipant(service, token);
-  if (!participant) redirect(JOIN_PATH);
+  const checked = await checkParticipant(service, token);
+  // #407: a database that did not answer has not said this person left the room. Sending them to
+  // the join form for it took a student out of a class over one timed-out request; thrown, it
+  // lands on this route's error screen, whose "Try again" runs this render once more.
+  if (!checked.ok && checked.reason === "unavailable") {
+    throw new Error("The session could not be reached to check a participant.");
+  }
+  if (!checked.ok) redirect(JOIN_PATH);
+  const { participant } = checked;
 
   // Only ever after the token has been checked: this read does no checking of its own.
   const read = await readPublicSessionState(service, sessionId);
