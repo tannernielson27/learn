@@ -127,14 +127,8 @@ test("a teacher reaches the library, classes, live sessions and the workspace fr
   const quizPath = new URL(page.url()).pathname;
   await expectScreen("Library", "true", "teacher-quiz-empty");
 
-  await page
-    .getByRole("navigation", { name: "Folders", exact: true })
-    .getByRole("link", { name: "Not in a folder", exact: true })
-    .click();
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Not in a folder", exact: true }),
-  ).toBeVisible();
-  await expectScreen("Library", "true", "teacher-quiz-not-in-a-folder");
+  // #411: a new quiz has no folders inside it; folders are in the library (libraryFolders.spec.ts).
+  await expect(page.getByRole("navigation", { name: "Folders", exact: true })).toHaveCount(0);
 
   await page.goto(`${quizPath}?status=archived`);
   await expect(

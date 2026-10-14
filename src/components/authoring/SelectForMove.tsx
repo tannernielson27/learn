@@ -1,7 +1,7 @@
 export interface SelectForMoveProps {
   /** The move form this checkbox joins; it sits in a list outside that form. */
   formId: string;
-  name: "item" | "caseStudy";
+  name: "item" | "caseStudy" | "quiz";
   value: string;
   label: string;
 }

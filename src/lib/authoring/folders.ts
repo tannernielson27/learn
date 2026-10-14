@@ -93,6 +93,15 @@ export function folderOptions(rows: readonly FolderRow[]): FolderOption[] {
   return flatten(buildFolderTree(rows), 1);
 }
 
+/**
+ * Whether a quiz shows folders inside it (#411). Folders now live in the library and hold quizzes;
+ * a new quiz offers none. A quiz that already has one keeps them, read and write, until #417
+ * turns them into quizzes. When its last one is deleted, the controls go too.
+ */
+export function offersInQuizFolders(folders: readonly FolderRow[]): boolean {
+  return folders.length > 0;
+}
+
 /** Reads the bank page's `folder` search parameter. Anything unreadable shows everything. */
 export function parseFolderView(value: string | string[] | undefined): FolderView {
   if (value === UNFILED) return { kind: "unfiled" };
