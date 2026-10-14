@@ -35,14 +35,14 @@ async function expectNav(page: Page, current: string, how: "page" | "true"): Pro
  * `aria-label`, `title`, `placeholder` and `alt` attributes, and its title. The Get started
  * checklist is left out: its words live in src/lib/onboarding and belong to #416.
  */
-function drawnHtml(page: Page): Promise<string> {
-  return page.evaluate(() => {
+async function drawnHtml(page: Page): Promise<string> {
+  const html = await page.evaluate(() => {
     const body = document.body.cloneNode(true) as HTMLElement;
     body.querySelector('[aria-labelledby="get-started-heading"]')?.remove();
-    // The signed-in name is the account's own: this helper's addresses start with "author-".
-    body.querySelector('[data-testid^="signed-in-"]')?.remove();
     return body.innerHTML;
   });
+  // The account's own address is data, not wording: e2e/signIn.ts starts every one with "author-".
+  return html.replace(/author-[\w.+-]*(?:@[\w.-]+)?/g, "");
 }
 
 async function expectGlossaryWords(page: Page): Promise<void> {
