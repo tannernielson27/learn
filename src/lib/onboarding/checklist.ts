@@ -49,7 +49,7 @@ export function checklistSteps(progress: OrgProgress): ChecklistStep[] {
       hint: "The sample has one question of every type and a case study, published and ready to use.",
       done: progress.banks.length > 0,
       href: "#new-bank-heading",
-      linkLabel: "New quiz",
+      linkLabel: "Write your own",
       sampleBankId: sample?.id ?? null,
     },
     {

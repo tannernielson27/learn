@@ -54,7 +54,7 @@ describe("checklistSteps", () => {
       "Create a class",
       "Assign a quiz or start a live session",
     ]);
-    expect(checklistSteps(EMPTY)[0]!.linkLabel).toBe("New quiz");
+    expect(checklistSteps(EMPTY)[0]!.linkLabel).toBe("Write your own");
     expect(checklistSteps(EMPTY)[2]!.hint).toBe("You need a quiz first.");
   });
 
