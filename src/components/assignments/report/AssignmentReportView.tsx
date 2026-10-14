@@ -9,8 +9,8 @@ import { ProgressTable, ScoreTable } from "./AssignmentStudentTable";
 
 const VIEW_LABELS: Record<ReportView, string> = {
   students: "Students",
-  items: "Items",
-  steps: "CJMM steps",
+  items: "Questions",
+  steps: "Clinical judgment steps",
 };
 
 export interface AssignmentReportViewProps {
@@ -76,8 +76,7 @@ export function AssignmentReportView({
 
       {report.released ? null : (
         <p role="status" className="measure mt-4 text-sm text-ink-2">
-          Scores show here once the assignment closes. Until then this shows who has started and who
-          has submitted, so it is safe to project.
+          Scores show once the assignment closes. Until then this is progress only.
         </p>
       )}
 
@@ -138,7 +137,7 @@ function ReportBody({
     return <p className="text-ink-2">Nobody is in this class now.</p>;
   }
   if (!report.released) {
-    return <p className="text-ink-2">Scores show here once the assignment closes.</p>;
+    return <p className="text-ink-2">Scores show once the assignment closes.</p>;
   }
   if (view === "items") {
     return (
@@ -186,10 +185,7 @@ function RemovedGroup({ report, maxAttempts }: { report: AssignmentReport; maxAt
       <h2 id="removed-heading" className="mb-1 text-lg font-medium text-ink-1">
         Removed from class
       </h2>
-      <p className="measure mb-3 text-sm text-ink-2">
-        Taken off the class after attempting this assignment. Their attempts are kept here and are
-        not counted in the class&apos;s figures.
-      </p>
+      <p className="measure mb-3 text-sm text-ink-2">Not counted in the class&apos;s figures.</p>
       <StudentTable
         report={report}
         students={report.removed}
@@ -203,9 +199,7 @@ function RemovedGroup({ report, maxAttempts }: { report: AssignmentReport; maxAt
 function StepsBody({ report }: { report: AssignmentReport }) {
   if (report.steps.length === 0) {
     return (
-      <p className="text-ink-2">
-        No item in this assignment is tagged with a CJMM step, so there is nothing to show by step.
-      </p>
+      <p className="text-ink-2">No question in this assignment has a clinical judgment step.</p>
     );
   }
   const untagged = report.items.filter((item) => item.cjmmStep === null).length;
@@ -213,10 +207,10 @@ function StepsBody({ report }: { report: AssignmentReport }) {
     <>
       <StepTable steps={report.steps} />
       <p className="mt-3 text-sm text-ink-2">
-        Each step is the mean of its items&apos; mean percents, from each student&apos;s best
+        Each step is the mean of its questions&apos; mean percents, from each student&apos;s best
         attempt.
         {untagged > 0
-          ? ` ${untagged === 1 ? "1 item" : `${untagged} items`} without a step ${untagged === 1 ? "is" : "are"} left out.`
+          ? ` ${untagged === 1 ? "1 question" : `${untagged} questions`} without a step ${untagged === 1 ? "is" : "are"} left out.`
           : ""}
       </p>
     </>

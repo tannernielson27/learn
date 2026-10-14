@@ -32,11 +32,11 @@ describe("SessionReportView", () => {
       "href",
       `/live/${SESSION}/report`,
     );
-    expect(within(nav).getByRole("link", { name: "CJMM steps" })).toHaveAttribute(
+    expect(within(nav).getByRole("link", { name: "Clinical judgment steps" })).toHaveAttribute(
       "href",
       `/live/${SESSION}/report?view=steps`,
     );
-    expect(within(nav).getByRole("link", { name: "Items" })).toHaveAttribute(
+    expect(within(nav).getByRole("link", { name: "Questions" })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -94,7 +94,7 @@ describe("SessionReportView", () => {
       .map((cell) => cell.textContent);
     expect(cells).toEqual(["2", "5", "75%"]);
     expect(screen.queryByRole("row", { name: /Analyze Cues/ })).toBeNull();
-    expect(screen.getByText(/1 item without a step is left out/)).toBeInTheDocument();
+    expect(screen.getByText(/1 question without a step is left out/)).toBeInTheDocument();
   });
 
   it("says so when no item carries a step", () => {
@@ -107,13 +107,13 @@ describe("SessionReportView", () => {
     );
     expect(screen.queryByRole("table")).toBeNull();
     expect(
-      screen.getByText(/No item in this session is tagged with a CJMM step/),
+      screen.getByText(/No question in this live session is tagged with a clinical judgment step/),
     ).toBeInTheDocument();
   });
 
   it("says so when nobody joined", () => {
     renderView("students", buildSessionReport({ ...REPORT_FIXTURE, participants: [] }));
     expect(screen.queryByRole("table")).toBeNull();
-    expect(screen.getByText("Nobody joined this session.")).toBeInTheDocument();
+    expect(screen.getByText("Nobody joined.")).toBeInTheDocument();
   });
 });

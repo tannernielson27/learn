@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { PracticeBankList } from "./PracticeBankList";
 
@@ -12,11 +12,11 @@ describe("PracticeBankList (#241)", () => {
         ]}
       />,
     );
-    const list = screen.getByRole("list", { name: "Practice banks" });
+    const list = screen.getByRole("list", { name: "Practice quizzes" });
     const cardiac = screen.getByRole("link", { name: "Cardiac week" });
     expect(cardiac).toHaveAttribute("href", "/learn/practice/b1");
     expect(list).toHaveTextContent("3 of 21 done");
-    expect(list).toHaveTextContent("1 item");
+    expect(list).toHaveTextContent("1 question");
   });
 
   const twoWorkspaces = [
@@ -28,15 +28,15 @@ describe("PracticeBankList (#241)", () => {
   it("names each bank's workspace for a student whose classes span more than one", () => {
     render(<PracticeBankList banks={twoWorkspaces} showWorkspace />);
     const rows = screen.getAllByRole("listitem");
-    expect(within(rows[0]!).getByText("Ada's", { exact: true })).toBeInTheDocument();
-    expect(within(rows[1]!).getByText("Grace's", { exact: true })).toBeInTheDocument();
+    expect(rows[0]).toHaveTextContent(/^Cardiac weekAda's · 3 of 21 done$/);
+    expect(rows[1]).toHaveTextContent(/^Cardiac weekGrace's · 4 questions$/);
     // The database sent no name for this one (or has not got the column yet): nothing is shown.
-    expect(rows[2]).toHaveTextContent(/^Renal week2 items$/);
+    expect(rows[2]).toHaveTextContent(/^Renal week2 questions$/);
   });
 
   it("leaves the workspace off for everybody else", () => {
     render(<PracticeBankList banks={twoWorkspaces} />);
-    const list = screen.getByRole("list", { name: "Practice banks" });
+    const list = screen.getByRole("list", { name: "Practice quizzes" });
     expect(list).not.toHaveTextContent("Ada's");
     expect(list).not.toHaveTextContent("Grace's");
   });
@@ -45,8 +45,7 @@ describe("PracticeBankList (#241)", () => {
     render(<PracticeBankList banks={[]} />);
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { level: 3, name: "Nothing is shared for practice yet" }),
+      screen.getByRole("heading", { level: 3, name: "Nothing shared for practice yet" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/instructor shares for practice/)).toBeInTheDocument();
   });
 });

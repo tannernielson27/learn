@@ -136,7 +136,7 @@ test("a practice run keeps an item the instructor unpublishes mid-run, with the 
   await expect(student.getByTestId("practice-count")).toHaveText("0 of 2 done");
 
   // Answered with the option the edited key would mark right: the reveal is the recorded version.
-  await student.getByRole("button", { name: "Item 2, not answered", exact: true }).click();
+  await student.getByRole("button", { name: "Question 2, not answered", exact: true }).click();
   await expect(student.getByText(SATA_STEM, { exact: false })).toBeVisible();
   await student.getByRole("checkbox", { name: /Temperature 37\.2/ }).click();
   const reveal = await capturedBytes(
@@ -170,7 +170,7 @@ test("a practice run keeps an item the instructor unpublishes mid-run, with the 
     .click();
   await classPractice.getByRole("button", { name: "Stop sharing", exact: true }).click();
   await expect(
-    classPractice.getByText("No bank is shared with this class for practice.", { exact: true }),
+    classPractice.getByText("No quiz is shared with this class.", { exact: true }),
   ).toBeVisible();
 
   const stopped = await phone.request.get(practicePath);

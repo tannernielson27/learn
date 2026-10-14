@@ -38,9 +38,16 @@ export default async function LiveSessionPage({ params }: PageProps<"/live/[sess
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
-      <p className="mb-2 text-sm text-ink-2">
+      <p className="mb-2 flex flex-wrap justify-between gap-x-4 text-sm text-ink-2">
         <Link href="/author" className="tap-target inline-flex items-center hover:text-ink-1">
-          Back to banks
+          Back to library
+        </Link>
+        {/* #414: what each control does is in the guide, not in a paragraph under the control. */}
+        <Link
+          href="/help/instructor#live"
+          className="tap-target inline-flex items-center hover:text-ink-1"
+        >
+          Help
         </Link>
       </p>
       <HostLobby
@@ -53,7 +60,7 @@ export default async function LiveSessionPage({ params }: PageProps<"/live/[sess
         qrCode={
           <SessionQrCode
             url={studentUrl}
-            label="QR code that opens the join page for this session"
+            label="QR code for joining this live session"
             className="mx-auto mt-6 block h-auto w-40 rounded-sm border border-line sm:w-48"
           />
         }

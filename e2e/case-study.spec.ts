@@ -45,7 +45,7 @@ test("the six steps run end to end and land on a total", async ({ page }, testIn
   const move = async (step: number) => {
     await expect(submit).toBeEnabled();
     await submit.click();
-    await page.getByRole("button", { name: step === 6 ? "See results" : "Next step" }).click();
+    await page.getByRole("button", { name: step === 6 ? "See results" : "Next question" }).click();
   };
 
   // The sample's six formats, answered the way the demo script does. Each step's controls are
@@ -99,7 +99,7 @@ test("a submitted step can be reopened with its answer and score intact", async 
   const firstSpan = page.getByRole("button", { name: /sudden shortness of breath/ });
   await firstSpan.click();
   await page.getByRole("button", { name: "Submit" }).click();
-  await page.getByRole("button", { name: "Next step" }).click();
+  await page.getByRole("button", { name: "Next question" }).click();
   await expect(page.locator("[data-step-indicator]")).toContainText("Step 2 of 6");
 
   await page.getByRole("button", { name: "Back" }).click();

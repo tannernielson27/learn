@@ -10,7 +10,7 @@ export interface ScoringSummary {
 
 // Neutral on purpose: an item can be invalid with every answer already marked (an empty stem, a
 // blank option), so the prompt must not tell the author to mark answers.
-export const SCORING_NOT_READY = "Finish the item to see its score.";
+export const SCORING_NOT_READY = "Finish the question to see its score.";
 
 const points = (count: number) => `${count} ${count === 1 ? "point" : "points"}`;
 

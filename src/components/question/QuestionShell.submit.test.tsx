@@ -8,7 +8,7 @@ import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { QuestionShell } from "./QuestionShell";
 
-const REASON = "Complete the item to submit.";
+const REASON = "Complete the question to submit.";
 
 function renderShell(props: Partial<ComponentProps<typeof QuestionShell>> = {}) {
   const onSubmit = vi.fn();

@@ -10,9 +10,9 @@ export interface EhrPreviewProps {
 }
 
 /**
- * The record as the player's panel shows it, with its own open section and time. It renders the
+ * The record as the player's panel shows it, with its own open tab and time. It renders the
  * panel's content rather than `EhrPanel`, whose pane, drawer and sheet belong to a page layout.
- * Sections and times the author removes fall back to the first, as the panel's content does.
+ * Tabs and times the teacher removes fall back to the first, as the panel's content does.
  */
 export function EhrPreview({ record }: EhrPreviewProps) {
   const [timeId, setTimeId] = useState<string>();
@@ -21,8 +21,7 @@ export function EhrPreview({ record }: EhrPreviewProps) {
   if (!record) {
     return (
       <p className="text-sm text-ink-2">
-        The preview appears once the patient has an age, sex and care setting, and one section is
-        written.
+        Shows once the patient has an age, sex, care setting and one tab.
       </p>
     );
   }

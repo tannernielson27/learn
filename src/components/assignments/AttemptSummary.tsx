@@ -15,7 +15,7 @@ export function AttemptSummary({ attempts, closed }: AttemptSummaryProps) {
   if (attempts.length === 0) {
     return (
       <p className="measure mt-6 text-ink-2">
-        {closed ? "You did not start this assignment." : "You have not started this assignment."}
+        {closed ? "You did not start this assignment." : "Not started."}
       </p>
     );
   }

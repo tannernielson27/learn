@@ -1,89 +1,98 @@
 import { describe, expect, it } from "vitest";
-import {
-  findRetiredTerms,
-  readText,
-  spokenAttributes,
-  visibleText,
-  wordCount,
-} from "./retiredTerms";
+import { findRetiredTerms, readableStrings, visibleWordCount } from "./retiredTerms";
 
-describe("findRetiredTerms", () => {
-  // The control: each line is wording the product had before the glossary (#410).
-  it.each([
-    ["Go to your item banks", "bank"],
-    ["Open a question bank to see what is already here", "bank"],
-    ["Write items", "item"],
-    ["Instructor guide", "instructor"],
-    ["Join your instructor’s class.", "instructor"],
-    ["Fast authoring", "author"],
-    ["Press End session when you are done.", "session alone"],
-    ["Type the live session code on the screen.", "session alone"],
-    ["Instructor-paced: you move the room.", "room"],
-    ["Read by Students, Items and CJMM steps", "CJMM"],
-    ["with the chart beside the question", "chart"],
-    ["The record then offers a time selector.", "record alone"],
-    ["Assign take-home work", "take-home work"],
-    ["Assign work or run a live session", "take-home work"],
-    ["Run a live session", "run, for a live session"],
-    ["published, ready to assign or run live", "run, for a live session"],
-    ["Make a class", "make, for something a teacher creates"],
-    ["including runs already started in a practice run", "practice run"],
-  ])("finds the retired word in %j", (text, term) => {
-    expect(findRetiredTerms(text).join("\n")).toContain(`"${term}"`);
+const found = (html: string) => findRetiredTerms(html).map((hit) => hit.found.toLowerCase());
+
+describe("the control: the check can fail", () => {
+  it("finds the old page heading in visible text", () => {
+    expect(found("<h1>Item banks</h1>")).toEqual(["banks", "item"]);
+  });
+
+  it("finds an old term in an aria-label, a title, a placeholder and alt text", () => {
+    expect(found('<ul aria-label="Item banks"></ul>')).toEqual(["banks", "item"]);
+    expect(found('<a title="Rename bank">x</a>')).toEqual(["bank"]);
+    expect(found('<input placeholder="Search items">')).toEqual(["items"]);
+    expect(found('<img alt="Your instructor">')).toEqual(["instructor"]);
+  });
+
+  it("finds an old term in a page title passed on its own", () => {
+    expect(found("Item bank")).toEqual(["bank", "item"]);
   });
 
   it.each([
-    "Go to your quizzes",
-    "Teacher guide",
-    "Start a live session, then End live session in the lobby.",
-    "Completing prose from a word bank of 4 to 8 words.",
-    "The patient record sits beside every question.",
+    ["Unfiled", "unfiled"],
+    ["All content", "all content"],
+    ["3 of 10 members", "members"],
+    ["Instructor-paced", "instructor"],
+    ["The session could not be started.", "session"],
+    ["That item type cannot be authored yet.", "item"],
+    ["Assigning these as graded work later shows a warning.", "graded work"],
+    ["Make a class", "make a class"],
+    ["Delete this quiz", "delete this quiz"],
+    ["CJMM step", "cjmm"],
+    ["Type the live session code on the screen.", "session code"],
+  ])("finds the retired wording in %j", (text, term) => {
+    expect(found(`<p>${text}</p>`)).toContain(term);
+  });
+});
+
+describe("what the check leaves alone", () => {
+  it.each([
+    "Quizzes",
+    "New question",
+    "Word bank",
+    "Start a live session",
+    "Live sessions",
     "12 in this session",
-    "Oxygen saturation 88% on room air",
-    "Write questions and run them with a class.",
-    "A quiz or a case study run in class, with students answering on their phones.",
-    "New quiz opens the form, and Create quiz saves it.",
-    "Your account is ready. An account was made with this address.",
-    "The link works once. How it is scored.",
-  ])("leaves the glossary's own wording alone: %j", (text) => {
-    expect(findRetiredTerms(text)).toEqual([]);
+    "Teacher-paced",
+    "Not in a folder",
+    "Delete folder",
+    "Delete assignment",
+    "3 of 10 teachers",
+  ])("passes %j", (text) => {
+    expect(findRetiredTerms(`<p>${text}</p>`)).toEqual([]);
   });
 
-  it("reads past case, curly quotes and line breaks", () => {
-    expect(findRetiredTerms("ITEM\n  BANKS")).not.toEqual([]);
-    expect(findRetiredTerms("your INSTRUCTOR’S class")).not.toEqual([]);
-  });
-
-  it("says which word, what to say instead, and where", () => {
-    const [found] = findRetiredTerms("Sort a large bank into folders.");
-    expect(found).toContain('"bank" (say: quiz)');
-    expect(found).toContain("sort a large bank into folders");
+  it("ignores routes, ids, field names, class names and scripts", () => {
+    const html =
+      '<a href="/author/banks/1" class="items-center" id="bank-search-q">Open</a>' +
+      '<input name="item" value="unfiled"><script>const bank = "item";</script>';
+    expect(findRetiredTerms(html)).toEqual([]);
   });
 });
 
-describe("readText", () => {
-  const html =
-    '<main class="items-center"><a href="/help/items" aria-label="Item guide">Guide</a>' +
-    '<img alt="A Bowtie item" src="/help/bowtie.png"><input placeholder="Bank name">' +
-    "<script>const instructor = 1;</script><p>Tom &amp; Ada&#39;s   class</p></main>";
-
-  it("keeps text and drops tags, scripts, addresses and class names", () => {
-    expect(visibleText(html)).toBe("Guide Tom & Ada's class");
-  });
-
-  it("reads labels, alt text and placeholders", () => {
-    expect(spokenAttributes(html)).toEqual(["Item guide", "A Bowtie item", "Bank name"]);
-  });
-
-  it("finds a retired word in a label even when the text is clean", () => {
-    expect(findRetiredTerms(visibleText(html))).toEqual([]);
-    expect(findRetiredTerms(readText(html)).join("\n")).toContain('"item"');
+describe("readableStrings", () => {
+  it("returns the text once, then each read attribute, with entities decoded", () => {
+    expect(
+      readableStrings(
+        '<p>Ada&#x27;s <b>quiz</b></p><button aria-label="Close &amp; save">x</button>',
+      ),
+    ).toEqual(["Ada's quiz x", "Close & save"]);
   });
 });
 
-describe("wordCount", () => {
-  it("counts words, not punctuation or space", () => {
-    expect(wordCount("  Sign in · or  create an account. ")).toBe(6);
-    expect(wordCount("")).toBe(0);
+describe("visibleWordCount", () => {
+  it("counts words in text, and not attributes, punctuation or markup", () => {
+    expect(
+      visibleWordCount('<h1 aria-label="Four more words here">Two words</h1><p>/ and — one</p>'),
+    ).toBe(4);
+    expect(visibleWordCount("<div></div>")).toBe(0);
+  });
+
+  it("counts a closed disclosure's summary and not its body, and all of an open one", () => {
+    const body = "<summary>Rename quiz</summary><p>Quiz name here</p>";
+    expect(visibleWordCount(`<details class="x">${body}</details>`)).toBe(2);
+    expect(visibleWordCount(`<details open="">${body}</details>`)).toBe(5);
+  });
+
+  it("leaves out a dialog that is not open", () => {
+    expect(visibleWordCount("<p>One</p><dialog><p>Are you sure</p></dialog>")).toBe(1);
+    expect(visibleWordCount('<dialog open=""><p>Are you sure</p></dialog>')).toBe(3);
+  });
+
+  it("leaves out the choices inside a select", () => {
+    expect(
+      visibleWordCount("<label>Time zone</label><select><option>Denver time</option></select>"),
+    ).toBe(2);
   });
 });

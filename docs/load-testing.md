@@ -211,6 +211,41 @@ starts. The sample case study was not run at 100 or 150: the bank runs took the 
 there was. A student-paced `view` count (n = 257) is short of three per phone because reads
 still in flight when the phones hang up are not counted.
 
+### What #407 changed in `view`, and what is not yet measured
+
+**No run has been made since.** The numbers above are the "before"; the "after" at 100 is still
+owed, and nothing here claims a faster `view` until it exists. What changed is counted, not timed:
+
+| one `view`, in database round trips | before (#404's commit) | after, migration applied | after, migration not yet pushed |
+| ----------------------------------- | ---------------------- | ------------------------ | ------------------------------- |
+| a step the host moved to            | 4, 2 of them writes    | 1, 1 write               | 4 (2 in a row, then 2 together) |
+| after the reveal                    | 5, 2 of them writes    | 1, 1 write               | 4                               |
+| a student-paced set                 | 4, 2 of them writes    | 1, 1 write               | 4                               |
+
+So a move in a class of 100 is 100 calls and 100 writes where it was 400 to 500 calls and 200
+writes. The counts are asserted in `src/lib/liveSupabase/viewRoute.test.ts` against a fake
+database that lists every request it is sent; the "before" column was read from `main` with the
+same counter. The one write left is the per-participant rate limit's.
+
+Two things the next run should know:
+
+- **A refused `view` is now a 503, and it is in the server's log.** Reading the route as it was
+  at that commit: for a phone whose participant row and session both still exist, the only way to
+  a 401 was the `resume_participant` call coming back as an error, which the route read as "not
+  a participant". So the 401s above were failed calls, not phones that had left. A 500 was
+  `begin_session_view` or the item read coming back as an error (or a fault the route does not
+  catch); which, the runs cannot say, because nothing was written down. supabase-js does not
+  retry a function call, which is a POST, and does retry a table read up to three times, waiting
+  1, 2 and 4 seconds, which would also lengthen a `view` without failing it. **Why** the calls
+  failed is still not identified. Every such failure is now a 503 with a
+  `[live] a database call failed` line naming the route, the call, the session and the socket
+  error, so the next run can read the cause off the log.
+- **The script's phones do not retry, and a real phone now does.** A phone tries a `view` that
+  did not get through up to three more times over about four seconds. `scripts/load-live`
+  simulates the phone itself and gives up on the first failure, so it will count a 503 a real
+  phone would have recovered from. Either teach it the same retry before the run, or read its
+  refusal count as an upper bound.
+
 ## In CI
 
 The `auth e2e` job runs a five-participant `--host` smoke against the build the e2e step made. It

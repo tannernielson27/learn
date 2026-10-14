@@ -10,7 +10,7 @@ const on = (position: number, itemCount = 6): LiveSessionState => ({
 
 describe("positionLabel (#184)", () => {
   it("says which item of how many in a bank session, as the console always has", () => {
-    expect(positionLabel(on(3, 10), { caseStudy: false, cjmmStep: 5 })).toBe("Item 3 of 10");
+    expect(positionLabel(on(3, 10), { caseStudy: false, cjmmStep: 5 })).toBe("Question 3 of 10");
   });
 
   it("names the CJMM step with the position in a case study", () => {

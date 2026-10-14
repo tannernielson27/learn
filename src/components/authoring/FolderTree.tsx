@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import {
   buildFolderTree,
+  NOT_IN_A_FOLDER,
   type FolderNode,
   type FolderRow,
   type FolderView,
@@ -76,12 +77,13 @@ export function FolderTree({ bankId, folders, view, filter = NO_FILTER }: Folder
       <ul className="flex flex-col">
         <li>
           <TreeLink href={hrefFor({ kind: "all" })} current={view.kind === "all"}>
-            All content
+            {/* "All questions" while a quiz has folders of its own; #417 retires them. */}
+            All questions
           </TreeLink>
         </li>
         <li>
           <TreeLink href={hrefFor({ kind: "unfiled" })} current={view.kind === "unfiled"}>
-            Unfiled
+            {NOT_IN_A_FOLDER}
           </TreeLink>
         </li>
       </ul>

@@ -329,11 +329,11 @@ export const INVITE_REFUSAL_MESSAGES: Record<CreateInviteRefusal, string> = {
   invalid_email: "Enter one email address for your colleague, like name@school.edu.",
   shared_workspace: "Inviting colleagues is not available in this workspace.",
   unconfirmed:
-    "Confirm your own email address before you invite anyone. Open the link in the email LeaRN sent you, or ask for a new one from your item banks page.",
-  already_member: "That address already belongs to a member of this workspace.",
+    "Confirm your own email address before you invite anyone. Open the link in the email LeaRN sent you, or ask for a new one from your library.",
+  already_member: "That address already belongs to a teacher in this workspace.",
   already_invited:
     "That address already has a pending invitation. Resend or revoke it in the list below.",
-  members_full: `This workspace has ${WORKSPACE_MEMBER_CAP} members, the most it can hold.`,
+  members_full: `This workspace has ${WORKSPACE_MEMBER_CAP} teachers, the most it can hold.`,
   invites_full: `This workspace has ${WORKSPACE_PENDING_CAP} pending invitations, the most it can hold at once. Revoke one to send another.`,
   rate_limited: `You have sent ${WORKSPACE_DAILY_INVITES} invitations in the last 24 hours. Try again tomorrow.`,
   recipient_limited:
@@ -373,7 +373,7 @@ export function notSentMessage(
 
 export const INVITE_GONE = "That invitation is no longer pending. Reload the page to see the list.";
 export const INVITE_ACCEPTED =
-  "Your colleague has already accepted that invitation. Reload the page to see them in Members.";
+  "Your colleague has already accepted that invitation. Reload the page to see them in Teachers.";
 export const REVOKE_FAILED = "Could not revoke the invitation. Try again.";
 export const RESEND_FAILED = "Could not resend the invitation. Nothing was changed. Try again.";
 export const RESEND_AT_LIMIT = `You have sent ${WORKSPACE_DAILY_INVITES} invitations in the last 24 hours, so this one was not resent. The earlier invitation is unchanged.`;

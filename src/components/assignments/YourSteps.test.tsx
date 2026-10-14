@@ -18,10 +18,7 @@ function renderSteps(input: StepMark[]) {
 describe("YourSteps (#239)", () => {
   it("says so when nothing has been marked yet", () => {
     renderSteps([]);
-    expect(
-      screen.getByRole("heading", { level: 3, name: "Nothing to show yet" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/once an assignment you answered closes/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "No answers yet" })).toBeInTheDocument();
     expect(screen.queryByRole("list")).toBeNull();
   });
 
@@ -41,9 +38,9 @@ describe("YourSteps (#239)", () => {
     ]);
     expect(rows[0]).toHaveTextContent("Recognize Cues");
     expect(rows[0]).toHaveTextContent("25%");
-    expect(rows[0]).toHaveTextContent("12 items");
+    expect(rows[0]).toHaveTextContent("12 questions");
     expect(rows[1]).toHaveTextContent("80%");
-    expect(rows[1]).toHaveTextContent("5 items");
+    expect(rows[1]).toHaveTextContent("5 questions");
   });
 
   it("reads Not enough answers yet under five items, with no percent and no bar", () => {
@@ -51,7 +48,7 @@ describe("YourSteps (#239)", () => {
     const rows = within(screen.getByRole("list")).getAllByRole("listitem");
     const analyze = rows.find((row) => row.textContent?.includes("Analyze Cues")) as HTMLElement;
     expect(analyze).toHaveTextContent("Not enough answers yet");
-    expect(analyze).toHaveTextContent("2 items");
+    expect(analyze).toHaveTextContent("2 questions");
     expect(analyze).not.toHaveTextContent("0%");
     expect(analyze.querySelector("[data-share]")).toBeNull();
     const single = rows.find((row) => row.textContent?.includes("Take Action")) as HTMLElement;
@@ -68,23 +65,23 @@ describe("YourSteps (#239)", () => {
 
   it("says one item in the singular", () => {
     renderSteps(marks(3, 1, 1));
-    expect(screen.getByText("Not enough answers yet (1 item)")).toBeInTheDocument();
+    expect(screen.getByText("Not enough answers yet (1 question)")).toBeInTheDocument();
   });
 
   it("shows the two sources apart once practice has marks", () => {
     renderSteps([...marks(1, 3, 1), ...marks(1, 2, 2, "practice")]);
     const [first] = within(screen.getByRole("list")).getAllByRole("listitem");
-    expect(first).toHaveTextContent("5 items: 3 from assignments, 2 from practice");
+    expect(first).toHaveTextContent("5 questions: 3 from assignments, 2 from practice");
   });
 
-  it("says how many answered items had no step", () => {
+  it("says how many answered questions have no step", () => {
     renderSteps([...marks(null, 2, 1), ...marks(1, 1, 1)]);
-    expect(screen.getByText("2 items had no step and are not counted here.")).toBeInTheDocument();
+    expect(screen.getByText("2 questions have no step and are not counted.")).toBeInTheDocument();
   });
 
   it("shows items with no step even when no step has any", () => {
     renderSteps(marks(null, 1, 1));
-    expect(screen.getByText("1 item had no step and is not counted here.")).toBeInTheDocument();
+    expect(screen.getByText("1 question has no step and is not counted.")).toBeInTheDocument();
     expect(screen.getByRole("list")).toBeInTheDocument();
   });
 });

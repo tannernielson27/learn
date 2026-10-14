@@ -218,7 +218,7 @@ describe("MoveWorkspaceForm", () => {
     ).toBeVisible();
     expect(screen.getByText(/You are signed in as grace@school\.edu\./)).toBeVisible();
     expect(screen.getByText(/You teach in Grace’s workspace now\./)).toBeVisible();
-    expect(screen.getByText(/its 2 item banks and 0 classes/)).toBeVisible();
+    expect(screen.getByText(/its 2 quizzes and 0 classes/)).toBeVisible();
     expect(screen.getByText(/Nothing comes with you\./)).toBeVisible();
     // ADR 0012: said before the box is ticked, and never "nothing is deleted".
     expect(

@@ -55,7 +55,7 @@ export function CreateCaseStudyForm({ action }: CreateCaseStudyFormProps) {
       </div>
       <div>
         <Button type="submit" variant="primary" disabled={pending}>
-          New case study
+          Create case study
         </Button>
       </div>
     </form>

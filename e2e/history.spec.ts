@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
-import { publishOpenItem } from "./authoringHelpers";
+import { openImport, publishOpenItem } from "./authoringHelpers";
 import { signInAsNewAuthor } from "./signIn";
 
 // Needs the local Supabase stack, like auth.spec.ts. CI runs it in the `auth-e2e` job.
@@ -36,13 +36,14 @@ test("an author publishes twice, previews version 1 and restores it as a draft",
   const bankName = `History ${testInfo.project.name} ${Date.now()}`;
 
   await page.goto("/author");
-  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
+  await openImport(page);
   await page.getByRole("textbox", { name: "Or paste JSON", exact: true }).fill(oneItem());
   await page.getByRole("button", { name: "Import", exact: true }).click();
-  await page.getByRole("list", { name: "Items" }).getByRole("link", { name: STEM }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Edit item" })).toBeVisible();
+  await page.getByRole("list", { name: "Questions" }).getByRole("link", { name: STEM }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Edit question" })).toBeVisible();
 
   // Version 1 keys option A; version 2 keys option B.
   await expect(isCorrect(page, "A")).toBeChecked();

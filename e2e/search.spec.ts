@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
-import { publishOpenItem } from "./authoringHelpers";
+import { openImport, publishOpenItem } from "./authoringHelpers";
 import { signInAsNewAuthor } from "./signIn";
 
 // Needs the local Supabase stack, like auth.spec.ts. CI runs it in the `auth-e2e` job.
@@ -57,13 +57,13 @@ function searchBank(): [string, string] {
   ];
 }
 
-const itemList = (page: Page) => page.getByRole("list", { name: "Items" });
+const itemList = (page: Page) => page.getByRole("list", { name: "Questions" });
 // One per item; each item also lists its tags.
 const rows = (page: Page) => itemList(page).locator(":scope > li");
-const searchForm = (page: Page) => page.getByRole("search", { name: "Search items" });
+const searchForm = (page: Page) => page.getByRole("search", { name: "Search questions" });
 
 async function search(page: Page, words: string) {
-  await searchForm(page).getByRole("searchbox", { name: "Search items" }).fill(words);
+  await searchForm(page).getByRole("searchbox", { name: "Search questions" }).fill(words);
   await searchForm(page).getByRole("button", { name: "Search" }).click();
 }
 
@@ -77,12 +77,13 @@ test("an author searches a bank for lactate, then narrows to published Matrix Mu
   const bankName = `Search ${testInfo.project.name} ${Date.now()}`;
 
   await page.goto("/author");
-  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   const bankUrl = new URL(page.url()).pathname;
 
   for (const [index, payload] of searchBank().entries()) {
+    await openImport(page);
     await page.getByRole("textbox", { name: "Or paste JSON", exact: true }).fill(payload);
     await page.getByRole("button", { name: "Import", exact: true }).click();
     await expect(
@@ -101,8 +102,8 @@ test("an author searches a bank for lactate, then narrows to published Matrix Mu
   // Search: the stem, its plural, an option and the rationale all match.
   await search(page, "lactate");
   await expect(page).toHaveURL(/\?q=lactate&type=&status=$/);
-  await expect(page.getByRole("status").filter({ hasText: "items match" })).toHaveText(
-    "5 items match: “lactate”.",
+  await expect(page.getByRole("status").filter({ hasText: "questions match" })).toHaveText(
+    "5 questions match: “lactate”.",
   );
   await expect(rows(page)).toHaveCount(5);
   await expect(pages).toHaveCount(0);
@@ -117,14 +118,14 @@ test("an author searches a bank for lactate, then narrows to published Matrix Mu
   await expect(itemList(page).locator("b")).toHaveCount(0);
   await expect(
     itemList(page).getByRole("link", { name: /which action comes first/ }),
-  ).toContainText("In the item: Recheck the serum lactate");
+  ).toContainText("In the question: Recheck the serum lactate");
   await expect(
     itemList(page).getByRole("link", { name: /which finding is the priority/ }),
   ).toContainText("Matched in the rationale");
 
   // Publish one of the matrix items, then come back to the same search.
   await rising.click();
-  await expect(page.getByRole("heading", { level: 1, name: "Edit item" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Edit question" })).toBeVisible();
   await publishOpenItem(page);
   await page.goto(`${bankUrl}?q=lactate`);
   await expect(rows(page)).toHaveCount(5);
@@ -137,16 +138,16 @@ test("an author searches a bank for lactate, then narrows to published Matrix Mu
   await searchForm(page).getByRole("button", { name: "Search" }).click();
   await expect(page).toHaveURL(/\?q=lactate&type=matrix_multiple_choice&status=published$/);
   await expect(page.getByRole("status").filter({ hasText: "matches" })).toHaveText(
-    "1 item matches: “lactate”, Matrix Multiple Choice, Published.",
+    "1 question matches: “lactate”, Matrix Multiple Choice, Published.",
   );
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page)).toContainText([RISING]);
-  await expect(page.getByText("A type filter lists items only.")).toBeVisible();
+  await expect(page.getByText("A type filter lists questions only.")).toBeVisible();
 
   // The URL keeps the search.
   await page.reload();
   await expect(rows(page)).toHaveCount(1);
-  await expect(searchForm(page).getByRole("searchbox", { name: "Search items" })).toHaveValue(
+  await expect(searchForm(page).getByRole("searchbox", { name: "Search questions" })).toHaveValue(
     "lactate",
   );
   await expectNoAxeViolations(page);

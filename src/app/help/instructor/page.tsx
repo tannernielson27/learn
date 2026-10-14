@@ -140,8 +140,8 @@ export default function InstructorGuide() {
         <Topic id="colleagues" title="Share a workspace with colleagues">
           <p>
             To share quizzes, classes and results, work in one workspace. Invite a colleague by
-            email from your workspace page, under <Ui>Account</Ui>. If you are joining theirs, ask
-            for the invitation before you sign up.
+            email from <Ui>Workspace</Ui>. If you are joining theirs, ask for the invitation before
+            you sign up.
           </p>
         </Topic>
       </Section>
@@ -204,8 +204,9 @@ export default function InstructorGuide() {
         </Topic>
         <Topic id="case-studies" title="Case studies">
           <p>
-            Press <Ui>New case study</Ui>, write the patient record, and add one question for each
-            of the six clinical judgment steps.
+            In a quiz, type a <Ui>Case study title</Ui> and press <Ui>Create case study</Ui>. Then
+            write the patient record, and add one question for each of the six clinical judgment
+            steps.
           </p>
         </Topic>
       </Section>
@@ -213,7 +214,7 @@ export default function InstructorGuide() {
       <Section id="classes">
         <Steps>
           <li>
-            From your library, open <Ui>Classes</Ui>.
+            Open <Ui>Classes</Ui>.
           </li>
           <li>
             Type a <Ui>Class name</Ui> and press <Ui>Create class</Ui>.
@@ -286,8 +287,8 @@ export default function InstructorGuide() {
             press <Ui>Start a live session</Ui>.
           </li>
           <li>
-            Put the lobby on the projector. Students open <Ui>Join</Ui>, type the six-character join
-            code or scan the QR code, and give a display name. They need no account.
+            Put the lobby on the projector. Students go to the join page, type the six-character
+            join code or scan the QR code, and give a display name. They need no account.
           </li>
           <li>
             Set <Ui>Time per question</Ui> if you want a timer, then press <Ui>Start</Ui>.
@@ -336,7 +337,7 @@ export default function InstructorGuide() {
         <List>
           <li>
             <Ui>Live sessions:</Ui> press <Ui>Open the report</Ui> after you end a live session.
-            Earlier ones are under <Ui>Live sessions and reports</Ui> on your library.
+            Earlier ones are under <Ui>Live sessions</Ui>.
           </li>
           <li>
             <Ui>Assignments:</Ui> <Ui>View progress</Ui> shows who has started and submitted while

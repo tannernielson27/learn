@@ -54,12 +54,15 @@ describe("readJoin", () => {
 
   it("reads each refusal the join form can show", () => {
     const cases = [
-      ["That code does not match a session that is open. Check it and try again.", "unknown_code"],
+      [
+        "That join code does not match an open live session. Check it and try again.",
+        "unknown_code",
+      ],
       [
         "Too many join attempts from this network. Wait a few minutes, then try again.",
         "rate_limited",
       ],
-      ["That session is full.", "full"],
+      ["That live session is full.", "full"],
       ["Joining is not working just now. Try again in a moment.", "unavailable"],
     ] as const;
     for (const [text, refusal] of cases) {

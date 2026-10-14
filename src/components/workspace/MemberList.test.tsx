@@ -49,9 +49,9 @@ afterEach(() => {
 });
 
 describe("MemberList", () => {
-  it("lists each member with a name, an address, a role and the day they joined", () => {
+  it("lists each teacher with a name, an address, a role and the day they joined", () => {
     render(<MemberList members={members} viewerId="p1" />);
-    const rows = within(screen.getByRole("list", { name: "Members" })).getAllByRole("listitem");
+    const rows = within(screen.getByRole("list", { name: "Teachers" })).getAllByRole("listitem");
     expect(rows).toHaveLength(3);
     expect(rows[0]).toHaveTextContent("Ada Lovelace");
     expect(rows[0]).toHaveTextContent("ada@school.edu");

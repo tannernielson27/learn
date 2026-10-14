@@ -58,8 +58,8 @@ describe("ClassRoster", () => {
     expect(screen.getByRole("heading", { name: "Roster" })).toHaveFocus();
   });
 
-  it("says when nobody has joined", () => {
-    render(
+  it("says when nobody has joined, in one line with the way to the invite link", () => {
+    const { container } = render(
       <ClassRoster
         entries={[]}
         removeActionFor={() => async () => {}}
@@ -70,7 +70,8 @@ describe("ClassRoster", () => {
     expect(
       screen.getByRole("heading", { level: 3, name: "Nobody has joined yet" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Share the invite link with your class.")).toBeInTheDocument();
+    // One line and one action (#412): no sentence under the heading.
+    expect(container.querySelector("p")).toBeNull();
     expect(screen.getByRole("link", { name: "Go to the invite link" })).toHaveAttribute(
       "href",
       "#invite-heading",

@@ -139,15 +139,15 @@ describe("who reaches /author/workspace", () => {
 });
 
 describe("a self-registered workspace", () => {
-  it("shows the name, the members, the invite form and the pending invitations", async () => {
+  it("shows the name, the teachers, the invite form and the pending invitations", async () => {
     await renderPage();
     expect(screen.getByRole("heading", { level: 1, name: "Ada's workspace" })).toBeVisible();
-    const memberRows = within(screen.getByRole("list", { name: "Members" })).getAllByRole(
+    const memberRows = within(screen.getByRole("list", { name: "Teachers" })).getAllByRole(
       "listitem",
     );
     expect(memberRows).toHaveLength(1);
     expect(memberRows[0]).toHaveTextContent("Ada Lovelace (you)");
-    expect(screen.getByText("1 of 10 members")).toBeVisible();
+    expect(screen.getByText("1 of 10 teachers")).toBeVisible();
     expect(screen.getByRole("heading", { level: 2, name: "Invite a colleague" })).toBeVisible();
     expect(screen.getByRole("textbox", { name: "Colleague's email address" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Send invitation" })).toBeVisible();
@@ -174,9 +174,10 @@ describe("a self-registered workspace", () => {
     expect(screen.getByRole("heading", { level: 3, name: "No pending invitations" })).toBeVisible();
   });
 
-  it("links back to the item banks", async () => {
+  it("has no back link of its own: the layout's navigation carries the way to the library", async () => {
     await renderPage();
-    expect(screen.getByRole("link", { name: "Item banks" })).toHaveAttribute("href", "/author");
+    expect(screen.queryByRole("link", { name: "Item banks" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Library" })).not.toBeInTheDocument();
   });
 
   it("draws a workspace name and an address that look like markup as text", async () => {
@@ -199,7 +200,7 @@ describe("a self-registered workspace", () => {
     tables.org_invites = { data: null, error: { code: "57014" } };
     await renderPage();
     const alerts = screen.getAllByRole("alert").map((alert) => alert.textContent);
-    expect(alerts).toContain("The members could not be loaded. Reload the page to try again.");
+    expect(alerts).toContain("The teachers could not be loaded. Reload the page to try again.");
     expect(alerts).toContain("The invitations could not be loaded. Reload the page to try again.");
     expect(screen.getByRole("textbox", { name: "Colleague's email address" })).toBeVisible();
   });
@@ -211,7 +212,7 @@ describe("removing a colleague", () => {
   it("marks who started the workspace and gives them a Remove on a colleague's row", async () => {
     withColleague();
     await renderPage();
-    const rows = within(screen.getByRole("list", { name: "Members" })).getAllByRole("listitem");
+    const rows = within(screen.getByRole("list", { name: "Teachers" })).getAllByRole("listitem");
     expect(rows[0]).toHaveTextContent("Started this workspace");
     expect(within(rows[0]!).queryByRole("button")).not.toBeInTheDocument();
     expect(rows[1]).not.toHaveTextContent("Started this workspace");
@@ -222,7 +223,7 @@ describe("removing a colleague", () => {
     withColleague();
     founder = { data: { founder_id: COLLEAGUE }, error: null };
     await renderPage();
-    const rows = within(screen.getByRole("list", { name: "Members" })).getAllByRole("listitem");
+    const rows = within(screen.getByRole("list", { name: "Teachers" })).getAllByRole("listitem");
     expect(rows[1]).toHaveTextContent("Started this workspace");
     expect(screen.queryByRole("button", { name: /^Remove / })).not.toBeInTheDocument();
   });
@@ -237,7 +238,7 @@ describe("removing a colleague", () => {
     await renderPage();
     expect(screen.getByRole("heading", { level: 1, name: "Ada's workspace" })).toBeVisible();
     expect(
-      within(screen.getByRole("list", { name: "Members" })).getAllByRole("listitem"),
+      within(screen.getByRole("list", { name: "Teachers" })).getAllByRole("listitem"),
     ).toHaveLength(2);
     expect(screen.queryByText("Started this workspace")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Remove / })).not.toBeInTheDocument();
@@ -252,7 +253,10 @@ describe("removing a colleague", () => {
 
   it("tells the inviter who can remove a colleague, and that a teacher elsewhere may move", async () => {
     await renderPage();
-    const copy = screen.getByText(/They join this workspace as a teacher/);
+    expect(screen.getByText("They join as a teacher with the same access as you.")).toBeVisible();
+    // The rest is kept, folded away until asked for (#412).
+    const copy = screen.getByText("What a colleague can do").closest("details")!;
+    expect(copy).not.toHaveAttribute("open");
     expect(copy).toHaveTextContent(
       "Only the person who started the workspace can remove a colleague",
     );
@@ -273,20 +277,18 @@ describe("a workspace that is not self-registered", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
-  it("shows the members and one sentence, and no way to invite", async () => {
+  it("shows the teachers and one sentence, and no way to invite", async () => {
     await renderPage();
     expect(screen.getByRole("heading", { level: 1, name: "LeaRN" })).toBeVisible();
-    expect(screen.getByRole("list", { name: "Members" })).toBeVisible();
+    expect(screen.getByRole("list", { name: "Teachers" })).toBeVisible();
     expect(
-      screen.getByText(
-        "Inviting colleagues is not available in this workspace. LeaRN adds its teachers directly.",
-      ),
+      screen.getByText("Your LeaRN administrator adds teachers to this workspace."),
     ).toBeVisible();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Pending invitations" })).not.toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "Pending invitations" })).not.toBeInTheDocument();
-    expect(screen.queryByText(/of 10 members/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/of 10 teachers/)).not.toBeInTheDocument();
   });
 });
 

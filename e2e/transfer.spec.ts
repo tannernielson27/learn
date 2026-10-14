@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { sampleCaseStudy } from "../src/lib/ngn/fixtures/case-study";
 import { signInAsNewAuthor } from "./signIn";
+import { openImport } from "./authoringHelpers";
 
 // Needs the local Supabase stack, like auth.spec.ts. CI runs it in the `auth-e2e` job.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
@@ -14,12 +15,13 @@ async function expectNoAxeViolations(page: Page) {
 
 async function createBank(page: Page, name: string) {
   await page.goto("/author");
-  await page.getByRole("textbox", { name: "Bank name" }).fill(name);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(name);
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
 }
 
 async function importJson(page: Page, text: string) {
+  await openImport(page);
   await page.getByRole("textbox", { name: "Or paste JSON", exact: true }).fill(text);
   await page.getByRole("button", { name: "Import", exact: true }).click();
 }
@@ -44,7 +46,7 @@ test("an author exports a case study and imports the copy into another bank as a
   const refused = page.getByRole("alert").filter({ hasText: "Nothing was imported." });
   await expect(refused).toContainText("This is not valid JSON.");
   await expect(
-    page.getByRole("heading", { name: "No case studies in this bank yet", exact: true }),
+    page.getByRole("heading", { name: "No case studies yet", exact: true }),
   ).toBeVisible();
   await expectNoAxeViolations(page);
 
@@ -75,11 +77,11 @@ test("an author exports a case study and imports the copy into another bank as a
 
   await listedCase().click();
   const rail = page.getByRole("navigation", { name: "Case study steps" });
-  await expect(rail.getByRole("button", { name: /^Record/ })).toContainText("Ready");
+  await expect(rail.getByRole("button", { name: /^Patient record/ })).toContainText("Ready");
   for (const step of [1, 2, 3, 4, 5, 6]) {
-    await expect(rail.getByRole("button", { name: new RegExp(`^Step ${step}:`) })).toContainText(
-      "Draft",
-    );
+    await expect(
+      rail.getByRole("button", { name: new RegExp(`^Step ${step} of 6:`) }),
+    ).toContainText("Draft");
   }
   await expectNoAxeViolations(page);
   await page.screenshot({

@@ -22,7 +22,7 @@ export const BULK_IMPORT_ERRORS = {
   tooMany: `Choose at most ${IMPORT_MAX_FILES} files at a time.`,
   empty: "This file is empty.",
   unsent:
-    "This file could not be sent, so it may not have been imported. Check the bank before importing it again.",
+    "This file could not be sent, so it may not have been imported. Check the quiz before importing it again.",
 } as const;
 
 /** What the server says about one file: the imported summary, or every reason it was refused. */

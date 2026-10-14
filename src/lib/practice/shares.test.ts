@@ -37,21 +37,21 @@ describe("practiceWarning", () => {
     expect(practiceWarning({ classNames: ["NUR 310"], exposedItems: 0 })).toBeNull();
   });
 
-  it("names the class and counts the items", () => {
+  it("names the class and counts the questions", () => {
     expect(practiceWarning({ classNames: ["NUR 310"], exposedItems: 12 })).toBe(
-      "Students in NUR 310 can see the answers to 12 of these items in practice.",
+      "Students in NUR 310 can see the answers to 12 of these questions in practice.",
     );
   });
 
   it("names every class", () => {
     expect(practiceWarning({ classNames: ["NUR 205", "NUR 310"], exposedItems: 3 })).toBe(
-      "Students in NUR 205 and NUR 310 can see the answers to 3 of these items in practice.",
+      "Students in NUR 205 and NUR 310 can see the answers to 3 of these questions in practice.",
     );
   });
 
   it("says one answer in the singular", () => {
     expect(practiceWarning({ classNames: ["NUR 310"], exposedItems: 1 })).toBe(
-      "Students in NUR 310 can see the answer to 1 of these items in practice.",
+      "Students in NUR 310 can see the answer to 1 of these questions in practice.",
     );
   });
 });

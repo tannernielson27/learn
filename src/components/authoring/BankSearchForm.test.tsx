@@ -8,12 +8,12 @@ const FOLDER = "0b7a2c1d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
 const base = `/author/banks/${BANK}`;
 
 describe("BankSearchForm", () => {
-  it("searches the bank page by words, type and status, with a plain GET form", () => {
+  it("searches the quiz page by words, type and status, with a plain GET form", () => {
     render(<BankSearchForm bankId={BANK} view={{ kind: "all" }} filter={NO_BANK_FILTER} />);
-    const form = screen.getByRole("search", { name: "Search items" });
+    const form = screen.getByRole("search", { name: "Search questions" });
     expect(form).toHaveAttribute("action", base);
     expect(form).toHaveAttribute("method", "get");
-    expect(within(form).getByRole("searchbox", { name: "Search items" })).toHaveAttribute(
+    expect(within(form).getByRole("searchbox", { name: "Search questions" })).toHaveAttribute(
       "name",
       "q",
     );
@@ -57,7 +57,7 @@ describe("BankSearchForm", () => {
       ["tag", "sepsis"],
       ["step", "2"],
     ]);
-    expect(screen.getByRole("searchbox", { name: "Search items" })).toHaveValue("lactate");
+    expect(screen.getByRole("searchbox", { name: "Search questions" })).toHaveValue("lactate");
     expect(screen.getByRole("combobox", { name: "Type" })).toHaveValue("bowtie");
     expect(screen.getByRole("combobox", { name: "Status" })).toHaveValue("draft");
     expect(screen.getByRole("link", { name: "Clear search" })).toHaveAttribute(
@@ -66,7 +66,7 @@ describe("BankSearchForm", () => {
     );
   });
 
-  it("keeps Unfiled", () => {
+  it("keeps Not in a folder", () => {
     const { container } = render(
       <BankSearchForm bankId={BANK} view={{ kind: "unfiled" }} filter={NO_BANK_FILTER} />,
     );

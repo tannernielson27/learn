@@ -83,7 +83,7 @@ describe("rationaleProblem", () => {
   it("names the rationale field when the form's rationale is blank", () => {
     expect(rationaleProblem(undefined)).toEqual({
       field: RATIONALE_FIELD,
-      message: "Write the rationale. An item needs one before it can be published.",
+      message: "Write the rationale. A question needs one to be published.",
     });
     expect(rationaleProblem({})).not.toBeNull();
     expect(rationaleProblem({ general: { value: "  " } })).not.toBeNull();

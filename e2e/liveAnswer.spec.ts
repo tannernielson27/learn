@@ -94,15 +94,15 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
   await signInAsNewAuthor(page, request, testInfo.project.name);
 
   const bankName = `Answer ${testInfo.project.name} ${Date.now()}`;
-  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
-  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("link", { name: "New question" }).click();
   await page.getByRole("button", { name: "Extended Multiple Response", exact: true }).click();
   await fillMultipleResponse(page, STEM, OPTIONS, CORRECT);
   await publishOpenItem(page);
-  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Back to quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
   await page.getByRole("button", { name: "Start a live session", exact: true }).click();
@@ -126,10 +126,10 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
   // Nothing to answer yet, and nothing to count.
   await expect(page.getByTestId("answer-count")).toHaveCount(0);
   for (const phone of [...phones, quiet]) {
-    await expect(phone.getByText("You are in.")).toBeVisible();
+    await expect(phone.getByText("You are in. Wait for your teacher to start.")).toBeVisible();
   }
 
-  await page.getByRole("button", { name: "Start session", exact: true }).click();
+  await page.getByRole("button", { name: "Start", exact: true }).click();
 
   // The item reaches every phone over the channel, with no reload and no key on it.
   for (const phone of phones) {
@@ -211,10 +211,9 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
   await expectNoAxeViolations(page);
 
   // The phone that did not answer sees the key and the rationale too, with no marks (#181).
-  await expect(quiet.getByTestId("not-answered")).toHaveText(
-    "You did not answer this item. Here is the answer your instructor is showing.",
-    { timeout: 15_000 },
-  );
+  await expect(quiet.getByTestId("not-answered")).toHaveText("You did not answer this question.", {
+    timeout: 15_000,
+  });
   await expect(quiet.getByText(RATIONALE, { exact: true })).toBeVisible();
   await expect(quiet.getByRole("complementary", { name: "Rationale", exact: true })).toBeVisible();
   await expect(quiet.getByRole("complementary", { name: "Score", exact: true })).toHaveCount(0);
@@ -231,11 +230,11 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
     (phones[2] as Page).getByRole("button", { name: "Submit", exact: true }),
   ).toHaveCount(0);
 
-  await page.getByRole("button", { name: "End session", exact: true }).click();
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
   // It asks first; the second press is the one in the question.
-  await page.getByRole("button", { name: "End session", exact: true }).click();
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
   for (const phone of [...phones, quiet]) {
-    await expect(phone.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
+    await expect(phone.getByText("This live session has ended.")).toBeVisible({ timeout: 15_000 });
     await phone.context().close();
   }
 
@@ -266,14 +265,16 @@ async function readTheReport(page: Page, bankName: string) {
   await expectNoPageScroll(page);
   await expectNoAxeViolations(page);
 
-  await page.getByRole("link", { name: "Items", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Results by item" })).toBeVisible();
+  await page.getByRole("link", { name: "Questions", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Results by question" })).toBeVisible();
   await expectNoAxeViolations(page);
 
-  await page.getByRole("link", { name: "CJMM steps", exact: true }).click();
+  await page.getByRole("link", { name: "Clinical judgment steps", exact: true }).click();
   await expect(page).toHaveURL(/\?view=steps$/);
   // The item written above carries no step, so the view says why it is empty.
-  await expect(page.getByText(/No item in this session is tagged with a CJMM step/)).toBeVisible();
+  await expect(
+    page.getByText(/No question in this live session is tagged with a clinical judgment step/),
+  ).toBeVisible();
   await expectNoAxeViolations(page);
 
   const [download] = await Promise.all([
@@ -313,14 +314,14 @@ test("a timed item counts down on the phone, and refuses an answer after zero", 
   await signInAsNewAuthor(page, request, testInfo.project.name);
 
   const bankName = `Timer ${testInfo.project.name} ${Date.now()}`;
-  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
-  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("link", { name: "New question" }).click();
   await page.getByRole("button", { name: "Extended Multiple Response", exact: true }).click();
   await fillMultipleResponse(page, STEM, OPTIONS, CORRECT);
   await publishOpenItem(page);
-  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Back to quiz" }).click();
   await page.getByRole("button", { name: "Start a live session", exact: true }).click();
   await expect(page).toHaveURL(/\/live\/[0-9a-f-]{36}$/);
 
@@ -335,10 +336,10 @@ test("a timed item counts down on the phone, and refuses an answer after zero", 
   );
 
   // The time is chosen in the lobby and applies from the first item.
-  const perItem = page.getByRole("combobox", { name: "Time per item" });
+  const perItem = page.getByRole("combobox", { name: "Time per question" });
   await perItem.selectOption({ label: "30 seconds" });
   await expect(perItem).toHaveValue("30");
-  await page.getByRole("button", { name: "Start session", exact: true }).click();
+  await page.getByRole("button", { name: "Start", exact: true }).click();
 
   // Both screens count down, from the same end time on the database's clock.
   await expect(page.getByRole("timer")).toHaveText(/^0:(2\d|30)$/, { timeout: 15_000 });
@@ -384,10 +385,10 @@ test("a timed item counts down on the phone, and refuses an answer after zero", 
     timeout: 15_000,
   });
 
-  await page.getByRole("button", { name: "End session", exact: true }).click();
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
   // It asks first; the second press is the one in the question.
-  await page.getByRole("button", { name: "End session", exact: true }).click();
-  await expect(phone.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
+  await expect(phone.getByText("This live session has ended.")).toBeVisible({ timeout: 15_000 });
   await phone.context().close();
 });
 
@@ -405,16 +406,16 @@ test("the host skips to an item and goes back, and the phone keeps its answer", 
 
   const bankName = `Goto ${testInfo.project.name} ${Date.now()}`;
   const SECOND_STEM = "Which findings are expected after the procedure?";
-  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   // `start_session` orders the set by when each item was made, so this one is item 1.
   for (const stem of [STEM, SECOND_STEM]) {
-    await page.getByRole("link", { name: "New item" }).click();
+    await page.getByRole("link", { name: "New question" }).click();
     await page.getByRole("button", { name: "Extended Multiple Response", exact: true }).click();
     await fillMultipleResponse(page, stem, OPTIONS, CORRECT);
     await publishOpenItem(page);
-    await page.getByRole("link", { name: "Back to bank" }).click();
+    await page.getByRole("link", { name: "Back to quiz" }).click();
     await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   }
   await page.getByRole("button", { name: "Start a live session", exact: true }).click();
@@ -432,18 +433,18 @@ test("the host skips to an item and goes back, and the phone keeps its answer", 
   await expect(page.getByTestId("present-count")).toHaveText("1 phone connected", {
     timeout: 15_000,
   });
-  await page.getByRole("button", { name: "Start session", exact: true }).click();
+  await page.getByRole("button", { name: "Start", exact: true }).click();
   await expect(phone.getByText(STEM)).toBeVisible({ timeout: 15_000 });
   await answer(phone, CORRECT);
   await expect(page.getByTestId("answer-count")).toHaveText("1 of 1 answered", {
     timeout: 15_000,
   });
 
-  const strip = page.getByRole("navigation", { name: "Items" });
-  await strip.getByRole("button", { name: "Go to item 2", exact: true }).click();
+  const strip = page.getByRole("navigation", { name: "Questions" });
+  await strip.getByRole("button", { name: "Go to question 2", exact: true }).click();
   await expect(phone.getByText(SECOND_STEM)).toBeVisible({ timeout: 15_000 });
   await expect(phone.getByRole("button", { name: "Submit", exact: true })).toBeVisible();
-  await expect(page.getByText(/Item 2 of 2/)).toBeVisible();
+  await expect(page.getByText(/Question 2 of 2/)).toBeVisible();
   await expectNoAxeViolations(page);
   await page.screenshot({
     path: `test-results/screenshots/${testInfo.project.name}/live-item-strip.png`,
@@ -451,7 +452,7 @@ test("the host skips to an item and goes back, and the phone keeps its answer", 
   });
 
   // Back to item 1 from the keyboard: the phone shows what it sent, not a fresh item.
-  await strip.getByRole("button", { name: "Go to item 1", exact: true }).focus();
+  await strip.getByRole("button", { name: "Go to question 1", exact: true }).focus();
   await page.keyboard.press("Enter");
   await expect(phone.getByText(STEM)).toBeVisible({ timeout: 15_000 });
   await expect(phone.getByTestId("answer-sent")).toBeVisible();
@@ -461,10 +462,10 @@ test("the host skips to an item and goes back, and the phone keeps its answer", 
     timeout: 15_000,
   });
 
-  await page.getByRole("button", { name: "End session", exact: true }).click();
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
   // It asks first; the second press is the one in the question.
-  await page.getByRole("button", { name: "End session", exact: true }).click();
-  await expect(phone.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
+  await expect(phone.getByText("This live session has ended.")).toBeVisible({ timeout: 15_000 });
   await phone.context().close();
 });
 
@@ -504,7 +505,7 @@ async function expectPatientRecord(phone: Page, projectName: string) {
   const record =
     projectName === "phone-375"
       ? phone.getByRole("dialog", { name: "Patient record", exact: true })
-      : phone.getByRole("tablist", { name: "Patient record sections", exact: true });
+      : phone.getByRole("tablist", { name: "Patient record tabs", exact: true });
   await expect(record).toBeVisible();
   await expect(phone.getByText(/Orthopedic unit/).filter({ visible: true })).toHaveCount(1);
   await expectNoBlockingAxeViolations(phone);
@@ -554,7 +555,7 @@ test("a case study runs live with the patient record beside each step on the pho
     timeout: 15_000,
   });
 
-  await page.getByRole("button", { name: "Start session", exact: true }).click();
+  await page.getByRole("button", { name: "Start", exact: true }).click();
   // The console names the step with its position.
   await expect(page.getByText(/Step 1 of 6: Recognize Cues/)).toBeVisible({ timeout: 15_000 });
   await expectNoAxeViolations(page);
@@ -577,7 +578,7 @@ test("a case study runs live with the patient record beside each step on the pho
   await expect(phone.getByText(CASE_STEP_1_RATIONALE).first()).toBeVisible();
 
   // Advance to step 2, on both screens.
-  await page.getByRole("button", { name: "Next item", exact: true }).click();
+  await page.getByRole("button", { name: "Next question", exact: true }).click();
   await expect(page.getByText(/Step 2 of 6: Analyze Cues/)).toBeVisible({ timeout: 15_000 });
   await expect(phone.getByText(CASE_STEP_2_STEM)).toBeVisible({
     timeout: 15_000,
@@ -585,10 +586,10 @@ test("a case study runs live with the patient record beside each step on the pho
   await expect(phone.getByText(CASE_STEP_1_STEM)).toHaveCount(0);
   await expectNoBlockingAxeViolations(phone);
 
-  await page.getByRole("button", { name: "End session", exact: true }).click();
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
   // It asks first; the second press is the one in the question.
-  await page.getByRole("button", { name: "End session", exact: true }).click();
-  await expect(phone.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
+  await expect(phone.getByText("This live session has ended.")).toBeVisible({ timeout: 15_000 });
   await phone.context().close();
 });
 
@@ -607,16 +608,16 @@ test("a student-paced set: phones move at their own pace, the board fills in, on
 
   const bankName = `Paced ${testInfo.project.name} ${Date.now()}`;
   const SECOND_STEM = "Which findings are expected after the procedure?";
-  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   // `start_session` orders the set by when each item was made, so STEM is item 1.
   for (const stem of [STEM, SECOND_STEM]) {
-    await page.getByRole("link", { name: "New item" }).click();
+    await page.getByRole("link", { name: "New question" }).click();
     await page.getByRole("button", { name: "Extended Multiple Response", exact: true }).click();
     await fillMultipleResponse(page, stem, OPTIONS, CORRECT);
     await publishOpenItem(page);
-    await page.getByRole("link", { name: "Back to bank" }).click();
+    await page.getByRole("link", { name: "Back to quiz" }).click();
     await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   }
   await page.getByRole("radio", { name: "Student-paced", exact: true }).check();
@@ -634,29 +635,29 @@ test("a student-paced set: phones move at their own pace, the board fills in, on
     timeout: 15_000,
   });
 
-  await page.getByRole("button", { name: "Start session", exact: true }).click();
+  await page.getByRole("button", { name: "Start", exact: true }).click();
   // No room-wide item to move, and no clock to put on one.
   await expect(page.getByRole("button", { name: "Show answers", exact: true })).toBeEnabled();
-  await expect(page.getByRole("button", { name: "Next item", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("combobox", { name: "Time per item" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Next question", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Time per question" })).toHaveCount(0);
 
   // Ada goes in order: item 1, then Next, then item 2.
   await expect(ada.getByText(STEM)).toBeVisible({ timeout: 15_000 });
   await expect(ada.getByText(RATIONALE)).toHaveCount(0);
   await answer(ada, CORRECT);
-  await ada.getByRole("button", { name: "Next item", exact: true }).click();
+  await ada.getByRole("button", { name: "Next question", exact: true }).click();
   await expect(ada.getByText(SECOND_STEM)).toBeVisible();
   await answer(ada, [0, 2]);
   await expect(ada.getByTestId("paced-count")).toHaveText("2 of 2 answered");
 
   // Bo goes straight to item 2 from the list, and leaves item 1.
-  const boItems = bo.getByRole("navigation", { name: "Items" });
+  const boItems = bo.getByRole("navigation", { name: "Questions" });
   await expect(boItems).toBeVisible({ timeout: 15_000 });
-  await boItems.getByRole("button", { name: "Item 2, not answered", exact: true }).click();
+  await boItems.getByRole("button", { name: "Question 2, not answered", exact: true }).click();
   await expect(bo.getByText(SECOND_STEM)).toBeVisible();
   await answer(bo, CORRECT);
   await expect(
-    boItems.getByRole("button", { name: "Item 2, answered", exact: true }),
+    boItems.getByRole("button", { name: "Question 2, answered", exact: true }),
   ).toBeVisible();
   await expectNoAxeViolations(bo);
   await bo.screenshot({
@@ -682,7 +683,7 @@ test("a student-paced set: phones move at their own pace, the board fills in, on
   await expect(bo.getByRole("complementary", { name: "Score" })).toBeVisible({ timeout: 15_000 });
   await expect(bo.getByText(RATIONALE)).toBeVisible();
   // Item 1, which Bo left: the key all the same, and a line saying so.
-  await bo.getByRole("button", { name: "Previous item", exact: true }).click();
+  await bo.getByRole("button", { name: "Previous question", exact: true }).click();
   await expect(bo.getByText(STEM)).toBeVisible();
   await expect(bo.getByTestId("not-answered")).toBeVisible();
   await expect(bo.getByText(RATIONALE)).toBeVisible();
@@ -690,17 +691,17 @@ test("a student-paced set: phones move at their own pace, the board fills in, on
 
   // Ada reviews both, with her own marks on each: item 1 was fully right.
   await expect(ada.getByRole("complementary", { name: "Score" })).toBeVisible({ timeout: 15_000 });
-  await ada.getByRole("button", { name: "Previous item", exact: true }).click();
+  await ada.getByRole("button", { name: "Previous question", exact: true }).click();
   await expect(ada.getByRole("complementary", { name: "Score" })).toContainText("2 / 2");
   await ada.screenshot({
     path: `test-results/screenshots/${testInfo.project.name}/live-paced-review.png`,
     fullPage: true,
   });
 
-  await page.getByRole("button", { name: "End session", exact: true }).click();
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
   // It asks first; the second press is the one in the question.
-  await page.getByRole("button", { name: "End session", exact: true }).click();
-  await expect(ada.getByText("This session has ended.")).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
+  await expect(ada.getByText("This live session has ended.")).toBeVisible({ timeout: 15_000 });
   await ada.context().close();
   await bo.context().close();
 });

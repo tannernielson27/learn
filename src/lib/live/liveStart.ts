@@ -14,8 +14,8 @@ export function caseStudyLiveStartMessage(
   if (reason === undefined) return undefined;
   // `start_session` answers 22023 for an unpublished case study and for a step still in draft.
   if (reason === "empty") {
-    return "Publish this case study and all six of its steps before starting a live session.";
+    return "Publish this case study and its six questions before starting a live session.";
   }
   if (reason === "gone") return "That case study no longer exists.";
-  return "The session could not be started. Try again.";
+  return "The live session could not be started. Try again.";
 }

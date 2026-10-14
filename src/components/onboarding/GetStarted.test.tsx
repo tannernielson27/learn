@@ -54,7 +54,7 @@ describe("GetStarted", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("could not be imported");
   });
 
-  it("links to the existing Sample bank instead of offering a second import", () => {
+  it("links to the existing sample quiz instead of offering a second import", () => {
     setup({ ...EMPTY, banks: [SAMPLE] });
     expect(screen.queryByRole("button", { name: "Import the sample quiz" })).toBeNull();
     expect(screen.getByRole("link", { name: "Open the sample quiz" })).toHaveAttribute(

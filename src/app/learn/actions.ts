@@ -16,7 +16,7 @@ const CODE_INCOMPLETE = "Enter the eight letters and numbers of your class code,
 // say which, so that a code cannot be probed. A class in another teacher's workspace is not a
 // refusal: one account joins classes in more than one workspace.
 const CODE_DID_NOT_WORK =
-  "That class code did not work. Check it with your instructor. If you were removed from the class, only they can add you back.";
+  "That class code did not work. Check it with your teacher. If you were removed from the class, only they can add you back.";
 const CODES_LIMITED = "Too many class codes tried. Wait a few minutes, then try again.";
 const UNAVAILABLE = "Joining is not working just now. Try again in a moment.";
 

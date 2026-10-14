@@ -69,8 +69,8 @@ type Notice =
   | { kind: "publishFailed"; error: string; blockers: string[] };
 
 const nameOf = (key: StepKey) =>
-  key === "record" ? "Record" : `Step ${key}: ${CJMM_STEP_LABELS[key]}`;
-const shortNameOf = (key: StepKey) => (key === "record" ? "The record" : `Step ${key}`);
+  key === "record" ? "Patient record" : `Step ${key} of 6: ${CJMM_STEP_LABELS[key]}`;
+const shortNameOf = (key: StepKey) => (key === "record" ? "The patient record" : `Step ${key}`);
 
 function afterDiscard(pending: Pending): string {
   if ("href" in pending) return "discard them and leave this case study";
@@ -93,8 +93,8 @@ function BlockerList({ blockers }: { blockers: readonly string[] }) {
 }
 
 /**
- * A case study built one step at a time, in any order: the record, then an item for each clinical
- * judgment step. The rail says where each step stands. Opening another step, leaving, previewing
+ * A case study built one step at a time, in any order: the patient record, then a question for
+ * each clinical judgment step. The rail says where each step stands. Opening another step, leaving, previewing
  * and publishing all move away from the open editor, so each asks first when there is unsaved work.
  */
 export function CaseStudyBuilder({
@@ -256,9 +256,7 @@ export function CaseStudyBuilder({
           >
             Back to editing
           </Button>
-          <p className="text-sm text-ink-2">
-            Previewing the saved case study, scored in this browser.
-          </p>
+          <p className="text-sm text-ink-2">The saved case study, as a student sees it.</p>
         </div>
         <div
           ref={previewRegion}
@@ -323,7 +321,7 @@ export function CaseStudyBuilder({
               Discard changes
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setPending(null)}>
-              Stay on this step
+              Keep editing
             </Button>
           </div>
         </div>

@@ -49,10 +49,10 @@ test("an instructor assigns a bank to a class and sees it listed in local time",
 
   await page.goto("/author");
   const bankName = `Assigned ${project} ${Date.now()}`;
-  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
-  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("link", { name: "New question" }).click();
   await page.getByRole("button", { name: "Multiple Choice", exact: true }).click();
   await fillMultipleChoice(
     page,
@@ -61,7 +61,7 @@ test("an instructor assigns a bank to a class and sees it listed in local time",
     1,
   );
   await publishOpenItem(page);
-  await page.getByRole("link", { name: "Back to bank" }).click();
+  await page.getByRole("link", { name: "Back to quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   const bankUrl = page.url();
 

@@ -144,7 +144,7 @@ export const COMPOSITE_GUIDE: CompositeGuideEntry[] = [
     title: "Case study",
     body: [
       "Six questions, one for each clinical judgment step, in the fixed order below. The patient record sits beside every question: a pane on a laptop, a sheet on a phone.",
-      "Build one with New case study in a quiz. It needs exactly 6 questions, steps 1 to 6 in order, and a patient record with at least one tab.",
+      "Build one in a quiz with Create case study. It needs exactly 6 questions, steps 1 to 6 in order, and a patient record with at least one tab.",
     ],
     scoring: "Each step’s question is scored by its own format’s rule.",
   },

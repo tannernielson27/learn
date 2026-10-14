@@ -4,7 +4,7 @@ import type { Item } from "@/lib/ngn/schemas";
 import { validateItem } from "@/lib/ngn/validate";
 
 export const PUBLISH_CHECK_ERRORS = {
-  incomplete: "The item is not complete yet. Fix the problems listed, then publish.",
+  incomplete: "The question is not complete yet. Fix the problems listed, then publish.",
   noRationale:
     "Write the rationale before publishing. It goes in the Rationale box, below the answers.",
 } as const;

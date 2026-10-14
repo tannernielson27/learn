@@ -31,10 +31,10 @@ describe("AssignPanel with no class (#266)", () => {
 });
 
 describe("AssignPanel practice warning (#240)", () => {
-  it("warns, naming the classes and counting the items, and still offers Assign", () => {
+  it("warns, naming the classes and counting the questions, and still offers Assign", () => {
     renderPanel({ exposure: { classNames: ["NUR 310"], exposedItems: 12 } });
     expect(screen.getByRole("note")).toHaveTextContent(
-      "Students in NUR 310 can see the answers to 12 of these items in practice.",
+      "Students in NUR 310 can see the answers to 12 of these questions in practice.",
     );
     expect(screen.getByRole("button", { name: "Assign" })).toBeEnabled();
   });

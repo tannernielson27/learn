@@ -54,7 +54,7 @@ async function makeClass(
 const classes = (page: Page) => page.getByRole("list", { name: "Your classes", exact: true });
 const openList = (page: Page) => page.getByRole("list", { name: "Open assignments", exact: true });
 const history = (page: Page) => page.getByRole("list", { name: "Assignment history", exact: true });
-const practice = (page: Page) => page.getByRole("list", { name: "Practice banks", exact: true });
+const practice = (page: Page) => page.getByRole("list", { name: "Practice quizzes", exact: true });
 
 test("a student in two workspaces reads the workspace on assignment, history and practice rows, and a student in one reads none", async ({
   page,

@@ -113,7 +113,7 @@ async function openWorkspace(page: Page, teacherName: string): Promise<void> {
   ).toBeVisible();
 }
 
-const members = (page: Page) => page.getByRole("list", { name: "Members", exact: true });
+const members = (page: Page) => page.getByRole("list", { name: "Teachers", exact: true });
 const pending = (page: Page) =>
   page.getByRole("list", { name: "Pending invitations", exact: true });
 
@@ -156,8 +156,8 @@ async function bytesAnyStatus(context: BrowserContext, path: string): Promise<st
 
 async function createBank(page: Page, name: string): Promise<string> {
   await page.goto("/author");
-  await page.getByRole("textbox", { name: "Bank name", exact: true }).fill(name);
-  await page.getByRole("button", { name: "Create bank", exact: true }).click();
+  await page.getByRole("textbox", { name: "Quiz name", exact: true }).fill(name);
+  await page.getByRole("button", { name: "Create quiz", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/banks\/[0-9a-f-]{36}$/);
   return new URL(page.url()).pathname;
 }
@@ -182,7 +182,7 @@ test("a teacher invites a colleague, who makes an account from the email and sha
   const bankPath = await createBank(page, bankName);
   await page.goto("/author");
   await page
-    .getByRole("navigation", { name: "More", exact: true })
+    .getByRole("navigation", { name: "Main", exact: true })
     .getByRole("link", { name: "Workspace", exact: true })
     .click();
   await expect(page).toHaveURL(/\/author\/workspace$/);
@@ -191,7 +191,7 @@ test("a teacher invites a colleague, who makes an account from the email and sha
   ).toBeVisible();
   await expect(members(page).getByRole("listitem")).toHaveCount(1);
   await expect(members(page)).toContainText(`${teacherName} (you)`);
-  await expect(page.getByText("1 of 10 members", { exact: true })).toBeVisible();
+  await expect(page.getByText("1 of 10 teachers", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 3, name: "No pending invitations", exact: true }),
   ).toBeVisible();
@@ -227,7 +227,7 @@ test("a teacher invites a colleague, who makes an account from the email and sha
 
   await page.reload();
   await expect(pending(page)).toContainText(colleagueEmail);
-  await expect(page.getByText("1 of 10 members", { exact: true })).toBeVisible();
+  await expect(page.getByText("1 of 10 teachers", { exact: true })).toBeVisible();
 
   // 4. A name and a password, and they are in: on the teacher's item banks, seeing the bank.
   await colleague.getByRole("textbox", { name: "Your name", exact: true }).fill(colleagueName);
@@ -258,7 +258,7 @@ test("a teacher invites a colleague, who makes an account from the email and sha
   await expect(members(page)).toContainText(`${teacherName} (you)`);
   await expect(members(page)).toContainText(colleagueName);
   await expect(members(page)).toContainText(colleagueEmail);
-  await expect(page.getByText("2 of 10 members", { exact: true })).toBeVisible();
+  await expect(page.getByText("2 of 10 teachers", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 3, name: "No pending invitations", exact: true }),
   ).toBeVisible();
@@ -303,7 +303,7 @@ test("a teacher invites a colleague, who makes an account from the email and sha
   await expect(other).toHaveURL(/\/author$/);
   await openWorkspace(other, otherName);
   await expect(members(other).getByRole("listitem")).toHaveCount(1);
-  await expect(other.getByText("1 of 10 members", { exact: true })).toBeVisible();
+  await expect(other.getByText("1 of 10 teachers", { exact: true })).toBeVisible();
   for (const path of ["/author", "/author/workspace", "/author/classes", bankPath]) {
     const bytes = await bytesAnyStatus(desk, path);
     for (const marker of [bankName, teacherName, colleagueName, colleagueEmail]) {
@@ -552,7 +552,7 @@ test("an account with no role joins with one button, and one someone else may ha
   await expect(members(page).getByRole("listitem")).toHaveCount(3);
   await expect(members(page)).toContainText(ownName);
   await expect(members(page)).toContainText(takenName);
-  await expect(page.getByText("3 of 10 members", { exact: true })).toBeVisible();
+  await expect(page.getByText("3 of 10 teachers", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 3, name: "No pending invitations", exact: true }),
   ).toBeVisible();
@@ -717,7 +717,7 @@ test("the founder removes a colleague, who starts again in a workspace of their 
     .click();
   await expect(members(page).getByRole("listitem")).toHaveCount(1);
   await expect(members(page)).not.toContainText(colleagueName);
-  await expect(page.getByText("1 of 10 members", { exact: true })).toBeVisible();
+  await expect(page.getByText("1 of 10 teachers", { exact: true })).toBeVisible();
   await shoot(page, testInfo, "9-removed");
 
   // 6. The colleague is no longer in that workspace. Removing them ended their sign-in sessions,
@@ -743,7 +743,7 @@ test("the founder removes a colleague, who starts again in a workspace of their 
   await expect(members(colleague).getByRole("listitem")).toHaveCount(1);
   await expect(members(colleague)).toContainText(`${colleagueName} (you)`);
   await expect(members(colleague)).toContainText("Started this workspace");
-  await expect(colleague.getByText("1 of 10 members", { exact: true })).toBeVisible();
+  await expect(colleague.getByText("1 of 10 teachers", { exact: true })).toBeVisible();
   // Nothing of the workspace they left reaches them, not even the bank they made there.
   // Control: the founder's own pages do carry the names being looked for.
   expect(await bytesAnyStatus(page.context(), "/author")).toContain(founderBank);
@@ -814,7 +814,7 @@ test("a teacher with a workspace of their own confirms, and moves into the one t
   await expect(
     mover.getByText(new RegExp(`^You teach in ${moverName}.s workspace now\\.`)),
   ).toBeVisible();
-  await expect(mover.getByText("you lose access to its 1 item bank and 1 class")).toBeVisible();
+  await expect(mover.getByText("you lose access to its 1 quiz and 1 class")).toBeVisible();
   const box = mover.getByRole("checkbox", {
     name: new RegExp(`^I understand that I will leave ${moverName}.s workspace`),
   });
@@ -862,7 +862,7 @@ test("a teacher with a workspace of their own confirms, and moves into the one t
   await expect(mover.getByRole("button", { name: /^Remove / })).toHaveCount(0);
   await page.reload();
   await expect(members(page).getByRole("listitem")).toHaveCount(2);
-  await expect(page.getByText("2 of 10 members", { exact: true })).toBeVisible();
+  await expect(page.getByText("2 of 10 teachers", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 3, name: "No pending invitations", exact: true }),
   ).toBeVisible();

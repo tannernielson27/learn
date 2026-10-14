@@ -79,3 +79,13 @@ export async function publishOpenItem(page: Page) {
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Published." })).toBeVisible();
 }
+
+/**
+ * Opens the quiz page's Import JSON form, which is closed until asked for (#412). Safe to call
+ * again on the same page: a form that is already open is left open.
+ */
+export async function openImport(page: Page) {
+  const pasted = textbox(page, "Or paste JSON");
+  if (!(await pasted.isVisible())) await page.getByText("Import JSON", { exact: true }).click();
+  await expect(pasted).toBeVisible();
+}

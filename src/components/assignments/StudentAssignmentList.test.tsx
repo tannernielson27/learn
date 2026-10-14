@@ -20,9 +20,8 @@ describe("StudentAssignmentList", () => {
     render(<StudentAssignmentList assignments={[]} classes={new Map()} />);
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { level: 3, name: "Nothing is open right now" }),
+      screen.getByRole("heading", { level: 3, name: "No open assignments" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/appear here while they are open/)).toBeInTheDocument();
   });
 
   it("lists what is open, with its class, its close time and its attempts", () => {

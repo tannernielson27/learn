@@ -54,7 +54,7 @@ import { StudentWelcome } from "@/components/onboarding/StudentWelcome";
 import { TeacherWelcome } from "@/components/onboarding/TeacherWelcome";
 import { ACCOUNT_NAME_HINT } from "@/lib/auth/displayName";
 import { landingEntry } from "@/lib/auth/landing";
-import { findRetiredTerms, readText, visibleText, wordCount } from "@/lib/copy/retiredTerms";
+import { findRetiredTerms, readableStrings, visibleWordCount } from "@/lib/copy/retiredTerms";
 import { EMAIL_PREVIEWS } from "@/lib/email/preview";
 import { renderMagicLinkTemplate } from "@/lib/email/templates/magicLink";
 import { renderWelcomeEmail } from "@/lib/email/templates/welcome";
@@ -75,12 +75,46 @@ import SignInPage, { metadata as signInMetadata } from "./sign-in/page";
 import SignUpPage, { metadata as signUpMetadata } from "./sign-up/page";
 import WelcomePage, { metadata as welcomeMetadata } from "./welcome/page";
 
+/** Everything in a piece of HTML that a person reads or hears, as one string. */
+const readText = (html: string): string => readableStrings(html).join(" \n ");
+
+/**
+ * Words this area also keeps out, beyond the shared list in src/lib/copy/retiredTerms.ts: they
+ * come up in prose that explains the product, which the screens' passes rarely have (#416).
+ */
+const MORE_RETIRED: readonly { say: string; pattern: RegExp }[] = [
+  { say: "patient record", pattern: /(?<!\bpatient )\brecords?\b/i },
+  { say: "Start a live session", pattern: /\b(?:run|runs|running|ran)\b(?: \w+){0,2} live\b/i },
+  {
+    say: "New, then Create",
+    pattern:
+      /\b(?:make|makes|making|made) (?:(?:a|an|your|the|one|new) ){0,2}(?:quiz|quizzes|class|classes|question|questions|case study|case studies|folder|folders)\b/i,
+  },
+  { say: "assignment", pattern: /\btake-home assignments?\b|\bassign(?:ed)? work\b/i },
+];
+
+/** Every retired word in `read`, from the shared list and from this area's own. */
+function retired(read: string): string[] {
+  const shared = findRetiredTerms(read).map(
+    (hit) => `"${hit.found}" (say: ${hit.say}) in "...${hit.context}..."`,
+  );
+  const more = MORE_RETIRED.flatMap(({ say, pattern }) => {
+    const match = pattern.exec(read);
+    return match
+      ? [
+          `"${match[0]}" (say: ${say}) in "...${read.slice(Math.max(0, match.index - 30), match.index + 40)}..."`,
+        ]
+      : [];
+  });
+  return [...shared, ...more];
+}
+
 /** One surface: what a person reads or hears on it, and the part of that which is counted. */
 interface Surface {
   name: string;
   /** Everything read or heard: text, labels, alt text, titles, subjects. */
   read: string;
-  /** The visible words alone. Empty for a surface that is checked but not counted. */
+  /** What is counted: HTML or text. Empty for a surface that is checked but not counted. */
   visible: string;
 }
 
@@ -112,7 +146,7 @@ async function page(
   await act?.();
   const html = container.innerHTML;
   cleanup();
-  return { name, read: [title, readText(html)].join(" \n "), visible: visibleText(html) };
+  return { name, read: [title, readText(html)].join(" \n "), visible: html };
 }
 
 const text = (name: string, parts: readonly string[]): Surface => ({
@@ -280,12 +314,12 @@ function emails(): Surface[] {
     ...EMAIL_PREVIEWS.map((preview) => ({
       name: `Email: ${preview.name}`,
       read: [preview.subject, readText(preview.bodyHtml), preview.text ?? ""].join(" \n "),
-      visible: `${preview.subject} ${visibleText(preview.bodyHtml)}`,
+      visible: `${preview.subject} ${preview.bodyHtml}`,
     })),
     {
       name: "Email: Welcome, no class yet",
       read: [newcomer.subject, readText(newcomer.html), newcomer.text].join(" \n "),
-      visible: `${newcomer.subject} ${visibleText(newcomerBody)}`,
+      visible: `${newcomer.subject} ${newcomerBody}`,
     },
     // The sign-in email with Supabase's placeholders in it, and the copy of it that is committed.
     {
@@ -298,9 +332,7 @@ function emails(): Surface[] {
 }
 
 const hits = (surfaces: readonly Surface[]): string[] =>
-  surfaces.flatMap((surface) =>
-    findRetiredTerms(surface.read).map((hit) => `${surface.name}: ${hit}`),
-  );
+  surfaces.flatMap((surface) => retired(surface.read).map((hit) => `${surface.name}: ${hit}`));
 
 const counted: Surface[] = [];
 
@@ -309,7 +341,7 @@ afterAll(() => {
   if (!file) return;
   const rows = counted
     .filter((surface) => surface.visible !== "")
-    .map((surface) => `| ${surface.name} | ${wordCount(surface.visible)} |`);
+    .map((surface) => `| ${surface.name} | ${visibleWordCount(surface.visible)} |`);
   mkdirSync(path.dirname(path.resolve(file)), { recursive: true });
   writeFileSync(file, ["| Surface | Words |", "| --- | ---: |", ...rows, ""].join("\n"));
 });
@@ -327,9 +359,14 @@ describe("the words that introduce and explain LeaRN (#416)", () => {
         </a>
       </main>,
     );
-    expect(hits([old]).join("\n")).toContain('control: "instructor"');
-    expect(hits([old]).join("\n")).toContain('control: "bank"');
-    expect(findRetiredTerms(old.visible).join("\n")).not.toContain('"bank"');
+    const found = hits([old]).join("\n");
+    expect(found).toContain('control: "Instructor"');
+    // "banks" is only in the label, so the label was read.
+    expect(found).toContain('control: "banks"');
+    expect(retired(readableStrings(old.visible)[0] ?? "").join("\n")).not.toContain('"banks"');
+    // This area's own words are caught too.
+    expect(retired("Run a quiz live, beside the record.").join("\n")).toContain('"record"');
+    expect(retired("Make a class.").join("\n")).toContain('"Make a class"');
   });
 
   it("has no retired word on any page, label or page title", async () => {

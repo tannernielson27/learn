@@ -30,7 +30,7 @@ describe("SessionList", () => {
       `/live/${ended.id}/report`,
     );
     expect(item).toHaveTextContent("Sep 22, 2026");
-    expect(item).toHaveTextContent("24 participants");
+    expect(item).toHaveTextContent("24 students");
     expect(item).toHaveTextContent("Ended");
   });
 
@@ -41,7 +41,7 @@ describe("SessionList", () => {
       "href",
       `/live/${running.id}`,
     );
-    expect(item).toHaveTextContent("1 participant");
+    expect(item).toHaveTextContent("1 student");
     expect(item).toHaveTextContent("Running");
   });
 
@@ -51,8 +51,8 @@ describe("SessionList", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "No live sessions yet" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/Start one from a bank/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Go to your item banks" })).toHaveAttribute(
+    expect(screen.getByText("Start one from a quiz.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Go to your quizzes" })).toHaveAttribute(
       "href",
       "/author",
     );

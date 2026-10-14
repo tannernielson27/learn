@@ -153,29 +153,30 @@ describe("StudentRoom: waiting", () => {
 
   it("waits in the lobby with the sentence every other screen uses", () => {
     setup();
-    expect(screen.getByText("You are in.")).toBeInTheDocument();
-    expect(screen.getByText(/your instructor starts the session/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "You are in. Wait for your teacher to start." }),
+    ).toBeInTheDocument();
   });
 
   it("says when the session has ended, and shows no item", () => {
     const room = setup();
     room.push({ state: state({ status: "ended", position: 4 }), item: KEYLESS });
-    expect(screen.getByText("This session has ended.")).toBeInTheDocument();
+    expect(screen.getByText("This live session has ended.")).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Options" })).toBeNull();
   });
 
   it("says when the room is paused, without losing the place", () => {
     const room = setup();
     room.push({ state: state({ status: "paused", position: 4 }), item: null });
-    expect(screen.getByText("The session is paused.")).toBeInTheDocument();
-    expect(screen.getByText("Item 4 of 12")).toBeInTheDocument();
+    expect(screen.getByText("The live session is paused.")).toBeInTheDocument();
+    expect(screen.getByText("Question 4 of 12")).toBeInTheDocument();
   });
 
   it("takes the item off the screen while the room is paused, because no answer is taken", () => {
     const room = setup();
     room.push({ state: running({ status: "paused" }), item: KEYLESS });
     // A Submit that `canSubmit` is certain to refuse is worse than a screen that says why.
-    expect(screen.getByText("The session is paused.")).toBeInTheDocument();
+    expect(screen.getByText("The live session is paused.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
   });
 
@@ -207,7 +208,7 @@ describe("StudentRoom: waiting", () => {
       { participantId: "p-1", displayName: "Sam Okafor", joinedAt: 1000 },
       { participantId: "p-2", displayName: "Ada", joinedAt: 1001 },
     ]);
-    expect(screen.getByTestId("room-count")).toHaveTextContent("2 in the room");
+    expect(screen.getByTestId("room-count")).toHaveTextContent("2 in this session");
   });
 
   it("says so while the connection is down, and stops saying so when it is back", () => {
@@ -253,7 +254,9 @@ describe("StudentRoom: waiting", () => {
         connect={() => room.transport}
       />,
     );
-    expect(screen.getByRole("heading", { name: "This session has ended." })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "This live session has ended." }),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/Reconnecting/)).toBeNull();
   });
 
@@ -466,7 +469,9 @@ describe("StudentRoom: the reveal", () => {
     });
     await renderersLoaded();
 
-    expect(screen.getByTestId("not-answered")).toHaveTextContent("You did not answer this item.");
+    expect(screen.getByTestId("not-answered")).toHaveTextContent(
+      "You did not answer this question.",
+    );
     expect(screen.getByRole("complementary", { name: "Rationale" })).toHaveTextContent(
       /Tachypnea, hypoxemia/,
     );
@@ -620,7 +625,7 @@ describe("StudentRoom: someone else joins or leaves (#408)", () => {
 
     // And the count was kept, not dropped: it is right the moment there is somewhere to show it.
     room.push({ state: running({ status: "paused", position: 2 }), item: next });
-    expect(screen.getByTestId("room-count")).toHaveTextContent("51 in the room");
+    expect(screen.getByTestId("room-count")).toHaveTextContent("51 in this session");
   });
 
   it("commits nothing for 50 leaves either", async () => {
@@ -643,7 +648,7 @@ describe("StudentRoom: someone else joins or leaves (#408)", () => {
     for (let count = 2; count <= 51; count += 1) room.roster(rosterOf(count));
 
     // The count is on this screen, so each join is drawn: one commit each, of one line.
-    expect(screen.getByTestId("room-count")).toHaveTextContent("51 in the room");
+    expect(screen.getByTestId("room-count")).toHaveTextContent("51 in this session");
     expect(commits).toHaveBeenCalledTimes(50);
     expect(renders).toHaveBeenCalledTimes(0);
 

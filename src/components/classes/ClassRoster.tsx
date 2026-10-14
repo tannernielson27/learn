@@ -24,14 +24,7 @@ export function ClassRoster({
 }: ClassRosterProps) {
   if (entries.length === 0) {
     // Under the class page's Roster h2.
-    return (
-      <EmptyState
-        level={3}
-        heading="Nobody has joined yet"
-        body="Share the invite link with your class."
-        action={emptyAction}
-      />
-    );
+    return <EmptyState level={3} heading="Nobody has joined yet" action={emptyAction} />;
   }
 
   return (

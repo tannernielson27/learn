@@ -21,8 +21,8 @@ export interface ItemEditorHost {
    */
   savedValues?: unknown;
   /**
-   * The item is published, so saving a draft would take it out of sessions, assignments and
-   * practice. Only a standalone item's page says; a case study's step does not.
+   * The item is published, so saving a draft would take it out of live sessions, assignments and
+   * practice. A standalone item's page says, and so does a case study's step (#413).
    */
   published?: boolean;
   /** Told when a save makes the item a draft, or a publish makes it published. */

@@ -34,7 +34,7 @@ describe("scoringSummary", () => {
   });
 
   it("asks the author to finish the item instead of guessing a number while it is invalid", () => {
-    expect(SCORING_NOT_READY).toBe("Finish the item to see its score.");
+    expect(SCORING_NOT_READY).toBe("Finish the question to see its score.");
     expect(scoringSummary({ model: "plus_minus", maxPoints: 1 }, false)).toEqual({
       headline: SCORING_NOT_READY,
     });

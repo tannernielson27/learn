@@ -13,7 +13,7 @@ describe("importLimits", () => {
     expect(limits.IMPORT_MAX_BYTES).toBe(800_000);
     expect(limits.IMPORT_MAX_ITEMS).toBe(50);
     expect(limits.IMPORT_ERRORS.itemCount).toBe(
-      "Include between 1 and 50 items. Split a larger set into several files.",
+      "Include between 1 and 50 questions. Split a larger set into several files.",
     );
   });
 });

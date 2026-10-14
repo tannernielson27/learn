@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
 import { signInAsNewAuthor } from "./signIn";
+import { openImport } from "./authoringHelpers";
 
 // Needs the local Supabase stack, like auth.spec.ts. CI runs it in the `auth-e2e` job.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
@@ -12,6 +13,7 @@ async function expectNoAxeViolations(page: Page) {
 }
 
 async function importJson(page: Page, text: string) {
+  await openImport(page);
   await page.getByRole("textbox", { name: "Or paste JSON", exact: true }).fill(text);
   await page.getByRole("button", { name: "Import", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Imported" })).toBeVisible();
@@ -40,13 +42,13 @@ test("an author archives an item, finds it in the Archived view, and restores it
   const bankName = `Archive ${testInfo.project.name} ${Date.now()}`;
 
   await page.goto("/author");
-  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   const bankUrl = page.url();
 
   await importJson(page, itemsJson);
-  const items = page.getByRole("list", { name: "Items" });
+  const items = page.getByRole("list", { name: "Questions" });
   const kept = items.getByRole("link", { name: new RegExp(`^${KEPT}`) });
   const filed = items.getByRole("link", { name: new RegExp(`^${FILED}`) });
   await expect(kept).toBeVisible();
@@ -57,9 +59,9 @@ test("an author archives an item, finds it in the Archived view, and restores it
   await expect(page.getByRole("textbox", { name: "Question stem", exact: true })).toHaveValue(
     FILED,
   );
-  await page.getByRole("button", { name: "Archive item", exact: true }).click();
-  await expect(page.getByText("This item is archived.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Restore item", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Archive question", exact: true }).click();
+  await expect(page.getByText("This question is archived.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Restore question", exact: true })).toBeVisible();
   await expectNoAxeViolations(page);
 
   // It has left the bank's list; the other item is still there.
@@ -70,7 +72,7 @@ test("an author archives an item, finds it in the Archived view, and restores it
   // The Archived view shows it, and only it.
   const views = page.getByRole("navigation", { name: "Current or archived" });
   await views.getByRole("link", { name: "Archived", exact: true }).click();
-  await expect(page.getByRole("heading", { level: 2, name: "Archived items" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Archived questions" })).toBeVisible();
   await expect(filed).toBeVisible();
   await expect(kept).toHaveCount(0);
   await expectNoAxeViolations(page);
@@ -82,7 +84,7 @@ test("an author archives an item, finds it in the Archived view, and restores it
   // Restore it from its row: the Archived view empties.
   await page.getByRole("button", { name: `Restore ${FILED}`, exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "No archived items here", exact: true }),
+    page.getByRole("heading", { name: "No archived questions here", exact: true }),
   ).toBeVisible();
 
   // And it is back among the bank's current items.

@@ -32,13 +32,7 @@ export function StudentAssignmentList({
 }: StudentAssignmentListProps) {
   if (assignments.length === 0) {
     // Under the student home's Open assignments h2.
-    return (
-      <EmptyState
-        level={3}
-        heading="Nothing is open right now"
-        body="Assignments from your instructor appear here while they are open."
-      />
-    );
+    return <EmptyState level={3} heading="No open assignments" />;
   }
 
   return (
@@ -57,10 +51,7 @@ export function StudentAssignmentList({
           {/* The workspace is beside the class only for a student in more than one workspace. */}
           <span className="text-sm break-words text-ink-2">
             {classLabel(classes.get(entry.classId))} ·{" "}
-            {attemptProgressLabel(entry.maxAttempts, progress.get(entry.id))}
-          </span>
-          <span className="text-sm text-ink-2">
-            Closes{" "}
+            {attemptProgressLabel(entry.maxAttempts, progress.get(entry.id))} · Closes{" "}
             <ClassTime
               iso={entry.closesAt}
               timeZone={classes.get(entry.classId)?.timeZone ?? DEFAULT_CLASS_TIME_ZONE}

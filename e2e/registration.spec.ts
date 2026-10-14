@@ -114,8 +114,8 @@ test("a stranger becomes a teacher, and another stranger becomes their student, 
     .getAttribute("href");
   expect(itemPath).toMatch(/^\/author\/items\/[0-9a-f-]{36}/);
   await page.goto("/author");
-  await page.getByRole("textbox", { name: "Bank name", exact: true }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank", exact: true }).click();
+  await page.getByRole("textbox", { name: "Quiz name", exact: true }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/banks\/[0-9a-f-]{36}$/);
   const bankPath = new URL(page.url()).pathname;
 
@@ -178,7 +178,7 @@ test("a stranger becomes a teacher, and another stranger becomes their student, 
   await other.getByRole("button", { name: "Skip", exact: true }).click();
   await expect(other.getByRole("dialog")).toHaveCount(0);
   await expect(
-    other.getByRole("heading", { level: 2, name: "No item banks yet", exact: true }),
+    other.getByRole("heading", { level: 2, name: "No quizzes yet", exact: true }),
   ).toBeVisible();
   for (const path of ["/author", "/author/classes", bankPath, classPath, itemPath ?? ""]) {
     const bytes = await bytesAnyStatus(desk, path);
