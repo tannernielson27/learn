@@ -135,14 +135,36 @@ function refusableTokens() {
   };
 }
 
+/**
+ * A network a test scripts (#407): what the nth request for the view is answered with instead of
+ * the next view (a status, or `"dropped"` for a request that never got an answer), and the waits
+ * and the jitter the transport is given, so no test sleeps.
+ */
+interface ScriptedNetwork {
+  failing?: (asked: number) => number | "dropped" | null;
+  pause?: (ms: number) => Promise<void>;
+  random?: () => number;
+}
+
 /** A phone on a socket a test drives, answering `/api/live/view` from a script. */
 function phone(
   views: ParticipantViewPayload[] = [LOBBY],
   tokens?: ReturnType<typeof refusableTokens>,
+  network: ScriptedNetwork = {},
 ) {
   const socket = fakeSocket();
   let asked = 0;
+  let requests = 0;
   const call = vi.fn(async () => {
+    requests += 1;
+    const failure = network.failing?.(requests) ?? null;
+    if (failure === "dropped") throw new TypeError("Failed to fetch");
+    if (failure !== null) {
+      return new Response(JSON.stringify({ error: "no" }), {
+        status: failure,
+        headers: { "content-type": "application/json" },
+      });
+    }
     const payload = views[Math.min(asked, views.length - 1)] as ParticipantViewPayload;
     asked += 1;
     return new Response(JSON.stringify(payload), {
@@ -155,6 +177,8 @@ function phone(
     tokens,
     fetch: call as unknown as typeof globalThis.fetch,
     baseUrl: "http://live.test",
+    ...(network.pause === undefined ? {} : { pause: network.pause }),
+    ...(network.random === undefined ? {} : { random: network.random }),
   });
 
   const recorded: Recorded = { views: [], states: [], rosters: [], connections: [] };
@@ -430,6 +454,139 @@ describe("the item's clock (#182)", () => {
   it("uses its own clock until it has heard the server's", () => {
     const live = phone();
     expect(Math.abs(live.transport.serverNow() - Date.now())).toBeLessThan(1_000);
+  });
+});
+
+describe("a view that did not get through (#407)", () => {
+  const ON_ONE = {
+    ...LOBBY,
+    state: at({ status: "running", position: 1, itemCount: 2, reveal: false }),
+  };
+  const ON_TWO = {
+    ...LOBBY,
+    state: at({ status: "running", position: 2, itemCount: 2, reveal: false }),
+  };
+
+  /** A phone on item one whose waits are recorded and over at once. */
+  function waiting(failing: ScriptedNetwork["failing"], random = 0.5) {
+    const waits: number[] = [];
+    const live = phone([ON_ONE, ON_TWO], undefined, {
+      failing,
+      random: () => random,
+      pause: async (ms) => {
+        waits.push(ms);
+      },
+    });
+    return { live, waits };
+  }
+
+  it.each([503, 502, 504, "dropped"] as const)(
+    "asks again after %s, and the phone lands on the item",
+    async (failure) => {
+      // The entry's read is request 1. The host moves, and the read that follows fails once.
+      const { live, waits } = waiting((asked) => (asked === 2 ? failure : null));
+      await live.enter();
+      live.socket.deliver({ new: stateRow({ item_position: 2 }) });
+
+      await vi.waitFor(() => expect(live.recorded.states.at(-1)).toMatchObject({ position: 2 }));
+      expect(live.asks()).toBe(3);
+      expect(waits).toEqual([400]);
+    },
+  );
+
+  it("gives up after four tries, with a longer wait before each", async () => {
+    const { live, waits } = waiting((asked) => (asked > 1 ? 503 : null));
+    await live.enter();
+    live.socket.deliver({ new: stateRow({ item_position: 2 }) });
+
+    await vi.waitFor(() => expect(live.asks()).toBe(5));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(live.asks()).toBe(5);
+    expect(waits).toEqual([400, 800, 1600]);
+    // Still on the item it had: nothing was shown that the server did not say.
+    expect(live.recorded.states.at(-1)).toMatchObject({ position: 1 });
+
+    // And not for good. The host's next move is a new read, which gets through.
+    live.socket.deliver({ new: stateRow({ item_position: 2, reveal: true }) });
+    await vi.waitFor(() => expect(live.asks()).toBe(9));
+  });
+
+  it("spreads a class out: the same failure is not retried at the same moment", async () => {
+    const early = waiting((asked) => (asked > 1 ? 503 : null), 0);
+    const late = waiting((asked) => (asked > 1 ? 503 : null), 0.999);
+    for (const { live } of [early, late]) {
+      await live.enter();
+      live.socket.deliver({ new: stateRow({ item_position: 2 }) });
+      await vi.waitFor(() => expect(live.asks()).toBe(5));
+    }
+    expect(early.waits).toEqual([200, 400, 800]);
+    expect(late.waits[0]).toBeGreaterThan(590);
+    expect(late.waits[2]).toBeLessThanOrEqual(2_400);
+  });
+
+  it.each([401, 409, 429, 500])(
+    "does not ask again after a %s: that is an answer",
+    async (status) => {
+      const { live, waits } = waiting((asked) => (asked > 1 ? status : null));
+      await live.enter();
+      live.socket.deliver({ new: stateRow({ item_position: 2 }) });
+
+      await vi.waitFor(() => expect(live.asks()).toBe(2));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(live.asks()).toBe(2);
+      expect(waits).toEqual([]);
+    },
+  );
+
+  it("stops asking the moment the phone leaves the room", async () => {
+    let release: () => void = () => {};
+    const live = phone([ON_ONE, ON_TWO], undefined, {
+      failing: (asked) => (asked > 1 ? 503 : null),
+      pause: () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+        }),
+    });
+    await live.enter();
+    live.socket.deliver({ new: stateRow({ item_position: 2 }) });
+    await vi.waitFor(() => expect(live.asks()).toBe(2));
+
+    await live.transport.leave();
+    release();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(live.asks()).toBe(2);
+  });
+
+  it("keeps what the later request said when a retried read lands after a newer one", async () => {
+    // Request 2 (the first move's read) fails and waits. Request 3 (the second move's read) is
+    // answered meanwhile. Then request 2 is tried again as request 4, and the server, asked
+    // last, says the most. A read numbered by when it began would be thrown away here.
+    let release: () => void = () => {};
+    const SHOWN = { ...ON_TWO, state: { ...ON_TWO.state, reveal: true } };
+    const live = phone([ON_ONE, ON_TWO, SHOWN], undefined, {
+      failing: (asked) => (asked === 2 ? 503 : null),
+      pause: () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+        }),
+    });
+    await live.enter();
+    live.socket.deliver({ new: stateRow({ item_position: 2 }) });
+    await vi.waitFor(() => expect(live.asks()).toBe(2));
+    live.socket.deliver({ new: stateRow({ item_position: 2, reveal: true }) });
+    await vi.waitFor(() => expect(live.recorded.states.at(-1)).toMatchObject({ position: 2 }));
+    expect(live.recorded.states.at(-1)).toMatchObject({ reveal: false });
+
+    release();
+    await vi.waitFor(() => expect(live.asks()).toBe(4));
+    await vi.waitFor(() => expect(live.recorded.states.at(-1)).toMatchObject({ reveal: true }));
+  });
+
+  it("tells the page when the room could not be read on the way in, after trying", async () => {
+    const { live, waits } = waiting(() => 503);
+    await expect(live.enter()).rejects.toThrow("The session could not be reached.");
+    expect(live.asks()).toBe(4);
+    expect(waits).toHaveLength(3);
   });
 });
 

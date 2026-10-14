@@ -5,9 +5,9 @@
  * of letting a browser read the tables. A participant has no Postgres identity: `anon` has no
  * privilege on `public.sessions` and none on `public.items`, so the item is read here, under the
  * service role, and `toKeylessItem` strips the key, the rationale and the scoring before anything
- * is serialized (ADR 0003, #56). The key travels exactly once — in `revealed` — and only when
- * `sessions.reveal` is true for the item the room is on, which the host sets and the browser
- * cannot.
+ * is serialized (ADR 0003, #56; `viewEntries.ts` is where). The key travels exactly once — in
+ * `revealed` — and only when `sessions.reveal` is true for the item the room is on, which the host
+ * sets and the browser cannot.
  *
  * It also answers the one question a phone cannot answer for itself after a reload: **have I
  * already answered this?** `answered` is that, and it is this participant's own response read
@@ -18,16 +18,32 @@
  * that may carry an answer key is allowed anywhere near a cache. Every answer also carries
  * `Cache-Control: no-store`.
  *
+ * ## One round trip (#407)
+ *
+ * Every move the host makes sends every phone here at once, so what one call costs is multiplied
+ * by the class. It used to be four database calls in a row, five after a reveal, two of them
+ * writes. It is now one: `public.open_session_view` checks the participant's token, charges
+ * their rate limit, and answers with the room, the item (or the whole student-paced set) and
+ * their own answers. See the migration for what it reads and why the keys in what it returns are
+ * no new exposure.
+ *
+ * **The app deploys before the migration is pushed**, so a database that has never heard of the
+ * function is an ordinary state, not a fault. PostgREST says so with `PGRST202`, having run
+ * nothing, and the route then does what it did before: `resume_participant`,
+ * `begin_session_view`, and the two selects in `viewReads.ts`. It remembers for a minute that the
+ * function is missing, so that fallback costs the four calls it always cost and not five.
+ *
  * ## How often one person may ask (#152)
  *
  * A participant token is required, so this route is not anonymous — but a participant of a room
- * could spin it as fast as it liked, and every call costs a `last_seen_at` write in
- * `resume_participant` plus three reads. `public.begin_session_view` is the cap: it charges this
- * participant's counter and hands back the four columns of `public.sessions` a student may know,
- * so the limit replaces the read the route used to do rather than sitting in front of it. That is
- * `begin_session_submission`'s bargain on the submission route, and the two counters are the same
- * table, the same five-minute window and the same `rate_limited` refusal. Only the number differs,
- * and the migration says why.
+ * could spin it as fast as it liked. `private.take_session_view` is the cap, charged by
+ * `open_session_view` and by `begin_session_view` alike: one counter, 600 calls in five minutes,
+ * and a `rate_limited` refusal that answers before anything else is read.
+ *
+ * ## When the database does not answer (#407)
+ *
+ * A call that fails is a 503 the phone retries, and a line in the log saying which call it was.
+ * It is never a 401: that is only for a token the database has looked at and does not know.
  */
 import {
   itemAt,
@@ -36,23 +52,26 @@ import {
   type LiveSessionState,
   type ParticipantItem,
 } from "@/lib/live";
+import type { ParticipantToken } from "@/lib/live/participantToken";
 import { readTimer } from "@/lib/live/timer";
-import type { Item } from "@/lib/ngn/schemas";
 import type { StartingOrderSeedFor } from "@/lib/ngn/startingOrder";
-import { parseSubmission, revealOf, toKeylessItem, withScoredReveal } from "@/lib/ngn/submit";
-import type { ScoreResult } from "@/lib/ngn/types";
-import { fromItemRow } from "@/lib/supabase/itemRows";
-import { readPacedSet } from "./pacedView";
-import { LIVE_ROUTE_ERRORS, asRefusal, fail, refuse, type LiveRouteDeps } from "./routeDeps";
-import { selectWithReveal } from "./scoredReveal";
+import type { Database } from "@/lib/supabase/database.types";
 import {
-  NO_STORE_HEADERS,
-  type AnsweredPayload,
-  type ParticipantViewPayload,
-  type RevealedPayload,
-} from "./wire";
-
-const ITEM_COLUMNS = "type, cjmm_step, tags, version, content, answer_key, rationale, scoring";
+  LIVE_ROUTE_ERRORS,
+  asRefusal,
+  fail,
+  faultResponse,
+  readParticipantToken,
+  refuse,
+  reportLiveFault,
+  routeOf,
+  unavailable,
+  type LiveRouteDeps,
+  type VerifiedParticipant,
+} from "./routeDeps";
+import { viewEntries, type WantedItem } from "./viewEntries";
+import { selectViewRows, type ViewRows } from "./viewReads";
+import { NO_STORE_HEADERS, type ParticipantViewPayload } from "./wire";
 
 /**
  * What the view route needs beyond the other live routes: the seed for an ordered-response item's
@@ -61,7 +80,38 @@ const ITEM_COLUMNS = "type, cjmm_step, tags, version, content, answer_key, ratio
  * where the barrel would carry `node:crypto` into a browser bundle.
  */
 export interface ViewRouteDeps extends LiveRouteDeps {
+  /**
+   * Only the fallback asks this (#407). On `open_session_view` the token in the cookie is checked
+   * by the function itself, in SQL, and `verify` is not called: a different verifier passed here
+   * changes who the route lets in only against a database without the function.
+   */
+  verify: LiveRouteDeps["verify"];
   startingOrderSeed: StartingOrderSeedFor;
+  /** The server's clock, for remembering a missing function. Injectable for the tests. */
+  now?: () => number;
+}
+
+/** The room, as both `begin_session_view` and `open_session_view` answer with it. */
+type RoomRow = Database["public"]["Functions"]["begin_session_view"]["Returns"][number];
+
+/** A request the route may answer: who is asking, their room, and the rows if already read. */
+type Opened =
+  | { ok: true; participant: VerifiedParticipant; room: RoomRow; rows: ViewRows | null }
+  | { ok: false; response: Response };
+
+/** PostgREST found no function by that name and those arguments, and ran nothing. */
+const FUNCTION_NOT_FOUND = "PGRST202";
+/** How long a missing `open_session_view` is taken as still missing before it is asked again. */
+const REPROBE_MS = 60_000;
+/**
+ * When `open_session_view` may next be tried, in epoch ms. Per server process, and only an
+ * optimisation: every process that guesses wrong finds out with one call and corrects itself.
+ */
+let functionMissingUntil = 0;
+
+/** Forgets that the function was missing. For the tests, which share this module. */
+export function forgetMissingViewFunction(): void {
+  functionMissingUntil = 0;
 }
 
 export async function readParticipantView(
@@ -75,212 +125,224 @@ export async function readParticipantView(
     return refuse("malformed");
   }
 
-  const participant = await deps.verify(request);
-  if (participant === null) return fail(401, LIVE_ROUTE_ERRORS.signedOut);
+  const opened = await openView(request, deps);
+  if (!opened.ok) return opened.response;
+  const { participant, room } = opened;
 
-  // Charges this participant's rate limit and reads the room in one round trip (#152), which is
-  // `begin_session_submission`'s bargain on the other route. The order is the submission route's
-  // too: who is speaking is settled first and the limit charged second, so nobody can spend a
-  // budget that is not theirs.
-  const { data: opened, error } = await deps.service.rpc("begin_session_view", {
-    target_session: participant.sessionId,
-    participant: participant.participantId,
+  const read = roomFrom(room);
+  if (read === null) return fail(500, LIVE_ROUTE_ERRORS.failed);
+  const { state, itemSet, serverNow } = read;
+  const { wanted, wholeSet } = wantedItems(itemSet, state);
+
+  if (!wholeSet && wanted.length === 0) {
+    return answer({ state, item: null, answered: null, revealed: null, serverNow });
+  }
+
+  let rows = opened.rows;
+  if (rows === null) {
+    const selected = await selectViewRows(deps.service, {
+      ...participant,
+      wanted,
+      wholeSet,
+      reveal: state.reveal,
+    });
+    if (!selected.ok) {
+      const { call, error, status } = selected;
+      reportLiveFault({
+        route: routeOf(request),
+        call,
+        sessionId: participant.sessionId,
+        error,
+        status,
+      });
+      return faultResponse(status);
+    }
+    rows = selected.rows;
+  }
+
+  const built = viewEntries({
+    sessionId: participant.sessionId,
+    wanted,
+    items: rows.items,
+    answers: rows.answers,
+    reveal: state.reveal,
+    startingOrderSeed: deps.startingOrderSeed,
   });
-  if (error) return fail(500, LIVE_ROUTE_ERRORS.failed);
-  const session = opened?.[0];
-  // A participant whose session has been deleted is not in a room any more. The token is the only
-  // thing that said otherwise, and it says nothing about whether the row still exists.
-  if (!session) return fail(401, LIVE_ROUTE_ERRORS.signedOut);
-  const refusal = asRefusal(session.refusal);
-  if (refusal !== null) return refuse(refusal);
-  // A refused call answers with nulls in every other column, so a code this app does not know is
-  // not something to carry on past: it would put a null status on a student's page. Never passed
-  // through as itself either — an unknown code reaches a person as an empty sentence.
-  if (session.refusal) return fail(500, LIVE_ROUTE_ERRORS.failed);
-
-  const itemSet = Array.isArray(session.session_items) ? (session.session_items as unknown[]) : [];
-  // The same nullability as the position below: a column the generator calls a number is null
-  // whenever the timer is off or not running, so every one is coerced before it is read.
-  const timer = readTimer(
-    session.session_timer_seconds ?? null,
-    session.session_ends_at ?? null,
-    session.session_remaining_ms ?? null,
-  );
-  if (timer === null) return fail(500, LIVE_ROUTE_ERRORS.failed);
-  // The database's clock as it read the room (#182), for the phone to measure its own against.
-  const serverNow = Date.parse(session.server_now);
-  if (Number.isNaN(serverNow)) return fail(500, LIVE_ROUTE_ERRORS.failed);
-  const state: LiveSessionState = pacedState(
-    {
-      status: session.session_status,
-      // A `returns table` function carries no nullability into the generated types, so the
-      // position is coerced rather than read straight through: before the room starts it really
-      // is null, whatever the type says.
-      position: session.session_position ?? null,
-      itemCount: itemSet.length,
-      reveal: session.session_reveal,
-      timer,
-    },
-    session.session_mode,
-  );
+  if (!built.ok) return fail(409, LIVE_ROUTE_ERRORS.unplayable);
 
   // #185: a student-paced room is on its whole set, and the phone is handed all of it.
-  const wholeSet = pacedSet(itemSet, state);
-  if (wholeSet !== null) {
-    const read = await readPacedSet(deps, participant, wholeSet as string[], state.reveal);
-    if (!read.ok) {
-      return read.reason === "failed"
-        ? fail(500, LIVE_ROUTE_ERRORS.failed)
-        : fail(409, LIVE_ROUTE_ERRORS.unplayable);
-    }
-    const payload: ParticipantViewPayload = {
+  if (wholeSet) {
+    return answer({
       state,
       item: null,
       answered: null,
       revealed: null,
-      set: read.set,
+      set: built.entries,
       serverNow,
-    };
-    return Response.json(payload, { headers: NO_STORE_HEADERS });
+    });
   }
+  const [only] = built.entries;
+  const item: ParticipantItem | null = only?.item ?? null;
+  return answer({
+    state,
+    item,
+    answered: only?.answered ?? null,
+    revealed: only?.revealed ?? null,
+    serverNow,
+  });
+}
 
-  const currentItemId = itemAt(itemSet, state);
-  if (typeof currentItemId !== "string") {
-    const payload: ParticipantViewPayload = {
-      state,
-      item: null,
-      answered: null,
-      revealed: null,
-      serverNow,
-    };
-    return Response.json(payload, { headers: NO_STORE_HEADERS });
-  }
-
-  const { data: row, error: itemError } = await deps.service
-    .from("items")
-    .select(ITEM_COLUMNS)
-    .eq("id", currentItemId)
-    .maybeSingle();
-  if (itemError) return fail(500, LIVE_ROUTE_ERRORS.failed);
-  if (!row) return fail(409, LIVE_ROUTE_ERRORS.unplayable);
-
-  // Stored JSON is external input, exactly as it is in the authoring score route: validate the
-  // whole item before anything is derived from it.
-  const stored = fromItemRow(row);
-  if (!stored.ok) return fail(409, LIVE_ROUTE_ERRORS.unplayable);
-
-  // One starting order per room for an ordered-response item (#219): every phone sees the same.
-  const item: ParticipantItem = toKeylessItem(
-    stored.value,
-    deps.startingOrderSeed(participant.sessionId, stored.value.id),
-  );
-  // `itemAt` only answers with an id while the room is on an item, which is exactly when
-  // `position` is not null. The cast is that fact, not an assumption about the row.
-  const position = state.position as number;
-  const answered = await answerFor(deps, participant, position, stored.value);
-  const revealed = state.reveal
-    ? await revealFor(deps, participant.sessionId, participant.participantId, {
-        item: stored.value,
-        position,
-      })
-    : null;
-
-  const payload: ParticipantViewPayload = { state, item, answered, revealed, serverNow };
+function answer(payload: ParticipantViewPayload): Response {
   return Response.json(payload, { headers: NO_STORE_HEADERS });
 }
 
 /**
- * Whether this participant has already answered the item the room is on, and what they said.
- *
- * Theirs and nobody else's: the read is keyed on the participant id the cookie was checked
- * against, so there is no query string to change. Two columns are selected and two are all that
- * could be: `points`, `max_points`, `model`, `breakdown` and `groups` are marks, and marks belong
- * to `revealFor` below, which runs only once the host has revealed (ADR 0003).
- *
- * The stored response is read back through `parseSubmission` rather than trusted. It was
- * validated on the way in, but stored JSON is external input every time it is read — the same
- * rule the item above it is held to — and an item edited under a running session could leave a
- * response that no longer matches its schema. An unreadable one reads as "not answered here":
- * the server still knows they answered and will still refuse a second answer, and the phone
- * simply opens the item fresh instead of being handed something a renderer cannot draw.
+ * Who is asking and what room they are in: by `open_session_view` in one call, or, against a
+ * database that does not have it yet, by the two calls it replaced.
  */
-async function answerFor(
-  deps: LiveRouteDeps,
-  participant: { sessionId: string; participantId: string },
-  position: number,
-  item: Item,
-): Promise<AnsweredPayload | null> {
-  const { data } = await deps.service
-    .from("session_responses")
-    .select("response, submitted_at")
-    .eq("session_id", participant.sessionId)
-    .eq("participant_id", participant.participantId)
-    .eq("item_position", position)
-    .maybeSingle();
-  if (!data?.submitted_at) return null;
+async function openView(request: Request, deps: ViewRouteDeps): Promise<Opened> {
+  // Shape only, and it decides one thing: a request with no token is not worth a round trip.
+  const token = readParticipantToken(request);
+  if (token === null) return { ok: false, response: signedOut() };
 
-  const parsed = parseSubmission({ response: data.response }, item.type);
-  if (!parsed.ok) return null;
-  // Stored text, checked rather than trusted, like the response beside it. An unparseable stamp
-  // is `NaN`, which serializes to `null` and would have the phone show an answer whose
-  // `submittedAt` is missing — an answer that claims never to have been sent. Unreadable reads as
-  // "not answered here", the same way an unreadable response does above.
-  const submittedAt = Date.parse(data.submitted_at);
-  if (Number.isNaN(submittedAt)) return null;
-  return { itemId: item.id, submittedAt, response: parsed.response };
-}
+  const now = deps.now?.() ?? Date.now();
+  if (now < functionMissingUntil) return openViewInTwoCalls(request, deps);
 
-/**
- * The key, plus this participant's own marks if they answered. Their marks and nobody else's: the
- * read is keyed on the participant id the token carried, so there is no query string to change.
- *
- * The key is the one their answer was scored with, stored beside the score, so an author's edit
- * since cannot draw a right answer red beside its points. Someone who did not answer, and a row
- * from before the column, get the item's key as it is now (`withScoredReveal`).
- */
-async function revealFor(
-  deps: LiveRouteDeps,
-  sessionId: string,
-  participantId: string,
-  revealed: { item: Item; position: number },
-): Promise<RevealedPayload> {
-  const { data } = await selectWithReveal(MARK_COLUMNS, (columns) =>
-    deps.service
-      .from("session_responses")
-      .select(columns)
-      .eq("session_id", sessionId)
-      .eq("participant_id", participantId)
-      .eq("item_position", revealed.position)
-      .maybeSingle(),
-  );
-  const row = data as unknown as MarkRow | null;
+  const { data, error, status } = await deps.service.rpc("open_session_view", {
+    target_participant: token.participantId,
+    target_session: token.sessionId,
+    presented_secret: token.secret,
+  });
+  if (error?.code === FUNCTION_NOT_FOUND) {
+    functionMissingUntil = now + REPROBE_MS;
+    return openViewInTwoCalls(request, deps);
+  }
+  if (error) return faulted(request, "open_session_view", token, { error, status });
 
-  const score: ScoreResult | null = !row
-    ? null
-    : {
-        points: Number(row.points),
-        maxPoints: Number(row.max_points),
-        model: row.model as ScoreResult["model"],
-        breakdown: (row.breakdown ?? []) as ScoreResult["breakdown"],
-        ...(row.groups == null ? {} : { groups: row.groups as ScoreResult["groups"] }),
-      };
-
+  const row = data?.[0];
+  // The database looked, and this token is nobody's: unknown, tampered, for another session, or
+  // for a participant or a session that is gone. The only 401 there is.
+  if (!row) return { ok: false, response: signedOut() };
+  const refused = refusalOf(row);
+  if (refused !== null) return { ok: false, response: refused };
   return {
-    itemId: revealed.item.id,
-    position: revealed.position,
-    reveal: revealOf(withScoredReveal(revealed.item, row?.reveal)),
-    score,
+    ok: true,
+    participant: { sessionId: token.sessionId, participantId: token.participantId },
+    room: row,
+    rows: { items: listOf(row.view_items), answers: listOf(row.view_answers) },
   };
 }
 
-/** A participant's own marks on one item, as `revealFor` reads them. */
-const MARK_COLUMNS = "points, max_points, model, breakdown, groups";
+/** The route as it was before #407, for a database the migration has not reached. */
+async function openViewInTwoCalls(request: Request, deps: ViewRouteDeps): Promise<Opened> {
+  const verified = await deps.verify(request);
+  if (!verified.ok) {
+    return {
+      ok: false,
+      response: verified.reason === "unavailable" ? unavailable() : signedOut(),
+    };
+  }
+  const { participant } = verified;
 
-interface MarkRow {
-  points: number | string | null;
-  max_points: number | string | null;
-  model: string | null;
-  breakdown: unknown;
-  groups: unknown;
-  reveal?: unknown;
+  // Charges this participant's rate limit and reads the room in one round trip (#152). Who is
+  // speaking is settled first and the limit charged second, so nobody can spend a budget that is
+  // not theirs.
+  const { data, error, status } = await deps.service.rpc("begin_session_view", {
+    target_session: participant.sessionId,
+    participant: participant.participantId,
+  });
+  if (error) return faulted(request, "begin_session_view", participant, { error, status });
+  const row = data?.[0];
+  // A participant whose session has been deleted is not in a room any more. The token is the only
+  // thing that said otherwise, and it says nothing about whether the row still exists.
+  if (!row) return { ok: false, response: signedOut() };
+  const refused = refusalOf(row);
+  if (refused !== null) return { ok: false, response: refused };
+  return { ok: true, participant, room: row, rows: null };
+}
+
+function signedOut(): Response {
+  return fail(401, LIVE_ROUTE_ERRORS.signedOut);
+}
+
+/** A call that did not come back: written down, and answered as something to try again. */
+function faulted(
+  request: Request,
+  call: string,
+  who: Pick<ParticipantToken, "sessionId">,
+  failure: { error: unknown; status: number },
+): Opened {
+  reportLiveFault({ route: routeOf(request), call, sessionId: who.sessionId, ...failure });
+  return { ok: false, response: faultResponse(failure.status) };
+}
+
+/**
+ * The refusal a room row carries, as a response, or null when it carries none.
+ *
+ * A refused call answers with nulls in every other column, so a code this app does not know is
+ * not something to carry on past: it would put a null status on a student's page. Never passed
+ * through as itself either — an unknown code reaches a person as an empty sentence.
+ */
+function refusalOf(row: Pick<RoomRow, "refusal">): Response | null {
+  const refusal = asRefusal(row.refusal);
+  if (refusal !== null) return refuse(refusal);
+  return row.refusal ? fail(500, LIVE_ROUTE_ERRORS.failed) : null;
+}
+
+/** A jsonb array from the database, as a list. Anything else is an empty one. */
+function listOf(value: unknown): readonly unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+/** The room a row describes, or null when the row cannot be read: a fault, not a room. */
+function roomFrom(
+  row: RoomRow,
+): { state: LiveSessionState; itemSet: readonly unknown[]; serverNow: number } | null {
+  const itemSet = listOf(row.session_items);
+  // A `returns table` function carries no nullability into the generated types, so every column
+  // is coerced before it is read: a timer column is null whenever the timer is off or not
+  // running, and the position really is null before the room starts.
+  const timer = readTimer(
+    row.session_timer_seconds ?? null,
+    row.session_ends_at ?? null,
+    row.session_remaining_ms ?? null,
+  );
+  if (timer === null) return null;
+  // The database's clock as it read the room (#182), for the phone to measure its own against.
+  const serverNow = Date.parse(row.server_now);
+  if (Number.isNaN(serverNow)) return null;
+  const state: LiveSessionState = pacedState(
+    {
+      status: row.session_status,
+      position: row.session_position ?? null,
+      itemCount: itemSet.length,
+      reveal: row.session_reveal,
+      timer,
+    },
+    row.session_mode,
+  );
+  return { state, itemSet, serverNow };
+}
+
+/**
+ * Which items the room is showing, by `pacedSet` and `itemAt`: the one rule for it, here as in
+ * the in-memory adapter. `open_session_view` reads by the same rule in SQL; if the two ever
+ * disagreed, an item this asked for would be missing from the rows and the view would be refused
+ * as unplayable rather than shown wrong.
+ */
+function wantedItems(
+  itemSet: readonly unknown[],
+  state: LiveSessionState,
+): { wanted: WantedItem[]; wholeSet: boolean } {
+  const set = pacedSet(itemSet, state);
+  if (set !== null) {
+    const wanted = set.map((id, index) => ({ id: String(id), position: index + 1 }));
+    return { wanted, wholeSet: true };
+  }
+  const current = itemAt(itemSet, state);
+  // `itemAt` only answers with an id while the room is on an item, which is exactly when
+  // `position` is not null.
+  if (typeof current !== "string" || state.position === null)
+    return { wanted: [], wholeSet: false };
+  return { wanted: [{ id: current, position: state.position }], wholeSet: false };
 }

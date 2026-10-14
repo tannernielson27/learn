@@ -1,8 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ParticipantToken } from "@/lib/live/participantToken";
-import { joinSession, resumeParticipant } from "./participants";
+import { checkParticipant, joinSession, resumeParticipant } from "./participants";
 
-type Reply = { data?: unknown; error?: { code?: string; message?: string } | null };
+type Reply = {
+  data?: unknown;
+  error?: { code?: string; message?: string } | null;
+  status?: number;
+};
 
 /** The same partial-mock shape `sessions.test.ts` uses, cast to the parameter's own type. */
 type Client = Parameters<typeof joinSession>[0];
@@ -148,5 +152,30 @@ describe("resumeParticipant", () => {
       "title",
     ]);
     expect(JSON.stringify(resumed)).not.toMatch(/answer|item_set|rationale|scoring/i);
+  });
+});
+
+describe("checkParticipant (#407)", () => {
+  it("tells a token the database does not know from a database that did not answer", async () => {
+    // The first is "join again". The second says nothing about the token at all, and reading it
+    // as the first is what sent a phone to the join form over one timed-out request.
+    expect(await checkParticipant(fakeRpc({ data: [], error: null }).client, TOKEN)).toEqual({
+      ok: false,
+      reason: "unknown",
+    });
+
+    const error = { code: "", message: "TypeError: fetch failed" };
+    expect(await checkParticipant(fakeRpc({ error, status: 0 }).client, TOKEN)).toEqual({
+      ok: false,
+      reason: "unavailable",
+      error,
+      status: 0,
+    });
+  });
+
+  it("lets nobody in either way", async () => {
+    for (const reply of [{ data: [], error: null }, { error: { code: "08006" } }]) {
+      expect((await checkParticipant(fakeRpc(reply).client, TOKEN)).ok).toBe(false);
+    }
   });
 });
