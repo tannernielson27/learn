@@ -43,14 +43,14 @@ insert into public.items (id, bank_id, org_id, type, status, content, answer_key
 -- A room the host leads, and a student-paced one beside it.
 insert into public.sessions (id, org_id, host_id, bank_id, title, code, item_set)
   select '00000000-0000-0000-0000-0000004070d1', p.org_id, p.id,
-         '00000000-0000-0000-0000-0000004070b1', 'Led', 'VEW407',
+         '00000000-0000-0000-0000-0000004070b1', 'Led', 'VEW472',
          '["00000000-0000-0000-0000-0000004070e1",
            "00000000-0000-0000-0000-0000004070e2"]'::jsonb
   from public.profiles p where p.id = '00000000-0000-0000-0000-0000004070aa';
 
 insert into public.sessions (id, org_id, host_id, bank_id, title, code, mode, item_set)
   select '00000000-0000-0000-0000-0000004070d2', p.org_id, p.id,
-         '00000000-0000-0000-0000-0000004070b1', 'Paced', 'VEW408', 'student_paced',
+         '00000000-0000-0000-0000-0000004070b1', 'Paced', 'VEW473', 'student_paced',
          '["00000000-0000-0000-0000-0000004070e1",
            "00000000-0000-0000-0000-0000004070e2",
            "00000000-0000-0000-0000-0000004070e3"]'::jsonb
