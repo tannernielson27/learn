@@ -94,6 +94,16 @@ real phone in the second case would sit in the lobby until the next move. `--hos
 `--lobby-ms` (3 s by default) before Start, as a person at the console does, and `stalled steps`
 makes it visible if it happens.
 
+## One hundred and one hundred and fifty, on a production build (#404)
+
+**The pass line, written before the first run.** A class of 100 passes when, on a production build
+(`pnpm build`, then `next start`):
+
+1. every participant joins (joined = asked for);
+2. there are no refusals, expected or not;
+3. every step reaches every phone (no stalled step, and every step settles at the full class);
+4. `view` p95 is under 2 s.
+
 ## In CI
 
 The `auth e2e` job runs a five-participant `--host` smoke against the build the e2e step made. It

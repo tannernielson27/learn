@@ -60,6 +60,8 @@ export function createParticipant({ displayName, options, rng, events }) {
   /** Item ids already answered or passed, so a second move on the same item is not a second answer. */
   const handled = new Set();
   const counts = { state: 0, presence: 0 };
+  /** Student-paced: whether this phone is already working through the set. */
+  let working = false;
 
   const post = (path, body) =>
     fetch(`${base}${path}`, {
@@ -126,7 +128,11 @@ export function createParticipant({ displayName, options, rng, events }) {
     client.realtime.disconnect();
   }
 
-  async function answer(item, position) {
+  /**
+   * `named` is true in a student-paced set, where the phone chooses the item and so names its
+   * place, as `participantTransport.ts` does; an instructor-paced answer sends no position.
+   */
+  async function answer(item, position, named = false) {
     await sleep(options.thinkMs[0] + rng() * (options.thinkMs[1] - options.thinkMs[0]));
     if (gone) return;
     if (rng() < options.blank) {
@@ -134,13 +140,33 @@ export function createParticipant({ displayName, options, rng, events }) {
       return;
     }
     const response = randomResponse(item, rng);
-    const sent = await timed("submit", () => post(ROUTES.submit, { itemId: item.id, response }));
+    const body = named ? { itemId: item.id, response, position } : { itemId: item.id, response };
+    const sent = await timed("submit", () => post(ROUTES.submit, body));
     if (sent.ok) {
       events.answered(position, "sent");
       return;
     }
     events.refused("submit", await refusalOf(sent));
     events.answered(position, "refused");
+  }
+
+  /**
+   * A student-paced set (#404): one item after another, each after its own think time, as a
+   * student works down the list. The phone does not read the view again between items.
+   */
+  async function answerSet(set) {
+    if (working) return;
+    working = true;
+    try {
+      for (const entry of set) {
+        if (gone || ended) return;
+        if (entry.answered !== null || handled.has(entry.item.id)) continue;
+        handled.add(entry.item.id);
+        await answer(entry.item, entry.position, true);
+      }
+    } finally {
+      working = false;
+    }
   }
 
   async function view() {
@@ -152,6 +178,10 @@ export function createParticipant({ displayName, options, rng, events }) {
     const payload = await response.json();
     const { state, item, answered, revealed } = payload;
     if (state.status === "ended") ended = true;
+    if (state.status === "running" && Array.isArray(payload.set)) {
+      if (!state.reveal) void answerSet(payload.set).catch((error) => events.failed(error));
+      return;
+    }
     if (state.status !== "running" || item === null || revealed !== null) return;
     if (answered !== null || handled.has(item.id)) return;
     handled.add(item.id);
