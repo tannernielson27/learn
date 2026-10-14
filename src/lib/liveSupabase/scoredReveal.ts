@@ -1,9 +1,9 @@
 /**
  * The key an answer was scored with, read back beside its score (`session_responses.reveal`).
  *
- * The submission route stores the item's key, rationale and scoring with the score, and the two
- * reveal paths (`viewRoute.ts`, `pacedView.ts`) draw the marks against that rather than against
- * the item as it is now, so an author's edit between the answer and the reveal cannot split the
+ * The submission route stores the item's key, rationale and scoring with the score, and the
+ * reveal (`viewEntries.ts`, for one item or a whole set) draws the marks against that rather than
+ * against the item as it is now, so an author's edit between the answer and the reveal cannot split the
  * points from the red and green (see `withScoredReveal`).
  *
  * ## Before the migration is pushed

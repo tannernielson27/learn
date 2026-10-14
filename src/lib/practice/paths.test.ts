@@ -9,8 +9,8 @@ describe("practicePath", () => {
 
 describe("practiceProgressLabel", () => {
   it.each([
-    [{ itemCount: 12, answered: 0 }, "12 items"],
-    [{ itemCount: 1, answered: 0 }, "1 item"],
+    [{ itemCount: 12, answered: 0 }, "12 questions"],
+    [{ itemCount: 1, answered: 0 }, "1 question"],
     [{ itemCount: 12, answered: 3 }, "3 of 12 done"],
     [{ itemCount: 12, answered: 12 }, "All 12 done"],
   ])("%o reads %s", (bank, label) => {

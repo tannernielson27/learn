@@ -11,25 +11,19 @@ export interface PracticeBankListProps {
 }
 
 /**
- * The Practice section of the student home (#241): each bank an instructor has shared with one of
- * the student's classes, how many items it holds, and how far their current run has got. Each name
- * opens the bank's practice. For a student in more than one workspace each row also names the
- * bank's workspace, as the assignment and history rows do. A Server Component.
+ * The Practice section of the student home (#241): each quiz a teacher has shared with one of
+ * the student's classes, how many questions it holds, and how far the student has got. Each name
+ * opens the quiz for practice. For a student in more than one workspace each row also names the
+ * quiz's workspace, as the assignment and history rows do. A Server Component.
  */
 export function PracticeBankList({ banks, showWorkspace = false }: PracticeBankListProps) {
   if (banks.length === 0) {
     // Under the student home's Practice h2.
-    return (
-      <EmptyState
-        level={3}
-        heading="Nothing is shared for practice yet"
-        body="Banks your instructor shares for practice appear here, ready to open."
-      />
-    );
+    return <EmptyState level={3} heading="Nothing shared for practice yet" />;
   }
   return (
     <ul
-      aria-label="Practice banks"
+      aria-label="Practice quizzes"
       className="flex flex-col divide-y divide-line border-y border-line"
     >
       {banks.map((bank) => {
@@ -42,8 +36,14 @@ export function PracticeBankList({ banks, showWorkspace = false }: PracticeBankL
             >
               {bank.name}
             </Link>
-            {workspace ? <span className="text-sm break-words text-ink-2">{workspace}</span> : null}
-            <span className="tabular text-sm text-ink-2">{practiceProgressLabel(bank)}</span>
+            <span className="tabular text-sm break-words text-ink-2">
+              {workspace ? (
+                <>
+                  <span>{workspace}</span> ·{" "}
+                </>
+              ) : null}
+              {practiceProgressLabel(bank)}
+            </span>
           </li>
         );
       })}

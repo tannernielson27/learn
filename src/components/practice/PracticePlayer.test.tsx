@@ -62,7 +62,7 @@ describe("PracticePlayer (#241)", () => {
     expect(ui.answer).toHaveBeenCalledWith(RUN, ROW_1, CORRECT);
     expect(await screen.findByText(MC_RATIONALE)).toBeInTheDocument();
     expect(screen.getByTestId("practice-count")).toHaveTextContent("1 of 2 done");
-    expect(screen.getByRole("button", { name: "Item 1, answered" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Question 1, answered" })).toBeInTheDocument();
   });
 
   it("reopens an item this run has answered in feedback, with no Submit", async () => {
@@ -90,13 +90,13 @@ describe("PracticePlayer (#241)", () => {
     const ui = setup();
     await renderersLoaded();
     await ui.user.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
-    await ui.user.click(screen.getByRole("button", { name: "Next item" }));
+    await ui.user.click(screen.getByRole("button", { name: "Next" }));
     await renderersLoaded();
-    expect(screen.getByRole("button", { name: "Item 2, not answered" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Question 2, not answered" })).toHaveAttribute(
       "aria-current",
       "step",
     );
-    await ui.user.click(screen.getByRole("button", { name: "Previous item" }));
+    await ui.user.click(screen.getByRole("button", { name: "Previous" }));
     await renderersLoaded();
     expect(screen.getByRole("radio", { name: /Auscultate the lungs/ })).toBeChecked();
   });
@@ -152,7 +152,7 @@ describe("PracticePlayer (#241)", () => {
     expect(await screen.findByText(MC_RATIONALE)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
     expect(screen.getByTestId("practice-count")).toHaveTextContent("1 of 2 done");
-    expect(screen.getByRole("button", { name: "Item 1, answered" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Question 1, answered" })).toBeInTheDocument();
   });
 
   it("plays a case study step by step, each answer naming that step's own row", async () => {
@@ -181,7 +181,7 @@ describe("PracticePlayer (#241)", () => {
         expect.objectContaining({ type: "highlight_text" }),
       ),
     );
-    expect(await screen.findByRole("button", { name: "Next step" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Next question" })).toBeInTheDocument();
   });
 
   it("reopens a case study's answered step with its marks", async () => {
@@ -203,7 +203,7 @@ describe("PracticePlayer (#241)", () => {
       }),
     );
     await renderersLoaded();
-    expect(screen.getByRole("button", { name: "Next step" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next question" })).toBeInTheDocument();
     expect(screen.getByTestId("practice-count")).toHaveTextContent("1 of 6 done");
   });
 
@@ -211,7 +211,7 @@ describe("PracticePlayer (#241)", () => {
     const ui = setup();
     await ui.user.click(screen.getByRole("button", { name: "Start over" }));
     expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
-    expect(screen.getByText(/Your answers so far are set aside/)).toBeInTheDocument();
+    expect(screen.getByText(/Your first answers still count/)).toBeInTheDocument();
     await ui.user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.getByRole("button", { name: "Start over" })).toHaveFocus();
 
@@ -220,8 +220,8 @@ describe("PracticePlayer (#241)", () => {
     await waitFor(() => expect(ui.startOver).toHaveBeenCalledTimes(1));
   });
 
-  it("says when a bank has nothing to practise", () => {
+  it("says when a quiz has nothing to practise", () => {
     setup(view({ entries: [], total: 0 }));
-    expect(screen.getByText("This bank has no items to practise yet.")).toBeInTheDocument();
+    expect(screen.getByText("This quiz has no questions yet.")).toBeInTheDocument();
   });
 });

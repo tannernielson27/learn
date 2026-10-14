@@ -245,7 +245,7 @@ export function CaseStudyPlayer<T extends PlayableItem>({
         <div className="fixed inset-x-0 bottom-0 border-t border-line bg-surface-1/95 px-5 py-3 backdrop-blur-sm [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
           <div className="mx-auto flex max-w-3xl items-center justify-end">
             <Button variant="primary" onClick={advance}>
-              {isLastStep ? "See results" : "Next step"}
+              {isLastStep ? "See results" : "Next question"}
             </Button>
           </div>
         </div>

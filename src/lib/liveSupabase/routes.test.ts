@@ -1,18 +1,23 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { validateItem } from "@/lib/ngn/validate";
 import type { Database } from "@/lib/supabase/database.types";
 import { toItemRow } from "@/lib/supabase/itemRows";
+import { PARTICIPANT_COOKIE, formatParticipantToken } from "@/lib/live/participantToken";
 import { startingOrderSeed } from "@/lib/ngn/startingOrder";
 import { submitSessionResponse } from "./submitRoute";
-import { readParticipantView, type ViewRouteDeps } from "./viewRoute";
+import { forgetMissingViewFunction, readParticipantView, type ViewRouteDeps } from "./viewRoute";
 
 /**
  * The refusals and faults the conformance suite cannot reach, because they are things a browser
  * does rather than things a room does: a forged request, an unreadable body, a rate limit, a
  * database that is not answering. Each is driven against the real handler with a scripted service
  * client, so what is under test is the handler's own decision.
+ *
+ * The view route is driven here **as it runs before the #407 migration is pushed**: the scripted
+ * database has never heard of `open_session_view`, so every test below is of the calls the route
+ * falls back to. The route on the one function is `viewRoute.test.ts`.
  */
 
 const ME = { sessionId: "s-1", participantId: "p-1" };
@@ -21,16 +26,32 @@ const URL_SUBMIT = "http://live.test/api/live/submit";
 
 type Answer = { data: unknown; error: unknown };
 
-/** A service client that answers from a script: one entry per table read or function call. */
+/** What PostgREST answers a call to a function the database does not have. */
+const NOT_PUSHED: Answer = {
+  data: null,
+  error: { code: "PGRST202", message: "Could not find the function in the schema cache" },
+};
+
+/**
+ * A service client that answers from a script: one entry per table read or function call. A
+ * table's entry is one row (or null), as it was when the route read one row; a read of several
+ * gets it as a list.
+ */
 function scriptedService(script: Record<string, Answer>): SupabaseClient<Database> {
   const answer = (key: string): Answer => script[key] ?? { data: null, error: null };
+  const listed = ({ data, error }: Answer): Answer => ({
+    data: data === null || Array.isArray(data) ? data : [data],
+    error,
+  });
   const client = {
     from(table: string) {
       return {
         select: () => {
           const builder = {
             eq: () => builder,
+            in: () => builder,
             maybeSingle: async () => answer(table),
+            then: (resolve: (value: Answer) => unknown) => resolve(listed(answer(table))),
           };
           return builder;
         },
@@ -43,18 +64,35 @@ function scriptedService(script: Record<string, Answer>): SupabaseClient<Databas
 
 function deps(script: Record<string, Answer>, verified: typeof ME | null = ME): ViewRouteDeps {
   return {
-    verify: async () => verified,
-    service: scriptedService(script),
+    verify: async () =>
+      verified === null ? { ok: false, reason: "signed_out" } : { ok: true, participant: verified },
+    service: scriptedService({ open_session_view: NOT_PUSHED, ...script }),
     startingOrderSeed: startingOrderSeed,
   };
 }
 
+/** A cookie of the right shape. Who it names is the scripted verifier's answer, not its own. */
+const COOKIE = `${PARTICIPANT_COOKIE}=${formatParticipantToken({
+  sessionId: "3f1a2b4c-5d6e-4f80-9a1b-2c3d4e5f6071",
+  participantId: "9b8a7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+  secret: "ab".repeat(24),
+})}`;
+
 const jsonRequest = (url: string, body: unknown, headers: Record<string, string> = {}) =>
   new Request(url, {
     method: "POST",
-    headers: { "content-type": "application/json", ...headers },
+    headers: { "content-type": "application/json", cookie: COOKIE, ...headers },
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
+
+// A failed call is written to the log (#407). Silenced here, and read where it is under test.
+beforeEach(() => {
+  forgetMissingViewFunction();
+  vi.spyOn(console, "error").mockImplementation(() => {});
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 async function refusalOf(response: Response): Promise<string | undefined> {
   return ((await response.json()) as { refusal?: string }).refusal;
@@ -116,8 +154,23 @@ describe("POST /api/live/view", () => {
       jsonRequest(URL_VIEW, {}),
       deps({ begin_session_view: { data: null, error: { message: "connection refused" } } }),
     );
-    expect(response.status).toBe(500);
+    // #407: something to try again, not a broken app and never "you are not in this session".
+    expect(response.status).toBe(503);
     expect(await response.text()).not.toContain("connection refused");
+  });
+
+  it("refuses a request with no cookie before asking the database anything", async () => {
+    const rpc = vi.fn(async () => ({ data: null, error: null }));
+    const response = await readParticipantView(
+      new Request(URL_VIEW, {
+        method: "POST",
+        body: "{}",
+        headers: { "content-type": "application/json" },
+      }),
+      { ...deps({}), service: { rpc } as unknown as SupabaseClient<Database> },
+    );
+    expect(response.status).toBe(401);
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("treats a session that is no longer there as not being in a room", async () => {
@@ -248,6 +301,7 @@ describe("POST /api/live/view", () => {
         }),
         items: {
           data: {
+            id: "a",
             type: "multiple_choice",
             cjmm_step: null,
             tags: [],
@@ -276,11 +330,12 @@ describe("POST /api/live/view", () => {
           reveal: false,
           items: ["a"],
         }),
-        items: { data: toItemRow(item.value), error: null },
+        items: { data: { id: "a", ...toItemRow(item.value) }, error: null },
         // `Date.parse` of this is NaN, which serializes to null: an answer that claims never to
         // have been sent. It reads as "not answered here" instead.
         session_responses: {
           data: {
+            item_position: 1,
             response: FIXTURES.multiple_choice.cases[0].response,
             submitted_at: "not a timestamp",
           },
@@ -417,7 +472,7 @@ describe("POST /api/live/submit", () => {
       jsonRequest(URL_SUBMIT, { itemId: "x", response: {} }),
       deps({ begin_session_submission: { data: null, error: { message: "boom" } } }),
     );
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(503);
     expect(await response.text()).not.toContain("boom");
   });
 

@@ -54,7 +54,7 @@ describe("AttemptPlayer (#208)", () => {
     const view = setup();
     await renderersLoaded();
     expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
-    expect(screen.getByTestId("save-status")).toHaveTextContent("Your answers save as you go.");
+    expect(screen.getByTestId("save-status")).toHaveTextContent("Answers save as you go.");
 
     await view.user.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
     expect(screen.getByTestId("save-status")).toHaveTextContent("Saving");
@@ -66,7 +66,7 @@ describe("AttemptPlayer (#208)", () => {
       optionId: "opt_a",
     });
     expect(screen.getByTestId("answered-count")).toHaveTextContent("1 of 2 answered");
-    expect(screen.getByRole("button", { name: "Item 1, answered" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Question 1, answered" })).toBeInTheDocument();
   });
 
   it("says Not saved, retrying when a save fails", async () => {
@@ -89,15 +89,15 @@ describe("AttemptPlayer (#208)", () => {
   it("moves through the set with the list, Next and Previous, keeping each answer", async () => {
     const view = setup();
     await renderersLoaded();
-    expect(screen.getByRole("button", { name: "Previous item" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
     await view.user.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
-    await view.user.click(screen.getByRole("button", { name: "Next item" }));
+    await view.user.click(screen.getByRole("button", { name: "Next" }));
     await renderersLoaded();
-    expect(screen.getByRole("button", { name: "Item 2, not answered" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Question 2, not answered" })).toHaveAttribute(
       "aria-current",
       "step",
     );
-    await view.user.click(screen.getByRole("button", { name: "Item 1, answered" }));
+    await view.user.click(screen.getByRole("button", { name: "Question 1, answered" }));
     expect(screen.getByRole("radio", { name: /Auscultate the lungs/ })).toBeChecked();
   });
 
@@ -107,9 +107,7 @@ describe("AttemptPlayer (#208)", () => {
     await view.user.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
     await view.user.click(screen.getByRole("button", { name: "Submit assignment" }));
     expect(screen.getByRole("heading", { name: "Submit attempt 1?" })).toBeInTheDocument();
-    expect(
-      screen.getByText(/1 of 2 answered\. You cannot change your answers/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/1 of 2 answered\. You cannot change answers/)).toBeInTheDocument();
 
     await view.user.click(screen.getByRole("button", { name: "Submit now" }));
     await waitFor(() => expect(view.submit).toHaveBeenCalledWith(ATTEMPT));

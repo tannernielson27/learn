@@ -40,7 +40,7 @@ test("the record opens over the item below the two-pane breakpoint", async ({ pa
   // display:none at these widths, so the open record is the only one in the accessibility tree.
   const record = phone
     ? page.getByRole("dialog", { name: "Patient record" })
-    : page.getByRole("tablist", { name: "Patient record sections" });
+    : page.getByRole("tablist", { name: "Patient record tabs" });
   await expect(record).toBeVisible();
 
   await page.screenshot({
@@ -94,7 +94,7 @@ test("the chart tabs page with an arrow rather than a scrollbar", async ({ page 
   if (testInfo.project.name === "tablet-768") {
     await page.getByRole("button", { name: "Patient record" }).click();
   }
-  const strip = page.getByRole("tablist", { name: "Patient record sections" });
+  const strip = page.getByRole("tablist", { name: "Patient record tabs" });
   const forward = page.locator('[data-strip-arrow="end"]').first();
   await expect(forward).toBeVisible();
   // Nothing to go back to until the strip has moved.
