@@ -35,9 +35,7 @@ export default async function AccountPage() {
           <h2 id="account-password" className="mb-2 text-xl font-medium text-ink-1">
             Password
           </h2>
-          <p className="mb-3 text-ink-2">
-            Choose a password, or change the one you have. Other devices are signed out.
-          </p>
+          <p className="mb-3 text-ink-2">Changing it signs out your other devices.</p>
           <Link href={choosePasswordPath(ACCOUNT_PATH)} className={LINK}>
             Change your password
           </Link>
@@ -48,9 +46,8 @@ export default async function AccountPage() {
             <h2 id="account-workspace" className="mb-2 text-xl font-medium text-ink-1">
               Workspace
             </h2>
-            <p className="mb-3 text-ink-2">See who teaches in your workspace.</p>
             <Link href={WORKSPACE_PATH} className={LINK}>
-              Members and invitations
+              Teachers and invitations
             </Link>
           </section>
         ) : null}

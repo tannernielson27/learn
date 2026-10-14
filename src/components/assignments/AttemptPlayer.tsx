@@ -33,7 +33,7 @@ export interface AttemptPlayerProps {
 }
 
 const STATUS_COPY: Record<Exclude<SaveStatus, "stopped">, string> = {
-  idle: "Your answers save as you go.",
+  idle: "Answers save as you go.",
   saving: "Saving",
   saved: "Saved",
   retrying: "Not saved, retrying",
@@ -129,7 +129,7 @@ export function AttemptPlayer({
   });
 
   if (items.length === 0) {
-    return <p className="measure text-ink-2">This assignment has no items to show.</p>;
+    return <p className="measure text-ink-2">This assignment has no questions.</p>;
   }
 
   const at = Math.min(index, items.length - 1);
@@ -186,7 +186,6 @@ export function AttemptPlayer({
           item={entry.item}
           initialResponse={answers[entry.itemId]}
           onResponseChange={(response) => change(entry.itemId, response)}
-          progress={{ index: at, total: items.length }}
           submit={noItemSubmit}
           showSubmit={false}
         />
@@ -194,14 +193,14 @@ export function AttemptPlayer({
 
       <div className="mt-2 flex flex-wrap justify-between gap-2">
         <Button variant="secondary" disabled={at === 0} onClick={() => setIndex(at - 1)}>
-          Previous item
+          Previous
         </Button>
         <Button
           variant="secondary"
           disabled={at === items.length - 1}
           onClick={() => setIndex(at + 1)}
         >
-          Next item
+          Next
         </Button>
       </div>
 
@@ -213,7 +212,7 @@ export function AttemptPlayer({
                 {`Submit attempt ${attemptNumber}?`}
               </h2>
               <p className="text-sm text-ink-2">
-                {`${answered} of ${items.length} answered. You cannot change your answers after you submit.`}
+                {`${answered} of ${items.length} answered. You cannot change answers after you submit.`}
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button

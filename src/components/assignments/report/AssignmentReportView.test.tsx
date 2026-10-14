@@ -85,11 +85,11 @@ describe("AssignmentReportView, once closed", () => {
       "href",
       `/author/assignments/${ASSIGNMENT}/report`,
     );
-    expect(within(nav).getByRole("link", { name: "CJMM steps" })).toHaveAttribute(
+    expect(within(nav).getByRole("link", { name: "Clinical judgment steps" })).toHaveAttribute(
       "href",
       `/author/assignments/${ASSIGNMENT}/report?view=steps`,
     );
-    expect(within(nav).getByRole("link", { name: "Items" })).toHaveAttribute(
+    expect(within(nav).getByRole("link", { name: "Questions" })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -149,8 +149,8 @@ describe("AssignmentReportView, while open", () => {
   it("says items and steps wait for the close", () => {
     renderView("items", false);
     expect(screen.queryByRole("table")).toBeNull();
-    const section = screen.getByRole("region", { name: "Items" });
-    expect(within(section).getByText(/Scores show here once the assignment closes/)).toBeVisible();
+    const section = screen.getByRole("region", { name: "Questions" });
+    expect(within(section).getByText(/Scores show once the assignment closes/)).toBeVisible();
   });
 });
 

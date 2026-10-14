@@ -47,7 +47,7 @@ class RendererBoundary extends Component<BoundaryProps, { failed: boolean }> {
           <p className="text-ink-1">{RENDERER_FAILED}</p>
           <p className="mt-1 text-sm text-ink-2">
             {this.props.onReload
-              ? "If it still does not load, reload the page. Answers you have not submitted may be lost."
+              ? "Still not loading? Reload the page. Answers you have not submitted may be lost."
               : "Check your connection, then try again."}
           </p>
         </div>

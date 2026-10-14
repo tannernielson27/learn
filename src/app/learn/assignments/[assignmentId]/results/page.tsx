@@ -44,7 +44,7 @@ function Header({
 /**
  * A student's results for one assignment (#210). Everything is decided on the server by
  * `loadResultsPage`: the submit at close for this student, then their own result through the
- * database, which answers only after the close; only then the items with their keys and
+ * database, which answers only after the close; only then the questions with their keys and
  * rationales. Before the close the page says when results come and carries nothing else. The page
  * uses no Server Action: it is a read.
  */
@@ -64,7 +64,7 @@ export default async function StudentResultsPage({
   if (view.kind === "failed") {
     return (
       <p role="alert" className="text-ink-2">
-        These results could not be loaded. Reload the page to try again.
+        These results did not load. Reload the page.
       </p>
     );
   }
@@ -77,7 +77,7 @@ export default async function StudentResultsPage({
       <>
         <Header assignment={view.assignment} closed={false} timeZone={timeZone} />
         <p role="status" data-testid="results-pending" className="measure mt-6 text-ink-1">
-          Your results will be shown when the assignment closes.
+          Results show when the assignment closes.
         </p>
         <p className="mt-4 text-sm">
           <Link

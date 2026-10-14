@@ -118,7 +118,7 @@ test("a student answers on a phone, reloads to find the answers, and submits", a
   const status = student.getByTestId("save-status");
   await student.getByRole("radio", { name: /Auscultate the lungs/ }).click();
   await expect(status).toHaveText("Saved", { timeout: 15_000 });
-  await student.getByRole("button", { name: "Next item", exact: true }).click();
+  await student.getByRole("button", { name: "Next", exact: true }).click();
   await student.getByRole("checkbox", { name: /Respiratory rate 28 breaths/ }).click();
   await expect(status).toHaveText("Saved", { timeout: 15_000 });
   await expect(student.getByTestId("answered-count")).toHaveText(/^2 of \d+ answered$/);
@@ -136,7 +136,7 @@ test("a student answers on a phone, reloads to find the answers, and submits", a
   // Close the tab and come back: both answers are there.
   await student.reload();
   await expect(student.getByRole("radio", { name: /Auscultate the lungs/ })).toBeChecked();
-  await student.getByRole("button", { name: "Item 2, answered", exact: true }).click();
+  await student.getByRole("button", { name: "Question 2, answered", exact: true }).click();
   await expect(
     student.getByRole("checkbox", { name: /Respiratory rate 28 breaths/ }),
   ).toBeChecked();
@@ -171,7 +171,7 @@ test("a student answers on a phone, reloads to find the answers, and submits", a
   await expect(
     student
       .getByRole("button", { name: "Patient record", exact: true })
-      .or(student.getByRole("tablist", { name: "Patient record sections", exact: true }))
+      .or(student.getByRole("tablist", { name: "Patient record tabs", exact: true }))
       .first(),
   ).toBeVisible();
   await expectNoAxeViolations(student);

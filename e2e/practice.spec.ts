@@ -124,9 +124,9 @@ test("a student practises a shared bank on a phone, sees each key as they answer
   const practicePath = `/learn/practice/${SAMPLES_BANK}`;
 
   // The home lists the bank under Practice, linked.
-  const list = student.getByRole("list", { name: "Practice banks", exact: true });
+  const list = student.getByRole("list", { name: "Practice quizzes", exact: true });
   await expect(list.getByRole("link", { name: "Samples", exact: true })).toBeVisible();
-  await expect(list).toContainText(/\d+ items/);
+  await expect(list).toContainText(/\d+ questions/);
   await expectNoAxeViolations(student);
   await student.screenshot({ path: shot("practice-home"), fullPage: true });
 
@@ -156,7 +156,7 @@ test("a student practises a shared bank on a phone, sees each key as they answer
   }
 
   // The SATA, answered wrong: one expected finding only.
-  await student.getByRole("button", { name: "Item 2, not answered", exact: true }).click();
+  await student.getByRole("button", { name: "Question 2, not answered", exact: true }).click();
   await student.getByRole("checkbox", { name: /Temperature 37\.2/ }).click();
   const [answerRequest, answerResponse] = await Promise.all([
     student.waitForRequest((req) => req.url().endsWith(ANSWER_ROUTE) && req.method() === "POST"),
@@ -180,7 +180,7 @@ test("a student practises a shared bank on a phone, sees each key as they answer
   await student.screenshot({ path: shot("practice-sata-feedback"), fullPage: true });
 
   // The next item: one finding in each body system.
-  await student.getByRole("button", { name: "Next item", exact: true }).click();
+  await student.getByRole("button", { name: "Next", exact: true }).click();
   await student.getByRole("checkbox", { name: /Deep, rapid respirations/ }).click();
   await student.getByRole("checkbox", { name: /Heart rate 118/ }).click();
   await student.getByRole("checkbox", { name: /Drowsiness/ }).click();
@@ -191,7 +191,7 @@ test("a student practises a shared bank on a phone, sees each key as they answer
   // Reload: the progress is still there, and the SATA reopens with its key.
   await student.reload();
   await expect(student.getByTestId("practice-count")).toHaveText(/^2 of \d+ done$/);
-  await student.getByRole("button", { name: "Item 2, answered", exact: true }).click();
+  await student.getByRole("button", { name: "Question 2, answered", exact: true }).click();
   await expect(student.getByText(SATA_RATIONALE, { exact: false })).toBeVisible();
   await expect(student.getByRole("button", { name: "Submit", exact: true })).toHaveCount(0);
 
@@ -228,7 +228,7 @@ test("a student practises a shared bank on a phone, sees each key as they answer
   // A student of the other class: the bank and its answer route are a 404.
   const outsider = await joinAsStudent(browser, request, testInfo, other.invite, "outsider");
   await expect(
-    outsider.page.getByRole("list", { name: "Practice banks", exact: true }),
+    outsider.page.getByRole("list", { name: "Practice quizzes", exact: true }),
   ).toHaveCount(0);
   const outsiderPage = await bytesOf(outsider.context, practicePath);
   expect(outsiderPage.status).toBe(404);
@@ -263,7 +263,7 @@ test("a student practises a shared bank on a phone, sees each key as they answer
   expect(await stoppedAnswer.text()).not.toContain(MC_RATIONALE);
   await student.goto("/learn");
   await expect(
-    student.getByRole("heading", { name: "Nothing is shared for practice yet", exact: true }),
+    student.getByRole("heading", { name: "Nothing shared for practice yet", exact: true }),
   ).toBeVisible();
 
   await phone.context.close();

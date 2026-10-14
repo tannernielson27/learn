@@ -17,16 +17,17 @@ const SOURCE_LABEL: Readonly<Record<StepSource, string>> = {
   practice: "practice",
 };
 
-const itemsLabel = (count: number): string => (count === 1 ? "1 item" : `${count} items`);
+const questionsLabel = (count: number): string =>
+  count === 1 ? "1 question" : `${count} questions`;
 
-/** "12 items", or with more than one source, "12 items: 8 from assignments, 4 from practice". */
+/** "12 questions", or with two sources, "12 questions: 8 from assignments, 4 from practice". */
 function countLabel(tally: SourcedTally): string {
   const sources = STEP_SOURCES.filter((source) => tally.bySource[source].items > 0);
-  if (sources.length < 2) return itemsLabel(tally.items);
+  if (sources.length < 2) return questionsLabel(tally.items);
   const parts = sources.map(
     (source) => `${tally.bySource[source].items} from ${SOURCE_LABEL[source]}`,
   );
-  return `${itemsLabel(tally.items)}: ${parts.join(", ")}`;
+  return `${questionsLabel(tally.items)}: ${parts.join(", ")}`;
 }
 
 /** How far across the step's bar goes. Decorative: the percent beside it says the number. */
@@ -67,37 +68,30 @@ function StepItem({ standing }: { standing: StepStanding }) {
 
 function UntaggedNote({ items }: { items: number }) {
   if (items === 0) return null;
-  const verb = items === 1 ? "had no step and is" : "had no step and are";
+  const verb = items === 1 ? "has no step and is" : "have no step and are";
   return (
-    <p className="mt-3 text-sm text-ink-2">{`${itemsLabel(items)} ${verb} not counted here.`}</p>
+    <p className="mt-3 text-sm text-ink-2">{`${questionsLabel(items)} ${verb} not counted.`}</p>
   );
 }
 
 /**
- * A student's clinical judgment steps (#239): the six CJMM steps, weakest first, from their best
- * attempt at each closed assignment. A step needs five items before it is ranked; until then it
+ * A student's clinical judgment steps (#239): the six steps, weakest first, from their best
+ * attempt at each closed assignment. A step needs five questions before it is ranked; until then it
  * reads "Not enough answers yet" and has no percent. The list is ordered, so a screen reader hears
  * the steps in rank order, each as a heading with its percent and count. A Server Component.
  */
 export function YourSteps({ standings }: YourStepsProps) {
   const answered = standings.steps.reduce((sum, step) => sum + step.items, 0);
   if (answered === 0 && standings.untagged.items === 0) {
-    // Under the student home's Your steps h2.
-    return (
-      <EmptyState
-        level={3}
-        heading="Nothing to show yet"
-        body="Your steps appear here once you practice, or once an assignment you answered closes."
-      />
-    );
+    // Under the student home's Your clinical judgment steps h2.
+    return <EmptyState level={3} heading="No answers yet" />;
   }
 
   return (
     <>
       <p className="mb-3 text-sm text-ink-2">
-        From your best attempt at each closed assignment and your first answer to each practice
-        item, weakest first. Practice never counts toward a grade. A step needs 5 items before it is
-        ranked.
+        Weakest first, from your best attempt at each closed assignment and your first answers in
+        practice.
       </p>
       <ol
         aria-label="Your clinical judgment steps"

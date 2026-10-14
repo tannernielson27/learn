@@ -11,7 +11,7 @@ export interface PracticeStartOverProps {
 }
 
 export const START_OVER_WARNING =
-  "Start over with every item unanswered? Your answers so far are set aside, and your first answers still count in Your steps.";
+  "Start over with every question unanswered? Your first answers still count in your clinical judgment steps.";
 
 /**
  * "Start over" for a practice run (#241), asked twice, as `ConfirmSubmit` asks: the first press
@@ -32,11 +32,8 @@ export function PracticeStartOver({ startOver }: PracticeStartOverProps) {
   }, [asking, returned]);
 
   return (
-    <section aria-labelledby="start-over-heading" className="mt-10 border-t border-line pt-6">
-      <h2 id="start-over-heading" className="text-base font-medium text-ink-1">
-        Start over
-      </h2>
-      <div ref={wrapperRef} className="mt-2">
+    <section aria-label="Start over" className="mt-10 border-t border-line pt-6">
+      <div ref={wrapperRef}>
         {asking ? (
           <form action={action} className="flex flex-col items-start gap-3">
             <p className="measure text-sm text-ink-1">{START_OVER_WARNING}</p>

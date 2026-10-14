@@ -24,7 +24,7 @@ export interface SetNavProps {
  */
 export function SetNav({ entries, current, onSelect }: SetNavProps) {
   return (
-    <nav aria-label="Items" className="mt-4">
+    <nav aria-label="Questions" className="mt-4">
       <ol className="flex flex-wrap gap-2">
         {entries.map((entry, position) => (
           <li key={entry.key}>
@@ -48,7 +48,7 @@ export function SetNav({ entries, current, onSelect }: SetNavProps) {
                 }`}
               />
               <span className="sr-only">
-                {`Item ${position + 1}, ${entry.answered ? "answered" : "not answered"}`}
+                {`Question ${position + 1}, ${entry.answered ? "answered" : "not answered"}`}
               </span>
             </button>
           </li>

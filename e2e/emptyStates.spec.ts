@@ -118,10 +118,10 @@ test("a fresh instructor and their first student see what to do next on every em
   await expect(student.getByRole("list", { name: "Your classes", exact: true })).toContainText(
     className,
   );
-  await expectEmptyState(student, 3, "Nothing is open right now");
-  await expectEmptyState(student, 3, "Nothing is shared for practice yet");
-  await expectEmptyState(student, 3, "Nothing has closed yet");
-  await expectEmptyState(student, 3, "Nothing to show yet");
+  await expectEmptyState(student, 3, "No open assignments");
+  await expectEmptyState(student, 3, "Nothing shared for practice yet");
+  await expectEmptyState(student, 3, "No closed assignments yet");
+  await expectEmptyState(student, 3, "No answers yet");
   await expect(student.locator("[data-empty-state]")).toHaveCount(4);
   await expectNoAxeViolations(student);
   await shoot(student, project, "student-home-empty");
