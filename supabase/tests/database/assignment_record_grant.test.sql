@@ -7,7 +7,7 @@
 -- superuser, and the column the student is refused does hold the record.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(9);
+select plan(10);
 
 insert into auth.users (id, email, aud, role) values
   ('00000000-0000-0000-0000-0000003350a1', 'record-teacher@example.test', 'authenticated', 'authenticated'),
@@ -110,6 +110,16 @@ select ok(
   not has_column_privilege('authenticated', 'public.assignments', 'patient_record', 'select')
   and has_column_privilege('authenticated', 'public.assignments', 'item_set', 'select'),
   'authenticated has select on every column but patient_record'
+);
+select is(
+  (select array_agg(c.column_name::text order by c.column_name::text)
+     from information_schema.columns c
+    where c.table_schema = 'public' and c.table_name = 'assignments'
+      and has_column_privilege('authenticated', 'public.assignments', c.column_name, 'select')),
+  array['bank_id', 'case_study_id', 'class_id', 'closes_at', 'created_at', 'created_by', 'id',
+        'item_set', 'max_attempts', 'opens_at', 'org_id', 'shuffle_options', 'title',
+        'updated_at'],
+  'the grant is this list: a column added later is granted on purpose or not at all'
 );
 select ok(
   not has_column_privilege('anon', 'public.assignments', 'patient_record', 'select'),

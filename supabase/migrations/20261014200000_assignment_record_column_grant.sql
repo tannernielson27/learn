@@ -23,9 +23,14 @@
 -- longer names it, and the author screens never did. An author loses the column too; nothing an
 -- author's client reads needs it, and the case study itself is theirs to read.
 --
--- Deploy order: the app ships first and works with or without this migration. Safe to replay: a
--- revoke and a grant, nothing else. The update and insert grants are untouched (neither names the
--- column: the snapshot trigger writes it).
+-- Deploy order: push this only after the app from #335 is live. That app works with or without
+-- it; the app before #335 does not work with it, because its take-home page selected this column
+-- with the student's client and would be refused. Safe to replay: a revoke and a grant, nothing
+-- else. The update and insert grants are untouched (neither names the column: the snapshot
+-- trigger writes it).
+--
+-- The grant is a list: a column added to this table later is not readable by `authenticated`
+-- until a migration grants it (assignment_record_grant.test.sql checks the list).
 
 revoke select on public.assignments from authenticated;
 
