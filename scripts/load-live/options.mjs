@@ -17,6 +17,7 @@ export const USAGE = `Usage: pnpm load:live (--code ABC234 | --host) [options]
   --host                   start and drive a session as an instructor (local stack: the demo account)
   --case-study <id>        with --host: the case study to run (default: the seeded sample)
   --bank <id>              with --host: run a bank instead
+  --paced                  with --host and --bank: student-paced, each phone works through the set
   --base <url>             the app (default http://127.0.0.1:3000)
   --participants <n>       class size (default 60, at most ${MAX_PARTICIPANTS})
   --blank <share>          share of answers left blank, 0 to 1 (default 0.1)
@@ -36,6 +37,7 @@ const OPTIONS = {
   host: { type: "boolean", default: false },
   "case-study": { type: "string" },
   bank: { type: "string" },
+  paced: { type: "boolean", default: false },
   base: { type: "string", default: "http://127.0.0.1:3000" },
   participants: { type: "string", default: "60" },
   blank: { type: "string", default: "0.1" },
@@ -67,10 +69,14 @@ function thinkRange(value) {
   return [min, max];
 }
 
+const PACED_NEEDS = "--paced needs --host and --bank.";
+
 function source(values) {
   if (values.bank && values["case-study"]) {
     throw new Error("Pass --bank or --case-study, not both.");
   }
+  // #404: `sessions_student_paced_bank_only` — a case study is never student-paced.
+  if (values.paced && !values.bank) throw new Error(PACED_NEEDS);
   if (values.bank) return { kind: "bank", id: values.bank };
   return { kind: "case_study", id: values["case-study"] ?? SAMPLE_CASE_STUDY_ID };
 }
@@ -78,6 +84,7 @@ function source(values) {
 function sessionCode(values) {
   if (values.host && values.code) throw new Error("Pass either --code or --host, not both.");
   if (values.host) return null;
+  if (values.paced) throw new Error(PACED_NEEDS);
   if (!values.code)
     throw new Error("Pass --code <code> for a session a person is hosting, or --host.");
   const code = values.code.replace(/[^0-9a-z]/gi, "").toUpperCase();
@@ -107,6 +114,7 @@ export function readOptions(argv, env) {
     code: sessionCode(values),
     host: values.host,
     source: values.host ? source(values) : null,
+    paced: values.paced,
     base: values.base.replace(/\/+$/, ""),
     participants: wholeNumber(values.participants, "--participants", 1, MAX_PARTICIPANTS),
     blank,
