@@ -47,6 +47,7 @@ const state = vi.hoisted(() => ({
   invites: [] as unknown[] | null,
   workspace: { name: "Ward 4 teaching", selfRegistered: true } as unknown,
   founderId: null as string | null,
+  moveContext: null as unknown,
 }));
 
 const action = () => vi.fn(async () => ({ status: "idle" }));
@@ -84,6 +85,10 @@ vi.mock("@/app/author/libraryActions", () => ({
   deleteLibraryFolderAction: action(),
   moveQuizzesAction: action(),
   renameLibraryFolderAction: action(),
+}));
+vi.mock("@/app/author/quizMoveActions", () => ({
+  moveToQuizAction: action(),
+  turnFolderIntoQuizAction: action(),
 }));
 vi.mock("@/app/author/archiveActions", () => ({
   restoreCaseStudyAction: action(),
@@ -169,6 +174,10 @@ vi.mock("@/lib/authoring/libraryData", async (original) => ({
     quizzes: state.banks,
   }),
   quizLibraryTrail: async () => state.libraryTrail,
+}));
+vi.mock("@/lib/authoring/quizMoveData", async (original) => ({
+  ...(await original<typeof import("@/lib/authoring/quizMoveData")>()),
+  readMoveContext: async () => state.moveContext,
 }));
 vi.mock("@/lib/supabase/classes", () => ({
   listClasses: async () => state.classes,
@@ -303,6 +312,10 @@ function fill() {
   ];
   state.workspace = { name: "Ward 4 teaching", selfRegistered: true };
   state.founderId = USER;
+  state.moveContext = {
+    quizzes: [{ id: "b2", name: "Renal week" }],
+    uses: { assignments: 1, liveSessions: 2 },
+  };
 }
 
 function empty() {
@@ -643,6 +656,7 @@ describe("library folders (#411)", () => {
 describe("a new quiz offers no folders inside it (#411)", () => {
   it("shows no in-quiz folder controls on a quiz with none", async () => {
     state.folders = [];
+    state.moveContext = { quizzes: [], uses: { assignments: 0, liveSessions: 0 } };
     render(await bankPage());
     expect(screen.queryByRole("navigation", { name: "Folders" })).toBeNull();
     expect(screen.queryByRole("textbox", { name: "Folder name" })).toBeNull();
@@ -670,5 +684,57 @@ describe("a new quiz offers no folders inside it (#411)", () => {
       "href",
       `/author?folder=${LIB_FOLDER}`,
     );
+  });
+});
+
+describe("moving to another quiz, and turning a folder into one (#417)", () => {
+  it("offers a move to another quiz on a quiz with no folders inside it", async () => {
+    state.folders = [];
+    render(await bankPage());
+    expect(screen.getByRole("combobox", { name: "Move to another quiz" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Renal week" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Move to quiz" })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Move selected to" })).toBeNull();
+    expect(screen.getAllByRole("checkbox", { name: /^Select / }).length).toBeGreaterThan(0);
+  });
+
+  it("offers both moves on a quiz with folders inside it", async () => {
+    render(await bankPage());
+    expect(screen.getByRole("combobox", { name: "Move selected to" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Move to another quiz" })).toBeInTheDocument();
+  });
+
+  it("lists, for this quiz, what stays with it", async () => {
+    render(await bankPage());
+    const kept = screen.getAllByRole("list", { name: "What stays with this quiz", hidden: true });
+    expect(kept[0]).toHaveTextContent("Its assignment keeps the questions it was given.");
+    expect(kept[0]).toHaveTextContent("Its 2 live session reports keep their questions.");
+    expect(kept[0]).toHaveTextContent("Practice with NUR 310 stays with this quiz.");
+  });
+
+  it("offers to turn the open folder into a quiz, named after it", async () => {
+    render(await bankPage({ folder: FOLDER }));
+    expect(screen.getByRole("button", { name: "Turn into a quiz" })).toBeInTheDocument();
+    // The confirm step is drawn closed, so its words are on the page for the glossary scan.
+    expect(screen.getByText('Turn "Week 1" into a quiz?')).toBeInTheDocument();
+    expect(
+      screen.getByText(/^A new quiz, "Week 1", goes beside this one in the library/),
+    ).toBeInTheDocument();
+  });
+
+  it("offers neither when what uses this quiz cannot be read", async () => {
+    state.moveContext = null;
+    render(await bankPage({ folder: FOLDER }));
+    expect(screen.queryByRole("combobox", { name: "Move to another quiz" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Turn into a quiz" })).toBeNull();
+    // The folder controls from before #417 are still there.
+    expect(screen.getByRole("combobox", { name: "Move selected to" })).toBeInTheDocument();
+  });
+
+  it("offers neither when the practice shares cannot be read", async () => {
+    state.bankShares = null;
+    render(await bankPage({ folder: FOLDER }));
+    expect(screen.queryByRole("combobox", { name: "Move to another quiz" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Turn into a quiz" })).toBeNull();
   });
 });
