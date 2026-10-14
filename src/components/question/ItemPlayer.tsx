@@ -143,7 +143,7 @@ export function ItemPlayer({
   if (!rendererModule) {
     return (
       <div className="rounded-md border border-dashed border-line-strong p-6 text-sm text-ink-2">
-        No renderer for this item type yet.
+        This question format cannot be shown yet.
       </div>
     );
   }

@@ -80,7 +80,7 @@ describe("joinClassWithCode (#362)", () => {
     expect(await joinClassWithCode(IDLE, form("ABCD2345"))).toEqual({
       status: "error",
       error:
-        "That class code did not work. Check it with your instructor. If you were removed from the class, only they can add you back.",
+        "That class code did not work. Check it with your teacher. If you were removed from the class, only they can add you back.",
     });
     expect(redirected).not.toHaveBeenCalled();
   });
@@ -157,7 +157,7 @@ describe("joinClassWithCode counts the caller's address before the account", () 
     expect(await joinClassWithCode(IDLE, form("ABCD2345"))).toEqual({
       status: "error",
       error:
-        "That class code did not work. Check it with your instructor. If you were removed from the class, only they can add you back.",
+        "That class code did not work. Check it with your teacher. If you were removed from the class, only they can add you back.",
     });
   });
 });

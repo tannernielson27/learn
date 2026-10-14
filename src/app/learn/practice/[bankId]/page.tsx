@@ -40,7 +40,7 @@ export default async function PracticePage({ params }: PageProps<"/learn/practic
       <p className="eyebrow mb-2">Practice</p>
       {page.kind === "failed" ? (
         <p role="alert" className="text-ink-2">
-          This practice could not be loaded. Reload the page to try again.
+          This practice did not load. Reload the page.
         </p>
       ) : (
         <>

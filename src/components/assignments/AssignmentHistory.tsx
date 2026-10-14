@@ -41,13 +41,7 @@ function Standing({ standing }: { standing: HistoryStanding }) {
 export function AssignmentHistory({ rows, classes }: AssignmentHistoryProps) {
   if (rows.length === 0) {
     // Under the student home's History h2.
-    return (
-      <EmptyState
-        level={3}
-        heading="Nothing has closed yet"
-        body="Your scores appear here once an assignment closes."
-      />
-    );
+    return <EmptyState level={3} heading="No closed assignments yet" />;
   }
 
   return (
@@ -67,11 +61,10 @@ export function AssignmentHistory({ rows, classes }: AssignmentHistoryProps) {
                 href={studentResultsPath(row.id)}
                 className="tap-target inline-flex items-center font-medium break-words text-ink-1 underline decoration-line-strong underline-offset-4 hover:decoration-accent"
               >
-                {`Results for ${row.title}`}
+                {row.title}
               </Link>
-              <span className="text-sm break-words text-ink-2">{classLabel(info)}</span>
-              <span className="text-sm text-ink-2">
-                Closed{" "}
+              <span className="text-sm break-words text-ink-2">
+                {classLabel(info)} · Closed{" "}
                 <ClassTime
                   iso={row.closesAt}
                   timeZone={info?.timeZone ?? DEFAULT_CLASS_TIME_ZONE}

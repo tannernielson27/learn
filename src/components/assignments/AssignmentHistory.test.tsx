@@ -27,10 +27,7 @@ describe("AssignmentHistory (#238)", () => {
   it("says so when nothing has closed", () => {
     renderRows([]);
     expect(
-      screen.getByRole("heading", { level: 3, name: "Nothing has closed yet" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Your scores appear here once an assignment closes."),
+      screen.getByRole("heading", { level: 3, name: "No closed assignments yet" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("list")).toBeNull();
   });
@@ -45,7 +42,7 @@ describe("AssignmentHistory (#238)", () => {
       "Best score 3.5 of 4 (88%)",
     );
     expect(row).toHaveTextContent("2 of 2 attempts used");
-    expect(screen.getByRole("link", { name: "Results for Cardiac bank" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Cardiac bank" })).toHaveAttribute(
       "href",
       "/learn/assignments/a1/results",
     );

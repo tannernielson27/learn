@@ -34,7 +34,7 @@ const STUDENT_HOME_HEADING_ID = "student-home-heading";
  * each linking to where it is taken (#208) with how their attempts stand, and (#238) their history:
  * every closed assignment in their current classes with their best score, linking to its results
  * (#210), and (#239) their clinical judgment steps, weakest first, from the same closed work and
- * (#241) their practice. Practice lists the banks shared with their classes, each opening a run.
+ * (#241) their practice. Practice lists the quizzes shared with their classes.
  * A student whose classes span more than one workspace reads the workspace on every such row.
  * Anyone who is not a student is sent to their own home by `requireStudent`.
  */
@@ -54,7 +54,7 @@ export default async function StudentHomePage() {
   ]);
   // #242: due times are shown in each class's zone, not the device's. A student whose classes
   // span more than one workspace also gets the workspace beside each class name, and on each
-  // practice bank, which names no class.
+  // practice quiz, which names no class.
   const classInfo = studentClassInfo(classes);
   const acrossWorkspaces = spansWorkspaces(classes);
   // #208: how this student's attempts stand at each; a failed read just leaves the counts off.
@@ -90,7 +90,7 @@ export default async function StudentHomePage() {
       ) : null}
       {classes === null ? (
         <p role="alert" className="text-ink-2">
-          Your classes could not be loaded. Reload the page to try again.
+          Your classes did not load. Reload the page.
         </p>
       ) : (
         <StudentClassList classes={classes} />
@@ -120,7 +120,7 @@ export default async function StudentHomePage() {
         </h2>
         {assignments === null ? (
           <p role="alert" className="text-ink-2">
-            Your assignments could not be loaded. Reload the page to try again.
+            Your assignments did not load. Reload the page.
           </p>
         ) : (
           <StudentAssignmentList
@@ -136,7 +136,7 @@ export default async function StudentHomePage() {
         </h2>
         {practice === null ? (
           <p role="alert" className="text-ink-2">
-            Your practice could not be loaded. Reload the page to try again.
+            Your practice did not load. Reload the page.
           </p>
         ) : (
           <PracticeBankList banks={practice} showWorkspace={acrossWorkspaces} />
@@ -148,7 +148,7 @@ export default async function StudentHomePage() {
         </h2>
         {history === null ? (
           <p role="alert" className="text-ink-2">
-            Your history could not be loaded. Reload the page to try again.
+            Your history did not load. Reload the page.
           </p>
         ) : (
           <AssignmentHistory rows={history} classes={classInfo} />
@@ -156,11 +156,11 @@ export default async function StudentHomePage() {
       </section>
       <section aria-labelledby="steps-heading" className="mt-10">
         <h2 id="steps-heading" className="mb-3 text-lg font-medium text-ink-1">
-          Your steps
+          Your clinical judgment steps
         </h2>
         {steps === null ? (
           <p role="alert" className="text-ink-2">
-            Your steps could not be loaded. Reload the page to try again.
+            Your steps did not load. Reload the page.
           </p>
         ) : (
           <YourSteps standings={steps} />

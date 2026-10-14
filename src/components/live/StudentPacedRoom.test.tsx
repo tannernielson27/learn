@@ -119,12 +119,12 @@ describe("StudentPacedRoom (#185)", () => {
     const room = setup();
     room.push({ state: state(), paced: [entry(FIRST, 1), entry(SECOND, 2)] });
     await renderersLoaded();
-    expect(itemButton("Item 1, not answered")).toHaveAttribute("aria-current", "step");
+    expect(itemButton("Question 1, not answered")).toHaveAttribute("aria-current", "step");
     expect(screen.getByRole("button", { name: "Previous item" })).toBeDisabled();
 
     // Straight to the second item, and answer it first.
     await room.user.click(screen.getByRole("button", { name: "Next item" }));
-    expect(itemButton("Item 2, not answered")).toHaveAttribute("aria-current", "step");
+    expect(itemButton("Question 2, not answered")).toHaveAttribute("aria-current", "step");
     await room.user.click(screen.getByRole("radio", { name: /Diaphoresis and tremor/ }));
     await room.user.click(screen.getByRole("button", { name: /^Submit$/ }));
     expect(await screen.findByTestId("answer-sent")).toBeInTheDocument();
@@ -132,14 +132,14 @@ describe("StudentPacedRoom (#185)", () => {
       type: "multiple_choice",
       optionId: "opt_b",
     });
-    expect(itemButton("Item 2, answered")).toBeInTheDocument();
+    expect(itemButton("Question 2, answered")).toBeInTheDocument();
     expect(screen.getByTestId("paced-count")).toHaveTextContent("1 of 2 answered");
     // Sent, not marked: the key is not on this phone until the reveal.
     expect(screen.getByRole("radio", { name: /Diaphoresis and tremor/ })).toBeChecked();
     expect(screen.queryAllByText("Incorrect")).toHaveLength(0);
 
     // Back to the first, still open.
-    await room.user.click(itemButton("Item 1, not answered"));
+    await room.user.click(itemButton("Question 1, not answered"));
     expect(screen.getByRole("button", { name: /^Submit$/ })).toBeInTheDocument();
   });
 
@@ -182,7 +182,7 @@ describe("StudentPacedRoom (#185)", () => {
     const room = setup();
     room.push({ state: state({ status: "paused" }), paced: [entry(FIRST, 1)] });
     expect(screen.getByText("The session is paused.")).toBeInTheDocument();
-    expect(screen.queryByRole("navigation", { name: "Items" })).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Questions" })).toBeNull();
     expect(screen.queryByText(/Item 1 of/)).toBeNull();
   });
 
@@ -212,7 +212,7 @@ describe("StudentPacedRoom (#185)", () => {
     const room = setup();
     room.push({ state: state(), paced: [entry(FIRST, 1), entry(SECOND, 2)] });
     await renderersLoaded();
-    const nav = screen.getByRole("navigation", { name: "Items" });
+    const nav = screen.getByRole("navigation", { name: "Questions" });
     expect(within(nav).getAllByRole("button")).toHaveLength(2);
     expect(screen.queryByText(FIRST.rationale.general?.value ?? "")).toBeNull();
   });

@@ -43,7 +43,7 @@ const BASE: AssignmentResultsProps = {
 const goTo = (position: number, answeredIt: boolean) =>
   fireEvent.click(
     screen.getByRole("button", {
-      name: `Item ${position}, ${answeredIt ? "answered" : "not answered"}`,
+      name: `Question ${position}, ${answeredIt ? "answered" : "not answered"}`,
     }),
   );
 
@@ -52,7 +52,7 @@ describe("AssignmentResults", () => {
     render(<AssignmentResults {...BASE} />);
     const total = screen.getByRole("region", { name: "Your score" });
     expect(total).toHaveTextContent("7 of 10");
-    expect(total).toHaveTextContent("Your best attempt counts: attempt 2 of 2.");
+    expect(total).toHaveTextContent("Your best: attempt 2 of 2.");
   });
 
   it("says a single attempt is the one that counts, and keeps decimals short", () => {
@@ -65,7 +65,8 @@ describe("AssignmentResults", () => {
     );
     const total = screen.getByRole("region", { name: "Your score" });
     expect(total).toHaveTextContent("1.5 of 3");
-    expect(total).toHaveTextContent("From your one attempt.");
+    // One attempt is the score: nothing is said beside it.
+    expect(total.querySelectorAll("p")).toHaveLength(1);
   });
 
   it("marks the one missed SATA option in words as well as colour, with its rationale", async () => {
@@ -117,15 +118,15 @@ describe("AssignmentResults", () => {
     render(<AssignmentResults {...BASE} best={null} attemptsMade={1} entries={entries} />);
     await renderersLoaded();
     expect(screen.getByRole("region", { name: "Your score" })).toHaveTextContent(
-      "Your attempt has not been marked yet. Reload the page in a moment.",
+      "Not marked yet. Reload the page in a moment.",
     );
     expect(screen.getByText("You did not answer this.")).toBeInTheDocument();
     goTo(2, true);
     await renderersLoaded();
-    expect(screen.getByText("Your answer to this could not be shown.")).toBeInTheDocument();
+    expect(screen.getByText("Your answer could not be shown.")).toBeInTheDocument();
     goTo(3, false);
     await renderersLoaded();
-    expect(screen.getByText("Your attempt has not been marked yet.")).toBeInTheDocument();
+    expect(screen.getByText("Not marked yet.")).toBeInTheDocument();
   });
 
   it("moves with Previous and Next", async () => {
@@ -136,19 +137,19 @@ describe("AssignmentResults", () => {
     }));
     render(<AssignmentResults {...BASE} best={null} attemptsMade={0} entries={entries} />);
     await renderersLoaded();
-    expect(screen.getByRole("button", { name: "Previous item" })).toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: "Next item" }));
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
     await renderersLoaded();
     expect(screen.getByText(firstLine(MR), { exact: false })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Next item" })).toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: "Previous item" }));
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Previous" }));
     await renderersLoaded();
     expect(screen.getByText(firstLine(MC), { exact: false })).toBeInTheDocument();
   });
 
-  it("says so when there are no items to show", () => {
+  it("says so when there are no questions to show", () => {
     render(<AssignmentResults {...BASE} />);
-    expect(screen.getByText("This assignment has no items to show.")).toBeInTheDocument();
+    expect(screen.getByText("This assignment has no questions.")).toBeInTheDocument();
   });
 
   it("a case study: the patient record beside every step's key", async () => {

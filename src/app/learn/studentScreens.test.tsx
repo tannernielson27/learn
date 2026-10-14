@@ -52,6 +52,8 @@ const OTHER_PASSES: readonly string[] = [
   "Eight letters and numbers, like ABCD-2345. Your instructor has it.",
   // src/components/classes/JoinClassButton.tsx
   "You are already an instructor, so this account stays one and is not added to the class.",
+  // src/lib/auth/landing.ts, which #416 changes to "Go to your quizzes".
+  "Go to your item banks",
 ];
 
 /** Retired words inside a question's own content are clinical writing, not the interface. */
@@ -174,6 +176,12 @@ vi.mock("@/lib/assignments/results", async (original) => ({
 vi.mock("@/lib/practice/page", async (original) => ({
   ...(await original<typeof import("@/lib/practice/page")>()),
   loadPracticePage: async () => state.practicePage,
+}));
+// The tables by question and by step are the live session report's (#414), wording included.
+vi.mock("@/components/live/report/ReportTables", async (original) => ({
+  ...(await original<typeof import("@/components/live/report/ReportTables")>()),
+  ItemTable: () => <p>[table by question, from the live session report]</p>,
+  StepTable: () => <p>[table by step, from the live session report]</p>,
 }));
 vi.mock("@/lib/assignments/reportLoader", () => ({
   loadAssignmentReport: async () => state.report,
@@ -452,7 +460,9 @@ interface Screen {
   then?: () => Promise<void> | void;
 }
 
-const click = (name: string | RegExp) => fireEvent.click(screen.getByRole("button", { name }));
+const click = (name: string | RegExp): void => {
+  fireEvent.click(screen.getByRole("button", { name }));
+};
 
 const SCREENS: readonly Screen[] = [
   { name: "/learn, no class yet", arrange: emptyHome, element: home },
@@ -681,6 +691,7 @@ const SCREENS: readonly Screen[] = [
   },
   { name: "assignment report, students, closed", element: () => reportView("students") },
   { name: "assignment report, students, still open", element: () => reportView("students", false) },
+  { name: "assignment report, questions", element: () => reportView("items") },
   { name: "assignment report, steps", element: () => reportView("steps") },
   {
     name: "assignment report, steps, none tagged",

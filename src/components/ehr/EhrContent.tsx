@@ -93,12 +93,10 @@ export function EhrContent({
       ) : null}
 
       {open === undefined ? (
-        <p className="border-t border-line pt-4 text-sm text-ink-2">
-          Nothing was charted at this time.
-        </p>
+        <p className="border-t border-line pt-4 text-sm text-ink-2">No entries at this time.</p>
       ) : (
         <Tabs
-          label="Patient record sections"
+          label="Patient record tabs"
           tabs={tabs}
           value={open}
           onChange={onSelectTab}
