@@ -148,10 +148,10 @@ describe("moveToQuiz", () => {
 describe("turnFolderIntoQuiz", () => {
   it("returns the new quiz", async () => {
     const { client, rpcs } = fakeClient(
-      () => ({}),
+      () => ({ data: { name: "Cardiac" } }),
       () => ({ data: { quiz: TARGET, name: "Cardiac", items: 2, case_studies: 1, steps: 6 } }),
     );
-    expect(await turnFolderIntoQuiz(client, FOLDER, "Cardiac")).toEqual({
+    expect(await turnFolderIntoQuiz(client, FOLDER)).toEqual({
       ok: true,
       value: { quizId: TARGET },
     });
@@ -160,10 +160,10 @@ describe("turnFolderIntoQuiz", () => {
 
   it("says plainly that it is not ready when the database has no turn_folder_into_quiz yet", async () => {
     const { client } = fakeClient(
-      () => ({}),
+      () => ({ data: { name: "Cardiac" } }),
       () => ({ error: { code: "PGRST202" } }),
     );
-    expect(await turnFolderIntoQuiz(client, FOLDER, "Cardiac")).toEqual({
+    expect(await turnFolderIntoQuiz(client, FOLDER)).toEqual({
       ok: false,
       error: TURN_NOT_READY,
     });
@@ -171,10 +171,10 @@ describe("turnFolderIntoQuiz", () => {
 
   it("refuses an empty folder in plain words", async () => {
     const { client } = fakeClient(
-      () => ({}),
+      () => ({ data: { name: "Cardiac" } }),
       () => ({ error: { code: "22023", hint: "empty" } }),
     );
-    expect(await turnFolderIntoQuiz(client, FOLDER, "Cardiac")).toEqual({
+    expect(await turnFolderIntoQuiz(client, FOLDER)).toEqual({
       ok: false,
       error: '"Cardiac" holds no questions or case studies of its own. Delete it instead.',
     });
@@ -182,9 +182,18 @@ describe("turnFolderIntoQuiz", () => {
 
   it("treats a reply without a quiz as a failure", async () => {
     const { client } = fakeClient(
-      () => ({}),
+      () => ({ data: { name: "Cardiac" } }),
       () => ({ data: {} }),
     );
-    expect((await turnFolderIntoQuiz(client, FOLDER, "Cardiac")).ok).toBe(false);
+    expect((await turnFolderIntoQuiz(client, FOLDER)).ok).toBe(false);
+  });
+
+  it("refuses a folder it cannot see before calling anything, whatever name the page held", async () => {
+    const { client, rpcs } = fakeClient(() => ({ data: null }));
+    expect(await turnFolderIntoQuiz(client, FOLDER)).toEqual({
+      ok: false,
+      error: "That folder no longer exists. Reload the page and try again.",
+    });
+    expect(rpcs).toEqual([]);
   });
 });

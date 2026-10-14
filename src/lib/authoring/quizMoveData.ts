@@ -101,8 +101,16 @@ export async function moveToQuiz(
 export async function turnFolderIntoQuiz(
   client: Client,
   folderId: string,
-  folderName: string,
 ): Promise<QuizMoveWrite<{ quizId: string }>> {
+  // The name, for the refusal's words, from the database under RLS, never from the caller.
+  const { data: folder, error: folderError } = await client
+    .from("bank_folders")
+    .select("name")
+    .eq("id", folderId)
+    .maybeSingle();
+  if (folderError) return fail(turnFolderError({}, ""));
+  if (!folder) return fail(turnFolderError({ code: "P0002" }, ""));
+  const folderName = folder.name;
   const { data, error } = await client.rpc("turn_folder_into_quiz", { target_folder: folderId });
   if (isRateLimitedError(error)) return fail(RATE_LIMIT_ERRORS.limited);
   if (error) return fail(turnFolderError(error, folderName));

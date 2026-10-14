@@ -359,6 +359,8 @@ begin
       using errcode = '22023', hint = 'empty';
   end if;
 
+  -- One namer per workspace at a time, so two folders turned at once never take the same name.
+  perform pg_advisory_xact_lock(hashtextextended('learn.quiz_name:' || source_org::text, 0));
   new_name := folder_name;
   while exists (
     select 1 from public.item_banks b where b.org_id = source_org and lower(b.name) = lower(new_name)

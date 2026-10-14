@@ -248,7 +248,7 @@ export default async function BankPage({
                 {knowsUses ? (
                   <TurnFolderIntoQuizButton
                     key={`turn-${folder.id}`}
-                    action={turnFolderIntoQuizAction.bind(null, bank.id, folder.id, folder.name)}
+                    action={turnFolderIntoQuizAction.bind(null, bank.id, folder.id)}
                     folderName={folder.name}
                     quizName={newQuizName(folder.name, [
                       bank.name,

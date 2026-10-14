@@ -35,21 +35,17 @@ export async function moveToQuizAction(
   return { status: "done", message: moved.value.message };
 }
 
-/**
- * Turns an in-quiz folder into a quiz, then opens it. Bound to the quiz and the folder; the name is
- * only for the refusal's words, as the database reads the folder itself.
- */
+/** Turns an in-quiz folder into a quiz, then opens it. Bound to the quiz and the folder. */
 export async function turnFolderIntoQuizAction(
   bankId: string,
   folderId: string,
-  folderName: string,
 ): Promise<ConfirmOutcome> {
   if (!isUuid(bankId) || !isUuid(folderId)) {
     return { ok: false, message: "That folder no longer exists." };
   }
 
   const { supabase } = await requireAuthor(`/author/banks/${bankId}?folder=${folderId}`);
-  const turned = await turnFolderIntoQuiz(supabase, folderId, folderName);
+  const turned = await turnFolderIntoQuiz(supabase, folderId);
   if (!turned.ok) return { ok: false, message: turned.error };
 
   revalidatePath(`/author/banks/${bankId}`);
