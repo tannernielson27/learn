@@ -243,6 +243,94 @@ Decisions taken at kickoff, each the conservative option; say if any should chan
 
 Sprint 11 is code complete: every story is merged, including the follow-ups #283, #288 and #289 filed during the sprint. `main` is at da34d8c. The demo script, owner steps, known gaps and retro are in `docs/sprints/S11-demo.md`, and `docs/sprints/S11-rehearsal.md` is Demo 12 step for step. Both Sprint 11 migrations are applied to hosted (rows 37 and 38). Milestone 11 stays open until the owner accepts the demo.
 
+## S12: AI question import (milestone 14)
+
+Status, 2026-10-14: not started beyond the #333 spike (PR #352). Sprints 13 and 14 ran first. Reveal-by-step for case study charts (#334–#336), planned here at kickoff, moved to S14 and is merged (PRs #424, #435, #438), so this sprint builds on it.
+
+Demo 13: a teacher uploads a Word case study and a PDF of questions, reviews what the AI found, fills in a missing answer, and imports the batch as drafts into a quiz. The imported case study's patient record grows step by step, live on a phone.
+
+The plan is ADR 0008. The AI copies questions that exist in a document. It never writes a key or a rationale.
+
+Owner decisions (2026-10-01):
+
+1. **Review first.** Parsed questions are staged; nothing reaches a quiz until the teacher imports the batch, all or nothing.
+2. **Extract only.** A missing key or rationale is flagged for the teacher, never generated.
+3. **Case studies are in this sprint.** A case study's chart may grow as the case unfolds, as the owner's Maryland samples do. Reveal-by-step itself shipped in S14 (`fromStep`, `stepAccess`, `recordAtStep`); #344 sets `fromStep` on what it imports.
+4. **Claude Sonnet 5.5 on the owner's key**, live calls, a monthly cap per org (see kickoff decision 4).
+5. **Formats:** PDF (text and scanned), .docx, .md, .txt.
+6. **Uploaded files are deleted** once the batch is imported or discarded.
+7. **A rights checkbox at upload**, which also confirms there is no real patient information.
+8. **A batch is up to 5 files, 100 pages and 150 questions.**
+
+| #                                                           | Title                                                                                          | Gates             | Status           |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------- | ---------------- |
+| [#333](https://github.com/tannernielson27/learn/issues/333) | chore(ai-import): measure cost and accuracy on the owner's sample documents                    | none              | In review (#352) |
+| [#337](https://github.com/tannernielson27/learn/issues/337) | feat(ngn): AI draft shapes and converters for the selection, ordered and bowtie types          | none              | Open             |
+| [#338](https://github.com/tannernielson27/learn/issues/338) | feat(ngn): AI draft shapes and converters for cloze, highlight, drag-and-drop and case studies | none              | Open             |
+| [#339](https://github.com/tannernielson27/learn/issues/339) | test(ai-import): a fictional golden corpus and an accuracy eval                                | none              | Open             |
+| [#340](https://github.com/tannernielson27/learn/issues/340) | feat(db): AI import batches, staged entries, a private upload bucket and a monthly cap         | security, db      | Open             |
+| [#341](https://github.com/tannernielson27/learn/issues/341) | feat(ai-import): check uploaded files and prepare them for Claude                              | security          | Open             |
+| [#342](https://github.com/tannernielson27/learn/issues/342) | feat(ai-import): Claude client, segment pass, usage ledger and cap                             | security          | Open             |
+| [#343](https://github.com/tannernielson27/learn/issues/343) | feat(ai-import): extract each question into a draft, validate it, and repair once              | security          | Open             |
+| [#344](https://github.com/tannernielson27/learn/issues/344) | feat(ai-import): assemble case studies with a chart that grows by step                         | none              | Open             |
+| [#345](https://github.com/tannernielson27/learn/issues/345) | feat(authoring): upload documents for AI import and watch them parse                           | security, e2e     | Open             |
+| [#346](https://github.com/tannernielson27/learn/issues/346) | feat(authoring): review an AI import batch before anything reaches the bank                    | security, e2e     | Open             |
+| [#347](https://github.com/tannernielson27/learn/issues/347) | feat(authoring): fix staged questions and case studies with the existing editors               | e2e               | Open             |
+| [#348](https://github.com/tannernielson27/learn/issues/348) | feat(authoring): import a reviewed batch all at once, or discard it                            | security, db, e2e | Open             |
+| [#349](https://github.com/tannernielson27/learn/issues/349) | docs(help): AI import guide, end-to-end tests, security rows and the S12 demo                  | e2e               | Open             |
+
+#334, #335 and #336 are in S14 below. Issue titles keep the words they were filed with; the interface follows docs/glossary.md ("quiz", not "bank"; "question", not "item").
+
+Suggested order, one builder at a time (two heavy builders run this machine out of memory):
+
+1. #333 spike. First the owner adds `ANTHROPIC_API_KEY` to `.env.local` and puts the samples in `.ai-import-samples/`.
+2. The #337 and #338 drafts (pure `src/lib/ngn`).
+3. #340 db (heavy; hold the merge until the owner can push), then #341 files.
+4. #339 eval, then #342 segment, then #343 extract. **Checkpoint:** a .md of multiple choice and select-all questions becomes staged entries.
+5. #344 case study assembly.
+6. #345 upload, #346 review, #347 edit, then #348 import (hold the merge for its push).
+7. #349 last.
+
+**Cut line:** if the sprint runs late, #344 and the case-study half of #347 move to a later sprint. Standalone questions still ship whole.
+
+Parallelization map. Never build two stories at once that edit the same files:
+
+- **`src/lib/ngn/registry.ts`:** #337, then #338. #338's case study draft reuses the `fromStep` and `stepAccess` schema that S14 shipped in `src/lib/ngn/schemas/common.ts`; it should not change it.
+- **Case study builder** (`CaseStudyBuilder`, `EhrBlockEditors`): #347 only.
+- **Quiz page** (`src/app/author/banks/[bankId]/page.tsx`): #345 only (the Import with AI link).
+- **`src/lib/aiImport/claude.ts` and the prompts:** #342, then #343, then #344.
+- **`src/lib/observability/scrub.ts`:** #342 only.
+- **docs/audits/S10-security.md:** several stories add rows. The orchestrator resolves it at merge; keep both.
+
+Migrations, reserved in merge order. They must sort after the newest migration on `main` (on 2026-10-14, `20261014300000_move_between_quizzes`); if `main` gains a later one before a story merges, renumber it:
+
+- `20261015000000_ai_import` (#340).
+- `20261015010000_ai_import_commit` (#348).
+
+Reveal-by-step needed one migration, `20261014200000_assignment_record_column_grant` (#335, S14), so no spare is reserved for it here.
+
+Decisions taken at kickoff, each the conservative option; say if any should change:
+
+1. **Owner documents never enter the repo** (#333, #339). They live in `.ai-import-samples/`, which is gitignored. The CI corpus is fictional, written for the repo.
+2. **The model never writes ids, tokens or offsets** (#337, #338). It fills a string-only draft, and pure converters build learn.v1.
+3. **Imports land in a new quiz, "AI import – <date>"**, by default; the teacher may pick an existing quiz instead (#348). Updated 2026-10-14: the kickoff said "a new folder", but since #411 a folder holds quizzes, not questions. The owner confirms.
+4. **The cap starts at 300 pages per org per month**, reserved before each call (#340). #333 may change the number. AI import is also off for a self-registered workspace until the owner turns it on (`orgs.ai_import_enabled`, S13 kickoff decision 1).
+5. **2–3 chunks parse at once** (#345). #333's latency may change it.
+6. **Images are not imported.** A question that relies on one is flagged (#341, #343).
+7. **Abandoned batches are deleted after 7 days** by a self-scheduling cleanup that needs no secret (#348).
+8. **Source errors are kept word for word**, with a note for the reviewer (#343).
+9. **A group that is not exactly six steps imports as standalone questions** (#344).
+
+Edge cases the owner's samples showed, each covered by an acceptance criterion or a corpus case in #339:
+
+- Keys as `*` glued or spaced, inside matrix cells, as "Answer: ✅ B." lines, and as yellow Word highlighting; layouts with no keys at all.
+- A stated scoring rule on each step; "Which 4…" (select-N) against "Select all that apply".
+- A case study bundled with a standalone bowtie or trend; a chart repeated every step and growing; a typo in a chart time.
+- Author blocks, objectives, QR codes, survey links and references, which are not question content; instructor notes.
+- Open discussion prompts, calculations, matching and one-line recall, which have no NGN type.
+- Errors in the source; an embedded clinical image and a copyrighted form; the same document as both .pdf and .docx.
+- Character damage in a PDF's text layer (degree signs, superscripts).
+
 ## S13: Registration + onboarding (milestone 15)
 
 Demo 14: a stranger signs up as a teacher, makes a class, and a stranger signs up as their student and joins by code, with no help from the owner.
@@ -296,23 +384,23 @@ Decisions taken at kickoff, each the conservative option; say if any should chan
 
 Only the stories this file has been told about are listed here; the milestone on GitHub has the rest.
 
-| #                                                           | Title                                                                                             | Gates             | Status                                                                                        |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------- | --------------------------------------------------------------------------------------------- |
-| [#334](https://github.com/tannernielson27/learn/issues/334) | feat(ngn): reveal and lock a case study's chart step by step (fromStep, stepAccess, recordAtStep) | none              | In review; no migration; owner confirms hidden/locked/open                                    |
-| [#335](https://github.com/tannernielson27/learn/issues/335) | feat(player): serve each case study step only the chart it has reached                            | security, e2e     | In review (#435); apply `20261014200000_assignment_record_column_grant` after the app deploys |
-| [#336](https://github.com/tannernielson27/learn/issues/336) | feat(authoring): set when each tab of a case study's chart appears and opens                      | e2e               | In review (#438); no migration                                                                |
-| [#406](https://github.com/tannernielson27/learn/issues/406) | fix(live): page the progress board read past 1,000 answers                                        | none              | Merged (#422); no migration                                                                   |
-| [#407](https://github.com/tannernielson27/learn/issues/407) | perf(live): fewer round trips when the host advances                                              | security, db      | In review; apply `20261013120000_open_session_view`; load run at 100 still owed               |
-| [#409](https://github.com/tannernielson27/learn/issues/409) | fix(auth): a full class signing in from one network                                               | security          | In review; no migration; owner sets the hosted Auth rate limits (docs/05 §7.7 step 4)         |
-| [#411](https://github.com/tannernielson27/learn/issues/411) | feat(authoring): library folders that hold quizzes                                                | db, e2e           | Merged (#433); owner pushes `20261014000000_library_folders`                                  |
-| [#412](https://github.com/tannernielson27/learn/issues/412) | feat(authoring): rename and trim, teacher home and quiz page                                      | e2e               | Merged (#429); no migration; leftovers in the wording cleanup PR                              |
-| [#413](https://github.com/tannernielson27/learn/issues/413) | feat(authoring): rename and trim, editors and case study builder                                  | e2e               | Merged (#434); no migration                                                                   |
-| [#414](https://github.com/tannernielson27/learn/issues/414) | feat(live): rename and trim, host console, join and student room                                  | e2e               | Merged (#431); no migration; leftovers in the wording cleanup PR                              |
-| [#415](https://github.com/tannernielson27/learn/issues/415) | feat(student): rename and trim, student home, practice and assignments                            | e2e               | Merged (#432); no migration; class components fixed in the wording cleanup PR                 |
-| [#416](https://github.com/tannernielson27/learn/issues/416) | docs(help): rename and trim, landing, onboarding, help and emails                                 | e2e               | Merged (#430); owner re-pastes `magic_link.html`; "Sample bank" name open                     |
-| [#417](https://github.com/tannernielson27/learn/issues/417) | feat(authoring): move questions between quizzes, and turn a folder into a quiz                    | db, e2e, security | In review (#437); owner pushes `20261014300000_move_between_quizzes` after `20261014000000`   |
+| #                                                           | Title                                                                                             | Gates             | Status                                                                                     |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------ |
+| [#334](https://github.com/tannernielson27/learn/issues/334) | feat(ngn): reveal and lock a case study's chart step by step (fromStep, stepAccess, recordAtStep) | none              | Merged (#424); no migration; owner confirms hidden/locked/open                             |
+| [#335](https://github.com/tannernielson27/learn/issues/335) | feat(player): serve each case study step only the chart it has reached                            | security, e2e     | Merged (#435); apply `20261014200000_assignment_record_column_grant` after the app deploys |
+| [#336](https://github.com/tannernielson27/learn/issues/336) | feat(authoring): set when each tab of a case study's chart appears and opens                      | e2e               | Merged (#438); no migration                                                                |
+| [#406](https://github.com/tannernielson27/learn/issues/406) | fix(live): page the progress board read past 1,000 answers                                        | none              | Merged (#422); no migration                                                                |
+| [#407](https://github.com/tannernielson27/learn/issues/407) | perf(live): fewer round trips when the host advances                                              | security, db      | In review; apply `20261013120000_open_session_view`; load run at 100 still owed            |
+| [#409](https://github.com/tannernielson27/learn/issues/409) | fix(auth): a full class signing in from one network                                               | security          | In review; no migration; owner sets the hosted Auth rate limits (docs/05 §7.7 step 4)      |
+| [#411](https://github.com/tannernielson27/learn/issues/411) | feat(authoring): library folders that hold quizzes                                                | db, e2e           | Merged (#433); owner pushes `20261014000000_library_folders`                               |
+| [#412](https://github.com/tannernielson27/learn/issues/412) | feat(authoring): rename and trim, teacher home and quiz page                                      | e2e               | Merged (#429); no migration; leftovers in the wording cleanup PR                           |
+| [#413](https://github.com/tannernielson27/learn/issues/413) | feat(authoring): rename and trim, editors and case study builder                                  | e2e               | Merged (#434); no migration                                                                |
+| [#414](https://github.com/tannernielson27/learn/issues/414) | feat(live): rename and trim, host console, join and student room                                  | e2e               | Merged (#431); no migration; leftovers in the wording cleanup PR                           |
+| [#415](https://github.com/tannernielson27/learn/issues/415) | feat(student): rename and trim, student home, practice and assignments                            | e2e               | Merged (#432); no migration; class components fixed in the wording cleanup PR              |
+| [#416](https://github.com/tannernielson27/learn/issues/416) | docs(help): rename and trim, landing, onboarding, help and emails                                 | e2e               | Merged (#430); owner re-pastes `magic_link.html`; "Sample bank" name open                  |
+| [#417](https://github.com/tannernielson27/learn/issues/417) | feat(authoring): move questions between quizzes, and turn a folder into a quiz                    | db, e2e, security | Merged (#437); owner pushes `20261014300000_move_between_quizzes` after `20261014000000`   |
 
-With #335 (PR #435) a student is sent the chart of each step they have reached and nothing later: live, by the play page and every view the phone fetches when the host moves; practice and take-home, the steps up to the first unanswered one and each one's chart. Until its migration is pushed, a student's own client can still select `assignments.patient_record` directly. With #336 (PR #438) the case study's patient record editor sets both, step by step, and saving a staged record keeps them; until it merges, saving one from the builder drops them.
+With #335 (PR #435) a student is sent the chart of each step they have reached and nothing later: live, by the play page and every view the phone fetches when the host moves; practice and take-home, the steps up to the first unanswered one and each one's chart. Until its migration is pushed, a student's own client can still select `assignments.patient_record` directly. With #336 (PR #438) the case study's patient record editor sets both, step by step, and saving a staged record keeps them.
 
 ## No milestone
 

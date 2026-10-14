@@ -48,3 +48,5 @@ coverage
 /blob-report/
 # pnpm load:live (#187)
 load-live-results*.json
+# AI import samples and spike output (#333): owner documents never enter the repo (ADR 0008)
+/.ai-import-samples/
