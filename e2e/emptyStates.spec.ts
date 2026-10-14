@@ -52,9 +52,10 @@ test("a fresh instructor and their first student see what to do next on every em
   await page.getByRole("link", { name: "Live sessions and reports", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/sessions$/);
   await expectEmptyState(page, 2, "No live sessions yet");
-  await expect(
-    page.getByRole("link", { name: "Go to your item banks", exact: true }),
-  ).toHaveAttribute("href", "/author");
+  await expect(page.getByRole("link", { name: "Go to your quizzes", exact: true })).toHaveAttribute(
+    "href",
+    "/author",
+  );
   await expectNoAxeViolations(page);
   await shoot(page, project, "sessions-empty");
 

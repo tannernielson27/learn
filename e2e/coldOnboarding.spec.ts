@@ -50,7 +50,7 @@ async function phoneContext(browser: Browser, testInfo: TestInfo): Promise<Brows
 }
 
 /**
- * Which "Go to item" button holds the sample's multiple-choice item. The sample's rows are written
+ * Which "Go to question" button holds the sample's multiple-choice item. The sample's rows are written
  * in one transaction, so they share a `created_at` and the room's order falls to their ids: it is
  * not the same twice. A person answers whatever is on screen; a script has to know what it is
  * answering, so this reads the room's item order and the strip does the rest, as a host would.
@@ -185,25 +185,20 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   const shownCode = page.getByRole("region", { name: "Join code", exact: true }).getByText(CODE);
   await expect(shownCode).toBeVisible();
   const code = await shownCode.innerText();
-  await expect(
-    page.getByText(
-      "Nobody has joined yet. Read the code out, or leave the QR code on the screen.",
-      {
-        exact: true,
-      },
-    ),
-  ).toBeVisible();
+  await expect(page.getByText("Nobody has joined yet.", { exact: true })).toBeVisible();
 
   const liveContext = await phoneContext(browser, testInfo);
   const phone = await liveContext.newPage();
   await skipWelcomes(phone);
   await phone.goto("/");
   await phone.getByRole("link", { name: "Join a live session", exact: true }).click();
-  await phone.getByRole("textbox", { name: "Session code", exact: true }).fill(code);
+  await phone.getByRole("textbox", { name: "Join code", exact: true }).fill(code);
   await phone.getByRole("textbox", { name: "Display name", exact: true }).fill(PHONE_NAME);
   await phone.getByRole("button", { name: "Join", exact: true }).click();
   await expect(phone).toHaveURL(/\/play\/[0-9a-f-]{36}$/);
-  await expect(phone.getByText("You are in.", { exact: true })).toBeVisible();
+  await expect(
+    phone.getByText("You are in. Wait for your teacher to start.", { exact: true }),
+  ).toBeVisible();
 
   // Presence arrives on the console with no reload.
   await expect(page.getByText(PHONE_NAME, { exact: true })).toBeVisible({ timeout: 15_000 });
@@ -211,9 +206,9 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   await expectNoAxeViolations(page);
   await shoot(page, testInfo, "7-lobby");
 
-  await page.getByRole("button", { name: "Start session", exact: true }).click();
+  await page.getByRole("button", { name: "Start", exact: true }).click();
   const position = await multipleChoicePosition(request, sessionId, bankId);
-  const goTo = page.getByRole("button", { name: `Go to item ${position}`, exact: true });
+  const goTo = page.getByRole("button", { name: `Go to question ${position}`, exact: true });
   if (position > 1) await goTo.click();
   await expect(goTo).toHaveAttribute("aria-current", "step");
   await expect(page.getByText("0 of 1 answered", { exact: true })).toBeVisible({ timeout: 15_000 });
@@ -226,11 +221,7 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   await expect(option).toBeVisible({ timeout: 15_000 });
   await option.click();
   await phone.getByRole("button", { name: "Submit", exact: true }).click();
-  await expect(
-    phone.getByText("Answer sent. Your instructor will show the answer at the front.", {
-      exact: true,
-    }),
-  ).toBeVisible();
+  await expect(phone.getByText("Answer sent.", { exact: true })).toBeVisible();
   await expectNoAxeViolations(phone);
   await shoot(phone, testInfo, "8-phone-answered");
 
@@ -254,10 +245,10 @@ test("an outside instructor onboards cold and runs a live session a phone answer
     { timeout: 15_000 },
   );
   await shoot(phone, testInfo, "10-phone-score");
-  await page.getByRole("button", { name: "End session", exact: true }).click();
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
   // It asks first; the second press is the one in the question.
-  await page.getByRole("button", { name: "End session", exact: true }).click();
-  await expect(phone.getByText("This session has ended.", { exact: true })).toBeVisible({
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
+  await expect(phone.getByText("This live session has ended.", { exact: true })).toBeVisible({
     timeout: 15_000,
   });
   await liveContext.close();

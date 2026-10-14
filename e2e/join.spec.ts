@@ -12,8 +12,9 @@ async function expectNoAxeViolations(page: Page) {
   expect(results.violations).toEqual([]);
 }
 
-const QR_LABEL = "QR code that opens the join page for this session";
-const NO_SUCH_SESSION = "That code does not match a session that is open. Check it and try again.";
+const QR_LABEL = "QR code for joining this live session";
+const NO_SUCH_SESSION =
+  "That join code does not match an open live session. Check it and try again.";
 
 /**
  * A refusal about the code, read the way a screen reader reads it: tied to the code field by
@@ -23,7 +24,7 @@ const NO_SUCH_SESSION = "That code does not match a session that is open. Check 
  * role on every page, so the bare role matches two elements and Playwright refuses it.
  */
 async function expectCodeRefusal(page: Page, message: string) {
-  await expect(page.getByRole("textbox", { name: "Session code" })).toHaveAccessibleDescription(
+  await expect(page.getByRole("textbox", { name: "Join code" })).toHaveAccessibleDescription(
     message,
   );
 }
@@ -78,7 +79,7 @@ test("a student scans the code, types a name, and comes back to the same place o
   await expectNoAxeViolations(student);
 
   // A code that is well formed but names nothing says so, and says nothing more than that.
-  await student.getByRole("textbox", { name: "Session code" }).fill("ZZZZZZ");
+  await student.getByRole("textbox", { name: "Join code" }).fill("ZZZZZZ");
   await student.getByRole("textbox", { name: "Display name" }).fill("Nobody");
   await student.getByRole("button", { name: "Join", exact: true }).click();
   await expectCodeRefusal(student, NO_SUCH_SESSION);
@@ -86,14 +87,14 @@ test("a student scans the code, types a name, and comes back to the same place o
 
   // What the QR code does: the address carries the code, so only the name is left to type.
   await student.goto(`/join/${code}`);
-  await expect(student.getByRole("textbox", { name: "Session code" })).toHaveValue(code);
+  await expect(student.getByRole("textbox", { name: "Join code" })).toHaveValue(code);
   await student.getByRole("textbox", { name: "Display name" }).fill("Sam Okafor");
   await student.getByRole("button", { name: "Join", exact: true }).click();
 
   await expect(student).toHaveURL(/\/play\/[0-9a-f-]{36}$/);
   const seat = student.url();
   await expect(student.getByText("Joined as")).toContainText("Sam Okafor");
-  await expect(student.getByText("You are in.")).toBeVisible();
+  await expect(student.getByText("You are in. Wait for your teacher to start.")).toBeVisible();
   await expectNoAxeViolations(student);
 
   // Reload: the same seat, not a second one.
@@ -112,14 +113,14 @@ test("a student scans the code, types a name, and comes back to the same place o
 
   // The host ends the session. The student is told, rather than being dropped back on a form.
   await page.goto(consoleUrl);
-  await page.getByRole("button", { name: "End session", exact: true }).click();
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
   // It asks first; the second press is the one in the question.
-  await page.getByRole("button", { name: "End session", exact: true }).click();
-  await expect(page.getByText("This session has ended.")).toBeVisible();
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Open the report", exact: true })).toBeVisible();
   await expect(page.getByRole("img", { name: QR_LABEL })).toHaveCount(0);
 
   await student.goto(seat);
-  await expect(student.getByText("This session has ended.")).toBeVisible();
+  await expect(student.getByText("This live session has ended.")).toBeVisible();
 
   // And the code stops working for anyone who has not joined yet.
   await student.goto(`/join/${code}`);

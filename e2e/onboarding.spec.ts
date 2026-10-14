@@ -210,7 +210,7 @@ test("the imported sample is ready to assign and to run live straight away", asy
   await page.getByRole("button", { name: "Start a live session", exact: true }).click();
   await expect(page).toHaveURL(/\/live\/[0-9a-f-]{36}$/);
   await expect(page.getByTestId("join-code")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Start session", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Start", exact: true })).toBeEnabled();
   await expectNoAxeViolations(page);
   await page.screenshot({
     path: `test-results/screenshots/${project}/sample-live.png`,
