@@ -1,7 +1,12 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { emptyEhrForm, toEhrForm, type EhrFormValues } from "@/lib/authoring/forms/ehr";
+import {
+  emptyEhrForm,
+  fromEhrForm,
+  toEhrForm,
+  type EhrFormValues,
+} from "@/lib/authoring/forms/ehr";
 import { sampleEhr } from "@/lib/ngn/fixtures/case-study";
 import { sampleTrendEhr } from "@/lib/ngn/fixtures/trend";
 import type { SaveResult } from "./EditorShell";
@@ -34,6 +39,16 @@ const button = (name: string) => {
 };
 
 describe("EhrEditor", () => {
+  // #413 renamed the editor's sections to tabs on screen only: what is saved keeps its shape.
+  it("saves an untouched patient record as the same JSON it opened with", async () => {
+    const { onSave, user } = setup(toEhrForm(sampleEhr));
+    await user.click(button("Save patient record"));
+    expect(onSave).toHaveBeenCalledTimes(1);
+    const saved = fromEhrForm(onSave.mock.calls[0]![0]);
+    expect(JSON.stringify(saved)).toBe(JSON.stringify(fromEhrForm(toEhrForm(sampleEhr))));
+    expect(saved).toEqual(sampleEhr);
+  }, 30_000);
+
   it("warns that every record is fictional", () => {
     setup();
     expect(screen.getByText(/fictional/i)).toHaveTextContent(/never enter real names/i);
