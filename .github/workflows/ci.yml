@@ -120,6 +120,16 @@ jobs:
           pnpm load:live --base http://127.0.0.1:3100 --host --participants 5 --think 200-1000 \
             --ramp 500 --lobby-ms 2000 --reveal-ms 300 --step-timeout 20000 --max-minutes 3 \
             --seed 187 --out "$RUNNER_TEMP/load-live-results.json"
+      # The screens these specs photograph with `page.screenshot`, at 375, 768 and 1280. Kept on a
+      # green run too (#412), so a change of wording or layout can be looked at before it merges:
+      #   gh run download <run-id> --name auth-e2e-screens-1
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: auth-e2e-screens-${{ matrix.shard }}
+          path: test-results/screenshots
+          if-no-files-found: ignore
+          retention-days: 7
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
