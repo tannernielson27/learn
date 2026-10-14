@@ -143,13 +143,15 @@ phone does, with its own think time before each.
 | 100 instructor | 100 / 100 | 42 / 246          | 3731 / 9034 (4300)    | 79 / 1020           | 1837 sent, 228 blank | view: 247 × 500, 57 × 401                                       | 8 of 21       | 128 / 168 / 244                                    | 1.29 / 0.71            |
 | 100 student    | 100 / 100 | 91 / 155          | 2865 / 5048 (257)     | 106 / 589           | 1872 sent, 228 blank | none                                                            | 0             | 72 / 141 / 201                                     | 2.16 / 0.72            |
 | 150 instructor | 150 / 150 | 2193 / 3614       | 3562 / 8965 (6570)    | 82 / 363            | 2071 sent, 222 blank | view: 1680 × 401, 1317 × 500; submit: 1 × 500, 1 × `not_joined` | 21 of 21      | 80 / 135 / 231                                     | 1.21 / 1.99            |
-| 150 student    | 150 / 150 | not recorded      | not recorded          | not recorded        | not recorded         | not recorded                                                    | not recorded  | not recorded                                       | 1.74 / —               |
+| 150 student    | 150 / 150 | 559 / 830         | 576 / 1430 (553)      | 25 / 55             | 1639 sent, 188 blank | view: 92 × 401, 87 × 500                                        | the set       | 18 / 86 / 160                                      | 2.73 / 1.00            |
 
-The three recorded runs ran one after another between 17:28 and 17:57 local time, before three
-other build sessions started on the machine at about 18:00. **The 150 student-paced run did not
-complete here.** All 150 joined; the run then overlapped those builds, free memory fell to about
-0.7 GB, and it was stopped at ten minutes with the set still open and nothing written. It left
-session `LEPMZB` open on the local stack.
+The first three runs ran one after another between 17:28 and 17:57 local time. The 150
+student-paced run is its second attempt, 18:32 to 18:43, with the Next server restarted from the
+same build. Its first attempt overlapped three other build sessions that started on the machine at
+about 18:00; free memory fell to about 0.7 GB and it was stopped at ten minutes with nothing
+written, so it is not in the table. No recorded run overlapped those builds, but the machine was
+quieter for the last run than for the first three, and its latencies are lower for that reason as
+much as any other: do not read 150 student-paced as faster than 100.
 
 **Does 100 pass? No, in either pacing.**
 
@@ -163,26 +165,33 @@ session `LEPMZB` open on the local stack.
   read carries all 21 items.
 - _Instructor-paced, 150._ Everyone joined; every one of the 21 steps stalled (65 to 133 of 150
   settled) and 2,999 requests were refused.
+- _Student-paced, 150._ Everyone joined. When the host opened the set, 87 phones read it and worked
+  through all 21 items; the other 63 had that one `view` refused (92 × 401 and 87 × 500 across the
+  run) and, having no later move to try again on, sat with nothing until the set timed out at
+  630 s with 1,827 of 3,150 settled.
 
 **What gave first: `POST /api/live/view`.** It was the slowest route in every run and the only
 one refused at 100. Join and submit stayed quick (submit p50 79–106 ms). An instructor-paced
 room sends every phone to `view` on every move, so 100 phones made 4,300 reads in seven minutes,
 a hundred of them in the same instant each time.
 
-What the refusals were, as far as this run shows: at 100 the local gateway's log has only 200s
-for the whole run, and it saw fewer `resume_participant` and `begin_session_view` calls than the
-phones made by about the number refused. So the failures happened in the Next server's own calls
-to Supabase, before the gateway: a failed `resume_participant` call reads as "signed out" (401)
-and a failed `begin_session_view` as 500. The route logs nothing when this happens, so the cause
-(the server's outbound connections, Docker Desktop's port forwarding, or the machine) is **not
-identified**. The gateway log was not checked for the 150 run. A phone told it is signed out in
-the middle of a session is the worse of the two for a student.
+What the refusals were, as far as these runs show: the local gateway's log has only 200s for
+every database call in the 100 instructor-paced run and in the 150 student-paced run (the other
+two were not checked). The route gives a refusal from the database its own name, and answers 401
+when the participant check comes back empty and 500 when `begin_session_view` comes back as an
+error. So these were not the database refusing: the likeliest reading is that the Next server's
+own calls to Supabase failed before the gateway answered them. The route logs nothing when this
+happens, so the cause (the server's outbound connections, Docker Desktop's port forwarding, or
+the machine itself) is **not identified**, and whether a hosted deployment does the same is
+#405's question. A phone told it is signed out in the middle of a session is the worse of the two
+for a student.
 
 **The "first step reached no phone" stall did not recur at 100.** Step 1 settled 100 of 100 in
 7.7 s instructor-paced, and the student-paced set opened for all 100. At 150 step 1 settled 123
 of 150, but not for that reason: Realtime delivered every move to every phone in both
 instructor-paced runs (state changes received total exactly 43 per phone: 4,300 at 100 and 6,450
-at 150). The phones that missed a step had the move and were refused the item by `view`.
+at 150), and all three moves to every phone in the 150 student-paced run (450). The phones that
+missed a step had the move and were refused the item by `view`.
 
 **The progress board's read is truncated at 100 × 21.** The script's host does not make that
 read, so it was made by hand after the 100 student-paced run: the same two-column select
