@@ -138,10 +138,10 @@ export function liveRouteDeps(): LiveRouteDeps {
 }
 
 export const LIVE_ROUTE_ERRORS = {
-  signedOut: "You have not joined this session.",
-  unplayable: "This item has a problem and cannot be shown.",
+  signedOut: "You have not joined this live session.",
+  unplayable: "This question has a problem and cannot be shown.",
   tooLarge: "That answer is too large to check.",
-  failed: "The session could not be reached. Try again.",
+  failed: "The live session could not be reached. Try again.",
 } as const;
 
 /** How an ordinary classroom refusal is carried over HTTP. Codes, not prose, are what branch. */

@@ -27,7 +27,7 @@ export async function reportCsvDownload(request: Request, sessionId: string): Pr
 
   const author = await authorForRoute();
   if (author.status === "signed_out") return refuse(401, "Sign in to download the report.");
-  if (author.status === "forbidden") return refuse(403, "Only instructors can download reports.");
+  if (author.status === "forbidden") return refuse(403, "Only teachers can download reports.");
 
   let read: Awaited<ReturnType<typeof readSessionReport>>;
   try {

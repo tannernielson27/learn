@@ -27,8 +27,8 @@ import { PRACTICE_REFUSALS } from "@/lib/practice/refusals";
  * are left out. A question's own words (stem, choices, patient record) are counted; they are the
  * same before and after, so a screen's change is its chrome.
  *
- * Wording that belongs to another pass is drawn on these screens too. It is set aside before the
- * search, sentence by sentence, in `OTHER_PASSES`, so that list is also the list of what is left.
+ * Nothing is set aside: the sentences these screens drew from other areas' files were the last
+ * old wording, fixed in the cleanup after the five passes, so every word on them is searched.
  */
 
 const USER = "00000000-0000-4000-8000-0000000415a1";
@@ -39,22 +39,6 @@ const QUIZ = "00000000-0000-4000-8000-0000000415b1";
 const ATTEMPT = "00000000-0000-4000-8000-0000000415e1";
 const RUN = "00000000-0000-4000-8000-0000000415f1";
 const row = (index: number) => `00000000-0000-4000-8000-${String(41500 + index).padStart(12, "0")}`;
-
-/**
- * Sentences these screens draw from files another pass owns. `src/components/classes/**` is the
- * classes pass (#412), `src/components/live/report/**` the live session pass (#414), and
- * `src/lib/ngn/**` keeps "item" as the NCLEX term on purpose.
- */
-const OTHER_PASSES: readonly string[] = [
-  // src/components/classes/StudentClassList.tsx
-  "Type your class code below, or open the invite link your instructor shares.",
-  // src/components/classes/JoinByCodeForm.tsx
-  "Eight letters and numbers, like ABCD-2345. Your instructor has it.",
-  // src/components/classes/JoinClassButton.tsx
-  "You are already an instructor, so this account stays one and is not added to the class.",
-  // src/lib/auth/landing.ts, which #416 changes to "Go to your quizzes".
-  "Go to your item banks",
-];
 
 /** Retired words inside a question's own content are clinical writing, not the interface. */
 const CONTENT_WORD =
@@ -714,9 +698,6 @@ function shownHtml(container: HTMLElement): string {
   return copy.innerHTML;
 }
 
-const setAside = (text: string): string =>
-  OTHER_PASSES.reduce((rest, sentence) => rest.split(sentence).join(" "), text);
-
 /**
  * The glossary retires "record" alone as well as "chart" and "EHR": the shared list stops at those
  * two, so this screen's own search adds it. "Patient record" is the word to use.
@@ -779,10 +760,6 @@ describe("the search itself", () => {
     expect(retired("<p>Open the record.</p>")).toHaveLength(1);
     expect(retired("<p>Open the patient record.</p>")).toEqual([]);
   });
-
-  it("does not set aside a retired word that only sits near another pass's sentence", () => {
-    expect(retired(setAside(`${OTHER_PASSES[0]} Ask your instructor.`))).toHaveLength(1);
-  });
 });
 
 describe("what a student sees uses the glossary's words (#415)", () => {
@@ -790,7 +767,7 @@ describe("what a student sees uses the glossary's words (#415)", () => {
     const container = await draw(entry);
     counts.push([entry.name, visibleWordCount(shownHtml(container))]);
     // Body, not container: the patient record's phone sheet is drawn outside the container.
-    expect(retired(setAside(document.body.innerHTML))).toEqual([]);
+    expect(retired(document.body.innerHTML)).toEqual([]);
   });
 
   it("names each page in the glossary's words", async () => {

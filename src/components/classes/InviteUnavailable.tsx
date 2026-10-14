@@ -11,7 +11,7 @@ import { StatusLinks } from "@/components/status/StatusLinks";
 export const INVITE_UNAVAILABLE_HEADING = "This invite link does not work";
 
 export const INVITE_UNAVAILABLE_TEXT =
-  "It may have been replaced, or you may have been removed from the class. Ask your instructor for a new link.";
+  "It may have been replaced, or you may have been removed from the class. Ask your teacher for a new link.";
 
 export function InviteUnavailable() {
   return (
