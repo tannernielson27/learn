@@ -114,6 +114,6 @@ describe("SessionReportView", () => {
   it("says so when nobody joined", () => {
     renderView("students", buildSessionReport({ ...REPORT_FIXTURE, participants: [] }));
     expect(screen.queryByRole("table")).toBeNull();
-    expect(screen.getByText("Nobody joined this live session.")).toBeInTheDocument();
+    expect(screen.getByText("Nobody joined.")).toBeInTheDocument();
   });
 });

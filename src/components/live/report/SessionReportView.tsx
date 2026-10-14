@@ -42,14 +42,14 @@ export function SessionReportView({
     <>
       <p className="mb-2 text-sm text-ink-2">
         <Link href={SESSIONS_PATH} className="tap-target inline-flex items-center hover:text-ink-1">
-          Back to live sessions
+          Live sessions
         </Link>
       </p>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <h1 className="font-read text-3xl break-words text-ink-1">{title}</h1>
           <p className="mt-1 text-sm text-ink-2">
-            {closedAt ? `Ended ${formatSessionDate(closedAt)}` : "Ended"} ·{" "}
+            {closedAt ? formatSessionDate(closedAt) : "Ended"} ·{" "}
             {report.students.length === 1 ? "1 student" : `${report.students.length} students`} ·{" "}
             {report.items.length === 1 ? "1 question" : `${report.items.length} questions`}
           </p>
@@ -93,7 +93,7 @@ export function SessionReportView({
 function ReportBody({ report, view }: { report: SessionReport; view: ReportView }) {
   if (view === "steps") return <StepsBody report={report} />;
   if (report.students.length === 0) {
-    return <p className="text-ink-2">Nobody joined this live session.</p>;
+    return <p className="text-ink-2">Nobody joined.</p>;
   }
   if (view === "items") {
     return <ItemTable items={report.items} participantCount={report.students.length} />;
@@ -110,16 +110,17 @@ function StepsBody({ report }: { report: SessionReport }) {
       </p>
     );
   }
+  // How a step's percent is worked out is in the teacher guide (#reports), not under the table.
   const untagged = report.items.filter((item) => item.cjmmStep === null).length;
   return (
     <>
       <StepTable steps={report.steps} />
-      <p className="mt-3 text-sm text-ink-2">
-        Each step is the mean of its questions&apos; mean percents.
-        {untagged > 0
-          ? ` ${untagged === 1 ? "1 question" : `${untagged} questions`} without a step ${untagged === 1 ? "is" : "are"} left out.`
-          : ""}
-      </p>
+      {untagged > 0 ? (
+        <p className="mt-3 text-sm text-ink-2">
+          {untagged === 1 ? "1 question" : `${untagged} questions`} without a step{" "}
+          {untagged === 1 ? "is" : "are"} left out.
+        </p>
+      ) : null}
     </>
   );
 }

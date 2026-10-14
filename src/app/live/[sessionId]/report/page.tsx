@@ -46,7 +46,7 @@ export default async function SessionReportPage({
               href={SESSIONS_PATH}
               className="tap-target inline-flex items-center hover:text-ink-1"
             >
-              Back to live sessions
+              Live sessions
             </Link>
           </p>
           <h1 className="font-read text-3xl break-words text-ink-1">{read.session.title}</h1>
