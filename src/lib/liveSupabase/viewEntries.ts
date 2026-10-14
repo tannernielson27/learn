@@ -19,7 +19,8 @@
  */
 import type { StartingOrderSeedFor } from "@/lib/ngn/startingOrder";
 import { parseSubmission, revealOf, toKeylessItem, withScoredReveal } from "@/lib/ngn/submit";
-import type { Item } from "@/lib/ngn/schemas";
+import { recordAtStep, stepAtPosition, type EhrRecordView } from "@/lib/ngn/chartReveal";
+import type { EhrRecord, Item } from "@/lib/ngn/schemas";
 import type { ScoreResult } from "@/lib/ngn/types";
 import { fromItemRow, type ItemRow } from "@/lib/supabase/itemRows";
 import type { AnsweredPayload, PacedItemPayload, RevealedPayload } from "./wire";
@@ -92,6 +93,22 @@ export function viewEntries(input: ViewEntriesInput): ViewEntriesResult {
     });
   }
   return { ok: true, entries };
+}
+
+/**
+ * The patient record a phone in a case-study room may hold (#335): the record the room started
+ * with, as it stands at the step the room is on, and nothing a later step brings. A room in its
+ * lobby is at step 1. Undefined for a room run from a bank, so its payload is as it always was.
+ *
+ * The one place a live record is cut to its step, for both of its readers: the view route, on
+ * `open_session_view` and on the calls it replaced alike, and the play page's first paint. So a
+ * phone is handed the same chart for the same step whichever way it asked.
+ */
+export function roomRecord(
+  record: EhrRecord | null,
+  position: number | null,
+): EhrRecordView | undefined {
+  return record === null ? undefined : recordAtStep(record, stepAtPosition(position));
 }
 
 /**

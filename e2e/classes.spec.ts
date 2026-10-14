@@ -164,7 +164,7 @@ test("an instructor who opens an invite link is told so and stays an instructor"
   const invite = await createClass(page, `NUR 320 ${Date.now() % 100_000}`);
 
   await page.goto(invite);
-  await expect(page.getByText(/You are already an instructor/)).toBeVisible();
+  await expect(page.getByText(/You are already a teacher/)).toBeVisible();
   await expectNoAxeViolations(page);
 
   await page.goto("/author");

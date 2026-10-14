@@ -175,7 +175,7 @@ A case study's record may hold parts of itself back until the case reaches them.
 - a tab that is `locked` at the step keeps `id`, `kind`, `title` and `timePointId` and is marked `locked: true`. It has no `blocks` field, so its text is not in the view at all. A locked tab is listed whether or not any of its blocks has arrived;
 - the view carries no `fromStep` and no `stepAccess`, so it says nothing about what arrives later.
 
-`stepAccess` may go back as well as forward (open at step 2, locked at step 3); the schema does not forbid it. Serving the view to students is #335 and the builder controls are #336; until #335, every student-facing page still sends the whole record.
+`stepAccess` may go back as well as forward (open at step 2, locked at step 3); the schema does not forbid it. The builder controls are #336. Serving the view to students is #335: wherever a case study's record reaches a student, the server sends `recordAtStep` for each step the student has reached and nothing later. A live room sends the chart at its position (`roomRecord`, on the play page and in every `/api/live/view`); practice and take-home send the steps up to the first unanswered one and each one's chart (`reachedStep`, `recordsThrough`), so going back a step shows that step's chart. The results page, the instructor's console and the author's preview show the whole record, the last two with a marker for the step. `assignments.patient_record` is not granted to `authenticated`.
 
 ### 4.2 Trend item
 

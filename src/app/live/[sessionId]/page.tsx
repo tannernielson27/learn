@@ -9,7 +9,9 @@ import { requireAuthor } from "@/lib/authoring/session";
 import { joinUrl } from "@/lib/live/routes";
 import { pacedState } from "@/lib/live/state";
 import { siteOrigin } from "@/lib/http/siteOrigin";
+import { readSessionRecord } from "@/lib/supabase/sessionRecord";
 import { readHostSession } from "@/lib/supabase/sessions";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const metadata: Metadata = { title: "Live session" };
 
@@ -31,6 +33,11 @@ export default async function LiveSessionPage({ params }: PageProps<"/live/[sess
   const { supabase } = await requireAuthor(`/live/${sessionId}`);
   const session = await readHostSession(supabase, sessionId);
   if (!session) notFound();
+  // #335: the whole record, for the instructor, with a marker for the class's step. Read with the
+  // service role only now that row level security has said the session is this host's.
+  const record = session.caseStudy
+    ? await readSessionRecord(createSupabaseServiceClient(), session.id)
+    : null;
 
   // Built from the request the host made, so a preview deployment's own address ends up in the
   // picture without anything being configured.
@@ -65,6 +72,7 @@ export default async function LiveSessionPage({ params }: PageProps<"/live/[sess
           />
         }
         caseStudy={session.caseStudy}
+        {...(record === null ? {} : { record })}
         initial={pacedState(
           {
             status: session.status,

@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { recordAtStep, tabAccessAt, type EhrRecordView, type EhrTabView } from "./chartReveal";
+import {
+  isStagedRecord,
+  reachedStep,
+  recordAtStep,
+  recordsThrough,
+  stepAtPosition,
+  tabAccessAt,
+  type EhrRecordView,
+  type EhrTabView,
+} from "./chartReveal";
 import { FIXTURES, sampleCaseStudy, sampleEhr, sampleTrendEhr, sampleTrendItem } from "./fixtures";
 import { stagedCaseStudy, stagedEhr } from "./fixtures/chart-reveal";
 import {
@@ -489,5 +498,54 @@ describe("tabAccessAt", () => {
     const short = { ...staged.tabs[3]!, stepAccess: ["open" as const] };
     expect(tabAccessAt(short, 1)).toBe("open");
     expect(tabAccessAt(short, 2)).toBe("hidden");
+  });
+});
+
+describe("the step a chart is at (#335)", () => {
+  it.each([
+    [null, 1],
+    [0, 1],
+    [-2, 1],
+    [1, 1],
+    [3, 3],
+    [6, 6],
+    [9, 6],
+    [Number.NaN, 1],
+  ])("a live room at position %j shows step %i's chart", (position, step) => {
+    expect(stepAtPosition(position)).toBe(step);
+  });
+
+  it.each([
+    [[], 1],
+    [[false, false, false, false, false, false], 1],
+    [[true], 2],
+    [[true, true, false, true], 3],
+    [[false, true, true, true, true, true], 1],
+    [[true, true, true, true, true, false], 6],
+    [[true, true, true, true, true, true], 6],
+  ])("a student who has answered %j has reached step %i", (answered, step) => {
+    expect(reachedStep(answered)).toBe(step);
+  });
+
+  it("lists each reached step's view, step 1 first, and none past it", () => {
+    const views = recordsThrough(staged, 3);
+    expect(views).toEqual([1, 2, 3].map((step) => recordAtStep(staged, step as CjmmStep)));
+    expect(JSON.stringify(views)).not.toContain("0200: Second large-bore IV");
+    expect(JSON.stringify(recordsThrough(staged, 4))).toContain("0200: Second large-bore IV");
+  });
+
+  it("refuses a reached step outside 1 to 6", () => {
+    expect(() => recordsThrough(staged, 0 as CjmmStep)).toThrow(RangeError);
+  });
+
+  it("tells a staged record from one with neither field", () => {
+    expect(isStagedRecord(staged)).toBe(true);
+    expect(isStagedRecord(ehrRecordSchema.parse(sampleEhr))).toBe(false);
+    const [first] = sampleEhr.tabs;
+    const onlyBlock = ehrRecordSchema.parse({
+      ...sampleEhr,
+      tabs: [{ ...first, blocks: [{ ...first!.blocks[0], fromStep: 2 }] }],
+    });
+    expect(isStagedRecord(onlyBlock)).toBe(true);
   });
 });

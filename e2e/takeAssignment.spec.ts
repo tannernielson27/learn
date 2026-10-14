@@ -178,7 +178,9 @@ test("a student answers on a phone, reloads to find the answers, and submits", a
   await student.screenshot({ path: shot("assignment-case-study"), fullPage: true });
   expect(await bytesOf(page.context(), `/author/items/${CASE_STEP_6}`)).toContain(STEP_6_RATIONALE);
   const caseBytes = await bytesOf(phone, `/learn/assignments/${caseAssignment}`);
-  expect(caseBytes).toContain("cs_hip_6");
+  // #335: an attempt with nothing saved has reached step 1, and is sent step 1 and no later step.
+  expect(caseBytes).toContain("cs_hip_1");
+  expect(caseBytes).not.toContain("cs_hip_6");
   expectKeyless(caseBytes, [STEP_6_RATIONALE]);
 
   await phone.close();

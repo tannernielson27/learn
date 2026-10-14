@@ -6,6 +6,7 @@ import {
   listExpiredAttempts,
   listMyAttemptProgress,
   listMyAttempts,
+  readAssignmentRecord,
   readSavedAnswers,
   readSetItems,
   readStudentAssignment,
@@ -56,7 +57,6 @@ describe("reading as the student", () => {
         max_attempts: 2,
         shuffle_options: true,
         item_set: [F1, 42, "not-a-uuid", F2],
-        patient_record: null,
       },
     });
     expect(await readStudentAssignment(fake.client, A)).toMatchObject({
@@ -64,11 +64,31 @@ describe("reading as the student", () => {
       itemSet: [F1, F2],
       maxAttempts: 2,
     });
-    expect(fake.calls.find(([step]) => step === "select")?.[1][0]).not.toContain("score");
+    const selected = fake.calls.find(([step]) => step === "select")?.[1][0];
+    expect(selected).not.toContain("score");
+    // #335: the student's client is not granted the whole record; the server reads it.
+    expect(selected).not.toContain("patient_record");
     expect(await readStudentAssignment(fakeQuery({ data: null }).client, A)).toBeNull();
     expect(
       await readStudentAssignment(fakeQuery({ data: { item_set: "x" } }).client, A),
     ).toMatchObject({ itemSet: [] });
+  });
+
+  it("reads a case study's whole record only through the server's own read (#335)", async () => {
+    const fake = fakeQuery({ data: { patient_record: { patientHeader: { age: 1 } } } });
+    expect(await readAssignmentRecord(fake.client, A)).toEqual({
+      ok: true,
+      record: { patientHeader: { age: 1 } },
+    });
+    expect(fake.calls).toContainEqual(["select", ["patient_record"]]);
+    expect(fake.calls).toContainEqual(["eq", ["id", A]]);
+    expect(
+      await readAssignmentRecord(fakeQuery({ data: { patient_record: null } }).client, A),
+    ).toEqual({ ok: true, record: null });
+    expect(await readAssignmentRecord(fakeQuery({ data: null }).client, A)).toEqual({ ok: false });
+    expect(await readAssignmentRecord(fakeQuery({ error: { code: "08000" } }).client, A)).toEqual({
+      ok: false,
+    });
   });
 
   it("lists attempts without ever selecting a score", async () => {

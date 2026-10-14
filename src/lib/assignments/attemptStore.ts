@@ -6,6 +6,7 @@ import {
   beginSubmission,
   listExpiredAttempts,
   listMyAttempts,
+  readAssignmentRecord,
   readSavedAnswers,
   readSetItems,
   readStudentAssignment,
@@ -55,6 +56,9 @@ export function attemptPageStore(user: Client, service: Client): AttemptPageStor
     attempts: (assignmentId) => listMyAttempts(user, assignmentId),
     answers: (attemptId) => readSavedAnswers(user, attemptId),
     items: (ids) => readSetItems(service, ids),
+    // #335: the service role, since the student's client is no longer granted the column. Only
+    // ever asked for an assignment the student's own read has just returned.
+    record: (assignmentId) => readAssignmentRecord(service, assignmentId),
     autoSubmit: (filter) => autoSubmitExpired(autoSubmitStore(service), filter),
   };
 }

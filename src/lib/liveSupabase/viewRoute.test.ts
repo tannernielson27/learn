@@ -7,8 +7,10 @@ import {
   CONFORMANCE_WRONG,
 } from "@/lib/live/roomConformance";
 import type { SessionMode } from "@/lib/live";
-import type { Item } from "@/lib/ngn/schemas";
-import type { Database } from "@/lib/supabase/database.types";
+import { stagedCaseStudy, stagedEhr } from "@/lib/ngn/fixtures/chart-reveal";
+import { caseStudySchema, type Item } from "@/lib/ngn/schemas";
+import type { Database, Json } from "@/lib/supabase/database.types";
+import { forgetSessionRecords } from "@/lib/supabase/sessionRecord";
 import { secretStartingOrderSeed } from "@/lib/supabase/startingOrderSeed";
 import { participantFromCookie } from "./routeDeps";
 import { createFakeClient } from "./testing/fakeSupabase";
@@ -114,6 +116,7 @@ let logged: MockInstance<typeof console.error>;
 
 beforeEach(() => {
   forgetMissingViewFunction();
+  forgetSessionRecords();
   logged = vi.spyOn(console, "error").mockImplementation(() => {});
 });
 afterEach(() => {
@@ -320,7 +323,7 @@ describe("who may read the room (#407)", () => {
       depsFor(live),
     );
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ error: "You have not joined this session." });
+    expect(await response.json()).toEqual({ error: "You have not joined this live session." });
     expect(logged).not.toHaveBeenCalled();
   });
 
@@ -395,7 +398,7 @@ describe("when the database does not answer (#407)", () => {
     expect(response.headers.get("retry-after")).toBe("1");
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(await response.json()).toEqual({
-      error: "The session could not be reached. Try again.",
+      error: "The live session could not be reached. Try again.",
       retryable: true,
     });
     // Not answered by falling back either: a dropped call is not a missing function.
@@ -491,5 +494,117 @@ describe("when the database does not answer (#407)", () => {
       "[live] a database call failed",
       expect.objectContaining({ route: "/api/live/view", call: named, sessionId: live.sessionId }),
     );
+  });
+});
+
+describe("a case study's chart, cut to the room's step (#335)", () => {
+  const study = caseStudySchema.parse(stagedCaseStudy);
+  // Step 3's 0130 note, step 4's 0200 note, and the labs tab's text (hidden, locked, then open).
+  const NOTE_0130 = "0130: Pale and diaphoretic";
+  const NOTE_0200 = "0200: Second large-bore IV";
+  const LABS = "Serum hCG";
+
+  async function stagedRoom(sessionId: string) {
+    const live = createFakeRoom({
+      items: study.items,
+      code: "CHART5",
+      sessionId,
+      patientRecord: stagedEhr as unknown as Json,
+    });
+    const host = live.host();
+    await host.open();
+    const joined = await live.participant().join(live.code, { displayName: "Ada" });
+    await live.settle();
+    return { live, host, ada: joined.participantId };
+  }
+
+  /** The view as the phone is handed it, on the one call and on the four, which must agree. */
+  async function bytesBothWays(live: FakeRoom, who: string): Promise<string> {
+    live.stack.beforeViewMigration = false;
+    forgetMissingViewFunction();
+    const one = await viewOnce(live, who);
+    live.stack.beforeViewMigration = true;
+    const four = await viewOnce(live, who);
+    live.stack.beforeViewMigration = false;
+    forgetMissingViewFunction();
+    expect(one.calls).toEqual(["rpc:open_session_view"]);
+    expect(four.calls).toContain("rpc:begin_session_view");
+    expect(one.response.status).toBe(200);
+    expect(four.response.status).toBe(200);
+    const bytes = await one.response.text();
+    expect(await four.response.text()).toBe(bytes);
+    return bytes;
+  }
+
+  it("sends step 1's chart and nothing later, and each later part only at its own step", async () => {
+    const { live, host, ada } = await stagedRoom("00000000-0000-0000-0000-000000000335");
+
+    // The lobby is step 1: the 0115 note is there, nothing later is, and the labs are hidden.
+    const lobby = await bytesBothWays(live, ada);
+    expect(lobby).toContain("0115: Pain now 8/10");
+    for (const later of [NOTE_0130, NOTE_0200, LABS, "Lab Results"]) {
+      expect(lobby).not.toContain(later);
+    }
+
+    await host.start();
+    await live.settle();
+    const step1 = await bytesBothWays(live, ada);
+    expect(step1).toContain("0115: Pain now 8/10");
+    for (const later of [NOTE_0130, NOTE_0200, LABS, "Lab Results", "fromStep", "stepAccess"]) {
+      expect(step1).not.toContain(later);
+    }
+
+    // Step 2: the labs tab is named and locked, and its text is still not on the wire.
+    await host.advance();
+    await live.settle();
+    const step2 = await bytesBothWays(live, ada);
+    expect(step2).toContain('"title":"Lab Results","locked":true');
+    expect(step2).not.toContain(LABS);
+    expect(step2).not.toContain(NOTE_0130);
+
+    // The controls: step 3 opens the labs and brings the 0130 note, step 4 the 0200 note.
+    await host.advance();
+    await live.settle();
+    const step3 = await bytesBothWays(live, ada);
+    expect(step3).toContain(LABS);
+    expect(step3).toContain(NOTE_0130);
+    expect(step3).not.toContain(NOTE_0200);
+    await host.advance();
+    await live.settle();
+    expect(await bytesBothWays(live, ada)).toContain(NOTE_0200);
+  });
+
+  it("puts nothing later on the phone's wire, and a bank room's view has no record", async () => {
+    const { live, host } = await stagedRoom("00000000-0000-0000-0000-000000000336");
+    await host.start();
+    await live.settle();
+    const wire = live.stack.wire.map((entry) => entry.body).join("\n");
+    expect(wire).toContain("0115: Pain now 8/10");
+    expect(wire).not.toContain(NOTE_0130);
+    expect(wire).not.toContain(LABS);
+
+    const { live: bank, ada } = await startedRoom("instructor_paced");
+    const body = JSON.parse(await (await viewOnce(bank, ada)).response.text()) as object;
+    expect(body).not.toHaveProperty("record");
+  });
+
+  it("reads the record once per process, so the steady state is still one call", async () => {
+    const { live, host, ada } = await stagedRoom("00000000-0000-0000-0000-000000000337");
+    await host.start();
+    await live.settle();
+    forgetSessionRecords();
+    expect((await viewOnce(live, ada)).calls).toEqual(["rpc:open_session_view", "select:sessions"]);
+    expect((await viewOnce(live, ada)).calls).toEqual(["rpc:open_session_view"]);
+  });
+
+  it("answers 503 when the record cannot be read, rather than a chart without its step", async () => {
+    const { live, host, ada } = await stagedRoom("00000000-0000-0000-0000-000000000338");
+    await host.start();
+    await live.settle();
+    forgetSessionRecords();
+    live.stack.unreachable.add("select:sessions");
+    const { response } = await viewOnce(live, ada);
+    expect(response.status).toBe(503);
+    expect(logged).toHaveBeenCalled();
   });
 });

@@ -19,7 +19,7 @@ export interface JoinClassButtonProps {
 }
 
 export const ALREADY_INSTRUCTOR =
-  "You are already an instructor, so this account stays one and is not added to the class.";
+  "You are already a teacher, so this account stays one and is not added to the class.";
 
 const INITIAL: JoinClassState = { status: "idle" };
 
@@ -42,7 +42,7 @@ export function JoinClassButton({ action, classTitle, email }: JoinClassButtonPr
             href="/author"
             className="tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline"
           >
-            Go to your item banks
+            Go to your quizzes
           </Link>
         </div>
       ) : (

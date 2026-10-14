@@ -20,7 +20,7 @@ describe("InviteUnavailable", () => {
 
     expect(INVITE_UNAVAILABLE_TEXT).toMatch(/replaced/);
     expect(INVITE_UNAVAILABLE_TEXT).toMatch(/removed/);
-    expect(INVITE_UNAVAILABLE_TEXT).toMatch(/Ask your instructor for a new link\.$/);
+    expect(INVITE_UNAVAILABLE_TEXT).toMatch(/Ask your teacher for a new link\.$/);
     expect(screen.getByText(INVITE_UNAVAILABLE_TEXT)).toBeInTheDocument();
   });
 

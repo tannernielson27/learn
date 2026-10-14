@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { RecordLayout } from "@/components/ehr/RecordLayout";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { SetNav } from "@/components/question/SetNav";
 import { Button } from "@/components/ui/Button";
@@ -16,6 +17,7 @@ import {
   type SaveStatus,
 } from "@/lib/assignments/autosave";
 import { postAttemptAnswer } from "@/lib/assignments/saveClient";
+import type { EhrRecordView } from "@/lib/ngn/chartReveal";
 import type { AnyResponse } from "@/lib/ngn/schemas";
 import type { ScoreReveal } from "@/lib/ngn/submit";
 
@@ -26,6 +28,17 @@ export interface AttemptPlayerProps {
   attemptId: string;
   attemptNumber: number;
   items: readonly AttemptItemPayload[];
+  /**
+   * How many items the set has (#335). A case study is sent only the steps reached, so this can be
+   * more than `items.length`; the next step arrives when the page is read again, which this player
+   * asks for once the last step it holds has an answer saved. `items.length` when absent.
+   */
+  total?: number;
+  /**
+   * A case study's patient record at each step in `items`, step 1 first (#335), cut on the
+   * server. The step on screen shows its own; absent for a bank.
+   */
+  records?: readonly EhrRecordView[];
   /** The Server Action that scores and submits this attempt on the server. */
   submit: (attemptId: string) => Promise<SubmitAttemptResult>;
   /** Saves one answer. Defaults to `POST /api/assignments/save`; injected by tests. */
@@ -106,16 +119,25 @@ export function AttemptPlayer({
   attemptId,
   attemptNumber,
   items,
+  total = items.length,
+  records,
   submit,
   save = postAttemptAnswer,
 }: AttemptPlayerProps) {
   const router = useRouter();
   const [index, setIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, AnyResponse>>(() =>
-    Object.fromEntries(
+  const [typed, setAnswers] = useState<Record<string, AnyResponse>>({});
+  // What the server says was saved, under what this tab has typed since. A step that arrives on a
+  // later read of the page (#335) brings its own saved answer with it.
+  const answers: Record<string, AnyResponse> = {
+    ...Object.fromEntries(
       items.flatMap((entry) => (entry.saved ? [[entry.itemId, entry.saved] as const] : [])),
     ),
-  );
+    ...typed,
+  };
+  const last = items.at(-1);
+  const waitingForNext =
+    last !== undefined && items.length < total && answers[last.itemId] !== undefined;
   const [status, setStatus] = useState<{ status: SaveStatus; refusal?: AttemptRefusal }>({
     status: "idle",
   });
@@ -125,7 +147,9 @@ export function AttemptPlayer({
 
   const saver = useAutosaver(attemptId, save, (next, refusal) => {
     setStatus({ status: next, refusal });
-    if (next === "stopped") router.refresh();
+    // A refusal reads the page for what happened; a saved answer to the last step this page holds
+    // reads it for the next step and its chart, which the server sends only now (#335).
+    if (next === "stopped" || (next === "saved" && waitingForNext)) router.refresh();
   });
 
   if (items.length === 0) {
@@ -164,11 +188,14 @@ export function AttemptPlayer({
     }
   };
 
-  return (
+  // The chart of the step on screen (#335): going back a step shows that step's chart again.
+  const record = records?.[Math.min(at, records.length - 1)];
+
+  const page = (
     <div className="pb-28">
       <p className="eyebrow">{`Attempt ${attemptNumber}`}</p>
       <p data-testid="answered-count" className="tabular mt-2 text-sm text-ink-2">
-        {`${answered} of ${items.length} answered`}
+        {`${answered} of ${total} answered`}
       </p>
 
       <SetNav
@@ -203,6 +230,17 @@ export function AttemptPlayer({
           Next
         </Button>
       </div>
+      {/* #335: the next step is read from the server once this one's answer is saved. */}
+      {waitingForNext && at === items.length - 1 ? (
+        <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+          <p role="status" className="text-sm text-ink-2">
+            Loading the next question.
+          </p>
+          <Button variant="ghost" size="sm" onClick={() => router.refresh()}>
+            Try again
+          </Button>
+        </div>
+      ) : null}
 
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-surface-1/95 px-4 py-3 backdrop-blur-sm [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
         <div className="mx-auto flex max-w-3xl flex-col gap-2">
@@ -212,7 +250,7 @@ export function AttemptPlayer({
                 {`Submit attempt ${attemptNumber}?`}
               </h2>
               <p className="text-sm text-ink-2">
-                {`${answered} of ${items.length} answered. You cannot change answers after you submit.`}
+                {`${answered} of ${total} answered. You cannot change answers after you submit.`}
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -255,4 +293,6 @@ export function AttemptPlayer({
       </div>
     </div>
   );
+
+  return record === undefined ? page : <RecordLayout record={record}>{page}</RecordLayout>;
 }
