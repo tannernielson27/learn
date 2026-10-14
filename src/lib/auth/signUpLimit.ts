@@ -9,16 +9,18 @@ const FIVE_MINUTES = 5 * 60_000;
  * How many sign-ups may be tried through the site's form (#359, ADR 0009), in the three tiers the
  * password and the one-time code use (`createTryLimiter`):
  *
- * - **perCaller**, one caller across every address: 60 per five minutes. A class told to "go and
- *   sign up" arrives from one campus address (the lesson of #217), so this must admit a room; 60
- *   is a full class once. It is also the most addresses one caller can ask "does this have an
- *   account?" about in a window, which the form answers since the 2026-10-06 owner decision.
+ * - **perCaller**, one caller across every address: 150 per five minutes (#409, was 60). A class
+ *   told to "go and sign up" arrives from one campus address (the lesson of #217), so this must
+ *   admit a room: a computer lab of 100, with a retry for half of them. It is also the most
+ *   addresses one caller can ask "does this have an account?" about in a window, which the form
+ *   answers since the 2026-10-06 owner decision, each behind a solved CAPTCHA.
  * - **perPair**, one caller at one address: 5. A person needs one, or a few after a mistyped
  *   password; nobody but that caller can spend it.
  * - **perAddress**, every caller at one address: 10. An address signs up once. This is what many
  *   networks together may spend on one address, and its refusals are logged without the address.
  *
- * None of these bounds mail on its own: 60 a window is far past Resend's 100 a day. The CAPTCHA
+ * None of these bounds mail on its own: 150 a window is far past Resend's 100 a day; the welcome
+ * email's deployment-wide ceiling (`welcomeLimit.ts`) does. The CAPTCHA
  * (`captcha.ts`) is what makes each try cost something; these keep a caller that solves it from
  * running unbounded. They count tries made through this site only, which is why Supabase's own
  * sign-up endpoint must be closed (`enable_signup = false`, `pnpm golive:check`).
@@ -27,7 +29,7 @@ const FIVE_MINUTES = 5 * 60_000;
  * for every other limiter here; local runs and e2e are not locked out by their own address.
  */
 export const SIGN_UP_LIMITS = {
-  perCaller: { attempts: 60, windowMs: FIVE_MINUTES },
+  perCaller: { attempts: 150, windowMs: FIVE_MINUTES },
   perPair: { attempts: 5, windowMs: FIVE_MINUTES },
   perAddress: { attempts: 10, windowMs: FIVE_MINUTES },
 } as const satisfies Record<string, RateLimit>;

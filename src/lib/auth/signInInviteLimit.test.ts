@@ -85,7 +85,7 @@ describe("the per-class invite budget", () => {
     for (let call = 0; call < SIGN_IN_INVITE_LIMIT.attempts; call += 1) {
       await limiter.takeInvite(IP, CLASS_A);
     }
-    // Plain sign-in from the same address still has every one of its thirty.
+    // Plain sign-in from the same address still has every one of its own.
     for (let call = 0; call < SIGN_IN_LIMITS.email.attempts; call += 1) {
       expect(await limiter.take(IP, "email")).toEqual({ ok: true });
     }
@@ -161,8 +161,12 @@ describe("the chosen invite ceiling", () => {
     expect(SIGN_IN_INVITE_LIMIT.windowMs).toBe(SIGN_IN_LIMITS.email.windowMs);
   });
 
-  it("gives a sixty-student class two tries each, and is well above the plain per-IP budget", () => {
+  it("gives a sixty-student class two tries each, and never less than plain sign-in in all", () => {
     expect(SIGN_IN_INVITE_LIMIT.attempts).toBeGreaterThanOrEqual(120);
-    expect(SIGN_IN_INVITE_LIMIT.attempts).toBeGreaterThan(SIGN_IN_LIMITS.email.attempts);
+    // #409 raised the plain per-IP budget to 150 for a computer lab; a caller with a live link
+    // must not be worse off across its classes than one without.
+    expect(SIGN_IN_INVITE_TOTAL_LIMIT.attempts).toBeGreaterThanOrEqual(
+      SIGN_IN_LIMITS.email.attempts,
+    );
   });
 });

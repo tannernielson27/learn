@@ -7,6 +7,7 @@ import {
   type EmailCodeDeps,
 } from "./emailCode";
 import { SIGN_IN_EMAIL_ERROR } from "./signInForm";
+import { SIGN_IN_RATE_LIMITED } from "./signInRateLimit";
 
 function form(fields: Record<string, string>): FormData {
   const data = new FormData();
@@ -79,6 +80,19 @@ describe("verifyEmailCode (#306)", () => {
       verify: vi.fn(async () => ({ error: { status: 403, code: "otp_expired" } })),
     });
     expect(await verifyEmailCode(form(GOOD), d)).toEqual({ ok: false, error: EMAIL_CODE_FAILED });
+    expect(JSON.stringify(error.mock.calls)).not.toContain("school.edu");
+    error.mockRestore();
+  });
+
+  it("says to wait, not that the code was wrong, when Supabase is rate limiting (#409)", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const d = deps({
+      verify: vi.fn(async () => ({ error: { status: 429, code: "over_request_rate_limit" } })),
+    });
+    expect(await verifyEmailCode(form(GOOD), d)).toEqual({
+      ok: false,
+      error: SIGN_IN_RATE_LIMITED,
+    });
     expect(JSON.stringify(error.mock.calls)).not.toContain("school.edu");
     error.mockRestore();
   });
