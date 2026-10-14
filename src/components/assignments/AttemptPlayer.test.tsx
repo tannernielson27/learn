@@ -1,11 +1,13 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderersLoaded } from "@/components/question/testing/renderers";
 import type { AttemptItemPayload } from "@/lib/assignments/attemptView";
 import type { SaveResult } from "@/lib/assignments/autosave";
 import { FIXTURES } from "@/lib/ngn/fixtures";
-import { itemSchema, type AnyResponse, type Item } from "@/lib/ngn/schemas";
+import { recordsThrough } from "@/lib/ngn/chartReveal";
+import { stagedEhr } from "@/lib/ngn/fixtures/chart-reveal";
+import { ehrRecordSchema, itemSchema, type AnyResponse, type Item } from "@/lib/ngn/schemas";
 import { toKeylessItem } from "@/lib/ngn/submit";
 import { AttemptPlayer } from "./AttemptPlayer";
 
@@ -147,5 +149,45 @@ describe("AttemptPlayer (#208)", () => {
     await waitFor(() => expect(refresh).toHaveBeenCalled(), { timeout: 3000 });
     expect(screen.getByTestId("save-status")).toHaveTextContent("This assignment has closed.");
     expect(screen.getByRole("button", { name: "Submit assignment" })).toBeDisabled();
+  });
+});
+
+describe("AttemptPlayer, a case study's chart per step (#335)", () => {
+  const staged = ehrRecordSchema.parse(stagedEhr);
+  const labs = () =>
+    within(screen.getByRole("complementary", { name: "Patient record" })).queryByRole("tab", {
+      name: /^Lab Results/,
+    });
+
+  it("shows the chart of the step on screen, and reads the page again once the last step it holds is saved", async () => {
+    refresh.mockClear();
+    const items = payload({ type: "multiple_choice", optionId: "opt_a" });
+    const user = userEvent.setup();
+    render(
+      <AttemptPlayer
+        attemptId={ATTEMPT}
+        attemptNumber={1}
+        items={items}
+        total={6}
+        records={recordsThrough(staged, 2)}
+        submit={vi.fn(async () => undefined)}
+        save={async () => ({ ok: true })}
+      />,
+    );
+    await renderersLoaded();
+    expect(screen.getByTestId("answered-count")).toHaveTextContent("1 of 6 answered");
+    expect(labs()).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(labs()).toHaveAccessibleName("Lab Results Locked");
+    // The last step this page holds, answered: the page is read for step 3.
+    // An option of the question, not one of the patient record's times.
+    const second = SECOND as Extract<Item, { type: "multiple_choice" }>;
+    const label = second.content.options[0]?.label ?? "";
+    await user.click(screen.getByRole("radio", { name: new RegExp(label.slice(0, 20)) }));
+    await waitFor(() => expect(refresh).toHaveBeenCalled(), { timeout: 3000 });
+
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+    expect(labs()).toBeNull();
   });
 });

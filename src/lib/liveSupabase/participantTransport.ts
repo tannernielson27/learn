@@ -59,6 +59,7 @@ import type {
   SessionView,
   Unsubscribe,
 } from "@/lib/live/transport";
+import type { EhrRecordView } from "@/lib/ngn/chartReveal";
 import type { ChannelTokenSource } from "./channelTokenSource";
 import { rosterFrom, type PresenceEntry } from "./presence";
 import type { Database } from "@/lib/supabase/database.types";
@@ -115,6 +116,11 @@ export interface StudentView extends SessionView<ParticipantItem> {
    * student-paced and running or paused.
    */
   paced?: PacedItemPayload[];
+  /**
+   * A case-study room's patient record at the step the room is on (#335), as the server cut it.
+   * Absent for a room run from a bank.
+   */
+  record?: EhrRecordView;
 }
 
 /**
@@ -222,8 +228,8 @@ export function postgresChangesReady(payload: unknown): boolean {
  * purpose: it differs on every read and is only ever used for the clock offset.
  */
 function sameView(a: ParticipantViewPayload, b: ParticipantViewPayload): boolean {
-  const shown = ({ state, item, answered, revealed, set }: ParticipantViewPayload) =>
-    JSON.stringify([state, item, answered, revealed, set ?? null]);
+  const shown = ({ state, item, answered, revealed, set, record }: ParticipantViewPayload) =>
+    JSON.stringify([state, item, answered, revealed, set ?? null, record ?? null]);
   return shown(a) === shown(b);
 }
 
@@ -641,6 +647,7 @@ export function createSupabaseParticipant(
     ...(payload.set === undefined
       ? {}
       : { set: payload.set.map((entry) => entry.item), paced: payload.set }),
+    ...(payload.record === undefined ? {} : { record: payload.record }),
   });
 
   function snapshot(joined: ParticipantCredentials, view: StudentView): ParticipantSnapshot {

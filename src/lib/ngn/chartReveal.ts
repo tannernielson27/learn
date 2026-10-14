@@ -64,6 +64,12 @@ type VitalsRow = Extract<EhrBlock, { kind: "vitals" }>["rows"][number];
 const isStep = (step: number): step is CjmmStep =>
   Number.isInteger(step) && step >= FIRST_STEP && step <= CASE_STUDY_STEP_COUNT;
 
+function assertStep(step: number): asserts step is CjmmStep {
+  if (!isStep(step)) {
+    throw new RangeError(`a case study step is a whole number from 1 to ${CASE_STUDY_STEP_COUNT}`);
+  }
+}
+
 const revealedBy = (fromStep: number | undefined, step: CjmmStep): boolean =>
   (fromStep ?? FIRST_STEP) <= step;
 
@@ -163,9 +169,7 @@ function tabAtStep(
  * way shows the wrong chart.
  */
 export function recordAtStep(record: EhrRecord, step: CjmmStep): EhrRecordView {
-  if (!isStep(step)) {
-    throw new RangeError(`a case study step is a whole number from 1 to ${CASE_STUDY_STEP_COUNT}`);
-  }
+  assertStep(step);
   const shownTimes = record.timePoints.filter((point) => revealedBy(point.fromStep, step));
   const hiddenTimes = record.timePoints.filter((point) => !revealedBy(point.fromStep, step));
   const hiddenTimeIds = new Set(hiddenTimes.map((point) => point.id));
@@ -178,4 +182,49 @@ export function recordAtStep(record: EhrRecord, step: CjmmStep): EhrRecordView {
       .map((tab) => tabAtStep(tab, step, hiddenTimeIds, hiddenLabels))
       .filter((tab): tab is EhrTabView => tab !== null),
   };
+}
+
+/**
+ * The step a live room's chart is at, from the room's one-based position (#335). A room that has
+ * not started, or has no position, is at step 1: the chart a class opens with. A position past the
+ * sixth step reads as the sixth, which only a set longer than a case study could produce.
+ */
+export function stepAtPosition(position: number | null): CjmmStep {
+  if (position === null || !Number.isFinite(position) || position < FIRST_STEP) return FIRST_STEP;
+  return Math.min(Math.floor(position), CASE_STUDY_STEP_COUNT) as CjmmStep;
+}
+
+/**
+ * The furthest step a student working at their own pace has reached (#335): the step after the
+ * last of an unbroken run of answered steps from step 1, and never past the last step. `answered`
+ * is one flag per step, step 1 first. An answer to a later step with a gap before it reaches
+ * nothing, so a step's chart is only ever opened by answering every step before it.
+ */
+export function reachedStep(answered: readonly boolean[]): CjmmStep {
+  const run = answered.findIndex((done) => !done);
+  const leading = run === -1 ? answered.length : run;
+  return Math.min(leading + FIRST_STEP, CASE_STUDY_STEP_COUNT) as CjmmStep;
+}
+
+/**
+ * The record's view at each step from step 1 to `reached`, step 1 first (#335): every chart a
+ * student who has reached that step may go back to, and none they have not reached. Each is
+ * `recordAtStep`'s own, so nothing here decides what a view holds.
+ */
+export function recordsThrough(record: EhrRecord, reached: CjmmStep): EhrRecordView[] {
+  assertStep(reached);
+  return Array.from({ length: reached }, (_, index) =>
+    recordAtStep(record, (index + FIRST_STEP) as CjmmStep),
+  );
+}
+
+/** Whether any part of a record arrives later or is ever locked or hidden: what an author's marker says. */
+export function isStagedRecord(record: EhrRecord): boolean {
+  return (
+    record.timePoints.some((point) => point.fromStep !== undefined) ||
+    record.tabs.some(
+      (tab) =>
+        tab.stepAccess !== undefined || tab.blocks.some((block) => block.fromStep !== undefined),
+    )
+  );
 }

@@ -1,5 +1,5 @@
 import { BlockList, isIP } from "node:net";
-import { expect, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, type APIRequestContext, type APIResponse, type Page } from "@playwright/test";
 import { latestSignInLink, openSignInLink } from "./mailbox";
 
 // The local stack's API gateway, next to the test mailbox in mailbox.ts (see supabase/config.toml).
@@ -286,6 +286,22 @@ export async function rpcAsUser<T>(
   });
   if (!called.ok()) throw new Error(`${fn} failed: ${called.status()} ${await called.text()}`);
   return (await called.json()) as T;
+}
+
+/**
+ * A select as the user whose access token this is, through the publishable key, the way their own
+ * browser's client would ask (#335 checks a column the student is not granted). Returns the raw
+ * response so a refusal can be asserted.
+ */
+export async function selectAsUser(
+  request: APIRequestContext,
+  accessToken: string,
+  table: string,
+  query: string,
+): Promise<APIResponse> {
+  return request.get(`${localStackUrl()}/rest/v1/${table}?${query}`, {
+    headers: { apikey: localPublishableKey(), Authorization: `Bearer ${accessToken}` },
+  });
 }
 
 /** An instructor account that exists but has not signed in yet, and the org it was put in. */

@@ -155,7 +155,8 @@ begin
     select c.relname from pg_class c join pg_namespace ns on ns.oid = c.relnamespace
     where ns.nspname = 'public' and c.relkind in ('r', 'v', 'm', 'p') and c.relname <> 'profiles'
   loop
-    if has_table_privilege(format('public.%I', t.relname), 'select') then
+    -- Any column (#335): assignments is granted by column and must still be counted.
+    if has_any_column_privilege(format('public.%I', t.relname), 'select') then
       execute format('select count(*) from public.%I', t.relname) into n;
       total := total + n;
     end if;

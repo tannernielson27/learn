@@ -32,7 +32,7 @@ export async function assignmentReportCsvDownload(
 
   const author = await authorForRoute();
   if (author.status === "signed_out") return refuse(401, "Sign in to download the report.");
-  if (author.status === "forbidden") return refuse(403, "Only instructors can download reports.");
+  if (author.status === "forbidden") return refuse(403, "Only teachers can download reports.");
 
   let loaded: Awaited<ReturnType<typeof loadAssignmentReport>>;
   try {
