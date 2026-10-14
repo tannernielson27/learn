@@ -255,9 +255,7 @@ test("an outside instructor onboards cold and runs a live session a phone answer
 
   // Every Get started step is done, so the author home no longer shows the checklist.
   await page.goto("/author");
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Item banks", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Library", exact: true })).toBeVisible();
   await expect(checklist).toHaveCount(0);
   await shoot(page, testInfo, "11-author-home-done");
 });

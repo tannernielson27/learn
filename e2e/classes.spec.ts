@@ -168,9 +168,7 @@ test("an instructor who opens an invite link is told so and stays an instructor"
   await expectNoAxeViolations(page);
 
   await page.goto("/author");
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Item banks", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Library", exact: true })).toBeVisible();
 });
 
 test("a student joins with an email and a password, with no email to wait for", async ({

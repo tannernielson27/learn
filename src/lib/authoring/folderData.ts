@@ -9,6 +9,7 @@ import {
   folderWriteError,
   MAX_FOLDER_DEPTH,
   moveSummary,
+  NOT_IN_A_FOLDER,
   type FolderRow,
 } from "./folders";
 
@@ -163,7 +164,7 @@ export async function moveToFolder(
   move: FolderMove,
 ): Promise<FolderWrite<{ message: string }>> {
   // The destination's path names it in the summary; an unknown folder is refused before moving.
-  let destination = "Unfiled";
+  let destination = NOT_IN_A_FOLDER;
   if (move.folderId) {
     let folders: FolderRow[];
     try {

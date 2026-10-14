@@ -101,7 +101,7 @@ export function parseImport(text: string): ParsedImport {
     const errors: string[] = [];
     const items: Item[] = [];
     entries.forEach((entry, index) => {
-      const label = `Item ${index + 1}`;
+      const label = `Question ${index + 1}`;
       if (!withinItemSizeLimit(entry)) {
         errors.push(`${label} is too large.`);
         return;
@@ -171,6 +171,6 @@ export function importSummary(parsed: ValidImport): string {
     return `Imported the case study "${parsed.caseStudy.title}" and its six steps as drafts.`;
   }
   return parsed.items.length === 1
-    ? "Imported 1 item as a draft."
-    : `Imported ${parsed.items.length} items as drafts.`;
+    ? "Imported 1 question as a draft."
+    : `Imported ${parsed.items.length} questions as drafts.`;
 }

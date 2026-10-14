@@ -49,8 +49,7 @@ export function AssignmentList({
       <EmptyState
         level={3}
         heading="No assignments yet"
-        body="Assign a bank or a case study to this class from its page."
-        action={{ href: "/author", label: "Go to your item banks" }}
+        action={{ href: "/author", label: "Assign from your library" }}
       />
     );
   }

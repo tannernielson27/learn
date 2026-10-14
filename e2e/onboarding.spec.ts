@@ -116,7 +116,7 @@ test("a new instructor imports the sample from Get started, then hides it", asyn
     checklist.getByRole("button", { name: "Import the sample bank", exact: true }),
   ).toHaveCount(0);
   await expect(
-    checklist.getByRole("link", { name: "Open the sample bank", exact: true }),
+    checklist.getByRole("link", { name: "Open the sample quiz", exact: true }),
   ).toHaveAttribute("href", `/author/banks/${bankId}`);
   await expectNoAxeViolations(page);
   await page.screenshot({
@@ -129,9 +129,7 @@ test("a new instructor imports the sample from Get started, then hides it", asyn
   await page.keyboard.press("Enter");
   await expect(checklist).toHaveCount(0);
   await page.reload();
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Item banks", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Library", exact: true })).toBeVisible();
   await expect(checklist).toHaveCount(0);
 });
 
@@ -274,9 +272,7 @@ test("an instructor in the shared org is never shown the teacher welcome", async
   request,
 }, testInfo) => {
   await signInAsNewAuthor(page, request, `no-welcome-${testInfo.project.name}`);
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Item banks", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Library", exact: true })).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 

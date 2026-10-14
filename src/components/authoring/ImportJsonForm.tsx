@@ -11,7 +11,7 @@ import {
   type FileReport,
   type ImportStep,
 } from "@/lib/authoring/bulkImport";
-import { folderOptions, UNFILED, type FolderRow } from "@/lib/authoring/folders";
+import { folderOptions, NOT_IN_A_FOLDER, UNFILED, type FolderRow } from "@/lib/authoring/folders";
 import { IMPORT_MAX_ITEMS } from "@/lib/authoring/importLimits";
 
 export interface ImportJsonFormProps {
@@ -138,7 +138,7 @@ export function ImportJsonForm({ action, folders, defaultFolderId }: ImportJsonF
           defaultValue={defaultFolderId ?? UNFILED}
           className="tap-target max-w-full rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 hover:border-line-strong"
         >
-          <option value={UNFILED}>Unfiled</option>
+          <option value={UNFILED}>{NOT_IN_A_FOLDER}</option>
           {options.map((option) => (
             <option key={option.id} value={option.id}>
               {option.path}
@@ -147,9 +147,9 @@ export function ImportJsonForm({ action, folders, defaultFolderId }: ImportJsonF
         </select>
       </div>
       <p id={`${id}-hint`} className="text-sm text-ink-2">
-        Items and case studies arrive as new drafts. Nothing already in this bank is changed. Choose
-        up to {IMPORT_MAX_FILES} files. Each file imports whole or not at all: up to{" "}
-        {IMPORT_MAX_ITEMS} items or one case study, at most 800 KB.
+        Everything arrives as a new draft, and a file imports whole or not at all. Up to{" "}
+        {IMPORT_MAX_FILES} files, each at most 800 KB with {IMPORT_MAX_ITEMS} questions or one case
+        study.
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={running !== null}>

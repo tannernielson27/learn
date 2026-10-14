@@ -8,25 +8,25 @@ const banks = [
 ];
 
 describe("BankList", () => {
-  it("links each bank by name, with its size and last edit", () => {
+  it("links each quiz by name, with its size and last edit", () => {
     render(<BankList banks={banks} />);
     const cardiac = screen.getByRole("link", { name: /Cardiac/ });
     expect(cardiac).toHaveAttribute("href", "/author/banks/b1");
-    expect(within(cardiac).getByText("12 items")).toBeInTheDocument();
+    expect(within(cardiac).getByText("12 questions")).toBeInTheDocument();
     expect(within(cardiac).getByText("Edited Sep 12, 2026")).toBeInTheDocument();
     expect(
-      within(screen.getByRole("link", { name: /Respiratory/ })).getByText("1 item"),
+      within(screen.getByRole("link", { name: /Respiratory/ })).getByText("1 question"),
     ).toBeInTheDocument();
   });
 
-  it("lists banks in a named list", () => {
+  it("lists quizzes in a named list", () => {
     render(<BankList banks={banks} />);
     expect(
-      within(screen.getByRole("list", { name: "Item banks" })).getAllByRole("listitem"),
+      within(screen.getByRole("list", { name: "Quizzes" })).getAllByRole("listitem"),
     ).toHaveLength(2);
   });
 
-  it("marks a bank shared for practice with the classes' names (#240)", () => {
+  it("marks a quiz shared for practice with the classes' names (#240)", () => {
     render(<BankList banks={banks} sharedWith={new Map([["b1", ["NUR 310", "NUR 320"]]])} />);
     const cardiac = screen.getByRole("link", { name: /Cardiac/ });
     expect(
@@ -36,16 +36,15 @@ describe("BankList", () => {
     expect(within(respiratory).queryByText(/Shared for practice/)).toBeNull();
   });
 
-  it("says what to do when there are no banks", () => {
-    render(
-      <BankList banks={[]} emptyAction={{ href: "#new-bank-heading", label: "Create a bank" }} />,
+  it("says so in one line, with the way to a new quiz, when there are no quizzes", () => {
+    const { container } = render(
+      <BankList banks={[]} emptyAction={{ href: "#new-bank-heading", label: "New quiz" }} />,
     );
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { level: 2, name: "No item banks yet" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Create one to start writing items.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Create a bank" })).toHaveAttribute(
+    expect(screen.getByRole("heading", { level: 2, name: "No quizzes yet" })).toBeInTheDocument();
+    // One line and one action (#412): no sentence under the heading.
+    expect(container.querySelector("p")).toBeNull();
+    expect(screen.getByRole("link", { name: "New quiz" })).toHaveAttribute(
       "href",
       "#new-bank-heading",
     );

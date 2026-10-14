@@ -32,7 +32,7 @@ export function BankSearchForm({ bankId, view, filter }: BankSearchFormProps) {
   return (
     <form
       role="search"
-      aria-label="Search items"
+      aria-label="Search questions"
       action={`/author/banks/${bankId}`}
       method="get"
       className="flex flex-col gap-3"
@@ -45,11 +45,10 @@ export function BankSearchForm({ bankId, view, filter }: BankSearchFormProps) {
 
       <div className="flex flex-col gap-2">
         <label htmlFor="bank-search-q" className="text-sm font-medium text-ink-1">
-          Search items
+          Search questions
         </label>
         <p id="bank-search-hint" className="text-sm text-ink-2">
-          Finds words in the stem, options and rationale. Use quotes for a phrase and a minus to
-          leave a word out.
+          Quotes find a phrase; a minus leaves a word out.
         </p>
         <input
           id="bank-search-q"

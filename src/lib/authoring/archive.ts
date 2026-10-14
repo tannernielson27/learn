@@ -8,12 +8,12 @@ type Client = SupabaseClient<Database>;
 export type ArchiveResult = { ok: true } | { ok: false; error: string };
 
 export const ARCHIVE_ERRORS = {
-  itemGone: "This item no longer exists.",
+  itemGone: "This question no longer exists.",
   caseStudyGone: "This case study no longer exists.",
   failed: "That could not be done. Try again.",
-  itemArchived: "This item is archived. Restore it before you change or publish it.",
+  itemArchived: "This question is archived. Restore it before you change or publish it.",
   caseStudyArchived: "This case study is archived. Restore it before you change or publish it.",
-  stepArchived: "That item is archived. Restore it before you place it as a step.",
+  stepArchived: "That question is archived. Restore it before you place it as a step.",
 } as const;
 
 interface DbError {
@@ -31,9 +31,9 @@ export function isArchivedError(error: DbError | null): boolean {
 export function stepArchiveRefusal(caseTitle: string | undefined, position: string | undefined) {
   const where =
     caseTitle && position
-      ? `This item is step ${position} of the case study "${caseTitle}".`
-      : "This item is a step in a case study.";
-  return `${where} Archive the case study instead, or give that step another item first.`;
+      ? `This question is step ${position} of the case study "${caseTitle}".`
+      : "This question is a step in a case study.";
+  return `${where} Archive the case study instead, or give that step another question first.`;
 }
 
 type ArchiveFunction =

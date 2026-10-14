@@ -61,8 +61,9 @@ describe("AssignmentList", () => {
     expect(
       screen.getByRole("heading", { level: 3, name: "No assignments yet" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/Assign a bank or a case study/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Go to your item banks" })).toHaveAttribute(
+    // One line and one action (#412): no sentence under the heading.
+    expect(screen.queryByText(/Assign a /)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Assign from your library" })).toHaveAttribute(
       "href",
       "/author",
     );

@@ -1,6 +1,6 @@
 export type BankFormResult = { ok: true; name: string } | { ok: false; error: string };
 
-export const BANK_NAME_ERROR = "Give the bank a name of up to 120 characters.";
+export const BANK_NAME_ERROR = "Give the quiz a name of up to 120 characters.";
 
 /** Matches the `item_banks.name` check constraint: 1 to 120 characters. */
 const MAX_NAME_LENGTH = 120;

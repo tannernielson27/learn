@@ -19,7 +19,7 @@ const INITIAL: BankFormState = { status: "idle" };
 export function CreateBankForm({
   action,
   initialName = "",
-  submitLabel = "Create bank",
+  submitLabel = "Create quiz",
 }: CreateBankFormProps) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
   // Controlled, so React's reset after an action never wipes what was typed.
@@ -36,7 +36,7 @@ export function CreateBankForm({
     <form action={formAction} className="flex flex-col gap-3 sm:max-w-md">
       <div className="flex flex-col gap-2">
         <label htmlFor={`${id}-name`} className="text-sm font-medium text-ink-1">
-          Bank name
+          Quiz name
         </label>
         <input
           ref={inputRef}

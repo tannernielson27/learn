@@ -11,15 +11,15 @@ import {
 } from "./bankSearch";
 
 describe("searchSummary", () => {
-  it("says how many items match, and what they match", () => {
+  it("says how many questions match, and what they match", () => {
     expect(searchSummary(6, { query: "lactate", type: null, status: null })).toBe(
-      "6 items match: “lactate”.",
+      "6 questions match: “lactate”.",
     );
     expect(
       searchSummary(1, { query: "lactate", type: "matrix_multiple_choice", status: "published" }),
-    ).toBe("1 item matches: “lactate”, Matrix Multiple Choice, Published.");
+    ).toBe("1 question matches: “lactate”, Matrix Multiple Choice, Published.");
     expect(searchSummary(0, { query: "", type: null, status: "draft" })).toBe(
-      "0 items match: Draft.",
+      "0 questions match: Draft.",
     );
   });
 });

@@ -30,7 +30,7 @@ describe("the workspace page's words", () => {
     expect(memberRoleLabel("admin")).toBe("Admin");
   });
 
-  it("counts members against the cap", () => {
-    expect(memberCountLabel(3)).toBe("3 of 10 members");
+  it("counts teachers against the cap", () => {
+    expect(memberCountLabel(3)).toBe("3 of 10 teachers");
   });
 });

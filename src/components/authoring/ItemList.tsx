@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { EmptyState, type EmptyStateContent } from "@/components/ui/EmptyState";
+import { NO_QUESTIONS_YET } from "@/lib/authoring/bankEmpty";
 import type { ItemSummary } from "@/lib/authoring/banks";
 import { formatEdited } from "@/lib/authoring/format";
 import { excerptSegments } from "@/lib/authoring/highlight";
@@ -11,7 +12,7 @@ import { SelectForMove } from "./SelectForMove";
 
 export interface ItemListProps {
   items: readonly ItemSummary[];
-  /** What an empty list says, under the page's Items h2; defaults to the empty-bank hint. */
+  /** What an empty list says, under the page's Questions h2; defaults to the empty quiz's line. */
   empty?: EmptyStateContent;
   /** The id of a move form: each item gets a checkbox that joins it. Without one, no selection. */
   moveFormId?: string;
@@ -47,18 +48,21 @@ function TagChips({ labels }: { labels: readonly string[] }) {
   );
 }
 
-const EMPTY_BANK: EmptyStateContent = {
-  heading: "No items in this bank yet",
-  body: "Choose New item to write one.",
-};
+/** What a question with no text yet is called in the list and in its controls' names. */
+const UNTITLED = "Untitled question";
 
-export function ItemList({ items, empty = EMPTY_BANK, moveFormId, restoreAction }: ItemListProps) {
+export function ItemList({
+  items,
+  empty = NO_QUESTIONS_YET,
+  moveFormId,
+  restoreAction,
+}: ItemListProps) {
   if (items.length === 0) {
     return <EmptyState level={3} {...empty} />;
   }
 
   return (
-    <ul aria-label="Items" className="flex flex-col divide-y divide-line border-y border-line">
+    <ul aria-label="Questions" className="flex flex-col divide-y divide-line border-y border-line">
       {items.map((item) => (
         <li key={item.id} className="flex items-stretch">
           {moveFormId ? (
@@ -66,7 +70,7 @@ export function ItemList({ items, empty = EMPTY_BANK, moveFormId, restoreAction 
               formId={moveFormId}
               name="item"
               value={item.id}
-              label={`Select ${item.stemExcerpt || "Untitled item"}`}
+              label={`Select ${item.stemExcerpt || UNTITLED}`}
             />
           ) : null}
           <Link
@@ -77,12 +81,12 @@ export function ItemList({ items, empty = EMPTY_BANK, moveFormId, restoreAction 
               {item.match?.stem ? (
                 <Highlighted segments={excerptSegments(item.match.stem)} />
               ) : (
-                item.stemExcerpt || "Untitled item"
+                item.stemExcerpt || UNTITLED
               )}
             </span>
             {item.match?.text ? (
               <span className="text-sm break-words text-ink-2">
-                In the item: <Highlighted segments={item.match.text} />
+                In the question: <Highlighted segments={item.match.text} />
               </span>
             ) : null}
             {item.match?.rationale ? (
@@ -108,7 +112,7 @@ export function ItemList({ items, empty = EMPTY_BANK, moveFormId, restoreAction 
           {item.status === "published" ? (
             <Link
               href={`/author/items/${item.id}/play`}
-              aria-label={`Play ${item.stemExcerpt || "Untitled item"}`}
+              aria-label={`Play ${item.stemExcerpt || UNTITLED}`}
               className="tap-target flex shrink-0 items-center px-4 text-sm font-medium text-accent-ink transition-colors duration-fast hover:bg-surface-2"
             >
               Play
@@ -119,7 +123,7 @@ export function ItemList({ items, empty = EMPTY_BANK, moveFormId, restoreAction 
               <ArchiveButton
                 action={restoreAction(item.id)}
                 label="Restore"
-                accessibleName={`Restore ${item.stemExcerpt || "Untitled item"}`}
+                accessibleName={`Restore ${item.stemExcerpt || UNTITLED}`}
               />
             </div>
           ) : null}

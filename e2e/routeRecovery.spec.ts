@@ -39,11 +39,11 @@ test("a student whose room fails to render rejoins it, as the same participant, 
   await signInAsNewAuthor(page, request, testInfo.project.name);
 
   const bankName = `Recovery ${testInfo.project.name} ${Date.now()}`;
-  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank", exact: true }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
-  await page.getByRole("link", { name: "New item", exact: true }).click();
+  await page.getByRole("link", { name: "New question", exact: true }).click();
   await page.getByRole("button", { name: "Multiple Choice", exact: true }).click();
   await fillMultipleChoice(
     page,

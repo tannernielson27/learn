@@ -23,17 +23,17 @@ test("an instructor starts a session from a bank, sees a six-character code, and
   await signInAsNewAuthor(page, request, testInfo.project.name);
 
   const bankName = `Live ${testInfo.project.name} ${Date.now()}`;
-  await page.getByRole("textbox", { name: "Bank name" }).fill(bankName);
-  await page.getByRole("button", { name: "Create bank" }).click();
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
   // A bank with nothing published cannot be run, and says so rather than failing quietly.
   await page.getByRole("button", { name: "Start a live session", exact: true }).click();
   await expect(
-    page.getByText("Publish an item in this bank before starting a live session."),
+    page.getByText("Publish a question in this quiz before starting a live session."),
   ).toBeVisible();
 
-  await page.getByRole("link", { name: "New item" }).click();
+  await page.getByRole("link", { name: "New question" }).click();
   await page.getByRole("button", { name: "Multiple Choice", exact: true }).click();
   // A new item starts with four blank option fields and every label is required, so filling only
   // two leaves the item invalid on options C and D. publishOpenItem asserts the editor lists no

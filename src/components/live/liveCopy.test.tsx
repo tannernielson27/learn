@@ -75,7 +75,7 @@ import LiveSessionPage, { metadata as liveMeta } from "@/app/live/[sessionId]/pa
 import ReportError from "@/app/live/[sessionId]/report/error";
 import SessionReportPage, { metadata as reportMeta } from "@/app/live/[sessionId]/report/page";
 import PlayError from "@/app/play/[sessionId]/error";
-import { findRetiredTerms, readText, visibleText, wordCount } from "@/lib/copy/retiredTerms";
+import { findRetiredTerms, readableStrings } from "@/lib/copy/retiredTerms";
 import {
   LIVE_REFUSALS,
   LiveSessionError,
@@ -117,12 +117,24 @@ const LIVE_RETIRED: readonly [string, RegExp][] = [
 
 /** Every retired word in what a person reads or hears of `html`. Empty when it is clean. */
 function retiredIn(html: string): string[] {
-  const read = readText(html);
-  const flat = read.toLowerCase().replace(/\s+/g, " ");
+  const flat = readableStrings(html).join(" | ").toLowerCase().replace(/\s+/g, " ");
   return [
-    ...findRetiredTerms(read),
+    ...findRetiredTerms(html).map((hit) => `"${hit.found}" (say: ${hit.say}) in "${hit.context}"`),
     ...LIVE_RETIRED.filter(([, pattern]) => pattern.test(flat)).map(([phrase]) => `"${phrase}"`),
   ];
+}
+
+/** The text of the HTML, without the read attributes: what the word counts on the PR count. */
+function visibleText(html: string): string {
+  const [text] = readableStrings(
+    html.replace(/\s(?:aria-label|title|placeholder|alt)="[^"]*"/gi, ""),
+  );
+  return text ?? "";
+}
+
+/** Runs of non-space characters that hold a letter or a digit. */
+function wordCount(text: string): number {
+  return text.split(/\s+/).filter((word) => /[\p{L}\p{N}]/u.test(word)).length;
 }
 
 const SESSION_ID = "00000000-0000-4000-8000-0000000414aa";

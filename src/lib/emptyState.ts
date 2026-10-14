@@ -4,10 +4,10 @@ export interface EmptyStateAction {
   readonly label: string;
 }
 
-/** What an empty list says: what it is for, and what to do next (#266). */
+/** What an empty list says: one line, and what to do next (#266, #412). */
 export interface EmptyStateContent {
   readonly heading: string;
-  /** One sentence naming the next step. */
-  readonly body: string;
+  /** One more sentence, only where the heading and the action do not say enough. */
+  readonly body?: string;
   readonly action?: EmptyStateAction;
 }
