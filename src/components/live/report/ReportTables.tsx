@@ -91,12 +91,12 @@ export function ItemTable({
     ? ["Step", "Answered", "Correct", "Mean", "Mean %", "Full", "Partial", "None"]
     : ["Step", "Answered", "Mean", "Mean %", "Full", "Partial", "None"];
   return (
-    <ScrollRegion label="Results by item">
+    <ScrollRegion label="Results by question">
       <table className="tabular w-full border-collapse text-sm">
         <thead>
           <tr>
             <th scope="col" className={`${HEAD} sticky left-0 bg-surface-1 text-left`}>
-              Item
+              Question
             </th>
             {heads.map((head) => (
               <th key={head} scope="col" className={`${HEAD} text-right`}>
@@ -135,14 +135,14 @@ export function ItemTable({
 
 export function StepTable({ steps }: { steps: readonly StepRow[] }) {
   return (
-    <ScrollRegion label="Results by CJMM step">
+    <ScrollRegion label="Results by clinical judgment step">
       <table className="tabular w-full border-collapse text-sm">
         <thead>
           <tr>
             <th scope="col" className={`${HEAD} sticky left-0 bg-surface-1 text-left`}>
-              CJMM step
+              Clinical judgment step
             </th>
-            {["Items", "Answers", "Mean %"].map((head) => (
+            {["Questions", "Answers", "Mean %"].map((head) => (
               <th key={head} scope="col" className={`${HEAD} text-right`}>
                 {head}
               </th>

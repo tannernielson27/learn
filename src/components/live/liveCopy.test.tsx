@@ -281,7 +281,13 @@ const pacedEntry = (over: object = {}) => ({
 
 const html = async (element: ReactElement) => renderToStaticMarkup(element);
 const boundary = (Boundary: typeof HostError) =>
-  html(<Boundary error={Object.assign(new Error("x"), { digest: "4031337" })} retry={() => {}} />);
+  html(
+    <Boundary
+      error={Object.assign(new Error("x"), { digest: "4031337" })}
+      retry={() => {}}
+      reset={() => {}}
+    />,
+  );
 
 const report = buildSessionReport(REPORT_FIXTURE);
 const reportView = (view: "students" | "items" | "steps", data = report) =>

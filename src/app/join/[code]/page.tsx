@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { isSessionCode, normalizeSessionCode } from "@/lib/live/sessionCode";
 import { JoinScreen } from "../JoinScreen";
 
-export const metadata: Metadata = { title: "Join a session" };
+export const metadata: Metadata = { title: "Join a live session" };
 
 /**
  * Where the QR code on the host's screen points. The code is filled in, not acted on: nothing is

@@ -8,7 +8,7 @@ import { buildSessionReport } from "@/lib/live/report";
 import { parseReportView, reportPath, SESSIONS_PATH } from "@/lib/live/reportFormat";
 import { readSessionReport } from "@/lib/supabase/sessionReport";
 
-export const metadata: Metadata = { title: "Session report" };
+export const metadata: Metadata = { title: "Live session report" };
 
 /**
  * An ended session's report (#186), for any author in the session's org.
@@ -46,19 +46,19 @@ export default async function SessionReportPage({
               href={SESSIONS_PATH}
               className="tap-target inline-flex items-center hover:text-ink-1"
             >
-              Back to sessions
+              Back to live sessions
             </Link>
           </p>
           <h1 className="font-read text-3xl break-words text-ink-1">{read.session.title}</h1>
           <p className="mt-4 text-ink-2">
-            This session is still open. Its report is ready once the session has ended.
+            This live session is still open. Its report is ready when it ends.
           </p>
           <p className="mt-4">
             <Link
               href={`/live/${sessionId}`}
               className="tap-target inline-flex items-center font-medium text-accent-ink hover:underline"
             >
-              Open the session console
+              Open the live session
             </Link>
           </p>
         </>

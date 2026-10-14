@@ -12,45 +12,45 @@ import { SUBMIT_ERRORS } from "@/lib/ngn/submitErrors";
 
 /**
  * The refusal codes, each with the sentence a person should be shown. Messages never name
- * internals: "this session is paused", not "status !== running". The codes are what code branches
+ * internals: "this live session is paused", not "status !== running". The codes are what code branches
  * on; the sentences are what a console or a player renders.
  */
 export const LIVE_REFUSALS = {
   /** The session has ended. Nothing works on it again, ever (#128's trigger agrees). */
-  not_open: "This session has ended.",
+  not_open: "This live session has ended.",
   /** Still in the lobby: there is no item to be on, so nothing can be revealed or answered. */
-  not_started: "This session has not started yet.",
-  already_started: "This session has already started.",
+  not_started: "This live session has not started yet.",
+  already_started: "This live session has already started.",
   /** A session with nothing to run would sit on an item that does not exist. */
-  empty_set: "This session has no items to run.",
-  past_end: "That was the last item.",
+  empty_set: "This live session has no questions.",
+  past_end: "That was the last question.",
   /** A jump (#183) to a position the set does not have. */
-  out_of_range: "There is no item at that position.",
+  out_of_range: "There is no question at that position.",
   /** A jump (#183) to the item the room is already on: nothing would move. */
-  same_item: "The session is already on that item.",
-  already_revealed: "The answer to this item is already showing.",
-  not_running: "This session is not running.",
-  not_paused: "This session is not paused.",
-  paused: "This session is paused.",
+  same_item: "The live session is already on that question.",
+  already_revealed: "The answer to this question is already showing.",
+  not_running: "This live session is not running.",
+  not_paused: "This live session is not paused.",
+  paused: "This live session is paused.",
   /** The room moved on between the student opening the item and answering it. */
-  wrong_item: "The session has moved on to another item.",
+  wrong_item: "The live session has moved on to another question.",
   /**
    * The item's timer ran out (#182), and the two seconds allowed for latency after it. Refused by
    * the server, whose clock is the only one that counts, never by a phone's.
    */
   time_up: "Time is up.",
   /** "Add 15 seconds" or "Stop timer" on an item with no clock running or frozen on it. */
-  no_timer: "This item has no timer running.",
+  no_timer: "This question has no timer running.",
   /** A per-item time the console does not offer. */
   bad_timer: "Choose one of the times offered for the timer.",
   /**
    * Next item, a jump or a timer button in a student-paced room (#185): each phone moves through
    * the set by itself, so there is no room-wide item to move or to time.
    */
-  student_paced: "Students work through this set at their own pace.",
-  unknown_code: "No open session has that code.",
-  not_joined: "You have not joined this session.",
-  already_answered: "You have already answered this item.",
+  student_paced: "Students work through this quiz at their own pace.",
+  unknown_code: "No open live session has that join code.",
+  not_joined: "You have not joined this live session.",
+  already_answered: "You have already answered this question.",
   no_name: "Enter a name so the class can see who answered.",
   name_too_long: "That name is too long. Use 60 characters or fewer.",
   /**

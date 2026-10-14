@@ -12,8 +12,7 @@ const STATUS_LABELS: Record<SessionStatus, string> = {
   ended: "Ended",
 };
 
-const participantLabel = (count: number) =>
-  count === 1 ? "1 participant" : `${count} participants`;
+const participantLabel = (count: number) => (count === 1 ? "1 student" : `${count} students`);
 
 export interface SessionListProps {
   sessions: readonly SessionSummary[];
@@ -30,8 +29,8 @@ export function SessionList({ sessions }: SessionListProps) {
       <EmptyState
         level={2}
         heading="No live sessions yet"
-        body="Start one from a bank, and its report will be listed here once it ends."
-        action={{ href: "/author", label: "Go to your item banks" }}
+        body="Start one from a quiz."
+        action={{ href: "/author", label: "Go to your quizzes" }}
       />
     );
   }
