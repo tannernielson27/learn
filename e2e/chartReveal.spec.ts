@@ -8,7 +8,10 @@ import {
   type Page,
   type TestInfo,
 } from "@playwright/test";
+import { FIXTURES } from "../src/lib/ngn/fixtures";
 import { stagedEhr } from "../src/lib/ngn/fixtures/chart-reveal";
+import { itemSchema } from "../src/lib/ngn/schemas";
+import { toItemRow } from "../src/lib/supabase/itemRows";
 import { bytesOf, wireText } from "./bytes";
 import { latestSignInLink, openSignInLink } from "./mailbox";
 import {
@@ -48,29 +51,21 @@ function expectPresent(bytes: string, texts: readonly string[]): void {
   for (const text of texts) expect(bytes, `"${text}" should be sent now`).toContain(text);
 }
 
-/** A published multiple choice for one step of the case. Fictional content. */
+const stepItemId = (stamp: string, step: number) =>
+  `chart_e2e_${stamp}_${step}`.replace(/[^A-Za-z0-9_]/g, "_");
+
+/**
+ * A published multiple choice for one step of the case: the canonical fixture, validated whole,
+ * with its own id and stem, so the room can play it. Fictional content.
+ */
 function stepRow(orgId: string, bankId: string, step: number, stamp: string) {
-  return {
-    org_id: orgId,
-    bank_id: bankId,
-    type: "multiple_choice",
-    cjmm_step: step,
-    status: "published",
-    content: {
-      id: `chart_e2e_${stamp}_${step}`,
-      stem: { kind: "markdown", value: `Chart step ${step}: which action comes first?` },
-      meta: {},
-      content: {
-        options: [
-          { id: "opt_a", label: `Assess the client at step ${step}` },
-          { id: "opt_b", label: `Document and wait at step ${step}` },
-        ],
-      },
-    },
-    answer_key: { correctOptionId: "opt_a" },
-    rationale: {},
-    scoring: { model: "zero_one", maxPoints: 1 },
-  };
+  const item = itemSchema.parse({
+    ...FIXTURES.multiple_choice.canonical,
+    id: stepItemId(stamp, step),
+    cjmmStep: step,
+    stem: { kind: "markdown", value: `Chart step ${step}: which action comes first?` },
+  });
+  return { org_id: orgId, bank_id: bankId, status: "published", ...toItemRow(item) };
 }
 
 interface StagedCase {
@@ -97,7 +92,7 @@ async function stagedCase(
     [1, 2, 3, 4, 5, 6].map((step) => stepRow(orgId, bank.id, step, stamp)),
   );
   const steps = [1, 2, 3, 4, 5, 6].map((step) => {
-    const row = items.find((item) => item.content.id === `chart_e2e_${stamp}_${step}`);
+    const row = items.find((item) => item.content.id === stepItemId(stamp, step));
     if (!row) throw new Error(`step ${step} was not inserted`);
     return row.id;
   });
