@@ -168,7 +168,8 @@ test("History shows a closed assignment's best score, and nothing of one still o
   // #239: no step has a mark of either assignment while both are open.
   expect(before).toContain(noSteps);
   expect(before).not.toContain("Not enough answers yet");
-  expect(before).not.toContain("Your clinical judgment steps");
+  // The ranked list itself, not the section heading, which is there either way.
+  expect(before).not.toContain(`aria-label="Your clinical judgment steps"`);
 
   // After the close (and its two seconds of grace).
   await student.waitForTimeout(Math.max(0, closesAt + 3_000 - Date.now()));
