@@ -153,9 +153,24 @@ export interface ParticipantTransportOptions {
   fetch?: typeof globalThis.fetch;
   /** Prefixed onto the route paths. Empty in a browser, where they are same-origin. */
   baseUrl?: string;
+  /** Waits between tries of a view that did not get through. Injectable for the tests. */
+  pause?: (ms: number) => Promise<void>;
+  /** The jitter on those waits, in [0, 1). Injectable for the tests. */
+  random?: () => number;
 }
 
 const STATUSES = new Set<string>(SESSION_STATUSES);
+
+/**
+ * How long to wait before each further try of a view that did not get through (#407), before
+ * jitter: each is scaled by a factor between 0.5 and 1.5, so the tries fall at 0.2–0.6 s,
+ * 0.4–1.2 s and 0.8–2.4 s after the failure before them. Four tries in all, and at most 4.2 s of
+ * waiting, which is inside the time a class waits for a slow phone anyway.
+ */
+export const VIEW_RETRY_WAITS_MS: readonly number[] = [400, 800, 1600];
+
+/** The answers that mean "not now" rather than "no": see `askForView`. */
+const RETRYABLE_STATUSES: ReadonlySet<number> = new Set([502, 503, 504]);
 
 /**
  * Reads a `live.session_public_state` row off the wire, or null.
@@ -245,6 +260,9 @@ export function createSupabaseParticipant(
 ): SupabaseParticipant {
   const call = options.fetch ?? globalThis.fetch;
   const base = options.baseUrl ?? "";
+  const pause =
+    options.pause ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  const random = options.random ?? Math.random;
 
   const views = new Set<(view: SessionView<ParticipantItem>) => void>();
   const students = new Set<(view: StudentView) => void>();
@@ -297,17 +315,54 @@ export function createSupabaseParticipant(
     return rosterFrom(channel?.presenceState<PresenceEntry>() ?? {}, self);
   }
 
+  /**
+   * One request for the view, or null when it is worth asking again (#407): the request never
+   * got an answer, or the server said it could not reach the database (503) or could not be
+   * reached itself (502, 504). Everything else is an answer and is not asked for twice: a 401
+   * is the server saying this phone is not in the room, a 429 that it should stop asking, and a
+   * 500 that something is broken which asking again will not mend.
+   */
+  async function askForView(): Promise<Response | null> {
+    try {
+      const response = await call(`${base}${LIVE_ROUTES.view}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        // The participant cookie is httpOnly, so the browser is what attaches it. Said explicitly
+        // rather than left to the default, because it is the whole of this request's authority.
+        credentials: "same-origin",
+        body: "{}",
+      });
+      return RETRYABLE_STATUSES.has(response.status) ? null : response;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Reads the view, trying again a few times when the read did not get through (#407).
+   *
+   * Every phone in the room makes this request in the same instant, because the host's move
+   * reaches them all at once. So a moment when the server cannot answer is a moment it cannot
+   * answer a whole class, and a read that simply gave up left that phone on the last item until
+   * the host's next move. The waits are short, there are three of them, and each is scaled by a
+   * random factor: a class that failed together must not come back together.
+   *
+   * It stops the moment this connection has left the room. When the tries run out it throws, as
+   * a read that failed always did, and the next move the host makes asks again.
+   */
   async function requestView(): Promise<ParticipantViewPayload> {
     if (me === null) throw new LiveSessionError("not_joined");
-    const sentAt = Date.now();
-    const response = await call(`${base}${LIVE_ROUTES.view}`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      // The participant cookie is httpOnly, so the browser is what attaches it. Said explicitly
-      // rather than left to the default, because it is the whole of this request's authority.
-      credentials: "same-origin",
-      body: "{}",
-    });
+    const mine = generation;
+    let sentAt = Date.now();
+    let response = await askForView();
+    for (const wait of VIEW_RETRY_WAITS_MS) {
+      if (response !== null) break;
+      await pause(wait * (0.5 + random()));
+      if (gone || mine !== generation) throw new LiveSessionError("not_joined");
+      sentAt = Date.now();
+      response = await askForView();
+    }
+    if (response === null) throw new Error("The session could not be reached.");
     if (!response.ok) throw await asError(response);
     const payload = (await response.json()) as ParticipantViewPayload;
     if (typeof payload.serverNow === "number" && Number.isFinite(payload.serverNow)) {
