@@ -75,7 +75,9 @@ test("a student whose room fails to render rejoins it, as the same participant, 
   await student.getByRole("button", { name: "Join", exact: true }).click();
   await expect(student).toHaveURL(/\/play\/[0-9a-f-]{36}$/);
   const roomUrl = student.url();
-  await expect(student.getByText("You are in.", { exact: true })).toBeVisible();
+  await expect(
+    student.getByText("You are in. Wait for your teacher to start.", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByTestId("present-count")).toHaveText("1 phone connected", {
     timeout: 15_000,
   });
@@ -94,16 +96,14 @@ test("a student whose room fails to render rejoins it, as the same participant, 
     await route.fulfill({ response });
   });
 
-  await page.getByRole("button", { name: "Start session", exact: true }).click();
+  await page.getByRole("button", { name: "Start", exact: true }).click();
 
   // The room's boundary, not a blank page and not the error.
   await expect(
     student.getByRole("heading", { level: 1, name: "This screen stopped working.", exact: true }),
   ).toBeVisible({ timeout: 15_000 });
   // Next's route announcer is an alert too, so the boundary's is picked out by what it says.
-  await expect(
-    student.getByRole("alert").filter({ hasText: "Your place in the session is kept." }),
-  ).toBeVisible();
+  await expect(student.getByRole("alert").filter({ hasText: "Your place is kept." })).toBeVisible();
   await expect(student.getByText(/Cannot read|TypeError|null|digest/)).toHaveCount(0);
   expect(broken).toBe(true);
   await expectNoAxeViolations(student);

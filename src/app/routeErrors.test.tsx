@@ -138,14 +138,14 @@ describe("route error boundaries", () => {
   it("the student room says the student keeps their place", () => {
     renderInSegment(PlayError);
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Your place in the session is kept.");
+    expect(screen.getByRole("alert")).toHaveTextContent("Your place is kept.");
   });
 
   it("the host console does not claim the session is still running, and offers the list", () => {
     renderInSegment(HostError);
 
     const alert = screen.getByRole("alert");
-    expect(alert).toHaveTextContent("The session itself is not affected");
+    expect(alert).toHaveTextContent("The live session is not affected");
     expect(alert).not.toHaveTextContent(/still running/);
     expect(screen.getByRole("link", { name: "Back to live sessions" })).toHaveAttribute(
       "href",
@@ -159,7 +159,7 @@ describe("route error boundaries", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "The report couldn't be loaded.",
     );
-    expect(screen.getByRole("alert")).toHaveTextContent("The session's results are saved.");
+    expect(screen.getByRole("alert")).toHaveTextContent("The answers are saved.");
     expect(screen.getByRole("link", { name: "Back to live sessions" })).toHaveAttribute(
       "href",
       "/author/sessions",

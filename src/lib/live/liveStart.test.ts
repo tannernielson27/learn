@@ -8,17 +8,17 @@ describe("caseStudyLiveStartMessage (#184)", () => {
 
   it("says what to publish when the database finds a step it will not run", () => {
     expect(caseStudyLiveStartMessage("empty")).toBe(
-      "Publish this case study and all six of its steps before starting a live session.",
+      "Publish this case study and its six questions before starting a live session.",
     );
   });
 
   it("says the case study is gone, and says try again for anything else", () => {
     expect(caseStudyLiveStartMessage("gone")).toBe("That case study no longer exists.");
     expect(caseStudyLiveStartMessage("failed")).toBe(
-      "The session could not be started. Try again.",
+      "The live session could not be started. Try again.",
     );
     expect(caseStudyLiveStartMessage("<script>")).toBe(
-      "The session could not be started. Try again.",
+      "The live session could not be started. Try again.",
     );
   });
 

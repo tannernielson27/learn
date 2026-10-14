@@ -37,12 +37,12 @@ function setup(over: Partial<ItemStripProps> = {}) {
 }
 
 const goButton = (position: number) =>
-  screen.getByRole("button", { name: `Go to item ${position}` });
+  screen.getByRole("button", { name: `Go to question ${position}` });
 
 describe("ItemStrip (#183)", () => {
   it("offers every item in the set, and marks the one the room is on", () => {
     setup({ state: state({ position: 2 }) });
-    const nav = screen.getByRole("navigation", { name: "Items" });
+    const nav = screen.getByRole("navigation", { name: "Questions" });
     expect(nav).toBeInTheDocument();
     for (const position of [1, 2, 3, 4]) expect(goButton(position)).toBeInTheDocument();
     expect(goButton(2)).toHaveAttribute("aria-current", "step");
@@ -67,9 +67,9 @@ describe("ItemStrip (#183)", () => {
 
   it("is not there in the lobby or once the session has ended", () => {
     const { rerender } = setup({ state: state({ status: "lobby", position: null }) });
-    expect(screen.queryByRole("navigation", { name: "Items" })).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Questions" })).toBeNull();
     rerender({ state: state({ status: "ended" }) });
-    expect(screen.queryByRole("navigation", { name: "Items" })).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Questions" })).toBeNull();
   });
 
   it("keeps the answered count it has heard for each item, and which were shown", () => {

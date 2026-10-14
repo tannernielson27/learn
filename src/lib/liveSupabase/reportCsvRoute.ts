@@ -5,7 +5,7 @@ import { buildSessionReport } from "@/lib/live/report";
 import { reportCsvFilename, sessionReportCsv } from "@/lib/live/reportCsv";
 import { readSessionReport } from "@/lib/supabase/sessionReport";
 
-const NOT_FOUND = "That session report was not found.";
+const NOT_FOUND = "That live session report was not found.";
 
 /** UTF-8's byte order mark: without it a spreadsheet may read "Zoë" as "ZoÃ«". */
 const BOM = "﻿";
@@ -41,7 +41,7 @@ export async function reportCsvDownload(request: Request, sessionId: string): Pr
   }
   if (!read) return refuse(404, NOT_FOUND);
   if (read.session.status !== "ended") {
-    return refuse(409, "The report is ready once the session has ended.");
+    return refuse(409, "The report is ready once the live session has ended.");
   }
 
   const csv = sessionReportCsv(buildSessionReport(read.input));

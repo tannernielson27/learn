@@ -50,7 +50,7 @@ export function JoinForm({ action, code }: JoinFormProps) {
     <form action={formAction} className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <label htmlFor={`${fieldId}-code`} className="text-sm font-medium text-ink-1">
-          Session code
+          Join code
         </label>
         <input
           ref={codeRef}
@@ -76,7 +76,7 @@ export function JoinForm({ action, code }: JoinFormProps) {
           </p>
         ) : (
           <p id={`${fieldId}-code-hint`} className="text-sm text-ink-2">
-            Six characters, from the screen at the front.
+            Six characters, on the screen at the front.
           </p>
         )}
       </div>
@@ -104,7 +104,7 @@ export function JoinForm({ action, code }: JoinFormProps) {
           </p>
         ) : (
           <p id={`${fieldId}-name-hint`} className="text-sm text-ink-2">
-            The rest of the class sees this. Up to {DISPLAY_NAME_MAX_LENGTH} characters.
+            The class sees this.
           </p>
         )}
       </div>
