@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { writeFileSync } from "node:fs";
 import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * #414: the live session says what `docs/glossary.md` says, on the teacher's side and the
@@ -507,6 +507,13 @@ const SCREENS: [string, () => Promise<string>][] = [
 
 const counts: Record<string, number> = {};
 
+// "Hide results" is remembered in the browser; each screen starts from a fresh one.
+beforeEach(() => {
+  window.localStorage.clear();
+  // Stored "showing" wins over the page's own memory of an earlier screen's choice.
+  window.localStorage.setItem(`learn.hostResults.hidden.${SESSION_ID}`, "0");
+});
+
 afterAll(() => {
   const target = process.env.LIVE_WORD_COUNTS;
   if (target) writeFileSync(target, `${JSON.stringify(counts, null, 2)}\n`);
@@ -540,6 +547,35 @@ describe("no retired word on any live session screen", () => {
     counts[name] = wordCount(visibleText(markup));
     expect(markup.length).toBeGreaterThan(0);
     expect(retiredIn(markup)).toEqual([]);
+  });
+
+  /** Proof that a state's builder reached the state it is named for, not an empty or wrong one. */
+  const REACHED: [string, string][] = [
+    ["teacher: lobby", "Waiting to start"],
+    ["teacher: roster, nobody yet", "Nobody has joined yet."],
+    ["teacher: question open", "Question 1 of 3"],
+    ["teacher: case study step", "Step 1 of 6: Recognize Cues"],
+    ["teacher: student-paced, progress board", "Ana Reyes"],
+    ["teacher: ended", "Open the report"],
+    ["teacher: live updates not running", "Live updates stopped."],
+    ["teacher: results hidden", "Results are hidden."],
+    ["teacher: confirm end", "End this live session?"],
+    ["teacher: confirm show answers (student-paced)", "Show answers for all 3 questions?"],
+    ["report: live session still open", "Open the live session"],
+    ["list: could not be loaded", "could not be loaded"],
+    ["student: lobby", "You are in."],
+    ["student: answer sent", "Answer sent."],
+    ["student: answer showing, did not answer", "You did not answer this question."],
+    ["student: answer too late", "Your answer was not taken."],
+    ["student: reconnecting", "Reconnecting."],
+    ["student-paced: loading", "Loading the questions."],
+    ["student-paced: answer sent", "Answer sent."],
+    ["student-paced: answers showing", "The answers are showing."],
+  ];
+  it.each(REACHED)("%s reaches its state", async (name, shown) => {
+    const build = SCREENS.find(([each]) => each === name)?.[1];
+    expect(build).toBeDefined();
+    expect(visibleText(await (build as () => Promise<string>)())).toContain(shown);
   });
 
   it("names every screen once, so the word-count table has no gaps", () => {
