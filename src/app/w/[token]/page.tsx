@@ -112,7 +112,7 @@ export default async function WorkspaceInvitePage({ params }: PageProps<"/w/[tok
         <InviteAnswerView answer={{ status: "closed", state: invite.state }} />
         {invite.state === "accepted" && teaches ? (
           <Link href="/author" className={`${linkClass} mt-2`}>
-            Go to your item banks
+            Go to your quizzes
           </Link>
         ) : null}
       </Shell>

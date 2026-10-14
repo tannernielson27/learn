@@ -75,6 +75,7 @@ import LiveSessionPage, { metadata as liveMeta } from "@/app/live/[sessionId]/pa
 import ReportError from "@/app/live/[sessionId]/report/error";
 import SessionReportPage, { metadata as reportMeta } from "@/app/live/[sessionId]/report/page";
 import PlayError from "@/app/play/[sessionId]/error";
+import { metadata as playMeta } from "@/app/play/[sessionId]/page";
 import { findRetiredTerms, readableStrings } from "@/lib/copy/retiredTerms";
 import {
   LIVE_REFUSALS,
@@ -94,6 +95,7 @@ import { REPORT_FIXTURE } from "@/lib/live/reportFixture";
 import { timerAnnouncement } from "@/lib/live/timer";
 import { waitingCopy } from "@/lib/live/waiting";
 import type { StudentView, SupabaseParticipant } from "@/lib/liveSupabase";
+import { LIVE_ROUTE_ERRORS } from "@/lib/liveSupabase/routeDeps";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema } from "@/lib/ngn/schemas";
 import { toKeylessItem } from "@/lib/ngn/submit";
@@ -602,14 +604,16 @@ describe("no retired word in the page titles", () => {
     ["/author/sessions", sessionsMeta.title],
     ["/join", joinMeta.title],
     ["/join/[code]", joinCodeMeta.title],
+    ["/play/[sessionId]", playMeta.title],
   ])("%s", (_, title) => {
     expect(typeof title).toBe("string");
     expect(retiredIn(`<title>${String(title)}</title>`)).toEqual([]);
   });
 
-  // `src/app/play/[sessionId]/page.tsx` still titles the tab "Session". PR #428 rewrites that
-  // file, so its title changes once that has merged.
-  it.todo("/play/[sessionId]");
+  // The student's tab said "Session" until the cleanup after the five passes.
+  it("titles the student's tab Live session", () => {
+    expect(playMeta.title).toBe("Live session");
+  });
 });
 
 describe("no retired word in the sentences the screens are handed", () => {
@@ -623,6 +627,7 @@ describe("no retired word in the sentences the screens are handed", () => {
   ];
   const sentences: [string, string[]][] = [
     ["a live session's refusals", Object.values(LIVE_REFUSALS)],
+    ["the errors the live routes send a phone", Object.values(LIVE_ROUTE_ERRORS)],
     [
       "the join form's refusals",
       Object.values(joinFormCopy).flatMap((value) =>

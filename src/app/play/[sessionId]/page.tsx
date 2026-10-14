@@ -14,7 +14,7 @@ import { readSessionRecord } from "@/lib/supabase/sessionRecord";
 import { readPublicSessionState } from "@/lib/supabase/sessions";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
-export const metadata: Metadata = { title: "Session" };
+export const metadata: Metadata = { title: "Live session" };
 
 /**
  * Where a participant lands, and where a reload — and every reconnect — brings them back to.

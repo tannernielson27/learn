@@ -7,7 +7,7 @@ function renderPanel(props: Partial<AssignPanelProps> = {}) {
     <AssignPanel
       sourceName="Cardiac week"
       backHref="/author/banks/b1"
-      backLabel="Back to bank"
+      backLabel="Back to quiz"
       classes={[{ id: "c1", name: "NUR 310" }]}
       action={vi.fn(async () => ({ status: "idle" as const }))}
       exposure={{ classNames: [], exposedItems: 0 }}

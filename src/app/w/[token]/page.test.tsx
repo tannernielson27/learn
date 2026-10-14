@@ -359,7 +359,7 @@ describe("/w/[token]: someone signed in", () => {
     reply = { data: [{ ...PENDING, state: "accepted" }], error: null };
     signedIn({ role: "instructor" });
     await renderPage();
-    expect(screen.getByRole("link", { name: "Go to your item banks" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Go to your quizzes" })).toHaveAttribute(
       "href",
       "/author",
     );
