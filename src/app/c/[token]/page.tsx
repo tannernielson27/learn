@@ -103,7 +103,7 @@ export default async function ClassInvitePage({ params }: PageProps<"/c/[token]"
         <h1 className="mb-3 font-read text-3xl text-ink-1">{invite.className}</h1>
         <p className="mb-6 text-ink-1">{ALREADY_INSTRUCTOR}</p>
         <Link href="/author" className={linkClass}>
-          Go to your item banks
+          Go to your quizzes
         </Link>
       </Shell>
     );

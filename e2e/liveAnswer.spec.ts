@@ -505,7 +505,7 @@ async function expectPatientRecord(phone: Page, projectName: string) {
   const record =
     projectName === "phone-375"
       ? phone.getByRole("dialog", { name: "Patient record", exact: true })
-      : phone.getByRole("tablist", { name: "Patient record sections", exact: true });
+      : phone.getByRole("tablist", { name: "Patient record tabs", exact: true });
   await expect(record).toBeVisible();
   await expect(phone.getByText(/Orthopedic unit/).filter({ visible: true })).toHaveCount(1);
   await expectNoBlockingAxeViolations(phone);
@@ -651,13 +651,13 @@ test("a student-paced set: phones move at their own pace, the board fills in, on
   await expect(ada.getByTestId("paced-count")).toHaveText("2 of 2 answered");
 
   // Bo goes straight to item 2 from the list, and leaves item 1.
-  const boItems = bo.getByRole("navigation", { name: "Items" });
+  const boItems = bo.getByRole("navigation", { name: "Questions" });
   await expect(boItems).toBeVisible({ timeout: 15_000 });
-  await boItems.getByRole("button", { name: "Item 2, not answered", exact: true }).click();
+  await boItems.getByRole("button", { name: "Question 2, not answered", exact: true }).click();
   await expect(bo.getByText(SECOND_STEM)).toBeVisible();
   await answer(bo, CORRECT);
   await expect(
-    boItems.getByRole("button", { name: "Item 2, answered", exact: true }),
+    boItems.getByRole("button", { name: "Question 2, answered", exact: true }),
   ).toBeVisible();
   await expectNoAxeViolations(bo);
   await bo.screenshot({

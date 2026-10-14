@@ -141,7 +141,7 @@ describe("ItemPlayer without a renderer", () => {
     try {
       render(<ItemPlayer item={unbuilt} submit={scoreInProcess(unbuilt)} />);
       await renderersLoaded();
-      expect(screen.getByText(/No renderer/)).toBeInTheDocument();
+      expect(screen.getByText(/cannot be shown yet/)).toBeInTheDocument();
     } finally {
       RENDERERS.bowtie = saved;
     }

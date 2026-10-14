@@ -172,7 +172,7 @@ test("a student sees nothing before the close, then their score, keys and ration
   const status = student.getByTestId("save-status");
   await student.getByRole("radio", { name: /Auscultate the lungs/ }).click();
   await expect(status).toHaveText("Saved", { timeout: 15_000 });
-  await student.getByRole("button", { name: "Next item", exact: true }).click();
+  await student.getByRole("button", { name: "Next", exact: true }).click();
   await student.getByRole("checkbox", { name: /Respiratory rate 28 breaths/ }).click();
   await student.getByRole("checkbox", { name: /Oxygen saturation 89%/ }).click();
   await expect(status).toHaveText("Saved", { timeout: 15_000 });
@@ -228,7 +228,7 @@ test("a student sees nothing before the close, then their score, keys and ration
 
   await student.goto(bankResults);
   await expect(student.getByTestId("results-pending")).toHaveText(
-    "Your results will be shown when the assignment closes.",
+    "Results show when the assignment closes.",
   );
   expectKeyless(await bytesOf(phone, bankResults), [MC_RATIONALE, MR_RATIONALE]);
   expectKeyless(await bytesOf(phone, caseResults), [STEP_6_RATIONALE]);
@@ -249,7 +249,8 @@ test("a student sees nothing before the close, then their score, keys and ration
 
   const total = student.getByRole("region", { name: "Your score", exact: true });
   await expect(total.getByTestId("results-total")).toHaveText(/^\d+(\.\d+)? of \d+(\.\d+)?$/);
-  await expect(total).toContainText("From your one attempt.");
+  // One attempt: the total stands alone, with nothing restating it.
+  await expect(total.locator("p")).toHaveCount(1);
   await expect(student.getByText(MC_RATIONALE, { exact: false }).first()).toBeVisible();
   // Right and wrong in words, on each option's own name, beside the icon and the colour.
   await expect(student.getByRole("radio", { name: /Auscultate the lungs/ })).toHaveAccessibleName(
@@ -259,7 +260,7 @@ test("a student sees nothing before the close, then their score, keys and ration
   await student.screenshot({ path: shot("assignment-results-bank"), fullPage: true });
 
   // The SATA: the missed option named in words, not only in colour.
-  await student.getByRole("button", { name: "Next item", exact: true }).click();
+  await student.getByRole("button", { name: "Next", exact: true }).click();
   await expect(
     student.getByRole("checkbox", { name: /New confusion per family/ }),
   ).toHaveAccessibleName(/Missed/);
@@ -297,7 +298,7 @@ test("a student sees nothing before the close, then their score, keys and ration
   await expect(
     student
       .getByRole("button", { name: "Patient record", exact: true })
-      .or(student.getByRole("tablist", { name: "Patient record sections", exact: true }))
+      .or(student.getByRole("tablist", { name: "Patient record tabs", exact: true }))
       .first(),
   ).toBeVisible();
   await expect(

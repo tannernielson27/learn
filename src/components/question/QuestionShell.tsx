@@ -122,7 +122,7 @@ export function QuestionShell({
       {progress ? (
         <div className="mb-4 flex items-center gap-3">
           <span className="font-mono text-xs text-ink-2">
-            {progress.index + 1} of {progress.total}
+            Question {progress.index + 1} of {progress.total}
           </span>
           <div className="h-1 flex-1 rounded-full bg-surface-2" aria-hidden="true">
             <div
@@ -166,7 +166,7 @@ export function QuestionShell({
               </p>
             ) : showReason ? (
               <span id={reasonId} className="text-sm text-ink-2">
-                Complete the item to submit.
+                Complete the question to submit.
               </span>
             ) : null}
             {/* aria-disabled, never disabled (#59): a disabled button cannot take focus, so a

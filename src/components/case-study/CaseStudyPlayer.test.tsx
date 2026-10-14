@@ -33,7 +33,7 @@ const sixSteps = caseStudySchema.parse({
 const sample = caseStudySchema.parse(sampleCaseStudy);
 
 const stepLine = () => screen.getByText(/^Step \d of 6:/);
-const next = () => screen.queryByRole("button", { name: /Next step|See results/ });
+const next = () => screen.queryByRole("button", { name: /Next question|See results/ });
 const submit = () => screen.getByRole("button", { name: "Submit" });
 const correct = () => screen.getByRole("radio", { name: /Auscultate the lungs/ });
 const wrong = () => screen.getByRole("radio", { name: /Document the weight/ });

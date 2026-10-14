@@ -65,7 +65,7 @@ export default async function StudentAssignmentPage({
   if (view.kind === "failed") {
     return (
       <p role="alert" className="text-ink-2">
-        This assignment could not be loaded. Reload the page to try again.
+        This assignment did not load. Reload the page.
       </p>
     );
   }
@@ -112,7 +112,7 @@ export default async function StudentAssignmentPage({
         </>
       ) : submitted ? (
         <p role="status" data-testid="submitted-notice" className="measure mt-6 text-ink-1">
-          Submitted. Your results will be shown when the assignment closes.
+          Submitted. Results show when the assignment closes.
         </p>
       ) : null}
       <AttemptSummary attempts={view.attempts} closed={view.closed} />
