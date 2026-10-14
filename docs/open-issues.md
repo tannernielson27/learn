@@ -303,6 +303,7 @@ Only the stories this file has been told about are listed here; the milestone on
 | [#336](https://github.com/tannernielson27/learn/issues/336) | feat(authoring): set when each tab of a case study's chart appears and opens                      | e2e           | To do; needs #334                                          |
 | [#406](https://github.com/tannernielson27/learn/issues/406) | fix(live): page the progress board read past 1,000 answers                                        | none          | Merged (#422); no migration                                |
 | [#415](https://github.com/tannernielson27/learn/issues/415) | feat(student): rename and trim, student home, practice and assignments                            | e2e           | In review; no migration; class components left for #412    |
+| [#412](https://github.com/tannernielson27/learn/issues/412) | feat(authoring): rename and trim, teacher home and quiz page                                      | e2e           | In review (#429); no migration                             |
 
 Until #335 merges, every student-facing page still sends a case study's whole record, so `fromStep` and `stepAccess` hide nothing yet. Until #336 merges, the record editor does not carry either field, so saving a staged record from the builder drops them; they arrive by JSON import only.
 

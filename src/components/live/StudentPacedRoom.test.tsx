@@ -183,7 +183,7 @@ describe("StudentPacedRoom (#185)", () => {
     room.push({ state: state({ status: "paused" }), paced: [entry(FIRST, 1)] });
     expect(screen.getByText("The session is paused.")).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Questions" })).toBeNull();
-    expect(screen.queryByText(/Item 1 of/)).toBeNull();
+    expect(screen.queryByText(/Question 1 of/)).toBeNull();
   });
 
   it("shows every item's key after Show answers, with marks where this phone answered", async () => {

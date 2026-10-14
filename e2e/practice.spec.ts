@@ -126,7 +126,7 @@ test("a student practises a shared bank on a phone, sees each key as they answer
   // The home lists the bank under Practice, linked.
   const list = student.getByRole("list", { name: "Practice quizzes", exact: true });
   await expect(list.getByRole("link", { name: "Samples", exact: true })).toBeVisible();
-  await expect(list).toContainText(/\d+ items/);
+  await expect(list).toContainText(/\d+ questions/);
   await expectNoAxeViolations(student);
   await student.screenshot({ path: shot("practice-home"), fullPage: true });
 
@@ -248,7 +248,7 @@ test("a student practises a shared bank on a phone, sees each key as they answer
   await classPractice.getByRole("button", { name: "Stop sharing Samples", exact: true }).click();
   await classPractice.getByRole("button", { name: "Stop sharing", exact: true }).click();
   await expect(
-    classPractice.getByText("No bank is shared with this class for practice.", { exact: true }),
+    classPractice.getByText("No quiz is shared with this class.", { exact: true }),
   ).toBeVisible();
 
   const stopped = await bytesOf(phone.context, practicePath);

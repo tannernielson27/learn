@@ -8,7 +8,7 @@ import { withLoadRecovery } from "@/components/question/RendererRecovery";
 import { renderersLoaded } from "@/components/question/testing/renderers";
 import { ATTEMPT_REFUSALS } from "@/lib/assignments/attemptRefusals";
 import { buildAssignmentReport, type AssignmentReportInput } from "@/lib/assignments/report";
-import { findRetiredTerms, readText, wordCount } from "@/lib/copy/retiredTerms";
+import { findRetiredTerms, readableStrings, visibleWordCount } from "@/lib/copy/retiredTerms";
 import { FIXTURES, sampleCaseStudy } from "@/lib/ngn/fixtures";
 import { caseStudySchema, itemSchema, type Item } from "@/lib/ngn/schemas";
 import { buildStepStandings, type StepMark } from "@/lib/ngn/stepStandings";
@@ -717,6 +717,26 @@ function shownHtml(container: HTMLElement): string {
 const setAside = (text: string): string =>
   OTHER_PASSES.reduce((rest, sentence) => rest.split(sentence).join(" "), text);
 
+/**
+ * The glossary retires "record" alone as well as "chart" and "EHR": the shared list stops at those
+ * two, so this screen's own search adds it. "Patient record" is the word to use.
+ */
+const RECORD_ALONE = /(?<!\bpatient )\brecords?\b/i;
+
+/** Every retired word in the given HTML or text, as "found: words around it", for a clear failure. */
+function retired(...sources: string[]): string[] {
+  const shared = findRetiredTerms(...sources).map((hit) => `${hit.found}: ${hit.context}`);
+  const local = sources
+    .flatMap((source) => readableStrings(source))
+    .flatMap((text) => {
+      const match = RECORD_ALONE.exec(text);
+      return match
+        ? [`${match[0]}: ${text.slice(Math.max(0, match.index - 30), match.index + 40)}`]
+        : [];
+    });
+  return [...shared, ...local];
+}
+
 const counts: [string, number][] = [];
 
 async function draw(entry: Screen): Promise<HTMLElement> {
@@ -753,22 +773,24 @@ describe("the search itself", () => {
         <p>Complete the item to submit.</p>
       </section>,
     );
-    const found = findRetiredTerms(readText(container.innerHTML)).join("\n");
-    expect(found).toContain('"bank"');
-    expect(found).toContain('"item"');
+    const found = retired(container.innerHTML).join("\n");
+    expect(found).toContain("banks:");
+    expect(found).toContain("item:");
+    expect(retired("<p>Open the record.</p>")).toHaveLength(1);
+    expect(retired("<p>Open the patient record.</p>")).toEqual([]);
   });
 
   it("does not set aside a retired word that only sits near another pass's sentence", () => {
-    expect(findRetiredTerms(setAside(`${OTHER_PASSES[0]} Ask your instructor.`))).toHaveLength(1);
+    expect(retired(setAside(`${OTHER_PASSES[0]} Ask your instructor.`))).toHaveLength(1);
   });
 });
 
 describe("what a student sees uses the glossary's words (#415)", () => {
   it.each(SCREENS)("$name", async (entry) => {
     const container = await draw(entry);
-    counts.push([entry.name, wordCount(readText(shownHtml(container)).split(" \n ")[0] ?? "")]);
+    counts.push([entry.name, visibleWordCount(shownHtml(container))]);
     // Body, not container: the patient record's phone sheet is drawn outside the container.
-    expect(findRetiredTerms(setAside(readText(document.body.innerHTML)))).toEqual([]);
+    expect(retired(setAside(document.body.innerHTML))).toEqual([]);
   });
 
   it("names each page in the glossary's words", async () => {
@@ -783,11 +805,11 @@ describe("what a student sees uses the glossary's words (#415)", () => {
     ]);
     const titles = pages.map((page) => String(page.metadata.title));
     expect(titles).toHaveLength(7);
-    expect(titles.flatMap((title) => findRetiredTerms(title))).toEqual([]);
+    expect(retired(...titles)).toEqual([]);
   });
 
   it("refuses in the glossary's words", () => {
     const refusals = [...Object.values(ATTEMPT_REFUSALS), ...Object.values(PRACTICE_REFUSALS)];
-    expect(refusals.flatMap((refusal) => findRetiredTerms(refusal))).toEqual([]);
+    expect(retired(...refusals)).toEqual([]);
   });
 });

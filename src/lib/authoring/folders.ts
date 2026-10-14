@@ -45,6 +45,9 @@ export interface FolderContents {
 
 export const UNFILED = "unfiled";
 
+/** What the interface calls the view, and the destination, of content that is in no folder. */
+export const NOT_IN_A_FOLDER = "Not in a folder";
+
 const collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
 
 /**
@@ -131,7 +134,7 @@ export function parseMoveForm(formData: FormData): MoveFormResult {
     return { ok: false, error: "That selection could not be read. Reload the page and try again." };
   }
   if (itemIds.length + caseStudyIds.length === 0) {
-    return { ok: false, error: "Select at least one item or case study to move." };
+    return { ok: false, error: "Select at least one question or case study to move." };
   }
   return { ok: true, folderId, itemIds, caseStudyIds };
 }
@@ -143,27 +146,37 @@ function readIds(values: FormDataEntryValue[]): string[] | null {
   return [...new Set(values)];
 }
 
+/**
+ * What to do before a folder can be deleted. Questions and case studies are moved, never deleted;
+ * a folder inside it is deleted in its turn.
+ */
+function emptyFolderFirst(contents: FolderContents): string {
+  const content = contents.items + contents.caseStudies;
+  if (contents.folders === 0) return `Move ${content === 1 ? "it" : "them"} out first.`;
+  if (content === 0) return `Delete ${contents.folders === 1 ? "it" : "them"} first.`;
+  return "Move the rest out and delete the folders inside first.";
+}
+
 /** Why a folder cannot be deleted, naming what is inside; null when it is empty. */
 export function folderContentsMessage(name: string, contents: FolderContents): string | null {
   const parts = [
-    countLabel(contents.items, "item", "items"),
+    countLabel(contents.items, "question", "questions"),
     countLabel(contents.caseStudies, "case study", "case studies"),
     countLabel(contents.folders, "folder", "folders"),
   ].filter((part): part is string => part !== null);
   if (parts.length === 0) return null;
-  const total = contents.items + contents.caseStudies + contents.folders;
   const list =
     parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`;
-  return `"${name}" holds ${list}. Move or delete ${total === 1 ? "it" : "them"} first.`;
+  return `"${name}" holds ${list}. ${emptyFolderFirst(contents)}`;
 }
 
-/** What a move did, or that nothing moved. `destination` is a folder path or "Unfiled". */
+/** What a move did, or that nothing moved. `destination` is a folder path or "Not in a folder". */
 export function moveSummary(
   moved: { items: number; caseStudies: number },
   destination: string,
 ): string {
   const parts = [
-    countLabel(moved.items, "item", "items"),
+    countLabel(moved.items, "question", "questions"),
     countLabel(moved.caseStudies, "case study", "case studies"),
   ].filter((part): part is string => part !== null);
   if (parts.length === 0) return "Nothing was moved. Reload the page and try again.";

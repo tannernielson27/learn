@@ -160,7 +160,7 @@ export default async function StudentHomePage() {
         </h2>
         {steps === null ? (
           <p role="alert" className="text-ink-2">
-            Your steps did not load. Reload the page.
+            Your clinical judgment steps did not load. Reload the page.
           </p>
         ) : (
           <YourSteps standings={steps} />

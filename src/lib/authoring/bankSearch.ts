@@ -81,14 +81,14 @@ export const STATUS_LABELS: Record<ContentStatus, string> = {
   archived: "Archived",
 };
 
-/** "6 items match: “lactate”, Matrix Multiple Choice, Published." */
+/** "6 questions match: “lactate”, Matrix Multiple Choice, Published." */
 export function searchSummary(total: number, search: ItemSearch): string {
   const parts = [
     ...(search.query ? [`“${search.query}”`] : []),
     ...(search.type ? [ITEM_TYPE_LABELS[search.type]] : []),
     ...(search.status ? [STATUS_LABELS[search.status]] : []),
   ];
-  const count = total === 1 ? "1 item matches" : `${total} items match`;
+  const count = total === 1 ? "1 question matches" : `${total} questions match`;
   return `${count}: ${parts.join(", ")}.`;
 }
 

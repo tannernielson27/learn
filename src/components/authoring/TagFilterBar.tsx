@@ -29,7 +29,7 @@ interface Chip {
   href: string;
 }
 
-const itemCount = (count: number) => (count === 1 ? "1 item" : `${count} items`);
+const itemCount = (count: number) => (count === 1 ? "1 question" : `${count} questions`);
 
 const chipClass =
   "tap-target inline-flex items-center gap-2 rounded-sm border px-3 text-sm transition-colors duration-fast";

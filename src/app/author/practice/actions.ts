@@ -18,7 +18,7 @@ const bankPath = (bankId: string) => `/author/banks/${bankId}`;
 const CHOOSE: ShareFormState = { status: "error", error: "Choose from the list." };
 const STOP_FAILED: ConfirmOutcome = {
   ok: false,
-  message: "Could not stop sharing this bank. Try again.",
+  message: "Could not stop sharing this quiz. Try again.",
 };
 
 /** Every page that shows a share: the bank list's badges, the bank page and the class page. */

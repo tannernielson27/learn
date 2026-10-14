@@ -88,7 +88,7 @@ test("the author nav links to help", async ({ page, request }, testInfo) => {
   test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
   await signInAsNewAuthor(page, request, `help-${testInfo.project.name}`);
   await page
-    .getByRole("navigation", { name: "Author" })
+    .getByRole("navigation", { name: "Help and account" })
     .getByRole("link", { name: "Help", exact: true })
     .click();
   await expect(page).toHaveURL(/\/help$/);

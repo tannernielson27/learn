@@ -11,7 +11,7 @@ const trail: FolderRow[] = [
 const crumbs = () => screen.getByRole("navigation", { name: "Breadcrumb" });
 
 describe("FolderBreadcrumbs", () => {
-  it("links up from a folder to its parents, the bank and the bank list", () => {
+  it("links up from a folder to its parents, the quiz and the library", () => {
     render(
       <FolderBreadcrumbs
         bankId="b1"
@@ -21,7 +21,7 @@ describe("FolderBreadcrumbs", () => {
       />,
     );
     const nav = within(crumbs());
-    expect(nav.getByRole("link", { name: "Item banks" })).toHaveAttribute("href", "/author");
+    expect(nav.getByRole("link", { name: "Library" })).toHaveAttribute("href", "/author");
     expect(nav.getByRole("link", { name: "Med-surg" })).toHaveAttribute("href", "/author/banks/b1");
     expect(nav.getByRole("link", { name: "Cardiac" })).toHaveAttribute(
       "href",
@@ -32,19 +32,19 @@ describe("FolderBreadcrumbs", () => {
     expect(current.closest("a")).toBeNull();
   });
 
-  it("ends at the bank when everything is shown", () => {
+  it("ends at the quiz when everything is shown", () => {
     render(<FolderBreadcrumbs bankId="b1" bankName="Med-surg" trail={[]} view={{ kind: "all" }} />);
     const nav = within(crumbs());
     expect(nav.getByText("Med-surg")).toHaveAttribute("aria-current", "page");
-    expect(nav.getAllByRole("link").map((link) => link.textContent)).toEqual(["Item banks"]);
+    expect(nav.getAllByRole("link").map((link) => link.textContent)).toEqual(["Library"]);
   });
 
-  it("ends at Unfiled for unfiled content", () => {
+  it("ends at Not in a folder for content in no folder", () => {
     render(
       <FolderBreadcrumbs bankId="b1" bankName="Med-surg" trail={[]} view={{ kind: "unfiled" }} />,
     );
     const nav = within(crumbs());
     expect(nav.getByRole("link", { name: "Med-surg" })).toBeInTheDocument();
-    expect(nav.getByText("Unfiled")).toHaveAttribute("aria-current", "page");
+    expect(nav.getByText("Not in a folder")).toHaveAttribute("aria-current", "page");
   });
 });

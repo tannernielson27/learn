@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ShareEntry } from "@/lib/supabase/practiceShares";
 import { PracticeShareForm, type PracticeShareFormProps } from "./PracticeShareForm";
 import { PracticeShareList, type PracticeShareListProps } from "./PracticeShareList";
@@ -5,6 +6,7 @@ import { PracticeShareList, type PracticeShareListProps } from "./PracticeShareL
 export interface PracticeSectionProps {
   /** Heading level and look follow the page: the bank page's sections are larger. */
   headingClassName: string;
+  /** One short line. The rest is on the help page the section links to (#412). */
   intro: string;
   /** The current shares, or null when they could not be read. */
   shares: readonly ShareEntry[] | null;
@@ -40,7 +42,15 @@ export function PracticeSection({
       <h2 id={HEADING_ID} tabIndex={-1} className={headingClassName}>
         Practice
       </h2>
-      <p className="max-w-prose text-ink-2">{intro}</p>
+      <p className="max-w-prose text-ink-2">
+        {intro}{" "}
+        <Link
+          href="/help/instructor#practice"
+          className="text-accent-ink underline underline-offset-4 hover:no-underline"
+        >
+          How practice works
+        </Link>
+      </p>
       {shares === null ? (
         <p role="alert" className="text-ink-2">
           The practice shares could not be loaded. Reload the page to try again.
