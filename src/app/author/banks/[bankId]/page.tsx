@@ -36,8 +36,11 @@ import {
   folderTrail,
   MAX_FOLDER_DEPTH,
   NOT_IN_A_FOLDER,
+  offersInQuizFolders,
   parseFolderView,
+  type FolderView,
 } from "@/lib/authoring/folders";
+import { quizLibraryTrail } from "@/lib/authoring/libraryData";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { bankViewHref, isFiltering, parseTagFilter, tagFacets } from "@/lib/authoring/tagFilter";
@@ -74,7 +77,7 @@ export default async function BankPage({
   const { bankId } = await params;
   if (!isUuid(bankId)) notFound();
   const query = await searchParams;
-  const view = parseFolderView(query.folder);
+  const askedView = parseFolderView(query.folder);
   const search = parseItemSearch(query);
   const filter: BankFilter = {
     ...parseTagFilter(query.tag, query.step, query.warnings),
@@ -94,18 +97,31 @@ export default async function BankPage({
     .maybeSingle();
   if (!bank) notFound();
 
+  // #411: a quiz offers folders inside it only if it already has one. Without any, every view is
+  // the whole quiz, so a stale "Not in a folder" link still lists everything.
+  // The reads that do not depend on the view start now, beside the folders.
+  const besideFolders = Promise.all([
+    quizLibraryTrail(supabase, bank.id),
+    listBankShares(supabase, bank.id),
+    listClasses(supabase),
+  ]);
+  // Awaited below; this only keeps a failure from going unobserved if the page stops first.
+  besideFolders.catch(() => undefined);
+  const folders = await listFolders(supabase, bank.id);
+  const inQuizFolders = offersInQuizFolders(folders);
+  const view: FolderView = inQuizFolders ? askedView : { kind: "all" };
+  if (!inQuizFolders && askedView.kind === "folder") notFound();
+
   // The filter and search run in the database, under RLS; the tag counts come from the view's
   // items within the search.
-  const [folders, itemPage, caseStudies, taggedRows, shares, classes] = await Promise.all([
-    listFolders(supabase, bank.id),
+  const [[libraryTrail, shares, classes], itemPage, caseStudies, taggedRows] = await Promise.all([
+    besideFolders,
     listItems(supabase, bank.id, view, filter, page),
     // Case studies carry no item tags or type, so a tag or type filter lists none of them.
     tagFiltered || search.type
       ? Promise.resolve([])
       : listCaseStudies(supabase, bank.id, view, search),
     listTaggedRows(supabase, bank.id, view, search),
-    listBankShares(supabase, bank.id),
-    listClasses(supabase),
   ]);
   const { items } = itemPage;
   const facets = tagFacets(taggedRows, filter);
@@ -114,14 +130,21 @@ export default async function BankPage({
   if (view.kind === "folder" && trail.length === 0) notFound();
   const folder = trail.at(-1);
   const heading = folder?.name ?? (view.kind === "unfiled" ? NOT_IN_A_FOLDER : bank.name);
-  const hasContent = items.length > 0 || caseStudies.length > 0;
+  // Moving between in-quiz folders, only where there are some.
+  const canMove = inQuizFolders && (items.length > 0 || caseStudies.length > 0);
   // #266: what each list says when it is empty, most specific reason first.
   const emptyView = { bankId: bank.id, view, filter, page };
   const liveRefusal = liveStartMessage(query.live);
 
   return (
     <>
-      <FolderBreadcrumbs bankId={bank.id} bankName={bank.name} trail={trail} view={view} />
+      <FolderBreadcrumbs
+        bankId={bank.id}
+        bankName={bank.name}
+        trail={trail}
+        view={view}
+        libraryTrail={libraryTrail}
+      />
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div className="flex min-w-0 flex-col items-start gap-2">
           <h1 className="min-w-0 font-read text-3xl break-words text-ink-1">{heading}</h1>
@@ -168,43 +191,47 @@ export default async function BankPage({
         </p>
       ) : null}
 
-      <div className="grid gap-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
-        <aside className="flex min-w-0 flex-col gap-6">
-          <FolderTree bankId={bank.id} folders={folders} view={view} filter={filter} />
-          {trail.length < MAX_FOLDER_DEPTH ? (
-            <FolderNameForm
-              // Keyed by the open folder, so a half-typed name never carries into another folder.
-              key={`new-${folder?.id ?? "top"}`}
-              action={createFolderInBank.bind(null, bank.id, folder?.id ?? null)}
-              label="Folder name"
-              hint={folder ? `Inside ${folder.name}.` : undefined}
-              submitLabel="Create folder"
-            />
-          ) : (
-            <p className="text-sm text-ink-2">Folders go at most {MAX_FOLDER_DEPTH} levels deep.</p>
-          )}
-          {folder ? (
-            <section
-              aria-labelledby="folder-heading"
-              className="flex flex-col gap-4 border-t border-line pt-4"
-            >
-              <h2 id="folder-heading" className="text-sm font-medium text-ink-2">
-                This folder
-              </h2>
+      <div className={inQuizFolders ? "grid gap-8 lg:grid-cols-[16rem_minmax(0,1fr)]" : undefined}>
+        {inQuizFolders ? (
+          <aside className="flex min-w-0 flex-col gap-6">
+            <FolderTree bankId={bank.id} folders={folders} view={view} filter={filter} />
+            {trail.length < MAX_FOLDER_DEPTH ? (
               <FolderNameForm
-                key={`rename-${folder.id}`}
-                action={renameFolderInBank.bind(null, bank.id, folder.id)}
-                label="New name"
-                submitLabel="Rename folder"
-                initialName={folder.name}
+                // Keyed by the open folder, so a half-typed name never carries into another folder.
+                key={`new-${folder?.id ?? "top"}`}
+                action={createFolderInBank.bind(null, bank.id, folder?.id ?? null)}
+                label="Folder name"
+                hint={folder ? `Inside ${folder.name}.` : undefined}
+                submitLabel="Create folder"
               />
-              <DeleteFolderForm
-                key={`delete-${folder.id}`}
-                action={deleteFolderInBank.bind(null, bank.id, folder.id)}
-              />
-            </section>
-          ) : null}
-        </aside>
+            ) : (
+              <p className="text-sm text-ink-2">
+                Folders go at most {MAX_FOLDER_DEPTH} levels deep.
+              </p>
+            )}
+            {folder ? (
+              <section
+                aria-labelledby="folder-heading"
+                className="flex flex-col gap-4 border-t border-line pt-4"
+              >
+                <h2 id="folder-heading" className="text-sm font-medium text-ink-2">
+                  This folder
+                </h2>
+                <FolderNameForm
+                  key={`rename-${folder.id}`}
+                  action={renameFolderInBank.bind(null, bank.id, folder.id)}
+                  label="New name"
+                  submitLabel="Rename folder"
+                  initialName={folder.name}
+                />
+                <DeleteFolderForm
+                  key={`delete-${folder.id}`}
+                  action={deleteFolderInBank.bind(null, bank.id, folder.id)}
+                />
+              </section>
+            ) : null}
+          </aside>
+        ) : null}
 
         <div className="flex min-w-0 flex-col gap-10">
           <section aria-labelledby="items-heading" className="flex flex-col gap-4">
@@ -218,7 +245,7 @@ export default async function BankPage({
                 {searchSummary(itemPage.total, search)}
               </p>
             ) : null}
-            {hasContent ? (
+            {canMove ? (
               <MoveToFolderForm
                 key={`move-${folder?.id ?? view.kind}`}
                 id={MOVE_FORM_ID}
@@ -228,7 +255,7 @@ export default async function BankPage({
             ) : null}
             <ItemList
               items={items}
-              moveFormId={hasContent ? MOVE_FORM_ID : undefined}
+              moveFormId={canMove ? MOVE_FORM_ID : undefined}
               restoreAction={archived ? (id) => restoreItemAction.bind(null, id) : undefined}
               empty={bankItemsEmpty(emptyView)}
             />
@@ -251,7 +278,7 @@ export default async function BankPage({
             ) : (
               <CaseStudyList
                 caseStudies={caseStudies}
-                moveFormId={hasContent ? MOVE_FORM_ID : undefined}
+                moveFormId={canMove ? MOVE_FORM_ID : undefined}
                 restoreAction={archived ? (id) => restoreCaseStudyAction.bind(null, id) : undefined}
                 empty={bankCaseStudiesEmpty(emptyView)}
               />

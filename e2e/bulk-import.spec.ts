@@ -4,6 +4,7 @@ import { ITEM_PAGE_SIZE } from "../src/lib/authoring/bankSearch";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
 import { signInAsNewAuthor } from "./signIn";
 import { openImport } from "./authoringHelpers";
+import { giveQuizAnInQuizFolder } from "./inQuizFolders";
 
 // Needs the local Supabase stack, like auth.spec.ts. CI runs it in the `auth-e2e` job.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
@@ -50,10 +51,9 @@ test("an author imports three files of 120 items into Cardiac; the broken file i
   await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
-  await page.getByRole("textbox", { name: "Folder name", exact: true }).fill("Cardiac");
-  await page.getByRole("button", { name: "Create folder", exact: true }).click();
+  // #411: a new quiz has no folders inside it, so it is given one the way an older quiz had.
+  await giveQuizAnInQuizFolder(page, request, "Cardiac");
   const folders = page.getByRole("navigation", { name: "Folders" });
-  await expect(folders.getByRole("link", { name: "Cardiac", exact: true })).toBeVisible();
 
   await openImport(page);
 
