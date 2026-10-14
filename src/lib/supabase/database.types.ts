@@ -551,7 +551,6 @@ export type Database = {
           library_folder_id?: string | null;
           name?: string;
           org_id?: string;
-          library_folder_id?: string | null;
           updated_at?: string;
         };
         Relationships: [
