@@ -57,8 +57,8 @@ describe("ITEM_GUIDE", () => {
 });
 
 describe("COMPOSITE_GUIDE", () => {
-  it("covers the case study and the Trend item", () => {
-    expect(COMPOSITE_GUIDE.map((entry) => entry.title)).toEqual(["Case study", "Trend item"]);
+  it("covers the case study and the Trend question", () => {
+    expect(COMPOSITE_GUIDE.map((entry) => entry.title)).toEqual(["Case study", "Trend question"]);
     for (const entry of COMPOSITE_GUIDE) {
       expect(entry.body.length).toBeGreaterThan(0);
       expect(entry.scoring.trim()).not.toBe("");

@@ -13,7 +13,7 @@ export const ARCHIVE_ERRORS = {
   failed: "That could not be done. Try again.",
   itemArchived: "This question is archived. Restore it before you change or publish it.",
   caseStudyArchived: "This case study is archived. Restore it before you change or publish it.",
-  stepArchived: "That question is archived. Restore it before you place it as a step.",
+  stepArchived: "That question is archived. Restore it before you use it in a case study.",
 } as const;
 
 interface DbError {

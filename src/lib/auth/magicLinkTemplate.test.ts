@@ -19,9 +19,9 @@ describe("supabase/templates/magic_link.html", () => {
     expect(new Set(variables)).toEqual(new Set([".RedirectTo", ".TokenHash", ".Token"]));
   });
 
-  it("reads right for an instructor and for a student joining a class", () => {
+  it("says what it is for, once, and when it stops working", () => {
     expect(TEMPLATE).toContain("<title>Sign in to LeaRN</title>");
-    expect(TEMPLATE).toMatch(/whether\s+you teach them or are joining one/);
+    expect(TEMPLATE).toContain("Use the button below to sign in.");
     expect(TEMPLATE).toMatch(/expire in an hour/);
   });
 

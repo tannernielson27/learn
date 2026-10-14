@@ -59,10 +59,10 @@ describe("a patient record in an item editor", () => {
     expect(screen.queryByLabelText("Age in years")).not.toBeInTheDocument();
     await user.click(button("Add patient record"));
     expect(screen.getByLabelText("Age in years")).toBeInTheDocument();
-    expect(screen.getByText(/never enter real patient information/i)).toBeInTheDocument();
+    expect(screen.getByText(/never enter real names/i)).toBeInTheDocument();
     // Inside an item, the record's sections sit under its own heading.
     expect(screen.getByRole("heading", { level: 2, name: "Patient record" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 3, name: "Sections" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "Tabs" })).toBeInTheDocument();
 
     await user.click(button("Save draft"));
     expect(onSaveDraft.mock.calls[0]![0].ehr).toStrictEqual(emptyEhrForm());
@@ -71,12 +71,12 @@ describe("a patient record in an item editor", () => {
   it("asks before removing the record, and keeps it when the author says so", async () => {
     const { onSaveDraft, user } = setup(trend());
     await user.click(button("Remove patient record"));
-    expect(screen.getByText("Remove the patient record from this item?")).toBeInTheDocument();
-    await user.click(button("Keep record"));
+    expect(screen.getByText("Remove the patient record from this question?")).toBeInTheDocument();
+    await user.click(button("Keep patient record"));
     expect(screen.getByLabelText("Age in years")).toBeInTheDocument();
 
     await user.click(button("Remove patient record"));
-    await user.click(button("Remove record"));
+    await user.click(button("Yes, remove it"));
     expect(screen.queryByLabelText("Age in years")).not.toBeInTheDocument();
     expect(button("Add patient record")).toHaveFocus();
     await user.click(button("Save draft"));
@@ -86,7 +86,7 @@ describe("a patient record in an item editor", () => {
   it("lists record problems with the item's, and a problem takes the author to its field", async () => {
     const { user } = setup(trend());
     await user.click(button("Remove patient record"));
-    await user.click(button("Remove record"));
+    await user.click(button("Yes, remove it"));
     await user.click(button("Add patient record"));
 
     const problems = within(screen.getByLabelText("Problems to fix"));

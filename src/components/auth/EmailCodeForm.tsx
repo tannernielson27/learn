@@ -35,9 +35,7 @@ export function EmailCodeForm({ action, email, next }: EmailCodeFormProps) {
     <form action={formAction} className="mt-6 flex flex-col gap-4 border-t border-line pt-6">
       <input type="hidden" name="email" value={email} />
       <input type="hidden" name="next" value={next} />
-      <p className="text-ink-2">
-        Opened the email on another device? Type the code from it here to sign in on this one.
-      </p>
+      <p className="text-ink-2">Or type the code from the email to sign in on this device.</p>
       <div className="flex flex-col gap-2">
         <label htmlFor={`${id}-code`} className="text-sm font-medium text-ink-1">
           Code from the email

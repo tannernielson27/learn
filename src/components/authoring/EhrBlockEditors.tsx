@@ -23,11 +23,11 @@ export const fieldClass =
   "w-full rounded-sm border border-line bg-surface-1 px-3 py-2 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect";
 
 /**
- * Words only a screen reader hears. Labels stay short on screen, where the section and block they
+ * Words only a screen reader hears. Labels stay short on screen, where the tab and block they
  * sit in are plain to see, and whole when read out of context, such as from a list of form fields.
  *
  * Name computation trims the text of each child element, so a space at either end of the hidden
- * words is moved outside the span; otherwise "Move" and " section 2" would read "Movesection 2".
+ * words is moved outside the span; otherwise "Move" and " tab 2" would read "Movetab 2".
  */
 export function Sr({ children }: { children: string }): ReactNode {
   return (
@@ -76,7 +76,7 @@ function TextBlockEditor({
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={id} className="text-sm text-ink-1">
-        <Sr>{`Section ${sectionNumber}, block ${blockNumber}, `}</Sr>
+        <Sr>{`Tab ${sectionNumber}, block ${blockNumber}, `}</Sr>
         Text
       </label>
       <textarea
@@ -89,8 +89,8 @@ function TextBlockEditor({
         onChange={(event) => onChange({ kind: "markdown", value: event.target.value })}
       />
       <p id={hint} className="text-xs text-ink-2">
-        Leave a blank line between paragraphs. Start lines with &quot;- &quot; for a list, or a note
-        with a time such as &quot;0800: &quot;.
+        A blank line between paragraphs; &quot;- &quot; for a list; &quot;0800: &quot; for a timed
+        note.
       </p>
     </div>
   );
@@ -109,8 +109,8 @@ function TableBlockEditor({
   focusLater,
   onChange,
 }: BlockEditorProps<EhrTableBlockForm>) {
-  const where = `Section ${sectionNumber}, block ${blockNumber}, `;
-  const scope = `section ${sectionNumber}, block ${blockNumber}`;
+  const where = `Tab ${sectionNumber}, block ${blockNumber}, `;
+  const scope = `tab ${sectionNumber}, block ${blockNumber}`;
   const base = fields.idFor(path);
   // The first heading carries the block's own id, so a problem with the block focuses it.
   const headingId = (column: number) => (column === 0 ? base : `${base}-heading-${column}`);
@@ -123,7 +123,7 @@ function TableBlockEditor({
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm text-ink-1">Column headings</legend>
         <p className="text-xs text-ink-2">
-          The first column heads each row. Leave its heading blank for a grid of measures by time.
+          The first column heads each row. Leave it blank for measures by time.
         </p>
         {block.columns.map((heading, column) => (
           <div key={column} className="flex flex-wrap items-end gap-2">
@@ -229,13 +229,13 @@ function VitalsBlockEditor({
   focusLater,
   onChange,
 }: BlockEditorProps<EhrVitalsBlockForm>) {
-  const scope = `section ${sectionNumber}, block ${blockNumber}`;
+  const scope = `tab ${sectionNumber}, block ${blockNumber}`;
   const addMeasureId = `${fields.idFor(path)}-add-measure`;
 
   return (
     <div className="flex flex-col gap-3">
       {block.rows.map((measure, row) => {
-        const prefix = `Section ${sectionNumber}, block ${blockNumber}, row ${row + 1}, `;
+        const prefix = `Tab ${sectionNumber}, block ${blockNumber}, row ${row + 1}, `;
         const rowPath = `${path}.rows.${row}`;
         const textField = (key: "label" | "value" | "unit", label: string) => {
           const field = `${rowPath}.${key}`;
@@ -327,7 +327,7 @@ function VitalsBlockEditor({
   );
 }
 
-/** The fields for one block of a section, by its kind. */
+/** The fields for one block of a tab, by its kind. */
 export function EhrBlockEditor(props: BlockEditorProps<EhrBlockForm>) {
   const { block } = props;
   if (block.kind === "markdown") return <TextBlockEditor {...props} block={block} />;

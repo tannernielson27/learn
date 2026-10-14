@@ -36,7 +36,8 @@ describe("the welcome email", () => {
   it("tells each role what to do first", () => {
     expect(renderWelcomeEmail("student", LINK).text).toMatch(/you are in your class/);
     expect(renderWelcomeEmail("student", LINK).text).toMatch(/Send the email again/);
-    expect(renderWelcomeEmail("teacher", LINK).text).toMatch(/make a class/);
+    expect(renderWelcomeEmail("teacher", LINK).text).toMatch(/create a class/);
+    expect(renderWelcomeEmail("teacher", LINK).text).toMatch(/Send the email again/);
     expect(renderWelcomeEmail("teacher", LINK).text).not.toMatch(/you are in your class/);
     // #361: an account with no class yet is told how to join one, not that it is in one.
     expect(renderWelcomeEmail("newcomer", LINK).text).toMatch(/join your class/);

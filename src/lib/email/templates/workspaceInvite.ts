@@ -34,7 +34,7 @@ const BUTTON = "Accept the invitation";
 const FOOTER =
   "Sent by LeaRN, an NCLEX practice app, because a teacher invited this address to their workspace.";
 const NOTES = [
-  "The invitation is only for this email address and expires in 7 days. Sign in or make an account with this address to accept it.",
+  "The invitation is only for this email address and expires in 7 days. Sign in or create an account with this address to accept it.",
   "An account that is already a student cannot accept it. One that already teaches in LeaRN is asked first, because accepting means leaving the workspace it teaches in.",
   "If you do not know the sender, you can ignore this email. Nothing happens unless you accept.",
 ] as const;
@@ -53,8 +53,8 @@ function paragraphsFor(content: WorkspaceInviteContent): string[] {
   const inviter = oneLine(content.inviterEmail, ADDRESS_LIMIT);
   const workspace = oneLine(content.workspaceName, NAME_LIMIT);
   return [
-    `${inviter} invited you to teach with them in the workspace "${workspace}" on LeaRN, an NCLEX practice app.`,
-    "Accepting makes you an instructor in that workspace: you share its item banks, classes and results.",
+    `${inviter} invited you to teach with them in the workspace "${workspace}" on LeaRN.`,
+    "Accepting makes you a teacher in that workspace: you share its quizzes, classes and results.",
   ];
 }
 

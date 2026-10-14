@@ -30,6 +30,7 @@ describe("the control: the check can fail", () => {
     ["Make a class", "make a class"],
     ["Delete this quiz", "delete this quiz"],
     ["CJMM step", "cjmm"],
+    ["Type the live session code on the screen.", "session code"],
   ])("finds the retired wording in %j", (text, term) => {
     expect(found(`<p>${text}</p>`)).toContain(term);
   });

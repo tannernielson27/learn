@@ -19,7 +19,7 @@ async function expectNoAxeViolations(page: Page) {
 
 const MINUTES = 60_000;
 
-test("the site header asks before leaving unsaved work in the builder, as Back to bank does", async ({
+test("the site header asks before leaving unsaved work in the builder, as Back to quiz does", async ({
   page,
   request,
 }, testInfo) => {
@@ -35,9 +35,9 @@ test("the site header asks before leaving unsaved work in the builder, as Back t
 
   await page.getByRole("textbox", { name: "Age in years", exact: true }).fill("72");
   await page.getByRole("banner").getByRole("link", { name: "LeaRN" }).click();
-  const ask = page.getByRole("alertdialog", { name: "The record has unsaved changes" });
+  const ask = page.getByRole("alertdialog", { name: "The patient record has unsaved changes" });
   await expect(ask).toBeVisible();
-  await ask.getByRole("button", { name: "Stay on this step" }).click();
+  await ask.getByRole("button", { name: "Keep editing" }).click();
   expect(page.url()).toBe(builderUrl);
   await expect(page.getByRole("textbox", { name: "Age in years", exact: true })).toHaveValue("72");
 
@@ -72,24 +72,24 @@ test("an author builds a complete case study from an empty bank, previews it, an
   await textbox("Age in years").fill("72");
   await select("Sex").selectOption("female");
   await textbox("Care setting").fill("Cardiac unit");
-  await select("New section kind").selectOption("history_physical");
-  await page.getByRole("button", { name: "Add section", exact: true }).click();
-  await textbox("Section 1, block 1, Text").fill(
+  await select("Tab kind").selectOption("history_physical");
+  await page.getByRole("button", { name: "Add tab", exact: true }).click();
+  await textbox("Tab 1, block 1, Text").fill(
     "Admitted with worsening shortness of breath and swelling of both ankles.",
   );
-  await select("New section kind").selectOption("vital_signs");
-  await page.getByRole("button", { name: "Add section", exact: true }).click();
-  await textbox("Section 2, block 1, row 1, Measure").fill("Heart rate");
-  await textbox("Section 2, block 1, row 1, Value").fill("112");
-  await page.getByRole("button", { name: "Save record" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Record saved." })).toBeVisible();
-  await expect(rail.getByRole("button", { name: /^Record/ })).toContainText("Ready");
+  await select("Tab kind").selectOption("vital_signs");
+  await page.getByRole("button", { name: "Add tab", exact: true }).click();
+  await textbox("Tab 2, block 1, row 1, Measure").fill("Heart rate");
+  await textbox("Tab 2, block 1, row 1, Value").fill("112");
+  await page.getByRole("button", { name: "Save patient record" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Patient record saved." })).toBeVisible();
+  await expect(rail.getByRole("button", { name: /^Patient record/ })).toContainText("Ready");
   await expectNoAxeViolations(page);
 
   // Six steps of mixed types, each written and published in place.
   const steps: { name: RegExp; type: string; fill: () => Promise<void> }[] = [
     {
-      name: /^Step 1: Recognize Cues/,
+      name: /^Step 1 of 6: Recognize Cues/,
       type: "Multiple Choice",
       fill: () =>
         fillMultipleChoice(page, "Which finding needs attention first?", [
@@ -100,7 +100,7 @@ test("an author builds a complete case study from an empty bank, previews it, an
         ]),
     },
     {
-      name: /^Step 2: Analyze Cues/,
+      name: /^Step 2 of 6: Analyze Cues/,
       type: "Extended Multiple Response",
       fill: () =>
         fillMultipleResponse(
@@ -117,7 +117,7 @@ test("an author builds a complete case study from an empty bank, previews it, an
         ),
     },
     {
-      name: /^Step 3: Prioritize Hypotheses/,
+      name: /^Step 3 of 6: Prioritize Hypotheses/,
       type: "Matrix Multiple Choice",
       fill: () =>
         fillMatrixMultipleChoice(
@@ -131,7 +131,7 @@ test("an author builds a complete case study from an empty bank, previews it, an
         ),
     },
     {
-      name: /^Step 4: Generate Solutions/,
+      name: /^Step 4 of 6: Generate Solutions/,
       type: "Ordered Response",
       fill: () =>
         fillOrderedResponse(page, "Put the nurse's first actions in order.", [
@@ -142,7 +142,7 @@ test("an author builds a complete case study from an empty bank, previews it, an
         ]),
     },
     {
-      name: /^Step 5: Take Action/,
+      name: /^Step 5 of 6: Take Action/,
       type: "Multiple Choice",
       fill: () =>
         fillMultipleChoice(page, "Which prescription should the nurse carry out first?", [
@@ -153,7 +153,7 @@ test("an author builds a complete case study from an empty bank, previews it, an
         ]),
     },
     {
-      name: /^Step 6: Evaluate Outcomes/,
+      name: /^Step 6 of 6: Evaluate Outcomes/,
       type: "Matrix Multiple Choice",
       fill: () =>
         fillMatrixMultipleChoice(
@@ -170,7 +170,7 @@ test("an author builds a complete case study from an empty bank, previews it, an
   for (const step of steps) {
     await rail.getByRole("button", { name: step.name }).click();
     await page.getByRole("button", { name: step.type, exact: true }).click();
-    await expect(page.getByRole("button", { name: "Change type" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Change format" })).toBeVisible();
     await step.fill();
     await publishOpenItem(page);
     await expect(rail.getByRole("button", { name: step.name })).toContainText("Ready");

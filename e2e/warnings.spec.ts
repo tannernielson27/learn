@@ -74,7 +74,7 @@ test("an author filters the bank to Has warnings, adds a rationale, and the warn
 
   // The item without a rationale cannot be published until one is written.
   await itemLinks(page).filter({ hasText: NO_RATIONALE }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Edit item" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Edit question" })).toBeVisible();
   const problems = page.getByRole("region", { name: "Problems to fix" });
   const fix = problems.getByRole("button", { name: /^Write the rationale/ });
   await expect(fix).toBeVisible();

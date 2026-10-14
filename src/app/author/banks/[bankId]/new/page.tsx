@@ -6,7 +6,7 @@ import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { createItem } from "../../../actions";
 
-export const metadata: Metadata = { title: "New item" };
+export const metadata: Metadata = { title: "New question" };
 
 export default async function NewItemPage({ params }: PageProps<"/author/banks/[bankId]/new">) {
   const { bankId } = await params;
@@ -30,8 +30,8 @@ export default async function NewItemPage({ params }: PageProps<"/author/banks/[
           {bank.name}
         </Link>
       </p>
-      <h1 className="mb-2 font-read text-3xl text-ink-1">New item</h1>
-      <p className="mb-6 text-ink-2">Choose the format. You can write the item next.</p>
+      <h1 className="mb-2 font-read text-3xl text-ink-1">New question</h1>
+      <p className="mb-6 text-ink-2">Choose a format.</p>
       <NewItemChooser create={createItem.bind(null, bank.id)} />
     </>
   );

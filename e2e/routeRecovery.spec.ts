@@ -52,7 +52,7 @@ test("a student whose room fails to render rejoins it, as the same participant, 
     1,
   );
   await publishOpenItem(page);
-  await page.getByRole("link", { name: "Back to bank", exact: true }).click();
+  await page.getByRole("link", { name: "Back to quiz", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
   await page.getByRole("button", { name: "Start a live session", exact: true }).click();

@@ -70,9 +70,7 @@ describe("ItemHistory", () => {
   it("says when nothing has been published", async () => {
     const { user } = renderHistory({ entries: [] });
     await user.click(screen.getByRole("button", { name: "History" }));
-    expect(
-      screen.getByText("Nothing published yet. Each publish adds a version here."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Nothing published yet.")).toBeInTheDocument();
   });
 
   it("previews a version read-only with what changed since", async () => {

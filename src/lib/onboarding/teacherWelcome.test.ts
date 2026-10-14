@@ -28,15 +28,15 @@ function client(replies: { profiles: Reply; orgs: Reply; org_invites?: ListReply
 }
 
 describe("teacherWelcomeSteps (#364)", () => {
-  it("is three steps: the workspace, question banks, then classes and sessions", () => {
+  it("is three steps: the workspace, a quiz, then a class and a live session", () => {
     const steps = teacherWelcomeSteps("Ada Lovelace");
     expect(steps.map((step) => step.title)).toEqual([
       "Welcome, Ada Lovelace",
-      "Start with a question bank",
-      "Then a class, and your first session",
+      "Create a quiz or import the sample",
+      "Then a class, and your first live session",
     ]);
     expect(steps[0]!.body.join(" ")).toMatch(/no other teacher can see them/);
-    expect(steps[1]!.body.join(" ")).toMatch(/import the sample bank/);
+    expect(steps[1]!.body.join(" ")).toMatch(/A quiz holds your questions and case studies/);
     expect(steps[2]!.body.join(" ")).toMatch(/class code or invite link/);
   });
 
@@ -48,7 +48,7 @@ describe("teacherWelcomeSteps (#364)", () => {
   it("names the checklist's own steps, so the two cannot disagree", () => {
     const checklist = checklistSteps({ banks: [], hasClass: false, hasAssignmentOrSession: false });
     const said = teacherWelcomeSteps(null)
-      .flatMap((step) => step.body)
+      .flatMap((step) => [step.title, ...step.body])
       .join(" ");
     for (const step of checklist) expect(said).toContain(step.title);
   });
@@ -73,13 +73,13 @@ describe("teacherWelcomeSteps for a colleague who was invited", () => {
 
   it("says the workspace is shared, and never that nobody else can see it", () => {
     expect(copy).toMatch(/shared workspace/);
-    expect(copy).toMatch(/the other teachers in it see and work on the same ones/);
+    expect(copy).toMatch(/the other teachers in it see and work on the same quizzes/);
     expect(copy).not.toMatch(/no other teacher/);
     expect(copy).not.toMatch(/your workspace/i);
   });
 
-  it("leaves the sample bank out: the workspace is not theirs to fill", () => {
-    expect(copy).not.toMatch(/sample bank/i);
+  it("leaves the sample out: the workspace is not theirs to fill", () => {
+    expect(copy).not.toMatch(/sample/i);
     expect(copy).not.toMatch(/import/i);
   });
 

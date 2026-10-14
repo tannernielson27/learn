@@ -45,17 +45,17 @@ export function checklistSteps(progress: OrgProgress): ChecklistStep[] {
   return [
     {
       id: "bank",
-      title: "Make a bank or import the sample",
-      hint: "A bank holds your items and case studies. The sample has one item of every type and a case study, published, ready to assign or run live.",
+      title: "Create a quiz or import the sample",
+      hint: "The sample has one question of every type and a case study, published and ready to use.",
       done: progress.banks.length > 0,
       href: "#new-bank-heading",
-      linkLabel: "Name a new bank",
+      linkLabel: "Write your own",
       sampleBankId: sample?.id ?? null,
     },
     {
       id: "class",
-      title: "Make a class",
-      hint: "Students join a class through its invite link.",
+      title: "Create a class",
+      hint: "Students join with its class code or invite link.",
       done: progress.hasClass,
       href: CLASSES_PATH,
       linkLabel: "Go to your classes",
@@ -63,10 +63,10 @@ export function checklistSteps(progress: OrgProgress): ChecklistStep[] {
     },
     {
       id: "assign",
-      title: "Assign work or run a live session",
+      title: "Assign a quiz or start a live session",
       hint: latest
-        ? "Open a bank to assign it to a class or start a live session. The sample is ready as it is; items you write are used once you publish them."
-        : "Once you have a bank, assign it to a class or start a live session from it.",
+        ? "Do either from a quiz. Questions you write are used once you publish them."
+        : "You need a quiz first.",
       done: progress.hasAssignmentOrSession,
       href: latest ? `/author/banks/${latest.id}` : null,
       linkLabel: latest ? `Open ${latest.name}` : "",
