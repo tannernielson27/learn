@@ -115,10 +115,64 @@ export type ExtractUnitResult =
   | { ok: false; code: "claude_failed"; reason: ClaudeFailureCode };
 
 /** A reservation the ledger refused, thrown out of a call. */
-class Refused extends Error {
+export class Refused extends Error {
   constructor(readonly result: Extract<ExtractUnitResult, { ok: false }>) {
     super("the reservation was refused");
   }
+}
+
+/**
+ * A Claude call reserved under the workspace's cap first and settled once after, with no pages
+ * (the segment pass counted them). A refused reservation throws `Refused`; `spent` hears every
+ * call's real usage, failed calls included.
+ */
+export function reservedCall(
+  deps: Pick<ExtractUnitDeps, "usageRpc" | "sleep" | "random">,
+  ref: FileRef,
+  client: MessagesClient,
+  document: { payload: ChunkPayload; pages: number },
+  spent: (usage: Usage) => void,
+): UnitCall {
+  return async (body) => {
+    const reservation = await reserveUsage(deps.usageRpc, {
+      orgId: ref.orgId,
+      batchId: ref.batchId,
+      pages: 0,
+      costUsd: estimateCallCost(
+        document.payload,
+        document.pages,
+        EXTRACT_MAX_TOKENS,
+        JSON.stringify(body.content.at(-1) ?? "").length,
+      ),
+    });
+    if (!reservation.ok) {
+      throw new Refused(
+        reservation.reason === "cap_reached"
+          ? {
+              ok: false,
+              code: "cap_reached",
+              remainingUsd: reservation.remainingUsd,
+              remainingPages: reservation.remainingPages,
+            }
+          : { ok: false, code: reservation.reason },
+      );
+    }
+    let answer: StructuredAnswer;
+    try {
+      answer = await callStructured(client, body, { sleep: deps.sleep, random: deps.random });
+    } catch (error) {
+      const usage = error instanceof ClaudeCallError ? error.usage : NO_USAGE;
+      spent(usage);
+      await settleUsage(deps.usageRpc, reservation.reservationId, { pages: 0, usage });
+      throw error;
+    }
+    spent(answer.usage);
+    await settleUsage(deps.usageRpc, reservation.reservationId, {
+      pages: 0,
+      usage: answer.usage,
+    });
+    return answer;
+  };
 }
 
 /** What Claude reads for questions read from `chunks`: their text joined, or their pages. */
@@ -170,7 +224,7 @@ export function rowOf(
   };
 }
 
-function wholeText(prepared: PreparedFile): string | null {
+export function wholeText(prepared: PreparedFile): string | null {
   if (prepared.kind === "pdf") return null;
   return prepared.chunks.map((chunk) => chunk.text ?? "").join("");
 }
@@ -271,46 +325,9 @@ export async function extractUnit(
       return { ok: false, code: "claude_failed", reason };
     }
 
-    const call: UnitCall = async (body) => {
-      const reservation = await reserveUsage(deps.usageRpc, {
-        orgId: ref.orgId,
-        batchId: ref.batchId,
-        pages: 0,
-        costUsd: estimateCallCost(
-          document.payload,
-          document.pages,
-          EXTRACT_MAX_TOKENS,
-          JSON.stringify(body.content.at(-1) ?? "").length,
-        ),
-      });
-      if (!reservation.ok) {
-        throw new Refused(
-          reservation.reason === "cap_reached"
-            ? {
-                ok: false,
-                code: "cap_reached",
-                remainingUsd: reservation.remainingUsd,
-                remainingPages: reservation.remainingPages,
-              }
-            : { ok: false, code: reservation.reason },
-        );
-      }
-      let answer: StructuredAnswer;
-      try {
-        answer = await callStructured(client, body, { sleep: deps.sleep, random: deps.random });
-      } catch (error) {
-        const spent = error instanceof ClaudeCallError ? error.usage : NO_USAGE;
-        usage = addUsage(usage, spent);
-        await settleUsage(deps.usageRpc, reservation.reservationId, { pages: 0, usage: spent });
-        throw error;
-      }
-      usage = addUsage(usage, answer.usage);
-      await settleUsage(deps.usageRpc, reservation.reservationId, {
-        pages: 0,
-        usage: answer.usage,
-      });
-      return answer;
-    };
+    const call = reservedCall(deps, ref, client, document, (spent) => {
+      usage = addUsage(usage, spent);
+    });
 
     const unitDocument = {
       payload: document.payload,

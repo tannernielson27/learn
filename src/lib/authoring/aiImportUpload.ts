@@ -100,6 +100,10 @@ export const AI_IMPORT_MESSAGES = {
   in_progress: "This file is being checked. Wait a moment.",
   incomplete: "Some parts of the files have not been read yet.",
   upload_failed: "The file could not be uploaded. Check your connection and try again.",
+  entry_changed:
+    "This question changed in another tab or window. Reload the page to see it as it is now.",
+  not_review: "This import is not waiting for review.",
+  not_retypable: "Only a single question can be read again as another type.",
 } as const;
 
 export type AiImportCode = keyof typeof AI_IMPORT_MESSAGES;
