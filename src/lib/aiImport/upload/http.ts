@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { messageFor } from "@/lib/authoring/aiImportUpload";
+import { messageFor, type BatchStatus } from "@/lib/authoring/aiImportUpload";
 import { aiImportAccess, readBatch, type AccessDeps, type BatchRow, type Client } from "./access";
 
 /** Shared by the parse and extract routes (#345). JSON only, never cached. */
@@ -34,13 +34,15 @@ export type Admitted = {
 
 /**
  * Everything both routes check before their own work: JSON (a cross-site form cannot post it),
- * a teacher, AI import on, a small body, and a batch of the teacher's own workspace that is
- * reading files. AI import off and another workspace's batch both answer 404.
+ * a teacher, AI import on, a small body, and a batch of the teacher's own workspace in the status
+ * the route works on (reading files, or in review for #346's change type). AI import off and
+ * another workspace's batch both answer 404.
  */
 export async function admit(
   request: Request,
   deps: RouteDeps,
   readIds: (body: unknown) => { batchId: string } | null,
+  expected: Extract<BatchStatus, "parsing" | "review"> = "parsing",
 ): Promise<Admitted | Response> {
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
     return fail(415, "malformed");
@@ -69,6 +71,8 @@ export async function admit(
   const batch = await readBatch(service, access.author.orgId, ids.batchId);
   if (batch === "unavailable") return fail(503, "unavailable");
   if (!batch) return fail(404, "not_found");
-  if (batch.status !== "parsing") return fail(409, "not_parsing");
+  if (batch.status !== expected) {
+    return fail(409, expected === "review" ? "not_review" : "not_parsing");
+  }
   return { orgId: access.author.orgId, userId: access.author.userId, service, batch, body };
 }

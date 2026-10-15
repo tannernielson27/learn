@@ -299,15 +299,22 @@ export function AiImportUpload({
           {questions} {questions === 1 ? "question is" : "questions are"} waiting for review.
           Nothing has been added to {quizName} yet.
         </p>
-        <p className="text-sm text-ink-2">
-          Reviewing an import is not available yet. Your import is kept until then.
-        </p>
-        <Link
-          href={`/author/banks/${bankId}`}
-          className="tap-target inline-flex items-center text-accent-ink underline"
-        >
-          Back to {quizName}
-        </Link>
+        <div className="flex flex-wrap items-center gap-4">
+          {batchId ? (
+            <Link
+              href={`/author/banks/${bankId}/ai-import/${batchId}`}
+              className="tap-target inline-flex items-center rounded-sm border border-accent bg-accent px-4 font-medium text-accent-contrast hover:bg-accent-ink"
+            >
+              Review the questions
+            </Link>
+          ) : null}
+          <Link
+            href={`/author/banks/${bankId}`}
+            className="tap-target inline-flex items-center text-accent-ink underline"
+          >
+            Back to {quizName}
+          </Link>
+        </div>
       </section>
     );
   }

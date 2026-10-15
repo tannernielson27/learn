@@ -71,7 +71,7 @@ export async function unitState(
   return { ok: true, units: units.length, staged: done, questions: positions.length };
 }
 
-function refusal(result: Extract<ExtractUnitResult, { ok: false }>): Response {
+export function refusal(result: Extract<ExtractUnitResult, { ok: false }>): Response {
   switch (result.code) {
     case "disabled":
       return fail(404, "not_found");
