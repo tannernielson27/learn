@@ -151,10 +151,16 @@ test("a teacher reviews an import: four statuses, a drop and a change of type", 
 });
 
 /** A student account signed in through the emailed link, in a browser of its own. */
-async function signedInStudent(browser: Browser, request: APIRequestContext, label: string) {
+async function signedInStudent(
+  browser: Browser,
+  request: APIRequestContext,
+  label: string,
+  orgId: string,
+) {
   const email = uniqueEmail(label);
   const userId = await createAccountWithoutRole(request, email);
-  await updateAsAdmin(request, "profiles", `id=eq.${userId}`, { role: "student" });
+  // A student of the batch's own workspace: the nearest a student gets to its keys.
+  await updateAsAdmin(request, "profiles", `id=eq.${userId}`, { org_id: orgId, role: "student" });
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto("/sign-in");
@@ -215,7 +221,7 @@ test("the review page and its change of type reach nobody outside the batch's wo
   await outsider.close();
 
   // A student is sent to the student home, as from every author page, with none of it.
-  const student = await signedInStudent(browser, request, `${label}-student`);
+  const student = await signedInStudent(browser, request, `${label}-student`, orgId);
   const studentGet = await student.context.request.get(reviewPath);
   expect(new URL(studentGet.url()).pathname).not.toMatch(/^\/author/);
   expect(wireText(await studentGet.text())).not.toContain(marker);

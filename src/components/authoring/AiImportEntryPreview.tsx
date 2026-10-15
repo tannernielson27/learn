@@ -1,5 +1,6 @@
 "use client";
 
+import { Component, useSyncExternalStore, type ReactNode } from "react";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { recordAtStep } from "@/lib/ngn/chartReveal";
 import { caseStudySchema, itemSchema, type Item } from "@/lib/ngn/schemas";
@@ -109,7 +110,51 @@ export function AiImportEntryPreview({ kind, item, label }: AiImportEntryPreview
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm text-ink-2">No key yet. This is how students will see it.</p>
-      <ItemPlayer item={item as Item} submit={refuse} showSubmit={false} label={label} />
+      <UnkeyedItem item={item as Record<string, unknown>} label={label} />
     </div>
   );
+}
+
+const CANNOT_DRAW = (
+  <p className="text-sm text-ink-2">
+    This question cannot be drawn until it is fixed. Its source is below.
+  </p>
+);
+
+const noSubscription = () => () => {};
+
+/**
+ * An item that is not valid yet (its key is empty) may still trip the player, which expects a
+ * whole item. It is drawn in the browser only, never on the server, so a question that cannot be
+ * drawn never takes the page down with it, and a boundary turns a throw into a sentence.
+ */
+function UnkeyedItem({ item, label }: { item: Record<string, unknown>; label: string }) {
+  const inBrowser = useSyncExternalStore(
+    noSubscription,
+    () => true,
+    () => false,
+  );
+  if (!inBrowser) return null;
+  return (
+    <PreviewBoundary>
+      <ItemPlayer
+        item={{ tags: [], ...item } as unknown as Item}
+        submit={refuse}
+        showSubmit={false}
+        label={label}
+      />
+    </PreviewBoundary>
+  );
+}
+
+class PreviewBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    return this.state.failed ? CANNOT_DRAW : this.props.children;
+  }
 }
