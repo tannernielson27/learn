@@ -103,18 +103,20 @@ insert into public.ai_import_entries
 -- What the server sends: a question row, and a case study with six steps (or five).
 create temporary table cmt as
   select
+    q.question,
     jsonb_build_object(
+      'title', 'Fictional case', 'tags', jsonb_build_array('ai-import'),
+      'ehr', jsonb_build_object('tabs', jsonb_build_array()),
+      'items', (select jsonb_agg(q.question || jsonb_build_object('cjmm_step', 1))
+                  from generate_series(1, 6))) as case_study
+  from (
+    select jsonb_build_object(
       'type', 'multiple_choice', 'cjmm_step', 3, 'tags', jsonb_build_array('ai-import'),
       'content', jsonb_build_object('stem', 'Which first?', 'id', 'ignored'),
       'answer_key', jsonb_build_object('correct', 'b'),
       'rationale', jsonb_build_object('general', 'Because.'),
-      'scoring', jsonb_build_object('rule', 'zero_one')) as question;
-alter table cmt add column case_study jsonb;
-update cmt set case_study = jsonb_build_object(
-  'title', 'Fictional case', 'tags', jsonb_build_array('ai-import'),
-  'ehr', jsonb_build_object('tabs', jsonb_build_array()),
-  'items', (select jsonb_agg(question || jsonb_build_object('cjmm_step', 1))
-              from generate_series(1, 6)));
+      'scoring', jsonb_build_object('rule', 'zero_one')) as question
+  ) as q;
 grant select on cmt to authenticated, anon;
 
 -- ---------------------------------------------------------------------------
