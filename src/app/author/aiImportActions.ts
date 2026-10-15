@@ -9,6 +9,12 @@ import {
   startBatch,
   type ActionDeps,
 } from "@/lib/aiImport/upload/actions";
+import {
+  dropEntry,
+  restoreEntry,
+  type EntryActionInput,
+  type ReviewActionDeps,
+} from "@/lib/aiImport/review/actions";
 import { requireAuthor } from "@/lib/authoring/session";
 import { sharedRateLimitStore } from "@/lib/rateLimit/postgresStore";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -50,4 +56,18 @@ export async function beginAiImportReading(batchId: string) {
 
 export async function finishAiImport(batchId: string) {
   return finishBatch(await guardedDeps(), batchId);
+}
+
+/** Review (#346): the same checks, then the teacher's own session and a version check. */
+async function reviewDeps(): Promise<ReviewActionDeps> {
+  const session = await requireAuthor("/author");
+  return { author: async () => ({ status: "ok", ...session }) };
+}
+
+export async function dropAiImportEntry(input: EntryActionInput) {
+  return dropEntry(await reviewDeps(), input);
+}
+
+export async function restoreAiImportEntry(input: EntryActionInput) {
+  return restoreEntry(await reviewDeps(), input);
 }

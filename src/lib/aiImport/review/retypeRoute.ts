@@ -36,7 +36,7 @@ function refused(result: Extract<RetypeResult, { ok: false }>): Response {
   if (result.code === "entry_changed" || result.code === "not_retypable") {
     return fail(409, result.code);
   }
-  return refusal(result);
+  return refusal(result as Exclude<typeof result, { code: "entry_changed" | "not_retypable" }>);
 }
 
 export async function retypeResponse(request: Request, deps: RetypeRouteDeps): Promise<Response> {

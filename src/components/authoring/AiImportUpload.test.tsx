@@ -111,6 +111,10 @@ describe("AiImportUpload", () => {
     expect(window.location.search).toBe("?batch=b1");
     expect(screen.getByRole("heading", { name: "Ready for review" })).toBeTruthy();
     expect(screen.getByRole("status").textContent).toContain("1 question is waiting for review");
+    // #346: the review screen is one link away.
+    expect(screen.getByRole("link", { name: "Review the questions" }).getAttribute("href")).toBe(
+      `/author/banks/${BANK}/ai-import/b1`,
+    );
   });
 
   it("carries on reading a batch it was reloaded on, and says why it stopped", async () => {
