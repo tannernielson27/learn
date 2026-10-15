@@ -269,7 +269,7 @@ Owner decisions (2026-10-01):
 | [#338](https://github.com/tannernielson27/learn/issues/338) | feat(ngn): AI draft shapes and converters for cloze, highlight, drag-and-drop and case studies | none              | Merged (#442); no migration                                                       |
 | [#339](https://github.com/tannernielson27/learn/issues/339) | test(ai-import): a fictional golden corpus and an accuracy eval                                | none              | Merged (#443); no migration                                                       |
 | [#340](https://github.com/tannernielson27/learn/issues/340) | feat(db): AI import batches, staged entries, a private upload bucket and a monthly cap         | security, db      | In review (#444); migration `20261015000000_ai_import`, held for the owner's push |
-| [#341](https://github.com/tannernielson27/learn/issues/341) | feat(ai-import): check uploaded files and prepare them for Claude                              | security          | Open                                                                              |
+| [#341](https://github.com/tannernielson27/learn/issues/341) | feat(ai-import): check uploaded files and prepare them for Claude                              | security          | In review, stacked on #444; no migration                                          |
 | [#342](https://github.com/tannernielson27/learn/issues/342) | feat(ai-import): Claude client, segment pass, usage ledger and cap                             | security          | Open                                                                              |
 | [#343](https://github.com/tannernielson27/learn/issues/343) | feat(ai-import): extract each question into a draft, validate it, and repair once              | security          | Open                                                                              |
 | [#344](https://github.com/tannernielson27/learn/issues/344) | feat(ai-import): assemble case studies with a chart that grows by step                         | none              | Open                                                                              |
@@ -278,6 +278,11 @@ Owner decisions (2026-10-01):
 | [#347](https://github.com/tannernielson27/learn/issues/347) | feat(authoring): fix staged questions and case studies with the existing editors               | e2e               | Open                                                                              |
 | [#348](https://github.com/tannernielson27/learn/issues/348) | feat(authoring): import a reviewed batch all at once, or discard it                            | security, db, e2e | Open                                                                              |
 | [#349](https://github.com/tannernielson27/learn/issues/349) | docs(help): AI import guide, end-to-end tests, security rows and the S12 demo                  | e2e               | Open                                                                              |
+
+Notes from #341 for the stories after it (`src/lib/aiImport/files/`):
+
+- **#345:** call `registerFile`, upload with the `contentType` it answers and the teacher's own session, then `checkUploadedFile`; all three take the service-role client, so the Server Function checks the caller authors the workspace first. A refused file keeps its row (and one of the 5 places) until `removeFile`. The returned `images` count is not stored.
+- **#342:** `ai_import_chunks` holds positions and pages, not content. Read a file only through `loadCheckedFile`, which re-hashes the object against `sha256` (a teacher can replace it while it is pending), then `chunkPayload(bytes, prepared, position)`. A .docx arrives as markdown; put `DOCX_MARKUP` in the prompt.
 
 #334, #335 and #336 are in S14 below. Issue titles keep the words they were filed with; the interface follows docs/glossary.md ("quiz", not "bank"; "question", not "item").
 
