@@ -54,6 +54,24 @@ const DROPPED_KEYS = new Set([
   "responsebody",
   "arguments",
   "vars",
+  // AI import (#342, ADR 0008 "Safety"): a teacher's document, what Claude was sent, and what it
+  // answered, which may hold keys. Staged entries hold them under these names too.
+  "excerpt",
+  "excerpts",
+  "sourceexcerpt",
+  "draft",
+  "drafts",
+  "document",
+  "documents",
+  "prompt",
+  "system",
+  "messages",
+  "content",
+  "text",
+  "segment",
+  "segments",
+  "questions",
+  "scoringrule",
 ]);
 
 /** The request headers worth keeping. Everything else, cookies and forwarded IPs included, goes. */

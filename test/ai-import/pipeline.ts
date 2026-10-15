@@ -10,20 +10,23 @@ import {
   isDraftType,
   type JsonSchema,
 } from "@/lib/ngn/draft";
+import { AI_IMPORT_MODEL, PRICE_PER_MILLION } from "@/lib/aiImport/config";
 import { NOT_IMPORTABLE, type RecordedQuestion, type Recording } from "./files";
 
 /**
  * The eval's own import pipeline (#339): a segment pass, then one extract call per question,
  * built on the #337/#338 draft schemas the way the #333 spike called Claude. It stands in for
- * the product pipeline until #342 (segment) and #343 (extract) build `src/lib/aiImport`; then
- * `runPipeline` should call that instead, so the eval measures what ships.
+ * the product pipeline until #343 (extract) builds the rest of `src/lib/aiImport`; then
+ * `runPipeline` should call that instead, so the eval measures what ships. #342's segment pass
+ * (`src/lib/aiImport/segment.ts`) reads a chunk of the product's own markdown, not this file's
+ * whole-document HTML, so it moves here together with extraction, which reads the same block.
+ * The model and prices already come from the product's config.
  *
  * Only `pnpm eval:ai-import` runs it against the API. Tests drive it with a fake client.
  */
 
-export const EVAL_MODEL = "claude-sonnet-5-5";
-/** USD per million tokens, Sonnet 5.5 list price (ADR 0008, 2026-10-01). */
-const PRICE = { input: 2, output: 10, cacheWrite: 2.5, cacheRead: 0.2 };
+export const EVAL_MODEL = AI_IMPORT_MODEL;
+const PRICE = PRICE_PER_MILLION;
 const EXTRACT_CONCURRENCY = 3;
 const MAX_TOKENS = 16_000;
 
