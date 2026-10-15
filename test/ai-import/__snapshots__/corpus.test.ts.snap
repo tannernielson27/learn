@@ -3,8 +3,8 @@
 exports[`the recorded responses > score as recorded (update with \`pnpm vitest -u\` when a recording is replaced) 1`] = `
 "| Type | Questions | Type right | Key exact | Stem | Options | Valid |
 | --- | --- | --- | --- | --- | --- | --- |
-| multiple_choice | 6 | 6/6 (100%) | 6/6 (100%) | 6/6 (100%) | 6/6 (100%) | 6/6 (100%) |
-| multiple_response | 6 | 6/6 (100%) | 6/6 (100%) | 6/6 (100%) | 6/6 (100%) | 6/6 (100%) |
+| multiple_choice | 15 | 15/15 (100%) | 15/15 (100%) | 15/15 (100%) | 15/15 (100%) | 15/15 (100%) |
+| multiple_response | 7 | 7/7 (100%) | 7/7 (100%) | 7/7 (100%) | 7/7 (100%) | 7/7 (100%) |
 | multiple_response_grouping | 1 | 1/1 (100%) | 1/1 (100%) | 1/1 (100%) | 1/1 (100%) | 1/1 (100%) |
 | matrix_multiple_choice | 3 | 3/3 (100%) | 3/3 (100%) | 3/3 (100%) | 3/3 (100%) | 3/3 (100%) |
 | matrix_multiple_response | 1 | 1/1 (100%) | 1/1 (100%) | 1/1 (100%) | 1/1 (100%) | 1/1 (100%) |
@@ -18,9 +18,9 @@ exports[`the recorded responses > score as recorded (update with \`pnpm vitest -
 | ordered_response | 2 | 2/2 (100%) | 2/2 (100%) | 2/2 (100%) | 2/2 (100%) | 2/2 (100%) |
 | bowtie | 1 | 1/1 (100%) | 1/1 (100%) | 1/1 (100%) | 1/1 (100%) | 1/1 (100%) |
 | not_importable | 3 | 3/3 (100%) | n/a | n/a | n/a | n/a |
-| **all** | 31 | 31/31 (100%) | 28/28 (100%) | 28/28 (100%) | 28/28 (100%) | 28/28 (100%) |
+| **all** | 41 | 41/41 (100%) | 38/38 (100%) | 38/38 (100%) | 38/38 (100%) | 38/38 (100%) |
 
-Case studies with the right chart at every step: 1/1 (100%).
+Charts right (a case study's at every step, a standalone question's own record): 3/3 (100%).
 Entries the source does not have: 0. Keys invented for unmarked questions: 0.
 
 No failures.

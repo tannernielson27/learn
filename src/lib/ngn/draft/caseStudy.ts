@@ -91,7 +91,8 @@ const SEXES: [RegExp, EhrRecord["patientHeader"]["sex"]][] = [
   [/^(?:m|male|man|boy)\b/i, "male"],
 ];
 
-function patientHeaderOf(patient: PatientDraft): {
+/** The patient header the source gives; a field it leaves out is flagged, never filled in. */
+export function patientHeaderOf(patient: PatientDraft): {
   header: EhrRecord["patientHeader"];
   reasons: DraftReason[];
 } {

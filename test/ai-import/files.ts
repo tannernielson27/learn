@@ -57,6 +57,8 @@ const recordedQuestion = z.object({
   type: z.string().min(1),
   /** The extract pass's draft, unparsed: the scorer parses it and counts a bad one as a failure. */
   draft: z.unknown().optional(),
+  /** A standalone bowtie's or trend's own chart (`standaloneChartJsonSchema`), unparsed (#344). */
+  chart: z.unknown().optional(),
   reason: z.string().optional(),
 });
 export type RecordedQuestion = z.infer<typeof recordedQuestion>;
@@ -90,6 +92,9 @@ export const CORPUS_CASES = [
   "matching",
   "instructor-notes",
   "injected-instruction",
+  "time-typo",
+  "standalone-trend",
+  "short-case-group",
 ] as const;
 
 const readJson = (path: string): unknown => JSON.parse(readFileSync(path, "utf8"));

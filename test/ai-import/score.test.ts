@@ -2,7 +2,14 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { toCaseStudyDraft, toDraft, toMultipleChoiceDraft, type DraftType } from "@/lib/ngn/draft";
+import {
+  standaloneChartDraftSchema,
+  standaloneRecordFrom,
+  toCaseStudyDraft,
+  toDraft,
+  toMultipleChoiceDraft,
+  type DraftType,
+} from "@/lib/ngn/draft";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { stagedCaseStudy } from "@/lib/ngn/fixtures/chart-reveal";
 import {
@@ -341,13 +348,74 @@ describe("case studies", () => {
     expect(extra.extras).toEqual([`case study "${caseStudy.title}"`]);
   });
 
-  it("drops steps past the sixth and fails a step that is missing", () => {
+  it("scores a group that is not six steps as the standalone questions the assembly makes", () => {
     const draft = toCaseStudyDraft(caseStudy);
     const score = scoreDocument(
       expected,
       recording([], [{ ...draft, steps: draft.steps.slice(0, 5) }]),
     );
-    expect(score.questions[5]).toMatchObject({ found: false, notes: ["step not found"] });
+    expect(score.caseStudies[0]).toMatchObject({ found: false, chart: false });
+    expect(score.extras).toHaveLength(5);
+  });
+});
+
+describe("a standalone question's own record", () => {
+  const chart = {
+    patient: { age: "71", sex: "male", setting: "Medical unit" },
+    chart: {
+      tabs: [
+        {
+          title: "Vital Signs",
+          sections: [
+            { kind: "table", columns: ["", "0800", "1200"], rows: [["Heart rate", "92", "104"]] },
+          ],
+        },
+      ],
+    },
+  };
+  const item = items.find((entry) => entry.type === "multiple_choice")!;
+  const ehr = standaloneRecordFrom(standaloneChartDraftSchema.parse(chart)).record;
+  const expected = expectedDoc({
+    questions: [
+      {
+        label: "Trend",
+        status: "ready",
+        item: { ...item, ehr } as unknown as Record<string, unknown>,
+      },
+    ],
+  });
+  const question = (extra: Partial<RecordedQuestion> = {}): RecordedQuestion => ({
+    opening: item.stem.value,
+    type: item.type,
+    draft: draftOf(item),
+    ...extra,
+  });
+
+  it("passes when the record matches", () => {
+    const score = scoreDocument(expected, recording([question({ chart })]));
+    expect(score.caseStudies).toEqual([
+      expect.objectContaining({ label: "Trend, own record", found: true, chart: true }),
+    ]);
+  });
+
+  it("fails a missing, different or unexpected record", () => {
+    const missing = scoreDocument(expected, recording([question()]));
+    expect(missing.caseStudies[0]).toMatchObject({ chart: false, notes: ["no record"] });
+
+    const other = { ...chart, patient: { ...chart.patient, age: "70" } };
+    const different = scoreDocument(expected, recording([question({ chart: other })]));
+    expect(different.caseStudies[0].notes[0]).toBe("the record differs from the expected one");
+
+    const plain = expectedDoc({
+      questions: [
+        { label: "Plain", status: "ready", item: item as unknown as Record<string, unknown> },
+      ],
+    });
+    const unexpected = scoreDocument(plain, recording([question({ chart })]));
+    expect(unexpected.caseStudies[0].notes[0]).toBe("a record the source does not give it");
+
+    const notFound = scoreDocument(expected, recording([]));
+    expect(notFound.caseStudies[0]).toMatchObject({ found: false, notes: ["not found"] });
   });
 });
 

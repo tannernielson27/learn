@@ -1,0 +1,568 @@
+{
+  "document": "07-night-shift-case-and-trend.md",
+  "source": "hand-written",
+  "questions": [
+    {
+      "opening": "The nurse reviews the client's vital signs over the shift. Which action",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "The nurse reviews the client's vital signs over the shift. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Raise the head of the bed and apply oxygen *"
+          },
+          {
+            "text": "Recheck the vital signs in 4 hours"
+          },
+          {
+            "text": "Offer the client a warm blanket"
+          },
+          {
+            "text": "Document the findings as expected"
+          }
+        ]
+      },
+      "chart": {
+        "patient": {
+          "age": "71",
+          "sex": "male",
+          "setting": "Medical unit"
+        },
+        "chart": {
+          "tabs": [
+            {
+              "title": "Vital Signs",
+              "sections": [
+                {
+                  "kind": "table",
+                  "columns": ["", "0800", "1200", "1600"],
+                  "rows": [
+                    ["Heart rate", "92/min", "104/min", "121/min"],
+                    ["Respiratory rate", "20/min", "24/min", "30/min"],
+                    ["SpO2", "95%", "92%", "87%"]
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "caseStudies": [
+    {
+      "draft": {
+        "title": "Unfolding Case Study: Bleeding After Hip Replacement",
+        "patient": {
+          "name": "Rosa Delacroix",
+          "age": "66",
+          "sex": "female",
+          "setting": "Orthopedic unit"
+        },
+        "charts": [
+          {
+            "tabs": [
+              {
+                "title": "Nurses' Notes",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Day 1, 2200: Returned from surgery at 2130. Drowsy, rousable to voice. Hip dressing dry and intact."
+                  }
+                ]
+              },
+              {
+                "title": "Vital Signs",
+                "sections": [
+                  {
+                    "kind": "table",
+                    "columns": ["", "2200"],
+                    "rows": [
+                      ["Heart rate", "84/min"],
+                      ["Blood pressure", "128/76 mm Hg"]
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Lab Results",
+                "sections": []
+              }
+            ]
+          },
+          {
+            "tabs": [
+              {
+                "title": "Nurses' Notes",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Day 1, 2200: Returned from surgery at 2130. Drowsy, rousable to voice. Hip dressing dry and intact."
+                  },
+                  {
+                    "kind": "text",
+                    "text": "Day 1, 2300: Reports pain 6/10 at the incision. Dressing has a small spot of drainage."
+                  }
+                ]
+              },
+              {
+                "title": "Vital Signs",
+                "sections": [
+                  {
+                    "kind": "table",
+                    "columns": ["", "2200", "2300"],
+                    "rows": [
+                      ["Heart rate", "84/min", "92/min"],
+                      ["Blood pressure", "128/76 mm Hg", "122/74 mm Hg"]
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Lab Results",
+                "sections": []
+              }
+            ]
+          },
+          {
+            "tabs": [
+              {
+                "title": "Nurses' Notes",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Day 1, 2200: Returned from surgery at 2130. Drowsy, rousable to voice. Hip dressing dry and intact."
+                  },
+                  {
+                    "kind": "text",
+                    "text": "Day 1, 2300: Reports pain 6/10 at the incision. Dressing has a small spot of drainage."
+                  },
+                  {
+                    "kind": "text",
+                    "text": "Day 2, 0200: Pale and restless. Drainage has spread past the mark."
+                  }
+                ]
+              },
+              {
+                "title": "Vital Signs",
+                "sections": [
+                  {
+                    "kind": "table",
+                    "columns": ["", "2200", "2300", "2015"],
+                    "rows": [
+                      ["Heart rate", "84/min", "92/min", "118/min"],
+                      ["Blood pressure", "128/76 mm Hg", "122/74 mm Hg", "96/58 mm Hg"]
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Lab Results",
+                "sections": [
+                  {
+                    "kind": "values",
+                    "rows": [
+                      {
+                        "label": "Hemoglobin",
+                        "value": "8.2",
+                        "unit": "g/dL",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Hematocrit",
+                        "value": "25",
+                        "unit": "%",
+                        "flag": "L"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "tabs": [
+              {
+                "title": "Nurses' Notes",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Day 1, 2200: Returned from surgery at 2130. Drowsy, rousable to voice. Hip dressing dry and intact."
+                  },
+                  {
+                    "kind": "text",
+                    "text": "Day 1, 2300: Reports pain 6/10 at the incision. Dressing has a small spot of drainage."
+                  },
+                  {
+                    "kind": "text",
+                    "text": "Day 2, 0200: Pale and restless. Drainage has spread past the mark."
+                  }
+                ]
+              },
+              {
+                "title": "Vital Signs",
+                "sections": [
+                  {
+                    "kind": "table",
+                    "columns": ["", "2200", "2300", "2015"],
+                    "rows": [
+                      ["Heart rate", "84/min", "92/min", "118/min"],
+                      ["Blood pressure", "128/76 mm Hg", "122/74 mm Hg", "96/58 mm Hg"]
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Lab Results",
+                "sections": [
+                  {
+                    "kind": "values",
+                    "rows": [
+                      {
+                        "label": "Hemoglobin",
+                        "value": "8.2",
+                        "unit": "g/dL",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Hematocrit",
+                        "value": "25",
+                        "unit": "%",
+                        "flag": "L"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "tabs": [
+              {
+                "title": "Nurses' Notes",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Day 1, 2200: Returned from surgery at 2130. Drowsy, rousable to voice. Hip dressing dry and intact."
+                  },
+                  {
+                    "kind": "text",
+                    "text": "Day 1, 2300: Reports pain 6/10 at the incision. Dressing has a small spot of drainage."
+                  },
+                  {
+                    "kind": "text",
+                    "text": "Day 2, 0200: Pale and restless. Drainage has spread past the mark."
+                  },
+                  {
+                    "kind": "text",
+                    "text": "Day 2, 0400: First unit of blood running. No signs of a reaction."
+                  }
+                ]
+              },
+              {
+                "title": "Vital Signs",
+                "sections": [
+                  {
+                    "kind": "table",
+                    "columns": ["", "2200", "2300", "2015", "0400"],
+                    "rows": [
+                      ["Heart rate", "84/min", "92/min", "118/min", "102/min"],
+                      [
+                        "Blood pressure",
+                        "128/76 mm Hg",
+                        "122/74 mm Hg",
+                        "96/58 mm Hg",
+                        "108/66 mm Hg"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Lab Results",
+                "sections": [
+                  {
+                    "kind": "values",
+                    "rows": [
+                      {
+                        "label": "Hemoglobin",
+                        "value": "8.2",
+                        "unit": "g/dL",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Hematocrit",
+                        "value": "25",
+                        "unit": "%",
+                        "flag": "L"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "tabs": [
+              {
+                "title": "Nurses' Notes",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Day 1, 2200: Returned from surgery at 2130. Drowsy, rousable to voice. Hip dressing dry and intact."
+                  },
+                  {
+                    "kind": "text",
+                    "text": "Day 1, 2300: Reports pain 6/10 at the incision. Dressing has a small spot of drainage."
+                  },
+                  {
+                    "kind": "text",
+                    "text": "Day 2, 0200: Pale and restless. Drainage has spread past the mark."
+                  },
+                  {
+                    "kind": "text",
+                    "text": "Day 2, 0400: First unit of blood running. No signs of a reaction."
+                  }
+                ]
+              },
+              {
+                "title": "Vital Signs",
+                "sections": [
+                  {
+                    "kind": "table",
+                    "columns": ["", "2200", "2300", "2015", "0400"],
+                    "rows": [
+                      ["Heart rate", "84/min", "92/min", "118/min", "102/min"],
+                      [
+                        "Blood pressure",
+                        "128/76 mm Hg",
+                        "122/74 mm Hg",
+                        "96/58 mm Hg",
+                        "108/66 mm Hg"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Lab Results",
+                "sections": [
+                  {
+                    "kind": "values",
+                    "rows": [
+                      {
+                        "label": "Hemoglobin",
+                        "value": "8.2",
+                        "unit": "g/dL",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Hematocrit",
+                        "value": "25",
+                        "unit": "%",
+                        "flag": "L"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "steps": [
+          {
+            "type": "multiple_choice",
+            "stem": "Which finding should the nurse report to the provider first?",
+            "options": [
+              {
+                "text": "Drowsy, rousable to voice"
+              },
+              {
+                "text": "Heart rate 84/min"
+              },
+              {
+                "text": "Blood pressure 128/76 mm Hg"
+              },
+              {
+                "text": "None of these findings *"
+              }
+            ]
+          },
+          {
+            "type": "multiple_choice",
+            "stem": "Which action should the nurse take first?",
+            "options": [
+              {
+                "text": "Mark the edge of the drainage and recheck it in 30 minutes *"
+              },
+              {
+                "text": "Remove the dressing to look at the incision"
+              },
+              {
+                "text": "Lower the head of the bed flat"
+              },
+              {
+                "text": "Encourage the client to walk to the bathroom"
+              }
+            ]
+          },
+          {
+            "type": "multiple_choice",
+            "stem": "Which condition is the client most likely developing?",
+            "options": [
+              {
+                "text": "Hypovolemia from blood loss *"
+              },
+              {
+                "text": "Fluid volume excess"
+              },
+              {
+                "text": "Fat embolism"
+              },
+              {
+                "text": "Wound infection"
+              }
+            ]
+          },
+          {
+            "type": "multiple_response",
+            "stem": "Which prescriptions should the nurse expect?",
+            "instructions": "Select all that apply.",
+            "statedScoring": "Scoring Rule: +/-",
+            "options": [
+              {
+                "text": "Type and crossmatch for 2 units of packed red blood cells *"
+              },
+              {
+                "text": "Give a 0.9% sodium chloride bolus IV *"
+              },
+              {
+                "text": "Apply firm pressure over the dressing *"
+              },
+              {
+                "text": "Give furosemide 40 mg IV"
+              },
+              {
+                "text": "Increase the client's activity"
+              }
+            ]
+          },
+          {
+            "type": "multiple_choice",
+            "stem": "Which finding during the transfusion requires the nurse to stop it?",
+            "options": [
+              {
+                "text": "Heart rate 102/min"
+              },
+              {
+                "text": "New chills and low back pain *"
+              },
+              {
+                "text": "Blood pressure 108/66 mm Hg"
+              },
+              {
+                "text": "Pain 4/10 at the incision"
+              }
+            ]
+          },
+          {
+            "type": "multiple_choice",
+            "stem": "Which finding shows that the client's condition has improved?",
+            "options": [
+              {
+                "text": "Heart rate 102/min, down from 118/min *"
+              },
+              {
+                "text": "Hemoglobin 8.2 g/dL"
+              },
+              {
+                "text": "Drainage past the mark"
+              },
+              {
+                "text": "Pale and restless"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "draft": {
+        "title": "Activity: Two Clients With Poor Intake",
+        "patient": {},
+        "charts": [
+          {
+            "tabs": [
+              {
+                "title": "Nurses' Notes",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Client A eats a quarter of each meal. Client B has lost 4 kg in a month."
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "steps": [
+          {
+            "type": "multiple_choice",
+            "stem": "Which client should the nurse weigh first?",
+            "options": [
+              {
+                "text": "Client A"
+              },
+              {
+                "text": "Client B *"
+              },
+              {
+                "text": "Both clients at once"
+              },
+              {
+                "text": "Neither client"
+              }
+            ]
+          },
+          {
+            "type": "multiple_choice",
+            "stem": "Which food is the best source of protein for Client A?",
+            "options": [
+              {
+                "text": "Toast"
+              },
+              {
+                "text": "Applesauce"
+              },
+              {
+                "text": "Scrambled eggs *"
+              },
+              {
+                "text": "Tea"
+              }
+            ]
+          },
+          {
+            "type": "multiple_choice",
+            "stem": "Which referral is most appropriate for Client B?",
+            "options": [
+              {
+                "text": "Registered dietitian *"
+              },
+              {
+                "text": "Physical therapist"
+              },
+              {
+                "text": "Respiratory therapist"
+              },
+              {
+                "text": "Social worker"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

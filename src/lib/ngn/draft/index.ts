@@ -1,3 +1,4 @@
+export * from "./assemble";
 export * from "./caseStudy";
 export * from "./chart";
 export * from "./cloze";
