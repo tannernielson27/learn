@@ -34,10 +34,11 @@ alter table public.ai_import_chunks add column segments jsonb;
 
 alter table public.ai_import_chunks
   add constraint ai_import_chunks_segments_shape_check check (
-    segments is null or (
+    segments is null or coalesce(
       jsonb_typeof(segments) = 'object'
       and jsonb_typeof(segments -> 'questions') = 'array'
-      and jsonb_typeof(segments -> 'answers') = 'array'
+      and jsonb_typeof(segments -> 'answers') = 'array',
+      false
     )
   ),
   add constraint ai_import_chunks_segments_size_check
@@ -53,10 +54,11 @@ alter table public.ai_import_batches add column source jsonb;
 
 alter table public.ai_import_batches
   add constraint ai_import_batches_source_shape_check check (
-    source is null or (
+    source is null or coalesce(
       jsonb_typeof(source) = 'object'
       and jsonb_typeof(source -> 'objectives') = 'array'
-      and jsonb_typeof(source -> 'references') = 'array'
+      and jsonb_typeof(source -> 'references') = 'array',
+      false
     )
   ),
   add constraint ai_import_batches_source_size_check check (pg_column_size(source) <= 65536);
