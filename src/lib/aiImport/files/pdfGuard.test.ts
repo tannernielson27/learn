@@ -1,5 +1,5 @@
 import { zlibSync } from "fflate";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { inspectPdf } from "./pdf";
 import { guardPdfStreams } from "./pdfGuard";
 import { buildPdf, utf8 } from "./testing/fixtures";
@@ -7,7 +7,7 @@ import { buildPdf, utf8 } from "./testing/fixtures";
 /** A PDF whose one object stream decodes to `decoded` bytes of zeros. */
 function objectStreamPdf(decoded: number, filter = "/FlateDecode"): Uint8Array {
   const data =
-    filter === "/FlateDecode" ? zlibSync(new Uint8Array(decoded), { level: 9 }) : utf8("x");
+    filter === "/FlateDecode" ? zlibSync(new Uint8Array(decoded), { level: 1 }) : utf8("x");
   const head = utf8(
     `%PDF-1.7\n1 0 obj\n<< /Type /ObjStm /N 1 /First 4 /Filter ${filter} /Length ${data.length} >>\nstream\n`,
   );
@@ -19,15 +19,20 @@ function objectStreamPdf(decoded: number, filter = "/FlateDecode"): Uint8Array {
   return out;
 }
 
-describe("guardPdfStreams", () => {
+/** 70 MB of object stream, past the 64 MB budget. Built once: it takes a moment on a slow runner. */
+let bomb: Uint8Array;
+beforeAll(() => {
+  bomb = objectStreamPdf(70 * 1024 * 1024);
+}, 60_000);
+
+describe("guardPdfStreams", { timeout: 30_000 }, () => {
   it("passes an ordinary PDF, object streams and all", async () => {
     expect(guardPdfStreams(await buildPdf(30))).toBe("ok");
     expect(guardPdfStreams(objectStreamPdf(1024 * 1024))).toBe("ok");
   });
 
   it("refuses object streams that decode past the budget, from a small file", () => {
-    const bomb = objectStreamPdf(70 * 1024 * 1024);
-    expect(bomb.length).toBeLessThan(200_000);
+    expect(bomb.length).toBeLessThan(1_000_000);
     expect(guardPdfStreams(bomb)).toBe("too_complex");
     expect(guardPdfStreams(objectStreamPdf(4096), 1024)).toBe("too_complex");
   });
@@ -44,9 +49,6 @@ describe("guardPdfStreams", () => {
   });
 
   it("makes inspectPdf refuse the bomb before loading it", async () => {
-    expect(await inspectPdf(objectStreamPdf(70 * 1024 * 1024))).toMatchObject({
-      ok: false,
-      code: "too_complex",
-    });
+    expect(await inspectPdf(bomb)).toMatchObject({ ok: false, code: "too_complex" });
   });
 });
