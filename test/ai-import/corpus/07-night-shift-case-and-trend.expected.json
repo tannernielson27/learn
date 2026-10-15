@@ -1,0 +1,548 @@
+{
+  "document": "07-night-shift-case-and-trend.md",
+  "covers": ["case-study", "time-typo", "standalone-trend", "short-case-group", "asterisk-spaced"],
+  "questions": [
+    {
+      "label": "Standalone Item: Trend",
+      "status": "ready",
+      "item": {
+        "id": "trend_item",
+        "stem": {
+          "kind": "markdown",
+          "value": "The nurse reviews the client's vital signs over the shift. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Raise the head of the bed and apply oxygen"
+            },
+            {
+              "id": "opt_b",
+              "label": "Recheck the vital signs in 4 hours"
+            },
+            {
+              "id": "opt_c",
+              "label": "Offer the client a warm blanket"
+            },
+            {
+              "id": "opt_d",
+              "label": "Document the findings as expected"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_a"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        },
+        "ehr": {
+          "patientHeader": {
+            "age": 71,
+            "sex": "male",
+            "setting": "Medical unit"
+          },
+          "timePoints": [
+            {
+              "id": "tp_1",
+              "label": "0800"
+            },
+            {
+              "id": "tp_2",
+              "label": "1200"
+            },
+            {
+              "id": "tp_3",
+              "label": "1600"
+            }
+          ],
+          "tabs": [
+            {
+              "id": "tab_1",
+              "kind": "vital_signs",
+              "title": "Vital Signs",
+              "blocks": [
+                {
+                  "kind": "table",
+                  "columns": ["", "0800", "1200", "1600"],
+                  "rows": [
+                    ["Heart rate", "92/min", "104/min", "121/min"],
+                    ["Respiratory rate", "20/min", "24/min", "30/min"],
+                    ["SpO2", "95%", "92%", "87%"]
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "label": "Activity Question 1 of 3",
+      "status": "ready",
+      "item": {
+        "id": "activity_q_1",
+        "stem": {
+          "kind": "markdown",
+          "value": "Which client should the nurse weigh first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Client A"
+            },
+            {
+              "id": "opt_b",
+              "label": "Client B"
+            },
+            {
+              "id": "opt_c",
+              "label": "Both clients at once"
+            },
+            {
+              "id": "opt_d",
+              "label": "Neither client"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "Activity Question 2 of 3",
+      "status": "ready",
+      "item": {
+        "id": "activity_q_2",
+        "stem": {
+          "kind": "markdown",
+          "value": "Which food is the best source of protein for Client A?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Toast"
+            },
+            {
+              "id": "opt_b",
+              "label": "Applesauce"
+            },
+            {
+              "id": "opt_c",
+              "label": "Scrambled eggs"
+            },
+            {
+              "id": "opt_d",
+              "label": "Tea"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_c"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "Activity Question 3 of 3",
+      "status": "ready",
+      "item": {
+        "id": "activity_q_3",
+        "stem": {
+          "kind": "markdown",
+          "value": "Which referral is most appropriate for Client B?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Registered dietitian"
+            },
+            {
+              "id": "opt_b",
+              "label": "Physical therapist"
+            },
+            {
+              "id": "opt_c",
+              "label": "Respiratory therapist"
+            },
+            {
+              "id": "opt_d",
+              "label": "Social worker"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_a"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    }
+  ],
+  "caseStudies": [
+    {
+      "label": "Unfolding Case Study: Bleeding After Hip Replacement",
+      "caseStudy": {
+        "id": "night_1",
+        "title": "Unfolding Case Study: Bleeding After Hip Replacement",
+        "ehr": {
+          "patientHeader": {
+            "name": "Rosa Delacroix",
+            "age": 66,
+            "sex": "female",
+            "setting": "Orthopedic unit"
+          },
+          "timePoints": [
+            {
+              "id": "tp_1",
+              "label": "2200"
+            },
+            {
+              "id": "tp_2",
+              "label": "2300",
+              "fromStep": 2
+            },
+            {
+              "id": "tp_3",
+              "label": "2015",
+              "fromStep": 3
+            },
+            {
+              "id": "tp_4",
+              "label": "0400",
+              "fromStep": 5
+            }
+          ],
+          "tabs": [
+            {
+              "id": "tab_1",
+              "kind": "nurses_notes",
+              "title": "Nurses' Notes",
+              "blocks": [
+                {
+                  "kind": "markdown",
+                  "value": "Day 1, 2200: Returned from surgery at 2130. Drowsy, rousable to voice. Hip dressing dry and intact."
+                },
+                {
+                  "kind": "markdown",
+                  "value": "Day 1, 2300: Reports pain 6/10 at the incision. Dressing has a small spot of drainage.",
+                  "fromStep": 2
+                },
+                {
+                  "kind": "markdown",
+                  "value": "Day 2, 0200: Pale and restless. Drainage has spread past the mark.",
+                  "fromStep": 3
+                },
+                {
+                  "kind": "markdown",
+                  "value": "Day 2, 0400: First unit of blood running. No signs of a reaction.",
+                  "fromStep": 5
+                }
+              ]
+            },
+            {
+              "id": "tab_2",
+              "kind": "vital_signs",
+              "title": "Vital Signs",
+              "blocks": [
+                {
+                  "kind": "table",
+                  "columns": ["", "2200", "2300", "2015", "0400"],
+                  "rows": [
+                    ["Heart rate", "84/min", "92/min", "118/min", "102/min"],
+                    [
+                      "Blood pressure",
+                      "128/76 mm Hg",
+                      "122/74 mm Hg",
+                      "96/58 mm Hg",
+                      "108/66 mm Hg"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "tab_3",
+              "kind": "lab_results",
+              "title": "Lab Results",
+              "blocks": [
+                {
+                  "kind": "vitals",
+                  "rows": [
+                    {
+                      "label": "Hemoglobin",
+                      "value": "8.2",
+                      "unit": "g/dL",
+                      "flag": "L"
+                    },
+                    {
+                      "label": "Hematocrit",
+                      "value": "25",
+                      "unit": "%",
+                      "flag": "L"
+                    }
+                  ],
+                  "fromStep": 3
+                }
+              ],
+              "stepAccess": ["locked", "locked", "open", "open", "open", "open"]
+            }
+          ]
+        },
+        "items": [
+          {
+            "id": "night_1_step_1",
+            "cjmmStep": 1,
+            "stem": {
+              "kind": "markdown",
+              "value": "Which finding should the nurse report to the provider first?"
+            },
+            "rationale": {},
+            "type": "multiple_choice",
+            "content": {
+              "options": [
+                {
+                  "id": "opt_a",
+                  "label": "Drowsy, rousable to voice"
+                },
+                {
+                  "id": "opt_b",
+                  "label": "Heart rate 84/min"
+                },
+                {
+                  "id": "opt_c",
+                  "label": "Blood pressure 128/76 mm Hg"
+                },
+                {
+                  "id": "opt_d",
+                  "label": "None of these findings"
+                }
+              ]
+            },
+            "answerKey": {
+              "correctOptionId": "opt_d"
+            },
+            "scoring": {
+              "model": "zero_one",
+              "maxPoints": 1
+            }
+          },
+          {
+            "id": "night_1_step_2",
+            "cjmmStep": 2,
+            "stem": {
+              "kind": "markdown",
+              "value": "Which action should the nurse take first?"
+            },
+            "rationale": {},
+            "type": "multiple_choice",
+            "content": {
+              "options": [
+                {
+                  "id": "opt_a",
+                  "label": "Mark the edge of the drainage and recheck it in 30 minutes"
+                },
+                {
+                  "id": "opt_b",
+                  "label": "Remove the dressing to look at the incision"
+                },
+                {
+                  "id": "opt_c",
+                  "label": "Lower the head of the bed flat"
+                },
+                {
+                  "id": "opt_d",
+                  "label": "Encourage the client to walk to the bathroom"
+                }
+              ]
+            },
+            "answerKey": {
+              "correctOptionId": "opt_a"
+            },
+            "scoring": {
+              "model": "zero_one",
+              "maxPoints": 1
+            }
+          },
+          {
+            "id": "night_1_step_3",
+            "cjmmStep": 3,
+            "stem": {
+              "kind": "markdown",
+              "value": "Which condition is the client most likely developing?"
+            },
+            "rationale": {},
+            "type": "multiple_choice",
+            "content": {
+              "options": [
+                {
+                  "id": "opt_a",
+                  "label": "Hypovolemia from blood loss"
+                },
+                {
+                  "id": "opt_b",
+                  "label": "Fluid volume excess"
+                },
+                {
+                  "id": "opt_c",
+                  "label": "Fat embolism"
+                },
+                {
+                  "id": "opt_d",
+                  "label": "Wound infection"
+                }
+              ]
+            },
+            "answerKey": {
+              "correctOptionId": "opt_a"
+            },
+            "scoring": {
+              "model": "zero_one",
+              "maxPoints": 1
+            }
+          },
+          {
+            "id": "night_1_step_4",
+            "cjmmStep": 4,
+            "stem": {
+              "kind": "markdown",
+              "value": "Which prescriptions should the nurse expect?"
+            },
+            "instructions": "Select all that apply.",
+            "rationale": {},
+            "type": "multiple_response",
+            "content": {
+              "variant": "sata",
+              "options": [
+                {
+                  "id": "opt_a",
+                  "label": "Type and crossmatch for 2 units of packed red blood cells"
+                },
+                {
+                  "id": "opt_b",
+                  "label": "Give a 0.9% sodium chloride bolus IV"
+                },
+                {
+                  "id": "opt_c",
+                  "label": "Apply firm pressure over the dressing"
+                },
+                {
+                  "id": "opt_d",
+                  "label": "Give furosemide 40 mg IV"
+                },
+                {
+                  "id": "opt_e",
+                  "label": "Increase the client's activity"
+                }
+              ]
+            },
+            "answerKey": {
+              "correctOptionIds": ["opt_a", "opt_b", "opt_c"]
+            },
+            "scoring": {
+              "model": "plus_minus",
+              "maxPoints": 3
+            }
+          },
+          {
+            "id": "night_1_step_5",
+            "cjmmStep": 5,
+            "stem": {
+              "kind": "markdown",
+              "value": "Which finding during the transfusion requires the nurse to stop it?"
+            },
+            "rationale": {},
+            "type": "multiple_choice",
+            "content": {
+              "options": [
+                {
+                  "id": "opt_a",
+                  "label": "Heart rate 102/min"
+                },
+                {
+                  "id": "opt_b",
+                  "label": "New chills and low back pain"
+                },
+                {
+                  "id": "opt_c",
+                  "label": "Blood pressure 108/66 mm Hg"
+                },
+                {
+                  "id": "opt_d",
+                  "label": "Pain 4/10 at the incision"
+                }
+              ]
+            },
+            "answerKey": {
+              "correctOptionId": "opt_b"
+            },
+            "scoring": {
+              "model": "zero_one",
+              "maxPoints": 1
+            }
+          },
+          {
+            "id": "night_1_step_6",
+            "cjmmStep": 6,
+            "stem": {
+              "kind": "markdown",
+              "value": "Which finding shows that the client's condition has improved?"
+            },
+            "rationale": {},
+            "type": "multiple_choice",
+            "content": {
+              "options": [
+                {
+                  "id": "opt_a",
+                  "label": "Heart rate 102/min, down from 118/min"
+                },
+                {
+                  "id": "opt_b",
+                  "label": "Hemoglobin 8.2 g/dL"
+                },
+                {
+                  "id": "opt_c",
+                  "label": "Drainage past the mark"
+                },
+                {
+                  "id": "opt_d",
+                  "label": "Pale and restless"
+                }
+              ]
+            },
+            "answerKey": {
+              "correctOptionId": "opt_a"
+            },
+            "scoring": {
+              "model": "zero_one",
+              "maxPoints": 1
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
