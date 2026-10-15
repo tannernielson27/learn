@@ -230,7 +230,7 @@ export type Database = {
           sha256?: string | null;
           size_bytes?: number | null;
           status?: string;
-          storage_path?: never;
+          storage_path?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -245,7 +245,7 @@ export type Database = {
           sha256?: string | null;
           size_bytes?: number | null;
           status?: string;
-          storage_path?: never;
+          storage_path?: string | null;
           updated_at?: string;
         };
         Relationships: [
