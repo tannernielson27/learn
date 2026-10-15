@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NO_USAGE } from "./config";
-import { estimateSegmentCost, reserveUsage, settleUsage, type UsageRpc } from "./ledger";
+import {
+  estimateCallCost,
+  estimateSegmentCost,
+  reserveUsage,
+  settleUsage,
+  type UsageRpc,
+} from "./ledger";
 
 const REQUEST = { orgId: "org-1", batchId: "batch-1", pages: 8, costUsd: 0.15 };
 
@@ -145,5 +151,13 @@ describe("estimateSegmentCost", () => {
 
   it("stays well inside what one reservation may be", () => {
     expect(estimateSegmentCost({ type: "text", text: "x".repeat(32_000) }, 11)).toBeLessThan(1);
+  });
+});
+
+describe("estimateCallCost", () => {
+  it("adds the request text around the document, such as a repair's draft", () => {
+    const payload = { type: "text" as const, text: "x".repeat(3_000) };
+    const bare = estimateCallCost(payload, 1, 8_000);
+    expect(estimateCallCost(payload, 1, 8_000, 3_000)).toBeCloseTo(bare + (1_000 * 2.5) / 1e6, 6);
   });
 });

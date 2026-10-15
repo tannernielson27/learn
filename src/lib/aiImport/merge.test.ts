@@ -13,7 +13,13 @@ function q(chunk: number, index: number, excerpt: string, more: Partial<SegmentQ
     confidence: 0.9,
     group: null,
     scoringRule: null,
-    flags: { instructorNote: false, reliesOnImage: false, notNgn: null, notInSource: false },
+    flags: {
+      instructorNote: false,
+      reliesOnImage: false,
+      notNgn: null,
+      notInSource: false,
+      ownChart: false,
+    },
     sourceChecked: true,
     cutOff: false,
     continued: false,
@@ -46,6 +52,7 @@ function chunk(
     questions,
     answers,
     droppedAnswers: 0,
+    source: { author: null, objectives: [], references: [] },
   };
 }
 
@@ -74,7 +81,13 @@ describe("mergeSegments", () => {
           number: "2",
           cutOff: true,
           type: null,
-          flags: { instructorNote: true, reliesOnImage: false, notNgn: "", notInSource: false },
+          flags: {
+            instructorNote: true,
+            reliesOnImage: false,
+            notNgn: "",
+            notInSource: false,
+            ownChart: false,
+          },
         }),
       ]),
       chunk(1, [
@@ -104,6 +117,7 @@ describe("mergeSegments", () => {
       reliesOnImage: false,
       notNgn: null,
       notInSource: false,
+      ownChart: false,
     });
   });
 

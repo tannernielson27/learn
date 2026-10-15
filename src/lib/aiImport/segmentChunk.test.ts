@@ -95,6 +95,7 @@ function deps(
     usageRpc: ledger.rpc,
     takeParseCall: vi.fn(async () => "ok" as const),
     loadFile: vi.fn(async () => ({ ok: true as const, bytes: new Uint8Array(), prepared })),
+    storeSegment: vi.fn(async () => "stored" as const),
     sleep: vi.fn(async () => {}),
     random: () => 0,
     ...overrides,
@@ -356,6 +357,33 @@ describe("segmentChunk's checks", () => {
     expect(result).toMatchObject({ ok: true, attempts: 1, remainingPages: null });
     if (result.ok) expect(result.costUsd).toBeGreaterThan(0);
   });
+
+  it("keeps the chunk's answer for the extract pass, under the file and position asked for", async () => {
+    const { client } = ok();
+    const storeSegment = vi.fn(async () => "stored" as const);
+    const result = await segmentChunk(deps(prepared, client, fakeLedger(), { storeSegment }), {
+      ...REF,
+      position: 0,
+    });
+    if (!result.ok) throw new Error(result.code);
+    expect(storeSegment).toHaveBeenCalledWith(
+      { orgId: "org-1", batchId: "batch-1", fileId: "file-1" },
+      0,
+      result.segment,
+    );
+  });
+
+  it("answers unavailable when the answer cannot be kept, after settling the call", async () => {
+    const { client } = ok();
+    const ledger = fakeLedger();
+    const storeSegment = vi.fn(async () => "unavailable" as const);
+    const result = await segmentChunk(deps(prepared, client, ledger, { storeSegment }), {
+      ...REF,
+      position: 0,
+    });
+    expect(result).toEqual({ ok: false, code: "unavailable" });
+    expect(ledger.settles).toHaveLength(1);
+  });
 });
 
 describe("segmentChunkDeps", () => {
@@ -377,5 +405,6 @@ describe("segmentChunkDeps", () => {
     expect(typeof wired.client).toBe("function");
     expect(typeof wired.takeParseCall).toBe("function");
     expect(typeof wired.loadFile).toBe("function");
+    expect(typeof wired.storeSegment).toBe("function");
   });
 });

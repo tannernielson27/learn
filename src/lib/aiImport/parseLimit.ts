@@ -19,10 +19,32 @@ export async function takeParseCall(
   userId: string,
   store: RateLimitStore = sharedRateLimitStore(),
 ): Promise<ParseAllowance> {
+  return take("ai_import_parse", AI_IMPORT_PARSE_LIMIT, userId, store);
+}
+
+/**
+ * How many extract requests one teacher may make (#343). A full batch is 150 questions, two to a
+ * request, so 75 requests and their repairs; 160 an hour is two full batches with room for
+ * retries. Each request makes at most two calls (the extract and one repair).
+ */
+export const AI_IMPORT_EXTRACT_LIMIT: RateLimit = { attempts: 160, windowMs: 60 * 60 * 1000 };
+
+/** Counts one extract request for `userId`, as `takeParseCall` does a parse call. */
+export async function takeExtractCall(
+  userId: string,
+  store: RateLimitStore = sharedRateLimitStore(),
+): Promise<ParseAllowance> {
+  return take("ai_import_extract", AI_IMPORT_EXTRACT_LIMIT, userId, store);
+}
+
+async function take(
+  bucket: "ai_import_parse" | "ai_import_extract",
+  limit: RateLimit,
+  userId: string,
+  store: RateLimitStore,
+): Promise<ParseAllowance> {
   try {
-    return (await store.hit("ai_import_parse", userId, AI_IMPORT_PARSE_LIMIT))
-      ? "ok"
-      : "rate_limited";
+    return (await store.hit(bucket, userId, limit)) ? "ok" : "rate_limited";
   } catch (error) {
     console.error("[ai-import] the shared rate limiter could not answer, so nothing was sent", {
       error: error instanceof Error ? error.name : "unknown",

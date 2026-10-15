@@ -14,6 +14,7 @@ import { estimatePages } from "./files/text";
 import { estimateSegmentCost, reserveUsage, settleUsage, type UsageRpc } from "./ledger";
 import { takeParseCall, type ParseAllowance } from "./parseLimit";
 import { SegmentShapeError, readSegment, segmentRequest, type ChunkSegment } from "./segment";
+import { storeChunkSegment, type SegmentStore } from "./segmentStore";
 
 /**
  * One chunk through the segment pass (#342): the request #345's browser makes, one chunk at a
@@ -26,6 +27,8 @@ import { SegmentShapeError, readSegment, segmentRequest, type ChunkSegment } fro
  *    with AI import off answers `disabled` here (`orgs.ai_import_enabled`, #355).
  * 5. Claude is called, with up to two retries, under that one reservation.
  * 6. The reservation is settled once: the real tokens, and the pages only when the chunk parsed.
+ * 7. The answer is kept in `ai_import_chunks.segments` for the extract pass (#343). A write that
+ *    fails answers `unavailable`, the call already settled; the chunk is sent again.
  *
  * The caller has checked that `userId` authors `orgId`, and takes both from the session.
  */
@@ -37,6 +40,8 @@ export interface SegmentChunkDeps {
   usageRpc: UsageRpc;
   takeParseCall: (userId: string) => Promise<ParseAllowance>;
   loadFile: (ref: FileRef) => ReturnType<typeof loadCheckedFile>;
+  /** Writes the chunk's answer to `ai_import_chunks.segments` (#343). */
+  storeSegment: SegmentStore;
   sleep?: (ms: number) => Promise<void>;
   random?: () => number;
 }
@@ -146,6 +151,13 @@ export async function segmentChunk(
   }
 
   await settle(pages, answer.usage);
+  // Kept for the extract pass, which merges every chunk of the file (#343).
+  const stored = await deps.storeSegment(
+    { orgId: request.orgId, batchId: request.batchId, fileId: request.fileId },
+    request.position,
+    segment,
+  );
+  if (stored !== "stored") return { ok: false, code: stored };
   return {
     ok: true,
     segment,
@@ -166,5 +178,6 @@ export function segmentChunkDeps(service: SupabaseClient<Database>): SegmentChun
       service.rpc(name, args)) as unknown as UsageRpc,
     takeParseCall: (userId) => takeParseCall(userId),
     loadFile: (ref) => loadCheckedFile(service, ref),
+    storeSegment: storeChunkSegment(service),
   };
 }
