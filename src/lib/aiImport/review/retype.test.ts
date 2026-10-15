@@ -110,6 +110,7 @@ function deps(
       prepared: preparedActivity(),
     })),
     readEntry: vi.fn(async () => entryRow()),
+    batchInReview: vi.fn(async () => true),
     fileAt: vi.fn(async (_org, _batch, place: number) => (place === 1 ? "file-2" : null)),
     writeEntry: vi.fn(async (_org, _batch, _entry, version: number, patch: RetypePatch) => {
       writes.push({ version, patch });
@@ -168,6 +169,22 @@ describe("retypeEntry", () => {
   it("reports a change that lands while Claude reads it, and writes nothing over it", async () => {
     const { wired } = deps({ writeEntry: vi.fn(async () => "changed" as const) });
     expect(await retypeEntry(wired, REQUEST)).toEqual({ ok: false, code: "entry_changed" });
+  });
+
+  it("refuses a dropped question before any call: it stays dropped until restored", async () => {
+    const { wired, create } = deps({
+      readEntry: vi.fn(async () => entryRow({ status: "dropped" })),
+    });
+    expect(await retypeEntry(wired, REQUEST)).toEqual({ ok: false, code: "not_retypable" });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("writes nothing once the batch has left review while Claude was reading", async () => {
+    const { wired, writes } = deps({ batchInReview: vi.fn(async () => false) });
+    expect(await retypeEntry(wired, REQUEST)).toEqual({ ok: false, code: "not_review" });
+    expect(writes).toEqual([]);
+    const broken = deps({ batchInReview: vi.fn(async () => "unavailable" as const) });
+    expect(await retypeEntry(broken.wired, REQUEST)).toEqual({ ok: false, code: "unavailable" });
   });
 
   it("refuses a case study, which has no single type", async () => {
@@ -283,6 +300,11 @@ describe("retypeDeps, the production wiring", () => {
         { error: { code: "XX000" } },
         { error: { code: "XX000" } },
       ],
+      ai_import_batches: [
+        { data: { status: "review" } },
+        { data: { status: "imported" } },
+        { error: { code: "XX000" } },
+      ],
       ai_import_files: [
         { data: [{ id: "file-1" }, { id: "file-2" }] },
         { data: [] },
@@ -303,6 +325,10 @@ describe("retypeDeps, the production wiring", () => {
     expect(await wired.writeEntry("org-1", "batch-1", "entry-1", 2, patch)).toBe("changed");
     expect(await wired.writeEntry("org-1", "batch-1", "entry-1", 2, patch)).toBe("unavailable");
     expect(await wired.readEntry("org-1", "batch-1", "entry-1")).toBe("unavailable");
+    expect(await wired.batchInReview("org-1", "batch-1")).toBe(true);
+    expect(await wired.batchInReview("org-1", "batch-1")).toBe(false);
+    expect(await wired.batchInReview("org-1", "batch-1")).toBe("unavailable");
+    expect(service.stepsOn("ai_import_batches", "eq")).toContainEqual(["org_id", "org-1"]);
     expect(await wired.fileAt("org-1", "batch-1", 1)).toBe("file-2");
     expect(await wired.fileAt("org-1", "batch-1", 0)).toBeNull();
     expect(await wired.fileAt("org-1", "batch-1", 0)).toBe("unavailable");

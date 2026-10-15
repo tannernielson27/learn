@@ -83,7 +83,7 @@ describe("POST /api/ai-import/retype", () => {
       userId: USER,
     });
     expect(claims.hits()).toEqual([
-      { bucket: "ai_import_unit", key: `retype:${BATCH}:${ENTRY}:2` },
+      { bucket: "ai_import_unit", key: `retype:${BATCH}:${ENTRY}:2:bowtie` },
     ]);
     expect(service.stepsOn("ai_import_batches", "eq")).toContainEqual(["org_id", ORG]);
     expect(response.headers.get("cache-control")).toBe("no-store");
@@ -95,7 +95,7 @@ describe("POST /api/ai-import/retype", () => {
     const second = setup({ claims });
     const response = await retypeResponse(post(BODY), second.deps);
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ code: "busy" });
+    expect(await response.json()).toMatchObject({ code: "retype_busy" });
     expect(second.retype).not.toHaveBeenCalled();
   });
 

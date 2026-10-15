@@ -15,7 +15,8 @@ import type { RetypeRequest, RetypeResult } from "./retype";
  * session's workspace), but for a batch in review. The entry's version is claimed for
  * `UNIT_CLAIM_MS` in the shared limiter before anything is spent, so a second tab that asks for
  * the same change at once is told `busy` rather than paying for it twice. A successful change
- * moves the version on, so the next change claims afresh.
+ * moves the version on, so the next change claims afresh; another type is another claim, so a
+ * failed read holds only that type for those minutes.
  *
  * The answer is the entry's new version and status, never the question: the page reloads it.
  */
@@ -33,10 +34,16 @@ export interface RetypeRouteDeps extends RouteDeps {
 }
 
 function refused(result: Extract<RetypeResult, { ok: false }>): Response {
-  if (result.code === "entry_changed" || result.code === "not_retypable") {
+  if (
+    result.code === "entry_changed" ||
+    result.code === "not_retypable" ||
+    result.code === "not_review"
+  ) {
     return fail(409, result.code);
   }
-  return refusal(result as Exclude<typeof result, { code: "entry_changed" | "not_retypable" }>);
+  return refusal(
+    result as Exclude<typeof result, { code: "entry_changed" | "not_retypable" | "not_review" }>,
+  );
 }
 
 export async function retypeResponse(request: Request, deps: RetypeRouteDeps): Promise<Response> {
@@ -51,14 +58,16 @@ export async function retypeResponse(request: Request, deps: RetypeRouteDeps): P
 
   let claimed: boolean;
   try {
-    claimed = await deps.claims().hit("ai_import_unit", `retype:${batchId}:${entryId}:${version}`, {
-      attempts: 1,
-      windowMs: UNIT_CLAIM_MS,
-    });
+    claimed = await deps
+      .claims()
+      .hit("ai_import_unit", `retype:${batchId}:${entryId}:${version}:${type}`, {
+        attempts: 1,
+        windowMs: UNIT_CLAIM_MS,
+      });
   } catch {
     return fail(503, "unavailable");
   }
-  if (!claimed) return fail(409, "busy");
+  if (!claimed) return fail(409, "retype_busy");
 
   let result: RetypeResult;
   try {

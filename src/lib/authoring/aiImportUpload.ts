@@ -103,7 +103,10 @@ export const AI_IMPORT_MESSAGES = {
   entry_changed:
     "This question changed in another tab or window. Reload the page to see it as it is now.",
   not_review: "This import is not waiting for review.",
-  not_retypable: "Only a single question can be read again as another type.",
+  not_retypable:
+    "Only a single question that has not been dropped can be read again as another type.",
+  retype_busy:
+    "This question is already being read again, or a try failed in the last few minutes. Wait a few minutes, or choose another type.",
 } as const;
 
 export type AiImportCode = keyof typeof AI_IMPORT_MESSAGES;

@@ -53,6 +53,11 @@ export interface RetypeDeps extends Pick<
   ) => Promise<EntryRow | null | "unavailable">;
   /** The id of the batch's file at `place` (upload order, from 0); null when there is none. */
   fileAt: (orgId: string, batchId: string, place: number) => Promise<string | null | "unavailable">;
+  /**
+   * Whether the batch is still in review, read again just before the write: the service client
+   * is not held to the edit policy's "only while in review", and the call may take a minute.
+   */
+  batchInReview: (orgId: string, batchId: string) => Promise<boolean | "unavailable">;
   /** Rewrites the entry where it is still at `version`; "changed" when it is not. */
   writeEntry: (
     orgId: string,
@@ -76,7 +81,7 @@ export interface RetypeRequest {
 
 export type RetypeResult =
   | { ok: true; version: number; status: string; usage: Usage; costUsd: number }
-  | { ok: false; code: "entry_changed" | "not_retypable" }
+  | { ok: false; code: "entry_changed" | "not_retypable" | "not_review" }
   | Extract<ExtractUnitResult, { ok: false }>;
 
 /** The teacher's word stands for the model's guess: the type, sure, and no "no NGN type". */
@@ -121,7 +126,10 @@ export async function retypeEntry(deps: RetypeDeps, request: RetypeRequest): Pro
   const entry = await deps.readEntry(request.orgId, request.batchId, request.entryId);
   if (entry === "unavailable") return { ok: false, code: "unavailable" };
   if (entry === null) return { ok: false, code: "not_found" };
-  if (entry.kind !== "item") return { ok: false, code: "not_retypable" };
+  // A case study has no single type; a dropped question stays dropped until it is restored.
+  if (entry.kind !== "item" || entry.status === "dropped") {
+    return { ok: false, code: "not_retypable" };
+  }
   if (entry.version !== request.version) return { ok: false, code: "entry_changed" };
 
   const allowance = await deps.takeExtractCall(request.userId);
@@ -179,6 +187,9 @@ export async function retypeEntry(deps: RetypeDeps, request: RetypeRequest): Pro
     draft: row.draft as Json | null,
     item: row.item,
   };
+  const open = await deps.batchInReview(request.orgId, request.batchId);
+  if (open === "unavailable") return { ok: false, code: "unavailable" };
+  if (!open) return { ok: false, code: "not_review" };
   const written = await deps.writeEntry(
     request.orgId,
     request.batchId,
@@ -232,6 +243,19 @@ export function retypeDeps(service: Client): RetypeDeps {
         return "unavailable";
       }
       return data?.[place]?.id ?? null;
+    },
+    batchInReview: async (orgId, batchId) => {
+      const { data, error } = await service
+        .from("ai_import_batches")
+        .select("status")
+        .eq("id", batchId)
+        .eq("org_id", orgId)
+        .maybeSingle();
+      if (error) {
+        logged("reading a batch", error);
+        return "unavailable";
+      }
+      return data?.status === "review";
     },
     writeEntry: async (orgId, batchId, entryId, version, patch) => {
       const { data, error } = await service
