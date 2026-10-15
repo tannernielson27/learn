@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-10-14 (S12: #337 merged, #338 in review).
+Last updated: 2026-10-14 (S12: #337 and #338 merged, #339 in review).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -245,7 +245,7 @@ Sprint 11 is code complete: every story is merged, including the follow-ups #283
 
 ## S12: AI question import (milestone 14)
 
-Status, 2026-10-14: only the #333 spike is done (PR #352); its measurements are in ADR 0008, "Cost and accuracy". Sprints 13 and 14 ran first. Reveal-by-step for case study charts (#334–#336), planned here at kickoff, moved to S14 and is merged (PRs #424, #435, #438), so this sprint builds on it.
+Status, 2026-10-14: the #333 spike (PR #352) and the draft converters for all 14 types (#337, #338) are done, and #339 adds the golden corpus and the accuracy eval (`test/ai-import/`, `pnpm eval:ai-import`). The spike's measurements are in ADR 0008, "Cost and accuracy". Sprints 13 and 14 ran first. Reveal-by-step for case study charts (#334–#336), planned here at kickoff, moved to S14 and is merged (PRs #424, #435, #438), so this sprint builds on it.
 
 Demo 13: a teacher uploads a Word case study and a PDF of questions, reviews what the AI found, fills in a missing answer, and imports the batch as drafts into a quiz. The imported case study's patient record grows step by step, live on a phone.
 
@@ -266,8 +266,8 @@ Owner decisions (2026-10-01):
 | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------- | ------------------------------ |
 | [#333](https://github.com/tannernielson27/learn/issues/333) | chore(ai-import): measure cost and accuracy on the owner's sample documents                    | none              | Merged (#352); no migration    |
 | [#337](https://github.com/tannernielson27/learn/issues/337) | feat(ngn): AI draft shapes and converters for the selection, ordered and bowtie types          | none              | Merged (#441); no migration    |
-| [#338](https://github.com/tannernielson27/learn/issues/338) | feat(ngn): AI draft shapes and converters for cloze, highlight, drag-and-drop and case studies | none              | In review (#442); no migration |
-| [#339](https://github.com/tannernielson27/learn/issues/339) | test(ai-import): a fictional golden corpus and an accuracy eval                                | none              | Open                           |
+| [#338](https://github.com/tannernielson27/learn/issues/338) | feat(ngn): AI draft shapes and converters for cloze, highlight, drag-and-drop and case studies | none              | Merged (#442); no migration    |
+| [#339](https://github.com/tannernielson27/learn/issues/339) | test(ai-import): a fictional golden corpus and an accuracy eval                                | none              | In review (#443); no migration |
 | [#340](https://github.com/tannernielson27/learn/issues/340) | feat(db): AI import batches, staged entries, a private upload bucket and a monthly cap         | security, db      | Open                           |
 | [#341](https://github.com/tannernielson27/learn/issues/341) | feat(ai-import): check uploaded files and prepare them for Claude                              | security          | Open                           |
 | [#342](https://github.com/tannernielson27/learn/issues/342) | feat(ai-import): Claude client, segment pass, usage ledger and cap                             | security          | Open                           |
@@ -330,6 +330,8 @@ Edge cases the owner's samples showed, each covered by an acceptance criterion o
 - Open discussion prompts, calculations, matching and one-line recall, which have no NGN type.
 - Errors in the source; an embedded clinical image and a copyrighted form; the same document as both .pdf and .docx.
 - Character damage in a PDF's text layer (degree signs, superscripts).
+
+#339's corpus covers keys glued, spaced, in matrix cells, as `✅ Answer` lines, as Word highlighting and at the back; an unmarked question after an injected instruction; a two-column PDF and a scanned page; a growing six-step case study with a standalone bowtie; an open prompt, a matching exercise, a calculation and instructor notes. Not yet in it: a trend item, a typo in a chart time, an embedded image, the same document as .pdf and .docx, and a damaged PDF text layer. Add them as #342–#344 need them (`test/ai-import/README.md`, "Adding a case").
 
 ## S13: Registration + onboarding (milestone 15)
 

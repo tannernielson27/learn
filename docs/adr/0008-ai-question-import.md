@@ -83,7 +83,7 @@ Accuracy, read by hand against the documents:
 ## Consequences
 
 - **Owner documents never enter the repo.** They may be copyrighted or licensed, and the Malnutrition one includes a third-party form. The local spike and eval read them from `.ai-import-samples/`, which is gitignored. CI's golden corpus is fictional content written for the repo.
-- **Accuracy is measured, not assumed.** `pnpm eval:ai-import` runs the corpus against the real API by hand and reports type accuracy, key accuracy and field accuracy. Any prompt change runs it before merge.
+- **Accuracy is measured, not assumed.** `pnpm eval:ai-import` runs the corpus against the real API by hand and reports type accuracy, key accuracy and field accuracy. Any prompt change runs it before merge. Since #339 the corpus, the scorer and the eval live in `test/ai-import/` (its README says how to run it), and CI scores recorded responses offline; an invented key fails CI.
 - **Images do not import.** LeaRN has no image support, so a question that relies on an image is flagged.
 - **A new external dependency at runtime.** If Anthropic is down, AI import fails with a clear message and everything else works. Failed chunks retry with backoff and can be resumed.
 - **Two migrations**, each pushed by the owner at merge: the import tables, bucket and cap (`20261015000000_ai_import`), and the import function (`20261015010000_ai_import_commit`). Each must sort after the newest migration on `main` when it merges, so renumber if needed. Reveal-by-step's own migration shipped with #335.

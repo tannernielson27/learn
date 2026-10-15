@@ -24,6 +24,9 @@ export default defineConfig({
             "src/*.{test,spec}.ts",
             // Repo tooling with logic worth pinning down, such as the pgTAP verdict (#163).
             "scripts/**/*.{test,spec}.ts",
+            // The AI import eval (#339): its scorer, run on recorded responses. The live run is
+            // `pnpm eval:ai-import`, with its own config; nothing here calls the API.
+            "test/**/*.{test,spec}.ts",
           ],
         },
       },

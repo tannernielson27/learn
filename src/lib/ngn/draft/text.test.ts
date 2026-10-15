@@ -71,6 +71,9 @@ describe("parseAnswer", () => {
 
   it.each([
     ["Answer: ✅ B.", [1]],
+    // The check mark may come first, as the #339 corpus prints it.
+    ["✅ Answer: B", [1]],
+    ["✔ Correct answer: D", [3]],
     ["B", [1]],
     ["(b)", [1]],
     ["A, C and D", [0, 2, 3]],
