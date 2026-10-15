@@ -15,6 +15,7 @@ import {
   type EntryActionInput,
   type ReviewActionDeps,
 } from "@/lib/aiImport/review/actions";
+import { discardBatch, importBatch, type CommitDeps } from "@/lib/aiImport/commit/actions";
 import { requireAuthor } from "@/lib/authoring/session";
 import { sharedRateLimitStore } from "@/lib/rateLimit/postgresStore";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -70,4 +71,28 @@ export async function dropAiImportEntry(input: EntryActionInput) {
 
 export async function restoreAiImportEntry(input: EntryActionInput) {
   return restoreEntry(await reviewDeps(), input);
+}
+
+/**
+ * Import and discard (#348): the same checks, the teacher's own session for the batch, and the
+ * service client only to remove the uploaded files once the database has let them go.
+ */
+async function commitDeps(): Promise<CommitDeps> {
+  const session = await requireAuthor("/author");
+  return {
+    author: async () => ({ status: "ok", ...session }),
+    service: createSupabaseServiceClient,
+  };
+}
+
+export async function importAiImportBatch(input: { batchId: string }) {
+  const result = await importBatch(await commitDeps(), input);
+  return result.ok
+    ? { ok: true as const, questions: result.questions, caseStudies: result.caseStudies }
+    : result;
+}
+
+export async function discardAiImportBatch(input: { batchId: string }) {
+  const result = await discardBatch(await commitDeps(), input);
+  return result.ok ? { ok: true as const } : result;
 }

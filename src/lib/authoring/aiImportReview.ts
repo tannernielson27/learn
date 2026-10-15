@@ -158,6 +158,16 @@ export function importSummary(entries: readonly ReviewEntryView[]): ImportSummar
   return { questions, caseStudies, label: `Import ${parts.join(" and ")}`, blockers };
 }
 
+/** After an import (#348): what went into the quiz, in one sentence. */
+export function importedSentence(questions: number, caseStudies: number, quizName: string): string {
+  const parts = [
+    questions > 0 || caseStudies === 0 ? plural(questions, "question", "questions") : null,
+    caseStudies > 0 ? plural(caseStudies, "case study", "case studies") : null,
+  ].filter((part): part is string => part !== null);
+  const one = questions + caseStudies === 1;
+  return `${parts.join(" and ")} ${one ? "was" : "were"} added to ${quizName} as ${one ? "a draft" : "drafts"}.`;
+}
+
 export interface FileGroup {
   name: string;
   entries: ReviewEntryView[];

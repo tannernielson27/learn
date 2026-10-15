@@ -213,6 +213,12 @@ begin
   if batch.status <> 'review' then
     return jsonb_build_object('ok', false, 'reason', 'not_review');
   end if;
+  -- Every entry of the batch, locked before its version is checked: an edit or a change of type
+  -- (#346's retype writes with the service client) that arrives now waits for this call, then
+  -- finds its row gone and answers entry_changed, so nothing is changed after it was checked.
+  perform 1 from public.ai_import_entries e
+   where e.batch_id = p_batch and e.org_id = caller_org
+     for update;
 
   select o.ai_import_enabled into enabled from public.orgs o where o.id = caller_org;
   if not coalesce(enabled, false) then

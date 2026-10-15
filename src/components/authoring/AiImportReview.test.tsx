@@ -7,7 +7,8 @@ import { FIXTURES } from "@/lib/ngn/fixtures";
 import { AiImportReview, type AiImportReviewActions } from "./AiImportReview";
 
 const refresh = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push }) }));
 const requests = vi.hoisted(() => ({ postJson: vi.fn(), uploadToStorage: vi.fn() }));
 vi.mock("./aiImportRequests", () => requests);
 
@@ -95,6 +96,7 @@ function setup(entries = ENTRIES, act = actions()) {
 
 beforeEach(() => {
   refresh.mockReset();
+  push.mockReset();
   requests.postJson.mockReset();
 });
 
@@ -178,23 +180,71 @@ describe("AiImportReview (#346)", () => {
     expect(screen.getByTestId("import-button").textContent).toBe("Import 4 questions");
   });
 
-  it("enables the import only once nothing blocks it and the import is handed in", () => {
-    const onImport = vi.fn();
-    render(
-      <AiImportReview
-        bankId={BANK}
-        quizName="Cardiac"
-        batchId={BATCH}
-        fileNames={["Cardiac.md"]}
-        entries={[ENTRIES[0]!]}
-        actions={actions()}
-        onImport={onImport}
-      />,
-    );
+  it("imports in one click once nothing blocks it, then says what went into the quiz", async () => {
+    const act = actions();
+    act.importBatch = vi.fn(async () => ({ ok: true as const, questions: 3, caseStudies: 1 }));
+    const { user } = setup([ENTRIES[0]!], act);
     const button = screen.getByTestId("import-button") as HTMLButtonElement;
     expect(button.disabled).toBe(false);
-    button.click();
-    expect(onImport).toHaveBeenCalled();
+    await user.click(button);
+    expect(act.importBatch).toHaveBeenCalledWith({ batchId: BATCH });
+    expect(screen.getByRole("status").textContent).toBe(
+      "3 questions and 1 case study were added to Cardiac as drafts.",
+    );
+    expect(screen.getByRole("link", { name: "Open Cardiac" })).toHaveAttribute(
+      "href",
+      `/author/banks/${BANK}`,
+    );
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it("keeps the review and says why when the import is refused", async () => {
+    const act = actions();
+    act.importBatch = vi.fn(async () => ({
+      ok: false as const,
+      code: "entry_changed",
+      message: "This question changed in another tab or window.",
+    }));
+    const { user } = setup([ENTRIES[0]!], act);
+    await user.click(screen.getByTestId("import-button"));
+    expect(await screen.findByText(/changed in another tab/)).toBeTruthy();
+    expect(screen.getByTestId("import-button").textContent).toBe("Import 1 question");
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("does not import while a kept question still needs an answer", async () => {
+    const act = actions();
+    act.importBatch = vi.fn();
+    const { user } = setup(ENTRIES, act);
+    await user.click(screen.getByTestId("import-button"));
+    expect(act.importBatch).not.toHaveBeenCalled();
+  });
+
+  it("discards only after the dialog is confirmed, then goes back to the quiz", async () => {
+    const act = actions();
+    act.discard = vi.fn(async () => ({ ok: true as const }));
+    const { user } = setup([ENTRIES[0]!], act);
+    await user.click(screen.getByRole("button", { name: "Discard this import" }));
+    expect(act.discard).not.toHaveBeenCalled();
+    const dialog = screen.getByRole("dialog", { name: "Discard this import?" });
+    await user.click(within(dialog).getByRole("button", { name: "Discard" }));
+    expect(act.discard).toHaveBeenCalledWith({ batchId: BATCH });
+    expect(push).toHaveBeenCalledWith(`/author/banks/${BANK}`);
+  });
+
+  it("keeps the dialog open with the reason when a discard is refused", async () => {
+    const act = actions();
+    act.discard = vi.fn(async () => ({
+      ok: false as const,
+      code: "already_imported",
+      message: "This import is already in the quiz.",
+    }));
+    const { user } = setup([ENTRIES[0]!], act);
+    await user.click(screen.getByRole("button", { name: "Discard this import" }));
+    const dialog = screen.getByRole("dialog", { name: "Discard this import?" });
+    await user.click(within(dialog).getByRole("button", { name: "Discard" }));
+    expect(within(dialog).getByText("This import is already in the quiz.")).toBeTruthy();
+    expect(push).not.toHaveBeenCalled();
   });
 
   it("explains that importing is not available yet when nothing blocks it", () => {

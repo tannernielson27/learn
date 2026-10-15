@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Dialog } from "@/components/ui/Dialog";
 import {
   REVIEW_FILTERS,
   filterCounts,
   groupByFile,
   importSummary,
+  importedSentence,
   matchesFilter,
   type ReviewEntryView,
   type ReviewFilter,
@@ -26,11 +28,20 @@ export interface EntryRef {
   version: number;
 }
 
+/** What an import answers: how many questions and case studies went into the quiz. */
+export type ImportOutcome = { ok: true; questions: number; caseStudies: number } | AiImportFailure;
+
 /** The Server Functions the page hands in (`src/app/author/aiImportActions.ts`). */
 export interface AiImportReviewActions {
   drop: (input: EntryRef) => EntryChange;
   restore: (input: EntryRef) => EntryChange;
+  /** #348: every kept entry into the quiz, all or nothing. Without it, importing is unavailable. */
+  importBatch?: (input: { batchId: string }) => Promise<ImportOutcome>;
+  /** #348: the batch, its staged questions and its uploaded files deleted. */
+  discard?: (input: { batchId: string }) => Promise<{ ok: true } | AiImportFailure>;
 }
+
+const UNEXPECTED = "That did not work. Try again.";
 
 export interface AiImportReviewProps {
   bankId: string;
@@ -39,8 +50,6 @@ export interface AiImportReviewProps {
   fileNames: string[];
   entries: ReviewEntryView[];
   actions: AiImportReviewActions;
-  /** The import itself is #348; until it is handed in, the button explains it is not available. */
-  onImport?: () => void;
 }
 
 type Override = { version: number; status: ReviewStatus };
@@ -58,10 +67,13 @@ export function AiImportReview({
   fileNames,
   entries: served,
   actions,
-  onImport,
 }: AiImportReviewProps) {
   const id = useId();
   const router = useRouter();
+  const [importing, setImporting] = useState(false);
+  const [imported, setImported] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const importInFlight = useRef(false);
   const [filter, setFilter] = useState<ReviewFilter>("all");
   // A drop or restore shows at once; a newer version from the server (a refresh) wins.
   const [overrides, setOverrides] = useState<Record<string, Override>>({});
@@ -110,7 +122,50 @@ export function AiImportReview({
     return result.ok ? { ok: true } : result;
   };
 
+  const runImport = async () => {
+    const importBatch = actions.importBatch;
+    if (!importBatch || importInFlight.current) return;
+    importInFlight.current = true;
+    setImporting(true);
+    setImportError(null);
+    try {
+      const result = await importBatch({ batchId });
+      if (result.ok) {
+        setImported(importedSentence(result.questions, result.caseStudies, quizName));
+        router.refresh();
+      } else {
+        setImportError(result.message);
+      }
+    } catch {
+      setImportError(UNEXPECTED);
+    } finally {
+      importInFlight.current = false;
+      setImporting(false);
+    }
+  };
+
   const blocked = summary.blockers.length > 0;
+  if (imported) {
+    return (
+      <section
+        aria-labelledby={`${id}-done`}
+        className="flex flex-col gap-3 rounded-sm border border-line bg-surface-1 p-4 sm:max-w-2xl"
+      >
+        <h2 id={`${id}-done`} className="font-read text-2xl text-ink-1">
+          Imported
+        </h2>
+        <p role="status" className="text-ink-1">
+          {imported}
+        </p>
+        <Link
+          href={`/author/banks/${bankId}`}
+          className="tap-target inline-flex items-center text-accent-ink underline"
+        >
+          Open {quizName}
+        </Link>
+      </section>
+    );
+  }
   return (
     <div className="flex flex-col gap-8">
       <section
@@ -125,14 +180,16 @@ export function AiImportReview({
           not importable are left out.
         </p>
         <div className="flex flex-wrap items-center gap-3">
+          {/* aria-disabled while importing, not disabled: a disabled button drops focus. */}
           <Button
             variant="primary"
-            disabled={blocked || !onImport}
+            disabled={blocked || !actions.importBatch}
+            aria-disabled={importing || undefined}
             aria-describedby={`${id}-why`}
-            onClick={onImport}
+            onClick={runImport}
             data-testid="import-button"
           >
-            {summary.label}
+            {importing ? "Importing…" : summary.label}
           </Button>
           <Link
             href={`/author/banks/${bankId}`}
@@ -148,12 +205,24 @@ export function AiImportReview({
                 <li key={line}>{line}</li>
               ))}
             </ul>
-          ) : onImport ? null : (
+          ) : actions.importBatch ? null : (
             <p className="text-ink-2">
               Importing is not available yet. Your review is kept until then.
             </p>
           )}
+          {/* Always rendered: a region that appears with its text already in it is often not read. */}
+          <p aria-live="polite" className="text-incorrect">
+            {importError}
+          </p>
         </div>
+        {actions.discard ? (
+          <DiscardImport
+            batchId={batchId}
+            bankId={bankId}
+            quizName={quizName}
+            discard={actions.discard}
+          />
+        ) : null}
       </section>
 
       <div role="group" aria-label="Show" className="flex flex-wrap gap-2">
@@ -198,5 +267,87 @@ export function AiImportReview({
         ))
       )}
     </div>
+  );
+}
+
+interface DiscardImportProps {
+  batchId: string;
+  bankId: string;
+  quizName: string;
+  discard: NonNullable<AiImportReviewActions["discard"]>;
+}
+
+/**
+ * "Discard this import" (#348). Pressing it changes nothing: a dialog says what goes, and its own
+ * button is the one that acts. Success goes back to the quiz; a refusal keeps the dialog open.
+ */
+function DiscardImport({ batchId, bankId, quizName, discard }: DiscardImportProps) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const inFlight = useRef(false);
+  const messageId = useId();
+
+  const close = () => {
+    if (inFlight.current) return;
+    setMessage(null);
+    setOpen(false);
+  };
+
+  const confirm = async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
+    try {
+      const result = await discard({ batchId });
+      if (result.ok) {
+        router.push(`/author/banks/${bankId}`);
+        return;
+      }
+      setMessage(result.message);
+    } catch {
+      setMessage(UNEXPECTED);
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <div>
+        <Button size="sm" onClick={() => setOpen(true)}>
+          Discard this import
+        </Button>
+      </div>
+      <Dialog
+        open={open}
+        onClose={close}
+        title="Discard this import?"
+        description={`Every question found in these files is deleted, and so are the uploaded files. Nothing is added to ${quizName}.`}
+        actions={
+          <>
+            <Button variant="ghost" onClick={close}>
+              Keep reviewing
+            </Button>
+            {/* aria-disabled, not disabled: a disabled button drops focus mid-request. */}
+            <Button
+              variant="primary"
+              aria-disabled={busy || undefined}
+              aria-describedby={message ? messageId : undefined}
+              onClick={confirm}
+            >
+              {busy ? "Discarding…" : "Discard"}
+            </Button>
+          </>
+        }
+      >
+        {/* Always rendered: a region that appears with its text already in it is often not read. */}
+        <p id={messageId} aria-live="polite" className="text-sm text-incorrect">
+          {message}
+        </p>
+      </Dialog>
+    </>
   );
 }

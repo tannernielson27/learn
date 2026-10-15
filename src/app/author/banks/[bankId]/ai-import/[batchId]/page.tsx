@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { dropAiImportEntry, restoreAiImportEntry } from "@/app/author/aiImportActions";
+import {
+  discardAiImportBatch,
+  dropAiImportEntry,
+  importAiImportBatch,
+  restoreAiImportEntry,
+} from "@/app/author/aiImportActions";
+import { importedSentence } from "@/lib/authoring/aiImportReview";
 import { AiImportReview } from "@/components/authoring/AiImportReview";
 import { aiImportEnabled } from "@/lib/aiImport/config";
 import { readReviewBatch } from "@/lib/aiImport/review/read";
@@ -44,6 +50,37 @@ export default async function AiImportReviewPage({
   if (batch.status === "uploading" || batch.status === "parsing") {
     redirect(`/author/banks/${bank.id}/ai-import?batch=${batch.id}`);
   }
+  if (batch.status === "imported") {
+    // #348: the batch keeps its counts after the import; its entries and files are gone.
+    const { data: done } = await author.supabase
+      .from("ai_import_batches")
+      .select("imported_questions, imported_case_studies")
+      .eq("id", batch.id)
+      .eq("org_id", author.orgId)
+      .maybeSingle();
+    return (
+      <>
+        <h1 className="mb-6 font-read text-3xl break-words text-ink-1">AI import</h1>
+        <section className="flex flex-col gap-3 rounded-sm border border-line bg-surface-1 p-4 sm:max-w-2xl">
+          <h2 className="font-read text-2xl text-ink-1">Imported</h2>
+          <p className="text-ink-1" data-testid="imported-summary">
+            {importedSentence(
+              done?.imported_questions ?? 0,
+              done?.imported_case_studies ?? 0,
+              bank.name,
+            )}{" "}
+            The uploaded files have been deleted.
+          </p>
+          <Link
+            href={`/author/banks/${bank.id}`}
+            className="tap-target inline-flex items-center text-accent-ink underline"
+          >
+            Open {bank.name}
+          </Link>
+        </section>
+      </>
+    );
+  }
   if (batch.status !== "review") notFound();
 
   return (
@@ -67,7 +104,12 @@ export default async function AiImportReviewPage({
         batchId={batch.id}
         fileNames={batch.fileNames}
         entries={batch.entries}
-        actions={{ drop: dropAiImportEntry, restore: restoreAiImportEntry }}
+        actions={{
+          drop: dropAiImportEntry,
+          restore: restoreAiImportEntry,
+          importBatch: importAiImportBatch,
+          discard: discardAiImportBatch,
+        }}
       />
     </>
   );
