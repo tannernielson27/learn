@@ -13,6 +13,7 @@ import {
   type ChartDraft,
   type ChartTabDraft,
   type ItemDraft,
+  type StandaloneChartDraft,
 } from ".";
 
 /*
@@ -198,7 +199,7 @@ describe("assembleCaseStudy", () => {
   });
 });
 
-const trendChart = {
+const trendChart: StandaloneChartDraft = {
   patient: { age: "71", sex: "male", setting: "Medical unit" },
   chart: {
     tabs: [

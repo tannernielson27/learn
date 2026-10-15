@@ -300,7 +300,7 @@ function splitGroup(
       kind: "item",
       item: item as ItemInput,
       reasons,
-      notes,
+      notes: notes.map((note) => ({ ...note })),
       groupKey,
       ...(index < CASE_STUDY_STEP_COUNT ? { step: (index + 1) as AssembledItem["step"] } : {}),
     };
