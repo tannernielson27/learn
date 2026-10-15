@@ -22,6 +22,8 @@ import { TagFilterBar } from "@/components/authoring/TagFilterBar";
 import { Button } from "@/components/ui/Button";
 import { startLiveSession } from "@/app/live/actions";
 import { shareBankWithClass, stopSharing } from "@/app/author/practice/actions";
+import { aiImportEnabled } from "@/lib/aiImport/config";
+import { workspaceEnabled } from "@/lib/aiImport/upload/access";
 import { assignmentPath } from "@/lib/assignments/assignments";
 import { bankCaseStudiesEmpty, bankItemsEmpty } from "@/lib/authoring/bankEmpty";
 import {
@@ -93,7 +95,13 @@ export default async function BankPage({
   // The Archived view is the status filter set to archived; every other list leaves archived out.
   const archived = search.status === "archived";
 
-  const { supabase } = await requireAuthor(`/author/banks/${bankId}`);
+  const author = await requireAuthor(`/author/banks/${bankId}`);
+  const { supabase } = author;
+  // #345: the Import with AI link, where AI import is on for the deployment and the workspace.
+  const aiImportOn = aiImportEnabled()
+    ? workspaceEnabled(author).then((on) => on === true)
+    : Promise.resolve(false);
+  aiImportOn.catch(() => undefined);
   const { data: bank } = await supabase
     .from("item_banks")
     .select("id, name")
@@ -130,6 +138,7 @@ export default async function BankPage({
       listTaggedRows(supabase, bank.id, view, search),
     ]);
   const { items } = itemPage;
+  const aiImport = await aiImportOn.catch(() => false);
   const facets = tagFacets(taggedRows, filter);
   const trail = view.kind === "folder" ? folderTrail(folders, view.id) : [];
   // A folder id that is not one of this bank's folders reads as not found.
@@ -340,6 +349,17 @@ export default async function BankPage({
             }}
           />
           {/* Closed until asked for (#412): most visits to a quiz are not to import into it. */}
+          {aiImport ? (
+            // #345: beside Import JSON, only where AI import is on for the deployment and workspace.
+            <div className="border-t border-line pt-6">
+              <Link
+                href={`/author/banks/${bank.id}/ai-import`}
+                className="tap-target inline-flex items-center text-sm font-medium text-accent-ink underline"
+              >
+                Import with AI
+              </Link>
+            </div>
+          ) : null}
           <details className="border-t border-line pt-6">
             <summary className="tap-target flex cursor-pointer items-center text-sm font-medium text-ink-2">
               Import JSON

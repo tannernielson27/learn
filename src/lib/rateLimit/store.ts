@@ -58,6 +58,9 @@ export const RATE_LIMIT_BUCKETS = [
   "ai_import_parse",
   // #343: AI import's extract calls, per teacher (`src/lib/aiImport/parseLimit.ts`).
   "ai_import_extract",
+  // #345: batch starts per teacher, and one claim per extract unit (`src/lib/aiImport/upload`).
+  "ai_import_batch",
+  "ai_import_unit",
 ] as const;
 
 export type RateLimitBucket = (typeof RATE_LIMIT_BUCKETS)[number];
