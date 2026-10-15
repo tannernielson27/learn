@@ -46,18 +46,18 @@ insert into public.item_banks (id, org_id, name) values
 
 -- R1: the batch A imports. One ready question, one ready case study, one dropped, one not
 -- importable. R2: a kept entry still needs an answer. R3: imports a broken case study. R4: its
--- quiz is gone. RB: B's.
+-- quiz is gone. RB: B's. Made uploading, so files can be added, then moved to review below.
 insert into public.ai_import_batches (id, org_id, bank_id, status, created_by) values
   ('00000000-0000-0000-0000-000000348a01', '00000000-0000-0000-0000-000000348f01',
-   '00000000-0000-0000-0000-000000348b01', 'review', '00000000-0000-0000-0000-000000348aaa'),
+   '00000000-0000-0000-0000-000000348b01', 'uploading', '00000000-0000-0000-0000-000000348aaa'),
   ('00000000-0000-0000-0000-000000348a02', '00000000-0000-0000-0000-000000348f01',
-   '00000000-0000-0000-0000-000000348b01', 'review', '00000000-0000-0000-0000-000000348aaa'),
+   '00000000-0000-0000-0000-000000348b01', 'uploading', '00000000-0000-0000-0000-000000348aaa'),
   ('00000000-0000-0000-0000-000000348a03', '00000000-0000-0000-0000-000000348f01',
-   '00000000-0000-0000-0000-000000348b01', 'review', '00000000-0000-0000-0000-000000348aaa'),
+   '00000000-0000-0000-0000-000000348b01', 'uploading', '00000000-0000-0000-0000-000000348aaa'),
   ('00000000-0000-0000-0000-000000348a04', '00000000-0000-0000-0000-000000348f01',
-   null, 'review', '00000000-0000-0000-0000-000000348aaa'),
+   null, 'uploading', '00000000-0000-0000-0000-000000348aaa'),
   ('00000000-0000-0000-0000-000000348ab1', '00000000-0000-0000-0000-000000348f02',
-   '00000000-0000-0000-0000-000000348b02', 'review', '00000000-0000-0000-0000-000000348bbb');
+   '00000000-0000-0000-0000-000000348b02', 'uploading', '00000000-0000-0000-0000-000000348bbb');
 
 insert into public.ai_import_files (id, batch_id, org_id, original_name, kind, status) values
   ('00000000-0000-0000-0000-000000348fa1', '00000000-0000-0000-0000-000000348a01',
@@ -71,6 +71,10 @@ insert into public.ai_import_chunks (id, file_id, batch_id, org_id, position, pa
 values
   ('00000000-0000-0000-0000-000000348ca1', '00000000-0000-0000-0000-000000348fa1',
    '00000000-0000-0000-0000-000000348a01', '00000000-0000-0000-0000-000000348f01', 0, 1, 2);
+update public.ai_import_batches set status = 'review'
+ where id in ('00000000-0000-0000-0000-000000348a01', '00000000-0000-0000-0000-000000348a02',
+              '00000000-0000-0000-0000-000000348a03', '00000000-0000-0000-0000-000000348a04',
+              '00000000-0000-0000-0000-000000348ab1');
 
 insert into public.ai_import_entries
   (id, batch_id, org_id, position, kind, type, status, item, source_excerpt) values

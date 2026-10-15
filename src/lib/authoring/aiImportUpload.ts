@@ -103,6 +103,15 @@ export const AI_IMPORT_MESSAGES = {
   entry_changed:
     "This question changed in another tab or window. Reload the page to see it as it is now.",
   not_review: "This import is not waiting for review.",
+  not_ready:
+    "Some questions you kept still need an answer or a fix. Fix them or drop them, then import.",
+  invalid_entry:
+    "A question you kept is not complete, so nothing was imported. Fix it or drop it, then import.",
+  nothing_to_import: "Nothing is left to import. Restore a question first.",
+  already_imported: "This import is already in the quiz.",
+  quiz_gone:
+    "The quiz this import was started from no longer exists, so nothing was imported. Discard this import.",
+  import_limited: "You are doing that too often. Wait a minute, then try again.",
   not_retypable:
     "Only a single question that has not been dropped can be read again as another type.",
   retype_busy:

@@ -9,6 +9,9 @@ export type Database = {
           created_at: string;
           created_by: string | null;
           id: string;
+          imported_at: string | null;
+          imported_case_studies: number | null;
+          imported_questions: number | null;
           library_folder_id: string | null;
           org_id: string;
           rights_confirmed_at: string;
@@ -21,6 +24,9 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           id?: string;
+          imported_at?: string | null;
+          imported_case_studies?: number | null;
+          imported_questions?: number | null;
           library_folder_id?: string | null;
           org_id: string;
           rights_confirmed_at?: string;
@@ -33,6 +39,9 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           id?: string;
+          imported_at?: string | null;
+          imported_case_studies?: number | null;
+          imported_questions?: number | null;
           library_folder_id?: string | null;
           org_id?: string;
           rights_confirmed_at?: string;
@@ -263,6 +272,27 @@ export type Database = {
             referencedColumns: ["id", "org_id"];
           },
         ];
+      };
+      ai_import_object_deletes: {
+        Row: {
+          batch_id: string;
+          org_id: string;
+          queued_at: string;
+          storage_path: string;
+        };
+        Insert: {
+          batch_id: string;
+          org_id: string;
+          queued_at?: string;
+          storage_path: string;
+        };
+        Update: {
+          batch_id?: string;
+          org_id?: string;
+          queued_at?: string;
+          storage_path?: string;
+        };
+        Relationships: [];
       };
       ai_usage: {
         Row: {
@@ -1822,6 +1852,10 @@ export type Database = {
           window_seconds: number;
         };
         Returns: boolean;
+      };
+      import_ai_batch: {
+        Args: { p_batch: string; p_entries: Json };
+        Returns: Json;
       };
       import_bank_content: {
         Args: {
