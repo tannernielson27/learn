@@ -1,0 +1,35 @@
+{
+  "document": "05-scanned-quiz.pdf",
+  "source": "hand-written",
+  "questions": [
+    {
+      "opening": "A client is starting warfarin. Which food should the nurse teach",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A client is starting warfarin. Which food should the nurse teach the client to eat in consistent amounts?",
+        "options": [
+          { "text": "Bananas" },
+          { "text": "Spinach *" },
+          { "text": "Whole-grain bread" },
+          { "text": "Low-fat yogurt" }
+        ]
+      }
+    },
+    {
+      "opening": "Which findings suggest that a client may have digoxin toxicity?",
+      "type": "multiple_response",
+      "draft": {
+        "type": "multiple_response",
+        "stem": "Which findings suggest that a client may have digoxin toxicity? Select all that apply.",
+        "options": [
+          { "text": "Nausea and loss of appetite *" },
+          { "text": "Seeing yellow-green halos around lights *" },
+          { "text": "Heart rate of 48/min *" },
+          { "text": "Increased urine output" },
+          { "text": "Ringing in the ears" }
+        ]
+      }
+    }
+  ]
+}

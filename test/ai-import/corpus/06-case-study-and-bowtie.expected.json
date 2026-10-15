@@ -1,0 +1,578 @@
+{
+  "document": "06-case-study-and-bowtie.md",
+  "covers": ["case-study", "standalone-bowtie", "asterisk-spaced"],
+  "questions": [
+    {
+      "label": "Standalone Item: Bowtie",
+      "status": "ready",
+      "item": {
+        "id": "pneumonia_q1",
+        "stem": {
+          "kind": "markdown",
+          "value": "A client with type 1 diabetes is admitted with nausea, abdominal pain and rapid, deep breathing. The blood glucose is 512 mg/dL, the arterial pH is 7.21 and the urine ketones are positive."
+        },
+        "instructions": "Complete the diagram by choosing the condition the client is most likely experiencing, 2 actions the nurse should take, and 2 parameters the nurse should monitor.",
+        "rationale": {},
+        "type": "bowtie",
+        "content": {
+          "actions": [
+            {
+              "id": "act_1",
+              "label": "Start a regular insulin infusion as prescribed"
+            },
+            {
+              "id": "act_2",
+              "label": "Give 0.9% sodium chloride IV as prescribed"
+            },
+            {
+              "id": "act_3",
+              "label": "Give 50% dextrose IV push"
+            },
+            {
+              "id": "act_4",
+              "label": "Restrict all oral and IV fluids"
+            },
+            {
+              "id": "act_5",
+              "label": "Give a dose of long-acting insulin only"
+            }
+          ],
+          "conditions": [
+            {
+              "id": "cond_1",
+              "label": "Diabetic ketoacidosis"
+            },
+            {
+              "id": "cond_2",
+              "label": "Hyperosmolar hyperglycemic state"
+            },
+            {
+              "id": "cond_3",
+              "label": "Hypoglycemia"
+            },
+            {
+              "id": "cond_4",
+              "label": "Thyroid storm"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "par_1",
+              "label": "Serum potassium"
+            },
+            {
+              "id": "par_2",
+              "label": "Blood glucose every hour"
+            },
+            {
+              "id": "par_3",
+              "label": "Serum calcium"
+            },
+            {
+              "id": "par_4",
+              "label": "Hemoglobin A1c"
+            },
+            {
+              "id": "par_5",
+              "label": "Platelet count"
+            }
+          ]
+        },
+        "answerKey": {
+          "actionIds": ["act_1", "act_2"],
+          "conditionId": "cond_1",
+          "parameterIds": ["par_1", "par_2"]
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 5
+        }
+      }
+    }
+  ],
+  "caseStudies": [
+    {
+      "label": "Unfolding Case Study: Pneumonia With Worsening Condition",
+      "caseStudy": {
+        "id": "pneumonia_case",
+        "title": "Unfolding Case Study: Pneumonia With Worsening Condition",
+        "ehr": {
+          "patientHeader": {
+            "name": "Walter Fenwick",
+            "age": 72,
+            "sex": "male",
+            "setting": "Medical unit"
+          },
+          "timePoints": [
+            {
+              "id": "tp_1",
+              "label": "0800"
+            },
+            {
+              "id": "tp_2",
+              "label": "1100",
+              "fromStep": 2
+            },
+            {
+              "id": "tp_3",
+              "label": "1500",
+              "fromStep": 6
+            }
+          ],
+          "tabs": [
+            {
+              "id": "tab_1",
+              "kind": "nurses_notes",
+              "title": "Nurses' Notes",
+              "blocks": [
+                {
+                  "kind": "markdown",
+                  "value": "Day 2, 0800: Client reports chills and a cough that brings up yellow sputum. Alert and oriented x4. Crackles in the right lower lobe."
+                },
+                {
+                  "kind": "markdown",
+                  "value": "Day 2, 1100: Client is restless and asks the same question twice. Skin warm and flushed.",
+                  "fromStep": 2
+                },
+                {
+                  "kind": "markdown",
+                  "value": "Day 2, 1130: Provider at the bedside. New prescriptions received.",
+                  "fromStep": 4
+                },
+                {
+                  "kind": "markdown",
+                  "value": "Day 2, 1500: Client is oriented x4. Urine output 45 mL/h.",
+                  "fromStep": 6
+                }
+              ]
+            },
+            {
+              "id": "tab_2",
+              "kind": "vital_signs",
+              "title": "Vital Signs",
+              "blocks": [
+                {
+                  "kind": "table",
+                  "columns": ["", "0800", "1100", "1500"],
+                  "rows": [
+                    ["Temperature", "38.6 °C", "39.1 °C", "37.9 °C"],
+                    ["Heart rate", "104/min", "118/min", "96/min"],
+                    ["Respiratory rate", "24/min", "28/min", "20/min"],
+                    ["Blood pressure", "118/72 mm Hg", "96/58 mm Hg", "112/68 mm Hg"],
+                    ["SpO2", "92% room air", "89% room air", "94% on 2 L/min"]
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "tab_3",
+              "kind": "lab_results",
+              "title": "Lab Results",
+              "blocks": [
+                {
+                  "kind": "vitals",
+                  "rows": [
+                    {
+                      "label": "White blood cells",
+                      "value": "18,400",
+                      "unit": "/mm3",
+                      "flag": "H"
+                    },
+                    {
+                      "label": "Lactate",
+                      "value": "3.2",
+                      "unit": "mmol/L",
+                      "flag": "H"
+                    },
+                    {
+                      "label": "Creatinine",
+                      "value": "1.6",
+                      "unit": "mg/dL",
+                      "flag": "H"
+                    }
+                  ],
+                  "fromStep": 3
+                },
+                {
+                  "kind": "vitals",
+                  "rows": [
+                    {
+                      "label": "Lactate, repeat at 1500",
+                      "value": "3.4",
+                      "unit": "mmol/L",
+                      "flag": "H"
+                    }
+                  ],
+                  "fromStep": 6
+                }
+              ],
+              "stepAccess": ["locked", "locked", "open", "open", "open", "open"]
+            }
+          ]
+        },
+        "items": [
+          {
+            "id": "pneumonia_case_step_1",
+            "cjmmStep": 1,
+            "stem": {
+              "kind": "markdown",
+              "value": "The nurse reviews the client's chart. Which findings require follow-up? Select all that apply."
+            },
+            "rationale": {},
+            "type": "multiple_response",
+            "content": {
+              "variant": "sata",
+              "options": [
+                {
+                  "id": "opt_a",
+                  "label": "Temperature 38.6 °C"
+                },
+                {
+                  "id": "opt_b",
+                  "label": "Heart rate 104/min"
+                },
+                {
+                  "id": "opt_c",
+                  "label": "Respiratory rate 24/min"
+                },
+                {
+                  "id": "opt_d",
+                  "label": "Blood pressure 118/72 mm Hg"
+                },
+                {
+                  "id": "opt_e",
+                  "label": "SpO2 92% on room air"
+                },
+                {
+                  "id": "opt_f",
+                  "label": "Alert and oriented x4"
+                }
+              ]
+            },
+            "answerKey": {
+              "correctOptionIds": ["opt_a", "opt_b", "opt_c", "opt_e"]
+            },
+            "scoring": {
+              "model": "plus_minus",
+              "maxPoints": 4
+            }
+          },
+          {
+            "id": "pneumonia_case_step_2",
+            "cjmmStep": 2,
+            "stem": {
+              "kind": "markdown",
+              "value": "Complete the sentence by choosing from the lists of options."
+            },
+            "rationale": {},
+            "content": {
+              "tokens": [
+                {
+                  "kind": "text",
+                  "value": "The client is most likely developing "
+                },
+                {
+                  "kind": "blank",
+                  "blankId": "blank_1"
+                },
+                {
+                  "kind": "text",
+                  "value": " as evidenced by "
+                },
+                {
+                  "kind": "blank",
+                  "blankId": "blank_2"
+                },
+                {
+                  "kind": "text",
+                  "value": "."
+                }
+              ],
+              "blanks": [
+                {
+                  "id": "blank_1",
+                  "choices": [
+                    {
+                      "id": "blank_1_a",
+                      "label": "sepsis"
+                    },
+                    {
+                      "id": "blank_1_b",
+                      "label": "heart failure"
+                    },
+                    {
+                      "id": "blank_1_c",
+                      "label": "a pulmonary embolism"
+                    }
+                  ]
+                },
+                {
+                  "id": "blank_2",
+                  "choices": [
+                    {
+                      "id": "blank_2_a",
+                      "label": "the new confusion and falling blood pressure"
+                    },
+                    {
+                      "id": "blank_2_b",
+                      "label": "the productive cough"
+                    },
+                    {
+                      "id": "blank_2_c",
+                      "label": "the client's age"
+                    }
+                  ]
+                }
+              ]
+            },
+            "answerKey": {
+              "blanks": [
+                {
+                  "blankId": "blank_1",
+                  "correctChoiceId": "blank_1_a"
+                },
+                {
+                  "blankId": "blank_2",
+                  "correctChoiceId": "blank_2_a"
+                }
+              ]
+            },
+            "type": "dropdown_rationale",
+            "scoring": {
+              "model": "rationale",
+              "maxPoints": 1
+            }
+          },
+          {
+            "id": "pneumonia_case_step_3",
+            "cjmmStep": 3,
+            "stem": {
+              "kind": "markdown",
+              "value": "Which complication is the client at highest risk for developing at this time?"
+            },
+            "rationale": {},
+            "type": "multiple_choice",
+            "content": {
+              "options": [
+                {
+                  "id": "opt_a",
+                  "label": "Septic shock"
+                },
+                {
+                  "id": "opt_b",
+                  "label": "Deep vein thrombosis"
+                },
+                {
+                  "id": "opt_c",
+                  "label": "Pressure injury"
+                },
+                {
+                  "id": "opt_d",
+                  "label": "Urinary retention"
+                }
+              ]
+            },
+            "answerKey": {
+              "correctOptionId": "opt_a"
+            },
+            "scoring": {
+              "model": "zero_one",
+              "maxPoints": 1
+            }
+          },
+          {
+            "id": "pneumonia_case_step_4",
+            "cjmmStep": 4,
+            "stem": {
+              "kind": "markdown",
+              "value": "For each prescription, indicate whether it is indicated or not indicated for the client at this time."
+            },
+            "rationale": {},
+            "content": {
+              "rows": [
+                {
+                  "id": "row_1",
+                  "label": "Obtain 2 sets of blood cultures"
+                },
+                {
+                  "id": "row_2",
+                  "label": "Give 30 mL/kg of 0.9% sodium chloride IV"
+                },
+                {
+                  "id": "row_3",
+                  "label": "Give furosemide 40 mg IV"
+                },
+                {
+                  "id": "row_4",
+                  "label": "Start a broad-spectrum antibiotic within 1 hour"
+                },
+                {
+                  "id": "row_5",
+                  "label": "Keep the client flat in bed without pillows"
+                }
+              ],
+              "columns": [
+                {
+                  "id": "col_1",
+                  "label": "Indicated"
+                },
+                {
+                  "id": "col_2",
+                  "label": "Not indicated"
+                }
+              ]
+            },
+            "type": "matrix_multiple_choice",
+            "answerKey": {
+              "rows": [
+                {
+                  "rowId": "row_1",
+                  "correctColumnId": "col_1"
+                },
+                {
+                  "rowId": "row_2",
+                  "correctColumnId": "col_1"
+                },
+                {
+                  "rowId": "row_3",
+                  "correctColumnId": "col_2"
+                },
+                {
+                  "rowId": "row_4",
+                  "correctColumnId": "col_1"
+                },
+                {
+                  "rowId": "row_5",
+                  "correctColumnId": "col_2"
+                }
+              ]
+            },
+            "scoring": {
+              "model": "zero_one",
+              "maxPoints": 5
+            }
+          },
+          {
+            "id": "pneumonia_case_step_5",
+            "cjmmStep": 5,
+            "stem": {
+              "kind": "markdown",
+              "value": "Which 3 actions should the nurse take first?"
+            },
+            "rationale": {},
+            "type": "multiple_response",
+            "content": {
+              "variant": "select_n",
+              "n": 3,
+              "options": [
+                {
+                  "id": "opt_a",
+                  "label": "Draw blood cultures before the first antibiotic dose"
+                },
+                {
+                  "id": "opt_b",
+                  "label": "Start the 0.9% sodium chloride bolus"
+                },
+                {
+                  "id": "opt_c",
+                  "label": "Apply oxygen to keep the SpO2 at or above 92%"
+                },
+                {
+                  "id": "opt_d",
+                  "label": "Encourage the client to walk in the hall"
+                },
+                {
+                  "id": "opt_e",
+                  "label": "Schedule a chest X-ray for tomorrow morning"
+                },
+                {
+                  "id": "opt_f",
+                  "label": "Teach the client about pneumonia vaccines"
+                }
+              ]
+            },
+            "answerKey": {
+              "correctOptionIds": ["opt_a", "opt_b", "opt_c"]
+            },
+            "scoring": {
+              "model": "plus_minus",
+              "maxPoints": 3
+            }
+          },
+          {
+            "id": "pneumonia_case_step_6",
+            "cjmmStep": 6,
+            "stem": {
+              "kind": "markdown",
+              "value": "For each finding, indicate whether it shows that the client's condition has improved or has not improved."
+            },
+            "rationale": {},
+            "content": {
+              "rows": [
+                {
+                  "id": "row_1",
+                  "label": "Temperature 37.9 °C"
+                },
+                {
+                  "id": "row_2",
+                  "label": "Heart rate 96/min"
+                },
+                {
+                  "id": "row_3",
+                  "label": "Blood pressure 112/68 mm Hg"
+                },
+                {
+                  "id": "row_4",
+                  "label": "Urine output 45 mL/h"
+                },
+                {
+                  "id": "row_5",
+                  "label": "Repeat lactate 3.4 mmol/L"
+                }
+              ],
+              "columns": [
+                {
+                  "id": "col_1",
+                  "label": "Improved"
+                },
+                {
+                  "id": "col_2",
+                  "label": "Not improved"
+                }
+              ]
+            },
+            "type": "matrix_multiple_choice",
+            "answerKey": {
+              "rows": [
+                {
+                  "rowId": "row_1",
+                  "correctColumnId": "col_1"
+                },
+                {
+                  "rowId": "row_2",
+                  "correctColumnId": "col_1"
+                },
+                {
+                  "rowId": "row_3",
+                  "correctColumnId": "col_1"
+                },
+                {
+                  "rowId": "row_4",
+                  "correctColumnId": "col_1"
+                },
+                {
+                  "rowId": "row_5",
+                  "correctColumnId": "col_2"
+                }
+              ]
+            },
+            "scoring": {
+              "model": "zero_one",
+              "maxPoints": 5
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

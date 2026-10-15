@@ -1,0 +1,91 @@
+{
+  "document": "05-scanned-quiz.pdf",
+  "covers": ["scanned-page", "asterisk-spaced"],
+  "questions": [
+    {
+      "label": "1.",
+      "status": "ready",
+      "item": {
+        "id": "pharm_q1",
+        "stem": {
+          "kind": "markdown",
+          "value": "A client is starting warfarin. Which food should the nurse teach the client to eat in consistent amounts?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Bananas"
+            },
+            {
+              "id": "opt_b",
+              "label": "Spinach"
+            },
+            {
+              "id": "opt_c",
+              "label": "Whole-grain bread"
+            },
+            {
+              "id": "opt_d",
+              "label": "Low-fat yogurt"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "2.",
+      "status": "ready",
+      "item": {
+        "id": "pharm_q2",
+        "stem": {
+          "kind": "markdown",
+          "value": "Which findings suggest that a client may have digoxin toxicity? Select all that apply."
+        },
+        "rationale": {},
+        "type": "multiple_response",
+        "content": {
+          "variant": "sata",
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Nausea and loss of appetite"
+            },
+            {
+              "id": "opt_b",
+              "label": "Seeing yellow-green halos around lights"
+            },
+            {
+              "id": "opt_c",
+              "label": "Heart rate of 48/min"
+            },
+            {
+              "id": "opt_d",
+              "label": "Increased urine output"
+            },
+            {
+              "id": "opt_e",
+              "label": "Ringing in the ears"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionIds": ["opt_a", "opt_b", "opt_c"]
+        },
+        "scoring": {
+          "model": "plus_minus",
+          "maxPoints": 3
+        }
+      }
+    }
+  ]
+}

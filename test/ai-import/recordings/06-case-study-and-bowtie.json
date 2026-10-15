@@ -1,0 +1,507 @@
+{
+  "document": "06-case-study-and-bowtie.md",
+  "source": "hand-written",
+  "questions": [
+    {
+      "opening": "A client with type 1 diabetes is admitted with nausea, abdominal pain",
+      "type": "bowtie",
+      "draft": {
+        "type": "bowtie",
+        "stem": "A client with type 1 diabetes is admitted with nausea, abdominal pain and rapid, deep breathing. The blood glucose is 512 mg/dL, the arterial pH is 7.21 and the urine ketones are positive.",
+        "instructions": "Complete the diagram by choosing the condition the client is most likely experiencing, 2 actions the nurse should take, and 2 parameters the nurse should monitor.",
+        "actions": [
+          {
+            "text": "Start a regular insulin infusion as prescribed *"
+          },
+          {
+            "text": "Give 0.9% sodium chloride IV as prescribed *"
+          },
+          {
+            "text": "Give 50% dextrose IV push"
+          },
+          {
+            "text": "Restrict all oral and IV fluids"
+          },
+          {
+            "text": "Give a dose of long-acting insulin only"
+          }
+        ],
+        "conditions": [
+          {
+            "text": "Diabetic ketoacidosis *"
+          },
+          {
+            "text": "Hyperosmolar hyperglycemic state"
+          },
+          {
+            "text": "Hypoglycemia"
+          },
+          {
+            "text": "Thyroid storm"
+          }
+        ],
+        "parameters": [
+          {
+            "text": "Serum potassium *"
+          },
+          {
+            "text": "Blood glucose every hour *"
+          },
+          {
+            "text": "Serum calcium"
+          },
+          {
+            "text": "Hemoglobin A1c"
+          },
+          {
+            "text": "Platelet count"
+          }
+        ]
+      }
+    }
+  ],
+  "caseStudies": [
+    {
+      "draft": {
+        "title": "Unfolding Case Study: Pneumonia With Worsening Condition",
+        "patient": {
+          "name": "Walter Fenwick",
+          "age": "72",
+          "sex": "male",
+          "setting": "Medical unit"
+        },
+        "charts": [
+          {
+            "tabs": [
+              {
+                "title": "Nurses' Notes",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Day 2, 0800: Client reports chills and a cough that brings up yellow sputum. Alert and oriented x4. Crackles in the right lower lobe."
+                  }
+                ]
+              },
+              {
+                "title": "Vital Signs",
+                "sections": [
+                  {
+                    "kind": "table",
+                    "columns": ["", "0800"],
+                    "rows": [
+                      ["Temperature", "38.6 °C"],
+                      ["Heart rate", "104/min"],
+                      ["Respiratory rate", "24/min"],
+                      ["Blood pressure", "118/72 mm Hg"],
+                      ["SpO2", "92% room air"]
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Lab Results",
+                "sections": []
+              }
+            ]
+          },
+          {
+            "tabs": [
+              {
+                "title": "Nurses' Notes",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Day 2, 0800: Client reports chills and a cough that brings up yellow sputum. Alert and oriented x4. Crackles in the right lower lobe.\n\nDay 2, 1100: Client is restless and asks the same question twice. Skin warm and flushed."
+                  }
+                ]
+              },
+              {
+                "title": "Vital Signs",
+                "sections": [
+                  {
+                    "kind": "table",
+                    "columns": ["", "0800", "1100"],
+                    "rows": [
+                      ["Temperature", "38.6 °C", "39.1 °C"],
+                      ["Heart rate", "104/min", "118/min"],
+                      ["Respiratory rate", "24/min", "28/min"],
+                      ["Blood pressure", "118/72 mm Hg", "96/58 mm Hg"],
+                      ["SpO2", "92% room air", "89% room air"]
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Lab Results",
+                "sections": []
+              }
+            ]
+          },
+          {
+            "tabs": [
+              {
+                "title": "Nurses' Notes",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Day 2, 0800: Client reports chills and a cough that brings up yellow sputum. Alert and oriented x4. Crackles in the right lower lobe.\n\nDay 2, 1100: Client is restless and asks the same question twice. Skin warm and flushed."
+                  }
+                ]
+              },
+              {
+                "title": "Vital Signs",
+                "sections": [
+                  {
+                    "kind": "table",
+                    "columns": ["", "0800", "1100"],
+                    "rows": [
+                      ["Temperature", "38.6 °C", "39.1 °C"],
+                      ["Heart rate", "104/min", "118/min"],
+                      ["Respiratory rate", "24/min", "28/min"],
+                      ["Blood pressure", "118/72 mm Hg", "96/58 mm Hg"],
+                      ["SpO2", "92% room air", "89% room air"]
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Lab Results",
+                "sections": [
+                  {
+                    "kind": "values",
+                    "rows": [
+                      {
+                        "label": "White blood cells",
+                        "value": "18,400",
+                        "unit": "/mm3",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Lactate",
+                        "value": "3.2",
+                        "unit": "mmol/L",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Creatinine",
+                        "value": "1.6",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "tabs": [
+              {
+                "title": "Nurses' Notes",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Day 2, 0800: Client reports chills and a cough that brings up yellow sputum. Alert and oriented x4. Crackles in the right lower lobe.\n\nDay 2, 1100: Client is restless and asks the same question twice. Skin warm and flushed.\n\nDay 2, 1130: Provider at the bedside. New prescriptions received."
+                  }
+                ]
+              },
+              {
+                "title": "Vital Signs",
+                "sections": [
+                  {
+                    "kind": "table",
+                    "columns": ["", "0800", "1100"],
+                    "rows": [
+                      ["Temperature", "38.6 °C", "39.1 °C"],
+                      ["Heart rate", "104/min", "118/min"],
+                      ["Respiratory rate", "24/min", "28/min"],
+                      ["Blood pressure", "118/72 mm Hg", "96/58 mm Hg"],
+                      ["SpO2", "92% room air", "89% room air"]
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Lab Results",
+                "sections": [
+                  {
+                    "kind": "values",
+                    "rows": [
+                      {
+                        "label": "White blood cells",
+                        "value": "18,400",
+                        "unit": "/mm3",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Lactate",
+                        "value": "3.2",
+                        "unit": "mmol/L",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Creatinine",
+                        "value": "1.6",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "tabs": [
+              {
+                "title": "Nurses' Notes",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Day 2, 0800: Client reports chills and a cough that brings up yellow sputum. Alert and oriented x4. Crackles in the right lower lobe.\n\nDay 2, 1100: Client is restless and asks the same question twice. Skin warm and flushed.\n\nDay 2, 1130: Provider at the bedside. New prescriptions received."
+                  }
+                ]
+              },
+              {
+                "title": "Vital Signs",
+                "sections": [
+                  {
+                    "kind": "table",
+                    "columns": ["", "0800", "1100"],
+                    "rows": [
+                      ["Temperature", "38.6 °C", "39.1 °C"],
+                      ["Heart rate", "104/min", "118/min"],
+                      ["Respiratory rate", "24/min", "28/min"],
+                      ["Blood pressure", "118/72 mm Hg", "96/58 mm Hg"],
+                      ["SpO2", "92% room air", "89% room air"]
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Lab Results",
+                "sections": [
+                  {
+                    "kind": "values",
+                    "rows": [
+                      {
+                        "label": "White blood cells",
+                        "value": "18,400",
+                        "unit": "/mm3",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Lactate",
+                        "value": "3.2",
+                        "unit": "mmol/L",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Creatinine",
+                        "value": "1.6",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "tabs": [
+              {
+                "title": "Nurses' Notes",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Day 2, 0800: Client reports chills and a cough that brings up yellow sputum. Alert and oriented x4. Crackles in the right lower lobe.\n\nDay 2, 1100: Client is restless and asks the same question twice. Skin warm and flushed.\n\nDay 2, 1130: Provider at the bedside. New prescriptions received.\n\nDay 2, 1500: Client is oriented x4. Urine output 45 mL/h."
+                  }
+                ]
+              },
+              {
+                "title": "Vital Signs",
+                "sections": [
+                  {
+                    "kind": "table",
+                    "columns": ["", "0800", "1100", "1500"],
+                    "rows": [
+                      ["Temperature", "38.6 °C", "39.1 °C", "37.9 °C"],
+                      ["Heart rate", "104/min", "118/min", "96/min"],
+                      ["Respiratory rate", "24/min", "28/min", "20/min"],
+                      ["Blood pressure", "118/72 mm Hg", "96/58 mm Hg", "112/68 mm Hg"],
+                      ["SpO2", "92% room air", "89% room air", "94% on 2 L/min"]
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Lab Results",
+                "sections": [
+                  {
+                    "kind": "values",
+                    "rows": [
+                      {
+                        "label": "White blood cells",
+                        "value": "18,400",
+                        "unit": "/mm3",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Lactate",
+                        "value": "3.2",
+                        "unit": "mmol/L",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Creatinine",
+                        "value": "1.6",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Lactate, repeat at 1500",
+                        "value": "3.4",
+                        "unit": "mmol/L",
+                        "flag": "H"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "steps": [
+          {
+            "type": "multiple_response",
+            "stem": "The nurse reviews the client's chart. Which findings require follow-up? Select all that apply.",
+            "options": [
+              {
+                "text": "Temperature 38.6 °C *"
+              },
+              {
+                "text": "Heart rate 104/min *"
+              },
+              {
+                "text": "Respiratory rate 24/min *"
+              },
+              {
+                "text": "Blood pressure 118/72 mm Hg"
+              },
+              {
+                "text": "SpO2 92% on room air *"
+              },
+              {
+                "text": "Alert and oriented x4"
+              }
+            ],
+            "statedScoring": "Scoring Rule: +/-"
+          },
+          {
+            "type": "dropdown_rationale",
+            "stem": "Complete the sentence by choosing from the lists of options.",
+            "sentence": "The client is most likely developing [[blank: sepsis * | heart failure | a pulmonary embolism]] as evidenced by [[blank: the new confusion and falling blood pressure * | the productive cough | the client's age]].",
+            "statedScoring": "Scoring Rule: Rationale"
+          },
+          {
+            "type": "multiple_choice",
+            "stem": "Which complication is the client at highest risk for developing at this time?",
+            "options": [
+              {
+                "text": "Septic shock *"
+              },
+              {
+                "text": "Deep vein thrombosis"
+              },
+              {
+                "text": "Pressure injury"
+              },
+              {
+                "text": "Urinary retention"
+              }
+            ]
+          },
+          {
+            "type": "matrix_multiple_choice",
+            "stem": "For each prescription, indicate whether it is indicated or not indicated for the client at this time.",
+            "columns": ["Indicated", "Not indicated"],
+            "rows": [
+              {
+                "text": "Obtain 2 sets of blood cultures",
+                "cells": ["*", ""]
+              },
+              {
+                "text": "Give 30 mL/kg of 0.9% sodium chloride IV",
+                "cells": ["*", ""]
+              },
+              {
+                "text": "Give furosemide 40 mg IV",
+                "cells": ["", "*"]
+              },
+              {
+                "text": "Start a broad-spectrum antibiotic within 1 hour",
+                "cells": ["*", ""]
+              },
+              {
+                "text": "Keep the client flat in bed without pillows",
+                "cells": ["", "*"]
+              }
+            ]
+          },
+          {
+            "type": "multiple_response",
+            "stem": "Which 3 actions should the nurse take first?",
+            "options": [
+              {
+                "text": "Draw blood cultures before the first antibiotic dose *"
+              },
+              {
+                "text": "Start the 0.9% sodium chloride bolus *"
+              },
+              {
+                "text": "Apply oxygen to keep the SpO2 at or above 92% *"
+              },
+              {
+                "text": "Encourage the client to walk in the hall"
+              },
+              {
+                "text": "Schedule a chest X-ray for tomorrow morning"
+              },
+              {
+                "text": "Teach the client about pneumonia vaccines"
+              }
+            ]
+          },
+          {
+            "type": "matrix_multiple_choice",
+            "stem": "For each finding, indicate whether it shows that the client's condition has improved or has not improved.",
+            "columns": ["Improved", "Not improved"],
+            "rows": [
+              {
+                "text": "Temperature 37.9 °C",
+                "cells": ["*", ""]
+              },
+              {
+                "text": "Heart rate 96/min",
+                "cells": ["*", ""]
+              },
+              {
+                "text": "Blood pressure 112/68 mm Hg",
+                "cells": ["*", ""]
+              },
+              {
+                "text": "Urine output 45 mL/h",
+                "cells": ["*", ""]
+              },
+              {
+                "text": "Repeat lactate 3.4 mmol/L",
+                "cells": ["", "*"]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

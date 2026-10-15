@@ -1,0 +1,427 @@
+{
+  "document": "01-med-surg-review.md",
+  "covers": [
+    "asterisk-glued",
+    "asterisk-spaced",
+    "check-answer-line",
+    "unmarked-key",
+    "injected-instruction",
+    "instructor-notes",
+    "open-prompt"
+  ],
+  "questions": [
+    {
+      "label": "Question 1",
+      "status": "ready",
+      "item": {
+        "id": "medsurg_q1",
+        "stem": {
+          "kind": "markdown",
+          "value": "A client who had abdominal surgery 6 hours ago reports pain of 8 on a scale of 0 to 10. Which action should the nurse take first?"
+        },
+        "rationale": {
+          "general": {
+            "kind": "markdown",
+            "value": "Assessment comes before intervention. New, severe pain after surgery can signal a complication, so the nurse assesses the incision and vital signs before choosing a comfort measure."
+          }
+        },
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Reposition the client and reassess in 1 hour"
+            },
+            {
+              "id": "opt_b",
+              "label": "Assess the incision site and the client's vital signs"
+            },
+            {
+              "id": "opt_c",
+              "label": "Encourage the client to use the incentive spirometer"
+            },
+            {
+              "id": "opt_d",
+              "label": "Document the pain rating in the client's record"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "Question 2",
+      "status": "ready",
+      "item": {
+        "id": "medsurg_q2",
+        "stem": {
+          "kind": "markdown",
+          "value": "The nurse is caring for a client who is receiving a continuous heparin infusion. Which findings should the nurse report to the health care provider? Select all that apply."
+        },
+        "rationale": {},
+        "type": "multiple_response",
+        "content": {
+          "variant": "sata",
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Blood in the urine"
+            },
+            {
+              "id": "opt_b",
+              "label": "aPTT within the target range"
+            },
+            {
+              "id": "opt_c",
+              "label": "Bleeding gums after brushing"
+            },
+            {
+              "id": "opt_d",
+              "label": "Platelet count of 250,000/mm3"
+            },
+            {
+              "id": "opt_e",
+              "label": "New bruising on both forearms"
+            },
+            {
+              "id": "opt_f",
+              "label": "Blood pressure of 124/78 mm Hg"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionIds": ["opt_a", "opt_c", "opt_e"]
+        },
+        "scoring": {
+          "model": "plus_minus",
+          "maxPoints": 3
+        }
+      }
+    },
+    {
+      "label": "Question 3",
+      "status": "ready",
+      "item": {
+        "id": "medsurg_q3",
+        "stem": {
+          "kind": "markdown",
+          "value": "A client with type 1 diabetes is found sweating and shaky. The capillary blood glucose is 52 mg/dL, and the client is awake and able to swallow. What should the nurse give first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "4 ounces of fruit juice"
+            },
+            {
+              "id": "opt_b",
+              "label": "A glass of whole milk with crackers"
+            },
+            {
+              "id": "opt_c",
+              "label": "Glucagon 1 mg intramuscularly"
+            },
+            {
+              "id": "opt_d",
+              "label": "Regular insulin as prescribed"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_a"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "Question 4",
+      "status": "needs_answer",
+      "item": {
+        "id": "medsurg_q4",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is teaching a client who has a new prescription for levothyroxine. Which statement by the client shows that the teaching was effective?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "\"I will take this pill with my breakfast.\""
+            },
+            {
+              "id": "opt_b",
+              "label": "\"I will take this pill on an empty stomach in the morning.\""
+            },
+            {
+              "id": "opt_c",
+              "label": "\"I can stop this medicine once I feel better.\""
+            },
+            {
+              "id": "opt_d",
+              "label": "\"I will take this pill together with my calcium supplement.\""
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": ""
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "Question 5",
+      "status": "ready",
+      "item": {
+        "id": "medsurg_q5",
+        "stem": {
+          "kind": "markdown",
+          "value": "The nurse is preparing to insert a peripheral IV catheter. Place the steps in the order the nurse should perform them."
+        },
+        "rationale": {},
+        "type": "ordered_response",
+        "content": {
+          "items": [
+            {
+              "id": "step_1",
+              "label": "Apply the tourniquet above the selected site"
+            },
+            {
+              "id": "step_2",
+              "label": "Perform hand hygiene and put on clean gloves"
+            },
+            {
+              "id": "step_3",
+              "label": "Clean the site with chlorhexidine and let it dry"
+            },
+            {
+              "id": "step_4",
+              "label": "Insert the catheter with the bevel up"
+            },
+            {
+              "id": "step_5",
+              "label": "Release the tourniquet and connect the extension set"
+            }
+          ]
+        },
+        "answerKey": {
+          "orderedIds": ["step_2", "step_1", "step_3", "step_4", "step_5"]
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "Question 6",
+      "status": "ready",
+      "item": {
+        "id": "medsurg_q6",
+        "stem": {
+          "kind": "markdown",
+          "value": "The nurse reviews the assessment of a client who is 2 days after a left total hip replacement. Click to highlight the findings that require follow-up."
+        },
+        "rationale": {},
+        "type": "highlight_table",
+        "content": {
+          "columns": ["Body system", "Findings"],
+          "rows": [
+            {
+              "id": "row_1",
+              "cells": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Cardiovascular"
+                  }
+                ],
+                [
+                  {
+                    "kind": "span",
+                    "spanId": "span_1",
+                    "value": "Left calf warm and swollen"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "; "
+                  },
+                  {
+                    "kind": "span",
+                    "spanId": "span_2",
+                    "value": "pedal pulses 2+ bilaterally"
+                  }
+                ]
+              ]
+            },
+            {
+              "id": "row_2",
+              "cells": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Respiratory"
+                  }
+                ],
+                [
+                  {
+                    "kind": "span",
+                    "spanId": "span_3",
+                    "value": "Respiratory rate 28/min"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "; "
+                  },
+                  {
+                    "kind": "span",
+                    "spanId": "span_4",
+                    "value": "sudden chest pain when breathing in"
+                  }
+                ]
+              ]
+            },
+            {
+              "id": "row_3",
+              "cells": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Surgical site"
+                  }
+                ],
+                [
+                  {
+                    "kind": "span",
+                    "spanId": "span_5",
+                    "value": "Incision edges approximated"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "; "
+                  },
+                  {
+                    "kind": "span",
+                    "spanId": "span_6",
+                    "value": "small amount of serous drainage"
+                  }
+                ]
+              ]
+            }
+          ]
+        },
+        "answerKey": {
+          "correctSpanIds": ["span_1", "span_3", "span_4"]
+        },
+        "scoring": {
+          "model": "plus_minus",
+          "maxPoints": 3
+        }
+      }
+    },
+    {
+      "label": "Question 7",
+      "status": "not_importable",
+      "opening": "In small groups, describe how you would explain the purpose of an incentive spirometer",
+      "reason": "An open discussion prompt with no answer choices."
+    },
+    {
+      "label": "Question 8",
+      "status": "ready",
+      "item": {
+        "id": "medsurg_q8",
+        "stem": {
+          "kind": "markdown",
+          "value": "A client is admitted with severe dehydration after 3 days of vomiting. For each body system, select the finding or findings that are consistent with dehydration."
+        },
+        "rationale": {},
+        "type": "multiple_response_grouping",
+        "content": {
+          "rows": [
+            {
+              "id": "row_1",
+              "label": "Neurologic",
+              "options": [
+                {
+                  "id": "row_1_a",
+                  "label": "Restless and irritable"
+                },
+                {
+                  "id": "row_1_b",
+                  "label": "Alert and calm"
+                }
+              ]
+            },
+            {
+              "id": "row_2",
+              "label": "Cardiovascular",
+              "options": [
+                {
+                  "id": "row_2_a",
+                  "label": "Heart rate 122/min"
+                },
+                {
+                  "id": "row_2_b",
+                  "label": "Capillary refill 1 second"
+                },
+                {
+                  "id": "row_2_c",
+                  "label": "Weak, thready pulse"
+                }
+              ]
+            },
+            {
+              "id": "row_3",
+              "label": "Renal",
+              "options": [
+                {
+                  "id": "row_3_a",
+                  "label": "Urine output 15 mL/h"
+                },
+                {
+                  "id": "row_3_b",
+                  "label": "Urine specific gravity 1.010"
+                }
+              ]
+            }
+          ]
+        },
+        "answerKey": {
+          "rows": [
+            {
+              "rowId": "row_1",
+              "correctOptionIds": ["row_1_a"]
+            },
+            {
+              "rowId": "row_2",
+              "correctOptionIds": ["row_2_a", "row_2_c"]
+            },
+            {
+              "rowId": "row_3",
+              "correctOptionIds": ["row_3_a"]
+            }
+          ]
+        },
+        "scoring": {
+          "model": "plus_minus",
+          "maxPoints": 4
+        }
+      }
+    }
+  ]
+}

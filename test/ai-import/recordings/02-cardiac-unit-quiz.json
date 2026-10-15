@@ -1,0 +1,86 @@
+{
+  "document": "02-cardiac-unit-quiz.docx",
+  "source": "hand-written",
+  "questions": [
+    {
+      "opening": "The nurse is caring for a client who had a cardiac catheterization",
+      "type": "matrix_multiple_choice",
+      "draft": {
+        "type": "matrix_multiple_choice",
+        "stem": "The nurse is caring for a client who had a cardiac catheterization through the right femoral artery 4 hours ago. For each assessment finding, indicate whether it is expected or unexpected.",
+        "columns": ["Expected", "Unexpected"],
+        "rows": [
+          { "text": "Right pedal pulse 2+", "cells": ["*", ""] },
+          { "text": "Bruise 2 cm across at the insertion site", "cells": ["*", ""] },
+          { "text": "Right foot cool and pale", "cells": ["", "*"] },
+          { "text": "New back pain with a blood pressure of 88/50 mm Hg", "cells": ["", "*"] }
+        ]
+      }
+    },
+    {
+      "opening": "The nurse is teaching a client about newly prescribed medications.",
+      "type": "matrix_multiple_response",
+      "draft": {
+        "type": "matrix_multiple_response",
+        "stem": "The nurse is teaching a client about newly prescribed medications. For each medication, select the teaching points that apply. Each medication may have more than one teaching point.",
+        "columns": ["Check pulse before taking", "Report unusual bleeding", "Take with food"],
+        "rows": [
+          { "text": "Digoxin", "cells": ["✓", "", ""] },
+          { "text": "Warfarin", "cells": ["", "✓", ""] },
+          { "text": "Metoprolol tartrate", "cells": ["✓", "", "✓"] },
+          { "text": "Aspirin", "cells": ["", "✓", "✓"] }
+        ]
+      }
+    },
+    {
+      "opening": "The nurse reviews the morning note for a client with heart failure.",
+      "type": "highlight_text",
+      "draft": {
+        "type": "highlight_text",
+        "stem": "The nurse reviews the morning note for a client with heart failure. Click to highlight the findings that require follow-up.",
+        "passage": "0700: Client is [[span: alert and oriented]]. States they [[span: needed three pillows to sleep last night*]]. This morning's weight is [[span: up 2.1 kg since yesterday*]]. [[span: Fine crackles in both lung bases*]]. [[span: Apical heart rate 82/min and regular]]. Client [[span: ate 75% of breakfast]]."
+      }
+    },
+    {
+      "opening": "The nurse reviews the client's prescriptions. For each medication, choose the action",
+      "type": "dropdown_table",
+      "draft": {
+        "type": "dropdown_table",
+        "stem": "The nurse reviews the client's prescriptions. For each medication, choose the action the nurse should take.",
+        "rowHeading": "Medication",
+        "choiceHeading": "Nursing action",
+        "rows": [
+          {
+            "label": "Digoxin 0.125 mg by mouth daily",
+            "choices": [
+              "Hold if the apical pulse is below 60/min *",
+              "Give with an antacid",
+              "Give a double dose if one is missed"
+            ]
+          },
+          {
+            "label": "Furosemide 40 mg IV daily",
+            "choices": [
+              "Give at bedtime",
+              "Monitor the serum potassium level *",
+              "Restrict potassium-rich foods"
+            ]
+          },
+          {
+            "label": "Lisinopril 10 mg by mouth daily",
+            "choices": [
+              "Teach the client to report a persistent dry cough *",
+              "Give with a potassium supplement",
+              "Hold if the heart rate is above 100/min"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "opening": "Match each heart sound with what it most often means.",
+      "type": "not_importable",
+      "reason": "A matching exercise; LeaRN has no matching type."
+    }
+  ]
+}

@@ -50,3 +50,5 @@ coverage
 load-live-results*.json
 # AI import samples and spike output (#333): owner documents never enter the repo (ADR 0008)
 /.ai-import-samples/
+# AI import eval output (#339): live recordings and reports, kept local
+/test/ai-import/out/

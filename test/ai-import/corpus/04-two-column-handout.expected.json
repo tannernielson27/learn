@@ -1,0 +1,138 @@
+{
+  "document": "04-two-column-handout.pdf",
+  "covers": ["two-column-pdf", "asterisk-spaced"],
+  "questions": [
+    {
+      "label": "1.",
+      "status": "ready",
+      "item": {
+        "id": "resp_q1",
+        "stem": {
+          "kind": "markdown",
+          "value": "A client with asthma uses an albuterol metered-dose inhaler. Which statement shows that the client understands how to use it?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "\"I will breathe in quickly and deeply as I press the inhaler.\""
+            },
+            {
+              "id": "opt_b",
+              "label": "\"I will hold my breath for about 10 seconds after each puff.\""
+            },
+            {
+              "id": "opt_c",
+              "label": "\"I will take both puffs at the same time.\""
+            },
+            {
+              "id": "opt_d",
+              "label": "\"I will rinse my mouth before I use the inhaler.\""
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "2.",
+      "status": "ready",
+      "item": {
+        "id": "resp_q2",
+        "stem": {
+          "kind": "markdown",
+          "value": "The nurse is caring for a client with a chest tube connected to water-seal drainage. Which 2 findings should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_response",
+        "content": {
+          "variant": "select_n",
+          "n": 2,
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Continuous bubbling in the water-seal chamber"
+            },
+            {
+              "id": "opt_b",
+              "label": "Tidaling in the water-seal chamber with breathing"
+            },
+            {
+              "id": "opt_c",
+              "label": "Drainage of 150 mL/h of bright red fluid"
+            },
+            {
+              "id": "opt_d",
+              "label": "A dry, intact occlusive dressing"
+            },
+            {
+              "id": "opt_e",
+              "label": "Gentle bubbling in the suction control chamber"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionIds": ["opt_a", "opt_c"]
+        },
+        "scoring": {
+          "model": "plus_minus",
+          "maxPoints": 2
+        }
+      }
+    },
+    {
+      "label": "3.",
+      "status": "ready",
+      "item": {
+        "id": "resp_q3",
+        "stem": {
+          "kind": "markdown",
+          "value": "The nurse is suctioning a client's tracheostomy. Place the actions in the order the nurse should perform them."
+        },
+        "rationale": {},
+        "type": "ordered_response",
+        "content": {
+          "items": [
+            {
+              "id": "step_1",
+              "label": "Insert the catheter without applying suction"
+            },
+            {
+              "id": "step_2",
+              "label": "Give the client 100% oxygen for 30 seconds"
+            },
+            {
+              "id": "step_3",
+              "label": "Apply intermittent suction while withdrawing the catheter"
+            },
+            {
+              "id": "step_4",
+              "label": "Perform hand hygiene and explain the procedure"
+            }
+          ]
+        },
+        "answerKey": {
+          "orderedIds": ["step_4", "step_2", "step_1", "step_3"]
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "4.",
+      "status": "not_importable",
+      "opening": "Calculate the client's body mass index. Height 170 cm, weight 85 kg.",
+      "reason": "A calculation with a typed answer; LeaRN has no calculation type."
+    }
+  ]
+}

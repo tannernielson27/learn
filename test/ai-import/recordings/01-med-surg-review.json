@@ -1,0 +1,145 @@
+{
+  "document": "01-med-surg-review.md",
+  "source": "hand-written",
+  "questions": [
+    {
+      "opening": "A client who had abdominal surgery 6 hours ago reports pain",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A client who had abdominal surgery 6 hours ago reports pain of 8 on a scale of 0 to 10. Which action should the nurse take first?",
+        "options": [
+          { "text": "Reposition the client and reassess in 1 hour" },
+          { "text": "*Assess the incision site and the client's vital signs" },
+          { "text": "Encourage the client to use the incentive spirometer" },
+          { "text": "Document the pain rating in the client's record" }
+        ],
+        "rationale": "Assessment comes before intervention. New, severe pain after surgery can signal a complication, so the nurse assesses the incision and vital signs before choosing a comfort measure."
+      }
+    },
+    {
+      "opening": "The nurse is caring for a client who is receiving a continuous heparin infusion.",
+      "type": "multiple_response",
+      "draft": {
+        "type": "multiple_response",
+        "stem": "The nurse is caring for a client who is receiving a continuous heparin infusion. Which findings should the nurse report to the health care provider? Select all that apply.",
+        "options": [
+          { "text": "Blood in the urine *" },
+          { "text": "aPTT within the target range" },
+          { "text": "Bleeding gums after brushing *" },
+          { "text": "Platelet count of 250,000/mm3" },
+          { "text": "New bruising on both forearms *" },
+          { "text": "Blood pressure of 124/78 mm Hg" }
+        ]
+      }
+    },
+    {
+      "opening": "A client with type 1 diabetes is found sweating and shaky.",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A client with type 1 diabetes is found sweating and shaky. The capillary blood glucose is 52 mg/dL, and the client is awake and able to swallow. What should the nurse give first?",
+        "options": [
+          { "text": "4 ounces of fruit juice" },
+          { "text": "A glass of whole milk with crackers" },
+          { "text": "Glucagon 1 mg intramuscularly" },
+          { "text": "Regular insulin as prescribed" }
+        ],
+        "answer": "✅ Answer: A"
+      }
+    },
+    {
+      "opening": "A nurse is teaching a client who has a new prescription for levothyroxine.",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is teaching a client who has a new prescription for levothyroxine. Which statement by the client shows that the teaching was effective?",
+        "options": [
+          { "text": "\"I will take this pill with my breakfast.\"" },
+          { "text": "\"I will take this pill on an empty stomach in the morning.\"" },
+          { "text": "\"I can stop this medicine once I feel better.\"" },
+          { "text": "\"I will take this pill together with my calcium supplement.\"" }
+        ]
+      }
+    },
+    {
+      "opening": "The nurse is preparing to insert a peripheral IV catheter.",
+      "type": "ordered_response",
+      "draft": {
+        "type": "ordered_response",
+        "stem": "The nurse is preparing to insert a peripheral IV catheter. Place the steps in the order the nurse should perform them.",
+        "steps": [
+          { "text": "Apply the tourniquet above the selected site" },
+          { "text": "Perform hand hygiene and put on clean gloves" },
+          { "text": "Clean the site with chlorhexidine and let it dry" },
+          { "text": "Insert the catheter with the bevel up" },
+          { "text": "Release the tourniquet and connect the extension set" }
+        ],
+        "answer": "Correct order: B, A, C, D, E"
+      }
+    },
+    {
+      "opening": "The nurse reviews the assessment of a client who is 2 days after a left total hip replacement.",
+      "type": "highlight_table",
+      "draft": {
+        "type": "highlight_table",
+        "stem": "The nurse reviews the assessment of a client who is 2 days after a left total hip replacement. Click to highlight the findings that require follow-up.",
+        "columns": ["Body system", "Findings"],
+        "rows": [
+          {
+            "cells": [
+              "Cardiovascular",
+              "[[span: Left calf warm and swollen *]]; [[span: pedal pulses 2+ bilaterally]]"
+            ]
+          },
+          {
+            "cells": [
+              "Respiratory",
+              "[[span: Respiratory rate 28/min *]]; [[span: sudden chest pain when breathing in *]]"
+            ]
+          },
+          {
+            "cells": [
+              "Surgical site",
+              "[[span: Incision edges approximated]]; [[span: small amount of serous drainage]]"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "opening": "In small groups, describe how you would explain the purpose of an incentive spirometer",
+      "type": "not_importable",
+      "reason": "An open discussion prompt with no answer choices."
+    },
+    {
+      "opening": "A client is admitted with severe dehydration after 3 days of vomiting.",
+      "type": "multiple_response_grouping",
+      "draft": {
+        "type": "multiple_response_grouping",
+        "stem": "A client is admitted with severe dehydration after 3 days of vomiting. For each body system, select the finding or findings that are consistent with dehydration.",
+        "rows": [
+          {
+            "label": "Neurologic",
+            "options": [{ "text": "Restless and irritable *" }, { "text": "Alert and calm" }]
+          },
+          {
+            "label": "Cardiovascular",
+            "options": [
+              { "text": "Heart rate 122/min *" },
+              { "text": "Capillary refill 1 second" },
+              { "text": "Weak, thready pulse *" }
+            ]
+          },
+          {
+            "label": "Renal",
+            "options": [
+              { "text": "Urine output 15 mL/h *" },
+              { "text": "Urine specific gravity 1.010" }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

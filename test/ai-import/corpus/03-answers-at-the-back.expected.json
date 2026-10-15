@@ -1,0 +1,409 @@
+{
+  "document": "03-answers-at-the-back.md",
+  "covers": ["answers-at-the-back"],
+  "questions": [
+    {
+      "label": "1.",
+      "status": "ready",
+      "item": {
+        "id": "fluids_q1",
+        "stem": {
+          "kind": "markdown",
+          "value": "A client with chronic obstructive pulmonary disease (COPD) is short of breath. The oxygen saturation is 86% on room air."
+        },
+        "instructions": "Complete the sentence by choosing from the lists of options.",
+        "rationale": {},
+        "content": {
+          "tokens": [
+            {
+              "kind": "text",
+              "value": "The nurse should first "
+            },
+            {
+              "kind": "blank",
+              "blankId": "blank_1"
+            },
+            {
+              "kind": "text",
+              "value": " and then "
+            },
+            {
+              "kind": "blank",
+              "blankId": "blank_2"
+            },
+            {
+              "kind": "text",
+              "value": "."
+            }
+          ],
+          "blanks": [
+            {
+              "id": "blank_1",
+              "choices": [
+                {
+                  "id": "blank_1_a",
+                  "label": "sit the client upright"
+                },
+                {
+                  "id": "blank_1_b",
+                  "label": "give oxygen at 15 L/min by non-rebreather mask"
+                },
+                {
+                  "id": "blank_1_c",
+                  "label": "call the rapid response team"
+                }
+              ]
+            },
+            {
+              "id": "blank_2",
+              "choices": [
+                {
+                  "id": "blank_2_a",
+                  "label": "start oxygen at 1 to 2 L/min by nasal cannula"
+                },
+                {
+                  "id": "blank_2_b",
+                  "label": "encourage the client to lie flat"
+                },
+                {
+                  "id": "blank_2_c",
+                  "label": "give a sedative for anxiety"
+                }
+              ]
+            }
+          ]
+        },
+        "answerKey": {
+          "blanks": [
+            {
+              "blankId": "blank_1",
+              "correctChoiceId": "blank_1_a"
+            },
+            {
+              "blankId": "blank_2",
+              "correctChoiceId": "blank_2_a"
+            }
+          ]
+        },
+        "type": "dropdown_cloze",
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 2
+        }
+      }
+    },
+    {
+      "label": "2.",
+      "status": "ready",
+      "item": {
+        "id": "fluids_q2",
+        "stem": {
+          "kind": "markdown",
+          "value": "A client has been vomiting for 2 days. The serum potassium is 2.9 mEq/L."
+        },
+        "instructions": "Complete the sentence by choosing from the lists of options.",
+        "rationale": {},
+        "content": {
+          "tokens": [
+            {
+              "kind": "text",
+              "value": "The client is at highest risk for "
+            },
+            {
+              "kind": "blank",
+              "blankId": "blank_1"
+            },
+            {
+              "kind": "text",
+              "value": " as evidenced by "
+            },
+            {
+              "kind": "blank",
+              "blankId": "blank_2"
+            },
+            {
+              "kind": "text",
+              "value": "."
+            }
+          ],
+          "blanks": [
+            {
+              "id": "blank_1",
+              "choices": [
+                {
+                  "id": "blank_1_a",
+                  "label": "seizures"
+                },
+                {
+                  "id": "blank_1_b",
+                  "label": "cardiac dysrhythmias"
+                },
+                {
+                  "id": "blank_1_c",
+                  "label": "hypertension"
+                }
+              ]
+            },
+            {
+              "id": "blank_2",
+              "choices": [
+                {
+                  "id": "blank_2_a",
+                  "label": "a serum potassium of 2.9 mEq/L"
+                },
+                {
+                  "id": "blank_2_b",
+                  "label": "the client's age"
+                },
+                {
+                  "id": "blank_2_c",
+                  "label": "the length of the illness"
+                }
+              ]
+            }
+          ]
+        },
+        "answerKey": {
+          "blanks": [
+            {
+              "blankId": "blank_1",
+              "correctChoiceId": "blank_1_b"
+            },
+            {
+              "blankId": "blank_2",
+              "correctChoiceId": "blank_2_a"
+            }
+          ]
+        },
+        "type": "dropdown_rationale",
+        "scoring": {
+          "model": "rationale",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "3.",
+      "status": "ready",
+      "item": {
+        "id": "fluids_q3",
+        "stem": {
+          "kind": "markdown",
+          "value": "A client with kidney failure has a serum potassium of 6.4 mEq/L."
+        },
+        "instructions": "Drag words from the word bank to complete the sentence.",
+        "rationale": {},
+        "content": {
+          "tokens": [
+            {
+              "kind": "text",
+              "value": "The client has "
+            },
+            {
+              "kind": "blank",
+              "blankId": "blank_1"
+            },
+            {
+              "kind": "text",
+              "value": ", and the nurse should watch the cardiac monitor for "
+            },
+            {
+              "kind": "blank",
+              "blankId": "blank_2"
+            },
+            {
+              "kind": "text",
+              "value": "."
+            }
+          ],
+          "blanks": [
+            {
+              "id": "blank_1"
+            },
+            {
+              "id": "blank_2"
+            }
+          ],
+          "bank": [
+            {
+              "id": "tok_1",
+              "label": "hypokalemia"
+            },
+            {
+              "id": "tok_2",
+              "label": "hyperkalemia"
+            },
+            {
+              "id": "tok_3",
+              "label": "peaked T waves"
+            },
+            {
+              "id": "tok_4",
+              "label": "flattened T waves"
+            },
+            {
+              "id": "tok_5",
+              "label": "muscle cramps"
+            },
+            {
+              "id": "tok_6",
+              "label": "a widened pulse pressure"
+            }
+          ],
+          "reusable": false
+        },
+        "answerKey": {
+          "blanks": [
+            {
+              "blankId": "blank_1",
+              "correctTokenId": "tok_2"
+            },
+            {
+              "blankId": "blank_2",
+              "correctTokenId": "tok_3"
+            }
+          ]
+        },
+        "type": "dragdrop_cloze",
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 2
+        }
+      }
+    },
+    {
+      "label": "4.",
+      "status": "ready",
+      "item": {
+        "id": "fluids_q4",
+        "stem": {
+          "kind": "markdown",
+          "value": "A client who had a thyroidectomy yesterday reports tingling around the mouth."
+        },
+        "instructions": "Drag words from the word bank to complete the sentence.",
+        "rationale": {},
+        "content": {
+          "tokens": [
+            {
+              "kind": "text",
+              "value": "The nurse suspects "
+            },
+            {
+              "kind": "blank",
+              "blankId": "blank_1"
+            },
+            {
+              "kind": "text",
+              "value": " as evidenced by "
+            },
+            {
+              "kind": "blank",
+              "blankId": "blank_2"
+            },
+            {
+              "kind": "text",
+              "value": "."
+            }
+          ],
+          "blanks": [
+            {
+              "id": "blank_1"
+            },
+            {
+              "id": "blank_2"
+            }
+          ],
+          "bank": [
+            {
+              "id": "tok_1",
+              "label": "hypocalcemia"
+            },
+            {
+              "id": "tok_2",
+              "label": "hypercalcemia"
+            },
+            {
+              "id": "tok_3",
+              "label": "tingling around the mouth"
+            },
+            {
+              "id": "tok_4",
+              "label": "a dry incision dressing"
+            },
+            {
+              "id": "tok_5",
+              "label": "a hoarse voice"
+            },
+            {
+              "id": "tok_6",
+              "label": "a heart rate of 76/min"
+            }
+          ],
+          "reusable": false
+        },
+        "answerKey": {
+          "blanks": [
+            {
+              "blankId": "blank_1",
+              "correctTokenId": "tok_1"
+            },
+            {
+              "blankId": "blank_2",
+              "correctTokenId": "tok_3"
+            }
+          ]
+        },
+        "type": "dragdrop_rationale",
+        "scoring": {
+          "model": "rationale",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "5.",
+      "status": "ready",
+      "item": {
+        "id": "fluids_q5",
+        "stem": {
+          "kind": "markdown",
+          "value": "The nurse is caring for a client with a serum sodium of 128 mEq/L. Which actions should the nurse take? Select all that apply."
+        },
+        "rationale": {},
+        "type": "multiple_response",
+        "content": {
+          "variant": "sata",
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Restrict free water intake as prescribed"
+            },
+            {
+              "id": "opt_b",
+              "label": "Monitor the client's level of consciousness"
+            },
+            {
+              "id": "opt_c",
+              "label": "Encourage the client to drink 3 L of water a day"
+            },
+            {
+              "id": "opt_d",
+              "label": "Start seizure precautions"
+            },
+            {
+              "id": "opt_e",
+              "label": "Give a hypotonic IV solution"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionIds": ["opt_a", "opt_b", "opt_d"]
+        },
+        "scoring": {
+          "model": "plus_minus",
+          "maxPoints": 3
+        }
+      }
+    }
+  ]
+}

@@ -124,8 +124,8 @@ const comparable = (text: string): string =>
  * something that is not one of `labels`: the caller flags it rather than guessing.
  */
 export function parseAnswer(answer: string, labels: readonly string[]): number[] | undefined {
-  const cleaned = normalizeLine(answer)
-    .replace(CHECK_MARK_ANYWHERE, " ")
+  // Trimmed again after the check marks go, so "✅ Answer: B" still starts with its prefix (#339).
+  const cleaned = normalizeLine(answer.replace(CHECK_MARK_ANYWHERE, " "))
     .replace(ANSWER_PREFIX, "")
     .replace(/[.]+$/, "")
     .trim();

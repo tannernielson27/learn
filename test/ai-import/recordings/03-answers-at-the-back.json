@@ -1,0 +1,84 @@
+{
+  "document": "03-answers-at-the-back.md",
+  "source": "hand-written",
+  "questions": [
+    {
+      "opening": "A client with chronic obstructive pulmonary disease (COPD) is short of breath.",
+      "type": "dropdown_cloze",
+      "draft": {
+        "type": "dropdown_cloze",
+        "stem": "A client with chronic obstructive pulmonary disease (COPD) is short of breath. The oxygen saturation is 86% on room air.",
+        "instructions": "Complete the sentence by choosing from the lists of options.",
+        "sentence": "The nurse should first [[blank: sit the client upright | give oxygen at 15 L/min by non-rebreather mask | call the rapid response team]] and then [[blank: start oxygen at 1 to 2 L/min by nasal cannula | encourage the client to lie flat | give a sedative for anxiety]].",
+        "answers": ["sit the client upright", "start oxygen at 1 to 2 L/min by nasal cannula"]
+      }
+    },
+    {
+      "opening": "A client has been vomiting for 2 days. The serum potassium is 2.9 mEq/L.",
+      "type": "dropdown_rationale",
+      "draft": {
+        "type": "dropdown_rationale",
+        "stem": "A client has been vomiting for 2 days. The serum potassium is 2.9 mEq/L.",
+        "instructions": "Complete the sentence by choosing from the lists of options.",
+        "sentence": "The client is at highest risk for [[blank: seizures | cardiac dysrhythmias | hypertension]] as evidenced by [[blank: a serum potassium of 2.9 mEq/L | the client's age | the length of the illness]].",
+        "answers": ["cardiac dysrhythmias", "a serum potassium of 2.9 mEq/L"],
+        "statedScoring": "Scoring Rule: Rationale"
+      }
+    },
+    {
+      "opening": "A client with kidney failure has a serum potassium of 6.4 mEq/L.",
+      "type": "dragdrop_cloze",
+      "draft": {
+        "type": "dragdrop_cloze",
+        "stem": "A client with kidney failure has a serum potassium of 6.4 mEq/L.",
+        "instructions": "Drag words from the word bank to complete the sentence.",
+        "sentence": "The client has [[blank]], and the nurse should watch the cardiac monitor for [[blank]].",
+        "bank": [
+          "hypokalemia",
+          "hyperkalemia",
+          "peaked T waves",
+          "flattened T waves",
+          "muscle cramps",
+          "a widened pulse pressure"
+        ],
+        "answers": ["hyperkalemia", "peaked T waves"]
+      }
+    },
+    {
+      "opening": "A client who had a thyroidectomy yesterday reports tingling around the mouth.",
+      "type": "dragdrop_rationale",
+      "draft": {
+        "type": "dragdrop_rationale",
+        "stem": "A client who had a thyroidectomy yesterday reports tingling around the mouth.",
+        "instructions": "Drag words from the word bank to complete the sentence.",
+        "sentence": "The nurse suspects [[blank]] as evidenced by [[blank]].",
+        "bank": [
+          "hypocalcemia",
+          "hypercalcemia",
+          "tingling around the mouth",
+          "a dry incision dressing",
+          "a hoarse voice",
+          "a heart rate of 76/min"
+        ],
+        "answers": ["hypocalcemia", "tingling around the mouth"],
+        "statedScoring": "Scoring Rule: Rationale"
+      }
+    },
+    {
+      "opening": "The nurse is caring for a client with a serum sodium of 128 mEq/L.",
+      "type": "multiple_response",
+      "draft": {
+        "type": "multiple_response",
+        "stem": "The nurse is caring for a client with a serum sodium of 128 mEq/L. Which actions should the nurse take? Select all that apply.",
+        "options": [
+          { "text": "Restrict free water intake as prescribed" },
+          { "text": "Monitor the client's level of consciousness" },
+          { "text": "Encourage the client to drink 3 L of water a day" },
+          { "text": "Start seizure precautions" },
+          { "text": "Give a hypotonic IV solution" }
+        ],
+        "answer": "A, B, D"
+      }
+    }
+  ]
+}

@@ -1,0 +1,327 @@
+{
+  "document": "02-cardiac-unit-quiz.docx",
+  "covers": ["word-highlight", "asterisk-spaced", "matching", "instructor-notes"],
+  "questions": [
+    {
+      "label": "Question 1",
+      "status": "ready",
+      "item": {
+        "id": "cardiac_q1",
+        "stem": {
+          "kind": "markdown",
+          "value": "The nurse is caring for a client who had a cardiac catheterization through the right femoral artery 4 hours ago. For each assessment finding, indicate whether it is expected or unexpected."
+        },
+        "rationale": {},
+        "content": {
+          "rows": [
+            {
+              "id": "row_1",
+              "label": "Right pedal pulse 2+"
+            },
+            {
+              "id": "row_2",
+              "label": "Bruise 2 cm across at the insertion site"
+            },
+            {
+              "id": "row_3",
+              "label": "Right foot cool and pale"
+            },
+            {
+              "id": "row_4",
+              "label": "New back pain with a blood pressure of 88/50 mm Hg"
+            }
+          ],
+          "columns": [
+            {
+              "id": "col_1",
+              "label": "Expected"
+            },
+            {
+              "id": "col_2",
+              "label": "Unexpected"
+            }
+          ]
+        },
+        "type": "matrix_multiple_choice",
+        "answerKey": {
+          "rows": [
+            {
+              "rowId": "row_1",
+              "correctColumnId": "col_1"
+            },
+            {
+              "rowId": "row_2",
+              "correctColumnId": "col_1"
+            },
+            {
+              "rowId": "row_3",
+              "correctColumnId": "col_2"
+            },
+            {
+              "rowId": "row_4",
+              "correctColumnId": "col_2"
+            }
+          ]
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 4
+        }
+      }
+    },
+    {
+      "label": "Question 2",
+      "status": "ready",
+      "item": {
+        "id": "cardiac_q2",
+        "stem": {
+          "kind": "markdown",
+          "value": "The nurse is teaching a client about newly prescribed medications. For each medication, select the teaching points that apply. Each medication may have more than one teaching point."
+        },
+        "rationale": {},
+        "content": {
+          "rows": [
+            {
+              "id": "row_1",
+              "label": "Digoxin"
+            },
+            {
+              "id": "row_2",
+              "label": "Warfarin"
+            },
+            {
+              "id": "row_3",
+              "label": "Metoprolol tartrate"
+            },
+            {
+              "id": "row_4",
+              "label": "Aspirin"
+            }
+          ],
+          "columns": [
+            {
+              "id": "col_1",
+              "label": "Check pulse before taking"
+            },
+            {
+              "id": "col_2",
+              "label": "Report unusual bleeding"
+            },
+            {
+              "id": "col_3",
+              "label": "Take with food"
+            }
+          ]
+        },
+        "type": "matrix_multiple_response",
+        "answerKey": {
+          "rows": [
+            {
+              "rowId": "row_1",
+              "correctColumnIds": ["col_1"]
+            },
+            {
+              "rowId": "row_2",
+              "correctColumnIds": ["col_2"]
+            },
+            {
+              "rowId": "row_3",
+              "correctColumnIds": ["col_1", "col_3"]
+            },
+            {
+              "rowId": "row_4",
+              "correctColumnIds": ["col_2", "col_3"]
+            }
+          ]
+        },
+        "scoring": {
+          "model": "plus_minus",
+          "maxPoints": 6
+        }
+      }
+    },
+    {
+      "label": "Question 3",
+      "status": "ready",
+      "item": {
+        "id": "cardiac_q3",
+        "stem": {
+          "kind": "markdown",
+          "value": "The nurse reviews the morning note for a client with heart failure. Click to highlight the findings that require follow-up."
+        },
+        "rationale": {},
+        "type": "highlight_text",
+        "content": {
+          "passage": [
+            {
+              "kind": "text",
+              "value": "0700: Client is "
+            },
+            {
+              "kind": "span",
+              "spanId": "span_1",
+              "value": "alert and oriented"
+            },
+            {
+              "kind": "text",
+              "value": ". States they "
+            },
+            {
+              "kind": "span",
+              "spanId": "span_2",
+              "value": "needed three pillows to sleep last night"
+            },
+            {
+              "kind": "text",
+              "value": ". This morning's weight is "
+            },
+            {
+              "kind": "span",
+              "spanId": "span_3",
+              "value": "up 2.1 kg since yesterday"
+            },
+            {
+              "kind": "text",
+              "value": ". "
+            },
+            {
+              "kind": "span",
+              "spanId": "span_4",
+              "value": "Fine crackles in both lung bases"
+            },
+            {
+              "kind": "text",
+              "value": ". "
+            },
+            {
+              "kind": "span",
+              "spanId": "span_5",
+              "value": "Apical heart rate 82/min and regular"
+            },
+            {
+              "kind": "text",
+              "value": ". Client "
+            },
+            {
+              "kind": "span",
+              "spanId": "span_6",
+              "value": "ate 75% of breakfast"
+            },
+            {
+              "kind": "text",
+              "value": "."
+            }
+          ]
+        },
+        "answerKey": {
+          "correctSpanIds": ["span_2", "span_3", "span_4"]
+        },
+        "scoring": {
+          "model": "plus_minus",
+          "maxPoints": 3
+        }
+      }
+    },
+    {
+      "label": "Question 4",
+      "status": "ready",
+      "item": {
+        "id": "cardiac_q4",
+        "stem": {
+          "kind": "markdown",
+          "value": "The nurse reviews the client's prescriptions. For each medication, choose the action the nurse should take."
+        },
+        "rationale": {},
+        "type": "dropdown_table",
+        "content": {
+          "columns": {
+            "label": "Medication",
+            "dropdown": "Nursing action"
+          },
+          "rows": [
+            {
+              "id": "row_1",
+              "label": "Digoxin 0.125 mg by mouth daily",
+              "choices": [
+                {
+                  "id": "row_1_a",
+                  "label": "Hold if the apical pulse is below 60/min"
+                },
+                {
+                  "id": "row_1_b",
+                  "label": "Give with an antacid"
+                },
+                {
+                  "id": "row_1_c",
+                  "label": "Give a double dose if one is missed"
+                }
+              ]
+            },
+            {
+              "id": "row_2",
+              "label": "Furosemide 40 mg IV daily",
+              "choices": [
+                {
+                  "id": "row_2_a",
+                  "label": "Give at bedtime"
+                },
+                {
+                  "id": "row_2_b",
+                  "label": "Monitor the serum potassium level"
+                },
+                {
+                  "id": "row_2_c",
+                  "label": "Restrict potassium-rich foods"
+                }
+              ]
+            },
+            {
+              "id": "row_3",
+              "label": "Lisinopril 10 mg by mouth daily",
+              "choices": [
+                {
+                  "id": "row_3_a",
+                  "label": "Teach the client to report a persistent dry cough"
+                },
+                {
+                  "id": "row_3_b",
+                  "label": "Give with a potassium supplement"
+                },
+                {
+                  "id": "row_3_c",
+                  "label": "Hold if the heart rate is above 100/min"
+                }
+              ]
+            }
+          ]
+        },
+        "answerKey": {
+          "rows": [
+            {
+              "rowId": "row_1",
+              "correctChoiceId": "row_1_a"
+            },
+            {
+              "rowId": "row_2",
+              "correctChoiceId": "row_2_b"
+            },
+            {
+              "rowId": "row_3",
+              "correctChoiceId": "row_3_a"
+            }
+          ]
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 3
+        }
+      }
+    },
+    {
+      "label": "Question 5",
+      "status": "not_importable",
+      "opening": "Match each heart sound with what it most often means.",
+      "reason": "A matching exercise; LeaRN has no matching type."
+    }
+  ]
+}
