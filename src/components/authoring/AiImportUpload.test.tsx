@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BatchView } from "@/lib/authoring/aiImportUpload";
 import { AiImportUpload, type AiImportActions } from "./AiImportUpload";
 
-const refresh = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+const replace = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
 const requests = vi.hoisted(() => ({ postJson: vi.fn(), uploadToStorage: vi.fn() }));
 vi.mock("./aiImportRequests", () => requests);
 
@@ -49,7 +49,7 @@ function actions(): AiImportActions {
 }
 
 beforeEach(() => {
-  refresh.mockReset();
+  replace.mockReset();
   requests.uploadToStorage.mockReset().mockResolvedValue(true);
   requests.postJson
     .mockReset()
@@ -98,7 +98,7 @@ describe("AiImportUpload", () => {
       screen.getByRole("checkbox", { name: /I may use this content in my course/ }),
     );
     await userEvent.click(screen.getByRole("button", { name: "Upload and read" }));
-    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("?batch=b1", { scroll: false }));
     expect(act.start).toHaveBeenCalledWith(BANK, true);
     expect(requests.uploadToStorage).toHaveBeenCalledWith("o/b1/f1", file, "text/markdown");
     expect(act.check).toHaveBeenCalledWith("b1", "f1");

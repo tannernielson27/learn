@@ -44,6 +44,8 @@ export type DriveResult =
 
 /** Answers that stop every file, not just the one that asked. */
 const STOPS_EVERYTHING = new Set([
+  // The teacher left the page.
+  "cancelled",
   "cap_reached",
   "rate_limited",
   "not_found",

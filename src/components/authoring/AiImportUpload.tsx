@@ -54,10 +54,14 @@ export interface AiImportUploadProps {
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-const io = (actions: AiImportActions): DriverIo => ({
-  parse: (batchId, fileId, position) =>
-    postJson("/api/ai-import/parse", { batchId, fileId, position }),
-  extract: (batchId, fileId, unit) => postJson("/api/ai-import/extract", { batchId, fileId, unit }),
+const LEFT = { ok: false as const, code: "cancelled", message: "" };
+
+/** Once the page is left, nothing more is sent: each request that would follow answers `cancelled`. */
+const io = (actions: AiImportActions, left: { current: boolean }): DriverIo => ({
+  parse: async (batchId, fileId, position) =>
+    left.current ? LEFT : postJson("/api/ai-import/parse", { batchId, fileId, position }),
+  extract: async (batchId, fileId, unit) =>
+    left.current ? LEFT : postJson("/api/ai-import/extract", { batchId, fileId, unit }),
   finish: (batchId) => actions.finish(batchId),
   sleep,
 });
@@ -95,7 +99,7 @@ export function AiImportUpload({
     setFiles(batch.files.map(trackFile));
     setAlert([]);
     const base = new Map(batch.files.map((file) => [file.id, file.questions]));
-    const result = await driveBatch(batch, io(actions), {
+    const result = await driveBatch(batch, io(actions, left), {
       chunkRead: (fileId, position) =>
         setFiles((list) =>
           list.map((file) =>
@@ -117,9 +121,11 @@ export function AiImportUpload({
           `${count} more ${count === 1 ? "question was" : "questions were"} left out: an import holds at most ${AI_IMPORT_MAX_QUESTIONS}.`,
         ),
     });
+    if (left.current) return;
     if (result.status === "review") {
       setStatus("review");
-      router.refresh();
+      // Through the router, so the page is read again for this batch whatever the address held.
+      router.replace(`?batch=${batch.id}`, { scroll: false });
     } else if (result.status === "stopped") {
       setAlert([result.failure.message]);
     } else {
@@ -135,6 +141,15 @@ export function AiImportUpload({
     }
     await read(begun.batch);
   }
+
+  const left = useRef(false);
+  useEffect(() => {
+    // Set again on mount, as development mounts every component twice.
+    left.current = false;
+    return () => {
+      left.current = true;
+    };
+  }, []);
 
   // A reload while files were being read carries on reading them.
   const resumed = useRef(false);
