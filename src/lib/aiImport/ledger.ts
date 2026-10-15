@@ -45,19 +45,30 @@ const PROMPT_TOKENS = 3_000;
 const MIN_RESERVATION_USD = 0.01;
 
 /**
- * What a segment call is reserved at: the input as if none of it came from the cache, written to
- * it at the higher price, and the whole of `max_tokens` as output. Settling gives the rest back.
- * Computed from the chunk's size alone, before the model has read a word of it.
+ * What a call is reserved at: the input as if none of it came from the cache, written to it at
+ * the higher price, and the whole of `maxTokens` as output. Settling gives the rest back.
+ * Computed from the document's size alone, plus `promptChars` of request text around it (the
+ * drafts a repair call sends back), before the model has read a word of it.
  */
-export function estimateSegmentCost(payload: ChunkPayload, pages: number): number {
+export function estimateCallCost(
+  payload: ChunkPayload,
+  pages: number,
+  maxTokens: number,
+  promptChars = 0,
+): number {
   const documentTokens =
     payload.type === "pdf"
       ? pages * TOKENS_PER_PDF_PAGE
       : Math.ceil(payload.text.length / CHARS_PER_TOKEN);
-  const input = (PROMPT_TOKENS + documentTokens) * PRICE_PER_MILLION.cacheWrite;
-  const output = SEGMENT_MAX_TOKENS * PRICE_PER_MILLION.output;
+  const promptTokens = PROMPT_TOKENS + Math.ceil(promptChars / CHARS_PER_TOKEN);
+  const input = (promptTokens + documentTokens) * PRICE_PER_MILLION.cacheWrite;
+  const output = maxTokens * PRICE_PER_MILLION.output;
   return Math.max(MIN_RESERVATION_USD, Math.ceil(input + output) / 1e6);
 }
+
+/** What a segment call is reserved at (#342). */
+export const estimateSegmentCost = (payload: ChunkPayload, pages: number): number =>
+  estimateCallCost(payload, pages, SEGMENT_MAX_TOKENS);
 
 const logged = (step: string, error: unknown) => {
   // The code and nothing else.

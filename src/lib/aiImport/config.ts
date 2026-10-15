@@ -13,6 +13,21 @@ export const PRICE_PER_MILLION = { input: 2, output: 10, cacheWrite: 2.5, cacheR
 /** The most a segment answer may run to. A chunk of about 8 pages lists maybe 20 questions. */
 export const SEGMENT_MAX_TOKENS = 8_000;
 
+/**
+ * The most an extract answer may run to (#343): two questions' drafts, or one chart-heavy one,
+ * with their "possible source error" notes.
+ */
+export const EXTRACT_MAX_TOKENS = 8_000;
+
+/** Questions per extract call. #333: four chart-heavy ones took 30-45 s; two stay near 20 s. */
+export const EXTRACT_PER_CALL = 2;
+
+/** Staged entries per batch (ADR 0008); `ai_import_entries` refuses the 151st. */
+export const MAX_ENTRIES_PER_BATCH = 150;
+
+/** Below this the reviewer is told the type is a guess (#333). */
+export const LOW_CONFIDENCE = 0.7;
+
 /** Tries per call: the first, then two more after a 429, 529 or 5xx. */
 export const MAX_ATTEMPTS = 3;
 /** The wait before the second try; it doubles for the third. A `retry-after` is used up to the cap. */

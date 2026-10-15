@@ -121,7 +121,8 @@ export interface ChunkRef {
 const escapeDocument = (text: string) =>
   text.replace(/<\/?document/gi, (tag) => `&lt;${tag.slice(1)}`);
 
-function documentBlock(payload: ChunkPayload): Anthropic.ContentBlockParam {
+/** The document as Claude reads it: a PDF as a document, text inside `<document>` tags. */
+export function documentBlock(payload: ChunkPayload): Anthropic.ContentBlockParam {
   if (payload.type === "pdf") {
     return {
       type: "document",

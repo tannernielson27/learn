@@ -82,6 +82,7 @@ export type Database = {
           page_from: number | null;
           page_to: number | null;
           position: number;
+          segments: Json | null;
           status: string;
           updated_at: string;
         };
@@ -98,6 +99,7 @@ export type Database = {
           page_from?: number | null;
           page_to?: number | null;
           position: number;
+          segments?: Json | null;
           status?: string;
           updated_at?: string;
         };
@@ -114,6 +116,7 @@ export type Database = {
           page_from?: number | null;
           page_to?: number | null;
           position?: number;
+          segments?: Json | null;
           status?: string;
           updated_at?: string;
         };

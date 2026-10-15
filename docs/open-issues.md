@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-10-15 (S12: #340 merged and applied, #341 merged, #342 in review).
+Last updated: 2026-10-15 (S12: #340 merged and applied, #341 and #342 merged, #343 in review).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -262,22 +262,22 @@ Owner decisions (2026-10-01):
 7. **A rights checkbox at upload**, which also confirms there is no real patient information.
 8. **A batch is up to 5 files, 100 pages and 150 questions.**
 
-| #                                                           | Title                                                                                          | Gates             | Status                         |
-| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------- | ------------------------------ |
-| [#333](https://github.com/tannernielson27/learn/issues/333) | chore(ai-import): measure cost and accuracy on the owner's sample documents                    | none              | Merged (#352); no migration    |
-| [#337](https://github.com/tannernielson27/learn/issues/337) | feat(ngn): AI draft shapes and converters for the selection, ordered and bowtie types          | none              | Merged (#441); no migration    |
-| [#338](https://github.com/tannernielson27/learn/issues/338) | feat(ngn): AI draft shapes and converters for cloze, highlight, drag-and-drop and case studies | none              | Merged (#442); no migration    |
-| [#339](https://github.com/tannernielson27/learn/issues/339) | test(ai-import): a fictional golden corpus and an accuracy eval                                | none              | Merged (#443); no migration    |
-| [#340](https://github.com/tannernielson27/learn/issues/340) | feat(db): AI import batches, staged entries, a private upload bucket and a monthly cap         | security, db      | Merged (#444), applied         |
-| [#341](https://github.com/tannernielson27/learn/issues/341) | feat(ai-import): check uploaded files and prepare them for Claude                              | security          | Merged (#445); no migration    |
-| [#342](https://github.com/tannernielson27/learn/issues/342) | feat(ai-import): Claude client, segment pass, usage ledger and cap                             | security          | In review (#446); no migration |
-| [#343](https://github.com/tannernielson27/learn/issues/343) | feat(ai-import): extract each question into a draft, validate it, and repair once              | security          | Open                           |
-| [#344](https://github.com/tannernielson27/learn/issues/344) | feat(ai-import): assemble case studies with a chart that grows by step                         | none              | Open                           |
-| [#345](https://github.com/tannernielson27/learn/issues/345) | feat(authoring): upload documents for AI import and watch them parse                           | security, e2e     | Open                           |
-| [#346](https://github.com/tannernielson27/learn/issues/346) | feat(authoring): review an AI import batch before anything reaches the bank                    | security, e2e     | Open                           |
-| [#347](https://github.com/tannernielson27/learn/issues/347) | feat(authoring): fix staged questions and case studies with the existing editors               | e2e               | Open                           |
-| [#348](https://github.com/tannernielson27/learn/issues/348) | feat(authoring): import a reviewed batch all at once, or discard it                            | security, db, e2e | Open                           |
-| [#349](https://github.com/tannernielson27/learn/issues/349) | docs(help): AI import guide, end-to-end tests, security rows and the S12 demo                  | e2e               | Open                           |
+| #                                                           | Title                                                                                          | Gates             | Status                                                           |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------- | ---------------------------------------------------------------- |
+| [#333](https://github.com/tannernielson27/learn/issues/333) | chore(ai-import): measure cost and accuracy on the owner's sample documents                    | none              | Merged (#352); no migration                                      |
+| [#337](https://github.com/tannernielson27/learn/issues/337) | feat(ngn): AI draft shapes and converters for the selection, ordered and bowtie types          | none              | Merged (#441); no migration                                      |
+| [#338](https://github.com/tannernielson27/learn/issues/338) | feat(ngn): AI draft shapes and converters for cloze, highlight, drag-and-drop and case studies | none              | Merged (#442); no migration                                      |
+| [#339](https://github.com/tannernielson27/learn/issues/339) | test(ai-import): a fictional golden corpus and an accuracy eval                                | none              | Merged (#443); no migration                                      |
+| [#340](https://github.com/tannernielson27/learn/issues/340) | feat(db): AI import batches, staged entries, a private upload bucket and a monthly cap         | security, db      | Merged (#444), applied                                           |
+| [#341](https://github.com/tannernielson27/learn/issues/341) | feat(ai-import): check uploaded files and prepare them for Claude                              | security          | Merged (#445); no migration                                      |
+| [#342](https://github.com/tannernielson27/learn/issues/342) | feat(ai-import): Claude client, segment pass, usage ledger and cap                             | security          | Merged (#446); no migration                                      |
+| [#343](https://github.com/tannernielson27/learn/issues/343) | feat(ai-import): extract each question into a draft, validate it, and repair once              | security, db      | In review (#PR); `20261015005000_ai_import_segments` not applied |
+| [#344](https://github.com/tannernielson27/learn/issues/344) | feat(ai-import): assemble case studies with a chart that grows by step                         | none              | Open                                                             |
+| [#345](https://github.com/tannernielson27/learn/issues/345) | feat(authoring): upload documents for AI import and watch them parse                           | security, e2e     | Open                                                             |
+| [#346](https://github.com/tannernielson27/learn/issues/346) | feat(authoring): review an AI import batch before anything reaches the bank                    | security, e2e     | Open                                                             |
+| [#347](https://github.com/tannernielson27/learn/issues/347) | feat(authoring): fix staged questions and case studies with the existing editors               | e2e               | Open                                                             |
+| [#348](https://github.com/tannernielson27/learn/issues/348) | feat(authoring): import a reviewed batch all at once, or discard it                            | security, db, e2e | Open                                                             |
+| [#349](https://github.com/tannernielson27/learn/issues/349) | docs(help): AI import guide, end-to-end tests, security rows and the S12 demo                  | e2e               | Open                                                             |
 
 Notes from #341 for the stories after it (`src/lib/aiImport/files/`):
 
@@ -286,9 +286,15 @@ Notes from #341 for the stories after it (`src/lib/aiImport/files/`):
 
 Notes from #342 for the stories after it (`src/lib/aiImport/`):
 
-- **#345:** a parse request calls `segmentChunk(segmentChunkDeps(service), { orgId, batchId, fileId, position, userId })` with the workspace and user from the session. It checks `AI_IMPORT_ENABLED`, the per-teacher limit (`ai_import_parse`, 60 an hour), the file's hash, then reserves and settles itself; it does not touch `ai_import_chunks`. Claim the chunk first (`update ... set status = 'running', attempts = attempts + 1 where status in ('pending', 'failed')`) so two tabs cannot send it twice, then record `done` or `failed` with the tokens. `cap_reached` carries `remainingUsd` and `remainingPages` for the page.
-- **#343, #345:** nothing stores a chunk's segment answer yet (`ChunkSegment`), and `mergeSegments` needs every chunk of a file. Either keep it in staged entries before extraction or add a column on `ai_import_chunks` (a migration); decide before #345.
-- **#343:** answer sections are copied text, linked by number (`MergedQuestion.answers`). For text and .docx they were found in the source; a PDF's cannot be checked here (`sourceChecked: false`), so treat a PDF key as needing the reviewer. `flags.notInSource` marks an excerpt the text does not hold. Confidence below 0.7 is shown to the reviewer. `runPipeline` in `test/ai-import` still has its own segment call; move it onto `src/lib/aiImport` with extraction, since both read the same document block.
+- **#345:** a parse request calls `segmentChunk(segmentChunkDeps(service), { orgId, batchId, fileId, position, userId })` with the workspace and user from the session. It checks `AI_IMPORT_ENABLED`, the per-teacher limit (`ai_import_parse`, 60 an hour), the file's hash, then reserves and settles itself; since #343 it writes the chunk's `segments` and no other column. Claim the chunk first (`update ... set status = 'running', attempts = attempts + 1 where status in ('pending', 'failed')`) so two tabs cannot send it twice, then record `done` or `failed` with the tokens. `cap_reached` carries `remainingUsd` and `remainingPages` for the page.
+- **#343, #345:** decided 2026-10-15 (owner): a column. `ai_import_chunks.segments` (#343's migration) holds each chunk's `ChunkSegment`, and `segmentChunk` now writes it itself after settling (`unavailable` if it cannot).
+- **#343:** answer sections are copied text, linked by number (`MergedQuestion.answers`). For text and .docx they were found in the source; a PDF's cannot be checked here (`sourceChecked: false`), so treat a PDF key as needing the reviewer. `flags.notInSource` marks an excerpt the text does not hold. Confidence below 0.7 is shown to the reviewer. `runPipeline` in `test/ai-import` still has its own segment call; move it onto `src/lib/aiImport` with extraction, since both read the same document block. (Done in #343.)
+
+Notes from #343 for the stories after it (`src/lib/aiImport/`):
+
+- **#345:** once every chunk of a file is `done`, extract it one unit per request: `extractUnit(extractUnitDeps(service), { orgId, batchId, fileId, userId, unit })`, from `unit: 0` up to the `units` each answer reports (2–3 at a time, the first alone so it warms the document cache). `incomplete` means a chunk has no segments yet. A unit sent twice stages nothing twice (`ai_import_entries (batch_id, position)` is unique; a file's questions sit at `file order × 1000 + place`). Extract requests have their own limit (`ai_import_extract`, 160 an hour). `overLimit` counts questions past the batch's 150, not extracted: show it. When every unit of every file is done, call `markDuplicates(service, { orgId, batchId })` once, then move the batch to `review`.
+- **#344:** `planExtraction(questions, hook)` takes a `CaseStudyHook`: answer the positions you assemble, and those are left out of the standalone units; pass it as `extractUnitDeps(...).caseStudies`. Without it every case-study step is extracted as a standalone question. Stage your case study at a position of its own in the same scheme. The eval's chart call in `test/ai-import/pipeline.ts` is the stand-in to replace.
+- **#346:** each `reasons` entry is `code: message` (`readReason` in `stage.ts`). `unmarked_key` means the model returned a key that part of the document does not show: the draft is kept, the item is null, the status `needs_fix`. `check_key` marks a key read from a PDF (not checkable). `duplicate` is advisory; the reviewer drops one. `source_error` notes never changed the text.
 
 #334, #335 and #336 are in S14 below. Issue titles keep the words they were filed with; the interface follows docs/glossary.md ("quiz", not "bank"; "question", not "item").
 
@@ -316,7 +322,8 @@ Parallelization map. Never build two stories at once that edit the same files:
 Migrations, reserved in merge order. They must sort after the newest migration on `main` (on 2026-10-14, `20261014300000_move_between_quizzes`); if `main` gains a later one before a story merges, renumber it:
 
 - `20261015000000_ai_import` (#340).
-- `20261015010000_ai_import_commit` (#348).
+- `20261015005000_ai_import_segments` (#343, owner decision 2026-10-15: a column for each chunk's segment answer).
+- `20261015010000_ai_import_commit` (#348), still after #343's.
 
 Reveal-by-step needed one migration, `20261014200000_assignment_record_column_grant` (#335, S14), so no spare is reserved for it here.
 

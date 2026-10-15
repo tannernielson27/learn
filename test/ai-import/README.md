@@ -65,4 +65,8 @@ A hand-written recording must score 100%. When a live run replaces one, copy it 
 
 ## The pipeline
 
-`pipeline.ts` is the eval's own stand-in: a segment pass, then one extract call per question with `draftJsonSchema(type)`, and for a case study one call with `caseStudyChartsJsonSchema()` plus one per step, all on Sonnet 5.5 with structured outputs, the document cached, and the first extract call run alone to warm the cache. When #342 and #343 build `src/lib/aiImport`, `runPipeline` should call that instead, so the eval measures what ships.
+`pipeline.ts` runs the product's own code (#343), so the eval measures what ships: `prepareFile` cuts the document into the chunks the product sends, the segment pass (`src/lib/aiImport/segment.ts`) reads each, `mergeSegments` joins them, and the extract pass (`extractQuestions`) fills each question's draft two at a time, with its one repair. A .docx is read as the product's markdown, not HTML. Only a case study's chart is still the eval's own call (`caseStudyChartsJsonSchema()`), until #344 assembles case studies in `src/lib/aiImport`; its steps go through the product's extract pass.
+
+### Thresholds (#333's spike, ADR 0008 "Cost and accuracy")
+
+A live run should meet what the spike measured on the owner's samples: types right for at least 26 of 28 importable questions (93%), every marked key exact, **no invented key** and no entry the source does not have, every open prompt, calculation and matching exercise not importable, and stems word for word. CI holds the recorded corpus to 100% on every check.

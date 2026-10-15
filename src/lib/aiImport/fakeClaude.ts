@@ -61,11 +61,71 @@ function message(json: unknown): Anthropic.Message {
   } as unknown as Anthropic.Message;
 }
 
+const OPTION = /^\s*(?:[-*]\s+)?[A-Za-z][.)]\s+(.+)$/;
+
+/** The options listed under a question's opening line, as `A. text` lines. */
+function optionsAfter(text: string, opening: string): { text: string }[] {
+  const at = text.indexOf(opening);
+  if (at < 0) return [];
+  const options: { text: string }[] = [];
+  for (const line of text
+    .slice(at + opening.length)
+    .split("\n")
+    .slice(1)) {
+    const match = OPTION.exec(line);
+    if (match) options.push({ text: match[1].trim() });
+    else if (line.trim() !== "" && options.length > 0) break;
+    else if (/^#{1,6}\s/.test(line)) break;
+  }
+  return options;
+}
+
+function lastText(body: Anthropic.MessageCreateParamsNonStreaming): string {
+  const content = body.messages[0]?.content;
+  if (!Array.isArray(content)) return "";
+  const last = content.at(-1);
+  return last?.type === "text" ? last.text : "";
+}
+
+/**
+ * For an extract request (#343), each question asked for becomes a draft of its type whose stem
+ * is its opening and whose options are the `A.` lines under it, marks and all.
+ */
+function fakeExtract(body: Anthropic.MessageCreateParamsNonStreaming) {
+  const text = documentText(body);
+  const listed = /<question(?:s)?>\n([\s\S]*?)\n<\/question(?:s)?>/.exec(lastText(body));
+  let questions: { field?: string; type?: string; opens?: string }[] = [];
+  try {
+    const parsed: unknown = JSON.parse(listed?.[1] ?? "[]");
+    questions = Array.isArray(parsed) ? parsed : [parsed];
+  } catch {
+    questions = [];
+  }
+  return Object.fromEntries(
+    questions.map((question, index) => [
+      question.field ?? `question_${index + 1}`,
+      {
+        draft: {
+          type: question.type ?? "multiple_choice",
+          stem: question.opens ?? "",
+          options: optionsAfter(text, question.opens ?? ""),
+        },
+        sourceErrors: [],
+      },
+    ]),
+  );
+}
+
+const isExtract = (body: Anthropic.MessageCreateParamsNonStreaming) => {
+  const schema = body.output_config?.format as { schema?: { properties?: object } } | undefined;
+  return Object.hasOwn(schema?.schema?.properties ?? {}, "question_1");
+};
+
 export function fakeClaudeClient(): MessagesClient {
   return {
     messages: {
       async create(body) {
-        return message(fakeSegment(documentText(body)));
+        return message(isExtract(body) ? fakeExtract(body) : fakeSegment(documentText(body)));
       },
     },
   };

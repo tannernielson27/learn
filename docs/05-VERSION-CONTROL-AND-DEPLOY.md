@@ -144,62 +144,63 @@ Rules:
 
 Everything in `supabase/migrations/` today, in filename order — this is the replay list, and a new project must end with every row below. Add a row in the same PR as the migration; a table that silently falls behind the directory is worse than none, because a replay checked against it looks complete when it is not.
 
-| #   | Migration                                       | What it adds                                                                       | On `vauokqoyvewtzubqajgh`? |
-| --- | ----------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------- |
-| 1   | `20260913000000_authoring_schema`               | orgs, profiles, item banks, items, versions, case studies, RLS                     | applied                    |
-| 2   | `20260914000000_case_study_steps`               | step items live in the case study's bank; atomic reorder                           | applied                    |
-| 3   | `20260915000000_import_bank_content`            | one-call JSON import                                                               | applied                    |
-| 4   | `20260916000000_bank_folders`                   | nested folders per bank                                                            | applied                    |
-| 5   | `20260919000000_item_tags`                      | tag filtering on the bank page                                                     | applied                    |
-| 6   | `20260919110000_start_step_and_rate_limits`     | `start_case_study_step`, per-user rate limit on authoring mutations                | applied                    |
-| 7   | `20260919120600_duplicate_content`              | duplicate an item or a case study                                                  | applied                    |
-| 8   | `20260919130000_item_search`                    | full-text search over a bank                                                       | applied                    |
-| 9   | `20260919150000_import_into_folder`             | import straight into a folder                                                      | applied                    |
-| 10  | `20260919160000_archive_content`                | archive and restore                                                                | applied                    |
-| 11  | `20260919170000_live_sessions`                  | live sessions with a six-character join code (#128)                                | applied                    |
-| 12  | `20260920130000_live_responses_and_aggregates`  | live responses, server-side scoring, per-participant submit limit (#131, #133)     | applied                    |
-| 13  | `20260920140000_session_participants`           | join with a display name and no account (#129)                                     | applied                    |
-| 14  | `20260921000000_resume_participant_joined_at`   | resume a participant after a reload (#133)                                         | applied                    |
-| 15  | `20260921100000_live_view_rate_limit`           | per-participant limit on `POST /api/live/view` (#152)                              | applied                    |
-| 16  | `20260921200000_authoring_limit_at_the_write`   | authoring rate limit enforced at the write, not only in the UI (#123)              | applied                    |
-| 17  | `20260921210000_private_live_channel`           | private Realtime channel with a per-participant token (#149)                       | applied                    |
-| 18  | `20260923010000_item_timer`                     | optional per-item timer on a live session (#182)                                   | applied                    |
-| 19  | `20260923060000_session_goto`                   | skip an item or go back to one (#183)                                              | applied                    |
-| 20  | `20260923070000_case_study_live_record`         | run a case study live with the patient record on every phone (#184)                | applied                    |
-| 21  | `20260923080000_student_paced`                  | student-paced mode (#185)                                                          | applied                    |
-| 22  | `20260924000000_invite_only_signup`             | new accounts get no role; `private.make_instructor` (#204, §7.6)                   | applied                    |
-| 23  | `20260924010000_classes`                        | classes, rosters and invite links; completes the invite seam (#205)                | applied                    |
-| 24  | `20260924020000_assignments`                    | assign a bank or case study to a class with a window and attempts (#207)           | applied                    |
-| 25  | `20260924030800_assignment_attempts`            | take an assignment: attempts, autosave, submit, submit at close (#208)             | applied                    |
-| 26  | `20260924040000_assignment_report`              | the author's read of attempt scores for the assignment report (#211)               | applied                    |
-| 27  | `20260924050000_my_assignment_result`           | a student's own score and marks after an assignment closes (#210)                  | applied                    |
-| 28  | `20260924060000_assignment_reminders`           | reminder email outbox, class time zone, the pg_cron entry point (#212, §7.8)       | applied                    |
-| 29  | `20260925000000_security_guard`                 | RLS on class_removals, anon execute revoked, removal trigger skips cascades (#233) | applied                    |
-| 30  | `20260925010000_shared_rate_limits`             | sign-in, invite and cron limits shared across server instances, keys hashed (#234) | applied                    |
-| 31  | `20260925020000_class_timezone_and_removed`     | class time zone set in the app; removed students in the assignment report (#242)   | applied                    |
-| 32  | `20260925030000_student_history`                | a student's closed assignments with their own attempts, for History (#238)         | applied                    |
-| 33  | `20260925040000_practice_shares`                | share a bank with a class for practice; the graded-reuse warning (#240)            | applied                    |
-| 34  | `20260925050000_rate_limit_sweep`               | a pg_cron job sweeps expired shared rate-limit rows every 5 minutes (#248, §7.8)   | applied                    |
-| 35  | `20260925060000_student_steps`                  | a student's own marks by CJMM step on closed assignments, for Your steps (#239)    | applied                    |
-| 36  | `20260925070000_practice`                       | practice runs and responses on a shared bank, scored one item at a time (#241)     | applied                    |
-| 37  | `20260926000000_practice_run_items`             | a practice run records its items and their published content when it starts (#271) | applied                    |
-| 38  | `20260926010000_sample_published`               | the sample bank imports published, in one call for one import unit (#283)          | applied                    |
-| 39  | `20260926020000_perf_org_fk_indexes`            | composite indexes for RLS and FK lookups on items and participants (#301)          | applied                    |
-| 40  | `20260928000000_scored_reveal`                  | the key an answer was scored with is stored beside its score, for the reveal       | applied (2026-09-29)       |
-| 41  | `20261006000000_self_serve_instructors`         | a workspace for each self-registered teacher; the onboarding record (#355)         | applied (seen 2026-10-08)  |
-| 42  | `20261006010000_class_join_code`                | an eight-character class code to type; Replace the link replaces it too (#356)     | applied (seen 2026-10-08)  |
-| 43  | `20261009000000_student_multi_workspace`        | one student account in classes of more than one workspace; `my_classes` names each | applied (2026-10-09)       |
-| 44  | `20261009010000_workspace_invites`              | a teacher invites a colleague into their own workspace: invitations and members    | applied (2026-10-09)       |
-| 45  | `20261010000000_workspace_follow_ups`           | only an author reads their org row; three invitations per address in 24 hours      | applied (2026-10-13)       |
-| 46  | `20261011000000_workspace_remove_and_move`      | a founder removes a colleague; a teacher moves by accepting an invitation          | applied (2026-10-13)       |
-| 47  | `20261011010000_practice_workspace_name`        | a practice bank's workspace name; a number per workspace in a student's class list | applied (2026-10-13)       |
-| 48  | `20261012000000_workspace_sweep`                | the sweep of abandoned workspaces; a dry run until the owner turns it on (§7.13)   | applied (2026-10-13)       |
-| 49  | `20261013000000_drop_open_state_policy`         | drops the last open policy on `live.session_public_state` (#178)                   | applied (2026-10-13)       |
-| 50  | `20261013120000_open_session_view`              | one round trip for a phone to read the room (#407)                                 | applied (2026-10-14)       |
-| 51  | `20261014000000_library_folders`                | library folders that hold quizzes, one tree per workspace (#411)                   | applied (2026-10-14)       |
-| 52  | `20261014200000_assignment_record_column_grant` | a take-home case study's full patient record leaves the student's client (#335)    | applied (2026-10-14)       |
-| 53  | `20261014300000_move_between_quizzes`           | move questions between quizzes, and turn an in-quiz folder into a quiz (#417)      | applied (2026-10-14)       |
-| 54  | `20261015000000_ai_import`                      | AI import batches, staged entries, a monthly cap per workspace, a private bucket   | applied (2026-10-15)       |
+| #   | Migration                                       | What it adds                                                                         | On `vauokqoyvewtzubqajgh`? |
+| --- | ----------------------------------------------- | ------------------------------------------------------------------------------------ | -------------------------- |
+| 1   | `20260913000000_authoring_schema`               | orgs, profiles, item banks, items, versions, case studies, RLS                       | applied                    |
+| 2   | `20260914000000_case_study_steps`               | step items live in the case study's bank; atomic reorder                             | applied                    |
+| 3   | `20260915000000_import_bank_content`            | one-call JSON import                                                                 | applied                    |
+| 4   | `20260916000000_bank_folders`                   | nested folders per bank                                                              | applied                    |
+| 5   | `20260919000000_item_tags`                      | tag filtering on the bank page                                                       | applied                    |
+| 6   | `20260919110000_start_step_and_rate_limits`     | `start_case_study_step`, per-user rate limit on authoring mutations                  | applied                    |
+| 7   | `20260919120600_duplicate_content`              | duplicate an item or a case study                                                    | applied                    |
+| 8   | `20260919130000_item_search`                    | full-text search over a bank                                                         | applied                    |
+| 9   | `20260919150000_import_into_folder`             | import straight into a folder                                                        | applied                    |
+| 10  | `20260919160000_archive_content`                | archive and restore                                                                  | applied                    |
+| 11  | `20260919170000_live_sessions`                  | live sessions with a six-character join code (#128)                                  | applied                    |
+| 12  | `20260920130000_live_responses_and_aggregates`  | live responses, server-side scoring, per-participant submit limit (#131, #133)       | applied                    |
+| 13  | `20260920140000_session_participants`           | join with a display name and no account (#129)                                       | applied                    |
+| 14  | `20260921000000_resume_participant_joined_at`   | resume a participant after a reload (#133)                                           | applied                    |
+| 15  | `20260921100000_live_view_rate_limit`           | per-participant limit on `POST /api/live/view` (#152)                                | applied                    |
+| 16  | `20260921200000_authoring_limit_at_the_write`   | authoring rate limit enforced at the write, not only in the UI (#123)                | applied                    |
+| 17  | `20260921210000_private_live_channel`           | private Realtime channel with a per-participant token (#149)                         | applied                    |
+| 18  | `20260923010000_item_timer`                     | optional per-item timer on a live session (#182)                                     | applied                    |
+| 19  | `20260923060000_session_goto`                   | skip an item or go back to one (#183)                                                | applied                    |
+| 20  | `20260923070000_case_study_live_record`         | run a case study live with the patient record on every phone (#184)                  | applied                    |
+| 21  | `20260923080000_student_paced`                  | student-paced mode (#185)                                                            | applied                    |
+| 22  | `20260924000000_invite_only_signup`             | new accounts get no role; `private.make_instructor` (#204, §7.6)                     | applied                    |
+| 23  | `20260924010000_classes`                        | classes, rosters and invite links; completes the invite seam (#205)                  | applied                    |
+| 24  | `20260924020000_assignments`                    | assign a bank or case study to a class with a window and attempts (#207)             | applied                    |
+| 25  | `20260924030800_assignment_attempts`            | take an assignment: attempts, autosave, submit, submit at close (#208)               | applied                    |
+| 26  | `20260924040000_assignment_report`              | the author's read of attempt scores for the assignment report (#211)                 | applied                    |
+| 27  | `20260924050000_my_assignment_result`           | a student's own score and marks after an assignment closes (#210)                    | applied                    |
+| 28  | `20260924060000_assignment_reminders`           | reminder email outbox, class time zone, the pg_cron entry point (#212, §7.8)         | applied                    |
+| 29  | `20260925000000_security_guard`                 | RLS on class_removals, anon execute revoked, removal trigger skips cascades (#233)   | applied                    |
+| 30  | `20260925010000_shared_rate_limits`             | sign-in, invite and cron limits shared across server instances, keys hashed (#234)   | applied                    |
+| 31  | `20260925020000_class_timezone_and_removed`     | class time zone set in the app; removed students in the assignment report (#242)     | applied                    |
+| 32  | `20260925030000_student_history`                | a student's closed assignments with their own attempts, for History (#238)           | applied                    |
+| 33  | `20260925040000_practice_shares`                | share a bank with a class for practice; the graded-reuse warning (#240)              | applied                    |
+| 34  | `20260925050000_rate_limit_sweep`               | a pg_cron job sweeps expired shared rate-limit rows every 5 minutes (#248, §7.8)     | applied                    |
+| 35  | `20260925060000_student_steps`                  | a student's own marks by CJMM step on closed assignments, for Your steps (#239)      | applied                    |
+| 36  | `20260925070000_practice`                       | practice runs and responses on a shared bank, scored one item at a time (#241)       | applied                    |
+| 37  | `20260926000000_practice_run_items`             | a practice run records its items and their published content when it starts (#271)   | applied                    |
+| 38  | `20260926010000_sample_published`               | the sample bank imports published, in one call for one import unit (#283)            | applied                    |
+| 39  | `20260926020000_perf_org_fk_indexes`            | composite indexes for RLS and FK lookups on items and participants (#301)            | applied                    |
+| 40  | `20260928000000_scored_reveal`                  | the key an answer was scored with is stored beside its score, for the reveal         | applied (2026-09-29)       |
+| 41  | `20261006000000_self_serve_instructors`         | a workspace for each self-registered teacher; the onboarding record (#355)           | applied (seen 2026-10-08)  |
+| 42  | `20261006010000_class_join_code`                | an eight-character class code to type; Replace the link replaces it too (#356)       | applied (seen 2026-10-08)  |
+| 43  | `20261009000000_student_multi_workspace`        | one student account in classes of more than one workspace; `my_classes` names each   | applied (2026-10-09)       |
+| 44  | `20261009010000_workspace_invites`              | a teacher invites a colleague into their own workspace: invitations and members      | applied (2026-10-09)       |
+| 45  | `20261010000000_workspace_follow_ups`           | only an author reads their org row; three invitations per address in 24 hours        | applied (2026-10-13)       |
+| 46  | `20261011000000_workspace_remove_and_move`      | a founder removes a colleague; a teacher moves by accepting an invitation            | applied (2026-10-13)       |
+| 47  | `20261011010000_practice_workspace_name`        | a practice bank's workspace name; a number per workspace in a student's class list   | applied (2026-10-13)       |
+| 48  | `20261012000000_workspace_sweep`                | the sweep of abandoned workspaces; a dry run until the owner turns it on (§7.13)     | applied (2026-10-13)       |
+| 49  | `20261013000000_drop_open_state_policy`         | drops the last open policy on `live.session_public_state` (#178)                     | applied (2026-10-13)       |
+| 50  | `20261013120000_open_session_view`              | one round trip for a phone to read the room (#407)                                   | applied (2026-10-14)       |
+| 51  | `20261014000000_library_folders`                | library folders that hold quizzes, one tree per workspace (#411)                     | applied (2026-10-14)       |
+| 52  | `20261014200000_assignment_record_column_grant` | a take-home case study's full patient record leaves the student's client (#335)      | applied (2026-10-14)       |
+| 53  | `20261014300000_move_between_quizzes`           | move questions between quizzes, and turn an in-quiz folder into a quiz (#417)        | applied (2026-10-14)       |
+| 54  | `20261015000000_ai_import`                      | AI import batches, staged entries, a monthly cap per workspace, a private bucket     | applied (2026-10-15)       |
+| 55  | `20261015005000_ai_import_segments`             | each chunk's segment answer on `ai_import_chunks`; one staged entry per place (#343) | not applied                |
 
 Checked 2026-09-24 with `pnpm exec supabase migration list --linked`: rows 1–38 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged, row 23 straight after #220, row 24 straight after #222, row 25 straight after #224, row 26 straight after #226, row 27 straight after #228, row 28 straight after #230, row 29 straight after #245, row 30 after #247 and row 31 after #251 and row 32 after #254 and row 33 after #255 and row 34 after #257 and row 35 after #258 and row 36 after #261, all on 2026-09-24; the owner pushed row 37 (#284) on 2026-09-26, about a day after its merge, because the permission classifier refused the orchestrator's push, and row 38 straight after #286 the same day). Checked 2026-09-26. Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
 

@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMemoryRateLimitStore } from "@/lib/rateLimit/testing/memoryStore";
 import { RateLimitUnavailableError, type RateLimitStore } from "@/lib/rateLimit/store";
-import { AI_IMPORT_PARSE_LIMIT, takeParseCall } from "./parseLimit";
+import {
+  AI_IMPORT_EXTRACT_LIMIT,
+  AI_IMPORT_PARSE_LIMIT,
+  takeExtractCall,
+  takeParseCall,
+} from "./parseLimit";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -29,5 +34,16 @@ describe("takeParseCall", () => {
       },
     };
     expect(await takeParseCall("teacher-a", odd)).toBe("unavailable");
+  });
+});
+
+describe("takeExtractCall", () => {
+  it("counts extract requests in their own bucket, apart from parse calls", async () => {
+    const store = createMemoryRateLimitStore();
+    for (let i = 0; i < AI_IMPORT_EXTRACT_LIMIT.attempts; i += 1) {
+      expect(await takeExtractCall("teacher-a", store)).toBe("ok");
+    }
+    expect(await takeExtractCall("teacher-a", store)).toBe("rate_limited");
+    expect(await takeParseCall("teacher-a", store)).toBe("ok");
   });
 });
