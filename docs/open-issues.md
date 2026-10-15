@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-10-15 (S12: #340 merged and applied, #341 and #342 merged, #343 in review).
+Last updated: 2026-10-15 (S12: #340 merged and applied, #341 to #345 merged, #346 in review).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -273,8 +273,8 @@ Owner decisions (2026-10-01):
 | [#342](https://github.com/tannernielson27/learn/issues/342) | feat(ai-import): Claude client, segment pass, usage ledger and cap                             | security          | Merged (#446); no migration |
 | [#343](https://github.com/tannernielson27/learn/issues/343) | feat(ai-import): extract each question into a draft, validate it, and repair once              | security, db      | Merged (#448), applied      |
 | [#344](https://github.com/tannernielson27/learn/issues/344) | feat(ai-import): assemble case studies with a chart that grows by step                         | none              | Merged (#447); no migration |
-| [#345](https://github.com/tannernielson27/learn/issues/345) | feat(authoring): upload documents for AI import and watch them parse                           | security, e2e     | In review; no migration     |
-| [#346](https://github.com/tannernielson27/learn/issues/346) | feat(authoring): review an AI import batch before anything reaches the bank                    | security, e2e     | Open                        |
+| [#345](https://github.com/tannernielson27/learn/issues/345) | feat(authoring): upload documents for AI import and watch them parse                           | security, e2e     | Merged (#449); no migration |
+| [#346](https://github.com/tannernielson27/learn/issues/346) | feat(authoring): review an AI import batch before anything reaches the bank                    | security, e2e     | In review; no migration     |
 | [#347](https://github.com/tannernielson27/learn/issues/347) | feat(authoring): fix staged questions and case studies with the existing editors               | e2e               | Open                        |
 | [#348](https://github.com/tannernielson27/learn/issues/348) | feat(authoring): import a reviewed batch all at once, or discard it                            | security, db, e2e | Open                        |
 | [#349](https://github.com/tannernielson27/learn/issues/349) | docs(help): AI import guide, end-to-end tests, security rows and the S12 demo                  | e2e               | Open                        |
@@ -301,6 +301,13 @@ Notes from #345 for the stories after it (`src/lib/aiImport/upload/`, `src/compo
 - **#346, #348:** a batch in review still counts towards the workspace's 20 open batches until it is imported or discarded.
 - **Decision for the owner (#345):** the import is started from a quiz, so `ai_import_batches.bank_id` is that quiz. Kickoff decision 3 said a new quiz by default; #348 can still offer the choice (the column is the teacher's to change while the batch is open).
 - **Retries:** a failed chunk can be sent again at once (up to 5 tries). A failed extract unit keeps its 6-minute claim, so "Try again" waits for it (the page asks again every 15 s).
+
+Notes from #346 for the stories after it (`src/lib/aiImport/review/`, `src/components/authoring/AiImportReview.tsx`):
+
+- **#347:** the review screen is `/author/banks/[bankId]/ai-import/[batchId]`. Each entry card (`AiImportReviewEntry`) has Drop/Restore and Change type; add the edit link there. Entries are read with the teacher's own session (`readReviewBatch`), and every change names the version the page showed: update `... where version = <shown>` and treat no row as `entry_changed` (`src/lib/aiImport/review/actions.ts` does this for drop and restore). A teacher's session may update `type, draft, item, status` while the batch is in review; `reasons` needs the service client. After a fix, set the status again (`restoredStatus` in `src/lib/authoring/aiImportReview.ts` works it out from the item and reasons), and drop the stale `needs_fix`/`needs_answer` reasons.
+- **#347:** Change type is `POST /api/ai-import/retype` (`retypeEntry`): one question re-extracted as the chosen type under the cap, written back at the shown version. It keeps a `duplicate` reason and replaces the rest. A case study has no change of type.
+- **#348:** the button is `AiImportReview`'s `onImport` prop: hand it in and it enables once `importSummary(entries).blockers` is empty. Kept = not `dropped` and not `not_importable`. "Dropped" is a status, so restoring works by recomputing; nothing else marks an entry dropped.
+- **Restore:** the table keeps no earlier status, so restoring recomputes it: no NGN type is not importable; no item, or a `needs_fix`, `unmarked_key`, `not_in_source`, `relies_on_image` or `cut_off` reason, needs a fix; a `needs_answer` reason needs an answer; anything else is ready.
 
 Notes from #344 for #343 (`src/lib/ngn/draft/assemble.ts`, pure):
 
