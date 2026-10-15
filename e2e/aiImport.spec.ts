@@ -8,7 +8,8 @@ import { selectAsAdmin, signInAsInstructorInEmptyOrg, updateAsAdmin } from "./si
 // Claude for the fake client (src/lib/aiImport/fakeClaude.ts): no live API call is ever made.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
 
-const CORPUS = path.join(import.meta.dirname, "..", "test", "ai-import", "corpus");
+// Playwright runs from the repo root, and the e2e files are not ES modules (no import.meta).
+const CORPUS = path.resolve("test", "ai-import", "corpus");
 
 /** Two fictional corpus documents (#339), uploaded as a teacher would pick them. */
 const corpusFile = (name: string) => ({
