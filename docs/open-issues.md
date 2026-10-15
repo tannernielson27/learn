@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-10-13 (Sprint 14: the chart reveal model, #334, in review).
+Last updated: 2026-10-14 (S12: #337 merged, #338 in review).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -265,8 +265,8 @@ Owner decisions (2026-10-01):
 | #                                                           | Title                                                                                          | Gates             | Status                         |
 | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------- | ------------------------------ |
 | [#333](https://github.com/tannernielson27/learn/issues/333) | chore(ai-import): measure cost and accuracy on the owner's sample documents                    | none              | Merged (#352); no migration    |
-| [#337](https://github.com/tannernielson27/learn/issues/337) | feat(ngn): AI draft shapes and converters for the selection, ordered and bowtie types          | none              | In review (#441); no migration |
-| [#338](https://github.com/tannernielson27/learn/issues/338) | feat(ngn): AI draft shapes and converters for cloze, highlight, drag-and-drop and case studies | none              | Open                           |
+| [#337](https://github.com/tannernielson27/learn/issues/337) | feat(ngn): AI draft shapes and converters for the selection, ordered and bowtie types          | none              | Merged (#441); no migration    |
+| [#338](https://github.com/tannernielson27/learn/issues/338) | feat(ngn): AI draft shapes and converters for cloze, highlight, drag-and-drop and case studies | none              | In review (#442); no migration |
 | [#339](https://github.com/tannernielson27/learn/issues/339) | test(ai-import): a fictional golden corpus and an accuracy eval                                | none              | Open                           |
 | [#340](https://github.com/tannernielson27/learn/issues/340) | feat(db): AI import batches, staged entries, a private upload bucket and a monthly cap         | security, db      | Open                           |
 | [#341](https://github.com/tannernielson27/learn/issues/341) | feat(ai-import): check uploaded files and prepare them for Claude                              | security          | Open                           |
