@@ -155,6 +155,15 @@ insert into uncharged_allowlist (schema_name, table_name, reason) values
    'Library folders (#411) hold quizzes, and are outside the four authoring actions as item_banks '
    'and bank_folders are. Insert is limited to org, parent and name, update to the name; filing a '
    'quiz writes item_banks, which is a container and uncounted too.'),
+  ('public', 'ai_import_batches',
+   'AI import batches (#340) are a staging container, not bank content. Insert is limited to the '
+   'workspace and target, update to the target quiz and folder, and delete discards the batch and '
+   'its staged entries; at most 20 are open per workspace. Nothing reaches a quiz until the import '
+   'call (#348), which writes items and case_studies and is charged there.'),
+  ('public', 'ai_import_entries',
+   'Staged AI import entries (#340) are edited in review before anything reaches a quiz. Update '
+   'only, of type, draft, item and status; no insert or delete; at most 150 per batch. The import '
+   'call (#348) writes the real items and case_studies, which are charged.'),
   ('public', 'profiles',
    'Not authoring. A user may rename themselves (update of display_name only, own row only); no '
    'insert or delete. It holds one row per user and has nothing to amplify.'),

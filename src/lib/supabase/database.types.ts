@@ -3,6 +3,308 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      ai_import_batches: {
+        Row: {
+          bank_id: string | null;
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          library_folder_id: string | null;
+          org_id: string;
+          rights_confirmed_at: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          bank_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          library_folder_id?: string | null;
+          org_id: string;
+          rights_confirmed_at?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          bank_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          library_folder_id?: string | null;
+          org_id?: string;
+          rights_confirmed_at?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ai_import_batches_bank_fkey";
+            columns: ["bank_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "item_banks";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "ai_import_batches_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ai_import_batches_library_folder_fkey";
+            columns: ["library_folder_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "library_folders";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "ai_import_batches_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "orgs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      ai_import_chunks: {
+        Row: {
+          attempts: number;
+          batch_id: string;
+          created_at: string;
+          file_id: string;
+          id: string;
+          input_tokens: number;
+          last_error: string | null;
+          org_id: string;
+          output_tokens: number;
+          page_from: number | null;
+          page_to: number | null;
+          position: number;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          attempts?: number;
+          batch_id: string;
+          created_at?: string;
+          file_id: string;
+          id?: string;
+          input_tokens?: number;
+          last_error?: string | null;
+          org_id: string;
+          output_tokens?: number;
+          page_from?: number | null;
+          page_to?: number | null;
+          position: number;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          attempts?: number;
+          batch_id?: string;
+          created_at?: string;
+          file_id?: string;
+          id?: string;
+          input_tokens?: number;
+          last_error?: string | null;
+          org_id?: string;
+          output_tokens?: number;
+          page_from?: number | null;
+          page_to?: number | null;
+          position?: number;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ai_import_chunks_file_fkey";
+            columns: ["file_id", "batch_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "ai_import_files";
+            referencedColumns: ["id", "batch_id", "org_id"];
+          },
+        ];
+      };
+      ai_import_entries: {
+        Row: {
+          batch_id: string;
+          chunk_id: string | null;
+          created_at: string;
+          draft: Json | null;
+          group_key: string | null;
+          id: string;
+          item: Json | null;
+          kind: string;
+          org_id: string;
+          position: number;
+          reasons: string[];
+          source_excerpt: string;
+          status: string;
+          step: number | null;
+          type: string | null;
+          updated_at: string;
+          version: number;
+        };
+        Insert: {
+          batch_id: string;
+          chunk_id?: string | null;
+          created_at?: string;
+          draft?: Json | null;
+          group_key?: string | null;
+          id?: string;
+          item?: Json | null;
+          kind?: string;
+          org_id: string;
+          position: number;
+          reasons?: string[];
+          source_excerpt?: string;
+          status: string;
+          step?: number | null;
+          type?: string | null;
+          updated_at?: string;
+          version?: number;
+        };
+        Update: {
+          batch_id?: string;
+          chunk_id?: string | null;
+          created_at?: string;
+          draft?: Json | null;
+          group_key?: string | null;
+          id?: string;
+          item?: Json | null;
+          kind?: string;
+          org_id?: string;
+          position?: number;
+          reasons?: string[];
+          source_excerpt?: string;
+          status?: string;
+          step?: number | null;
+          type?: string | null;
+          updated_at?: string;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ai_import_entries_batch_fkey";
+            columns: ["batch_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "ai_import_batches";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "ai_import_entries_chunk_fkey";
+            columns: ["chunk_id", "batch_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "ai_import_chunks";
+            referencedColumns: ["id", "batch_id", "org_id"];
+          },
+        ];
+      };
+      ai_import_files: {
+        Row: {
+          batch_id: string;
+          created_at: string;
+          id: string;
+          kind: string | null;
+          org_id: string;
+          original_name: string;
+          pages: number | null;
+          rejected_reason: string | null;
+          sha256: string | null;
+          size_bytes: number | null;
+          status: string;
+          storage_path: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          batch_id: string;
+          created_at?: string;
+          id?: string;
+          kind?: string | null;
+          org_id: string;
+          original_name: string;
+          pages?: number | null;
+          rejected_reason?: string | null;
+          sha256?: string | null;
+          size_bytes?: number | null;
+          status?: string;
+          storage_path?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          batch_id?: string;
+          created_at?: string;
+          id?: string;
+          kind?: string | null;
+          org_id?: string;
+          original_name?: string;
+          pages?: number | null;
+          rejected_reason?: string | null;
+          sha256?: string | null;
+          size_bytes?: number | null;
+          status?: string;
+          storage_path?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ai_import_files_batch_fkey";
+            columns: ["batch_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "ai_import_batches";
+            referencedColumns: ["id", "org_id"];
+          },
+        ];
+      };
+      ai_usage: {
+        Row: {
+          calls: number;
+          cost_reserved_usd: number;
+          cost_used_usd: number;
+          input_tokens: number;
+          month: string;
+          org_id: string;
+          output_tokens: number;
+          pages_reserved: number;
+          pages_used: number;
+          updated_at: string;
+        };
+        Insert: {
+          calls?: number;
+          cost_reserved_usd?: number;
+          cost_used_usd?: number;
+          input_tokens?: number;
+          month: string;
+          org_id: string;
+          output_tokens?: number;
+          pages_reserved?: number;
+          pages_used?: number;
+          updated_at?: string;
+        };
+        Update: {
+          calls?: number;
+          cost_reserved_usd?: number;
+          cost_used_usd?: number;
+          input_tokens?: number;
+          month?: string;
+          org_id?: string;
+          output_tokens?: number;
+          pages_reserved?: number;
+          pages_used?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "orgs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       assignment_attempts: {
         Row: {
           assignment_id: string;
@@ -817,6 +1119,8 @@ export type Database = {
       orgs: {
         Row: {
           ai_import_enabled: boolean;
+          ai_import_monthly_cap_usd: number;
+          ai_import_monthly_page_cap: number | null;
           created_at: string;
           emptied_at: string | null;
           founder_id: string | null;
@@ -826,6 +1130,8 @@ export type Database = {
         };
         Insert: {
           ai_import_enabled?: boolean;
+          ai_import_monthly_cap_usd?: number;
+          ai_import_monthly_page_cap?: number | null;
           created_at?: string;
           emptied_at?: string | null;
           founder_id?: string | null;
@@ -835,6 +1141,8 @@ export type Database = {
         };
         Update: {
           ai_import_enabled?: boolean;
+          ai_import_monthly_cap_usd?: number;
+          ai_import_monthly_page_cap?: number | null;
           created_at?: string;
           emptied_at?: string | null;
           founder_id?: string | null;
@@ -1798,6 +2106,21 @@ export type Database = {
         Args: { item_ids: string[]; target: string };
         Returns: undefined;
       };
+      reserve_ai_usage: {
+        Args: {
+          p_batch?: string;
+          p_cost_usd: number;
+          p_org: string;
+          p_pages: number;
+        };
+        Returns: {
+          allowed: boolean;
+          reason: string;
+          remaining_pages: number;
+          remaining_usd: number;
+          reservation_id: string;
+        }[];
+      };
       resolve_class_invite: {
         Args: { client_key?: string; token: string };
         Returns: {
@@ -1852,6 +2175,16 @@ export type Database = {
         }[];
       };
       server_clock: { Args: never; Returns: string };
+      settle_ai_usage: {
+        Args: {
+          p_cost_usd: number;
+          p_input_tokens: number;
+          p_output_tokens: number;
+          p_pages: number;
+          p_reservation: string;
+        };
+        Returns: boolean;
+      };
       start_assignment_attempt: {
         Args: { target_assignment: string };
         Returns: {
