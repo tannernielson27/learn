@@ -193,6 +193,64 @@ describe("extractUnit on the recorded course activity", () => {
   });
 });
 
+describe("extractUnit on a case study group", () => {
+  /** The activity with its first two questions grouped as "Patient 1": a group of two. */
+  const grouped = {
+    ...activitySegment,
+    questions: activitySegment.questions.map((question, index) =>
+      index < 2 ? { ...question, caseStudy: { title: "Patient 1" } } : question,
+    ),
+  };
+  const segments = () => segmentsOf(COURSE_ACTIVITY, grouped);
+
+  it("stages a group that is not six as its questions, with their places and #344's note", async () => {
+    const { wired, create, inserted } = deps({
+      segments: segments(),
+      answers: [activityExtraction, {}],
+    });
+    const result = await extractUnit(wired, { ...REQUEST, unit: 1 });
+    expect(result).toMatchObject({ ok: true, units: 2, overLimit: 0 });
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(inserted.map((row) => [row.kind, row.status, row.group_key, row.step])).toEqual([
+      ["item", "needs_answer", "Patient 1", 1],
+      ["item", "ready", "Patient 1", 2],
+    ]);
+    expect(inserted[0].reasons.some((reason) => reason.startsWith("note: "))).toBe(true);
+  });
+
+  it("stages a group whole or not at all: a group sent again makes no call", async () => {
+    const { wired, create } = deps({
+      segments: segments(),
+      staged: { count: 1, positions: new Set([POSITIONS_PER_FILE + 1]) },
+    });
+    expect(await extractUnit(wired, { ...REQUEST, unit: 1 })).toMatchObject({
+      ok: true,
+      alreadyStaged: 2,
+      staged: [],
+    });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("keeps what fits in the batch and reports the rest", async () => {
+    const { wired, inserted } = deps({
+      segments: segments(),
+      answers: [activityExtraction, {}],
+      staged: { count: 149, positions: new Set() },
+    });
+    expect(await extractUnit(wired, { ...REQUEST, unit: 1 })).toMatchObject({
+      ok: true,
+      overLimit: 1,
+    });
+    expect(inserted).toHaveLength(1);
+    const full = deps({ segments: segments(), staged: { count: 150, positions: new Set() } });
+    expect(await extractUnit(full.wired, { ...REQUEST, unit: 1 })).toMatchObject({
+      ok: true,
+      overLimit: 2,
+    });
+    expect(full.create).not.toHaveBeenCalled();
+  });
+});
+
 describe("extractUnit's checks", () => {
   it("refuses before anything when AI import is off or the teacher is over their limit", async () => {
     const off = deps({ env: { AI_IMPORT_ENABLED: "false", ANTHROPIC_API_KEY: "k" } });

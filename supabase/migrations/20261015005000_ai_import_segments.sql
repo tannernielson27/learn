@@ -1,4 +1,5 @@
--- AI import: where each chunk's segment answer is kept, and one staged entry per place (#343).
+-- AI import: where each chunk's segment answer is kept, one staged entry per place, and a
+-- batch's source matter (#343, #344).
 --
 -- 1. `ai_import_chunks.segments` holds what the segment pass found in one chunk (#342's
 --    `ChunkSegment`): each question's excerpt, number, type and flags, and any answer or
@@ -21,7 +22,13 @@
 --    so the second insert of the same question conflicts and is skipped. The table is empty until
 --    this story's code runs, so the index builds on nothing.
 --
--- Nothing user-facing reads or writes either yet; #345 is the first caller.
+-- 3. `ai_import_batches.source` holds what the documents say about themselves (#344's
+--    `assembleImport` source: author, learning objectives, references). It belongs to the batch,
+--    never to a question. Read like the batch ("authors read AI import batches"); written by the
+--    server only: the teacher's insert and update grants on the table name their columns, and
+--    this one is not among them.
+--
+-- Nothing user-facing reads or writes any of these yet; #345 is the first caller.
 
 alter table public.ai_import_chunks add column segments jsonb;
 
@@ -41,3 +48,18 @@ comment on column public.ai_import_chunks.segments is
 
 create unique index ai_import_entries_batch_position_key
   on public.ai_import_entries (batch_id, position);
+
+alter table public.ai_import_batches add column source jsonb;
+
+alter table public.ai_import_batches
+  add constraint ai_import_batches_source_shape_check check (
+    source is null or (
+      jsonb_typeof(source) = 'object'
+      and jsonb_typeof(source -> 'objectives') = 'array'
+      and jsonb_typeof(source -> 'references') = 'array'
+    )
+  ),
+  add constraint ai_import_batches_source_size_check check (pg_column_size(source) <= 65536);
+
+comment on column public.ai_import_batches.source is
+  'What the documents say about themselves (author, objectives, references), from #344''s assembleImport; written by the server only.';

@@ -98,6 +98,7 @@ function combine(first: Working, second: Working, keepOpeningOf: Working): Worki
       reliesOnImage: first.flags.reliesOnImage || second.flags.reliesOnImage,
       notNgn,
       notInSource: keepOpeningOf.flags.notInSource,
+      ownChart: first.flags.ownChart || second.flags.ownChart,
     },
     chunks: [...new Set([...first.chunks, ...second.chunks])].sort((x, y) => x - y),
     answers: [],

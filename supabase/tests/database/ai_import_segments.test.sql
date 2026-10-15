@@ -7,11 +7,13 @@
 --   3. A teacher reads their own workspace's segments, keys and all, as they read staged entries;
 --      another workspace's teacher and a student read none.
 --   4. `ai_import_entries (batch_id, position)` is unique, so one question is staged once.
+--   5. `ai_import_batches.source` (#344's source matter): the server writes it, in shape; a
+--      teacher reads it with the batch and cannot write it.
 --
 -- Runs with `pnpm test:db`. Fixture ids of its own (...343xxx); the closing rollback removes them.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(20);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures, as the superuser
@@ -128,7 +130,30 @@ select throws_ok(
   'the same place in a batch is staged once'
 );
 
+-- 5. A batch's source matter
+select lives_ok(
+  $$ update public.ai_import_batches
+       set source = '{"author":"Pine Hollow faculty","objectives":["Assess intake"],"references":[]}'
+     where id = '00000000-0000-0000-0000-000000343ba1' $$,
+  'the server stores a batch''s source matter'
+);
+
+select throws_ok(
+  $$ update public.ai_import_batches set source = '{"author":"x","objectives":"one"}'
+     where id = '00000000-0000-0000-0000-000000343ba1' $$,
+  '23514', null,
+  'source matter whose objectives are not a list is refused'
+);
+
 reset role;
+
+select ok(
+  has_column_privilege('authenticated', 'public.ai_import_batches', 'source', 'SELECT')
+  and not has_column_privilege('authenticated', 'public.ai_import_batches', 'source', 'INSERT')
+  and not has_column_privilege('authenticated', 'public.ai_import_batches', 'source', 'UPDATE')
+  and not has_column_privilege('anon', 'public.ai_import_batches', 'source', 'SELECT'),
+  'a teacher reads a batch''s source matter and never writes it; anon holds nothing on it'
+);
 
 -- ---------------------------------------------------------------------------
 -- 3. Who reads them
@@ -152,6 +177,20 @@ select throws_ok(
   'A cannot write segments'
 );
 
+select is(
+  (select source ->> 'author' from public.ai_import_batches
+    where id = '00000000-0000-0000-0000-000000343ba1'),
+  'Pine Hollow faculty',
+  'A reads their own batch''s source matter'
+);
+
+select throws_ok(
+  $$ update public.ai_import_batches set source = null
+     where id = '00000000-0000-0000-0000-000000343ba1' $$,
+  '42501', null,
+  'A cannot write a batch''s source matter'
+);
+
 select set_config('request.jwt.claims',
   '{"sub":"00000000-0000-0000-0000-000000343bbb","role":"authenticated"}', true);
 
@@ -159,6 +198,12 @@ select is_empty(
   $$ select segments from public.ai_import_chunks
       where id = '00000000-0000-0000-0000-000000343ca1' $$,
   'another workspace''s teacher reads none of them'
+);
+
+select is_empty(
+  $$ select source from public.ai_import_batches
+      where id = '00000000-0000-0000-0000-000000343ba1' $$,
+  'another workspace''s teacher reads none of a batch''s source matter'
 );
 
 select set_config('request.jwt.claims',

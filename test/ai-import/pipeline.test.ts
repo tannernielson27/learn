@@ -59,6 +59,8 @@ function replaying(recording: Recording, overrides: { extract?: () => Anthropic.
     ),
     ...recording.questions.map((question) => ({ ...question, title: undefined })),
   ];
+  const quotedIn = (tag: string, ask: string) =>
+    JSON.parse(new RegExp(`<${tag}>\\n([\\s\\S]*?)\\n</${tag}>`).exec(ask)?.[1] ?? "{}");
   const calls: Body[] = [];
   const client: MessagesClient = {
     messages: {
@@ -73,6 +75,7 @@ function replaying(recording: Recording, overrides: { extract?: () => Anthropic.
               confidence: 0.9,
               ...(entry.title ? { caseStudy: { title: entry.title } } : {}),
               ...(entry.reason ? { notNgnReason: entry.reason } : {}),
+              ...("chart" in entry && entry.chart !== undefined ? { ownChart: true } : {}),
               instructorNote: false,
               reliesOnImage: false,
               cutOff: false,
@@ -82,8 +85,14 @@ function replaying(recording: Recording, overrides: { extract?: () => Anthropic.
           });
         }
         if ("charts" in properties) {
-          const { title, patient, charts } = cases[0];
+          const { title: asked } = quotedIn("case_study", askOf(body)) as { title: string };
+          const { title, patient, charts } = cases.find((draft) => draft.title === asked)!;
           return answer({ title, patient, charts });
+        }
+        if ("chart" in properties) {
+          const { opens } = quotedIn("question", askOf(body)) as { opens: string };
+          const question = recording.questions.find((candidate) => candidate.opening === opens);
+          return answer(question?.chart ?? {});
         }
         if (overrides.extract) return overrides.extract();
         const asked = JSON.parse(
@@ -110,44 +119,50 @@ const bytesOf = (name: string) => readFileSync(join(CORPUS_DIR, name));
 const noWait = async () => {};
 
 describe("runPipeline", () => {
-  it.each(["01-med-surg-review.md", "06-case-study-and-bowtie.md"])(
-    "%s: segments, extracts and assembles what the model returns",
-    async (name) => {
-      const { client, calls } = replaying(recordings.get(name)!);
-      const recording = await runPipeline(
-        client,
-        { name, bytes: bytesOf(name) },
-        { now: () => new Date("2026-10-14T12:00:00Z"), sleep: noWait },
-      );
-      expect(recording).toMatchObject({
-        document: name,
-        source: EVAL_MODEL,
-        recordedAt: "2026-10-14T12:00:00.000Z",
-      });
-      const report = buildReport([
-        scoreDocument(
-          expected.find((doc) => doc.document === name)!,
-          recording,
-        ),
-      ]);
-      expect(isPerfect(report), formatReport(report)).toBe(true);
+  it.each([
+    "01-med-surg-review.md",
+    "06-case-study-and-bowtie.md",
+    "07-night-shift-case-and-trend.md",
+  ])("%s: segments, extracts and assembles what the model returns", async (name) => {
+    const { client, calls } = replaying(recordings.get(name)!);
+    const recording = await runPipeline(
+      client,
+      { name, bytes: bytesOf(name) },
+      { now: () => new Date("2026-10-14T12:00:00Z"), sleep: noWait },
+    );
+    expect(recording).toMatchObject({
+      document: name,
+      source: EVAL_MODEL,
+      recordedAt: "2026-10-14T12:00:00.000Z",
+    });
+    const report = buildReport([
+      scoreDocument(
+        expected.find((doc) => doc.document === name)!,
+        recording,
+      ),
+    ]);
+    expect(isPerfect(report), formatReport(report)).toBe(true);
 
-      // Every call is a structured-output call on the product's model, with the product's rules.
-      for (const body of calls) {
-        expect(body.model).toBe(EVAL_MODEL);
-        expect(body.output_config?.format?.type).toBe("json_schema");
-        const system = body.system as Anthropic.TextBlockParam[];
-        expect([SEGMENT_RULES, EXTRACT_RULES]).toContain(system[0].text);
-      }
-      // One segment call (one chunk), the extracts two at a time, and one chart call per case.
-      const drafted = recording.questions.filter((q) => q.type !== NOT_IMPORTABLE).length;
-      const steps = recording.caseStudies.length * 6;
-      const cases = recording.caseStudies.length;
-      expect(calls).toHaveLength(1 + Math.ceil(drafted / 2) + Math.ceil(steps / 2) + cases);
-      expect(recording.usage.inputTokens).toBe(calls.length * 5500);
-      expect(recording.usage.costUsd).toBeGreaterThan(0);
-    },
-  );
+    // Every call is a structured-output call on the product's model, with the product's rules.
+    for (const body of calls) {
+      expect(body.model).toBe(EVAL_MODEL);
+      expect(body.output_config?.format?.type).toBe("json_schema");
+      const system = body.system as Anthropic.TextBlockParam[];
+      expect([SEGMENT_RULES, EXTRACT_RULES]).toContain(system[0].text);
+    }
+    // One segment call (one chunk), the extracts two at a time, one call per question with a
+    // chart of its own, and per case study group its steps two at a time and its charts.
+    const drafted = recording.questions.filter((q) => q.type !== NOT_IMPORTABLE);
+    const charted = drafted.filter((q) => q.chart !== undefined).length;
+    const groups = recording.caseStudies.map(
+      (entry) => Math.ceil((entry.draft as CaseDraft).steps.length / 2) + 1,
+    );
+    expect(calls).toHaveLength(
+      1 + Math.ceil(drafted.length / 2) + charted + groups.reduce((a, b) => a + b, 0),
+    );
+    expect(recording.usage.inputTokens).toBe(calls.length * 5500);
+    expect(recording.usage.costUsd).toBeGreaterThan(0);
+  });
 
   it("keeps a question whose extract call fails, with the reason, and goes on", async () => {
     const name = "01-med-surg-review.md";
@@ -163,7 +178,7 @@ describe("runPipeline", () => {
     }
   });
 
-  it("records a case study whose calls fail, so the scorer counts it as not parsed", async () => {
+  it("records a case study whose chart call fails with its steps and no chart", async () => {
     const name = "06-case-study-and-bowtie.md";
     const { client } = replaying(recordings.get(name)!);
     const failing: MessagesClient = {
@@ -177,11 +192,32 @@ describe("runPipeline", () => {
       },
     };
     const recording = await runPipeline(failing, { name, bytes: bytesOf(name) }, { sleep: noWait });
+    const [caseStudy] = recording.caseStudies;
+    expect(caseStudy.draft).toMatchObject({
+      title: "Unfolding Case Study: Pneumonia With Worsening Condition",
+    });
+    expect((caseStudy.draft as CaseDraft).steps).toHaveLength(6);
+    expect(caseStudy.draft).not.toHaveProperty("charts");
+    const report = buildReport([
+      scoreDocument(
+        expected.find((doc) => doc.document === name)!,
+        recording,
+      ),
+    ]);
+    expect(report.caseStudies.passed).toBe(0);
+  });
+
+  it("records a case study whose step calls fail as an error the scorer counts", async () => {
+    const name = "06-case-study-and-bowtie.md";
+    const { client } = replaying(recordings.get(name)!, {
+      extract: () => answer({}, "max_tokens"),
+    });
+    const recording = await runPipeline(client, { name, bytes: bytesOf(name) }, { sleep: noWait });
     expect(recording.caseStudies).toEqual([
       {
         draft: {
           title: "Unfolding Case Study: Pneumonia With Worsening Condition",
-          error: "the Claude call failed (no_answer)",
+          error: "the Claude call failed (max_tokens)",
         },
       },
     ]);

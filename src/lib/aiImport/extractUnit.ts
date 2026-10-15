@@ -18,8 +18,8 @@ import {
   type AiImportEnv,
   type Usage,
 } from "./config";
-import { planExtraction, type CaseStudyHook } from "./extract";
-import { extractQuestions, regionsOf, type UnitCall } from "./extractQuestions";
+import { planExtraction } from "./extract";
+import { extractCaseStudy, extractQuestions, regionsOf, type UnitCall } from "./extractQuestions";
 import { extractPdfPages } from "./files/pdf";
 import type { ChunkPayload, PreparedFile } from "./files/prepare";
 import { loadCheckedFile, type FileFailure, type FileRef } from "./files/store";
@@ -45,6 +45,10 @@ import { formatReason, type StagedEntry } from "./stage";
  *    them.
  * 6. The entries are inserted; one already there (the same batch and place) is left as it is.
  *
+ * A case study group is one unit: its steps two to a call and its charts in one more, all at
+ * once, assembled by #344 (`extractCaseStudy`). It is staged whole or not at all. When every
+ * unit of every file is done, `finishExtraction` flags duplicates and records the source matter.
+ *
  * The caller has checked that `userId` authors `orgId`, and takes both from the session.
  */
 
@@ -56,7 +60,7 @@ export const POSITIONS_PER_FILE = 1000;
 export interface StagedRow {
   chunk_id: string | null;
   position: number;
-  kind: "item";
+  kind: "item" | "case_study";
   type: string | null;
   status: string;
   reasons: string[];
@@ -82,8 +86,6 @@ export interface ExtractUnitDeps {
     ref: FileRef,
   ) => Promise<{ count: number; positions: Set<number> } | "unavailable">;
   insertEntries: (ref: FileRef, rows: StagedRow[]) => Promise<"ok" | "unavailable">;
-  /** #344's case study assembly; without it every question is standalone. */
-  caseStudies?: CaseStudyHook;
   sleep?: (ms: number) => Promise<void>;
   random?: () => number;
 }
@@ -156,7 +158,7 @@ export function rowOf(
   return {
     chunk_id: chunkIds.get(entry.chunk) ?? null,
     position: base + entry.position,
-    kind: "item",
+    kind: entry.kind,
     type: entry.type,
     status: entry.status,
     reasons: entry.reasons.map(formatReason),
@@ -178,6 +180,7 @@ interface Planned {
   questions: MergedQuestion[];
   all: MergedQuestion[];
   call: boolean;
+  caseStudy: string | null;
   chunkIds: Map<number, string>;
 }
 
@@ -189,7 +192,7 @@ async function plan(
   const loaded = await deps.loadSegments(ref);
   if (!loaded.ok) return { ok: false, code: loaded.code };
   const merged = mergeSegments(loaded.segments).questions;
-  const { units } = planExtraction(merged, deps.caseStudies);
+  const units = planExtraction(merged);
   const chosen = units[unit];
   if (!chosen) return { ok: false, code: "not_found" };
   const questions = merged.filter((question) => chosen.positions.includes(question.position));
@@ -198,6 +201,7 @@ async function plan(
     questions,
     all: merged,
     call: chosen.call,
+    caseStudy: chosen.caseStudy,
     chunkIds: loaded.chunkIds,
   };
 }
@@ -220,15 +224,20 @@ export async function extractUnit(
   const staged = await deps.stagedPlaces(ref);
   if (staged === "unavailable") return { ok: false, code: "unavailable" };
 
-  const fresh = planned.questions.filter((q) => !staged.positions.has(base + q.position));
+  const isStaged = (q: MergedQuestion) => staged.positions.has(base + q.position);
+  // A case study group is staged whole or not at all: one entry may stand for all six steps.
+  const fresh =
+    planned.caseStudy !== null && planned.questions.some(isStaged)
+      ? []
+      : planned.questions.filter((q) => !isStaged(q));
   const room = Math.max(0, MAX_ENTRIES_PER_BATCH - staged.count);
-  const questions = fresh.slice(0, room);
-  const done = (entries: StagedEntry[], usage: Usage): ExtractUnitResult => ({
+  const questions = planned.caseStudy !== null && room > 0 ? fresh : fresh.slice(0, room);
+  const done = (entries: StagedEntry[], usage: Usage, dropped = 0): ExtractUnitResult => ({
     ok: true,
     units: planned.units,
     staged: entries,
     alreadyStaged: planned.questions.length - fresh.length,
-    overLimit: fresh.length - questions.length,
+    overLimit: fresh.length - questions.length + dropped,
     usage,
     costUsd: costOf(usage),
   });
@@ -248,7 +257,9 @@ export async function extractUnit(
     if (!loaded.ok) return { ok: false, code: loaded.code };
     let document: Awaited<ReturnType<typeof unitPayload>>;
     try {
-      document = await unitPayload(loaded.bytes, loaded.prepared, questions[0].chunks);
+      // A standalone unit shares its chunks; a case study reads every chunk its steps came from.
+      const chunks = [...new Set(questions.flatMap((question) => question.chunks))];
+      document = await unitPayload(loaded.bytes, loaded.prepared, chunks);
     } catch {
       return { ok: false, code: "unavailable" };
     }
@@ -301,17 +312,17 @@ export async function extractUnit(
       return answer;
     };
 
+    const unitDocument = {
+      payload: document.payload,
+      kind: loaded.prepared.kind,
+      sourceText: wholeText(loaded.prepared),
+    };
+    const regions = regionsOf(planned.all, unitDocument.sourceText);
     try {
-      entries = await extractQuestions(
-        call,
-        questions,
-        {
-          payload: document.payload,
-          kind: loaded.prepared.kind,
-          sourceText: wholeText(loaded.prepared),
-        },
-        regionsOf(planned.all, wholeText(loaded.prepared)),
-      );
+      entries =
+        planned.caseStudy === null
+          ? await extractQuestions(call, questions, unitDocument, regions)
+          : await extractCaseStudy(call, planned.caseStudy, questions, unitDocument, regions);
     } catch (error) {
       if (error instanceof Refused) return error.result;
       const reason = error instanceof ClaudeCallError ? error.code : "connection";
@@ -319,9 +330,11 @@ export async function extractUnit(
     }
   }
 
-  const rows = entries.map((entry) => rowOf(entry, base, planned.chunkIds));
+  // A split case study group may stage more entries than there is room for.
+  const kept = entries.slice(0, room);
+  const rows = kept.map((entry) => rowOf(entry, base, planned.chunkIds));
   if ((await deps.insertEntries(ref, rows)) !== "ok") return { ok: false, code: "unavailable" };
-  return done(entries, usage);
+  return done(kept, usage, entries.length - kept.length);
 }
 
 const logged = (step: string, error: { code?: string } | null) => {

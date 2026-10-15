@@ -1,29 +1,32 @@
-import type Anthropic from "@anthropic-ai/sdk";
-import { caseStudyChartsJsonSchema } from "@/lib/ngn/draft";
 import { ClaudeCallError, callStructured, type MessagesClient } from "@/lib/aiImport/claude";
 import {
   AI_IMPORT_MODEL,
-  EXTRACT_MAX_TOKENS,
   NO_USAGE,
   PRICE_PER_MILLION,
   addUsage,
   type Usage,
 } from "@/lib/aiImport/config";
-import { EXTRACT_RULES, planExtraction } from "@/lib/aiImport/extract";
-import { extractQuestions, regionsOf, type UnitCall } from "@/lib/aiImport/extractQuestions";
+import { planExtraction, type ExtractUnit } from "@/lib/aiImport/extract";
+import {
+  extractCaseStudy,
+  extractQuestions,
+  regionsOf,
+  type UnitCall,
+  type UnitDocument,
+} from "@/lib/aiImport/extractQuestions";
 import { unitPayload } from "@/lib/aiImport/extractUnit";
-import { DOCX_MARKUP } from "@/lib/aiImport/files/docx";
 import { chunkPayload, prepareFile, type PreparedFile } from "@/lib/aiImport/files/prepare";
 import { mergeSegments, type MergedQuestion } from "@/lib/aiImport/merge";
-import { documentBlock, readSegment, segmentRequest } from "@/lib/aiImport/segment";
+import { readSegment, segmentRequest } from "@/lib/aiImport/segment";
+import type { StagedEntry } from "@/lib/aiImport/stage";
 import { NOT_IMPORTABLE, type RecordedQuestion, type Recording } from "./files";
 
 /**
- * The eval's import pipeline (#339, moved onto the product by #343): the product's own segment
- * pass (`src/lib/aiImport/segment.ts`) on each chunk the product cuts, its merge, and its extract
- * pass with the one repair (`extractQuestions`), so the eval measures what ships. Only the case
- * study charts are still the eval's own call, a stand-in until #344 assembles case studies in
- * `src/lib/aiImport`; their steps go through the product's extract pass.
+ * The eval's import pipeline (#339), on the product's own code since #343, so the eval measures
+ * what ships: `prepareFile` cuts the chunks the product sends, the segment pass reads each,
+ * `mergeSegments` joins them, `planExtraction` makes the product's units, and each unit runs as
+ * the server runs it (`extractQuestions`, or `extractCaseStudy` with #344's assembly), charts
+ * included. Each call's answer is written down as a recording for the scorer.
  *
  * Only `pnpm eval:ai-import` runs it against the API. Tests drive it with a fake client.
  */
@@ -69,39 +72,85 @@ async function segmentFile(
   return mergeSegments(segments).questions;
 }
 
-/** The questions at `positions`, in the units the product would send them in. */
-function unitsOf(questions: readonly MergedQuestion[], positions: ReadonlySet<number>) {
-  const chosen = questions.filter((question) => positions.has(question.position));
-  return planExtraction(chosen).units.map((unit) =>
-    chosen.filter((question) => unit.positions.includes(question.position)),
-  );
+/** The opening a chart request names, read back from its question block. */
+function chartOpening(call: Parameters<UnitCall>[0]): string | undefined {
+  const last = call.content.at(-1);
+  const text = last?.type === "text" ? last.text : "";
+  const quoted = /<question>\n([\s\S]*?)\n<\/question>/.exec(text)?.[1];
+  try {
+    return quoted ? (JSON.parse(quoted) as { opens?: string }).opens : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
-/** The case study's title, patient and charts: the eval's stand-in for #344. */
-async function chartsOf(
+interface UnitRecord {
+  questions: RecordedQuestion[];
+  caseStudies: Recording["caseStudies"];
+}
+
+const recorded = (entry: StagedEntry, chart: unknown): RecordedQuestion =>
+  entry.status === "not_importable"
+    ? {
+        opening: entry.sourceExcerpt,
+        type: NOT_IMPORTABLE,
+        reason: entry.reasons[0]?.message ?? "",
+      }
+    : {
+        opening: entry.sourceExcerpt,
+        type: entry.type ?? NOT_IMPORTABLE,
+        ...(entry.draft !== null ? { draft: entry.draft } : {}),
+        ...(chart !== undefined ? { chart } : {}),
+      };
+
+/** One unit, run as the server runs it, written down as part of a recording. */
+async function runUnit(
   call: UnitCall,
-  title: string,
-  payload: Awaited<ReturnType<typeof unitPayload>>["payload"],
-  kind: PreparedFile["kind"],
-): Promise<Record<string, unknown>> {
-  const content: Anthropic.ContentBlockParam[] = [
-    ...(kind === "docx" ? [{ type: "text" as const, text: DOCX_MARKUP }] : []),
-    documentBlock(payload),
-    {
-      type: "text",
-      text: `Copy the case study titled ${JSON.stringify(title)}: its title, the patient header, and its chart as the source shows it with each step.`,
-    },
-  ];
-  const answer = await call(
-    {
-      system: EXTRACT_RULES,
-      schema: caseStudyChartsJsonSchema(),
-      content,
-      maxTokens: EXTRACT_MAX_TOKENS,
-    },
-    "extract",
-  );
-  return answer.value as Record<string, unknown>;
+  unit: ExtractUnit,
+  questions: readonly MergedQuestion[],
+  document: UnitDocument,
+  regions: ReadonlyMap<number, string | null>,
+): Promise<UnitRecord> {
+  const charts = new Map<string, unknown>();
+  let caseCharts: unknown;
+  const watched: UnitCall = async (request, purpose) => {
+    const answer = await call(request, purpose);
+    if (purpose === "chart") {
+      const opening = chartOpening(request);
+      if (opening !== undefined) charts.set(opening, answer.value);
+      else caseCharts = answer.value;
+    }
+    return answer;
+  };
+  if (unit.caseStudy === null) {
+    const entries = await extractQuestions(watched, questions, document, regions);
+    return {
+      questions: entries.map((entry) => recorded(entry, charts.get(entry.sourceExcerpt))),
+      caseStudies: [],
+    };
+  }
+  const entries = await extractCaseStudy(watched, unit.caseStudy, questions, document, regions);
+  // One case study holds its steps' drafts; a split group, each question its own.
+  const whole = entries.find((entry) => entry.kind === "case_study");
+  const steps = whole
+    ? (whole.draft as { steps: unknown[] }).steps
+    : entries
+        .filter((entry) => entry.status !== "not_importable" && entry.draft !== null)
+        .map((entry) => entry.draft);
+  return {
+    questions: entries
+      .filter((entry) => entry.status === "not_importable")
+      .map((entry) => recorded(entry, undefined)),
+    caseStudies: [
+      {
+        draft: {
+          ...(typeof caseCharts === "object" && caseCharts !== null ? caseCharts : {}),
+          title: (caseCharts as { title?: unknown } | undefined)?.title ?? unit.caseStudy,
+          steps,
+        },
+      },
+    ],
+  };
 }
 
 /** Reads one document the way the import will, and returns what came back as a recording. */
@@ -131,61 +180,35 @@ export async function runPipeline(
   const sourceText =
     prepared.kind === "pdf" ? null : prepared.chunks.map((chunk) => chunk.text ?? "").join("");
   const regions = regionsOf(merged, sourceText);
-  // Every group is assembled here (#344's stand-in); everything else is a standalone question.
-  const plan = planExtraction(merged, (_, groups) => ({
-    assembled: groups.flatMap((group) => group.positions),
-  }));
-  const grouped = new Set(plan.caseStudyGroups.flatMap((group) => group.positions));
 
-  const drafts = new Map<number, { draft?: unknown; reason?: string }>();
-  const extractAll = async (positions: ReadonlySet<number>) => {
-    for (const unit of unitsOf(merged, positions)) {
-      try {
-        const { payload } = await unitPayload(bytes, prepared, unit[0].chunks);
-        const entries = await extractQuestions(
-          call,
-          unit,
-          { payload, kind: prepared.kind, sourceText },
-          regions,
-        );
-        for (const entry of entries) {
-          drafts.set(entry.position, entry.draft === null ? {} : { draft: entry.draft });
-        }
-      } catch (error) {
-        for (const question of unit) {
-          drafts.set(question.position, { reason: `extract failed: ${message(error)}` });
-        }
-      }
-    }
-  };
-
-  await extractAll(new Set(merged.filter((q) => !grouped.has(q.position)).map((q) => q.position)));
-  const questions: RecordedQuestion[] = merged
-    .filter((question) => !grouped.has(question.position))
-    .map((question) => {
-      if (question.type === null) {
-        return {
-          opening: question.excerpt,
-          type: NOT_IMPORTABLE,
-          reason: question.flags.notNgn ?? "",
-        };
-      }
-      return { opening: question.excerpt, type: question.type, ...drafts.get(question.position) };
-    });
-
-  const caseStudies = [];
-  for (const group of plan.caseStudyGroups) {
+  const questions: RecordedQuestion[] = [];
+  const caseStudies: Recording["caseStudies"] = [];
+  for (const unit of planExtraction(merged)) {
+    const inUnit = merged.filter((question) => unit.positions.includes(question.position));
     try {
-      const steps = merged.filter((question) => group.positions.includes(question.position));
-      const chunks = [...new Set(steps.flatMap((step) => step.chunks))];
+      const chunks = [...new Set(inUnit.flatMap((question) => question.chunks))];
       const { payload } = await unitPayload(bytes, prepared, chunks);
-      const charts = await chartsOf(call, group.title, payload, prepared.kind);
-      await extractAll(new Set(group.positions));
-      caseStudies.push({
-        draft: { ...charts, steps: steps.map((step) => drafts.get(step.position)?.draft) },
-      });
+      const result = await runUnit(
+        call,
+        unit,
+        inUnit,
+        { payload, kind: prepared.kind, sourceText },
+        regions,
+      );
+      questions.push(...result.questions);
+      caseStudies.push(...result.caseStudies);
     } catch (error) {
-      caseStudies.push({ draft: { title: group.title, error: message(error) } });
+      if (unit.caseStudy !== null) {
+        caseStudies.push({ draft: { title: unit.caseStudy, error: message(error) } });
+        continue;
+      }
+      questions.push(
+        ...inUnit.map((question) => ({
+          opening: question.excerpt,
+          type: question.type ?? NOT_IMPORTABLE,
+          reason: `extract failed: ${message(error)}`,
+        })),
+      );
     }
   }
 

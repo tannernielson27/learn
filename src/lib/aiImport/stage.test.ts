@@ -30,7 +30,13 @@ function question(fields: Partial<MergedQuestion> = {}): MergedQuestion {
     confidence: 0.9,
     group: null,
     scoringRule: null,
-    flags: { instructorNote: false, reliesOnImage: false, notNgn: null, notInSource: false },
+    flags: {
+      instructorNote: false,
+      reliesOnImage: false,
+      notNgn: null,
+      notInSource: false,
+      ownChart: false,
+    },
     sourceChecked: true,
     cutOff: false,
     continued: false,
@@ -80,7 +86,13 @@ describe("stageQuestion", () => {
     const entry = stageQuestion({
       ...input(choice),
       question: question({
-        flags: { instructorNote: false, reliesOnImage: true, notNgn: null, notInSource: true },
+        flags: {
+          instructorNote: false,
+          reliesOnImage: true,
+          notNgn: null,
+          notInSource: true,
+          ownChart: false,
+        },
         cutOff: true,
         confidence: 0.55,
       }),
@@ -131,7 +143,13 @@ describe("stageQuestion", () => {
       input(null, {
         question: question({
           type: null,
-          flags: { instructorNote: false, reliesOnImage: false, notNgn: "", notInSource: false },
+          flags: {
+            instructorNote: false,
+            reliesOnImage: false,
+            notNgn: "",
+            notInSource: false,
+            ownChart: false,
+          },
         }),
       }),
     );

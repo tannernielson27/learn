@@ -3,6 +3,7 @@ import { DOCX_MARKUP } from "./files/docx";
 import {
   SEGMENT_RULES,
   SegmentShapeError,
+  mergeSource,
   readSegment,
   segmentJsonSchema,
   segmentRequest,
@@ -101,7 +102,13 @@ describe("readSegment", () => {
         page: null,
         group: null,
         sourceChecked: true,
-        flags: { instructorNote: false, reliesOnImage: false, notNgn: null, notInSource: false },
+        flags: {
+          instructorNote: false,
+          reliesOnImage: false,
+          notNgn: null,
+          notInSource: false,
+          ownChart: false,
+        },
       }),
     ]);
   });
@@ -204,6 +211,66 @@ describe("readSegment", () => {
       });
     expect(read).toThrow(SegmentShapeError);
     expect(read).not.toThrow(/Jane/);
+  });
+});
+
+describe("own charts and source matter (#343, #344)", () => {
+  const withSource = `Prepared by: Pine Hollow faculty\n\nObjective: Assess intake.\n\n${SOURCE}`;
+
+  it("flags a standalone question's own chart, never a case study step's", () => {
+    const read = readSegment(
+      {
+        questions: [
+          question({ ownChart: true }),
+          question({ ownChart: true, caseStudy: { title: "Case" } }),
+        ],
+        answers: [],
+      },
+      TEXT_CHUNK,
+      { type: "text", text: SOURCE },
+    );
+    expect(read.questions.map((q) => q.flags.ownChart)).toEqual([true, false]);
+  });
+
+  it("keeps the author, objectives and references a text chunk holds, and drops the rest", () => {
+    const read = readSegment(
+      {
+        questions: [],
+        answers: [],
+        source: {
+          author: "Pine Hollow faculty",
+          objectives: ["Objective: Assess intake.", "Invented objective", " "],
+          references: ["A reference not in the text"],
+        },
+      },
+      TEXT_CHUNK,
+      { type: "text", text: withSource },
+    );
+    expect(read.source).toEqual({
+      author: "Pine Hollow faculty",
+      objectives: ["Objective: Assess intake."],
+      references: [],
+    });
+    const none = readSegment({ questions: [], answers: [] }, TEXT_CHUNK, {
+      type: "text",
+      text: SOURCE,
+    });
+    expect(none.source).toEqual({ author: null, objectives: [], references: [] });
+  });
+
+  it("keeps a PDF chunk's source matter unchecked, and merges a file's chunks", () => {
+    const pdf = readSegment(
+      { questions: [], answers: [], source: { author: "A", references: ["R1", "R1"] } },
+      PDF_CHUNK,
+      { type: "pdf", bytes: new Uint8Array() },
+    );
+    expect(pdf.source).toEqual({ author: "A", objectives: [], references: ["R1", "R1"] });
+    const second = { ...pdf, source: { author: "B", objectives: ["O"], references: ["R2"] } };
+    expect(mergeSource([pdf, second])).toEqual({
+      author: "A",
+      objectives: ["O"],
+      references: ["R1", "R2"],
+    });
   });
 });
 

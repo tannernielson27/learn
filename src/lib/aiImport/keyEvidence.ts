@@ -57,7 +57,9 @@ export function locateOpenings(source: string, excerpts: readonly string[]): num
   return excerpts.map((excerpt) => {
     const wanted = openingKey(excerpt);
     if (!wanted) return -1;
-    const at = haystack.indexOf(` ${wanted} `, from);
+    // In order first; a question listed out of the document's order is looked for anywhere.
+    let at = haystack.indexOf(` ${wanted} `, from);
+    if (at < 0) at = haystack.indexOf(` ${wanted} `);
     if (at < 0) return -1;
     from = at + 1;
     // `at` points at the space before the match in `haystack`, which is one longer at the front.
@@ -73,8 +75,8 @@ export function questionRegions(source: string, excerpts: readonly string[]): (s
   const starts = locateOpenings(source, excerpts);
   return starts.map((start, index) => {
     if (start < 0) return null;
-    const next = starts.slice(index + 1).find((later) => later > start);
-    return source.slice(start, next ?? source.length);
+    const later = starts.filter((other, at) => at !== index && other > start);
+    return source.slice(start, later.length > 0 ? Math.min(...later) : source.length);
   });
 }
 

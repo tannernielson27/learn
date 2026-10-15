@@ -66,7 +66,7 @@ A hand-written recording must score 100%. When a live run replaces one, copy it 
 
 ## The pipeline
 
-`pipeline.ts` runs the product's own code (#343), so the eval measures what ships: `prepareFile` cuts the document into the chunks the product sends, the segment pass (`src/lib/aiImport/segment.ts`) reads each, `mergeSegments` joins them, and the extract pass (`extractQuestions`) fills each question's draft two at a time, with its one repair. A .docx is read as the product's markdown, not HTML. Only a case study's chart is still the eval's own call (`caseStudyChartsJsonSchema()`), until #344 assembles case studies in `src/lib/aiImport`; its steps go through the product's extract pass.
+`pipeline.ts` runs the product's own code (#343), so the eval measures what ships: `prepareFile` cuts the document into the chunks the product sends, the segment pass (`src/lib/aiImport/segment.ts`) reads each, `mergeSegments` joins them, `planExtraction` makes the product's units, and each unit runs as the server runs it: standalone questions two to a call with their one repair, and a chart call for a question printed with its own chart (`standaloneChartJsonSchema()`, the trend in 07); a case study group's steps and its charts (`caseStudyChartsJsonSchema()`), assembled by #344's `assembleCaseStudy`. A .docx is read as the product's markdown, not HTML. What came back is written down as a recording and scored.
 
 ### Thresholds (#333's spike, ADR 0008 "Cost and accuracy")
 

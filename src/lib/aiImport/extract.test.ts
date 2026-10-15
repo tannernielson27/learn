@@ -23,7 +23,13 @@ function question(position: number, fields: Partial<MergedQuestion> = {}): Merge
     confidence: 0.9,
     group: null,
     scoringRule: null,
-    flags: { instructorNote: false, reliesOnImage: false, notNgn: null, notInSource: false },
+    flags: {
+      instructorNote: false,
+      reliesOnImage: false,
+      notNgn: null,
+      notInSource: false,
+      ownChart: false,
+    },
     sourceChecked: true,
     cutOff: false,
     continued: false,
@@ -42,32 +48,30 @@ describe("planExtraction", () => {
       question(4, { type: null }),
       question(5),
     ];
-    expect(planExtraction(questions).units).toEqual([
-      { index: 0, positions: [1, 4], call: false },
-      { index: 1, positions: [0, 2], call: true },
-      { index: 2, positions: [3, 5], call: true },
+    expect(planExtraction(questions)).toEqual([
+      { index: 0, positions: [1, 4], call: false, caseStudy: null },
+      { index: 1, positions: [0, 2], call: true, caseStudy: null },
+      { index: 2, positions: [3, 5], call: true, caseStudy: null },
     ]);
   });
 
   it("never pairs questions read from different chunks", () => {
     const questions = [question(0), question(1, { chunks: [0, 1] }), question(2, { chunks: [1] })];
-    expect(planExtraction(questions).units.map((unit) => unit.positions)).toEqual([[0], [1], [2]]);
+    expect(planExtraction(questions).map((unit) => unit.positions)).toEqual([[0], [1], [2]]);
   });
 
-  it("extracts case study steps as standalone questions until #344's hook takes them", () => {
+  it("gives each case study group one unit of its own, its open prompts included", () => {
     const steps = [0, 1, 2].map((p) =>
       question(p, { group: { title: "Unfolding Case: Asthma", step: p + 1 } }),
     );
-    const questions = [...steps, question(3)];
+    const prompt = question(3, { type: null, group: { title: "Unfolding Case: Asthma", step: 4 } });
+    const questions = [...steps, prompt, question(4)];
     expect(caseStudyGroups(questions)).toEqual([
-      { title: "Unfolding Case: Asthma", positions: [0, 1, 2] },
+      { title: "Unfolding Case: Asthma", positions: [0, 1, 2, 3] },
     ]);
-    expect(planExtraction(questions).units.flatMap((unit) => unit.positions)).toEqual([0, 1, 2, 3]);
-
-    const plan = planExtraction(questions, (_, groups) => ({ assembled: groups[0].positions }));
-    expect(plan.units).toEqual([{ index: 0, positions: [3], call: true }]);
-    expect(plan.caseStudyGroups).toEqual([
-      { title: "Unfolding Case: Asthma", positions: [0, 1, 2] },
+    expect(planExtraction(questions)).toEqual([
+      { index: 0, positions: [0, 1, 2, 3], call: true, caseStudy: "Unfolding Case: Asthma" },
+      { index: 1, positions: [4], call: true, caseStudy: null },
     ]);
   });
 

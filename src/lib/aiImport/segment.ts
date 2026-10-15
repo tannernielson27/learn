@@ -77,6 +77,12 @@ const segmentQuestionSchema = z.object({
   reliesOnImage: z
     .boolean()
     .describe("The question needs a picture, chart image or drawing to be answered."),
+  ownChart: z
+    .boolean()
+    .optional()
+    .describe(
+      "A standalone question printed with a chart of its own (a patient record, vital signs, a flow sheet). False for a case study step, whose chart belongs to the case study.",
+    ),
   cutOff: z.boolean().describe("The question runs past the end of the part you were sent."),
   continued: z.boolean().describe("The part you were sent opens partway through this question."),
 });
@@ -99,6 +105,19 @@ export const segmentSchema = z.object({
     .array(segmentAnswerSchema)
     .describe(
       'Answer keys or rationales printed apart from their questions ("answers at the back"), one per question number. Leave the list empty when there are none.',
+    ),
+  source: z
+    .object({
+      author: z.string().optional().describe("The author block, word for word."),
+      objectives: z
+        .array(z.string())
+        .optional()
+        .describe("Each learning objective, word for word."),
+      references: z.array(z.string()).optional().describe("Each reference, word for word."),
+    })
+    .optional()
+    .describe(
+      "What this part says about the document itself, when it prints any: its author, learning objectives and references. Leave it out otherwise.",
     ),
 });
 
@@ -171,6 +190,15 @@ export interface SegmentFlags {
   notNgn: string | null;
   /** The excerpt was not found in the chunk's text. Never set for a PDF, which is not checked. */
   notInSource: boolean;
+  /** A standalone question printed with its own chart, read by its own call (#343, #344). */
+  ownChart: boolean;
+}
+
+/** What a document says about itself (#344's `SourceMatter`), copied word for word. */
+export interface SegmentSource {
+  author: string | null;
+  objectives: string[];
+  references: string[];
 }
 
 export interface SegmentQuestion {
@@ -210,6 +238,8 @@ export interface ChunkSegment {
   answers: SegmentAnswer[];
   /** Answer sections the model gave that the chunk's text does not hold: dropped, and counted. */
   droppedAnswers: number;
+  /** The author, objectives and references this chunk prints; for text, only what it holds. */
+  source: SegmentSource;
 }
 
 /** The model's answer did not match the schema. Holds no part of the answer. */
@@ -270,6 +300,7 @@ export function readSegment(value: unknown, chunk: ChunkRef, payload: ChunkPaylo
           reliesOnImage: question.reliesOnImage,
           notNgn: type === null ? (optionalText(question.notNgnReason) ?? "") : null,
           notInSource: source !== null && !containsPassage(source, question.excerpt, EXCERPT_WORDS),
+          ownChart: question.caseStudy?.title.trim() ? false : (question.ownChart ?? false),
         },
         sourceChecked: source !== null,
         cutOff: question.cutOff,
@@ -303,5 +334,39 @@ export function readSegment(value: unknown, chunk: ChunkRef, payload: ChunkPaylo
     questions,
     answers,
     droppedAnswers,
+    source: sourceOf(parsed.data.source, source),
+  };
+}
+
+const SOURCE_LINES = 20;
+
+/** The source matter the model copied, kept only where a text chunk holds it. */
+function sourceOf(
+  matter: z.infer<typeof segmentSchema>["source"],
+  text: string | null,
+): SegmentSource {
+  const held = (value: string | undefined): value is string => {
+    const trimmed = value?.trim();
+    return Boolean(trimmed) && (text === null || containsPassage(text, trimmed!));
+  };
+  const list = (values: string[] | undefined) =>
+    (values ?? [])
+      .filter(held)
+      .map((value) => value.trim().slice(0, 1_000))
+      .slice(0, SOURCE_LINES);
+  return {
+    author: held(matter?.author) ? matter.author.trim().slice(0, 1_000) : null,
+    objectives: list(matter?.objectives),
+    references: list(matter?.references),
+  };
+}
+
+/** One file's source matter, from all its chunks: the first author, each line once. */
+export function mergeSource(chunks: readonly ChunkSegment[]): SegmentSource {
+  const unique = (values: string[]) => [...new Set(values)].slice(0, SOURCE_LINES);
+  return {
+    author: chunks.find((chunk) => chunk.source.author !== null)?.source.author ?? null,
+    objectives: unique(chunks.flatMap((chunk) => chunk.source.objectives)),
+    references: unique(chunks.flatMap((chunk) => chunk.source.references)),
   };
 }

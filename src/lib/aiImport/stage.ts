@@ -1,21 +1,39 @@
-import { fromDraft, itemDraftSchema, type DraftReason, type ItemDraft } from "@/lib/ngn/draft";
+import {
+  assembleCaseStudy,
+  assembleQuestion,
+  fromDraft,
+  itemDraftSchema,
+  type AssemblyNote,
+  type DraftReason,
+  type ItemDraft,
+} from "@/lib/ngn/draft";
 import { itemQualityWarnings } from "@/lib/ngn/quality";
-import { itemSchema, type Item, type ItemInput, type ItemType } from "@/lib/ngn/schemas";
+import {
+  caseStudySchema,
+  itemSchema,
+  type CaseStudy,
+  type Item,
+  type ItemInput,
+  type ItemType,
+} from "@/lib/ngn/schemas";
 import { LOW_CONFIDENCE } from "./config";
 import type { DraftProblem, ExtractedDraft } from "./extract";
 import { showsKey } from "./keyEvidence";
 import type { MergedQuestion } from "./merge";
 
 /**
- * A question becomes a staged entry (#343, ADR 0008 Pipeline steps 6-7). Pure.
+ * Questions become staged entries (#343, ADR 0008 Pipeline steps 6-7). Pure.
  *
- * `fromDraft`, then `itemSchema`, then `itemQualityWarnings`. The status says what the teacher
- * must do, and each reason says why, in plain words:
+ * A standalone question: `fromDraft` (through #344's `assembleQuestion`, which adds its own chart
+ * when it has one), then `itemSchema`, then `itemQualityWarnings`. A case study group: #344's
+ * `assembleCaseStudy`, then `caseStudySchema`. The status says what the teacher must do, and each
+ * reason says why, in plain words:
  *
- * - `ready`: a valid item whose key the source shows.
- * - `needs_answer`: the source has no key; the item's key is empty and only the teacher fills it.
+ * - `ready`: valid, with a key the source shows.
+ * - `needs_answer`: the source has no key; the key is empty and only the teacher fills it.
  * - `needs_fix`: the draft does not convert after its repair, or the question cannot stand as it
- *   was read (cut off, relies on an image, or not found in the source). The draft is kept.
+ *   was read (cut off, relies on an image, not found in the source, a chart that does not read).
+ *   The draft is kept.
  * - `not_importable`: no NGN type (an open prompt, a calculation, matching, recall).
  *
  * Extract only: a draft that comes back keyed from a text source whose part of the document shows
@@ -37,6 +55,7 @@ export type EntryReasonCode =
   | "low_confidence"
   | "scoring_conflict"
   | "source_error"
+  | "note"
   | "warning"
   | "duplicate";
 
@@ -66,6 +85,7 @@ const REASON_CODES: readonly EntryReasonCode[] = [
   "low_confidence",
   "scoring_conflict",
   "source_error",
+  "note",
   "warning",
   "duplicate",
 ];
@@ -79,18 +99,19 @@ export function readReason(stored: string): EntryReason | null {
 }
 
 export interface StagedEntry {
-  /** The question's place in its file (`MergedQuestion.position`). */
+  kind: "item" | "case_study";
+  /** The question's place in its file (`MergedQuestion.position`); a case study's first step's. */
   position: number;
   /** The first chunk it was read from. */
   chunk: number;
   status: EntryStatus;
-  /** The item's type, or the draft's when it did not convert; null with no NGN type. */
+  /** The item's type, or the draft's when it did not convert; null with no NGN type or a case. */
   type: ItemType | null;
   reasons: EntryReason[];
-  /** The model's draft as it gave it, kept whatever happened to it. */
+  /** The model's draft as it gave it, kept whatever happened to it. A case study's charts and steps. */
   draft: unknown;
-  /** A valid item (`ready`), the converter's item with an empty key (`needs_answer`), or null. */
-  item: Item | ItemInput | null;
+  /** Valid (`ready`), with an empty key (`needs_answer`), or null. */
+  item: Item | ItemInput | CaseStudy | Record<string, unknown> | null;
   sourceExcerpt: string;
   group: { title: string; step: number | null } | null;
 }
@@ -112,20 +133,18 @@ export type Converted =
 const pathOf = (path: readonly PropertyKey[]): (string | number)[] =>
   path.map((part) => (typeof part === "number" ? part : String(part)));
 
-/** Parses and converts one draft, and lists what is wrong with it. */
+const issuesOf = (issues: readonly { path: PropertyKey[]; message: string }[]): DraftProblem[] =>
+  issues.slice(0, 10).map((issue) => ({ path: pathOf(issue.path), message: issue.message }));
+
+const keyedBy = (reasons: readonly DraftReason[]) =>
+  !reasons.some((reason) => reason.code === "needs_answer");
+
+/** Parses and converts one draft (without its chart), and lists what is wrong with it. */
 export function convertDraft(raw: unknown): Converted {
   const parsed = itemDraftSchema.safeParse(raw);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      problems: parsed.error.issues.slice(0, 10).map((issue) => ({
-        path: pathOf(issue.path),
-        message: issue.message,
-      })),
-    };
-  }
+  if (!parsed.success) return { ok: false, problems: issuesOf(parsed.error.issues) };
   const conversion = fromDraft(parsed.data);
-  const keyed = !conversion.reasons.some((reason) => reason.code === "needs_answer");
+  const keyed = keyedBy(conversion.reasons);
   const fixes = conversion.reasons
     .filter((reason) => reason.code === "needs_fix")
     .map((reason) => ({ path: reason.path ?? [], message: reason.message }));
@@ -134,14 +153,7 @@ export function convertDraft(raw: unknown): Converted {
   if (keyed && fixes.length === 0) {
     const checked = itemSchema.safeParse(conversion.item);
     if (checked.success) valid = checked.data;
-    else {
-      schemaProblems.push(
-        ...checked.error.issues.slice(0, 10).map((issue) => ({
-          path: pathOf(issue.path),
-          message: issue.message,
-        })),
-      );
-    }
+    else schemaProblems.push(...issuesOf(checked.error.issues));
   }
   return {
     ok: true,
@@ -168,6 +180,12 @@ export interface StageInput {
   source: "text" | "pdf";
   /** The question's part of a text source; null when it could not be found. */
   region: string | null;
+  /** The output of its `standaloneChartJsonSchema()` call, when it has its own chart. */
+  chart?: unknown;
+  /** Notes #344's assembly gave it (a split case study group). */
+  notes?: readonly AssemblyNote[];
+  /** Its place in a split case study group, from 1. */
+  step?: number;
 }
 
 const RANK: Record<EntryStatus, number> = {
@@ -234,29 +252,83 @@ const CHECK_KEY: EntryReason = {
   message: "The key was read from a PDF, which could not be checked against its text. Check it.",
 };
 
-function keyBelieved(input: StageInput): boolean {
-  if (input.source === "pdf") return true;
-  if (input.question.answers.length > 0) return true;
-  return input.region !== null && showsKey(input.region);
+const NEEDS_ANSWER =
+  "The source marks no answer. Add the key before this question can be imported.";
+
+function keyBelieved(question: MergedQuestion, source: "text" | "pdf", region: string | null) {
+  if (source === "pdf") return true;
+  if (question.answers.length > 0) return true;
+  return region !== null && showsKey(region);
 }
 
-function base(input: StageInput): Omit<StagedEntry, "status" | "type" | "reasons" | "item"> {
+const keyUnchecked = (question: MergedQuestion, source: "text" | "pdf") =>
+  source === "pdf" || question.answers.some((answer) => !answer.sourceChecked);
+
+/** #344's notes as reasons: a possible source error, or a note for the reviewer. */
+const noteReasons = (notes: readonly AssemblyNote[] = []): EntryReason[] =>
+  notes.map((note) =>
+    note.code === "possible_source_error"
+      ? { code: "source_error", message: `Possible source error: ${note.message}` }
+      : { code: "note", message: note.message },
+  );
+
+const problemReason = (problem: DraftProblem, prefix = ""): EntryReason => ({
+  code: "needs_fix",
+  message: `${prefix}${problem.path.length ? `${problem.path.join(".")}: ` : ""}${problem.message}`,
+});
+
+const draftReasons = (reasons: readonly DraftReason[], code: DraftReason["code"]) =>
+  reasons.filter((reason) => reason.code === code);
+
+/** The item with its own chart attached, and what the chart adds. */
+function withChart(
+  converted: Extract<Converted, { ok: true }>,
+  chart: unknown,
+): { item: ItemInput; valid: Item | null; fixes: DraftProblem[]; notes: AssemblyNote[] } {
+  if (chart === undefined) {
+    return { item: converted.item, valid: converted.valid, fixes: [], notes: [] };
+  }
+  const assembled = assembleQuestion(
+    { draft: converted.draft, chart },
+    {
+      id: converted.item.id,
+    },
+  );
+  const fixes = draftReasons(assembled.reasons, "needs_fix").map((reason) => ({
+    path: reason.path ?? [],
+    message: reason.message,
+  }));
+  if (fixes.length > 0 || converted.valid === null) {
+    return { item: assembled.item, valid: null, fixes, notes: assembled.notes };
+  }
+  const checked = itemSchema.safeParse(assembled.item);
+  return checked.success
+    ? { item: assembled.item, valid: checked.data, fixes: [], notes: assembled.notes }
+    : {
+        item: assembled.item,
+        valid: null,
+        fixes: issuesOf(checked.error.issues),
+        notes: assembled.notes,
+      };
+}
+
+/** Builds one question's staged entry. */
+export function stageQuestion(input: StageInput): StagedEntry {
   const { question } = input;
-  return {
+  const base = {
+    kind: "item" as const,
     position: question.position,
     chunk: question.chunks[0] ?? question.chunk,
     draft: input.extracted?.draft ?? null,
     sourceExcerpt: question.excerpt,
-    group: question.group,
+    group: question.group
+      ? { title: question.group.title, step: input.step ?? question.group.step }
+      : null,
   };
-}
-
-/** Builds one staged entry. */
-export function stageQuestion(input: StageInput): StagedEntry {
-  const { question } = input;
+  const assembly = noteReasons(input.notes);
   if (question.type === null) {
     return {
-      ...base(input),
+      ...base,
       status: "not_importable",
       type: null,
       item: null,
@@ -265,6 +337,7 @@ export function stageQuestion(input: StageInput): StagedEntry {
           code: "not_ngn",
           message: question.flags.notNgn || "This question has no NGN item type.",
         },
+        ...assembly,
       ],
     };
   }
@@ -280,40 +353,183 @@ export function stageQuestion(input: StageInput): StagedEntry {
     item: Item | ItemInput | null,
     reasons: EntryReason[],
   ): StagedEntry => ({
-    ...base(input),
+    ...base,
     status: worse(status, flags.status),
     type: (item?.type ?? (converted?.ok ? converted.draft.type : question.type)) as ItemType,
     item,
-    reasons: [...reasons, ...flags.reasons, ...notes].slice(0, MAX_REASONS),
+    reasons: [...reasons, ...flags.reasons, ...assembly, ...notes].slice(0, MAX_REASONS),
   });
 
   if (!input.extracted || !converted || !converted.ok) return finish("needs_fix", null, [NO_DRAFT]);
 
-  const scoring: EntryReason[] = converted.reasons
-    .filter((reason) => reason.code === "scoring_conflict")
-    .map((reason) => ({ code: "scoring_conflict", message: reason.message }));
-  if (converted.keyed && !keyBelieved(input)) return finish("needs_fix", null, [UNMARKED_KEY]);
+  const scoring: EntryReason[] = draftReasons(converted.reasons, "scoring_conflict").map(
+    (reason) => ({ code: "scoring_conflict", message: reason.message }),
+  );
+  if (converted.keyed && !keyBelieved(question, input.source, input.region)) {
+    return finish("needs_fix", null, [UNMARKED_KEY]);
+  }
   if (converted.problems.length > 0) {
-    const fixes = converted.problems.slice(0, 5).map((problem): EntryReason => ({
-      code: "needs_fix",
-      message: problem.path.length
-        ? `${problem.path.join(".")}: ${problem.message}`
-        : problem.message,
-    }));
+    const fixes = converted.problems.slice(0, 5).map((problem) => problemReason(problem));
     return finish("needs_fix", null, [...fixes, ...scoring]);
   }
-  const unchecked =
-    input.source === "pdf" || question.answers.some((answer) => !answer.sourceChecked);
-  const check = unchecked ? [CHECK_KEY] : [];
-  if (!converted.keyed || converted.valid === null) {
-    const message =
-      converted.reasons.find((reason) => reason.code === "needs_answer")?.message ??
-      "The source marks no answer. Add the key before this question can be imported.";
-    return finish("needs_answer", converted.item, [{ code: "needs_answer", message }, ...scoring]);
+  const charted = withChart(converted, input.chart);
+  const chartNotes = noteReasons(charted.notes);
+  if (charted.fixes.length > 0) {
+    const fixes = charted.fixes.slice(0, 5).map((problem) => problemReason(problem));
+    return finish("needs_fix", null, [...fixes, ...scoring, ...chartNotes]);
   }
-  const warnings = itemQualityWarnings(converted.valid).map((warning): EntryReason => ({
+  if (!converted.keyed || charted.valid === null) {
+    const message = draftReasons(converted.reasons, "needs_answer")[0]?.message ?? NEEDS_ANSWER;
+    return finish("needs_answer", charted.item, [
+      { code: "needs_answer", message },
+      ...scoring,
+      ...chartNotes,
+    ]);
+  }
+  const check = keyUnchecked(question, input.source) ? [CHECK_KEY] : [];
+  const warnings = itemQualityWarnings(charted.valid).map((warning): EntryReason => ({
     code: "warning",
     message: warning.message,
   }));
-  return finish("ready", converted.valid, [...check, ...scoring, ...warnings]);
+  return finish("ready", charted.valid, [...check, ...scoring, ...chartNotes, ...warnings]);
+}
+
+/** One step of a case study group, as extracted. */
+export interface StageStep {
+  question: MergedQuestion;
+  extracted: ExtractedDraft | undefined;
+  converted: Converted | undefined;
+  region: string | null;
+}
+
+export interface StageCaseStudyInput {
+  title: string;
+  steps: readonly StageStep[];
+  /** The output of the `caseStudyChartsJsonSchema()` call; undefined when it failed. */
+  charts: unknown;
+  source: "text" | "pdf";
+}
+
+/**
+ * A case study group's staged entries, through #344's `assembleCaseStudy`. Questions with no NGN
+ * type, and steps whose draft did not convert, are staged on their own. Six steps that convert
+ * become one case study entry; any other count, each question on its own with #344's note.
+ */
+export function stageCaseStudy(input: StageCaseStudyInput): StagedEntry[] {
+  const loose: StagedEntry[] = [];
+  const drafted: (StageStep & { converted: Extract<Converted, { ok: true }> })[] = [];
+  for (const step of input.steps) {
+    if (step.question.type !== null && step.extracted && step.converted?.ok) {
+      drafted.push({ ...step, converted: step.converted });
+    } else {
+      loose.push(stageQuestion({ ...step, source: input.source }));
+    }
+  }
+  if (drafted.length === 0) return loose;
+
+  const group = {
+    title: input.title,
+    charts: input.charts,
+    steps: drafted.map((step) => step.converted.draft),
+  };
+  const assembled = assembleCaseStudy(group, { id: "ai_case" });
+  const [first] = assembled;
+  if (first.kind === "item") {
+    const staged = drafted.map((step, index) =>
+      stageQuestion({
+        ...step,
+        source: input.source,
+        notes: assembled[index]?.notes ?? [],
+        step: index + 1,
+      }),
+    );
+    return [...loose, ...staged].sort((a, b) => a.position - b.position);
+  }
+  return [...loose, stageAssembledCase(input, drafted, first)].sort(
+    (a, b) => a.position - b.position,
+  );
+}
+
+function stageAssembledCase(
+  input: StageCaseStudyInput,
+  drafted: readonly (StageStep & { converted: Extract<Converted, { ok: true }> })[],
+  assembled: Extract<ReturnType<typeof assembleCaseStudy>[number], { kind: "case_study" }>,
+): StagedEntry {
+  const lead = drafted[0].question;
+  const prefix = (index: number) => `Step ${index + 1}: `;
+  const stepFlags = drafted.flatMap((step, index) => {
+    const flags = flagReasons(step.question);
+    const errors = (step.extracted?.sourceErrors ?? []).map((note): EntryReason => ({
+      code: "source_error",
+      message: `Possible source error: ${note}`,
+    }));
+    return [...flags.reasons, ...errors].map((reason) => ({
+      ...reason,
+      message: prefix(index) + reason.message,
+    }));
+  });
+  const flagged = drafted.some((step) => flagReasons(step.question).status === "needs_fix");
+  const notes = noteReasons(assembled.notes);
+  const base = {
+    kind: "case_study" as const,
+    position: lead.position,
+    chunk: lead.chunks[0] ?? lead.chunk,
+    type: null,
+    draft: {
+      title: input.title,
+      charts: input.charts ?? null,
+      steps: drafted.map((step) => step.extracted?.draft ?? null),
+    },
+    sourceExcerpt: lead.excerpt,
+    group: { title: input.title, step: null },
+  };
+  const finish = (status: EntryStatus, item: StagedEntry["item"], reasons: EntryReason[]) => ({
+    ...base,
+    status: flagged ? worse(status, "needs_fix") : status,
+    item,
+    reasons: [...reasons, ...stepFlags, ...notes].slice(0, MAX_REASONS),
+  });
+
+  const invented = drafted.findIndex(
+    (step) => step.converted.keyed && !keyBelieved(step.question, input.source, step.region),
+  );
+  if (invented >= 0) {
+    return finish("needs_fix", null, [
+      { ...UNMARKED_KEY, message: prefix(invented) + UNMARKED_KEY.message },
+    ]);
+  }
+  const fixes = draftReasons(assembled.reasons, "needs_fix").map((reason) =>
+    problemReason({ path: reason.path ?? [], message: reason.message }),
+  );
+  const scoring = draftReasons(assembled.reasons, "scoring_conflict").map(
+    (reason): EntryReason => ({ code: "scoring_conflict", message: reason.message }),
+  );
+  if (fixes.length > 0) return finish("needs_fix", null, [...fixes.slice(0, 5), ...scoring]);
+  const unanswered = draftReasons(assembled.reasons, "needs_answer").map((reason): EntryReason => ({
+    code: "needs_answer",
+    message: `${reason.path?.length ? `${reason.path.join(".")}: ` : ""}${reason.message}`,
+  }));
+  if (unanswered.length > 0) {
+    return finish("needs_answer", assembled.caseStudy as Record<string, unknown>, [
+      ...unanswered.slice(0, 6),
+      ...scoring,
+    ]);
+  }
+  const checked = caseStudySchema.safeParse(assembled.caseStudy);
+  if (!checked.success) {
+    const issues = issuesOf(checked.error.issues)
+      .slice(0, 5)
+      .map((p) => problemReason(p));
+    return finish("needs_fix", null, [...issues, ...scoring]);
+  }
+  const check = drafted.some((step) => keyUnchecked(step.question, input.source))
+    ? [CHECK_KEY]
+    : [];
+  const warnings = checked.data.items.flatMap((item, index) =>
+    itemQualityWarnings(item).map((warning): EntryReason => ({
+      code: "warning",
+      message: prefix(index) + warning.message,
+    })),
+  );
+  return finish("ready", checked.data, [...check, ...scoring, ...warnings]);
 }

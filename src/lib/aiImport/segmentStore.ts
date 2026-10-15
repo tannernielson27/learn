@@ -33,6 +33,7 @@ const segmentQuestionSchema = z.object({
     reliesOnImage: z.boolean(),
     notNgn: text.nullable(),
     notInSource: z.boolean(),
+    ownChart: z.boolean().default(false),
   }),
   sourceChecked: z.boolean(),
   cutOff: z.boolean(),
@@ -55,6 +56,13 @@ export const storedSegmentSchema = z.object({
   questions: z.array(segmentQuestionSchema).max(200),
   answers: z.array(segmentAnswerSchema).max(200),
   droppedAnswers: z.number().int().min(0),
+  source: z
+    .object({
+      author: text.nullable(),
+      objectives: z.array(text).max(20),
+      references: z.array(text).max(20),
+    })
+    .default({ author: null, objectives: [], references: [] }),
 });
 
 /** A chunk's stored segment, or null when it is missing or not what the server wrote. */
