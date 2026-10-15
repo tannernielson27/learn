@@ -1,12 +1,20 @@
+import { z } from "zod";
 import {
+  assembleCaseStudy,
+  assembleQuestion,
   caseStudyDraftSchema,
   chartsOf,
-  fromCaseStudyDraft,
   fromDraft,
   itemDraftSchema,
   type DraftReason,
 } from "@/lib/ngn/draft";
-import { ITEM_TYPES, itemSchema, type EhrRecord, type ItemInput } from "@/lib/ngn/schemas";
+import {
+  CASE_STUDY_STEP_COUNT,
+  ITEM_TYPES,
+  itemSchema,
+  type EhrRecord,
+  type ItemInput,
+} from "@/lib/ngn/schemas";
 import {
   asCaseStudy,
   asItem,
@@ -253,7 +261,14 @@ function scoreCaseStudy(
       })),
     };
   }
-  const converted = fromCaseStudyDraft(parsed.data, { id: "eval_case" });
+  // Scored through the product's assembly (#344), so the eval measures what ships.
+  const { steps: stepDrafts, ...charts } = parsed.data;
+  const [assembled] = assembleCaseStudy(
+    { title: parsed.data.title, charts, steps: stepDrafts },
+    { id: "eval_case" },
+  );
+  if (assembled.kind !== "case_study") throw new Error("a six-step draft assembles as one case");
+  const converted = assembled;
   const chart = chartOf(converted.caseStudy.ehr as EhrRecord) === chartOf(want.ehr);
   const steps = want.items.map((item, index) => {
     const got = converted.caseStudy.items[index] as ItemInput | undefined;
@@ -283,12 +298,60 @@ function scoreCaseStudy(
   };
 }
 
+/** A standalone question's own record (a bowtie's or trend's chart) against the expected one. */
+function scoreRecord(
+  document: string,
+  label: string,
+  want: EhrRecord | undefined,
+  recorded: RecordedQuestion | undefined,
+): CaseStudyResult {
+  const where = { document, label: `${label}, own record` };
+  const draft = itemDraftSchema.safeParse(recorded?.draft);
+  if (!recorded || !draft.success) {
+    return { ...where, found: false, chart: false, notes: ["not found"] };
+  }
+  const assembled = assembleQuestion({ draft: draft.data, chart: recorded.chart }, { id: "eval" });
+  const got = assembled.item.ehr as EhrRecord | undefined;
+  const reasons = assembled.reasons
+    .filter((reason) => reason.path?.[0] === "chart" || reason.path?.[0] === "patient")
+    .map((reason) => reason.message);
+  if (want === undefined || got === undefined) {
+    const note = want === undefined ? "a record the source does not give it" : "no record";
+    return { ...where, found: true, chart: false, notes: [note, ...reasons] };
+  }
+  const chart = chartOf(got) === chartOf(want);
+  return {
+    ...where,
+    found: true,
+    chart,
+    notes: chart ? reasons : ["the record differs from the expected one", ...reasons],
+  };
+}
+
+const stepDraftsSchema = z.array(itemDraftSchema);
+
+/**
+ * A recorded case study group that is not six steps: the assembly stages its questions on their
+ * own (#344), so they are scored as standalone questions. Undefined for a group of six, or one
+ * whose steps do not parse (scored, and failed, as a case study).
+ */
+function splitGroup(draft: unknown): RecordedQuestion[] | undefined {
+  const steps = stepDraftsSchema.safeParse((draft as { steps?: unknown } | null)?.steps);
+  if (!steps.success || steps.data.length === CASE_STUDY_STEP_COUNT) return undefined;
+  return steps.data.map((step) => ({ opening: step.stem, type: step.type, draft: step }));
+}
+
 /** Scores one document's recording against its expected output. */
 export function scoreDocument(
   expected: ExpectedDocument,
   recording: Recording | undefined,
 ): DocumentScore {
-  const recorded = recording?.questions ?? [];
+  const groups = recording?.caseStudies ?? [];
+  const split = groups.map((entry) => splitGroup(entry.draft));
+  const recorded = [
+    ...(recording?.questions ?? []),
+    ...split.flatMap((questions) => questions ?? []),
+  ];
   const matched = matchQuestions(expected.questions, recorded);
   const questions = expected.questions.map((question, index) => {
     const r = matched.get(index);
@@ -302,9 +365,17 @@ export function scoreDocument(
   const used = new Set(matched.values());
   const extras = recorded.flatMap((entry, index) => (used.has(index) ? [] : [entry.opening]));
 
-  const drafts = recording?.caseStudies ?? [];
+  const caseStudies: CaseStudyResult[] = expected.questions.flatMap((question, index) => {
+    if (question.status === NOT_IMPORTABLE) return [];
+    const r = matched.get(index);
+    const entry = r === undefined ? undefined : recorded[r];
+    const want = asItem(question).ehr as EhrRecord | undefined;
+    if (want === undefined && entry?.chart === undefined) return [];
+    return [scoreRecord(expected.document, question.label, want, entry)];
+  });
+
+  const drafts = groups.filter((_, index) => split[index] === undefined);
   const takenDrafts = new Set<number>();
-  const caseStudies: CaseStudyResult[] = [];
   for (const expectedCase of expected.caseStudies) {
     const title = String(expectedCase.caseStudy.title ?? expectedCase.label);
     const pick = drafts.findIndex(
@@ -436,7 +507,7 @@ export function formatReport(report: EvalReport): string {
     ...report.rows.map(line),
     line({ ...report.total, bucket: "**all**" }),
     "",
-    `Case studies with the right chart at every step: ${cell(report.caseStudies)}.`,
+    `Charts right (a case study's at every step, a standalone question's own record): ${cell(report.caseStudies)}.`,
     `Entries the source does not have: ${report.extras}. Keys invented for unmarked questions: ${report.inventedKeys}.`,
     "",
     ...(failures.length > 0 ? ["Failures:", "", ...failures] : ["No failures."]),
