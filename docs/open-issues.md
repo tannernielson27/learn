@@ -262,22 +262,22 @@ Owner decisions (2026-10-01):
 7. **A rights checkbox at upload**, which also confirms there is no real patient information.
 8. **A batch is up to 5 files, 100 pages and 150 questions.**
 
-| #                                                           | Title                                                                                          | Gates             | Status                                                            |
-| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------- |
-| [#333](https://github.com/tannernielson27/learn/issues/333) | chore(ai-import): measure cost and accuracy on the owner's sample documents                    | none              | Merged (#352); no migration                                       |
-| [#337](https://github.com/tannernielson27/learn/issues/337) | feat(ngn): AI draft shapes and converters for the selection, ordered and bowtie types          | none              | Merged (#441); no migration                                       |
-| [#338](https://github.com/tannernielson27/learn/issues/338) | feat(ngn): AI draft shapes and converters for cloze, highlight, drag-and-drop and case studies | none              | Merged (#442); no migration                                       |
-| [#339](https://github.com/tannernielson27/learn/issues/339) | test(ai-import): a fictional golden corpus and an accuracy eval                                | none              | Merged (#443); no migration                                       |
-| [#340](https://github.com/tannernielson27/learn/issues/340) | feat(db): AI import batches, staged entries, a private upload bucket and a monthly cap         | security, db      | Merged (#444), applied                                            |
-| [#341](https://github.com/tannernielson27/learn/issues/341) | feat(ai-import): check uploaded files and prepare them for Claude                              | security          | Merged (#445); no migration                                       |
-| [#342](https://github.com/tannernielson27/learn/issues/342) | feat(ai-import): Claude client, segment pass, usage ledger and cap                             | security          | Merged (#446); no migration                                       |
-| [#343](https://github.com/tannernielson27/learn/issues/343) | feat(ai-import): extract each question into a draft, validate it, and repair once              | security, db      | In review (#448); `20261015005000_ai_import_segments` not applied |
-| [#344](https://github.com/tannernielson27/learn/issues/344) | feat(ai-import): assemble case studies with a chart that grows by step                         | none              | Merged (#447); no migration                                       |
-| [#345](https://github.com/tannernielson27/learn/issues/345) | feat(authoring): upload documents for AI import and watch them parse                           | security, e2e     | Open                                                              |
-| [#346](https://github.com/tannernielson27/learn/issues/346) | feat(authoring): review an AI import batch before anything reaches the bank                    | security, e2e     | Open                                                              |
-| [#347](https://github.com/tannernielson27/learn/issues/347) | feat(authoring): fix staged questions and case studies with the existing editors               | e2e               | Open                                                              |
-| [#348](https://github.com/tannernielson27/learn/issues/348) | feat(authoring): import a reviewed batch all at once, or discard it                            | security, db, e2e | Open                                                              |
-| [#349](https://github.com/tannernielson27/learn/issues/349) | docs(help): AI import guide, end-to-end tests, security rows and the S12 demo                  | e2e               | Open                                                              |
+| #                                                           | Title                                                                                          | Gates             | Status                      |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------- | --------------------------- |
+| [#333](https://github.com/tannernielson27/learn/issues/333) | chore(ai-import): measure cost and accuracy on the owner's sample documents                    | none              | Merged (#352); no migration |
+| [#337](https://github.com/tannernielson27/learn/issues/337) | feat(ngn): AI draft shapes and converters for the selection, ordered and bowtie types          | none              | Merged (#441); no migration |
+| [#338](https://github.com/tannernielson27/learn/issues/338) | feat(ngn): AI draft shapes and converters for cloze, highlight, drag-and-drop and case studies | none              | Merged (#442); no migration |
+| [#339](https://github.com/tannernielson27/learn/issues/339) | test(ai-import): a fictional golden corpus and an accuracy eval                                | none              | Merged (#443); no migration |
+| [#340](https://github.com/tannernielson27/learn/issues/340) | feat(db): AI import batches, staged entries, a private upload bucket and a monthly cap         | security, db      | Merged (#444), applied      |
+| [#341](https://github.com/tannernielson27/learn/issues/341) | feat(ai-import): check uploaded files and prepare them for Claude                              | security          | Merged (#445); no migration |
+| [#342](https://github.com/tannernielson27/learn/issues/342) | feat(ai-import): Claude client, segment pass, usage ledger and cap                             | security          | Merged (#446); no migration |
+| [#343](https://github.com/tannernielson27/learn/issues/343) | feat(ai-import): extract each question into a draft, validate it, and repair once              | security, db      | Merged (#448), applied      |
+| [#344](https://github.com/tannernielson27/learn/issues/344) | feat(ai-import): assemble case studies with a chart that grows by step                         | none              | Merged (#447); no migration |
+| [#345](https://github.com/tannernielson27/learn/issues/345) | feat(authoring): upload documents for AI import and watch them parse                           | security, e2e     | In review; no migration     |
+| [#346](https://github.com/tannernielson27/learn/issues/346) | feat(authoring): review an AI import batch before anything reaches the bank                    | security, e2e     | Open                        |
+| [#347](https://github.com/tannernielson27/learn/issues/347) | feat(authoring): fix staged questions and case studies with the existing editors               | e2e               | Open                        |
+| [#348](https://github.com/tannernielson27/learn/issues/348) | feat(authoring): import a reviewed batch all at once, or discard it                            | security, db, e2e | Open                        |
+| [#349](https://github.com/tannernielson27/learn/issues/349) | docs(help): AI import guide, end-to-end tests, security rows and the S12 demo                  | e2e               | Open                        |
 
 Notes from #341 for the stories after it (`src/lib/aiImport/files/`):
 
@@ -294,6 +294,13 @@ Notes from #343 for the stories after it (`src/lib/aiImport/`):
 
 - **#345:** once every chunk of a file is `done`, extract it one unit per request: `extractUnit(extractUnitDeps(service), { orgId, batchId, fileId, userId, unit })`, from `unit: 0` up to the `units` each answer reports (2–3 at a time, the first alone so it warms the document cache). `incomplete` means a chunk has no segments yet. A unit sent twice stages nothing twice (`ai_import_entries (batch_id, position)` is unique; a file's questions sit at `file order × 1000 + place`). Extract requests have their own limit (`ai_import_extract`, 160 an hour). `overLimit` counts questions past the batch's 150, not extracted: show it. A case study group is one unit (its steps and its charts in parallel calls, assembled by #344), so it can run longer than a standalone unit. When every unit of every file is done, call `finishExtraction(service, { orgId, batchId })` once (duplicates flagged, source matter on `ai_import_batches.source`), then move the batch to `review`.
 - **#346:** each `reasons` entry is `code: message` (`readReason` in `stage.ts`). `unmarked_key` means the model returned a key that part of the document does not show: the draft is kept, the item is null, the status `needs_fix`. `check_key` marks a key read from a PDF (not checkable). `duplicate` is advisory; the reviewer drops one. `source_error` notes never changed the text; `note` is #344's reviewer note (a group that was not six steps). A case study is one entry, `kind = 'case_study'`, at its first step's place: `item` is the learn.v1 case study, `draft` is `{ title, charts, steps }`.
+
+Notes from #345 for the stories after it (`src/lib/aiImport/upload/`, `src/components/authoring/AiImportUpload.tsx`):
+
+- **#346:** a batch reaches `review` from the upload page at `/author/banks/[bankId]/ai-import?batch=<id>`, which then shows "Ready for review" and the count staged, nothing more. Replace that section of `AiImportUpload` (the `status === "review"` branch) with the review screen or a link to it. The batch's `bank_id` is the quiz the teacher started from (see the decision below). Read entries on the server only; the page and routes never send a draft, an item or a key to the browser today.
+- **#346, #348:** a batch in review still counts towards the workspace's 20 open batches until it is imported or discarded.
+- **Decision for the owner (#345):** the import is started from a quiz, so `ai_import_batches.bank_id` is that quiz. Kickoff decision 3 said a new quiz by default; #348 can still offer the choice (the column is the teacher's to change while the batch is open).
+- **Retries:** a failed chunk can be sent again at once (up to 5 tries). A failed extract unit keeps its 6-minute claim, so "Try again" waits for it (the page asks again every 15 s).
 
 Notes from #344 for #343 (`src/lib/ngn/draft/assemble.ts`, pure):
 

@@ -9,7 +9,7 @@ import {
   startBatch,
   type ActionDeps,
 } from "@/lib/aiImport/upload/actions";
-import { authorForRoute } from "@/lib/authoring/session";
+import { requireAuthor } from "@/lib/authoring/session";
 import { sharedRateLimitStore } from "@/lib/rateLimit/postgresStore";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -18,32 +18,36 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
  * a Server Function is a public endpoint, whatever page it was handed to.
  */
 
-const deps: ActionDeps = {
-  author: authorForRoute,
-  service: createSupabaseServiceClient,
-  limiter: () => sharedRateLimitStore(),
-};
+/** The verified teacher (others are sent away, as from every authoring Server Function). */
+async function guardedDeps(): Promise<ActionDeps> {
+  const session = await requireAuthor("/author");
+  return {
+    author: async () => ({ status: "ok", ...session }),
+    service: createSupabaseServiceClient,
+    limiter: () => sharedRateLimitStore(),
+  };
+}
 
 export async function startAiImport(bankId: string, rightsConfirmed: boolean) {
-  return startBatch(deps, bankId, rightsConfirmed === true);
+  return startBatch(await guardedDeps(), bankId, rightsConfirmed === true);
 }
 
 export async function registerAiImportFile(batchId: string, name: string) {
-  return registerUpload(deps, batchId, name);
+  return registerUpload(await guardedDeps(), batchId, name);
 }
 
 export async function checkAiImportFile(batchId: string, fileId: string) {
-  return checkUpload(deps, batchId, fileId);
+  return checkUpload(await guardedDeps(), batchId, fileId);
 }
 
 export async function removeAiImportFile(batchId: string, fileId: string) {
-  return removeUpload(deps, batchId, fileId);
+  return removeUpload(await guardedDeps(), batchId, fileId);
 }
 
 export async function beginAiImportReading(batchId: string) {
-  return beginParsing(deps, batchId);
+  return beginParsing(await guardedDeps(), batchId);
 }
 
 export async function finishAiImport(batchId: string) {
-  return finishBatch(deps, batchId);
+  return finishBatch(await guardedDeps(), batchId);
 }
