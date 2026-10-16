@@ -17,9 +17,6 @@ export interface CountdownProps {
 /** How often the clock is redrawn. Four times a second keeps a displayed second honest. */
 const REDRAW_MS = 250;
 
-/** The last stretch, when the bar takes the flag colour. The clock's own number says it too. */
-const URGENT_MS = 10_000;
-
 /**
  * The item's countdown (#182), on the console and on every phone.
  *
@@ -36,10 +33,8 @@ const URGENT_MS = 10_000;
  * **Motion.** The bar shrinks by `transform` alone. Each redraw sets a new `scaleX` and a linear
  * transition exactly one redraw long carries it there, so the steps run into each other and the
  * bar drains smoothly on the compositor, with no animation loop in script. Reduced motion drops
- * the transition and the bar steps. In the last ten seconds the bar swaps to the flag amber (a
- * swap, not a colour animation); nothing flashes and nothing turns red, which is reserved for
- * feedback (docs/04-DESIGN-DIRECTION.md). Colour is never the only signal: the clock beside the
- * bar says the same thing in numbers.
+ * the transition and the bar steps. The bar keeps one colour to the end: nothing flashes and
+ * nothing turns red or amber, which are reserved for feedback (docs/04-DESIGN-DIRECTION.md).
  */
 export function Countdown({ timer, now }: CountdownProps) {
   const [at, setAt] = useState(now);
@@ -64,10 +59,9 @@ export function Countdown({ timer, now }: CountdownProps) {
   const whole = timer.seconds === null ? left : timer.seconds * 1_000;
   const share = whole <= 0 ? 0 : Math.min(1, left / whole);
   const word = left === 0 ? "Time is up" : frozen ? "Paused" : "Time left";
-  const urgent = left <= URGENT_MS;
 
   return (
-    <div className="mt-4" data-testid="countdown" data-urgent={urgent ? "true" : undefined}>
+    <div className="mt-4" data-testid="countdown">
       <div className="flex items-baseline justify-between gap-3">
         <p data-testid="countdown-state" className="text-sm text-ink-2">
           {word}
@@ -79,9 +73,7 @@ export function Countdown({ timer, now }: CountdownProps) {
       <div aria-hidden="true" className="mt-2 h-1 overflow-hidden rounded-sm bg-surface-2">
         <div
           data-testid="countdown-bar"
-          className={`h-full origin-left transition-transform ease-linear motion-reduce:transition-none ${
-            urgent ? "bg-flag" : "bg-ink-2"
-          }`}
+          className="h-full origin-left bg-ink-2 transition-transform ease-linear motion-reduce:transition-none"
           style={{ transform: `scaleX(${share})`, transitionDuration: `${REDRAW_MS}ms` }}
         />
       </div>

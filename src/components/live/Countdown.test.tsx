@@ -103,27 +103,18 @@ describe("Countdown", () => {
     // The transition lasts exactly one redraw, so each step runs into the next with no pause.
     expect(bar.style.transitionDuration).toBe("250ms");
     expect(bar).toHaveClass("transition-transform", "ease-linear", "motion-reduce:transition-none");
-    // Only `transform` is transitioned: the colour change below is a swap, not an animation.
+    // Only `transform` is transitioned: motion here is transform and opacity alone.
     expect(bar).not.toHaveClass("transition-colors");
     expect(bar).not.toHaveClass("transition");
   });
 
-  it("turns the bar to the flag colour in the last ten seconds, and not before", () => {
+  it("keeps the bar its one neutral colour to the end: amber and red are for feedback", () => {
     render(<Countdown timer={running(12_000, 30)} now={now} />);
     const bar = screen.getByTestId("countdown-bar");
     expect(bar).toHaveClass("bg-ink-2");
+    tick(10_000);
+    expect(bar).toHaveClass("bg-ink-2");
     expect(bar).not.toHaveClass("bg-flag");
-    expect(screen.getByTestId("countdown")).not.toHaveAttribute("data-urgent");
-
-    tick(2_000);
-    expect(bar).toHaveClass("bg-flag");
-    expect(bar).not.toHaveClass("bg-ink-2");
-    expect(screen.getByTestId("countdown")).toHaveAttribute("data-urgent", "true");
-  });
-
-  it("keeps the flag colour while paused in the last ten seconds", () => {
-    const frozen: ItemTimer = { seconds: 30, endsAt: null, remainingMs: 6_000 };
-    render(<Countdown timer={frozen} now={now} />);
-    expect(screen.getByTestId("countdown-bar")).toHaveClass("bg-flag");
+    expect(bar).not.toHaveClass("bg-incorrect");
   });
 });
