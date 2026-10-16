@@ -371,6 +371,18 @@ describe("StudentRoom: answering the item", () => {
     expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
   });
 
+  it("marks the sent answer with a hidden check that settles in, still announced as words", async () => {
+    const room = setup();
+    room.push({ state: running(), item: KEYLESS, answered: answeredWith() });
+    await renderersLoaded();
+
+    const sent = screen.getByTestId("answer-sent");
+    expect(sent).toHaveAttribute("role", "status");
+    expect(sent).toHaveTextContent(/^Answer sent\.$/);
+    expect(sent.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    expect(sent.querySelector('[data-motion="answer-sent"]')).toHaveClass("motion-arrive");
+  });
+
   it("names the sent answer as one landmark, not a region wrapped round another (#274)", async () => {
     const room = setup();
     room.push({ state: running(), item: KEYLESS, answered: answeredWith() });
