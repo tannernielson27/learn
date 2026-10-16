@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, type KeyboardEvent } from "react";
+import { PRESS_CLASSES } from "./Button";
 
 export interface SegmentedOption<V extends string> {
   value: V;
@@ -68,7 +69,7 @@ export function SegmentedControl<V extends string>({
             aria-checked={selected}
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(option.value)}
-            className={`tap-target rounded-sm ${pad} font-medium transition-[background-color,color] duration-fast ease-out-expo ${
+            className={`tap-target rounded-sm ${pad} font-medium ${PRESS_CLASSES} ${
               selected
                 ? "bg-accent-soft text-accent-ink"
                 : "text-ink-2 hover:bg-surface-2 hover:text-ink-1"

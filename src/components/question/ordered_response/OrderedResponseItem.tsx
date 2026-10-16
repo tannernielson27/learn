@@ -19,6 +19,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { startingIds } from "@/lib/ngn/presentation";
 import { useSilentDndAccessibility } from "../dndAccessibility";
 import type { RichText } from "@/lib/ngn/schemas";
+import { PRESS_CLASSES } from "@/components/ui/Button";
 import { ElementRationale } from "../ElementRationale";
 import { FeedbackIcon, feedbackLabel } from "../OptionRow";
 import type { ElementFeedback, ItemRendererProps, PlayerMode } from "../types";
@@ -259,7 +260,7 @@ function MoveButton({ label, direction, disabled, onMove, buttonRef }: MoveButto
       aria-label={`Move "${label}" ${direction}`}
       disabled={disabled}
       onClick={onMove}
-      className="tap-target inline-flex items-center justify-center rounded-sm border border-line text-ink-2 transition-[background-color,color] duration-fast ease-out-expo hover:bg-surface-2 hover:text-ink-1 disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
+      className={`tap-target inline-flex items-center justify-center rounded-sm border border-line text-ink-2 ${PRESS_CLASSES} hover:bg-surface-2 hover:text-ink-1 disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent`}
     >
       <svg
         aria-hidden="true"
