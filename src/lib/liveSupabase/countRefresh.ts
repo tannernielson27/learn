@@ -24,6 +24,13 @@ import type { Participant } from "@/lib/live";
 /** A few seconds: inside the issue's "right within a few seconds of a join". */
 export const COUNT_REFRESH_MS = 3000;
 
+/**
+ * How many times an ask that failed is made again, an interval apart, before waiting for the next
+ * newcomer or the room's next move. A failed ask for the last arrival would otherwise leave the
+ * waiting screen a few short until the quiz starts.
+ */
+export const COUNT_REFRESH_RETRIES = 3;
+
 /** The clock and the timer, injectable so a test can move time by hand. */
 export interface RefreshTimers {
   now: () => number;
@@ -32,7 +39,8 @@ export interface RefreshTimers {
 }
 
 const REAL_TIMERS: RefreshTimers = {
-  now: () => Date.now(),
+  // Monotonic, so a clock set back does not hold an ask for as long as it was set back.
+  now: () => performance.now(),
   set: (run, ms) => setTimeout(run, ms),
   clear: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
 };
@@ -44,8 +52,12 @@ export interface CountRefresh {
   stop(): void;
 }
 
+/**
+ * `ask` answers whether the database took it (or nothing, when it cannot tell). An ask that
+ * answers false is made again `intervalMs` later, up to `COUNT_REFRESH_RETRIES` times in a row.
+ */
 export function createCountRefresh(
-  ask: () => void,
+  ask: () => Promise<boolean> | void,
   intervalMs: number = COUNT_REFRESH_MS,
   timers: RefreshTimers = REAL_TIMERS,
 ): CountRefresh {
@@ -53,13 +65,29 @@ export function createCountRefresh(
   let lastAsked = Number.NEGATIVE_INFINITY;
   let waiting: unknown = null;
   let stopped = false;
+  let failures = 0;
 
   const askNow = () => {
     waiting = null;
     if (stopped) return;
     lastAsked = timers.now();
-    ask();
+    const answered = ask();
+    if (answered === undefined) return;
+    void answered.then(
+      (ok) => settle(ok),
+      () => settle(false),
+    );
   };
+
+  function settle(ok: boolean): void {
+    if (ok) {
+      failures = 0;
+      return;
+    }
+    failures += 1;
+    if (stopped || waiting !== null || failures > COUNT_REFRESH_RETRIES) return;
+    waiting = timers.set(askNow, intervalMs);
+  }
 
   return {
     saw(roster) {
@@ -72,6 +100,7 @@ export function createCountRefresh(
       }
       // Already waiting to ask: that ask will count this newcomer too.
       if (!someoneNew || waiting !== null) return;
+      failures = 0;
       const wait = lastAsked + intervalMs - timers.now();
       if (wait <= 0) askNow();
       else waiting = timers.set(askNow, wait);

@@ -39,6 +39,12 @@
 -- What this file does not prove is what the hosted Realtime version does; that is the hosted
 -- before/after measurement #426 asks for, pending the load target (#405).
 --
+-- Order: the app deploys before this is pushed, as always. A phone still on the old page joins
+-- with presence on; Realtime then checks both reads and lets it in on `broadcast`
+-- (`broadcast_read? || presence_read?`), so it keeps its channel and only its count stops moving
+-- until it reloads. To undo the policy, put `'presence'` back in the select's `extension in (...)`
+-- as `20260921210000_private_live_channel.sql` wrote it.
+--
 -- Applies on a fresh replay; one column, two functions replaced, one created, one policy replaced.
 
 -- ---------------------------------------------------------------------------
@@ -59,7 +65,9 @@ update live.session_public_state m
   from (select p.session_id, count(*)::integer as joined
           from public.participants p
          group by p.session_id) c
- where c.session_id = m.session_id;
+ where c.session_id = m.session_id
+   -- An ended room's phones have gone, and nothing refreshes it again: no reason to send its row.
+   and m.status <> 'ended';
 
 -- ---------------------------------------------------------------------------
 -- 2. The mirror writes the count with the state
@@ -121,6 +129,10 @@ revoke all on function private.mirror_session_state() from public, anon, authent
 --
 -- Writes the row only when the count has changed and the room has not ended, so a refresh that
 -- finds nothing new sends phones nothing at all.
+--
+-- What it does not cover: a room whose host console is closed. Its phones' count then waits for
+-- the room's next move, and a phone that enters or rejoins still counts correctly from
+-- `open_session_view` below.
 create function public.refresh_participant_count(target uuid) returns void
 language plpgsql security definer set search_path = ''
 as $$
@@ -151,7 +163,7 @@ comment on function public.refresh_participant_count(uuid) is
   'Brings live.session_public_state.participant_count up to date for a session the caller hosts '
   '(#426). Writes, and so sends phones a row, only when the count changed and the room is open.';
 
-revoke all on function public.refresh_participant_count(uuid) from public, anon;
+revoke all on function public.refresh_participant_count(uuid) from public, anon, service_role;
 grant execute on function public.refresh_participant_count(uuid) to authenticated;
 
 -- ---------------------------------------------------------------------------
