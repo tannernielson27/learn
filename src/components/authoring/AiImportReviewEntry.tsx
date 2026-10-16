@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import {
@@ -21,6 +22,8 @@ export interface AiImportReviewEntryProps {
   entry: ReviewEntryView;
   /** "Question 3", or the case study's title. */
   heading: string;
+  /** The entry's edit page (#347); offered for a single question with a type, not dropped. */
+  editHref?: string;
   onDrop: (entry: ReviewEntryView) => EntryChange;
   onRestore: (entry: ReviewEntryView) => EntryChange;
   /** Reads the question again as `type`; resolves once the page has the new reading. */
@@ -46,6 +49,7 @@ type Pending = "drop" | "restore" | "retype" | null;
 export function AiImportReviewEntry({
   entry,
   heading,
+  editHref,
   onDrop,
   onRestore,
   onRetype,
@@ -57,6 +61,8 @@ export function AiImportReviewEntry({
   const choices = retypeChoices(entry);
   const [type, setType] = useState<ItemType | "">("");
   const dropped = entry.status === "dropped";
+  // A case study has its own builder, and a question with no NGN type has no editor.
+  const editable = editHref && entry.kind === "item" && entry.type !== null && !dropped;
 
   async function run(
     kind: Exclude<Pending, null>,
@@ -148,6 +154,15 @@ export function AiImportReviewEntry({
       )}
 
       <div className="flex flex-wrap items-center gap-3">
+        {editable ? (
+          <Link
+            href={editHref}
+            aria-label={`Edit ${heading}`}
+            className="tap-target inline-flex items-center justify-center rounded-sm border border-line bg-surface-1 px-3 text-sm font-medium text-ink-1 transition-colors duration-fast ease-out-expo hover:border-line-strong hover:bg-surface-2 motion-reduce:transition-none"
+          >
+            Edit
+          </Link>
+        ) : null}
         {dropped ? null : (
           <Button
             size="sm"

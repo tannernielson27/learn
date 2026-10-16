@@ -25,6 +25,8 @@ export { issueMessageId };
 export interface SaveResult {
   ok: boolean;
   error?: string;
+  /** What to say once it is saved, when the host has more to say than the editor's own words. */
+  message?: string;
 }
 
 type Status =
@@ -116,7 +118,8 @@ export function EditorShell<Values, Input extends ScoredInput>({
   // Only a valid item has a final maximum; scoringSummary says so instead of guessing.
   const scoring = scoringSummary(input.scoring, valid);
   // A missing rationale blocks publishing (spec §6), so it reads as one more problem to fix.
-  const missingRationale = rationaleProblem(input.rationale);
+  // Saving without publishing never needs it, so a Save-only editor does not ask for it yet.
+  const missingRationale = host.saveOnly ? null : rationaleProblem(input.rationale);
   const problems = missingRationale ? [...issues, missingRationale] : issues;
   const canPublish = valid && !missingRationale;
   // Advice needs a whole item to judge, so it waits until the item is valid.
@@ -216,7 +219,11 @@ export function EditorShell<Values, Input extends ScoredInput>({
     }
     if (result.ok) {
       setSavedSnapshot(JSON.stringify(current));
-      setStatus({ kind: "done", message: doneMessage, shownWith: JSON.stringify(readValues()) });
+      setStatus({
+        kind: "done",
+        message: result.message ?? doneMessage,
+        shownWith: JSON.stringify(readValues()),
+      });
       host.onPublishedChange?.(nowPublished);
     } else {
       setStatus({ kind: "error", message: result.error ?? failMessage });
@@ -416,38 +423,53 @@ export function EditorShell<Values, Input extends ScoredInput>({
         ) : null}
 
         <div className="flex flex-wrap items-center gap-3 border-t border-line pt-4">
-          <Button
-            type="button"
-            disabled={busy}
-            aria-describedby={host.published ? unpublishId : undefined}
-            onClick={() =>
-              run(
-                onSaveDraft,
-                // Saving a draft unpublishes the item, so the message says so.
-                host.published ? "Saved as a draft. Publish to use it again." : "Draft saved.",
-                "The draft could not be saved. Try again.",
-                false,
-              )
-            }
-          >
-            Save draft
-          </Button>
-          <Button
-            type="button"
-            variant="primary"
-            aria-disabled={!canPublish || busy}
-            onClick={() => {
-              if (!canPublish || busy) return;
-              void run(
-                (current) => onPublish(toInput(current)),
-                "Published.",
-                "The question could not be published. Try again.",
-                true,
-              );
-            }}
-          >
-            Publish
-          </Button>
+          {host.saveOnly ? (
+            <Button
+              type="button"
+              variant="primary"
+              disabled={busy}
+              onClick={() =>
+                run(onSaveDraft, "Saved.", "The question could not be saved. Try again.", false)
+              }
+            >
+              Save
+            </Button>
+          ) : (
+            <>
+              <Button
+                type="button"
+                disabled={busy}
+                aria-describedby={host.published ? unpublishId : undefined}
+                onClick={() =>
+                  run(
+                    onSaveDraft,
+                    // Saving a draft unpublishes the item, so the message says so.
+                    host.published ? "Saved as a draft. Publish to use it again." : "Draft saved.",
+                    "The draft could not be saved. Try again.",
+                    false,
+                  )
+                }
+              >
+                Save draft
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                aria-disabled={!canPublish || busy}
+                onClick={() => {
+                  if (!canPublish || busy) return;
+                  void run(
+                    (current) => onPublish(toInput(current)),
+                    "Published.",
+                    "The question could not be published. Try again.",
+                    true,
+                  );
+                }}
+              >
+                Publish
+              </Button>
+            </>
+          )}
           {isDirty ? <p className="text-sm text-ink-2">Unsaved changes</p> : null}
           {status.kind === "done" && status.shownWith === valuesJson ? (
             <p role="status" className="text-sm text-ink-2">

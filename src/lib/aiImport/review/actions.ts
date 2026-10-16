@@ -35,10 +35,10 @@ const logged = (step: string, error: { code?: string } | null) => {
 };
 
 /** The entry and its batch's status, read with the teacher's own session. */
-async function readEntry(
+export async function readEntry(
   client: Client,
   orgId: string,
-  input: EntryActionInput,
+  input: Pick<EntryActionInput, "batchId" | "entryId">,
 ): Promise<{ row: EntryRow; batchStatus: string } | "not_found" | "unavailable"> {
   const [entry, batch] = await Promise.all([
     client
