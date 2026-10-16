@@ -162,4 +162,14 @@ describe("ordered response renderer", () => {
     expect(within(panel).getByText("/ 4")).toBeInTheDocument();
     expect(within(panel).getByText(/Each step in its correct position/)).toBeInTheDocument();
   });
+
+  it("presses the move buttons in, and a disabled one stays disabled so it does not", async () => {
+    render(<ItemPlayer item={wholeItem} submit={scoreInProcess(wholeItem)} />);
+    await renderersLoaded();
+    const first = order()[0]!;
+    expect(down(first)).toHaveClass("press");
+    // The press rule skips :disabled (globals.css), so the top step's up button never sinks.
+    expect(up(first)).toBeDisabled();
+    expect(up(first)).toHaveClass("press");
+  });
 });
