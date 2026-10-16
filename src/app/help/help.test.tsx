@@ -60,6 +60,7 @@ describe("/help/instructor", () => {
   const SECTIONS = [
     ["sign-in", "Sign up and sign in"],
     ["banks", "Create or import a quiz"],
+    ["ai-import", "Import questions with AI"],
     ["items", "Write questions"],
     ["classes", "Create a class and invite students"],
     ["assign", "Assign a quiz"],
@@ -95,6 +96,10 @@ describe("/help/instructor", () => {
       "colleagues",
       "import",
       "folders",
+      "ai-import-review",
+      "ai-import-fix",
+      "ai-import-finish",
+      "ai-import-limits",
       "publish",
       "history",
       "case-studies",
@@ -115,6 +120,29 @@ describe("/help/instructor", () => {
       const topic = container.querySelector(`#${id}`) as HTMLElement;
       expect(within(topic).getByRole("heading", { level: 3 })).toBeInTheDocument();
     }
+  });
+
+  // #349: what AI import does, and what it will not do, in a teacher's words.
+  it("says what AI import reads, flags and leaves out", () => {
+    const { container } = render(<InstructorGuide />);
+    const section = container.querySelector("section#ai-import") as HTMLElement;
+    for (const words of [
+      /PDF, Word \.docx, Markdown or text/,
+      /never writes an answer or a rationale/,
+      /no real patient information/,
+      /Needs an answer/,
+      /Needs a fix/,
+      /Not importable/,
+      /Pictures are not imported/,
+      /monthly allowance/,
+      /uploaded files are deleted/,
+    ]) {
+      expect(section).toHaveTextContent(words);
+    }
+    expect(within(section).getByRole("img")).toHaveAttribute(
+      "alt",
+      expect.stringMatching(/review/i),
+    );
   });
 
   it("gives every image alt text and its size", () => {

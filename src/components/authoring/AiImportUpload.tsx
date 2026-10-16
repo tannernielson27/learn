@@ -357,6 +357,14 @@ export function AiImportUpload({
               questions in all. Claude copies the questions; nothing reaches {quizName} until you
               review it.
             </p>
+            <p className="text-sm">
+              <Link
+                href="/help/instructor#ai-import"
+                className="text-accent-ink underline underline-offset-4 hover:no-underline"
+              >
+                How AI import works
+              </Link>
+            </p>
           </div>
           {batchId ? null : (
             <label className="tap-target flex items-start gap-3 text-sm text-ink-1">

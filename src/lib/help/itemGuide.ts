@@ -244,4 +244,12 @@ export const HELP_FIGURES = {
     height: 469,
     alt: "Live results for a select-all-that-apply question: each option with a bar and a count such as 3 of 5, 60%, and a note that 1 student chose no option. Nothing is marked correct.",
   },
+  // #349: from the gallery's AI import review (no question in it has a key).
+  aiImportReview: {
+    src: "help/ai-import-review.png",
+    baseline: "desktop-1280/ai-import-review.png",
+    width: 0,
+    height: 0,
+    alt: "The review screen of an AI import: a disabled Import 2 questions button with what holds it back, then three questions marked Needs an answer, Needs a fix and Not importable, each with what to check and buttons to edit, show the source or drop it.",
+  },
 } as const satisfies Record<string, HelpFigure>;

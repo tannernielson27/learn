@@ -82,6 +82,23 @@ describe("AiImportUpload", () => {
     expect(act.start).not.toHaveBeenCalled();
   });
 
+  // #349: what the AI will and will not do is in the teacher guide, one link away.
+  it("links to the teacher guide's AI import section", () => {
+    render(
+      <AiImportUpload
+        bankId={BANK}
+        quizName="Cardiac"
+        allowance={null}
+        initial={null}
+        actions={actions()}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "How AI import works" })).toHaveAttribute(
+      "href",
+      "/help/instructor#ai-import",
+    );
+  });
+
   it("uploads, reads each part and finds the questions, then refreshes for review", async () => {
     const act = actions();
     render(

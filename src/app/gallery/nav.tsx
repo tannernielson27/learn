@@ -18,6 +18,7 @@ const COMPOSITES = [
   { href: "/gallery/case-study", label: "Case study" },
   { href: "/gallery/trend", label: "Trend item" },
   { href: "/gallery/live", label: "Fake room" },
+  { href: "/gallery/ai-import", label: "AI import review" },
 ] as const;
 
 export function GalleryNav() {
