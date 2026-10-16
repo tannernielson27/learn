@@ -88,11 +88,12 @@ test("a teacher imports a document with AI, fixes a question, and publishes it",
     const card = blocking.first();
     const name = await card.getByRole("heading", { level: 3 }).innerText();
     await card.getByRole("button", { name: "Drop", exact: true }).click();
-    await expect(
-      cards
-        .filter({ has: page.getByRole("heading", { level: 3, name, exact: true }) })
-        .getByTestId("entry-status"),
-    ).toHaveText("Dropped");
+    const dropped = cards.filter({
+      has: page.getByRole("heading", { level: 3, name, exact: true }),
+    });
+    await expect(dropped.getByTestId("entry-status")).toHaveText("Dropped");
+    // Settled: the drop has answered and the card offers Restore, enabled.
+    await expect(dropped.getByRole("button", { name: "Restore", exact: true })).toBeEnabled();
     await expect(blocking).toHaveCount(left - 1);
   }
   await expect(importButton).toBeEnabled();
