@@ -26,7 +26,16 @@ export function Roster({ roster }: RosterProps) {
           In this session
         </h2>
         <p data-testid="present-count" aria-live="polite" className="tabular text-sm text-ink-2">
-          {present} {present === 1 ? "phone" : "phones"} connected
+          {/* Keyed on the number, so only this span remounts and settles in when it changes: one
+              CSS animation however many join, no JS loop, and the rows below keep their mounts. */}
+          <span
+            key={present}
+            data-motion="present-count"
+            className="motion-settle inline-block motion-reduce:animate-none"
+          >
+            {present}
+          </span>{" "}
+          {present === 1 ? "phone" : "phones"} connected
         </p>
       </div>
 

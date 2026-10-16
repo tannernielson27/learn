@@ -47,7 +47,15 @@ export function RoomCount({ present }: { present: PresentCount }) {
   const count = useSyncExternalStore(present.subscribe, present.read, present.read);
   return (
     <p data-testid="room-count" className="tabular mt-8 text-sm text-ink-2">
-      {count} in this session
+      {/* Keyed on the number, so a join or a leave settles the number in and nothing else. */}
+      <span
+        key={count}
+        data-motion="room-count"
+        className="motion-settle inline-block motion-reduce:animate-none"
+      >
+        {count}
+      </span>{" "}
+      in this session
     </p>
   );
 }
