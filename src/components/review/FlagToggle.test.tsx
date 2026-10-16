@@ -36,4 +36,11 @@ describe("FlagToggle", () => {
     await userEvent.keyboard(" ");
     expect(button).toHaveAttribute("aria-pressed", "true");
   });
+
+  it("presses in like a Button, flagged or not", () => {
+    const { rerender } = render(<FlagToggle flagged={false} label="step 2" onChange={() => {}} />);
+    expect(screen.getByRole("button", { name: "Flag step 2" })).toHaveClass("press");
+    rerender(<FlagToggle flagged label="step 2" onChange={() => {}} />);
+    expect(screen.getByRole("button", { name: "Flag step 2" })).toHaveClass("press");
+  });
 });

@@ -155,4 +155,14 @@ describe("TagFilterBar", () => {
     );
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("presses its chips in like a Button, chosen or not", () => {
+    const bar = setup({ tags: ["Physiological Adaptation"], step: null });
+    expect(
+      within(bar).getByRole("link", {
+        name: "Remove filter Physiological Adaptation, 2 questions",
+      }),
+    ).toHaveClass("press");
+    expect(within(bar).getByRole("link", { name: "sepsis, 1 question" })).toHaveClass("press");
+  });
 });

@@ -28,4 +28,9 @@ describe("SegmentedControl", () => {
     await userEvent.keyboard("{ArrowLeft}");
     expect(onChange).toHaveBeenCalledWith("light");
   });
+
+  it("presses each segment in like a Button", () => {
+    render(<SegmentedControl label="Theme" options={options} value="system" onChange={() => {}} />);
+    for (const radio of screen.getAllByRole("radio")) expect(radio).toHaveClass("press");
+  });
 });
