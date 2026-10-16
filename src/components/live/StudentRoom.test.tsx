@@ -496,6 +496,41 @@ describe("StudentRoom: the reveal", () => {
     expect(screen.queryByText("The answer is showing.")).toBeNull();
   });
 
+  it("settles the reveal in: the score panel lifts and its points settle", async () => {
+    const room = setup();
+    room.push({
+      state: running({ reveal: true }),
+      item: KEYLESS,
+      answered: answeredWith(),
+      revealed: revealFor({ points: 3, maxPoints: 3, model: "plus_minus", breakdown: [] }),
+    });
+    await renderersLoaded();
+
+    // The panel lifts in and the number settles; both are transform and opacity only.
+    const score = screen.getByRole("complementary", { name: "Score" });
+    expect(score.className).toContain("animate-[fade-up_");
+    expect(score.querySelector(".motion-settle")).not.toBeNull();
+  });
+
+  it("settles the not-answered line in, and reduced motion turns that off", async () => {
+    const room = setup();
+    room.push({
+      state: running({ reveal: true }),
+      item: KEYLESS,
+      answered: null,
+      revealed: revealFor(null),
+    });
+    await renderersLoaded();
+
+    expect(screen.getByTestId("not-answered")).toHaveClass(
+      "motion-settle",
+      "motion-reduce:animate-none",
+    );
+    expect(screen.getByRole("complementary", { name: "Rationale" }).className).toContain(
+      "animate-[fade-up_",
+    );
+  });
+
   it("shows the same phone no key before the reveal: the control", async () => {
     const room = setup();
     room.push({ state: running(), item: KEYLESS, answered: null, revealed: null });

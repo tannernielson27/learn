@@ -15,6 +15,8 @@
   --ink-2: oklch(44% 0.012 260);
   --line: oklch(88% 0.006 85);
   --line-strong: oklch(72% 0.01 260);
+  /* A text field's edge: 3:1 against the field and the page (WCAG 1.4.11). */
+  --line-field: oklch(62% 0.01 260);
 
   /* Clinical blue: interaction and selection only */
   --accent: oklch(44% 0.12 250);
@@ -90,6 +92,7 @@
     --ink-2: oklch(72% 0.01 260);
     --line: oklch(32% 0.012 260);
     --line-strong: oklch(48% 0.012 260);
+    --line-field: oklch(56% 0.012 260);
 
     --accent: oklch(76% 0.1 250);
     --accent-ink: oklch(82% 0.09 250);
@@ -113,6 +116,7 @@
   --ink-2: oklch(72% 0.01 260);
   --line: oklch(32% 0.012 260);
   --line-strong: oklch(48% 0.012 260);
+  --line-field: oklch(56% 0.012 260);
 
   --accent: oklch(76% 0.1 250);
   --accent-ink: oklch(82% 0.09 250);

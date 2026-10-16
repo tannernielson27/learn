@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type Ref } from "react";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 
 export interface PasswordFieldProps {
   id: string;
@@ -54,7 +55,7 @@ export function PasswordField({
           maxLength={72}
           aria-invalid={invalid ? true : undefined}
           aria-describedby={describedBy}
-          className="tap-target w-full rounded-sm border border-line bg-surface-1 pr-18 pl-3 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect"
+          className={fieldClasses("pr-18 pl-3 text-base")}
         />
         <button
           type="button"

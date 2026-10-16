@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useId, useRef } from "react";
 import { Button } from "@/components/ui/Button";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 import { PasswordField } from "./PasswordField";
 
 export type PasswordSignInState =
@@ -19,8 +20,7 @@ export interface PasswordSignInFormProps {
 }
 
 const INITIAL: PasswordSignInState = { status: "idle" };
-const FIELD =
-  "tap-target w-full rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect";
+const FIELD = fieldClasses("px-3 text-base");
 
 /** Email and password, one tap to sign in. The everyday way in; the emailed link is the spare key. */
 export function PasswordSignInForm({

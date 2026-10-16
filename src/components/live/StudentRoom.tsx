@@ -412,7 +412,10 @@ export function RevealedItem({
     return (
       <div className="mt-8">
         {revealed.score === null ? (
-          <p data-testid="not-answered" className="measure mb-4 text-sm text-ink-2">
+          <p
+            data-testid="not-answered"
+            className="measure motion-settle mb-4 text-sm text-ink-2 motion-reduce:animate-none"
+          >
             {NOT_ANSWERED}
           </p>
         ) : null}

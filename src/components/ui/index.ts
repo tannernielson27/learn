@@ -1,4 +1,5 @@
 export { Button, buttonClasses, PRESS_CLASSES, type ButtonProps } from "./Button";
+export { FIELD_CLASSES, fieldClasses } from "./fieldClasses";
 export { Dialog, type DialogProps, type DialogSteps } from "./Dialog";
 export {
   SegmentedControl,
@@ -7,6 +8,14 @@ export {
 } from "./SegmentedControl";
 export { Tabs, type TabItem, type TabsProps } from "./Tabs";
 export { Surface, type SurfaceProps } from "./Surface";
+export {
+  Skeleton,
+  SkeletonLine,
+  SkeletonScreen,
+  type SkeletonLineProps,
+  type SkeletonProps,
+  type SkeletonScreenProps,
+} from "./Skeleton";
 export {
   EmptyState,
   type EmptyStateAction,

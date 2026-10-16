@@ -11,6 +11,7 @@
   --color-ink-2: var(--ink-2);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
+  --color-line-field: var(--line-field);
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
