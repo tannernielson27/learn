@@ -3,6 +3,7 @@
 import { useId } from "react";
 import type { RichText } from "@/lib/ngn/schemas";
 import { ElementRationale } from "../ElementRationale";
+import { feedbackMarkClasses } from "../feedbackMarks";
 import { useFeedbackWordClass } from "../FeedbackWords";
 import { FeedbackIcon, feedbackLabel } from "../OptionRow";
 import type { ElementFeedback, PlayerMode } from "../types";
@@ -33,16 +34,13 @@ export interface MatrixProps {
   onToggle: (rowId: string, columnId: string) => void;
 }
 
-const cellFeedback: Record<ElementFeedback, string> = {
-  neutral: "",
-  correct: "border-correct bg-correct-soft",
-  incorrect: "border-incorrect bg-incorrect-soft",
-  missed: "border-dashed border-correct",
-};
-
+/**
+ * The cell's border colour and fill. The colour is set here and nowhere else on the cell: a second
+ * border colour beside it (the old `border-transparent` base) won the cascade and hid the marks.
+ */
 function stateClasses(checked: boolean, feedback: ElementFeedback, mode: PlayerMode): string {
-  if (mode === "feedback") return cellFeedback[feedback];
-  return checked ? "border-accent bg-accent-soft" : "";
+  if (mode === "feedback") return feedbackMarkClasses(feedback, "border-transparent");
+  return checked ? "border-accent bg-accent-soft" : "border-transparent";
 }
 
 /**
@@ -111,7 +109,15 @@ function MatrixGrid({
   const interactive = mode === "answer";
   return (
     // Padding cancelled by the margin, so the scroll box does not clip a control's focus ring.
-    <div className="-m-1 hidden overflow-x-auto p-1 md:block">
+    // Once the controls are read-only nothing in it takes focus, and the marks' words can widen it
+    // past a tablet's width, so the box itself is then a tab stop a keyboard can scroll (axe:
+    // scrollable-region-focusable).
+    <div
+      tabIndex={interactive ? undefined : 0}
+      role={interactive ? undefined : "group"}
+      aria-label={interactive ? undefined : caption}
+      className="-m-1 hidden overflow-x-auto p-1 md:block"
+    >
       <table className="w-full border-collapse text-left">
         <caption className="sr-only">{caption}</caption>
         <thead>
@@ -151,7 +157,7 @@ function MatrixGrid({
                     <td key={column.id} className="p-1 align-middle">
                       <label
                         htmlFor={inputId}
-                        className={`tap-target flex w-full items-center justify-center gap-1.5 rounded-sm border border-transparent transition-[background-color,border-color] duration-fast ease-out-expo ${
+                        className={`tap-target flex w-full items-center justify-center gap-1.5 rounded-sm border transition-[background-color,border-color] duration-fast ease-out-expo ${
                           interactive ? "cursor-pointer hover:bg-surface-2" : "cursor-default"
                         } ${stateClasses(checked, feedback, mode)}`}
                       >
@@ -237,7 +243,7 @@ function MatrixCards({
                   <label
                     key={column.id}
                     htmlFor={inputId}
-                    className={`option tap-target flex items-center gap-3 border border-transparent px-3 py-2 transition-[background-color,border-color] duration-fast ease-out-expo ${
+                    className={`option tap-target flex items-center gap-3 border px-3 py-2 transition-[background-color,border-color] duration-fast ease-out-expo ${
                       interactive ? "cursor-pointer hover:bg-surface-2" : "cursor-default"
                     } ${stateClasses(checked, feedback, mode)}`}
                   >

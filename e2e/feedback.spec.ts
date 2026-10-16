@@ -118,6 +118,60 @@ const INLINE: {
   },
 ];
 
+/** Ticks the first choice in each row: some right, some wrong, and the rest of the key missed. */
+async function firstInEachRow(page: Page) {
+  const names = await page
+    .locator("input[type=radio]:visible, input[type=checkbox]:visible")
+    .evaluateAll((inputs) => [...new Set(inputs.map((input) => input.getAttribute("name")))]);
+  for (const name of names) await page.locator(`input[name="${name}"]:visible`).first().check();
+}
+
+/** Picks the first choice in odd drop-downs and the second in even ones, so some are wrong. */
+async function alternateInEachSelect(page: Page) {
+  const selects = page.locator("select:visible");
+  const count = await selects.count();
+  for (let i = 0; i < count; i += 1) await selects.nth(i).selectOption({ index: 1 + (i % 2) });
+}
+
+const inlineAnswer = (type: string) => INLINE.find((c) => c.type === type)!.answer;
+
+// #325: one feedback mark across item types (docs/04 §4). Each answer leaves a mix of right, wrong
+// and missed elements, so the baseline shows every mark the type can draw.
+const MARKS: { type: string; answer: (page: Page) => Promise<void> }[] = [
+  { type: "matrix_multiple_choice", answer: firstInEachRow },
+  { type: "matrix_multiple_response", answer: firstInEachRow },
+  { type: "dropdown_cloze", answer: alternateInEachSelect },
+  { type: "dropdown_rationale", answer: alternateInEachSelect },
+  { type: "dropdown_table", answer: alternateInEachSelect },
+  { type: "dragdrop_cloze", answer: inlineAnswer("dragdrop_cloze") },
+  { type: "dragdrop_rationale", answer: inlineAnswer("dragdrop_rationale") },
+  { type: "bowtie", answer: inlineAnswer("bowtie") },
+];
+
+for (const { type, answer } of MARKS) {
+  test(`${type}: feedback marks`, async ({ page }, testInfo) => {
+    await ready(page, type);
+    await questionShown(page);
+    await answer(page);
+    await page.getByRole("button", { name: "Submit" }).click();
+    await expect(page.getByRole("complementary", { name: "Score" })).toBeVisible();
+
+    await page.screenshot({
+      path: `test-results/screenshots/${testInfo.project.name}/feedback-marks-${type}.png`,
+      fullPage: true,
+    });
+    if (process.env.CI) {
+      await expect(page).toHaveScreenshot(`feedback-marks-${type}.png`, { fullPage: true });
+    }
+    const { violations } = await new AxeBuilder({ page }).analyze();
+    expect(
+      violations
+        .filter((v) => v.impact === "serious" || v.impact === "critical")
+        .map((v) => `${v.id}: ${v.help}`),
+    ).toEqual([]);
+  });
+}
+
 for (const { type, answer, control, why } of INLINE) {
   test(`${type}: feedback explains each element where it is`, async ({ page }, testInfo) => {
     await ready(page, type);

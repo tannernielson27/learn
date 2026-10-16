@@ -9,6 +9,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { useRef, type KeyboardEvent } from "react";
+import { feedbackMarkClasses } from "../feedbackMarks";
 import { FeedbackIcon, feedbackLabel } from "../OptionRow";
 import type { ElementFeedback, PlayerMode } from "../types";
 import { useFeedbackWordClass } from "../FeedbackWords";
@@ -50,13 +51,6 @@ export function useDragClickGuard() {
     },
   };
 }
-
-export const slotFeedbackClasses: Record<ElementFeedback, string> = {
-  neutral: "border-line-strong",
-  correct: "border-correct bg-correct-soft",
-  incorrect: "border-incorrect bg-incorrect-soft",
-  missed: "border-dashed border-correct",
-};
 
 interface WordChipProps {
   token: BankToken;
@@ -143,7 +137,7 @@ export function DropSlot(props: DropSlotProps) {
         onKeyDown={onKeyDown}
         className={`tap-target inline-flex max-w-full items-center rounded-sm border-2 px-3 text-left leading-snug text-ink-1 transition-[background-color,border-color] duration-fast ease-out-expo disabled:cursor-default ${
           block ? "h-20 min-w-0 flex-1 justify-start text-sm" : "min-w-32 justify-center text-base"
-        } ${mode === "feedback" ? slotFeedbackClasses[feedback] : answerClasses}`}
+        } ${mode === "feedback" ? feedbackMarkClasses(feedback, "border-line-strong") : answerClasses}`}
       >
         {label ? (
           // Keyed by the choice, so a newly placed choice eases in (the drop settling).
