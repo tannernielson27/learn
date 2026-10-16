@@ -55,6 +55,13 @@
 @utility tabular {
   font-variant-numeric: tabular-nums;
 }
+/* A control held down sinks slightly (Button, and links that look like one). Not while disabled,
+   and not under reduced motion, which sets --press-scale to 1. */
+@utility press {
+  &:active:not(:disabled, [aria-disabled="true"]) {
+    scale: var(--press-scale);
+  }
+}
 /* For strips that carry their own paging control, so the bar is not a second, uglier one. */
 @utility no-scrollbar {
   scrollbar-width: none;

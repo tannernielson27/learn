@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { PRESS_CLASSES } from "@/components/ui/Button";
 import type { LandingEntry } from "@/lib/auth/landing";
 
 /**
@@ -17,10 +18,8 @@ const SAMPLE = {
     "which findings in the 1400 nurses' note need immediate follow-up.",
 } as const;
 
-const PRIMARY =
-  "tap-target inline-flex items-center justify-center rounded-sm border border-accent bg-accent px-5 font-medium text-accent-contrast transition-colors duration-fast hover:bg-accent-ink";
-const SECONDARY =
-  "tap-target inline-flex items-center justify-center rounded-sm border border-line-strong bg-surface-1 px-5 font-medium text-ink-1 transition-colors duration-fast hover:bg-surface-2";
+const PRIMARY = `tap-target inline-flex items-center justify-center rounded-sm border border-accent bg-accent px-5 font-medium text-accent-contrast hover:bg-accent-ink ${PRESS_CLASSES}`;
+const SECONDARY = `tap-target inline-flex items-center justify-center rounded-sm border border-line-strong bg-surface-1 px-5 font-medium text-ink-1 hover:bg-surface-2 ${PRESS_CLASSES}`;
 
 /** One line each (#416). Every claim is something the product does today. */
 const WHAT_IT_DOES = [

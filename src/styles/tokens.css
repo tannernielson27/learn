@@ -73,6 +73,8 @@
   --motion-shift: 8px;
   --motion-scale: 0.96;
   --stagger-step: 40ms;
+  /* How far a held-down button sinks. */
+  --press-scale: 0.97;
 
   /* Layout */
   --tap-min: 44px;
@@ -134,5 +136,6 @@
     --motion-shift: 0px;
     --motion-scale: 1;
     --stagger-step: 0ms;
+    --press-scale: 1;
   }
 }

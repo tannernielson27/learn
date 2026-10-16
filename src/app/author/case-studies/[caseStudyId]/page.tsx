@@ -23,7 +23,7 @@ import { editorFor, storedItemOf } from "@/components/authoring/editorFor";
 import { ItemEditorLoader } from "@/components/authoring/ItemEditorLoader";
 import { StepItemPanel } from "@/components/authoring/StepItemPanel";
 import { StepTypeChooser } from "@/components/authoring/StepTypeChooser";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClasses } from "@/components/ui/Button";
 import { caseStudyBlockers, stepsReadyLabel } from "@/lib/authoring/caseStudyReadiness";
 import { ehrFormFromStored, previewRecord } from "@/lib/authoring/forms/ehr";
 import { isUuid } from "@/lib/authoring/ids";
@@ -145,7 +145,7 @@ export default async function CaseStudyPage({
         {row.status === "published" ? (
           <Link
             href={assignmentPath({ kind: "case_study", id: row.id })}
-            className="tap-target inline-flex items-center rounded-sm border border-line bg-surface-1 px-3 text-sm font-medium text-ink-1 hover:border-line-strong hover:bg-surface-2"
+            className={buttonClasses({ size: "sm" })}
           >
             Assign
           </Link>

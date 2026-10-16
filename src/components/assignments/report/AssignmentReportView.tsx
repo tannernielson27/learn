@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LocalTime } from "@/components/assignments/LocalTime";
 import { ItemTable, StepTable } from "@/components/live/report/ReportTables";
+import { buttonClasses } from "@/components/ui/Button";
 import { assignmentReportCsvPath, assignmentReportPath } from "@/lib/assignments/assignments";
 import type { AssignmentReport } from "@/lib/assignments/report";
 import { classPath } from "@/lib/classes/classes";
@@ -64,11 +65,7 @@ export function AssignmentReportView({
           </p>
         </div>
         {report.released ? (
-          <a
-            href={assignmentReportCsvPath(assignmentId)}
-            download
-            className="tap-target inline-flex items-center rounded-sm border border-line bg-surface-1 px-4 font-medium text-ink-1 transition-colors duration-fast hover:border-line-strong hover:bg-surface-2"
-          >
+          <a href={assignmentReportCsvPath(assignmentId)} download className={buttonClasses()}>
             Download CSV
           </a>
         ) : null}

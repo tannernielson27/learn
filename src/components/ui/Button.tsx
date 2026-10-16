@@ -8,10 +8,17 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
 }
 
+/**
+ * The press: a control sinks a little under the finger or the pointer while it is held down
+ * (`press` in globals.css). Transform only, so nothing around it moves; reduced motion turns it
+ * off through `--press-scale`. Exported for links that look like buttons, so both feel the same.
+ */
+export const PRESS_CLASSES =
+  "press transition-[background-color,border-color,color,opacity,scale] duration-fast ease-out-expo";
+
 const base =
   "inline-flex items-center justify-center gap-2 rounded-sm font-medium select-none " +
-  "transition-[background-color,border-color,color,opacity] duration-fast ease-out-expo " +
-  "disabled:cursor-not-allowed disabled:opacity-50 tap-target";
+  `${PRESS_CLASSES} disabled:cursor-not-allowed disabled:opacity-50 tap-target`;
 
 const variants: Record<ButtonVariant, string> = {
   primary:
@@ -26,6 +33,17 @@ const sizes: Record<ButtonSize, string> = {
   md: "px-4 text-base",
 };
 
+/**
+ * The classes a `Button` wears, for a `Link` or a download `<a>` that should look and press like
+ * one. A link is still a link: this changes how it looks, not what it is.
+ */
+export function buttonClasses({
+  variant = "secondary",
+  size = "md",
+}: { variant?: ButtonVariant; size?: ButtonSize } = {}): string {
+  return `${base} ${variants[variant]} ${sizes[size]}`;
+}
+
 export function Button({
   variant = "secondary",
   size = "md",
@@ -36,7 +54,7 @@ export function Button({
   return (
     <button
       type={type}
-      className={`${base} ${variants[variant]} ${sizes[size]} ${className}`.trim()}
+      className={`${buttonClasses({ variant, size })} ${className}`.trim()}
       {...rest}
     />
   );

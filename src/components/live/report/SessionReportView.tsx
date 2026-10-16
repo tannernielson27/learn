@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { buttonClasses } from "@/components/ui/Button";
 import type { SessionReport } from "@/lib/live/report";
 import {
   REPORT_VIEWS,
@@ -54,11 +55,7 @@ export function SessionReportView({
             {report.items.length === 1 ? "1 question" : `${report.items.length} questions`}
           </p>
         </div>
-        <a
-          href={reportCsvPath(sessionId)}
-          download
-          className="tap-target inline-flex items-center rounded-sm border border-line bg-surface-1 px-4 font-medium text-ink-1 transition-colors duration-fast hover:border-line-strong hover:bg-surface-2"
-        >
+        <a href={reportCsvPath(sessionId)} download className={buttonClasses()}>
           Download CSV
         </a>
       </header>

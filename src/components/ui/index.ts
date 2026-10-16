@@ -1,4 +1,4 @@
-export { Button, type ButtonProps } from "./Button";
+export { Button, buttonClasses, PRESS_CLASSES, type ButtonProps } from "./Button";
 export { Dialog, type DialogProps, type DialogSteps } from "./Dialog";
 export {
   SegmentedControl,
