@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  importedSentence,
   REVIEW_FILTERS,
   filterCounts,
   groupByFile,
@@ -225,5 +226,15 @@ describe("retypeChoices", () => {
     expect(choices[0]).toEqual({ value: "multiple_response", label: "Extended Multiple Response" });
     expect(retypeChoices(entry({ kind: "case_study", type: null }))).toEqual([]);
     expect(retypeChoices(entry({ status: "not_importable", type: null }))).toHaveLength(14);
+  });
+});
+
+describe("importedSentence", () => {
+  it("says what went into the quiz", () => {
+    expect(importedSentence(3, 1, "Cardiac")).toBe(
+      "3 questions and 1 case study were added to Cardiac as drafts.",
+    );
+    expect(importedSentence(1, 0, "Cardiac")).toBe("1 question was added to Cardiac as a draft.");
+    expect(importedSentence(0, 2, "Renal")).toBe("2 case studies were added to Renal as drafts.");
   });
 });

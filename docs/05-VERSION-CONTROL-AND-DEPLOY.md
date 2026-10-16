@@ -201,6 +201,7 @@ Everything in `supabase/migrations/` today, in filename order — this is the re
 | 53  | `20261014300000_move_between_quizzes`           | move questions between quizzes, and turn an in-quiz folder into a quiz (#417)           | applied (2026-10-14)       |
 | 54  | `20261015000000_ai_import`                      | AI import batches, staged entries, a monthly cap per workspace, a private bucket        | applied (2026-10-15)       |
 | 55  | `20261015005000_ai_import_segments`             | each chunk's segment answer; one staged entry per place; a batch's source matter (#343) | applied (2026-10-15)       |
+| 56  | `20261015010000_ai_import_commit`               | import a reviewed batch at once, discard it, sweep open batches after 7 days (#348)     | **not applied**            |
 
 Checked 2026-09-24 with `pnpm exec supabase migration list --linked`: rows 1–38 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged, row 23 straight after #220, row 24 straight after #222, row 25 straight after #224, row 26 straight after #226, row 27 straight after #228, row 28 straight after #230, row 29 straight after #245, row 30 after #247 and row 31 after #251 and row 32 after #254 and row 33 after #255 and row 34 after #257 and row 35 after #258 and row 36 after #261, all on 2026-09-24; the owner pushed row 37 (#284) on 2026-09-26, about a day after its merge, because the permission classifier refused the orchestrator's push, and row 38 straight after #286 the same day). Checked 2026-09-26. Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
 
@@ -392,7 +393,10 @@ Until the §7.3 split there is one project and one job, pointed at the productio
    select vault.create_secret('<secret>', 'learn_cron_secret');
    select cron.schedule('learn-assignment-reminders', '*/15 * * * *', $$select private.call_reminder_route()$$);
    select private.schedule_rate_limit_sweep();
+   select private.schedule_ai_import_sweep();
    ```
+
+   The newest line schedules `learn-ai-import-sweep` (#348): daily at 03:23 UTC it deletes AI import batches still open and untouched for 7 days. Like the rate-limit sweep it needs only pg_cron, is scheduled by its own migration where pg_cron is already on, and is idempotent.
 
    The last line schedules the second job, `learn-rate-limit-sweep` (#248): every 5 minutes it deletes up to 5000 expired rows from `private.shared_rate_limits`, the sign-in, invite and cron limiter of #234, so a flood from many addresses cannot grow that table faster than the limiter's own cleanup. It needs no URL and no secret, only pg_cron. It answers `scheduled`, or `updated` when its migration (`20260925050000_rate_limit_sweep`) already scheduled it (the migration does that on a project where pg_cron was on before it was applied), or `no_pg_cron` when step 3 is not done. Running it again never makes a second job: it resets the existing one and switches it back on.
 

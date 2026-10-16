@@ -31,7 +31,7 @@ The constraints: a Vercel Hobby function per request, the 1 MB Server Action bod
 6. **Normalize, validate, repair:** `src/lib/ngn/draft/<type>.ts` turns a draft into a `learn.v1` item deterministically (pure, fixture-tested, inside the 90% gate). The result must pass `itemSchema`, then `itemQualityWarnings` runs. On failure Claude gets one repair attempt with the error paths; after that the entry is kept as `needs_fix`.
 7. **Stage:** every question becomes a staged entry: `ready`, `needs_answer` (no key in the source), `needs_fix`, or `not_importable` (open prompts, matching, recall, anything without an NGN type), with the reason and the source excerpt.
 8. **Review:** the teacher sees each entry rendered by the real question components, its warnings, and its source side by side. They can change its type (one re-extract), edit it with the existing editors (`EditorShell`'s `onSaveDraft` points at the staged entry), or drop it.
-9. **Import:** one call writes every accepted entry and case study as new drafts in one transaction, all or nothing, into a chosen quiz (default: a new quiz, "AI import – <date>"; since #411 a folder holds quizzes, not questions). The stored files are then deleted. Batches abandoned in review are deleted after 7 days.
+9. **Import:** one call writes every accepted entry and case study as new drafts in one transaction, all or nothing, into the quiz the import was started from (owner decision, 2026-10-15; the kickoff's default of a new quiz, "AI import – <date>", was dropped and no choice is offered). The stored files are then deleted. Batches abandoned in review are deleted after 7 days. Built in #348: `public.import_ai_batch`.
 
 ### Extract only
 
