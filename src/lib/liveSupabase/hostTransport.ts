@@ -150,8 +150,10 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
   /** The last read of the answers, for the other ask on the same tick to reuse (#197). */
   let lastRead: SharedRead | null = null;
   /**
-   * The room as this console last read it from the database, so a row that describes exactly that
-   * room — a count refresh (#426) — is not a reason to read it again.
+   * The room as this console last told its listeners about it, so a row that describes exactly
+   * that room — a count refresh (#426) — is not a reason to read it again. Not what it last *read*:
+   * a move reads the room straight after it (`settleFrom`), usually before the channel's echo of
+   * the move arrives, and that echo is still what loads the item the room moved to.
    */
   let readFacts: string | null = null;
   /**
@@ -331,7 +333,6 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
       // #185: a student-paced room says so, and the reducer refuses its per-item moves.
       data.mode,
     );
-    readFacts = roomFacts(state);
   }
 
   /**
@@ -384,6 +385,7 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     }
     current = await loadItem();
     if (closed) return;
+    readFacts = roomFacts(state);
     const view: SessionView<Item> = { state, item: current };
     for (const listener of [...views]) listener(view);
   }
@@ -586,6 +588,7 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
       await measureClock();
       await readSession();
       current = await loadItem();
+      readFacts = roomFacts(state);
       return {
         sessionId,
         code,
