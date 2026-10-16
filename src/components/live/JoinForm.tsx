@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useId, useRef } from "react";
 import { Button } from "@/components/ui/Button";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 import { DISPLAY_NAME_MAX_LENGTH } from "@/lib/live/displayName";
 import type { JoinField } from "@/lib/live/joinForm";
 import { SESSION_CODE_LENGTH } from "@/lib/live/sessionCode";
@@ -41,10 +42,7 @@ export function JoinForm({ action, code }: JoinFormProps) {
     else codeRef.current?.focus();
   }, [state]);
 
-  const field =
-    "tap-target w-full rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 " +
-    "transition-[border-color] duration-fast ease-out-expo hover:border-line-strong " +
-    "aria-invalid:border-incorrect";
+  const field = fieldClasses("px-3 text-base");
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
@@ -68,7 +66,7 @@ export function JoinForm({ action, code }: JoinFormProps) {
           autoFocus={code === ""}
           aria-invalid={codeError ? true : undefined}
           aria-describedby={codeError ? `${fieldId}-code-error` : `${fieldId}-code-hint`}
-          className={`${field} font-mono text-xl tracking-[0.2em] uppercase`}
+          className={fieldClasses("px-3 font-mono text-xl tracking-[0.2em] uppercase")}
         />
         {codeError ? (
           <p id={`${fieldId}-code-error`} role="alert" className="text-sm text-incorrect">

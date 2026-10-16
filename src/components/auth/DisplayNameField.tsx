@@ -1,4 +1,5 @@
 import type { Ref } from "react";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 import { ACCOUNT_NAME_HINT, ACCOUNT_NAME_MAX_LENGTH } from "@/lib/auth/displayName";
 
 export interface DisplayNameFieldProps {
@@ -58,7 +59,7 @@ export function DisplayNameField({
         autoFocus={autoFocus}
         aria-invalid={invalid ? true : undefined}
         aria-describedby={describedBy}
-        className="tap-target w-full rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect"
+        className={fieldClasses("px-3 text-base")}
       />
       <p id={hintId} className="text-sm text-ink-2">
         {hint}

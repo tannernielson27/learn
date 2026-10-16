@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 import { EmailCodeForm, type EmailCodeFormProps } from "./EmailCodeForm";
 
 export type SignInState =
@@ -100,7 +101,7 @@ export function SignInForm({
           }}
           aria-invalid={state.status === "error" ? true : undefined}
           aria-describedby={error ? errorId : undefined}
-          className="tap-target w-full rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect"
+          className={fieldClasses("px-3 text-base")}
         />
         {error ? (
           <p id={errorId} role="alert" className="text-sm text-incorrect">
