@@ -1,21 +1,10 @@
 "use client";
 
+import { feedbackMarkClasses } from "../feedbackMarks";
 import { FeedbackIcon, feedbackLabel } from "../OptionRow";
 import { RowTable, type RowControlContext } from "../row_table/RowTable";
-import {
-  elementFeedback,
-  type ElementFeedback,
-  type ItemRendererProps,
-  type PlayerMode,
-} from "../types";
+import { elementFeedback, type ItemRendererProps, type PlayerMode } from "../types";
 import { useFeedbackWordClass } from "../FeedbackWords";
-
-const feedbackClasses: Record<ElementFeedback, string> = {
-  neutral: "",
-  correct: "border-correct bg-correct-soft",
-  incorrect: "border-incorrect bg-incorrect-soft",
-  missed: "border-dashed border-correct",
-};
 
 interface RowSelectProps {
   context: RowControlContext;
@@ -40,10 +29,10 @@ function RowSelect({
   const feedback = elementFeedback(value !== undefined, value === correctId, mode);
   const stateClass =
     mode === "feedback"
-      ? feedbackClasses[feedback]
+      ? feedbackMarkClasses(feedback, "border-line-strong", "bg-surface-1")
       : value
-        ? "border-accent bg-accent-soft"
-        : "border-line-strong";
+        ? "bg-surface-1 border-accent bg-accent-soft"
+        : "bg-surface-1 border-line-strong";
   const correctLabel = choices.find((c) => c.id === correctId)?.label;
   const inGrid = context.view === "grid";
   return (
@@ -56,7 +45,7 @@ function RowSelect({
           value={value ?? ""}
           disabled={mode !== "answer"}
           onChange={(event) => onChoose(event.target.value || undefined)}
-          className={`tap-target w-full min-w-0 rounded-sm border bg-surface-1 px-2 text-base text-ink-1 transition-[background-color,border-color] duration-fast ease-out-expo disabled:opacity-100 ${stateClass}`}
+          className={`tap-target w-full min-w-0 rounded-sm border px-2 text-base text-ink-1 transition-[background-color,border-color] duration-fast ease-out-expo disabled:opacity-100 ${stateClass}`}
         >
           <option value="">Select…</option>
           {choices.map((choice) => (

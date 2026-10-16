@@ -87,10 +87,12 @@ The decision: keep all three. If the cost ever matters (a failing LCP budget on 
 | Selected                        | `--accent` border 2px, `--accent-soft` fill, check or radio filled, 200ms ease-out |
 | Focus-visible                   | 2px `--accent` outline offset 2px; never removed                                   |
 | Disabled (Select N cap reached) | 50% opacity, tooltip "You have selected N"                                         |
-| Correct (feedback)              | `--correct` left rule + check icon; text unchanged                                 |
-| Incorrect (feedback)            | `--incorrect` left rule + x icon                                                   |
+| Correct (feedback)              | 4px `--correct` left rule, `--correct-soft` fill + check icon; text unchanged      |
+| Incorrect (feedback)            | 4px `--incorrect` left rule, `--incorrect-soft` fill + x icon                      |
 | Missed correct (feedback)       | dashed `--correct` border + the word "Missed"; no icon (a check reads as chosen)   |
 | Sent, not yet revealed          | Selected treatment, read-only; no correct/incorrect marks until the key arrives    |
+
+One mark for every item type (#325): option rows, ordered steps, matrix cells (grid and card views), drop-down blanks and the drop-down table, and drag-and-drop and bowtie slots all draw the same three marks from `feedbackMarkClasses` (`src/components/question/feedbackMarks.ts`). Correct and incorrect take a 4px left rule in their colour over the matching soft fill (`--correct-soft`, `--incorrect-soft`), with the element's own border on the other three sides; missed takes the dashed `--correct` border. No exception was needed: a matrix grid cell is a padded chip with gaps on both sides, and every blank and slot is a bordered box, so each has a left edge that reads as a rule. A slot keeps its 2px border on the other sides; the rule is still 4px. The mark sets the element's border colour and fill and nothing else on the element may: `border-line`, `border-line-strong`, `border-transparent` and `bg-surface-1` are emitted after the mark colours and win the cascade, which used to hide the missed border on option rows and matrix cells and the soft fill on option rows, steps and selects. When the words and icons widen the matrix grid past a tablet's width, the read-only grid's scroll box becomes a tab stop so a keyboard can scroll it.
 
 Feedback marks need the key. An answer that has been sent but whose key has not reached the browser (a live session before the host reveals) is drawn in review mode — the choices stay selected and nothing is marked — never as feedback, which would draw every choice as incorrect.
 

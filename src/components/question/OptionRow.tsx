@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { RichText } from "@/lib/ngn/schemas";
 import { ElementRationale } from "./ElementRationale";
+import { feedbackMarkClasses } from "./feedbackMarks";
 import { useFeedbackWordClass } from "./FeedbackWords";
 import type { ElementFeedback, PlayerMode } from "./types";
 
@@ -19,13 +20,6 @@ export interface OptionRowProps {
   rationale?: RichText;
   onToggle: () => void;
 }
-
-const feedbackClasses: Record<ElementFeedback, string> = {
-  neutral: "",
-  correct: "border-l-4 border-l-correct bg-correct-soft",
-  incorrect: "border-l-4 border-l-incorrect bg-incorrect-soft",
-  missed: "border-dashed border-correct",
-};
 
 export const feedbackLabel: Record<ElementFeedback, string> = {
   neutral: "",
@@ -92,9 +86,9 @@ export function OptionRow({
     <div>
       <label
         htmlFor={id}
-        className={`option flex min-h-11 cursor-pointer items-start gap-3 rounded-sm border border-line bg-surface-1 px-4 py-3 transition-[background-color,border-color,box-shadow] duration-fast ease-out-expo ${
+        className={`option flex min-h-11 cursor-pointer items-start gap-3 rounded-sm border px-4 py-3 transition-[background-color,border-color,box-shadow] duration-fast ease-out-expo ${
           interactive ? "hover:bg-surface-2" : "cursor-default"
-        } ${selectedClasses} ${feedbackClasses[feedback]} ${disabled && !checked ? "opacity-50" : ""}`}
+        } ${selectedClasses} ${feedbackMarkClasses(feedback, "border-line", "bg-surface-1")} ${disabled && !checked ? "opacity-50" : ""}`}
       >
         <input
           id={id}

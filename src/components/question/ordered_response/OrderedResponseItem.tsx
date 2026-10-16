@@ -21,6 +21,7 @@ import { useSilentDndAccessibility } from "../dndAccessibility";
 import type { RichText } from "@/lib/ngn/schemas";
 import { PRESS_CLASSES } from "@/components/ui/Button";
 import { ElementRationale } from "../ElementRationale";
+import { feedbackMarkClasses } from "../feedbackMarks";
 import { FeedbackIcon, feedbackLabel } from "../OptionRow";
 import type { ElementFeedback, ItemRendererProps, PlayerMode } from "../types";
 import { usePrefersReducedMotion } from "../usePrefersReducedMotion";
@@ -35,13 +36,6 @@ export function moveStep(order: readonly string[], id: string, direction: Direct
   if (from < 0 || to < 0 || to >= order.length) return [...order];
   return arrayMove([...order], from, to);
 }
-
-const feedbackClasses: Record<ElementFeedback, string> = {
-  neutral: "border-line",
-  correct: "border-line border-l-4 border-l-correct bg-correct-soft",
-  incorrect: "border-line border-l-4 border-l-incorrect bg-incorrect-soft",
-  missed: "border-dashed border-correct",
-};
 
 export function OrderedResponseItem({
   item,
@@ -188,7 +182,7 @@ function StepRow(props: StepRowProps) {
       style={style}
       data-label={label}
       aria-describedby={rationale ? rationaleId : undefined}
-      className={`option flex items-center gap-2 rounded-sm border bg-surface-1 px-2 py-2 sm:gap-3 sm:px-3 ${feedbackClasses[feedback]} ${
+      className={`option flex items-center gap-2 rounded-sm border px-2 py-2 sm:gap-3 sm:px-3 ${feedbackMarkClasses(feedback, "border-line", "bg-surface-1")} ${
         isDragging ? "relative z-10 shadow-md" : ""
       }`}
     >

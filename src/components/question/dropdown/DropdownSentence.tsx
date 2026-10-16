@@ -3,6 +3,7 @@
 import { Fragment, useId } from "react";
 import type { RichText } from "@/lib/ngn/schemas";
 import { ElementRationale } from "../ElementRationale";
+import { feedbackMarkClasses } from "../feedbackMarks";
 import { FeedbackIcon, feedbackLabel } from "../OptionRow";
 import { blankOrder, type BlankAnswer, type SentenceToken } from "../sentence";
 import { elementFeedback, type ElementFeedback, type PlayerMode } from "../types";
@@ -30,13 +31,6 @@ export interface DropdownSentenceProps {
   blankRationale?: (blankId: string) => RichText | undefined;
   onChoose: (blankId: string, choiceId: string | undefined) => void;
 }
-
-const stateClasses: Record<ElementFeedback, string> = {
-  neutral: "",
-  correct: "border-correct bg-correct-soft",
-  incorrect: "border-incorrect bg-incorrect-soft",
-  missed: "border-dashed border-correct",
-};
 
 function Mark({ state }: { state: ElementFeedback }) {
   const feedbackWordClass = useFeedbackWordClass();
@@ -105,8 +99,10 @@ export function DropdownSentence({
                 value={pick ?? ""}
                 disabled={mode !== "answer"}
                 onChange={(event) => onChoose(blank.id, event.target.value || undefined)}
-                className={`tap-target max-w-full rounded-sm border bg-surface-1 px-2 text-base leading-normal text-ink-1 transition-[background-color,border-color] duration-fast ease-out-expo disabled:opacity-100 ${
-                  mode === "feedback" ? stateClasses[feedback] : selectedClass
+                className={`tap-target max-w-full rounded-sm border px-2 text-base leading-normal text-ink-1 transition-[background-color,border-color] duration-fast ease-out-expo disabled:opacity-100 ${
+                  mode === "feedback"
+                    ? feedbackMarkClasses(feedback, "border-line-strong", "bg-surface-1")
+                    : `bg-surface-1 ${selectedClass}`
                 }`}
               >
                 <option value="">Select…</option>
