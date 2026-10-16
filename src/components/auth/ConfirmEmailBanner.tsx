@@ -31,8 +31,8 @@ export function ConfirmEmailBanner({ action, email }: ConfirmEmailBannerProps) {
         Confirm your email address
       </h2>
       <p className="mt-1 text-sm text-ink-2">
-        We sent a link to {email}. Opening it lets you back in if you forget your password. Nothing
-        is locked until then.
+        We sent a link to {email}. It lets you reset a forgotten password. Nothing is locked
+        meanwhile.
       </p>
       <form action={formAction} className="mt-2 flex flex-wrap items-center gap-x-3">
         <Button type="submit" variant="ghost" size="sm" disabled={pending} aria-disabled={pending}>

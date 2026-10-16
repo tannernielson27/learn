@@ -11,12 +11,12 @@ import { STUDENT_HOME } from "@/lib/classes/classes";
 import { readViewer } from "@/lib/classes/viewer";
 import { joinClassByCode } from "@/lib/supabase/classInvites";
 
-const CODE_INCOMPLETE = "Enter the eight letters and numbers of your class code, like ABCD-2345.";
+const CODE_INCOMPLETE = "Enter all eight letters and numbers, like ABCD-2345.";
 // One answer for an unknown code and a class the student was removed from: the database does not
 // say which, so that a code cannot be probed. A class in another teacher's workspace is not a
 // refusal: one account joins classes in more than one workspace.
 const CODE_DID_NOT_WORK =
-  "That class code did not work. Check it with your teacher. If you were removed from the class, only they can add you back.";
+  "That class code did not work. Ask your teacher to check it, or to add you back if you were removed.";
 const CODES_LIMITED = "Too many class codes tried. Wait a few minutes, then try again.";
 const UNAVAILABLE = "Joining is not working just now. Try again in a moment.";
 

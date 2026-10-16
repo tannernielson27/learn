@@ -18,8 +18,7 @@ export interface JoinClassButtonProps {
   email: string;
 }
 
-export const ALREADY_INSTRUCTOR =
-  "You are already a teacher, so this account stays one and is not added to the class.";
+export const ALREADY_INSTRUCTOR = "This is a teacher account, so it is not added to the class.";
 
 const INITIAL: JoinClassState = { status: "idle" };
 

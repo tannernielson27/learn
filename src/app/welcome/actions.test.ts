@@ -70,7 +70,7 @@ describe("setUpWorkspace (#361)", () => {
     rpc.mockResolvedValueOnce({ data: null, error: { code: "XX000" } });
     expect(await setUpWorkspace()).toEqual({
       status: "error",
-      error: "Your workspace could not be set up just now. Try again in a moment.",
+      error: "The workspace was not set up. Try again in a moment.",
     });
     expect(redirected).not.toHaveBeenCalled();
     const logged = JSON.stringify(vi.mocked(console.error).mock.calls);
