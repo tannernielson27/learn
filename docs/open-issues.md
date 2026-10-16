@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-10-15 (S12: #340 merged and applied, #341 to #345 merged, #346 in review).
+Last updated: 2026-10-15 (S12: #340 merged and applied, #341 to #346 merged, #347 in review).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -262,22 +262,22 @@ Owner decisions (2026-10-01):
 7. **A rights checkbox at upload**, which also confirms there is no real patient information.
 8. **A batch is up to 5 files, 100 pages and 150 questions.**
 
-| #                                                           | Title                                                                                          | Gates             | Status                      |
-| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------- | --------------------------- |
-| [#333](https://github.com/tannernielson27/learn/issues/333) | chore(ai-import): measure cost and accuracy on the owner's sample documents                    | none              | Merged (#352); no migration |
-| [#337](https://github.com/tannernielson27/learn/issues/337) | feat(ngn): AI draft shapes and converters for the selection, ordered and bowtie types          | none              | Merged (#441); no migration |
-| [#338](https://github.com/tannernielson27/learn/issues/338) | feat(ngn): AI draft shapes and converters for cloze, highlight, drag-and-drop and case studies | none              | Merged (#442); no migration |
-| [#339](https://github.com/tannernielson27/learn/issues/339) | test(ai-import): a fictional golden corpus and an accuracy eval                                | none              | Merged (#443); no migration |
-| [#340](https://github.com/tannernielson27/learn/issues/340) | feat(db): AI import batches, staged entries, a private upload bucket and a monthly cap         | security, db      | Merged (#444), applied      |
-| [#341](https://github.com/tannernielson27/learn/issues/341) | feat(ai-import): check uploaded files and prepare them for Claude                              | security          | Merged (#445); no migration |
-| [#342](https://github.com/tannernielson27/learn/issues/342) | feat(ai-import): Claude client, segment pass, usage ledger and cap                             | security          | Merged (#446); no migration |
-| [#343](https://github.com/tannernielson27/learn/issues/343) | feat(ai-import): extract each question into a draft, validate it, and repair once              | security, db      | Merged (#448), applied      |
-| [#344](https://github.com/tannernielson27/learn/issues/344) | feat(ai-import): assemble case studies with a chart that grows by step                         | none              | Merged (#447); no migration |
-| [#345](https://github.com/tannernielson27/learn/issues/345) | feat(authoring): upload documents for AI import and watch them parse                           | security, e2e     | Merged (#449); no migration |
-| [#346](https://github.com/tannernielson27/learn/issues/346) | feat(authoring): review an AI import batch before anything reaches the bank                    | security, e2e     | In review; no migration     |
-| [#347](https://github.com/tannernielson27/learn/issues/347) | feat(authoring): fix staged questions and case studies with the existing editors               | e2e               | Open                        |
-| [#348](https://github.com/tannernielson27/learn/issues/348) | feat(authoring): import a reviewed batch all at once, or discard it                            | security, db, e2e | Open                        |
-| [#349](https://github.com/tannernielson27/learn/issues/349) | docs(help): AI import guide, end-to-end tests, security rows and the S12 demo                  | e2e               | Open                        |
+| #                                                           | Title                                                                                          | Gates             | Status                         |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------- | ------------------------------ |
+| [#333](https://github.com/tannernielson27/learn/issues/333) | chore(ai-import): measure cost and accuracy on the owner's sample documents                    | none              | Merged (#352); no migration    |
+| [#337](https://github.com/tannernielson27/learn/issues/337) | feat(ngn): AI draft shapes and converters for the selection, ordered and bowtie types          | none              | Merged (#441); no migration    |
+| [#338](https://github.com/tannernielson27/learn/issues/338) | feat(ngn): AI draft shapes and converters for cloze, highlight, drag-and-drop and case studies | none              | Merged (#442); no migration    |
+| [#339](https://github.com/tannernielson27/learn/issues/339) | test(ai-import): a fictional golden corpus and an accuracy eval                                | none              | Merged (#443); no migration    |
+| [#340](https://github.com/tannernielson27/learn/issues/340) | feat(db): AI import batches, staged entries, a private upload bucket and a monthly cap         | security, db      | Merged (#444), applied         |
+| [#341](https://github.com/tannernielson27/learn/issues/341) | feat(ai-import): check uploaded files and prepare them for Claude                              | security          | Merged (#445); no migration    |
+| [#342](https://github.com/tannernielson27/learn/issues/342) | feat(ai-import): Claude client, segment pass, usage ledger and cap                             | security          | Merged (#446); no migration    |
+| [#343](https://github.com/tannernielson27/learn/issues/343) | feat(ai-import): extract each question into a draft, validate it, and repair once              | security, db      | Merged (#448), applied         |
+| [#344](https://github.com/tannernielson27/learn/issues/344) | feat(ai-import): assemble case studies with a chart that grows by step                         | none              | Merged (#447); no migration    |
+| [#345](https://github.com/tannernielson27/learn/issues/345) | feat(authoring): upload documents for AI import and watch them parse                           | security, e2e     | Merged (#449); no migration    |
+| [#346](https://github.com/tannernielson27/learn/issues/346) | feat(authoring): review an AI import batch before anything reaches the bank                    | security, e2e     | Merged (#450); no migration    |
+| [#347](https://github.com/tannernielson27/learn/issues/347) | feat(authoring): fix staged questions and case studies with the existing editors               | e2e               | In review (#452); no migration |
+| [#348](https://github.com/tannernielson27/learn/issues/348) | feat(authoring): import a reviewed batch all at once, or discard it                            | security, db, e2e | Open                           |
+| [#349](https://github.com/tannernielson27/learn/issues/349) | docs(help): AI import guide, end-to-end tests, security rows and the S12 demo                  | e2e               | Open                           |
 
 Notes from #341 for the stories after it (`src/lib/aiImport/files/`):
 
@@ -308,6 +308,14 @@ Notes from #346 for the stories after it (`src/lib/aiImport/review/`, `src/compo
 - **#347:** Change type is `POST /api/ai-import/retype` (`retypeEntry`): one question re-extracted as the chosen type under the cap, written back at the shown version. It keeps a `duplicate` reason and replaces the rest. A case study has no change of type.
 - **#348:** the button is `AiImportReview`'s `onImport` prop: hand it in and it enables once `importSummary(entries).blockers` is empty. Kept = not `dropped` and not `not_importable`. "Dropped" is a status, so restoring works by recomputing; nothing else marks an entry dropped.
 - **Restore:** the table keeps no earlier status, so restoring recomputes it: no NGN type is not importable; no item, or a `needs_fix`, `unmarked_key`, `not_in_source`, `relies_on_image` or `cut_off` reason, needs a fix; a `needs_answer` reason needs an answer; anything else is ready.
+
+Notes from #347 for the stories after it (`src/lib/aiImport/review/fix.ts`, `src/components/authoring/AiImportEntryEditor.tsx`):
+
+- **#348:** a single question with an NGN type that is not dropped has **Edit** on its card, opening `/author/banks/[bankId]/ai-import/[batchId]/[entryId]` with its type's own editor (one **Save**, no Publish). Save (`saveAiImportEntryFix` → `saveEntryFix`) stores only a whole, valid item of the entry's own type (`itemSchema`), so after #347 an entry with an item and status `ready` always holds a valid item. It writes `item`, `status` and `reasons` with the service client at the shown version, after reading the batch's status again, the same window as Change type: #348's import should still take a row lock or re-check versions. The draft column is left as the model gave it.
+- **#348:** a save drops every reason except `duplicate`, `instructor_note`, `source_error` and `note`, and works the quality `warning`s out again from the saved item (`reasonsAfterFix`). So a saved question is Ready unless it was dropped.
+- **#348:** `AiImportReview` hands each card an `editHref`; nothing else in it changed.
+- **Cut (#347):** the case-study half (the builder view for a staged case study, its record with "Shows from step", and "Split into standalone items") is not built. A case study card has no Edit link; drop it or import it as staged. Its acceptance test ("split a staged case study into six standalone items") is not met.
+- **#349:** the e2e is `e2e/aiImportFix.spec.ts` (the Malnutrition-shaped matrix: mark the key, Save, Ready). The help guide can say: Edit, mark the answer, Save, back to the review.
 
 Notes from #344 for #343 (`src/lib/ngn/draft/assemble.ts`, pure):
 
