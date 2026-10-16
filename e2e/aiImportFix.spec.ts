@@ -92,7 +92,7 @@ test("a teacher marks the key on an unmarked matrix and it becomes Ready", async
   const mark = (row: number, column: string) =>
     page
       .getByRole("radiogroup", { name: `Correct column for row ${row}` })
-      .getByRole("radio", { name: column })
+      .getByRole("radio", { name: column, exact: true })
       .check();
   await mark(1, "Expected");
   await mark(2, "Unexpected");
