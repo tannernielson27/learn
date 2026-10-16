@@ -248,8 +248,8 @@ export const HELP_FIGURES = {
   aiImportReview: {
     src: "help/ai-import-review.png",
     baseline: "desktop-1280/ai-import-review.png",
-    width: 0,
-    height: 0,
-    alt: "The review screen of an AI import: a disabled Import 2 questions button with what holds it back, then three questions marked Needs an answer, Needs a fix and Not importable, each with what to check and buttons to edit, show the source or drop it.",
+    width: 928,
+    height: 1918,
+    alt: "The review screen of an AI import: a greyed-out Import 2 questions button with what holds it back, the filters, then three questions marked Needs an answer, Needs a fix and Not importable. Each says what to check and has Show source and Drop; the first two also have Edit. No answer is marked.",
   },
 } as const satisfies Record<string, HelpFigure>;

@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-10-15 (S12: #340 merged and applied, #341 to #347 merged, #348 in review with its migration not yet applied).
+Last updated: 2026-10-15 (S12 finished: #333 to #347 merged, #348 and #349 in review, #348's migration not yet applied; the case-study half of #347 cut).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -245,6 +245,8 @@ Sprint 11 is code complete: every story is merged, including the follow-ups #283
 
 ## S12: AI question import (milestone 14)
 
+**Finished, 2026-10-15: every story is built.** #348 (PR #451) and #349 (PR #453) wait for the owner to merge, and #348's migration (row 56) for the owner's push. The case-study half of #347 was cut under the cut line below: a staged case study imports as it is or is dropped, with no builder view and no "Split into standalone items". The demo script, owner steps, known gaps and retro are in `docs/sprints/S12-demo.md`; the owner steps for the key, the cap, the push and the spend limit are docs/05 §7.14.
+
 Status, 2026-10-14: the #333 spike (PR #352) and the draft converters for all 14 types (#337, #338) are done, and #339 adds the golden corpus and the accuracy eval (`test/ai-import/`, `pnpm eval:ai-import`). The spike's measurements are in ADR 0008, "Cost and accuracy". Sprints 13 and 14 ran first. Reveal-by-step for case study charts (#334–#336), planned here at kickoff, moved to S14 and is merged (PRs #424, #435, #438), so this sprint builds on it.
 
 Demo 13: a teacher uploads a Word case study and a PDF of questions, reviews what the AI found, fills in a missing answer, and imports the batch as drafts into a quiz. The imported case study's patient record grows step by step, live on a phone.
@@ -277,7 +279,7 @@ Owner decisions (2026-10-01):
 | [#346](https://github.com/tannernielson27/learn/issues/346) | feat(authoring): review an AI import batch before anything reaches the bank                    | security, e2e     | Merged (#450); no migration |
 | [#347](https://github.com/tannernielson27/learn/issues/347) | feat(authoring): fix staged questions and case studies with the existing editors               | e2e               | Merged (#452); no migration |
 | [#348](https://github.com/tannernielson27/learn/issues/348) | feat(authoring): import a reviewed batch all at once, or discard it                            | security, db, e2e | In review (#451); migration |
-| [#349](https://github.com/tannernielson27/learn/issues/349) | docs(help): AI import guide, end-to-end tests, security rows and the S12 demo                  | e2e               | Open                        |
+| [#349](https://github.com/tannernielson27/learn/issues/349) | docs(help): AI import guide, end-to-end tests, security rows and the S12 demo                  | e2e               | In review (#453)            |
 
 Notes from #341 for the stories after it (`src/lib/aiImport/files/`):
 
@@ -323,6 +325,13 @@ Notes from #348 for the stories after it (`src/lib/aiImport/commit/`, migration 
 - **#347:** an import locks every entry of its batch (`select ... for update` in `import_ai_batch`) and checks each kept entry's version against the one the server validated, so an edit or retype that lands during an import waits, then finds the row gone. Keep writing entries with `where version = <shown>`.
 - **Owner step at push:** where pg_cron is on (the hosted project), the migration schedules `learn-ai-import-sweep` itself; elsewhere run `select private.schedule_ai_import_sweep();` after enabling pg_cron (docs/05 §7.8).
 - **Files:** a file row deleted queues its object in `ai_import_object_deletes`; the server removes up to 100 of the workspace's queued objects after each import or discard. A workspace that never imports or discards again keeps the objects of its swept batches until it does.
+
+Notes from #349 (`e2e/aiImportFlow.spec.ts`, `/gallery/ai-import`, `/help/instructor#ai-import`):
+
+- The full walk runs in `auth e2e` through the interface only: upload the corpus's `01-med-surg-review.md`, mark the key on question 3 (blood glucose 52 mg/dL, "Needs an answer"), drop what still blocks, import, publish the fixed question.
+- The guide's figure is `public/help/ai-import-review.png`, a byte copy of the `desktop-1280` baseline from `e2e/aiImportGallery.spec.ts` (regenerate with the `e2e baselines` workflow, which now includes it). Its entries carry no key, as #269 decision 6 asks.
+- The upload page links to `/help/instructor#ai-import` ("How AI import works"); keep the anchor.
+- Security rows for the three routes, the two Server Function files, `import_ai_batch` and `ai_import_object_deletes`, and the sprint's accepted gaps, are in docs/audits/S10-security.md ("Sprint 12 review").
 
 Notes from #344 for #343 (`src/lib/ngn/draft/assemble.ts`, pure):
 
