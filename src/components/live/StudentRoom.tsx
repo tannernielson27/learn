@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnswerSentLine } from "@/components/live/AnswerSentLine";
 import { Countdown } from "@/components/live/Countdown";
 import { LIVE_BUSY_LABEL, liveSubmitFailure } from "@/components/live/liveSubmit";
 import { useShowLiveRecord } from "@/components/live/LiveRecord";
@@ -334,9 +335,7 @@ export function StudentRoom({
         // A plain wrapper, as in StudentPacedRoom: the player inside is already the "Your answer"
         // landmark, and a second region of that name fails axe's landmark-unique (#274).
         <div className="mt-8">
-          <p role="status" data-testid="answer-sent" className="measure mb-4 text-sm text-ink-2">
-            {SENT}
-          </p>
+          <AnswerSentLine text={SENT} announce />
           <ItemPlayer
             key={`${item.id}:sent`}
             item={item}

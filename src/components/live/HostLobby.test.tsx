@@ -214,6 +214,13 @@ describe("HostLobby", () => {
     expect(screen.getByRole("img", { name: /QR code/ })).toBeInTheDocument();
   });
 
+  it("sets the code projector-size from lg up and phone-size below it", () => {
+    setup();
+    const code = screen.getByTestId("join-code");
+    expect(code).toHaveClass("text-5xl", "lg:text-8xl", "lg:whitespace-nowrap", "tabular");
+    expect(code).toHaveTextContent("AJ4 K7P");
+  });
+
   it("offers only the moves the room can make from the lobby", () => {
     setup();
     expect(button("Start")).toBeEnabled();
