@@ -2134,7 +2134,10 @@ export type Database = {
           submitted_at: string;
         }[];
       };
-      refresh_participant_count: { Args: { target: string }; Returns: undefined };
+      refresh_participant_count: {
+        Args: { target: string };
+        Returns: undefined;
+      };
       register_instructor: {
         Args: { p_user: string; p_workspace: string };
         Returns: string;
