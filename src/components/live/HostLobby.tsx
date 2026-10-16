@@ -361,9 +361,12 @@ export function HostLobby({
 
       <section
         aria-labelledby="code-heading"
-        className="mt-8 rounded-sm border border-line bg-surface-1 px-4 py-6 text-center"
+        className="mt-8 rounded-sm border border-line bg-surface-1 px-4 py-6 text-center lg:py-10"
       >
-        <h2 id="code-heading" className="text-sm font-medium tracking-wide text-ink-2 uppercase">
+        <h2
+          id="code-heading"
+          className="text-sm font-medium tracking-wide text-ink-2 uppercase lg:text-base"
+        >
           Join code
         </h2>
         {ended ? (
@@ -384,12 +387,15 @@ export function HostLobby({
           <>
             <p
               data-testid="join-code"
-              className="mt-3 font-mono text-5xl tracking-[0.2em] text-ink-1"
+              className="tabular mt-3 -mr-[0.2em] font-mono text-5xl tracking-[0.2em] text-ink-1 lg:mt-4 lg:-mr-[0.25em] lg:whitespace-nowrap lg:text-8xl lg:tracking-[0.25em]"
             >
               {formatSessionCode(code)}
             </p>
             {qrCode}
-            <p data-testid="join-url" className="mt-3 font-mono text-sm break-all text-ink-2">
+            <p
+              data-testid="join-url"
+              className="mt-3 font-mono text-sm break-all text-ink-2 lg:mt-4 lg:text-lg"
+            >
               {studentUrl}
             </p>
           </>
