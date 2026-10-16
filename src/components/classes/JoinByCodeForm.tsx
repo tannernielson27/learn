@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 import { ALREADY_INSTRUCTOR } from "./JoinClassButton";
 
 export type JoinByCodeState =
@@ -71,7 +72,7 @@ export function JoinByCodeForm({ action, initialCode = "" }: JoinByCodeFormProps
           onChange={(event) => setCode(event.target.value)}
           aria-invalid={error ? true : undefined}
           aria-describedby={[hintId, error ? errorId : null].filter(Boolean).join(" ")}
-          className="tap-target w-full max-w-64 rounded-sm border border-line bg-surface-1 px-3 font-mono text-base tracking-wide text-ink-1 uppercase hover:border-line-strong aria-invalid:border-incorrect"
+          className={fieldClasses("max-w-64 px-3 font-mono text-base tracking-wide uppercase")}
         />
         <p id={hintId} className="text-sm text-ink-2">
           {HINT}

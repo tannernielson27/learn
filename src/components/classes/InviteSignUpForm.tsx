@@ -5,6 +5,7 @@ import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { DisplayNameField } from "@/components/auth/DisplayNameField";
 import { PasswordField } from "@/components/auth/PasswordField";
 import { Button } from "@/components/ui/Button";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 import { PASSWORD_HINT, PASSWORD_MIN_LENGTH } from "@/lib/auth/passwordRules";
 import { STUDENT_HOME } from "@/lib/classes/classes";
 import { InviteUnavailable } from "./InviteUnavailable";
@@ -30,8 +31,7 @@ export interface InviteSignUpFormProps {
 }
 
 const INITIAL: InviteSignUpState = { status: "idle" };
-const FIELD =
-  "tap-target w-full rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect";
+const FIELD = fieldClasses("px-3 text-base");
 
 function existsMessage(email: string): string {
   return `${email} already has a LeaRN account, and that is not its password. Try its password again, or join with an emailed link.`;

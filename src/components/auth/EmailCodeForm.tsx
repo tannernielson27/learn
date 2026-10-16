@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useId, useRef } from "react";
 import { Button } from "@/components/ui/Button";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 
 export type EmailCodeState = { status: "idle" } | { status: "error"; error: string };
 
@@ -52,7 +53,7 @@ export function EmailCodeForm({ action, email, next }: EmailCodeFormProps) {
           maxLength={16}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${id}-error` : undefined}
-          className="tap-target w-full rounded-sm border border-line bg-surface-1 px-3 font-mono text-lg tracking-widest text-ink-1 hover:border-line-strong aria-invalid:border-incorrect"
+          className={fieldClasses("px-3 font-mono text-lg tracking-widest")}
         />
         {error ? (
           <p id={`${id}-error`} role="alert" className="text-sm text-incorrect">

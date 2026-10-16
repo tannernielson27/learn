@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 import { ACCOUNT_NAME_HINT } from "@/lib/auth/displayName";
 import { PASSWORD_HINT, PASSWORD_MIN_LENGTH } from "@/lib/auth/passwordRules";
 import type { SignUpRole } from "@/lib/auth/signUp";
@@ -39,8 +40,7 @@ interface Answered {
 }
 
 const INITIAL: Answered = { state: { status: "idle" }, attempt: 0 };
-const FIELD =
-  "tap-target w-full rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect";
+const FIELD = fieldClasses("px-3 text-base");
 const CHOICE =
   "tap-target flex cursor-pointer items-center gap-3 rounded-sm border border-line bg-surface-1 px-3 py-3 text-base text-ink-1 transition-colors duration-fast hover:border-line-strong has-checked:border-accent has-checked:bg-accent-soft";
 const LINK =
