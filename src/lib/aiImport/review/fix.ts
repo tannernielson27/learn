@@ -3,9 +3,10 @@ import { inputFromForm } from "@/lib/authoring/forms/codecs";
 import {
   readStoredReasons,
   restoredStatus,
+  type ReviewReason,
   type ReviewStatus,
 } from "@/lib/authoring/aiImportReview";
-import { messageFor, type AiImportFailure } from "@/lib/authoring/aiImportUpload";
+import { messageFor, type AiImportFailure, type BatchStatus } from "@/lib/authoring/aiImportUpload";
 import { withinItemSizeLimit } from "@/lib/authoring/payloadSize";
 import { ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 import { itemQualityWarnings } from "@/lib/ngn/quality";
@@ -14,6 +15,7 @@ import type { Json } from "@/lib/supabase/database.types";
 import { convertDraft, formatReason, MAX_REASONS, readReason } from "../stage";
 import { aiImportAccess, type AccessDeps, type Client } from "../upload/access";
 import { readEntry } from "./actions";
+import { ENTRY_COLUMNS, toEntryView, type EntryRow } from "./read";
 
 /**
  * Fix a staged question with its type's own editor (#347). The editor opens on what was staged
@@ -172,4 +174,79 @@ export async function saveEntryFix(deps: FixDeps, raw: unknown): Promise<FixResu
   // No row: another tab moved the version on since the read.
   if (!written) return refuse("entry_changed");
   return { ok: true, version: written.version, status: written.status as ReviewStatus };
+}
+
+/** What the edit page needs of one staged question: never the draft itself, only the start. */
+export interface FixEntry {
+  id: string;
+  version: number;
+  type: ItemType;
+  status: ReviewStatus;
+  reasons: ReviewReason[];
+  sourceExcerpt: string;
+  /** Its number on the review screen: its place in source order across the import, from 1. */
+  number: number;
+  /** The stored item JSON the editor opens on (`editorStart`). */
+  start: unknown;
+}
+
+/**
+ * One question of a batch of this workspace and quiz, for its edit page; null when there is no
+ * such batch, and no entry when it is not one a teacher can edit here. Read with the teacher's own
+ * session (RLS) and filtered by the session's workspace. The draft opens the editor and goes no
+ * further.
+ */
+export async function readFixEntry(
+  client: Client,
+  orgId: string,
+  ids: { bankId: string; batchId: string; entryId: string },
+): Promise<{ batchStatus: BatchStatus; entry: FixEntry | null } | null | "unavailable"> {
+  const [batch, entry, order] = await Promise.all([
+    client
+      .from("ai_import_batches")
+      .select("status")
+      .eq("id", ids.batchId)
+      .eq("org_id", orgId)
+      .eq("bank_id", ids.bankId)
+      .maybeSingle(),
+    client
+      .from("ai_import_entries")
+      .select(`${ENTRY_COLUMNS}, draft`)
+      .eq("id", ids.entryId)
+      .eq("batch_id", ids.batchId)
+      .eq("org_id", orgId)
+      .maybeSingle(),
+    client
+      .from("ai_import_entries")
+      .select("id")
+      .eq("batch_id", ids.batchId)
+      .eq("org_id", orgId)
+      .order("position"),
+  ]);
+  const error = batch.error ?? entry.error ?? order.error;
+  if (error) {
+    logged("reading an entry to fix", error);
+    return "unavailable";
+  }
+  if (!batch.data) return null;
+  const batchStatus = batch.data.status as BatchStatus;
+  const row = entry.data as (EntryRow & { draft: unknown }) | null;
+  if (!row || row.kind !== "item" || row.status === "dropped" || !isItemType(row.type)) {
+    return { batchStatus, entry: null };
+  }
+  const view = toEntryView(row);
+  const place = ((order.data ?? []) as { id: string }[]).findIndex((other) => other.id === row.id);
+  return {
+    batchStatus,
+    entry: {
+      id: row.id,
+      version: row.version,
+      type: row.type,
+      status: view.status,
+      reasons: view.reasons,
+      sourceExcerpt: row.source_excerpt,
+      number: place + 1,
+      start: editorStart({ item: row.item, draft: row.draft, reasons: row.reasons ?? [] }),
+    },
+  };
 }

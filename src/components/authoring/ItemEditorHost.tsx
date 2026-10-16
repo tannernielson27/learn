@@ -27,6 +27,11 @@ export interface ItemEditorHost {
   published?: boolean;
   /** Told when a save makes the item a draft, or a publish makes it published. */
   onPublishedChange?: (published: boolean) => void;
+  /**
+   * The editor saves back to where it came from and publishes nothing: one Save button, no
+   * Publish. A staged AI import question (#347) is fixed this way before it is imported.
+   */
+  saveOnly?: boolean;
 }
 
 const STANDALONE: ItemEditorHost = { inCaseStudy: false };

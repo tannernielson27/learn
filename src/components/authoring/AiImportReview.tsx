@@ -188,6 +188,7 @@ export function AiImportReview({
                 key={entry.id}
                 entry={entry}
                 heading={headingOf(entry)}
+                editHref={`/author/banks/${bankId}/ai-import/${batchId}/${entry.id}`}
                 onDrop={change(actions.drop)}
                 onRestore={change(actions.restore)}
                 onRetype={retype}

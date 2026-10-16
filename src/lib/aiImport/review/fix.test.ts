@@ -3,6 +3,7 @@ import { matrixFormFromStored, type MatrixFormValues } from "@/lib/authoring/for
 import { fromMatrixMultipleChoiceDraft, type MatrixMultipleChoiceDraft } from "@/lib/ngn/draft";
 import { itemSchema } from "@/lib/ngn/schemas";
 import {
+  BANK,
   BATCH,
   OFF,
   ON,
@@ -11,7 +12,7 @@ import {
   teacher,
   type Reply,
 } from "../upload/testing/fakeSupabase";
-import { editorStart, reasonsAfterFix, saveEntryFix, type FixDeps } from "./fix";
+import { editorStart, readFixEntry, reasonsAfterFix, saveEntryFix, type FixDeps } from "./fix";
 
 const ENTRY = "00000000-0000-4000-8000-0000000000e1";
 
@@ -315,5 +316,75 @@ describe("saveEntryFix", () => {
     expect(errorSpy).toHaveBeenCalled();
     // Codes only: never the question or its key.
     expect(JSON.stringify(errorSpy.mock.calls)).not.toContain("Weight loss");
+  });
+});
+
+describe("readFixEntry", () => {
+  const OTHER = "00000000-0000-4000-8000-0000000000e2";
+  const ids = { bankId: BANK, batchId: BATCH, entryId: ENTRY };
+  const read = (entry: Reply, batch: Reply = inReview, order?: Reply) => {
+    const client = fakeClient({
+      ai_import_batches: [batch],
+      ai_import_entries: [entry, order ?? { data: [{ id: OTHER }, { id: ENTRY }] }],
+    });
+    return { client, result: readFixEntry(client.client, ORG, ids) };
+  };
+
+  it("reads the question, its number and what the editor opens on, for this workspace and quiz", async () => {
+    const { client, result } = read(row({ draft }));
+    expect(await result).toEqual({
+      batchStatus: "review",
+      entry: {
+        id: ENTRY,
+        version: 3,
+        type: "matrix_multiple_choice",
+        status: "needs_answer",
+        reasons: [
+          {
+            code: "needs_answer",
+            message:
+              "The source marks no answer. Add the key before this question can be imported.",
+          },
+          { code: "duplicate", message: "The same question as Question 1." },
+        ],
+        sourceExcerpt: "For each finding...",
+        number: 2,
+        start: keyless,
+      },
+    });
+    expect(client.stepsOn("ai_import_batches", "eq")).toEqual([
+      ["id", BATCH],
+      ["org_id", ORG],
+      ["bank_id", BANK],
+    ]);
+    expect(
+      client.stepsOn("ai_import_entries", "eq").filter(([column]) => column === "org_id"),
+    ).toHaveLength(2);
+  });
+
+  it("opens an unconverted question on its draft, without a key the document does not show", async () => {
+    const { result } = read(
+      row({
+        item: null,
+        draft: keyedDraft,
+        status: "needs_fix",
+        reasons: ["unmarked_key: The AI marked an answer."],
+      }),
+    );
+    const entry = (await result) as { entry: { start: Record<string, unknown> } };
+    expect(entry.entry.start).not.toHaveProperty("answerKey");
+  });
+
+  it("has no entry for one that cannot be edited here", async () => {
+    for (const over of [{ status: "dropped" }, { kind: "case_study" }, { type: null }]) {
+      expect(await read(row(over)).result).toEqual({ batchStatus: "review", entry: null });
+    }
+    expect(await read({ data: null }).result).toEqual({ batchStatus: "review", entry: null });
+  });
+
+  it("is null for a batch of another workspace or quiz, and says so when a read fails", async () => {
+    expect(await read(row(), { data: null }).result).toBeNull();
+    expect(await read(row(), { error: { code: "XX000" } }).result).toBe("unavailable");
+    expect(await read(row(), inReview, { error: { code: "XX000" } }).result).toBe("unavailable");
   });
 });
