@@ -68,7 +68,7 @@ export default async function LiveSessionPage({ params }: PageProps<"/live/[sess
           <SessionQrCode
             url={studentUrl}
             label="QR code for joining this live session"
-            className="mx-auto mt-6 block h-auto w-40 rounded-sm border border-line sm:w-48"
+            className="mx-auto mt-6 block h-auto w-40 rounded-sm border border-line sm:w-48 lg:mt-8 lg:w-72"
           />
         }
         caseStudy={session.caseStudy}
