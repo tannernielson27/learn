@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { act, Profiler } from "react";
 import { describe, expect, it, vi } from "vitest";
-import type { LiveSessionState, Participant, ParticipantItem, SubmitAck } from "@/lib/live";
+import type { LiveSessionState, ParticipantItem, SubmitAck } from "@/lib/live";
 import { LiveSessionError, NO_TIMER } from "@/lib/live";
 import type { PacedItemPayload, StudentView, SupabaseParticipant } from "@/lib/liveSupabase";
 import { FIXTURES } from "@/lib/ngn/fixtures";
@@ -48,7 +48,7 @@ const commits = vi.fn();
 
 function fakeTransport(submit: (itemId: string, response: AnyResponse) => Promise<SubmitAck>) {
   const viewListeners = new Set<(view: StudentView) => void>();
-  const presenceListeners = new Set<(roster: Participant[]) => void>();
+  const countListeners = new Set<(count: number) => void>();
   const transport = {
     resume: vi.fn(async () => ({ state: state(), item: null, answered: null, revealed: null })),
     join: vi.fn(),
@@ -58,9 +58,10 @@ function fakeTransport(submit: (itemId: string, response: AnyResponse) => Promis
       return () => viewListeners.delete(listener);
     },
     onSessionState: () => () => {},
-    onPresence: (listener: (roster: Participant[]) => void) => {
-      presenceListeners.add(listener);
-      return () => presenceListeners.delete(listener);
+    // #426: a phone is told how many have joined, never who.
+    onCount: (listener: (count: number) => void) => {
+      countListeners.add(listener);
+      return () => countListeners.delete(listener);
     },
     onReveal: () => () => {},
     onConnection: () => () => {},
@@ -75,9 +76,9 @@ function fakeTransport(submit: (itemId: string, response: AnyResponse) => Promis
           listener({ state: state(), item: null, answered: null, revealed: null, ...view });
         }
       }),
-    roster: (people: Participant[]) =>
+    count: (count: number) =>
       act(() => {
-        for (const listener of presenceListeners) listener(people);
+        for (const listener of countListeners) listener(count);
       }),
   };
 }
@@ -221,14 +222,6 @@ describe("StudentPacedRoom (#185)", () => {
 });
 
 describe("StudentPacedRoom: someone else joins or leaves (#408)", () => {
-  /** A roster of `count` phones, as a presence sync would hand it over. */
-  const rosterOf = (count: number): Participant[] =>
-    Array.from({ length: count }, (_, index) => ({
-      participantId: `p-${index}`,
-      displayName: `Student ${index}`,
-      joinedAt: 1000 + index,
-    }));
-
   it("commits nothing for 50 joins while the set is on the screen; a move still commits", async () => {
     const room = setup();
     const set = [entry(FIRST, 1), entry(SECOND, 2)];
@@ -236,7 +229,7 @@ describe("StudentPacedRoom: someone else joins or leaves (#408)", () => {
     await renderersLoaded();
     commits.mockClear();
 
-    for (let count = 2; count <= 51; count += 1) room.roster(rosterOf(count));
+    for (let count = 2; count <= 51; count += 1) room.count(count);
     expect(commits).toHaveBeenCalledTimes(0);
 
     // The control: this phone moving to its next item does commit.
@@ -250,9 +243,9 @@ describe("StudentPacedRoom: someone else joins or leaves (#408)", () => {
 
   it("still counts the phones in the room while waiting", () => {
     const room = setup();
-    room.roster(rosterOf(2));
+    room.count(2);
     expect(screen.getByTestId("room-count")).toHaveTextContent("2 in this session");
-    room.roster(rosterOf(1));
+    room.count(1);
     expect(screen.getByTestId("room-count")).toHaveTextContent("1 in this session");
   });
 });

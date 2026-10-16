@@ -425,11 +425,16 @@ describe("the free-tier budget (ADR 0002)", () => {
       Array.from({ length: 60 }, (_, index) => `Student ${index + 1}`),
     );
     expect(people).toHaveLength(60);
+    await live.settle();
+    // The lobby's count refreshes (#426): at most one per join here, where the harness asks for
+    // every newcomer at once; a real console asks at most once every few seconds
+    // (`countRefresh.ts`). Counted from here on, the room's own moves are what is measured.
+    const lobby = live.stack.messagesSent;
+    expect(lobby).toBeLessThanOrEqual(60);
 
     await host.start();
     await live.settle();
-    const roomMessagesAfterStart = live.stack.messagesSent;
-    expect(roomMessagesAfterStart).toBe(1);
+    expect(live.stack.messagesSent - lobby).toBe(1);
 
     for (let position = 1; position <= items.length; position += 1) {
       const item = items[position - 1] as Item;
@@ -445,7 +450,7 @@ describe("the free-tier budget (ADR 0002)", () => {
     expect(live.stack.responses).toHaveLength(1_200);
     // 1 start + 20 reveals + 19 advances + 1 end, each one state row and — except for the start,
     // which has no item behind it yet — one aggregate row. Twelve hundred answers added nothing.
-    expect(live.stack.messagesSent).toBe(1 + 20 * 2 + 19 * 2 + 2);
+    expect(live.stack.messagesSent - lobby).toBe(1 + 20 * 2 + 19 * 2 + 2);
     expect(live.stack.aggregates).toHaveLength(20);
   }, 120_000);
 });

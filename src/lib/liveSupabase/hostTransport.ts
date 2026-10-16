@@ -46,6 +46,8 @@ import type { Item } from "@/lib/ngn/schemas";
 import type { Database } from "@/lib/supabase/database.types";
 import { fromItemRow } from "@/lib/supabase/itemRows";
 import { endSession } from "@/lib/supabase/sessions";
+import { createCountRefresh } from "./countRefresh";
+import { publicStateFrom } from "./participantTransport";
 import { readProgress } from "./progress";
 import { rosterFrom, type PresenceEntry } from "./presence";
 import { LIVE_SCHEMA, liveTopic, presentRealtimeToken } from "./wire";
@@ -91,6 +93,28 @@ export interface HostTransportOptions {
   /** The instructor's own browser client. Every read below is theirs, under their org's RLS. */
   client: SupabaseClient<Database>;
   sessionId: string;
+  /**
+   * How often, at most, the console asks the database to bring the waiting screen's count up to
+   * date (#426). See `countRefresh.ts`. Zero asks for every newcomer at once, for the tests.
+   */
+  countRefreshMs?: number;
+}
+
+/**
+ * What a state says about the room, as one string to compare: everything a state row carries but
+ * the waiting screen's count (#426) and the time it was written.
+ */
+function roomFacts(state: LiveSessionState): string {
+  const { status, position, itemCount, reveal, timer } = state;
+  return JSON.stringify([
+    status,
+    position,
+    itemCount,
+    reveal,
+    timer.seconds,
+    timer.endsAt,
+    timer.remainingMs,
+  ]);
 }
 
 function subscribe<T>(listeners: Set<T>, listener: T): Unsubscribe {
@@ -125,6 +149,22 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
   let subscribed = false;
   /** The last read of the answers, for the other ask on the same tick to reuse (#197). */
   let lastRead: SharedRead | null = null;
+  /**
+   * The room as this console last read it from the database, so a row that describes exactly that
+   * room — a count refresh (#426) — is not a reason to read it again.
+   */
+  let readFacts: string | null = null;
+  /**
+   * The waiting screen's count (#426): phones no longer hear Presence, so this console — which
+   * does — asks the database to recount when it sees someone new. The database decides the number.
+   * A refresh that fails is not retried: the next newcomer or the room's next move carries it.
+   */
+  const counting = createCountRefresh(() => {
+    if (closed) return;
+    void Promise.resolve(client.rpc("refresh_participant_count", { target: sessionId })).catch(
+      () => {},
+    );
+  }, options.countRefreshMs);
 
   /**
    * Registered as soon as the console exists rather than at `open()`: a component subscribes on
@@ -148,7 +188,9 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
       table: "session_public_state",
       filter: `session_id=eq.${sessionId}`,
     },
-    () => {
+    (message: { new?: unknown }) => {
+      const row = publicStateFrom(message.new);
+      if (row !== null && readFacts !== null && roomFacts(row) === readFacts) return;
       void onStateChanged();
     },
   );
@@ -170,6 +212,7 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
   );
   channel.on("presence", { event: "sync" }, () => {
     const roster = rosterNow();
+    counting.saw(roster);
     for (const listener of [...presence]) listener(roster);
   });
 
@@ -284,6 +327,7 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
       // #185: a student-paced room says so, and the reducer refuses its per-item moves.
       data.mode,
     );
+    readFacts = roomFacts(state);
   }
 
   /**
@@ -552,6 +596,7 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     async close(): Promise<void> {
       if (closed) return;
       closed = true;
+      counting.stop();
       views.clear();
       presence.clear();
       aggregates.clear();

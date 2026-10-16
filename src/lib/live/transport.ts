@@ -110,7 +110,11 @@ export interface ParticipantSnapshot extends SessionView<ParticipantItem> {
   mode: SessionMode;
   /** This participant's own id, which every later call is made as. */
   participantId: string;
-  roster: Participant[];
+  /**
+   * How many have joined this session, this participant included (#426). A number and never a
+   * list: a phone is not told who else is in the room. See `onCount`.
+   */
+  count: number;
 }
 
 /** What `open` answers the host with. The host may hold keys and may read the tallies. */
@@ -184,7 +188,14 @@ export interface LiveSessionTransport {
   /** Leaves the room. Idempotent, so a component's cleanup can call it without checking. */
   leave(): Promise<void>;
   onSessionState(listener: (view: SessionView<ParticipantItem>) => void): Unsubscribe;
-  onPresence(listener: (roster: Participant[]) => void): Unsubscribe;
+  /**
+   * How many have joined this session, whenever that number reaches this connection (#426): the
+   * waiting screen's "12 in this session". Someone who has left still counts — they joined, and
+   * the host's roster keeps their name too. Never who: only the host is told that (`onPresence`
+   * on `LiveHostTransport`). An adapter over a network may deliver it a few seconds after a join;
+   * it never goes down.
+   */
+  onCount(listener: (count: number) => void): Unsubscribe;
   /** Fires once per item the host reveals, carrying this participant's own marks. */
   onReveal(listener: (revealed: ItemReveal) => void): Unsubscribe;
   /**

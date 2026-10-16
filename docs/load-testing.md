@@ -44,16 +44,18 @@ gitignored).
 
 A small table on stdout, and all of it as JSON in `--out` for comparing runs:
 
-| Measure       | What it is                                                                                                                                    |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| joined        | participants who got a cookie and a subscribed channel, of those asked for                                                                    |
-| join ms       | the join form post, p50 / p95 / max                                                                                                           |
-| view ms       | `POST /api/live/view`, fired by every move that changes the item or the reveal                                                                |
-| submit ms     | `POST /api/live/submit`                                                                                                                       |
-| refusals      | by code; `wrong_item`, `already_revealed`, `not_started`, `paused`, `not_open`, `time_up` are expected when an answer lands as the host moves |
-| unexpected    | every other refusal or HTTP error; the run fails when it is not zero                                                                          |
-| stalled steps | `--host` only: steps whose answers had not all arrived when the step timed out                                                                |
-| realtime msgs | `postgres_changes` plus presence syncs each participant received                                                                              |
+| Measure         | What it is                                                                                                                                                                                                                                                |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| joined          | participants who got a cookie and a subscribed channel, of those asked for                                                                                                                                                                                |
+| join ms         | the join form post, p50 / p95 / max                                                                                                                                                                                                                       |
+| view ms         | `POST /api/live/view`, fired by every move that changes the item or the reveal                                                                                                                                                                            |
+| submit ms       | `POST /api/live/submit`                                                                                                                                                                                                                                   |
+| refusals        | by code; `wrong_item`, `already_revealed`, `not_started`, `paused`, `not_open`, `time_up` are expected when an answer lands as the host moves                                                                                                             |
+| unexpected      | every other refusal or HTTP error; the run fails when it is not zero                                                                                                                                                                                      |
+| stalled steps   | `--host` only: steps whose answers had not all arrived when the step timed out                                                                                                                                                                            |
+| realtime msgs   | `postgres_changes` plus presence syncs each participant received                                                                                                                                                                                          |
+| realtime frames | every frame each socket was sent on its own channel, by event (`postgres_changes`, `presence_state`, `presence_diff`, `system`), whether or not anything listened; the per-participant figure leaves out replies to the phone's own join and track (#426) |
+| frames by event | the same frames, summed over the class, by event                                                                                                                                                                                                          |
 
 The exit code is 1 when anyone failed to join, any refusal was unexpected, or a step stalled.
 
@@ -245,6 +247,54 @@ Two things the next run should know:
   simulates the phone itself and gives up on the first failure, so it will count a 503 a real
   phone would have recovered from. Either teach it the same retry before the run, or read its
   refusal count as an upper bound.
+
+## #426: measuring a phone that no longer listens for Presence
+
+**Not measured yet.** This needs the hosted load target (#405); the saving cannot be shown
+locally, because the question is what hosted Realtime sends. Until both runs below exist, nothing
+here or in the PR claims a smaller number.
+
+What changed, so the runs know what they compare:
+
+- **Before** (`main` before #426): every phone binds a presence listener, so it is sent the
+  room's roster and every join and leave after it. #404 measured 41 to 131 "realtime msgs" per
+  participant at 60, counting listener callbacks, not frames.
+- **After** (#426's branch with `20261016010000_room_count` pushed): a phone tracks itself and
+  binds no listener, and the `realtime.messages` select policy no longer lets a participant read
+  presence. Reading Realtime's server (supabase/realtime, `presence_handler.ex`, 2026-10-16), the
+  policy is the half that matters: a socket that tracks has presence turned on for it whatever it
+  joined with, and is then sent presence wherever it may read it. The count on the waiting screen
+  comes from `participant_count` on the state row instead, written with each move and by the host
+  console's `refresh_participant_count` at most once every 3 s when someone new joins.
+
+The script measures both with `--student-presence on|off` and the "realtime frames" row, which
+counts what the socket was sent rather than what a listener heard. With `--host` and `off`, the
+script's host also watches the roster and asks for the refresh the way the console does, because
+those rows are part of what a phone is sent after the change.
+
+On the load target, at 100, instructor-paced and with the same seed and ramp for both:
+
+```bash
+# 1. Before: the target running main, without the #426 migration.
+pnpm load:live --host --bank <bank id> --participants 100 --ramp 10000 --seed 426   --student-presence on --base <target app url> --out before-426.json
+
+# 2. Deploy #426's branch to the target and push its migration there (the owner runs db push).
+
+# 3. After.
+pnpm load:live --host --bank <bank id> --participants 100 --ramp 10000 --seed 426   --student-presence off --base <target app url> --out after-426.json
+```
+
+Write down, from each JSON: `realtime.frames.perParticipant` (min / median / max),
+`realtime.frames.byEvent` (`presence_state` and `presence_diff` should be zero after), the number
+of `postgres_changes` frames (which goes **up** after by the count refreshes: at most one per 3 s
+of joins), and `joined`, `stalledSteps` and `unexpectedRefusals` (which must not get worse). Then
+check by hand, at 375px and 1280px: the host roster fills with every join and greys a leave, and a
+phone on the waiting screen shows the right "N in this session" within a few seconds of the last
+join.
+
+If the per-participant frames do not come down by much, #426's PR is closed with these numbers
+and nothing is merged. Run 1 must be made before the migration is pushed: once it is, a phone
+cannot read presence whatever the script binds, and `on` no longer reproduces the before.
 
 ## In CI
 
