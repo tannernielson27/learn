@@ -154,6 +154,9 @@ export async function saveEntryFix(deps: FixDeps, raw: unknown): Promise<FixResu
     reasons: readStoredReasons(reasons),
   });
 
+  // The service client is not held to the edit policy's "only while in review", so the batch is
+  // read again here. A window of milliseconds remains before the write, as for Change type (#346);
+  // closing it needs a conditional update in the database, and this story adds no migration.
   const service = deps.service();
   const open = await batchInReview(service, orgId, input.batchId);
   if (open === "unavailable") return refuse("unavailable");
