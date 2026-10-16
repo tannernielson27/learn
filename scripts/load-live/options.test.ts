@@ -75,6 +75,19 @@ describe("readOptions", () => {
     });
   });
 
+  it("runs phones without a presence listener unless asked, as the app does since #426", () => {
+    expect(readOptions(["--code", "ABC234"], ENV).studentPresence).toBe(false);
+    expect(readOptions(["--code", "ABC234", "--student-presence", "on"], ENV).studentPresence).toBe(
+      true,
+    );
+    expect(readOptions(["--code", "ABC234", "--student-presence=off"], ENV).studentPresence).toBe(
+      false,
+    );
+    expect(() => readOptions(["--code", "ABC234", "--student-presence", "yes"], ENV)).toThrow(
+      /--student-presence must be on or off/,
+    );
+  });
+
   it("defaults --host to the seeded sample case study", () => {
     expect(readOptions(["--host"], ENV).source).toEqual({
       kind: "case_study",

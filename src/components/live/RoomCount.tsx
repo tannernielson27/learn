@@ -11,14 +11,16 @@ export interface PresentCount {
 }
 
 /**
- * The count a student's room keeps from Realtime Presence (#408).
+ * The count a student's room keeps (#408), from the transport's `onCount` (#426).
  *
- * Every join and leave in a session reaches every phone as a presence sync. Held in the room's
- * own state, each one re-rendered the whole room — the item and the answer in progress included —
- * for a number that is only on the screen while there is nothing to answer. Held here, a sync
- * costs the room nothing: the one line that shows the number subscribes to it, and it is mounted
- * only on the waiting screen. The number is still kept while an item is up, so it is right the
- * moment the room pauses.
+ * Held in the room's own state, every change to it re-rendered the whole room — the item and the
+ * answer in progress included — for a number that is only on the screen while there is nothing to
+ * answer. Held here, a change costs the room nothing: the one line that shows the number
+ * subscribes to it, and it is mounted only on the waiting screen. The number is still kept while
+ * an item is up, so it is right the moment the room pauses.
+ *
+ * Since #426 the number is how many have joined the session, which the database keeps on the
+ * session's public state; it no longer comes from Realtime Presence, which a phone is not sent.
  *
  * Starts at one: this phone is in the room before its first sync says so.
  */

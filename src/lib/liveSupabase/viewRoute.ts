@@ -98,7 +98,14 @@ type RoomRow = Database["public"]["Functions"]["begin_session_view"]["Returns"][
 
 /** A request the route may answer: who is asking, their room, and the rows if already read. */
 type Opened =
-  | { ok: true; participant: VerifiedParticipant; room: RoomRow; rows: ViewRows | null }
+  | {
+      ok: true;
+      participant: VerifiedParticipant;
+      room: RoomRow;
+      rows: ViewRows | null;
+      /** How many have joined (#426). Only `open_session_view` says; the old path leaves it out. */
+      count: { count?: number };
+    }
   | { ok: false; response: Response };
 
 /** PostgREST found no function by that name and those arguments, and ran nothing. */
@@ -129,7 +136,7 @@ export async function readParticipantView(
 
   const opened = await openView(request, deps);
   if (!opened.ok) return opened.response;
-  const { participant, room } = opened;
+  const { participant, room, count } = opened;
 
   const read = roomFrom(room);
   if (read === null) return fail(500, LIVE_ROUTE_ERRORS.failed);
@@ -148,7 +155,15 @@ export async function readParticipantView(
   const record = chart.record === undefined ? {} : { record: chart.record };
 
   if (!wholeSet && wanted.length === 0) {
-    return answer({ state, item: null, answered: null, revealed: null, ...record, serverNow });
+    return answer({
+      state,
+      item: null,
+      answered: null,
+      revealed: null,
+      ...record,
+      ...count,
+      serverNow,
+    });
   }
 
   let rows = opened.rows;
@@ -191,6 +206,7 @@ export async function readParticipantView(
       answered: null,
       revealed: null,
       set: built.entries,
+      ...count,
       serverNow,
     });
   }
@@ -202,6 +218,7 @@ export async function readParticipantView(
     answered: only?.answered ?? null,
     revealed: only?.revealed ?? null,
     ...record,
+    ...count,
     serverNow,
   });
 }
@@ -273,6 +290,7 @@ async function openView(request: Request, deps: ViewRouteDeps): Promise<Opened> 
     participant: { sessionId: token.sessionId, participantId: token.participantId },
     room: row,
     rows: { items: listOf(row.view_items), answers: listOf(row.view_answers) },
+    count: countOf(row.session_participants),
   };
 }
 
@@ -301,7 +319,7 @@ async function openViewInTwoCalls(request: Request, deps: ViewRouteDeps): Promis
   if (!row) return { ok: false, response: signedOut() };
   const refused = refusalOf(row);
   if (refused !== null) return { ok: false, response: refused };
-  return { ok: true, participant, room: row, rows: null };
+  return { ok: true, participant, room: row, rows: null, count: {} };
 }
 
 function signedOut(): Response {
@@ -330,6 +348,11 @@ function refusalOf(row: Pick<RoomRow, "refusal">): Response | null {
   const refusal = asRefusal(row.refusal);
   if (refusal !== null) return refuse(refusal);
   return row.refusal ? fail(500, LIVE_ROUTE_ERRORS.failed) : null;
+}
+
+/** The count `open_session_view` read (#426), as the payload carries it: present only if sound. */
+function countOf(value: unknown): { count?: number } {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 ? { count: value } : {};
 }
 
 /** A jsonb array from the database, as a list. Anything else is an empty one. */
