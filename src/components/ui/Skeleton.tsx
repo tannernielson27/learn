@@ -5,12 +5,21 @@ export interface SkeletonProps {
   className?: string;
 }
 
+/** The pulse: opacity only, plain CSS with no script, and still under reduced motion. */
+export const SKELETON_PULSE = "animate-pulse motion-reduce:animate-none";
+
 /**
  * One neutral block standing in for a line of a page that is still on its way. The secondary
- * surface, no text and no accent: a skeleton is not a selection, a focus or an action.
+ * surface, no text and no accent: a skeleton is not a selection, a focus or an action. Every block
+ * starts its pulse with the screen, so they pulse together; a real heading beside them holds still.
  */
 export function Skeleton({ className = "" }: SkeletonProps) {
-  return <div aria-hidden="true" className={`rounded-sm bg-surface-2 ${className}`.trim()} />;
+  return (
+    <div
+      aria-hidden="true"
+      className={`rounded-sm bg-surface-2 ${SKELETON_PULSE} ${className}`.trim()}
+    />
+  );
 }
 
 export interface SkeletonLineProps {
@@ -30,15 +39,15 @@ export function SkeletonLine({ lineClassName, className }: SkeletonLineProps) {
 }
 
 export interface SkeletonScreenProps {
-  /** What a screen reader hears, e.g. "Loading live sessions". The only words on the screen. */
+  /** What a screen reader hears, e.g. "Loading live sessions". */
   label: string;
   children: ReactNode;
 }
 
 /**
- * A route's `loading.tsx` body: one status line for a screen reader and the blocks, drawn in the
- * page's own shape. The blocks share a single slow opacity pulse, plain CSS with no script, and
- * hold still under reduced motion.
+ * A route's `loading.tsx` body: one status line for a screen reader, then the page's own shape.
+ * The blocks hide themselves from assistive technology; the children may also hold the page's
+ * real h1, so a loading screen still has its one heading (axe `page-has-heading-one`).
  */
 export function SkeletonScreen({ label, children }: SkeletonScreenProps) {
   return (
@@ -46,13 +55,7 @@ export function SkeletonScreen({ label, children }: SkeletonScreenProps) {
       <p role="status" className="sr-only">
         {label}
       </p>
-      <div
-        data-skeleton-blocks
-        aria-hidden="true"
-        className="animate-pulse motion-reduce:animate-none"
-      >
-        {children}
-      </div>
+      <div data-skeleton-blocks>{children}</div>
     </div>
   );
 }

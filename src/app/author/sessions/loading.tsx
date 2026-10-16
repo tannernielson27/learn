@@ -3,7 +3,7 @@
 const ROWS = 5;
 
 /**
- * The Live sessions list in outline while it loads: the heading, then ruled rows the height of a
+ * The Live sessions list in outline while it loads: the real heading, then ruled rows the height of a
  * session's row (title, then date, count and status, which wrap under it at 375px). Each line
  * keeps the real text's line height, so the list lands without a shift.
  *
@@ -15,7 +15,9 @@ const ROWS = 5;
 export default function SessionsLoading() {
   return (
     <SkeletonScreen label="Loading live sessions">
-      <SkeletonLine lineClassName="mb-6 h-[2.7rem]" className="h-8 w-48" />
+      {/* The page's own h1, word for word and class for class: static text, so it is drawn rather
+          than outlined, and the loading screen keeps its one heading. */}
+      <h1 className="mb-6 font-read text-3xl text-ink-1">Live sessions</h1>
       <div className="flex flex-col divide-y divide-line border-y border-line">
         {Array.from({ length: ROWS }, (_, row) => (
           <div

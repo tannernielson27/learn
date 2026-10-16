@@ -43,14 +43,26 @@ describe("SkeletonScreen", () => {
     expect(container.firstElementChild).toHaveAttribute("aria-busy", "true");
   });
 
-  it("pulses on opacity alone, and not at all under reduced motion", () => {
+  it("pulses its blocks on opacity alone, and not at all under reduced motion", () => {
     const { container } = render(
       <SkeletonScreen label="Loading">
         <Skeleton />
       </SkeletonScreen>,
     );
-    const blocks = container.querySelector("[data-skeleton-blocks]");
-    expect(blocks).toHaveAttribute("aria-hidden", "true");
-    expect(blocks).toHaveClass("animate-pulse", "motion-reduce:animate-none");
+    const block = container.querySelector("[data-skeleton-blocks] > div");
+    expect(block).toHaveAttribute("aria-hidden", "true");
+    expect(block).toHaveClass("animate-pulse", "motion-reduce:animate-none");
+  });
+
+  it("keeps a real heading among the blocks visible to assistive technology, and still", () => {
+    render(
+      <SkeletonScreen label="Loading">
+        <h1>Live sessions</h1>
+        <Skeleton />
+      </SkeletonScreen>,
+    );
+    const heading = screen.getByRole("heading", { level: 1, name: "Live sessions" });
+    expect(heading.closest("[aria-hidden]")).toBeNull();
+    expect(heading.closest(".animate-pulse")).toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-import { SkeletonLine, SkeletonScreen } from "@/components/ui/Skeleton";
+import { Skeleton, SkeletonLine, SkeletonScreen } from "@/components/ui/Skeleton";
 
 const MEMBER_ROWS = 2;
 
@@ -13,7 +13,12 @@ export default function WorkspaceLoading() {
   return (
     <SkeletonScreen label="Loading the workspace">
       <SkeletonLine lineClassName="mb-1 h-5" className="h-3.5 w-24" />
-      <SkeletonLine lineClassName="mb-8 h-[2.7rem]" className="h-8 w-64 max-w-full" />
+      {/* The page's h1 is the workspace's name, not known yet. A real h1 named for the page, in
+          the name's line box, so the screen keeps its one heading and nothing shifts. */}
+      <h1 className="mb-8 flex h-[2.7rem] items-center">
+        <span className="sr-only">Workspace</span>
+        <Skeleton className="h-8 w-64 max-w-full" />
+      </h1>
 
       <div className="mb-10">
         <SkeletonLine lineClassName="mb-3 h-7" className="h-5 w-24" />
