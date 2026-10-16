@@ -107,8 +107,10 @@ create temporary table cmt as
     jsonb_build_object(
       'title', 'Fictional case', 'tags', jsonb_build_array('ai-import'),
       'ehr', jsonb_build_object('tabs', jsonb_build_array()),
-      'items', (select jsonb_agg(q.question || jsonb_build_object('cjmm_step', 1))
-                  from generate_series(1, 6))) as case_study
+      -- The step number names the inner query, so the aggregate is evaluated there; each step's
+      -- cjmm_step is 1 here and the import pins it to the step's position.
+      'items', (select jsonb_agg(q.question || jsonb_build_object('cjmm_step', g.n - g.n + 1))
+                  from generate_series(1, 6) as g(n))) as case_study
   from (
     select jsonb_build_object(
       'type', 'multiple_choice', 'cjmm_step', 3, 'tags', jsonb_build_array('ai-import'),

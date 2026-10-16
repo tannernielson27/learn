@@ -66,19 +66,17 @@ test("a teacher imports a reviewed batch into the quiz, and its files are delete
   await expect(page.getByRole("heading", { level: 1, name: "Review AI import" })).toBeVisible();
   const batchId = new URL(page.url()).pathname.split("/").at(-1)!;
 
-  // Keep two questions, ready, and drop the rest, as a teacher would after reviewing.
-  const entries = await selectAsAdmin<{ id: string }>(
+  // Keep the first question the pipeline found ready and drop the rest, as a teacher would after
+  // reviewing. (Some the fake client stages need an answer or a fix; those cannot be imported.)
+  const [kept] = await selectAsAdmin<{ id: string }>(
     request,
     "ai_import_entries",
-    `select=id&batch_id=eq.${batchId}&order=position`,
+    `select=id&batch_id=eq.${batchId}&status=eq.ready&item=not.is.null&order=position&limit=1`,
   );
-  expect(entries.length).toBeGreaterThanOrEqual(2);
-  await updateAsAdmin(request, "ai_import_entries", `batch_id=eq.${batchId}`, {
+  expect(kept).toBeTruthy();
+  await updateAsAdmin(request, "ai_import_entries", `batch_id=eq.${batchId}&id=neq.${kept!.id}`, {
     status: "dropped",
   });
-  for (const kept of entries.slice(0, 2)) {
-    await updateAsAdmin(request, "ai_import_entries", `id=eq.${kept.id}`, { status: "ready" });
-  }
   const [file] = await selectAsAdmin<{ storage_path: string }>(
     request,
     "ai_import_files",
@@ -90,18 +88,18 @@ test("a teacher imports a reviewed batch into the quiz, and its files are delete
   await page.reload();
 
   const importButton = page.getByTestId("import-button");
-  await expect(importButton).toHaveText("Import 2 questions");
+  await expect(importButton).toHaveText("Import 1 question");
   await expect(importButton).toBeEnabled();
   await expectNoAxeViolations(page);
   await importButton.click();
-  await expect(page.getByText(`2 questions were added to ${quizName} as drafts.`)).toBeVisible({
+  await expect(page.getByText(`1 question was added to ${quizName} as a draft.`)).toBeVisible({
     timeout: 30_000,
   });
 
   // The batch page says imported, now and after a reload.
   await page.reload();
   await expect(page.getByTestId("imported-summary")).toContainText(
-    `2 questions were added to ${quizName} as drafts.`,
+    `1 question was added to ${quizName} as a draft.`,
   );
   await expectNoAxeViolations(page);
   await page.screenshot({ path: `${shots}/ai-import-imported.png`, fullPage: true });
@@ -112,7 +110,7 @@ test("a teacher imports a reviewed batch into the quiz, and its files are delete
     "items",
     `select=status&bank_id=eq.${bankId}`,
   );
-  expect(items.map((item) => item.status)).toEqual(["draft", "draft"]);
+  expect(items.map((item) => item.status)).toEqual(["draft"]);
   const [batch] = await selectAsAdmin<{ status: string }>(
     request,
     "ai_import_batches",
