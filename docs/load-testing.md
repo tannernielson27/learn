@@ -292,6 +292,12 @@ check by hand, at 375px and 1280px: the host roster fills with every join and gr
 phone on the waiting screen shows the right "N in this session" within a few seconds of the last
 join.
 
+**The after run is also the safety check for the policy change**, which was read in Realtime's
+source and not run: every phone must join (a refused or timed-out channel shows as a `join`
+refusal), its `track` must be acknowledged so the host roster fills, and `presence_state` /
+`presence_diff` must be zero per phone. If any phone cannot join or track, the migration is not
+pushed to production, whatever the frames say.
+
 If the per-participant frames do not come down by much, #426's PR is closed with these numbers
 and nothing is merged. Run 1 must be made before the migration is pushed: once it is, a phone
 cannot read presence whatever the script binds, and `on` no longer reproduces the before.
