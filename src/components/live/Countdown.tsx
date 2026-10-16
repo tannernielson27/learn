@@ -30,9 +30,11 @@ const REDRAW_MS = 250;
  * left.", "10 seconds left." and "Time is up." — the three moments that change what a student
  * should do — and nothing else (`timerAnnouncement`).
  *
- * **Motion.** The bar shrinks by `transform`, redrawn in steps with no transition, so there is no
- * animation for reduced motion to switch off. Nothing flashes and nothing turns red: red is
- * reserved for feedback (docs/04-DESIGN-DIRECTION.md).
+ * **Motion.** The bar shrinks by `transform` alone. Each redraw sets a new `scaleX` and a linear
+ * transition exactly one redraw long carries it there, so the steps run into each other and the
+ * bar drains smoothly on the compositor, with no animation loop in script. Reduced motion drops
+ * the transition and the bar steps. The bar keeps one colour to the end: nothing flashes and
+ * nothing turns red or amber, which are reserved for feedback (docs/04-DESIGN-DIRECTION.md).
  */
 export function Countdown({ timer, now }: CountdownProps) {
   const [at, setAt] = useState(now);
@@ -71,8 +73,8 @@ export function Countdown({ timer, now }: CountdownProps) {
       <div aria-hidden="true" className="mt-2 h-1 overflow-hidden rounded-sm bg-surface-2">
         <div
           data-testid="countdown-bar"
-          className="h-full origin-left bg-ink-2"
-          style={{ transform: `scaleX(${share})` }}
+          className="h-full origin-left bg-ink-2 transition-transform ease-linear motion-reduce:transition-none"
+          style={{ transform: `scaleX(${share})`, transitionDuration: `${REDRAW_MS}ms` }}
         />
       </div>
       <p data-testid="countdown-announcement" aria-live="polite" className="sr-only">

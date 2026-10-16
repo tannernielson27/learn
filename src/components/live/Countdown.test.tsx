@@ -96,4 +96,25 @@ describe("Countdown", () => {
     const bar = screen.getByTestId("countdown-bar");
     expect(bar.style.transform).toBe("scaleX(0.5)");
   });
+
+  it("drains between redraws with a linear transform transition, switched off for reduced motion", () => {
+    render(<Countdown timer={running(15_000, 30)} now={now} />);
+    const bar = screen.getByTestId("countdown-bar");
+    // The transition lasts exactly one redraw, so each step runs into the next with no pause.
+    expect(bar.style.transitionDuration).toBe("250ms");
+    expect(bar).toHaveClass("transition-transform", "ease-linear", "motion-reduce:transition-none");
+    // Only `transform` is transitioned: motion here is transform and opacity alone.
+    expect(bar).not.toHaveClass("transition-colors");
+    expect(bar).not.toHaveClass("transition");
+  });
+
+  it("keeps the bar its one neutral colour to the end: amber and red are for feedback", () => {
+    render(<Countdown timer={running(12_000, 30)} now={now} />);
+    const bar = screen.getByTestId("countdown-bar");
+    expect(bar).toHaveClass("bg-ink-2");
+    tick(10_000);
+    expect(bar).toHaveClass("bg-ink-2");
+    expect(bar).not.toHaveClass("bg-flag");
+    expect(bar).not.toHaveClass("bg-incorrect");
+  });
 });
