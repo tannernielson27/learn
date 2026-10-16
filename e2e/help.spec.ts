@@ -63,6 +63,7 @@ test("the teacher guide's contents list goes to each section", async ({ page }) 
   await expect(contents.getByRole("link")).toHaveText([
     "Sign up and sign in",
     "Create or import a quiz",
+    "Import questions with AI",
     "Write questions",
     "Create a class and invite students",
     "Assign a quiz",
@@ -93,6 +94,17 @@ test("the question guide has a section for every question format", async ({ page
     path: `test-results/screenshots/${testInfo.project.name}/help-items.png`,
     fullPage: true,
   });
+});
+
+// #349: the upload page links here, so the anchor is part of what the guide promises.
+test("the teacher guide explains AI import, with its review screen", async ({ page }) => {
+  await page.goto("/help/instructor#ai-import");
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Import questions with AI", exact: true }),
+  ).toBeInViewport();
+  const section = page.locator("section#ai-import");
+  await expect(section).toContainText("It never writes an answer or a rationale.");
+  await expect(section.getByRole("img")).toBeVisible();
 });
 
 // The demo step: from help, open the question guide and find how a drop-down rationale is scored.

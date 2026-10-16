@@ -13,6 +13,7 @@ export const metadata: Metadata = { title: "Teacher guide" };
 const SECTIONS = [
   { id: "sign-in", title: "Sign up and sign in" },
   { id: "banks", title: "Create or import a quiz" },
+  { id: "ai-import", title: "Import questions with AI" },
   { id: "items", title: "Write questions" },
   { id: "classes", title: "Create a class and invite students" },
   { id: "assign", title: "Assign a quiz" },
@@ -170,6 +171,77 @@ export default function InstructorGuide() {
         </Topic>
         <Topic id="folders" title="Folders, tags and search">
           <p>Sort a large quiz into folders, tag questions, and search by text or tag.</p>
+        </Topic>
+      </Section>
+
+      <Section id="ai-import">
+        <p>
+          Claude copies the questions in your documents into a quiz. It never writes an answer or a
+          rationale. If a quiz has no <Ui>Import with AI</Ui>, it is not turned on for your
+          workspace.
+        </p>
+        <Steps>
+          <li>
+            In a quiz, press <Ui>Import with AI</Ui>.
+          </li>
+          <li>Choose up to 5 documents: PDF, Word .docx, Markdown or text.</li>
+          <li>
+            Confirm you may use the content and that it has no real patient information, then press{" "}
+            <Ui>Upload and read</Ui>.
+          </li>
+          <li>
+            Wait while it reads. You can leave and come back. Then press{" "}
+            <Ui>Review the questions</Ui>.
+          </li>
+        </Steps>
+        <Topic id="ai-import-review" title="Review what it found">
+          <List>
+            <li>
+              <Ui>Ready:</Ui> imports as it is.
+            </li>
+            <li>
+              <Ui>Needs an answer:</Ui> the document marks no answer.
+            </li>
+            <li>
+              <Ui>Needs a fix:</Ui> something did not read cleanly. The card says what.
+            </li>
+            <li>
+              <Ui>Not importable:</Ui> not an NGN question, such as a discussion prompt. It is left
+              out.
+            </li>
+          </List>
+          <p>
+            <Ui>Show source</Ui> puts the document&apos;s words beside the question. <Ui>Drop</Ui>{" "}
+            leaves a question out. <Ui>Change type</Ui> reads it again as another format, which uses
+            some of the monthly allowance.
+          </p>
+          <HelpFigure
+            figure={HELP_FIGURES.aiImportReview}
+            caption="Three questions that each need something before the import."
+          />
+        </Topic>
+        <Topic id="ai-import-fix" title="Add a missing answer">
+          <p>
+            Press <Ui>Edit</Ui> on the question, mark the answer and press <Ui>Save</Ui>. It is then
+            Ready. A case study cannot be edited here: import it and edit it in the quiz, or drop
+            it.
+          </p>
+        </Topic>
+        <Topic id="ai-import-finish" title="Import or discard">
+          <p>
+            Once nothing needs an answer or a fix, <Ui>Import</Ui> adds every kept question to the
+            quiz as a draft, all at once. Write a rationale and publish each as usual.{" "}
+            <Ui>Discard this import</Ui> keeps nothing. Either way the uploaded files are deleted.
+            An import left for 7 days is deleted.
+          </p>
+        </Topic>
+        <Topic id="ai-import-limits" title="Limits">
+          <List>
+            <li>A missing answer or rationale is flagged for you, never made up.</li>
+            <li>Pictures are not imported. A question that needs one is flagged.</li>
+            <li>Your workspace has a monthly allowance. The upload page shows what is left.</li>
+            <li>One import holds up to 5 files, 100 PDF pages and 150 questions.</li>
+          </List>
         </Topic>
       </Section>
 

@@ -7,7 +7,8 @@ const GUIDES = [
   {
     href: "/help/instructor",
     label: "Teacher guide",
-    summary: "Quizzes, questions, classes, assignments, live sessions, reports and practice.",
+    summary:
+      "Quizzes, questions, AI import, classes, assignments, live sessions, reports and practice.",
   },
   {
     href: "/help/items",
