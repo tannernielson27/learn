@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PRESS_CLASSES } from "@/components/ui/Button";
 import type { ItemSearch } from "@/lib/authoring/bankSearch";
 import type { FolderView } from "@/lib/authoring/folders";
 import {
@@ -31,8 +32,7 @@ interface Chip {
 
 const itemCount = (count: number) => (count === 1 ? "1 question" : `${count} questions`);
 
-const chipClass =
-  "tap-target inline-flex items-center gap-2 rounded-sm border px-3 text-sm transition-colors duration-fast";
+const chipClass = `tap-target inline-flex items-center gap-2 rounded-sm border px-3 text-sm ${PRESS_CLASSES}`;
 const idleClass = "border-line bg-surface-1 text-ink-1 hover:border-line-strong hover:bg-surface-2";
 const chosenClass = "border-accent bg-accent-soft font-medium text-accent-ink hover:bg-surface-2";
 

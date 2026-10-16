@@ -41,4 +41,10 @@ describe("Pager", () => {
     const { container } = render(<Pager page={1} pageCount={1} hrefFor={hrefFor} />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("presses its links in like a Button", () => {
+    render(<Pager page={2} pageCount={3} hrefFor={hrefFor} />);
+    expect(screen.getByRole("link", { name: "Previous page" })).toHaveClass("press");
+    expect(screen.getByRole("link", { name: "Next page" })).toHaveClass("press");
+  });
 });

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PRESS_CLASSES } from "@/components/ui/Button";
 
 export interface PagerProps {
   page: number;
@@ -9,8 +10,7 @@ export interface PagerProps {
 
 const linkClass =
   "tap-target inline-flex items-center rounded-sm border border-line bg-surface-1 px-3 text-sm " +
-  "font-medium text-accent-ink transition-colors duration-fast hover:border-line-strong " +
-  "hover:bg-surface-2";
+  `font-medium text-accent-ink ${PRESS_CLASSES} hover:border-line-strong hover:bg-surface-2`;
 
 /** Previous and next links for a paged list, kept in the URL. Nothing for a single page. */
 export function Pager({ page, pageCount, hrefFor }: PagerProps) {

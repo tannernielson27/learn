@@ -1,6 +1,7 @@
 "use client";
 
 import type { ButtonHTMLAttributes } from "react";
+import { PRESS_CLASSES } from "@/components/ui/Button";
 
 export interface FlagToggleProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onChange"> {
   flagged: boolean;
@@ -20,7 +21,7 @@ export function FlagToggle({ flagged, label, onChange, className = "", ...rest }
       type="button"
       aria-pressed={flagged}
       onClick={() => onChange(!flagged)}
-      className={`tap-target inline-flex items-center gap-2 rounded-sm border px-3 text-sm font-medium transition-[background-color,border-color,color] duration-fast ease-out-expo ${
+      className={`tap-target inline-flex items-center gap-2 rounded-sm border px-3 text-sm font-medium ${PRESS_CLASSES} ${
         flagged
           ? "border-flag bg-flag-soft text-ink-1"
           : "border-line text-ink-2 hover:bg-surface-2 hover:text-ink-1"

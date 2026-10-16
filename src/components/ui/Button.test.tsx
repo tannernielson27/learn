@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -37,5 +39,10 @@ describe("Button", () => {
     expect(buttonClasses({ variant: "primary" })).toBe(button.className);
     expect(buttonClasses({ size: "sm" })).toContain("px-3 text-sm");
     expect(buttonClasses()).toContain("bg-surface-1");
+  });
+
+  it("never presses a disabled control, native or aria-disabled", () => {
+    const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
+    expect(css).toContain(':active:not(:disabled, [aria-disabled="true"])');
   });
 });

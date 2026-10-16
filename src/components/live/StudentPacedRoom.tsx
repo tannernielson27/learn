@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AnswerSentLine } from "@/components/live/AnswerSentLine";
 import { LIVE_BUSY_LABEL, liveSubmitFailure } from "@/components/live/liveSubmit";
 import { createPresentCount, RoomCount } from "@/components/live/RoomCount";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
@@ -220,9 +221,7 @@ export function StudentPacedRoom({
       ) : mine !== null ? (
         // A plain wrapper: the player inside is already the "Your answer" landmark.
         <div className="mt-8">
-          <p data-testid="answer-sent" className="measure mb-4 text-sm text-ink-2">
-            {SENT}
-          </p>
+          <AnswerSentLine text={SENT} />
           <ItemPlayer
             key={`${entry.item.id}:sent`}
             item={entry.item}
