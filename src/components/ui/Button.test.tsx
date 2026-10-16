@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { Button } from "./Button";
+import { Button, buttonClasses } from "./Button";
 
 describe("Button", () => {
   it("renders as a non-submit button by default and fires onClick", async () => {
@@ -26,5 +26,16 @@ describe("Button", () => {
     expect(button).toBeDisabled();
     await userEvent.click(button);
     expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("presses in, and gives a link the same classes as the button it imitates", () => {
+    render(<Button variant="primary">Join</Button>);
+    const button = screen.getByRole("button", { name: "Join" });
+    expect(button).toHaveClass("press");
+    // The press is a transform, so it has to be in the transition list to ease rather than jump.
+    expect(button.className).toContain("scale]");
+    expect(buttonClasses({ variant: "primary" })).toBe(button.className);
+    expect(buttonClasses({ size: "sm" })).toContain("px-3 text-sm");
+    expect(buttonClasses()).toContain("bg-surface-1");
   });
 });

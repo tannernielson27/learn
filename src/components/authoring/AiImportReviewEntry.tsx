@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useId, useState } from "react";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClasses } from "@/components/ui/Button";
 import {
   STATUS_LABELS,
   retypeChoices,
@@ -158,7 +158,7 @@ export function AiImportReviewEntry({
           <Link
             href={editHref}
             aria-label={`Edit ${heading}`}
-            className="tap-target inline-flex items-center justify-center rounded-sm border border-line bg-surface-1 px-3 text-sm font-medium text-ink-1 transition-colors duration-fast ease-out-expo hover:border-line-strong hover:bg-surface-2 motion-reduce:transition-none"
+            className={buttonClasses({ size: "sm" })}
           >
             Edit
           </Link>

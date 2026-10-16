@@ -19,7 +19,7 @@ import { QuizMoveForm } from "@/components/authoring/QuizMoveForm";
 import { TurnFolderIntoQuizButton } from "@/components/authoring/TurnFolderIntoQuizButton";
 import { Pager } from "@/components/authoring/Pager";
 import { TagFilterBar } from "@/components/authoring/TagFilterBar";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClasses } from "@/components/ui/Button";
 import { startLiveSession } from "@/app/live/actions";
 import { shareBankWithClass, stopSharing } from "@/app/author/practice/actions";
 import { aiImportEnabled } from "@/lib/aiImport/config";
@@ -197,16 +197,13 @@ export default async function BankPage({
             Start a live session
           </Button>
           {/* #207: the same bank, given to a class to take at home. */}
-          <Link
-            href={assignmentPath({ kind: "bank", id: bank.id })}
-            className="tap-target inline-flex items-center rounded-sm border border-line bg-surface-1 px-4 font-medium text-ink-1 hover:border-line-strong hover:bg-surface-2"
-          >
+          <Link href={assignmentPath({ kind: "bank", id: bank.id })} className={buttonClasses()}>
             Assign
           </Link>
         </form>
         <Link
           href={`/author/banks/${bank.id}/new`}
-          className="tap-target inline-flex items-center rounded-sm border border-accent bg-accent px-4 font-medium text-accent-contrast hover:bg-accent-ink"
+          className={buttonClasses({ variant: "primary" })}
         >
           New question
         </Link>

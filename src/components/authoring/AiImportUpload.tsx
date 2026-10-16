@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type DragEvent, type FormEvent } from "react";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClasses } from "@/components/ui/Button";
 import { driveBatch, type DriverIo } from "@/lib/authoring/aiImportDriver";
 import {
   AI_IMPORT_ACCEPT,
@@ -303,7 +303,7 @@ export function AiImportUpload({
           {batchId ? (
             <Link
               href={`/author/banks/${bankId}/ai-import/${batchId}`}
-              className="tap-target inline-flex items-center rounded-sm border border-accent bg-accent px-4 font-medium text-accent-contrast hover:bg-accent-ink"
+              className={buttonClasses({ variant: "primary" })}
             >
               Review the questions
             </Link>
