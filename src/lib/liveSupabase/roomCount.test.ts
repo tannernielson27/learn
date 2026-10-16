@@ -13,6 +13,10 @@ import { createFakeRoom, type FakeRoom } from "./testing/supabaseRoom";
  * public state, kept fresh by the host's console, and a phone is sent no roster at all.
  */
 
+interface FakeChannelLike {
+  on: (type: string, filter: unknown, listener: (message: unknown) => void) => FakeChannelLike;
+}
+
 function room(): FakeRoom {
   return createFakeRoom({
     items: CONFORMANCE_ITEMS,
@@ -141,6 +145,44 @@ describe("the waiting screen's count, end to end (#426)", () => {
     await live.settle();
 
     expect(live.stack.messagesSent).toBe(sent);
+  });
+
+  it("still hears its own move when its own read of the room lands before the echo", async () => {
+    // In production the console's read after a move usually beats the channel's echo of it. The
+    // echo must still be treated as news: it is what loads the item the room moved to.
+    const live = room();
+    const client = createFakeClient(live.stack, { role: "authenticated", orgId: live.orgId });
+    const slowEcho = {
+      ...client,
+      channel(topic: string, options: unknown) {
+        const channel = (client.channel as unknown as (t: string, o: unknown) => FakeChannelLike)(
+          topic,
+          options,
+        );
+        const on = channel.on.bind(channel);
+        channel.on = (type, filter, listener) =>
+          on(type, filter, (message: unknown) => {
+            setTimeout(() => listener(message), 5);
+          });
+        return channel;
+      },
+    } as unknown as SupabaseClient<Database>;
+    const host = createSupabaseHost({
+      client: slowEcho,
+      sessionId: live.sessionId,
+      countRefreshMs: 0,
+    });
+    const seen: (string | undefined)[] = [];
+    host.onSessionState((view) => seen.push(view.item?.id));
+    await host.open();
+    await host.start();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    await live.settle();
+    await host.advance();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    await live.settle();
+
+    expect(seen.at(-1)).toBe(CONFORMANCE_ITEMS[1]?.id);
   });
 
   it("refuses a host from another org, as the database does", async () => {
