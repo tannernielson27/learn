@@ -14,9 +14,7 @@ describe("JoinByCodeForm (#362)", () => {
     setup({ status: "idle" });
     const field = screen.getByRole("textbox", { name: "Class code" });
     expect(field).toBeRequired();
-    expect(field).toHaveAccessibleDescription(
-      "Eight letters and numbers, like ABCD-2345. Your teacher has it.",
-    );
+    expect(field).toHaveAccessibleDescription("Like ABCD-2345. Your teacher has it.");
     expect(field).toHaveAttribute("autocapitalize", "characters");
   });
 
@@ -46,7 +44,7 @@ describe("JoinByCodeForm (#362)", () => {
   it("tells an instructor the account stays one, with the way home", async () => {
     const { user } = setup({ status: "instructor" });
     await user.type(screen.getByRole("textbox", { name: "Class code" }), "ABCD-2345{Enter}");
-    expect(await screen.findByRole("status")).toHaveTextContent(/already a teacher/);
+    expect(await screen.findByRole("status")).toHaveTextContent(/This is a teacher account/);
     expect(screen.getByRole("link", { name: "Go to your quizzes" })).toHaveAttribute(
       "href",
       "/author",

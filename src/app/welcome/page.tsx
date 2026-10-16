@@ -41,9 +41,7 @@ export default async function WelcomePage({ searchParams }: PageProps<"/welcome"
       <h2 id="welcome-join" className="mb-2 text-lg font-semibold text-ink-1">
         Join your class
       </h2>
-      <p className="mb-4 text-ink-2">
-        Type the class code from your teacher, or open their invite link.
-      </p>
+      <p className="mb-4 text-ink-2">Use the class code or invite link from your teacher.</p>
       <JoinByCodeForm action={joinClassWithCode} initialCode={classCode ?? undefined} />
     </section>
   );
@@ -55,7 +53,7 @@ export default async function WelcomePage({ searchParams }: PageProps<"/welcome"
       </h2>
       <p className="mb-4 text-ink-2">
         {teaching
-          ? "Your account is ready, but your workspace could not be set up. Try again."
+          ? "Your account is ready, but the workspace is not. Try again."
           : "A workspace holds your quizzes and classes."}
       </p>
       <SetUpWorkspace action={setUpWorkspace} />

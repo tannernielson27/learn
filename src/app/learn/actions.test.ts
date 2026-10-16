@@ -69,7 +69,7 @@ describe("joinClassWithCode (#362)", () => {
       const state = await joinClassWithCode(IDLE, form(typed));
       expect(state).toEqual({
         status: "error",
-        error: "Enter the eight letters and numbers of your class code, like ABCD-2345.",
+        error: "Enter all eight letters and numbers, like ABCD-2345.",
       });
       expect(rpc).not.toHaveBeenCalled();
     },
@@ -80,7 +80,7 @@ describe("joinClassWithCode (#362)", () => {
     expect(await joinClassWithCode(IDLE, form("ABCD2345"))).toEqual({
       status: "error",
       error:
-        "That class code did not work. Check it with your teacher. If you were removed from the class, only they can add you back.",
+        "That class code did not work. Ask your teacher to check it, or to add you back if you were removed.",
     });
     expect(redirected).not.toHaveBeenCalled();
   });
@@ -157,7 +157,7 @@ describe("joinClassWithCode counts the caller's address before the account", () 
     expect(await joinClassWithCode(IDLE, form("ABCD2345"))).toEqual({
       status: "error",
       error:
-        "That class code did not work. Check it with your teacher. If you were removed from the class, only they can add you back.",
+        "That class code did not work. Ask your teacher to check it, or to add you back if you were removed.",
     });
   });
 });

@@ -56,7 +56,7 @@ describe("StudentClassList", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "You are not in a class yet" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/invite link your teacher shares/)).toBeInTheDocument();
+    expect(screen.getByText(/your teacher’s invite link/)).toBeInTheDocument();
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
   });
 });

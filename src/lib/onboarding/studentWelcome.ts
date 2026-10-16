@@ -36,23 +36,20 @@ export function studentWelcomeSteps(
   return [
     {
       title: name ? `Welcome, ${name}` : "Welcome to LeaRN",
-      body: [
-        inClasses(classNames),
-        "Your classes are at the top of this page. Everything your teacher gives you is below them.",
-      ],
+      body: [inClasses(classNames), "Your classes are at the top. Your work is below them."],
     },
     {
       title: "Assignments and practice",
       body: [
-        "Open assignments lists what is due and when it closes, in your class’s time zone.",
-        "Practice lists the quizzes your teacher has shared. Practice is not graded.",
+        "Open assignments shows what is due and when, in your class’s time zone.",
+        "Practice has the quizzes your teacher shared. It is not graded.",
       ],
     },
     {
       title: "Results and live sessions",
       body: [
-        "When an assignment closes, it moves to History with your score, the answers and the rationales.",
-        "A live session needs no sign-in: go to the join page and type the join code your teacher shows.",
+        "Closed assignments move to History, with your score, answers and rationales.",
+        "Live sessions need no sign-in: type your teacher’s join code on the join page.",
       ],
     },
   ];

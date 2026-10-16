@@ -14,7 +14,7 @@ describe("ConfirmEmailBanner", () => {
     setup({ status: "idle" });
     expect(screen.getByRole("heading", { name: "Confirm your email address" })).toBeInTheDocument();
     expect(screen.getByText(/a@school\.edu/)).toBeInTheDocument();
-    expect(screen.getByText(/Nothing is locked until then/)).toBeInTheDocument();
+    expect(screen.getByText(/Nothing is locked meanwhile/)).toBeInTheDocument();
   });
 
   it("sends the email again and says so politely", async () => {

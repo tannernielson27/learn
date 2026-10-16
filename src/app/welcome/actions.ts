@@ -9,7 +9,7 @@ import { workspaceName } from "@/lib/auth/signUp";
 import { readViewer } from "@/lib/classes/viewer";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
-const WORKSPACE_FAILED = "Your workspace could not be set up just now. Try again in a moment.";
+const WORKSPACE_FAILED = "The workspace was not set up. Try again in a moment.";
 
 /** `register_instructor`'s refusal of an account that already has a role. */
 const ALREADY_HAS_A_ROLE = "23514";
