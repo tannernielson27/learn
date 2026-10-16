@@ -157,13 +157,14 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
   /**
    * The waiting screen's count (#426): phones no longer hear Presence, so this console — which
    * does — asks the database to recount when it sees someone new. The database decides the number.
-   * A refresh that fails is not retried: the next newcomer or the room's next move carries it.
+   * A refresh that fails is asked again a few times, an interval apart (`countRefresh.ts`).
    */
-  const counting = createCountRefresh(() => {
-    if (closed) return;
-    void Promise.resolve(client.rpc("refresh_participant_count", { target: sessionId })).catch(
-      () => {},
-    );
+  const counting = createCountRefresh(async () => {
+    if (closed) return true;
+    // supabase-js answers a failed call with `{ error }` rather than throwing; both are a "no",
+    // which `createCountRefresh` asks again a few times for. A throw is its to catch.
+    const { error } = await client.rpc("refresh_participant_count", { target: sessionId });
+    return error === null;
   }, options.countRefreshMs);
 
   /**
@@ -191,6 +192,9 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     (message: { new?: unknown }) => {
       const row = publicStateFrom(message.new);
       if (row !== null && readFacts !== null && roomFacts(row) === readFacts) return;
+      // Forgotten until this read lands, so a row that arrives meanwhile — the room moving back
+      // to where it was, say — is read for rather than taken as already seen.
+      readFacts = null;
       void onStateChanged();
     },
   );

@@ -7,8 +7,8 @@
 -- the session's org may ask for one; an ended room is left alone; the view read answers with the
 -- same number; and row level security on the mirror is what it was.
 --
--- "Writes nothing" is read off the row's `xmin`: inside one transaction `now()` does not move, so
--- `updated_at` cannot tell a second write from none.
+-- "Writes nothing" is read off the row's `ctid`: inside one transaction `now()` does not move and
+-- neither does `xmin`, so neither can tell a second write from none; a new tuple's place can.
 --
 -- Runs with `pnpm test:db`. Uses its own fixture ids so it never counts the seed's.
 begin;
@@ -58,10 +58,11 @@ language sql as $$
    where session_id = '00000000-0000-0000-0000-0000004260a1';
 $$;
 
--- The row's version: changes on every write to it, and on nothing else.
+-- Where the row lives: every UPDATE writes a new tuple, so this moves on every write to it and on
+-- nothing else, even inside this one transaction (where `xmin` would not move).
 create function pg_temp.version_of_a() returns text
 language sql as $$
-  select xmin::text from live.session_public_state
+  select ctid::text from live.session_public_state
    where session_id = '00000000-0000-0000-0000-0000004260a1';
 $$;
 

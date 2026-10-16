@@ -50,12 +50,14 @@ async function refusalOf(response) {
  * Counts every frame this socket is sent on its own channel, by event (#426): `postgres_changes`,
  * `presence_state`, `presence_diff`, `system`, `phx_reply`. A presence listener's callbacks are
  * not the measure: the server can send presence to a socket that has no listener for it, and the
- * question is whether it does. `socketAdapter` is realtime-js's own and not public API, so a
- * version without it counts nothing here rather than failing the run.
+ * question is whether it does. `socketAdapter` is realtime-js's own (2.116.0), so a version
+ * without it stops the run: zero frames counted would read as a saving.
  */
 function countFrames(client, topic, frames) {
   const adapter = client.realtime?.socketAdapter;
-  if (typeof adapter?.onMessage !== "function") return;
+  if (typeof adapter?.onMessage !== "function") {
+    throw new Error("frames_uncountable: this realtime-js has no socketAdapter.onMessage");
+  }
   adapter.onMessage((message) => {
     if (message?.topic !== topic || typeof message.event !== "string") return;
     frames[message.event] = (frames[message.event] ?? 0) + 1;

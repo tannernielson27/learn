@@ -350,12 +350,12 @@ function refusalOf(row: Pick<RoomRow, "refusal">): Response | null {
   return row.refusal ? fail(500, LIVE_ROUTE_ERRORS.failed) : null;
 }
 
-/** A jsonb array from the database, as a list. Anything else is an empty one. */
 /** The count `open_session_view` read (#426), as the payload carries it: present only if sound. */
 function countOf(value: unknown): { count?: number } {
   return typeof value === "number" && Number.isInteger(value) && value >= 0 ? { count: value } : {};
 }
 
+/** A jsonb array from the database, as a list. Anything else is an empty one. */
 function listOf(value: unknown): readonly unknown[] {
   return Array.isArray(value) ? value : [];
 }

@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Participant } from "@/lib/live";
-import { COUNT_REFRESH_MS, createCountRefresh, type RefreshTimers } from "./countRefresh";
+import {
+  COUNT_REFRESH_MS,
+  COUNT_REFRESH_RETRIES,
+  createCountRefresh,
+  type RefreshTimers,
+} from "./countRefresh";
 
 /**
  * #426: the host's console asks the database to bring the waiting screen's count up to date. How
@@ -111,6 +116,30 @@ describe("createCountRefresh (#426)", () => {
     time.advance(COUNT_REFRESH_MS * 2);
     expect(ask).toHaveBeenCalledTimes(1);
     expect(time.pending()).toBe(0);
+  });
+
+  it("asks once more an interval later when an ask fails, and gives up after a few", async () => {
+    const time = clock();
+    const ask = vi.fn(async () => false);
+    const refresh = createCountRefresh(ask, COUNT_REFRESH_MS, time.timers);
+    refresh.saw(roomOf(1));
+    for (let tick = 0; tick < 10; tick += 1) {
+      await Promise.resolve();
+      await Promise.resolve();
+      time.advance(COUNT_REFRESH_MS);
+    }
+    expect(ask).toHaveBeenCalledTimes(1 + COUNT_REFRESH_RETRIES);
+    expect(time.pending()).toBe(0);
+  });
+
+  it("does not ask again after an ask that went through", async () => {
+    const time = clock();
+    const ask = vi.fn(async () => true);
+    const refresh = createCountRefresh(ask, COUNT_REFRESH_MS, time.timers);
+    refresh.saw(roomOf(1));
+    await Promise.resolve();
+    time.advance(COUNT_REFRESH_MS * 3);
+    expect(ask).toHaveBeenCalledTimes(1);
   });
 
   it("asks for every newcomer at once when the interval is zero", () => {
