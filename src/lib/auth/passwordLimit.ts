@@ -12,7 +12,10 @@ const FIVE_MINUTES = 5 * 60_000;
  *   forgotten which of their passwords it was, and it is all one guesser gets.
  * - **perAddress**, every caller at one address: twenty per five minutes. The ceiling on guessing
  *   one account from many networks at once, and what a campaign must spend to shut the owner out
- *   of their password, which takes several networks. The emailed link still works even then.
+ *   of their password, which takes several networks. Do not count on the emailed link as the way
+ *   round: the link has its own ceiling (`SIGN_IN_ADDRESS_LIMITS`, 12 per five minutes), and four
+ *   networks can fill it and this one at once (#159). A refusal here is reported to Sentry so the
+ *   owner hears of a campaign (`alertCeilingRefusal`).
  * - **perCaller**, one caller across addresses: 150 per five minutes, the invite total (#217),
  *   because a whole class signs in from one campus address in the first minutes of a session.
  *
@@ -44,6 +47,7 @@ export function createSignInPasswordLimiter(
     limits,
     spent: SIGN_IN_PASSWORD_TRIES_SPENT,
     what: "password",
+    alert: "password",
   });
 }
 

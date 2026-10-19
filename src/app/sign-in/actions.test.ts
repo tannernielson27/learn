@@ -11,6 +11,23 @@ import type { MemoryRateLimitStore } from "@/lib/rateLimit/testing/memoryStore";
 import { RateLimitUnavailableError } from "@/lib/rateLimit/store";
 import { EmailError, type EmailMessage } from "@/lib/email";
 import { WELCOME_SUBJECT } from "@/lib/email/templates/welcome";
+import { ceilingAlertPayload } from "@/lib/observability/ceilingAlert";
+
+// #159: a ceiling refusal is reported to Sentry. Mocked so the exact payload can be read back.
+const { captureMessage, flush } = vi.hoisted(() => ({
+  captureMessage: vi.fn(),
+  flush: vi.fn(async () => true),
+}));
+vi.mock("@sentry/nextjs", () => ({ captureMessage, flush }));
+
+// #159: no test may inherit a real SENTRY_DSN from the shell; the ones that need one stub it.
+beforeEach(() => {
+  vi.stubEnv("SENTRY_DSN", "");
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+const SENTRY_DSN = "https://0123456789abcdef0123456789abcdef@o0.ingest.us.sentry.io/0";
 
 /**
  * The Server Functions are thin: they read the request, count it against the three limits and
@@ -298,6 +315,7 @@ describe("requestSignInLink limits the caller and the address separately", () =>
   });
 
   it("holds the ceiling against a flood spread over callers, and logs it without the address", async () => {
+    vi.stubEnv("SENTRY_DSN", SENTRY_DSN);
     const { perCaller, overall } = SIGN_IN_ADDRESS_LIMITS;
     for (let call = 0; call < overall.attempts; call += 1) {
       if (call % perCaller.attempts === 0) fromNewAddress();
@@ -323,6 +341,21 @@ describe("requestSignInLink limits the caller and the address separately", () =>
     expect(line).toMatch(/ceilingRefusals/);
     expect(line).not.toContain(inbox);
     expect(line).not.toContain(inbox.split("@")[0]);
+
+    // #159: and to Sentry as one fixed warning that names the path and nothing else. The control
+    // is what the refused request carried: it holds the address and the caller's IP, so their
+    // absence from the payload means something. A Sentry call that echoed any of it fails here.
+    await vi.waitFor(() => expect(flush).toHaveBeenCalledTimes(1));
+    expect(captureMessage).toHaveBeenCalledTimes(1);
+    expect(captureMessage).toHaveBeenCalledWith(...ceilingAlertPayload("link"));
+    const [local, domain] = inbox.split("@");
+    const ip = requestHeaders.get("x-vercel-forwarded-for") ?? "";
+    const input = JSON.stringify([...emailForm(inbox).entries(), ...requestHeaders.entries()]);
+    for (const secret of [inbox, local, domain, ip]) expect(input).toContain(secret);
+    const payload = JSON.stringify([captureMessage.mock.calls, flush.mock.calls]);
+    for (const secret of [inbox, local, domain, ip, "user-1"]) {
+      expect(payload).not.toContain(secret);
+    }
   });
 });
 
