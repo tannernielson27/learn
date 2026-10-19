@@ -1,3 +1,4 @@
+import { alertCeilingRefusal, type CeilingPath } from "@/lib/observability/ceilingAlert";
 import type { RateLimit, RateLimitBucket, RateLimitStore } from "@/lib/rateLimit/store";
 import {
   normalizeSignInAddress,
@@ -29,6 +30,11 @@ export interface TryLimiterConfig {
   rateLimited?: string;
   /** What the person reads when the store cannot answer. Sign-in's by default. */
   unavailable?: string;
+  /**
+   * Which sign-in ceiling this is, for the operator's Sentry alert (#159). A refusal by the
+   * per-address ceiling is reported, throttled and address-free; left out, it is only logged.
+   */
+  alert?: CeilingPath;
 }
 
 export interface TryLimiter {
@@ -78,6 +84,8 @@ export function createTryLimiter(store: RateLimitStore, config: TryLimiterConfig
           console.warn(`[${scope}] an address reached the ${what}-try ceiling`, {
             ceilingRefusals,
           });
+          // And to Sentry, throttled and address-free, where an alert rule can page on it (#159).
+          if (config.alert) alertCeilingRefusal(config.alert);
           return spent;
         }
         return { ok: true };

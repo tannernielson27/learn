@@ -14,7 +14,9 @@ const FIVE_MINUTES = 5 * 60_000;
  * - **perAddress**, every caller at one address: fifteen per five minutes. The ceiling on guessing
  *   from many networks at once: 180 an hour, about one chance in 5,500 of hitting a live six-digit
  *   code before it expires. It is also what a campaign would have to spend to lock the owner out,
- *   which takes many networks rather than one, and even then the emailed link still works.
+ *   which takes many networks rather than one. The emailed link is no way round: its own ceiling
+ *   (`SIGN_IN_ADDRESS_LIMITS`) can be filled by four networks at the same time (#159). A refusal
+ *   here is reported to Sentry so the owner hears of a campaign (`alertCeilingRefusal`).
  * - **perCaller**, one caller across addresses: 150 per five minutes (#409, was 30), as for asking
  *   for links, so a computer lab of 100 students behind one address can each type their code. It
  *   is not what stops guessing: the two tiers above are, per account, and #409 left them alone.
@@ -48,6 +50,7 @@ export function createSignInCodeLimiter(
     limits,
     spent: SIGN_IN_CODE_TRIES_SPENT,
     what: "code",
+    alert: "code",
   });
 }
 

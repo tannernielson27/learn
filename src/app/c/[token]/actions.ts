@@ -28,6 +28,7 @@ import { clipInviteToken, invitePath, STUDENT_HOME } from "@/lib/classes/classes
 import { readViewer } from "@/lib/classes/viewer";
 import { getMailer } from "@/lib/email";
 import { canonicalSiteOrigin } from "@/lib/http/siteOrigin";
+import { alertCeilingRefusal } from "@/lib/observability/ceilingAlert";
 import { joinClass, resolveClassInvite, type ResolvedInvite } from "@/lib/supabase/classInvites";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -113,6 +114,8 @@ export async function requestInviteLink(
       console.warn("[invite] an address reached the deployment-wide ceiling", {
         ceilingRefusals: signInAddressCeilingRefusals(),
       });
+      // The same ceiling as sign-in's, so the same alert (#159); see `alertCeilingRefusal`.
+      alertCeilingRefusal("link");
     }
     return sent;
   }

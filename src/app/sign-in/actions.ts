@@ -28,6 +28,7 @@ import { sendWelcomeEmail, welcomeRoleFor } from "@/lib/auth/welcomeEmail";
 import { takeWelcomeEmail } from "@/lib/auth/welcomeLimit";
 import { getMailer } from "@/lib/email";
 import { canonicalSiteOrigin } from "@/lib/http/siteOrigin";
+import { alertCeilingRefusal } from "@/lib/observability/ceilingAlert";
 import { confirmedDeps, earlierAccessDeps, signedInUserId } from "@/lib/supabase/emailConfirmed";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -82,6 +83,9 @@ export async function requestSignInLink(
       console.warn("[sign-in] an address reached the deployment-wide ceiling", {
         ceilingRefusals: signInAddressCeilingRefusals(),
       });
+      // And to Sentry, so a sustained lockout pages someone (#159). Throttled, after the
+      // response, and given only which ceiling it was: see `alertCeilingRefusal`.
+      alertCeilingRefusal("link");
     }
     return sent(parsed.email);
   }

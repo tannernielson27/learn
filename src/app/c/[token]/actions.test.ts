@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SIGN_IN_EMAIL_ERROR } from "@/lib/auth/signInForm";
 import {
   SIGN_IN_ADDRESS_LIMITS,
@@ -12,6 +12,22 @@ import type { MemoryRateLimitStore } from "@/lib/rateLimit/testing/memoryStore";
 import { RateLimitUnavailableError } from "@/lib/rateLimit/store";
 import { EmailError, type EmailMessage } from "@/lib/email";
 import { WELCOME_SUBJECT } from "@/lib/email/templates/welcome";
+import { ceilingAlertPayload } from "@/lib/observability/ceilingAlert";
+
+// #159: a ceiling refusal is reported to Sentry. Mocked so the exact payload can be read back.
+const { captureMessage, flush } = vi.hoisted(() => ({
+  captureMessage: vi.fn(),
+  flush: vi.fn(async () => true),
+}));
+vi.mock("@sentry/nextjs", () => ({ captureMessage, flush }));
+
+// #159: no test may inherit a real SENTRY_DSN from the shell; the ones that need one stub it.
+beforeEach(() => {
+  vi.stubEnv("SENTRY_DSN", "");
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 /**
  * The invite's Server Functions are wiring: the per-IP and per-recipient limits of #139/#157, the
@@ -227,6 +243,49 @@ describe("requestInviteLink", () => {
     const logged = JSON.stringify(warn.mock.calls);
     expect(logged).toContain("classId");
     expect(logged).not.toContain(recipient);
+    warn.mockRestore();
+  });
+
+  it("answers sent past one address's ceiling, and tells Sentry after the response without the address (#159)", async () => {
+    vi.stubEnv("SENTRY_DSN", "https://0123456789abcdef0123456789abcdef@o0.ingest.us.sentry.io/0");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { perCaller, overall } = SIGN_IN_ADDRESS_LIMITS;
+    const target = newRecipient();
+    for (let call = 0; call < overall.attempts; call += 1) {
+      if (call % perCaller.attempts === 0) {
+        caller += 1;
+        requestHeaders.set("x-vercel-forwarded-for", `203.0.113.${caller}`);
+      }
+      await requestInviteLink(TOKEN, { status: "idle" }, emailForm(target));
+    }
+    await runScheduled();
+    scheduled.length = 0;
+    expect(warn).not.toHaveBeenCalled();
+
+    caller += 1;
+    const ip = `203.0.113.${caller}`;
+    requestHeaders.set("x-vercel-forwarded-for", ip);
+    const form = emailForm(target);
+    expect(await requestInviteLink(TOKEN, { status: "idle" }, form)).toEqual({
+      status: "sent",
+      email: target,
+    });
+    expect(warn).toHaveBeenCalledTimes(1);
+    // Nothing reaches Sentry until the response has gone: the alert is the only task scheduled.
+    expect(captureMessage).not.toHaveBeenCalled();
+    expect(scheduled).toHaveLength(1);
+    await runScheduled();
+    expect(captureMessage.mock.calls).toEqual([ceilingAlertPayload("link")]);
+    expect(flush).toHaveBeenCalledTimes(1);
+
+    // The control: the refused request carried the address and the IP, so their absence counts.
+    const [local, domain] = target.split("@");
+    const input = JSON.stringify([...form.entries(), ...requestHeaders.entries()]);
+    for (const secret of [target, local, domain, ip]) expect(input).toContain(secret);
+    const payload = JSON.stringify([captureMessage.mock.calls, flush.mock.calls]);
+    for (const secret of [target, local, domain, ip, CLASS_ID, TOKEN]) {
+      expect(payload).not.toContain(secret);
+    }
     warn.mockRestore();
   });
 
