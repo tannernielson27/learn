@@ -61,15 +61,27 @@ The exit code is 1 when anyone failed to join, any refusal was unexpected, or a 
 
 It writes sixty participants and hundreds of answers into the database behind the app, so:
 
-- The production deployment's address is refused outright.
+- Every address the production deployment answers on is refused outright.
 - The target's `/api/health` must name the same Supabase project the sockets would open on.
 - A hosted target is refused when its project is production's, as production's own `/api/health`
-  reports it, or when that cannot be confirmed. **Today every preview shares production's project,
-  so every hosted run is refused** until the production split (docs/05 §7.3) gives production its
-  own. `LOAD_LIVE_PRODUCTION_REFS` (comma-separated refs) adds projects to refuse.
+  reports it, or when that cannot be confirmed. Production's ref (`vauokqoyvewtzubqajgh`) is also
+  refused by name. `LOAD_LIVE_PRODUCTION_REFS` (comma-separated refs) adds projects to refuse.
+  Previews still share production's project, so they are refused; the one hosted target is below.
 - The local stack is never compared with anything, so a local run does not contact production.
 
 It prints no keys, cookies or tokens, and none go into the JSON.
+
+## The hosted load target (#405)
+
+- **Supabase:** project `learn-load` (`vyrarqaonzfcgqakqdal`, us-east-1, Micro), in the same Pro
+  organization as production, so the Realtime limits it hits are the ones production has. It holds
+  the migrations, `supabase/seed.sql`'s workspace and Samples bank, and one instructor for `--host`.
+  Nothing in it is real; it can be deleted after a run and made again.
+- **Vercel:** the `chore/405-load-target` branch's preview. The four Supabase variables are set for
+  that Git branch only, so every other preview still uses production's project.
+- **Run:** `LOAD_HOST_EMAIL` and `LOAD_HOST_PASSWORD` name the instructor, and `--supabase-url` /
+  `--publishable-key` must be `learn-load`'s (`.env.local` points at the local stack), or the target
+  check refuses the run.
 
 ## Results on the local stack
 

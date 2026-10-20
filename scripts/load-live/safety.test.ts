@@ -72,6 +72,39 @@ describe("checkTarget", () => {
     expect(verdict.ok ? "" : verdict.reason).toMatch(/reports Supabase project/);
   });
 
+  // #405: the hosted load target, a Supabase project of its own behind one preview branch.
+  const LOAD = {
+    base: "https://learn-git-chore-405-load-target-tanner-nielsons-projects.vercel.app",
+    supabaseUrl: "https://vyrarqaonzfcgqakqdal.supabase.co",
+    targetProject: "vyrarqaonzfcgqakqdal",
+    productionProject: "vauokqoyvewtzubqajgh",
+  };
+
+  it("lets the hosted load project through", () => {
+    expect(checkTarget(LOAD)).toEqual({ ok: true, project: "vyrarqaonzfcgqakqdal" });
+  });
+
+  it("refuses production's project by its ref, even when production's health says otherwise", () => {
+    const verdict = checkTarget({
+      ...LOAD,
+      supabaseUrl: "https://vauokqoyvewtzubqajgh.supabase.co",
+      targetProject: "vauokqoyvewtzubqajgh",
+      productionProject: "zyxwvutsrqponmlkjihg",
+    });
+    expect(verdict).toMatchObject({ ok: false });
+    expect(verdict.ok ? "" : verdict.reason).toMatch(/production's Supabase project/);
+  });
+
+  it("refuses every address production answers on", () => {
+    for (const base of [
+      "https://learn-nine-alpha.vercel.app",
+      "https://learn-git-main-tanner-nielsons-projects.vercel.app",
+    ]) {
+      const verdict = checkTarget({ ...LOAD, base });
+      expect(verdict.ok ? "" : verdict.reason).toMatch(/production deployment/);
+    }
+  });
+
   it("refuses a Supabase URL it cannot name, and a base that is not http", () => {
     expect(checkTarget({ ...LOCAL, supabaseUrl: "https://example.com" }).ok).toBe(false);
     expect(checkTarget({ ...LOCAL, base: "ftp://127.0.0.1" }).ok).toBe(false);
