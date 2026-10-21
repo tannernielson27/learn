@@ -38,9 +38,11 @@ const NOTHING_SELECTED = "Select at least one question or case study to archive.
 
 function Refusals({ lines }: { lines: readonly string[] }) {
   if (lines.length === 0) return null;
+  // Two writes can refuse for the same reason (questions and case studies that both changed).
+  const unique = [...new Set(lines)];
   return (
     <ul className="flex list-disc flex-col gap-1 pl-5">
-      {lines.map((line) => (
+      {unique.map((line) => (
         <li key={line}>{line}</li>
       ))}
     </ul>
@@ -65,7 +67,10 @@ export function useArchiveSelected(
 
   useEffect(() => {
     if (state.status === "idle") return;
-    if (state.status === "done" && clears.current) formRef.current?.reset();
+    // Rows that stayed keep their checks, so the teacher can see which ones the reasons are about.
+    if (state.status === "done" && clears.current && state.refusals.length === 0) {
+      formRef.current?.reset();
+    }
     outcomeRef.current?.focus();
   }, [state, formRef]);
 

@@ -160,4 +160,28 @@ describe("QuizMoveForm: archive", () => {
     expect(alert).toHaveTextContent("It is a step.");
     expect(alert).toHaveFocus();
   });
+
+  it("keeps the checks when some rows stayed, so the teacher sees which", async () => {
+    const step = 'A question is step 2 of the case study "Mr. Lee", so it stays.';
+    draw(vi.fn<Archive>(async () => done("Archived 1 question.", [step])));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Pain" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Fever" }));
+    await userEvent.click(screen.getByRole("button", { name: "Archive selected" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Archive" }),
+    );
+    await screen.findByRole("status");
+    expect(screen.getByRole("checkbox", { name: "Select Fever" })).toBeChecked();
+  });
+
+  it("says a reason once, however many writes gave it", async () => {
+    const changed = "Some of these changed since the page loaded.";
+    draw(vi.fn<Archive>(async () => done("Archived 1 question.", [changed, changed])));
+    await userEvent.click(screen.getByRole("button", { name: "Archive Pain" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Archive" }),
+    );
+    const outcome = await screen.findByRole("status");
+    expect(within(outcome).getAllByRole("listitem")).toHaveLength(1);
+  });
 });
