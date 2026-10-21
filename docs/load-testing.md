@@ -295,6 +295,19 @@ with everything else on the instance. The largest single user of database time i
 subscriber; `live.session_public_state` and `public.session_item_aggregates` are the published
 tables. That is where #426 works.
 
+**#426 on Large (PR #464 at `44de022`, merged into the load branch for the run and reverted;
+its migration applied to `learn-load`).** Same seed, `--student-presence off`, 2026-10-21:
+
+| run            | realtime msgs per phone (median), before → after | realtime msgs total, before → after | submit p50 / p95, before → after | view p50 / p95, before → after |
+| -------------- | ------------------------------------------------ | ----------------------------------- | -------------------------------- | ------------------------------ |
+| 100 instructor | 75 → 45                                          | 7,589 → 4,475                       | 500 / 892 → 482 / 1183           | 1044 / 1388 → 1087 / 1385      |
+| 150 instructor | 80 → 47                                          | 12,281 → 6,970                      | 1680 / 3107 → 1565 / 3126        | 1591 / 2238 → 1586 / 2060      |
+| 150 student    | 40 → 6                                           | 6,030 → 874                         | 3279 / 4687 → 3345 / 4870        | 1509 / 2536 → 1023 / 2825      |
+
+Every phone joined and nothing was refused or stalled. Presence traffic went to zero, which takes
+a class off the plan's 50 presence messages a second (Pro, spend cap on), and total Realtime
+traffic fell 41–86%. The waits did not move: the time is in the API layer, not in Realtime.
+
 **What a plan holds.** One 100-person session at a time is what was measured. Realtime's limits
 are per plan, not per compute size: Pro with the spend cap on allows 500 concurrent connections
 (four rooms of 100 with their hosts) and 50 presence messages a second; with the cap off, 10,000
