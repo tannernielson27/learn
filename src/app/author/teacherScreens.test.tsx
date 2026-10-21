@@ -91,6 +91,7 @@ vi.mock("@/app/author/quizMoveActions", () => ({
   turnFolderIntoQuizAction: action(),
 }));
 vi.mock("@/app/author/archiveActions", () => ({
+  archiveSelectedAction: action(),
   restoreCaseStudyAction: action(),
   restoreItemAction: action(),
 }));
@@ -661,7 +662,23 @@ describe("a new quiz offers no folders inside it (#411)", () => {
     expect(screen.queryByRole("navigation", { name: "Folders" })).toBeNull();
     expect(screen.queryByRole("textbox", { name: "Folder name" })).toBeNull();
     expect(screen.queryByRole("combobox", { name: "Move selected to" })).toBeNull();
-    expect(screen.queryByRole("checkbox", { name: /^Select / })).toBeNull();
+    // #471: the rows are still selectable, to archive them.
+    expect(screen.getAllByRole("checkbox", { name: /^Select / }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Archive selected" })).toBeInTheDocument();
+  });
+
+  it("offers Archive on each current row, and not in the Archived view (#471)", async () => {
+    render(await bankPage());
+    expect(
+      screen.getByRole("button", { name: "Archive Heart failure admission" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Archive Untitled question" })).toBeInTheDocument();
+  });
+
+  it("offers Restore, not Archive, in the Archived view (#471)", async () => {
+    render(await bankPage({ status: "archived" }));
+    expect(screen.queryByRole("button", { name: /^Archive / })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Archive selected" })).toBeNull();
   });
 
   it("lists the whole quiz for a stale Not in a folder link", async () => {

@@ -4,6 +4,7 @@ import { NO_CASE_STUDIES_YET } from "@/lib/authoring/bankEmpty";
 import type { CaseStudySummary } from "@/lib/authoring/banks";
 import { formatEdited } from "@/lib/authoring/format";
 import { ArchiveButton, type ArchiveButtonProps } from "./ArchiveButton";
+import { ArchiveRowButton } from "./ArchiveRowButton";
 import { SelectForMove } from "./SelectForMove";
 
 export interface CaseStudyListProps {
@@ -14,6 +15,8 @@ export interface CaseStudyListProps {
   moveFormId?: string;
   /** In the Archived view: the restore action for a case study, so each row offers Restore. */
   restoreAction?: (caseStudyId: string) => ArchiveButtonProps["action"];
+  /** The selection form a row's own Archive sends (#471); without one, no Archive. */
+  archiveFormId?: string;
 }
 
 const STATUS_LABELS: Record<CaseStudySummary["status"], string> = {
@@ -28,6 +31,7 @@ export function CaseStudyList({
   empty = NO_CASE_STUDIES_YET,
   moveFormId,
   restoreAction,
+  archiveFormId,
 }: CaseStudyListProps) {
   if (caseStudies.length === 0) {
     return <EmptyState level={3} {...empty} />;
@@ -66,6 +70,14 @@ export function CaseStudyList({
                 accessibleName={`Restore ${caseStudy.title}`}
               />
             </div>
+          ) : null}
+          {archiveFormId ? (
+            <ArchiveRowButton
+              formId={archiveFormId}
+              kind="caseStudy"
+              id={caseStudy.id}
+              name={caseStudy.title}
+            />
           ) : null}
         </li>
       ))}

@@ -7,6 +7,7 @@ import { excerptSegments } from "@/lib/authoring/highlight";
 import { tagLabels } from "@/lib/authoring/tagFilter";
 import { ITEM_TYPE_LABELS, ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 import { ArchiveButton, type ArchiveButtonProps } from "./ArchiveButton";
+import { ArchiveRowButton } from "./ArchiveRowButton";
 import { Highlighted } from "./Highlighted";
 import { SelectForMove } from "./SelectForMove";
 
@@ -18,6 +19,8 @@ export interface ItemListProps {
   moveFormId?: string;
   /** In the Archived view: the restore action for an item, so each row offers Restore. */
   restoreAction?: (itemId: string) => ArchiveButtonProps["action"];
+  /** The selection form a row's own Archive sends (#471); without one, no Archive. */
+  archiveFormId?: string;
 }
 
 const STATUS_LABELS: Record<ItemSummary["status"], string> = {
@@ -56,6 +59,7 @@ export function ItemList({
   empty = NO_QUESTIONS_YET,
   moveFormId,
   restoreAction,
+  archiveFormId,
 }: ItemListProps) {
   if (items.length === 0) {
     return <EmptyState level={3} {...empty} />;
@@ -126,6 +130,14 @@ export function ItemList({
                 accessibleName={`Restore ${item.stemExcerpt || UNTITLED}`}
               />
             </div>
+          ) : null}
+          {archiveFormId ? (
+            <ArchiveRowButton
+              formId={archiveFormId}
+              kind="item"
+              id={item.id}
+              name={item.stemExcerpt || UNTITLED}
+            />
           ) : null}
         </li>
       ))}

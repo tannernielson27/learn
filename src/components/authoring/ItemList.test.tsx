@@ -214,4 +214,25 @@ describe("ItemList", () => {
     render(<ItemList items={items} />);
     expect(screen.queryByRole("button", { name: /^Restore/ })).not.toBeInTheDocument();
   });
+
+  it("offers Archive on each row, named for it, sending the selection form (#471)", () => {
+    render(<ItemList items={items} archiveFormId="selection" />);
+    const archive = screen.getByRole("button", {
+      name: "Archive Which findings need follow-up?",
+    });
+    expect(archive).toHaveTextContent("Archive");
+    expect(archive).toHaveAttribute("form", "selection");
+    expect(archive).toHaveAttribute("name", "archiveOne");
+    expect(archive).toHaveAttribute("value", "item:i1");
+    expect(archive.closest("a")).toBeNull();
+    expect(screen.getByRole("button", { name: "Archive Untitled question" })).toHaveAttribute(
+      "value",
+      "item:i2",
+    );
+  });
+
+  it("offers no Archive without a selection form", () => {
+    render(<ItemList items={items} />);
+    expect(screen.queryByRole("button", { name: /^Archive/ })).not.toBeInTheDocument();
+  });
 });

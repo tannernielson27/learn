@@ -138,13 +138,22 @@ export function parseMoveForm(formData: FormData): MoveFormResult {
 export type SelectionResult =
   { ok: true; itemIds: string[]; caseStudyIds: string[] } | { ok: false; error: string };
 
-/** Reads the selected `item` and `caseStudy` ids of a move, at most MOVE_LIMIT of them. */
-export function parseSelection(formData: FormData): SelectionResult {
+/**
+ * Reads the selected `item` and `caseStudy` ids of a move (or of an archive, in its own words), at
+ * most MOVE_LIMIT of them.
+ */
+export function parseSelection(
+  formData: FormData,
+  verb: "move" | "archive" = "move",
+): SelectionResult {
   const rawItems = formData.getAll("item");
   const rawCaseStudies = formData.getAll("caseStudy");
   // Bounded before any id is read, so a flood of fields costs no more than counting them.
   if (rawItems.length + rawCaseStudies.length > MOVE_LIMIT) {
-    return { ok: false, error: `Move at most ${MOVE_LIMIT} at a time.` };
+    return {
+      ok: false,
+      error: `${verb === "move" ? "Move" : "Archive"} at most ${MOVE_LIMIT} at a time.`,
+    };
   }
   const itemIds = readIds(rawItems);
   const caseStudyIds = readIds(rawCaseStudies);
@@ -152,7 +161,7 @@ export function parseSelection(formData: FormData): SelectionResult {
     return { ok: false, error: "That selection could not be read. Reload the page and try again." };
   }
   if (itemIds.length + caseStudyIds.length === 0) {
-    return { ok: false, error: "Select at least one question or case study to move." };
+    return { ok: false, error: `Select at least one question or case study to ${verb}.` };
   }
   return { ok: true, itemIds, caseStudyIds };
 }

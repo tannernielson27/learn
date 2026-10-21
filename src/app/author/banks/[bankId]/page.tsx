@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { restoreCaseStudyAction, restoreItemAction } from "@/app/author/archiveActions";
+import {
+  archiveSelectedAction,
+  restoreCaseStudyAction,
+  restoreItemAction,
+} from "@/app/author/archiveActions";
 import { ArchiveViewSwitch } from "@/components/authoring/ArchiveViewSwitch";
 import { BankSearchForm } from "@/components/authoring/BankSearchForm";
 import { CaseStudyList } from "@/components/authoring/CaseStudyList";
@@ -158,6 +162,10 @@ export default async function BankPage({
   // Moving between in-quiz folders, only where there are some; to another quiz, where there is one.
   const canMoveToQuiz = knowsUses && otherQuizzes.length > 0 && hasContent;
   const canMove = (inQuizFolders && hasContent) || canMoveToQuiz;
+  // #471: current rows archive from the list, one by one or selected; the Archived view restores.
+  const canArchive = !archived && hasContent;
+  const selectionFormId = canMove || canArchive ? MOVE_FORM_ID : undefined;
+  const archiveFormId = canArchive ? MOVE_FORM_ID : undefined;
   // #266: what each list says when it is empty, most specific reason first.
   const emptyView = { bankId: bank.id, view, filter, page };
   const liveRefusal = liveStartMessage(query.live);
@@ -281,7 +289,7 @@ export default async function BankPage({
                 {searchSummary(itemPage.total, search)}
               </p>
             ) : null}
-            {canMove ? (
+            {selectionFormId ? (
               <QuizMoveForm
                 key={`move-${folder?.id ?? view.kind}`}
                 id={MOVE_FORM_ID}
@@ -290,11 +298,14 @@ export default async function BankPage({
                 quizzes={canMoveToQuiz ? otherQuizzes : []}
                 moveToQuiz={moveToQuizAction.bind(null, bank.id)}
                 staysBehind={keptLines}
+                archive={canArchive ? archiveSelectedAction.bind(null, bank.id) : undefined}
+                archivedHref={bankViewHref(bank.id, view, { ...filter, status: "archived" })}
               />
             ) : null}
             <ItemList
               items={items}
-              moveFormId={canMove ? MOVE_FORM_ID : undefined}
+              moveFormId={selectionFormId}
+              archiveFormId={archiveFormId}
               restoreAction={archived ? (id) => restoreItemAction.bind(null, id) : undefined}
               empty={bankItemsEmpty(emptyView)}
             />
@@ -317,7 +328,8 @@ export default async function BankPage({
             ) : (
               <CaseStudyList
                 caseStudies={caseStudies}
-                moveFormId={canMove ? MOVE_FORM_ID : undefined}
+                moveFormId={selectionFormId}
+                archiveFormId={archiveFormId}
                 restoreAction={archived ? (id) => restoreCaseStudyAction.bind(null, id) : undefined}
                 empty={bankCaseStudiesEmpty(emptyView)}
               />
