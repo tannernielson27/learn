@@ -15,7 +15,17 @@
 
 export const PRODUCTION_BASE = "https://learn-tanner-nielsons-projects.vercel.app";
 
-const PRODUCTION_HOSTS = new Set([new URL(PRODUCTION_BASE).hostname]);
+// Every address the production deployment answers on (Vercel project `learn`, #405), not only the
+// one above.
+const PRODUCTION_HOSTS = new Set([
+  new URL(PRODUCTION_BASE).hostname,
+  "learn-nine-alpha.vercel.app",
+  "learn-git-main-tanner-nielsons-projects.vercel.app",
+]);
+
+// Production's Supabase project, refused by ref whatever production's `/api/health` says (#405).
+// The health comparison stays the main check; this one does not depend on production answering.
+const PRODUCTION_REFS = new Set(["vauokqoyvewtzubqajgh"]);
 
 const LOOPBACK = new Set(["127.0.0.1", "localhost", "[::1]"]);
 
@@ -96,7 +106,7 @@ export function checkTarget({
       "Could not confirm which Supabase project production uses, so a hosted run is refused.",
     );
   }
-  if (productionProject === project) {
+  if (productionProject === project || PRODUCTION_REFS.has(project)) {
     return refuse(
       `${parsedBase.host} runs on production's Supabase project (${project}). A load run there ` +
         "would write into production's database.",
