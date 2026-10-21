@@ -258,6 +258,60 @@ Two things the next run should know:
   phone would have recovered from. Either teach it the same retry before the run, or read its
   refusal count as an upper bound.
 
+## Hosted: one hundred and one hundred and fifty on `learn-load` (#405)
+
+The load preview (`chore/405-load-target`, a production build on Vercel, functions in `iad1`) on
+`learn-load` (us-east-1, Pro organization) at each compute size, 2026-10-20 and 21. The same Samples
+bank and seed 404 as #404, so the answers match run for run; the script ran on a laptop on campus
+Wi-Fi. Times in ms.
+
+| compute | run            | joined    | join p50 / p95 | view p50 / p95 (n) | submit p50 / p95 | answers              | refusals | stalled steps | realtime msgs per participant (min / median / max) |
+| ------- | -------------- | --------- | -------------- | ------------------ | ---------------- | -------------------- | -------- | ------------- | -------------------------------------------------- |
+| Micro   | 100 instructor | 100 / 100 | 1753 / 6693    | 1747 / 2422 (4324) | 2295 / 4621      | 1872 sent, 228 blank | none     | 0             | 60 / 76 / 101                                      |
+| Micro   | 100 student    | 100 / 100 | 1730 / 6094    | 1541 / 2914 (269)  | 4049 / 6141      | 1872 sent, 228 blank | none     | 0             | 19 / 37 / 55                                       |
+| Micro   | 150 instructor | 150 / 150 | 3627 / 6809    | 2736 / 4642 (6450) | 6348 / 9169      | 2820 sent, 330 blank | none     | 0             | 59 / 83 / 113                                      |
+| Small   | 150 instructor | 150 / 150 | 7065 / 9938    | 3317 / 5150 (6454) | 8121 / 11217     | 2820 sent, 330 blank | none     | 0             | 63 / 81 / 115                                      |
+| Large   | 100 instructor | 100 / 100 | 1335 / 4034    | 1044 / 1388 (4367) | 500 / 892        | 1872 sent, 228 blank | none     | 0             | 59 / 75 / 103                                      |
+| Large   | 100 student    | 100 / 100 | 636 / 1319     | 935 / 1841 (304)   | 896 / 1713       | 1872 sent, 228 blank | none     | 0             | 20 / 32 / 48                                       |
+| Large   | 150 instructor | 150 / 150 | 1924 / 3036    | 1591 / 2238 (6491) | 1680 / 3107      | 2820 sent, 330 blank | none     | 0             | 60 / 80 / 119                                      |
+| Large   | 150 student    | 150 / 150 | 1712 / 4094    | 1509 / 2536 (465)  | 3279 / 4687      | 2820 sent, 330 blank | none     | 0             | 21 / 40 / 58                                       |
+
+**Every run passed: everyone joined, nothing was refused, nothing stalled.** The 500s, 401s and
+stalls #404 saw on a laptop did not happen hosted at any size. What changed with size is how
+long a phone waits.
+
+**Compute is the lever, and only Large moves it.** Nano, Micro, Small and Medium are the same two
+shared ARM cores, which burst and then fall back (Supabase, "Compute and Disk"); the sizes differ
+in memory. Small was no faster than Micro, and slower once the earlier runs had spent the burst.
+Large is two dedicated cores, and at 100 it brought a submit from 2.3 s to 0.5 s.
+
+**The wait is not in Postgres.** During the Large 150 run Supabase's edge saw
+`open_session_view` take 1,320 ms at p50 and the plain calls (`resume_participant`,
+`record_session_response`, `items`) about 330 ms, while `pg_stat_statements` puts the app's
+statements at 0.3–1.3 ms each. PostgREST held 29 connections, so the queue is not for a
+connection either; the time is spent in the API layer before a statement runs, on cores it shares
+with everything else on the instance. The largest single user of database time is Realtime's
+`postgres_changes` poll (about 10 ms a call, 9,100 calls), which checks each change against every
+subscriber; `live.session_public_state` and `public.session_item_aggregates` are the published
+tables. That is where #426 works.
+
+**What a plan holds.** One 100-person session at a time is what was measured. Realtime's limits
+are per plan, not per compute size: Pro with the spend cap on allows 500 concurrent connections
+(four rooms of 100 with their hosts) and 50 presence messages a second; with the cap off, 10,000
+connections and 1,000 presence messages a second. Two 100-person sessions at once on one Large
+instance were not run.
+
+**Getting a hosted run going needed three things the local stack does not.** A signing key the
+project trusts (a new project's legacy JWT secret is not: an ES256 key from
+`supabase gen signing-key`, imported and rotated in, is); Vercel's system bypass for the address
+the script runs from, because about 20 quick requests from one address draw a challenge
+(`X-Vercel-Mitigated: challenge`) the script cannot answer; and the `--supabase-url` and
+`--publishable-key` flags, since `.env.local` names the local stack.
+
+**Not measured.** Real phones and browsers, and whether one recovers from Vercel's challenge
+mid-session; two sessions at once; PostgREST's `max_rows` (the #404 truncation at 1,000 rows is
+the default) and Vercel's function concurrency, neither of which was reached.
+
 ## In CI
 
 The `auth e2e` job runs a five-participant `--host` smoke against the build the e2e step made. It
