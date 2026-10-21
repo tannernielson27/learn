@@ -104,8 +104,6 @@ export interface FakePublicStateRow {
   item_ends_at: string | null;
   timer_seconds: number | null;
   timer_remaining_ms: number | null;
-  /** How many have joined (#426). Written with the state and by `refresh_participant_count`. */
-  participant_count: number;
   updated_at: string;
 }
 
@@ -227,14 +225,6 @@ export class FakeSupabase {
 
   private readonly channels = new Set<FakeChannel>();
   private readonly presence = new Map<string, Map<string, Row[]>>();
-  /**
-   * Presence syncs delivered, by the role of the socket they reached (#426). Since
-   * `20261016010000_room_count.sql` an anonymous socket — a phone — may not read presence, so
-   * nothing is ever delivered to one; see `syncPresence`.
-   */
-  readonly presenceSent = { anon: 0, authenticated: 0 };
-  /** Presence listeners bound, by the role of the socket that bound them (#426). */
-  readonly presenceBindings = { anon: 0, authenticated: 0, service: 0 };
   private clock = 1_700_000_000_000;
   private operations = 0;
 
@@ -355,33 +345,11 @@ export class FakeSupabase {
       item_ends_at: after.item_ends_at,
       timer_seconds: after.timer_seconds,
       timer_remaining_ms: after.timer_remaining_ms,
-      // #426: the count rides along with every state write, for nothing.
-      participant_count: this.joinedCount(after.id),
       updated_at: this.now(),
     };
     const index = this.publicState.findIndex((held) => held.session_id === after.id);
     if (index === -1) this.publicState.push(row);
     else this.publicState[index] = row;
-    this.publish("session_public_state", row as unknown as Row, null);
-  }
-
-  /** `count(*)` over `public.participants` for one session: everyone who has ever joined it. */
-  joinedCount(sessionId: string): number {
-    return this.participants.filter((row) => row.session_id === sessionId).length;
-  }
-
-  /**
-   * `public.refresh_participant_count` (#426): the mirror's count brought up to date, written —
-   * and so sent to every phone — only when it has changed and the room is still open.
-   */
-  refreshCount(sessionId: string): void {
-    const index = this.publicState.findIndex((held) => held.session_id === sessionId);
-    const held = this.publicState[index];
-    if (held === undefined || held.status === "ended") return;
-    const joined = this.joinedCount(sessionId);
-    if (held.participant_count === joined) return;
-    const row: FakePublicStateRow = { ...held, participant_count: joined, updated_at: this.now() };
-    this.publicState[index] = row;
     this.publish("session_public_state", row as unknown as Row, null);
   }
 
@@ -482,11 +450,7 @@ export class FakeSupabase {
   syncPresence(topic: string): void {
     for (const channel of this.channels) {
       if (channel.topic !== topic) continue;
-      // The `realtime.messages` select policy since #426: a signed-in author may read presence on
-      // a session channel, a participant's socket may not, whatever listeners it has bound.
-      if (channel.role !== "authenticated") continue;
       for (const listener of channel.presenceListeners) {
-        this.presenceSent.authenticated += 1;
         this.operations += 1;
         queueMicrotask(() => {
           this.operations += 1;
@@ -514,11 +478,6 @@ export class FakeChannel {
 
   /** Set when Realtime refused this channel at join. Nothing it asks for afterwards is honoured. */
   denied = false;
-
-  /** Who the socket is, for the policies that tell a host from a phone. */
-  get role(): FakeIdentity["role"] {
-    return this.identity.role;
-  }
 
   /**
    * `20260921210000_private_live_channel.sql`'s `realtime.messages` policies, said in code: an
@@ -565,7 +524,6 @@ export class FakeChannel {
     listener: (message: { new: Row; old: Row }) => void,
   ): this {
     if (type === "presence") {
-      this.stack.presenceBindings[this.identity.role] += 1;
       this.presenceListeners.add(() => listener({ new: {}, old: {} }));
       return this;
     }
@@ -822,9 +780,6 @@ export function createFakeClient(
     rpc(name: string, args: Record<string, unknown>) {
       const dropped = stack.sent(`rpc:${name}`);
       if (dropped !== null) return Promise.resolve({ data: null, error: dropped, status: 0 });
-      if (name === "refresh_participant_count") {
-        return Promise.resolve(refreshParticipantCount(stack, identity, args));
-      }
       return Promise.resolve(runRpc(stack, name, args));
     },
     channel(
@@ -847,23 +802,6 @@ export function createFakeClient(
     },
   };
   return client as unknown as SupabaseClient<Database>;
-}
-
-/**
- * `public.refresh_participant_count` (#426, 20261016010000_room_count.sql): an author in the
- * session's org may ask; anyone else, and a session that is not there, is told it is gone.
- */
-function refreshParticipantCount(
-  stack: FakeSupabase,
-  identity: FakeIdentity,
-  args: Record<string, unknown>,
-): { data: null; error: { message: string; code: string } | null } {
-  const session = stack.sessions.find((row) => row.id === String(args.target));
-  if (identity.role !== "authenticated" || !session || session.org_id !== identity.orgId) {
-    return { data: null, error: { message: "that session does not exist", code: "P0002" } };
-  }
-  stack.refreshCount(session.id);
-  return { data: null, error: null };
 }
 
 /** What PostgREST answers a select naming `reveal` on a database without the column. */
@@ -1233,7 +1171,6 @@ function openSessionView(
         server_now: new Date(stack.peek()).toISOString(),
         view_items: items,
         view_answers: answers,
-        session_participants: stack.joinedCount(session.id),
       },
     ],
     error: null,

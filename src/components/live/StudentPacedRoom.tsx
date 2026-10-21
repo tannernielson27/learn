@@ -113,9 +113,8 @@ export function StudentPacedRoom({
       setSet(view.paced ?? null);
       setConnection("live");
     });
-    // How many have joined, as a number (#426): a phone is no longer sent who.
-    const offCount = joined.onCount((count) => {
-      if (watching) present.set(count);
+    const offPresence = joined.onPresence((roster) => {
+      if (watching) present.set(roster.length);
     });
     const offConnection = joined.onConnection((status, rejoined) => {
       if (!watching) return;
@@ -129,7 +128,7 @@ export function StudentPacedRoom({
     return () => {
       watching = false;
       offView();
-      offCount();
+      offPresence();
       offConnection();
       room.current = null;
       void joined.leave().catch(() => {});

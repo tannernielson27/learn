@@ -220,17 +220,6 @@ describe("a database the migration has not reached (#407)", () => {
   });
 });
 
-/**
- * The one call's body with its count taken out (#426), after checking it had one. Only
- * `open_session_view` counts; the old path's body is otherwise byte for byte the same.
- */
-function withoutCount(bytes: string): string {
-  const body = JSON.parse(bytes) as Record<string, unknown>;
-  expect(body.count).toEqual(expect.any(Number));
-  delete body.count;
-  return JSON.stringify(body);
-}
-
 describe("the one call says what the four calls said (#407)", () => {
   /** The same room read both ways, as the bytes each way answered with. */
   async function bothWays(live: FakeRoom, who: string): Promise<{ one: string; four: string }> {
@@ -244,17 +233,8 @@ describe("the one call says what the four calls said (#407)", () => {
     expect(one.calls).toEqual(["rpc:open_session_view"]);
     expect(four.calls).toContain("rpc:begin_session_view");
     expect(one.response.status).toBe(200);
-    return { one: withoutCount(await one.response.text()), four: await four.response.text() };
+    return { one: await one.response.text(), four: await four.response.text() };
   }
-
-  it("hands the phone how many have joined, as a number and with nobody's name (#426)", async () => {
-    const { live, ada } = await startedRoom("instructor_paced");
-    await live.participant().join(live.code, { displayName: "Linus" });
-    await live.settle();
-    const body = await (await viewOnce(live, ada)).response.text();
-    expect((JSON.parse(body) as { count: unknown }).count).toBe(live.stack.participants.length);
-    expect(body).not.toContain("Linus");
-  });
 
   it.each(["instructor_paced", "student_paced"] as const)(
     "%s: before the reveal and after it, for someone who answered and someone who did not",
@@ -552,7 +532,7 @@ describe("a case study's chart, cut to the room's step (#335)", () => {
     expect(one.response.status).toBe(200);
     expect(four.response.status).toBe(200);
     const bytes = await one.response.text();
-    expect(await four.response.text()).toBe(withoutCount(bytes));
+    expect(await four.response.text()).toBe(bytes);
     return bytes;
   }
 

@@ -7,8 +7,7 @@
 //      and asking it up front saves parsing a React payload for a token.
 //   3. Opens its own socket to its session's private channel (`src/lib/liveSupabase/
 //      participantTransport.ts`): `postgres_changes` on `live.session_public_state` for the room's
-//      moves, tracking itself in Presence, with the publishable key and that token. Since #426 a
-//      phone binds no presence listener; `--student-presence on` binds one, as phones did before.
+//      moves and Presence for the roster, with the publishable key and that token.
 //   4. On every move that changes the item or the reveal, reads `POST /api/live/view`; on an item
 //      it has not answered, thinks for a while and posts `POST /api/live/submit`.
 //
@@ -46,24 +45,6 @@ async function refusalOf(response) {
  * @param {() => number} deps.rng
  * @param {object} deps.events    `{ measure(kind, ms), refused(kind, code), answered(position, how) }`
  */
-/**
- * Counts every frame this socket is sent on its own channel, by event (#426): `postgres_changes`,
- * `presence_state`, `presence_diff`, `system`, `phx_reply`. A presence listener's callbacks are
- * not the measure: the server can send presence to a socket that has no listener for it, and the
- * question is whether it does. `socketAdapter` is realtime-js's own (2.116.0), so a version
- * without it stops the run: zero frames counted would read as a saving.
- */
-function countFrames(client, topic, frames) {
-  const adapter = client.realtime?.socketAdapter;
-  if (typeof adapter?.onMessage !== "function") {
-    throw new Error("frames_uncountable: this realtime-js has no socketAdapter.onMessage");
-  }
-  adapter.onMessage((message) => {
-    if (message?.topic !== topic || typeof message.event !== "string") return;
-    frames[message.event] = (frames[message.event] ?? 0) + 1;
-  });
-}
-
 export function createParticipant({ displayName, options, rng, events }) {
   const { base } = options;
   let cookie = null;
@@ -78,8 +59,7 @@ export function createParticipant({ displayName, options, rng, events }) {
   let seen = { position: null, reveal: null };
   /** Item ids already answered or passed, so a second move on the same item is not a second answer. */
   const handled = new Set();
-  /** Listener callbacks, and (#426) every frame the socket was sent on its channel, by event. */
-  const counts = { state: 0, presence: 0, frames: {} };
+  const counts = { state: 0, presence: 0 };
   /** Student-paced: whether this phone is already working through the set. */
   let working = false;
 
@@ -232,11 +212,9 @@ export function createParticipant({ displayName, options, rng, events }) {
       },
       (message) => onState(message.new),
     );
-    if (options.studentPresence) {
-      channel.on("presence", { event: "sync" }, () => {
-        counts.presence += 1;
-      });
-    }
+    channel.on("presence", { event: "sync" }, () => {
+      counts.presence += 1;
+    });
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error("channel_timeout")), SUBSCRIBE_TIMEOUT_MS);
       let settled = false;
@@ -271,7 +249,6 @@ export function createParticipant({ displayName, options, rng, events }) {
       const refused = await fetchToken();
       if (refused !== null) return { ok: false, refusal: refused };
       client = createClient(options.supabaseUrl, options.publishableKey, { accessToken });
-      countFrames(client, `realtime:live:${sessionId}`, counts.frames);
       try {
         await client.realtime.setAuth();
         await subscribe();

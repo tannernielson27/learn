@@ -6,12 +6,6 @@
 // `current_position` and `reveal` on the session row the way `hostTransport.ts` does (the
 // `guard_session_change` trigger holds it to the same transitions), and `end_session` at the end.
 // It never touches the service role.
-//
-// #426: with `--student-presence off` (the default) it also watches the roster the way the console
-// does and asks `refresh_participant_count` when someone new joins, at most once every
-// `COUNT_REFRESH_MS` with one more ask at the end of a burst (`src/lib/liveSupabase/
-// countRefresh.ts`). That is what keeps the phones' count fresh, and its rows are part of what a
-// phone is sent, so a run without it would undercount the after.
 
 import { createClient } from "@supabase/supabase-js";
 
@@ -28,51 +22,6 @@ export function hostCredentials(env, project) {
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/** `COUNT_REFRESH_MS` in `src/lib/liveSupabase/countRefresh.ts`. */
-const COUNT_REFRESH_MS = 3000;
-
-/**
- * The console's roster and count refresh (#426), said again for a script that cannot import the
- * app's TypeScript: a newcomer asks at once after a quiet spell, and newcomers inside the interval
- * are caught by one more ask at its end.
- */
-async function watchRoster(client, sessionId) {
-  const seen = new Set();
-  let lastAsked = Number.NEGATIVE_INFINITY;
-  let waiting = null;
-  let stopped = false;
-  const ask = () => {
-    waiting = null;
-    if (stopped) return;
-    lastAsked = Date.now();
-    void Promise.resolve(client.rpc("refresh_participant_count", { target: sessionId })).catch(
-      () => {},
-    );
-  };
-  await client.realtime.setAuth();
-  const channel = client.channel(`live:${sessionId}`, { config: { private: true } });
-  channel.on("presence", { event: "sync" }, () => {
-    let someoneNew = false;
-    for (const entries of Object.values(channel.presenceState())) {
-      for (const entry of entries) {
-        if (typeof entry?.participantId !== "string" || seen.has(entry.participantId)) continue;
-        seen.add(entry.participantId);
-        someoneNew = true;
-      }
-    }
-    if (!someoneNew || waiting !== null) return;
-    const wait = lastAsked + COUNT_REFRESH_MS - Date.now();
-    if (wait <= 0) ask();
-    else waiting = setTimeout(ask, wait);
-  });
-  channel.subscribe();
-  return async () => {
-    stopped = true;
-    if (waiting !== null) clearTimeout(waiting);
-    await client.removeChannel(channel);
-  };
-}
 
 export async function openHostedSession({ options, credentials }) {
   const client = createClient(options.supabaseUrl, options.publishableKey, {
@@ -94,8 +43,6 @@ export async function openHostedSession({ options, credentials }) {
 
   const read = await client.from("sessions").select("code, item_set").eq("id", sessionId).single();
   if (read.error) throw new Error("The new session could not be read back.");
-
-  const stopWatching = options.studentPresence ? null : await watchRoster(client, sessionId);
 
   async function set(fields) {
     const { error } = await client.from("sessions").update(fields).eq("id", sessionId);
@@ -164,7 +111,6 @@ export async function openHostedSession({ options, credentials }) {
     },
 
     async end() {
-      await stopWatching?.();
       await client.rpc("end_session", { target: sessionId });
       await client.auth.signOut();
     },
