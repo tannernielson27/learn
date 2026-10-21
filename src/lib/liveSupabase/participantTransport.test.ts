@@ -319,12 +319,27 @@ describe("the count on the waiting screen (#426)", () => {
     expect(live.recorded.counts).toEqual([7]);
   });
 
-  it("never goes down: an older number that lands late is not shown", async () => {
-    // Nobody leaves a session's count, so a smaller number is only ever an older one.
+  it("goes down when someone leaves: a smaller number in a row is shown", async () => {
+    // Someone who has left is not counted (owner decision, 2026-10-21).
     const live = phone([{ ...LOBBY, count: 7 }]);
     await live.enter();
     live.socket.deliver({ new: stateRow({ ...LOBBY_ROW, participant_count: 5 }) });
-    expect(live.recorded.counts).toEqual([7]);
+    expect(live.recorded.counts).toEqual([7, 5]);
+  });
+
+  it("keeps the row's number over a view read once a row has come", async () => {
+    // Rows arrive in the order they were written; a view's count was read at some moment in
+    // between and may be older, so it only stands in until the first row.
+    const running = (position: number, count: number) => ({
+      ...LOBBY,
+      state: at({ status: "running", position, itemCount: 2, reveal: false }),
+      count,
+    });
+    const live = phone([running(1, 7), running(2, 9)]);
+    await live.enter();
+    live.socket.deliver({ new: stateRow({ item_position: 2, participant_count: 5 }) });
+    await vi.waitFor(() => expect(live.recorded.states.at(-1)).toMatchObject({ position: 2 }));
+    expect(live.recorded.counts).toEqual([7, 5]);
   });
 
   it("ignores a count that is not a count", async () => {

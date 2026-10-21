@@ -1,22 +1,23 @@
 /**
- * When the host's console asks the database to bring the waiting screen's count up to date (#426).
+ * When the host's console tells the database how many students are in the room (#426).
  *
  * Phones no longer receive Presence. "12 in this session" comes from `participant_count` on
- * `live.session_public_state`, which every phone already hears by `postgres_changes`. The
- * database writes it with every state change; between them, the host's console — which still
- * receives Presence, and so sees every join — asks for it with `refresh_participant_count`.
+ * `live.session_public_state`, which every phone already hears by `postgres_changes`. Only the
+ * host's console still receives Presence, so only it knows who is here now and who has left; it
+ * reports the size of its roster with `refresh_participant_count`. Someone who has left is not
+ * counted (owner decision, 2026-10-21).
  *
- * Every write of that row is a message to every phone, so how often the console asks is what
- * bounds the messages a class is sent for its own arrival. The rule here:
+ * Every write of that row is a message to every phone, so how often the console reports is what
+ * bounds the messages a class is sent for its own coming and going. The rule here:
  *
- *   * Only a participant the console has **not seen before** is a reason to ask. A leave, a phone
- *     dropping and coming back, a re-track: none of them changes how many have joined.
- *   * At most once per `intervalMs`: the first newcomer after a quiet spell is asked about at once,
- *     and any who arrive inside the interval are caught by one more ask at its end. So a burst of
- *     a hundred joins over ten seconds is four or five writes, not a hundred, and the last phone to
- *     arrive is counted within one interval of arriving.
+ *   * Only a roster of a **different size** from the one last reported is a reason to report. A
+ *     phone dropping and coming back inside one interval, or a re-track, changes nothing.
+ *   * At most once per `intervalMs`: the first change after a quiet spell is reported at once, and
+ *     any that follow inside the interval are caught by one more report at its end, with whatever
+ *     the roster is by then. So a burst of a hundred joins over ten seconds is four or five
+ *     writes, not a hundred, and the last arrival or departure is counted within one interval.
  *
- * The database writes only when the number has changed, so an ask that finds nothing new sends
+ * The database writes only when the number has changed, so a report that changes nothing sends
  * phones nothing either.
  */
 import type { Participant } from "@/lib/live";
@@ -25,9 +26,9 @@ import type { Participant } from "@/lib/live";
 export const COUNT_REFRESH_MS = 3000;
 
 /**
- * How many times an ask that failed is made again, an interval apart, before waiting for the next
- * newcomer or the room's next move. A failed ask for the last arrival would otherwise leave the
- * waiting screen a few short until the quiz starts.
+ * How many times a report that failed is made again, an interval apart, before waiting for the
+ * roster's next change. A failed report for the last arrival would otherwise leave the waiting
+ * screen a few short until someone else comes or goes.
  */
 export const COUNT_REFRESH_RETRIES = 3;
 
@@ -39,71 +40,92 @@ export interface RefreshTimers {
 }
 
 const REAL_TIMERS: RefreshTimers = {
-  // Monotonic, so a clock set back does not hold an ask for as long as it was set back.
+  // Monotonic, so a clock set back does not hold a report for as long as it was set back.
   now: () => performance.now(),
   set: (run, ms) => setTimeout(run, ms),
   clear: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
 };
 
 export interface CountRefresh {
-  /** Hands over the roster a presence sync produced. Asks, or schedules an ask, if anyone is new. */
+  /** Hands over the roster a presence sync produced. Reports, or schedules a report, if its size changed. */
   saw(roster: readonly Participant[]): void;
-  /** Stops for good: nothing waiting is asked, and nothing later is. */
+  /** Stops for good: nothing waiting is reported, and nothing later is. */
   stop(): void;
 }
 
+/** How many different people a roster holds: one phone tracked twice is still one student. */
+function sizeOf(roster: readonly Participant[]): number {
+  return new Set(roster.map((person) => person.participantId)).size;
+}
+
 /**
- * `ask` answers whether the database took it (or nothing, when it cannot tell). An ask that
- * answers false is made again `intervalMs` later, up to `COUNT_REFRESH_RETRIES` times in a row.
+ * `report` is handed the number to store and answers whether the database took it (or nothing,
+ * when it cannot tell, which is taken as a yes). A report that answers false is made again
+ * `intervalMs` later, up to `COUNT_REFRESH_RETRIES` times in a row.
  */
 export function createCountRefresh(
-  ask: () => Promise<boolean> | void,
+  report: (present: number) => Promise<boolean> | void,
   intervalMs: number = COUNT_REFRESH_MS,
   timers: RefreshTimers = REAL_TIMERS,
 ): CountRefresh {
-  const seen = new Set<string>();
+  /** The roster's size at the last sync. */
+  let latest: number | null = null;
+  /** The number the database last took. */
+  let reported: number | null = null;
   let lastAsked = Number.NEGATIVE_INFINITY;
   let waiting: unknown = null;
+  let inFlight = false;
   let stopped = false;
   let failures = 0;
 
-  const askNow = () => {
-    waiting = null;
-    if (stopped) return;
-    lastAsked = timers.now();
-    const answered = ask();
-    if (answered === undefined) return;
-    void answered.then(
-      (ok) => settle(ok),
-      () => settle(false),
-    );
-  };
+  /** Reports now, or at the end of the interval, unless a report is already due or under way. */
+  function schedule(): void {
+    if (stopped || waiting !== null || inFlight) return;
+    const wait = lastAsked + intervalMs - timers.now();
+    if (wait <= 0) reportNow();
+    else waiting = timers.set(reportNow, wait);
+  }
 
-  function settle(ok: boolean): void {
+  function reportNow(): void {
+    waiting = null;
+    if (stopped || latest === null || latest === reported) return;
+    lastAsked = timers.now();
+    const sending = latest;
+    const answered = report(sending);
+    if (answered === undefined) {
+      reported = sending;
+      return;
+    }
+    inFlight = true;
+    void answered.then(
+      (ok) => settle(ok, sending),
+      () => settle(false, sending),
+    );
+  }
+
+  function settle(ok: boolean, sent: number): void {
+    inFlight = false;
+    if (stopped) return;
     if (ok) {
       failures = 0;
+      reported = sent;
+      // The roster moved while the report was under way: one more, at the end of the interval.
+      if (latest !== reported) schedule();
       return;
     }
     failures += 1;
-    if (stopped || waiting !== null || failures > COUNT_REFRESH_RETRIES) return;
-    waiting = timers.set(askNow, intervalMs);
+    if (waiting !== null || failures > COUNT_REFRESH_RETRIES) return;
+    waiting = timers.set(reportNow, intervalMs);
   }
 
   return {
     saw(roster) {
       if (stopped) return;
-      let someoneNew = false;
-      for (const person of roster) {
-        if (seen.has(person.participantId)) continue;
-        seen.add(person.participantId);
-        someoneNew = true;
-      }
-      // Already waiting to ask: that ask will count this newcomer too.
-      if (!someoneNew || waiting !== null) return;
+      latest = sizeOf(roster);
+      // Already due or under way: that report reads `latest` when it goes, or checks it after.
+      if (latest === reported || waiting !== null || inFlight) return;
       failures = 0;
-      const wait = lastAsked + intervalMs - timers.now();
-      if (wait <= 0) askNow();
-      else waiting = timers.set(askNow, wait);
+      schedule();
     },
     stop() {
       stopped = true;

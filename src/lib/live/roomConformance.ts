@@ -217,7 +217,7 @@ export function describeRoomConformance(adapter: string, createRoom: Conformance
 
     // #426: a phone is told how many, never who. The host's console is in the room, as it is in a
     // class: over a network it is what keeps the number fresh between the room's own moves.
-    it("tells a participant how many have joined, and never who", async () => {
+    it("tells a participant how many are in the room, and never who", async () => {
       const room = await makeRoom();
       await openHost(room);
       const counts: unknown[] = [];
@@ -234,7 +234,7 @@ export function describeRoomConformance(adapter: string, createRoom: Conformance
       expect(counts.every((count) => typeof count === "number")).toBe(true);
     });
 
-    it("keeps counting someone who has left: they joined this session", async () => {
+    it("stops counting someone who has left (owner decision, 2026-10-21)", async () => {
       const room = await makeRoom();
       const host = await openHost(room);
       const counts: number[] = [];
@@ -246,7 +246,7 @@ export function describeRoomConformance(adapter: string, createRoom: Conformance
       await host.start();
       await room.settle();
 
-      expect(counts.at(-1)).toBe(2);
+      expect(counts.at(-1)).toBe(1);
     });
 
     it("drops a participant who leaves, and leaving twice is harmless", async () => {

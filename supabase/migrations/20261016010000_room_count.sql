@@ -7,19 +7,20 @@
 --
 -- What changes here:
 --
---   1. `live.session_public_state` gains `participant_count`: how many people have joined this
---      session. A number, and nothing else about who they are. Every phone already receives this
---      row by `postgres_changes` (`replica identity full`), so the count rides along with every
---      state change for nothing.
---   2. The mirror trigger writes the count whenever it writes the state. It still writes only when
---      something a student sees has changed; a join on its own does not write the row here.
---   3. `public.refresh_participant_count(target)` is the bounded refresh: the host's console calls
---      it, at most once every few seconds, when its own roster (which keeps Presence) sees someone
---      new. It writes the row only if the count has actually changed and the session has not
---      ended, so whatever calls it, a session's row changes for its count at most once per join.
---      Joins are capped at 300 a session (`private.session_is_full`), which bounds that too.
---   4. `public.open_session_view` answers with the count as well, so a phone has the number the
---      moment it enters or rejoins, itself included, before any row has reached it.
+--   1. `live.session_public_state` gains `participant_count`: how many students are in the room
+--      now. Someone who has left is not counted (owner decision, 2026-10-21). A number, and
+--      nothing else about who they are. Every phone already receives this row by
+--      `postgres_changes` (`replica identity full`), so the count rides along with every state
+--      change for nothing.
+--   2. The mirror trigger is unchanged: it writes the columns it always wrote and leaves the count
+--      as it is, because who is in the room is not something the session row knows.
+--   3. `public.refresh_participant_count(target, present)` is how the count changes. Only the
+--      host's console knows who is still here, because only it keeps Presence, so it reports the
+--      size of its roster, at most once every few seconds, when that size changes. The database
+--      caps the number at how many have ever joined (300 at most, `private.session_is_full`) and
+--      writes the row only if the number changed and the session has not ended.
+--   4. `public.open_session_view` answers with the stored count as well, at least 1 for the phone
+--      asking, so a phone has a number the moment it enters or rejoins, before any row reaches it.
 --   5. A participant may no longer READ presence on its session's channel. It may still track
 --      (the insert policy is unchanged), so the host still sees every phone. See below.
 --
@@ -45,7 +46,7 @@
 -- until it reloads. To undo the policy, put `'presence'` back in the select's `extension in (...)`
 -- as `20260921210000_private_live_channel.sql` wrote it.
 --
--- Applies on a fresh replay; one column, two functions replaced, one created, one policy replaced.
+-- Applies on a fresh replay; one column, one function replaced, one created, one policy replaced.
 
 -- ---------------------------------------------------------------------------
 -- 1. The column
@@ -56,86 +57,39 @@ alter table live.session_public_state
     constraint session_public_state_participant_count_check check (participant_count >= 0);
 
 comment on column live.session_public_state.participant_count is
-  'How many people have joined this session (#426): the waiting screen''s "12 in this session". '
-  'A number only; who they are is Presence, which only the host reads. Written by the mirror '
-  'trigger with every state change and by refresh_participant_count, never more than once a join.';
+  'How many students are in the room now (#426): the waiting screen''s "12 in this session". '
+  'A number only; who they are is Presence, which only the host reads. Written only by '
+  'refresh_participant_count, from the host console''s roster, capped at how many have joined.';
 
-update live.session_public_state m
-   set participant_count = c.joined
-  from (select p.session_id, count(*)::integer as joined
-          from public.participants p
-         group by p.session_id) c
- where c.session_id = m.session_id
-   -- An ended room's phones have gone, and nothing refreshes it again: no reason to send its row.
-   and m.status <> 'ended';
+-- No backfill: who is in a room open at this moment is Presence, which the database cannot read.
+-- The host's console reports it on its next roster sync, within a few seconds.
 
 -- ---------------------------------------------------------------------------
--- 2. The mirror writes the count with the state
+-- 3. The host reports who is in the room
 -- ---------------------------------------------------------------------------
 
--- #182's function with one column added to the row. The early return is unchanged: a session
--- update that changes nothing a student sees still writes nothing, and the count alone never
--- makes this trigger write. `participants_session_id_idx` makes the count an index-only range of
--- at most 300 rows.
-create or replace function private.mirror_session_state() returns trigger
+-- Called by the host's console (`hostTransport.ts`) with the size of its Presence roster,
+-- throttled there to once every few seconds and only when that size has changed. Presence is the
+-- one thing that knows a student has left, and only the host reads it.
+--
+-- Security definer because nobody but the database's own functions may write
+-- `live.session_public_state`. The caller is held to the same rule `public.sessions`' update
+-- policy holds a host to: an author in the session's org. Anyone else, and a session that does
+-- not exist, is told the session is gone (P0002), as `stop_item_timer` tells them, so the
+-- function says nothing about other orgs' rooms.
+--
+-- The number is the host's to give, for its own room, so it is taken, but bounded: never below
+-- zero and never above how many have joined (an index-only count of at most 300 rows,
+-- `participants_session_id_idx`). Writes the row only when the number changed and the room has
+-- not ended, so a report that changes nothing sends phones nothing.
+--
+-- What it does not cover: a room whose host console is closed. Its count then stays where the
+-- console last left it.
+create function public.refresh_participant_count(target uuid, present integer) returns void
 language plpgsql security definer set search_path = ''
 as $$
-begin
-  if tg_op = 'UPDATE'
-     and new.status is not distinct from old.status
-     and new.current_position is not distinct from old.current_position
-     and new.reveal is not distinct from old.reveal
-     and new.item_ends_at is not distinct from old.item_ends_at
-     and new.timer_seconds is not distinct from old.timer_seconds
-     and new.timer_remaining_ms is not distinct from old.timer_remaining_ms then
-    return null;
-  end if;
-
-  insert into live.session_public_state as m
-    (session_id, status, item_position, item_count, reveal, item_ends_at, timer_seconds,
-     timer_remaining_ms, participant_count, updated_at)
-  values
-    (new.id, new.status, new.current_position, jsonb_array_length(new.item_set), new.reveal,
-     new.item_ends_at, new.timer_seconds, new.timer_remaining_ms,
-     (select count(*)::integer from public.participants p where p.session_id = new.id), now())
-  on conflict (session_id) do update set
-    status = excluded.status,
-    item_position = excluded.item_position,
-    item_count = excluded.item_count,
-    reveal = excluded.reveal,
-    item_ends_at = excluded.item_ends_at,
-    timer_seconds = excluded.timer_seconds,
-    timer_remaining_ms = excluded.timer_remaining_ms,
-    participant_count = excluded.participant_count,
-    updated_at = now();
-  return null;
-end;
-$$;
-
-revoke all on function private.mirror_session_state() from public, anon, authenticated;
-
--- ---------------------------------------------------------------------------
--- 3. The bounded refresh
--- ---------------------------------------------------------------------------
-
--- Called by the host's console (`hostTransport.ts`), throttled there to once every few seconds,
--- when Presence shows it a participant it has not seen before. The database decides the number;
--- the caller only says "now is a good time to look".
---
--- Security definer because nobody but the mirror may write `live.session_public_state`. The
--- caller is held to the same rule `public.sessions`' update policy holds a host to: an author in
--- the session's org. Anyone else, and a session that does not exist, is told the session is gone
--- (P0002), as `stop_item_timer` tells them, so the function says nothing about other orgs' rooms.
---
--- Writes the row only when the count has changed and the room has not ended, so a refresh that
--- finds nothing new sends phones nothing at all.
---
--- What it does not cover: a room whose host console is closed. Its phones' count then waits for
--- the room's next move, and a phone that enters or rejoins still counts correctly from
--- `open_session_view` below.
-create function public.refresh_participant_count(target uuid) returns void
-language plpgsql security definer set search_path = ''
-as $$
+declare
+  in_room integer;
 begin
   if not exists (
     select 1
@@ -147,33 +101,34 @@ begin
     raise exception 'that session does not exist' using errcode = 'P0002';
   end if;
 
+  select least(greatest(coalesce(present, 0), 0), count(*)::integer) into in_room
+    from public.participants p
+   where p.session_id = target;
+
   update live.session_public_state m
-     set participant_count = c.joined,
+     set participant_count = in_room,
          updated_at = now()
-    from (select count(*)::integer as joined
-            from public.participants p
-           where p.session_id = target) c
    where m.session_id = target
      and m.status <> 'ended'
-     and m.participant_count is distinct from c.joined;
+     and m.participant_count is distinct from in_room;
 end;
 $$;
 
-comment on function public.refresh_participant_count(uuid) is
-  'Brings live.session_public_state.participant_count up to date for a session the caller hosts '
-  '(#426). Writes, and so sends phones a row, only when the count changed and the room is open.';
+comment on function public.refresh_participant_count(uuid, integer) is
+  'Sets live.session_public_state.participant_count to how many students the host''s console sees '
+  'in the room, for a session the caller hosts (#426), capped at how many have joined. Writes, and '
+  'so sends phones a row, only when the number changed and the room is open.';
 
-revoke all on function public.refresh_participant_count(uuid) from public, anon, service_role;
-grant execute on function public.refresh_participant_count(uuid) to authenticated;
+revoke all on function public.refresh_participant_count(uuid, integer)
+  from public, anon, service_role;
+grant execute on function public.refresh_participant_count(uuid, integer) to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- 4. The view read answers with the count
 -- ---------------------------------------------------------------------------
 
--- #407's function with one column added at the end: how many have joined, counted here rather than
--- read off the mirror, because a join does not write the mirror and a phone entering must count
--- itself. An index-only count of at most 300 rows (`participants_session_id_idx`). A phone keeps
--- the larger of this and what the mirror sends it, since nobody is ever taken out of the count.
+-- #407's function with one column added at the end: the stored count, read off the mirror, and
+-- at least 1, because the phone asking is in the room even before the host has reported it.
 -- The return type changes, so the function is dropped and created again; the grant is given back
 -- below. Everything else is word for word what `20261013120000_open_session_view.sql` wrote, and
 -- its header is still the explanation of it.
@@ -207,7 +162,7 @@ declare
   whole_set boolean;
   shown_items jsonb := '[]'::jsonb;
   own_answers jsonb := '[]'::jsonb;
-  joined integer;
+  in_room integer;
 begin
   if not exists (
     select 1
@@ -275,23 +230,23 @@ begin
        and (whole_set or r.item_position = found_session.current_position);
   end if;
 
-  -- #426: how many have joined, this participant among them.
-  select count(*)::integer into joined
-    from public.participants p
-   where p.session_id = target_session;
+  -- #426: how many are in the room as the host last reported it, this participant at least.
+  select greatest(coalesce(m.participant_count, 0), 1) into in_room
+    from live.session_public_state m
+   where m.session_id = target_session;
 
   return query select null::text, found_session.status, found_session.mode,
                       found_session.current_position, found_session.reveal,
                       found_session.item_set, found_session.timer_seconds,
                       found_session.item_ends_at, found_session.timer_remaining_ms, now(),
-                      shown_items, own_answers, joined;
+                      shown_items, own_answers, coalesce(in_room, 1);
 end;
 $$;
 
 comment on function public.open_session_view(uuid, uuid, text) is
   'Everything POST /api/live/view needs in one call: checks the participant token, charges the '
   'per-participant view limit, and answers with the room, the item or set it is on, this '
-  'participant''s own answers (#407) and how many have joined (#426). Returns items with their '
+  'participant''s own answers (#407) and how many are in the room (#426). Returns items with their '
   'keys; service_role only, and the route strips every key before it answers.';
 
 revoke all on function public.open_session_view(uuid, uuid, text)

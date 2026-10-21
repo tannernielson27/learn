@@ -87,7 +87,7 @@ interface StoredAnswer {
 interface ParticipantConnection {
   participantId: string | null;
   views: Set<(view: SessionView<ParticipantItem>) => void>;
-  /** How many have joined (#426). A phone is told the number, never the roster. */
+  /** How many are in the room (#426). A phone is told the number, never the roster. */
   counts: Set<(count: number) => void>;
   reveals: Set<(revealed: ItemReveal) => void>;
 }
@@ -170,10 +170,10 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
     }
   }
 
-  /** On a join only: someone leaving is still someone who joined this session (#426). */
+  /** On a join and on a leave: someone who has left is not counted (#426, owner decision 2026-10-21). */
   function emitCount(): void {
     for (const connection of connections) {
-      for (const listener of connection.counts) listener(everyone.size);
+      for (const listener of connection.counts) listener(roster.size);
     }
   }
 
@@ -318,7 +318,7 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
       code,
       mode,
       participantId,
-      count: everyone.size,
+      count: roster.size,
       ...participantView(),
     });
 
@@ -354,6 +354,7 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
         // Answers stay: they were given. Only the person leaves.
         roster.delete(participantId);
         emitPresence();
+        emitCount();
       },
 
       onSessionState: (listener) => subscribe(connection.views, listener),

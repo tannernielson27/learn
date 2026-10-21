@@ -104,7 +104,7 @@ export interface FakePublicStateRow {
   item_ends_at: string | null;
   timer_seconds: number | null;
   timer_remaining_ms: number | null;
-  /** How many have joined (#426). Written with the state and by `refresh_participant_count`. */
+  /** How many are in the room (#426), as the host last reported it. Only `refresh_participant_count` writes it. */
   participant_count: number;
   updated_at: string;
 }
@@ -355,8 +355,9 @@ export class FakeSupabase {
       item_ends_at: after.item_ends_at,
       timer_seconds: after.timer_seconds,
       timer_remaining_ms: after.timer_remaining_ms,
-      // #426: the count rides along with every state write, for nothing.
-      participant_count: this.joinedCount(after.id),
+      // #426: the mirror leaves the count as it was; only the host's report changes it.
+      participant_count:
+        this.publicState.find((held) => held.session_id === after.id)?.participant_count ?? 0,
       updated_at: this.now(),
     };
     const index = this.publicState.findIndex((held) => held.session_id === after.id);
@@ -371,16 +372,20 @@ export class FakeSupabase {
   }
 
   /**
-   * `public.refresh_participant_count` (#426): the mirror's count brought up to date, written —
-   * and so sent to every phone — only when it has changed and the room is still open.
+   * `public.refresh_participant_count` (#426): the host's number, capped at zero and at how many
+   * have joined, written — and so sent to every phone — only when it has changed and the room is
+   * still open.
    */
-  refreshCount(sessionId: string): void {
+  refreshCount(sessionId: string, present: number): void {
     const index = this.publicState.findIndex((held) => held.session_id === sessionId);
     const held = this.publicState[index];
     if (held === undefined || held.status === "ended") return;
-    const joined = this.joinedCount(sessionId);
-    if (held.participant_count === joined) return;
-    const row: FakePublicStateRow = { ...held, participant_count: joined, updated_at: this.now() };
+    const inRoom = Math.min(
+      Math.max(Number.isFinite(present) ? present : 0, 0),
+      this.joinedCount(sessionId),
+    );
+    if (held.participant_count === inRoom) return;
+    const row: FakePublicStateRow = { ...held, participant_count: inRoom, updated_at: this.now() };
     this.publicState[index] = row;
     this.publish("session_public_state", row as unknown as Row, null);
   }
@@ -862,7 +867,7 @@ function refreshParticipantCount(
   if (identity.role !== "authenticated" || !session || session.org_id !== identity.orgId) {
     return { data: null, error: { message: "that session does not exist", code: "P0002" } };
   }
-  stack.refreshCount(session.id);
+  stack.refreshCount(session.id, Number(args.present));
   return { data: null, error: null };
 }
 
@@ -1233,7 +1238,10 @@ function openSessionView(
         server_now: new Date(stack.peek()).toISOString(),
         view_items: items,
         view_answers: answers,
-        session_participants: stack.joinedCount(session.id),
+        session_participants: Math.max(
+          stack.publicState.find((held) => held.session_id === session.id)?.participant_count ?? 0,
+          1,
+        ),
       },
     ],
     error: null,

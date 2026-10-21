@@ -2135,7 +2135,7 @@ export type Database = {
         }[];
       };
       refresh_participant_count: {
-        Args: { target: string };
+        Args: { present: number; target: string };
         Returns: undefined;
       };
       register_instructor: {

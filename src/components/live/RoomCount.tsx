@@ -19,8 +19,9 @@ export interface PresentCount {
  * subscribes to it, and it is mounted only on the waiting screen. The number is still kept while
  * an item is up, so it is right the moment the room pauses.
  *
- * Since #426 the number is how many have joined the session, which the database keeps on the
- * session's public state; it no longer comes from Realtime Presence, which a phone is not sent.
+ * Since #426 the number is how many are in the room, which the host's console reports and the
+ * database keeps on the session's public state; it no longer comes from Realtime Presence, which a
+ * phone is not sent. Someone who has left is not counted.
  *
  * Starts at one: this phone is in the room before its first sync says so.
  */

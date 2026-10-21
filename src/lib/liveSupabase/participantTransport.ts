@@ -320,18 +320,24 @@ export function createSupabaseParticipant(
   let readsSent = 0;
   let newestShown = 0;
   /**
-   * How many have joined this session, as far as this phone has heard (#426). Null until the
-   * database has said: a view or a row from before the migration carries no count.
+   * How many are in the room, as far as this phone has heard (#426). Null until the database has
+   * said: a view or a row from before the migration carries no count.
    */
   let count: number | null = null;
+  /** Whether a state row has brought a count since this phone (re)entered. */
+  let countFromRow = false;
 
   /**
-   * Takes a count from a row or a view. Nobody is ever taken out of a session's count, so a
-   * smaller number is only an older one that landed late, and is not shown; an equal one tells
-   * nobody anything.
+   * Takes a count from a row or a view. The count goes down when someone leaves, so a smaller
+   * number is news, not an old one. Rows arrive in the order they were written, so the latest row
+   * is the room; a view's count, read at some moment in between, only stands in until the first
+   * row has come. An equal number tells nobody anything.
    */
-  function noteCount(next: number | null): void {
-    if (gone || next === null || (count !== null && next <= count)) return;
+  function noteCount(next: number | null, source: "row" | "view"): void {
+    if (gone || next === null) return;
+    if (source === "row") countFromRow = true;
+    else if (countFromRow) return;
+    if (next === count) return;
     count = next;
     for (const listener of [...counts]) listener(next);
   }
@@ -464,7 +470,7 @@ export function createSupabaseParticipant(
     if (gone || me === null) return;
     const { payload, newest } = await readView();
     if (gone || mine !== generation) return;
-    noteCount(countFrom(payload.count));
+    noteCount(countFrom(payload.count), "view");
     if (!newest) return;
     if (quiet && held !== null && sameView(held, payload)) {
       held = payload;
@@ -486,7 +492,7 @@ export function createSupabaseParticipant(
    * the room telling this phone that *something* moved, and asking is always safe.
    */
   function onStateMessage(row: unknown): void {
-    noteCount(countFrom((row as Record<string, unknown> | null)?.participant_count));
+    noteCount(countFrom((row as Record<string, unknown> | null)?.participant_count), "row");
     const next = publicStateFrom(row);
     const standing = held;
     if (
@@ -635,6 +641,7 @@ export function createSupabaseParticipant(
     announcedPaced = new Set();
     held = null;
     count = null;
+    countFromRow = false;
     notifyConnection("connecting", false);
     await openChannel(identity.sessionId, {
       participantId: identity.participantId,
@@ -652,7 +659,7 @@ export function createSupabaseParticipant(
   async function readAndAnnounce(mine: number): Promise<StudentView> {
     const { payload, newest } = await readView();
     if (gone || mine !== generation) throw new LiveSessionError("not_joined");
-    noteCount(countFrom(payload.count));
+    noteCount(countFrom(payload.count), "view");
     if (newest || held === null) {
       announce(payload);
       return studentView(payload);
@@ -739,6 +746,7 @@ export function createSupabaseParticipant(
       me = null;
       held = null;
       count = null;
+      countFromRow = false;
       if (open === null) return;
       // A socket that is already down cannot be told this name is going; the server drops the
       // presence entry with the connection anyway. Swallowed so that the channel is still removed

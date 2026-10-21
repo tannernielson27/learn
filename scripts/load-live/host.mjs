@@ -8,8 +8,8 @@
 // It never touches the service role.
 //
 // #426: with `--student-presence off` (the default) it also watches the roster the way the console
-// does and asks `refresh_participant_count` when someone new joins, at most once every
-// `COUNT_REFRESH_MS` with one more ask at the end of a burst (`src/lib/liveSupabase/
+// does and reports its size with `refresh_participant_count` when that changes, at most once every
+// `COUNT_REFRESH_MS` with one more report at the end of a burst (`src/lib/liveSupabase/
 // countRefresh.ts`). That is what keeps the phones' count fresh, and its rows are part of what a
 // phone is sent, so a run without it would undercount the after.
 
@@ -33,35 +33,36 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const COUNT_REFRESH_MS = 3000;
 
 /**
- * The console's roster and count refresh (#426), said again for a script that cannot import the
- * app's TypeScript: a newcomer asks at once after a quiet spell, and newcomers inside the interval
- * are caught by one more ask at its end.
+ * The console's roster and count report (#426), said again for a script that cannot import the
+ * app's TypeScript: a change in the roster's size is reported at once after a quiet spell, and
+ * changes inside the interval are caught by one more report at its end, with the size by then.
  */
 async function watchRoster(client, sessionId) {
-  const seen = new Set();
+  let present = 0;
+  let reported = null;
   let lastAsked = Number.NEGATIVE_INFINITY;
   let waiting = null;
   let stopped = false;
   const ask = () => {
     waiting = null;
-    if (stopped) return;
+    if (stopped || present === reported) return;
     lastAsked = Date.now();
-    void Promise.resolve(client.rpc("refresh_participant_count", { target: sessionId })).catch(
-      () => {},
-    );
+    reported = present;
+    void Promise.resolve(
+      client.rpc("refresh_participant_count", { target: sessionId, present }),
+    ).catch(() => {});
   };
   await client.realtime.setAuth();
   const channel = client.channel(`live:${sessionId}`, { config: { private: true } });
   channel.on("presence", { event: "sync" }, () => {
-    let someoneNew = false;
+    const ids = new Set();
     for (const entries of Object.values(channel.presenceState())) {
       for (const entry of entries) {
-        if (typeof entry?.participantId !== "string" || seen.has(entry.participantId)) continue;
-        seen.add(entry.participantId);
-        someoneNew = true;
+        if (typeof entry?.participantId === "string") ids.add(entry.participantId);
       }
     }
-    if (!someoneNew || waiting !== null) return;
+    present = ids.size;
+    if (present === reported || waiting !== null) return;
     const wait = lastAsked + COUNT_REFRESH_MS - Date.now();
     if (wait <= 0) ask();
     else waiting = setTimeout(ask, wait);

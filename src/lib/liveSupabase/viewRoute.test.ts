@@ -247,7 +247,7 @@ describe("the one call says what the four calls said (#407)", () => {
     return { one: withoutCount(await one.response.text()), four: await four.response.text() };
   }
 
-  it("hands the phone how many have joined, as a number and with nobody's name (#426)", async () => {
+  it("hands the phone how many are in the room, as a number and with nobody's name (#426)", async () => {
     const { live, ada } = await startedRoom("instructor_paced");
     await live.participant().join(live.code, { displayName: "Linus" });
     await live.settle();

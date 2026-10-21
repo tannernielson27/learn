@@ -67,9 +67,9 @@ describe("the waiting screen's count, end to end (#426)", () => {
 
     expect(ada.counts.at(-1)).toBe(3);
     expect(refreshes).toEqual([
-      { target: live.sessionId },
-      { target: live.sessionId },
-      { target: live.sessionId },
+      { target: live.sessionId, present: 1 },
+      { target: live.sessionId, present: 2 },
+      { target: live.sessionId, present: 3 },
     ]);
     // What crossed the channel to a phone carries a number and no names.
     const rows = live.stack.wire.filter((entry) => entry.label === "session_public_state");
@@ -97,26 +97,30 @@ describe("the waiting screen's count, end to end (#426)", () => {
     expect(live.stack.presenceSent.authenticated).toBeGreaterThan(0);
     // The host roster is unchanged by any of it: every join and the leave are there.
     expect(seen.at(-1)?.map((person) => person.displayName)).toEqual(["Ada", "Quiet"]);
-    // And Grace leaving does not take her out of the number: she joined this session.
-    expect(ada.counts.at(-1)).toBe(3);
+    // And Grace leaving takes her out of the number (owner decision, 2026-10-21).
+    expect(ada.counts.at(-1)).toBe(2);
   });
 
-  it("does not ask again for a sync that shows the host nobody new", async () => {
+  it("reports a phone dropping and coming back, and ends where it started", async () => {
     const live = room();
     const { host, refreshes } = countingHost(live);
     await host.open();
     await live.settle();
     const ada = await phoneIn(live, "Ada");
+    await phoneIn(live, "Grace");
     const before = refreshes.length;
 
-    // A phone dropping and coming back is the same person: Presence syncs, nobody is new.
     await ada.phone.leave();
     await live.settle();
     const back = live.resuming(live.stack.participants[0]!.id);
     await back.resume(live.identityOf(live.stack.participants[0]!.id));
     await live.settle();
 
-    expect(refreshes).toHaveLength(before);
+    expect(refreshes.slice(before)).toEqual([
+      { target: live.sessionId, present: 1 },
+      { target: live.sessionId, present: 2 },
+    ]);
+    expect(live.stack.publicState[0]?.participant_count).toBe(2);
   });
 
   it("does not re-read the room on the host for a row that only carries a new count", async () => {
@@ -133,18 +137,30 @@ describe("the waiting screen's count, end to end (#426)", () => {
     expect(reads()).toBe(before);
   });
 
-  it("writes nothing to the room when the host asks and nobody new has joined", async () => {
+  it("writes nothing to the room when the host reports the number it already has", async () => {
     const live = room();
     await phoneIn(live, "Ada");
     const client = createFakeClient(live.stack, { role: "authenticated", orgId: live.orgId });
-    await client.rpc("refresh_participant_count", { target: live.sessionId });
+    await client.rpc("refresh_participant_count", { target: live.sessionId, present: 1 });
     await live.settle();
     const sent = live.stack.messagesSent;
 
-    await client.rpc("refresh_participant_count", { target: live.sessionId });
+    await client.rpc("refresh_participant_count", { target: live.sessionId, present: 1 });
     await live.settle();
 
     expect(live.stack.messagesSent).toBe(sent);
+  });
+
+  it("never stores more than have joined, nor less than none", async () => {
+    const live = room();
+    await phoneIn(live, "Ada");
+    await phoneIn(live, "Grace");
+    const client = createFakeClient(live.stack, { role: "authenticated", orgId: live.orgId });
+
+    await client.rpc("refresh_participant_count", { target: live.sessionId, present: 99 });
+    expect(live.stack.publicState[0]?.participant_count).toBe(2);
+    await client.rpc("refresh_participant_count", { target: live.sessionId, present: -4 });
+    expect(live.stack.publicState[0]?.participant_count).toBe(0);
   });
 
   it("still hears its own move when its own read of the room lands before the echo", async () => {
@@ -191,7 +207,10 @@ describe("the waiting screen's count, end to end (#426)", () => {
       role: "authenticated",
       orgId: "00000000-0000-0000-0000-00000000dead",
     });
-    const { error } = await client.rpc("refresh_participant_count", { target: live.sessionId });
+    const { error } = await client.rpc("refresh_participant_count", {
+      target: live.sessionId,
+      present: 1,
+    });
     expect(error).toMatchObject({ code: "P0002" });
   });
 });

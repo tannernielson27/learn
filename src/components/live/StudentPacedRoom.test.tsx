@@ -58,7 +58,7 @@ function fakeTransport(submit: (itemId: string, response: AnyResponse) => Promis
       return () => viewListeners.delete(listener);
     },
     onSessionState: () => () => {},
-    // #426: a phone is told how many have joined, never who.
+    // #426: a phone is told how many are in the room, never who.
     onCount: (listener: (count: number) => void) => {
       countListeners.add(listener);
       return () => countListeners.delete(listener);

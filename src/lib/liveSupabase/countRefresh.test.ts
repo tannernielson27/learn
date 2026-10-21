@@ -60,17 +60,44 @@ describe("createCountRefresh (#426)", () => {
     expect(ask).toHaveBeenCalledTimes(1);
   });
 
-  it("asks nothing for a sync that shows nobody new: a leave, a rejoin, a re-track", () => {
+  it("reports the roster's size, so someone who leaves is taken out of the count", () => {
     const time = clock();
     const ask = vi.fn();
     const refresh = createCountRefresh(ask, COUNT_REFRESH_MS, time.timers);
     refresh.saw(roomOf(3));
     time.advance(COUNT_REFRESH_MS * 5);
     refresh.saw(roomOf(2));
-    refresh.saw(roomOf(3));
-    refresh.saw([person(2), person(0)]);
+    expect(ask.mock.calls).toEqual([[3], [2]]);
+  });
+
+  it("reports nothing for a sync whose size has not changed: a re-track, one phone twice", () => {
+    const time = clock();
+    const ask = vi.fn();
+    const refresh = createCountRefresh(ask, COUNT_REFRESH_MS, time.timers);
+    refresh.saw(roomOf(2));
     time.advance(COUNT_REFRESH_MS * 5);
-    expect(ask).toHaveBeenCalledTimes(1);
+    refresh.saw([person(1), person(0)]);
+    refresh.saw([person(0), person(1), person(1)]);
+    time.advance(COUNT_REFRESH_MS * 5);
+    expect(ask.mock.calls).toEqual([[2]]);
+  });
+
+  it("reports the size at the end of the interval, not every step on the way", () => {
+    const time = clock();
+    const ask = vi.fn();
+    const refresh = createCountRefresh(ask, COUNT_REFRESH_MS, time.timers);
+    refresh.saw(roomOf(3));
+    refresh.saw(roomOf(2));
+    refresh.saw(roomOf(4));
+    refresh.saw(roomOf(3));
+    time.advance(COUNT_REFRESH_MS);
+    // A leave and a join inside the interval that end where they started send nothing more.
+    expect(ask.mock.calls).toEqual([[3]]);
+    // After a quiet interval the next change goes at once, and the one after waits its turn.
+    refresh.saw(roomOf(5));
+    refresh.saw(roomOf(4));
+    time.advance(COUNT_REFRESH_MS);
+    expect(ask.mock.calls).toEqual([[3], [5], [4]]);
   });
 
   it("asks at most once an interval however many join, and once more at the end of it", () => {
@@ -140,6 +167,22 @@ describe("createCountRefresh (#426)", () => {
     await Promise.resolve();
     time.advance(COUNT_REFRESH_MS * 3);
     expect(ask).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports once more when the roster moved while a report was under way", async () => {
+    const time = clock();
+    let answer: (ok: boolean) => void = () => {};
+    const ask = vi.fn(() => new Promise<boolean>((resolve) => (answer = resolve)));
+    const refresh = createCountRefresh(ask, COUNT_REFRESH_MS, time.timers);
+    refresh.saw(roomOf(4));
+    refresh.saw(roomOf(3));
+    time.advance(COUNT_REFRESH_MS);
+    expect(ask.mock.calls).toEqual([[4]]);
+    answer(true);
+    await Promise.resolve();
+    await Promise.resolve();
+    time.advance(COUNT_REFRESH_MS);
+    expect(ask.mock.calls).toEqual([[4], [3]]);
   });
 
   it("asks for every newcomer at once when the interval is zero", () => {

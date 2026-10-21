@@ -94,8 +94,8 @@ export interface HostTransportOptions {
   client: SupabaseClient<Database>;
   sessionId: string;
   /**
-   * How often, at most, the console asks the database to bring the waiting screen's count up to
-   * date (#426). See `countRefresh.ts`. Zero asks for every newcomer at once, for the tests.
+   * How often, at most, the console tells the database how many are in the room (#426). See
+   * `countRefresh.ts`. Zero reports every change at once, for the tests.
    */
   countRefreshMs?: number;
 }
@@ -158,14 +158,18 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
   let readFacts: string | null = null;
   /**
    * The waiting screen's count (#426): phones no longer hear Presence, so this console — which
-   * does — asks the database to recount when it sees someone new. The database decides the number.
-   * A refresh that fails is asked again a few times, an interval apart (`countRefresh.ts`).
+   * does — reports how many are in its roster when that number changes, a leave included. The
+   * database caps it at how many have joined. A report that fails is made again a few times, an
+   * interval apart (`countRefresh.ts`).
    */
-  const counting = createCountRefresh(async () => {
+  const counting = createCountRefresh(async (present) => {
     if (closed) return true;
     // supabase-js answers a failed call with `{ error }` rather than throwing; both are a "no",
-    // which `createCountRefresh` asks again a few times for. A throw is its to catch.
-    const { error } = await client.rpc("refresh_participant_count", { target: sessionId });
+    // which `createCountRefresh` reports again a few times. A throw is its to catch.
+    const { error } = await client.rpc("refresh_participant_count", {
+      target: sessionId,
+      present,
+    });
     return error === null;
   }, options.countRefreshMs);
 
