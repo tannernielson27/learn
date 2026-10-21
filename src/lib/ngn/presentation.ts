@@ -58,3 +58,80 @@ export function unansweredResponse(item: Item): AnyResponse {
 export function isTrendItem(item: Item): boolean {
   return (item.ehr?.timePoints.length ?? 0) > 1;
 }
+
+/**
+ * The key as an answer (#467): the response that picks exactly what the key names, so a teacher's
+ * key preview shows each keyed element as correct. `unansweredResponse` is the student's view of
+ * the same key, where those elements read missed; for a teacher checking an import, "Missed" read
+ * as the AI having got the answer wrong. Reads the key, so it is only for an item that has one.
+ */
+export function keyResponse(item: Item): AnyResponse {
+  switch (item.type) {
+    case "multiple_choice":
+      return { type: item.type, optionId: item.answerKey.correctOptionId };
+    case "multiple_response":
+      return { type: item.type, optionIds: [...item.answerKey.correctOptionIds] };
+    case "multiple_response_grouping":
+      return {
+        type: item.type,
+        rows: item.answerKey.rows.map((row) => ({
+          rowId: row.rowId,
+          optionIds: [...row.correctOptionIds],
+        })),
+      };
+    case "matrix_multiple_choice":
+      return {
+        type: item.type,
+        rows: item.answerKey.rows.map((row) => ({
+          rowId: row.rowId,
+          columnId: row.correctColumnId,
+        })),
+      };
+    case "matrix_multiple_response":
+      return {
+        type: item.type,
+        rows: item.answerKey.rows.map((row) => ({
+          rowId: row.rowId,
+          columnIds: [...row.correctColumnIds],
+        })),
+      };
+    case "dropdown_cloze":
+    case "dropdown_rationale":
+      return {
+        type: item.type,
+        blanks: item.answerKey.blanks.map((blank) => ({
+          blankId: blank.blankId,
+          choiceId: blank.correctChoiceId,
+        })),
+      };
+    case "dropdown_table":
+      return {
+        type: item.type,
+        rows: item.answerKey.rows.map((row) => ({
+          rowId: row.rowId,
+          choiceId: row.correctChoiceId,
+        })),
+      };
+    case "dragdrop_cloze":
+    case "dragdrop_rationale":
+      return {
+        type: item.type,
+        blanks: item.answerKey.blanks.map((blank) => ({
+          blankId: blank.blankId,
+          tokenId: blank.correctTokenId,
+        })),
+      };
+    case "highlight_text":
+    case "highlight_table":
+      return { type: item.type, spanIds: [...item.answerKey.correctSpanIds] };
+    case "ordered_response":
+      return { type: item.type, orderedIds: [...item.answerKey.orderedIds] };
+    case "bowtie":
+      return {
+        type: item.type,
+        actionIds: [...item.answerKey.actionIds],
+        conditionId: item.answerKey.conditionId,
+        parameterIds: [...item.answerKey.parameterIds],
+      };
+  }
+}

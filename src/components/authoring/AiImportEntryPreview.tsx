@@ -3,6 +3,7 @@
 import { Component, useSyncExternalStore, type ReactNode } from "react";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { recordAtStep } from "@/lib/ngn/chartReveal";
+import { keyResponse } from "@/lib/ngn/presentation";
 import { caseStudySchema, itemSchema, type Item } from "@/lib/ngn/schemas";
 import { toKeylessItem, type Reveal, type SubmitHandler } from "@/lib/ngn/submit";
 import { CJMM_STEP_LABELS, type CjmmStep } from "@/lib/ngn/types";
@@ -10,8 +11,10 @@ import { EhrPreview } from "./EhrPreview";
 
 /**
  * A staged question as students will see it, with its key shown (#346): the real players, read
- * only. A valid item opens on its key (`initialKey`, as a live session shows it to a phone that
- * did not answer). An item with no key yet is shown as a student would answer it, with no key.
+ * only. A valid item opens on its key, answered with the key itself (#467), so each keyed element
+ * reads Correct. Opening on `initialKey` alone, as a live phone that did not answer does, marked
+ * them all Missed, which a teacher read as the AI getting the answer wrong. An item with no key
+ * yet is shown as a student would answer it, with no key.
  * Anything else cannot be drawn until it is fixed (#347). This is a teacher's own workspace's
  * key, on an author route (ADR 0003): nothing here is sent to a student.
  */
@@ -31,6 +34,7 @@ function KeyedItem({ item, label }: { item: Item; label: string }) {
     <ItemPlayer
       item={toKeylessItem(item)}
       initialKey={keyOf(item)}
+      initialResponse={keyResponse(item)}
       submit={refuse}
       showSubmit={false}
       label={label}

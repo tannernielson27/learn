@@ -117,9 +117,10 @@ describe("AiImportReview (#346)", () => {
       "Ready",
     ]);
     expect(screen.getByText("The AI marked an answer the document does not show.")).toBeTruthy();
-    // A ready question opens on its key, as the player shows it; nothing here can be submitted.
+    // A ready question opens on its key, marked Correct (#467); nothing here can be submitted.
     const preview = screen.getByRole("region", { name: "Question 1, preview" });
-    expect(within(preview).getByText("Missed")).toBeTruthy();
+    expect(within(preview).getByText("Correct")).toBeTruthy();
+    expect(within(preview).queryByText("Missed")).toBeNull();
     expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
     expect(screen.getByText("No key yet. This is how students will see it.")).toBeTruthy();
   });

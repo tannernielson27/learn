@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { FIXTURES, allFixtures, sampleTrendEhr, sampleTrendItem } from "./fixtures";
-import { initialResponse, isTrendItem, unansweredResponse } from "./presentation";
-import { itemSchema, type Item } from "./schemas";
-import { emptyResponse } from "./scoring";
+import {
+  FIXTURES,
+  allFixtures,
+  sampleCaseStudy,
+  sampleTrendEhr,
+  sampleTrendItem,
+} from "./fixtures";
+import { initialResponse, isTrendItem, keyResponse, unansweredResponse } from "./presentation";
+import { caseStudySchema, itemSchema, responseSchema, type Item } from "./schemas";
+import { emptyResponse, scoreItem } from "./scoring";
 import { startingOrder, startingOrderSeed } from "./startingOrder";
 import { toKeylessItem } from "./submit";
 
@@ -103,5 +109,44 @@ describe("isTrendItem", () => {
       },
     });
     expect(isTrendItem(single)).toBe(false);
+  });
+});
+
+describe("keyResponse (#467)", () => {
+  const keyed: Item[] = [
+    ...allFixtures.flatMap((fixture) => [
+      itemSchema.parse(fixture.canonical),
+      itemSchema.parse(fixture.edge),
+    ]),
+    ...caseStudySchema.parse(sampleCaseStudy).items,
+  ];
+
+  it("covers every item type", () => {
+    expect(new Set(keyed.map((item) => item.type))).toEqual(new Set(Object.keys(FIXTURES)));
+  });
+
+  it("is the key as an answer: a valid response that scores full points", () => {
+    for (const item of keyed) {
+      const response = keyResponse(item);
+      expect(responseSchema.parse(response), item.id).toEqual(response);
+      const score = scoreItem(item, response);
+      expect(score.points, `${item.type} ${item.id}`).toBe(score.maxPoints);
+    }
+  });
+
+  it("chooses exactly the key's elements, so nothing outside the key reads as picked", () => {
+    const sata = itemSchema.parse(FIXTURES.multiple_response.canonical);
+    if (sata.type !== "multiple_response") throw new Error("fixture type");
+    expect(keyResponse(sata)).toEqual({
+      type: "multiple_response",
+      optionIds: sata.answerKey.correctOptionIds,
+    });
+  });
+
+  it("copies the key rather than sharing its arrays", () => {
+    const item = orderedFixture();
+    const response = keyResponse(item);
+    if (response.type !== "ordered_response") throw new Error("type");
+    expect(response.orderedIds).not.toBe(item.answerKey.orderedIds);
   });
 });
