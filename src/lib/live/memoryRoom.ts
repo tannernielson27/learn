@@ -87,7 +87,8 @@ interface StoredAnswer {
 interface ParticipantConnection {
   participantId: string | null;
   views: Set<(view: SessionView<ParticipantItem>) => void>;
-  presence: Set<(roster: Participant[]) => void>;
+  /** How many are in the room (#426). A phone is told the number, never the roster. */
+  counts: Set<(count: number) => void>;
   reveals: Set<(revealed: ItemReveal) => void>;
 }
 
@@ -164,11 +165,15 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
 
   function emitPresence(): void {
     const list = rosterList();
-    for (const connection of connections) {
-      for (const listener of connection.presence) listener(list);
-    }
     for (const host of hosts) {
       for (const listener of host.presence) listener(list);
+    }
+  }
+
+  /** On a join and on a leave: someone who has left is not counted (#426, owner decision 2026-10-21). */
+  function emitCount(): void {
+    for (const connection of connections) {
+      for (const listener of connection.counts) listener(roster.size);
     }
   }
 
@@ -303,7 +308,7 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
     const connection: ParticipantConnection = {
       participantId: null,
       views: new Set(),
-      presence: new Set(),
+      counts: new Set(),
       reveals: new Set(),
     };
     connections.add(connection);
@@ -313,7 +318,7 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
       code,
       mode,
       participantId,
-      roster: rosterList(),
+      count: roster.size,
       ...participantView(),
     });
 
@@ -334,6 +339,7 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
         roster.set(participantId, person);
         everyone.set(participantId, person);
         emitPresence();
+        emitCount();
         return snapshot(participantId);
       },
 
@@ -341,17 +347,18 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
         const participantId = connection.participantId;
         connection.participantId = null;
         connection.views.clear();
-        connection.presence.clear();
+        connection.counts.clear();
         connection.reveals.clear();
         connections.delete(connection);
         if (participantId === null) return;
         // Answers stay: they were given. Only the person leaves.
         roster.delete(participantId);
         emitPresence();
+        emitCount();
       },
 
       onSessionState: (listener) => subscribe(connection.views, listener),
-      onPresence: (listener) => subscribe(connection.presence, listener),
+      onCount: (listener) => subscribe(connection.counts, listener),
       onReveal: (listener) => subscribe(connection.reveals, listener),
       serverNow: () => now(),
 

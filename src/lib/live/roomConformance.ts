@@ -153,7 +153,7 @@ export function describeRoomConformance(adapter: string, createRoom: Conformance
       expect(snapshot.participantId).not.toBe("");
       expect(snapshot.state.status).toBe("lobby");
       await room.settle();
-      expect(snapshot.roster).toHaveLength(1);
+      expect(snapshot.count).toBe(1);
     });
 
     it("forgives the spacing, hyphens and case a code is read out in", async () => {
@@ -195,22 +195,58 @@ export function describeRoomConformance(adapter: string, createRoom: Conformance
       const two = await transport.join("LEARN7", { displayName: "Someone else" });
       await room.settle();
       expect(two.participantId).toBe(one.participantId);
-      expect(two.roster).toHaveLength(1);
-      expect(two.roster[0]?.displayName).toBe("Ada");
+      expect(two.count).toBe(1);
+      const host = room.host();
+      const { roster } = await host.open();
+      expect(roster.map((person) => person.displayName)).toEqual(["Ada"]);
     });
   });
 
   describe(`${adapter}: presence`, () => {
-    it("tells everyone who is in the room, oldest first", async () => {
+    it("tells the host who is in the room, oldest first", async () => {
       const room = await makeRoom();
+      const host = await openHost(room);
       const seen: Participant[][] = [];
-      const watcher = room.participant();
-      watcher.onPresence((roster) => seen.push(roster));
-      await watcher.join("LEARN7", { displayName: "Ada" });
+      host.onPresence((roster) => seen.push(roster));
+      await joined(room, "Ada");
       await joined(room, "Grace");
       await room.settle();
 
       expect(seen.at(-1)?.map((p) => p.displayName)).toEqual(["Ada", "Grace"]);
+    });
+
+    // #426: a phone is told how many, never who. The host's console is in the room, as it is in a
+    // class: over a network it is what keeps the number fresh between the room's own moves.
+    it("tells a participant how many are in the room, and never who", async () => {
+      const room = await makeRoom();
+      await openHost(room);
+      const counts: unknown[] = [];
+      const watcher = room.participant();
+      watcher.onCount((count) => counts.push(count));
+      const snapshot = await watcher.join("LEARN7", { displayName: "Ada" });
+      expect(snapshot.count).toBe(1);
+      expect(snapshot).not.toHaveProperty("roster");
+      await joined(room, "Grace");
+      await joined(room, "Quiet");
+      await room.settle();
+
+      expect(counts.at(-1)).toBe(3);
+      expect(counts.every((count) => typeof count === "number")).toBe(true);
+    });
+
+    it("stops counting someone who has left (owner decision, 2026-10-21)", async () => {
+      const room = await makeRoom();
+      const host = await openHost(room);
+      const counts: number[] = [];
+      const watcher = room.participant();
+      watcher.onCount((count) => counts.push(count));
+      await watcher.join("LEARN7", { displayName: "Ada" });
+      const grace = await joined(room, "Grace");
+      await grace.leave();
+      await host.start();
+      await room.settle();
+
+      expect(counts.at(-1)).toBe(1);
     });
 
     it("drops a participant who leaves, and leaving twice is harmless", async () => {

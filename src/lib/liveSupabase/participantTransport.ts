@@ -9,7 +9,9 @@
  *     mirror of the session that holds no org, no host, no code and no item ids. The session row
  *     itself stays unreadable to `anon`, as #128 left it. The table is `replica identity full`,
  *     so the whole row is in the message and a pause or a resume costs no request of its own.
- *   * **The roster** is Realtime Presence on the session's channel: names, and nothing else.
+ *   * **Presence** is one way: this phone tracks itself, so the host's roster has its name, and it
+ *     is sent nobody else's (#426). How many are in the session arrives as a number,
+ *     `participant_count` on the same mirror row, and on every read of the view.
  *   * **The item, this phone's own answer, and the key at reveal** come from
  *     `POST /api/live/view`, because only a server may read `public.items`. What comes back is a
  *     `ParticipantItem` — branded so that an item still carrying an `answerKey` would not
@@ -52,7 +54,6 @@ import { clockOffset, readTimer } from "@/lib/live/timer";
 import type {
   ItemReveal,
   LiveSessionTransport,
-  Participant,
   ParticipantIdentity,
   ParticipantItem,
   ParticipantSnapshot,
@@ -61,7 +62,7 @@ import type {
 } from "@/lib/live/transport";
 import type { EhrRecordView } from "@/lib/ngn/chartReveal";
 import type { ChannelTokenSource } from "./channelTokenSource";
-import { rosterFrom, type PresenceEntry } from "./presence";
+import type { PresenceEntry } from "./presence";
 import type { Database } from "@/lib/supabase/database.types";
 import {
   LIVE_ROUTES,
@@ -213,6 +214,14 @@ export function publicStateFrom(row: unknown): LiveSessionState | null {
 }
 
 /**
+ * The waiting screen's count off a mirror row or a view (#426), or null when there is none: a
+ * database the migration has not reached, or anything that is not a whole, non-negative number.
+ */
+export function countFrom(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : null;
+}
+
+/**
  * Whether a Realtime `system` message says the channel's `postgres_changes` subscription is live
  * (#193). Realtime sends `{ extension: "postgres_changes", status: "ok" }` once it is, and
  * `status: "error"` when it could not be; the second has no move to go and fetch.
@@ -272,7 +281,7 @@ export function createSupabaseParticipant(
 
   const views = new Set<(view: SessionView<ParticipantItem>) => void>();
   const students = new Set<(view: StudentView) => void>();
-  const presence = new Set<(roster: Participant[]) => void>();
+  const counts = new Set<(count: number) => void>();
   const reveals = new Set<(revealed: ItemReveal) => void>();
   const connections = new Set<(status: RoomConnection, rejoined: boolean) => void>();
 
@@ -310,15 +319,27 @@ export function createSupabaseParticipant(
    */
   let readsSent = 0;
   let newestShown = 0;
+  /**
+   * How many are in the room, as far as this phone has heard (#426). Null until the database has
+   * said: a view or a row from before the migration carries no count.
+   */
+  let count: number | null = null;
+  /** Whether a state row has brought a count since this phone (re)entered. */
+  let countFromRow = false;
 
-  function rosterNow(): Participant[] {
-    // An entry has to answer with a roster this person is already in, so this connection's own
-    // entry is folded in when a sync has not carried it back yet. See `rosterFrom`.
-    const self =
-      me === null
-        ? null
-        : { participantId: me.participantId, displayName: me.displayName, joinedAt: me.joinedAt };
-    return rosterFrom(channel?.presenceState<PresenceEntry>() ?? {}, self);
+  /**
+   * Takes a count from a row or a view. The count goes down when someone leaves, so a smaller
+   * number is news, not an old one. Rows arrive in the order they were written, so the latest row
+   * is the room; a view's count, read at some moment in between, only stands in until the first
+   * row has come. An equal number tells nobody anything.
+   */
+  function noteCount(next: number | null, source: "row" | "view"): void {
+    if (gone || next === null) return;
+    if (source === "row") countFromRow = true;
+    else if (countFromRow) return;
+    if (next === count) return;
+    count = next;
+    for (const listener of [...counts]) listener(next);
   }
 
   /**
@@ -448,7 +469,9 @@ export function createSupabaseParticipant(
     const mine = generation;
     if (gone || me === null) return;
     const { payload, newest } = await readView();
-    if (gone || mine !== generation || !newest) return;
+    if (gone || mine !== generation) return;
+    noteCount(countFrom(payload.count), "view");
+    if (!newest) return;
     if (quiet && held !== null && sameView(held, payload)) {
       held = payload;
       return;
@@ -469,6 +492,7 @@ export function createSupabaseParticipant(
    * the room telling this phone that *something* moved, and asking is always safe.
    */
   function onStateMessage(row: unknown): void {
+    noteCount(countFrom((row as Record<string, unknown> | null)?.participant_count), "row");
     const next = publicStateFrom(row);
     const standing = held;
     if (
@@ -477,7 +501,10 @@ export function createSupabaseParticipant(
       next.position === standing.state.position &&
       next.reveal === standing.state.reveal
     ) {
-      announce(restated(standing, next));
+      const view = restated(standing, next);
+      // A row that changed nothing but the count (#426): the screen has nothing to draw anew.
+      if (sameView(standing, view)) return;
+      announce(view);
       return;
     }
     // A listener cannot await, and a failed refresh must not become an unhandled rejection in a
@@ -547,20 +574,18 @@ export function createSupabaseParticipant(
       if (gone || !postgresChangesReady(payload)) return;
       void refresh(true).catch(() => {});
     });
-    /**
-     * Why a phone still *receives* presence (#408). Being seen by the host needs only `track`
-     * below; this listener is what makes Realtime send the room's presence to this socket at all
-     * (realtime-js joins with `presence.enabled` true when a presence listener is bound). It
-     * stays because the waiting screen shows how many are in the room, and a listener cannot be
-     * added or dropped once the channel has subscribed. The screens no longer render for a sync
-     * they do not draw (`RoomCount`); dropping the messages themselves means taking that count
-     * from somewhere else first.
+    /*
+     * No presence listener, on purpose (#426). Being seen by the host needs only `track` below.
+     * Binding a listener is what makes realtime-js join with `presence.enabled` true and so ask
+     * Realtime for the room's whole roster and every join and leave after it — on the order of
+     * N squared messages as a class gathers, for one number on the waiting screen. That number
+     * now comes from `participant_count` on the mirror row above and from each read of the view.
+     *
+     * The client is only half of it. Realtime turns presence on for a socket when it first
+     * tracks, whatever it joined with, and then sends it presence wherever the `realtime.messages`
+     * select policy lets it read presence; so since `20261016010000_room_count.sql` that policy no
+     * longer lets a participant read it. See the migration's header.
      */
-    opened.on("presence", { event: "sync" }, () => {
-      if (gone) return;
-      const roster = rosterNow();
-      for (const listener of [...presence]) listener(roster);
-    });
 
     /**
      * Settles when the channel first comes up, or when it first fails to.
@@ -615,6 +640,8 @@ export function createSupabaseParticipant(
     announcedReveal = null;
     announcedPaced = new Set();
     held = null;
+    count = null;
+    countFromRow = false;
     notifyConnection("connecting", false);
     await openChannel(identity.sessionId, {
       participantId: identity.participantId,
@@ -632,6 +659,7 @@ export function createSupabaseParticipant(
   async function readAndAnnounce(mine: number): Promise<StudentView> {
     const { payload, newest } = await readView();
     if (gone || mine !== generation) throw new LiveSessionError("not_joined");
+    noteCount(countFrom(payload.count), "view");
     if (newest || held === null) {
       announce(payload);
       return studentView(payload);
@@ -656,7 +684,8 @@ export function createSupabaseParticipant(
       code: joined.code,
       mode: joined.mode,
       participantId: joined.participantId,
-      roster: rosterNow(),
+      // This phone is in the session before any count has said so.
+      count: Math.max(count ?? 1, 1),
       state: view.state,
       item: view.item,
       ...(view.set === undefined ? {} : { set: view.set }),
@@ -708,7 +737,7 @@ export function createSupabaseParticipant(
       gone = true;
       views.clear();
       students.clear();
-      presence.clear();
+      counts.clear();
       reveals.clear();
       connections.clear();
       const open = channel;
@@ -716,6 +745,8 @@ export function createSupabaseParticipant(
       credentials = null;
       me = null;
       held = null;
+      count = null;
+      countFromRow = false;
       if (open === null) return;
       // A socket that is already down cannot be told this name is going; the server drops the
       // presence entry with the connection anyway. Swallowed so that the channel is still removed
@@ -730,7 +761,7 @@ export function createSupabaseParticipant(
 
     onSessionState: (listener) => subscribe(views, listener),
     onStudentView: (listener) => subscribe(students, listener),
-    onPresence: (listener) => subscribe(presence, listener),
+    onCount: (listener) => subscribe(counts, listener),
     onReveal: (listener) => subscribe(reveals, listener),
     onConnection: (listener) => subscribe(connections, listener),
     serverNow: () => Date.now() + offset,
