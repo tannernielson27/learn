@@ -49,7 +49,10 @@ insert into public.items (id, bank_id, org_id, type, status, content, answer_key
   from public.profiles p,
        (values ('00000000-0000-0000-0000-0000000007e1'::uuid, 'published'::public.content_status),
                ('00000000-0000-0000-0000-0000000007e2'::uuid, 'published'::public.content_status),
-               ('00000000-0000-0000-0000-0000000007e3'::uuid, 'draft'::public.content_status))
+               ('00000000-0000-0000-0000-0000000007e3'::uuid, 'draft'::public.content_status),
+               -- #468: steps of the case studies below, never run as loose questions.
+               ('00000000-0000-0000-0000-0000000007e5'::uuid, 'published'::public.content_status),
+               ('00000000-0000-0000-0000-0000000007e6'::uuid, 'published'::public.content_status))
          as v (id, status)
   where p.id = '00000000-0000-0000-0000-0000000007aa';
 -- One unpublished item in the empty bank, so the bank exists but has nothing to run.
@@ -64,7 +67,7 @@ insert into public.case_studies (id, bank_id, org_id, title, ehr, status)
   from public.profiles where id = '00000000-0000-0000-0000-0000000007aa';
 insert into public.case_study_items (case_study_id, org_id, bank_id, position, item_id)
   select '00000000-0000-0000-0000-0000000007c1', org_id, '00000000-0000-0000-0000-0000000007b1', 1,
-         '00000000-0000-0000-0000-0000000007e1'
+         '00000000-0000-0000-0000-0000000007e5'
   from public.profiles where id = '00000000-0000-0000-0000-0000000007aa';
 
 -- A draft case study, and a published one whose step is still a draft item: neither may be run.
@@ -80,7 +83,7 @@ insert into public.case_study_items (case_study_id, org_id, bank_id, position, i
   select v.case_study_id, p.org_id, '00000000-0000-0000-0000-0000000007b1', 1, v.item_id
   from public.profiles p,
        (values ('00000000-0000-0000-0000-0000000007c2'::uuid,
-                '00000000-0000-0000-0000-0000000007e2'::uuid),
+                '00000000-0000-0000-0000-0000000007e6'::uuid),
                ('00000000-0000-0000-0000-0000000007c3'::uuid,
                 '00000000-0000-0000-0000-0000000007e3'::uuid)) as v (case_study_id, item_id)
   where p.id = '00000000-0000-0000-0000-0000000007aa';

@@ -666,6 +666,7 @@ export type Database = {
           folder_id: string | null;
           id: string;
           org_id: string;
+          quiz_position: number;
           status: Database["public"]["Enums"]["content_status"];
           tags: string[];
           title: string;
@@ -680,6 +681,7 @@ export type Database = {
           folder_id?: string | null;
           id?: string;
           org_id: string;
+          quiz_position?: number;
           status?: Database["public"]["Enums"]["content_status"];
           tags?: string[];
           title: string;
@@ -694,6 +696,7 @@ export type Database = {
           folder_id?: string | null;
           id?: string;
           org_id?: string;
+          quiz_position?: number;
           status?: Database["public"]["Enums"]["content_status"];
           tags?: string[];
           title?: string;
@@ -966,6 +969,7 @@ export type Database = {
           folder_id: string | null;
           id: string;
           org_id: string;
+          quiz_position: number;
           rationale: Json;
           scoring: Json;
           search_vector: unknown;
@@ -986,6 +990,7 @@ export type Database = {
           folder_id?: string | null;
           id?: string;
           org_id: string;
+          quiz_position?: number;
           rationale?: Json;
           scoring: Json;
           search_vector?: unknown;
@@ -1006,6 +1011,7 @@ export type Database = {
           folder_id?: string | null;
           id?: string;
           org_id?: string;
+          quiz_position?: number;
           rationale?: Json;
           scoring?: Json;
           search_vector?: unknown;
@@ -1907,6 +1913,18 @@ export type Database = {
           updated_at: string;
         }[];
       };
+      list_quiz_entries: {
+        Args: { target_bank: string };
+        Returns: {
+          id: string;
+          kind: string;
+          quiz_position: number;
+          status: Database["public"]["Enums"]["content_status"];
+          stem: Json;
+          title: string;
+          type: string;
+        }[];
+      };
       mark_onboarded: { Args: never; Returns: string };
       move_to_folder: {
         Args: {
@@ -2149,6 +2167,10 @@ export type Database = {
       remove_org_member: { Args: { p_member: string }; Returns: string };
       reorder_case_study_steps: {
         Args: { item_ids: string[]; target: string };
+        Returns: undefined;
+      };
+      reorder_quiz: {
+        Args: { entry_ids: string[]; target_bank: string };
         Returns: undefined;
       };
       reserve_ai_usage: {

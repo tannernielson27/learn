@@ -283,6 +283,15 @@ export default async function BankPage({
             <h2 id="items-heading" className="font-read text-2xl text-ink-1">
               {archived ? "Archived questions" : "Questions"}
             </h2>
+            {/* #468: one order for the quiz's questions and case studies, on a screen of its own. */}
+            {archived ? null : (
+              <Link
+                href={`/author/banks/${bank.id}/order`}
+                className="tap-target inline-flex items-center self-start text-sm font-medium text-accent-ink underline"
+              >
+                Change order
+              </Link>
+            )}
             <BankSearchForm bankId={bank.id} view={view} filter={filter} />
             <TagFilterBar bankId={bank.id} view={view} filter={filter} facets={facets} />
             {searching ? (

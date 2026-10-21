@@ -106,9 +106,9 @@ export async function listBanks(client: Client): Promise<BankSummary[]> {
 
 /**
  * One page of a bank's items in a folder view, through `list_bank_items` under RLS: the tag filter,
- * a full-text search with its type and status, ranked by relevance when searching and by last edit
- * otherwise. The function reads content only for the stem and scoring only for its maximum;
- * answer_key and rationale text are never returned.
+ * a full-text search with its type and status, ranked by relevance when searching and in the quiz's
+ * order otherwise (#468), step questions last. The function reads content only for the stem and
+ * scoring only for its maximum; answer_key and rationale text are never returned.
  */
 export async function listItems(
   client: Client,
@@ -245,6 +245,9 @@ export async function listTaggedRows(
   }));
 }
 
+/** Postgres and PostgREST saying a column is not there: quiz_position before its migration. */
+const BEFORE_QUIZ_ORDER = new Set(["42703", "PGRST204", "PGRST100"]);
+
 export interface CaseStudySummary {
   id: string;
   title: string;
@@ -266,14 +269,27 @@ export async function listCaseStudies(
 ): Promise<CaseStudySummary[]> {
   // Only a count of steps: neither the record nor any step's key is read for the list. The key is
   // named because the case study steps migration adds a second key pair (bank) between these tables.
-  const query = client
-    .from("case_studies")
-    .select("id, title, status, updated_at, case_study_items!case_study_items_case_org_fkey(count)")
-    .eq("bank_id", bankId);
-  const { data, error } = await withStatus(matching(inView(query, view), "title", search), search)
-    .order("updated_at", { ascending: false })
-    .limit(CASE_STUDY_LIST_LIMIT);
-  if (error) throw new AuthoringDataError("Case studies could not be loaded.");
+  const read = (inQuizOrder: boolean) => {
+    const query = client
+      .from("case_studies")
+      .select(
+        "id, title, status, updated_at, case_study_items!case_study_items_case_org_fkey(count)",
+      )
+      .eq("bank_id", bankId);
+    const narrowed = withStatus(matching(inView(query, view), "title", search), search);
+    // #468: in the quiz's order without a search; a search keeps last edited first.
+    const ordered = inQuizOrder
+      ? narrowed.order("quiz_position").order("created_at")
+      : narrowed.order("updated_at", { ascending: false });
+    return ordered.limit(CASE_STUDY_LIST_LIMIT);
+  };
+  const inQuizOrder = !search.query;
+  let { data, error } = await read(inQuizOrder);
+  // A database without the quiz order yet (#468's migration not pushed) lists as it did before.
+  if (inQuizOrder && error && BEFORE_QUIZ_ORDER.has(error.code ?? "")) {
+    ({ data, error } = await read(false));
+  }
+  if (error || !data) throw new AuthoringDataError("Case studies could not be loaded.");
   return data.map((row) => ({
     id: row.id,
     title: row.title,

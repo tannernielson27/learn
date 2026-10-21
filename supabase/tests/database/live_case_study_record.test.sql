@@ -28,6 +28,13 @@ insert into public.items (id, bank_id, org_id, type, cjmm_step, status, content,
          'multiple_choice', 1, 'published', '{}', '{"correctOptionId":"secret_key"}', '{}'
   from public.profiles where id = '00000000-0000-0000-0000-0000000184aa';
 
+-- #468: a loose published question, so the bank has something of its own to run; the step above
+-- runs only with its case study.
+insert into public.items (id, bank_id, org_id, type, status, content, answer_key, scoring)
+  select '00000000-0000-0000-0000-0000000184e2', '00000000-0000-0000-0000-0000000184b1', org_id,
+         'multiple_choice', 'published', '{}', '{"correctOptionId":"secret_key"}', '{}'
+  from public.profiles where id = '00000000-0000-0000-0000-0000000184aa';
+
 insert into public.case_studies (id, bank_id, org_id, title, ehr, status)
   select '00000000-0000-0000-0000-0000000184c1', '00000000-0000-0000-0000-0000000184b1', org_id,
          'Record case', '{"patientHeader":{"age":74,"sex":"female","setting":"Ward"}}', 'published'
