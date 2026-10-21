@@ -151,6 +151,12 @@ export interface ParticipantViewPayload {
    */
   record?: EhrRecordView;
   /**
+   * How many have joined this session (#426): the waiting screen's "12 in this session", so a
+   * phone has the number the moment it enters or rejoins. A number and never who. Absent when the
+   * database has not been given the migration that counts.
+   */
+  count?: number;
+  /**
    * The database's `now()` as it read the room, epoch ms (#182). What a phone measures its own
    * clock against, so a countdown is right on a phone whose clock is not. See `clockOffset`.
    */
