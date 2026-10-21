@@ -122,40 +122,11 @@ function realtimeCounts(joined) {
     total,
     state: joined.reduce((sum, p) => sum + p.counts.state, 0),
     presence: joined.reduce((sum, p) => sum + p.counts.presence, 0),
-    perParticipant: spread(totals),
-    frames: framesCounts(joined),
-  };
-}
-
-function spread(sorted) {
-  return {
-    min: sorted[0] ?? 0,
-    median: sorted[Math.floor(sorted.length / 2)] ?? 0,
-    max: sorted.at(-1) ?? 0,
-  };
-}
-
-/**
- * #426: the frames each socket was actually sent on its channel, by event. Replies to this
- * phone's own join and track (`phx_reply`) are kept in `byEvent` but left out of the per-participant
- * figure, which is what the room sent it.
- */
-function framesCounts(joined) {
-  const byEvent = {};
-  const totals = joined
-    .map((p) => {
-      let total = 0;
-      for (const [event, n] of Object.entries(p.counts.frames)) {
-        byEvent[event] = (byEvent[event] ?? 0) + n;
-        if (event !== "phx_reply") total += n;
-      }
-      return total;
-    })
-    .sort((a, b) => a - b);
-  return {
-    total: totals.reduce((sum, n) => sum + n, 0),
-    byEvent,
-    perParticipant: spread(totals),
+    perParticipant: {
+      min: totals[0] ?? 0,
+      median: totals[Math.floor(totals.length / 2)] ?? 0,
+      max: totals.at(-1) ?? 0,
+    },
   };
 }
 
@@ -172,7 +143,6 @@ function results({ options, project, code, joined, tally, steps, startedAt }) {
     code,
     mode: options.host ? "host" : "code",
     paced: options.paced ? "student_paced" : "instructor_paced",
-    studentPresence: options.studentPresence ? "on" : "off",
     seed: options.seed,
     participants: options.participants,
     joined: joined.length,

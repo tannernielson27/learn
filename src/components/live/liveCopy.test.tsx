@@ -247,7 +247,7 @@ async function phone(
       pushView = listener;
       return () => {};
     },
-    onCount: () => () => {},
+    onPresence: () => () => {},
     onConnection: (listener: typeof setConnection) => {
       setConnection = listener;
       return () => {};

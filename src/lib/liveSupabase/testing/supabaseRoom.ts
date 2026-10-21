@@ -125,7 +125,6 @@ export function createFakeRoom(options: FakeRoomOptions): FakeRoom {
     item_ends_at: null,
     timer_seconds: null,
     timer_remaining_ms: null,
-    participant_count: 0,
     updated_at: stack.now(),
   });
 
@@ -292,9 +291,6 @@ export function createFakeRoom(options: FakeRoomOptions): FakeRoom {
       createSupabaseHost({
         client: createFakeClient(stack, { role: "authenticated", orgId: ORG_ID }),
         sessionId: session.id,
-        // Every newcomer recounted at once: `settle()` waits on the stack, not on a timer.
-        // The throttle itself is pinned in `countRefresh.test.ts`.
-        countRefreshMs: 0,
       }),
 
     settle: () => stack.settle(),

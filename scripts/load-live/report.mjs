@@ -65,26 +65,5 @@ export function formatTable(result) {
       "realtime msgs",
       `${result.realtime.total} total; per participant min ${rt.min} / median ${rt.median} / max ${rt.max}`,
     ),
-    ...framesRows(result.realtime.frames),
   ].join("\n");
-}
-
-/**
- * #426: every frame each socket was sent on its channel, by event, whether or not anything on the
- * phone listened for it. A presence listener's callbacks undercount what the server sent; this is
- * what the before/after of a phone without one is measured by. Absent from older results.
- */
-function framesRows(frames) {
-  if (!frames) return [];
-  const f = frames.perParticipant;
-  const byEvent = Object.entries(frames.byEvent)
-    .map(([event, n]) => `${event}=${n}`)
-    .join(" ");
-  return [
-    row(
-      "realtime frames",
-      `${frames.total} total; per participant min ${f.min} / median ${f.median} / max ${f.max}`,
-    ),
-    row("frames by event", byEvent || "none"),
-  ];
 }

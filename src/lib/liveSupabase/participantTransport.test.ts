@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
-import { NO_TIMER, type LiveSessionState } from "@/lib/live";
+import { NO_TIMER, type LiveSessionState, type Participant } from "@/lib/live";
 import type { Database } from "@/lib/supabase/database.types";
 import {
   createSupabaseParticipant,
@@ -115,7 +115,7 @@ describe("publicStateFrom", () => {
 interface Recorded {
   views: StudentView[];
   states: LiveSessionState[];
-  counts: number[];
+  rosters: Participant[][];
   connections: { status: RoomConnection; rejoined: boolean }[];
 }
 
@@ -181,10 +181,10 @@ function phone(
     ...(network.random === undefined ? {} : { random: network.random }),
   });
 
-  const recorded: Recorded = { views: [], states: [], counts: [], connections: [] };
+  const recorded: Recorded = { views: [], states: [], rosters: [], connections: [] };
   transport.onStudentView((view) => recorded.views.push(view));
   transport.onSessionState((view) => recorded.states.push(view.state));
-  transport.onCount((count) => recorded.counts.push(count));
+  transport.onPresence((roster) => recorded.rosters.push(roster));
   transport.onConnection((status, rejoined) => recorded.connections.push({ status, rejoined }));
 
   return {
@@ -253,14 +253,13 @@ describe("resuming a room a phone is already in", () => {
     });
   });
 
-  it("binds no presence listener, so Realtime joins it with presence off (#426)", async () => {
-    // realtime-js joins with `presence.enabled` true when a presence listener is bound, or when
-    // the config says so. Neither: the phone tracks itself and asks for nobody else.
+  it("puts this phone in the roster before any sync has carried it back", async () => {
     const live = phone();
     await live.enter();
-    expect(live.socket.presenceBindings).toBe(0);
-    expect(live.socket.options).not.toMatchObject({ config: { presence: { enabled: true } } });
-    expect(live.socket.tracked).toHaveLength(1);
+    live.socket.sync();
+    expect(live.recorded.rosters.at(-1)).toEqual([
+      { participantId: ME.participantId, displayName: "Sam Okafor", joinedAt: 100 },
+    ]);
   });
 
   it("is one resume however many times an effect re-runs", async () => {
@@ -276,95 +275,6 @@ describe("resuming a room a phone is already in", () => {
     await expect(
       live.transport.submit("item", { type: "multiple_choice", optionId: "a" }),
     ).rejects.toMatchObject({ code: "not_joined" });
-  });
-});
-
-describe("the count on the waiting screen (#426)", () => {
-  const LOBBY_ROW = { status: "lobby", item_position: null };
-
-  it("is handed the count with the room on the way in", async () => {
-    const live = phone([{ ...LOBBY, count: 7 }]);
-    await live.enter();
-    expect(live.recorded.counts).toEqual([7]);
-  });
-
-  it("takes a new count from a state row, with no request and without repainting the room", async () => {
-    const live = phone([{ ...LOBBY, count: 7 }]);
-    await live.enter();
-    const views = live.recorded.views.length;
-    const states = live.recorded.states.length;
-
-    live.socket.deliver({ new: stateRow({ ...LOBBY_ROW, participant_count: 9 }) });
-    expect(live.recorded.counts.at(-1)).toBe(9);
-    expect(live.asks()).toBe(1);
-    expect(live.recorded.views).toHaveLength(views);
-    expect(live.recorded.states).toHaveLength(states);
-  });
-
-  it("takes the count and the move from a row that carries both", async () => {
-    const live = phone([
-      { ...LOBBY, state: at({ status: "running", position: 1, itemCount: 2, reveal: false }) },
-    ]);
-    await live.enter();
-    live.socket.deliver({ new: stateRow({ status: "paused", participant_count: 4 }) });
-    expect(live.recorded.states.at(-1)).toMatchObject({ status: "paused" });
-    expect(live.recorded.counts.at(-1)).toBe(4);
-    expect(live.asks()).toBe(1);
-  });
-
-  it("tells nobody when the number has not changed", async () => {
-    const live = phone([{ ...LOBBY, count: 7 }]);
-    await live.enter();
-    live.socket.deliver({ new: stateRow({ ...LOBBY_ROW, participant_count: 7 }) });
-    expect(live.recorded.counts).toEqual([7]);
-  });
-
-  it("goes down when someone leaves: a smaller number in a row is shown", async () => {
-    // Someone who has left is not counted (owner decision, 2026-10-21).
-    const live = phone([{ ...LOBBY, count: 7 }]);
-    await live.enter();
-    live.socket.deliver({ new: stateRow({ ...LOBBY_ROW, participant_count: 5 }) });
-    expect(live.recorded.counts).toEqual([7, 5]);
-  });
-
-  it("keeps the row's number over a view read once a row has come", async () => {
-    // Rows arrive in the order they were written; a view's count was read at some moment in
-    // between and may be older, so it only stands in until the first row.
-    const running = (position: number, count: number) => ({
-      ...LOBBY,
-      state: at({ status: "running", position, itemCount: 2, reveal: false }),
-      count,
-    });
-    const live = phone([running(1, 7), running(2, 9)]);
-    await live.enter();
-    live.socket.deliver({ new: stateRow({ item_position: 2, participant_count: 5 }) });
-    await vi.waitFor(() => expect(live.recorded.states.at(-1)).toMatchObject({ position: 2 }));
-    expect(live.recorded.counts).toEqual([7, 5]);
-  });
-
-  it("ignores a count that is not a count", async () => {
-    const live = phone([{ ...LOBBY, count: 7 }]);
-    await live.enter();
-    for (const odd of ["12", -1, 1.5, Number.NaN, null]) {
-      live.socket.deliver({ new: stateRow({ ...LOBBY_ROW, participant_count: odd }) });
-    }
-    expect(live.recorded.counts).toEqual([7]);
-  });
-
-  it("says nothing before a database that has no count has given one", async () => {
-    // A view read on the old path (`begin_session_view`) carries no count.
-    const live = phone([LOBBY]);
-    await live.enter();
-    live.socket.deliver({ new: stateRow(LOBBY_ROW) });
-    expect(live.recorded.counts).toEqual([]);
-  });
-
-  it("tells nobody once the phone has left", async () => {
-    const live = phone([{ ...LOBBY, count: 7 }]);
-    await live.enter();
-    await live.transport.leave();
-    live.socket.deliver({ new: stateRow({ ...LOBBY_ROW, participant_count: 9 }) });
-    expect(live.recorded.counts).toEqual([7]);
   });
 });
 
@@ -780,7 +690,6 @@ function fakeSocket() {
   let topic = "";
   let options: unknown = undefined;
   let channels = 0;
-  let presenceBindings = 0;
 
   const channel = {
     on(
@@ -788,10 +697,8 @@ function fakeSocket() {
       options: Record<string, string | undefined>,
       listener: (message: { new: Record<string, unknown> }) => void,
     ) {
-      if (type === "presence") {
-        presenceBindings += 1;
-        syncs.push(() => listener({ new: {} }));
-      } else if (type === "system") {
+      if (type === "presence") syncs.push(() => listener({ new: {} }));
+      else if (type === "system") {
         systems.push(listener as unknown as (payload: Record<string, unknown>) => void);
       } else {
         bindings.push(options);
@@ -842,9 +749,6 @@ function fakeSocket() {
     },
     get channels() {
       return channels;
-    },
-    get presenceBindings() {
-      return presenceBindings;
     },
     emit: (status: string) => {
       for (const listener of listeners) listener(status);

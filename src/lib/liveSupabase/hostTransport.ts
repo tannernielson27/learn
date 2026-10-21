@@ -46,8 +46,6 @@ import type { Item } from "@/lib/ngn/schemas";
 import type { Database } from "@/lib/supabase/database.types";
 import { fromItemRow } from "@/lib/supabase/itemRows";
 import { endSession } from "@/lib/supabase/sessions";
-import { createCountRefresh } from "./countRefresh";
-import { publicStateFrom } from "./participantTransport";
 import { readProgress } from "./progress";
 import { rosterFrom, type PresenceEntry } from "./presence";
 import { LIVE_SCHEMA, liveTopic, presentRealtimeToken } from "./wire";
@@ -93,28 +91,6 @@ export interface HostTransportOptions {
   /** The instructor's own browser client. Every read below is theirs, under their org's RLS. */
   client: SupabaseClient<Database>;
   sessionId: string;
-  /**
-   * How often, at most, the console tells the database how many are in the room (#426). See
-   * `countRefresh.ts`. Zero reports every change at once, for the tests.
-   */
-  countRefreshMs?: number;
-}
-
-/**
- * What a state says about the room, as one string to compare: everything a state row carries but
- * the waiting screen's count (#426) and the time it was written.
- */
-function roomFacts(state: LiveSessionState): string {
-  const { status, position, itemCount, reveal, timer } = state;
-  return JSON.stringify([
-    status,
-    position,
-    itemCount,
-    reveal,
-    timer.seconds,
-    timer.endsAt,
-    timer.remainingMs,
-  ]);
 }
 
 function subscribe<T>(listeners: Set<T>, listener: T): Unsubscribe {
@@ -149,29 +125,6 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
   let subscribed = false;
   /** The last read of the answers, for the other ask on the same tick to reuse (#197). */
   let lastRead: SharedRead | null = null;
-  /**
-   * The room as this console last told its listeners about it, so a row that describes exactly
-   * that room — a count refresh (#426) — is not a reason to read it again. Not what it last *read*:
-   * a move reads the room straight after it (`settleFrom`), usually before the channel's echo of
-   * the move arrives, and that echo is still what loads the item the room moved to.
-   */
-  let readFacts: string | null = null;
-  /**
-   * The waiting screen's count (#426): phones no longer hear Presence, so this console — which
-   * does — reports how many are in its roster when that number changes, a leave included. The
-   * database caps it at how many have joined. A report that fails is made again a few times, an
-   * interval apart (`countRefresh.ts`).
-   */
-  const counting = createCountRefresh(async (present) => {
-    if (closed) return true;
-    // supabase-js answers a failed call with `{ error }` rather than throwing; both are a "no",
-    // which `createCountRefresh` reports again a few times. A throw is its to catch.
-    const { error } = await client.rpc("refresh_participant_count", {
-      target: sessionId,
-      present,
-    });
-    return error === null;
-  }, options.countRefreshMs);
 
   /**
    * Registered as soon as the console exists rather than at `open()`: a component subscribes on
@@ -195,12 +148,7 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
       table: "session_public_state",
       filter: `session_id=eq.${sessionId}`,
     },
-    (message: { new?: unknown }) => {
-      const row = publicStateFrom(message.new);
-      if (row !== null && readFacts !== null && roomFacts(row) === readFacts) return;
-      // Forgotten until this read lands, so a row that arrives meanwhile — the room moving back
-      // to where it was, say — is read for rather than taken as already seen.
-      readFacts = null;
+    () => {
       void onStateChanged();
     },
   );
@@ -222,7 +170,6 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
   );
   channel.on("presence", { event: "sync" }, () => {
     const roster = rosterNow();
-    counting.saw(roster);
     for (const listener of [...presence]) listener(roster);
   });
 
@@ -389,7 +336,6 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     }
     current = await loadItem();
     if (closed) return;
-    readFacts = roomFacts(state);
     const view: SessionView<Item> = { state, item: current };
     for (const listener of [...views]) listener(view);
   }
@@ -592,7 +538,6 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
       await measureClock();
       await readSession();
       current = await loadItem();
-      readFacts = roomFacts(state);
       return {
         sessionId,
         code,
@@ -607,7 +552,6 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     async close(): Promise<void> {
       if (closed) return;
       closed = true;
-      counting.stop();
       views.clear();
       presence.clear();
       aggregates.clear();

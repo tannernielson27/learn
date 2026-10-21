@@ -9,7 +9,7 @@
 -- Runs with `pnpm exec supabase test db`. Uses its own fixture ids so it never counts the seed's.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(27);
+select plan(25);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures, as the superuser
@@ -44,15 +44,11 @@ insert into public.sessions (id, org_id, host_id, title, code)
                ('00000000-0000-0000-0000-0000001490b1'::uuid, 'Room B', 'PRV235')) as v (id, title, code)
   where p.id = '00000000-0000-0000-0000-0000001490aa';
 
--- One presence and one broadcast message per room, as Realtime writes them, so a select has
--- something to find. Realtime checks `broadcast` when a socket joins with presence off, which is
--- how a phone joins since #426; `presence` is the roster.
+-- One presence message per room, as Realtime writes it, so a select has something to find.
 insert into realtime.messages (topic, extension, private)
 values
   ('live:00000000-0000-0000-0000-0000001490a1', 'presence', true),
-  ('live:00000000-0000-0000-0000-0000001490b1', 'presence', true),
-  ('live:00000000-0000-0000-0000-0000001490a1', 'broadcast', true),
-  ('live:00000000-0000-0000-0000-0000001490b1', 'broadcast', true);
+  ('live:00000000-0000-0000-0000-0000001490b1', 'presence', true);
 
 -- Whether a policy lets this socket see anything of the room it is joining: 1 or 0. Whether, not
 -- how much, because a participant's own `track` below adds a row of its own.
@@ -75,15 +71,7 @@ $$;
 create function pg_temp.topic(session uuid) returns void
 language sql as $$ select set_config('realtime.topic', 'live:' || session::text, true); $$;
 
--- Whether this socket may join the room with presence off (#426): the check Realtime makes then.
-create function pg_temp.joinable_here() returns integer
-language sql as $$
-  select (exists (select 1 from realtime.messages
-                   where topic = realtime.topic() and extension = 'broadcast'))::int;
-$$;
-
 grant execute on function pg_temp.visible_here() to anon, authenticated;
-grant execute on function pg_temp.joinable_here() to anon, authenticated;
 grant execute on function pg_temp.as_participant_of_a() to anon, authenticated;
 grant execute on function pg_temp.topic(uuid) to anon, authenticated;
 
@@ -95,16 +83,12 @@ set local role anon;
 select pg_temp.as_participant_of_a();
 
 select pg_temp.topic('00000000-0000-0000-0000-0000001490a1');
-select is(pg_temp.joinable_here(), 1, 'a participant of A may join A''s channel');
-select is(pg_temp.visible_here(), 0,
-  'a participant of A does not read A''s roster: only the host does (#426)');
+select is(pg_temp.visible_here(), 1, 'a participant of A may join A''s channel');
 select lives_ok(
   $$ insert into realtime.messages (topic, extension, private)
      values ('live:00000000-0000-0000-0000-0000001490a1', 'presence', true) $$,
   'a participant of A may track their presence in A'
 );
-select is(pg_temp.visible_here(), 0,
-  'and having tracked, still reads nobody else''s presence (#426)');
 select throws_ok(
   $$ insert into realtime.messages (topic, extension, private)
      values ('live:00000000-0000-0000-0000-0000001490a1', 'broadcast', true) $$,
@@ -113,7 +97,7 @@ select throws_ok(
 );
 
 select pg_temp.topic('00000000-0000-0000-0000-0000001490b1');
-select is(pg_temp.joinable_here(), 0, 'a participant of A may NOT join B''s channel');
+select is(pg_temp.visible_here(), 0, 'a participant of A may NOT join B''s channel');
 select throws_ok(
   $$ insert into realtime.messages (topic, extension, private)
      values ('live:00000000-0000-0000-0000-0000001490b1', 'presence', true) $$,
@@ -122,7 +106,7 @@ select throws_ok(
 );
 
 select set_config('realtime.topic', 'room-1', true);
-select is(pg_temp.joinable_here(), 0, 'a participant token opens no topic but its own');
+select is(pg_temp.visible_here(), 0, 'a participant token opens no topic but its own');
 
 reset role;
 
@@ -133,7 +117,7 @@ reset role;
 set local role anon;
 select set_config('request.jwt.claims', '{"role":"anon"}', true);
 select pg_temp.topic('00000000-0000-0000-0000-0000001490a1');
-select is(pg_temp.joinable_here(), 0, 'the publishable key alone joins no session''s channel');
+select is(pg_temp.visible_here(), 0, 'the publishable key alone joins no session''s channel');
 select throws_ok(
   $$ insert into realtime.messages (topic, extension, private)
      values ('live:00000000-0000-0000-0000-0000001490a1', 'presence', true) $$,
@@ -144,7 +128,7 @@ select throws_ok(
 -- A token whose claim names A but whose topic is written differently is still not A.
 select pg_temp.as_participant_of_a();
 select set_config('realtime.topic', 'LIVE:00000000-0000-0000-0000-0000001490a1', true);
-select is(pg_temp.joinable_here(), 0, 'the topic must match exactly');
+select is(pg_temp.visible_here(), 0, 'the topic must match exactly');
 reset role;
 
 -- ---------------------------------------------------------------------------

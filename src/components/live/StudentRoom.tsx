@@ -197,9 +197,8 @@ export function StudentRoom({
       // It is what takes the notice below down again after a failed open has put it up.
       setConnection("live");
     });
-    // How many have joined, as a number (#426): a phone is no longer sent who.
-    const offCount = joined.onCount((count) => {
-      if (watching) present.set(count);
+    const offPresence = joined.onPresence((roster) => {
+      if (watching) present.set(roster.length);
     });
     const offConnection = joined.onConnection((status, rejoined) => {
       if (!watching) return;
@@ -223,7 +222,7 @@ export function StudentRoom({
     return () => {
       watching = false;
       offView();
-      offCount();
+      offPresence();
       offConnection();
       room.current = null;
       // A cleanup cannot await, and a socket that has already dropped must not turn leaving the

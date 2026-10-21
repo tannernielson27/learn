@@ -27,9 +27,6 @@ export const USAGE = `Usage: pnpm load:live (--code ABC234 | --host) [options]
   --lobby-ms <ms>          with --host: pause in the lobby once everyone is in (default 3000)
   --reveal-ms <ms>         with --host: how long a reveal stays up (default 2000)
   --step-timeout <ms>      with --host: longest wait for a step's answers (default 30000)
-  --student-presence <on|off>
-                           on: each phone binds a presence listener, as the app did before #426;
-                           off (default): it tracks itself and listens for nobody, as it does now
   --max-minutes <n>        give up after this long (default 30)
   --out <path>             results JSON (default ./load-live-results.json)
   --supabase-url <url>     default NEXT_PUBLIC_SUPABASE_URL
@@ -51,7 +48,6 @@ const OPTIONS = {
   "reveal-ms": { type: "string", default: "2000" },
   "step-timeout": { type: "string", default: "30000" },
   "max-minutes": { type: "string", default: "30" },
-  "student-presence": { type: "string", default: "off" },
   out: { type: "string", default: "./load-live-results.json" },
   "supabase-url": { type: "string" },
   "publishable-key": { type: "string" },
@@ -71,12 +67,6 @@ function thinkRange(value) {
   const [min, max] = match ? [Number(match[1]), Number(match[2])] : [NaN, NaN];
   if (!(min <= max)) throw new Error("--think must look like 1000-6000, smaller number first.");
   return [min, max];
-}
-
-function onOff(value, flag) {
-  if (value === "on") return true;
-  if (value === "off") return false;
-  throw new Error(`${flag} must be on or off.`);
 }
 
 const PACED_NEEDS = "--paced needs --host and --bank.";
@@ -135,8 +125,6 @@ export function readOptions(argv, env) {
     revealMs: wholeNumber(values["reveal-ms"], "--reveal-ms", 0),
     stepTimeoutMs: wholeNumber(values["step-timeout"], "--step-timeout", 1000),
     maxMinutes: wholeNumber(values["max-minutes"], "--max-minutes", 1, 240),
-    // #426: the before (on) and after (off) of a phone that listens for the roster.
-    studentPresence: onOff(values["student-presence"], "--student-presence"),
     out: values.out,
     supabaseUrl,
     publishableKey,
