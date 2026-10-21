@@ -2022,6 +2022,7 @@ export type Database = {
           session_ends_at: string;
           session_items: Json;
           session_mode: Database["public"]["Enums"]["session_mode"];
+          session_participants: number;
           session_position: number;
           session_remaining_ms: number;
           session_reveal: boolean;
@@ -2132,6 +2133,10 @@ export type Database = {
           refusal: string;
           submitted_at: string;
         }[];
+      };
+      refresh_participant_count: {
+        Args: { target: string };
+        Returns: undefined;
       };
       register_instructor: {
         Args: { p_user: string; p_workspace: string };

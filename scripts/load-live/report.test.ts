@@ -62,7 +62,15 @@ describe("formatTable", () => {
       skipped: 20,
       refusals: { wrong_item: 2, rate_limited: 1 },
       unexpectedRefusals: 1,
-      realtime: { total: 600, perParticipant: { min: 9, median: 10, max: 11 } },
+      realtime: {
+        total: 600,
+        perParticipant: { min: 9, median: 10, max: 11 },
+        frames: {
+          total: 900,
+          byEvent: { postgres_changes: 600, presence_diff: 300 },
+          perParticipant: { min: 14, median: 15, max: 16 },
+        },
+      },
     });
     expect(table).toContain("joined");
     expect(table).toMatch(/60\s*\/\s*60/);
@@ -70,5 +78,24 @@ describe("formatTable", () => {
     expect(table).toMatch(/wrong_item=2/);
     expect(table).toMatch(/unexpected\s+1/);
     expect(table).toMatch(/realtime msgs.*9.*10.*11/);
+    // #426: what the socket was actually sent, frame by frame, whether or not anything listened.
+    expect(table).toMatch(/realtime frames.*900.*14.*15.*16/);
+    expect(table).toMatch(/presence_diff=300/);
+  });
+
+  it("leaves the frames row out of a result from before they were counted", () => {
+    const table = formatTable({
+      participants: 1,
+      joined: 1,
+      join: summarize([1]),
+      view: summarize([1]),
+      submit: summarize([1]),
+      submitted: 1,
+      skipped: 0,
+      refusals: {},
+      unexpectedRefusals: 0,
+      realtime: { total: 1, perParticipant: { min: 1, median: 1, max: 1 } },
+    });
+    expect(table).not.toMatch(/realtime frames/);
   });
 });
