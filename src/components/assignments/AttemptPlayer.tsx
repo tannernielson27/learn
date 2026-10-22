@@ -296,5 +296,12 @@ export function AttemptPlayer({
     </div>
   );
 
-  return records === undefined ? page : <RecordLayout record={record}>{page}</RecordLayout>;
+  const previous = at > 0 ? (records?.[Math.min(at, records.length) - 1] ?? null) : null;
+  return records === undefined ? (
+    page
+  ) : (
+    <RecordLayout record={record} previous={previous}>
+      {page}
+    </RecordLayout>
+  );
 }
