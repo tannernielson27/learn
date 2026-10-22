@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { ITEM_TYPES, ITEM_TYPE_LABELS } from "../src/lib/ngn/labels";
 import { signInAsNewAuthor } from "./signIn";
+import { openAccountMenu } from "./accountMenu";
 
 // #269: the help pages are public and static. The signed-out tests need no stack, so they run
 // against every preview (e2e.yml) as well as in the auth e2e job; the author-nav test needs the
@@ -136,6 +137,7 @@ test("the landing page's footer links to help", async ({ page }) => {
 test("the author nav links to help", async ({ page, request }, testInfo) => {
   test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
   await signInAsNewAuthor(page, request, `help-${testInfo.project.name}`);
+  await openAccountMenu(page);
   await page
     .getByRole("navigation", { name: "Help and account" })
     .getByRole("link", { name: "Help", exact: true })

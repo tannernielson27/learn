@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { confirmLinkIn, latestEmail, latestSignInLink, openSignInLink } from "./mailbox";
 import { signInAsNewAuthor } from "./signIn";
 import { skipWelcomes } from "./welcome";
+import { openAccountMenu } from "./accountMenu";
 
 // #205: a class, its invite link, and a student who joins through it. Needs the local Supabase
 // stack (auth, the Mailpit test mailbox) and a build pointed at it, like auth.spec.ts.
@@ -234,6 +235,7 @@ test("a student joins with an email and a password, with no email to wait for", 
   ).toHaveCount(0);
 
   // Back another day: the password signs in on its own.
+  await openAccountMenu(student);
   await student.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(student).toHaveURL(/\/sign-in$/);
   await student.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
@@ -252,6 +254,7 @@ test("a student joins with an email and a password, with no email to wait for", 
   expect(visited.filter((pathname) => pathname.startsWith("/author"))).toEqual([]);
 
   // The header's Account link: the name can be changed there, and the roster follows.
+  await openAccountMenu(student);
   await student.getByRole("link", { name: "Account", exact: true }).click();
   await expect(student).toHaveURL(/\/account$/);
   await expect(
@@ -277,6 +280,7 @@ test("a student joins with an email and a password, with no email to wait for", 
   await expect(page.getByRole("list", { name: "Roster", exact: true })).toContainText(renamed);
 
   // The same form on an invite, with someone else's password, says the address is taken.
+  await openAccountMenu(student);
   await student.getByRole("button", { name: "Sign out", exact: true }).click();
   // Wait for it: leaving at once would cancel the sign-out and find the student still in.
   await expect(student).toHaveURL(/\/sign-in$/);
