@@ -9,7 +9,12 @@ import { createPresentCount, RoomCount } from "@/components/live/RoomCount";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { SetNav } from "@/components/question/SetNav";
 import { Button } from "@/components/ui/Button";
-import { RevealedItem, refuseSecondAnswer, type StudentRoomProps } from "./StudentRoom";
+import { PhoneHeader } from "@/components/live/phone/PhoneHeader";
+import { PhoneEnded, PhoneMessage, PhoneWaiting } from "@/components/live/phone/PhoneStates";
+import { ReconnectingBanner } from "@/components/live/phone/ReconnectingBanner";
+import { RevealedItem, refuseSecondAnswer } from "@/components/live/phone/RevealedItem";
+import { EMPTY_HISTORY } from "@/components/live/phone/history";
+import type { StudentRoomProps } from "./StudentRoom";
 // Module by module, for the reason `StudentRoom` gives: this is a screen a student loads, and the
 // barrels value-export things that hold keys (ADR 0003, `noClientScoring.test.ts`).
 import { isLiveSessionError } from "@/lib/live/errors";
@@ -173,43 +178,49 @@ export function StudentPacedRoom({
   const answeredFor = (entry: PacedItemPayload): AnsweredPayload | null =>
     entry.answered ?? sent[entry.item.id] ?? null;
 
+  const onSet = set !== null && set.length > 0 && state.status === "running";
+  const at = onSet ? Math.min(index, set.length - 1) : 0;
   const header = (
     <>
-      <h1 className="font-read text-3xl break-words text-ink-1">{title}</h1>
-      <p className="mt-4 text-sm text-ink-2">
-        Joined as <span className="font-medium break-words text-ink-1">{displayName}</span>
-      </p>
-      {connection === "reconnecting" ? (
-        <p role="status" className="mt-4 text-sm text-ink-2">
-          Reconnecting. Stay on this page.
-        </p>
-      ) : null}
+      {connection === "reconnecting" ? <ReconnectingBanner /> : null}
+      <PhoneHeader
+        progress={onSet ? `Question ${at + 1} of ${set.length}` : null}
+        title={title}
+        connection={connection === "reconnecting" ? "reconnecting" : "connected"}
+        serverNow={Date.now}
+        {...(onSet && state.reveal ? { badge: "Answers showing" } : {})}
+      />
     </>
   );
 
-  if (set === null || set.length === 0 || state.status !== "running") {
+  if (!onSet) {
     const copy = waitingCopy(state);
     return (
-      <>
+      <div className="flex flex-1 flex-col">
         {header}
-        <section aria-labelledby="waiting-heading" className="mt-8">
-          <h2 id="waiting-heading" className="font-read text-2xl text-ink-1">
-            {state.status === "running" ? LOADING : copy.headline}
-          </h2>
-        </section>
-        <RoomCount present={present} />
-      </>
+        {state.status === "lobby" ? (
+          <PhoneWaiting headline={copy.headline} displayName={displayName} present={present} />
+        ) : state.status === "ended" ? (
+          <PhoneEnded
+            headline={copy.headline}
+            history={EMPTY_HISTORY}
+            itemCount={state.itemCount}
+          />
+        ) : (
+          <PhoneMessage heading={state.status === "running" ? LOADING : copy.headline}>
+            <RoomCount present={present} />
+          </PhoneMessage>
+        )}
+      </div>
     );
   }
 
-  const at = Math.min(index, set.length - 1);
   const entry = set[at] as PacedItemPayload;
   const mine = answeredFor(entry);
   const done = set.filter((each) => answeredFor(each) !== null).length;
-  const progress = { index: at, total: set.length };
 
   return (
-    <>
+    <div className="flex flex-1 flex-col">
       {header}
 
       <p role="status" data-testid="paced-count" className="tabular mt-6 text-sm text-ink-2">
@@ -223,12 +234,7 @@ export function StudentPacedRoom({
       />
 
       {state.reveal && entry.revealed !== null ? (
-        <RevealedItem
-          item={entry.item}
-          answered={mine}
-          revealed={entry.revealed}
-          progress={progress}
-        />
+        <RevealedItem item={entry.item} answered={mine} revealed={entry.revealed} />
       ) : state.reveal ? (
         <p className="measure mt-8 text-ink-2">{SHOWING}</p>
       ) : mine !== null ? (
@@ -241,7 +247,6 @@ export function StudentPacedRoom({
             // Review: no key on this phone until the reveal, so nothing to mark (StudentRoom).
             initialMode="review"
             initialResponse={mine.response}
-            progress={progress}
             submit={refuseSecondAnswer}
             label="Your answer"
           />
@@ -255,7 +260,6 @@ export function StudentPacedRoom({
             onResponseChange={(response) =>
               setDrafts((held) => ({ ...held, [entry.item.id]: response }))
             }
-            progress={progress}
             submit={(response) => send(entry, response)}
             busyLabel={LIVE_BUSY_LABEL}
             failureMessage={liveSubmitFailure}
@@ -275,6 +279,6 @@ export function StudentPacedRoom({
           Next question
         </Button>
       </div>
-    </>
+    </div>
   );
 }

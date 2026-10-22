@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { pollWhileVisible } from "@/components/live/pollWhileVisible";
-import { keepSame } from "@/components/live/sameData";
+import { chartRows } from "@/components/live/stage/stageItem";
 import { Button } from "@/components/ui/Button";
+import { ResultsChart } from "@/components/ui/ResultsChart";
 import type { Distribution } from "@/lib/live/results";
 import { DistributionView } from "./DistributionView";
+import { Footnotes, blankLine } from "./parts";
 import { useHiddenResults } from "./useHiddenResults";
+import { useRoomResults } from "./useRoomResults";
 
 export interface HostResultsProps {
   sessionId: string;
@@ -20,11 +21,6 @@ export interface HostResultsProps {
   active: boolean;
   /** The tally's cadence (`TALLY_INTERVAL_MS`). */
   intervalMs: number;
-}
-
-interface Held {
-  position: number | null;
-  distribution: Distribution | null;
 }
 
 /**
@@ -49,51 +45,66 @@ export function HostResults({
   active,
   intervalMs,
 }: HostResultsProps) {
-  const [held, setHeld] = useState<Held | null>(null);
+  const current = useRoomResults(ask, position, revealed, active, intervalMs);
   const [hidden, setHidden] = useHiddenResults(sessionId);
 
-  useEffect(() => {
-    if (!active) return;
-    let watching = true;
-    const askNow = () => {
-      void ask()
-        .then((distribution) => {
-          if (watching) setHeld(keepSame<Held>({ position, distribution }));
-        })
-        .catch(() => {});
-    };
-    const stop = pollWhileVisible(askNow, intervalMs);
-    return () => {
-      watching = false;
-      stop();
-    };
-  }, [active, ask, position, revealed, intervalMs]);
-
   if (!active) return null;
-  const current = held !== null && held.position === position ? held.distribution : null;
 
   return (
-    <section aria-labelledby="results-heading" className="mt-8">
+    <section aria-labelledby="results-heading" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="results-heading" className="font-read text-xl text-ink-1">
+        <h2 id="results-heading" className="text-base font-semibold text-ink-1">
           Results
         </h2>
         <Button size="sm" aria-controls="results-body" onClick={() => setHidden(!hidden)}>
           {hidden ? "Show results" : "Hide results"}
         </Button>
       </div>
-      <div
-        id="results-body"
-        className="mt-4 rounded-sm border border-line bg-surface-1 px-4 py-5 sm:px-6"
-      >
+      <div id="results-body">
         {hidden ? (
           <p className="text-base text-ink-2">Results are hidden.</p>
         ) : current === null ? (
           <p className="text-base text-ink-2">No answers yet.</p>
         ) : (
-          <DistributionView distribution={current} revealed={revealed} />
+          <RoomResults distribution={current} revealed={revealed} />
         )}
       </div>
+      {revealed || hidden ? null : (
+        <p className="text-sm text-ink-2">
+          Only you see these counts. The projector shows them when you show the answer.
+        </p>
+      )}
     </section>
+  );
+}
+
+/**
+ * One bar per option on the shared chart (PLAN §4: one neutral hue, the letter and the count on
+ * every bar, the key marked three ways once shown). Every other kind keeps its own view.
+ */
+function RoomResults({
+  distribution,
+  revealed,
+}: {
+  distribution: Distribution;
+  revealed: boolean;
+}) {
+  const rows = chartRows(distribution, revealed);
+  if (rows === null || distribution.kind !== "options") {
+    return <DistributionView distribution={distribution} revealed={revealed} />;
+  }
+  return (
+    <div data-testid="results-view" data-kind="options">
+      <p className="tabular mb-4 text-sm text-ink-2">
+        {distribution.responded} {distribution.responded === 1 ? "answer" : "answers"} counted
+      </p>
+      <ResultsChart rows={rows} total={distribution.responded} label="Options" />
+      <Footnotes
+        lines={[
+          blankLine(distribution.unanswered, "chose no option"),
+          blankLine(distribution.unreadable, "could not be read and are not counted"),
+        ]}
+      />
+    </div>
   );
 }

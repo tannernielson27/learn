@@ -111,7 +111,7 @@ import { SessionReportView } from "./report/SessionReportView";
 import { Roster } from "./Roster";
 import { StudentPacedRoom } from "./StudentPacedRoom";
 import { StudentRoom } from "./StudentRoom";
-import { TimerControls } from "./TimerControls";
+import { TimeChoice, TimerButtons } from "./TimerControls";
 
 /** Phrases this area retired that the shared list has no pattern of its own for. */
 const LIVE_RETIRED: readonly [string, RegExp][] = [
@@ -180,6 +180,7 @@ interface HostOptions {
   caseStudy?: boolean;
   offline?: boolean;
   progress?: SessionProgress;
+  view?: "control" | "projector";
 }
 
 /** The teacher's live session on `initial`, with a transport that answers but never moves. */
@@ -202,6 +203,7 @@ async function host(initial: LiveSessionState, options: HostOptions = {}) {
     onSessionState: () => () => {},
     onPresence: () => () => {},
     onAggregate: () => () => {},
+    onConnection: () => () => {},
     aggregate: async () => ({ position: 1, responded: 2, present: 3 }),
     results: async () => null,
     progress: async () => options.progress ?? null,
@@ -220,6 +222,7 @@ async function host(initial: LiveSessionState, options: HostOptions = {}) {
       initial={initial}
       connect={() => transport}
       caseStudy={options.caseStudy}
+      view={options.view}
     />,
   );
   await settle();
@@ -342,7 +345,10 @@ const hostSession = {
   closedAt: null,
   caseStudy: false,
 };
-const params = { params: Promise.resolve({ sessionId: SESSION_ID }) } as never;
+const params = {
+  params: Promise.resolve({ sessionId: SESSION_ID }),
+  searchParams: Promise.resolve({}),
+} as never;
 
 /** Every screen and state in the area, by the name the pull request's table uses. */
 const SCREENS: [string, () => Promise<string>][] = [
@@ -390,20 +396,54 @@ const SCREENS: [string, () => Promise<string>][] = [
   ["teacher: roster, nobody yet", () => html(<Roster roster={[]} />)],
   [
     "teacher: timer, before the start",
-    () =>
-      html(<TimerControls state={state()} busy={false} onChoose={() => {}} onCommand={() => {}} />),
+    () => html(<TimeChoice state={state()} busy={false} onChoose={() => {}} />),
   ],
   [
     "teacher: timer, question with a clock",
     () =>
       html(
-        <TimerControls
-          state={running({ timer: { seconds: 60, endsAt: NOW + 30_000, remainingMs: null } })}
-          busy={false}
-          onChoose={() => {}}
-          onCommand={() => {}}
-        />,
+        <>
+          <TimeChoice
+            state={running({ timer: { seconds: 60, endsAt: NOW + 30_000, remainingMs: null } })}
+            busy={false}
+            onChoose={() => {}}
+          />
+          <TimerButtons
+            state={running({ timer: { seconds: 60, endsAt: NOW + 30_000, remainingMs: null } })}
+            busy={false}
+            onCommand={() => {}}
+          />
+        </>,
       ),
+  ],
+  // The projector view of the same live session.
+  [
+    "projector: lobby",
+    async () => (await host(state(), { view: "projector" })).container.innerHTML,
+  ],
+  [
+    "projector: question open",
+    async () => (await host(running(), { view: "projector" })).container.innerHTML,
+  ],
+  [
+    "projector: case study step",
+    async () =>
+      (await host(running({ itemCount: 6 }), { caseStudy: true, view: "projector" })).container
+        .innerHTML,
+  ],
+  [
+    "projector: answer showing",
+    async () => (await host(running({ reveal: true }), { view: "projector" })).container.innerHTML,
+  ],
+  [
+    "projector: paused",
+    async () =>
+      (await host(state({ status: "paused", position: 2 }), { view: "projector" })).container
+        .innerHTML,
+  ],
+  [
+    "projector: ended",
+    async () => (await host(state({ status: "ended" }), { view: "projector" })).container.innerHTML,
   ],
   ["teacher: live session page failed", () => boundary(HostError)],
   // The report and the list.
@@ -570,7 +610,13 @@ describe("no retired word on any live session screen", () => {
 
   /** Proof that a state's builder reached the state it is named for, not an empty or wrong one. */
   const REACHED: [string, string][] = [
-    ["teacher: lobby", "Waiting to start"],
+    ["teacher: lobby", "Show the class the projector view"],
+    ["projector: lobby", "in this session"],
+    ["projector: question open", "Question 1 of 3"],
+    ["projector: case study step", "Step 1 of 6: Recognize Cues"],
+    ["projector: answer showing", "Answer"],
+    ["projector: paused", "Paused"],
+    ["projector: ended", "Live session ended"],
     ["teacher: roster, nobody yet", "Nobody has joined yet."],
     ["teacher: question open", "Question 1 of 3"],
     ["teacher: case study step", "Step 1 of 6: Recognize Cues"],
@@ -586,7 +632,7 @@ describe("no retired word on any live session screen", () => {
     ["student: answer sent", "Answer sent."],
     ["student: answer showing, did not answer", "You did not answer this question."],
     ["student: answer too late", "Your answer was not taken."],
-    ["student: reconnecting", "Reconnecting."],
+    ["student: reconnecting", "Stay on this page. Your answer is kept."],
     ["student-paced: loading", "Loading the questions."],
     ["student-paced: answer sent", "Answer sent."],
     ["student-paced: answers showing", "The answers are showing."],

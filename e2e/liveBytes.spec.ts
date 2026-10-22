@@ -130,6 +130,11 @@ test("a live SATA and a case-study step reach the phone keyless until the reveal
   const before = await viewBytes(context);
   expect(before).toMatch(SATA_STEM);
   expectKeyless(before, [SATA_RATIONALE], LIVE_KEY_MARKERS);
+  // The projector view is the room's screen, served from the teacher's route: its page carries
+  // no key or rationale either. The control is that it is the projector view at all.
+  const projector = await bytesOf(page.context(), `${new URL(page.url()).pathname}?view=projector`);
+  expect(projector).toContain("data-stage");
+  expectKeyless(projector, [SATA_RATIONALE, MC_RATIONALE], LIVE_KEY_MARKERS);
 
   await phone.getByRole("checkbox", { name: /Respiratory rate 28 breaths/ }).click();
   await phone.getByRole("checkbox", { name: /Oxygen saturation 89%/ }).click();

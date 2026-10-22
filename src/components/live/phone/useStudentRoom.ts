@@ -1,0 +1,245 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useShowLiveRecord } from "@/components/live/LiveRecord";
+import { createPresentCount, type PresentCount } from "@/components/live/RoomCount";
+// Module by module rather than through `@/lib/live` and `@/lib/liveSupabase`: those barrels
+// value-export the in-memory room and the host console, both of which hold items with their keys
+// and import the scoring engine. This is what a student loads (ADR 0003).
+import { isLiveSessionError } from "@/lib/live/errors";
+import type { LiveSessionState } from "@/lib/live/state";
+import type { ItemReveal, ParticipantItem } from "@/lib/live/transport";
+import {
+  createSupabaseParticipant,
+  type RoomConnection,
+  type StudentView,
+  type SupabaseParticipant,
+} from "@/lib/liveSupabase/participantTransport";
+import { createChannelTokenSource } from "@/lib/liveSupabase/channelTokenSource";
+import type { AnsweredPayload, ChannelCredential } from "@/lib/liveSupabase/wire";
+import type { AnyResponse } from "@/lib/ngn/schemas";
+import type { ScoreReveal, SubmitHandler } from "@/lib/ngn/submit";
+import { createSupabaseChannelClient } from "@/lib/supabase/browser";
+import { usePhoneHistory } from "./usePhoneHistory";
+
+export interface StudentRoomOptions {
+  sessionId: string;
+  participantId: string;
+  displayName: string;
+  joinedAt: number;
+  initial: LiveSessionState;
+  channel: ChannelCredential;
+  connect?: () => SupabaseParticipant;
+}
+
+export interface StudentRoomData {
+  state: LiveSessionState;
+  item: ParticipantItem | null;
+  answered: AnsweredPayload | null;
+  revealed: ItemReveal | null;
+  present: PresentCount;
+  connection: RoomConnection;
+  /** What this phone has selected on the item on screen but not yet sent. */
+  draft: AnyResponse | undefined;
+  setDraft: (itemId: string, response: AnyResponse) => void;
+  /** The server refused this phone's answer to the item on screen as late (#182). */
+  late: boolean;
+  send: SubmitHandler;
+  serverNow: () => number;
+  history: ReturnType<typeof usePhoneHistory>;
+}
+
+/**
+ * A student's phone's one connection to the room (#132, #133), held apart from what it draws.
+ *
+ * **One connection.** The same channel carries presence and the room's moves, and the same object
+ * fetches the item and posts the answer. Two connections on one topic would be two presence
+ * entries for one phone.
+ *
+ * **Reconnecting.** Realtime replays nothing, so a phone that slept through a move comes back to
+ * a room it thinks is still on item two. The transport re-tracks its presence and re-reads the
+ * room; this also asks the server for the page again — `router.refresh()`, which re-runs the
+ * server render and hands down a fresh `initial` without touching any state held here. That is
+ * why it is a refresh and not a reload: **an answer in progress survives it.**
+ *
+ * **When the server is done with this phone (#149).** The transport reports `"refused"` — never
+ * followed by a rejoin — and this does the same `router.refresh()`: a participant who is gone is
+ * redirected to the join form, and an ended session renders its own ended screen.
+ */
+export function useStudentRoom({
+  sessionId,
+  participantId,
+  displayName,
+  joinedAt,
+  initial,
+  channel,
+  connect,
+}: StudentRoomOptions): StudentRoomData {
+  const router = useRouter();
+  /** The latest router, so the connection is never torn down and reopened for a new one. */
+  const routerRef = useRef(router);
+  useEffect(() => {
+    routerRef.current = router;
+  });
+  const showRecord = useShowLiveRecord();
+  const [state, setState] = useState<LiveSessionState>(initial);
+  const [item, setItem] = useState<ParticipantItem | null>(null);
+  const [answered, setAnswered] = useState<AnsweredPayload | null>(null);
+  const [revealed, setRevealed] = useState<ItemReveal | null>(null);
+  /** Not state: a join or a leave elsewhere in the room must not render this screen (#408). */
+  const [present] = useState(createPresentCount);
+  const [connection, setConnection] = useState<RoomConnection>("connecting");
+  /**
+   * Held here rather than only inside `ItemPlayer` because the player is remounted whenever the
+   * room changes what this screen shows — a pause takes the item off, a resume puts it back — and
+   * a student who had ticked three boxes when the host paused should find them still ticked. It
+   * is dropped when the room moves to another item, which is a different question.
+   */
+  const [draft, setDraftState] = useState<{ itemId: string; response: AnyResponse } | null>(null);
+  /**
+   * The item this phone tried to answer after its time was up (#182), and the end time it was
+   * refused against, so the next item opens fresh, and so does this one if the host adds time.
+   */
+  const [lateFor, setLateFor] = useState<{ itemId: string; endsAt: number | null } | null>(null);
+  /** Who this phone is, fixed for the life of the page: what the channel is keyed with. */
+  const [me] = useState(() => ({ sessionId, participantId, displayName, joinedAt }));
+  const history = usePhoneHistory(sessionId, participantId);
+
+  /**
+   * A new `initial` only ever arrives with a new server render (`router.refresh()` below), and
+   * React's "adjust state when a prop changes" pattern lets it land instead of being shadowed by
+   * whatever the socket last said. The item, the answer and the reveal are not touched.
+   */
+  const [applied, setApplied] = useState(initial);
+  if (applied !== initial) {
+    setApplied(initial);
+    setState(initial);
+  }
+
+  const room = useRef<SupabaseParticipant | null>(null);
+  /** The session's clock, as the transport measured it (#182); never `Date.now()` directly. */
+  const serverNow = useCallback(() => room.current?.serverNow() ?? Date.now(), []);
+  /** The first token, held for the life of the page; the source refreshes its own. */
+  const [firstChannel] = useState(channel);
+
+  const dial = useMemo(
+    () =>
+      connect ??
+      (() => {
+        const tokens = createChannelTokenSource({ initial: firstChannel });
+        return createSupabaseParticipant({
+          // A client of its own, authorized by the channel token rather than by any Supabase
+          // session: a student has none (#149). See `createSupabaseChannelClient`.
+          client: createSupabaseChannelClient(tokens.accessToken),
+          tokens,
+        });
+      }),
+    [connect, firstChannel],
+  );
+
+  const note = history.note;
+  useEffect(() => {
+    let watching = true;
+    const joined = dial();
+    room.current = joined;
+
+    const offView = joined.onStudentView((view: StudentView) => {
+      if (!watching) return;
+      // #335: the chart at the room's step, as the server cut it, for the layout around this room.
+      if (view.record !== undefined) showRecord?.(view.record);
+      setState(view.state);
+      setItem(view.item);
+      setAnswered(view.answered);
+      setRevealed(view.revealed);
+      note(view);
+      // A view arriving is proof the server is reachable, whatever the socket said a moment ago.
+      setConnection("live");
+    });
+    // How many have joined, as a number (#426): a phone is no longer sent who.
+    const offCount = joined.onCount((count) => {
+      if (watching) present.set(count);
+    });
+    const offConnection = joined.onConnection((status, rejoined) => {
+      if (!watching) return;
+      setConnection(status);
+      if (rejoined || status === "refused") routerRef.current.refresh();
+    });
+
+    /**
+     * A failed open leaves the screen on the server's first paint and says so. Realtime retries
+     * by itself, and the transport asks for the room again the moment the channel comes up.
+     */
+    void joined.resume(me).catch(() => {
+      if (watching) setConnection("reconnecting");
+    });
+
+    return () => {
+      watching = false;
+      offView();
+      offCount();
+      offConnection();
+      room.current = null;
+      // A cleanup cannot await, and a dropped socket must not become an unhandled rejection.
+      void joined.leave().catch(() => {});
+    };
+  }, [dial, me, present, showRecord, note]);
+
+  const answering = item !== null && state.status === "running" && !state.reveal;
+  const sent = answered !== null && item !== null && answered.itemId === item.id;
+  const late =
+    answering &&
+    !sent &&
+    lateFor !== null &&
+    lateFor.itemId === item.id &&
+    lateFor.endsAt === state.timer.endsAt;
+
+  /**
+   * Sends one answer. It does **not** resolve with a score: ADR 0003 keeps the key and the marks
+   * on the server, which answers `{ itemId, submittedAt }` and nothing else. The moment the
+   * acknowledgement lands, the sent state replaces the player, so the promise is left unsettled.
+   * `already_answered` means what the sent state means; `time_up` is the late screen; every
+   * other refusal is rethrown, which unlocks the button and lets the room's state say why.
+   */
+  const send: SubmitHandler = async (response: AnyResponse) => {
+    const joined = room.current;
+    const current = item;
+    if (joined === null || current === null)
+      throw new Error("This phone is not in a live session.");
+    try {
+      const ack = await joined.submit(current.id, response);
+      const mine = { itemId: current.id, submittedAt: ack.submittedAt, response };
+      setAnswered(mine);
+      note({ state, item: current, answered: mine, revealed: null });
+    } catch (refused) {
+      if (isLiveSessionError(refused) && refused.code === "time_up") {
+        setLateFor({ itemId: current.id, endsAt: state.timer.endsAt });
+        return new Promise<ScoreReveal>(() => {});
+      }
+      if (!isLiveSessionError(refused) || refused.code !== "already_answered") throw refused;
+      // A refusal carries no acknowledgement; the next view replaces this time with the server's.
+      setAnswered({ itemId: current.id, submittedAt: Date.now(), response });
+    }
+    return new Promise<ScoreReveal>(() => {});
+  };
+
+  const setDraft = useCallback(
+    (itemId: string, response: AnyResponse) => setDraftState({ itemId, response }),
+    [],
+  );
+
+  return {
+    state,
+    item,
+    answered,
+    revealed,
+    present,
+    connection,
+    draft: item !== null && draft?.itemId === item.id ? draft.response : undefined,
+    setDraft,
+    late,
+    send,
+    serverNow,
+    history,
+  };
+}

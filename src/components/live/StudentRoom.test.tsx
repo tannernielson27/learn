@@ -206,9 +206,28 @@ describe("StudentRoom: waiting", () => {
   it("says so while the connection is down, and stops saying so when it is back", () => {
     const room = setup();
     room.connection("reconnecting");
-    expect(screen.getByRole("status")).toHaveTextContent("Reconnecting");
+    expect(screen.getByTestId("reconnecting")).toHaveTextContent(
+      "ReconnectingStay on this page. Your answer is kept.",
+    );
+    expect(screen.getByTestId("reconnecting")).toHaveAttribute("role", "status");
     room.connection("live", true);
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByTestId("reconnecting")).toBeNull();
+  });
+
+  it("keeps the question and its draft while reconnecting, with Submit held off and saying why", async () => {
+    const room = setup(running());
+    room.push({ state: running(), item: KEYLESS });
+    const box = await screen.findByRole("checkbox", { name: /Respiratory rate 28/ });
+    await userEvent.click(box);
+    room.connection("reconnecting");
+    expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeChecked();
+    const submits = screen.getAllByRole("button", { name: /^Submit$/ });
+    expect(submits).toHaveLength(1);
+    expect(submits[0]).toBeDisabled();
+    expect(submits[0]).toHaveAccessibleDescription("Submit comes back when you are connected.");
+    room.connection("live", true);
+    expect(screen.getByRole("button", { name: /^Submit$/ })).toBeEnabled();
+    expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeChecked();
   });
 
   it("re-reads the page from the server when the socket comes back, and not on the first join", () => {
@@ -271,9 +290,9 @@ describe("StudentRoom: waiting", () => {
     );
 
     // Not an error: Realtime retries by itself and the transport asks again when it gets through.
-    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Reconnecting"));
+    await waitFor(() => expect(screen.getByTestId("reconnecting")).toBeInTheDocument());
     room.push({ state: running(), item: KEYLESS });
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByTestId("reconnecting")).toBeNull();
   });
 
   it("leaves the room when the page goes away", () => {

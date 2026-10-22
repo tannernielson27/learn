@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { HostLobby } from "@/components/live/HostLobby";
 import { SessionQrCode } from "@/components/live/SessionQrCode";
+import { liveViewOf, printedJoinUrl } from "@/components/live/stage/liveView";
+import { JoinCode } from "@/components/ui/JoinCode";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { joinUrl } from "@/lib/live/routes";
@@ -24,10 +25,16 @@ export const metadata: Metadata = { title: "Live session" };
  * room's status on the screen before any script has run.
  *
  * The lobby itself is a Client Component because a lobby is a live thing — presence arrives over a
- * socket and the moves go out over one. See `HostLobby`.
+ * socket and the moves go out over one. See `HostLobby`, which draws the teacher's control view,
+ * or with `?view=projector` the projector view of the same live session.
  */
-export default async function LiveSessionPage({ params }: PageProps<"/live/[sessionId]">) {
+export default async function LiveSessionPage({
+  params,
+  searchParams,
+}: PageProps<"/live/[sessionId]">) {
   const { sessionId } = await params;
+  // One route, two views (owner decision 3): `?view=projector` opens the projector view.
+  const view = liveViewOf((await searchParams).view);
   if (!isUuid(sessionId)) notFound();
 
   const { supabase } = await requireAuthor(`/live/${sessionId}`);
@@ -43,31 +50,23 @@ export default async function LiveSessionPage({ params }: PageProps<"/live/[sess
   const studentUrl = joinUrl(siteOrigin(await headers()), session.code);
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
-      <p className="mb-2 flex flex-wrap justify-between gap-x-4 text-sm text-ink-2">
-        <Link href="/author" className="tap-target inline-flex items-center hover:text-ink-1">
-          Back to library
-        </Link>
-        {/* #414: what each control does is in the guide, not in a paragraph under the control. */}
-        <Link
-          href="/help/instructor#live"
-          className="tap-target inline-flex items-center hover:text-ink-1"
-        >
-          Help
-        </Link>
-      </p>
+    <div className="flex flex-1 flex-col">
       <HostLobby
         sessionId={session.id}
         title={session.title}
         code={session.code}
         studentUrl={studentUrl}
+        view={view}
         // Drawn here, on the server, and handed over as markup, so the encoder stays out of the
         // console's bundle (#297).
-        qrCode={
-          <SessionQrCode
-            url={studentUrl}
-            label="QR code for joining this live session"
-            className="mx-auto mt-6 block h-auto w-40 rounded-sm border border-line sm:w-48 lg:mt-8 lg:w-72"
+        qrCode={<SessionQrCode url={studentUrl} label="QR code for joining this live session" />}
+        stageJoin={
+          <JoinCode
+            code={session.code}
+            url={printedJoinUrl(studentUrl)}
+            qrUrl={studentUrl}
+            size="stage"
+            className="justify-between"
           />
         }
         caseStudy={session.caseStudy}
@@ -84,6 +83,6 @@ export default async function LiveSessionPage({ params }: PageProps<"/live/[sess
           session.mode,
         )}
       />
-    </main>
+    </div>
   );
 }
