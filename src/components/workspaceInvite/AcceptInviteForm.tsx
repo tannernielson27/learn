@@ -9,6 +9,9 @@ import { DEFAULT_AFTER_SIGN_IN } from "@/lib/auth/nextPath";
 import { PASSWORD_HINT, PASSWORD_MIN_LENGTH } from "@/lib/auth/passwordRules";
 import type { InviteAccountState } from "@/lib/workspace/invite";
 import { InviteAnswerView } from "./InviteAnswerView";
+import { AUTH_HEADING, AUTH_SUBLINE } from "@/components/auth/AuthFrame";
+import { FormError } from "@/components/auth/FormError";
+import { textLinkClasses } from "@/components/ui/TextLink";
 
 export interface AcceptInviteFormProps {
   /** `createAccountAndAccept`, bound to the token; on success it redirects. */
@@ -22,8 +25,7 @@ export interface AcceptInviteFormProps {
 }
 
 const INITIAL: InviteAccountState = { status: "idle" };
-const LINK =
-  "tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline";
+const LINK = textLinkClasses();
 const FIELD =
   "tap-target w-full rounded-sm border border-line bg-surface-2 px-3 text-base text-ink-2";
 
@@ -72,11 +74,11 @@ export function AcceptInviteForm({
           id={`${id}-notice`}
           ref={noticeRef}
           tabIndex={-1}
-          className="mb-3 font-read text-3xl break-words text-ink-1 outline-none"
+          className={`${AUTH_HEADING} outline-none`}
         >
           {made ? "Your account is ready" : "You already have an account"}
         </h1>
-        <p className="mb-6 text-ink-2">
+        <p className={AUTH_SUBLINE}>
           {made
             ? "You are in the workspace. Sign in with your email address and the password you just chose."
             : INVITE_ACCOUNT_EXISTS}
@@ -95,13 +97,13 @@ export function AcceptInviteForm({
 
   return (
     <section aria-labelledby={`${id}-heading`}>
-      <h1 id={`${id}-heading`} className="mb-3 font-read text-3xl break-words text-ink-1">
+      <h1 id={`${id}-heading`} className={AUTH_HEADING}>
         {heading}
       </h1>
-      <p className="mb-6 text-ink-2">
+      <p className={AUTH_SUBLINE}>
         Enter your name and choose a password to make your account and join the workspace.
       </p>
-      <form action={formAction} className="flex flex-col gap-4">
+      <form action={formAction} className="flex flex-col gap-5">
         <DisplayNameField
           id={`${id}-name`}
           value={name}
@@ -112,7 +114,7 @@ export function AcceptInviteForm({
           errorId={error?.field === "displayName" ? errorId : undefined}
         />
         <div className="flex flex-col gap-2">
-          <label htmlFor={`${id}-email`} className="text-sm font-medium text-ink-1">
+          <label htmlFor={`${id}-email`} className="text-sm font-semibold text-ink-1">
             Email address
           </label>
           <input
@@ -137,12 +139,15 @@ export function AcceptInviteForm({
           invalid={error?.field === "password"}
           errorId={error?.field === "password" ? errorId : undefined}
         />
-        {error ? (
-          <p id={errorId} role="alert" className="text-sm text-incorrect">
-            {error.error}
-          </p>
-        ) : null}
-        <Button type="submit" variant="primary" disabled={pending} aria-disabled={pending}>
+        {error ? <FormError id={errorId}>{error.error}</FormError> : null}
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          block
+          disabled={pending}
+          aria-disabled={pending}
+        >
           {pending ? "Joining…" : "Create account and join"}
         </Button>
       </form>

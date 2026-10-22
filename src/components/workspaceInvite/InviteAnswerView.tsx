@@ -10,7 +10,7 @@ import {
   type InviteAnswer,
 } from "@/lib/workspace/invite";
 
-const HEADING = "font-read text-3xl break-words text-ink-1 outline-none";
+const HEADING = "font-read text-display leading-tight break-words text-ink-1 outline-none";
 
 function Notice({ id, heading, text }: { id: string; heading: string; text: string }) {
   return (
