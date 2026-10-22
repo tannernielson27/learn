@@ -1,4 +1,11 @@
-import { CELL, HEAD, ROW, ROW_HEAD, ScrollRegion } from "@/components/live/report/ReportTables";
+import {
+  CaseStudyHeadRow,
+  CELL,
+  HEAD,
+  ROW,
+  ROW_HEAD,
+  ScrollRegion,
+} from "@/components/live/report/ReportTables";
 import {
   STUDENT_STATUS_LABEL,
   type AssignmentItemRow,
@@ -70,6 +77,8 @@ export function ScoreTable({
     <ScrollRegion label={label}>
       <table className="tabular w-full border-collapse text-sm">
         <thead>
+          {/* #470: a whole quiz's case studies, each named over its steps' columns. */}
+          <CaseStudyHeadRow items={items} before={5} after={0} />
           <tr>
             <th scope="col" className={STICKY_HEAD}>
               Student

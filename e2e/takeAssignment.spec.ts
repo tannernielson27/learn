@@ -133,6 +133,23 @@ test("a student answers on a phone, reloads to find the answers, and submits", a
   expect(takingBytes).toContain("gaining 2.3 kg");
   expectKeyless(takingBytes, [MC_RATIONALE, MR_RATIONALE]);
 
+  // #470: the whole quiz plays its case study in place, after its loose questions. The page is
+  // sent its step 1 and that step's chart, and no later step and no step's key.
+  expect(takingBytes).toContain("cs_hip_1");
+  expect(takingBytes).not.toContain("cs_hip_2");
+  expect(takingBytes).toContain("Orthopedic unit");
+  expectKeyless(takingBytes, [STEP_6_RATIONALE]);
+  const chart = student
+    .getByRole("button", { name: "Patient record", exact: true })
+    .or(student.getByRole("tablist", { name: "Patient record tabs", exact: true }))
+    .first();
+  // A loose question has no chart beside it; the case study's first step has its own.
+  await expect(chart).toHaveCount(0);
+  // supabase/seed.sql: fifteen loose questions, then the case study, so its step 1 is question 16.
+  await student.getByRole("button", { name: "Question 16, not answered", exact: true }).click();
+  await expect(chart).toBeVisible();
+  await expectNoAxeViolations(student);
+
   // Close the tab and come back: both answers are there.
   await student.reload();
   await expect(student.getByRole("radio", { name: /Auscultate the lungs/ })).toBeChecked();

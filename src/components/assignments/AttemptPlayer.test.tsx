@@ -5,7 +5,7 @@ import { renderersLoaded } from "@/components/question/testing/renderers";
 import type { AttemptItemPayload } from "@/lib/assignments/attemptView";
 import type { SaveResult } from "@/lib/assignments/autosave";
 import { FIXTURES } from "@/lib/ngn/fixtures";
-import { recordsThrough } from "@/lib/ngn/chartReveal";
+import { recordAtStep, recordsThrough } from "@/lib/ngn/chartReveal";
 import { stagedEhr } from "@/lib/ngn/fixtures/chart-reveal";
 import { ehrRecordSchema, itemSchema, type AnyResponse, type Item } from "@/lib/ngn/schemas";
 import { toKeylessItem } from "@/lib/ngn/submit";
@@ -189,5 +189,32 @@ describe("AttemptPlayer, a case study's chart per step (#335)", () => {
 
     await user.click(screen.getByRole("button", { name: "Previous" }));
     expect(labs()).toBeNull();
+  });
+});
+
+describe("AttemptPlayer, a whole quiz with a case study in place (#470)", () => {
+  it("shows a step's chart beside it and none beside a loose question", async () => {
+    const staged = ehrRecordSchema.parse(stagedEhr);
+    const user = userEvent.setup();
+    render(
+      <AttemptPlayer
+        attemptId={ATTEMPT}
+        attemptNumber={1}
+        items={payload()}
+        total={8}
+        records={[null, recordAtStep(staged, 1)]}
+        submit={vi.fn(async () => undefined)}
+        save={async () => ({ ok: true })}
+      />,
+    );
+    await renderersLoaded();
+    const chart = () => screen.queryByRole("complementary", { name: "Patient record" });
+    expect(chart()).toBeNull();
+    expect(screen.getByTestId("answered-count")).toHaveTextContent("0 of 8 answered");
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(chart()).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+    expect(chart()).toBeNull();
   });
 });

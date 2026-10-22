@@ -15,6 +15,45 @@ export const GROUP_HEAD =
 const caseStudyHeading = (title: string) => `Case study: ${title}`;
 
 /**
+ * A row over a table's question columns naming each case study a quiz played in place over its
+ * own steps' columns (#469, #470), or nothing for a set with none. `before` and `after` are how
+ * many other columns the table has on either side of the questions. Each name is a column header
+ * spanning its steps, so it heads every cell under them.
+ */
+export function CaseStudyHeadRow({
+  items,
+  before,
+  after,
+}: {
+  items: readonly Pick<ItemRow, "position" | "caseStudy">[];
+  before: number;
+  after: number;
+}) {
+  const groups = groupByCaseStudy(items);
+  if (groups.every((group) => group.caseStudy === null)) return null;
+  return (
+    <tr>
+      <td colSpan={before} />
+      {groups.map((group) =>
+        group.caseStudy === null ? (
+          <td key={group.items[0]?.position} colSpan={group.items.length} />
+        ) : (
+          <th
+            key={group.items[0]?.position}
+            scope="col"
+            colSpan={group.items.length}
+            className={GROUP_HEAD}
+          >
+            {caseStudyHeading(group.caseStudy.title)}
+          </th>
+        ),
+      )}
+      {after > 0 ? <td colSpan={after} /> : null}
+    </tr>
+  );
+}
+
+/**
  * A table that scrolls sideways inside its own box, never the page (#186's 375px criterion).
  * Focusable and named, so a keyboard can scroll it and axe's scrollable-region rule holds.
  */
@@ -38,42 +77,11 @@ export function StudentTable({
   items: readonly ItemRow[];
   students: readonly StudentRow[];
 }) {
-  // #469: a quiz that played case studies in place names each over its steps' columns.
-  const groups = groupByCaseStudy(items);
-  const grouped = groups.some((group) => group.caseStudy !== null);
   return (
     <ScrollRegion label="Scores by student">
       <table className="tabular w-full border-collapse text-sm">
-        {grouped ? (
-          <>
-            <colgroup span={1} />
-            {groups.map((group) => (
-              <colgroup key={group.items[0]?.position} span={group.items.length} />
-            ))}
-            <colgroup span={2} />
-          </>
-        ) : null}
         <thead>
-          {grouped ? (
-            <tr>
-              <td className="sticky left-0 bg-surface-1" />
-              {groups.map((group) =>
-                group.caseStudy === null ? (
-                  <td key={group.items[0]?.position} colSpan={group.items.length} />
-                ) : (
-                  <th
-                    key={group.items[0]?.position}
-                    scope="colgroup"
-                    colSpan={group.items.length}
-                    className={GROUP_HEAD}
-                  >
-                    {caseStudyHeading(group.caseStudy.title)}
-                  </th>
-                ),
-              )}
-              <td colSpan={2} />
-            </tr>
-          ) : null}
+          <CaseStudyHeadRow items={items} before={1} after={2} />
           <tr>
             <th scope="col" className={`${HEAD} sticky left-0 bg-surface-1 text-left`}>
               Student

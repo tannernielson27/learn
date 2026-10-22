@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { inCaseStudies } from "@/lib/live/report";
 import { buildAssignmentReport, type AssignmentReportInput } from "./report";
 import { assignmentReportCsv } from "./reportCsv";
 
@@ -108,5 +109,19 @@ describe("assignmentReportCsv", () => {
     expect(() => assignmentReportCsv(buildAssignmentReport({ ...INPUT, released: false }))).toThrow(
       /not released/,
     );
+  });
+});
+
+describe("assignmentReportCsv for a whole quiz with a case study in place (#470)", () => {
+  it("names the case study and the step in each step's column, and scores as before", () => {
+    const items = inCaseStudies(INPUT.items, [
+      { caseStudyId: "c-1", title: "Hip", firstPosition: 2, stepCount: 1 },
+    ]);
+    const mixed = assignmentReportCsv(buildAssignmentReport({ ...INPUT, items })).split("\r\n");
+    expect(mixed[0]).toBe(
+      'Student,Q1 mc-vitals,"Q2 mr-assess (Case study: Hip, Step 1 of 1)",' +
+        "Points,Possible,Percent,Attempts used,Status,Class status",
+    );
+    expect(mixed.slice(1)).toEqual(lines.slice(1));
   });
 });
