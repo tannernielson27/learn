@@ -10,6 +10,11 @@ describe("Skeleton", () => {
     expect(block).toHaveClass("bg-surface-2", "h-6", "w-40");
     expect(block).toHaveTextContent("");
   });
+
+  it("holds still when asked, for a loading screen where nothing may loop", () => {
+    const { container } = render(<Skeleton still className="h-6" />);
+    expect(container.firstElementChild).not.toHaveClass("animate-pulse");
+  });
 });
 
 describe("SkeletonLine", () => {
@@ -18,6 +23,11 @@ describe("SkeletonLine", () => {
     const line = container.firstElementChild;
     expect(line).toHaveClass("h-5", "items-center");
     expect(line?.firstElementChild).toHaveClass("bg-surface-2", "h-3.5", "w-32");
+  });
+
+  it("passes still on to its block", () => {
+    const { container } = render(<SkeletonLine still lineClassName="h-5" className="w-32" />);
+    expect(container.firstElementChild?.firstElementChild).not.toHaveClass("animate-pulse");
   });
 });
 

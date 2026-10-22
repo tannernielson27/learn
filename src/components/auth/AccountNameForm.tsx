@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useId, useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { DisplayNameField } from "./DisplayNameField";
+import { FormError } from "./FormError";
 
 export type AccountNameState =
   { status: "idle" } | { status: "saved"; name: string } | { status: "error"; error: string };
@@ -41,11 +42,7 @@ export function AccountNameForm({ action, name }: AccountNameFormProps) {
           invalid={error !== null}
           errorId={error ? errorId : undefined}
         />
-        {error ? (
-          <p id={errorId} role="alert" className="text-sm text-incorrect">
-            {error}
-          </p>
-        ) : null}
+        {error ? <FormError id={errorId}>{error}</FormError> : null}
         <Button type="submit" variant="primary" disabled={pending} aria-disabled={pending}>
           {pending ? "Saving…" : "Save name"}
         </Button>

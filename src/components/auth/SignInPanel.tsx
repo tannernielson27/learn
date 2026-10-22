@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { textLinkClasses } from "@/components/ui/TextLink";
 import { choosePasswordPath } from "@/lib/auth/accountPaths";
 import type { EmailCodeFormProps } from "./EmailCodeForm";
 import { PasswordSignInForm, type PasswordSignInFormProps } from "./PasswordSignInForm";
@@ -19,8 +20,8 @@ export interface SignInPanelProps {
 /** `forgot` is the emailed link with one difference: it lands on choosing a new password. */
 type Mode = "password" | "link" | "forgot";
 
-const SWITCH =
-  "tap-target inline-flex items-center rounded-sm text-left text-sm font-medium text-accent-ink hover:underline";
+// Each a 44px standalone link's look on a button: it changes the form, it goes nowhere.
+const SWITCH = `${textLinkClasses()} rounded-sm text-left`;
 
 /**
  * The sign-in page's one decision: a password, or a link by email. The password comes first
@@ -54,7 +55,7 @@ export function SignInPanel({
           onEmailChange={setEmail}
           autoFocus={switched}
         />
-        <div className="mt-4 flex flex-col items-start">
+        <div className="mt-5 flex flex-col items-start">
           <button type="button" className={SWITCH} onClick={() => show("forgot")}>
             Forgot your password?
           </button>
@@ -84,7 +85,7 @@ export function SignInPanel({
         onEmailChange={setEmail}
         autoFocus={switched}
       />
-      <div className="mt-4 flex flex-col items-start">
+      <div className="mt-5 flex flex-col items-start">
         <button type="button" className={SWITCH} onClick={() => show("password")}>
           Sign in with your password instead
         </button>

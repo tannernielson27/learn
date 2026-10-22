@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { Button } from "@/components/ui/Button";
+import { FormError } from "./FormError";
 
 export type WorkspaceState = { status: "idle" } | { status: "error"; error: string };
 
@@ -21,11 +22,7 @@ export function SetUpWorkspace({ action }: SetUpWorkspaceProps) {
       <Button type="submit" variant="primary" disabled={pending} aria-disabled={pending}>
         {pending ? "Setting up…" : "Set up my workspace"}
       </Button>
-      {state.status === "error" ? (
-        <p role="alert" className="text-sm text-incorrect">
-          {state.error}
-        </p>
-      ) : null}
+      {state.status === "error" ? <FormError>{state.error}</FormError> : null}
     </form>
   );
 }

@@ -4,6 +4,7 @@ import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
 import { RouteRecovery } from "@/components/recovery/RouteRecovery";
 import { errorDigest } from "@/components/status/errorDigest";
+import { StatusFrame } from "@/components/status/StatusFrame";
 import { StatusLinks } from "@/components/status/StatusLinks";
 
 /**
@@ -16,7 +17,7 @@ export default function RootError({ error, retry }: ErrorInfo) {
   useReportError(error);
   const digest = errorDigest(error);
   return (
-    <main className="mx-auto w-full max-w-lg flex-1 px-4 py-12">
+    <StatusFrame>
       <RouteRecovery
         headline="LeaRN could not show this page."
         detail={
@@ -29,6 +30,6 @@ export default function RootError({ error, retry }: ErrorInfo) {
       >
         <StatusLinks />
       </RouteRecovery>
-    </main>
+    </StatusFrame>
   );
 }

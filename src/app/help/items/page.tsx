@@ -11,6 +11,7 @@ import {
 } from "@/lib/help/itemGuide";
 import { ITEM_TYPES, ITEM_TYPE_LABELS, type ItemType } from "@/lib/ngn/labels";
 import { CJMM_STEP_LABELS, type CjmmStep } from "@/lib/ngn/types";
+import { textLinkClasses } from "@/components/ui/TextLink";
 
 export const metadata: Metadata = { title: "Question guide" };
 
@@ -79,11 +80,12 @@ function SectionHeading({ id, children }: { id: string; children: ReactNode }) {
 }
 
 function Contents() {
-  const link = "text-accent-ink underline-offset-4 hover:underline";
+  // Each a 44px standalone link: the list is a set of targets, not a sentence (WCAG 2.5.8).
+  const link = textLinkClasses({ size: "sm" });
   return (
     <nav aria-label="On this page" className="rounded-md border border-line bg-surface-1 p-4">
       <p className="eyebrow">On this page</p>
-      <ul className="mt-2 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
+      <ul className="mt-2 grid gap-x-6 text-sm sm:grid-cols-2">
         <li>
           <a href="#scoring" className={link}>
             Scoring models
@@ -134,9 +136,7 @@ export default function ItemGuide() {
     <article className="flex flex-col gap-10">
       <header>
         <p className="eyebrow">Help</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink-1 sm:text-3xl">
-          Question guide
-        </h1>
+        <h1 className="mt-2 font-read text-display leading-tight text-ink-1">Question guide</h1>
         <p className="measure mt-3 text-lg text-ink-2">
           What each question format tests, how it is scored, and one tip. Scores are whole numbers
           from 0 to the question’s maximum.

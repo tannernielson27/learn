@@ -7,11 +7,12 @@ import { landingEntry } from "@/lib/auth/landing";
 import { readViewer } from "@/lib/classes/viewer";
 import { WORKSPACE_PATH } from "@/lib/workspace/workspace";
 import { saveDisplayName } from "./actions";
+import { AuthFrame, AUTH_HEADING, AUTH_SUBLINE } from "@/components/auth/AuthFrame";
+import { textLinkClasses } from "@/components/ui/TextLink";
 
 export const metadata: Metadata = { title: "Your account" };
 
-const LINK =
-  "tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline";
+const LINK = textLinkClasses();
 
 /**
  * A signed-in person's own settings (#358): the name the header and the class roster show, and
@@ -25,38 +26,35 @@ export default async function AccountPage() {
   const home = landingEntry(viewer);
 
   return (
-    <main className="flex flex-1 items-start justify-center px-4 pt-16 pb-12 sm:items-center sm:pt-0">
-      <div className="w-full max-w-sm">
-        <p className="mb-2 font-mono text-sm tracking-wide text-ink-2 uppercase">LeaRN</p>
-        <h1 className="mb-3 font-read text-3xl text-ink-1">Your account</h1>
-        <p className="mb-6 break-words text-ink-2">Signed in as {viewer.email}.</p>
-        <AccountNameForm action={saveDisplayName} name={viewer.displayName} />
-        <section aria-labelledby="account-password" className="mt-8 border-t border-line pt-6">
-          <h2 id="account-password" className="mb-2 text-xl font-medium text-ink-1">
-            Password
+    <AuthFrame>
+      <h1 className={AUTH_HEADING}>Your account</h1>
+      <p className={AUTH_SUBLINE}>Signed in as {viewer.email}.</p>
+      <AccountNameForm action={saveDisplayName} name={viewer.displayName} />
+      <section aria-labelledby="account-password" className="mt-8 border-t border-line pt-6">
+        <h2 id="account-password" className="mb-2 text-xl font-semibold text-ink-1">
+          Password
+        </h2>
+        <p className="mb-3 text-ink-2">Changing it signs out your other devices.</p>
+        <Link href={choosePasswordPath(ACCOUNT_PATH)} className={LINK}>
+          Change your password
+        </Link>
+      </section>
+      {/* A teacher's workspace is under /author, which checks the role again. */}
+      {viewer.role === "instructor" || viewer.role === "admin" ? (
+        <section aria-labelledby="account-workspace" className="mt-8 border-t border-line pt-6">
+          <h2 id="account-workspace" className="mb-2 text-xl font-semibold text-ink-1">
+            Workspace
           </h2>
-          <p className="mb-3 text-ink-2">Changing it signs out your other devices.</p>
-          <Link href={choosePasswordPath(ACCOUNT_PATH)} className={LINK}>
-            Change your password
+          <Link href={WORKSPACE_PATH} className={LINK}>
+            Teachers and invitations
           </Link>
         </section>
-        {/* A teacher's workspace is under /author, which checks the role again. */}
-        {viewer.role === "instructor" || viewer.role === "admin" ? (
-          <section aria-labelledby="account-workspace" className="mt-8 border-t border-line pt-6">
-            <h2 id="account-workspace" className="mb-2 text-xl font-medium text-ink-1">
-              Workspace
-            </h2>
-            <Link href={WORKSPACE_PATH} className={LINK}>
-              Teachers and invitations
-            </Link>
-          </section>
-        ) : null}
-        <p className="mt-8">
-          <Link href={home.href} className={LINK}>
-            {home.label}
-          </Link>
-        </p>
-      </div>
-    </main>
+      ) : null}
+      <p className="mt-8">
+        <Link href={home.href} className={LINK}>
+          {home.label}
+        </Link>
+      </p>
+    </AuthFrame>
   );
 }

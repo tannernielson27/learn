@@ -6,6 +6,7 @@ import { landingEntry } from "@/lib/auth/landing";
 import { safeNextPath } from "@/lib/auth/nextPath";
 import { readViewer } from "@/lib/classes/viewer";
 import { choosePassword } from "./actions";
+import { AuthFrame, AUTH_HEADING, AUTH_SUBLINE } from "@/components/auth/AuthFrame";
 
 export const metadata: Metadata = { title: "Choose a password" };
 
@@ -28,33 +29,30 @@ export default async function ChoosePasswordPage({ searchParams }: PageProps<"/a
   const justConfirmed = params.confirmed === "1";
 
   return (
-    <main className="flex flex-1 items-start justify-center px-4 pt-16 pb-12 sm:items-center sm:pt-0">
-      <div className="w-full max-w-sm">
-        <p className="mb-2 font-mono text-sm tracking-wide text-ink-2 uppercase">LeaRN</p>
-        {justConfirmed ? (
-          <>
-            <h1 className="mb-3 font-read text-3xl text-ink-1">Your email is confirmed</h1>
-            <p className="mb-6 text-ink-2">
-              An account for {viewer.email} was made with a password before anyone had shown the
-              address was theirs. To keep it yours, that password no longer works and every other
-              device has been signed out. Choose a new password to finish.
-            </p>
-          </>
-        ) : (
-          <>
-            <h1 className="mb-3 font-read text-3xl text-ink-1">Choose a password</h1>
-            <p className="mb-6 text-ink-2">
-              For {viewer.email}. With a password you can sign in without waiting for an email.
-            </p>
-          </>
-        )}
-        <ChoosePasswordForm
-          action={choosePassword}
-          email={viewer.email}
-          next={next}
-          skippable={!justConfirmed}
-        />
-      </div>
-    </main>
+    <AuthFrame>
+      {justConfirmed ? (
+        <>
+          <h1 className={AUTH_HEADING}>Your email is confirmed</h1>
+          <p className={AUTH_SUBLINE}>
+            An account for {viewer.email} was made with a password before anyone had shown the
+            address was theirs. To keep it yours, that password no longer works and every other
+            device has been signed out. Choose a new password to finish.
+          </p>
+        </>
+      ) : (
+        <>
+          <h1 className={AUTH_HEADING}>Choose a password</h1>
+          <p className={AUTH_SUBLINE}>
+            For {viewer.email}. With a password you can sign in without waiting for an email.
+          </p>
+        </>
+      )}
+      <ChoosePasswordForm
+        action={choosePassword}
+        email={viewer.email}
+        next={next}
+        skippable={!justConfirmed}
+      />
+    </AuthFrame>
   );
 }

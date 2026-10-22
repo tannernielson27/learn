@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ContinueButton } from "@/components/auth/ContinueButton";
 import { readConfirmLink } from "@/lib/auth/confirm";
 import { confirmSignIn } from "./actions";
+import { AuthFrame, AUTH_HEADING, AUTH_SUBLINE } from "@/components/auth/AuthFrame";
 
 // The page holds a live, unspent token until the button is pressed: render it per request, never
 // from a cache, so Next answers it with `Cache-Control: no-store` (checked on the response in
@@ -27,22 +28,19 @@ export default async function ConfirmPage({ searchParams }: PageProps<"/auth/con
   if (!link.ok) redirect(link.failed);
 
   return (
-    <main className="flex flex-1 items-start justify-center px-4 pt-16 pb-12 sm:items-center sm:pt-0">
-      <div className="w-full max-w-sm">
-        <p className="mb-2 font-mono text-sm tracking-wide text-ink-2 uppercase">LeaRN</p>
-        <h1 className="mb-3 font-read text-3xl text-ink-1">Finish signing in</h1>
-        <p className="mb-6 text-ink-2">
-          Pressing the button signs you in on this device, even if you asked for the link on another
-          one. The link works once. To sign in on the device where you asked instead, type the code
-          from the email there.
-        </p>
-        <form action={confirmSignIn}>
-          <input type="hidden" name="token_hash" value={link.tokenHash} />
-          <input type="hidden" name="type" value="email" />
-          <input type="hidden" name="next" value={link.next} />
-          <ContinueButton />
-        </form>
-      </div>
-    </main>
+    <AuthFrame>
+      <h1 className={AUTH_HEADING}>Finish signing in</h1>
+      <p className={AUTH_SUBLINE}>
+        Pressing the button signs you in on this device, even if you asked for the link on another
+        one. The link works once. To sign in on the device where you asked instead, type the code
+        from the email there.
+      </p>
+      <form action={confirmSignIn}>
+        <input type="hidden" name="token_hash" value={link.tokenHash} />
+        <input type="hidden" name="type" value="email" />
+        <input type="hidden" name="next" value={link.next} />
+        <ContinueButton />
+      </form>
+    </AuthFrame>
   );
 }

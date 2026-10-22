@@ -9,6 +9,9 @@ import { fieldClasses } from "@/components/ui/fieldClasses";
 import { PASSWORD_HINT, PASSWORD_MIN_LENGTH } from "@/lib/auth/passwordRules";
 import { STUDENT_HOME } from "@/lib/classes/classes";
 import { InviteUnavailable } from "./InviteUnavailable";
+import { AUTH_HEADING, AUTH_SUBLINE } from "@/components/auth/AuthFrame";
+import { FormError } from "@/components/auth/FormError";
+import { textLinkClasses } from "@/components/ui/TextLink";
 
 export type InviteSignUpState =
   | { status: "idle" }
@@ -31,7 +34,7 @@ export interface InviteSignUpFormProps {
 }
 
 const INITIAL: InviteSignUpState = { status: "idle" };
-const FIELD = fieldClasses("px-3 text-base");
+const FIELD = fieldClasses("h-13 px-3.5 text-lg");
 
 function existsMessage(email: string): string {
   return `${email} already has a LeaRN account, and that is not its password. Try its password again, or join with an emailed link.`;
@@ -83,16 +86,16 @@ export function InviteSignUpForm({
           id={`${id}-ready`}
           ref={readyRef}
           tabIndex={-1}
-          className="mb-3 font-read text-3xl text-ink-1 outline-none"
+          className={`${AUTH_HEADING} outline-none`}
         >
           Your account is ready
         </h1>
-        <p className="mb-6 text-ink-2">
+        <p className={AUTH_SUBLINE}>
           You are in {classTitle}. Sign in with the email address and password you just chose.
         </p>
         <Link
           href={`/sign-in?next=${encodeURIComponent(STUDENT_HOME)}`}
-          className="tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline"
+          className={textLinkClasses()}
         >
           Sign in
         </Link>
@@ -102,14 +105,14 @@ export function InviteSignUpForm({
 
   return (
     <section aria-labelledby={`${id}-heading`}>
-      <h1 id={`${id}-heading`} className="mb-3 font-read text-3xl text-ink-1">
+      <h1 id={`${id}-heading`} className={AUTH_HEADING}>
         Join {classTitle}
       </h1>
-      <p className="mb-6 text-ink-2">
+      <p className={AUTH_SUBLINE}>
         Enter your name and email address, and choose a password. If you already have a LeaRN
         account, use its password.
       </p>
-      <form action={formAction} className="flex flex-col gap-4">
+      <form action={formAction} className="flex flex-col gap-5">
         <DisplayNameField
           id={`${id}-name`}
           value={name}
@@ -120,7 +123,7 @@ export function InviteSignUpForm({
           errorId={error?.field === "displayName" ? errorId : undefined}
         />
         <div className="flex flex-col gap-2">
-          <label htmlFor={`${id}-email`} className="text-sm font-medium text-ink-1">
+          <label htmlFor={`${id}-email`} className="text-sm font-semibold text-ink-1">
             Email address
           </label>
           <input
@@ -148,12 +151,15 @@ export function InviteSignUpForm({
           invalid={error?.field === "password"}
           errorId={error?.field === "password" ? errorId : undefined}
         />
-        {error ? (
-          <p id={errorId} role="alert" className="text-sm text-incorrect">
-            {error.message}
-          </p>
-        ) : null}
-        <Button type="submit" variant="primary" disabled={pending} aria-disabled={pending}>
+        {error ? <FormError id={errorId}>{error.message}</FormError> : null}
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          block
+          disabled={pending}
+          aria-disabled={pending}
+        >
           {pending ? "Joining…" : "Join the class"}
         </Button>
       </form>

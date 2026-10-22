@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { StatusFrame } from "@/components/status/StatusFrame";
 import { StatusLinks } from "@/components/status/StatusLinks";
 import { StatusPanel } from "@/components/status/StatusPanel";
 
@@ -14,7 +15,7 @@ export const metadata: Metadata = { title: "Page not found" };
  */
 export default function NotFound() {
   return (
-    <main className="mx-auto w-full max-w-lg flex-1 px-4 py-12">
+    <StatusFrame>
       <StatusPanel headline="This page does not exist.">
         <p className="measure text-ink-2">
           The link may be mistyped, or the page may have moved. Check the address, or start again
@@ -22,6 +23,6 @@ export default function NotFound() {
         </p>
         <StatusLinks />
       </StatusPanel>
-    </main>
+    </StatusFrame>
   );
 }

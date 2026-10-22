@@ -11,8 +11,9 @@ export interface StatusPanelProps {
 
 /**
  * The one surface every "this did not work" page shares (#164, #267): the not-found page, the
- * root error page and every route's error boundary. A bordered panel on the page surface, the
- * headline as a focused h1, and whatever the page says and offers under it.
+ * root error page and every route's error boundary. No box (the overhaul's editorial look): the
+ * headline as a large serif h1 that takes focus, and whatever the page says and offers under it,
+ * on the same rhythm as the sign-in form.
  *
  * It arrives with `motion-enter` (opacity and an 8px lift, collapsed by reduced motion through the
  * tokens), so it reads as the page changing rather than flashing.
@@ -20,13 +21,10 @@ export interface StatusPanelProps {
 export function StatusPanel({ headline, children }: StatusPanelProps) {
   const headingId = useId();
   return (
-    <section
-      aria-labelledby={headingId}
-      className="motion-enter flex flex-col items-start gap-4 rounded-md border border-line bg-surface-1 p-5"
-    >
+    <section aria-labelledby={headingId} className="motion-enter flex flex-col items-start gap-5">
       <FocusHeading
         id={headingId}
-        className="font-read text-2xl break-words text-ink-1 outline-none"
+        className="font-read text-display leading-tight break-words text-ink-1 outline-none"
       >
         {headline}
       </FocusHeading>

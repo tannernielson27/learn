@@ -37,7 +37,7 @@ export function PasswordField({
 
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="text-sm font-medium text-ink-1">
+      <label htmlFor={id} className="text-sm font-semibold text-ink-1">
         {label}
       </label>
       <div className="relative">
@@ -55,7 +55,7 @@ export function PasswordField({
           maxLength={72}
           aria-invalid={invalid ? true : undefined}
           aria-describedby={describedBy}
-          className={fieldClasses("pr-18 pl-3 text-base")}
+          className={fieldClasses("h-13 pr-18 pl-3.5 text-lg")}
         />
         <button
           type="button"

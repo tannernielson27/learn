@@ -12,6 +12,8 @@ import { readViewer } from "@/lib/classes/viewer";
 import { signOut } from "../author/actions";
 import { joinClassWithCode } from "../learn/actions";
 import { setUpWorkspace } from "./actions";
+import { AuthFrame, AUTH_HEADING, AUTH_SUBLINE } from "@/components/auth/AuthFrame";
+import { textLinkClasses } from "@/components/ui/TextLink";
 
 export const metadata: Metadata = { title: "Welcome" };
 
@@ -61,30 +63,24 @@ export default async function WelcomePage({ searchParams }: PageProps<"/welcome"
   );
 
   return (
-    <main className="flex flex-1 items-start justify-center px-4 pt-16 pb-12 sm:items-center sm:pt-0">
-      <div className="w-full max-w-sm">
-        <p className="mb-2 font-mono text-sm tracking-wide text-ink-2 uppercase">LeaRN</p>
-        <h1 className="mb-3 font-read text-3xl text-ink-1">Welcome to LeaRN</h1>
-        <p className="mb-6 text-sm break-words text-ink-2">Signed in as {shownName(viewer)}.</p>
+    <AuthFrame>
+      <h1 className={AUTH_HEADING}>Welcome to LeaRN</h1>
+      <p className={AUTH_SUBLINE}>Signed in as {shownName(viewer)}.</p>
 
-        <div className="mb-8 flex flex-col gap-8 divide-y divide-line [&>section+section]:pt-8">
-          {teaching ? [teach, join] : [join, teach]}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-4">
-          <Link
-            href={ACCOUNT_PATH}
-            className="tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline"
-          >
-            Your account
-          </Link>
-          <form action={signOut}>
-            <Button type="submit" variant="ghost" size="sm">
-              Sign out
-            </Button>
-          </form>
-        </div>
+      <div className="mb-8 flex flex-col gap-8 divide-y divide-line [&>section+section]:pt-8">
+        {teaching ? [teach, join] : [join, teach]}
       </div>
-    </main>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-4">
+        <Link href={ACCOUNT_PATH} className={textLinkClasses()}>
+          Your account
+        </Link>
+        <form action={signOut}>
+          <Button type="submit" variant="ghost" size="sm">
+            Sign out
+          </Button>
+        </form>
+      </div>
+    </AuthFrame>
   );
 }
