@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AssignmentReportView } from "@/components/assignments/report/AssignmentReportView";
+import { PageWidth } from "@/components/ui/PageWidth";
 import { assignmentReportPath } from "@/lib/assignments/assignments";
 import { assignmentReportStore } from "@/lib/assignments/attemptStore";
 import { loadAssignmentReport } from "@/lib/assignments/reportLoader";
@@ -34,15 +35,18 @@ export default async function AssignmentReportPage({
   );
   if (!loaded) notFound();
 
+  // Score tables are wide: the report takes the wide content width (PLAN §6).
   return (
-    <AssignmentReportView
-      assignmentId={assignmentId}
-      classId={loaded.assignment.classId}
-      title={loaded.assignment.title}
-      closesAt={loaded.assignment.closesAt}
-      maxAttempts={loaded.assignment.maxAttempts}
-      report={loaded.report}
-      view={view}
-    />
+    <PageWidth width="wide">
+      <AssignmentReportView
+        assignmentId={assignmentId}
+        classId={loaded.assignment.classId}
+        title={loaded.assignment.title}
+        closesAt={loaded.assignment.closesAt}
+        maxAttempts={loaded.assignment.maxAttempts}
+        report={loaded.report}
+        view={view}
+      />
+    </PageWidth>
   );
 }
