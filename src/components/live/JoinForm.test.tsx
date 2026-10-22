@@ -90,7 +90,14 @@ describe("JoinForm", () => {
   it("describes each field while nothing is wrong, so the hints are read out", () => {
     setup({ status: "idle" });
     expect(codeField()).toHaveAccessibleDescription("Six characters, on the screen at the front.");
-    expect(nameField()).toHaveAccessibleDescription("The class sees this.");
+    expect(nameField()).toHaveAccessibleDescription(
+      "Your teacher sees this name. The class sees it only before the start.",
+    );
+  });
+
+  it("makes Join the full-width main action, at the phone's large size", () => {
+    render(<JoinForm action={vi.fn()} code="" />);
+    expect(joinButton()).toHaveClass("w-full", "min-h-(--button-height-lg)");
   });
 
   it("uses no emoji anywhere, per docs/04 §7", () => {
