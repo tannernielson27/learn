@@ -53,6 +53,7 @@
   /* Fluid headings and the projector ladder: `text-display`, `text-stage-stem`, ... */
   --text-display: var(--text-display);
   --text-title: var(--text-title);
+  --text-score: var(--text-score);
   --text-stage-code: var(--text-stage-code);
   --text-stage-stem: var(--text-stage-stem);
   --text-stage-option: var(--text-stage-option);

@@ -22,11 +22,11 @@ export function AttemptSummary({ attempts, closed }: AttemptSummaryProps) {
   return (
     <ul
       aria-label="Your attempts"
-      className="mt-6 flex flex-col divide-y divide-line border-y border-line"
+      className="mt-6 flex max-w-reading flex-col divide-y divide-line rounded-md border border-line bg-surface-1"
     >
       {attempts.map((attempt) => (
-        <li key={attempt.id} className="flex flex-col gap-1 px-2 py-3">
-          <span className="font-medium text-ink-1">{`Attempt ${attempt.number}`}</span>
+        <li key={attempt.id} className="flex flex-col gap-1 px-4 py-3">
+          <span className="font-semibold text-ink-1">{`Attempt ${attempt.number}`}</span>
           {attempt.submittedAt ? (
             <span className="text-sm text-ink-2" data-testid="attempt-submitted">
               {attempt.autoSubmitted ? "Submitted at close " : "Submitted "}

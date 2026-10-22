@@ -18,6 +18,7 @@
  * Server only: it reaches the results loader, which reaches the scoring seam.
  */
 import type { ResultEntry, ResultsView } from "@/lib/assignments/results";
+import { isFullMarks } from "@/lib/assignments/resultsSummary";
 import type { RateLimitStore } from "@/lib/rateLimit/store";
 import type { MissedStart } from "@/lib/supabase/practiceMissed";
 import type { RunSlots } from "./answerRoute";
@@ -29,8 +30,7 @@ export interface RunMark {
   maxPoints: number;
 }
 
-export const isFullMarks = ({ points, maxPoints }: RunMark): boolean =>
-  maxPoints > 0 && points >= maxPoints;
+export { isFullMarks };
 
 /** A run's questions answered below full marks, in play order. */
 export function missedInRun(

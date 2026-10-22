@@ -265,6 +265,8 @@
   --chart-key: var(--correct);
   --chart-key-outline: 3px;
   --joincode-size: var(--text-3xl);
+  /* The total on a results page (ResultsPhone 44px to ResultsDesktop 56px), within 2.5x. */
+  --text-score: clamp(2.75rem, 2.2rem + 1.6vw, 3.5rem);
   --joincode-size-stage: var(--text-stage-code);
   --toast-offset: var(--space-4);
 

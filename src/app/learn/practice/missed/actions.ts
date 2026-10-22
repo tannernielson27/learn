@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import type { PractiseMissedState } from "@/components/review/PractiseMissed";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireStudent } from "@/lib/classes/viewer";
 import { MISSED_REFUSALS, startMissedPractice, type MissedSourceRef } from "@/lib/practice/missed";
@@ -8,8 +9,6 @@ import { missedPracticePath } from "@/lib/practice/paths";
 import { missedStore } from "@/lib/practice/store";
 import { sharedRateLimitStore } from "@/lib/rateLimit/postgresStore";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
-
-export type PractiseMissedState = { error: string | null };
 
 /**
  * "Practise the N I missed" (owner decision 6). The browser names only the source; which

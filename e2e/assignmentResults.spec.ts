@@ -248,7 +248,7 @@ test("a student sees nothing before the close, then their score, keys and ration
   await expect(student).toHaveURL(new RegExp(`${bankResults}$`));
 
   const total = student.getByRole("region", { name: "Your score", exact: true });
-  await expect(total.getByTestId("results-total")).toHaveText(/^\d+(\.\d+)? of \d+(\.\d+)?$/);
+  await expect(total.getByTestId("results-total")).toHaveText(/^\d+(\.\d+)?\/\d+(\.\d+)?$/);
   // One attempt: the total stands alone, with nothing restating it.
   await expect(total.locator("p")).toHaveCount(1);
   await expect(student.getByText(MC_RATIONALE, { exact: false }).first()).toBeVisible();

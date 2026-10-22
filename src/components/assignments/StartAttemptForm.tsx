@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Notice } from "@/components/ui/Notice";
 
 export interface StartAttemptFormProps {
   /** The Server Action, already bound to the assignment. */
@@ -14,14 +15,10 @@ export function StartAttemptForm({ start, label }: StartAttemptFormProps) {
   const [state, action, pending] = useActionState(start, { error: null });
   return (
     <form action={action} className="mt-6 flex flex-col items-start gap-2">
-      <Button type="submit" variant="primary" disabled={pending}>
+      <Button type="submit" variant="primary" size="lg" className="min-w-40" disabled={pending}>
         {pending ? "Starting" : label}
       </Button>
-      {state.error ? (
-        <p role="alert" className="text-sm text-incorrect">
-          {state.error}
-        </p>
-      ) : null}
+      {state.error ? <Notice role="alert">{state.error}</Notice> : null}
     </form>
   );
 }

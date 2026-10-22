@@ -192,8 +192,13 @@ describe("newTabIds", () => {
     timePoints: [],
     tabs,
   });
-  const open = (id: string) => ({ id, kind: "notes" as const, title: id, blocks: [] });
-  const locked = (id: string) => ({ id, kind: "notes" as const, title: id, locked: true as const });
+  const open = (id: string) => ({ id, kind: "nurses_notes" as const, title: id, blocks: [] });
+  const locked = (id: string) => ({
+    id,
+    kind: "nurses_notes" as const,
+    title: id,
+    locked: true as const,
+  });
 
   it("marks a tab open now that was absent or locked at the step before", () => {
     const before = view([open("hp"), locked("labs")]);

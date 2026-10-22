@@ -47,7 +47,7 @@ export function FeedbackIcon({
       data-feedback-mark={state}
       className={`${className} shrink-0 leading-none ${isCorrect ? "text-correct" : "text-incorrect"}`}
     >
-      <Icon icon={isCorrect ? Check : X} className="size-4.5" strokeWidth={2.5} />
+      <Icon icon={isCorrect ? Check : X} className="size-4.5" />
     </span>
   );
 }
