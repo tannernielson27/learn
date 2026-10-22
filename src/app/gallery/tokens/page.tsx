@@ -2,16 +2,29 @@ import { MotionDemo } from "./motion-demo";
 
 const COLORS = [
   { group: "Surfaces", tokens: ["surface-0", "surface-1", "surface-2"] },
-  { group: "Ink and lines", tokens: ["ink-1", "ink-2", "line", "line-strong"] },
+  { group: "Ink and lines", tokens: ["ink-1", "ink-2", "line", "line-strong", "line-field"] },
   { group: "Accent", tokens: ["accent", "accent-ink", "accent-soft", "accent-contrast"] },
   {
     group: "Feedback (feedback mode only)",
-    tokens: ["correct", "correct-soft", "incorrect", "incorrect-soft", "flag", "flag-soft"],
+    tokens: [
+      "correct",
+      "correct-soft",
+      "incorrect",
+      "incorrect-soft",
+      "flag",
+      "flag-ink",
+      "flag-soft",
+    ],
   },
+  {
+    group: "System messages and charts",
+    tokens: ["notice", "notice-soft", "chart-bar", "chart-key"],
+  },
+  { group: "Projector stage (always light)", tokens: ["stage-surface", "stage-ink", "stage-line"] },
 ] as const;
 
-const TYPE_SCALE = ["xs", "sm", "base", "lg", "xl", "2xl", "3xl"] as const;
-const SPACE = ["1", "2", "3", "4", "6", "8", "12"] as const;
+const TYPE_SCALE = ["xs", "sm", "base", "lg", "xl", "2xl", "3xl", "title", "display"] as const;
+const SPACE = ["1", "2", "3", "4", "6", "8", "12", "16", "24"] as const;
 
 export default function TokensPage() {
   return (
@@ -76,9 +89,26 @@ export default function TokensPage() {
             </div>
           </div>
           <p className="mt-3 text-sm text-ink-2">
-            Two radii only. Depth comes from lines, not shadows.
+            Two radii only. Depth comes from lines; the one shadow, --elevation-1, is for a dialog,
+            a toast and a dragged token.
           </p>
+          <div className="mt-3 h-12 w-32 rounded-md bg-surface-1 shadow-elevation-1" />
         </section>
+      </div>
+
+      <h2 className="mt-10 text-lg font-semibold">Projector ladder</h2>
+      <p className="mt-2 max-w-prose text-sm text-ink-2">
+        Set in the stage&apos;s container units with rem floors, so a laptop zooms and a projector
+        scales. On a 1080px stage: join code about 160px, question 64px, choices 48px, numbers 96px,
+        labels 32px. This box is a small stage.
+      </p>
+      <div
+        data-theme="light"
+        className="mt-3 aspect-video max-w-xl overflow-hidden rounded-md border border-line bg-stage-surface p-4 text-stage-ink [container-type:size]"
+      >
+        <p className="font-mono text-stage-code leading-none font-semibold">V96 RN8</p>
+        <p className="mt-2 text-stage-stem font-semibold">Which action comes first?</p>
+        <p className="text-stage-label text-ink-2">18 of 24 answered</p>
       </div>
 
       <h2 className="mt-10 text-lg font-semibold">Motion</h2>
