@@ -22,7 +22,7 @@ export function ArchiveViewSwitch({ bankId, view, filter }: ArchiveViewSwitchPro
   const current: BankFilter = archived ? { ...filter, status: null } : filter;
   return (
     <nav aria-label="Current or archived">
-      <ul className="flex gap-1 rounded-sm border border-line p-1">
+      <ul className="flex gap-1 rounded-md border border-field-border p-1">
         <li>
           <Link
             href={bankViewHref(bankId, view, current)}

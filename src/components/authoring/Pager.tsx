@@ -9,8 +9,8 @@ export interface PagerProps {
 }
 
 const linkClass =
-  "tap-target inline-flex items-center rounded-sm border border-line bg-surface-1 px-3 text-sm " +
-  `font-medium text-accent-ink ${PRESS_CLASSES} hover:border-line-strong hover:bg-surface-2`;
+  "tap-target inline-flex items-center rounded-sm border border-field-border bg-surface-1 px-3 text-sm " +
+  `font-medium text-accent-ink ${PRESS_CLASSES} hover:bg-surface-2`;
 
 /** Previous and next links for a paged list, kept in the URL. Nothing for a single page. */
 export function Pager({ page, pageCount, hrefFor }: PagerProps) {
