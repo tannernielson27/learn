@@ -58,6 +58,17 @@ const ROWS = [
 ];
 
 describe("archiveSelection", () => {
+  it("names the step-to-case-study key, since two keys join those tables (#471)", async () => {
+    const { client, calls } = fakeClient((call) => {
+      if (call.table === "items" && !isUpdate(call)) return { data: ROWS };
+      return { data: [] };
+    });
+    await archiveSelection(client, BANK, { itemIds: [DRAFT], caseStudyIds: [] });
+    const steps = calls.find((call) => call.table === "case_study_items");
+    // An unnamed embed is ambiguous to PostgREST (PGRST201) and failed every archive in e2e.
+    expect(arg(steps!, "select")?.[0]).toMatch(/case_studies!case_study_items_case_org_fkey\(/);
+  });
+
   it("archives each status in one write, keeps a step and says why", async () => {
     const { client, calls } = fakeClient((call) => {
       if (call.table === "items" && !isUpdate(call)) return { data: ROWS };

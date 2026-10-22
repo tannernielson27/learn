@@ -119,7 +119,7 @@ async function archiveItems(
   if (open.length > 0) {
     const { data: stepData, error: stepError } = await client
       .from("case_study_items")
-      .select("item_id, position, case_studies(title)")
+      .select("item_id, position, case_studies!case_study_items_case_org_fkey(title)")
       .in("item_id", open);
     if (stepError) return null;
     for (const step of (stepData ?? []) as unknown as StepRow[]) {
