@@ -1,5 +1,6 @@
 import type { RosterEntry } from "@/lib/supabase/classes";
 import { ConfirmSubmit, type ConfirmSubmitProps } from "./ConfirmSubmit";
+import { Badge } from "@/components/ui/Badge";
 import { EmptyState, type EmptyStateAction } from "@/components/ui/EmptyState";
 
 export interface ClassRosterProps {
@@ -40,7 +41,7 @@ export function ClassRoster({
               <span className="truncate text-sm text-ink-2">{entry.email}</span>
             ) : null}
             {entry.signedIn ? null : (
-              <span className="text-sm text-ink-2">Has not signed in yet</span>
+              <Badge className="mt-1 self-start">Has not signed in yet</Badge>
             )}
           </span>
           <ConfirmSubmit

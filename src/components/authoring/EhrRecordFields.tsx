@@ -21,6 +21,8 @@ import {
   type EhrTabKind,
 } from "@/lib/authoring/forms/ehr";
 import { setTabStepAccess, setTimePointFromStep } from "@/lib/authoring/forms/ehrSteps";
+import { Card } from "@/components/ui/Card";
+import { textLinkClasses } from "@/components/ui/TextLink";
 import { Sr, fieldClass, type FieldHelpers, type FocusLater } from "./EhrBlockEditors";
 import { EhrSectionEditor, moveButtonId, type SectionPatch } from "./EhrSectionEditor";
 import { FromStepSelect } from "./EhrStepControls";
@@ -177,9 +179,11 @@ export function EhrRecordFields({
 
   return (
     <>
-      <p className="rounded-sm border border-line bg-surface-1 px-4 py-3 text-sm text-ink-1">
-        Fictional patients only. Never enter real names, dates or details.
-      </p>
+      <Card tone="inset" padding="sm">
+        <p className="text-sm text-ink-1">
+          Fictional patients only. Never enter real names, dates or details.
+        </p>
+      </Card>
       {steps ? (
         <p className="text-sm text-ink-2">
           Set when students see each time point, tab and block.{" "}
@@ -189,7 +193,7 @@ export function EhrRecordFields({
             href="/help/items#case-study"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-accent-ink underline underline-offset-4"
+            className={textLinkClasses({ kind: "inline" })}
           >
             How a case study unfolds<span className="sr-only"> (opens in a new tab)</span>
           </a>

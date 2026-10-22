@@ -219,7 +219,8 @@ describe("EhrEditor", () => {
       error: "This case study is gone.",
     }));
     await user.click(button("Save patient record"));
-    expect(await screen.findByText("This case study is gone.")).toHaveAttribute("role", "alert");
+    // A neutral Notice, not red text: the alert is its panel, with the words inside it.
+    expect(await screen.findByRole("alert")).toHaveTextContent("This case study is gone.");
   }, 30_000);
 
   it("recovers from a save request that fails outright", async () => {
@@ -227,9 +228,9 @@ describe("EhrEditor", () => {
       throw new Error("offline");
     });
     await user.click(button("Save patient record"));
-    expect(
-      await screen.findByText("The patient record could not be saved. Try again."),
-    ).toHaveAttribute("role", "alert");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The patient record could not be saved. Try again.",
+    );
     expect(button("Save patient record")).not.toBeDisabled();
   }, 30_000);
 });

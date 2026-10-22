@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import type { CjmmStep } from "@/lib/ngn/types";
 import { ItemEditorHostContext, useItemEditorHost, type ItemEditorHost } from "./ItemEditorHost";
 import { StepTypeChooser } from "./StepTypeChooser";
@@ -64,7 +65,7 @@ export function StepItemPanel({
       </div>
 
       {mode === "confirm" ? (
-        <div className="flex flex-col gap-3 rounded-sm border border-line bg-surface-1 p-4">
+        <Card padding="sm" className="flex flex-col gap-3">
           <p className="text-sm text-ink-1">
             A new format starts a new question for Step {position}. This one&apos;s text and answers
             will be lost.
@@ -77,7 +78,7 @@ export function StepItemPanel({
               Keep this question
             </Button>
           </div>
-        </div>
+        </Card>
       ) : null}
 
       {mode === "choose" ? (

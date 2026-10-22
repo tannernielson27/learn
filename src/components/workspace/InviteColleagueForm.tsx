@@ -1,7 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useId, useRef, useState } from "react";
+import { FieldError } from "@/components/authoring/FieldError";
 import { Button } from "@/components/ui/Button";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 
 export type InviteColleagueState =
   { status: "idle" } | { status: "sent"; email: string } | { status: "error"; error: string };
@@ -53,12 +55,12 @@ export function InviteColleagueForm({ action }: InviteColleagueFormProps) {
           onChange={(event) => setEmail(event.target.value)}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${id}-error` : `${id}-hint`}
-          className="tap-target w-full rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect"
+          className={fieldClasses("px-3 text-base")}
         />
         {error ? (
-          <p id={`${id}-error`} role="alert" className="text-sm break-words text-incorrect">
+          <FieldError id={`${id}-error`} role="alert">
             {error}
-          </p>
+          </FieldError>
         ) : (
           <p id={`${id}-hint`} className="text-sm text-ink-2">
             The link works for this address only and lasts 7 days.

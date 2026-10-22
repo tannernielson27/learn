@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
   discardAiImportBatch,
@@ -9,6 +8,10 @@ import {
 } from "@/app/author/aiImportActions";
 import { importedSentence } from "@/lib/authoring/aiImportReview";
 import { AiImportReview } from "@/components/authoring/AiImportReview";
+import { Breadcrumbs } from "@/components/authoring/FolderBreadcrumbs";
+import { ReadingWidth } from "@/components/authoring/PageWidth";
+import { Card } from "@/components/ui/Card";
+import { TextLink } from "@/components/ui/TextLink";
 import { aiImportEnabled } from "@/lib/aiImport/config";
 import { readReviewBatch } from "@/lib/aiImport/review/read";
 import type { Client } from "@/lib/aiImport/upload/access";
@@ -59,44 +62,36 @@ export default async function AiImportReviewPage({
       .eq("org_id", author.orgId)
       .maybeSingle();
     return (
-      <>
+      <ReadingWidth>
         <h1 className="mb-6 font-read text-3xl break-words text-ink-1">AI import</h1>
-        <section className="flex flex-col gap-3 rounded-sm border border-line bg-surface-1 p-4 sm:max-w-2xl">
-          <h2 className="font-read text-2xl text-ink-1">Imported</h2>
-          <p className="text-ink-1" data-testid="imported-summary">
-            {importedSentence(
-              done?.imported_questions ?? 0,
-              done?.imported_case_studies ?? 0,
-              bank.name,
-            )}{" "}
-            The uploaded files have been deleted.
-          </p>
-          <Link
-            href={`/author/banks/${bank.id}`}
-            className="tap-target inline-flex items-center text-accent-ink underline"
-          >
-            Open {bank.name}
-          </Link>
+        <section className="sm:max-w-2xl">
+          <Card className="flex flex-col items-start gap-3">
+            <h2 className="font-read text-2xl text-ink-1">Imported</h2>
+            <p className="text-ink-1" data-testid="imported-summary">
+              {importedSentence(
+                done?.imported_questions ?? 0,
+                done?.imported_case_studies ?? 0,
+                bank.name,
+              )}{" "}
+              The uploaded files have been deleted.
+            </p>
+            <TextLink href={`/author/banks/${bank.id}`}>Open {bank.name}</TextLink>
+          </Card>
         </section>
-      </>
+      </ReadingWidth>
     );
   }
   if (batch.status !== "review") notFound();
 
+  // Wide: each question's preview and its source sit side by side on a laptop (PLAN §6).
   return (
     <>
-      <nav aria-label="Breadcrumb" className="mb-4 flex flex-wrap gap-2 text-sm text-ink-2">
-        <Link href={`/author/banks/${bank.id}`} className="underline hover:text-ink-1">
-          {bank.name}
-        </Link>
-        <span aria-hidden="true">/</span>
-        <Link
-          href={`/author/banks/${bank.id}/ai-import?batch=${batch.id}`}
-          className="underline hover:text-ink-1"
-        >
-          Import with AI
-        </Link>
-      </nav>
+      <Breadcrumbs
+        crumbs={[
+          { label: bank.name, href: `/author/banks/${bank.id}` },
+          { label: "Import with AI", href: `/author/banks/${bank.id}/ai-import?batch=${batch.id}` },
+        ]}
+      />
       <h1 className="mb-6 font-read text-3xl break-words text-ink-1">Review AI import</h1>
       <AiImportReview
         bankId={bank.id}

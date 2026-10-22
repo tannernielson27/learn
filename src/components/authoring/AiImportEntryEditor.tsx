@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { textLinkClasses } from "@/components/ui/TextLink";
 import {
   STATUS_LABELS,
   type ReviewReason,
@@ -107,20 +109,15 @@ export function AiImportEntryEditor({
 
   return (
     <>
-      <p className="mb-2 text-sm">
-        <GuardedLink
-          href={reviewHref}
-          className="text-accent-ink underline-offset-4 hover:underline"
-        >
+      <p className="mb-2">
+        <GuardedLink href={reviewHref} className={textLinkClasses({ size: "sm" })}>
           Back to the review
         </GuardedLink>
       </p>
       <p className="eyebrow mb-1">{ITEM_TYPE_LABELS[editor.type]}</p>
       <div className="mb-4 flex flex-wrap items-baseline gap-3">
         <h1 className="font-read text-3xl break-words text-ink-1">Edit {heading}</h1>
-        <p className="text-sm font-medium text-ink-1" data-testid="entry-status">
-          {STATUS_LABELS[status]}
-        </p>
+        <Badge data-testid="entry-status">{STATUS_LABELS[status]}</Badge>
       </div>
       <div className="mb-6 flex max-w-prose flex-col gap-3">
         <p className="text-sm text-ink-2">
@@ -136,7 +133,7 @@ export function AiImportEntryEditor({
             ))}
           </ul>
         ) : null}
-        <details className="rounded-sm border border-line bg-surface-1">
+        <details className="rounded-md border border-line bg-surface-1">
           <summary className="tap-target cursor-pointer px-3 py-2 text-sm font-medium text-ink-1">
             Show the document&apos;s words
           </summary>
@@ -151,7 +148,7 @@ export function AiImportEntryEditor({
           role="alertdialog"
           aria-labelledby={askId}
           tabIndex={-1}
-          className="mb-4 flex flex-col gap-3 rounded-sm border border-line bg-surface-1 p-4"
+          className="mb-4 flex flex-col gap-3 rounded-md border border-line bg-surface-1 p-4"
         >
           <p id={askId} className="text-sm font-medium text-ink-1">
             This question has unsaved changes

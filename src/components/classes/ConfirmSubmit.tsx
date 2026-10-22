@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { FieldError } from "@/components/authoring/FieldError";
 import { Button } from "@/components/ui/Button";
 
 /**
@@ -172,10 +173,11 @@ export function ConfirmSubmit({
           </Button>
         </div>
         {/* Always rendered: a region that appears with its text already in it is often not read. */}
-        <p id={messageId} aria-live="polite" className="text-sm text-incorrect">
-          {/* Keyed by the failure, so the same sentence twice in a row is a new node, read again. */}
-          {message ? <span key={failures}>{message}</span> : null}
-        </p>
+        <div id={messageId} aria-live="polite">
+          {/* Keyed by the failure, so the same sentence twice in a row is a new node, read again.
+              Ink with an alert icon, not red: red marks answers (PLAN D11). */}
+          {message ? <FieldError key={failures}>{message}</FieldError> : null}
+        </div>
       </form>
     </div>
   );

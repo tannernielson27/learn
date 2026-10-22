@@ -219,7 +219,7 @@ const home = await import("./page");
 const layout = await import("./layout");
 const bank = await import("./banks/[bankId]/page");
 const workspace = await import("./workspace/page");
-const classes = await import("./classes/page");
+const classes = await import("./classes/(list)/page");
 const classPage = await import("./classes/[classId]/page");
 
 const item = (id: string, stemExcerpt: string, over: Record<string, unknown> = {}) => ({
@@ -642,6 +642,27 @@ describe("library folders (#411)", () => {
     await expect(homePage({ folder: "00000000-0000-4000-8000-0000000000ff" })).rejects.toThrow(
       "notFound",
     );
+  });
+
+  it("lists every quiz with its folder in All quizzes, each with Start", async () => {
+    withLibraryFolders();
+    state.banks = [
+      { ...(state.banks[0] as object), folderId: LIB_CHILD },
+      { ...(state.banks[1] as object), folderId: null },
+    ];
+    render(await homePage({ folder: "all" }));
+    expect(screen.getByRole("heading", { level: 1, name: "Library" })).toBeInTheDocument();
+    const rail = within(screen.getByRole("list", { name: "Folders" }));
+    expect(rail.getByRole("link", { name: "All quizzes" })).toHaveAttribute("aria-current", "page");
+    const quizzes = within(screen.getByRole("list", { name: "Quizzes" }));
+    expect(quizzes.getByRole("link", { name: /Cardiac week/ })).toHaveTextContent(
+      "Med-Surg/Week 1",
+    );
+    expect(quizzes.getByRole("link", { name: /Renal week/ })).toHaveTextContent("Not in a folder");
+    expect(
+      quizzes.getByRole("button", { name: "Start a live session of Cardiac week" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Search quizzes" })).toBeInTheDocument();
   });
 
   it("lists the quizzes and offers no folder controls before folders are ready", async () => {
