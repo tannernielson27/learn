@@ -246,7 +246,7 @@ export async function listTaggedRows(
 }
 
 /** Postgres and PostgREST saying a column is not there: quiz_position before its migration. */
-const BEFORE_QUIZ_ORDER = new Set(["42703", "PGRST204", "PGRST100"]);
+const BEFORE_QUIZ_ORDER = new Set(["42703", "PGRST204"]);
 
 export interface CaseStudySummary {
   id: string;
@@ -279,7 +279,7 @@ export async function listCaseStudies(
     const narrowed = withStatus(matching(inView(query, view), "title", search), search);
     // #468: in the quiz's order without a search; a search keeps last edited first.
     const ordered = inQuizOrder
-      ? narrowed.order("quiz_position").order("created_at")
+      ? narrowed.order("quiz_position").order("created_at").order("id")
       : narrowed.order("updated_at", { ascending: false });
     return ordered.limit(CASE_STUDY_LIST_LIMIT);
   };

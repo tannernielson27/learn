@@ -36,6 +36,9 @@ export interface QuizOrderEditorProps {
 
 const INITIAL: QuizOrderState = { status: "idle" };
 
+/** What dnd-kit's hidden instructions say, in the glossary's words. */
+const QUIZ_ORDER_DRAG_HINT = "Use the arrow buttons to move a question or case study.";
+
 /**
  * The Change order screen (#468): every question and case study of a quiz in one list, moved with
  * the up and down buttons (keyboard, screen reader, any pointer) or dragged by the grip, then saved
@@ -47,6 +50,9 @@ export function QuizOrderEditor({ entries, action }: QuizOrderEditorProps) {
   const [saved, setSaved] = useState(() => entries.map((entry) => entry.id));
   const [order, setOrder] = useState(saved);
   const [message, setMessage] = useState("");
+  // The order last sent, so a refusal is shown only while the list still shows that order.
+  const [submitted, setSubmitted] = useState<readonly string[] | null>(null);
+  const savedLine = useRef<HTMLParagraphElement>(null);
   // A save that went through is the new starting point; adjusted during render, not in an effect.
   const [seen, setSeen] = useState(state);
   if (state !== seen) {
@@ -62,6 +68,11 @@ export function QuizOrderEditor({ entries, action }: QuizOrderEditorProps) {
   );
   const byId = new Map(entries.map((entry) => [entry.id, entry]));
   const changed = orderChanged(saved, order);
+
+  // Save order is disabled once the order is saved, so focus goes to the line that says so.
+  useEffect(() => {
+    if (state.status === "done") savedLine.current?.focus();
+  }, [state]);
 
   // Keyed rows move in the DOM when the order changes; put focus back on the moved entry's button.
   useEffect(() => {
@@ -91,7 +102,15 @@ export function QuizOrderEditor({ entries, action }: QuizOrderEditorProps) {
   };
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form
+      action={formAction}
+      onSubmit={(event) => {
+        // Stays enabled while saving, so focus is not dropped; a second press sends nothing.
+        if (pending) event.preventDefault();
+        else setSubmitted(order);
+      }}
+      className="flex flex-col gap-4"
+    >
       {order.map((id) => (
         <input key={id} type="hidden" name={QUIZ_ORDER_FIELD} value={id} />
       ))}
@@ -100,7 +119,11 @@ export function QuizOrderEditor({ entries, action }: QuizOrderEditorProps) {
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragEnd={onDragEnd}
-        accessibility={dndA11y.accessibility}
+        accessibility={{
+          ...dndA11y.accessibility,
+          // The grip is for a pointer only; the arrow buttons are the keyboard's way.
+          screenReaderInstructions: { draggable: QUIZ_ORDER_DRAG_HINT },
+        }}
       >
         <SortableContext items={order} strategy={verticalListSortingStrategy} disabled={pending}>
           <ol
@@ -130,18 +153,19 @@ export function QuizOrderEditor({ entries, action }: QuizOrderEditorProps) {
         {message}
       </p>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <Button type="submit" variant="primary" disabled={pending || !changed}>
+        <Button type="submit" variant="primary" disabled={!changed && !pending}>
           Save order
         </Button>
-        {changed && !pending ? (
-          <p className="text-sm text-ink-2">Not saved yet.</p>
-        ) : state.status === "done" ? (
-          <p role="status" className="text-sm text-ink-1">
-            {state.message}
-          </p>
-        ) : null}
+        {/* Always mounted, so a screen reader hears its words change. */}
+        <p ref={savedLine} role="status" tabIndex={-1} className="text-sm text-ink-1">
+          {changed && !pending
+            ? "Not saved yet."
+            : state.status === "done" && !changed
+              ? state.message
+              : ""}
+        </p>
       </div>
-      {state.status === "error" ? (
+      {state.status === "error" && submitted && !orderChanged(submitted, order) ? (
         <p role="alert" className="text-sm text-incorrect">
           {state.error}
         </p>

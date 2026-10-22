@@ -108,7 +108,12 @@ test("a teacher reorders three questions, and a live session runs them in that o
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow).toBeLessThanOrEqual(0);
-  expect(findRetiredTerms(await page.locator("body").innerHTML(), await page.title())).toEqual([]);
+  // The signed-in teacher's generated address is not copy.
+  const html = (await page.locator("body").innerHTML()).replace(
+    /author-[\w.+-]*(?:@[\w.-]+)?/g,
+    "",
+  );
+  expect(findRetiredTerms(html, await page.title())).toEqual([]);
   await shoot("quiz-order");
 
   await page.getByRole("button", { name: "Save order", exact: true }).click();

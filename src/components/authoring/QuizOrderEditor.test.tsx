@@ -76,7 +76,7 @@ describe("QuizOrderEditor", () => {
     await user.click(screen.getByRole("button", { name: 'Move "Sepsis" up' }));
     await user.click(screen.getByRole("button", { name: "Save order" }));
     expect(action.mock.calls[0][1].getAll("entry")).toEqual(["c1", "i1", "i2"]);
-    expect(await screen.findByText("Order saved.")).toBeInTheDocument();
+    expect(await screen.findByText("Order saved.")).toHaveFocus();
     expect(screen.getByRole("button", { name: "Save order" })).toBeDisabled();
     expect(screen.queryByText("Not saved yet.")).not.toBeInTheDocument();
   });
@@ -89,5 +89,9 @@ describe("QuizOrderEditor", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(error);
     expect(sent()).toEqual(["i1", "i2", "c1"]);
     expect(screen.getByRole("button", { name: "Save order" })).toBeEnabled();
+
+    // Once the list no longer shows the order that was refused, neither does the refusal.
+    await user.click(screen.getByRole("button", { name: 'Move "Sepsis" up' }));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

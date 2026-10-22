@@ -31,8 +31,9 @@
 -- direct PATCH of bank_id through the Data API. Each puts the row at the end of its quiz:
 --
 --   * on insert, always (a position a caller sends is ignored);
---   * on a change of bank_id, unless the same statement set a new position (move_quiz_content
---     below does, so a move keeps the moved entries' order);
+--   * on a change of bank_id, except inside move_quiz_content's one statement, which numbers the
+--     moved entries itself so a move keeps their order (it sets learn.quiz_move for that statement;
+--     comparing old and new positions would misfire whenever a new position equals the old one);
 --   * on a restore (status leaves 'archived'), so what comes back is found at the end.
 --
 -- "The end" is one more than the largest position held by any item or case study in the quiz.
@@ -93,8 +94,8 @@ alter table public.case_studies add column quiz_position integer;
 -- ---------------------------------------------------------------------------
 
 -- 20260913000000's private.set_updated_at, for items and case studies only, with one test added:
--- inside a write that set learn.quiz_order_write (reorder_quiz and move_quiz_content's numbering,
--- for the one statement that writes positions), updated_at is left as it was. The setting is
+-- inside a write that set learn.quiz_order_write (reorder_quiz's two updates, and the backfill),
+-- updated_at is left as it was. A move still counts as an edit, as it did before. The setting is
 -- transaction-local and reachable only by SQL running in the same transaction; the Data API gives
 -- a client no way to set it (set_config lives in pg_catalog, which is not exposed), the same line
 -- private.charge_authoring_action draws.
@@ -194,13 +195,16 @@ grant execute on function private.next_quiz_position(uuid) to authenticated, ser
 -- New, moved and restored entries go to the end
 -- ---------------------------------------------------------------------------
 
+-- Security definer, as private.charge_content_write is: the trigger fires for every writer,
+-- service_role included, and only authenticated has usage on the private schema it calls into.
+-- It reads and writes nothing but the row in hand and the quiz's end.
 create function private.place_at_quiz_end() returns trigger
-language plpgsql set search_path = ''
+language plpgsql security definer set search_path = ''
 as $$
 begin
   if tg_op = 'INSERT'
      or (new.bank_id is distinct from old.bank_id
-         and new.quiz_position is not distinct from old.quiz_position)
+         and coalesce(current_setting('learn.quiz_move', true), '') <> 'on')
      or (old.status = 'archived' and new.status <> 'archived') then
     perform private.lock_quiz_order(new.bank_id);
     new.quiz_position := private.next_quiz_position(new.bank_id);
@@ -431,7 +435,8 @@ begin
 
   -- One statement, so the composite keys between the three tables are checked once, at its end,
   -- when every row names the target quiz. Every moved row gets its new position in the same
-  -- statement, so the place-at-end trigger leaves it alone.
+  -- statement, and learn.quiz_move tells the place-at-end trigger to leave it alone.
+  perform set_config('learn.quiz_move', 'on', true);
   with moving as (
     select cs.id, false as is_step, cs.quiz_position, cs.created_at
       from public.case_studies cs
@@ -471,6 +476,7 @@ begin
   select (select count(*) from moved_case_rows), (select count(*) from moved_item_rows)
     into moved_cases, moved_items
     from (select count(*) from moved_step_rows) steps_written;
+  perform set_config('learn.quiz_move', '', true);
 
   -- Questions chosen on their own, as against the steps their case studies carried.
   chosen_items := cardinality(array(select unnest(wanted_items) except select unnest(step_ids)));

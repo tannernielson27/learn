@@ -273,11 +273,11 @@ select is(
   'a whole-quiz live session runs its published loose questions in quiz order, without the step'
 );
 
-insert into public.assignments (id, class_id, bank_id, title, opens_at, closes_at)
-values (pg_temp.u('a02'), pg_temp.u('a01'), pg_temp.u('b01'), 'Ordered',
+insert into public.assignments (class_id, bank_id, title, opens_at, closes_at)
+values (pg_temp.u('a01'), pg_temp.u('b01'), 'Ordered 468',
         now() - interval '1 hour', now() + interval '1 day');
 select is(
-  (select item_set from public.assignments where id = pg_temp.u('a02')),
+  (select item_set from public.assignments where title = 'Ordered 468'),
   jsonb_build_array(pg_temp.u('105'), pg_temp.u('102'), pg_temp.u('101')),
   'and so does a whole-quiz assignment'
 );
