@@ -157,11 +157,12 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
       .getByRole("list", { name: "Options", exact: true })
       .getByRole("listitem")
       .filter({ hasText: OPTIONS[index] as string });
-  await expect(resultRow(0)).toContainText("3 of 3 · 100%", { timeout: 15_000 });
-  await expect(resultRow(1)).toContainText("2 of 3 · 67%");
-  await expect(resultRow(2)).toContainText("1 of 3 · 33%");
-  await expect(resultRow(3)).toContainText("0 of 3 · 0%");
-  await expect(page.getByTestId("result-correct")).toHaveCount(0);
+  await expect(resultRow(0)).toContainText("3 · 100%", { timeout: 15_000 });
+  await expect(resultRow(1)).toContainText("2 · 67%");
+  await expect(resultRow(2)).toContainText("1 · 33%");
+  await expect(resultRow(3)).toContainText("0 · 0%");
+  // The shared chart marks a key row with `data-key`, a check and the word "Correct".
+  await expect(page.locator("li[data-key]")).toHaveCount(0);
   await expectNoAxeViolations(page);
   await page.screenshot({
     path: `test-results/screenshots/${testInfo.project.name}/live-results-console.png`,
@@ -172,7 +173,7 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
   await page.getByRole("button", { name: "Hide results", exact: true }).click();
   await expect(page.getByRole("list", { name: "Options", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Show results", exact: true }).click();
-  await expect(resultRow(0)).toContainText("3 of 3 · 100%");
+  await expect(resultRow(0)).toContainText("3 · 100%");
 
   // A reload mid-item comes back to the answer that was sent, not to a blank form.
   const reloaded = phones[0] as Page;
@@ -201,13 +202,14 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
   await expectNoAxeViolations(phones[0] as Page);
 
   // And on the console, the two correct options are now marked, in words, and only those.
-  await expect(page.getByTestId("result-correct")).toHaveCount(CORRECT.length, {
+  await expect(page.locator("li[data-key]")).toHaveCount(CORRECT.length, {
     timeout: 15_000,
   });
   for (const index of CORRECT) {
-    await expect(resultRow(index).getByTestId("result-correct")).toContainText("Correct");
+    await expect(resultRow(index)).toHaveAttribute("data-key", "");
+    await expect(resultRow(index)).toContainText("Correct");
   }
-  await expect(resultRow(2).getByTestId("result-correct")).toHaveCount(0);
+  await expect(resultRow(2)).not.toHaveAttribute("data-key");
   await expectNoAxeViolations(page);
 
   // The phone that did not answer sees the key and the rationale too, with no marks (#181).

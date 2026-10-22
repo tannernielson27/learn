@@ -93,6 +93,10 @@ export function ControlBar({ state, commands, busy, onCommand, summary }: Contro
     <>
       <div
         data-testid="control-bar"
+        // While a question is open the bar waits behind it, out of reach and out of the
+        // accessibility tree, so the dialog's button is the one "End live session" there is.
+        inert={asked !== null}
+        aria-hidden={asked === null ? undefined : true}
         className="sticky bottom-0 z-1 border-t border-line bg-surface-1 px-4 py-3 [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))] sm:px-8"
       >
         <div className="mx-auto flex w-full max-w-7xl flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
