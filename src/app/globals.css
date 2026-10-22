@@ -273,4 +273,47 @@
       transition: none;
     }
   }
+  /* A toast (ui/Toast) arriving in the top layer and leaving: as the dialog, on :popover-open. */
+  .motion-toast {
+    opacity: 0;
+    transform: translateY(var(--motion-shift));
+    transition:
+      opacity var(--duration-base) var(--ease-out-expo),
+      transform var(--duration-base) var(--ease-out-expo),
+      display var(--duration-base) allow-discrete,
+      overlay var(--duration-base) allow-discrete;
+  }
+  .motion-toast:popover-open {
+    opacity: 1;
+    transform: none;
+  }
+  @starting-style {
+    .motion-toast:popover-open {
+      opacity: 0;
+      transform: translateY(var(--motion-shift));
+    }
+  }
+
+  /* A results bar growing to its length once, from the left (ui/ResultsChart). The element's own
+     transform is where it ends. Reduced motion: an 80ms fade instead, nothing moves. */
+  .motion-grow {
+    animation: grow-x var(--duration-slow) var(--ease-out-expo) both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .motion-grow {
+      animation-name: fade-in;
+    }
+  }
+}
+
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
 }
