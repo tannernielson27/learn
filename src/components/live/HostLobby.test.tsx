@@ -636,6 +636,11 @@ describe("HostLobby: a student-paced room (#185)", () => {
     expect(button("Show answers")).toBeDisabled();
   });
 
+  it("offers no time per question in the lobby: each phone keeps its own pace", () => {
+    setup(state({ mode: "student_paced" }));
+    expect(screen.queryByRole("combobox", { name: "Time per question" })).toBeNull();
+  });
+
   it("starts from the lobby with the same Start button", async () => {
     const fake = setup(state({ mode: "student_paced" }));
     await fake.user.click(button("Start"));

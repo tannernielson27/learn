@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Roster } from "@/components/live/Roster";
 import { TimeChoice } from "@/components/live/TimerControls";
-import type { LiveSessionState, RosterEntry } from "@/lib/live";
+import { isStudentPaced, type LiveSessionState, type RosterEntry } from "@/lib/live";
 import { formatSessionCode } from "@/lib/live/sessionCode";
 import { ProjectorNotice } from "./ProjectorNotice";
 
@@ -61,7 +61,10 @@ export function ControlLobby({
           </div>
         </section>
         <ProjectorNotice projectorHref={projectorHref} onPresent={onPresent} />
-        <TimeChoice state={state} busy={busy} onChoose={onChoose} />
+        {/* A student-paced room (#185) has no clock per question: each phone keeps its own pace. */}
+        {isStudentPaced(state) ? null : (
+          <TimeChoice state={state} busy={busy} onChoose={onChoose} />
+        )}
       </div>
       <Roster roster={roster} />
     </div>
