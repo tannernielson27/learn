@@ -10,7 +10,7 @@
 --      content, a repeat, nothing), another workspace's quiz, another workspace's teacher, a
 --      student. The reorder holds the quiz's order lock, which adds and moves take too.
 --   6. A whole-quiz live session and assignment run the published loose questions in quiz order;
---      a case study's step is never one of them. The quiz page lists in quiz order, steps last.
+--      a case study's step is never one of them. The quiz page lists in quiz order, with no steps.
 --   7. A restore, a duplicate, a JSON import, a move to another quiz (in source order) and a
 --      direct change of bank_id all land at the end.
 --
@@ -287,8 +287,8 @@ select is(
      from public.list_bank_items(pg_temp.u('b01'))
           with ordinality as l(id, type, status, updated_at, cjmm_step, tags, stem, max_points,
                                stem_match, text_match, rationale_match, total_count, n)),
-  array[pg_temp.u('105'), pg_temp.u('104'), pg_temp.u('102'), pg_temp.u('101'), pg_temp.u('111')],
-  'the quiz page lists its questions in quiz order, and step questions after them'
+  array[pg_temp.u('105'), pg_temp.u('104'), pg_temp.u('102'), pg_temp.u('101')],
+  'the quiz page lists its questions in quiz order, and no step question: those are in their case study'
 );
 
 update public.items set tags = '{edited}' where id = pg_temp.u('105');

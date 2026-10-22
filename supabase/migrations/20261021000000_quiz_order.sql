@@ -496,9 +496,10 @@ $$;
 -- The quiz page's question list, in quiz order without a search
 -- ---------------------------------------------------------------------------
 
--- 20260919160000's function with the order changed and nothing else. With no search, loose
--- questions come in quiz order and step questions after them (in their own quiz positions); with a
--- search, relevance then last edit, as before. The signature is unchanged, so the grants stand.
+-- 20260919160000's function with two changes. A case study's step questions are left out: they
+-- live inside their case study, which the quiz page lists apart (owner decision 2026-10-21). And
+-- with no search, the questions come in quiz order; with a search, relevance then last edit, as
+-- before. The signature is unchanged, so the grants stand.
 create or replace function public.list_bank_items(
   target_bank uuid,
   search text default null,
@@ -542,14 +543,13 @@ as $$
            i.scoring -> 'maxPoints' as max_points, i.search_vector,
            case when q.query is null then 0 else ts_rank(i.search_vector, q.query) end as rank,
            -- #468: the quiz's order, without a search only; null (all equal) while searching.
-           case when q.query is null then
-             exists (select 1 from public.case_study_items csi where csi.item_id = i.id)
-           end as is_step,
            case when q.query is null then i.quiz_position end as quiz_position,
            count(*) over () as total_count
     from public.items i
     cross join q
     where i.bank_id = target_bank
+      -- #468: a step question is listed inside its case study, never as a question of its own.
+      and not exists (select 1 from public.case_study_items csi where csi.item_id = i.id)
       and (q.query is null or i.search_vector @@ q.query)
       and (item_type is null or i.type = item_type)
       -- Archived items only when asked for by name.
@@ -561,7 +561,7 @@ as $$
       and (not coalesce(unfiled_only, false) or i.folder_id is null)
       and (coalesce(cardinality(with_tags), 0) = 0 or i.tags @> with_tags)
       and (with_step is null or i.cjmm_step = with_step)
-    order by rank desc, is_step, quiz_position, i.updated_at desc, i.id
+    order by rank desc, quiz_position, i.updated_at desc, i.id
     limit least(greatest(coalesce(page_size, 50), 1), 200)
     offset least(greatest(coalesce(page_offset, 0), 0), 100000)
   )
@@ -599,7 +599,7 @@ as $$
       and coalesce(strpos(s.headline, chr(2)), 0) = 0
       and coalesce(strpos(t.headline, chr(2)), 0) = 0
   ) r on true
-  order by p.rank desc, p.is_step, p.quiz_position, p.updated_at desc, p.id
+  order by p.rank desc, p.quiz_position, p.updated_at desc, p.id
 $$;
 
 -- ---------------------------------------------------------------------------
