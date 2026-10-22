@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { PRESS_CLASSES } from "@/components/ui/Button";
+import { buttonClasses } from "@/components/ui/Button";
+import { TextLink } from "@/components/ui/TextLink";
 import type { LandingEntry } from "@/lib/auth/landing";
 
 /**
@@ -18,8 +19,8 @@ const SAMPLE = {
     "which findings in the 1400 nurses' note need immediate follow-up.",
 } as const;
 
-const PRIMARY = `tap-target inline-flex items-center justify-center rounded-sm border border-accent bg-accent px-5 font-medium text-accent-contrast hover:bg-accent-ink ${PRESS_CLASSES}`;
-const SECONDARY = `tap-target inline-flex items-center justify-center rounded-sm border border-line-strong bg-surface-1 px-5 font-medium text-ink-1 hover:bg-surface-2 ${PRESS_CLASSES}`;
+const PRIMARY = buttonClasses({ variant: "primary", size: "lg" });
+const SECONDARY = buttonClasses({ variant: "secondary", size: "lg" });
 
 /** One line each (#416). Every claim is something the product does today. */
 const WHAT_IT_DOES = [
@@ -58,7 +59,7 @@ function Rows({ rows }: { rows: readonly Row[] }) {
     <dl className="mt-6 grid gap-x-10 gap-y-6 sm:grid-cols-2">
       {rows.map(({ term, detail }) => (
         <div key={term}>
-          <dt className="font-medium text-ink-1">{term}</dt>
+          <dt className="font-semibold text-ink-1">{term}</dt>
           <dd className="mt-1 max-w-prose leading-relaxed text-ink-2">{detail}</dd>
         </div>
       ))}
@@ -71,15 +72,21 @@ export interface LandingProps {
   entry: LandingEntry;
 }
 
-/** The public front page (#264). Static apart from `entry`; no item component renders here. */
+/**
+ * The public front page (#264). Static apart from `entry`; no item component renders here.
+ *
+ * Two primary actions, one per reader: the account (or the signed-in visitor's home) with Sign in
+ * beside it, and, set apart under a rule, Join a live session for a student in class right now,
+ * who needs no account. The order of the links is unchanged.
+ */
 export function Landing({ entry }: LandingProps) {
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-10 pb-16 sm:px-6 sm:pt-16 lg:px-8">
+    <main className="mx-auto w-full max-w-wide flex-1 px-5 pt-10 pb-16 sm:px-6 sm:pt-16 lg:px-8">
       <p className="eyebrow">LeaRN</p>
 
       <div className="mt-4 grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-12">
         <div>
-          <h1 className="font-read text-4xl leading-tight text-ink-1 sm:text-5xl">
+          <h1 className="font-read text-display leading-tight text-ink-1">
             Live learning for the Next Generation NCLEX.
           </h1>
           <p className="mt-5 max-w-prose text-lg leading-relaxed text-ink-2">
@@ -95,9 +102,12 @@ export function Landing({ entry }: LandingProps) {
                 {entry.also.label}
               </Link>
             ) : null}
-            <Link href="/join" className={SECONDARY}>
+          </div>
+          <div className="mt-6 flex flex-col gap-3 border-t border-line pt-6 sm:flex-row sm:items-center sm:gap-5">
+            <Link href="/join" className={PRIMARY}>
               Join a live session
             </Link>
+            <p className="text-ink-2">In class now? No account needed.</p>
           </div>
         </div>
 
@@ -137,12 +147,9 @@ export function Landing({ entry }: LandingProps) {
         <p>Every patient shown in LeaRN is fictional.</p>
         {/* #269: the teacher and question guides are public. */}
         <nav aria-label="Footer">
-          <Link
-            href="/help"
-            className="tap-target inline-flex items-center text-accent-ink underline underline-offset-4"
-          >
+          <TextLink href="/help" size="sm">
             Help
-          </Link>
+          </TextLink>
         </nav>
       </div>
     </main>

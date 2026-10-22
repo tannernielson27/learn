@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { HelpFigure } from "@/components/help/HelpFigure";
+import { TextLink, textLinkClasses } from "@/components/ui/TextLink";
 import { HELP_FIGURES } from "@/lib/help/itemGuide";
 
 export const metadata: Metadata = { title: "Teacher guide" };
@@ -67,13 +67,11 @@ function Contents() {
   return (
     <nav aria-label="On this page" className="rounded-md border border-line bg-surface-1 p-4">
       <p className="eyebrow">On this page</p>
-      <ol className="mt-2 grid list-inside list-decimal gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
+      {/* Each a 44px standalone link: the list is a set of targets, not a sentence (WCAG 2.5.8). */}
+      <ol className="mt-2 grid list-decimal gap-x-6 pl-5 text-sm marker:text-ink-2 sm:grid-cols-2">
         {SECTIONS.map((section) => (
           <li key={section.id}>
-            <a
-              href={`#${section.id}`}
-              className="text-accent-ink underline-offset-4 hover:underline"
-            >
+            <a href={`#${section.id}`} className={textLinkClasses({ size: "sm" })}>
               {section.title}
             </a>
           </li>
@@ -88,14 +86,12 @@ export default function InstructorGuide() {
     <article className="flex flex-col gap-10">
       <header>
         <p className="eyebrow">Help</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink-1 sm:text-3xl">
-          Teacher guide
-        </h1>
+        <h1 className="mt-2 font-read text-display leading-tight text-ink-1">Teacher guide</h1>
         <p className="measure mt-3 text-lg text-ink-2">
           For how each format is scored, see the{" "}
-          <Link href="/help/items" className="text-accent-ink underline underline-offset-4">
+          <TextLink href="/help/items" kind="inline">
             question guide
-          </Link>
+          </TextLink>
           .
         </p>
       </header>
@@ -129,8 +125,12 @@ export default function InstructorGuide() {
               <Ui>Sign in with an emailed link instead</Ui> signs you in without a password.
             </li>
             <li>
-              To change your password, open <Ui>Account</Ui> and press <Ui>Change your password</Ui>
-              .
+              To change your password, open the account menu (your initials, top right), choose{" "}
+              <Ui>Account</Ui> and press <Ui>Change your password</Ui>.
+            </li>
+            <li>
+              The account menu also holds <Ui>Help</Ui>, the theme (<Ui>System</Ui>, <Ui>Light</Ui>{" "}
+              or <Ui>Dark</Ui>) and <Ui>Sign out</Ui>.
             </li>
             <li>
               If no email arrives, check the spelling. The form never says whether an address has an
@@ -349,6 +349,10 @@ export default function InstructorGuide() {
           <li>
             Put the lobby on the projector. Students go to the join page, type the six-character
             join code or scan the QR code, and give a display name. They need no account.
+          </li>
+          <li>
+            For the projector, press <Ui>Open in a new window</Ui> or{" "}
+            <Ui>Present on this screen</Ui> in the lobby: that view shows no controls.
           </li>
           <li>
             Set <Ui>Time per question</Ui> if you want a timer, then press <Ui>Start</Ui>.
