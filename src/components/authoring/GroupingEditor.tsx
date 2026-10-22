@@ -16,6 +16,8 @@ import {
 import { describeIssues } from "@/lib/authoring/issueMessages";
 import { multipleResponseGroupingItemSchema, type ItemInputOf } from "@/lib/ngn/schemas";
 import { EditorShell, issueMessageId, type SaveResult } from "./EditorShell";
+import { fieldClasses } from "@/components/ui/fieldClasses";
+import { CorrectToggle } from "./CorrectToggle";
 
 export interface GroupingEditorProps {
   initialValues: GroupingFormValues;
@@ -30,8 +32,7 @@ const MIN_OPTIONS = 2;
 const MAX_OPTIONS = 4;
 
 const letter = (index: number) => String.fromCharCode(65 + index);
-const fieldClass =
-  "w-full rounded-sm border border-line bg-surface-1 px-3 py-2 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect";
+const fieldClass = fieldClasses("px-3 py-2 text-base");
 
 function unusedId(base: string, taken: ReadonlySet<string>): string {
   for (let i = 1; i < 100; i += 1) {
@@ -105,13 +106,15 @@ function GroupFields({
         const labelField = `rows.${rowIndex}.options.${optionIndex}.label`;
         return (
           <div key={field.fieldKey} className="flex flex-wrap items-center gap-3">
-            <input
-              type="checkbox"
-              aria-label={`Option ${L} is correct`}
-              aria-describedby={describedBy(correctField)}
-              className="size-5 accent-accent"
-              {...register(`rows.${rowIndex}.options.${optionIndex}.correct`)}
-            />
+            <CorrectToggle>
+              <input
+                type="checkbox"
+                aria-label={`Option ${L} is correct`}
+                aria-describedby={describedBy(correctField)}
+                className="size-5 accent-accent"
+                {...register(`rows.${rowIndex}.options.${optionIndex}.correct`)}
+              />
+            </CorrectToggle>
             <label
               htmlFor={`${ids}-group-${rowIndex}-opt-${optionIndex}`}
               className="w-16 shrink-0 text-sm text-ink-1"

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Badge } from "@/components/ui/Badge";
 import { EmptyState, type EmptyStateContent } from "@/components/ui/EmptyState";
 import { NO_CASE_STUDIES_YET } from "@/lib/authoring/bankEmpty";
 import type { CaseStudySummary } from "@/lib/authoring/banks";
@@ -39,7 +40,7 @@ export function CaseStudyList({
   return (
     <ul
       aria-label="Case studies"
-      className="flex flex-col divide-y divide-line border-y border-line"
+      className="flex flex-col divide-y divide-line rounded-md border border-line bg-surface-1"
     >
       {caseStudies.map((caseStudy) => (
         <li key={caseStudy.id} className="flex items-stretch">
@@ -56,8 +57,10 @@ export function CaseStudyList({
             className="tap-target flex min-w-0 flex-1 flex-col gap-1 px-2 py-3 transition-colors duration-fast hover:bg-surface-2"
           >
             <span className="text-ink-1">{caseStudy.title}</span>
-            <span className="flex flex-wrap gap-x-3 text-sm text-ink-2">
-              <span>{STATUS_LABELS[caseStudy.status]}</span>
+            <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">
+              <Badge tone={caseStudy.status === "draft" ? "accent" : "neutral"}>
+                {STATUS_LABELS[caseStudy.status]}
+              </Badge>
               <span>{`${Math.min(caseStudy.stepCount, 6)} of 6 steps`}</span>
               <span>{formatEdited(caseStudy.updatedAt)}</span>
             </span>

@@ -1,3 +1,4 @@
+import { ReadingWidth } from "@/components/authoring/PageWidth";
 import { Skeleton, SkeletonLine, SkeletonScreen } from "@/components/ui/Skeleton";
 
 const MEMBER_ROWS = 2;
@@ -11,30 +12,33 @@ const MEMBER_ROWS = 2;
  */
 export default function WorkspaceLoading() {
   return (
-    <SkeletonScreen label="Loading the workspace">
-      <SkeletonLine lineClassName="mb-1 h-5" className="h-3.5 w-24" />
-      {/* The page's h1 is the workspace's name, not known yet. A real h1 named for the page, in
+    // The page's reading column, so the page lands where its outline stood.
+    <ReadingWidth>
+      <SkeletonScreen label="Loading the workspace">
+        <SkeletonLine lineClassName="mb-1 h-5" className="h-3.5 w-24" />
+        {/* The page's h1 is the workspace's name, not known yet. A real h1 named for the page, in
           the name's line box, so the screen keeps its one heading and nothing shifts. */}
-      <h1 className="mb-8 flex h-[2.7rem] items-center">
-        <span className="sr-only">Workspace</span>
-        <Skeleton className="h-8 w-64 max-w-full" />
-      </h1>
+        <h1 className="mb-8 flex h-[2.7rem] items-center">
+          <span className="sr-only">Workspace</span>
+          <Skeleton className="h-8 w-64 max-w-full" />
+        </h1>
 
-      <div className="mb-10">
-        <SkeletonLine lineClassName="mb-3 h-7" className="h-5 w-24" />
-        <div className="flex flex-col divide-y divide-line border-y border-line">
-          {Array.from({ length: MEMBER_ROWS }, (_, row) => (
-            <div key={row} className="flex flex-col px-2 py-3">
-              <SkeletonLine lineClassName="h-[1.6rem]" className="h-4 w-40" />
-              <SkeletonLine lineClassName="h-5" className="h-3.5 w-52 max-w-full" />
-              <SkeletonLine lineClassName="h-5" className="h-3.5 w-36" />
-            </div>
-          ))}
+        <div className="mb-10">
+          <SkeletonLine lineClassName="mb-3 h-7" className="h-5 w-24" />
+          <div className="flex flex-col divide-y divide-line border-y border-line">
+            {Array.from({ length: MEMBER_ROWS }, (_, row) => (
+              <div key={row} className="flex flex-col px-2 py-3">
+                <SkeletonLine lineClassName="h-[1.6rem]" className="h-4 w-40" />
+                <SkeletonLine lineClassName="h-5" className="h-3.5 w-52 max-w-full" />
+                <SkeletonLine lineClassName="h-5" className="h-3.5 w-36" />
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
 
-      <SkeletonLine lineClassName="mb-2 h-7" className="h-5 w-44" />
-      <SkeletonLine lineClassName="h-[1.6rem]" className="h-4 w-full max-w-prose" />
-    </SkeletonScreen>
+        <SkeletonLine lineClassName="mb-2 h-7" className="h-5 w-44" />
+        <SkeletonLine lineClassName="h-[1.6rem]" className="h-4 w-full max-w-prose" />
+      </SkeletonScreen>
+    </ReadingWidth>
   );
 }

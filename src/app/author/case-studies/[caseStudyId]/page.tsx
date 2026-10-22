@@ -23,7 +23,12 @@ import { editorFor, storedItemOf } from "@/components/authoring/editorFor";
 import { ItemEditorLoader } from "@/components/authoring/ItemEditorLoader";
 import { StepItemPanel } from "@/components/authoring/StepItemPanel";
 import { StepTypeChooser } from "@/components/authoring/StepTypeChooser";
+import { ReadingWidth } from "@/components/authoring/PageWidth";
+import { Badge } from "@/components/ui/Badge";
 import { Button, buttonClasses } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Notice } from "@/components/ui/Notice";
+import { TextLink, textLinkClasses } from "@/components/ui/TextLink";
 import { caseStudyBlockers, stepsReadyLabel } from "@/lib/authoring/caseStudyReadiness";
 import { ehrFormFromStored, previewRecord } from "@/lib/authoring/forms/ehr";
 import { isUuid } from "@/lib/authoring/ids";
@@ -118,13 +123,13 @@ export default async function CaseStudyPage({
       <p className="eyebrow mb-1">Case study</p>
       <div className="mb-6 flex flex-wrap items-baseline gap-3">
         <h1 className="font-read text-3xl text-ink-1">{row.title}</h1>
-        <p className="text-sm text-ink-2">{STATUS_LABELS[row.status]}</p>
+        <Badge>{STATUS_LABELS[row.status]}</Badge>
         {/* Only a case study with its patient record and six finished steps exports. */}
         {preview.ok ? (
           <a
             href={`/author/case-studies/${row.id}/export`}
             download
-            className="text-sm text-accent-ink underline-offset-4 hover:underline"
+            className={textLinkClasses({ size: "sm" })}
           >
             Export JSON
           </a>
@@ -169,18 +174,21 @@ export default async function CaseStudyPage({
   // only what it is, and the way to restore it.
   if (row.status === "archived") {
     return (
-      <>
-        <p className="mb-2 text-sm">
-          <Link href={bankHref} className="text-accent-ink underline-offset-4 hover:underline">
+      // One column: with no builder there is no rail.
+      <ReadingWidth>
+        <p className="mb-2">
+          <TextLink href={bankHref} size="sm">
             Back to quiz
-          </Link>
+          </TextLink>
         </p>
         {header}
-        <p className="mb-6 max-w-prose rounded-sm border border-line bg-surface-2 p-3 text-ink-1">
-          This case study is archived. It is out of the quiz, and its patient record and questions
-          cannot change. Restore it to edit it.
-        </p>
-      </>
+        <Card tone="inset" padding="sm" className="mb-6 max-w-prose">
+          <p className="text-ink-1">
+            This case study is archived. It is out of the quiz, and its patient record and questions
+            cannot change. Restore it to edit it.
+          </p>
+        </Card>
+      </ReadingWidth>
     );
   }
 
@@ -190,6 +198,7 @@ export default async function CaseStudyPage({
     steps: stepStates,
   });
 
+  // Wide: the builder has its step rail beside the open step (PLAN §6).
   return (
     <>
       <CaseStudyBuilder
@@ -206,25 +215,24 @@ export default async function CaseStudyPage({
       >
         {header}
         {liveRefusal ? (
-          <p role="alert" className="mb-6 text-sm text-incorrect">
+          <Notice role="alert" className="mb-6">
             {liveRefusal}
-          </p>
+          </Notice>
         ) : null}
       </CaseStudyBuilder>
 
       {blockers.length > 0 ? (
-        <section
-          aria-labelledby="blockers-heading"
-          className="mt-8 rounded-sm border border-line p-4"
-        >
-          <h2 id="blockers-heading" className="mb-2 text-sm font-medium text-ink-1">
-            Before publishing
-          </h2>
-          <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-ink-1">
-            {blockers.map((blocker) => (
-              <li key={blocker}>{blocker}</li>
-            ))}
-          </ul>
+        <section aria-labelledby="blockers-heading" className="mt-8">
+          <Card padding="sm">
+            <h2 id="blockers-heading" className="mb-2 text-sm font-medium text-ink-1">
+              Before publishing
+            </h2>
+            <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-ink-1">
+              {blockers.map((blocker) => (
+                <li key={blocker}>{blocker}</li>
+              ))}
+            </ul>
+          </Card>
         </section>
       ) : (
         <p className="mt-8 text-ink-1">Ready to publish.</p>

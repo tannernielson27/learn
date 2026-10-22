@@ -5,6 +5,7 @@ import type { ConfirmOutcome } from "@/components/classes/ConfirmSubmit";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { StaysBehindList } from "./StaysBehindList";
+import { FieldError } from "./FieldError";
 
 export interface TurnFolderIntoQuizButtonProps {
   /** `turnFolderIntoQuizAction`, bound to the quiz and the folder. Opens the new quiz on success. */
@@ -106,9 +107,9 @@ export function TurnFolderIntoQuizButton({
         <div className="flex flex-col gap-3">
           <StaysBehindList lines={staysBehind} />
           {/* Always rendered: a region that appears with its text already in it is often not read. */}
-          <p id={messageId} aria-live="polite" className="text-sm text-incorrect">
+          <FieldError id={messageId} aria-live="polite">
             {message ? <span key={failures}>{message}</span> : null}
-          </p>
+          </FieldError>
         </div>
       </Dialog>
     </>

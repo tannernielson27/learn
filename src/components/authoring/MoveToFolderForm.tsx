@@ -4,6 +4,8 @@ import { startTransition, useActionState, useEffect, useId, useRef, type FormEve
 import { Button } from "@/components/ui/Button";
 import { folderOptions, NOT_IN_A_FOLDER, UNFILED, type FolderRow } from "@/lib/authoring/folders";
 import type { FolderFormState } from "./FolderNameForm";
+import { fieldClasses } from "@/components/ui/fieldClasses";
+import { FieldError } from "./FieldError";
 
 export interface MoveToFolderFormProps {
   /** The lists' checkboxes join this form by its id. */
@@ -50,7 +52,7 @@ export function MoveToFolderForm({ id, folders, action }: MoveToFolderFormProps)
             defaultValue=""
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? `${uid}-error` : undefined}
-            className="tap-target max-w-full rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect"
+            className={fieldClasses("max-w-full px-3 text-base")}
           >
             <option value="" disabled>
               Choose a folder
@@ -68,9 +70,9 @@ export function MoveToFolderForm({ id, folders, action }: MoveToFolderFormProps)
         </Button>
       </div>
       {error ? (
-        <p id={`${uid}-error`} role="alert" className="text-sm text-incorrect">
+        <FieldError id={`${uid}-error`} role="alert">
           {error}
-        </p>
+        </FieldError>
       ) : null}
       {state.status === "done" ? (
         <p role="status" className="text-sm text-ink-2">

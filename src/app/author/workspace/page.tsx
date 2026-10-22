@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { ReadingWidth } from "@/components/authoring/PageWidth";
+import { Notice } from "@/components/ui/Notice";
 import { InviteColleagueForm } from "@/components/workspace/InviteColleagueForm";
 import { MemberList } from "@/components/workspace/MemberList";
 import { PendingInvites } from "@/components/workspace/PendingInvites";
@@ -45,7 +47,7 @@ export default async function WorkspacePage() {
   const canRemove = canInvite && founderId === userId;
 
   return (
-    <>
+    <ReadingWidth>
       {/* The way back to the library is the layout's navigation (#412). */}
       <p className="mb-1 font-mono text-sm tracking-wide text-ink-2 uppercase">Workspace</p>
       {/* The name is a teacher's own words: text, never markup. */}
@@ -53,9 +55,9 @@ export default async function WorkspacePage() {
         {workspace ? workspace.name : "Your workspace"}
       </h1>
       {workspace ? null : (
-        <p role="alert" className="mb-8 text-ink-2">
+        <Notice role="alert" className="mb-8">
           The workspace could not be loaded. Reload the page to try again.
-        </p>
+        </Notice>
       )}
 
       <section aria-labelledby="members-heading" className="mb-10">
@@ -69,9 +71,9 @@ export default async function WorkspacePage() {
           ) : null}
         </div>
         {members === null ? (
-          <p role="alert" className="text-ink-2">
+          <Notice role="alert">
             The teachers could not be loaded. Reload the page to try again.
-          </p>
+          </Notice>
         ) : (
           <MemberList
             members={members}
@@ -127,9 +129,9 @@ export default async function WorkspacePage() {
               Pending invitations
             </h2>
             {invites === null ? (
-              <p role="alert" className="text-ink-2">
+              <Notice role="alert">
                 The invitations could not be loaded. Reload the page to try again.
-              </p>
+              </Notice>
             ) : (
               <PendingInvites
                 invites={invites}
@@ -151,6 +153,6 @@ export default async function WorkspacePage() {
           </p>
         </section>
       ) : null}
-    </>
+    </ReadingWidth>
   );
 }

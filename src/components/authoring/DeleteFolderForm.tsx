@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import type { FolderFormState } from "./FolderNameForm";
+import { FieldError } from "./FieldError";
 
 export interface DeleteFolderFormProps {
   /** Deletes the open folder and opens its parent, or says what is still inside it. */
@@ -27,9 +28,9 @@ export function DeleteFolderForm({ action }: DeleteFolderFormProps) {
         </Button>
       </div>
       {state.status === "error" ? (
-        <p ref={alertRef} role="alert" tabIndex={-1} className="text-sm text-incorrect">
+        <FieldError ref={alertRef} role="alert" tabIndex={-1}>
           {state.error}
-        </p>
+        </FieldError>
       ) : null}
     </form>
   );

@@ -2,6 +2,10 @@
 
 import { useEffect, useId, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { fieldClasses } from "@/components/ui/fieldClasses";
+import { Notice } from "@/components/ui/Notice";
+import { textLinkClasses } from "@/components/ui/TextLink";
 import { describeEhrIssues, describeEmptySteps } from "@/lib/authoring/ehrIssues";
 import { fromEhrForm, previewRecord, type EhrFormValues } from "@/lib/authoring/forms/ehr";
 import { CASE_STUDY_STEPS } from "@/lib/authoring/forms/ehrSteps";
@@ -26,10 +30,6 @@ type Status =
   | { kind: "error"; message: string };
 
 const SAVE_FAILED = "The patient record could not be saved. Try again.";
-
-/** The record fields' look, sized to its words rather than the column. */
-const selectClass =
-  "rounded-sm border border-line bg-surface-1 px-3 py-2 text-base text-ink-1 hover:border-line-strong";
 
 /**
  * A case study's patient record on its own page: the record's fields, what it still needs, Save,
@@ -102,25 +102,24 @@ export function EhrEditor({ initialValues, onSave }: EhrEditorProps) {
         />
 
         {issues.length > 0 ? (
-          <section
-            aria-label="Problems to fix"
-            className="rounded-sm border border-line bg-surface-1 p-4"
-          >
-            <h2 className="mb-2 text-sm font-medium text-ink-1">Problems to fix</h2>
-            <ul className="flex flex-col gap-1">
-              {issues.map((issue) => (
-                <li key={issue.field}>
-                  <button
-                    type="button"
-                    id={issueMessageId(ids, issue.field)}
-                    onClick={() => focusRecordField(ids, issue.field)}
-                    className="tap-target text-left text-sm text-accent-ink underline-offset-4 hover:underline"
-                  >
-                    {issue.message}
-                  </button>
-                </li>
-              ))}
-            </ul>
+          <section aria-label="Problems to fix">
+            <Card padding="sm">
+              <h2 className="mb-2 text-sm font-medium text-ink-1">Problems to fix</h2>
+              <ul className="flex flex-col gap-1">
+                {issues.map((issue) => (
+                  <li key={issue.field}>
+                    <button
+                      type="button"
+                      id={issueMessageId(ids, issue.field)}
+                      onClick={() => focusRecordField(ids, issue.field)}
+                      className={`${textLinkClasses({ size: "sm" })} text-left`}
+                    >
+                      {issue.message}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </Card>
           </section>
         ) : null}
 
@@ -135,9 +134,9 @@ export function EhrEditor({ initialValues, onSave }: EhrEditorProps) {
             </p>
           ) : null}
           {status.kind === "error" ? (
-            <p role="alert" className="text-sm text-incorrect">
+            <Notice role="alert" className="w-full">
               {status.message}
-            </p>
+            </Notice>
           ) : null}
         </div>
       </form>
@@ -149,9 +148,11 @@ export function EhrEditor({ initialValues, onSave }: EhrEditorProps) {
             <label htmlFor={`${ids}-preview-step`} className="text-sm text-ink-1">
               Preview at
             </label>
+            {/* Sized to its words rather than the column: `w-auto!` over the field's own w-full,
+                which Tailwind would otherwise order last. */}
             <select
               id={`${ids}-preview-step`}
-              className={`tap-target ${selectClass}`}
+              className={fieldClasses("w-auto! px-3 py-2 text-base")}
               value={previewStep}
               onChange={(event) => setPreviewStep(event.target.value)}
             >
@@ -164,9 +165,9 @@ export function EhrEditor({ initialValues, onSave }: EhrEditorProps) {
             </select>
           </div>
         </div>
-        <div className="rounded-sm border border-line bg-surface-1 p-4">
+        <Card padding="sm">
           <EhrPreview record={shown} />
-        </div>
+        </Card>
       </section>
     </div>
   );

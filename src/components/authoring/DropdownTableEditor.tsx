@@ -16,6 +16,8 @@ import {
 import { describeIssues } from "@/lib/authoring/issueMessages";
 import { dropdownTableItemSchema, type ItemInputOf } from "@/lib/ngn/schemas";
 import { EditorShell, issueMessageId, type SaveResult } from "./EditorShell";
+import { fieldClasses } from "@/components/ui/fieldClasses";
+import { CorrectToggle } from "./CorrectToggle";
 
 export interface DropdownTableEditorProps {
   initialValues: DropdownTableFormValues;
@@ -30,8 +32,7 @@ const MIN_CHOICES = 2;
 const MAX_CHOICES = 6;
 
 const letter = (index: number) => String.fromCharCode(65 + index);
-const fieldClass =
-  "w-full rounded-sm border border-line bg-surface-1 px-3 py-2 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect";
+const fieldClass = fieldClasses("px-3 py-2 text-base");
 
 function unusedId(prefix: string, taken: ReadonlySet<string>): string {
   for (let i = 1; i < 100; i += 1) {
@@ -98,14 +99,16 @@ function RowFields({
         const labelField = `rows.${rowIndex}.choices.${choiceIndex}.label`;
         return (
           <div key={field.fieldKey} className="flex flex-wrap items-center gap-3">
-            <input
-              type="radio"
-              value={field.id}
-              aria-label={`Choice ${L} is correct`}
-              aria-describedby={describedBy(correctField)}
-              className="size-5 accent-accent"
-              {...register(`rows.${rowIndex}.correctChoiceId`)}
-            />
+            <CorrectToggle>
+              <input
+                type="radio"
+                value={field.id}
+                aria-label={`Choice ${L} is correct`}
+                aria-describedby={describedBy(correctField)}
+                className="size-5 accent-accent"
+                {...register(`rows.${rowIndex}.correctChoiceId`)}
+              />
+            </CorrectToggle>
             <label
               htmlFor={`${ids}-row-${rowIndex}-choice-${choiceIndex}`}
               className="w-20 shrink-0 text-sm text-ink-1"

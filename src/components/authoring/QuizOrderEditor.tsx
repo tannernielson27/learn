@@ -13,7 +13,11 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { useSilentDndAccessibility } from "@/components/question/dndAccessibility";
 import { usePrefersReducedMotion } from "@/components/question/usePrefersReducedMotion";
+import { ChevronUp, GripVertical } from "lucide-react";
+import { Badge } from "@/components/ui/Badge";
 import { Button, PRESS_CLASSES } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
+import { Notice } from "@/components/ui/Notice";
 import {
   moveEntry,
   moveEntryTo,
@@ -166,9 +170,7 @@ export function QuizOrderEditor({ entries, action }: QuizOrderEditorProps) {
         </p>
       </div>
       {state.status === "error" && submitted && !orderChanged(submitted, order) ? (
-        <p role="alert" className="text-sm text-incorrect">
-          {state.error}
-        </p>
+        <Notice role="alert">{state.error}</Notice>
       ) : null}
     </form>
   );
@@ -201,7 +203,7 @@ function EntryRow({ entry, index, count, locked, onMove, register }: EntryRowPro
       ref={setNodeRef}
       style={style}
       className={`flex items-center gap-2 bg-surface-1 px-1 py-2 sm:gap-3 sm:px-2 ${
-        isDragging ? "relative z-10 shadow-md" : ""
+        isDragging ? "relative z-10 shadow-elevation-1" : ""
       }`}
     >
       <span
@@ -210,14 +212,14 @@ function EntryRow({ entry, index, count, locked, onMove, register }: EntryRowPro
         aria-hidden="true"
         className="flex w-6 shrink-0 cursor-grab touch-none items-center justify-center self-stretch text-ink-2 sm:w-8"
       >
-        <GripIcon />
+        <Icon icon={GripVertical} />
       </span>
       <span className="w-7 shrink-0 font-mono text-sm text-ink-2 tabular">{index + 1}</span>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="break-words text-ink-1">{entry.label}</span>
-        <span className="flex flex-wrap gap-x-3 text-sm text-ink-2">
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">
           <span>{entry.format}</span>
-          <span>{entry.status}</span>
+          <Badge>{entry.status}</Badge>
         </span>
       </div>
       {/* Stacked on phones so the entry's words keep most of the row's width. */}
@@ -257,32 +259,10 @@ function MoveButton({ label, direction, disabled, onMove, buttonRef }: MoveButto
       aria-label={`Move "${label}" ${direction}`}
       disabled={disabled}
       onClick={onMove}
-      className={`tap-target inline-flex items-center justify-center rounded-sm border border-line text-ink-2 ${PRESS_CLASSES} hover:bg-surface-2 hover:text-ink-1 disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent`}
+      // A secondary button's 3:1 edge (WCAG 1.4.11), square for an icon.
+      className={`tap-target inline-flex items-center justify-center rounded-md border border-field-border bg-surface-1 text-ink-1 ${PRESS_CLASSES} hover:bg-surface-2 disabled:cursor-default disabled:opacity-40 disabled:hover:bg-surface-1`}
     >
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 24 24"
-        width="20"
-        height="20"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className={direction === "down" ? "rotate-180" : ""}
-      >
-        <path d="m18 15-6-6-6 6" />
-      </svg>
+      <Icon icon={ChevronUp} className={direction === "down" ? "rotate-180" : ""} />
     </button>
-  );
-}
-
-function GripIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
-      {[5, 12, 19].flatMap((y) =>
-        [9, 15].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.5" />),
-      )}
-    </svg>
   );
 }

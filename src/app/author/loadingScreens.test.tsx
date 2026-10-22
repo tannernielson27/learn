@@ -1,11 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import ClassesLoading from "./classes/(list)/loading";
 import SessionsLoading from "./sessions/loading";
 import WorkspaceLoading from "./workspace/loading";
 
 describe.each([
   ["Live sessions", SessionsLoading, "Loading live sessions", "Live sessions"],
   ["Workspace", WorkspaceLoading, "Loading the workspace", "Workspace"],
+  ["Classes", ClassesLoading, "Loading classes", "Classes"],
 ] as const)("%s loading state", (_name, Loading, label, heading) => {
   it("says what is loading in one status line, with no link", () => {
     render(<Loading />);
@@ -25,6 +27,18 @@ describe.each([
 describe("Live sessions loading state", () => {
   it("draws the page's own h1, so it does not move when the list arrives", () => {
     render(<SessionsLoading />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveClass(
+      "mb-6",
+      "font-read",
+      "text-3xl",
+      "text-ink-1",
+    );
+  });
+});
+
+describe("Classes loading state", () => {
+  it("draws the page's own h1, so it does not move when the list arrives", () => {
+    render(<ClassesLoading />);
     expect(screen.getByRole("heading", { level: 1 })).toHaveClass(
       "mb-6",
       "font-read",

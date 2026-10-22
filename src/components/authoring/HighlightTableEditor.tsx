@@ -17,6 +17,7 @@ import { describeIssues } from "@/lib/authoring/issueMessages";
 import { highlightTableItemSchema, type ItemInputOf } from "@/lib/ngn/schemas";
 import { EditorShell, issueMessageId, type SaveResult } from "./EditorShell";
 import { HighlightSpanList } from "./HighlightSpanList";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 
 export interface HighlightTableEditorProps {
   initialValues: HighlightTableFormValues;
@@ -30,8 +31,7 @@ const MAX_COLUMNS = 4;
 const MIN_ROWS = 1;
 const MAX_ROWS = 8;
 
-const fieldClass =
-  "w-full rounded-sm border border-line bg-surface-1 px-3 py-2 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect";
+const fieldClass = fieldClasses("px-3 py-2 text-base");
 const DIRTY = { shouldDirty: true } as const;
 
 type Rows = HighlightTableFormValues["rows"];

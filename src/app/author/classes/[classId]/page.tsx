@@ -3,11 +3,13 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { deleteAssignment, editAssignment } from "@/app/author/assignments/actions";
 import { AssignmentList } from "@/components/assignments/AssignmentList";
+import { ReadingWidth } from "@/components/authoring/PageWidth";
 import { ClassNameForm } from "@/components/classes/ClassNameForm";
 import { ClassRoster } from "@/components/classes/ClassRoster";
 import { ClassTimeZoneForm } from "@/components/classes/ClassTimeZoneForm";
 import { InviteLinkPanel } from "@/components/classes/InviteLinkPanel";
 import { PracticeSection } from "@/components/practice/PracticeSection";
+import { Notice } from "@/components/ui/Notice";
 import { shareClassWithBank, stopSharing } from "@/app/author/practice/actions";
 import { listBanks } from "@/lib/authoring/banks";
 import { isUuid } from "@/lib/authoring/ids";
@@ -44,7 +46,8 @@ export default async function ClassPage({ params }: PageProps<"/author/classes/[
   const url = inviteUrl(canonicalSiteOrigin(await headers()), detail.inviteToken);
 
   return (
-    <>
+    // One column: the roster and the assignments are lists of lines, not tables (PLAN §6).
+    <ReadingWidth>
       {/* The way back to every class is the layout's navigation (#412). */}
       <h1 className="mb-6 font-read text-3xl break-words text-ink-1">{detail.name}</h1>
 
@@ -69,9 +72,9 @@ export default async function ClassPage({ params }: PageProps<"/author/classes/[
           Assignments
         </h2>
         {assignments === null ? (
-          <p role="alert" className="text-ink-2">
+          <Notice role="alert">
             The assignments could not be loaded. Reload the page to try again.
-          </p>
+          </Notice>
         ) : (
           <AssignmentList
             assignments={assignments}
@@ -115,9 +118,9 @@ export default async function ClassPage({ params }: PageProps<"/author/classes/[
           Roster
         </h2>
         {roster === null ? (
-          <p role="alert" className="text-ink-2">
+          <Notice role="alert">
             The roster could not be loaded. Reload the page to try again.
-          </p>
+          </Notice>
         ) : (
           <ClassRoster
             entries={roster}
@@ -149,6 +152,6 @@ export default async function ClassPage({ params }: PageProps<"/author/classes/[
           submitLabel="Rename class"
         />
       </section>
-    </>
+    </ReadingWidth>
   );
 }

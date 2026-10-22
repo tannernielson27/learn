@@ -7,6 +7,8 @@ import {
   LIBRARY_FOLDER_MAX_DEPTH,
   libraryFolderContentsMessage,
   libraryFolderWriteError,
+  libraryRail,
+  libraryViewHref,
   parseLibraryView,
   parseQuizMoveForm,
   QUIZ_MOVE_LIMIT,
@@ -46,6 +48,59 @@ describe("parseLibraryView", () => {
     expect(parseLibraryView("unfiled")).toEqual({ kind: "top" });
     expect(parseLibraryView([MED_SURG])).toEqual({ kind: "top" });
     expect(parseLibraryView("not-an-id")).toEqual({ kind: "top" });
+  });
+
+  it("opens All quizzes for the word all", () => {
+    expect(parseLibraryView("all")).toEqual({ kind: "all" });
+    expect(parseLibraryView(["all"])).toEqual({ kind: "top" });
+  });
+});
+
+describe("libraryViewHref", () => {
+  it("links each view by its folder parameter", () => {
+    expect(libraryViewHref({ kind: "top" })).toBe("/author");
+    expect(libraryViewHref({ kind: "all" })).toBe("/author?folder=all");
+    expect(libraryViewHref({ kind: "folder", id: MED_SURG })).toBe(`/author?folder=${MED_SURG}`);
+  });
+});
+
+describe("libraryRail", () => {
+  it("lists All quizzes, Not in a folder and the top level's folders, marking the open view", () => {
+    expect(libraryRail(rows, { kind: "top" })).toEqual([
+      { key: "all", label: "All quizzes", href: "/author?folder=all", depth: 0, current: false },
+      { key: "top", label: "Not in a folder", href: "/author", depth: 0, current: true },
+      {
+        key: MED_SURG,
+        label: "Med-Surg",
+        href: `/author?folder=${MED_SURG}`,
+        depth: 0,
+        current: false,
+        quizCount: 2,
+      },
+      {
+        key: PEDS,
+        label: "Pediatrics",
+        href: `/author?folder=${PEDS}`,
+        depth: 0,
+        current: false,
+        quizCount: 1,
+      },
+    ]);
+    expect(libraryRail(rows, { kind: "all" })[0]!.current).toBe(true);
+  });
+
+  it("opens the branch of the open folder, so the folders inside it are one tap away", () => {
+    const open = libraryRail(rows, { kind: "folder", id: MED_SURG });
+    expect(open.map((entry) => [entry.label, entry.depth, entry.current])).toEqual([
+      ["All quizzes", 0, false],
+      ["Not in a folder", 0, false],
+      ["Med-Surg", 0, true],
+      ["Week 1", 1, false],
+      ["Pediatrics", 0, false],
+    ]);
+    const inside = libraryRail(rows, { kind: "folder", id: WEEK_1 });
+    expect(inside.filter((entry) => entry.current).map((entry) => entry.label)).toEqual(["Week 1"]);
+    expect(inside.map((entry) => entry.label)).toContain("Week 1");
   });
 });
 

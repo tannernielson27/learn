@@ -1,6 +1,7 @@
 "use client";
 
 import { useId } from "react";
+import { PRESS_CLASSES } from "@/components/ui/Button";
 import { ITEM_TYPE_GROUPS, isEditorReady } from "@/lib/authoring/itemTypeGroups";
 import { ITEM_TYPE_LABELS, type ItemType } from "@/lib/ngn/labels";
 
@@ -41,9 +42,11 @@ export function NewItemPicker({ onChoose, busy = false }: NewItemPickerProps) {
                   onClick={() => {
                     if (!unavailable) onChoose(type);
                   }}
-                  className={`tap-target flex items-center justify-between gap-3 rounded-sm border px-3 text-left text-base transition-colors duration-fast ${
+                  // A secondary button's 3:1 edge and press (WCAG 1.4.11), laid out as a row: a long
+                  // format name wraps instead of running off a 320px screen.
+                  className={`tap-target flex items-center justify-between gap-3 rounded-md border px-3 text-left text-base ${PRESS_CLASSES} ${
                     ready
-                      ? "border-line bg-surface-1 text-ink-1 hover:border-line-strong hover:bg-surface-2"
+                      ? "border-field-border bg-surface-1 text-ink-1 hover:bg-surface-2"
                       : "cursor-not-allowed border-line bg-surface-0 text-ink-2"
                   }`}
                 >
