@@ -4,6 +4,7 @@ import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
 import { RouteRecovery } from "@/components/recovery/RouteRecovery";
 import { errorDigest } from "@/components/status/errorDigest";
+import { StatusFrame } from "@/components/status/StatusFrame";
 import { StatusLinks } from "@/components/status/StatusLinks";
 import "./globals.css";
 
@@ -26,7 +27,7 @@ export default function GlobalError({ error, retry }: ErrorInfo) {
     <html lang="en" className="h-full antialiased">
       <body className="flex min-h-full flex-col bg-surface-0 text-ink-1">
         <title>LeaRN</title>
-        <main className="mx-auto w-full max-w-lg flex-1 px-4 py-12">
+        <StatusFrame>
           <RouteRecovery
             headline="LeaRN could not show this page."
             detail="Try again to load it. If you were in a live session, your place is kept."
@@ -35,7 +36,7 @@ export default function GlobalError({ error, retry }: ErrorInfo) {
           >
             <StatusLinks />
           </RouteRecovery>
-        </main>
+        </StatusFrame>
       </body>
     </html>
   );

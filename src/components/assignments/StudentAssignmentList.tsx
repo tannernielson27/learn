@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   attemptProgressLabel,
   studentAssignmentPath,
@@ -8,6 +7,7 @@ import { classLabel, type StudentClassInfo } from "@/lib/classes/studentClasses"
 import { DEFAULT_CLASS_TIME_ZONE } from "@/lib/classes/timeZone";
 import type { AssignmentSummary } from "@/lib/supabase/assignments";
 import { ClassTime } from "./ClassTime";
+import { HOME_LIST_CLASSES, HomeRow } from "@/components/learn/HomeRow";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 /** What a student's lists need to know about each of their classes. */
@@ -31,33 +31,22 @@ export function StudentAssignmentList({
   progress = new Map(),
 }: StudentAssignmentListProps) {
   if (assignments.length === 0) {
-    // Under the student home's Open assignments h2.
+    // Under the student home's Assignments h2.
     return <EmptyState level={3} heading="No open assignments" />;
   }
 
   return (
-    <ul
-      aria-label="Open assignments"
-      className="flex flex-col divide-y divide-line border-y border-line"
-    >
+    <ul aria-label="Open assignments" className={HOME_LIST_CLASSES}>
       {assignments.map((entry) => (
-        <li key={entry.id} className="flex flex-col gap-1 px-2 py-3">
-          <Link
-            href={studentAssignmentPath(entry.id)}
-            className="tap-target inline-flex items-center font-medium break-words text-ink-1 underline decoration-line-strong underline-offset-4 hover:decoration-accent"
-          >
-            {entry.title}
-          </Link>
+        <HomeRow key={entry.id} href={studentAssignmentPath(entry.id)} title={entry.title}>
           {/* The workspace is beside the class only for a student in more than one workspace. */}
-          <span className="text-sm break-words text-ink-2">
-            {classLabel(classes.get(entry.classId))} ·{" "}
-            {attemptProgressLabel(entry.maxAttempts, progress.get(entry.id))} · Closes{" "}
-            <ClassTime
-              iso={entry.closesAt}
-              timeZone={classes.get(entry.classId)?.timeZone ?? DEFAULT_CLASS_TIME_ZONE}
-            />
-          </span>
-        </li>
+          {classLabel(classes.get(entry.classId))} ·{" "}
+          {attemptProgressLabel(entry.maxAttempts, progress.get(entry.id))} · Closes{" "}
+          <ClassTime
+            iso={entry.closesAt}
+            timeZone={classes.get(entry.classId)?.timeZone ?? DEFAULT_CLASS_TIME_ZONE}
+          />
+        </HomeRow>
       ))}
     </ul>
   );

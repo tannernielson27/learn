@@ -24,6 +24,7 @@ import PlayItemError from "./author/items/[itemId]/play/error";
 import RootError from "./error";
 import GlobalError from "./global-error";
 import HostError from "./live/[sessionId]/error";
+import LearnError from "./learn/error";
 import ReportError from "./live/[sessionId]/report/error";
 import PlayError from "./play/[sessionId]/error";
 
@@ -37,6 +38,7 @@ const BOUNDARIES: [string, ComponentType<ErrorInfo>][] = [
   ["authoring", AuthorError],
   ["the case study builder", CaseStudyError],
   ["an item or case study being played", PlayItemError],
+  ["a student page", LearnError],
   ["any other page (the root boundary)", RootError],
 ];
 

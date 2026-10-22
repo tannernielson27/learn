@@ -3,6 +3,11 @@ import type { ReactNode } from "react";
 export interface SkeletonProps {
   /** Size and spacing: give it the height of the line it stands in for, so nothing shifts. */
   className?: string;
+  /**
+   * No pulse: a plain block. For loading screens held to "nothing loops" (design doc §5), which
+   * the overhaul's later routes use; the pulse stays the default for the screens that have it.
+   */
+  still?: boolean;
 }
 
 /** The pulse: opacity only, plain CSS with no script, and still under reduced motion. */
@@ -13,11 +18,13 @@ export const SKELETON_PULSE = "animate-pulse motion-reduce:animate-none";
  * surface, no text and no accent: a skeleton is not a selection, a focus or an action. Every block
  * starts its pulse with the screen, so they pulse together; a real heading beside them holds still.
  */
-export function Skeleton({ className = "" }: SkeletonProps) {
+export function Skeleton({ className = "", still = false }: SkeletonProps) {
   return (
     <div
       aria-hidden="true"
-      className={`rounded-sm bg-surface-2 ${SKELETON_PULSE} ${className}`.trim()}
+      className={`rounded-sm bg-surface-2 ${still ? "" : SKELETON_PULSE} ${className}`
+        .replace(/\s+/g, " ")
+        .trim()}
     />
   );
 }
@@ -27,13 +34,15 @@ export interface SkeletonLineProps {
   lineClassName: string;
   /** The block inside it, shorter than the line so stacked lines read as lines, not a slab. */
   className: string;
+  /** No pulse, as on `Skeleton`. */
+  still?: boolean;
 }
 
 /** A block centred in a line box of the text's own height, so stacked lines keep their rhythm. */
-export function SkeletonLine({ lineClassName, className }: SkeletonLineProps) {
+export function SkeletonLine({ lineClassName, className, still = false }: SkeletonLineProps) {
   return (
     <div className={`flex items-center ${lineClassName}`}>
-      <Skeleton className={className} />
+      <Skeleton className={className} still={still} />
     </div>
   );
 }

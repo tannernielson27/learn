@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SignedInAs } from "@/components/auth/SignedInAs";
+import { LearnContentWidth } from "@/components/learn/LearnContentWidth";
 import { AccountMenu, MENU_ITEM_CLASSES } from "@/components/ui/AccountMenu";
 import { AppShell } from "@/components/ui/AppShell";
 import { ACCOUNT_PATH } from "@/lib/auth/accountPaths";
@@ -9,7 +10,11 @@ import { readViewer } from "@/lib/classes/viewer";
 import { accountInitials } from "@/lib/ui/initials";
 import { signOut } from "../author/actions";
 
-/** The student side's frame (#205): the same shell as authoring, pointing at the student home. */
+/**
+ * The student side's frame (#205): the same shell as authoring, pointing at the student home. The
+ * shell sets no width; `LearnContentWidth` gives the home its two columns and the rest the reading
+ * column, since a layout cannot tell its pages apart on the server.
+ */
 export default async function StudentLayout({ children }: LayoutProps<"/learn">) {
   const viewer = await readViewer();
   const signedIn = viewer.status === "signed_in";
@@ -18,6 +23,7 @@ export default async function StudentLayout({ children }: LayoutProps<"/learn">)
   return (
     <AppShell
       homeHref={STUDENT_HOME}
+      width="full"
       account={
         signedIn ? (
           <>
@@ -41,7 +47,7 @@ export default async function StudentLayout({ children }: LayoutProps<"/learn">)
         ) : null
       }
     >
-      {children}
+      <LearnContentWidth>{children}</LearnContentWidth>
     </AppShell>
   );
 }

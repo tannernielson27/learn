@@ -403,7 +403,7 @@ const reportView = (view: "students" | "items" | "steps", released = true, untag
 const assignmentParams = { params: Promise.resolve({ assignmentId: ASSIGNMENT }) } as never;
 
 async function home(): Promise<ReactElement> {
-  const { default: Page } = await import("./page");
+  const { default: Page } = await import("./(home)/page");
   return Page();
 }
 async function assignment(): Promise<ReactElement> {
@@ -772,7 +772,7 @@ describe("what a student sees uses the glossary's words (#415)", () => {
 
   it("names each page in the glossary's words", async () => {
     const pages = await Promise.all([
-      import("./page"),
+      import("./(home)/page"),
       import("./assignments/[assignmentId]/page"),
       import("./assignments/[assignmentId]/results/page"),
       import("./practice/[bankId]/page"),

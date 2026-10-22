@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { StatusPanel } from "@/components/status/StatusPanel";
 import { Button } from "@/components/ui/Button";
+import { Notice } from "@/components/ui/Notice";
 
 export interface RouteRecoveryProps {
   /** What stopped working, in the reader's words. Never the error's own message. */
@@ -25,7 +26,8 @@ export interface RouteRecoveryProps {
  * What a route's `error.tsx` shows in place of the page that failed (#164).
  *
  * The same panel as the not-found page (`StatusPanel`, #267) and the question renderer's own
- * recovery (#54): the sentence in `ink-1`, the reassurance under it in `ink-2`, one Try again.
+ * recovery (#54): the headline, then what is still true in a neutral `Notice` (never feedback
+ * red, PLAN D11), then one large Try again.
  * It is handed copy and, at most, the digest — never the error itself, so neither its message nor
  * a stack can reach a student (Sprint 11 kickoff decision 4). React already reports every caught
  * error through console.error, and `useReportError` sends it to Sentry, so there is no logging
@@ -38,10 +40,12 @@ export function RouteRecovery({ headline, detail, onRetry, digest, children }: R
   return (
     <StatusPanel headline={headline}>
       {/* The alert is the sentence that says what to do, so a screen reader hears it at once. */}
-      <p role="alert" className="measure text-ink-2">
+      <Notice role="alert" className="measure w-full">
         {detail}
-      </p>
-      <Button onClick={onRetry}>Try again</Button>
+      </Notice>
+      <Button variant="primary" size="lg" onClick={onRetry}>
+        Try again
+      </Button>
       {children}
       {digest ? (
         <p className="text-sm text-ink-2">
