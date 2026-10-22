@@ -2,8 +2,8 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { findRetiredTerms } from "../src/lib/copy/retiredTerms";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
-import { openImport } from "./authoringHelpers";
 import { drag } from "./drag";
+import { seedQuiz } from "./seedQuiz";
 import { selectAsAdmin, signInAsInstructorInEmptyOrg, updateAsAdmin } from "./signIn";
 
 // #468: a teacher puts a quiz's questions in the order students meet them, with the arrows or by
@@ -23,8 +23,8 @@ async function createQuiz(page: Page, name: string): Promise<string> {
   return new URL(page.url()).pathname.split("/").at(-1) as string;
 }
 
-/** Imports one question per stem, in order, then publishes them with the local secret key. */
-async function importPublished(
+/** Seeds one question per stem, in order, then publishes them with the local secret key. */
+async function seedPublished(
   page: Page,
   request: APIRequestContext,
   bankId: string,
@@ -34,11 +34,7 @@ async function importPublished(
     id: `order-${index + 1}`,
     stem: { kind: "markdown", value },
   }));
-  await openImport(page);
-  await page
-    .getByRole("textbox", { name: "Or paste JSON", exact: true })
-    .fill(JSON.stringify({ format: "learn.v1", items }));
-  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await seedQuiz(page, request, JSON.stringify({ format: "learn.v1", items }));
   await expect(
     page.getByRole("list", { name: "Questions" }).getByRole("link", { name: STEMS[0] }),
   ).toBeVisible();
@@ -76,9 +72,9 @@ test("a teacher reorders three questions, and a live session runs them in that o
     page.screenshot({ path: `test-results/screenshots/${project}/${name}.png`, fullPage: true });
   await signInAsInstructorInEmptyOrg(page, request, `order-${project}`);
   const quiz = await createQuiz(page, "Ordered quiz");
-  const ids = await importPublished(page, request, quiz);
+  const ids = await seedPublished(page, request, quiz);
 
-  // An import keeps the order of its file.
+  // Questions added one after another keep that order.
   await page.getByRole("link", { name: "Change order", exact: true }).click();
   await expect(
     page.getByRole("heading", { level: 1, name: "Change order", exact: true }),

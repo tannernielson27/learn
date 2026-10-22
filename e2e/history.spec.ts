@@ -1,7 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
-import { openImport, publishOpenItem } from "./authoringHelpers";
+import { publishOpenItem } from "./authoringHelpers";
+import { seedQuiz } from "./seedQuiz";
 import { signInAsNewAuthor } from "./signIn";
 
 // Needs the local Supabase stack, like auth.spec.ts. CI runs it in the `auth-e2e` job.
@@ -30,7 +31,7 @@ test("an author publishes twice, previews version 1 and restores it as a draft",
   page,
   request,
 }, testInfo) => {
-  // Sign-in, an import and three publishes: longer than the default.
+  // Sign-in, a seeded question and three publishes: longer than the default.
   test.slow();
   await signInAsNewAuthor(page, request, testInfo.project.name);
   const bankName = `History ${testInfo.project.name} ${Date.now()}`;
@@ -39,9 +40,7 @@ test("an author publishes twice, previews version 1 and restores it as a draft",
   await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
   await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
-  await openImport(page);
-  await page.getByRole("textbox", { name: "Or paste JSON", exact: true }).fill(oneItem());
-  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await seedQuiz(page, request, oneItem());
   await page.getByRole("list", { name: "Questions" }).getByRole("link", { name: STEM }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Edit question" })).toBeVisible();
 

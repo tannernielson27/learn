@@ -1,8 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
+import { seedQuiz } from "./seedQuiz";
 import { signInAsNewAuthor } from "./signIn";
-import { openImport } from "./authoringHelpers";
 
 // Needs the local Supabase stack, like auth.spec.ts. CI runs it in the `auth-e2e` job.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
@@ -10,13 +10,6 @@ test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase 
 async function expectNoAxeViolations(page: Page) {
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
-}
-
-async function importJson(page: Page, text: string) {
-  await openImport(page);
-  await page.getByRole("textbox", { name: "Or paste JSON", exact: true }).fill(text);
-  await page.getByRole("button", { name: "Import", exact: true }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Imported" })).toBeVisible();
 }
 
 const KEPT = "Archive demo item that stays";
@@ -36,7 +29,7 @@ test("an author archives an item, finds it in the Archived view, and restores it
   page,
   request,
 }, testInfo) => {
-  // Sign-in, an import, an archive and a restore: longer than the default.
+  // Sign-in, seeding, an archive and a restore: longer than the default.
   test.slow();
   await signInAsNewAuthor(page, request, testInfo.project.name);
   const bankName = `Archive ${testInfo.project.name} ${Date.now()}`;
@@ -47,7 +40,7 @@ test("an author archives an item, finds it in the Archived view, and restores it
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   const bankUrl = page.url();
 
-  await importJson(page, itemsJson);
+  await seedQuiz(page, request, itemsJson);
   const items = page.getByRole("list", { name: "Questions" });
   const kept = items.getByRole("link", { name: new RegExp(`^${KEPT}`) });
   const filed = items.getByRole("link", { name: new RegExp(`^${FILED}`) });
@@ -108,8 +101,9 @@ test("a teacher archives questions from the quiz page, one and several, then res
   await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
-  await importJson(
+  await seedQuiz(
     page,
+    request,
     JSON.stringify({
       format: "learn.v1",
       items: LIST_STEMS.map((stem, index) => ({

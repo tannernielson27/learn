@@ -59,7 +59,7 @@ describe("/help/items", () => {
 describe("/help/instructor", () => {
   const SECTIONS = [
     ["sign-in", "Sign up and sign in"],
-    ["banks", "Create or import a quiz"],
+    ["banks", "Create a quiz"],
     ["ai-import", "Import questions with AI"],
     ["items", "Write questions"],
     ["classes", "Create a class and invite students"],
@@ -94,7 +94,6 @@ describe("/help/instructor", () => {
       "sign-up",
       "password",
       "colleagues",
-      "import",
       "folders",
       "ai-import-review",
       "ai-import-fix",
