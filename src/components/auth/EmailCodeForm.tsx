@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useId, useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { fieldClasses } from "@/components/ui/fieldClasses";
+import { FormError } from "./FormError";
 
 export type EmailCodeState = { status: "idle" } | { status: "error"; error: string };
 
@@ -38,7 +39,7 @@ export function EmailCodeForm({ action, email, next }: EmailCodeFormProps) {
       <input type="hidden" name="next" value={next} />
       <p className="text-ink-2">Or type the code from the email to sign in on this device.</p>
       <div className="flex flex-col gap-2">
-        <label htmlFor={`${id}-code`} className="text-sm font-medium text-ink-1">
+        <label htmlFor={`${id}-code`} className="text-sm font-semibold text-ink-1">
           Code from the email
         </label>
         <input
@@ -53,13 +54,9 @@ export function EmailCodeForm({ action, email, next }: EmailCodeFormProps) {
           maxLength={16}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${id}-error` : undefined}
-          className={fieldClasses("px-3 font-mono text-lg tracking-widest")}
+          className={fieldClasses("h-13 px-3.5 font-mono text-xl tracking-widest")}
         />
-        {error ? (
-          <p id={`${id}-error`} role="alert" className="text-sm text-incorrect">
-            {error}
-          </p>
-        ) : null}
+        {error ? <FormError id={`${id}-error`}>{error}</FormError> : null}
       </div>
       <Button type="submit" disabled={pending} aria-disabled={pending}>
         {pending ? "Checking the code…" : "Sign in with the code"}

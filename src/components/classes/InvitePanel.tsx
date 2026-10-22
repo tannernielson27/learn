@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { EmailCodeFormProps } from "@/components/auth/EmailCodeForm";
 import { InviteEmailForm, type InviteEmailFormProps } from "./InviteEmailForm";
 import { InviteSignUpForm, type InviteSignUpFormProps } from "./InviteSignUpForm";
+import { textLinkClasses } from "@/components/ui/TextLink";
 
 export interface InvitePanelProps {
   signUpAction: InviteSignUpFormProps["action"];
@@ -15,8 +16,7 @@ export interface InvitePanelProps {
   classTitle: string;
 }
 
-const SWITCH =
-  "tap-target mt-4 inline-flex items-center rounded-sm text-left text-sm font-medium text-accent-ink hover:underline";
+const SWITCH = `${textLinkClasses()} mt-5 rounded-sm text-left`;
 
 /**
  * The class invite for someone not signed in. A password comes first, because it lets a student

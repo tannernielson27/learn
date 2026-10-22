@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { Button } from "@/components/ui/Button";
 import { InviteUnavailable } from "./InviteUnavailable";
+import { AUTH_HEADING, AUTH_SUBLINE } from "@/components/auth/AuthFrame";
+import { FormError } from "@/components/auth/FormError";
+import { textLinkClasses } from "@/components/ui/TextLink";
 
 export type JoinClassState =
   | { status: "idle" }
@@ -30,28 +33,28 @@ export function JoinClassButton({ action, classTitle, email }: JoinClassButtonPr
 
   return (
     <section aria-labelledby="join-class-heading">
-      <h1 id="join-class-heading" className="mb-3 font-read text-3xl text-ink-1">
+      <h1 id="join-class-heading" className={AUTH_HEADING}>
         Join {classTitle}
       </h1>
-      <p className="mb-6 text-ink-2">You are signed in as {email}.</p>
+      <p className={AUTH_SUBLINE}>You are signed in as {email}.</p>
       {state.status === "instructor" ? (
         <div role="status" className="mb-6 flex flex-col gap-3">
           <p className="text-ink-1">{ALREADY_INSTRUCTOR}</p>
-          <Link
-            href="/author"
-            className="tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline"
-          >
+          <Link href="/author" className={textLinkClasses()}>
             Go to your quizzes
           </Link>
         </div>
       ) : (
         <form action={formAction} className="flex flex-col gap-3">
-          {state.status === "error" ? (
-            <p role="alert" className="text-sm text-incorrect">
-              {state.error}
-            </p>
-          ) : null}
-          <Button type="submit" variant="primary" disabled={pending} aria-disabled={pending}>
+          {state.status === "error" ? <FormError>{state.error}</FormError> : null}
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            block
+            disabled={pending}
+            aria-disabled={pending}
+          >
             {pending ? "Joining…" : `Join ${classTitle}`}
           </Button>
         </form>

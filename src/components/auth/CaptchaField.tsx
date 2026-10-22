@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { TURNSTILE_SCRIPT_URL } from "@/lib/auth/turnstile";
+import { FormError } from "./FormError";
 
 /** The part of Cloudflare's `window.turnstile` this component uses. */
 interface TurnstileApi {
@@ -121,11 +122,7 @@ export function CaptchaField({ siteKey, action, resetKey }: CaptchaFieldProps) {
     <div className="flex flex-col gap-2">
       {/* The widget is 65px tall; holding the space keeps the form from jumping when it arrives. */}
       <div ref={container} data-testid="captcha-field" className="min-h-[65px]" />
-      {trouble ? (
-        <p role="alert" className="text-sm text-incorrect">
-          {TROUBLE}
-        </p>
-      ) : null}
+      {trouble ? <FormError>{TROUBLE}</FormError> : null}
     </div>
   );
 }

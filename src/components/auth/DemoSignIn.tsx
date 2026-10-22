@@ -2,6 +2,7 @@
 
 import { useActionState, useId } from "react";
 import { Button } from "@/components/ui/Button";
+import { FormError } from "./FormError";
 
 export type DemoSignInState = { status: "idle" } | { status: "error"; error: string };
 
@@ -41,9 +42,9 @@ export function DemoSignIn({ action, next }: DemoSignInProps) {
         </Button>
       </form>
       {state.status === "error" ? (
-        <p id={`${id}-error`} role="alert" className="mt-2 text-sm text-incorrect">
+        <FormError id={`${id}-error`} className="mt-2">
           {state.error}
-        </p>
+        </FormError>
       ) : null}
     </section>
   );
