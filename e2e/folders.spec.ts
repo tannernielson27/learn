@@ -1,8 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
+import { seedQuiz } from "./seedQuiz";
 import { signInAsNewAuthor } from "./signIn";
-import { openImport } from "./authoringHelpers";
 import { giveQuizAnInQuizFolder } from "./inQuizFolders";
 
 // Needs the local Supabase stack, like auth.spec.ts. CI runs it in the `auth-e2e` job.
@@ -50,7 +50,7 @@ test("an author sorts ten items into Cardiac and Respiratory and opens a folder"
   page,
   request,
 }, testInfo) => {
-  // Sign-in, an import, two folders, two moves and a nested folder: longer than the default.
+  // Sign-in, seeding, two folders, two moves and a nested folder: longer than the default.
   test.slow();
   await signInAsNewAuthor(page, request, testInfo.project.name);
   const bankName = `Folders ${testInfo.project.name} ${Date.now()}`;
@@ -60,10 +60,7 @@ test("an author sorts ten items into Cardiac and Respiratory and opens a folder"
   await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
-  await openImport(page);
-
-  await page.getByRole("textbox", { name: "Or paste JSON", exact: true }).fill(tenItems());
-  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await seedQuiz(page, request, tenItems());
   await expect(itemLinks(page)).toHaveCount(10);
 
   // #411: a new quiz has no folders inside it, so it is given its first the way an older one had.

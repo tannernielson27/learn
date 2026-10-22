@@ -2,8 +2,8 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
 import { sampleCaseStudy } from "../src/lib/ngn/fixtures/case-study";
+import { seedQuiz } from "./seedQuiz";
 import { signInAsNewAuthor } from "./signIn";
-import { openImport } from "./authoringHelpers";
 
 // Needs the local Supabase stack, like auth.spec.ts. CI runs it in the `auth-e2e` job.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
@@ -11,13 +11,6 @@ test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase 
 async function expectNoAxeViolations(page: Page) {
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
-}
-
-async function importJson(page: Page, text: string) {
-  await openImport(page);
-  await page.getByRole("textbox", { name: "Or paste JSON", exact: true }).fill(text);
-  await page.getByRole("button", { name: "Import", exact: true }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Imported" })).toBeVisible();
 }
 
 const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -30,7 +23,7 @@ test("an author duplicates a case study, changes step 3 in the copy, and the ori
   page,
   request,
 }, testInfo) => {
-  // Sign-in, two imports, two copies and a save: longer than the default.
+  // Sign-in, two seeded quizzes, two copies and a save: longer than the default.
   test.slow();
   await signInAsNewAuthor(page, request, testInfo.project.name);
   const bankName = `Duplicate ${testInfo.project.name} ${Date.now()}`;
@@ -41,7 +34,7 @@ test("an author duplicates a case study, changes step 3 in the copy, and the ori
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   const bankUrl = page.url();
 
-  await importJson(page, JSON.stringify({ format: "learn.v1", caseStudy: sampleCaseStudy }));
+  await seedQuiz(page, request, JSON.stringify({ format: "learn.v1", caseStudy: sampleCaseStudy }));
   const cases = page.getByRole("list", { name: "Case studies" });
   const original = cases
     .getByRole("link", { name: new RegExp(`^${escapeRegExp(title)}`) })
@@ -103,7 +96,7 @@ test("an author duplicates an item and the copy opens as a draft marked (copy)",
     id: "duplicate-demo",
     stem: { kind: "markdown", value: itemStem },
   };
-  await importJson(page, JSON.stringify({ format: "learn.v1", items: [item] }));
+  await seedQuiz(page, request, JSON.stringify({ format: "learn.v1", items: [item] }));
   const items = page.getByRole("list", { name: "Questions" });
   await items.getByRole("link", { name: new RegExp(`^${itemStem}`) }).click();
   await expect(page.getByRole("textbox", { name: "Question stem", exact: true })).toHaveValue(

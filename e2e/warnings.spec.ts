@@ -1,8 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
+import { seedQuiz } from "./seedQuiz";
 import { signInAsNewAuthor } from "./signIn";
-import { openImport } from "./authoringHelpers";
 
 // Needs the local Supabase stack, like auth.spec.ts. CI runs it in the `auth-e2e` job.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
@@ -45,10 +45,7 @@ test("an author filters the bank to Has warnings, adds a rationale, and the warn
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   const bankUrl = page.url();
 
-  await openImport(page);
-
-  await page.getByRole("textbox", { name: "Or paste JSON", exact: true }).fill(threeItems());
-  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await seedQuiz(page, request, threeItems());
   await expect(itemLinks(page)).toHaveCount(3);
   await expect(itemLinks(page).filter({ hasText: NO_RATIONALE })).toContainText("1 warning");
   await expect(itemLinks(page).filter({ hasText: CLEAN })).not.toContainText("warning");

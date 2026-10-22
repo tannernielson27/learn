@@ -2,19 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import { FIXTURES, sampleCaseStudy } from "@/lib/ngn/fixtures";
 import { validateCaseStudy, validateItem } from "@/lib/ngn/validate";
 import { toCaseStudyRow, toItemRow } from "@/lib/supabase/itemRows";
-import {
-  TRANSFER_ERRORS,
-  importIntoBank,
-  readCaseStudyExport,
-  readItemExport,
-} from "./importExport";
+import { TRANSFER_ERRORS, readCaseStudyExport, readItemExport } from "./importExport";
 import { CASE_STUDY_WITH_STEPS } from "./caseStudies";
-import { importRowsFor, parseImport } from "./transfer";
 
 type Result = { data?: unknown; error?: { code?: string; message?: string } | null };
 
 /** A chainable stand-in for the Supabase client, as in caseStudies.test.ts. */
-function fakeClient(queue: Record<string, Result[]> = {}, rpcResult: Result = { error: null }) {
+function fakeClient(queue: Record<string, Result[]> = {}) {
   const calls: { table: string; method: string; args: unknown[] }[] = [];
   const next = (table: string): Result => queue[table]?.shift() ?? { data: null, error: null };
   const from = vi.fn((table: string) => {
@@ -29,13 +23,10 @@ function fakeClient(queue: Record<string, Result[]> = {}, rpcResult: Result = { 
     chain.maybeSingle = async () => result;
     return chain;
   });
-  const rpc = vi.fn(async () => rpcResult);
-  return { client: { from, rpc } as never, from, rpc, calls };
+  return { client: { from } as never, from, calls };
 }
 
-const BANK_ID = "00000000-0000-4000-8000-000000000002";
 const ITEM_ID = "00000000-0000-4000-8000-000000000010";
-const FOLDER_ID = "00000000-0000-4000-8000-000000000020";
 
 const validItem = () => {
   const result = validateItem(FIXTURES.multiple_choice.canonical);
@@ -47,82 +38,6 @@ const validCaseStudy = () => {
   if (!result.ok) throw new Error("sample case study must be valid");
   return result.value;
 };
-
-describe("importIntoBank", () => {
-  const rows = () => {
-    const parsed = parseImport(JSON.stringify({ format: "learn.v1", items: [validItem()] }));
-    if (!parsed.ok) throw new Error("should parse");
-    return importRowsFor(parsed);
-  };
-
-  it("writes everything through the import function, in one call", async () => {
-    const fake = fakeClient(
-      {},
-      { data: { item_ids: [ITEM_ID], case_study_id: null }, error: null },
-    );
-    const importRows = rows();
-    expect(await importIntoBank(fake.client, BANK_ID, importRows)).toEqual({
-      ok: true,
-      value: { itemIds: [ITEM_ID], caseStudyId: null },
-    });
-    expect(fake.rpc).toHaveBeenCalledTimes(1);
-    expect(fake.rpc).toHaveBeenCalledWith("import_bank_content", {
-      target_bank: BANK_ID,
-      new_items: importRows.items,
-      new_case_study: null,
-    });
-    expect(fake.from).not.toHaveBeenCalled();
-  });
-
-  it("says the bank is gone when the caller cannot see it", async () => {
-    const fake = fakeClient({}, { data: null, error: { code: "22023" } });
-    expect(await importIntoBank(fake.client, BANK_ID, rows())).toEqual({
-      ok: false,
-      error: TRANSFER_ERRORS.bankGone,
-    });
-  });
-
-  it("files everything in a target folder in the same call", async () => {
-    const fake = fakeClient(
-      {},
-      { data: { item_ids: [ITEM_ID], case_study_id: null }, error: null },
-    );
-    const importRows = rows();
-    await importIntoBank(fake.client, BANK_ID, importRows, FOLDER_ID);
-    expect(fake.rpc).toHaveBeenCalledTimes(1);
-    expect(fake.rpc).toHaveBeenCalledWith("import_bank_content", {
-      target_bank: BANK_ID,
-      new_items: importRows.items,
-      new_case_study: null,
-      target_folder: FOLDER_ID,
-    });
-  });
-
-  it("sends no folder when the import goes to Unfiled", async () => {
-    const fake = fakeClient(
-      {},
-      { data: { item_ids: [ITEM_ID], case_study_id: null }, error: null },
-    );
-    await importIntoBank(fake.client, BANK_ID, rows(), null);
-    expect((fake.rpc.mock.calls[0] as unknown[])[1]).not.toHaveProperty("target_folder");
-  });
-
-  it("says the folder is gone when it is not one of the bank's folders", async () => {
-    const fake = fakeClient({}, { data: null, error: { code: "23503" } });
-    expect(await importIntoBank(fake.client, BANK_ID, rows(), FOLDER_ID)).toEqual({
-      ok: false,
-      error: TRANSFER_ERRORS.folderGone,
-    });
-  });
-
-  it("says nothing was imported on any other failure", async () => {
-    const fake = fakeClient({}, { data: null, error: { code: "23514" } });
-    expect(await importIntoBank(fake.client, BANK_ID, rows())).toEqual({
-      ok: false,
-      error: TRANSFER_ERRORS.importFailed,
-    });
-  });
-});
 
 describe("readItemExport", () => {
   it("exports a valid stored item in the learn.v1 envelope", async () => {
