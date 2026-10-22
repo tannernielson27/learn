@@ -88,6 +88,8 @@ describe("the phone's header on a question", () => {
     await renderersLoaded();
     const header = screen.getByRole("banner");
     expect(header).toHaveTextContent("Question 1 of 5");
+    // Said once: the header carries the place, and the question below does not repeat it.
+    expect(screen.getAllByText(/Question 1 of 5/)).toHaveLength(1);
     expect(within(header).getByText("Connected")).toBeInTheDocument();
     expect(within(header).getByRole("timer")).toHaveTextContent("0:08");
     expect(within(header).getByText("10 seconds left")).toBeInTheDocument();

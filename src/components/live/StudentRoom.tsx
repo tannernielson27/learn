@@ -97,10 +97,6 @@ export function StudentRoom(props: StudentRoomProps) {
     view.phase === "refused" ? null : view.phase === "reconnecting" ? view.underneath : view;
   const reconnecting = view.phase === "reconnecting";
 
-  const progress =
-    state.position === null || state.itemCount === 0
-      ? undefined
-      : { index: state.position - 1, total: state.itemCount };
   const progressLabel =
     settled !== null && "place" in settled && settled.place.position !== null
       ? `Question ${settled.place.position} of ${settled.place.itemCount}`
@@ -131,7 +127,6 @@ export function StudentRoom(props: StudentRoomProps) {
           settled={settled}
           room={room}
           displayName={displayName}
-          progress={progress}
           reconnecting={reconnecting}
           history={history.entries}
         />
@@ -144,14 +139,12 @@ function Body({
   settled,
   room,
   displayName,
-  progress,
   reconnecting,
   history,
 }: {
   settled: PhoneSettledView;
   room: ReturnType<typeof useStudentRoom>;
   displayName: string;
-  progress: { index: number; total: number } | undefined;
   reconnecting: boolean;
   history: ReturnType<typeof useStudentRoom>["history"]["entries"];
 }) {
@@ -188,12 +181,7 @@ function Body({
       }
       return (
         <>
-          <RevealedItem
-            item={item}
-            answered={answered}
-            revealed={settled.revealed}
-            progress={progress}
-          />
+          <RevealedItem item={item} answered={answered} revealed={settled.revealed} />
           <p className="pb-6 text-center text-sm text-ink-2">
             The next question appears when your teacher moves on.
           </p>
@@ -212,7 +200,6 @@ function Body({
             // Review, not feedback: the key stays on the server until the host reveals it.
             initialMode="review"
             initialResponse={answered.response}
-            progress={progress}
             submit={refuseSecondAnswer}
             label="Your answer"
           />
@@ -241,7 +228,6 @@ function Body({
             item={item}
             initialResponse={room.draft}
             onResponseChange={(response) => room.setDraft(item.id, response)}
-            progress={progress}
             submit={room.send}
             busyLabel={LIVE_BUSY_LABEL}
             failureMessage={liveSubmitFailure}

@@ -218,7 +218,6 @@ export function StudentPacedRoom({
   const entry = set[at] as PacedItemPayload;
   const mine = answeredFor(entry);
   const done = set.filter((each) => answeredFor(each) !== null).length;
-  const progress = { index: at, total: set.length };
 
   return (
     <div className="flex flex-1 flex-col">
@@ -235,12 +234,7 @@ export function StudentPacedRoom({
       />
 
       {state.reveal && entry.revealed !== null ? (
-        <RevealedItem
-          item={entry.item}
-          answered={mine}
-          revealed={entry.revealed}
-          progress={progress}
-        />
+        <RevealedItem item={entry.item} answered={mine} revealed={entry.revealed} />
       ) : state.reveal ? (
         <p className="measure mt-8 text-ink-2">{SHOWING}</p>
       ) : mine !== null ? (
@@ -253,7 +247,6 @@ export function StudentPacedRoom({
             // Review: no key on this phone until the reveal, so nothing to mark (StudentRoom).
             initialMode="review"
             initialResponse={mine.response}
-            progress={progress}
             submit={refuseSecondAnswer}
             label="Your answer"
           />
@@ -267,7 +260,6 @@ export function StudentPacedRoom({
             onResponseChange={(response) =>
               setDrafts((held) => ({ ...held, [entry.item.id]: response }))
             }
-            progress={progress}
             submit={(response) => send(entry, response)}
             busyLabel={LIVE_BUSY_LABEL}
             failureMessage={liveSubmitFailure}
