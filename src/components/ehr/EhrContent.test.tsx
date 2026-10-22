@@ -4,7 +4,8 @@ import { useState } from "react";
 import { describe, expect, it } from "vitest";
 import { sampleEhr } from "@/lib/ngn/fixtures";
 import type { EhrRecord } from "@/lib/ngn/schemas";
-import { EhrContent, tabsAtTime } from "./EhrContent";
+import type { EhrRecordView } from "@/lib/ngn/chartReveal";
+import { EhrContent, newTabIds, tabsAtTime } from "./EhrContent";
 
 function Harness({ record = sampleEhr }: { record?: EhrRecord }) {
   const [selectedTimeId, setSelectedTimeId] = useState(record.timePoints[0]!.id);
@@ -181,5 +182,53 @@ describe("EhrContent", () => {
       />,
     );
     expect(screen.getByText(/No entries at this time/)).toBeInTheDocument();
+  });
+});
+
+describe("newTabIds", () => {
+  const header = { age: 74, sex: "female" } as EhrRecordView["patientHeader"];
+  const view = (tabs: EhrRecordView["tabs"], patientHeader = header): EhrRecordView => ({
+    patientHeader,
+    timePoints: [],
+    tabs,
+  });
+  const open = (id: string) => ({ id, kind: "nurses_notes" as const, title: id, blocks: [] });
+  const locked = (id: string) => ({
+    id,
+    kind: "nurses_notes" as const,
+    title: id,
+    locked: true as const,
+  });
+
+  it("marks a tab open now that was absent or locked at the step before", () => {
+    const before = view([open("hp"), locked("labs")]);
+    const now = view([open("hp"), open("labs"), open("vitals")]);
+    expect([...newTabIds(now, before)].sort()).toEqual(["labs", "vitals"]);
+  });
+
+  it("marks nothing without a step before, or when it was another patient's", () => {
+    const now = view([open("hp")]);
+    expect(newTabIds(now, undefined).size).toBe(0);
+    const other = view([], { age: 30, sex: "male" } as EhrRecordView["patientHeader"]);
+    expect(newTabIds(now, other).size).toBe(0);
+  });
+
+  it("shows the word New on such a tab, and keeps it out of the tab's name", () => {
+    const before = view([open("hp")]);
+    const now = view([open("hp"), open("labs")]);
+    render(
+      <EhrContent
+        record={now}
+        previous={before}
+        selectedTabId="hp"
+        onSelectTab={() => {}}
+        selectedTimeId=""
+        onSelectTime={() => {}}
+      />,
+    );
+    const tab = screen.getByRole("tab", { name: "labs" });
+    expect(tab).toHaveTextContent("New");
+    expect(tab).toHaveAccessibleDescription("New at this step");
+    expect(screen.getByRole("tab", { name: "hp" })).not.toHaveTextContent("New");
   });
 });

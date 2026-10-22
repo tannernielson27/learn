@@ -51,9 +51,12 @@ function TableBlock({ columns, rows }: Extract<EhrBlock, { kind: "table" }>) {
         <thead>
           <tr>
             {cornerIsBlank ? (
-              <td className="border-b border-line-strong pb-2" />
+              <td className="sticky left-0 border-b border-line-strong bg-surface-1 pb-2" />
             ) : (
-              <th scope="col" className="border-b border-line-strong pr-4 pb-2 font-medium">
+              <th
+                scope="col"
+                className="sticky left-0 border-b border-line-strong bg-surface-1 pr-4 pb-2 font-medium"
+              >
                 {corner}
               </th>
             )}
@@ -73,11 +76,14 @@ function TableBlock({ columns, rows }: Extract<EhrBlock, { kind: "table" }>) {
             const [head, ...cells] = row;
             return (
               <tr key={rowIndex} className="border-b border-line last:border-b-0">
-                <th scope="row" className="py-2 pr-4 align-top font-normal whitespace-nowrap">
+                <th
+                  scope="row"
+                  className="sticky left-0 bg-surface-1 py-2 pr-4 align-top font-normal whitespace-nowrap"
+                >
                   {head}
                 </th>
                 {cells.map((cell, cellIndex) => (
-                  <td key={cellIndex} className="py-2 pr-4 align-top">
+                  <td key={cellIndex} className="py-2 pr-4 align-top font-mono">
                     {cell}
                   </td>
                 ))}
@@ -97,18 +103,27 @@ function TableBlock({ columns, rows }: Extract<EhrBlock, { kind: "table" }>) {
 function VitalsBlock({ rows }: Extract<EhrBlock, { kind: "vitals" }>) {
   return (
     <div className="overflow-x-auto">
-      <table className="tabular w-full border-collapse text-left text-sm">
+      <table className="tabular w-full border-collapse text-left text-base">
         <tbody>
           {rows.map((row, index) => (
             <tr key={index} className="border-b border-line last:border-b-0">
-              <th scope="row" className="py-2 pr-4 align-top font-normal">
+              <th
+                scope="row"
+                className="sticky left-0 bg-surface-1 py-2.5 pr-4 align-top font-normal"
+              >
                 {row.label}
               </th>
-              <td className="py-2 text-right align-top font-mono">{row.value}</td>
-              <td className="py-2 pl-2 align-top whitespace-nowrap text-ink-2">{row.unit ?? ""}</td>
-              <td className="w-8 py-2 pl-2 align-top">
+              <td className="py-2.5 text-right align-top font-mono">{row.value}</td>
+              <td className="py-2.5 pl-2 align-top whitespace-nowrap text-ink-2">
+                {row.unit ?? ""}
+              </td>
+              <td className="w-8 py-2.5 pl-2 align-top">
                 {row.flag ? (
-                  <span className="inline-flex items-center rounded-sm border border-line-strong px-1 font-mono text-xs text-ink-2">
+                  // The H or L tag of the patient record mockup: ink on a 1.5px ink edge, never red.
+                  <span
+                    title={row.flag === "H" ? "High" : "Low"}
+                    className="inline-grid size-5 place-items-center rounded-sm border-[1.5px] border-ink-1 font-mono text-xs font-bold text-ink-1"
+                  >
                     <span aria-hidden="true">{row.flag}</span>
                     <span className="sr-only">{row.flag === "H" ? "high" : "low"}</span>
                   </span>

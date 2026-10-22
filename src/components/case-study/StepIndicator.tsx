@@ -15,14 +15,17 @@ export function StepIndicator({ step, total }: StepIndicatorProps) {
   return (
     <div>
       {/* Not a live region: each step change moves focus to the step, whose name says this. */}
-      <p className="text-sm font-medium" data-step-indicator={onResults ? "results" : step}>
+      <p
+        className="tabular font-mono text-sm font-semibold text-ink-1"
+        data-step-indicator={onResults ? "results" : step}
+      >
         {onResults ? "Results" : `Step ${step} of ${total}: ${CJMM_STEP_LABELS[step as CjmmStep]}`}
       </p>
       <ol aria-hidden="true" className="mt-2 flex gap-1">
         {Array.from({ length: total }, (_, i) => (
           <li
             key={i}
-            className={`h-1 flex-1 rounded-full transition-colors duration-base ease-out-expo ${
+            className={`h-1.5 max-w-7 flex-1 rounded-full transition-colors duration-base ease-out-expo ${
               i < step ? "bg-accent" : "bg-surface-2"
             }`}
           />

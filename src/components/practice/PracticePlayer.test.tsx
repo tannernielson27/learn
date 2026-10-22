@@ -80,10 +80,80 @@ describe("PracticePlayer (#241)", () => {
         total: 1,
       }),
     );
+    // Every question answered: the run opens on its results, and a question opens from there.
+    expect(screen.getByRole("region", { name: "Practice finished" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /^Q1,/ }));
     await renderersLoaded();
     expect(screen.getByText(MC_RATIONALE)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
     expect(screen.getByTestId("practice-count")).toHaveTextContent("1 of 1 done");
+    await userEvent.click(screen.getByRole("button", { name: "See results" }));
+    expect(screen.getByRole("region", { name: "Practice finished" })).toBeInTheDocument();
+  });
+
+  it("ends on the results: the total, what was missed, Practise the N I missed, Start over", async () => {
+    const wrong = { type: "multiple_choice" as const, optionId: "opt_b" };
+    const practiseMissed = vi.fn(async () => ({ error: null }));
+    const startOver = vi.fn(async () => ({ error: null }));
+    render(
+      <PracticePlayer
+        view={view({
+          answered: 2,
+          entries: [
+            {
+              kind: "item",
+              itemId: ROW_1,
+              item: toKeylessItem(MC),
+              answered: { kind: "scored", response: CORRECT, reveal: scoreSubmission(MC, CORRECT) },
+            },
+            {
+              kind: "item",
+              itemId: ROW_2,
+              item: toKeylessItem(MC),
+              answered: { kind: "scored", response: wrong, reveal: scoreSubmission(MC, wrong) },
+            },
+          ],
+        })}
+        startOver={startOver}
+        practiseMissed={practiseMissed}
+      />,
+    );
+    const results = screen.getByRole("region", { name: "Practice finished" });
+    expect(screen.getByTestId("results-total")).toHaveTextContent("1/2");
+    expect(results).toHaveTextContent("points · 50%");
+    // Missed first: that is what is left to do.
+    expect(
+      screen.getByRole("list", { name: "Missed questions" }).querySelectorAll("li"),
+    ).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Practise the 1 I missed" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start over with all 2" })).toBeInTheDocument();
+  });
+
+  it("a run of missed questions ends with the way back instead of Start over", () => {
+    render(
+      <PracticePlayer
+        view={view({
+          kind: "missed",
+          total: 1,
+          answered: 1,
+          entries: [
+            {
+              kind: "item",
+              itemId: ROW_1,
+              item: toKeylessItem(MC),
+              answered: { kind: "scored", response: CORRECT, reveal: scoreSubmission(MC, CORRECT) },
+            },
+          ],
+        })}
+        back={{ href: "/learn", label: "Back to your classes" }}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Back to your classes" })).toHaveAttribute(
+      "href",
+      "/learn",
+    );
+    expect(screen.queryByRole("button", { name: /Start over/ })).toBeNull();
+    expect(screen.getByText("all correct")).toBeInTheDocument();
   });
 
   it("moves with Next and Previous, keeping a half-made answer", async () => {

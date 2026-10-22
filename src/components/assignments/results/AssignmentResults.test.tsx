@@ -40,18 +40,16 @@ const BASE: AssignmentResultsProps = {
   record: null,
 };
 
-const goTo = (position: number, answeredIt: boolean) =>
-  fireEvent.click(
-    screen.getByRole("button", {
-      name: `Question ${position}, ${answeredIt ? "answered" : "not answered"}`,
-    }),
-  );
+/** Opens a question from the list of questions with their verdicts. */
+const goTo = (position: number) =>
+  fireEvent.click(screen.getByRole("button", { name: new RegExp(`^Q${position},`) }));
 
 describe("AssignmentResults", () => {
   it("leads with the best attempt's total, in words", () => {
     render(<AssignmentResults {...BASE} />);
     const total = screen.getByRole("region", { name: "Your score" });
-    expect(total).toHaveTextContent("7 of 10");
+    expect(total).toHaveTextContent("7/10");
+    expect(total).toHaveTextContent("points · 70%");
     expect(total).toHaveTextContent("Your best: attempt 2 of 2.");
   });
 
@@ -64,7 +62,7 @@ describe("AssignmentResults", () => {
       />,
     );
     const total = screen.getByRole("region", { name: "Your score" });
-    expect(total).toHaveTextContent("1.5 of 3");
+    expect(screen.getByTestId("results-total")).toHaveTextContent("1.5/3");
     // One attempt is the score: nothing is said beside it.
     expect(total.querySelectorAll("p")).toHaveLength(1);
   });
@@ -76,7 +74,7 @@ describe("AssignmentResults", () => {
     expect(screen.getByRole("complementary", { name: "Score" })).toBeInTheDocument();
     expect(screen.getByText(firstLine(MC), { exact: false })).toBeInTheDocument();
 
-    goTo(2, true);
+    goTo(2);
     await renderersLoaded();
     // Words, not colour alone: the missed option says so on screen, not only to a screen reader.
     const missed = screen.getAllByText("Missed");
@@ -103,7 +101,7 @@ describe("AssignmentResults", () => {
     );
     expect(screen.getByText("You did not attempt this.")).toBeInTheDocument();
     expect(screen.getByRole("complementary", { name: "Rationale" })).toBeInTheDocument();
-    goTo(2, false);
+    goTo(2);
     await renderersLoaded();
     expect(screen.getByText("You did not attempt this.")).toBeInTheDocument();
     expect(screen.getByText(firstLine(MR), { exact: false })).toBeInTheDocument();
@@ -121,10 +119,10 @@ describe("AssignmentResults", () => {
       "Not marked yet. Reload the page in a moment.",
     );
     expect(screen.getByText("You did not answer this.")).toBeInTheDocument();
-    goTo(2, true);
+    goTo(2);
     await renderersLoaded();
     expect(screen.getByText("Your answer could not be shown.")).toBeInTheDocument();
-    goTo(3, false);
+    goTo(3);
     await renderersLoaded();
     expect(screen.getByText("Not marked yet.")).toBeInTheDocument();
   });
@@ -145,6 +143,52 @@ describe("AssignmentResults", () => {
     fireEvent.click(screen.getByRole("button", { name: "Previous" }));
     await renderersLoaded();
     expect(screen.getByText(firstLine(MC), { exact: false })).toBeInTheDocument();
+  });
+
+  it("lists every question with its verdict, and filters to the missed ones", async () => {
+    const entries = [answered(MC, mcRight(MC), 1), answered(MR, mrMissingOne(MR), 2)];
+    render(<AssignmentResults {...BASE} entries={entries} />);
+    await renderersLoaded();
+    const all = screen.getByRole("list", { name: "All questions" });
+    expect(all.querySelectorAll("li")).toHaveLength(2);
+    expect(all).toHaveTextContent("All correct");
+    expect(all).toHaveTextContent("Partially correct");
+    fireEvent.click(screen.getByRole("radio", { name: "Missed 1" }));
+    const missed = screen.getByRole("list", { name: "Missed questions" });
+    expect(missed.querySelectorAll("li")).toHaveLength(1);
+    expect(missed).toHaveTextContent("Q2");
+  });
+
+  it("Review what I missed opens the first missed question, and Practise names how many", async () => {
+    const entries = [answered(MC, mcRight(MC), 1), answered(MR, mrMissingOne(MR), 2)];
+    const practise = async () => ({ error: null });
+    render(<AssignmentResults {...BASE} entries={entries} practiseMissed={practise} />);
+    await renderersLoaded();
+    expect(screen.getByRole("button", { name: "Practise the 1 I missed" })).toBeInTheDocument();
+    expect(screen.getByText(/Practice is never graded/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Review what I missed" }));
+    await renderersLoaded();
+    expect(screen.getByRole("region", { name: "Question 2" })).toHaveFocus();
+    expect(screen.getByText(firstLine(MR), { exact: false })).toBeInTheDocument();
+  });
+
+  it("offers neither when nothing was missed, and shows the share by step", async () => {
+    const entries = [answered(MC, mcRight(MC), 1)];
+    render(
+      <AssignmentResults
+        {...BASE}
+        entries={entries}
+        practiseMissed={async () => ({ error: null })}
+      />,
+    );
+    await renderersLoaded();
+    expect(screen.queryByRole("button", { name: /I missed/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Review what I missed" })).toBeNull();
+    if (MC.cjmmStep !== undefined) {
+      expect(screen.getByRole("region", { name: "By clinical judgment step" })).toHaveTextContent(
+        "100%",
+      );
+    }
   });
 
   it("says so when there are no questions to show", () => {
@@ -173,7 +217,7 @@ describe("AssignmentResults", () => {
     ).toBeGreaterThan(0);
     expect(screen.getByRole("complementary", { name: "Rationale" })).toBeInTheDocument();
     const last = CASE.items.at(-1) as Item;
-    goTo(CASE.items.length, false);
+    goTo(CASE.items.length);
     await renderersLoaded();
     expect(screen.getByText(firstLine(last), { exact: false })).toBeInTheDocument();
   });

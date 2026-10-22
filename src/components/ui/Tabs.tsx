@@ -13,6 +13,13 @@ export interface TabItem {
    * so there is nothing behind it to show. `content` is not rendered for a locked tab.
    */
   locked?: boolean;
+  /**
+   * A short word beside the label, such as "New" on a patient record tab a step has just opened.
+   * Shown, but kept out of the tab's name so the tab is found by its label alone; `badgeNote` is
+   * read as its description.
+   */
+  badge?: string;
+  badgeNote?: string;
 }
 
 export interface TabsProps {
@@ -160,14 +167,29 @@ export function Tabs({
                 aria-selected={isSelected}
                 aria-controls={`${baseId}-panel-${tab.id}`}
                 tabIndex={isSelected ? 0 : -1}
+                aria-describedby={tab.badge ? `${baseId}-badge-${tab.id}` : undefined}
                 onClick={() => select(tab.id)}
-                className={`tap-target -mb-px shrink-0 snap-start whitespace-nowrap border-b-2 px-3 text-sm font-medium transition-[color,border-color] duration-fast ease-out-expo ${
+                className={`tap-target -mb-px inline-flex shrink-0 snap-start items-center gap-2 whitespace-nowrap border-b-2 px-3 text-sm font-medium transition-[color,border-color] duration-fast ease-out-expo ${
                   isSelected
                     ? "border-accent text-accent-ink"
                     : "border-transparent text-ink-2 hover:text-ink-1"
                 }`}
               >
                 {tab.label}
+                {tab.badge ? (
+                  <>
+                    <span
+                      aria-hidden="true"
+                      className="inline-flex h-5 items-center rounded-full bg-accent-soft px-2 text-xs font-semibold text-accent-ink"
+                    >
+                      {tab.badge}
+                    </span>
+                    {/* Hidden, so it is no part of the name; a description may point at it. */}
+                    <span id={`${baseId}-badge-${tab.id}`} hidden>
+                      {tab.badgeNote ?? tab.badge}
+                    </span>
+                  </>
+                ) : null}
               </button>
             );
           })}

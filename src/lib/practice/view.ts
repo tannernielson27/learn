@@ -24,8 +24,8 @@ import {
   type Reveal,
 } from "@/lib/ngn/submit";
 import { secretStartingOrderSeed } from "@/lib/supabase/startingOrderSeed";
-import { reachedStep, recordsThrough } from "@/lib/ngn/chartReveal";
-import type { CjmmStep } from "@/lib/ngn/types";
+import { reachedStep, recordAtStep, recordsThrough } from "@/lib/ngn/chartReveal";
+import { CJMM_STEP_LABELS, type CjmmStep } from "@/lib/ngn/types";
 import {
   itemsOf,
   sizeOf,
@@ -66,6 +66,12 @@ export interface PracticeViewInput {
   caseStudies: readonly PracticeCaseStudyRow[];
   /** This run's stored answers, by item row id. */
   answers: Readonly<Record<string, unknown>>;
+  /**
+   * A run of only the questions a student missed (20261023020000): its case-study steps are a
+   * few of each case study's, so each plays on its own with the chart at its own step, rather
+   * than as a case study that would renumber them.
+   */
+  missed?: boolean;
 }
 
 /** The item as this run shows it: keyless, started in the secret order, options shuffled. */
@@ -148,11 +154,42 @@ function caseStudyEntry(
   };
 }
 
+const isStep = (step: number | null): step is CjmmStep =>
+  step !== null && Number.isInteger(step) && step >= 1 && step <= 6;
+
+/**
+ * A missed case-study step as a question on its own, with the chart at its own step. A step whose
+ * case study or record cannot be read plays without one, so a question is never lost for want of
+ * its chart.
+ */
+function looseStep(
+  slot: PracticeSlot,
+  items: ReadonlyMap<string, Item>,
+  input: PracticeViewInput,
+): PracticeEntry | null {
+  const entry = entryOf(slot, items, input);
+  if (!entry) return null;
+  const row = input.caseStudies.find((study) => study.id === slot.caseStudyId);
+  const ehr = ehrRecordSchema.safeParse(row?.ehr);
+  if (!row || !ehr.success || !isStep(slot.step)) return { kind: "item", ...entry };
+  return {
+    kind: "item",
+    ...entry,
+    record: recordAtStep(ehr.data, slot.step),
+    context: `Case study: ${row.title} · Step ${slot.step}: ${CJMM_STEP_LABELS[slot.step]}`,
+  };
+}
+
 function entriesOf(input: PracticeViewInput): PracticeEntry[] {
   const items = new Map(input.items.map((entry) => [entry.rowId, entry.item]));
   const entries: PracticeEntry[] = [];
   const seen = new Set<string>();
   for (const slot of input.slots) {
+    if (slot.caseStudyId !== null && input.missed) {
+      const entry = looseStep(slot, items, input);
+      if (entry) entries.push(entry);
+      continue;
+    }
     if (slot.caseStudyId === null) {
       const entry = entryOf(slot, items, input);
       if (entry) entries.push({ kind: "item", ...entry });
@@ -173,6 +210,7 @@ export function buildPracticeView(input: PracticeViewInput): PracticeView {
   return {
     runId: input.run.runId,
     bankName: input.run.bankName,
+    kind: input.missed ? "missed" : "quiz",
     // Every step counts toward the total, the ones not yet reached as well.
     total: entries.reduce((sum, entry) => sum + sizeOf(entry), 0),
     answered: all.filter((entry) => entry.answered !== null).length,

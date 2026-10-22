@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { RecordLayout } from "@/components/ehr/RecordLayout";
+import { ActionBar } from "@/components/question/ActionBar";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { FlagToggle } from "@/components/review/FlagToggle";
 import { ReviewList } from "@/components/review/ReviewList";
@@ -196,9 +197,12 @@ export function CaseStudyPlayer<T extends PlayableItem>({
     };
   };
 
+  // The Next bar takes the place of the shell's Submit once a step is answered.
+  const showNext = !onResults && !reviewing && isAnswered(current);
+
   const page = (
     <>
-      <div>
+      <div className={showNext ? "max-md:pb-28 short:pr-36" : undefined}>
         <header className="mb-6">
           <StepIndicator step={index + 1} total={total} />
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -276,26 +280,24 @@ export function CaseStudyPlayer<T extends PlayableItem>({
       </div>
 
       {/* Takes the place of the shell's submit bar, which is gone once the step has been answered. */}
-      {!onResults && !reviewing && isAnswered(current) ? (
-        <div className="fixed inset-x-0 bottom-0 border-t border-line bg-surface-1/95 px-5 py-3 backdrop-blur-sm [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
-          <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-end gap-3">
-            {nextArrived ? null : (
-              <>
-                <p role="status" className="text-sm text-ink-2">
-                  Loading the next question.
-                </p>
-                {onReloadNext ? (
-                  <Button variant="ghost" size="sm" onClick={onReloadNext}>
-                    Try again
-                  </Button>
-                ) : null}
-              </>
-            )}
-            <Button variant="primary" disabled={!nextArrived} onClick={advance}>
-              {isLastStep ? "See results" : "Next question"}
-            </Button>
-          </div>
-        </div>
+      {showNext ? (
+        <ActionBar className="justify-end short:justify-end">
+          {nextArrived ? null : (
+            <>
+              <p role="status" className="text-sm text-ink-2">
+                Loading the next question.
+              </p>
+              {onReloadNext ? (
+                <Button variant="ghost" size="sm" onClick={onReloadNext}>
+                  Try again
+                </Button>
+              ) : null}
+            </>
+          )}
+          <Button variant="primary" size="lg" disabled={!nextArrived} onClick={advance}>
+            {isLastStep ? "See results" : "Next question"}
+          </Button>
+        </ActionBar>
       ) : null}
     </>
   );
@@ -303,7 +305,12 @@ export function CaseStudyPlayer<T extends PlayableItem>({
   return record === undefined ? (
     page
   ) : (
-    <RecordLayout record={record} note={note}>
+    <RecordLayout
+      record={record}
+      // The step before's chart, so a tab this step opens is marked "New" (#335).
+      previous={records && index > 0 ? records[Math.min(index, records.length) - 1] : undefined}
+      note={note}
+    >
       {page}
     </RecordLayout>
   );

@@ -84,6 +84,11 @@ export type ResultsView =
       kind: "results";
       assignment: ResultsHeader;
       best: BestResult | null;
+      /**
+       * The attempt `best` is, for the server's "Practise the N I missed" (20261023020000). Never
+       * handed to the results component; null when no attempt is marked.
+       */
+      bestAttemptId: string | null;
       attemptsMade: number;
       entries: ResultEntry[];
       /** The case study's patient record, parsed; null for a bank. */
@@ -214,6 +219,7 @@ export async function loadResultsPage(
       best && best.score !== null && best.maxScore !== null
         ? { attemptNumber: best.number, score: best.score, maxScore: best.maxScore }
         : null,
+    bestAttemptId: best && best.score !== null && best.maxScore !== null ? best.id : null,
     attemptsMade: result.attempts.length,
     entries: set.map((entry) => entryFor(entry, result.attempts, best)),
     record: recordOf(result.patientRecord),

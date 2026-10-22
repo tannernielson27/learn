@@ -551,7 +551,7 @@ const SCREENS: readonly Screen[] = [
       state.resultsPage = results();
     },
     element: resultsPage,
-    then: () => click(/2, not answered/),
+    then: () => click(/^Q2,/),
   },
   {
     name: "results, one attempt",

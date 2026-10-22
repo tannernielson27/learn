@@ -53,6 +53,7 @@
   /* Fluid headings and the projector ladder: `text-display`, `text-stage-stem`, ... */
   --text-display: var(--text-display);
   --text-title: var(--text-title);
+  --text-score: var(--text-score);
   --text-stage-code: var(--text-stage-code);
   --text-stage-stem: var(--text-stage-stem);
   --text-stage-option: var(--text-stage-option);
@@ -68,6 +69,10 @@
   --breakpoint-xl: 80rem;
   --breakpoint-2xl: 100rem;
 }
+
+/* A phone on its side: height under 480px (M3 compact height, PLAN §6). The header collapses and
+   Submit moves into a slim right-hand column. */
+@custom-variant short (@media (max-height: 479.98px) and (orientation: landscape));
 
 @utility duration-fast {
   transition-duration: var(--duration-fast);

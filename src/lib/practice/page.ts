@@ -10,9 +10,15 @@
 import type { SetItem } from "@/lib/assignments/attemptScoring";
 import type { RateLimitStore } from "@/lib/rateLimit/store";
 import type { OpenedRun } from "@/lib/supabase/practice";
+import type { MissedRunRead, MissedSource } from "@/lib/supabase/practiceMissed";
 import type { RunSlots } from "./answerRoute";
 import { PRACTICE_START_LIMIT, takePracticeLimit } from "./limits";
-import { buildPracticeView, type PracticeCaseStudyRow, type PracticeView } from "./view";
+import {
+  buildPracticeView,
+  type PracticeCaseStudyRow,
+  type PracticeRun,
+  type PracticeView,
+} from "./view";
 
 export interface PracticePageStore {
   open(student: string, bankId: string, fresh: boolean): Promise<OpenedRun>;
@@ -33,10 +39,23 @@ export async function loadPracticePage(
 ): Promise<PracticePageView> {
   const opened = await store.open(student, bankId, false);
   if (!opened.ok) return { kind: opened.reason === "not_found" ? "missing" : "failed" };
-  const { run } = opened;
+  return loadRunView(store, student, opened.run, false);
+}
 
+/**
+ * The run's own view, once it has been opened: listed by a call that checks it again, then its
+ * items (with keys, for the builder to strip) and its own answers.
+ */
+export async function loadRunView(
+  store: Omit<PracticePageStore, "open">,
+  student: string,
+  run: PracticeRun,
+  missed: boolean,
+): Promise<PracticePageView> {
   const listed = await store.slots(student, run.runId);
   if (listed === null) return { kind: "failed" };
+  // The run was open a moment ago; listing nothing now means it no longer is.
+  if (missed && listed.slots.length === 0) return { kind: "missing" };
 
   const itemIds = listed.slots.map((slot) => slot.itemId);
   const caseIds = [
@@ -51,8 +70,40 @@ export async function loadPracticePage(
 
   return {
     kind: "ready",
-    view: buildPracticeView({ run, slots: listed.slots, items, caseStudies, answers }),
+    view: buildPracticeView({ run, slots: listed.slots, items, caseStudies, answers, missed }),
   };
+}
+
+export interface MissedPageStore extends Omit<PracticePageStore, "open"> {
+  /** The missed run's header, when it is live for the student; the database checks the source. */
+  header(student: string, runId: string): Promise<MissedRunRead>;
+}
+
+export type MissedPageView =
+  | { kind: "missing" }
+  | { kind: "failed" }
+  | { kind: "ready"; view: PracticeView; source: MissedSource };
+
+/**
+ * A run of only the questions a student missed (20261023020000): its header first, which answers
+ * only for the student's own missed run while its source is still open to them (a 404 otherwise),
+ * then the run's own view, with each case-study step played on its own.
+ */
+export async function loadMissedPracticePage(
+  store: MissedPageStore,
+  student: string,
+  runId: string,
+): Promise<MissedPageView> {
+  const header = await store.header(student, runId);
+  if (!header.ok) return { kind: header.reason === "not_found" ? "missing" : "failed" };
+  const { run } = header;
+  const page = await loadRunView(
+    store,
+    student,
+    { runId: run.runId, bankId: run.bankId, bankName: run.title, seed: run.seed },
+    true,
+  );
+  return page.kind === "ready" ? { ...page, source: run.source } : page;
 }
 
 export type StartOverOutcome = "started" | "rate_limited" | "not_found" | "failed";
