@@ -78,7 +78,7 @@ insert into public.items (id, bank_id, org_id, type, cjmm_step, status, content,
          (values ('00000000-0000-0000-0000-0000002070f1', 'published', '3 hours'),
                  ('00000000-0000-0000-0000-0000002070f2', 'published', '2 hours'),
                  ('00000000-0000-0000-0000-0000002070f3', 'draft', '1 hour'),
-                 -- #468: the case study's step, which a whole-bank assignment leaves out.
+                 -- #468: the case study's step, which runs only with its case study (in place, #470).
                  ('00000000-0000-0000-0000-0000002070f4', 'published', '90 minutes')) as v(id, status, age)
    where p.id = '00000000-0000-0000-0000-0000002070a1';
 
@@ -107,8 +107,8 @@ select lives_ok(
 );
 select is(
   (select item_set from public.assignments where title = 'Open 207'),
-  '["00000000-0000-0000-0000-0000002070f1", "00000000-0000-0000-0000-0000002070f2"]'::jsonb,
-  'the item set is the bank''s published loose questions, in quiz order, snapshotted as ids'
+  '["00000000-0000-0000-0000-0000002070f1", "00000000-0000-0000-0000-0000002070f2", "00000000-0000-0000-0000-0000002070f4"]'::jsonb,
+  'the item set is the quiz in order, its case study in place as its step (#470), snapshotted as ids'
 );
 select is(
   (select row(max_attempts, shuffle_options, pg_temp.record_of('Open 207') is null)::text
@@ -252,7 +252,7 @@ select pg_temp.act_as('00000000-0000-0000-0000-0000002070a1');
 
 select is(
   (select jsonb_array_length(item_set) from public.assignments where title = 'Open 207'),
-  2,
+  3,
   'publishing another item in the bank does not change an assignment''s items'
 );
 select is(
@@ -470,7 +470,7 @@ select lives_ok(
 select is(
   (select row(bank_id is null, jsonb_array_length(item_set))::text
      from public.assignments where title = 'Open 207'),
-  row(true, 2)::text,
+  row(true, 3)::text,
   'the assignment stays, its pointer cleared and its items kept'
 );
 select is(

@@ -278,8 +278,8 @@ values (pg_temp.u('a01'), pg_temp.u('b01'), 'Ordered 468',
         now() - interval '1 hour', now() + interval '1 day');
 select is(
   (select item_set from public.assignments where title = 'Ordered 468'),
-  jsonb_build_array(pg_temp.u('105'), pg_temp.u('102'), pg_temp.u('101')),
-  'and so does a whole-quiz assignment'
+  jsonb_build_array(pg_temp.u('105'), pg_temp.u('111'), pg_temp.u('102'), pg_temp.u('101')),
+  'and so does a whole-quiz assignment (#470)'
 );
 
 select is(
