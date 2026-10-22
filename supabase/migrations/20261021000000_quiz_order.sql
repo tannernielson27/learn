@@ -151,8 +151,12 @@ update public.case_studies cs
 
 select set_config('learn.quiz_order_write', '', false);
 
-alter table public.items alter column quiz_position set not null;
-alter table public.case_studies alter column quiz_position set not null;
+-- The default is never kept: the place-at-end trigger below sets every new row's position. It is
+-- there so an insert need not name the column (the generated types keep it optional).
+alter table public.items alter column quiz_position set not null,
+  alter column quiz_position set default 0;
+alter table public.case_studies alter column quiz_position set not null,
+  alter column quiz_position set default 0;
 
 create index items_bank_id_quiz_position_idx on public.items (bank_id, quiz_position);
 create index case_studies_bank_id_quiz_position_idx
