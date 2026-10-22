@@ -36,6 +36,7 @@ import {
 import type {
   ItemAggregate,
   ItemReveal,
+  LiveConnection,
   LiveHostTransport,
   LiveSessionTransport,
   Participant,
@@ -76,6 +77,12 @@ export interface InMemoryRoom {
   participant(): LiveSessionTransport;
   /** The host's console connection. More than one is fine: co-instructors share a room. */
   host(): LiveHostTransport;
+  /**
+   * Plays the hosts' channel dropping and coming back, for tests and the gallery. Nothing else
+   * changes: this room has no socket, so moves and reads carry on as before. Every open console
+   * hears the new status; `connected` after anything else is a rejoin.
+   */
+  setHostConnection(status: LiveConnection): void;
 }
 
 interface StoredAnswer {
@@ -96,6 +103,7 @@ interface HostConnection {
   views: Set<(view: SessionView<Item>) => void>;
   presence: Set<(roster: Participant[]) => void>;
   aggregates: Set<(aggregate: ItemAggregate) => void>;
+  connections: Set<(status: LiveConnection, rejoined: boolean) => void>;
 }
 
 /**
@@ -139,6 +147,8 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
   const answers = new Map<number, Map<string, StoredAnswer>>();
   const connections = new Set<ParticipantConnection>();
   const hosts = new Set<HostConnection>();
+  /** What every console hears about its channel; see `setHostConnection`. */
+  let hostConnection: LiveConnection = "connected";
 
   const rosterList = (): Participant[] =>
     [...roster.values()].sort(
@@ -405,6 +415,7 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
       views: new Set(),
       presence: new Set(),
       aggregates: new Set(),
+      connections: new Set(),
     };
     // Registered as soon as the console exists, not at `open()`: a component subscribes on mount
     // and awaits the snapshot after, and a subscription that quietly did nothing until the promise
@@ -414,6 +425,9 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
     return {
       async open(): Promise<HostSnapshot> {
         hosts.add(connection);
+        // There is no socket to wait for: the console is connected the moment it opens, as the
+        // Supabase adapter says once its channel first comes up.
+        for (const listener of [...connection.connections]) listener(hostConnection, false);
         return {
           sessionId,
           code,
@@ -429,11 +443,13 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
         connection.views.clear();
         connection.presence.clear();
         connection.aggregates.clear();
+        connection.connections.clear();
       },
 
       onSessionState: (listener) => subscribe(connection.views, listener),
       onPresence: (listener) => subscribe(connection.presence, listener),
       onAggregate: (listener) => subscribe(connection.aggregates, listener),
+      onConnection: (listener) => subscribe(connection.connections, listener),
 
       /**
        * Counted from the answers on record, which is the same count `open()` reports.
@@ -499,6 +515,14 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
     };
   }
 
+  function setHostConnection(status: LiveConnection): void {
+    const rejoined = status === "connected" && hostConnection !== "connected";
+    hostConnection = status;
+    for (const open of [...hosts]) {
+      for (const listener of [...open.connections]) listener(status, rejoined);
+    }
+  }
+
   return {
     sessionId,
     code,
@@ -506,5 +530,6 @@ export function createInMemoryRoom(options: InMemoryRoomOptions): InMemoryRoom {
     currentState: () => state,
     participant,
     host,
+    setHostConnection,
   };
 }

@@ -732,6 +732,19 @@ export function describeRoomConformance(adapter: string, createRoom: Conformance
       expect(views).toHaveLength(0);
     });
 
+    it("says it is connected once it opens, and nothing after it closes", async () => {
+      const room = await makeRoom();
+      const host = room.host();
+      const heard: [string, boolean][] = [];
+      host.onConnection((status, rejoined) => heard.push([status, rejoined]));
+      await host.open();
+      await room.settle();
+      expect(heard).toEqual([["connected", false]]);
+      await host.close();
+      await room.settle();
+      expect(heard).toEqual([["connected", false]]);
+    });
+
     it("lets a co-instructor open a second console on the same room", async () => {
       const room = await makeRoom();
       const one = await openHost(room);

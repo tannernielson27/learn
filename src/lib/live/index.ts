@@ -40,6 +40,7 @@ export {
   type HostSnapshot,
   type ItemAggregate,
   type ItemReveal,
+  type LiveConnection,
   type LiveHostTransport,
   type LiveSessionTransport,
   type Participant,

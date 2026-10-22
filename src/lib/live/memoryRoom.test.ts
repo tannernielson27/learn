@@ -137,3 +137,48 @@ describe("the in-memory room itself", () => {
     expect(accepted).toMatchObject({ id: first.id });
   });
 });
+
+describe("the in-memory room's host connection", () => {
+  it("plays a drop and a rejoin to every open console, and still moves while down", async () => {
+    const room = createInMemoryRoom({ items: ITEMS });
+    const one = room.host();
+    const two = room.host();
+    const heard: [string, boolean][] = [];
+    const second: string[] = [];
+    one.onConnection((status, rejoined) => heard.push([status, rejoined]));
+    two.onConnection((status) => second.push(status));
+    await one.open();
+    await two.open();
+
+    room.setHostConnection("reconnecting");
+    await one.start();
+    room.setHostConnection("connected");
+    room.setHostConnection("connected");
+
+    expect(heard).toEqual([
+      ["connected", false],
+      ["reconnecting", false],
+      ["connected", true],
+      ["connected", false],
+    ]);
+    expect(second).toEqual(["connected", "reconnecting", "connected", "connected"]);
+    expect(room.currentState().status).toBe("running");
+  });
+
+  it("opens a console with whatever the channel is doing, and forgets a closed one", async () => {
+    const room = createInMemoryRoom({ items: ITEMS });
+    room.setHostConnection("offline");
+    const host = room.host();
+    const heard: string[] = [];
+    const leave = host.onConnection((status) => heard.push(status));
+    await host.open();
+    expect(heard).toEqual(["offline"]);
+    leave();
+    room.setHostConnection("connected");
+    expect(heard).toEqual(["offline"]);
+    host.onConnection((status) => heard.push(status));
+    await host.close();
+    room.setHostConnection("reconnecting");
+    expect(heard).toEqual(["offline"]);
+  });
+});

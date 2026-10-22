@@ -106,6 +106,7 @@ function fakeTransport(initial: LiveSessionState, refusal?: LiveSessionError) {
       return () => presence.delete(listener);
     },
     onAggregate: () => () => {},
+    onConnection: () => () => {},
     async aggregate(): Promise<ItemAggregate | null> {
       asked += 1;
       return tally;
