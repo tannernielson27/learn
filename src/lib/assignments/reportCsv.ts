@@ -1,4 +1,5 @@
 import { toCsv, type CsvCell } from "@/lib/live/csv";
+import { itemHeader } from "@/lib/live/reportCsv";
 import { STUDENT_STATUS_LABEL, type AssignmentReport, type AssignmentStudentRow } from "./report";
 
 /** Two decimal places, as a number, so the spreadsheet can still add it up. */
@@ -34,7 +35,7 @@ export function assignmentReportCsv(report: AssignmentReport): string {
   if (!report.released) throw new Error("the report's scores are not released");
   const header: CsvCell[] = [
     "Student",
-    ...report.items.map((item) => `Q${item.position} ${item.ref}`),
+    ...report.items.map(itemHeader),
     "Points",
     "Possible",
     "Percent",

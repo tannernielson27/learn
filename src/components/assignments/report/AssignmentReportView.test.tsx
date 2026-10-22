@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { buildAssignmentReport, type AssignmentReportInput } from "@/lib/assignments/report";
+import { inCaseStudies } from "@/lib/live/report";
 import { AssignmentReportView } from "./AssignmentReportView";
 
 const ASSIGNMENT = "00000000-0000-4000-8000-0000000002a1";
@@ -229,5 +230,41 @@ describe("AssignmentReportView, with students removed from the class (#242)", ()
     renderWith(true, { ...WITH_REMOVED, students: WITH_REMOVED.students.slice(-1) });
     expect(screen.getByText(/Nobody is in this class now/)).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Removed from class" })).toBeInTheDocument();
+  });
+});
+
+describe("AssignmentReportView, a whole quiz with a case study in place (#470)", () => {
+  const mixed = buildAssignmentReport({
+    ...INPUT,
+    items: inCaseStudies(INPUT.items, [
+      { caseStudyId: "c-1", title: "Heart failure", firstPosition: 2, stepCount: 1 },
+    ]),
+  });
+  const renderMixed = (view: "students" | "items") =>
+    render(
+      <AssignmentReportView
+        assignmentId={ASSIGNMENT}
+        classId={CLASS}
+        title="Week 5: Heart failure"
+        closesAt="2026-09-23T17:00:00Z"
+        maxAttempts={2}
+        report={mixed}
+        view={view}
+      />,
+    );
+
+  it("groups the case study's steps under its title by question", () => {
+    renderMixed("items");
+    expect(
+      screen.getByRole("rowheader", { name: "Case study: Heart failure" }),
+    ).toBeInTheDocument();
+  });
+
+  it("names the case study over its steps' columns by student", () => {
+    renderMixed("students");
+    expect(screen.getByRole("columnheader", { name: "Case study: Heart failure" })).toHaveAttribute(
+      "colspan",
+      "1",
+    );
   });
 });

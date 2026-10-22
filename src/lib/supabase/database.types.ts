@@ -409,6 +409,7 @@ export type Database = {
         Row: {
           bank_id: string | null;
           case_study_id: string | null;
+          case_study_records: Json | null;
           class_id: string;
           closes_at: string;
           created_at: string;
@@ -426,6 +427,7 @@ export type Database = {
         Insert: {
           bank_id?: string | null;
           case_study_id?: string | null;
+          case_study_records?: Json | null;
           class_id: string;
           closes_at: string;
           created_at?: string;
@@ -443,6 +445,7 @@ export type Database = {
         Update: {
           bank_id?: string | null;
           case_study_id?: string | null;
+          case_study_records?: Json | null;
           class_id?: string;
           closes_at?: string;
           created_at?: string;

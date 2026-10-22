@@ -108,24 +108,45 @@ export async function readStudentAssignment(
 
 /**
  * A take-home case study's patient record as stored, whole, for the server to cut (#335). Null
- * for a bank; `{ ok: false }` when the read failed.
+ * for a bank; `{ ok: false }` when the read failed. #470: and, for a whole quiz, each case study
+ * it plays in place with its own record (`case_study_records`), stored JSON for the caller to
+ * parse; null when none plays.
  *
  * Service role, and so only ever called with an assignment id the student's own client has just
  * read under row level security (`readStudentAssignment`): this does no checking of its own. The
- * whole record never leaves the server; `loadAttemptPage` sends `recordsThrough` of it.
+ * whole record never leaves the server; `loadAttemptPage` sends `recordAtStep` of it, for each
+ * step the student has reached.
  */
 export async function readAssignmentRecord(
   service: Client,
   assignmentId: string,
-): Promise<{ ok: true; record: Json | null } | { ok: false }> {
-  const { data, error } = await service
+): Promise<{ ok: true; record: Json | null; runs: Json | null } | { ok: false }> {
+  const read = await service
     .from("assignments")
-    .select("patient_record")
+    .select("patient_record, case_study_records")
     .eq("id", assignmentId)
     .maybeSingle();
+  // A database the #470 migration has not reached: no assignment plays a case study in place.
+  if (read.error?.code === UNDEFINED_COLUMN) {
+    const { data, error } = await service
+      .from("assignments")
+      .select("patient_record")
+      .eq("id", assignmentId)
+      .maybeSingle();
+    if (error || !data) return { ok: false };
+    return { ok: true, record: data.patient_record ?? null, runs: null };
+  }
+  const { data, error } = read;
   if (error || !data) return { ok: false };
-  return { ok: true, record: data.patient_record ?? null };
+  return {
+    ok: true,
+    record: data.patient_record ?? null,
+    runs: data.case_study_records ?? null,
+  };
 }
+
+/** PostgreSQL's undefined_column, which PostgREST passes through for a column it cannot select. */
+const UNDEFINED_COLUMN = "42703";
 
 /** This student's attempts at one assignment, oldest first. Null on an error. */
 export async function listMyAttempts(

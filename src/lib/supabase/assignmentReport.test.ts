@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { readAssignmentReportRows, readReportAssignment } from "./assignmentReport";
+import {
+  readAssignmentCaseStudies,
+  readAssignmentReportRows,
+  readReportAssignment,
+} from "./assignmentReport";
 import { PAGE_SIZE } from "./sessionReport";
 
 type Client = Parameters<typeof readReportAssignment>[0];
@@ -208,5 +212,40 @@ describe("readAssignmentReportRows", () => {
   it("throws when the read fails", async () => {
     const fake = fakeClient({ assignment_report_rows: { data: null, error: { message: "down" } } });
     await expect(readAssignmentReportRows(fake.client, ASSIGNMENT)).rejects.toThrow(/down/);
+  });
+});
+
+describe("readAssignmentCaseStudies (#470)", () => {
+  it("reads the case studies' names and places, and never hands on a record", async () => {
+    const fake = fakeClient({
+      assignments: {
+        data: {
+          case_study_records: [
+            {
+              case_study_id: "c-1",
+              title: "Hip",
+              first_position: 2,
+              step_count: 6,
+              record: { patientHeader: { age: 70, sex: "female", setting: "Ward" } },
+            },
+          ],
+        },
+        error: null,
+      },
+    });
+    const places = await readAssignmentCaseStudies(fake.client, ASSIGNMENT);
+    expect(places).toEqual([{ caseStudyId: "c-1", title: "Hip", firstPosition: 2, stepCount: 6 }]);
+    expect(fake.calls).toContainEqual({
+      name: "assignments",
+      method: "eq",
+      args: ["id", ASSIGNMENT],
+    });
+  });
+
+  it("is none for an assignment without them, and throws when the read fails", async () => {
+    const none = fakeClient({ assignments: { data: { case_study_records: null }, error: null } });
+    expect(await readAssignmentCaseStudies(none.client, ASSIGNMENT)).toEqual([]);
+    const failed = fakeClient({ assignments: { data: null, error: { message: "down" } } });
+    await expect(readAssignmentCaseStudies(failed.client, ASSIGNMENT)).rejects.toThrow("down");
   });
 });

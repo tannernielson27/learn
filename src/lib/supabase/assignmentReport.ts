@@ -5,6 +5,8 @@ import type {
   ReportStudentInput,
 } from "@/lib/assignments/report";
 import { isUuid } from "@/lib/authoring/ids";
+import { parseCaseStudyRuns } from "@/lib/live/caseStudyRuns";
+import type { ReportCaseStudyPlace } from "@/lib/live/report";
 import type { Database, Json } from "./database.types";
 import { readAllPages } from "./sessionReport";
 
@@ -65,6 +67,38 @@ export async function readReportAssignment(
     maxAttempts: data.max_attempts,
     itemSet: toItemSet(data.item_set),
   };
+}
+
+/** PostgreSQL's undefined_column, which PostgREST passes through for a column it cannot select. */
+const UNDEFINED_COLUMN = "42703";
+
+/**
+ * Where each case study a whole-quiz assignment plays in place sits in its set (#470), as the
+ * assignment snapshotted it: names and places only, never a record. Empty for none, and on a
+ * database the migration has not reached. Throws when the read fails.
+ *
+ * Service role: `case_study_records` holds every step's chart and is granted to no user's client.
+ * Only ever called for an assignment the author's own read has just found (`loadAssignmentReport`).
+ */
+export async function readAssignmentCaseStudies(
+  service: Client,
+  assignmentId: string,
+): Promise<ReportCaseStudyPlace[]> {
+  const { data, error } = await service
+    .from("assignments")
+    .select("case_study_records")
+    .eq("id", assignmentId)
+    .maybeSingle();
+  if (error?.code === UNDEFINED_COLUMN) return [];
+  if (error) throw new Error(`could not read the assignment's case studies: ${error.message}`);
+  return parseCaseStudyRuns(data?.case_study_records).map(
+    ({ caseStudyId, title, firstPosition, stepCount }) => ({
+      caseStudyId,
+      title,
+      firstPosition,
+      stepCount,
+    }),
+  );
 }
 
 /** numeric over PostgREST is a number, but a driver may hand back a string. */

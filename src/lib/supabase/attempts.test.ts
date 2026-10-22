@@ -79,16 +79,51 @@ describe("reading as the student", () => {
     expect(await readAssignmentRecord(fake.client, A)).toEqual({
       ok: true,
       record: { patientHeader: { age: 1 } },
+      runs: null,
     });
-    expect(fake.calls).toContainEqual(["select", ["patient_record"]]);
+    expect(fake.calls).toContainEqual(["select", ["patient_record, case_study_records"]]);
     expect(fake.calls).toContainEqual(["eq", ["id", A]]);
     expect(
       await readAssignmentRecord(fakeQuery({ data: { patient_record: null } }).client, A),
-    ).toEqual({ ok: true, record: null });
+    ).toEqual({ ok: true, record: null, runs: null });
     expect(await readAssignmentRecord(fakeQuery({ data: null }).client, A)).toEqual({ ok: false });
     expect(await readAssignmentRecord(fakeQuery({ error: { code: "08000" } }).client, A)).toEqual({
       ok: false,
     });
+  });
+
+  it("reads a whole quiz's case-study records beside it (#470)", async () => {
+    const runs = [{ case_study_id: "c", title: "Hip", first_position: 2, step_count: 6 }];
+    const fake = fakeQuery({ data: { patient_record: null, case_study_records: runs } });
+    expect(await readAssignmentRecord(fake.client, A)).toEqual({ ok: true, record: null, runs });
+  });
+
+  it("reads the one record alone from a database without the column yet (#470)", async () => {
+    const replies: Reply[] = [
+      { error: { code: "42703" } },
+      { data: { patient_record: { patientHeader: { age: 1 } } } },
+    ];
+    const selected: unknown[] = [];
+    const client = {
+      from: () => {
+        const reply = replies.shift() ?? { error: { code: "08000" } };
+        const builder: Record<string, unknown> = {};
+        for (const step of ["select", "eq", "maybeSingle"]) {
+          builder[step] = (...args: unknown[]) => {
+            if (step === "select") selected.push(args[0]);
+            return builder;
+          };
+        }
+        builder.then = (resolve: (value: Reply) => unknown) => resolve({ error: null, ...reply });
+        return builder;
+      },
+    } as unknown as Client;
+    expect(await readAssignmentRecord(client, A)).toEqual({
+      ok: true,
+      record: { patientHeader: { age: 1 } },
+      runs: null,
+    });
+    expect(selected).toEqual(["patient_record, case_study_records", "patient_record"]);
   });
 
   it("lists attempts without ever selecting a score", async () => {

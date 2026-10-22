@@ -7,7 +7,7 @@
  * attempt left open past the close is counted with what it saved. Only then are the rows read,
  * through the definer function that withholds scores until the close.
  */
-import type { ReportItemInput } from "@/lib/live/report";
+import { inCaseStudies, type ReportCaseStudyPlace, type ReportItemInput } from "@/lib/live/report";
 import type { AssignmentReportRows, ReportAssignment } from "@/lib/supabase/assignmentReport";
 import { assignmentState } from "./assignments";
 import { isClosed } from "./attemptPage";
@@ -18,6 +18,11 @@ export interface AssignmentReportStore {
   /** Scores and records this assignment's attempts left open at close; how many it recorded. */
   autoSubmit(assignmentId: string): Promise<number>;
   items(ids: readonly string[]): Promise<ReportItemInput[]>;
+  /**
+   * Where each case study a whole quiz plays in place sits in the set (#470): names and places,
+   * never a record. Asked only after `assignment` has found the assignment for this author.
+   */
+  caseStudies(assignmentId: string): Promise<ReportCaseStudyPlace[]>;
   rows(assignmentId: string): Promise<AssignmentReportRows>;
 }
 
@@ -58,10 +63,13 @@ export async function loadAssignmentReport(
     await submitAtClose(store, assignmentId);
   }
 
-  const [items, rows] = await Promise.all([
+  const [named, places, rows] = await Promise.all([
     store.items(assignment.itemSet),
+    store.caseStudies(assignmentId),
     store.rows(assignmentId),
   ]);
+  // #470: each step of a case study the quiz plays in place, under its case study.
+  const items = inCaseStudies(named, places);
   // With nobody in the class the database returns no row to carry scores_released, so the
   // close itself decides, with the same grace the database uses.
   const released = rows.students.length === 0 ? isClosed(assignment.closesAt, now) : rows.released;

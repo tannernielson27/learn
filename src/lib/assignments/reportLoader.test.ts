@@ -56,6 +56,10 @@ function fakeStore(overrides: Partial<AssignmentReportStore> = {}) {
       order.push("items");
       return ITEMS;
     }),
+    caseStudies: vi.fn(async () => {
+      order.push("caseStudies");
+      return [];
+    }),
     rows: vi.fn(async () => {
       order.push("rows");
       return ROWS;
@@ -188,5 +192,32 @@ describe("loadAssignmentReport", () => {
       }),
     });
     await expect(loadAssignmentReport(store, ASSIGNMENT.id, OPEN)).rejects.toThrow("down");
+  });
+});
+
+describe("loadAssignmentReport: a whole quiz with a case study in place (#470)", () => {
+  it("puts each step under its case study, read only after the assignment was found", async () => {
+    const places = [{ caseStudyId: "c-1", title: "Hip", firstPosition: 1, stepCount: 1 }];
+    const { store, order } = fakeStore({
+      caseStudies: vi.fn(async () => {
+        order.push("caseStudies");
+        return places;
+      }),
+    });
+    const loaded = await loadAssignmentReport(store, ASSIGNMENT.id, OPEN);
+    expect(order.indexOf("assignment")).toBeLessThan(order.indexOf("caseStudies"));
+    expect(loaded?.report.items[0]?.caseStudy).toEqual({
+      id: "c-1",
+      title: "Hip",
+      step: 1,
+      stepCount: 1,
+    });
+    expect(loaded?.report.items.slice(1).every((item) => item.caseStudy === null)).toBe(true);
+  });
+
+  it("does not ask where case studies sit for an assignment the author cannot see", async () => {
+    const { store } = fakeStore({ assignment: vi.fn(async () => null) });
+    expect(await loadAssignmentReport(store, ASSIGNMENT.id, OPEN)).toBeNull();
+    expect(store.caseStudies).not.toHaveBeenCalled();
   });
 });

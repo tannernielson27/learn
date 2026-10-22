@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { readAssignmentReportRows, readReportAssignment } from "@/lib/supabase/assignmentReport";
+import {
+  readAssignmentCaseStudies,
+  readAssignmentReportRows,
+  readReportAssignment,
+} from "@/lib/supabase/assignmentReport";
 import type { Database } from "@/lib/supabase/database.types";
 import { readReportItems } from "@/lib/supabase/sessionReport";
 import {
@@ -94,8 +98,9 @@ export function historyStore(user: Client, service: Client): HistoryStore {
 
 /**
  * The assignment report's reads (#211). `author` reads the assignment, its items' names and the
- * report rows as the signed-in author; `service` runs only the submit at close, and only after the
- * author's own read has found the assignment (see `loadAssignmentReport`).
+ * report rows as the signed-in author; `service` runs only the submit at close and reads where a
+ * whole quiz's case studies sit (#470), and only after the author's own read has found the
+ * assignment (see `loadAssignmentReport`).
  */
 export function assignmentReportStore(author: Client, service: Client): AssignmentReportStore {
   return {
@@ -103,6 +108,9 @@ export function assignmentReportStore(author: Client, service: Client): Assignme
     autoSubmit: (assignmentId) =>
       autoSubmitExpired(autoSubmitStore(service), { assignmentId, limit: AUTO_SUBMIT_BATCH }),
     items: (ids) => readReportItems(author, ids),
+    // #470: the service role, since no user's client is granted the column; only ever asked once
+    // the author's own read has found the assignment.
+    caseStudies: (assignmentId) => readAssignmentCaseStudies(service, assignmentId),
     rows: (assignmentId) => readAssignmentReportRows(author, assignmentId),
   };
 }

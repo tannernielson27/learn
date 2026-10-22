@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { FIXTURES, sampleCaseStudy } from "@/lib/ngn/fixtures";
+import { recordAtStep } from "@/lib/ngn/chartReveal";
 import { stagedCaseStudy, stagedEhr } from "@/lib/ngn/fixtures/chart-reveal";
+import { ehrRecordSchema } from "@/lib/ngn/schemas";
 import { caseStudySchema, itemSchema, type Item } from "@/lib/ngn/schemas";
 import type { AttemptSummary, StudentAssignment } from "@/lib/supabase/attempts";
 import { loadAttemptPage, type AttemptPageStore } from "./attemptPage";
@@ -174,6 +176,75 @@ describe("loadAttemptPage, on what the student's page is handed before close", (
   it("a record that could not be read fails the page rather than showing it without one", async () => {
     const fake = store({ record: vi.fn(async () => ({ ok: false as const })) });
     expect((await loadAttemptPage(fake, ASSIGNMENT, STUDENT, NOW)).kind).toBe("failed");
+  });
+});
+
+describe("loadAttemptPage, a whole quiz with a case study in place (#470)", () => {
+  const study = caseStudySchema.parse(stagedCaseStudy);
+  const staged = ehrRecordSchema.parse(stagedEhr);
+  // A loose question, the case study's six steps at positions 2 to 7, then another question.
+  const items = [MC, ...study.items, MR];
+  const runs = [
+    { case_study_id: "c", title: "Ectopic", first_position: 2, step_count: 6, record: stagedEhr },
+  ];
+
+  /** The quiz's assignment with the first loose question and `steps` steps saved. */
+  function mixedStore(steps: number, extra: Record<string, unknown> = {}) {
+    return store(
+      {
+        assignment: vi.fn(async () =>
+          assignment({ itemSet: items.map((_, i) => rowId(i + 1)), shuffleOptions: false }),
+        ),
+        answers: vi.fn(async () => ({
+          [rowId(1)]: savedFor(MC),
+          ...Object.fromEntries(
+            study.items.slice(0, steps).map((step, i) => [rowId(i + 2), savedFor(step)]),
+          ),
+          ...extra,
+        })),
+        record: vi.fn(async () => ({ ok: true as const, record: null, runs })),
+      },
+      setOf(items),
+    );
+  }
+
+  it("sends the set up to the first step not yet reached, with that step's chart only", async () => {
+    const view = await loadAttemptPage(mixedStore(0), ASSIGNMENT, STUDENT, NOW);
+    if (view.kind !== "taking") throw new Error(`expected taking, got ${view.kind}`);
+    expect(view.items.map((item) => item.item.id)).toEqual([MC.id, study.items[0]?.id]);
+    expect(view.total).toBe(8);
+    expect(view.records).toEqual([null, recordAtStep(staged, 1)]);
+    const bytes = JSON.stringify(view);
+    expect(bytes).not.toContain(`"id":"${MR.id}"`);
+    expect(bytes).not.toContain("Serum hCG");
+    expect(bytes).not.toContain('"answerKey"');
+  });
+
+  it("counts steps from the case study's own start, and opens the rest once it is done", async () => {
+    const third = await loadAttemptPage(mixedStore(2), ASSIGNMENT, STUDENT, NOW);
+    if (third.kind !== "taking") throw new Error(third.kind);
+    expect(third.items).toHaveLength(4);
+    expect(third.records?.at(-1)).toEqual(recordAtStep(staged, 3));
+
+    const done = await loadAttemptPage(mixedStore(6), ASSIGNMENT, STUDENT, NOW);
+    if (done.kind !== "taking") throw new Error(done.kind);
+    expect(done.items.map((item) => item.item.id)).toEqual(items.map((item) => item.id));
+    expect(done.records).toEqual([
+      null,
+      ...[1, 2, 3, 4, 5, 6].map((step) => recordAtStep(staged, step as 1)),
+      null,
+    ]);
+  });
+
+  it("does not open a later step for an answer to it with a gap before it", async () => {
+    const view = await loadAttemptPage(
+      mixedStore(1, { [rowId(4)]: savedFor(study.items[2] as Item) }),
+      ASSIGNMENT,
+      STUDENT,
+      NOW,
+    );
+    if (view.kind !== "taking") throw new Error(view.kind);
+    expect(view.items).toHaveLength(3);
   });
 });
 

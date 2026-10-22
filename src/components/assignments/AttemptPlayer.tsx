@@ -36,9 +36,10 @@ export interface AttemptPlayerProps {
   total?: number;
   /**
    * A case study's patient record at each step in `items`, step 1 first (#335), cut on the
-   * server. The step on screen shows its own; absent for a bank.
+   * server. The step on screen shows its own; absent for a bank. For a whole quiz that plays case
+   * studies in place (#470), one per item: a step's chart, or null on a loose question.
    */
-  records?: readonly EhrRecordView[];
+  records?: readonly (EhrRecordView | null)[];
   /** The Server Action that scores and submits this attempt on the server. */
   submit: (attemptId: string) => Promise<SubmitAttemptResult>;
   /** Saves one answer. Defaults to `POST /api/assignments/save`; injected by tests. */
@@ -188,8 +189,9 @@ export function AttemptPlayer({
     }
   };
 
-  // The chart of the step on screen (#335): going back a step shows that step's chart again.
-  const record = records?.[Math.min(at, records.length - 1)];
+  // The chart of the step on screen (#335): going back a step shows that step's chart again. A
+  // loose question of a quiz has none (#470), and the work stays where it is in the layout.
+  const record = records?.[Math.min(at, records.length - 1)] ?? null;
 
   const page = (
     <div className="pb-28">
@@ -294,5 +296,5 @@ export function AttemptPlayer({
     </div>
   );
 
-  return record === undefined ? page : <RecordLayout record={record}>{page}</RecordLayout>;
+  return records === undefined ? page : <RecordLayout record={record}>{page}</RecordLayout>;
 }
