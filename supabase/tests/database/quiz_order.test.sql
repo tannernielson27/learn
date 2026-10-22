@@ -269,8 +269,8 @@ select is(
 insert into ids (name, id) select 'session', public.start_session(pg_temp.u('b01'), null);
 select is(
   (select s.item_set from public.sessions s join ids on ids.id = s.id where ids.name = 'session'),
-  jsonb_build_array(pg_temp.u('105'), pg_temp.u('102'), pg_temp.u('101')),
-  'a whole-quiz live session runs its published loose questions in quiz order, without the step'
+  jsonb_build_array(pg_temp.u('105'), pg_temp.u('111'), pg_temp.u('102'), pg_temp.u('101')),
+  'a whole-quiz live session runs the quiz in order, its case study in place as its step (#469)'
 );
 
 insert into public.assignments (class_id, bank_id, title, opens_at, closes_at)

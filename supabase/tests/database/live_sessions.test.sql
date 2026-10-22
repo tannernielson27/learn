@@ -124,8 +124,9 @@ select results_eq(
 select results_eq(
   $$ select jsonb_array_length(s.item_set)
      from public.sessions s join started t on t.session_id = s.id where t.label = 'bank' $$,
-  $$ values (2) $$,
-  'the set snapshots the bank''s published items only; the draft is left out'
+  $$ values (3) $$,
+  'the set snapshots the bank''s published questions and its one ready case study''s step (#469); '
+  'the draft, the draft case study and the one with a draft step are left out'
 );
 
 select throws_ok(
