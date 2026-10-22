@@ -39,11 +39,11 @@ describe("feedback icons", () => {
     expect(document.body.textContent).not.toContain("✓");
   });
 
-  it.each([
-    ["correct", "✓"],
-    ["incorrect", "✕"],
-  ] as const)("marks a %s choice with %s", (state, icon) => {
+  it.each(["correct", "incorrect"] as const)("marks a %s choice with its own icon", (state) => {
     render(<FeedbackIcon state={state} />);
-    expect(document.querySelector("[data-feedback-mark]")).toHaveTextContent(icon);
+    const mark = document.querySelector(`[data-feedback-mark="${state}"]`);
+    expect(mark).not.toBeNull();
+    expect(mark?.querySelector("svg")).not.toBeNull();
+    expect(mark).toHaveAttribute("aria-hidden", "true");
   });
 });

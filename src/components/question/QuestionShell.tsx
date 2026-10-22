@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useRef, type ReactNode, type RefObject } from "react";
-import { Button } from "@/components/ui/Button";
-import { SCORING_MODEL_LABELS } from "@/lib/ngn/labels";
+import { useEffect, useId, useLayoutEffect, useRef, type ReactNode } from "react";
+import { ProgressBar } from "@/components/ui/ProgressBar";
 import type { RichText } from "@/lib/ngn/schemas";
 import type { ScoreResult } from "@/lib/ngn/types";
 import { applyStagger } from "./motion";
+import { RichTextView } from "./RichTextView";
+import { RationalePanel, ScoreBreakdown, ScorePanel } from "./ScorePanel";
+import { SubmitBar } from "./SubmitBar";
 import type { PlayerMode } from "./types";
-import { scoreVerdict, type VerdictKind } from "./verdict";
 
 export interface QuestionShellProps {
   stem: RichText;
@@ -24,6 +25,8 @@ export interface QuestionShellProps {
   busyLabel?: string;
   /** Why the last check failed, shown beside Submit. */
   submitError?: string;
+  /** What the answer holds so far, beside Submit: "2 selected". */
+  submitStatus?: string;
   /** Present in feedback mode. */
   score?: ScoreResult;
   /** Item-specific note shown under the scoring rule in feedback mode. */
@@ -41,19 +44,7 @@ export interface QuestionShellProps {
   children: ReactNode;
 }
 
-/** Minimal rich text: paragraphs split on blank lines. Markdown parsing arrives with authoring. */
-export function RichTextView({ text, className = "" }: { text: RichText; className?: string }) {
-  const paragraphs = text.value.split(/\n{2,}/);
-  return (
-    <div className={className}>
-      {paragraphs.map((p, i) => (
-        <p key={i} className={i > 0 ? "mt-3" : ""}>
-          {p}
-        </p>
-      ))}
-    </div>
-  );
-}
+export { RichTextView } from "./RichTextView";
 
 /**
  * The one frame every item is rendered inside: stem, instructions, the renderer, a fixed submit
@@ -69,6 +60,7 @@ export function QuestionShell({
   submitting = false,
   busyLabel = "Checking your answer",
   submitError,
+  submitStatus,
   score,
   scoreNote,
   rationale,
@@ -94,15 +86,7 @@ export function QuestionShell({
     scorePanel.current?.focus();
   }, [score]);
 
-  // aria-disabled is advisory: the browser still fires click (and Enter and Space) on the button,
-  // so this is what actually keeps an incomplete or in-flight answer from being sent.
-  const blocked = !canSubmit || submitting;
-  const reasonId = useId();
-  // The reason is only rendered when there is no error in its place, so only then is it pointed to.
-  const showReason = !submitError && !canSubmit;
-
   const submit = () => {
-    if (blocked) return;
     focusScore.current = true;
     onSubmit?.();
   };
@@ -111,7 +95,8 @@ export function QuestionShell({
     <section
       ref={root}
       aria-labelledby={headingId}
-      className="flex min-h-full flex-col pb-24"
+      // Room for the phone's fixed bar below, and for the landscape phone's column beside.
+      className={`flex min-h-full flex-col ${mode === "answer" && showSubmit ? "max-md:pb-28 short:pr-36 short:pb-0" : ""}`}
       data-mode={mode}
     >
       {/* A level-2 heading in every context (gallery, case study, preview, play), so a renderer's
@@ -121,19 +106,16 @@ export function QuestionShell({
       </h2>
       {progress ? (
         <div className="mb-4 flex items-center gap-3">
-          <span className="font-mono text-xs text-ink-2">
+          <span className="tabular font-mono text-sm font-semibold text-ink-1">
             Question {progress.index + 1} of {progress.total}
           </span>
-          <div className="h-1 flex-1 rounded-full bg-surface-2" aria-hidden="true">
-            <div
-              className="h-1 rounded-full bg-accent transition-transform duration-base ease-out-expo"
-              style={{
-                width: "100%",
-                transform: `scaleX(${(progress.index + 1) / progress.total})`,
-                transformOrigin: "left",
-              }}
-            />
-          </div>
+          <ProgressBar
+            className="flex-1"
+            value={progress.index + 1}
+            max={progress.total}
+            label="Questions"
+            valueText={`Question ${progress.index + 1} of ${progress.total}`}
+          />
         </div>
       ) : null}
 
@@ -155,163 +137,15 @@ export function QuestionShell({
       ) : null}
 
       {mode === "answer" && showSubmit ? (
-        // z-1: a disabled button after this in the page (opacity-50 makes it a stacking context)
-        // would otherwise paint over the bar and swallow a tap on Submit. It stays under the EHR
-        // panel (z-2) and sheet (z-5).
-        <div className="fixed inset-x-0 bottom-0 z-1 border-t border-line bg-surface-1/95 px-5 py-3 backdrop-blur-sm [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
-          <div className="mx-auto flex max-w-3xl items-center justify-end gap-3">
-            {submitError ? (
-              <p role="alert" className="text-sm text-incorrect">
-                {submitError}
-              </p>
-            ) : showReason ? (
-              <span id={reasonId} className="text-sm text-ink-2">
-                Complete the question to submit.
-              </span>
-            ) : null}
-            {/* aria-disabled, never disabled (#59): a disabled button cannot take focus, so a
-                screen reader never reaches the reason beside it. It stays focusable, says it is
-                unavailable, is described by the reason, and `submit` ignores the press. The
-                aria-disabled: classes repeat Button's disabled: look so nothing moves visually. */}
-            <Button
-              variant="primary"
-              type="button"
-              aria-disabled={blocked ? true : undefined}
-              aria-describedby={showReason ? reasonId : undefined}
-              className="aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
-              onClick={submit}
-            >
-              {submitting ? busyLabel : "Submit"}
-            </Button>
-          </div>
-        </div>
+        <SubmitBar
+          canSubmit={canSubmit}
+          onSubmit={submit}
+          submitting={submitting}
+          busyLabel={busyLabel}
+          submitError={submitError}
+          status={submitStatus}
+        />
       ) : null}
     </section>
-  );
-}
-
-function ScorePanel({
-  panel,
-  score,
-  note,
-  rationale,
-}: {
-  panel: RefObject<HTMLElement | null>;
-  score: ScoreResult;
-  note?: string;
-  rationale?: RichText;
-}) {
-  const model = SCORING_MODEL_LABELS[score.model];
-  const verdict = scoreVerdict(score);
-  const verdictId = useId();
-  const pointsId = useId();
-  return (
-    <aside
-      ref={panel}
-      tabIndex={-1}
-      aria-label="Score"
-      aria-describedby={`${verdictId} ${pointsId}`}
-      data-verdict={verdict.kind}
-      className={`mt-8 animate-[fade-up_var(--duration-slow)_var(--ease-out-expo)_both] rounded-md border border-line bg-surface-1 p-5 ${VERDICT_RULE[verdict.kind]}`}
-    >
-      <h2 className="eyebrow">Score</h2>
-      <div className="mt-1 flex items-baseline justify-between gap-4">
-        {/* Colour is never the only signal: the word leads, and the icon repeats it. */}
-        <p
-          id={verdictId}
-          className={`flex items-baseline gap-2 font-read text-xl ${VERDICT_TEXT[verdict.kind]}`}
-        >
-          {verdict.kind === "partial" ? null : (
-            <span aria-hidden="true" className="font-mono text-base">
-              {verdict.kind === "full" ? "✓" : "✕"}
-            </span>
-          )}
-          <span>{verdict.headline}</span>
-        </p>
-        <p id={pointsId} className="motion-settle tabular font-mono text-2xl">
-          <span className="sr-only">{verdict.detail}</span>
-          <span aria-hidden="true">
-            {score.points}
-            <span className="text-base text-ink-2"> / {score.maxPoints}</span>
-          </span>
-        </p>
-      </div>
-      <p className="mt-2 text-sm">
-        <span className="font-medium">{model.name}.</span>{" "}
-        <span className="text-ink-2">{model.explanation}</span>
-      </p>
-      {note ? <p className="mt-2 text-sm text-ink-1">{note}</p> : null}
-      {rationale ? (
-        <div className="mt-4 border-t border-line pt-4">
-          <h3 className="eyebrow">Rationale</h3>
-          <RichTextView text={rationale} className="mt-2 text-ink-1" />
-        </div>
-      ) : null}
-    </aside>
-  );
-}
-
-/** The panel's left rule, as an option's (docs/04 §4): green for full marks, red for none. */
-const VERDICT_RULE: Record<VerdictKind, string> = {
-  full: "border-l-4 border-l-correct",
-  partial: "border-l-4 border-l-line-strong",
-  none: "border-l-4 border-l-incorrect",
-};
-
-const VERDICT_TEXT: Record<VerdictKind, string> = {
-  full: "text-correct",
-  partial: "text-ink-1",
-  none: "text-incorrect",
-};
-
-/** The rationale on its own, for a key revealed with no answer to score (#181). */
-function RationalePanel({ rationale }: { rationale: RichText }) {
-  const headingId = useId();
-  return (
-    <aside
-      aria-labelledby={headingId}
-      className="mt-8 animate-[fade-up_var(--duration-slow)_var(--ease-out-expo)_both] rounded-md border border-line bg-surface-1 p-5"
-    >
-      <h2 id={headingId} className="eyebrow">
-        Rationale
-      </h2>
-      <RichTextView text={rationale} className="mt-2 text-ink-1" />
-    </aside>
-  );
-}
-
-/**
- * How the score was arrived at, element by element, straight from the engine's breakdown: the
- * player computes none of it. It is its own region rather than part of the score panel, so the
- * total there stays the one number in it.
- */
-function ScoreBreakdown({ score }: { score: ScoreResult }) {
-  const headingId = useId();
-  if (score.breakdown.length === 0) return null;
-  return (
-    // Named "Breakdown", not "Score breakdown": Playwright matches accessible names by substring,
-    // so the latter would also answer to every query for the score panel beside it.
-    <aside
-      aria-labelledby={headingId}
-      className="mt-4 animate-[fade-up_var(--duration-slow)_var(--ease-out-expo)_both] rounded-md border border-line bg-surface-1 p-5"
-    >
-      <h2 id={headingId} className="eyebrow">
-        Breakdown
-      </h2>
-      <ul className="mt-2 text-sm">
-        {score.breakdown.map((entry) => (
-          <li
-            key={entry.elementId}
-            className="flex items-baseline justify-between gap-4 border-b border-line py-2 last:border-b-0"
-          >
-            <span>{entry.label ?? entry.elementId}</span>
-            {/* The element itself already says correct or incorrect; this is the arithmetic. */}
-            <span className="tabular w-8 shrink-0 text-right font-mono text-ink-2">
-              {entry.delta > 0 ? `+${entry.delta}` : entry.delta}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </aside>
   );
 }

@@ -85,7 +85,7 @@ describe("QuestionShell Submit while the item is incomplete", () => {
   it("keeps the disabled look, so nothing on the page moves", () => {
     const { submit } = renderShell();
     // Button's own disabled: classes no longer match, so these stand in for them.
-    expect(submit.className).toContain("aria-disabled:opacity-50");
+    expect(submit.className).toContain("aria-disabled:bg-surface-2");
     expect(submit.className).toContain("aria-disabled:cursor-not-allowed");
   });
 });
