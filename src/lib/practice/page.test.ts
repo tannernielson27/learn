@@ -3,7 +3,13 @@ import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema, type Item } from "@/lib/ngn/schemas";
 import { createMemoryRateLimitStore } from "@/lib/rateLimit/testing/memoryStore";
 import { PRACTICE_START_LIMIT } from "./limits";
-import { loadPracticePage, startPracticeOver, type PracticePageStore } from "./page";
+import {
+  loadMissedPracticePage,
+  loadPracticePage,
+  startPracticeOver,
+  type MissedPageStore,
+  type PracticePageStore,
+} from "./page";
 
 const MC = itemSchema.parse(FIXTURES.multiple_choice.canonical) as Item;
 const STUDENT = "00000000-0000-4000-8000-0000000000d1";
@@ -116,5 +122,67 @@ describe("startPracticeOver", () => {
     const store = fakeStore();
     expect(await startPracticeOver(store, limiter, STUDENT, BANK)).toBe("rate_limited");
     expect(store.open).not.toHaveBeenCalled();
+  });
+});
+
+describe("loadMissedPracticePage", () => {
+  const header = {
+    ok: true as const,
+    run: {
+      runId: RUN.runId,
+      bankId: BANK,
+      title: "Week 7",
+      seed: RUN.seed,
+      source: { kind: "assignment" as const, id: "00000000-0000-4000-8000-0000000000e1" },
+    },
+  };
+  function missedStore(overrides: Partial<MissedPageStore> = {}): MissedPageStore {
+    return { ...fakeStore(), header: vi.fn(async () => header), ...overrides };
+  }
+
+  it("reads the header first, then the run as any run, titled by its source", async () => {
+    const store = missedStore();
+    const page = await loadMissedPracticePage(store, STUDENT, RUN.runId);
+    expect(page.kind).toBe("ready");
+    if (page.kind !== "ready") return;
+    expect(page.view.bankName).toBe("Week 7");
+    expect(page.view.kind).toBe("missed");
+    expect(page.source).toEqual(header.run.source);
+    expect(store.header).toHaveBeenCalledWith(STUDENT, RUN.runId);
+    expect(JSON.stringify(page)).not.toContain(RUN.seed);
+  });
+
+  it("is missing when the run is not the student's missed run, and reads nothing else", async () => {
+    const store = missedStore({
+      header: vi.fn(async () => ({ ok: false as const, reason: "not_found" as const })),
+    });
+    expect(await loadMissedPracticePage(store, STUDENT, RUN.runId)).toEqual({ kind: "missing" });
+    expect(store.slots).not.toHaveBeenCalled();
+  });
+
+  it("is missing when the run lists nothing, and failed when a read fails", async () => {
+    expect(
+      await loadMissedPracticePage(
+        missedStore({ slots: vi.fn(async () => ({ slots: [], answered: new Set<string>() })) }),
+        STUDENT,
+        RUN.runId,
+      ),
+    ).toEqual({ kind: "missing" });
+    expect(
+      await loadMissedPracticePage(
+        missedStore({
+          header: vi.fn(async () => ({ ok: false as const, reason: "failed" as const })),
+        }),
+        STUDENT,
+        RUN.runId,
+      ),
+    ).toEqual({ kind: "failed" });
+    expect(
+      await loadMissedPracticePage(
+        missedStore({ items: vi.fn(async () => null) }),
+        STUDENT,
+        RUN.runId,
+      ),
+    ).toEqual({ kind: "failed" });
   });
 });

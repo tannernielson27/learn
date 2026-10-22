@@ -1413,6 +1413,8 @@ export type Database = {
           id: string;
           org_id: string;
           seed: string;
+          source_assignment: string | null;
+          source_run: string | null;
           started_at: string;
           student_id: string;
         };
@@ -1422,6 +1424,8 @@ export type Database = {
           id?: string;
           org_id: string;
           seed?: string;
+          source_assignment?: string | null;
+          source_run?: string | null;
           started_at?: string;
           student_id: string;
         };
@@ -1431,6 +1435,8 @@ export type Database = {
           id?: string;
           org_id?: string;
           seed?: string;
+          source_assignment?: string | null;
+          source_run?: string | null;
           started_at?: string;
           student_id?: string;
         };
@@ -1448,6 +1454,20 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "orgs";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "practice_runs_source_assignment_fkey";
+            columns: ["source_assignment", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "assignments";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "practice_runs_source_run_fkey";
+            columns: ["source_run", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "practice_runs";
+            referencedColumns: ["id", "org_id"];
           },
           {
             foreignKeyName: "practice_runs_student_id_fkey";
@@ -2005,6 +2025,17 @@ export type Database = {
           workspace_name: string;
         }[];
       };
+      missed_practice_run: {
+        Args: { student: string; target_run: string };
+        Returns: {
+          bank_id: string;
+          run_id: string;
+          seed: string;
+          source_id: string;
+          source_kind: string;
+          title: string;
+        }[];
+      };
       my_practice_step_marks: {
         Args: never;
         Returns: {
@@ -2268,6 +2299,25 @@ export type Database = {
       start_case_study_step: {
         Args: { step_position: number; step_type: string; target: string };
         Returns: string;
+      };
+      start_missed_practice_from_assignment: {
+        Args: {
+          best_attempt?: string;
+          student: string;
+          target_assignment: string;
+          target_items: string[];
+        };
+        Returns: {
+          outcome: string;
+          run_id: string;
+        }[];
+      };
+      start_missed_practice_from_run: {
+        Args: { source: string; student: string; target_items: string[] };
+        Returns: {
+          outcome: string;
+          run_id: string;
+        }[];
       };
       start_session: {
         Args: {

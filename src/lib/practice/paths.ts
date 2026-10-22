@@ -3,6 +3,11 @@ export function practicePath(bankId: string): string {
   return `/learn/practice/${bankId}`;
 }
 
+/** Where a run of only the questions a student missed is played (20261023020000). */
+export function missedPracticePath(runId: string): string {
+  return `/learn/practice/missed/${runId}`;
+}
+
 const questionsLabel = (count: number): string =>
   count === 1 ? "1 question" : `${count} questions`;
 

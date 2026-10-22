@@ -267,6 +267,49 @@ describe("buildPracticeView, on the bytes a student is handed", () => {
     });
   });
 
+  describe("a run of only the missed questions (20261023020000)", () => {
+    const missedSlots = [
+      { itemId: rowId(1), caseStudyId: null, step: null },
+      { itemId: rowId(102), caseStudyId: CASE_ID, step: 3 },
+      { itemId: rowId(104), caseStudyId: CASE_ID, step: 5 },
+    ];
+
+    it("plays each missed step on its own, with the chart at its own step and a line naming it", () => {
+      const view = buildPracticeView(
+        input({
+          slots: missedSlots,
+          caseStudies: [{ id: CASE_ID, title: "Hip", ehr: stagedEhr }],
+          missed: true,
+        }),
+      );
+      expect(view.kind).toBe("missed");
+      expect(view.total).toBe(3);
+      expect(view.entries.map((entry) => entry.kind)).toEqual(["item", "item", "item"]);
+      const [, third, fifth] = view.entries;
+      if (third?.kind !== "item" || fifth?.kind !== "item") throw new Error("expected items");
+      expect(third.record).toEqual(recordAtStep(stagedEhr, 3));
+      expect(fifth.record).toEqual(recordAtStep(stagedEhr, 5));
+      expect(third.context).toBe("Case study: Hip · Step 3: Prioritize Hypotheses");
+      expect(view.entries[0]).not.toHaveProperty("record");
+    });
+
+    it("plays a step whose record is broken without one rather than dropping it", () => {
+      const view = buildPracticeView(
+        input({
+          slots: missedSlots,
+          caseStudies: [{ id: CASE_ID, title: "Hip", ehr: { broken: true } }],
+          missed: true,
+        }),
+      );
+      expect(view.entries).toHaveLength(3);
+      expect(view.entries[1]).not.toHaveProperty("record");
+    });
+
+    it("is a quiz run unless it says otherwise", () => {
+      expect(buildPracticeView(input()).kind).toBe("quiz");
+    });
+  });
+
   it("changes nothing it is given", () => {
     const source = input({ answers: { [rowId(1)]: { type: "multiple_choice", optionId: "x" } } });
     const before = JSON.stringify(source);

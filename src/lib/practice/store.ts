@@ -8,7 +8,16 @@ import {
   readRunSlots,
   recordPracticeResponse,
 } from "@/lib/supabase/practice";
+import { resultsStore } from "@/lib/assignments/attemptStore";
+import { loadResultsPage } from "@/lib/assignments/results";
+import {
+  readMissedRun,
+  readRunMarks,
+  startMissedFromAssignment,
+  startMissedFromRun,
+} from "@/lib/supabase/practiceMissed";
 import type { PracticeAnswerStore } from "./answerRoute";
+import type { MissedStore } from "./missed";
 import type { PracticePageStore } from "./page";
 
 type Client = SupabaseClient<Database>;
@@ -34,5 +43,30 @@ export function practiceAnswerStore(service: Client): PracticeAnswerStore {
     slots: (student, runId) => readRunSlots(service, student, runId),
     items: (student, runId, ids) => readRunItems(service, student, runId, ids),
     record: (input) => recordPracticeResponse(service, input),
+  };
+}
+
+/**
+ * "Practise the N I missed" (20261023020000). The results page is read as the student, under
+ * their own session, exactly as `/learn/assignments/[id]/results` reads it; the runs as the
+ * service role, for the student the server verified.
+ */
+export function missedStore(user: Client, service: Client): MissedStore {
+  return {
+    slots: (student, runId) => readRunSlots(service, student, runId),
+    marks: (runId) => readRunMarks(service, runId),
+    fromRun: (student, runId, ids) => startMissedFromRun(service, student, runId, ids),
+    results: (student, assignmentId) =>
+      loadResultsPage(resultsStore(user, service), assignmentId, student),
+    fromAssignment: (student, assignmentId, ids, best) =>
+      startMissedFromAssignment(service, student, assignmentId, ids, best),
+  };
+}
+
+/** A run of missed questions: its header, then the same reads as any run. */
+export function missedPageStore(service: Client) {
+  return {
+    header: (student: string, runId: string) => readMissedRun(service, student, runId),
+    ...practicePageStore(service),
   };
 }

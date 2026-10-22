@@ -15,6 +15,13 @@ export interface PracticeItemEntry {
   itemId: string;
   item: KeylessItem;
   answered: PracticeAnswered | null;
+  /**
+   * Only in a run of the questions a student missed: a case study's step played on its own, with
+   * the patient record as it stood at that step and a line naming the case study and the step.
+   * The source already showed the student that step and its chart.
+   */
+  record?: EhrRecordView;
+  context?: string;
 }
 
 /**
@@ -40,6 +47,11 @@ export type PracticeEntry = ({ kind: "item" } & PracticeItemEntry) | PracticeCas
 export interface PracticeView {
   runId: string;
   bankName: string;
+  /**
+   * `quiz` for a run of a shared quiz; `missed` for a run of only the questions missed in an
+   * earlier run or an assignment, which has no Start over of its own.
+   */
+  kind?: "quiz" | "missed";
   /** Items and case-study steps in the run. */
   total: number;
   answered: number;
