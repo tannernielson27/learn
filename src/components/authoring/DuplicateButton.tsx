@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { useAskToLeave } from "./LeaveGuard";
+import { FieldError } from "./FieldError";
 
 export type DuplicateState = { status: "idle" } | { status: "error"; error: string };
 
@@ -49,9 +50,9 @@ export function DuplicateButton({ action, label }: DuplicateButtonProps) {
         </Button>
       </div>
       {state.status === "error" ? (
-        <p ref={alertRef} role="alert" tabIndex={-1} className="text-sm text-incorrect">
+        <FieldError ref={alertRef} role="alert" tabIndex={-1}>
           {state.error}
-        </p>
+        </FieldError>
       ) : null}
     </form>
   );

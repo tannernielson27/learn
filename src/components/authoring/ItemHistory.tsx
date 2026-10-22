@@ -90,7 +90,7 @@ export function ItemHistory({
                         setSelected(candidate.version);
                         setConfirming(false);
                       }}
-                      className="tap-target flex flex-col items-start rounded-sm border border-line bg-surface-1 px-3 py-2 text-left hover:border-line-strong aria-pressed:border-accent aria-pressed:bg-accent-soft"
+                      className="tap-target flex flex-col items-start rounded-sm border border-field-border bg-surface-1 px-3 py-2 text-left hover:bg-surface-2 aria-pressed:border-accent aria-pressed:bg-accent-soft"
                     >
                       <span className="text-sm font-medium text-ink-1">
                         Version {candidate.version}

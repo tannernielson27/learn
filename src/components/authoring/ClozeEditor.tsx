@@ -21,6 +21,8 @@ import {
   type ItemInputOf,
 } from "@/lib/ngn/schemas";
 import { EditorShell, issueMessageId, type SaveResult } from "./EditorShell";
+import { fieldClasses } from "@/components/ui/fieldClasses";
+import { CorrectToggle } from "./CorrectToggle";
 
 type ClozeType = "dropdown_cloze" | "dropdown_rationale";
 
@@ -35,8 +37,7 @@ export interface ClozeEditorProps<T extends ClozeType = ClozeType> {
 const MIN_CHOICES = 3;
 const MAX_CHOICES = 5;
 const letter = (index: number) => String.fromCharCode(65 + index);
-const fieldClass =
-  "w-full rounded-sm border border-line bg-surface-1 px-3 py-2 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect";
+const fieldClass = fieldClasses("px-3 py-2 text-base");
 
 function unusedBlankId(taken: ReadonlySet<string>): string {
   for (let i = 1; i < 100; i += 1) {
@@ -95,14 +96,16 @@ function BlankFields({
         const labelField = `blanks.${blankIndex}.choices.${choiceIndex}.label`;
         return (
           <div key={field.fieldKey} className="flex flex-wrap items-center gap-3">
-            <input
-              type="radio"
-              value={field.id}
-              aria-label={`Choice ${L} is correct`}
-              aria-describedby={describedBy(correctField)}
-              className="size-5 accent-accent"
-              {...register(`blanks.${blankIndex}.correctChoiceId`)}
-            />
+            <CorrectToggle>
+              <input
+                type="radio"
+                value={field.id}
+                aria-label={`Choice ${L} is correct`}
+                aria-describedby={describedBy(correctField)}
+                className="size-5 accent-accent"
+                {...register(`blanks.${blankIndex}.correctChoiceId`)}
+              />
+            </CorrectToggle>
             <label
               htmlFor={`${ids}-blank-${blankIndex}-choice-${choiceIndex}`}
               className="w-20 shrink-0 text-sm text-ink-1"

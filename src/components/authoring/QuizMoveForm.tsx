@@ -10,6 +10,8 @@ import { selectionLabel, type QuizOption } from "@/lib/authoring/quizMove";
 import { useArchiveSelected, type ArchiveSelectedAction } from "./ArchiveSelected";
 import type { FolderFormState } from "./FolderNameForm";
 import { StaysBehindList } from "./StaysBehindList";
+import { fieldClasses } from "@/components/ui/fieldClasses";
+import { FieldError } from "./FieldError";
 
 type MoveAction = (state: FolderFormState, formData: FormData) => Promise<FolderFormState>;
 
@@ -39,8 +41,7 @@ export interface QuizMoveFormProps {
 const INITIAL: FolderFormState = { status: "idle" };
 const idle: MoveAction = async (state) => state;
 
-const selectClass =
-  "tap-target max-w-full rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect";
+const selectClass = fieldClasses("max-w-full px-3 text-base");
 
 interface Asking {
   title: string;
@@ -51,9 +52,9 @@ function Outcome({ id, state, problem }: { id: string; state: FolderFormState; p
   const error = problem ?? (state.status === "error" ? state.error : null);
   if (error) {
     return (
-      <p id={id} role="alert" className="text-sm text-incorrect">
+      <FieldError id={id} role="alert">
         {error}
-      </p>
+      </FieldError>
     );
   }
   return state.status === "done" ? (

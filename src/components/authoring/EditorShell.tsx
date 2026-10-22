@@ -3,11 +3,11 @@
 // tracking against the last saved snapshot, and a standalone item's patient record.
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { UseFormRegisterReturn } from "react-hook-form";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
-import { Button } from "@/components/ui/Button";
-import { emptyEhrForm, previewRecord, type EhrFormValues } from "@/lib/authoring/forms/ehr";
+import { Card } from "@/components/ui/Card";
+import { previewRecord, type EhrFormValues } from "@/lib/authoring/forms/ehr";
 import type { EditorIssue } from "@/lib/authoring/issueMessages";
 import { scoringSummary } from "@/lib/authoring/scoringSummary";
 import { editorWarnings, RATIONALE_FIELD, rationaleProblem } from "@/lib/authoring/warningMessages";
@@ -15,10 +15,14 @@ import { itemSchema, type Item } from "@/lib/ngn/schemas";
 import { scoreInProcess } from "@/lib/ngn/submit";
 import type { CjmmStep, ScoringModel } from "@/lib/ngn/types";
 import { EhrPreview } from "./EhrPreview";
-import { EhrRecordFields, focusRecordField, recordFieldId } from "./EhrRecordFields";
+import { EditorActions } from "./EditorActions";
+import { EditorChecks } from "./EditorChecks";
+import { EditorRecordSection } from "./EditorRecordSection";
+import { focusRecordField } from "./EhrRecordFields";
 import { issueMessageId } from "./issueIds";
 import { useItemEditorHost, useReportDirty } from "./ItemEditorHost";
 import { TagFields } from "./TagFields";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 
 export { issueMessageId };
 
@@ -55,8 +59,7 @@ interface WithTags {
 
 const RECORD_PREFIX = "ehr.";
 const OPTION_RATIONALE = /^options\.(\d+)\.rationale$/;
-const fieldClass =
-  "w-full rounded-sm border border-line bg-surface-1 px-3 py-2 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect";
+const fieldClass = fieldClasses("px-3 py-2 text-base");
 
 export interface EditorShellProps<Values, Input extends ScoredInput> {
   /** The form as it stands right now (re-read on every render by the caller). */
@@ -111,7 +114,6 @@ export function EditorShell<Values, Input extends ScoredInput>({
   const [savedSnapshot, setSavedSnapshot] = useState(() =>
     JSON.stringify(host.savedValues ?? initialValues),
   );
-  const [confirmingRemove, setConfirmingRemove] = useState(false);
   const valuesJson = JSON.stringify(values);
   const isDirty = valuesJson !== savedSnapshot;
   const busy = status.kind === "busy";
@@ -172,16 +174,6 @@ export function EditorShell<Values, Input extends ScoredInput>({
     return () => window.removeEventListener("beforeunload", warn);
   }, [isDirty]);
 
-  // Adding, keeping or removing the record changes which buttons exist, so focus is placed once
-  // the new form is on the page. Event handlers set it; nothing reads it during render.
-  const pendingFocus = useRef<string | null>(null);
-  useEffect(() => {
-    const id = pendingFocus.current;
-    if (!id) return;
-    pendingFocus.current = null;
-    document.getElementById(id)?.focus();
-  });
-
   function changeRecord(update: (current: EhrFormValues) => EhrFormValues) {
     const current = (readValues() as WithRecord).ehr;
     if (current && onRecordChange) onRecordChange(update(current));
@@ -231,16 +223,48 @@ export function EditorShell<Values, Input extends ScoredInput>({
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-2">
-      <form className="flex flex-col gap-6" onSubmit={(event) => event.preventDefault()} noValidate>
+    <div className="grid gap-x-10 gap-y-6 lg:grid-cols-2">
+      <EditorActions
+        saveOnly={Boolean(host.saveOnly)}
+        published={Boolean(host.published)}
+        busy={busy}
+        canPublish={canPublish}
+        dirty={isDirty}
+        done={status.kind === "done" && status.shownWith === valuesJson ? status.message : null}
+        error={status.kind === "error" ? status.message : null}
+        unpublishId={unpublishId}
+        onSave={() =>
+          run(onSaveDraft, "Saved.", "The question could not be saved. Try again.", false)
+        }
+        onSaveDraft={() =>
+          run(
+            onSaveDraft,
+            // Saving a draft unpublishes the item, so the message says so.
+            host.published ? "Saved as a draft. Publish to use it again." : "Draft saved.",
+            "The draft could not be saved. Try again.",
+            false,
+          )
+        }
+        onPublish={() => {
+          if (!canPublish || busy) return;
+          void run(
+            (current) => onPublish(toInput(current)),
+            "Published.",
+            "The question could not be published. Try again.",
+            true,
+          );
+        }}
+      />
+      <form
+        className="flex min-w-0 flex-col gap-6"
+        onSubmit={(event) => event.preventDefault()}
+        noValidate
+      >
         {/* Not a live region: it changes with every answer marked, and would repeat itself. */}
-        <section
-          aria-label="Scoring"
-          className="rounded-sm border border-line bg-surface-1 px-4 py-3"
-        >
-          <p className="text-sm font-medium text-ink-1">{scoring.headline}</p>
+        <Card tone="inset" padding="sm" role="region" aria-label="Scoring">
+          <p className="text-sm font-semibold text-ink-1">{scoring.headline}</p>
           {scoring.rule ? <p className="mt-1 text-sm text-ink-2">{scoring.rule}</p> : null}
-        </section>
+        </Card>
 
         {children}
 
@@ -272,229 +296,36 @@ export function EditorShell<Values, Input extends ScoredInput>({
         ) : null}
 
         {offersRecord && onRecordChange ? (
-          <section
-            aria-labelledby={`${recordIds}-heading`}
-            className="flex flex-col gap-4 border-t border-line pt-6"
-          >
-            <h2 id={`${recordIds}-heading`} className="text-sm font-medium text-ink-1">
-              Patient record
-            </h2>
-            {record ? (
-              <>
-                {confirmingRemove ? (
-                  <div className="flex flex-col gap-3 rounded-sm border border-line bg-surface-1 p-4">
-                    <p className="text-sm text-ink-1">
-                      Remove the patient record from this question?
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          pendingFocus.current = `${recordIds}-add`;
-                          setConfirmingRemove(false);
-                          onRecordChange(undefined);
-                        }}
-                      >
-                        Yes, remove it
-                      </Button>
-                      <Button
-                        id={`${recordIds}-keep`}
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          pendingFocus.current = `${recordIds}-remove`;
-                          setConfirmingRemove(false);
-                        }}
-                      >
-                        Keep patient record
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <Button
-                      id={`${recordIds}-remove`}
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        pendingFocus.current = `${recordIds}-keep`;
-                        setConfirmingRemove(true);
-                      }}
-                    >
-                      Remove patient record
-                    </Button>
-                  </div>
-                )}
-                <EhrRecordFields
-                  values={record}
-                  onChange={changeRecord}
-                  issues={recordIssues}
-                  idPrefix={recordIds}
-                  issueIdPrefix={issueIdPrefix}
-                  issueFieldPrefix={RECORD_PREFIX}
-                  sectionsHeading="h3"
-                />
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-ink-2">
-                  For a Trend question or a bowtie.{" "}
-                  {/* A new tab, so the question being written stays open. Underlined, as a link
-                      inside a line of text must be (axe link-in-text-block). */}
-                  <a
-                    href="/help/items#trend"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-accent-ink underline underline-offset-4"
-                  >
-                    How Trend works<span className="sr-only"> (opens in a new tab)</span>
-                  </a>
-                </p>
-                <div>
-                  <Button
-                    id={`${recordIds}-add`}
-                    size="sm"
-                    onClick={() => {
-                      pendingFocus.current = recordFieldId(recordIds, "patient.age");
-                      onRecordChange(emptyEhrForm());
-                    }}
-                  >
-                    Add patient record
-                  </Button>
-                </div>
-              </>
-            )}
-          </section>
+          <EditorRecordSection
+            record={record}
+            onRecordChange={onRecordChange}
+            changeRecord={changeRecord}
+            recordIds={recordIds}
+            issues={recordIssues}
+            issueIdPrefix={issueIdPrefix}
+            issueFieldPrefix={RECORD_PREFIX}
+          />
         ) : null}
 
-        {problems.length > 0 ? (
-          <section
-            aria-label="Problems to fix"
-            className="rounded-sm border border-line bg-surface-1 p-4"
-          >
-            {/* Inside a case study the step's own heading is the h2 above this. */}
-            {host.inCaseStudy ? (
-              <h3 className="mb-2 text-sm font-medium text-ink-1">Problems to fix</h3>
-            ) : (
-              <h2 className="mb-2 text-sm font-medium text-ink-1">Problems to fix</h2>
-            )}
-            <ul className="flex flex-col gap-1">
-              {problems.map((issue) => (
-                <li key={issue.field}>
-                  <button
-                    type="button"
-                    id={issueMessageId(issueIdPrefix, issue.field)}
-                    onClick={() => focusProblem(issue.field)}
-                    className="tap-target text-left text-sm text-accent-ink underline-offset-4 hover:underline"
-                  >
-                    {issue.message}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        {warnings.length > 0 ? (
-          <section
-            aria-label="Quality warnings"
-            className="rounded-sm border border-line bg-surface-1 p-4"
-          >
-            {host.inCaseStudy ? (
-              <h3 className="text-sm font-medium text-ink-1">Worth a second look</h3>
-            ) : (
-              <h2 className="text-sm font-medium text-ink-1">Worth a second look</h2>
-            )}
-            <p className="mb-2 text-sm text-ink-2">These do not stop publishing.</p>
-            <ul className="flex flex-col gap-1">
-              {warnings.map((warning) => (
-                <li key={warning.field}>
-                  <button
-                    type="button"
-                    onClick={() => focusProblem(warning.field)}
-                    className="tap-target text-left text-sm text-accent-ink underline-offset-4 hover:underline"
-                  >
-                    {warning.message}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        <div className="flex flex-wrap items-center gap-3 border-t border-line pt-4">
-          {host.saveOnly ? (
-            <Button
-              type="button"
-              variant="primary"
-              disabled={busy}
-              onClick={() =>
-                run(onSaveDraft, "Saved.", "The question could not be saved. Try again.", false)
-              }
-            >
-              Save
-            </Button>
-          ) : (
-            <>
-              <Button
-                type="button"
-                disabled={busy}
-                aria-describedby={host.published ? unpublishId : undefined}
-                onClick={() =>
-                  run(
-                    onSaveDraft,
-                    // Saving a draft unpublishes the item, so the message says so.
-                    host.published ? "Saved as a draft. Publish to use it again." : "Draft saved.",
-                    "The draft could not be saved. Try again.",
-                    false,
-                  )
-                }
-              >
-                Save draft
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                aria-disabled={!canPublish || busy}
-                onClick={() => {
-                  if (!canPublish || busy) return;
-                  void run(
-                    (current) => onPublish(toInput(current)),
-                    "Published.",
-                    "The question could not be published. Try again.",
-                    true,
-                  );
-                }}
-              >
-                Publish
-              </Button>
-            </>
-          )}
-          {isDirty ? <p className="text-sm text-ink-2">Unsaved changes</p> : null}
-          {status.kind === "done" && status.shownWith === valuesJson ? (
-            <p role="status" className="text-sm text-ink-2">
-              {status.message}
-            </p>
-          ) : null}
-          {status.kind === "error" ? (
-            <p role="alert" className="text-sm text-incorrect">
-              {status.message}
-            </p>
-          ) : null}
-          {host.published ? (
-            <p id={unpublishId} className="w-full text-sm text-ink-2">
-              This question is published. Saving a draft takes it out of live sessions, assignments
-              and practice until you publish again.
-            </p>
-          ) : null}
-        </div>
+        <EditorChecks
+          problems={problems}
+          warnings={warnings}
+          issueIdPrefix={issueIdPrefix}
+          nested={host.inCaseStudy}
+          focusProblem={focusProblem}
+        />
       </form>
 
-      <section aria-label="Preview" className="min-w-0 lg:sticky lg:top-4 lg:self-start">
-        <p className="eyebrow mb-2">Preview</p>
-        {/* The transform makes this box the containing block for the player's fixed submit bar. */}
+      {/* Below the action bar, which stays at the top from 1024px. */}
+      <section
+        aria-label="Preview"
+        className="min-w-0 rounded-md bg-surface-2 p-4 sm:p-6 lg:sticky lg:top-24 lg:self-start"
+      >
+        <p className="eyebrow mb-3">Preview · what a student sees</p>
+        {/* A phone's width, as students answer on one (Editor mockup). The transform makes this
+            box the containing block for the player's fixed submit bar. */}
         <div
-          className="rounded-sm border border-line bg-surface-0 p-4 pb-24"
+          className="mx-auto w-full max-w-sm rounded-md border border-line bg-surface-0 p-4 pb-24 shadow-elevation-1"
           style={{ transform: "translateZ(0)" }}
         >
           {/* A record reads first, as it does above the question on a phone. */}
