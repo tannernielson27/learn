@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tokens and components</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="lr.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&amp;display=swap">
+<style>body{margin:0}a{color:oklch(38% 0.12 250)}a:hover{color:oklch(30% 0.12 250)}</style>
+</helmet>
+<div class="lr" style="width: 1440px; height: 1500px; padding: 56px 64px; display: flex; flex-direction: column; gap: 48px">
+  <header style="display: flex; flex-direction: column; gap: 8px">
+    <p class="eyebrow">Clinical Editorial, stage edition</p>
+    <h1 class="serif" style="font-size: 44px">Tokens and components</h1>
+    <p class="muted" style="max-width: 760px; line-height: 1.5">Warm paper, near-black ink, one clinical blue for interaction. Correct, incorrect and flag colors appear only when an answer is marked or time runs low, and always with an icon or a word.</p>
+  </header>
+
+  <section aria-labelledby="pal-h" style="display: flex; flex-direction: column; gap: 16px">
+    <h2 id="pal-h" style="font-size: 18px; font-weight: 700">Palette · contrast on white (light theme)</h2>
+    <div style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 14px">
+      <sc-for list="{{swatches}}" as="s" hint-placeholder-count="8">
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <div style="height: 72px; border-radius: 8px; border: 1px solid var(--line); background: {{s.css}}"></div>
+          <p style="font-size: 14px; font-weight: 600">{{s.name}}</p>
+          <p class="mono muted" style="font-size: 12px">{{s.ratio}}</p>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section aria-labelledby="type-h" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px">
+    <div style="display: flex; flex-direction: column; gap: 14px">
+      <h2 id="type-h" style="font-size: 18px; font-weight: 700">Type</h2>
+      <p class="serif" style="font-size: 36px">Source Serif 4 · page titles</p>
+      <p style="font-size: 19px; line-height: 1.55">Inter · question text, 19 px, line-height 1.55, measure 68ch</p>
+      <p style="font-size: 16px">Inter · interface and choices, 16 px</p>
+      <p class="mono" style="font-size: 16px">JetBrains Mono · codes, vitals, timers 0:24</p>
+      <p class="eyebrow">Eyebrow label</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <h2 style="font-size: 18px; font-weight: 700">Projector ladder (on a 1080 px stage)</h2>
+      <p class="mono" style="font-size: 14px">Join code 160 px · question 60 px · choices 42 px · numbers 88 px · labels ≥ 28 px</p>
+      <p class="muted" style="font-size: 14px; line-height: 1.5">Set in container units on the stage with rem floors, so a teacher laptop zooms and a projector scales. Strokes are 3 px or more.</p>
+      <div style="border: 3px solid oklch(80% 0.006 260); border-radius: 14px; padding: 20px 24px; display: flex; align-items: center; gap: 20px; margin-top: 8px">
+        <span style="width: 56px; height: 56px; border-radius: 50%; border: 3px solid var(--ink-1); display: grid; place-items: center; font: 700 26px var(--ff-mono)">A</span>
+        <span style="font-size: 30px; font-weight: 500">A stage choice</span>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="ctl-h" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px">
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <h2 id="ctl-h" style="font-size: 18px; font-weight: 700">Buttons · 44 px minimum</h2>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap"><button class="btn btn-primary" type="button">Primary</button><button class="btn btn-secondary" type="button">Secondary</button><button class="btn btn-ghost" type="button">Ghost</button><button class="btn" type="button" disabled>Disabled</button></div>
+      <button class="btn btn-primary btn-lg" type="button">Large, for the main action on phones</button>
+      <div class="field" style="margin-top: 8px"><label for="f1">Field · border 3.6:1</label><input id="f1" value="Typed text"></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <h2 style="font-size: 18px; font-weight: 700">Choice states</h2>
+      <div class="option"><span class="letter">A</span>Rest</div>
+      <div class="option is-selected"><span class="letter">B</span>Selected</div>
+      <div class="option correct"><span style="flex: 1">Correct</span><span class="mark"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Correct</span></div>
+      <div class="option incorrect"><span style="flex: 1">Incorrect</span><span class="mark"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>Incorrect</span></div>
+      <div class="option missed"><span style="flex: 1">Missed</span><span class="mark">Missed</span></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 14px">
+      <h2 style="font-size: 18px; font-weight: 700">Status</h2>
+      <div class="timer"><div class="track"><div class="fill" style="width: 70%"></div></div><span class="time">0:21</span></div>
+      <div class="timer warn"><div class="track"><div class="fill" style="width: 25%"></div></div><span class="time">0:08</span></div>
+      <p style="font-size: 13px; font-weight: 600; color: var(--flag-ink)">10 seconds left</p>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap"><span class="badge badge-live">Live</span><span class="badge">Draft</span><span class="badge badge-accent">New</span></div>
+      <p style="display: flex; align-items: center; gap: 8px; font-size: 14px"><span class="statusdot"></span>Connected <span class="statusdot off" style="margin-left: 16px"></span>Offline</p>
+      <div class="notice"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg><span>System messages use this neutral notice, never feedback red.</span></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="chart-h" style="display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 48px">
+    <div style="display: flex; flex-direction: column; gap: 14px">
+      <h2 id="chart-h" style="font-size: 18px; font-weight: 700">Results chart · one neutral hue, key marked three ways</h2>
+      <div class="chart">
+        <div class="chart-row key"><span class="letter">A</span><div class="bar"><span style="width: 59%"></span></div><span class="count">13 · 59% ✓</span></div>
+        <div class="chart-row"><span class="letter">B</span><div class="bar"><span style="width: 5%"></span></div><span class="count">1 · 5%</span></div>
+        <div class="chart-row"><span class="letter">C</span><div class="bar"><span style="width: 14%"></span></div><span class="count">3 · 14%</span></div>
+      </div>
+      <p class="muted" style="font-size: 13px">The key: green fill, a 3 px outline, and the word "Correct" beside its label. Red and green never sit side by side.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 14px">
+      <h2 style="font-size: 18px; font-weight: 700">Spacing · 8 pt grid</h2>
+      <div style="display: flex; align-items: flex-end; gap: 12px">
+        <sc-for list="{{space}}" as="s" hint-placeholder-count="9">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><span style="width: {{s.px}}; height: {{s.px}}; background: var(--accent-soft); border: 1px solid var(--accent)"></span><span class="mono muted" style="font-size: 11px">{{s.n}}</span></div>
+        </sc-for>
+      </div>
+      <h2 style="font-size: 18px; font-weight: 700; margin-top: 12px">Motion</h2>
+      <p class="muted" style="font-size: 14px; line-height: 1.55">Transform and opacity only. 120 to 320 ms, eased out. Nothing loops, no pulse, no confetti. Reduced motion: an 80 ms fade.</p>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const swatches = [
+      ["Paper", "var(--surface-0)", "page"],
+      ["Ink", "var(--ink-1)", "17.3 : 1"],
+      ["Muted ink", "var(--ink-2)", "7.4 : 1"],
+      ["Clinical blue", "var(--accent)", "7.8 : 1"],
+      ["Correct", "var(--correct)", "5.7 : 1"],
+      ["Incorrect", "var(--incorrect)", "6.6 : 1"],
+      ["Flag (timer)", "var(--flag)", "3.7 : 1 · UI only"],
+      ["Field line", "var(--line-field)", "3.6 : 1"],
+    ].map(([name, css, ratio]) => ({ name, css, ratio }));
+    const space = [4, 8, 12, 16, 24, 32, 48, 64, 96].map((n) => ({ n, px: n + "px" }));
+    return { swatches, space };
+  }
+}
+</script>
+</body>
+</html>

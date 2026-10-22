@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Question on a student phone</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="lr.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&amp;display=swap">
+<style>body{margin:0}a{color:oklch(38% 0.12 250)}a:hover{color:oklch(30% 0.12 250)}</style>
+</helmet>
+<div class="lr" style="width: 375px; height: 812px; position: relative; display: flex; flex-direction: column">
+  <header style="padding: 14px 20px 12px; background: var(--surface-1); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px">
+      <p class="mono" style="font-weight: 600">Question 3 of 20</p>
+      <span style="display: flex; align-items: center; gap: 6px; color: var(--ink-2)"><span class="statusdot"></span>Live</span>
+    </div>
+    <div class="timer warn"><div class="track"><div class="fill" style="width: 27%"></div></div><span class="time">0:08</span></div>
+    <p style="font-size: 13px; font-weight: 600; color: var(--flag-ink)" aria-live="polite">10 seconds left</p>
+  </header>
+  <main style="flex: 1; padding: 20px 20px 120px; display: flex; flex-direction: column; gap: 16px; overflow: hidden">
+    <p class="stem" style="font-size: 18px">A client with heart failure gained 2.3 kg (5 lb) in two days and is now short of breath lying flat. Which action should the nurse take first?</p>
+    <div role="radiogroup" aria-label="Choices" style="display: flex; flex-direction: column; gap: 10px">
+      <sc-for list="{{options}}" as="o" hint-placeholder-count="4">
+        <button type="button" role="radio" aria-checked="{{o.checked}}" class="{{o.cls}}" onClick="{{o.pick}}"><span class="letter">{{o.letter}}</span><span>{{o.label}}</span></button>
+      </sc-for>
+    </div>
+  </main>
+  <div class="submitbar">
+    <p class="muted" style="font-size: 14px; flex: 1">{{hint}}</p>
+    <a class="btn btn-primary btn-lg" href="PhoneSent.dc.html" style="min-width: 128px">Submit</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  state = { picked: "A" };
+  renderVals() {
+    const labels = [
+      ["A", "Auscultate the lungs and check oxygen saturation"],
+      ["B", "Encourage the client to drink more fluids"],
+      ["C", "Document the weight and reassess tomorrow"],
+      ["D", "Teach the client about low-sodium food choices"],
+    ];
+    const options = labels.map(([letter, label]) => ({
+      letter,
+      label,
+      checked: this.state.picked === letter ? "true" : "false",
+      cls: this.state.picked === letter ? "option is-selected" : "option",
+      pick: () => this.setState({ picked: letter }),
+    }));
+    return { options, hint: this.state.picked ? "You can change it until you submit." : "Choose one answer." };
+  }
+}
+</script>
+</body>
+</html>

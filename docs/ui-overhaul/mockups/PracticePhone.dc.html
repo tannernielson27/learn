@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Practice question, answer checked</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="lr.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&amp;display=swap">
+<style>body{margin:0}a{color:oklch(38% 0.12 250)}a:hover{color:oklch(30% 0.12 250)}</style>
+</helmet>
+<div class="lr" style="width: 375px; height: 812px; position: relative; display: flex; flex-direction: column; overflow: hidden">
+  <header style="padding: 10px 8px 12px 4px; background: var(--surface-1); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px">
+    <div style="display: flex; justify-content: space-between; align-items: center">
+      <a class="link" href="StudentHome.dc.html" style="padding: 0 10px; font-weight: 500; font-size: 15px"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>Practice</a>
+      <p class="mono" style="font-weight: 600; font-size: 14px; padding-right: 12px">7 of 21</p>
+    </div>
+    <div class="progress" style="margin: 0 12px 0 16px"><span style="width: 33%"></span></div>
+  </header>
+  <main style="flex: 1; padding: 16px 20px 110px; display: flex; flex-direction: column; gap: 12px">
+    <section class="verdict" aria-label="Your result">
+      <div>
+        <h3>Partially correct</h3>
+        <p class="mono muted" style="font-size: 14px; margin-top: 2px">1 of 3 points</p>
+      </div>
+    </section>
+    <p class="stem" style="font-size: 16px">A 68-year-old client admitted with pneumonia. Which findings need immediate follow-up?</p>
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <div class="option correct" style="padding-top: 12px; padding-bottom: 12px; min-height: 48px"><span style="flex: 1">Respiratory rate 28/min</span><span class="mark"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Correct</span></div>
+      <div class="option missed" style="padding-top: 11px; padding-bottom: 11px; min-height: 48px"><span style="flex: 1">SpO2 89% on room air</span><span class="mark">Missed</span></div>
+      <div class="option" style="padding-top: 12px; padding-bottom: 12px; min-height: 48px; color: var(--ink-2)"><span style="flex: 1">Temperature 37.2 °C</span></div>
+      <div class="option correct" style="padding-top: 12px; padding-bottom: 12px; min-height: 48px"><span style="flex: 1">New confusion per family</span><span class="mark"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Correct</span></div>
+      <div class="option incorrect" style="padding-top: 12px; padding-bottom: 12px; min-height: 48px"><span style="flex: 1">Productive yellow cough</span><span class="mark"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>Incorrect</span></div>
+    </div>
+    <p class="rationale" style="font-size: 15px">Tachypnea, hypoxemia and new confusion point to worsening gas exchange and possible sepsis. A productive cough is expected with pneumonia.</p>
+  </main>
+  <div class="submitbar">
+    <button class="btn btn-ghost" type="button">Previous</button>
+    <a class="btn btn-primary btn-lg" href="ResultsPhone.dc.html" style="flex: 1">Next question</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

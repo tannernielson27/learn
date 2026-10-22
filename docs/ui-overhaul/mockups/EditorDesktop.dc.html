@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Question editor</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="lr.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&amp;display=swap">
+<style>body{margin:0}a{color:oklch(38% 0.12 250)}a:hover{color:oklch(30% 0.12 250)}textarea{font:16px/1.5 var(--ff-ui);color:var(--ink-1);border:1px solid var(--line-field);border-radius:8px;padding:12px 14px;width:100%;resize:none;background:var(--surface-1)}</style>
+</helmet>
+<div class="lr" style="width: 1440px; height: 900px; display: flex; flex-direction: column">
+  <header class="topbar" style="justify-content: space-between">
+    <div style="display: flex; align-items: center; gap: 16px; min-width: 0">
+      <a class="link" href="QuizDesktop.dc.html" style="font-weight: 500"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Week 7: cardiac and respiratory priorities</a>
+      <span class="badge badge-accent">Draft</span>
+      <span class="muted" style="font-size: 13px">Saved 2 minutes ago</span>
+    </div>
+    <div style="display: flex; gap: 10px">
+      <button class="btn btn-secondary" type="button">Save draft</button>
+      <button class="btn btn-primary" type="button">Publish</button>
+    </div>
+  </header>
+  <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)">
+    <section aria-label="Edit question" style="padding: 28px 40px; display: flex; flex-direction: column; gap: 20px; overflow: hidden; border-right: 1px solid var(--line)">
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px">
+        <div class="field"><label for="type">Question type</label><select id="type"><option>Multiple choice</option></select></div>
+        <div class="field"><label for="step">Clinical judgment step</label><select id="step"><option>4. Generate Solutions</option></select></div>
+      </div>
+      <div class="field"><label for="stem">Question text</label><textarea id="stem" rows="3">A client with heart failure gained 2.3 kg (5 lb) in two days and is now short of breath lying flat. Which action should the nurse take first?</textarea></div>
+      <fieldset style="border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px">
+        <legend style="font-size: 14px; font-weight: 600; margin-bottom: 10px">Choices <span class="muted" style="font-weight: 400">· mark the one correct answer</span></legend>
+        <sc-for list="{{choices}}" as="c" hint-placeholder-count="4">
+          <div style="display: grid; grid-template-columns: 28px minmax(0, 1fr) 132px; gap: 10px; align-items: center">
+            <span class="mono muted" style="font-weight: 600">{{c.letter}}</span>
+            <input aria-label="Choice {{c.letter}}" value="{{c.label}}" style="height: 48px; border: 1px solid var(--line-field); border-radius: 8px; padding: 0 12px; font: 15px var(--ff-ui); background: var(--surface-1); color: var(--ink-1)">
+            <button type="button" role="radio" aria-checked="{{c.checked}}" class="{{c.cls}}" style="min-height: 48px" onClick="{{c.pick}}">{{c.mark}}</button>
+          </div>
+        </sc-for>
+      </fieldset>
+      <div class="field"><label for="why">Rationale</label><textarea id="why" rows="3">Fast weight gain with orthopnea points to fluid overload. Assess breathing first: lung sounds and saturation tell you how far it has gone.</textarea></div>
+    </section>
+    <section aria-label="Preview" style="background: var(--surface-2); padding: 28px 40px; display: flex; flex-direction: column; gap: 14px; overflow: hidden">
+      <div style="display: flex; align-items: center; justify-content: space-between">
+        <p class="eyebrow">Preview · what a student sees</p>
+        <div role="tablist" aria-label="Preview size" style="display: flex; gap: 4px; padding: 4px; border-radius: 10px; background: var(--surface-1); border: 1px solid var(--line)">
+          <button role="tab" aria-selected="true" type="button" class="btn" style="min-height: 36px; padding: 0 12px; background: var(--accent-soft); color: var(--accent-ink); font-size: 13px">Phone</button>
+          <button role="tab" aria-selected="false" type="button" class="btn" style="min-height: 36px; padding: 0 12px; background: transparent; font-size: 13px; font-weight: 500">Projector</button>
+        </div>
+      </div>
+      <div class="card" style="width: 375px; align-self: center; padding: 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--elevation-1)">
+        <p class="stem" style="font-size: 17px">A client with heart failure gained 2.3 kg (5 lb) in two days and is now short of breath lying flat. Which action should the nurse take first?</p>
+        <div class="option"><span class="letter">A</span>Auscultate the lungs and check oxygen saturation</div>
+        <div class="option"><span class="letter">B</span>Encourage the client to drink more fluids</div>
+        <div class="option"><span class="letter">C</span>Document the weight and reassess tomorrow</div>
+        <div class="option"><span class="letter">D</span>Teach the client about low-sodium food choices</div>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  state = { key: "A" };
+  renderVals() {
+    const choices = [
+      ["A", "Auscultate the lungs and check oxygen saturation"],
+      ["B", "Encourage the client to drink more fluids"],
+      ["C", "Document the weight and reassess tomorrow"],
+      ["D", "Teach the client about low-sodium food choices"],
+    ].map(([letter, label]) => {
+      const on = this.state.key === letter;
+      return {
+        letter, label,
+        checked: on ? "true" : "false",
+        mark: on ? "Correct" : "Mark correct",
+        cls: on ? "btn btn-primary" : "btn btn-secondary",
+        pick: () => this.setState({ key: letter }),
+      };
+    });
+    return { choices };
+  }
+}
+</script>
+</body>
+</html>

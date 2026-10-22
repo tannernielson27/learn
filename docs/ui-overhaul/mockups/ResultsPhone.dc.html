@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Practice results on a phone</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="lr.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&amp;display=swap">
+<style>body{margin:0}a{color:oklch(38% 0.12 250)}a:hover{color:oklch(30% 0.12 250)}</style>
+</helmet>
+<div class="lr" style="width: 375px; height: 812px; position: relative; display: flex; flex-direction: column; overflow: hidden">
+  <header style="height: 56px; display: flex; align-items: center; padding: 0 8px 0 4px; background: var(--surface-1); border-bottom: 1px solid var(--line)">
+    <a class="link" href="StudentHome.dc.html" style="padding: 0 10px; font-weight: 500"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Your classes</a>
+  </header>
+  <main style="flex: 1; padding: 20px 20px 150px; display: flex; flex-direction: column; gap: 20px">
+    <div>
+      <p class="eyebrow">Practice finished</p>
+      <h1 class="serif" style="font-size: 26px; line-height: 1.2; margin-top: 6px">Respiratory and sepsis</h1>
+    </div>
+    <div style="display: flex; align-items: baseline; gap: 10px; border-top: 3px solid var(--ink-1); padding-top: 14px">
+      <p class="mono" style="font-size: 44px; font-weight: 700; line-height: 1">15<span class="muted" style="font-size: 22px; font-weight: 500">/21</span></p>
+      <p class="muted">all correct</p>
+    </div>
+    <section aria-labelledby="m-h" style="display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline">
+        <h2 id="m-h" style="font-size: 17px; font-weight: 700">What you missed</h2>
+        <span class="mono muted" style="font-size: 14px">6</span>
+      </div>
+      <ul class="card" style="overflow: hidden">
+        <li style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 14px; border-bottom: 1px solid var(--line)"><span class="mono muted" style="font-size: 13px; width: 28px">Q7</span><span style="flex: 1; font-size: 15px; line-height: 1.35">Findings that need immediate follow-up</span><span class="mono" style="font-size: 13px">1/3</span></li>
+        <li style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 14px; border-bottom: 1px solid var(--line)"><span class="mono muted" style="font-size: 13px; width: 28px">Q11</span><span style="flex: 1; font-size: 15px; line-height: 1.35">Priority after a sepsis bundle starts</span><span class="mono" style="font-size: 13px; color: var(--incorrect); font-weight: 600">0/1</span></li>
+        <li style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 14px"><span class="mono muted" style="font-size: 13px; width: 28px"></span><span class="muted" style="flex: 1; font-size: 15px">and 4 more</span><a class="link" href="ResultsDesktop.dc.html" style="min-height: 44px; font-size: 14px">Review all</a></li>
+      </ul>
+    </section>
+  </main>
+  <div class="submitbar" style="flex-direction: column; align-items: stretch; gap: 8px">
+    <a class="btn btn-primary btn-lg btn-block" href="PracticePhone.dc.html">Practise the 6 I missed</a>
+    <a class="btn btn-secondary btn-block" href="PracticePhone.dc.html">Start over with all 21</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

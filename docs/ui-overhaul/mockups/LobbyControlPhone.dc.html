@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lobby, teacher control on a phone</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="lr.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&amp;display=swap">
+<style>body{margin:0}a{color:oklch(38% 0.12 250)}a:hover{color:oklch(30% 0.12 250)}</style>
+</helmet>
+<div class="lr" style="width: 375px; height: 812px; position: relative; display: flex; flex-direction: column">
+  <header style="display: flex; align-items: center; justify-content: space-between; height: 56px; padding: 0 8px 0 4px; background: var(--surface-1); border-bottom: 1px solid var(--line)">
+    <a class="link" href="QuizDesktop.dc.html" style="padding: 0 10px; font-weight: 500"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Quiz</a>
+    <span style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); padding-right: 8px"><span class="statusdot"></span>Connected</span>
+  </header>
+  <div style="padding: 20px 20px 0; display: flex; flex-direction: column; gap: 20px">
+    <div>
+      <p class="eyebrow">Lobby</p>
+      <h1 class="serif" style="font-size: 24px; line-height: 1.2; margin-top: 6px">Week 7: cardiac and respiratory priorities</h1>
+    </div>
+    <div class="card" style="padding: 20px; text-align: center; display: flex; flex-direction: column; gap: 6px">
+      <p class="eyebrow">Join code</p>
+      <p class="mono" style="font-size: 48px; font-weight: 600; letter-spacing: 0.08em">V96 RN8</p>
+      <p class="mono muted" style="font-size: 13px">learn-nclex.app/join</p>
+    </div>
+    <div style="display: flex; align-items: baseline; justify-content: space-between">
+      <h2 style="font-size: 17px; font-weight: 600">In this session</h2>
+      <p class="mono" style="font-size: 15px"><strong>24</strong> joined</p>
+    </div>
+    <ul class="card" style="overflow: hidden">
+      <li style="min-height: 48px; display: flex; align-items: center; padding: 0 16px; border-bottom: 1px solid var(--line)">Ada Brennan</li>
+      <li style="min-height: 48px; display: flex; align-items: center; padding: 0 16px; border-bottom: 1px solid var(--line)">Priya Ramanathan-Okafor</li>
+      <li style="min-height: 48px; display: flex; align-items: center; padding: 0 16px; border-bottom: 1px solid var(--line)">Marcus Oyelaran-Whitfield</li>
+      <li style="min-height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px"><span class="muted">and 21 more</span><a class="link" href="LobbyControl.dc.html" style="min-height: 44px">See all</a></li>
+    </ul>
+  </div>
+  <div class="submitbar" style="flex-direction: column; align-items: stretch; gap: 8px">
+    <a class="btn btn-primary btn-lg btn-block" href="QuestionControl.dc.html">Start</a>
+    <div style="display: flex; gap: 8px">
+      <a class="btn btn-secondary" href="LobbyStage.dc.html" style="flex: 1">Projector view</a>
+      <button class="btn btn-secondary" type="button" style="flex: 1">End</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

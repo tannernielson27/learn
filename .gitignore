@@ -52,3 +52,6 @@ load-live-results*.json
 /.ai-import-samples/
 # AI import eval output (#339): live recordings and reports, kept local
 /test/ai-import/out/
+
+# UI overhaul working notes and screenshots
+.ui-refresh/

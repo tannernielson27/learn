@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Quiz page</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="lr.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&amp;display=swap">
+<style>body{margin:0}a{color:oklch(38% 0.12 250)}a:hover{color:oklch(30% 0.12 250)}</style>
+</helmet>
+<div class="lr" style="width: 1440px; height: 900px; display: flex; flex-direction: column">
+  <header class="topbar" style="justify-content: space-between">
+    <div style="display: flex; align-items: center; gap: 28px">
+      <a class="brand" href="LibraryDesktop.dc.html">LeaRN</a>
+      <nav class="nav" aria-label="Main"><a href="LibraryDesktop.dc.html" aria-current="page">Library</a><a href="#">Classes</a><a href="#">Live sessions</a><a href="#">Workspace</a></nav>
+    </div>
+    <span class="avatar">CO</span>
+  </header>
+  <div style="flex: 1; min-height: 0; width: 1280px; margin: 0 auto; padding: 28px 0; display: flex; flex-direction: column; gap: 24px">
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <a class="link" href="LibraryDesktop.dc.html" style="font-weight: 500; font-size: 14px; min-height: 32px"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Library / NUR 310 Adult Health II</a>
+      <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px">
+        <div><h1 class="serif" style="font-size: 36px; line-height: 1.15">Week 7: cardiac and respiratory priorities</h1><p class="muted" style="margin-top: 6px">20 questions · 2 case studies · 18 published · shared for practice with NUR 310</p></div>
+        <div style="display: flex; gap: 10px; flex: none">
+          <button class="btn btn-secondary" type="button">Share for practice</button>
+          <button class="btn btn-secondary" type="button">Assign</button>
+          <a class="btn btn-primary" href="LobbyControl.dc.html"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>Start a live session</a>
+        </div>
+      </div>
+    </div>
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 32px; min-height: 0">
+      <section aria-labelledby="order-h" style="display: flex; flex-direction: column; min-height: 0">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 10px">
+          <h2 id="order-h" style="font-size: 15px; font-weight: 700">In this order</h2>
+          <p class="muted" style="font-size: 13px">Drag to reorder, or use the arrow buttons.</p>
+        </div>
+        <ol class="card" style="overflow: hidden">
+          <sc-for list="{{entries}}" as="e" hint-placeholder-count="7">
+            <li style="display: grid; grid-template-columns: 24px 36px minmax(0, 1fr) 170px 110px; gap: 14px; align-items: center; min-height: 64px; padding: 8px 16px; border-bottom: 1px solid var(--line)">
+              <span aria-hidden="true" style="color: var(--ink-2); font: 700 14px var(--ff-mono); letter-spacing: -2px">⋮⋮</span>
+              <span class="mono muted" style="font-size: 13px">{{e.n}}</span>
+              <div style="min-width: 0"><a href="EditorDesktop.dc.html" style="display: block; font-size: 15px; color: var(--ink-1); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{e.title}}</a><p class="muted" style="font-size: 13px; margin-top: 2px">{{e.type}}</p></div>
+              <span class="muted" style="font-size: 13px">{{e.step}}</span>
+              <span class="{{e.badge}}" style="justify-self: start">{{e.status}}</span>
+            </li>
+          </sc-for>
+        </ol>
+      </section>
+      <aside style="display: flex; flex-direction: column; gap: 16px">
+        <div class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 8px">
+          <p style="font-weight: 700; font-size: 15px">Add to this quiz</p>
+          <a class="btn btn-secondary btn-block" href="EditorDesktop.dc.html" style="justify-content: flex-start"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>New question</a>
+          <button class="btn btn-secondary btn-block" type="button" style="justify-content: flex-start"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>New case study</button>
+          <button class="btn btn-secondary btn-block" type="button" style="justify-content: flex-start"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>Import with AI</button>
+        </div>
+        <div class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 6px">
+          <p style="font-weight: 700; font-size: 15px">Last live session</p>
+          <p class="muted" style="font-size: 14px">Tuesday · 24 students · 91% answered</p>
+          <a class="link" href="#" style="font-size: 14px">Open the report</a>
+        </div>
+        <details class="card" style="padding: 4px 16px">
+          <summary style="min-height: 44px; display: flex; align-items: center; font-weight: 600; font-size: 14px; cursor: pointer">More</summary>
+          <div style="display: flex; flex-direction: column; padding-bottom: 8px"><a class="link" href="#" style="font-size: 14px">Rename quiz</a><a class="link" href="#" style="font-size: 14px">Move to a folder</a><a class="link" href="#" style="font-size: 14px">Archive quiz</a></div>
+        </details>
+      </aside>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const pub = "badge", draft = "badge badge-accent";
+    const entries = [
+      [1, "A client with heart failure gained 2.3 kg in two days. Which action first?", "Multiple choice", "Generate Solutions", "Published", pub],
+      [2, "Findings in a client with pneumonia that need immediate follow-up", "Select all that apply", "Recognize Cues", "Published", pub],
+      [3, "Case study: sudden dyspnea after hip arthroplasty", "Case study · 6 steps", "All six steps", "Published", pub],
+      [4, "Body-system findings that support diabetic ketoacidosis", "Multiple response grouping", "Analyze Cues", "Published", pub],
+      [5, "Order the steps for inserting an indwelling urinary catheter", "Ordered response", "Take Action", "Draft", draft],
+      [6, "Indicated, contraindicated or non-essential for acute pancreatitis", "Matrix multiple choice", "Generate Solutions", "Published", pub],
+      [7, "Which client should the nurse see first after handoff?", "Multiple choice", "Prioritize Hypotheses", "Published", pub],
+      [8, "Case study: new-onset atrial fibrillation in the ED", "Case study · 6 steps", "All six steps", "Draft", draft],
+    ].map(([n, title, type, step, status, badge]) => ({ n, title, type, step, status, badge }));
+    return { entries };
+  }
+}
+</script>
+</body>
+</html>

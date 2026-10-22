@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Teacher library</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="lr.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&amp;display=swap">
+<style>body{margin:0}a{color:oklch(38% 0.12 250)}a:hover{color:oklch(30% 0.12 250)}</style>
+</helmet>
+<div class="lr" style="width: 1440px; height: 900px; display: flex; flex-direction: column; position: relative">
+  <header class="topbar" style="justify-content: space-between">
+    <div style="display: flex; align-items: center; gap: 28px">
+      <a class="brand" href="LibraryDesktop.dc.html">LeaRN</a>
+      <nav class="nav" aria-label="Main"><a href="LibraryDesktop.dc.html" aria-current="page">Library</a><a href="#">Classes</a><a href="#">Live sessions</a><a href="#">Workspace</a></nav>
+    </div>
+    <button class="btn btn-ghost" type="button" aria-expanded="true" aria-label="Account menu" style="padding: 0 6px"><span class="avatar">CO</span></button>
+  </header>
+  <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: 288px minmax(0, 1fr)">
+    <aside aria-label="Folders" style="border-right: 1px solid var(--line); padding: 24px 16px; display: flex; flex-direction: column; gap: 4px">
+      <p class="eyebrow" style="padding: 0 12px 8px">Folders</p>
+      <a href="#" style="display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: 0 12px; border-radius: 8px; background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; text-decoration: none">All quizzes <span class="mono" style="font-size: 13px">12</span></a>
+      <a href="#" style="display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: 0 12px; border-radius: 8px; color: var(--ink-1); text-decoration: none">Not in a folder <span class="mono muted" style="font-size: 13px">2</span></a>
+      <hr class="rule" style="margin: 8px 0">
+      <a href="#" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 8px; color: var(--ink-1); text-decoration: none"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>NUR 310 Adult Health II<span class="mono muted" style="font-size: 13px; margin-left: auto">6</span></a>
+      <a href="#" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 8px; color: var(--ink-1); text-decoration: none"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>NCLEX review block<span class="mono muted" style="font-size: 13px; margin-left: auto">4</span></a>
+      <button class="btn btn-ghost" type="button" style="justify-content: flex-start; margin-top: 8px"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>New folder</button>
+    </aside>
+    <main style="padding: 32px 48px; display: flex; flex-direction: column; gap: 20px; max-width: 1100px; min-width: 0">
+      <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px">
+        <div><h1 class="serif" style="font-size: 36px">Library</h1><p class="muted" style="margin-top: 4px">12 quizzes</p></div>
+        <div style="display: flex; gap: 12px; align-items: center">
+          <label style="position: relative; display: block"><span style="position: absolute; left: 12px; top: 13px; color: var(--ink-2)"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span><input aria-label="Search quizzes" placeholder="Search quizzes" style="height: 46px; width: 280px; border: 1px solid var(--line-field); border-radius: 8px; padding: 0 12px 0 40px; font: 15px var(--ff-ui); background: var(--surface-1)"></label>
+          <button class="btn btn-primary" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>New quiz</button>
+        </div>
+      </div>
+      <ul class="card" style="overflow: hidden">
+        <sc-for list="{{quizzes}}" as="q" hint-placeholder-count="6">
+          <li style="display: grid; grid-template-columns: minmax(0, 1fr) 220px 160px 120px; gap: 16px; align-items: center; min-height: 72px; padding: 12px 20px; border-bottom: 1px solid var(--line)">
+            <div style="min-width: 0"><a href="QuizDesktop.dc.html" style="font-weight: 600; font-size: 16px; color: var(--ink-1); text-decoration: none">{{q.name}}</a><p class="muted" style="font-size: 13px; margin-top: 2px">{{q.folder}}</p></div>
+            <span class="muted" style="font-size: 14px">{{q.count}}</span>
+            <span class="muted" style="font-size: 14px">{{q.edited}}</span>
+            <a class="btn btn-secondary" href="LobbyControl.dc.html" style="min-height: 40px; font-size: 14px">Start</a>
+          </li>
+        </sc-for>
+      </ul>
+    </main>
+  </div>
+  <div role="menu" aria-label="Account" style="position: absolute; right: 24px; top: 60px; width: 280px; background: var(--surface-1); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--elevation-1); padding: 8px">
+    <div style="padding: 10px 12px"><p style="font-weight: 600">Chidinma Okonkwo</p><p class="muted" style="font-size: 13px">Teacher · Westfield School of Nursing</p></div>
+    <hr class="rule" style="margin: 4px 0">
+    <p class="eyebrow" style="padding: 10px 12px 6px">Theme</p>
+    <div role="radiogroup" aria-label="Theme" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 0 8px 8px">
+      <button type="button" role="radio" aria-checked="true" class="btn" style="min-height: 40px; padding: 0; background: var(--accent-soft); color: var(--accent-ink); font-size: 14px">System</button>
+      <button type="button" role="radio" aria-checked="false" class="btn" style="min-height: 40px; padding: 0; background: transparent; font-size: 14px; font-weight: 500">Light</button>
+      <button type="button" role="radio" aria-checked="false" class="btn" style="min-height: 40px; padding: 0; background: transparent; font-size: 14px; font-weight: 500">Dark</button>
+    </div>
+    <p class="muted" style="font-size: 12px; padding: 0 12px 8px">The projector view is always light.</p>
+    <hr class="rule" style="margin: 4px 0">
+    <a role="menuitem" href="#" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: var(--ink-1); text-decoration: none">Account</a>
+    <a role="menuitem" href="#" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: var(--ink-1); text-decoration: none">Help</a>
+    <a role="menuitem" href="#" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: var(--ink-1); text-decoration: none">Sign out</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const quizzes = [
+      ["Week 7: cardiac and respiratory priorities", "NUR 310 Adult Health II", "20 questions · 2 case studies", "Edited today"],
+      ["Sepsis and shock: recognize and act early", "NUR 310 Adult Health II", "14 questions · 1 case study", "Edited Monday"],
+      ["Fluid and electrolyte imbalances in older adults", "NCLEX review block", "32 questions", "Oct 14"],
+      ["Post-operative complications after orthopedic surgery", "NUR 310 Adult Health II", "8 questions · 3 case studies", "Oct 9"],
+      ["Pharmacology: anticoagulants and reversal agents", "NCLEX review block", "25 questions", "Oct 2"],
+      ["Prioritization and delegation", "Not in a folder", "18 questions", "Sep 28"],
+    ].map(([name, folder, count, edited]) => ({ name, folder, count, edited }));
+    return { quizzes };
+  }
+}
+</script>
+</body>
+</html>

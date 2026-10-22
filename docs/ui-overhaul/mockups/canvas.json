@@ -1,0 +1,61 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-10-22T19:00:00Z" },
+  "title": "LeaRN overhaul mockups",
+  "launch": { "view": "canvas", "page": "live" },
+  "pages": [
+    { "id": "live", "name": "Live session" },
+    { "id": "solo", "name": "Practice and assignments" },
+    { "id": "teacher", "name": "Teacher" },
+    { "id": "system", "name": "Foundation" }
+  ],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 375, "h": 812, "title": "Join (phone)", "page": "live", "is_interactive": true },
+    "JoinDesktop.dc.html": { "x": 455, "y": 0, "w": 1280, "h": 800, "title": "Join (laptop)", "page": "live" },
+    "LobbyStage.dc.html": { "x": 1815, "y": 0, "w": 1920, "h": 1080, "title": "Lobby (projector)", "page": "live", "is_interactive": true },
+    "LobbyControl.dc.html": { "x": 3815, "y": 0, "w": 1280, "h": 800, "title": "Lobby (teacher control, laptop)", "page": "live", "is_interactive": true },
+    "LobbyControlPhone.dc.html": { "x": 5175, "y": 0, "w": 375, "h": 812, "title": "Lobby (teacher control, phone)", "page": "live" },
+    "PhoneWaiting.dc.html": { "x": 5630, "y": 0, "w": 375, "h": 812, "title": "Waiting (student phone)", "page": "live", "is_interactive": true },
+    "QuestionStage.dc.html": { "x": 0, "y": 1500, "w": 1920, "h": 1080, "title": "Question (projector)", "page": "live", "is_interactive": true },
+    "QuestionControl.dc.html": { "x": 2000, "y": 1500, "w": 1280, "h": 800, "title": "Question (teacher control)", "page": "live", "is_interactive": true },
+    "PhoneQuestion.dc.html": { "x": 3360, "y": 1500, "w": 375, "h": 812, "title": "Question (student phone, last 10 s)", "page": "live", "is_interactive": true },
+    "PhoneQuestionLand.dc.html": { "x": 3815, "y": 1500, "w": 844, "h": 390, "title": "Question (phone landscape)", "page": "live" },
+    "PhoneSent.dc.html": { "x": 4739, "y": 1500, "w": 375, "h": 812, "title": "Answer sent", "page": "live", "is_interactive": true },
+    "PhoneReconnecting.dc.html": { "x": 5194, "y": 1500, "w": 375, "h": 812, "title": "Reconnecting", "page": "live" },
+    "RevealStage.dc.html": { "x": 0, "y": 3000, "w": 1920, "h": 1080, "title": "Answer showing (projector)", "page": "live", "is_interactive": true },
+    "PhoneRevealed.dc.html": { "x": 2000, "y": 3000, "w": 375, "h": 812, "title": "Answer showing (student phone)", "page": "live", "is_interactive": true },
+    "EndStage.dc.html": { "x": 2455, "y": 3000, "w": 1920, "h": 1080, "title": "Session ended (projector)", "page": "live" },
+    "PhoneEnded.dc.html": { "x": 4455, "y": 3000, "w": 375, "h": 812, "title": "Session ended (student phone)", "page": "live" },
+    "CaseStage.dc.html": { "x": 0, "y": 4500, "w": 1920, "h": 1080, "title": "Case study step (projector)", "page": "live" },
+    "PhoneCase.dc.html": { "x": 2000, "y": 4500, "w": 375, "h": 812, "title": "Case study step (student phone)", "page": "live" },
+    "StudentHome.dc.html": { "x": 0, "y": 0, "w": 375, "h": 812, "title": "Student home (phone)", "page": "solo", "is_interactive": true },
+    "PracticeCase.dc.html": { "x": 455, "y": 0, "w": 1440, "h": 900, "title": "Practice, case study (desktop)", "page": "solo" },
+    "PracticePhone.dc.html": { "x": 1975, "y": 0, "w": 375, "h": 812, "title": "Practice, answer checked (phone)", "page": "solo", "is_interactive": true },
+    "ResultsDesktop.dc.html": { "x": 0, "y": 1400, "w": 1440, "h": 900, "title": "Results (desktop)", "page": "solo", "is_interactive": true },
+    "ResultsPhone.dc.html": { "x": 1520, "y": 1400, "w": 375, "h": 812, "title": "Results (phone)", "page": "solo", "is_interactive": true },
+    "LibraryDesktop.dc.html": { "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Library (desktop)", "page": "teacher", "is_interactive": true },
+    "QuizDesktop.dc.html": { "x": 1520, "y": 0, "w": 1440, "h": 900, "title": "Quiz (desktop)", "page": "teacher", "is_interactive": true },
+    "LibraryPhone.dc.html": { "x": 3040, "y": 0, "w": 375, "h": 812, "title": "Library (phone)", "page": "teacher" },
+    "EditorDesktop.dc.html": { "x": 0, "y": 1400, "w": 1440, "h": 900, "title": "Question editor (desktop)", "page": "teacher" },
+    "Foundation.dc.html": { "x": 0, "y": 0, "w": 1440, "h": 1500, "title": "Tokens and components", "page": "system" }
+  },
+  "order": [
+    "Main.dc.html", "JoinDesktop.dc.html", "LobbyStage.dc.html", "LobbyControl.dc.html", "LobbyControlPhone.dc.html", "PhoneWaiting.dc.html",
+    "QuestionStage.dc.html", "QuestionControl.dc.html", "PhoneQuestion.dc.html", "PhoneQuestionLand.dc.html", "PhoneSent.dc.html", "PhoneReconnecting.dc.html",
+    "RevealStage.dc.html", "PhoneRevealed.dc.html", "EndStage.dc.html", "PhoneEnded.dc.html", "CaseStage.dc.html", "PhoneCase.dc.html",
+    "StudentHome.dc.html", "PracticeCase.dc.html", "PracticePhone.dc.html", "ResultsDesktop.dc.html", "ResultsPhone.dc.html",
+    "LibraryDesktop.dc.html", "QuizDesktop.dc.html", "LibraryPhone.dc.html", "EditorDesktop.dc.html", "Foundation.dc.html"
+  ],
+  "notes": {
+    "liveA": { "x": 0, "y": -300, "text": "Join and lobby", "kind": "title1", "page": "live", "maxW": 6000 },
+    "liveB": { "x": 0, "y": 1200, "text": "Question: projector, teacher control, student phone", "kind": "title1", "page": "live", "maxW": 5600 },
+    "liveC": { "x": 0, "y": 2700, "text": "Answer showing and end of session", "kind": "title1", "page": "live", "maxW": 4800 },
+    "liveD": { "x": 0, "y": 4200, "text": "Case study in a live session", "kind": "title1", "page": "live", "maxW": 2400 },
+    "soloA": { "x": 0, "y": -300, "text": "Practice and assignments", "kind": "title1", "page": "solo", "maxW": 2350 },
+    "soloB": { "x": 0, "y": 1100, "text": "Results", "kind": "title1", "page": "solo", "maxW": 1900 },
+    "teachA": { "x": 0, "y": -300, "text": "Library and quiz", "kind": "title1", "page": "teacher", "maxW": 3400 },
+    "teachB": { "x": 0, "y": 1100, "text": "Question editor", "kind": "title1", "page": "teacher", "maxW": 1440 },
+    "sysA": { "x": 0, "y": -300, "text": "Foundation: tokens and components", "kind": "title1", "page": "system", "maxW": 1440 }
+  },
+  "designSystems": []
+}
