@@ -146,6 +146,59 @@ describe("readSessionReport", () => {
     expect(fake.calls.some((call) => call.table === "items")).toBe(false);
   });
 
+  it("puts each step of a case study the quiz played in place under it (#469)", async () => {
+    const replies = okReplies();
+    const fake = fakeClient({
+      ...replies,
+      sessions: {
+        data: {
+          ...sessionRow,
+          case_study_records: [
+            { case_study_id: "c-1", title: "Hip", first_position: 2, step_count: 2, record: null },
+          ],
+        },
+        error: null,
+      },
+    });
+    const read = await readSessionReport(fake.client, SESSION);
+    expect(read?.input.items.map((item) => item.caseStudy ?? null)).toEqual([
+      null,
+      { id: "c-1", title: "Hip", step: 1, stepCount: 2 },
+      { id: "c-1", title: "Hip", step: 2, stepCount: 2 },
+    ]);
+    const selected = fake.calls.find(
+      (call) => call.table === "sessions" && call.method === "select",
+    );
+    expect(selected?.args[0]).toBe(
+      "id, title, status, opened_at, closed_at, item_set, case_study_records",
+    );
+  });
+
+  it("reads a session from a database without the column yet as playing none", async () => {
+    const replies = okReplies();
+    let asked = 0;
+    const base = fakeClient(replies);
+    const client = {
+      from: (table: string) => {
+        if (table !== "sessions")
+          return (base.client as unknown as { from: (t: string) => unknown }).from(table);
+        asked += 1;
+        const reply =
+          asked === 1
+            ? { data: null, error: { message: "column does not exist", code: "42703" } }
+            : { data: sessionRow, error: null };
+        const chain: Record<string, unknown> = {};
+        for (const method of ["select", "eq", "maybeSingle"]) chain[method] = () => chain;
+        chain.then = (resolve: (value: unknown) => unknown) => resolve(reply);
+        return chain;
+      },
+    } as unknown as Client;
+    const read = await readSessionReport(client, SESSION);
+    expect(asked).toBe(2);
+    expect(read?.input.items).toHaveLength(3);
+    expect(read?.input.items.every((item) => item.caseStudy === undefined)).toBe(true);
+  });
+
   it("gives an item with a step out of range no step", async () => {
     const replies = okReplies();
     const fake = fakeClient({

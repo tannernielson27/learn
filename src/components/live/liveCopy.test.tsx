@@ -61,6 +61,11 @@ const reads = vi.hoisted(() => ({
   listRecentSessions: vi.fn(),
 }));
 vi.mock("@/lib/supabase/sessions", () => ({ readHostSession: reads.readHostSession }));
+// #469: the console reads every room's records, a quiz's included, with the service role.
+vi.mock("@/lib/supabase/service", () => ({ createSupabaseServiceClient: () => ({}) }));
+vi.mock("@/lib/supabase/sessionRecord", () => ({
+  readSessionRecords: async () => ({ record: null, runs: [] }),
+}));
 vi.mock("@/lib/supabase/sessionReport", () => ({
   readSessionReport: reads.readSessionReport,
   listRecentSessions: reads.listRecentSessions,

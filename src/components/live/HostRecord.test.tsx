@@ -22,3 +22,24 @@ describe("HostRecord (#335)", () => {
     expect(screen.queryByTestId("host-record")).toBeNull();
   });
 });
+
+describe("HostRecord in a quiz that plays case studies in place (#469)", () => {
+  const staged = ehrRecordSchema.parse(stagedEhr);
+
+  it("names the case study whose record it is", () => {
+    render(<HostRecord record={staged} position={3} title="Ectopic pregnancy" />);
+    expect(screen.getByTestId("host-record")).toHaveTextContent(
+      "Patient record: Ectopic pregnancy· Step 3",
+    );
+  });
+
+  it("in a student-paced room, marks no step: each phone is on its own", () => {
+    render(<HostRecord record={staged} position={null} title="Ectopic pregnancy" paced />);
+    expect(screen.getByTestId("host-record")).toHaveTextContent(
+      /^Patient record: Ectopic pregnancy(?!·)/,
+    );
+    expect(screen.getByTestId("record-note")).toHaveTextContent(
+      "Full patient record. Each phone shows only what the step on its screen has reached.",
+    );
+  });
+});

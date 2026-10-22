@@ -26,6 +26,7 @@ import {
   type TimerCommand,
 } from "@/lib/live";
 import { createSupabaseHost } from "@/lib/liveSupabase";
+import { runAt, type CaseStudyRun } from "@/lib/live/caseStudyRuns";
 import { positionLabel } from "@/lib/live/positionLabel";
 import { reportPath } from "@/lib/live/reportFormat";
 import { formatSessionCode } from "@/lib/live/sessionCode";
@@ -58,7 +59,16 @@ export interface HostLobbyProps {
    * with a marker for the step the class is on. Absent for a bank.
    */
   record?: EhrRecord;
+  /**
+   * The case studies a whole-quiz room plays in place (#469), each with its whole record. On one
+   * of their steps the console names the case study and the step, and shows that record with the
+   * step marker, as a case-study room does; on a loose question, neither.
+   */
+  runs?: readonly CaseStudyRun[];
 }
+
+/** A room with no case study played in place: one list for every render, so nothing reruns. */
+const NO_RUNS: readonly CaseStudyRun[] = [];
 
 /**
  * How often the console asks for the tally while an item is open (#133).
@@ -165,6 +175,7 @@ export function HostLobby({
   tallyIntervalMs = TALLY_INTERVAL_MS,
   caseStudy = false,
   record,
+  runs = NO_RUNS,
 }: HostLobbyProps) {
   const [state, setState] = useState<LiveSessionState>(initial);
   const [roster, setRoster] = useState<RosterEntry[]>([]);
@@ -334,8 +345,16 @@ export function HostLobby({
    * nobody has seen yet is worse than showing nothing for a beat.
    */
   const answersOn = tally !== null && tally.position === state.position ? tally : null;
-  // A student-paced room (#185) is on no one item, so there is no position to name.
-  const position = paced ? null : positionLabel(state, { caseStudy, cjmmStep });
+  // A student-paced room (#185) is on no one item, so there is no position to name, and no one
+  // case study's step to name either (#469).
+  const place = paced ? null : runAt(runs, state.position);
+  const position = paced
+    ? null
+    : positionLabel(state, {
+        caseStudy,
+        cjmmStep,
+        run: place && { step: place.step, stepCount: place.run.stepCount },
+      });
 
   return (
     <>
@@ -346,6 +365,11 @@ export function HostLobby({
         {position === null ? null : <> · {position}</>}
         {state.reveal ? <> · {paced ? "answers showing" : "answer showing"}</> : null}
       </p>
+      {place === null ? null : (
+        <p data-testid="host-case-study" className="mt-1 text-sm break-words text-ink-2">
+          Case study: <span className="text-ink-1">{place.run.title}</span>
+        </p>
+      )}
 
       {onAnItem && answersOn !== null ? (
         <p
@@ -463,6 +487,30 @@ export function HostLobby({
       )}
 
       {record === undefined ? null : <HostRecord record={record} position={state.position} />}
+      {place?.run.record ? (
+        // The case study's own steps count from its first position: its step is the position
+        // HostRecord marks. Keyed by the case study, so moving to the next one starts its chart
+        // at its own first time and tab.
+        <HostRecord
+          key={place.run.firstPosition}
+          record={place.run.record}
+          position={place.step}
+          title={place.run.title}
+        />
+      ) : null}
+      {paced
+        ? runs.map((run) =>
+            run.record === null ? null : (
+              <HostRecord
+                key={run.firstPosition}
+                record={run.record}
+                position={null}
+                title={run.title}
+                paced
+              />
+            ),
+          )
+        : null}
 
       <HostResults
         sessionId={sessionId}

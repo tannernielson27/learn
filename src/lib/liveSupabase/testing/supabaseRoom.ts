@@ -87,6 +87,11 @@ function rowId(index: number): string {
 export interface FakeRoomOptions extends ConformanceRoomOptions {
   /** A case study's record, as `start_session` would have snapshotted it (#184, #335). */
   patientRecord?: Json;
+  /**
+   * The case studies a whole-quiz room plays in place, as the snapshot trigger would have written
+   * them into `sessions.case_study_records` (#469).
+   */
+  caseStudyRecords?: Json;
 }
 
 export function createFakeRoom(options: FakeRoomOptions): FakeRoom {
@@ -113,6 +118,9 @@ export function createFakeRoom(options: FakeRoomOptions): FakeRoom {
     timer_remaining_ms: null,
     closed_at: null,
     ...(options.patientRecord === undefined ? {} : { patient_record: options.patientRecord }),
+    ...(options.caseStudyRecords === undefined
+      ? {}
+      : { case_study_records: options.caseStudyRecords }),
   };
   stack.sessions.push(session);
   // What `sessions_mirror_public_state` writes on INSERT. Nobody is subscribed yet, so no message.

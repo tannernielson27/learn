@@ -45,3 +45,25 @@ describe("positionLabel (#184)", () => {
     expect(positionLabel(on(1, 0), { caseStudy: false, cjmmStep: null })).toBeNull();
   });
 });
+
+describe("positionLabel in a quiz that plays case studies in place (#469)", () => {
+  const step = (number: number, stepCount = 6) => ({ step: number, stepCount });
+
+  it("says which question of the quiz, then which step of its case study", () => {
+    expect(positionLabel(on(9, 14), { caseStudy: false, cjmmStep: 2, run: step(2) })).toBe(
+      "Question 9 of 14 · Step 2 of 6: Analyze Cues",
+    );
+  });
+
+  it("names the step by its place in the case study until the item has arrived", () => {
+    expect(positionLabel(on(8, 14), { caseStudy: false, cjmmStep: null, run: step(1) })).toBe(
+      "Question 8 of 14 · Step 1 of 6: Recognize Cues",
+    );
+  });
+
+  it("is a plain question on a loose question", () => {
+    expect(positionLabel(on(1, 14), { caseStudy: false, cjmmStep: 5, run: null })).toBe(
+      "Question 1 of 14",
+    );
+  });
+});

@@ -44,6 +44,8 @@ export interface FakeSessionRow {
   closed_at: string | null;
   /** The case study's record the room started with (#184); absent or null for a bank room. */
   patient_record?: Json | null;
+  /** The case studies a whole-quiz room plays in place (#469); absent or null for none. */
+  case_study_records?: Json | null;
 }
 
 export interface FakeItemRow {

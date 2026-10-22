@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildSessionReport, type SessionReportInput } from "./report";
+import {
+  buildSessionReport,
+  groupByCaseStudy,
+  inCaseStudies,
+  type ReportItemInput,
+  type SessionReportInput,
+} from "./report";
 import { REPORT_FIXTURE } from "./reportFixture";
 
 const report = buildSessionReport(REPORT_FIXTURE);
@@ -169,5 +175,58 @@ describe("buildSessionReport: input it does not trust", () => {
       points: 1,
       maxPoints: 1,
     });
+  });
+});
+
+describe("a session that played a case study in place (#469)", () => {
+  // A loose question, a case study's three steps, then another loose question.
+  const items: ReportItemInput[] = [1, 2, 3, 4, 5].map((position) => ({
+    position,
+    itemId: `i-${position}`,
+    ref: `ref-${position}`,
+    type: "multiple_choice",
+    cjmmStep: null,
+  }));
+  const places = [{ caseStudyId: "c-1", title: "Hip", firstPosition: 2, stepCount: 3 }];
+
+  it("marks each step with its case study and its step, counted from the case study's start", () => {
+    const marked = inCaseStudies(items, places);
+    expect(marked.map((item) => item.caseStudy ?? null)).toEqual([
+      null,
+      { id: "c-1", title: "Hip", step: 1, stepCount: 3 },
+      { id: "c-1", title: "Hip", step: 2, stepCount: 3 },
+      { id: "c-1", title: "Hip", step: 3, stepCount: 3 },
+      null,
+    ]);
+  });
+
+  it("carries the case study onto each question's row, and scores as before", () => {
+    const report = buildSessionReport({
+      items: inCaseStudies(items, places),
+      participants: [{ id: "p", displayName: "Ava", joinedAt: "2026-09-22T10:00:01Z" }],
+      responses: [
+        { participantId: "p", itemPosition: 1, points: 1, maxPoints: 1 },
+        { participantId: "p", itemPosition: 3, points: 0, maxPoints: 1 },
+      ],
+    });
+    expect(report.items.map((row) => row.caseStudy?.step ?? null)).toEqual([null, 1, 2, 3, null]);
+    expect(report.students[0]).toMatchObject({ points: 1, possible: 2, answered: 2 });
+  });
+
+  it("groups rows into runs: loose stretches, and each case study's steps under it", () => {
+    const groups = groupByCaseStudy(inCaseStudies(items, places));
+    expect(groups.map((group) => [group.caseStudy?.title ?? null, group.items.length])).toEqual([
+      [null, 1],
+      ["Hip", 3],
+      [null, 1],
+    ]);
+  });
+
+  it("keeps the same case study played twice in a row as two groups", () => {
+    const twice = inCaseStudies(items.slice(0, 4), [
+      { caseStudyId: "c-1", title: "Hip", firstPosition: 1, stepCount: 2 },
+      { caseStudyId: "c-1", title: "Hip", firstPosition: 3, stepCount: 2 },
+    ]);
+    expect(groupByCaseStudy(twice).map((group) => group.items.length)).toEqual([2, 2]);
   });
 });

@@ -8,6 +8,12 @@ export interface CaseStudyLayoutProps {
    * null for a session run from a bank.
    */
   record: EhrRecordView | null;
+  /**
+   * Whether the chart may come and go as the room moves (#469): a room run from a quiz that plays
+   * case studies in place, where a step has its case study's chart and a loose question none. The
+   * layout is then the record's from the start, with or without a chart in it.
+   */
+  changing?: boolean;
   children: ReactNode;
 }
 
@@ -24,8 +30,8 @@ export interface CaseStudyLayoutProps {
  * holds back until a later step is not on the page, and a tab locked at this step shows its name
  * and the word "Locked".
  */
-export function CaseStudyLayout({ record, children }: CaseStudyLayoutProps) {
-  if (record === null) {
+export function CaseStudyLayout({ record, changing = false, children }: CaseStudyLayoutProps) {
+  if (record === null && !changing) {
     return <main className="mx-auto w-full max-w-lg flex-1 px-4 py-12">{children}</main>;
   }
   return (

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { ItemRow, StepRow, StudentRow } from "@/lib/live/report";
+import { groupByCaseStudy, type ItemRow, type StepRow, type StudentRow } from "@/lib/live/report";
 import { formatPercent, formatPoints } from "@/lib/live/reportFormat";
 
 export const HEAD =
@@ -8,6 +8,11 @@ export const CELL = "px-3 py-2 text-right whitespace-nowrap";
 /** The first column stays put while the rest scroll under it, so a row keeps its name at 375px. */
 export const ROW_HEAD = "sticky left-0 bg-surface-1 px-3 py-2 text-left font-medium text-ink-1";
 export const ROW = "border-b border-line last:border-b-0";
+/** A case study's name over its steps (#469), in a row or across columns of its own. */
+export const GROUP_HEAD =
+  "border-b border-line bg-surface-2 px-3 py-2 text-left font-medium break-words text-ink-1";
+
+const caseStudyHeading = (title: string) => `Case study: ${title}`;
 
 /**
  * A table that scrolls sideways inside its own box, never the page (#186's 375px criterion).
@@ -33,10 +38,42 @@ export function StudentTable({
   items: readonly ItemRow[];
   students: readonly StudentRow[];
 }) {
+  // #469: a quiz that played case studies in place names each over its steps' columns.
+  const groups = groupByCaseStudy(items);
+  const grouped = groups.some((group) => group.caseStudy !== null);
   return (
     <ScrollRegion label="Scores by student">
       <table className="tabular w-full border-collapse text-sm">
+        {grouped ? (
+          <>
+            <colgroup span={1} />
+            {groups.map((group) => (
+              <colgroup key={group.items[0]?.position} span={group.items.length} />
+            ))}
+            <colgroup span={2} />
+          </>
+        ) : null}
         <thead>
+          {grouped ? (
+            <tr>
+              <td className="sticky left-0 bg-surface-1" />
+              {groups.map((group) =>
+                group.caseStudy === null ? (
+                  <td key={group.items[0]?.position} colSpan={group.items.length} />
+                ) : (
+                  <th
+                    key={group.items[0]?.position}
+                    scope="colgroup"
+                    colSpan={group.items.length}
+                    className={GROUP_HEAD}
+                  >
+                    {caseStudyHeading(group.caseStudy.title)}
+                  </th>
+                ),
+              )}
+              <td colSpan={2} />
+            </tr>
+          ) : null}
           <tr>
             <th scope="col" className={`${HEAD} sticky left-0 bg-surface-1 text-left`}>
               Student
@@ -105,31 +142,60 @@ export function ItemTable({
             ))}
           </tr>
         </thead>
-        <tbody>
-          {items.map((item) => (
-            <tr key={item.position} className={ROW}>
-              <th scope="row" className={ROW_HEAD}>
-                {`Q${item.position} ${item.ref}`}
-              </th>
-              <td className={CELL}>{item.cjmmStep === null ? "–" : `Step ${item.cjmmStep}`}</td>
-              <td className={CELL}>{`${item.responded} of ${participantCount}`}</td>
-              {correctColumn ? (
-                <td className={CELL}>{formatPercent(item.percentCorrect ?? null)}</td>
-              ) : null}
-              <td className={CELL}>
-                {item.meanPoints === null
-                  ? "–"
-                  : `${formatPoints(item.meanPoints)} / ${formatPoints(item.maxPoints)}`}
-              </td>
-              <td className={`${CELL} font-medium`}>{formatPercent(item.meanPercent)}</td>
-              <td className={CELL}>{item.full}</td>
-              <td className={CELL}>{item.partial}</td>
-              <td className={CELL}>{item.none}</td>
-            </tr>
-          ))}
-        </tbody>
+        {/* #469: each case study a quiz played in place heads a group of its own steps. */}
+        {groupByCaseStudy(items).map((group) => (
+          <tbody key={group.items[0]?.position}>
+            {group.caseStudy === null ? null : (
+              <tr>
+                <th scope="rowgroup" colSpan={heads.length + 1} className={GROUP_HEAD}>
+                  {caseStudyHeading(group.caseStudy.title)}
+                </th>
+              </tr>
+            )}
+            {group.items.map((item) => (
+              <ItemTableRow
+                key={item.position}
+                item={item}
+                participantCount={participantCount}
+                correctColumn={correctColumn}
+              />
+            ))}
+          </tbody>
+        ))}
       </table>
     </ScrollRegion>
+  );
+}
+
+function ItemTableRow({
+  item,
+  participantCount,
+  correctColumn,
+}: {
+  item: ItemRow & { percentCorrect?: number | null };
+  participantCount: number;
+  correctColumn: boolean;
+}) {
+  return (
+    <tr className={ROW}>
+      <th scope="row" className={ROW_HEAD}>
+        {`Q${item.position} ${item.ref}`}
+      </th>
+      <td className={CELL}>{item.cjmmStep === null ? "–" : `Step ${item.cjmmStep}`}</td>
+      <td className={CELL}>{`${item.responded} of ${participantCount}`}</td>
+      {correctColumn ? (
+        <td className={CELL}>{formatPercent(item.percentCorrect ?? null)}</td>
+      ) : null}
+      <td className={CELL}>
+        {item.meanPoints === null
+          ? "–"
+          : `${formatPoints(item.meanPoints)} / ${formatPoints(item.maxPoints)}`}
+      </td>
+      <td className={`${CELL} font-medium`}>{formatPercent(item.meanPercent)}</td>
+      <td className={CELL}>{item.full}</td>
+      <td className={CELL}>{item.partial}</td>
+      <td className={CELL}>{item.none}</td>
+    </tr>
   );
 }
 

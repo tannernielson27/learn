@@ -10,6 +10,13 @@ export interface HostRecordProps {
   record: EhrRecord;
   /** The room's position, for the step marker. */
   position: number | null;
+  /** The case study's title, where a room plays more than one (#469). */
+  title?: string;
+  /**
+   * A student-paced room (#469): every phone is on a step of its own, so there is no class step
+   * to mark.
+   */
+  paced?: boolean;
 }
 
 /**
@@ -19,7 +26,7 @@ export interface HostRecordProps {
  *
  * Folded away by default, so the console's controls stay where an instructor expects them.
  */
-export function HostRecord({ record, position }: HostRecordProps) {
+export function HostRecord({ record, position, title, paced = false }: HostRecordProps) {
   const firstTime = record.timePoints[0]?.id ?? "";
   const [timeId, setTimeId] = useState(firstTime);
   const [tabId, setTabId] = useState(() => openTabsAtTime(record, firstTime)[0]?.id ?? "");
@@ -27,13 +34,15 @@ export function HostRecord({ record, position }: HostRecordProps) {
   // console has never shown it: it stays as it was.
   if (!isStagedRecord(record)) return null;
   const step = stepAtPosition(position);
-  const note = `Full patient record. The class is on step ${step}, and phones show only what step ${step} has reached.`;
+  const note = paced
+    ? "Full patient record. Each phone shows only what the step on its screen has reached."
+    : `Full patient record. The class is on step ${step}, and phones show only what step ${step} has reached.`;
 
   return (
     <details data-testid="host-record" className="mt-8 rounded-sm border border-line bg-surface-1">
       <summary className="tap-target flex cursor-pointer items-center px-4 text-sm font-medium text-ink-1">
-        Patient record
-        <span className="ml-2 text-ink-2">{`· Step ${step}`}</span>
+        {title === undefined ? "Patient record" : `Patient record: ${title}`}
+        {paced ? null : <span className="ml-2 text-ink-2">{`· Step ${step}`}</span>}
       </summary>
       <div className="border-t border-line px-4 pt-4 pb-5">
         <EhrContent

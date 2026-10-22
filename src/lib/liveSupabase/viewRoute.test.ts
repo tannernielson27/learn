@@ -628,3 +628,104 @@ describe("a case study's chart, cut to the room's step (#335)", () => {
     expect(logged).toHaveBeenCalled();
   });
 });
+
+describe("a quiz that plays a case study in place, on the phone's wire (#469)", () => {
+  const study = caseStudySchema.parse(stagedCaseStudy);
+  const NOTE_0115 = "0115: Pain now 8/10";
+  const NOTE_0130 = "0130: Pale and diaphoretic";
+  const LABS = "Serum hCG";
+  // A loose question first, then the case study's six steps at positions 2 to 7.
+  const records = [
+    {
+      case_study_id: "00000000-0000-0000-0000-0000000004c9",
+      title: "Ectopic",
+      first_position: 2,
+      step_count: 6,
+      record: stagedEhr,
+    },
+  ] as unknown as Json;
+
+  async function quizRoom(sessionId: string, mode: SessionMode) {
+    const live = createFakeRoom({
+      items: [FIRST, ...study.items],
+      code: "QZCS69",
+      sessionId,
+      mode,
+      caseStudyRecords: records,
+    });
+    const host = live.host();
+    await host.open();
+    const joined = await live.participant().join(live.code, { displayName: "Ada" });
+    await live.settle();
+    return { live, host, ada: joined.participantId };
+  }
+
+  /** Every string a key, rationale or scoring of these items would put on the wire. */
+  function secrets(items: readonly Item[]): string[] {
+    return items.flatMap((item) => [
+      JSON.stringify(item.answerKey),
+      ...(item.rationale.general ? [item.rationale.general.value] : []),
+    ]);
+  }
+
+  async function body(live: FakeRoom, who: string): Promise<Record<string, unknown>> {
+    const { response } = await viewOnce(live, who);
+    expect(response.status).toBe(200);
+    return (await response.json()) as Record<string, unknown>;
+  }
+
+  it("puts the chart away on a loose question and brings each step its own, keyless", async () => {
+    const { live, host, ada } = await quizRoom(
+      "00000000-0000-0000-0000-000000000469",
+      "instructor_paced",
+    );
+
+    await host.start();
+    await live.settle();
+    const loose = await body(live, ada);
+    expect(loose.record).toBeNull();
+
+    await host.advance();
+    await live.settle();
+    const step1 = await body(live, ada);
+    const step1Bytes = JSON.stringify(step1);
+    expect(step1Bytes).toContain(NOTE_0115);
+    expect(step1Bytes).not.toContain(NOTE_0130);
+    expect(step1Bytes).not.toContain(LABS);
+    expect(step1Bytes).not.toContain('"answerKey"');
+    for (const secret of secrets([FIRST, ...study.items])) expect(step1Bytes).not.toContain(secret);
+
+    // The control: the case study's third step, the room's fourth position, opens the labs.
+    await host.advance();
+    await host.advance();
+    await live.settle();
+    const step3 = JSON.stringify(await body(live, ada));
+    expect(step3).toContain(LABS);
+    expect(step3).toContain(NOTE_0130);
+  });
+
+  it("hands a student-paced phone each step's chart on its entry, and no key", async () => {
+    const { live, host, ada } = await quizRoom(
+      "00000000-0000-0000-0000-000000000470",
+      "student_paced",
+    );
+    await host.start();
+    await live.settle();
+
+    const view = await body(live, ada);
+    expect(view).not.toHaveProperty("record");
+    const set = view.set as { position: number; record?: unknown }[];
+    expect(set).toHaveLength(7);
+    expect(set[0]).not.toHaveProperty("record");
+    const stepBytes = set.map((entry) => JSON.stringify(entry.record ?? null));
+    expect(stepBytes[1]).toContain(NOTE_0115);
+    expect(stepBytes[1]).not.toContain(NOTE_0130);
+    expect(stepBytes[1]).not.toContain(LABS);
+    expect(stepBytes[3]).toContain(NOTE_0130);
+    expect(stepBytes[3]).toContain(LABS);
+
+    const bytes = JSON.stringify(view);
+    expect(bytes).not.toContain('"answerKey"');
+    for (const secret of secrets([FIRST, ...study.items])) expect(bytes).not.toContain(secret);
+  });
+});

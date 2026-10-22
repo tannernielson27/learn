@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { buildSessionReport } from "@/lib/live/report";
+import { buildSessionReport, inCaseStudies } from "@/lib/live/report";
 import { REPORT_FIXTURE } from "@/lib/live/reportFixture";
 import { SessionReportView } from "./SessionReportView";
 
@@ -115,5 +115,39 @@ describe("SessionReportView", () => {
     renderView("students", buildSessionReport({ ...REPORT_FIXTURE, participants: [] }));
     expect(screen.queryByRole("table")).toBeNull();
     expect(screen.getByText("Nobody joined.")).toBeInTheDocument();
+  });
+});
+
+describe("SessionReportView for a quiz that played a case study in place (#469)", () => {
+  const mixed = buildSessionReport({
+    ...REPORT_FIXTURE,
+    items: inCaseStudies(REPORT_FIXTURE.items, [
+      { caseStudyId: "c-1", title: "Hip arthroplasty", firstPosition: 2, stepCount: 2 },
+    ]),
+  });
+
+  it("groups the case study's steps under its title in the questions view", () => {
+    renderView("items", mixed);
+    const table = screen.getByRole("table");
+    const group = within(table).getByRole("rowheader", { name: "Case study: Hip arthroplasty" });
+    expect(group).toHaveAttribute("scope", "rowgroup");
+    const groupBody = group.closest("tbody") as HTMLElement;
+    expect(
+      within(groupBody)
+        .getAllByRole("rowheader")
+        .map((cell) => cell.textContent),
+    ).toEqual(["Case study: Hip arthroplasty", "Q2 mr-assess", "Q3 bowtie-act"]);
+  });
+
+  it("heads the case study's columns with its title in the students view", () => {
+    renderView("students", mixed);
+    const heading = screen.getByRole("columnheader", { name: "Case study: Hip arthroplasty" });
+    expect(heading).toHaveAttribute("colspan", "2");
+    expect(screen.getByRole("columnheader", { name: "Q2 mr-assess" })).toBeInTheDocument();
+  });
+
+  it("has no case study heading for a quiz of loose questions", () => {
+    renderView("students");
+    expect(screen.queryByText(/Case study:/)).toBeNull();
   });
 });

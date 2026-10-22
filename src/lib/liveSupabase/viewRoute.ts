@@ -69,8 +69,7 @@ import {
   type LiveRouteDeps,
   type VerifiedParticipant,
 } from "./routeDeps";
-import type { EhrRecordView } from "@/lib/ngn/chartReveal";
-import { readCachedSessionRecord } from "@/lib/supabase/sessionRecord";
+import { readCachedSessionRecord, type SessionRecords } from "@/lib/supabase/sessionRecord";
 import { roomRecord, viewEntries, type WantedItem } from "./viewEntries";
 import { selectViewRows, type ViewRows } from "./viewReads";
 import { NO_STORE_HEADERS, type ParticipantViewPayload } from "./wire";
@@ -143,16 +142,17 @@ export async function readParticipantView(
   const { state, itemSet, serverNow } = read;
   const { wanted, wholeSet } = wantedItems(itemSet, state);
 
-  // #335: a case-study room's chart, cut to the room's step. A student-paced room is always run
-  // from a bank (`sessions_student_paced_bank_only`), so it has no record to read.
-  const chart = wholeSet
-    ? ({ ok: true, record: undefined } as const)
-    : await chartOf(deps.service, participant.sessionId, state.position);
-  if (!chart.ok) {
-    reportLiveFault({ route: routeOf(request), sessionId: participant.sessionId, ...chart.fault });
-    return faultResponse(chart.fault.status);
+  // #335: a case-study room's chart, cut to the room's step. #469: a room run from a quiz has one
+  // per case study it plays in place, and a student-paced one (always run from a quiz,
+  // `sessions_student_paced_bank_only`) hands each step its chart on the set's entry instead.
+  const charts = await chartsOf(deps.service, participant.sessionId);
+  if (!charts.ok) {
+    reportLiveFault({ route: routeOf(request), sessionId: participant.sessionId, ...charts.fault });
+    return faultResponse(charts.fault.status);
   }
-  const record = chart.record === undefined ? {} : { record: chart.record };
+  const { runs } = charts.records;
+  const chart = wholeSet ? undefined : roomRecord(charts.records.record, state.position, runs);
+  const record = chart === undefined ? {} : { record: chart };
 
   if (!wholeSet && wanted.length === 0) {
     return answer({
@@ -195,6 +195,7 @@ export async function readParticipantView(
     answers: rows.answers,
     reveal: state.reveal,
     startingOrderSeed: deps.startingOrderSeed,
+    ...(wholeSet ? { runs } : {}),
   });
   if (!built.ok) return fail(409, LIVE_ROUTE_ERRORS.unplayable);
 
@@ -227,25 +228,22 @@ function answer(payload: ParticipantViewPayload): Response {
   return Response.json(payload, { headers: NO_STORE_HEADERS });
 }
 
-type Chart =
-  | { ok: true; record: EhrRecordView | undefined }
+type Charts =
+  | { ok: true; records: SessionRecords }
   | { ok: false; fault: { call: string; error: unknown; status: number } };
 
 /**
- * The room's chart at its step (#335), the same on `open_session_view` and on the calls it
- * replaced: neither reads the record, so both ask `readCachedSessionRecord`, which each server
- * process answers from the database once per room, and both cut it with `roomRecord`.
+ * The room's records (#335, #469), the same on `open_session_view` and on the calls it replaced:
+ * neither reads them, so both ask `readCachedSessionRecord`, which each server process answers
+ * from the database once per room. They are whole here, and cut to a step before they are sent:
+ * by `roomRecord` for the room's one item, by `viewEntries` for a student-paced set.
  *
- * Whether a room has a record is only known by reading it, so a bank room pays the one read too,
- * and a failure of that first read is a 503 for it as well. Accepted: the phone retries a 503,
- * the read is cached once it succeeds, and guessing "no record" on a failure could show a
- * case-study room with no chart at all.
+ * Whether a room has a record is only known by reading it, so a room of loose questions pays the
+ * one read too, and a failure of that first read is a 503 for it as well. Accepted: the phone
+ * retries a 503, the read is cached once it succeeds, and guessing "no record" on a failure could
+ * show a case-study step with no chart at all.
  */
-async function chartOf(
-  service: ViewRouteDeps["service"],
-  sessionId: string,
-  position: number | null,
-): Promise<Chart> {
+async function chartsOf(service: ViewRouteDeps["service"], sessionId: string): Promise<Charts> {
   const read = await readCachedSessionRecord(service, sessionId);
   if (!read.ok) {
     return {
@@ -253,7 +251,7 @@ async function chartOf(
       fault: { call: "select:sessions.patient_record", error: read.error, status: read.status },
     };
   }
-  return { ok: true, record: roomRecord(read.record, position) };
+  return { ok: true, records: { record: read.record, runs: read.runs } };
 }
 
 /**

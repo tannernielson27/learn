@@ -4,7 +4,11 @@ import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema, type Item } from "@/lib/ngn/schemas";
 import { startingOrderSeed } from "@/lib/ngn/startingOrder";
 import { toItemRow } from "@/lib/supabase/itemRows";
-import { viewEntries, type ViewEntriesInput } from "./viewEntries";
+import type { CaseStudyRun } from "@/lib/live/caseStudyRuns";
+import { recordAtStep } from "@/lib/ngn/chartReveal";
+import { stagedEhr } from "@/lib/ngn/fixtures/chart-reveal";
+import { ehrRecordSchema } from "@/lib/ngn/schemas";
+import { roomRecord, stepRecord, viewEntries, type ViewEntriesInput } from "./viewEntries";
 
 /**
  * `viewEntries` is the only door between rows that carry keys and a response (#407, ADR 0003), so
@@ -150,6 +154,62 @@ describe("viewEntries with rows it cannot use", () => {
       const built = viewEntries(input({ answers }));
       if (!built.ok) throw new Error("the view was refused");
       expect(built.entries[0]?.answered).toBeNull();
+    }
+  });
+});
+
+describe("the charts of a quiz that plays case studies in place (#469)", () => {
+  const staged = ehrRecordSchema.parse(stagedEhr);
+  // Position 1 a loose question; 2 to 7 a case study with the staged record; 8 to 13 one without.
+  const runs: CaseStudyRun[] = [
+    { caseStudyId: "case-a", title: "A", firstPosition: 2, stepCount: 6, record: staged },
+    { caseStudyId: "case-b", title: "B", firstPosition: 8, stepCount: 6, record: null },
+  ];
+
+  it("cuts a step's chart to its own step, counted from its case study's first position", () => {
+    expect(stepRecord(runs, 2)).toEqual(recordAtStep(staged, 1));
+    expect(stepRecord(runs, 4)).toEqual(recordAtStep(staged, 3));
+    expect(stepRecord(runs, 7)).toEqual(recordAtStep(staged, 6));
+  });
+
+  it("has no chart on a loose question, nor for a case study that had no record", () => {
+    expect(stepRecord(runs, 1)).toBeUndefined();
+    expect(stepRecord(runs, 9)).toBeUndefined();
+    expect(stepRecord(runs, null)).toBeUndefined();
+  });
+
+  it("tells the phone to put the chart away anywhere but a step with a chart", () => {
+    expect(roomRecord(null, 3, runs)).toEqual(recordAtStep(staged, 2));
+    expect(roomRecord(null, 1, runs)).toBeNull();
+    expect(roomRecord(null, null, runs)).toBeNull();
+    expect(roomRecord(null, 9, runs)).toBeNull();
+    // A room run from one case study, or from a quiz of loose questions, is as it was.
+    expect(roomRecord(staged, null)).toEqual(recordAtStep(staged, 1));
+    expect(roomRecord(null, 2)).toBeUndefined();
+  });
+
+  it("hands each step of a student-paced set its chart, and a loose question none", () => {
+    const built = viewEntries(
+      input({
+        wanted: [
+          { id: "row-1", position: 1 },
+          { id: "row-2", position: 4 },
+        ],
+        items: [rowOf(FIRST, "row-1"), rowOf(SECOND, "row-2")],
+        answers: [markedAnswer(SECOND, 4)],
+        runs,
+      }),
+    );
+    if (!built.ok) throw new Error("the view was refused");
+    const [loose, step] = built.entries;
+    expect(loose).not.toHaveProperty("record");
+    expect(step?.record).toEqual(recordAtStep(staged, 3));
+    // The chart is a step's view, and the entry is still keyless before the reveal.
+    const bytes = JSON.stringify(built.entries);
+    expect(bytes).not.toContain("fromStep");
+    expect(bytes).not.toContain("stepAccess");
+    for (const secret of [...secretsOf(FIRST), ...secretsOf(SECOND)]) {
+      expect(bytes).not.toContain(secret);
     }
   });
 });

@@ -119,9 +119,10 @@ export interface StudentView extends SessionView<ParticipantItem> {
   paced?: PacedItemPayload[];
   /**
    * A case-study room's patient record at the step the room is on (#335), as the server cut it.
-   * Absent for a room run from a bank.
+   * Absent for a room run from a bank. Null in a whole-quiz room that plays case studies in place
+   * (#469) while it is on anything but one of their steps: there is no chart to show.
    */
-  record?: EhrRecordView;
+  record?: EhrRecordView | null;
 }
 
 /**
