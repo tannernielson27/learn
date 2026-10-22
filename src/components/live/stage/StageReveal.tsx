@@ -51,14 +51,22 @@ export function StageReveal({
         }
       />
       <h1 className="sr-only">{place.label === null ? "Answer" : `${place.label}: answer`}</h1>
-      {question === null ? null : <StageStem stem={question.stem} small />}
-      {rows === null ? (
-        <p className="text-stage-option text-ink-2">Each phone shows its own marks.</p>
-      ) : (
-        <ResultsChart rows={rows} total={total} size="stage" />
+      {/* On a short projector the question gives way to the chart and the rationale: it is on
+          every phone, and the class has just read it. */}
+      {question === null ? null : (
+        <div className="[@container(max-height:50rem)]:hidden">
+          <StageStem stem={question.stem} small />
+        </div>
       )}
+      <div className="min-h-0 flex-1 overflow-hidden">
+        {rows === null ? (
+          <p className="text-stage-option text-ink-2">Each phone shows its own marks.</p>
+        ) : (
+          <ResultsChart rows={rows} total={total} size="stage" />
+        )}
+      </div>
       {rationale === null ? null : (
-        <div className="mt-auto max-w-[84cqi] font-read text-stage-label leading-snug text-stage-ink">
+        <div className="max-w-[84cqi] shrink-0 font-read text-stage-label leading-snug text-stage-ink [@container(max-height:50rem)]:text-2xl">
           <RichTextView text={rationale} />
         </div>
       )}

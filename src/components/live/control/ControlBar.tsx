@@ -76,14 +76,23 @@ export function ControlBar({ state, commands, busy, onCommand, summary }: Contro
   const main = commands.find((each) => each.command === primary);
   const side = commands.filter((each) => each.command !== primary && each.command !== "advance");
 
-  const draw = (command: ControlCommand, variant: "primary" | "secondary" | "ghost") => (
+  /**
+   * One flat row, ordered by CSS: on a phone the primary is first and full width, and every
+   * other move shares the row under it; from `sm` the quiet moves sit left and the forward ones
+   * right, with the primary last.
+   */
+  const draw = (
+    command: ControlCommand,
+    variant: "primary" | "secondary" | "ghost",
+    placement: string,
+  ) => (
     <Button
       key={command.command}
       variant={variant}
-      size={variant === "ghost" ? "md" : "lg"}
+      size={variant === "primary" ? "lg" : "md"}
       disabled={busy || !command.enabled}
       onClick={() => press(command)}
-      className={variant === "primary" ? "max-sm:w-full sm:min-w-44" : ""}
+      className={`${placement} ${variant === "primary" ? "max-sm:basis-full sm:min-w-44" : "max-sm:grow"} sm:min-h-(--button-height-lg)`}
     >
       {command.label}
     </Button>
@@ -99,17 +108,17 @@ export function ControlBar({ state, commands, busy, onCommand, summary }: Contro
         aria-hidden={asked === null ? undefined : true}
         className="sticky bottom-0 z-1 border-t border-line bg-surface-1 px-4 py-3 [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))] sm:px-8"
       >
-        <div className="mx-auto flex w-full max-w-7xl flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <div className="flex flex-wrap items-center gap-2">
-            {side.map((command) =>
-              draw(command, command.command === "end" ? "ghost" : "secondary"),
-            )}
-            {summary ? <p className="text-sm text-ink-2 max-md:hidden">{summary}</p> : null}
-          </div>
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:gap-3">
-            {forward.map((command) => draw(command, "secondary"))}
-            {main ? draw(main, "primary") : null}
-          </div>
+        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3">
+          {side.map((command) =>
+            draw(command, command.command === "end" ? "ghost" : "secondary", "max-sm:order-2"),
+          )}
+          {summary ? (
+            <p className="mr-auto text-sm text-ink-2 max-md:hidden">{summary}</p>
+          ) : (
+            <span className="mr-auto" />
+          )}
+          {forward.map((command) => draw(command, "secondary", "max-sm:order-1"))}
+          {main ? draw(main, "primary", "max-sm:order-first") : null}
         </div>
       </div>
       {asked === null ? null : (

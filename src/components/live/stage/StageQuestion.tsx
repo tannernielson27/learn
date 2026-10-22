@@ -45,7 +45,7 @@ export function StageQuestion({
 }: StageQuestionProps) {
   const where = [place.label, paused ? "Paused" : null].filter(Boolean).join(" · ");
   return (
-    <div className="flex h-full min-h-0 flex-col gap-[3.3cqb]">
+    <div className="flex h-full min-h-0 flex-col gap-[2.6cqb]">
       {casePlace === null ? null : (
         <section
           aria-label="Patient"
@@ -72,20 +72,24 @@ export function StageQuestion({
           )
         }
       />
-      {question === null ? (
-        <p className="text-stage-option text-ink-2">The question is on its way.</p>
-      ) : (
-        <>
-          <h1 className="sr-only">{place.label ?? "Question"}</h1>
-          <StageStem stem={question.stem} />
-          {question.options === null ? (
-            <p className="text-stage-option text-ink-2">Answer on your phone.</p>
-          ) : (
-            <StageOptions options={question.options} />
-          )}
-        </>
-      )}
-      <footer className="mt-auto grid grid-cols-[minmax(0,1fr)_auto] items-end gap-[6cqi]">
+      {/* The one part that gives way on a short projector (1280x720), so the clock and the count
+          below always stay on the wall. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-[2.6cqb] overflow-hidden">
+        {question === null ? (
+          <p className="text-stage-option text-ink-2">The question is on its way.</p>
+        ) : (
+          <>
+            <h1 className="sr-only">{place.label ?? "Question"}</h1>
+            <StageStem stem={question.stem} />
+            {question.options === null ? (
+              <p className="text-stage-option text-ink-2">Answer on your phone.</p>
+            ) : (
+              <StageOptions options={question.options} />
+            )}
+          </>
+        )}
+      </div>
+      <footer className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-[6cqi]">
         <div className="flex min-w-0 flex-col gap-[1.5cqb]">
           {casePlace === null ? null : (
             <p className="text-stage-label font-semibold text-ink-2">

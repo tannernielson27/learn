@@ -100,7 +100,7 @@ export function StageView({
       <button
         type="button"
         onClick={onExit}
-        className="absolute right-6 bottom-4 text-sm text-ink-2 opacity-70 hover:opacity-100 focus-visible:opacity-100"
+        className="absolute top-2 right-6 text-sm text-ink-2 opacity-70 hover:opacity-100 focus-visible:opacity-100"
       >
         Press Esc for the control view
       </button>

@@ -35,11 +35,14 @@ export function JoinStrip({ url, code }: { url: string; code: string }) {
   );
 }
 
-/** The question text, the stage's largest words after the join code. */
+/**
+ * The question text, the stage's largest words after the join code. A step down on a short
+ * projector (1280x720), where the rem floor would otherwise push the options off the wall.
+ */
 export function StageStem({ stem, small = false }: { stem: RichText; small?: boolean }) {
   return (
     <div
-      className={`max-w-[80cqi] leading-tight font-semibold tracking-[-0.015em] text-stage-ink ${small ? "text-stage-option" : "text-stage-stem"} [&_p+p]:mt-[1cqb]`}
+      className={`max-w-[80cqi] leading-tight font-semibold tracking-[-0.015em] text-stage-ink ${small ? "text-stage-option" : "text-stage-stem [@container(max-height:50rem)]:text-stage-option"} [&_p+p]:mt-[1cqb]`}
     >
       <RichTextView text={stem} />
     </div>
@@ -53,11 +56,11 @@ export function StageStem({ stem, small = false }: { stem: RichText; small?: boo
 export function StageOptions({ options }: { options: readonly StageOption[] }) {
   const columns = options.length > 4 ? "grid-cols-2" : "grid-cols-1";
   return (
-    <ol aria-label="Choices" className={`grid ${columns} gap-[1.7cqb]`}>
+    <ol aria-label="Choices" className={`grid ${columns} gap-[1.5cqb]`}>
       {options.map((option) => (
         <li
           key={option.letter}
-          className="flex items-center gap-[2.5cqb] rounded-md border-(length:--stage-stroke) border-stage-line px-[3cqb] py-[1.6cqb] text-stage-option leading-tight font-medium"
+          className="flex items-center gap-[2.5cqb] rounded-md border-(length:--stage-stroke) border-stage-line px-[3cqb] py-[1.3cqb] text-stage-option leading-tight font-medium"
         >
           <span
             aria-hidden="true"
