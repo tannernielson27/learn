@@ -27,6 +27,7 @@ import {
 } from "@/lib/live";
 import { createSupabaseHost } from "@/lib/liveSupabase";
 import { runAt, type CaseStudyRun } from "@/lib/live/caseStudyRuns";
+import { asksFirst, commandLabel, offeredCommands, type AskedCommand } from "@/lib/live/controls";
 import { positionLabel } from "@/lib/live/positionLabel";
 import { reportPath } from "@/lib/live/reportFormat";
 import { formatSessionCode } from "@/lib/live/sessionCode";
@@ -83,48 +84,8 @@ const NO_RUNS: readonly CaseStudyRun[] = [];
  */
 export const TALLY_INTERVAL_MS = 3_000;
 
-/** The moves, in the order a host reaches for them, with the word each button says. */
-const LABELS: Record<HostCommand, string> = {
-  start: "Start",
-  reveal: "Show answer",
-  advance: "Next question",
-  pause: "Pause",
-  resume: "Resume",
-  end: "End live session",
-};
-
-/**
- * Which buttons are on the screen at all. The rest is `canRunHostCommand` greying them out. A
- * student-paced room (#185) has no "Next question": every phone moves through the set by itself.
- */
-function offered(state: LiveSessionState): HostCommand[] {
-  if (state.status === "ended") return [];
-  if (state.status === "lobby") return ["start", "end"];
-  const moves: HostCommand[] =
-    state.status === "paused"
-      ? ["reveal", "advance", "resume", "end"]
-      : ["reveal", "advance", "pause", "end"];
-  return isStudentPaced(state) ? moves.filter((command) => command !== "advance") : moves;
-}
-
-/** What a button says. One "Show answers" reveals a student-paced room's whole set (#185). */
-function labelFor(command: HostCommand, state: LiveSessionState): string {
-  return command === "reveal" && isStudentPaced(state) ? "Show answers" : LABELS[command];
-}
-
-/**
- * The moves that cannot be taken back, so the console asks first. Ending is final, and a
- * student-paced room's "Show answers" closes answering on every item for every student at once.
- * One item's "Show answer" does not ask: the room moves on to the next item anyway.
- */
-type Asked = "end" | "reveal";
-
-function asksFirst(command: HostCommand, state: LiveSessionState): command is Asked {
-  return command === "end" || (command === "reveal" && isStudentPaced(state));
-}
-
 /** What the question says, and what its two buttons say. */
-function question(command: Asked, state: LiveSessionState) {
+function question(command: AskedCommand, state: LiveSessionState) {
   return command === "end"
     ? {
         title: "End this live session?",
@@ -182,7 +143,7 @@ export function HostLobby({
   const [tally, setTally] = useState<ItemAggregate | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
-  const [asking, setAsking] = useState<Asked | null>(null);
+  const [asking, setAsking] = useState<AskedCommand | null>(null);
   /** The current item's CJMM step, which a case study's console names (#184). */
   const [cjmmStep, setCjmmStep] = useState<number | null>(null);
 
@@ -334,7 +295,7 @@ export function HostLobby({
     else void run(command);
   }
 
-  function confirm(command: Asked) {
+  function confirm(command: AskedCommand) {
     setAsking(null);
     void run(command);
   }
@@ -446,7 +407,7 @@ export function HostLobby({
           <p className="text-sm text-ink-2">{question(asked, state).detail}</p>
           <div className="flex flex-wrap gap-2">
             <Button variant="primary" disabled={pending !== null} onClick={() => confirm(asked)}>
-              {labelFor(asked, state)}
+              {commandLabel(asked, state)}
             </Button>
             <Button variant="ghost" onClick={() => setAsking(null)}>
               {question(asked, state).cancel}
@@ -455,14 +416,14 @@ export function HostLobby({
         </div>
       ) : (
         <div className="mt-6 flex flex-wrap gap-2">
-          {offered(state).map((command) => (
+          {offeredCommands(state).map((command) => (
             <Button
               key={command}
               variant={command === "start" || command === "advance" ? "primary" : "secondary"}
               disabled={pending !== null || !canRunHostCommand(state, command)}
               onClick={() => press(command)}
             >
-              {labelFor(command, state)}
+              {commandLabel(command, state)}
             </Button>
           ))}
         </div>

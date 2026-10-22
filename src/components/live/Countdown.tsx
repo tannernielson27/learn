@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 // Module by module, like the rest of what a phone loads: `@/lib/live` value-exports the in-memory
 // room, which holds keys and the scoring engine (ADR 0003, `noClientScoring.test.ts`).
-import { formatClock, remainingMs, timerAnnouncement, type ItemTimer } from "@/lib/live/timer";
+import { readCountdown } from "@/lib/live/countdown";
+import { timerAnnouncement, type ItemTimer } from "@/lib/live/timer";
 
 export interface CountdownProps {
   timer: ItemTimer;
@@ -52,13 +53,11 @@ export function Countdown({ timer, now }: CountdownProps) {
     return () => clearInterval(handle);
   }, [running, now]);
 
-  const left = remainingMs(timer, at);
-  if (left === null) return null;
+  const reading = readCountdown(timer, at);
+  if (reading === null) return null;
 
-  const frozen = timer.remainingMs !== null;
-  const whole = timer.seconds === null ? left : timer.seconds * 1_000;
-  const share = whole <= 0 ? 0 : Math.min(1, left / whole);
-  const word = left === 0 ? "Time is up" : frozen ? "Paused" : "Time left";
+  const { leftMs: left, frozen, fraction: share } = reading;
+  const word = reading.up ? "Time is up" : frozen ? "Paused" : "Time left";
 
   return (
     <div className="mt-4" data-testid="countdown">
@@ -67,7 +66,7 @@ export function Countdown({ timer, now }: CountdownProps) {
           {word}
         </p>
         <p role="timer" className="tabular font-mono text-2xl text-ink-1">
-          {formatClock(left)}
+          {reading.label}
         </p>
       </div>
       <div aria-hidden="true" className="mt-2 h-1 overflow-hidden rounded-sm bg-surface-2">
