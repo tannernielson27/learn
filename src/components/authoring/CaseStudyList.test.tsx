@@ -83,4 +83,17 @@ describe("CaseStudyList", () => {
     ).toBeInTheDocument();
     expect(restoreAction).toHaveBeenCalledWith("c2");
   });
+
+  it("offers Archive on each row, named for it, sending the selection form (#471)", () => {
+    render(<CaseStudyList caseStudies={caseStudies} archiveFormId="selection" />);
+    const archive = screen.getByRole("button", { name: "Archive Sepsis" });
+    expect(archive).toHaveAttribute("form", "selection");
+    expect(archive).toHaveAttribute("value", "caseStudy:c2");
+    expect(archive.closest("a")).toBeNull();
+  });
+
+  it("offers no Archive without a selection form", () => {
+    render(<CaseStudyList caseStudies={caseStudies} />);
+    expect(screen.queryByRole("button", { name: /^Archive/ })).not.toBeInTheDocument();
+  });
 });

@@ -10,6 +10,12 @@ import {
   restoreCaseStudy,
   restoreItem,
 } from "@/lib/authoring/archive";
+import {
+  archiveSummary,
+  parseArchiveSelection,
+  type ArchiveSelectionState,
+} from "@/lib/authoring/archiveSelection";
+import { archiveSelection } from "@/lib/authoring/archiveSelectionData";
 import { isUuid } from "@/lib/authoring/ids";
 import { checkRateLimit } from "@/lib/authoring/rateLimit";
 import { requireAuthor } from "@/lib/authoring/session";
@@ -51,6 +57,38 @@ export async function archiveCaseStudyAction(caseStudyId: string): Promise<Archi
     ARCHIVE_ERRORS.caseStudyGone,
     archiveCaseStudy,
   );
+}
+
+/**
+ * The quiz page's Archive (#471): one row's own Archive, or every checked row. One request, a few
+ * writes (see archiveSelection), counted against the save limit like the one-row actions. What
+ * stayed, a case study step above all, is said beside what was archived.
+ */
+export async function archiveSelectedAction(
+  bankId: string,
+  _previous: ArchiveSelectionState,
+  formData: FormData,
+): Promise<ArchiveSelectionState> {
+  if (!isUuid(bankId)) {
+    return { status: "error", error: "That quiz no longer exists.", refusals: [] };
+  }
+  const selection = parseArchiveSelection(formData);
+  if (!selection.ok) return { status: "error", error: selection.error, refusals: [] };
+
+  const { supabase } = await requireAuthor(`/author/banks/${bankId}`);
+  const limit = await checkRateLimit(supabase, "save");
+  if (!limit.ok) return { status: "error", error: limit.error, refusals: [] };
+
+  const { archived, refusals } = await archiveSelection(supabase, bankId, {
+    itemIds: selection.itemIds,
+    caseStudyIds: selection.caseStudyIds,
+  });
+  const message = archiveSummary(archived);
+  if (archived.items + archived.caseStudies === 0) {
+    return { status: "error", error: message, refusals };
+  }
+  revalidatePath(`/author/banks/${bankId}`);
+  return { status: "done", message, refusals };
 }
 
 export async function restoreCaseStudyAction(caseStudyId: string): Promise<ArchiveState> {

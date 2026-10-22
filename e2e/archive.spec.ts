@@ -92,3 +92,72 @@ test("an author archives an item, finds it in the Archived view, and restores it
   await expect(kept).toBeVisible();
   await expect(filed).toBeVisible();
 });
+
+const LIST_STEMS = ["Quiz page archive one", "Quiz page archive two", "Quiz page archive three"];
+
+test("a teacher archives questions from the quiz page, one and several, then restores one (#471)", async ({
+  page,
+  request,
+}, testInfo) => {
+  test.slow();
+  await signInAsNewAuthor(page, request, testInfo.project.name);
+  const bankName = `Archive list ${testInfo.project.name} ${Date.now()}`;
+
+  await page.goto("/author");
+  await page.getByRole("textbox", { name: "Quiz name" }).fill(bankName);
+  await page.getByRole("button", { name: "Create quiz" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
+
+  await importJson(
+    page,
+    JSON.stringify({
+      format: "learn.v1",
+      items: LIST_STEMS.map((stem, index) => ({
+        ...FIXTURES.multiple_choice.canonical,
+        id: `archive-list-${index}`,
+        stem: { kind: "markdown", value: stem },
+      })),
+    }),
+  );
+  const items = page.getByRole("list", { name: "Questions" });
+  const row = (stem: string) => items.getByRole("link", { name: new RegExp(`^${stem}`) });
+  const [one, two, three] = LIST_STEMS as [string, string, string];
+  for (const stem of LIST_STEMS) await expect(row(stem)).toBeVisible();
+
+  // One row, from its own Archive: the confirm names how many, and nothing goes until it is used.
+  await page.getByRole("button", { name: `Archive ${one}`, exact: true }).click();
+  const confirmOne = page.getByRole("dialog", { name: "Archive 1 question?", exact: true });
+  await expect(confirmOne).toBeVisible();
+  await expectNoAxeViolations(page);
+  await confirmOne.getByRole("button", { name: "Archive", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Archived 1 question." })).toBeVisible();
+  await expect(row(one)).toHaveCount(0);
+
+  // Several at once: select two, then Archive selected.
+  await page.getByRole("checkbox", { name: `Select ${two}`, exact: true }).check();
+  await page.getByRole("checkbox", { name: `Select ${three}`, exact: true }).check();
+  await page.getByRole("button", { name: "Archive selected", exact: true }).click();
+  const confirmTwo = page.getByRole("dialog", { name: "Archive 2 questions?", exact: true });
+  await confirmTwo.getByRole("button", { name: "Archive", exact: true }).click();
+  const outcome = page.getByRole("status").filter({ hasText: "Archived 2 questions." });
+  await expect(outcome).toBeVisible();
+  await expect(row(two)).toHaveCount(0);
+  await expect(row(three)).toHaveCount(0);
+  await page.screenshot({
+    path: `test-results/screenshots/${testInfo.project.name}/bank-archived-from-list.png`,
+    fullPage: true,
+  });
+
+  // The way back: Archived lists all three, and Restore brings one back.
+  await outcome.getByRole("link", { name: "Show archived", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "Archived questions" })).toBeVisible();
+  for (const stem of LIST_STEMS) await expect(row(stem)).toBeVisible();
+  await page.getByRole("button", { name: `Restore ${two}`, exact: true }).click();
+  await expect(row(two)).toHaveCount(0);
+
+  const views = page.getByRole("navigation", { name: "Current or archived" });
+  await views.getByRole("link", { name: "Current", exact: true }).click();
+  await expect(row(two)).toBeVisible();
+  await expect(row(one)).toHaveCount(0);
+  await expect(row(three)).toHaveCount(0);
+});

@@ -5,7 +5,9 @@ import type { FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { folderOptions, NOT_IN_A_FOLDER, UNFILED, type FolderRow } from "@/lib/authoring/folders";
+import { ARCHIVE_ONE } from "@/lib/authoring/archiveSelection";
 import { selectionLabel, type QuizOption } from "@/lib/authoring/quizMove";
+import { useArchiveSelected, type ArchiveSelectedAction } from "./ArchiveSelected";
 import type { FolderFormState } from "./FolderNameForm";
 import { StaysBehindList } from "./StaysBehindList";
 
@@ -22,6 +24,16 @@ export interface QuizMoveFormProps {
   moveToQuiz?: MoveAction;
   /** What stays with this quiz when questions leave it, said before they do. */
   staysBehind: readonly string[];
+  /** Archives the selection, or one row's own Archive (#471); without it, nothing archives. */
+  archive?: ArchiveSelectedAction;
+  /** The Archived view, linked from what an archive says. */
+  archivedHref?: string;
+  /**
+   * Whether the lists hold any rows to select. False after the last ones were archived: the form
+   * stays, so what the archive said and its link to Archived outlive the refresh that emptied
+   * the lists, but there is nothing left to Archive selected.
+   */
+  hasRows?: boolean;
 }
 
 const INITIAL: FolderFormState = { status: "idle" };
@@ -53,8 +65,8 @@ function Outcome({ id, state, problem }: { id: string; state: FolderFormState; p
 
 /**
  * The quiz page's selection (#417): what is checked moves to one of this quiz's folders, where it
- * has some, or to another quiz. A move to another quiz asks first, saying what stays with this
- * quiz; nothing moves until the teacher confirms.
+ * has some, or to another quiz, or is archived (#471). A move to another quiz asks first, saying
+ * what stays with this quiz, and so does an archive; nothing changes until the teacher confirms.
  */
 export function QuizMoveForm({
   id,
@@ -63,6 +75,9 @@ export function QuizMoveForm({
   quizzes,
   moveToQuiz,
   staysBehind,
+  archive,
+  archivedHref,
+  hasRows = true,
 }: QuizMoveFormProps) {
   const [folderState, folderAction, folderPending] = useActionState(moveToFolder ?? idle, INITIAL);
   const [quizState, quizAction, quizPending] = useActionState(moveToQuiz ?? idle, INITIAL);
@@ -70,6 +85,7 @@ export function QuizMoveForm({
   // A refusal before asking: which field it is about, so only that one is marked invalid.
   const [problem, setProblem] = useState<{ quiz: boolean; message: string } | undefined>(undefined);
   const formRef = useRef<HTMLFormElement>(null);
+  const archiving = useArchiveSelected(archive, formRef, archivedHref, hasRows);
   const uid = useId();
   const byFolder = folders.length > 0 && moveToFolder !== undefined;
   const byQuiz = quizzes.length > 0 && moveToQuiz !== undefined;
@@ -80,6 +96,13 @@ export function QuizMoveForm({
   // reset only once a move is done, never when one is refused.
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // A row's own Archive sends this form too, carrying only its row: that asks, and moves nothing.
+    const submitter = (event.nativeEvent as SubmitEvent).submitter;
+    if (submitter instanceof HTMLButtonElement && submitter.name === ARCHIVE_ONE) {
+      archiving.askOne(submitter);
+      return;
+    }
+    if (!byFolder) return;
     const formData = new FormData(event.currentTarget);
     startTransition(() => folderAction(formData));
   }
@@ -119,7 +142,7 @@ export function QuizMoveForm({
     if (quizState.status === "done") formRef.current?.reset();
   }, [quizState]);
 
-  if (!byFolder && !byQuiz) return null;
+  if (!byFolder && !byQuiz && !archive) return null;
 
   return (
     <form ref={formRef} id={id} onSubmit={submit} className="flex flex-col gap-4">
@@ -207,6 +230,7 @@ export function QuizMoveForm({
           </Dialog>
         </div>
       ) : null}
+      {archiving.controls}
     </form>
   );
 }
