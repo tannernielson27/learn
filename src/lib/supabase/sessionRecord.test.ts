@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sampleCaseStudy, sampleEhr } from "@/lib/ngn/fixtures";
-import { forgetSessionRecords, readCachedSessionRecord, readSessionRecord } from "./sessionRecord";
+import {
+  forgetSessionRecords,
+  readCachedSessionRecord,
+  readSessionRecord,
+  readSessionRecords,
+} from "./sessionRecord";
 
 type Reply = { data?: unknown; error?: { code?: string } | null };
 type Client = Parameters<typeof readSessionRecord>[0];
@@ -34,8 +39,8 @@ describe("readSessionRecord (#184)", () => {
 
     expect(await readSessionRecord(fake.client, SESSION)).toEqual(sampleEhr);
     expect(fake.from).toHaveBeenCalledWith("sessions");
-    // Not the item set, not a key: the one column the phone is about to show.
-    expect(fake.select).toHaveBeenCalledWith("patient_record");
+    // Not the item set, not a key: the record columns and nothing else.
+    expect(fake.select).toHaveBeenCalledWith("patient_record, case_study_records");
     expect(fake.eq).toHaveBeenCalledWith("id", SESSION);
   });
 
@@ -85,7 +90,7 @@ describe("readCachedSessionRecord (#335)", () => {
     const staged = fakeRow({ data: { patient_record: sampleEhr }, error: null });
     await readCachedSessionRecord(staged.client, SESSION);
     const again = await readCachedSessionRecord(staged.client, SESSION);
-    expect(again).toEqual({ ok: true, record: sampleEhr, found: true });
+    expect(again).toEqual({ ok: true, record: sampleEhr, runs: [], found: true });
     expect(staged.from).toHaveBeenCalledTimes(1);
 
     const bank = fakeRow({ data: { patient_record: null }, error: null });
@@ -105,5 +110,50 @@ describe("readCachedSessionRecord (#335)", () => {
     await readCachedSessionRecord(missing.client, SESSION);
     await readCachedSessionRecord(missing.client, SESSION);
     expect(missing.from).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("readSessionRecords (#469)", () => {
+  const CASE = "00000000-0000-4000-8000-0000000000c1";
+  const stored = {
+    case_study_id: CASE,
+    title: "Hip",
+    first_position: 3,
+    step_count: 6,
+    record: { ...sampleEhr, answerKey: { leaked: true } },
+  };
+
+  it("reads each case study a quiz session plays, with its record parsed", async () => {
+    const fake = fakeRow({ data: { patient_record: null, case_study_records: [stored] } });
+    const records = await readSessionRecords(fake.client, SESSION);
+    expect(records.record).toBeNull();
+    expect(records.runs).toEqual([
+      { caseStudyId: CASE, title: "Hip", firstPosition: 3, stepCount: 6, record: sampleEhr },
+    ]);
+    expect(JSON.stringify(records)).not.toContain("leaked");
+  });
+
+  it("is nothing at all for a failed read", async () => {
+    const fake = fakeRow({ error: { code: "08000" } });
+    expect(await readSessionRecords(fake.client, SESSION)).toEqual({ record: null, runs: [] });
+  });
+
+  it("reads the one record alone from a database without the column yet", async () => {
+    const maybeSingle = vi.fn(async () => ({ data: { patient_record: sampleEhr }, error: null }));
+    const select = vi.fn((columns: string) => ({
+      eq: () => ({
+        maybeSingle:
+          columns === "patient_record"
+            ? maybeSingle
+            : async () => ({ data: null, error: { code: "42703" }, status: 400 }),
+      }),
+    }));
+    const client = { from: () => ({ select }) } as unknown as Client;
+
+    expect(await readSessionRecords(client, SESSION)).toEqual({ record: sampleEhr, runs: [] });
+    expect(select.mock.calls.map(([columns]) => columns)).toEqual([
+      "patient_record, case_study_records",
+      "patient_record",
+    ]);
   });
 });

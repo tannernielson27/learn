@@ -130,6 +130,12 @@ export interface PacedItemPayload {
   item: ParticipantItem;
   answered: AnsweredPayload | null;
   revealed: RevealedPayload | null;
+  /**
+   * For a step of a case study a whole-quiz room plays in place (#469): that case study's patient
+   * record as it stands at this step (`recordAtStep`), and nothing a later step reveals. Absent on
+   * a loose question.
+   */
+  record?: EhrRecordView;
 }
 
 /** The body of a successful `POST /api/live/view`. */
@@ -148,8 +154,12 @@ export interface ParticipantViewPayload {
    * (#335): `recordAtStep` of the record the room started with, built by `roomRecord`. Nothing a
    * later step reveals, and no tab locked at this step beyond its name. Absent for a room run from
    * a bank, which has no record. Re-sent with every view, so the phone's chart moves with the host.
+   *
+   * In a room run from a quiz that plays case studies in place (#469), the chart of the case study
+   * whose step the room is on, at that step, and null while it is on anything else: the phone puts
+   * the chart away. A student-paced room carries its charts on the set's entries instead.
    */
-  record?: EhrRecordView;
+  record?: EhrRecordView | null;
   /**
    * How many have joined this session (#426): the waiting screen's "12 in this session", so a
    * phone has the number the moment it enters or rejoins. A number and never who. Absent when the

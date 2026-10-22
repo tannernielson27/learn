@@ -1,5 +1,5 @@
 import { toCsv, type CsvCell } from "./csv";
-import type { SessionReport } from "./report";
+import type { ItemRow, SessionReport } from "./report";
 
 /** Two decimal places, as a number, so the spreadsheet can still add it up. */
 const round2 = (value: number): number => Math.round(value * 100) / 100;
@@ -12,7 +12,7 @@ const round2 = (value: number): number => Math.round(value * 100) / 100;
 export function sessionReportCsv(report: SessionReport): string {
   const header: CsvCell[] = [
     "Student",
-    ...report.items.map((item) => `Q${item.position} ${item.ref}`),
+    ...report.items.map(itemHeader),
     "Points",
     "Possible",
     "Percent",
@@ -25,6 +25,17 @@ export function sessionReportCsv(report: SessionReport): string {
     student.percent === null ? null : round2(student.percent),
   ]);
   return toCsv([header, ...rows]);
+}
+
+/**
+ * A question's column: its place and its name, and for a step of a case study a quiz played in
+ * place (#469), which case study and which step, so the file reads on its own.
+ */
+export function itemHeader(item: Pick<ItemRow, "position" | "ref" | "caseStudy">): string {
+  const name = `Q${item.position} ${item.ref}`;
+  const caseStudy = item.caseStudy;
+  if (!caseStudy) return name;
+  return `${name} (Case study: ${caseStudy.title}, Step ${caseStudy.step} of ${caseStudy.stepCount})`;
 }
 
 const TITLE_LENGTH = 50;

@@ -10,8 +10,10 @@ import {
   type LiveSessionState,
   type SessionView,
 } from "@/lib/live";
+import type { CaseStudyRun } from "@/lib/live/caseStudyRuns";
 import { sampleCaseStudy } from "@/lib/ngn/fixtures";
-import { caseStudySchema, type Item } from "@/lib/ngn/schemas";
+import { stagedEhr } from "@/lib/ngn/fixtures/chart-reveal";
+import { caseStudySchema, ehrRecordSchema, type Item } from "@/lib/ngn/schemas";
 import { HostLobby } from "./HostLobby";
 
 /**
@@ -74,7 +76,7 @@ function caseStudyTransport(initial: LiveSessionState): LiveHostTransport {
   };
 }
 
-function setup(initial: LiveSessionState, caseStudy: boolean) {
+function setup(initial: LiveSessionState, caseStudy: boolean, runs?: readonly CaseStudyRun[]) {
   const transport = caseStudyTransport(initial);
   render(
     <HostLobby
@@ -85,6 +87,7 @@ function setup(initial: LiveSessionState, caseStudy: boolean) {
       qrCode={null}
       initial={initial}
       caseStudy={caseStudy}
+      {...(runs === undefined ? {} : { runs })}
       connect={() => transport}
       tallyIntervalMs={20}
     />,
@@ -114,5 +117,39 @@ describe("HostLobby running a case study (#184)", () => {
     setup({ ...initialSessionState(6), status: "running", position: 2 }, false);
     expect(await screen.findByText(/Question 2 of 6/)).toBeInTheDocument();
     expect(screen.queryByText(/Analyze Cues/)).toBeNull();
+  });
+});
+
+describe("HostLobby running a quiz that plays a case study in place (#469)", () => {
+  // The six steps at positions 1 to 6, and a loose question at 7.
+  const runs: CaseStudyRun[] = [
+    {
+      caseStudyId: "00000000-0000-4000-8000-0000000469c1",
+      title: "Ectopic pregnancy",
+      firstPosition: 1,
+      stepCount: 6,
+      record: ehrRecordSchema.parse(stagedEhr),
+    },
+  ];
+
+  it("names the case study and its step, and shows its record with the step marked", async () => {
+    setup({ ...initialSessionState(7), status: "running", position: 2 }, false, runs);
+    expect(
+      await screen.findByText(/Question 2 of 7 · Step 2 of 6: Analyze Cues/),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("host-case-study")).toHaveTextContent(
+      "Case study: Ectopic pregnancy",
+    );
+    expect(screen.getByTestId("host-record")).toHaveTextContent(
+      "Patient record: Ectopic pregnancy· Step 2",
+    );
+  });
+
+  it("names neither, and shows no record, on a loose question", async () => {
+    setup({ ...initialSessionState(7), status: "running", position: 7 }, false, runs);
+    expect(await screen.findByText(/Question 7 of 7/)).toBeInTheDocument();
+    expect(screen.queryByText(/Step \d of 6/)).toBeNull();
+    expect(screen.queryByTestId("host-case-study")).toBeNull();
+    expect(screen.queryByTestId("host-record")).toBeNull();
   });
 });

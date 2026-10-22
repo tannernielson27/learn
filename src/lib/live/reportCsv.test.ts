@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSessionReport } from "./report";
+import { buildSessionReport, inCaseStudies } from "./report";
 import { REPORT_FIXTURE } from "./reportFixture";
 import { reportCsvFilename, sessionReportCsv } from "./reportCsv";
 
@@ -63,5 +63,22 @@ describe("reportCsvFilename", () => {
 
   it("keeps a long title to a sensible length", () => {
     expect(reportCsvFilename("x".repeat(300), null).length).toBeLessThanOrEqual(80);
+  });
+});
+
+describe("sessionReportCsv for a quiz that played a case study in place (#469)", () => {
+  it("names the case study and the step in each step's column", () => {
+    const items = inCaseStudies(REPORT_FIXTURE.items, [
+      { caseStudyId: "c-1", title: "Hip, day 1", firstPosition: 2, stepCount: 2 },
+    ]);
+    const [header] = sessionReportCsv(buildSessionReport({ ...REPORT_FIXTURE, items })).split(
+      "\r\n",
+    );
+    expect(header).toBe(
+      "Student,Q1 mc-vitals," +
+        '"Q2 mr-assess (Case study: Hip, day 1, Step 1 of 2)",' +
+        '"Q3 bowtie-act (Case study: Hip, day 1, Step 2 of 2)",' +
+        "Q4 untagged,Points,Possible,Percent",
+    );
   });
 });

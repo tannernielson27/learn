@@ -32,3 +32,17 @@ describe("CaseStudyLayout (#184)", () => {
     expect(screen.getByText("Item 1 of 3")).toBeInTheDocument();
   });
 });
+
+describe("CaseStudyLayout in a quiz that plays case studies in place (#469)", () => {
+  it("is the record's layout from the start, with no chart until a step brings one", () => {
+    render(
+      <CaseStudyLayout record={null} changing>
+        <p>Question 1 of 7</p>
+      </CaseStudyLayout>,
+    );
+    expect(screen.queryByRole("complementary", { name: "Patient record" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Patient record" })).toBeNull();
+    expect(screen.getByRole("main")).not.toHaveClass("max-w-lg");
+    expect(screen.getByText("Question 1 of 7")).toBeInTheDocument();
+  });
+});

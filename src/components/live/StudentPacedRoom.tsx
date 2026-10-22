@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnswerSentLine } from "@/components/live/AnswerSentLine";
+import { useShowLiveRecord } from "@/components/live/LiveRecord";
 import { LIVE_BUSY_LABEL, liveSubmitFailure } from "@/components/live/liveSubmit";
 import { createPresentCount, RoomCount } from "@/components/live/RoomCount";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
@@ -88,6 +89,17 @@ export function StudentPacedRoom({
   }
 
   const room = useRef<SupabaseParticipant | null>(null);
+
+  // #469: in a quiz that plays case studies in place, the chart beside the set is the one the
+  // entry on the screen carries, cut on the server to its step; none on a loose question.
+  const showRecord = useShowLiveRecord();
+  const onScreen =
+    set === null || set.length === 0 || state.status !== "running"
+      ? null
+      : (set[Math.min(index, set.length - 1)]?.record ?? null);
+  useEffect(() => {
+    showRecord?.(onScreen);
+  }, [showRecord, onScreen]);
 
   const dial = useMemo(
     () =>

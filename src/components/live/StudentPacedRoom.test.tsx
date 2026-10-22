@@ -9,10 +9,15 @@ import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema, type AnyResponse, type Item } from "@/lib/ngn/schemas";
 import { toKeylessItem } from "@/lib/ngn/submit";
 import { renderersLoaded } from "@/components/question/testing/renderers";
+import { recordAtStep } from "@/lib/ngn/chartReveal";
+import { sampleEhr } from "@/lib/ngn/fixtures";
+import { CaseStudyLayout } from "./CaseStudyLayout";
 import { StudentPacedRoom } from "./StudentPacedRoom";
 
 const refresh = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+// One router for every render, as Next's is, so the room's connection effect runs once.
+const router = { refresh };
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 const FIRST = itemSchema.parse(FIXTURES.multiple_choice.canonical);
 const SECOND = itemSchema.parse(FIXTURES.multiple_choice.edge);
@@ -247,5 +252,43 @@ describe("StudentPacedRoom: someone else joins or leaves (#408)", () => {
     expect(screen.getByTestId("room-count")).toHaveTextContent("2 in this session");
     room.count(1);
     expect(screen.getByTestId("room-count")).toHaveTextContent("1 in this session");
+  });
+});
+
+describe("StudentPacedRoom in a quiz that plays case studies in place (#469)", () => {
+  it("shows the chart the entry on the screen carries, and none on a loose question", async () => {
+    const room = fakeTransport(async (itemId) => ({ itemId, submittedAt: 1 }));
+    render(
+      <CaseStudyLayout record={null} changing>
+        <StudentPacedRoom
+          sessionId="00000000-0000-4000-8000-0000000469aa"
+          title="Mixed quiz"
+          displayName="Sam Okafor"
+          participantId="00000000-0000-4000-8000-0000000469bb"
+          joinedAt={1000}
+          initial={state({ status: "lobby", position: null })}
+          channel={CHANNEL}
+          connect={() => room.transport}
+        />
+      </CaseStudyLayout>,
+    );
+    const user = userEvent.setup();
+    const chart = () => screen.queryByRole("complementary", { name: "Patient record" });
+
+    room.push({
+      state: state(),
+      paced: [entry(FIRST, 1), entry(SECOND, 2, { record: recordAtStep(sampleEhr, 1) })],
+    });
+    await renderersLoaded();
+    expect(chart()).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Next question" }));
+    expect(chart()).toBeInTheDocument();
+    expect(screen.getAllByText(/Orthopedic unit/).length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole("button", { name: "Previous question" }));
+    expect(chart()).toBeNull();
+    // The room stayed where it was in the tree: one connection, never reopened.
+    expect(room.transport.resume).toHaveBeenCalledTimes(1);
   });
 });

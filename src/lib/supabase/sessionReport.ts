@@ -1,9 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type {
-  ReportItemInput,
-  ReportParticipantInput,
-  ReportResponseInput,
-  SessionReportInput,
+import { parseCaseStudyRuns } from "@/lib/live/caseStudyRuns";
+import {
+  inCaseStudies,
+  type ReportItemInput,
+  type ReportParticipantInput,
+  type ReportResponseInput,
+  type SessionReportInput,
 } from "@/lib/live/report";
 import type { CjmmStep } from "@/lib/ngn/types";
 import type { Database } from "./database.types";
@@ -73,12 +75,7 @@ export async function readSessionReport(
   supabase: Client,
   sessionId: string,
 ): Promise<SessionReportData | null> {
-  const { data: session, error } = await supabase
-    .from("sessions")
-    .select("id, title, status, opened_at, closed_at, item_set")
-    .eq("id", sessionId)
-    .maybeSingle();
-  if (error) throw new Error(`could not read session: ${error.message}`);
+  const session = await readSessionRow(supabase, sessionId);
   if (!session) return null;
 
   const itemIds = itemIdsOf(session.item_set);
@@ -96,8 +93,49 @@ export async function readSessionReport(
       openedAt: session.opened_at,
       closedAt: session.closed_at,
     },
-    input: { items: toReportItems(itemIds, items), participants, responses },
+    input: {
+      // #469: each step of a case study a whole quiz played in place, under its case study.
+      items: inCaseStudies(toReportItems(itemIds, items), placesOf(session.case_study_records)),
+      participants,
+      responses,
+    },
   };
+}
+
+/** PostgreSQL's undefined_column, which PostgREST passes through for a column it cannot select. */
+const UNDEFINED_COLUMN = "42703";
+
+/**
+ * The session's own row. A database the #469 migration has not reached has no
+ * `case_study_records`; there, no session played a case study in place, and it reads as none.
+ */
+async function readSessionRow(supabase: Client, sessionId: string) {
+  const read = await supabase
+    .from("sessions")
+    .select("id, title, status, opened_at, closed_at, item_set, case_study_records")
+    .eq("id", sessionId)
+    .maybeSingle();
+  if (read.error?.code === UNDEFINED_COLUMN) {
+    const { data, error } = await supabase
+      .from("sessions")
+      .select("id, title, status, opened_at, closed_at, item_set")
+      .eq("id", sessionId)
+      .maybeSingle();
+    if (error) throw new Error(`could not read session: ${error.message}`);
+    return data === null ? null : { ...data, case_study_records: null };
+  }
+  if (read.error) throw new Error(`could not read session: ${read.error.message}`);
+  return read.data;
+}
+
+/** Where each case study a session played in place sits in its set, as the session snapshotted it. */
+function placesOf(stored: unknown) {
+  return parseCaseStudyRuns(stored).map(({ caseStudyId, title, firstPosition, stepCount }) => ({
+    caseStudyId,
+    title,
+    firstPosition,
+    stepCount,
+  }));
 }
 
 /**

@@ -9,7 +9,7 @@ import { LiveRecordLayout, useShowLiveRecord } from "./LiveRecord";
 
 const staged = ehrRecordSchema.parse(stagedEhr);
 
-const held: { show: ((record: EhrRecordView) => void) | null } = { show: null };
+const held: { show: ((record: EhrRecordView | null) => void) | null } = { show: null };
 function Room() {
   const setter = useShowLiveRecord();
   useEffect(() => {
@@ -17,7 +17,7 @@ function Room() {
   }, [setter]);
   return <p>room</p>;
 }
-const show = (record: EhrRecordView) => held.show?.(record);
+const show = (record: EhrRecordView | null) => held.show?.(record);
 
 describe("LiveRecordLayout (#335)", () => {
   it("shows the server's chart, then each chart the room hands it, with no reload", async () => {
@@ -35,6 +35,29 @@ describe("LiveRecordLayout (#335)", () => {
     expect(labs()).not.toHaveAttribute("aria-disabled");
     await userEvent.click(labs());
     expect(screen.getAllByText(/Serum hCG/).length).toBeGreaterThan(0);
+  });
+
+  it("puts the chart away and brings another back without remounting the room (#469)", () => {
+    const mounts = { count: 0 };
+    function Counted() {
+      useEffect(() => {
+        mounts.count += 1;
+      }, []);
+      return <Room />;
+    }
+    render(
+      <LiveRecordLayout initial={null}>
+        <Counted />
+      </LiveRecordLayout>,
+    );
+    const chart = () => screen.queryByRole("complementary", { name: "Patient record" });
+    expect(chart()).toBeNull();
+    act(() => show(recordAtStep(staged, 1)));
+    expect(chart()).toBeInTheDocument();
+    act(() => show(null));
+    expect(chart()).toBeNull();
+    expect(screen.getByText("room")).toBeInTheDocument();
+    expect(mounts.count).toBe(1);
   });
 
   it("is not there outside a case-study room", () => {
