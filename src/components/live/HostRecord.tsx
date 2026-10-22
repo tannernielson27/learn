@@ -39,7 +39,7 @@ export function HostRecord({ record, position, title, paced = false }: HostRecor
     : `Full patient record. The class is on step ${step}, and phones show only what step ${step} has reached.`;
 
   return (
-    <details data-testid="host-record" className="mt-8 rounded-sm border border-line bg-surface-1">
+    <details data-testid="host-record" className="rounded-md border border-line bg-surface-1">
       <summary className="tap-target flex cursor-pointer items-center px-4 text-sm font-medium text-ink-1">
         {title === undefined ? "Patient record" : `Patient record: ${title}`}
         {paced ? null : <span className="ml-2 text-ink-2">{`· Step ${step}`}</span>}

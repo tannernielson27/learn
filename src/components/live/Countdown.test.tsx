@@ -93,13 +93,13 @@ describe("Countdown", () => {
 
   it("draws the bar with a transform, the one property motion here may use", () => {
     render(<Countdown timer={running(15_000, 30)} now={now} />);
-    const bar = screen.getByTestId("countdown-bar");
+    const bar = screen.getByTestId("countdown-fill");
     expect(bar.style.transform).toBe("scaleX(0.5)");
   });
 
   it("drains between redraws with a linear transform transition, switched off for reduced motion", () => {
     render(<Countdown timer={running(15_000, 30)} now={now} />);
-    const bar = screen.getByTestId("countdown-bar");
+    const bar = screen.getByTestId("countdown-fill");
     // The transition lasts exactly one redraw, so each step runs into the next with no pause.
     expect(bar.style.transitionDuration).toBe("250ms");
     expect(bar).toHaveClass("transition-transform", "ease-linear", "motion-reduce:transition-none");
@@ -108,13 +108,19 @@ describe("Countdown", () => {
     expect(bar).not.toHaveClass("transition");
   });
 
-  it("keeps the bar its one neutral colour to the end: amber and red are for feedback", () => {
+  it("turns the bar amber with words in the last ten seconds, and nothing red (owner decision 7)", () => {
     render(<Countdown timer={running(12_000, 30)} now={now} />);
-    const bar = screen.getByTestId("countdown-bar");
-    expect(bar).toHaveClass("bg-ink-2");
-    tick(10_000);
-    expect(bar).toHaveClass("bg-ink-2");
-    expect(bar).not.toHaveClass("bg-flag");
+    const bar = screen.getByTestId("countdown-fill");
+    expect(bar).toHaveClass("bg-accent");
+    expect(screen.queryByText("10 seconds left")).toBeNull();
+    tick(2_000);
+    expect(bar).toHaveClass("bg-flag");
     expect(bar).not.toHaveClass("bg-incorrect");
+    expect(screen.getByText("10 seconds left")).toBeInTheDocument();
+  });
+
+  it("draws the projector's size from the stage ladder", () => {
+    render(<Countdown timer={running(12_000, 30)} now={now} size="stage" />);
+    expect(screen.getByRole("timer")).toHaveClass("text-stage-label");
   });
 });

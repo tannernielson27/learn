@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 import {
   TIMER_CHOICES,
   canRunHostCommand,
@@ -8,14 +9,6 @@ import {
   type TimerChoice,
   type TimerCommand,
 } from "@/lib/live";
-
-export interface TimerControlsProps {
-  state: LiveSessionState;
-  /** True while a move is in flight, so nothing is pressed twice. */
-  busy: boolean;
-  onChoose: (seconds: number | null) => void;
-  onCommand: (command: TimerCommand) => void;
-}
 
 const CHOICE_LABELS: Record<string, string> = {
   off: "Off",
@@ -30,18 +23,22 @@ const OFF = "off";
 const valueOf = (seconds: TimerChoice | number | null): string =>
   seconds === null ? OFF : String(seconds);
 
+export interface TimeChoiceProps {
+  state: LiveSessionState;
+  /** True while a move is in flight, so nothing is pressed twice. */
+  busy: boolean;
+  onChoose: (seconds: number | null) => void;
+  className?: string;
+}
+
 /**
- * The host's timer (#182): how long each item gets, and the two buttons for the item showing.
+ * How long each question gets (#182). The choice applies from the next question the room moves
+ * to — `chooseTimer` says why — and the hint under it says so once a question is up, so a teacher
+ * who picks a minute halfway through is not surprised that the clock on the screen did not jump.
  *
- * The choice applies from the next item the room moves to — `chooseTimer` says why — and the hint
- * under it says so, so a host who picks a minute halfway through an item is not surprised that the
- * clock on the screen did not jump. "Add 15 seconds" and "Stop timer" are for the item showing,
- * greyed out by the same reducer that would refuse them.
- *
- * A native `select`, which is keyboard- and screen-reader-operable without any help, and at 44px
- * tall like every other control here.
+ * A native `select`, which is keyboard- and screen-reader-operable without any help, at 44px tall.
  */
-export function TimerControls({ state, busy, onChoose, onCommand }: TimerControlsProps) {
+export function TimeChoice({ state, busy, onChoose, className = "" }: TimeChoiceProps) {
   const onItem = state.status === "running" || state.status === "paused";
   const current = state.timer.seconds;
   // A time set some other way than this console (the column allows 5 to 3600 seconds) is still
@@ -49,55 +46,61 @@ export function TimerControls({ state, busy, onChoose, onCommand }: TimerControl
   const unlisted = current !== null && !(TIMER_CHOICES as readonly unknown[]).includes(current);
 
   return (
-    <section aria-labelledby="timer-heading" className="mt-6">
-      <h2 id="timer-heading" className="font-read text-xl text-ink-1">
-        Timer
-      </h2>
-      <div className="mt-3 flex flex-wrap items-end gap-3">
-        <div className="flex min-w-0 flex-col gap-1">
-          <label htmlFor="timer-seconds" className="text-sm text-ink-1">
-            Time per question
-          </label>
-          <select
-            id="timer-seconds"
-            value={valueOf(current)}
-            disabled={busy}
-            aria-describedby="timer-hint"
-            onChange={(event) =>
-              onChoose(event.target.value === OFF ? null : Number(event.target.value))
-            }
-            className="tap-target min-w-40 rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 hover:border-line-strong"
-          >
-            {TIMER_CHOICES.map((choice) => (
-              <option key={valueOf(choice)} value={valueOf(choice)}>
-                {CHOICE_LABELS[valueOf(choice)]}
-              </option>
-            ))}
-            {unlisted ? <option value={valueOf(current)}>{current} seconds</option> : null}
-          </select>
-        </div>
-        {onItem ? (
-          <>
-            <Button
-              disabled={busy || !canRunHostCommand(state, "extend_timer")}
-              onClick={() => onCommand("extend_timer")}
-            >
-              Add 15 seconds
-            </Button>
-            <Button
-              disabled={busy || !canRunHostCommand(state, "stop_timer")}
-              onClick={() => onCommand("stop_timer")}
-            >
-              Stop timer
-            </Button>
-          </>
-        ) : null}
-      </div>
-      <p id="timer-hint" className="mt-2 text-sm text-ink-2">
+    <div className={`flex max-w-80 flex-col gap-2 ${className}`.trim()}>
+      <label htmlFor="timer-seconds" className="text-sm font-medium text-ink-1">
+        Time per question
+      </label>
+      <select
+        id="timer-seconds"
+        value={valueOf(current)}
+        disabled={busy}
+        aria-describedby="timer-hint"
+        onChange={(event) =>
+          onChoose(event.target.value === OFF ? null : Number(event.target.value))
+        }
+        className={fieldClasses("px-3 text-base")}
+      >
+        {TIMER_CHOICES.map((choice) => (
+          <option key={valueOf(choice)} value={valueOf(choice)}>
+            {CHOICE_LABELS[valueOf(choice)]}
+          </option>
+        ))}
+        {unlisted ? <option value={valueOf(current)}>{current} seconds</option> : null}
+      </select>
+      <p id="timer-hint" className="text-sm text-ink-2">
         {onItem
           ? "A new time applies from the next question."
-          : "When time is up, answers stop. You still move the class on."}
+          : "You can add time or stop the timer during a question."}
       </p>
-    </section>
+    </div>
+  );
+}
+
+export interface TimerButtonsProps {
+  state: LiveSessionState;
+  busy: boolean;
+  onCommand: (command: TimerCommand) => void;
+}
+
+/**
+ * "Add 15 seconds" and "Stop timer", for the question showing (WCAG 2.2.1: extending is one tap
+ * away). Greyed out by the same reducer that would refuse them.
+ */
+export function TimerButtons({ state, busy, onCommand }: TimerButtonsProps) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      <Button
+        disabled={busy || !canRunHostCommand(state, "extend_timer")}
+        onClick={() => onCommand("extend_timer")}
+      >
+        Add 15 seconds
+      </Button>
+      <Button
+        disabled={busy || !canRunHostCommand(state, "stop_timer")}
+        onClick={() => onCommand("stop_timer")}
+      >
+        Stop timer
+      </Button>
+    </div>
   );
 }

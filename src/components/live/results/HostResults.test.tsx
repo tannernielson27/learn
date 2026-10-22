@@ -89,9 +89,27 @@ describe("HostResults (#180)", () => {
   it("marks the correct options only once the answer is showing", async () => {
     const { view, props } = setup();
     await screen.findByText("1 answer counted");
-    expect(screen.queryAllByTestId("result-correct")).toHaveLength(0);
+    const keyRows = () => document.querySelectorAll("li[data-key]");
+    expect(keyRows()).toHaveLength(0);
+    expect(screen.queryByText("Correct")).toBeNull();
     view.rerender(<HostResults {...props} revealed />);
-    await waitFor(() => expect(screen.getAllByTestId("result-correct").length).toBeGreaterThan(0));
+    await waitFor(() => expect(keyRows().length).toBeGreaterThan(0));
+    expect(screen.getAllByText("Correct").length).toBe(keyRows().length);
+  });
+
+  it("draws one-bar-per-option results on the shared chart, lettered in the item's order", async () => {
+    setup();
+    const chart = await screen.findByRole("list", { name: "Options" });
+    expect(chart.querySelectorAll("li")).toHaveLength(item.content.options.length);
+    expect(chart.querySelector("li")).toHaveTextContent(/A\./);
+    expect(screen.getAllByText("1 · 100%").length).toBe(2);
+  });
+
+  it("says the counts are private until the answer is shown", async () => {
+    const { view, props } = setup();
+    expect(await screen.findByText(/Only you see these counts/)).toBeInTheDocument();
+    view.rerender(<HostResults {...props} revealed />);
+    expect(screen.queryByText(/Only you see these counts/)).toBeNull();
   });
 
   it("hides the tallies on request, and remembers it for this session", async () => {
@@ -144,7 +162,7 @@ describe("HostResults (#180)", () => {
       />,
     );
     expect(await screen.findByText("0 answers counted")).toBeInTheDocument();
-    expect(screen.getAllByText("0 of 0 · 0%").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("0 · 0%").length).toBeGreaterThan(0);
   });
 
   it("keeps quiet when an ask fails, rather than erroring on a projector", async () => {

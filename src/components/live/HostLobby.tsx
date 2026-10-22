@@ -1,37 +1,22 @@
 "use client";
 
-import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Countdown } from "@/components/live/Countdown";
-import { ItemStrip } from "@/components/live/ItemStrip";
-import { pollWhileVisible } from "@/components/live/pollWhileVisible";
-import { ProgressBoard } from "@/components/live/ProgressBoard";
-import { Roster } from "@/components/live/Roster";
-import { keepTally } from "@/components/live/sameTally";
-import { TimerControls } from "@/components/live/TimerControls";
-import { HostRecord } from "@/components/live/HostRecord";
-import { HostResults } from "@/components/live/results/HostResults";
-import type { EhrRecord } from "@/lib/ngn/schemas";
-import { Button } from "@/components/ui/Button";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { ControlView } from "@/components/live/control/ControlView";
+import { TALLY_INTERVAL_MS, useHostRoom } from "@/components/live/host/useHostRoom";
 import {
-  canRunHostCommand,
-  isLiveSessionError,
-  isStudentPaced,
-  mergeRoster,
-  type HostCommand,
-  type ItemAggregate,
-  type LiveHostTransport,
-  type LiveSessionState,
-  type RosterEntry,
-  type TimerCommand,
-} from "@/lib/live";
-import { createSupabaseHost } from "@/lib/liveSupabase";
+  controlPath,
+  printedJoinUrl,
+  projectorPath,
+  type LiveView,
+} from "@/components/live/stage/liveView";
+import { StageView } from "@/components/live/stage/StageView";
+import { isStudentPaced, type LiveHostTransport, type LiveSessionState } from "@/lib/live";
 import { runAt, type CaseStudyRun } from "@/lib/live/caseStudyRuns";
-import { asksFirst, commandLabel, offeredCommands, type AskedCommand } from "@/lib/live/controls";
 import { positionLabel } from "@/lib/live/positionLabel";
-import { reportPath } from "@/lib/live/reportFormat";
-import { formatSessionCode } from "@/lib/live/sessionCode";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { controlView, stageView } from "@/lib/live/views";
+import type { EhrRecord } from "@/lib/ngn/schemas";
+
+export { TALLY_INTERVAL_MS };
 
 export interface HostLobbyProps {
   sessionId: string;
@@ -44,6 +29,10 @@ export interface HostLobbyProps {
    * component here so the encoder never ships to the host's browser or re-runs on each render.
    */
   qrCode: ReactNode;
+  /** The projector lobby's join panel (`JoinCode` at stage size), drawn on the server likewise. */
+  stageJoin?: ReactNode;
+  /** Which of the two views to open on: `?view=projector` asks for the projector. */
+  view?: LiveView;
   /** What the server read a moment ago. The console renders from this before it connects. */
   initial: LiveSessionState;
   /** Injectable so this can be driven without Supabase. The page passes nothing. */
@@ -71,59 +60,37 @@ export interface HostLobbyProps {
 /** A room with no case study played in place: one list for every render, so nothing reruns. */
 const NO_RUNS: readonly CaseStudyRun[] = [];
 
-/**
- * How often the console asks for the tally while an item is open (#133).
- *
- * A pull, because ADR 0002 forbids a push per submission: nothing goes out over the channel while
- * a class answers, so the count a host watches has to be asked for. Three seconds is under the
- * time it takes to notice a number is stale and far above the cost — one indexed read of
- * `session_responses` per tick on the host's own connection, and no Realtime message at all. The
- * results panel (#180) asks on the same tick and the transport serves both from that one read
- * (#197), so the panel does not double it. It runs only while the room is on an item, so a
- * lobby, a paused-and-forgotten room and an ended one ask for nothing.
- */
-export const TALLY_INTERVAL_MS = 3_000;
-
-/** What the question says, and what its two buttons say. */
-function question(command: AskedCommand, state: LiveSessionState) {
-  return command === "end"
-    ? {
-        title: "End this live session?",
-        detail: "Students are disconnected and the join code stops working. You can't reopen it.",
-        cancel: "Keep it open",
-      }
-    : {
-        title: `Show answers for all ${questions(state.itemCount)}?`,
-        detail: "Students who haven't finished can't answer any more.",
-        cancel: "Not yet",
-      };
+/** Full screen where the browser allows it; a refusal leaves the projector view in the window. */
+function enterFullScreen() {
+  try {
+    void document.documentElement.requestFullscreen?.().catch(() => {});
+  } catch {
+    // Not offered here (an iframe, an old browser): the window is the stage.
+  }
 }
 
-/** What is in flight: a move, a timer button, a new time per item, or a jump (#183). */
-type Pending = HostCommand | TimerCommand | "set_timer" | "goto";
-
-const OFFLINE = "Live updates stopped. The live session is still open. Reload to catch up.";
-
-/** "1 question", "3 questions". */
-const questions = (count: number): string => (count === 1 ? "1 question" : `${count} questions`);
-const FAILED = "That did not go through. Try again.";
+function leaveFullScreen() {
+  try {
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+  } catch {
+    // Nothing to leave.
+  }
+}
 
 /**
- * The instructor's console: who is in the room, and the moves that take the room through it.
+ * A live session for the teacher, in one of its two views (owner decision 3, one route):
  *
- * **Where each thing on this screen comes from.** The code, the title and the first state are the
- * server's, rendered before any script runs, so a projector shows the join code even if the socket
- * never opens. Everything that changes afterwards comes over `LiveHostTransport` (#131): the
- * roster from Realtime Presence, the state from the mirror of `public.sessions`, and every move
- * from the six methods the state machine allows. This component holds no Supabase call of its own
- * and no rule about what a room may do — `applyHostCommand` decides that, once, in `src/lib/live`.
+ * - the **control view** (`ControlView`): names, controls and the private live counts;
+ * - the **projector view** (`StageView`): what the room sees, with no controls, always light.
  *
- * **Why the buttons are `canRunHostCommand` and not a chain of ifs.** The reducer already knows
- * that a room on its last item cannot advance and that an answer cannot be shown twice; asking it
- * is what keeps the greyed-out button and the refusal the adapter would raise from drifting apart.
+ * Both are fed by `useHostRoom`, the console's one connection to the room, and both are drawn
+ * from `src/lib/live/views.ts`, so the wall and the teacher's screen agree on the phase. A
+ * second window opens `?view=projector` and connects on its own; "Present on this screen"
+ * switches this window in place, full screen where the browser allows, and Escape (or leaving
+ * full screen) comes back. The address follows the view, so a reload keeps it.
  *
- * Keyboard: everything here is a `button` in reading order with the focus ring the base layer
- * gives it. Nothing is a click handler on a div, and nothing needs a pointer.
+ * Keyboard: everything is a native button, link or select in reading order with the focus ring
+ * the base layer gives it. Nothing is a click handler on a div, and nothing needs a pointer.
  */
 export function HostLobby({
   sessionId,
@@ -131,6 +98,8 @@ export function HostLobby({
   code,
   studentUrl,
   qrCode,
+  stageJoin,
+  view: firstView = "control",
   initial,
   connect,
   tallyIntervalMs = TALLY_INTERVAL_MS,
@@ -138,174 +107,51 @@ export function HostLobby({
   record,
   runs = NO_RUNS,
 }: HostLobbyProps) {
-  const [state, setState] = useState<LiveSessionState>(initial);
-  const [roster, setRoster] = useState<RosterEntry[]>([]);
-  const [tally, setTally] = useState<ItemAggregate | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState<Pending | null>(null);
-  const [asking, setAsking] = useState<AskedCommand | null>(null);
-  /** The current item's CJMM step, which a case study's console names (#184). */
-  const [cjmmStep, setCjmmStep] = useState<number | null>(null);
+  const room = useHostRoom({ sessionId, initial, connect, tallyIntervalMs });
+  const [view, setView] = useState<LiveView>(firstView);
+  /** Whether this window went full screen for the projector, so leaving it comes back. */
+  const [presenting, setPresenting] = useState(false);
 
-  const transport = useRef<LiveHostTransport | null>(null);
-  /** Resolves when `open()` has read the room, so a move made in the first second still lands. */
-  const opened = useRef<Promise<unknown> | null>(null);
-
-  const dial = useMemo(
-    () =>
-      connect ?? (() => createSupabaseHost({ client: createSupabaseBrowserClient(), sessionId })),
-    [connect, sessionId],
-  );
-
-  useEffect(() => {
-    const console_ = dial();
-    transport.current = console_;
-    let watching = true;
-
-    const offState = console_.onSessionState((view) => {
-      if (!watching) return;
-      setState(view.state);
-      setCjmmStep(view.item?.cjmmStep ?? null);
-    });
-    const offPresence = console_.onPresence((people) => {
-      if (watching) setRoster((held) => mergeRoster(held, people));
-    });
-    // Pushed once per item change, never once per submission (ADR 0002). The count that moves
-    // while the class answers is the poll below.
-    const offAggregate = console_.onAggregate((aggregate) => {
-      if (watching) setTally(keepTally(aggregate));
-    });
-
-    const open = console_.open().then(
-      (snapshot) => {
-        if (!watching) return;
-        setState(snapshot.state);
-        setCjmmStep(snapshot.item?.cjmmStep ?? null);
-        setRoster((held) => mergeRoster(held, snapshot.roster));
-        setTally(snapshot.aggregate);
-      },
-      () => {
-        // The room itself is fine — it lives in Postgres. What has failed is this screen's
-        // connection to it, and saying so is better than a console that silently stops moving.
-        if (watching) setError(OFFLINE);
-      },
-    );
-    opened.current = open;
-
-    return () => {
-      watching = false;
-      offState();
-      offPresence();
-      offAggregate();
-      // A cleanup cannot await, and a socket that has already dropped must not turn leaving the
-      // console into an unhandled rejection.
-      void console_.close().catch(() => {});
-    };
-  }, [dial]);
-
-  /**
-   * How many answers are in for the item the room is on.
-   *
-   * Asked for rather than waited for, because nothing is pushed while an item is being answered
-   * (ADR 0002) and "three of three answered" is exactly what a host wants before they reveal. It
-   * runs only while the room is on an item — a lobby and an ended session ask for nothing — and
-   * an ask that fails is simply not repeated until the next tick: a count that stops moving for
-   * three seconds is not worth an error on a projector. A hidden tab asks nothing, and asks at
-   * once when it comes back (#323).
-   */
-  const paced = isStudentPaced(state);
-  /** A student-paced room (#185) is on its whole set, never on one item; the board is its view. */
-  const open = state.status === "running" || state.status === "paused";
-  const onAnItem =
-    !paced && state.position !== null && state.status !== "lobby" && state.status !== "ended";
-  useEffect(() => {
-    if (!onAnItem) return;
-    let watching = true;
-    const ask = () => {
-      const console_ = transport.current;
-      if (console_ === null) return;
-      void console_
-        .aggregate()
-        .then((aggregate) => {
-          // An unchanged tally is a new object each poll; keeping the held one skips a render.
-          if (watching && aggregate !== null) setTally(keepTally(aggregate));
-        })
-        .catch(() => {});
-    };
-    const stop = pollWhileVisible(ask, tallyIntervalMs);
-    return () => {
-      watching = false;
-      stop();
-    };
-  }, [onAnItem, state.position, state.reveal, tallyIntervalMs]);
-
-  const perform = useCallback(
-    async (label: Pending, move: (to: LiveHostTransport) => Promise<LiveSessionState>) => {
-      const console_ = transport.current;
-      if (console_ === null) return;
-      setPending(label);
-      setError(null);
+  const show = useCallback(
+    (next: LiveView) => {
+      setView(next);
       try {
-        // The adapter guards against the room it has read, so a button pressed before the first
-        // read came back waits for it rather than being refused for a room that looks empty.
-        await opened.current;
-        setState(await move(console_));
-      } catch (refused) {
-        setError(isLiveSessionError(refused) ? refused.message : FAILED);
-      } finally {
-        setPending(null);
+        window.history.replaceState(
+          null,
+          "",
+          next === "projector" ? projectorPath(sessionId) : controlPath(sessionId),
+        );
+      } catch {
+        // The view still switches; only a reload would forget it.
       }
     },
-    [],
+    [sessionId],
   );
 
-  const run = useCallback(
-    (command: HostCommand | TimerCommand) => perform(command, COMMANDS[command]),
-    [perform],
-  );
-  const jump = useCallback(
-    (position: number) => perform("goto", (to) => to.goto(position)),
-    [perform],
-  );
-  const chooseTime = useCallback(
-    (seconds: number | null) => perform("set_timer", (to) => to.setTimer(seconds)),
-    [perform],
-  );
-  /**
-   * The session's clock for the countdown (#182): the database's, as the console measured it on
-   * opening, so this screen and every phone count down to the same zero. This laptop's own clock
-   * only until the console has opened.
-   */
-  const serverNow = useCallback(() => transport.current?.serverNow() ?? Date.now(), []);
-  /** How the room answered the item it is on (#180), asked for by the results panel. */
-  const askResults = useCallback(() => transport.current?.results() ?? Promise.resolve(null), []);
-  /** Who has answered what (#185), asked for by the student-paced progress board. */
-  const askProgress = useCallback(() => transport.current?.progress() ?? Promise.resolve(null), []);
+  const present = useCallback(() => {
+    show("projector");
+    setPresenting(true);
+    enterFullScreen();
+  }, [show]);
 
-  const ended = state.status === "ended";
-  // A question about a move the room no longer allows (another tab ended it) is not asked.
-  const asked = asking !== null && canRunHostCommand(state, asking) ? asking : null;
-  const askRef = useRef<HTMLDivElement>(null);
+  const exit = useCallback(() => {
+    setPresenting(false);
+    leaveFullScreen();
+    show("control");
+  }, [show]);
+
+  // The browser's own Escape leaves full screen without a keydown reaching the page.
   useEffect(() => {
-    if (asked !== null) askRef.current?.focus();
-  }, [asked]);
+    if (!presenting) return;
+    const onChange = () => {
+      if (!document.fullscreenElement) exit();
+    };
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, [presenting, exit]);
 
-  function press(command: HostCommand) {
-    if (asksFirst(command, state)) setAsking(command);
-    else void run(command);
-  }
-
-  function confirm(command: AskedCommand) {
-    setAsking(null);
-    void run(command);
-  }
-
-  /**
-   * The tally, but only while it is about the item on the screen. A tally for the item the room
-   * has just left is still in hand when `advance` lands, and "5 of 5 answered" above a question
-   * nobody has seen yet is worse than showing nothing for a beat.
-   */
-  const answersOn = tally !== null && tally.position === state.position ? tally : null;
+  const { state } = room;
+  const paced = isStudentPaced(state);
   // A student-paced room (#185) is on no one item, so there is no position to name, and no one
   // case study's step to name either (#469).
   const place = paced ? null : runAt(runs, state.position);
@@ -313,207 +159,53 @@ export function HostLobby({
     ? null
     : positionLabel(state, {
         caseStudy,
-        cjmmStep,
+        cjmmStep: room.cjmmStep,
         run: place && { step: place.step, stepCount: place.run.stepCount },
       });
+  const input = {
+    state,
+    code,
+    names: room.roster.map((entry) => entry.displayName),
+    answered: room.answersOn?.responded ?? null,
+    connection: room.connection,
+    caseStudy,
+    cjmmStep: room.cjmmStep,
+    runs,
+  };
+
+  if (view === "projector") {
+    return (
+      <StageView
+        title={title}
+        code={code}
+        url={printedJoinUrl(studentUrl)}
+        join={stageJoin}
+        room={room}
+        view={stageView(input)}
+        {...(record === undefined ? {} : { record })}
+        runs={runs}
+        intervalMs={tallyIntervalMs}
+        onExit={exit}
+      />
+    );
+  }
 
   return (
-    <>
-      <h1 className="font-read text-3xl break-words text-ink-1">{title}</h1>
-      <p className="mt-1 text-sm text-ink-2">
-        {STATUS_LABEL[state.status]} · {questions(state.itemCount)}
-        {paced ? <> · Student-paced</> : null}
-        {position === null ? null : <> · {position}</>}
-        {state.reveal ? <> · {paced ? "answers showing" : "answer showing"}</> : null}
-      </p>
-      {place === null ? null : (
-        <p data-testid="host-case-study" className="mt-1 text-sm break-words text-ink-2">
-          Case study: <span className="text-ink-1">{place.run.title}</span>
-        </p>
-      )}
-
-      {onAnItem && answersOn !== null ? (
-        <p
-          data-testid="answer-count"
-          aria-live="polite"
-          className="tabular mt-3 text-sm text-ink-1"
-        >
-          {answersOn.responded} of {answersOn.present} answered
-        </p>
-      ) : null}
-
-      {onAnItem ? <Countdown timer={state.timer} now={serverNow} /> : null}
-
-      <section
-        aria-labelledby="code-heading"
-        className="mt-8 rounded-sm border border-line bg-surface-1 px-4 py-6 text-center lg:py-10"
-      >
-        <h2
-          id="code-heading"
-          className="text-sm font-medium tracking-wide text-ink-2 uppercase lg:text-base"
-        >
-          Join code
-        </h2>
-        {ended ? (
-          <>
-            <p data-testid="join-code" className="mt-3 font-mono text-3xl text-ink-2 line-through">
-              {formatSessionCode(code)}
-            </p>
-            <p className="mt-4">
-              <Link
-                href={reportPath(sessionId)}
-                className="tap-target inline-flex items-center font-medium text-accent-ink hover:underline"
-              >
-                Open the report
-              </Link>
-            </p>
-          </>
-        ) : (
-          <>
-            <p
-              data-testid="join-code"
-              className="tabular mt-3 -mr-[0.2em] font-mono text-5xl tracking-[0.2em] text-ink-1 lg:mt-4 lg:-mr-[0.25em] lg:whitespace-nowrap lg:text-8xl lg:tracking-[0.25em]"
-            >
-              {formatSessionCode(code)}
-            </p>
-            {qrCode}
-            <p
-              data-testid="join-url"
-              className="mt-3 font-mono text-sm break-all text-ink-2 lg:mt-4 lg:text-lg"
-            >
-              {studentUrl}
-            </p>
-          </>
-        )}
-      </section>
-
-      {error === null ? null : (
-        <p role="alert" className="mt-6 text-sm text-incorrect">
-          {error}
-        </p>
-      )}
-
-      {ended ? null : asked !== null ? (
-        <div
-          ref={askRef}
-          role="alertdialog"
-          aria-labelledby="ask-heading"
-          tabIndex={-1}
-          className="mt-6 flex flex-col gap-3 rounded-sm border border-line bg-surface-1 p-4"
-        >
-          <p id="ask-heading" className="font-medium text-ink-1">
-            {question(asked, state).title}
-          </p>
-          <p className="text-sm text-ink-2">{question(asked, state).detail}</p>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="primary" disabled={pending !== null} onClick={() => confirm(asked)}>
-              {commandLabel(asked, state)}
-            </Button>
-            <Button variant="ghost" onClick={() => setAsking(null)}>
-              {question(asked, state).cancel}
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="mt-6 flex flex-wrap gap-2">
-          {offeredCommands(state).map((command) => (
-            <Button
-              key={command}
-              variant={command === "start" || command === "advance" ? "primary" : "secondary"}
-              disabled={pending !== null || !canRunHostCommand(state, command)}
-              onClick={() => press(command)}
-            >
-              {commandLabel(command, state)}
-            </Button>
-          ))}
-        </div>
-      )}
-
-      {paced ? null : (
-        <ItemStrip
-          state={state}
-          tally={tally}
-          busy={pending !== null}
-          onGoto={(position) => void jump(position)}
-        />
-      )}
-
-      {ended || paced ? null : (
-        <TimerControls
-          state={state}
-          busy={pending !== null}
-          onChoose={(seconds) => void chooseTime(seconds)}
-          onCommand={(command) => void run(command)}
-        />
-      )}
-
-      {record === undefined ? null : <HostRecord record={record} position={state.position} />}
-      {place?.run.record ? (
-        // The case study's own steps count from its first position: its step is the position
-        // HostRecord marks. Keyed by the case study, so moving to the next one starts its chart
-        // at its own first time and tab.
-        <HostRecord
-          key={place.run.firstPosition}
-          record={place.run.record}
-          position={place.step}
-          title={place.run.title}
-        />
-      ) : null}
-      {paced
-        ? runs.map((run) =>
-            run.record === null ? null : (
-              <HostRecord
-                key={run.firstPosition}
-                record={run.record}
-                position={null}
-                title={run.title}
-                paced
-              />
-            ),
-          )
-        : null}
-
-      <HostResults
-        sessionId={sessionId}
-        ask={askResults}
-        position={state.position}
-        revealed={state.reveal}
-        active={onAnItem}
-        intervalMs={tallyIntervalMs}
-      />
-
-      {paced ? (
-        <ProgressBoard
-          ask={askProgress}
-          itemCount={state.itemCount}
-          active={open}
-          intervalMs={tallyIntervalMs}
-        />
-      ) : null}
-
-      {/* An ended room has no one to wait for, and its join hint would point at a dead code. */}
-      {ended ? null : <Roster roster={roster} />}
-    </>
+    <ControlView
+      sessionId={sessionId}
+      title={title}
+      code={code}
+      studentUrl={studentUrl}
+      qrCode={qrCode}
+      room={room}
+      view={controlView(input)}
+      position={position}
+      place={place}
+      {...(record === undefined ? {} : { record })}
+      runs={runs}
+      intervalMs={tallyIntervalMs}
+      projectorHref={projectorPath(sessionId)}
+      onPresent={present}
+    />
   );
 }
-
-const STATUS_LABEL: Record<LiveSessionState["status"], string> = {
-  lobby: "Waiting to start",
-  running: "Running",
-  paused: "Paused",
-  ended: "Ended",
-};
-
-const COMMANDS: Record<
-  HostCommand | TimerCommand,
-  (to: LiveHostTransport) => Promise<LiveSessionState>
-> = {
-  start: (to) => to.start(),
-  advance: (to) => to.advance(),
-  reveal: (to) => to.reveal(),
-  pause: (to) => to.pause(),
-  resume: (to) => to.resume(),
-  end: (to) => to.end(),
-  extend_timer: (to) => to.extendTimer(),
-  stop_timer: (to) => to.stopTimer(),
-};

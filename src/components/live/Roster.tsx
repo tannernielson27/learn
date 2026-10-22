@@ -1,3 +1,6 @@
+import { WifiOff } from "lucide-react";
+import { Badge } from "@/components/ui/Badge";
+import { Icon } from "@/components/ui/Icon";
 import { countPresent, type RosterEntry } from "@/lib/live";
 
 export interface RosterProps {
@@ -5,7 +8,8 @@ export interface RosterProps {
 }
 
 /**
- * Who is in the room, on the screen at the front of it.
+ * Who is in the session, on the teacher's control view only: the projector shows names in the
+ * lobby on its own, and counts after the start (owner decision 4).
  *
  * Names and nothing else — no scores, no "answered", no join time. The count beside the heading is
  * a polite live region, so a host running the class with a screen reader hears the room fill up
@@ -20,9 +24,12 @@ export function Roster({ roster }: RosterProps) {
   const present = countPresent(roster);
 
   return (
-    <section aria-labelledby="roster-heading" className="mt-8">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 id="roster-heading" className="font-read text-xl text-ink-1">
+    <section
+      aria-labelledby="roster-heading"
+      className="flex min-h-0 flex-col overflow-hidden rounded-md border border-line bg-surface-1"
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-5 pt-5 pb-3">
+        <h2 id="roster-heading" className="font-read text-2xl text-ink-1">
           In this session
         </h2>
         <p data-testid="present-count" aria-live="polite" className="tabular text-sm text-ink-2">
@@ -31,7 +38,7 @@ export function Roster({ roster }: RosterProps) {
           <span
             key={present}
             data-motion="present-count"
-            className="motion-settle inline-block motion-reduce:animate-none"
+            className="motion-settle inline-block font-mono font-bold text-ink-1 motion-reduce:animate-none"
           >
             {present}
           </span>{" "}
@@ -40,21 +47,22 @@ export function Roster({ roster }: RosterProps) {
       </div>
 
       {roster.length === 0 ? (
-        <p className="mt-3 text-sm text-ink-2">Nobody has joined yet.</p>
+        <p className="border-t border-line px-5 py-4 text-sm text-ink-2">Nobody has joined yet.</p>
       ) : (
-        <ul className="mt-3 flex flex-col gap-px overflow-hidden rounded-sm border border-line">
+        <ul className="min-h-0 overflow-y-auto border-t border-line">
           {roster.map((entry) => (
             <li
               key={entry.participantId}
-              className={`motion-enter flex min-h-11 items-center justify-between gap-3 bg-surface-1 px-3 py-2 ${
+              className={`motion-enter flex min-h-12 items-center justify-between gap-3 border-b border-line px-5 py-2 last:border-b-0 ${
                 entry.present ? "text-ink-1" : "text-ink-2"
               }`}
             >
               <span className="min-w-0 truncate">{entry.displayName}</span>
               {entry.present ? null : (
-                <span className="shrink-0 rounded-sm border border-line px-2 py-0.5 text-xs text-ink-2">
+                <Badge className="shrink-0 font-medium">
+                  <Icon icon={WifiOff} className="size-3.5" />
                   Away
-                </span>
+                </Badge>
               )}
             </li>
           ))}
