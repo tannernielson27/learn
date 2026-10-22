@@ -61,6 +61,8 @@ export function Toast({ message, onDismiss, duration = TOAST_MS }: ToastProps) {
       <div
         ref={card}
         popover="manual"
+        // Without the popover API the attribute does nothing, so an empty card would sit on screen.
+        hidden={message === null}
         aria-hidden="true"
         data-testid="toast"
         className="motion-toast fixed inset-x-0 top-auto bottom-(--toast-offset) mx-auto w-fit max-w-[calc(100%-2rem)] rounded-md border border-line bg-surface-1 px-4 py-3 text-base font-semibold text-ink-1 shadow-elevation-1"

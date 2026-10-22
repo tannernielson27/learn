@@ -65,7 +65,12 @@ describe("Toast", () => {
   it("still speaks in a browser without popovers", () => {
     // @ts-expect-error: a browser from before the popover API
     delete HTMLElement.prototype.showPopover;
-    render(<Toast message="Saved" onDismiss={() => {}} />);
+    const { rerender } = render(<Toast message="Saved" onDismiss={() => {}} />);
     expect(screen.getByRole("status")).toHaveTextContent("Saved");
+    // jsdom draws every [popover] as hidden, so the attribute is what can be checked here.
+    expect(screen.getByTestId("toast")).not.toHaveAttribute("hidden");
+    // With no top layer to leave, the card itself must go, or an empty pill stays on screen.
+    rerender(<Toast message={null} onDismiss={() => {}} />);
+    expect(screen.getByTestId("toast")).toHaveAttribute("hidden");
   });
 });

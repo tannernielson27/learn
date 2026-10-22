@@ -3,6 +3,7 @@ import { GuardedLink, LeaveGuardProvider } from "@/components/authoring/LeaveGua
 import { TeacherNav } from "@/components/authoring/TeacherNav";
 import { AccountMenu, MENU_ITEM_CLASSES } from "@/components/ui/AccountMenu";
 import { AppShell, WORDMARK_CLASSES } from "@/components/ui/AppShell";
+import { textLinkClasses } from "@/components/ui/TextLink";
 import { ACCOUNT_PATH } from "@/lib/auth/accountPaths";
 import { shownName } from "@/lib/auth/displayName";
 import { readViewer } from "@/lib/classes/viewer";
@@ -50,7 +51,13 @@ export default async function AuthorLayout({ children }: LayoutProps<"/author">)
                 }
               />
             </>
-          ) : null
+          ) : (
+            // #269: the guides are public, so a viewer who is not signed in (or not yet a teacher,
+            // on /author/no-access) still has the way to them that the menu gives everyone else.
+            <GuardedLink href="/help" className={textLinkClasses({ size: "sm" })}>
+              Help
+            </GuardedLink>
+          )
         }
       >
         {children}

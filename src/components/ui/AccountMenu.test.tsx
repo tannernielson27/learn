@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountMenu, MENU_ITEM_CLASSES } from "./AccountMenu";
@@ -48,6 +48,27 @@ describe("AccountMenu", () => {
     const signOut = screen.getByRole("button", { name: "Sign out", hidden: true });
     expect(signOut).toHaveAttribute("type", "submit");
     expect(signOut.closest("form")).not.toBeNull();
+  });
+
+  it("closes when one of its links is followed, since the layout outlives the navigation", () => {
+    menu();
+    const panel = document.getElementById(
+      screen.getByRole("button", { name: "Account menu" }).getAttribute("popovertarget")!,
+    )!;
+    // jsdom has no popover API; stand in for an open panel.
+    const hide = vi.fn();
+    Object.assign(panel, { hidePopover: hide });
+    const matches = panel.matches.bind(panel);
+    vi.spyOn(panel, "matches").mockImplementation((query) =>
+      query === ":popover-open" ? true : matches(query),
+    );
+    const help = screen.getByRole("link", { name: "Help", hidden: true });
+    help.addEventListener("click", (event) => event.preventDefault());
+
+    fireEvent.click(screen.getByText("The projector view is always light."));
+    expect(hide).not.toHaveBeenCalled();
+    fireEvent.click(help);
+    expect(hide).toHaveBeenCalledTimes(1);
   });
 
   it("sets the theme from the menu, the same store the page boots from", async () => {

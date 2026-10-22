@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useSyncExternalStore, type ReactNode } from "react";
+import { useId, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import {
   THEME_CHOICES,
   applyTheme,
@@ -27,6 +27,14 @@ export interface AccountMenuProps {
   links: ReactNode;
   /** The Server Function that signs out. */
   signOut: (formData: FormData) => void | Promise<void>;
+}
+
+/** Hides the open panel when the click landed on one of its links. */
+function closeOnLink(event: MouseEvent<HTMLElement>) {
+  if (!(event.target instanceof Element) || event.target.closest("a") === null) return;
+  const panel = event.currentTarget.closest("[popover]") as
+    (HTMLElement & { hidePopover?: () => void }) | null;
+  if (panel?.matches(":popover-open")) panel.hidePopover?.();
 }
 
 /**
@@ -75,7 +83,9 @@ export function AccountMenu({ name, initials, links, signOut }: AccountMenuProps
           <p className="px-2 pt-2 text-xs text-ink-2">The projector view is always light.</p>
         </div>
         <hr className="my-1 border-line" />
-        <nav aria-label="Help and account" className="flex flex-col">
+        {/* The layout outlives a client navigation, so a followed link closes the panel itself;
+            otherwise it would stay open, with focus inside it, over the next page. */}
+        <nav aria-label="Help and account" className="flex flex-col" onClick={closeOnLink}>
           {links}
         </nav>
         <form action={signOut}>
