@@ -17,6 +17,7 @@
  * One item or a whole student-paced set is the same work, so both go through here: a room on one
  * item is a set of one, at the position the room is on.
  */
+import { runAt, type CaseStudyRun } from "@/lib/live/caseStudyRuns";
 import type { StartingOrderSeedFor } from "@/lib/ngn/startingOrder";
 import { parseSubmission, revealOf, toKeylessItem, withScoredReveal } from "@/lib/ngn/submit";
 import { recordAtStep, stepAtPosition, type EhrRecordView } from "@/lib/ngn/chartReveal";
@@ -55,6 +56,11 @@ export interface ViewEntriesInput {
   answers: readonly unknown[];
   reveal: boolean;
   startingOrderSeed: StartingOrderSeedFor;
+  /**
+   * The case studies a whole-quiz room plays in place (#469). Each of their steps in the set is
+   * handed its own case study's chart at that step; a loose question none.
+   */
+  runs?: readonly CaseStudyRun[];
 }
 
 /** `unplayable`: an item the room is on is missing, or its stored JSON no longer validates. */
@@ -84,12 +90,14 @@ export function viewEntries(input: ViewEntriesInput): ViewEntriesResult {
     const item = items.get(id);
     if (item === undefined) return { ok: false, reason: "unplayable" };
     const mine = byPosition.get(position) ?? null;
+    const chart = stepRecord(input.runs ?? [], position);
     entries.push({
       position,
       // One starting order per room for an ordered-response item (#219): every phone sees the same.
       item: toKeylessItem(item, input.startingOrderSeed(input.sessionId, item.id)),
       answered: answeredFrom(item, mine),
       revealed: input.reveal ? revealedFrom(item, position, mine) : null,
+      ...(chart === undefined ? {} : { record: chart }),
     });
   }
   return { ok: true, entries };
@@ -100,6 +108,11 @@ export function viewEntries(input: ViewEntriesInput): ViewEntriesResult {
  * with, as it stands at the step the room is on, and nothing a later step brings. A room in its
  * lobby is at step 1. Undefined for a room run from a bank, so its payload is as it always was.
  *
+ * A room run from a quiz that plays case studies in place (#469, `runs`) is on a chart only while
+ * it is on one of their steps: that case study's record at that step. Anywhere else (a loose
+ * question, the lobby, a case study that had no record) it is null, which tells the phone to put
+ * the chart away rather than leave the last one up.
+ *
  * The one place a live record is cut to its step, for both of its readers: the view route, on
  * `open_session_view` and on the calls it replaced alike, and the play page's first paint. So a
  * phone is handed the same chart for the same step whichever way it asked.
@@ -107,8 +120,24 @@ export function viewEntries(input: ViewEntriesInput): ViewEntriesResult {
 export function roomRecord(
   record: EhrRecord | null,
   position: number | null,
-): EhrRecordView | undefined {
+  runs: readonly CaseStudyRun[] = [],
+): EhrRecordView | null | undefined {
+  if (runs.length > 0) return stepRecord(runs, position) ?? null;
   return record === null ? undefined : recordAtStep(record, stepAtPosition(position));
+}
+
+/**
+ * A whole-quiz room's chart at one position of its set (#469): the record of the case study whose
+ * step it is, cut to that step by `recordAtStep`. Undefined on a loose question, and on a step of
+ * a case study that had no record.
+ */
+export function stepRecord(
+  runs: readonly CaseStudyRun[],
+  position: number | null,
+): EhrRecordView | undefined {
+  const place = runAt(runs, position);
+  if (place === null || place.run.record === null) return undefined;
+  return recordAtStep(place.run.record, place.step);
 }
 
 /**

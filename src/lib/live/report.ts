@@ -8,6 +8,18 @@ import { CJMM_STEP_LABELS, type CjmmStep } from "@/lib/ngn/types";
  * narrowed to one session. It decides nothing about who may see them.
  */
 
+/**
+ * The case study a question was a step of, in a session run from a quiz that played it in place
+ * (#469): named as it was when the session started, and the step by its place in the case study.
+ */
+export interface ReportCaseStudy {
+  id: string;
+  title: string;
+  /** 1 to `stepCount`: its place in the case study, counted from the case study's first position. */
+  step: number;
+  stepCount: number;
+}
+
 export interface ReportItemInput {
   /** Where the item sat in the session, counting from 1. */
   position: number;
@@ -16,6 +28,8 @@ export interface ReportItemInput {
   ref: string;
   type: string | null;
   cjmmStep: CjmmStep | null;
+  /** The case study it was a step of (#469), or absent for a loose question. */
+  caseStudy?: ReportCaseStudy | null;
 }
 
 export interface ReportParticipantInput {
@@ -61,6 +75,8 @@ export interface ItemRow {
   ref: string;
   type: string | null;
   cjmmStep: CjmmStep | null;
+  /** The case study it was a step of (#469); null for a loose question. */
+  caseStudy: ReportCaseStudy | null;
   responded: number;
   unanswered: number;
   full: number;
@@ -85,6 +101,64 @@ export interface SessionReport {
   items: ItemRow[];
   students: StudentRow[];
   steps: StepRow[];
+}
+
+/** A case study played in place, as the session's snapshot places it in the set (#469). */
+export interface ReportCaseStudyPlace {
+  caseStudyId: string;
+  title: string;
+  firstPosition: number;
+  stepCount: number;
+}
+
+/**
+ * The items of a session, each step of a case study it played in place marked with its case study
+ * and step (#469). The places come from the session's own snapshot, so a case study renamed or
+ * archived since still reads as it was played. An item outside every place is left as it is.
+ */
+export function inCaseStudies(
+  items: readonly ReportItemInput[],
+  places: readonly ReportCaseStudyPlace[],
+): ReportItemInput[] {
+  return items.map((item) => {
+    const place = places.find(
+      (each) =>
+        item.position >= each.firstPosition && item.position < each.firstPosition + each.stepCount,
+    );
+    if (place === undefined) return item;
+    return {
+      ...item,
+      caseStudy: {
+        id: place.caseStudyId,
+        title: place.title,
+        step: item.position - place.firstPosition + 1,
+        stepCount: place.stepCount,
+      },
+    };
+  });
+}
+
+/**
+ * Items in runs: each case study's steps together under it, and each stretch of loose questions
+ * between them together under null. In set order; what a table groups its rows or columns by.
+ */
+export function groupByCaseStudy<T extends { caseStudy?: ReportCaseStudy | null }>(
+  items: readonly T[],
+): { caseStudy: ReportCaseStudy | null; items: T[] }[] {
+  const groups: { caseStudy: ReportCaseStudy | null; items: T[] }[] = [];
+  for (const item of items) {
+    const caseStudy = item.caseStudy ?? null;
+    const last = groups.at(-1);
+    // A new case study starts at its step 1, so the same case study twice in a row is two groups.
+    const continues =
+      last !== undefined &&
+      (caseStudy === null
+        ? last.caseStudy === null
+        : last.caseStudy !== null && last.caseStudy.id === caseStudy.id && caseStudy.step > 1);
+    if (continues) last.items.push(item);
+    else groups.push({ caseStudy, items: [item] });
+  }
+  return groups;
 }
 
 type ScoreKey = `${string}@${number}`;
@@ -145,6 +219,7 @@ function itemRow(
     ref: item.ref,
     type: item.type,
     cjmmStep: item.cjmmStep,
+    caseStudy: item.caseStudy ? { ...item.caseStudy } : null,
     responded: answers.length,
     unanswered: participants.length - answers.length,
     full: marks.filter((mark) => mark === "full").length,

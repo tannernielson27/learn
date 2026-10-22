@@ -7,7 +7,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { LIVE_KEY_MARKERS, bytesOf, capturedBytes, expectKeyless, wireText } from "./bytes";
-import { signInAsNewAuthor } from "./signIn";
+import { selectAsAdmin, signInAsNewAuthor } from "./signIn";
 
 // #244: what a phone in a live room is handed, on the bytes the built app serves, before and after
 // the reveal. The handler-level tests (supabaseRoom, pacedWire, caseStudyWire) prove the logic
@@ -20,11 +20,16 @@ import { signInAsNewAuthor } from "./signIn";
 // CI runs it in the `auth-e2e` job.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
 
-// supabase/seed.sql. A bank's live set is ordered by creation, then id, and the seed writes every
-// item in one statement, so the MC (…100) is item 1 and the SATA (…101) item 2.
+// supabase/seed.sql. A quiz's live set is in quiz order, and the seed writes every item in one
+// statement, so the MC (…100) is item 1 and the SATA (…101) item 2. The case study comes after
+// them, and since #469 a whole-quiz room plays its six steps (…115 to …120) in its place.
 const SAMPLES_BANK = "00000000-0000-4000-8000-000000000002";
 const SAMPLE_CASE_STUDY = "00000000-0000-4000-8000-000000000003";
 const MC_ITEM = "00000000-0000-4000-8000-000000000100";
+const CASE_STEP_1_ITEM = "00000000-0000-4000-8000-000000000115";
+const CASE_TITLE = "Post-operative day 1: sudden dyspnea after hip arthroplasty";
+/** The seeded record's own words: its patient header's setting. */
+const RECORD_TEXT = "Orthopedic unit";
 const MC_STEM = /gaining 2\.3 kg/;
 const SATA_STEM = /community-acquired pneumonia/;
 const SATA_RATIONALE = "Tachypnea, hypoxemia, and new confusion indicate worsening gas exchange";
@@ -186,6 +191,80 @@ test("a live SATA and a case-study step reach the phone keyless until the reveal
   const stepAfter = await viewBytes(context);
   expect(stepAfter).toContain(CASE_STEP_1_RATIONALE);
   expect(stepAfter).toContain('"answerKey"');
+
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
+  // It asks first; the second press is the one in the question.
+  await page.getByRole("button", { name: "End live session", exact: true }).click();
+  await expect(phone.getByText("This live session has ended.")).toBeVisible({ timeout: 15_000 });
+  await context.close();
+});
+
+test("a whole-quiz room plays its case study in place: the step reaches the phone keyless, with its record", async ({
+  browser,
+  page,
+  request,
+}, testInfo) => {
+  // #469. The bytes are the same whatever the screen, so one project runs it.
+  test.skip(testInfo.project.name !== "phone-375", "the response bytes do not depend on viewport");
+  test.setTimeout(120_000);
+  await signInAsNewAuthor(page, request, "live-bytes-quiz");
+  const origin = new URL(page.url()).origin;
+
+  // The whole Samples quiz, instructor-paced: its loose questions, then the case study's steps.
+  const code = await startRoom(page, `/author/banks/${SAMPLES_BANK}`);
+  const sessionId = new URL(page.url()).pathname.split("/").at(-1) as string;
+  const [session] = await selectAsAdmin<{ item_set: string[] }>(
+    request,
+    "sessions",
+    `select=item_set&id=eq.${sessionId}`,
+  );
+  const stepPosition = (session?.item_set.indexOf(CASE_STEP_1_ITEM) ?? -1) + 1;
+  expect(stepPosition).toBeGreaterThan(1);
+  expect(session?.item_set.slice(stepPosition - 1, stepPosition + 5)).toHaveLength(6);
+
+  const phone = await phoneFor(browser, origin);
+  const context = phone.context();
+  const playPath = await joinRoom(phone, code);
+  await expect(page.getByTestId("present-count")).toHaveText("1 phone connected", {
+    timeout: 15_000,
+  });
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await expect(phone.getByText(MC_STEM)).toBeVisible({ timeout: 15_000 });
+
+  // A loose question has no chart: not on the screen, not in the page, not in the view.
+  await expect(phone.getByRole("button", { name: "Patient record", exact: true })).toHaveCount(0);
+  expect(await bytesOf(context, playPath)).not.toContain(RECORD_TEXT);
+  const loose = await viewBytes(context);
+  expect(loose).toContain('"record":null');
+  expect(loose).not.toContain(RECORD_TEXT);
+
+  // The case study's step 1, at its place in the quiz.
+  await page.getByRole("button", { name: `Go to question ${stepPosition}`, exact: true }).click();
+  await expect(phone.getByText(CASE_STEP_1_STEM)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId("host-case-study")).toHaveText(`Case study: ${CASE_TITLE}`);
+  await expect(
+    page.getByText(`Question ${stepPosition} of ${session?.item_set.length} · Step 1 of 6`, {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expect(phone.getByRole("button", { name: "Patient record", exact: true })).toBeVisible();
+
+  // Before the reveal: the page and the view carry the record, which is not answer-bearing, and
+  // no step's key or rationale.
+  const stepPage = await bytesOf(context, playPath);
+  expect(stepPage).toContain(RECORD_TEXT);
+  expectKeyless(stepPage, [CASE_STEP_1_RATIONALE, MC_RATIONALE], LIVE_KEY_MARKERS);
+  const before = await viewBytes(context);
+  expect(before).toContain("Click to highlight the findings in the 1400 nurses");
+  expect(before).toContain(RECORD_TEXT);
+  expectKeyless(before, [CASE_STEP_1_RATIONALE], LIVE_KEY_MARKERS);
+
+  // The control: after the reveal, the step's key and rationale, to a phone that did not answer.
+  await page.getByRole("button", { name: "Show answer", exact: true }).click();
+  await expect(phone.getByTestId("not-answered")).toBeVisible({ timeout: 15_000 });
+  const after = await viewBytes(context);
+  expect(after).toContain(CASE_STEP_1_RATIONALE);
+  expect(after).toContain('"answerKey"');
 
   await page.getByRole("button", { name: "End live session", exact: true }).click();
   // It asks first; the second press is the one in the question.

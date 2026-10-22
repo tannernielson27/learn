@@ -9,7 +9,7 @@ import { requireAuthor } from "@/lib/authoring/session";
 import { joinUrl } from "@/lib/live/routes";
 import { pacedState } from "@/lib/live/state";
 import { siteOrigin } from "@/lib/http/siteOrigin";
-import { readSessionRecord } from "@/lib/supabase/sessionRecord";
+import { readSessionRecords } from "@/lib/supabase/sessionRecord";
 import { readHostSession } from "@/lib/supabase/sessions";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -34,10 +34,9 @@ export default async function LiveSessionPage({ params }: PageProps<"/live/[sess
   const session = await readHostSession(supabase, sessionId);
   if (!session) notFound();
   // #335: the whole record, for the instructor, with a marker for the class's step. Read with the
-  // service role only now that row level security has said the session is this host's.
-  const record = session.caseStudy
-    ? await readSessionRecord(createSupabaseServiceClient(), session.id)
-    : null;
+  // service role only now that row level security has said the session is this host's. #469: a
+  // whole quiz that plays case studies in place has one per case study instead.
+  const { record, runs } = await readSessionRecords(createSupabaseServiceClient(), session.id);
 
   // Built from the request the host made, so a preview deployment's own address ends up in the
   // picture without anything being configured.
@@ -73,6 +72,7 @@ export default async function LiveSessionPage({ params }: PageProps<"/live/[sess
         }
         caseStudy={session.caseStudy}
         {...(record === null ? {} : { record })}
+        {...(runs.length === 0 ? {} : { runs })}
         initial={pacedState(
           {
             status: session.status,
