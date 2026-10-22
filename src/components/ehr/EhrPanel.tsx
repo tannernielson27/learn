@@ -17,6 +17,19 @@ const DRAWER_QUERY = "(min-width: 768px)";
  */
 const PANE_QUERY = "(min-width: 1024px)";
 
+/*
+ * Inside `RecordLayout` the pane shows once that layout's own container is 900px wide (the
+ * `record` container queries, which come after the breakpoints in the stylesheet and so win). A
+ * panel drawn on its own, with no such container around it, falls back to the window: 1024px.
+ * Written out in full: the stylesheet is built from the class names as they appear in the source.
+ */
+const PANE =
+  "hidden " +
+  "lg:sticky lg:top-0 lg:block lg:max-h-dvh lg:w-[45%] lg:max-w-160 lg:shrink-0 lg:overflow-y-auto lg:border-x lg:border-line lg:bg-surface-1 lg:px-6 lg:pt-5 lg:pb-24 " +
+  "@max-[56.25rem]/record:hidden " +
+  "@min-[56.25rem]/record:sticky @min-[56.25rem]/record:top-0 @min-[56.25rem]/record:block @min-[56.25rem]/record:max-h-dvh @min-[56.25rem]/record:w-[45%] @min-[56.25rem]/record:max-w-160 @min-[56.25rem]/record:shrink-0 @min-[56.25rem]/record:overflow-y-auto @min-[56.25rem]/record:border-x @min-[56.25rem]/record:border-line @min-[56.25rem]/record:bg-surface-1 @min-[56.25rem]/record:px-6 @min-[56.25rem]/record:pt-5 @min-[56.25rem]/record:pb-24";
+const OVERLAY = "lg:hidden @max-[56.25rem]/record:block @min-[56.25rem]/record:hidden";
+
 /** Whether an element is laid out at all: the pane is `display: none` until its container fits it. */
 function useShown(ref: RefObject<HTMLElement | null>): boolean | null {
   const [shown, setShown] = useState<boolean | null>(null);
@@ -141,15 +154,11 @@ export function EhrPanel({ record, previous, openTabId, note, className = "" }: 
   return (
     <>
       {/* Two-pane: the chart scrolls on its own and stops clear of the submit bar. */}
-      <aside
-        ref={paneRef}
-        aria-label={LABEL}
-        className={`hidden @min-[56.25rem]/record:sticky @min-[56.25rem]/record:top-0 @min-[56.25rem]/record:block @min-[56.25rem]/record:max-h-dvh @min-[56.25rem]/record:w-[45%] @min-[56.25rem]/record:max-w-160 @min-[56.25rem]/record:shrink-0 @min-[56.25rem]/record:overflow-y-auto @min-[56.25rem]/record:border-x @min-[56.25rem]/record:border-line @min-[56.25rem]/record:bg-surface-1 @min-[56.25rem]/record:px-6 @min-[56.25rem]/record:pt-5 @min-[56.25rem]/record:pb-24 ${className}`.trim()}
-      >
+      <aside ref={paneRef} aria-label={LABEL} className={`${PANE} ${className}`.trim()}>
         {content}
       </aside>
 
-      <div className="@min-[56.25rem]/record:hidden" onKeyDown={onDrawerKeyDown}>
+      <div className={OVERLAY} onKeyDown={onDrawerKeyDown}>
         <div className="sticky top-0 z-20 border-b border-line bg-surface-1 px-4 py-2">
           <button
             ref={chip}
