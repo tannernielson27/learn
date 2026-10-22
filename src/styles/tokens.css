@@ -1,36 +1,77 @@
 /*
- * LeaRN design tokens — "Clinical Editorial". See docs/04-DESIGN-DIRECTION.md.
- * Light is the primary theme. Dark is a deliberate re-lighting of the same hues.
- * Every color in the app must come from these tokens.
+ * LeaRN design tokens — "Clinical Editorial, stage edition". See docs/04-DESIGN-DIRECTION.md and
+ * docs/ui-overhaul/PLAN.md §4 and §9. Light is the primary theme. Dark is a deliberate re-lighting
+ * of the same hues. Every color in the app must come from these tokens.
+ *
+ * Three layers, and components read only the last two:
+ *
+ *   1. Base: raw oklch ramps. Named by hue and lightness, so a value says what it is. Nothing in a
+ *      component may read these; they exist so the semantic layer has one place to point at.
+ *   2. Semantic: what a color is for (`--surface-*`, `--ink-*`, `--accent*`, `--correct*`, ...),
+ *      re-lit for dark mode. The names and values that were here before the overhaul are kept.
+ *   3. Component: what one component wears (`--field-border`, `--chart-key`, ...), always a
+ *      semantic token or a size, so a theme change reaches it without a line of its own.
+ *
+ * Why the colour layers sit on `:root, [data-theme]` and not on `:root` alone: a custom property
+ * that reads another is worked out where it is declared. The projector stage is a light island
+ * inside whatever theme the page is in (`data-theme="light"` on StageShell), and it only re-lights
+ * if the semantic and component layers are declared again on that element.
  */
 
+/* 1. Base ---------------------------------------------------------------------------------- */
 :root {
-  color-scheme: light dark;
+  /* Warm paper */
+  --paper-98: oklch(98.5% 0.004 85);
+  --paper-96: oklch(96% 0.006 85);
+  --paper-94: oklch(94% 0.005 85);
+  --paper-88: oklch(88% 0.006 85);
+  --white: oklch(100% 0 0);
 
-  /* Surfaces and ink */
-  --surface-0: oklch(98.5% 0.004 85);
-  --surface-1: oklch(100% 0 0);
-  --surface-2: oklch(96% 0.006 85);
-  --ink-1: oklch(20% 0.01 260);
-  --ink-2: oklch(44% 0.012 260);
-  --line: oklch(88% 0.006 85);
-  --line-strong: oklch(72% 0.01 260);
-  /* A text field's edge: 3:1 against the field and the page (WCAG 1.4.11). */
-  --line-field: oklch(62% 0.01 260);
+  /* Cool neutrals, by lightness */
+  --neutral-15: oklch(15% 0.01 260);
+  --neutral-16: oklch(16% 0.02 260);
+  --neutral-18: oklch(18% 0.01 260);
+  --neutral-20: oklch(20% 0.01 260);
+  --neutral-22: oklch(22% 0.01 260);
+  --neutral-26: oklch(26% 0.014 260);
+  --neutral-27: oklch(27% 0.012 260);
+  --neutral-32: oklch(32% 0.012 260);
+  --neutral-44: oklch(44% 0.012 260);
+  --neutral-48: oklch(48% 0.012 260);
+  --neutral-56: oklch(56% 0.012 260);
+  --neutral-62: oklch(62% 0.01 260);
+  --neutral-72: oklch(72% 0.01 260);
+  --neutral-80: oklch(80% 0.006 260);
+  --neutral-955: oklch(95.5% 0.006 260);
+  --neutral-99: oklch(99% 0 0);
 
-  /* Clinical blue: interaction and selection only */
-  --accent: oklch(44% 0.12 250);
-  --accent-ink: oklch(38% 0.12 250);
-  --accent-soft: oklch(94% 0.03 250);
-  --accent-contrast: oklch(99% 0 0);
+  /* Clinical blue */
+  --blue-30: oklch(30% 0.05 250);
+  --blue-38: oklch(38% 0.12 250);
+  --blue-44: oklch(44% 0.12 250);
+  --blue-76: oklch(76% 0.1 250);
+  --blue-82: oklch(82% 0.09 250);
+  --blue-94: oklch(94% 0.03 250);
 
-  /* Feedback semantics: appear only in feedback mode */
-  --correct: oklch(50% 0.13 150);
-  --correct-soft: oklch(95% 0.04 150);
-  --incorrect: oklch(50% 0.17 25);
-  --incorrect-soft: oklch(95% 0.03 25);
-  --flag: oklch(62% 0.13 75);
-  --flag-soft: oklch(96% 0.05 85);
+  /* Feedback hues */
+  --green-27: oklch(27% 0.04 150);
+  --green-50: oklch(50% 0.13 150);
+  --green-76: oklch(76% 0.13 150);
+  --green-95: oklch(95% 0.04 150);
+  --red-28: oklch(28% 0.04 25);
+  --red-50: oklch(50% 0.17 25);
+  --red-74: oklch(74% 0.15 25);
+  --red-95: oklch(95% 0.03 25);
+  --amber-28: oklch(28% 0.04 80);
+  --amber-45: oklch(45% 0.1 70);
+  --amber-62: oklch(62% 0.13 75);
+  --amber-78: oklch(78% 0.12 80);
+  --amber-84: oklch(84% 0.1 80);
+  --amber-96: oklch(96% 0.05 85);
+
+  /* Shadow tints */
+  --shade-light: oklch(20% 0.01 260 / 0.06);
+  --shade-dark: oklch(0% 0 0 / 0.4);
 
   /*
    * A QR code is read by a camera, not by a person, so it is the one mark in the system that does
@@ -52,8 +93,11 @@
   --text-xl: 1.375rem;
   --text-2xl: 1.75rem;
   --text-3xl: 2.25rem;
+  /* Fluid headings, rem-bounded (WCAG 1.4.4: never a viewport-only size, max at most 2.5x min). */
+  --text-display: clamp(1.75rem, 1.4rem + 1.2vw, 2.5rem);
+  --text-title: clamp(1.375rem, 1.2rem + 0.6vw, 1.75rem);
 
-  /* Space */
+  /* Space: an 8pt grid; 4 and 12 are for inside components */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -61,6 +105,8 @@
   --space-6: 1.5rem;
   --space-8: 2rem;
   --space-12: 3rem;
+  --space-16: 4rem;
+  --space-24: 6rem;
 
   /* Shape: two radii only */
   --radius-sm: 4px;
@@ -81,54 +127,185 @@
   /* Layout */
   --tap-min: 44px;
   --measure: 68ch;
+  /* AppShell's content widths: today's reading column, the wide pages, and no cap at all. */
+  --content-reading: 48rem;
+  --content-wide: 75rem;
 }
 
+/* 2. Semantic, light (the default, and any element marked `data-theme="light"`) -------------- */
+:root,
+[data-theme="light"] {
+  color-scheme: light dark;
+
+  /* Surfaces and ink */
+  --surface-0: var(--paper-98);
+  --surface-1: var(--white);
+  --surface-2: var(--paper-96);
+  --ink-1: var(--neutral-20);
+  --ink-2: var(--neutral-44);
+  --line: var(--paper-88);
+  --line-strong: var(--neutral-72);
+  /* A text field's edge: 3:1 against the field and the page (WCAG 1.4.11). */
+  --line-field: var(--neutral-62);
+
+  /* Clinical blue: interaction and selection only */
+  --accent: var(--blue-44);
+  --accent-ink: var(--blue-38);
+  --accent-soft: var(--blue-94);
+  --accent-contrast: var(--neutral-99);
+
+  /* Feedback semantics: appear only in feedback mode */
+  --correct: var(--green-50);
+  --correct-soft: var(--green-95);
+  --incorrect: var(--red-50);
+  --incorrect-soft: var(--red-95);
+  /* Flag: a flagged item, and a timer's last ten seconds (with the words, never colour alone). */
+  --flag: var(--amber-62);
+  /* Flag as text: --flag itself is 3.7:1 on white, UI only. */
+  --flag-ink: var(--amber-45);
+  --flag-soft: var(--amber-96);
+
+  /* System messages: neutral ink on a cool grey, never feedback red. */
+  --notice: var(--neutral-20);
+  --notice-soft: var(--neutral-955);
+
+  /* The one shadow: a dragged token, a dialog, a toast. */
+  --elevation-1: 0 1px 2px var(--shade-light), 0 4px 12px var(--shade-light);
+
+  /*
+   * The projector stage is always light (projectors cannot make black; dark slides wash out in a
+   * lit room), so these four are the same in both themes and are not restated below.
+   */
+  --stage-surface: var(--white);
+  --stage-ink: var(--neutral-15);
+  --stage-line: var(--neutral-80);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* 2. Semantic, dark ------------------------------------------------------------------------- */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --surface-0: oklch(18% 0.01 260);
-    --surface-1: oklch(22% 0.01 260);
-    --surface-2: oklch(27% 0.012 260);
-    --ink-1: oklch(94% 0.005 85);
-    --ink-2: oklch(72% 0.01 260);
-    --line: oklch(32% 0.012 260);
-    --line-strong: oklch(48% 0.012 260);
-    --line-field: oklch(56% 0.012 260);
+    --surface-0: var(--neutral-18);
+    --surface-1: var(--neutral-22);
+    --surface-2: var(--neutral-27);
+    --ink-1: var(--paper-94);
+    --ink-2: var(--neutral-72);
+    --line: var(--neutral-32);
+    --line-strong: var(--neutral-48);
+    --line-field: var(--neutral-56);
 
-    --accent: oklch(76% 0.1 250);
-    --accent-ink: oklch(82% 0.09 250);
-    --accent-soft: oklch(30% 0.05 250);
-    --accent-contrast: oklch(16% 0.02 260);
+    --accent: var(--blue-76);
+    --accent-ink: var(--blue-82);
+    --accent-soft: var(--blue-30);
+    --accent-contrast: var(--neutral-16);
 
-    --correct: oklch(76% 0.13 150);
-    --correct-soft: oklch(27% 0.04 150);
-    --incorrect: oklch(74% 0.15 25);
-    --incorrect-soft: oklch(28% 0.04 25);
-    --flag: oklch(78% 0.12 80);
-    --flag-soft: oklch(28% 0.04 80);
+    --correct: var(--green-76);
+    --correct-soft: var(--green-27);
+    --incorrect: var(--red-74);
+    --incorrect-soft: var(--red-28);
+    --flag: var(--amber-78);
+    --flag-ink: var(--amber-84);
+    --flag-soft: var(--amber-28);
+
+    --notice: var(--paper-94);
+    --notice-soft: var(--neutral-26);
+
+    --elevation-1: 0 1px 2px var(--shade-dark), 0 4px 12px var(--shade-dark);
   }
 }
 
 :root[data-theme="dark"] {
-  --surface-0: oklch(18% 0.01 260);
-  --surface-1: oklch(22% 0.01 260);
-  --surface-2: oklch(27% 0.012 260);
-  --ink-1: oklch(94% 0.005 85);
-  --ink-2: oklch(72% 0.01 260);
-  --line: oklch(32% 0.012 260);
-  --line-strong: oklch(48% 0.012 260);
-  --line-field: oklch(56% 0.012 260);
+  --surface-0: var(--neutral-18);
+  --surface-1: var(--neutral-22);
+  --surface-2: var(--neutral-27);
+  --ink-1: var(--paper-94);
+  --ink-2: var(--neutral-72);
+  --line: var(--neutral-32);
+  --line-strong: var(--neutral-48);
+  --line-field: var(--neutral-56);
 
-  --accent: oklch(76% 0.1 250);
-  --accent-ink: oklch(82% 0.09 250);
-  --accent-soft: oklch(30% 0.05 250);
-  --accent-contrast: oklch(16% 0.02 260);
+  --accent: var(--blue-76);
+  --accent-ink: var(--blue-82);
+  --accent-soft: var(--blue-30);
+  --accent-contrast: var(--neutral-16);
 
-  --correct: oklch(76% 0.13 150);
-  --correct-soft: oklch(27% 0.04 150);
-  --incorrect: oklch(74% 0.15 25);
-  --incorrect-soft: oklch(28% 0.04 25);
-  --flag: oklch(78% 0.12 80);
-  --flag-soft: oklch(28% 0.04 80);
+  --correct: var(--green-76);
+  --correct-soft: var(--green-27);
+  --incorrect: var(--red-74);
+  --incorrect-soft: var(--red-28);
+  --flag: var(--amber-78);
+  --flag-ink: var(--amber-84);
+  --flag-soft: var(--amber-28);
+
+  --notice: var(--paper-94);
+  --notice-soft: var(--neutral-26);
+
+  --elevation-1: 0 1px 2px var(--shade-dark), 0 4px 12px var(--shade-dark);
+}
+
+/* 3. Component ------------------------------------------------------------------------------ */
+:root,
+[data-theme] {
+  /* A field's and a secondary button's edge: the 3:1 line, never the 1.4:1 divider. */
+  --field-border: var(--line-field);
+  --button-height-md: var(--tap-min);
+  --button-height-lg: 3.5rem;
+  --option-min-height: 3.5rem;
+  --submitbar-height: 5rem;
+  /* The results chart: one neutral hue for every bar; the key gets the correct fill and more. */
+  --chart-bar: var(--line-field);
+  --chart-track: var(--surface-2);
+  --chart-key: var(--correct);
+  --chart-key-outline: 3px;
+  --joincode-size: var(--text-3xl);
+  --joincode-size-stage: var(--text-stage-code);
+  --toast-offset: var(--space-4);
+
+  /*
+   * The projector ladder (PLAN §6), in container units of the stage (StageShell is a
+   * `container-type: size` region) with rem floors, so a laptop zooms and a projector scales.
+   * Sizes are for a 1080px-tall stage. Every clamp keeps its max within 2.5x its min. The teacher's
+   * text size control sets `--stage-scale` on the stage; it multiplies all three terms, so the ratio
+   * holds. They sit in this layer, not the base, so that a `--stage-scale` set on StageShell reaches
+   * them: a custom property's own `var()`s are worked out where it is declared.
+   */
+  --stage-scale: 1;
+  --text-stage-code: clamp(
+    calc(4rem * var(--stage-scale)),
+    calc(15cqb * var(--stage-scale)),
+    calc(10rem * var(--stage-scale))
+  );
+  --text-stage-stem: clamp(
+    calc(2rem * var(--stage-scale)),
+    calc(6cqb * var(--stage-scale)),
+    calc(5rem * var(--stage-scale))
+  );
+  --text-stage-option: clamp(
+    calc(1.75rem * var(--stage-scale)),
+    calc(4.5cqb * var(--stage-scale)),
+    calc(4.375rem * var(--stage-scale))
+  );
+  --text-stage-number: clamp(
+    calc(2.5rem * var(--stage-scale)),
+    calc(9cqb * var(--stage-scale)),
+    calc(6.25rem * var(--stage-scale))
+  );
+  --text-stage-label: clamp(
+    calc(2rem * var(--stage-scale)),
+    calc(3cqb * var(--stage-scale)),
+    calc(5rem * var(--stage-scale))
+  );
+  /* 60px and 80px of safe area on a 1920x1080 stage, scaled with it. */
+  --stage-pad-block: max(1rem, 5.5556cqb);
+  --stage-pad-inline: max(1.5rem, 4.1667cqi);
+  --stage-stroke: 3px;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -22,6 +22,16 @@
   --color-incorrect-soft: var(--incorrect-soft);
   --color-flag: var(--flag);
   --color-flag-soft: var(--flag-soft);
+  --color-flag-ink: var(--flag-ink);
+  --color-notice: var(--notice);
+  --color-notice-soft: var(--notice-soft);
+  --color-chart-bar: var(--chart-bar);
+  --color-chart-track: var(--chart-track);
+  --color-chart-key: var(--chart-key);
+  --color-field-border: var(--field-border);
+  --color-stage-surface: var(--stage-surface);
+  --color-stage-ink: var(--stage-ink);
+  --color-stage-line: var(--stage-line);
   --color-transparent: transparent;
   --color-current: currentColor;
 
@@ -35,6 +45,28 @@
   --radius-full: 9999px;
 
   --ease-out-expo: var(--ease-out-expo);
+
+  /* The one shadow (PLAN §9). Tailwind's own shadow scale is left as it was until Phase D
+     retires its last two uses. */
+  --shadow-elevation-1: var(--elevation-1);
+
+  /* Fluid headings and the projector ladder: `text-display`, `text-stage-stem`, ... */
+  --text-display: var(--text-display);
+  --text-title: var(--text-title);
+  --text-stage-code: var(--text-stage-code);
+  --text-stage-stem: var(--text-stage-stem);
+  --text-stage-option: var(--text-stage-option);
+  --text-stage-number: var(--text-stage-number);
+  --text-stage-label: var(--text-stage-label);
+
+  /* Content widths for AppShell: `max-w-reading`, `max-w-wide`. */
+  --container-reading: var(--content-reading);
+  --container-wide: var(--content-wide);
+
+  /* M3 window size classes (PLAN §6): sm 640, md 768, lg 1024 as Tailwind has them, plus
+     xl 1280 (large) and 2xl 1600 (extra-large). */
+  --breakpoint-xl: 80rem;
+  --breakpoint-2xl: 100rem;
 }
 
 @utility duration-fast {
