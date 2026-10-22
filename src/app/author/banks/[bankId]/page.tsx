@@ -163,7 +163,8 @@ export default async function BankPage({
   const canMoveToQuiz = knowsUses && otherQuizzes.length > 0 && hasContent;
   const canMove = (inQuizFolders && hasContent) || canMoveToQuiz;
   // #471: current rows archive from the list, one by one or selected; the Archived view restores.
-  const canArchive = !archived && hasContent;
+  // The form stays when the list is empty, so archiving the last rows still says what happened.
+  const canArchive = !archived;
   const selectionFormId = canMove || canArchive ? MOVE_FORM_ID : undefined;
   const archiveFormId = canArchive ? MOVE_FORM_ID : undefined;
   // #266: what each list says when it is empty, most specific reason first.
@@ -300,6 +301,7 @@ export default async function BankPage({
                 staysBehind={keptLines}
                 archive={canArchive ? archiveSelectedAction.bind(null, bank.id) : undefined}
                 archivedHref={bankViewHref(bank.id, view, { ...filter, status: "archived" })}
+                hasRows={hasContent}
               />
             ) : null}
             <ItemList

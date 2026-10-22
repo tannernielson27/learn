@@ -58,6 +58,7 @@ export function useArchiveSelected(
   action: ArchiveSelectedAction | undefined,
   formRef: RefObject<HTMLFormElement | null>,
   archivedHref: string | undefined,
+  hasRows = true,
 ) {
   const [state, run, pending] = useActionState(action ?? idle, IDLE);
   const [asking, setAsking] = useState<Asking | null>(null);
@@ -114,11 +115,13 @@ export function useArchiveSelected(
 
   const controls = action ? (
     <div className="flex flex-col gap-2">
-      <div>
-        <Button size="sm" onClick={askSelected} disabled={pending}>
-          Archive selected
-        </Button>
-      </div>
+      {hasRows ? (
+        <div>
+          <Button size="sm" onClick={askSelected} disabled={pending}>
+            Archive selected
+          </Button>
+        </div>
+      ) : null}
       {problem ? (
         <p role="alert" className="text-sm text-incorrect">
           {problem}

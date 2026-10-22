@@ -184,4 +184,32 @@ describe("QuizMoveForm: archive", () => {
     const outcome = await screen.findByRole("status");
     expect(within(outcome).getAllByRole("listitem")).toHaveLength(1);
   });
+
+  it("keeps saying what was archived once the list is empty, with no Archive selected", async () => {
+    const archive = vi.fn<Archive>(async () => done("Archived 1 question."));
+    const { rerender } = draw(archive);
+    await userEvent.click(screen.getByRole("button", { name: "Archive Pain" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Archive" }),
+    );
+    await screen.findByRole("status");
+    // The page refreshes with nothing left to select: the outcome and its link must survive it.
+    rerender(
+      <>
+        <QuizMoveForm
+          id={FORM}
+          folders={[]}
+          quizzes={[]}
+          staysBehind={[]}
+          archive={archive}
+          archivedHref={ARCHIVED_HREF}
+          hasRows={false}
+        />
+        <ul />
+      </>,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("Archived 1 question.");
+    expect(screen.getByRole("link", { name: "Show archived" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Archive selected" })).toBeNull();
+  });
 });

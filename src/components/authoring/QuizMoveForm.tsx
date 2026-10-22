@@ -28,6 +28,12 @@ export interface QuizMoveFormProps {
   archive?: ArchiveSelectedAction;
   /** The Archived view, linked from what an archive says. */
   archivedHref?: string;
+  /**
+   * Whether the lists hold any rows to select. False after the last ones were archived: the form
+   * stays, so what the archive said and its link to Archived outlive the refresh that emptied
+   * the lists, but there is nothing left to Archive selected.
+   */
+  hasRows?: boolean;
 }
 
 const INITIAL: FolderFormState = { status: "idle" };
@@ -71,6 +77,7 @@ export function QuizMoveForm({
   staysBehind,
   archive,
   archivedHref,
+  hasRows = true,
 }: QuizMoveFormProps) {
   const [folderState, folderAction, folderPending] = useActionState(moveToFolder ?? idle, INITIAL);
   const [quizState, quizAction, quizPending] = useActionState(moveToQuiz ?? idle, INITIAL);
@@ -78,7 +85,7 @@ export function QuizMoveForm({
   // A refusal before asking: which field it is about, so only that one is marked invalid.
   const [problem, setProblem] = useState<{ quiz: boolean; message: string } | undefined>(undefined);
   const formRef = useRef<HTMLFormElement>(null);
-  const archiving = useArchiveSelected(archive, formRef, archivedHref);
+  const archiving = useArchiveSelected(archive, formRef, archivedHref, hasRows);
   const uid = useId();
   const byFolder = folders.length > 0 && moveToFolder !== undefined;
   const byQuiz = quizzes.length > 0 && moveToQuiz !== undefined;
