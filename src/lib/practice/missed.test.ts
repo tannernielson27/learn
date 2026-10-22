@@ -265,4 +265,15 @@ describe("startMissedPractice", () => {
       },
     );
   });
+
+  it("refuses rather than starts when the limiter cannot answer, since each start writes a run", async () => {
+    const store = fakeStore();
+    const down = {
+      hit: () => Promise.reject(new Error("limiter down")),
+    } as unknown as ReturnType<typeof createMemoryRateLimitStore>;
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(await startMissedPractice(store, down, STUDENT, { kind: "run", runId: RUN })).toEqual({
+      kind: "rate_limited",
+    });
+  });
 });

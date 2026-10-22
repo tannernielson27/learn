@@ -114,14 +114,24 @@ async function fromAssignment(
   return settled(await store.fromAssignment(student, assignmentId, missed, view.bestAttemptId));
 }
 
-/** Starts a run of the missed questions. Counted against `practice_start`, failing open. */
+/**
+ * Starts a run of the missed questions. Counted against `practice_start`, and unlike the other
+ * practice limits it fails closed: each start writes a whole new run (security review, 2026-10-22).
+ */
 export async function startMissedPractice(
   store: MissedStore,
   limiter: RateLimitStore,
   student: string,
   source: MissedSourceRef,
 ): Promise<StartMissedOutcome> {
-  if (!(await takePracticeLimit(limiter, "practice_start", student, PRACTICE_START_LIMIT))) {
+  const within = await takePracticeLimit(
+    limiter,
+    "practice_start",
+    student,
+    PRACTICE_START_LIMIT,
+    "refuse",
+  );
+  if (!within) {
     return { kind: "rate_limited" };
   }
   return source.kind === "run"

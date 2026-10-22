@@ -35,6 +35,13 @@ describe("stageQuestion", () => {
     expect(text).not.toContain("correctOptionId");
     expect(text).not.toContain(mc.rationale.general?.value ?? "no rationale");
   });
+
+  it.each([mc, sata, matrix])("has no key, rationale or scoring field for $type", (item) => {
+    const text = JSON.stringify(stageQuestion(item));
+    for (const field of ["answerKey", "rationale", "scoring", "correct"]) {
+      expect(text).not.toContain(field);
+    }
+  });
 });
 
 describe("stageRationale", () => {

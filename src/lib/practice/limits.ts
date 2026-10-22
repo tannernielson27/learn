@@ -20,21 +20,27 @@ export const PRACTICE_START_LIMIT: Readonly<RateLimit> = { attempts: 10, windowM
 
 export type PracticeBucket = Extract<RateLimitBucket, "practice_answer" | "practice_start">;
 
-/** Counts one hit for the student. True when within the limit, or when the limiter is down. */
+/**
+ * Counts one hit for the student. True when within the limit. When the limiter is down, true
+ * (fail open) unless `whenDown` is "refuse": a missed-questions run copies up to a thousand items
+ * per start and can seed the next one, so an unlimited loop of those is not cheap.
+ */
 export async function takePracticeLimit(
   store: RateLimitStore,
   bucket: PracticeBucket,
   studentId: string,
   limit: Readonly<RateLimit>,
+  whenDown: "allow" | "refuse" = "allow",
 ): Promise<boolean> {
   try {
     return await store.hit(bucket, studentId, limit);
   } catch (error) {
+    const allow = whenDown === "allow";
     // Never the student id: the message says which limit, and why, and nothing about who.
-    console.warn("[practice] the rate limiter could not answer; allowing the request", {
-      bucket,
-      reason: error instanceof Error ? error.name : "unknown",
-    });
-    return true;
+    console.warn(
+      `[practice] the rate limiter could not answer; ${allow ? "allowing" : "refusing"} the request`,
+      { bucket, reason: error instanceof Error ? error.name : "unknown" },
+    );
+    return allow;
   }
 }
