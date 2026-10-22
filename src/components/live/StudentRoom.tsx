@@ -1,32 +1,31 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnswerSentLine } from "@/components/live/AnswerSentLine";
-import { Countdown } from "@/components/live/Countdown";
 import { LIVE_BUSY_LABEL, liveSubmitFailure } from "@/components/live/liveSubmit";
-import { useShowLiveRecord } from "@/components/live/LiveRecord";
-import { createPresentCount, RoomCount } from "@/components/live/RoomCount";
+import { PhoneHeader } from "@/components/live/phone/PhoneHeader";
+import {
+  PhoneEnded,
+  PhoneMessage,
+  PhoneRefused,
+  PhoneWaiting,
+} from "@/components/live/phone/PhoneStates";
+import { ReconnectingBanner } from "@/components/live/phone/ReconnectingBanner";
+import { RevealedItem, refuseSecondAnswer } from "@/components/live/phone/RevealedItem";
+import { useStudentRoom } from "@/components/live/phone/useStudentRoom";
+import { RoomCount } from "@/components/live/RoomCount";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
+import { Button } from "@/components/ui/Button";
 // Module by module rather than through `@/lib/live` and `@/lib/liveSupabase`: those barrels
 // value-export the in-memory room and the host console, both of which hold items with their keys
 // and import the scoring engine. This is the one screen a student loads, so it takes only what it
 // uses (ADR 0003, `src/components/question/noClientScoring.test.ts`).
-import { isLiveSessionError } from "@/lib/live/errors";
 import type { LiveSessionState } from "@/lib/live/state";
-import { toScoreReveal, type ItemReveal, type ParticipantItem } from "@/lib/live/transport";
-import { waitingCopy } from "@/lib/live/waiting";
-import {
-  createSupabaseParticipant,
-  type RoomConnection,
-  type StudentView,
-  type SupabaseParticipant,
-} from "@/lib/liveSupabase/participantTransport";
-import { createChannelTokenSource } from "@/lib/liveSupabase/channelTokenSource";
-import type { AnsweredPayload, ChannelCredential } from "@/lib/liveSupabase/wire";
-import type { AnyResponse } from "@/lib/ngn/schemas";
-import type { ScoreReveal, SubmitHandler } from "@/lib/ngn/submit";
-import { createSupabaseChannelClient } from "@/lib/supabase/browser";
+import type { LiveConnection } from "@/lib/live/transport";
+import { phoneView, type PhoneSettledView } from "@/lib/live/views";
+import type { RoomConnection, SupabaseParticipant } from "@/lib/liveSupabase/participantTransport";
+import type { ChannelCredential } from "@/lib/liveSupabase/wire";
+
+export { RevealedItem, refuseSecondAnswer };
 
 export interface StudentRoomProps {
   sessionId: string;
@@ -49,405 +48,224 @@ export interface StudentRoomProps {
 
 const SENT = "Answer sent.";
 const LATE = "Your answer was not taken.";
-const NOT_ANSWERED = "You did not answer this question.";
 
 /**
- * A student's phone during a live session (#132, #133).
+ * The room's connection in the words the phone's states use. Still connecting is shown as
+ * connected: the first paint is the server's own, and a banner over it would only flash.
+ */
+function liveConnection(connection: RoomConnection): LiveConnection {
+  return connection === "reconnecting" ? "reconnecting" : "connected";
+}
+
+/**
+ * A student's phone during a live session (#132, #133), in the named states of `phoneView`
+ * (`src/lib/live/views.ts`, PLAN §5.6): waiting, answering, answer sent, answer showing, paused,
+ * ended, reconnecting over any of them, and refused. One sentence each, at most one action.
  *
- * **One connection.** #132 gave this screen a presence-and-state connection because the token
- * seam was still open and it could not answer anything. #133 closed that seam, so the screen
- * holds the participant transport itself: the same channel carries presence and the room's moves,
- * and the same object fetches the item and posts the answer. Two connections on one topic would
- * have been two presence entries for one phone.
- *
- * **Three states per item, and the renderer is the same one every time.** Answering, sent, and —
- * once the host reveals — the key with this phone's own marks, or the key alone for a phone that
- * did not answer (#181). All three are `ItemPlayer`, keyed
- * so that each is its own mount: the player reads `item`, `initialResponse` and `initialReveal`
- * once, which is exactly what makes a step reopen in a different state. Nothing here is a second
- * copy of any item type, and nothing here scores anything.
+ * **The renderer is the same one every time.** Answering, sent, and — once the host reveals —
+ * the key with this phone's own marks, or the key alone for a phone that did not answer (#181).
+ * All are `ItemPlayer`, keyed so each is its own mount, in its NCLEX layout: this screen frames
+ * the question (header, clock, states) and never restyles it.
  *
  * **Where the key is.** Not on this phone until the host reveals it. The item comes from
- * `/api/live/view` with `answerKey`, `rationale` and `scoring` stripped on the server, and the
- * type `ParticipantItem` brands all three `never`, so an item that still had one could not be put
- * here at all. The answer goes to `/api/live/submit`, which scores it beside the key and answers
- * with an acknowledgement carrying no marks (ADR 0003).
+ * `/api/live/view` with `answerKey`, `rationale` and `scoring` stripped on the server, and
+ * `ParticipantItem` brands all three `never`; `phoneView` strips them again. The answer goes to
+ * `/api/live/submit`, which scores it beside the key and answers with no marks (ADR 0003).
  *
- * **Reconnecting.** Realtime replays nothing, so a phone that slept through a move comes back to
- * a room it thinks is still on item two. The transport re-tracks its presence and re-reads the
- * room; this screen also asks the server for the page again — `router.refresh()`, which re-runs
- * the server render and hands down a fresh `initial` without touching any state a client
- * component is holding. That last part is why it is a refresh and not a reload: **an answer in
- * progress survives it.**
+ * **Reconnecting** keeps the question on screen with the draft in it and Submit held off, under
+ * a dark banner (PLAN §5.7).
  *
- * **When the server is done with this phone (#149).** The channel token is refreshed every half
- * hour, and the server refuses a refresh for good when this participant no longer exists or the
- * session has ended. The transport then closes the channel and reports `"refused"` — never
- * followed by a rejoin — and this screen does the same `router.refresh()`. The server render is
- * what knows the answer: a participant who is gone is redirected to the join form, and an ended
- * session renders its own ended screen through `waitingCopy`, the same way it does on a reload.
- * "Reconnecting" is not shown for a refused phone, because nothing is coming back.
- *
- * Built at 375px: one column, nothing wider than the screen, and long names wrap rather than
- * pushing the layout sideways.
+ * Built at 375px: one column, nothing wider than the screen, long names wrap.
  */
-export function StudentRoom({
-  sessionId,
-  title,
-  displayName,
-  participantId,
-  joinedAt,
-  initial,
-  channel,
-  connect,
-}: StudentRoomProps) {
-  const router = useRouter();
-  const showRecord = useShowLiveRecord();
-  const [state, setState] = useState<LiveSessionState>(initial);
-  const [item, setItem] = useState<ParticipantItem | null>(null);
-  const [answered, setAnswered] = useState<AnsweredPayload | null>(null);
-  const [revealed, setRevealed] = useState<ItemReveal | null>(null);
-  /** Not state: a join or a leave elsewhere in the room must not render this screen (#408). */
-  const [present] = useState(createPresentCount);
-  const [connection, setConnection] = useState<RoomConnection>("connecting");
-  /**
-   * What this phone has selected but not yet sent.
-   *
-   * Held here rather than only inside `ItemPlayer` because the player is remounted whenever the
-   * room changes what this screen is showing — a pause takes the item off, a resume puts it back —
-   * and a student who had ticked three boxes when the host paused to talk should find them still
-   * ticked. `ItemPlayer` hands every change over for exactly this, and takes it back as
-   * `initialResponse`. It is dropped when the room moves to another item, which is a different
-   * question and a different answer.
-   */
-  const [draft, setDraft] = useState<{ itemId: string; response: AnyResponse } | null>(null);
-  /**
-   * The item this phone tried to answer after its time was up (#182), which the server refused
-   * with `time_up`, and the end time it was refused against. Kept with both, so the next item — a
-   * new clock — opens fresh, and so does this one if the host adds time or stops the clock.
-   */
-  const [lateFor, setLateFor] = useState<{ itemId: string; endsAt: number | null } | null>(null);
+export function StudentRoom(props: StudentRoomProps) {
+  const { title, displayName } = props;
+  const room = useStudentRoom(props);
+  const { state, item, answered, connection, history } = room;
 
-  /**
-   * Who this phone is, fixed for the life of the page.
-   *
-   * `router.refresh()` below renders the page again on every reconnect, and this is what the
-   * channel is keyed and tracked with — so it is held rather than rebuilt, and a reconnect costs
-   * a re-track rather than tearing the channel down and opening a fresh one.
-   */
-  const [me] = useState(() => ({ sessionId, participantId, displayName, joinedAt }));
+  const refused = connection === "refused" && state.status !== "ended";
+  const view = phoneView({
+    state,
+    item,
+    answered,
+    revealed: room.revealed,
+    connection: liveConnection(connection),
+    refused,
+    joined: 1,
+    now: room.serverNow(),
+  });
+  const settled: PhoneSettledView | null =
+    view.phase === "refused" ? null : view.phase === "reconnecting" ? view.underneath : view;
+  const reconnecting = view.phase === "reconnecting";
 
-  /**
-   * The server is the authority on what the room is doing, and `router.refresh()` below is how
-   * this screen asks it again after a reconnect. React's own "adjust state when a prop changes"
-   * pattern, during render rather than in an effect: a new `initial` only ever arrives with a new
-   * server render, and this is what lets it land instead of being shadowed by whatever the socket
-   * last said before it dropped. The item, the answer and the reveal are not touched — the
-   * transport re-reads those itself, and they are what an answer in progress is made of.
-   */
-  const [applied, setApplied] = useState(initial);
-  if (applied !== initial) {
-    setApplied(initial);
-    setState(initial);
-  }
-
-  const room = useRef<SupabaseParticipant | null>(null);
-  /**
-   * The session's clock, as the transport measured it against the server's own (#182). A phone's
-   * clock can be minutes out; the countdown reads this and never `Date.now()` directly.
-   */
-  const serverNow = useCallback(() => room.current?.serverNow() ?? Date.now(), []);
-
-  /**
-   * The first token, held for the life of the page like `me` above. A `router.refresh()` renders
-   * the page again and mints another, but the source below already refreshes its own before it
-   * expires, and swapping it would mean rebuilding the client and the channel with it.
-   */
-  const [firstChannel] = useState(channel);
-
-  const dial = useMemo(
-    () =>
-      connect ??
-      (() => {
-        const tokens = createChannelTokenSource({ initial: firstChannel });
-        return createSupabaseParticipant({
-          // A client of its own, authorized by the channel token rather than by any Supabase
-          // session: a student has none (#149). See `createSupabaseChannelClient`.
-          client: createSupabaseChannelClient(tokens.accessToken),
-          tokens,
-        });
-      }),
-    [connect, firstChannel],
-  );
-
-  useEffect(() => {
-    let watching = true;
-    const joined = dial();
-    room.current = joined;
-
-    const offView = joined.onStudentView((view: StudentView) => {
-      if (!watching) return;
-      // #335: the chart at the room's step, as the server cut it, for the layout around this room.
-      if (view.record !== undefined) showRecord?.(view.record);
-      setState(view.state);
-      setItem(view.item);
-      setAnswered(view.answered);
-      setRevealed(view.revealed);
-      // A view arriving is proof the server is reachable, whatever the socket said a moment ago.
-      // It is what takes the notice below down again after a failed open has put it up.
-      setConnection("live");
-    });
-    // How many have joined, as a number (#426): a phone is no longer sent who.
-    const offCount = joined.onCount((count) => {
-      if (watching) present.set(count);
-    });
-    const offConnection = joined.onConnection((status, rejoined) => {
-      if (!watching) return;
-      setConnection(status);
-      // A rejoin means the room may have moved while the socket was down; a refusal means the
-      // server has finished with this phone. Either way the server render is what knows next.
-      if (rejoined || status === "refused") router.refresh();
-    });
-
-    /**
-     * A failed open leaves the screen on the server's first paint — the room as it was a moment
-     * ago, which is better than a blank page — and says so, rather than swallowing it. It is not
-     * an error message, because nothing is wrong that will not fix itself: Realtime retries by
-     * itself, and the transport asks the server for the room again the moment the channel comes
-     * up. The notice goes when the first view lands.
-     */
-    void joined.resume(me).catch(() => {
-      if (watching) setConnection("reconnecting");
-    });
-
-    return () => {
-      watching = false;
-      offView();
-      offCount();
-      offConnection();
-      room.current = null;
-      // A cleanup cannot await, and a socket that has already dropped must not turn leaving the
-      // page into an unhandled rejection in a student's browser.
-      void joined.leave().catch(() => {});
-    };
-  }, [dial, router, me, present, showRecord]);
-
-  /**
-   * Whether the item is on this phone at all.
-   *
-   * `running` only, so a paused room takes the waiting screen and its own sentence. That is not a
-   * cosmetic choice: `canSubmit` refuses an answer while a room is paused, and a Submit button
-   * that is certain to be refused is worse than a screen that says what is happening. Everything
-   * a paused, ended or not-yet-started room says is `waitingCopy`'s, unchanged from #132.
-   */
-  const onAnItem = item !== null && state.status === "running";
-  const showing = onAnItem && state.reveal && revealed !== null && revealed.itemId === item.id;
-  /**
-   * The key is up but the phone has not fetched it yet — the state message travels on its own and
-   * the reveal behind it takes a request. `answering` excludes that moment on purpose: a Submit
-   * button offered over an answer that is already on the board would be refused if it were
-   * pressed, so the waiting screen says "The answer is showing" for the moment in between.
-   */
-  const answering = onAnItem && !state.reveal;
-  const sent = answered !== null && item !== null && answered.itemId === item.id;
-  const late =
-    answering &&
-    !sent &&
-    lateFor !== null &&
-    lateFor.itemId === item.id &&
-    lateFor.endsAt === state.timer.endsAt;
-  /** Whether the item's clock belongs on this screen: on an item, with no key showing. */
-  const clocked =
-    item !== null && !state.reveal && (state.status === "running" || state.status === "paused");
   const progress =
     state.position === null || state.itemCount === 0
       ? undefined
       : { index: state.position - 1, total: state.itemCount };
-
-  /**
-   * Sends one answer.
-   *
-   * What it does **not** do is resolve with a score. ADR 0003 puts the key and the marks in the
-   * host's hands, so `/api/live/submit` answers with `{ itemId, submittedAt }` and nothing else —
-   * there is nothing here to hand back. The moment the acknowledgement lands, this screen
-   * replaces the player with the sent state, and `ItemPlayer` drops any result that arrives after
-   * it has unmounted; so the promise is deliberately left unsettled rather than resolved with
-   * marks the server did not send or rejected with a failure there was none of. The key, the
-   * rationale and this phone's own marks arrive at the reveal, in a new player.
-   *
-   * A second tap that reaches the server anyway is answered `already_answered`, which is not an
-   * error to show anyone: it means exactly what the sent state means. Every other refusal —
-   * paused, moved on, revealed, ended — is rejected, which both unlocks the button and lets the
-   * room's own state, already on its way over the channel, say what happened in its own words.
-   */
-  const send: SubmitHandler = async (response: AnyResponse) => {
-    const joined = room.current;
-    const current = item;
-    if (joined === null || current === null)
-      throw new Error("This phone is not in a live session.");
-    try {
-      const ack = await joined.submit(current.id, response);
-      setAnswered({ itemId: current.id, submittedAt: ack.submittedAt, response });
-    } catch (refused) {
-      // Time was up when the answer reached the server (#182). Not a failure to show as one: the
-      // screen says what happened in its own words, and the player it came from goes away.
-      if (isLiveSessionError(refused) && refused.code === "time_up") {
-        setLateFor({ itemId: current.id, endsAt: state.timer.endsAt });
-        return new Promise<ScoreReveal>(() => {});
-      }
-      if (!isLiveSessionError(refused) || refused.code !== "already_answered") throw refused;
-      // A refusal carries no acknowledgement, so there is no session clock to take this from.
-      // Nothing renders it — it is here because the shape says an answer has a time — and the
-      // next view this phone fetches replaces it with the server's own.
-      setAnswered({ itemId: current.id, submittedAt: Date.now(), response });
-    }
-    return new Promise<ScoreReveal>(() => {});
-  };
-
-  const copy = waitingCopy(state);
+  const progressLabel =
+    settled !== null && "place" in settled && settled.place.position !== null
+      ? `Question ${settled.place.position} of ${settled.place.itemCount}`
+      : null;
+  // The clock belongs on a question with no key showing, a paused one included (it holds still).
+  const clocked =
+    settled !== null &&
+    item !== null &&
+    ["answering", "answerSent", "timeUp", "paused"].includes(settled.phase)
+      ? state.timer
+      : null;
 
   return (
-    <>
-      <h1 className="font-read text-3xl break-words text-ink-1">{title}</h1>
-      <p className="mt-4 text-sm text-ink-2">
-        Joined as <span className="font-medium break-words text-ink-1">{displayName}</span>
-      </p>
-
-      {connection === "reconnecting" ? (
-        <p role="status" className="mt-4 text-sm text-ink-2">
-          Reconnecting. Stay on this page.
-        </p>
-      ) : null}
-
-      {clocked ? <Countdown timer={state.timer} now={serverNow} /> : null}
-
-      {showing && revealed !== null ? (
-        <RevealedItem item={item} answered={answered} revealed={revealed} progress={progress} />
-      ) : late ? (
-        <section aria-labelledby="late-heading" className="mt-8">
-          <h2 id="late-heading" className="font-read text-2xl text-ink-1">
-            Time is up
-          </h2>
-          <p role="status" data-testid="answer-late" className="measure mt-2 text-ink-2">
-            {LATE}
-          </p>
-        </section>
-      ) : answering && sent && answered !== null ? (
-        // A plain wrapper, as in StudentPacedRoom: the player inside is already the "Your answer"
-        // landmark, and a second region of that name fails axe's landmark-unique (#274).
-        <div className="mt-8">
-          <AnswerSentLine text={SENT} announce />
-          <ItemPlayer
-            key={`${item.id}:sent`}
-            item={item}
-            // Review, not feedback: the answer has been scored on the server, but the key stays
-            // there until the host reveals it, and with nothing to mark against a feedback render
-            // would draw a right choice as wrong.
-            initialMode="review"
-            initialResponse={answered.response}
-            progress={progress}
-            // Review mode offers no Submit, so this is never reached. It is here because the
-            // player's one way to have an answer checked is a handler, and a sent answer has
-            // already been checked — on the server, where the key is.
-            submit={refuseSecondAnswer}
-            label="Your answer"
-          />
-        </div>
-      ) : answering ? (
-        <div className="mt-8">
-          <ItemPlayer
-            key={`${item.id}:answer`}
-            item={item}
-            initialResponse={draft?.itemId === item.id ? draft.response : undefined}
-            onResponseChange={(response) => setDraft({ itemId: item.id, response })}
-            progress={progress}
-            submit={send}
-            busyLabel={LIVE_BUSY_LABEL}
-            failureMessage={liveSubmitFailure}
-          />
-        </div>
-      ) : (
-        <>
-          <section aria-labelledby="waiting-heading" className="mt-8">
-            {copy.progress === null ? null : (
-              <p className="eyebrow mb-2 tabular">{copy.progress}</p>
-            )}
-            <h2 id="waiting-heading" className="font-read text-2xl text-ink-1">
-              {copy.headline}
-            </h2>
-          </section>
-
-          <RoomCount present={present} />
-        </>
-      )}
-    </>
-  );
-}
-
-/**
- * The item once the host has revealed it: the same renderer again, in feedback mode.
- *
- * A phone that answered sees its own answer marked against the key. A phone that did **not**
- * (#181) is handed the same key — the server sends every participant the reveal, with `score`
- * null for one that stayed quiet — and sees it on the same renderer through `initialKey`: nothing
- * chosen, the key's elements marked, the rationale beneath, and a line saying they did not answer,
- * so the class discussion has something on every phone to follow.
- *
- * A reveal with marks but no answer this phone can draw (a stored answer that no longer parses)
- * falls to the key-only view too, without the note: they did answer, it just cannot be shown.
- */
-export function RevealedItem({
-  item,
-  answered,
-  revealed,
-  progress,
-}: {
-  item: ParticipantItem;
-  answered: AnsweredPayload | null;
-  revealed: ItemReveal;
-  progress?: { index: number; total: number };
-}) {
-  const mine = toScoreReveal(revealed);
-
-  if (mine === null || answered === null || answered.itemId !== item.id) {
-    return (
-      <div className="mt-8">
-        {revealed.score === null ? (
-          <p
-            data-testid="not-answered"
-            className="measure motion-settle mb-4 text-sm text-ink-2 motion-reduce:animate-none"
-          >
-            {NOT_ANSWERED}
-          </p>
-        ) : null}
-        <ItemPlayer
-          key={`${item.id}:key`}
-          item={item}
-          initialKey={revealed.reveal}
-          progress={progress}
-          submit={refuseSecondAnswer}
-          label="Answer key"
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-8">
-      <ItemPlayer
-        key={`${item.id}:reveal`}
-        item={item}
-        initialResponse={answered.response}
-        initialReveal={mine}
-        progress={progress}
-        submit={refuseSecondAnswer}
-        label="Your answer"
+    <div className="flex flex-1 flex-col">
+      {reconnecting ? <ReconnectingBanner /> : null}
+      <PhoneHeader
+        progress={progressLabel}
+        title={title}
+        connection={liveConnection(connection)}
+        timer={clocked}
+        serverNow={room.serverNow}
+        {...(settled?.phase === "answerShowing" ? { badge: "Answer showing" } : {})}
       />
+      {settled === null ? (
+        <PhoneRefused />
+      ) : (
+        <Body
+          settled={settled}
+          room={room}
+          displayName={displayName}
+          progress={progress}
+          reconnecting={reconnecting}
+          history={history.entries}
+        />
+      )}
     </div>
   );
 }
 
-/** A player opened on an answer already given has nothing to send. */
-export const refuseSecondAnswer: SubmitHandler = async () => {
-  throw new Error("This question has already been answered.");
-};
+function Body({
+  settled,
+  room,
+  displayName,
+  progress,
+  reconnecting,
+  history,
+}: {
+  settled: PhoneSettledView;
+  room: ReturnType<typeof useStudentRoom>;
+  displayName: string;
+  progress: { index: number; total: number } | undefined;
+  reconnecting: boolean;
+  history: ReturnType<typeof useStudentRoom>["history"]["entries"];
+}) {
+  const { item, answered, state } = room;
+
+  switch (settled.phase) {
+    case "waiting":
+      return (
+        <PhoneWaiting
+          headline={settled.headline}
+          displayName={displayName}
+          present={room.present}
+        />
+      );
+    case "ended":
+      return (
+        <PhoneEnded headline={settled.headline} history={history} itemCount={state.itemCount} />
+      );
+    case "paused":
+      return (
+        <PhoneMessage heading={settled.headline}>
+          <p className="text-ink-2">
+            {settled.answered ? "Your answer is in." : "Your answer so far is kept."} Wait for your
+            teacher to carry on.
+          </p>
+          <RoomCount present={room.present} />
+        </PhoneMessage>
+      );
+    case "answerShowing":
+      if (item === null || settled.revealed === null) {
+        // The key is up but this phone has not fetched it yet: no Submit over an answer that is
+        // already on the board.
+        return <PhoneMessage heading="The answer is showing." />;
+      }
+      return (
+        <>
+          <RevealedItem
+            item={item}
+            answered={answered}
+            revealed={settled.revealed}
+            progress={progress}
+          />
+          <p className="pb-6 text-center text-sm text-ink-2">
+            The next question appears when your teacher moves on.
+          </p>
+        </>
+      );
+    case "answerSent":
+      if (item === null || answered === null) return null;
+      return (
+        // A plain wrapper, as in StudentPacedRoom: the player inside is already the "Your answer"
+        // landmark, and a second region of that name fails axe's landmark-unique (#274).
+        <div className="mt-5">
+          <AnswerSentLine text={SENT} announce />
+          <ItemPlayer
+            key={`${item.id}:sent`}
+            item={item}
+            // Review, not feedback: the key stays on the server until the host reveals it.
+            initialMode="review"
+            initialResponse={answered.response}
+            progress={progress}
+            submit={refuseSecondAnswer}
+            label="Your answer"
+          />
+        </div>
+      );
+    // Time up keeps Submit for the server's grace after zero: the header's clock says the time
+    // is up, and the server's refusal is what puts up "Time is up" below.
+    case "timeUp":
+    case "answering":
+      if (item === null) {
+        return <PhoneMessage heading="The live session is under way." />;
+      }
+      if (room.late) {
+        return (
+          <PhoneMessage heading="Time is up">
+            <p role="status" data-testid="answer-late" className="text-ink-2">
+              {LATE}
+            </p>
+          </PhoneMessage>
+        );
+      }
+      return (
+        <div className="mt-5">
+          <ItemPlayer
+            key={`${item.id}:answer`}
+            item={item}
+            initialResponse={room.draft}
+            onResponseChange={(response) => room.setDraft(item.id, response)}
+            progress={progress}
+            submit={room.send}
+            busyLabel={LIVE_BUSY_LABEL}
+            failureMessage={liveSubmitFailure}
+            // Held off while the phone cannot reach the room; the draft stays in the player.
+            showSubmit={!reconnecting}
+          />
+          {reconnecting ? <HeldSubmit /> : null}
+        </div>
+      );
+  }
+}
+
+/** Submit while reconnecting (PhoneReconnecting mockup): there, greyed, and saying why. */
+function HeldSubmit() {
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-1 border-t border-line bg-surface-1 px-5 py-3 [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
+      <div className="mx-auto flex max-w-lg items-center justify-end gap-3">
+        <p id="held-submit" className="flex-1 text-sm text-ink-2">
+          Submit comes back when you are connected.
+        </p>
+        <Button variant="primary" size="lg" disabled aria-describedby="held-submit">
+          Submit
+        </Button>
+      </div>
+    </div>
+  );
+}

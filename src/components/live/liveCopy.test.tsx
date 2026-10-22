@@ -632,7 +632,7 @@ describe("no retired word on any live session screen", () => {
     ["student: answer sent", "Answer sent."],
     ["student: answer showing, did not answer", "You did not answer this question."],
     ["student: answer too late", "Your answer was not taken."],
-    ["student: reconnecting", "Reconnecting."],
+    ["student: reconnecting", "Stay on this page. Your answer is kept."],
     ["student-paced: loading", "Loading the questions."],
     ["student-paced: answer sent", "Answer sent."],
     ["student-paced: answers showing", "The answers are showing."],
