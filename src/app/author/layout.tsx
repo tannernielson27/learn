@@ -21,8 +21,11 @@ export default async function AuthorLayout({ children }: LayoutProps<"/author">)
     // The header's links ask the page first, so leaving unsaved work (in the case study builder)
     // asks just as its own way back does.
     <LeaveGuardProvider>
+      {/* Wide, so the library's rail, the quiz page and the editor's two panes have room; a page
+          that reads as one column wraps itself in ReadingWidth (PLAN §6). */}
       <AppShell
         homeHref="/author"
+        width="wide"
         brand={
           <GuardedLink href="/author" className={WORDMARK_CLASSES}>
             LeaRN

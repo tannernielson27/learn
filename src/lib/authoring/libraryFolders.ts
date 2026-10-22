@@ -1,5 +1,6 @@
 import { countLabel, NOT_IN_A_FOLDER, UNFILED, type FolderRow } from "./folders";
 import { isUuid } from "./ids";
+import { LIBRARY_PATH } from "./teacherNav";
 
 /**
  * Library folders (#411): folders that hold quizzes, one tree per workspace. Kept in line with the
@@ -16,8 +17,14 @@ export interface LibraryFolderRow extends FolderRow {
   quizCount: number;
 }
 
-/** What the library lists: its top level, or one folder. */
-export type LibraryView = { kind: "top" } | { kind: "folder"; id: string };
+/**
+ * What the library lists: its top level (the folders and the quizzes in none, "Not in a folder"
+ * in the rail), every quiz wherever it is filed ("All quizzes"), or one folder.
+ */
+export type LibraryView = { kind: "top" } | { kind: "all" } | { kind: "folder"; id: string };
+
+/** The `folder` search parameter's value for All quizzes. */
+export const ALL_QUIZZES = "all";
 
 export type QuizMoveResult =
   { ok: true; folderId: string | null; quizIds: string[] } | { ok: false; error: string };
@@ -27,9 +34,75 @@ export const FOLDERS_NOT_READY = "Folders are not ready yet. Try again later.";
 
 /** Reads the library's `folder` search parameter. Anything unreadable shows the top level. */
 export function parseLibraryView(value: string | string[] | undefined): LibraryView {
+  if (value === ALL_QUIZZES) return { kind: "all" };
   return typeof value === "string" && isUuid(value)
     ? { kind: "folder", id: value }
     : { kind: "top" };
+}
+
+/** Where a library view lives. */
+export function libraryViewHref(view: LibraryView): string {
+  if (view.kind === "top") return LIBRARY_PATH;
+  return `${LIBRARY_PATH}?folder=${view.kind === "all" ? ALL_QUIZZES : view.id}`;
+}
+
+/** One line of the library's folder rail (Library mockup), or one chip of it on a phone. */
+export interface LibraryRailEntry {
+  /** "all", "top" or the folder's id. */
+  key: string;
+  label: string;
+  href: string;
+  /** 1 for a folder inside a top-level one, drawn indented on the rail. */
+  depth: number;
+  /** The view the page shows: the link carries `aria-current`. */
+  current: boolean;
+  /** A folder's own quizzes; the two views carry none, since neither count is read. */
+  quizCount?: number;
+}
+
+/**
+ * The rail: All quizzes, Not in a folder (the top level), then the top level's folders, with the
+ * branch of the open folder opened so its own folders are listed under it.
+ */
+export function libraryRail(
+  rows: readonly LibraryFolderRow[],
+  view: LibraryView,
+): LibraryRailEntry[] {
+  const openId = view.kind === "folder" ? view.id : null;
+  const open = openId ? rows.find((row) => row.id === openId) : undefined;
+  // The top-level folder whose branch is open: the open folder, or the one it sits in.
+  const branch = open ? (open.parentId ?? open.id) : null;
+  const folderEntry = (row: LibraryFolderRow, depth: number): LibraryRailEntry => ({
+    key: row.id,
+    label: row.name,
+    href: libraryViewHref({ kind: "folder", id: row.id }),
+    depth,
+    current: row.id === openId,
+    quizCount: row.quizCount,
+  });
+  const entries: LibraryRailEntry[] = [
+    {
+      key: ALL_QUIZZES,
+      label: "All quizzes",
+      href: libraryViewHref({ kind: "all" }),
+      depth: 0,
+      current: view.kind === "all",
+    },
+    {
+      key: "top",
+      label: NOT_IN_A_FOLDER,
+      href: LIBRARY_PATH,
+      depth: 0,
+      current: view.kind === "top",
+    },
+  ];
+  for (const row of childFolders(rows, null)) {
+    entries.push(folderEntry(row, 0));
+    if (row.id === branch) {
+      for (const child of childFolders(rows, row.id)) entries.push(folderEntry(child, 1));
+    }
+  }
+  return entries;
 }
 
 /** The folders directly inside `parentId` (null for the top level). */
