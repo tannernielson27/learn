@@ -100,7 +100,8 @@ export function ControlBar({ state, commands, busy, onCommand, summary }: Contro
 
   return (
     <>
-      <div
+      <section
+        aria-label="Live session controls"
         data-testid="control-bar"
         // While a question is open the bar waits behind it, out of reach and out of the
         // accessibility tree, so the dialog's button is the one "End live session" there is.
@@ -113,14 +114,16 @@ export function ControlBar({ state, commands, busy, onCommand, summary }: Contro
             draw(command, command.command === "end" ? "ghost" : "secondary", "max-sm:order-2"),
           )}
           {summary ? (
-            <p className="mr-auto text-sm text-ink-2 max-md:hidden">{summary}</p>
+            // Shown at every width: on a phone it wraps under the buttons ("21 questions ·
+            // Student-paced" is the only place a teacher-paced/student-paced room says which).
+            <p className="mr-auto text-sm text-ink-2 max-sm:order-3 max-sm:basis-full">{summary}</p>
           ) : (
             <span className="mr-auto" />
           )}
           {forward.map((command) => draw(command, "secondary", "max-sm:order-1"))}
           {main ? draw(main, "primary", "max-sm:order-first") : null}
         </div>
-      </div>
+      </section>
       {asked === null ? null : (
         <ConfirmDialog
           open

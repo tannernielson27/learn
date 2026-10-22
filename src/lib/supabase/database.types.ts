@@ -1952,6 +1952,17 @@ export type Database = {
         }[];
       };
       mark_onboarded: { Args: never; Returns: string };
+      missed_practice_run: {
+        Args: { student: string; target_run: string };
+        Returns: {
+          bank_id: string;
+          run_id: string;
+          seed: string;
+          source_id: string;
+          source_kind: string;
+          title: string;
+        }[];
+      };
       move_to_folder: {
         Args: {
           case_study_ids: string[];
@@ -2023,17 +2034,6 @@ export type Database = {
           bank_name: string;
           item_count: number;
           workspace_name: string;
-        }[];
-      };
-      missed_practice_run: {
-        Args: { student: string; target_run: string };
-        Returns: {
-          bank_id: string;
-          run_id: string;
-          seed: string;
-          source_id: string;
-          source_kind: string;
-          title: string;
         }[];
       };
       my_practice_step_marks: {

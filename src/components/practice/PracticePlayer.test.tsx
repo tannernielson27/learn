@@ -91,6 +91,19 @@ describe("PracticePlayer (#241)", () => {
     expect(screen.getByRole("region", { name: "Practice finished" })).toBeInTheDocument();
   });
 
+  it("shows the last answer's own marks and rationale before the results, then See results", async () => {
+    const ui = setup(view({ total: 1, entries: [view().entries[0]!] }));
+    await renderersLoaded();
+    await ui.user.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
+    await ui.user.click(screen.getByRole("button", { name: "Submit" }));
+
+    // Finished here, not on arrival: the answer's feedback first, the results on request.
+    expect(await screen.findByText(MC_RATIONALE)).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Practice finished" })).toBeNull();
+    await ui.user.click(screen.getByRole("button", { name: "See results" }));
+    expect(screen.getByRole("region", { name: "Practice finished" })).toBeInTheDocument();
+  });
+
   it("ends on the results: the total, what was missed, Practise the N I missed, Start over", async () => {
     const wrong = { type: "multiple_choice" as const, optionId: "opt_b" };
     const practiseMissed = vi.fn(async () => ({ error: null }));

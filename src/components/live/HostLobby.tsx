@@ -185,7 +185,7 @@ export function HostLobby({
         {...(record === undefined ? {} : { record })}
         runs={runs}
         intervalMs={tallyIntervalMs}
-        onExit={exit}
+        {...(presenting ? { onExit: exit } : {})}
       />
     );
   }

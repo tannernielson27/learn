@@ -28,21 +28,29 @@ function filesUnder(dir: string): string[] {
   });
 }
 
-const ROUTE_FILE = /\/(page|layout|not-found|template)\.tsx?$/;
+// Either separator, so the check means the same on Windows as on CI's Linux.
+const ROUTE_FILE = /[\\/](page|layout|not-found|template)\.tsx?$/;
+const LOADING_FILE = /[\\/]loading\.tsx?$/;
 const CALLS_NOT_FOUND = /\bnotFound\(\)/;
+
+/** The source without its comments, so a page that explains `notFound()` is not taken to call it. */
+const code = (file: string) =>
+  readFileSync(file, "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
 
 /** Every route file under a loading boundary that can call `notFound()`, relative to src/app. */
 function notFoundsUnderLoading(appDir: string): string[] {
   const all = filesUnder(appDir);
   return all
-    .filter((file) => /\/loading\.tsx?$/.test(file))
+    .filter((file) => LOADING_FILE.test(file))
     .flatMap((loading) => {
       const segment = path.dirname(loading);
       return all.filter(
         (file) =>
           file.startsWith(`${segment}${path.sep}`) &&
           ROUTE_FILE.test(file) &&
-          CALLS_NOT_FOUND.test(readFileSync(file, "utf8")),
+          CALLS_NOT_FOUND.test(code(file)),
       );
     })
     .map((file) => path.relative(appDir, file));
@@ -65,6 +73,7 @@ describe("loading boundaries", () => {
       write("learn/(home)/loading.tsx", "export default function L() {}");
       write("learn/(home)/page.tsx", "export default function P() {}");
       write("other/page.tsx", "notFound();");
+      write("learn/(list)/page.tsx", "/** A child's `notFound()` must still answer 404. */");
       expect(notFoundsUnderLoading(root)).toEqual([path.join("learn", "[id]", "page.tsx")]);
     } finally {
       rmSync(root, { recursive: true, force: true });

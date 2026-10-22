@@ -103,8 +103,12 @@ export function PracticePlayer({
   const [checked, setChecked] = useState<Done>({});
   const [drafts, setDrafts] = useState<Readonly<Record<string, AnyResponse>>>({});
   const [notice, setNotice] = useState<string | null>(null);
-  // Back in the questions after the run was finished: a question picked from the results.
-  const [reviewing, setReviewing] = useState(false);
+  // The results page is open: at once for a run already finished when it was opened, and only
+  // on "See results" for one finished here, so the last answer's own marks and rationale show
+  // first (code review, 2026-10-22). A question picked from the results closes it again.
+  const [resultsOpen, setResultsOpen] = useState(
+    () => view.total > 0 && Object.keys(serverDone(view.entries)).length >= view.total,
+  );
 
   if (view.entries.length === 0) {
     return <p className="measure text-ink-2">This quiz has no questions yet.</p>;
@@ -133,7 +137,7 @@ export function PracticePlayer({
     }
   };
 
-  if (finished && !reviewing) {
+  if (finished && resultsOpen) {
     const rows = rowsFromPractice(view.entries, done);
     return (
       <PracticeResults
@@ -147,7 +151,7 @@ export function PracticePlayer({
             itemsOf(each).some((step) => step.itemId === itemId),
           );
           setIndex(Math.max(0, to));
-          setReviewing(true);
+          setResultsOpen(false);
         }}
       />
     );
@@ -169,7 +173,7 @@ export function PracticePlayer({
 
   const standaloneDone = entry.kind === "item" && done[entry.itemId] !== undefined;
   const toResults = () => {
-    setReviewing(false);
+    setResultsOpen(true);
     setIndex(0);
   };
 
@@ -252,7 +256,7 @@ export function PracticePlayer({
           <Button variant="ghost" disabled={at === 0} onClick={() => setIndex(at - 1)}>
             Previous
           </Button>
-          {isLast && finished ? (
+          {finished ? (
             <Button variant="primary" size="lg" className="flex-1 md:flex-none" onClick={toResults}>
               See results
             </Button>

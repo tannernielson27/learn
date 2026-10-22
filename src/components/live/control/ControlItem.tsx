@@ -3,6 +3,7 @@
 import { Countdown } from "@/components/live/Countdown";
 import { HostRecord } from "@/components/live/HostRecord";
 import { ItemStrip } from "@/components/live/ItemStrip";
+import { Roster } from "@/components/live/Roster";
 import { HostResults } from "@/components/live/results/HostResults";
 import { TimeChoice, TimerButtons } from "@/components/live/TimerControls";
 import { RichTextView } from "@/components/question/QuestionShell";
@@ -132,6 +133,10 @@ export function ControlItem({
             title={place.run.title}
           />
         ) : null}
+
+        {/* Who is connected, through every question as in the lobby: a phone that drops out
+            mid-question shows here, and the count is what the teacher waits on. */}
+        <Roster roster={roster} />
       </div>
     </div>
   );

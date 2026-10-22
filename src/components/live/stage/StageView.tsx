@@ -28,8 +28,12 @@ export interface StageViewProps {
   record?: EhrRecord;
   runs: readonly CaseStudyRun[];
   intervalMs: number;
-  /** Back to the control view: Escape, or the small button in the corner. */
-  onExit: () => void;
+  /**
+   * Back to the control view: Escape, or the small button in the corner. Only for a window the
+   * teacher switched in place ("Present on this screen"); a window opened as the projector gets
+   * none, so a stray key or click cannot put names and live counts on the wall (code review).
+   */
+  onExit?: () => void;
 }
 
 /** The whole record a case study step is read from, with the step to cut it at. */
@@ -77,6 +81,7 @@ export function StageView({
   );
 
   useEffect(() => {
+    if (onExit === undefined) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onExit();
     };
@@ -97,13 +102,15 @@ export function StageView({
         runs={runs}
         results={results}
       />
-      <button
-        type="button"
-        onClick={onExit}
-        className="absolute top-2 right-6 text-sm text-ink-2 opacity-70 hover:opacity-100 focus-visible:opacity-100"
-      >
-        Press Esc for the control view
-      </button>
+      {onExit === undefined ? null : (
+        <button
+          type="button"
+          onClick={onExit}
+          className="absolute top-2 right-6 text-sm text-ink-2 opacity-70 hover:opacity-100 focus-visible:opacity-100"
+        >
+          Press Esc for the control view
+        </button>
+      )}
     </StageShell>
   );
 }

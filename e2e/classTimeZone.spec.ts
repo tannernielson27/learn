@@ -135,6 +135,8 @@ test("the class's time zone moves the due times on the student home", async ({
 
   // The assignment page says the same.
   await item.getByRole("link", { name: title, exact: true }).click();
+  // The home shows the time twice (its pick-up card and its list), so wait to have left it.
+  await expect(student).toHaveURL(/\/learn\/assignments\/[0-9a-f-]{36}$/);
   await expect(
     student.getByText(`Closes ${formatInZone(closesAt, "America/New_York")}`),
   ).toBeVisible();
