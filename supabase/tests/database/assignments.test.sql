@@ -77,7 +77,9 @@ insert into public.items (id, bank_id, org_id, type, cjmm_step, status, content,
     from public.profiles p,
          (values ('00000000-0000-0000-0000-0000002070f1', 'published', '3 hours'),
                  ('00000000-0000-0000-0000-0000002070f2', 'published', '2 hours'),
-                 ('00000000-0000-0000-0000-0000002070f3', 'draft', '1 hour')) as v(id, status, age)
+                 ('00000000-0000-0000-0000-0000002070f3', 'draft', '1 hour'),
+                 -- #468: the case study's step, which a whole-bank assignment leaves out.
+                 ('00000000-0000-0000-0000-0000002070f4', 'published', '90 minutes')) as v(id, status, age)
    where p.id = '00000000-0000-0000-0000-0000002070a1';
 
 insert into public.case_studies (id, bank_id, org_id, title, ehr, status)
@@ -87,7 +89,7 @@ insert into public.case_studies (id, bank_id, org_id, title, ehr, status)
     from public.profiles where id = '00000000-0000-0000-0000-0000002070a1';
 insert into public.case_study_items (case_study_id, org_id, bank_id, position, item_id)
   select '00000000-0000-0000-0000-0000002070a5', org_id, '00000000-0000-0000-0000-0000002070e0', 1,
-         '00000000-0000-0000-0000-0000002070f2'
+         '00000000-0000-0000-0000-0000002070f4'
     from public.profiles where id = '00000000-0000-0000-0000-0000002070a1';
 
 -- ---------------------------------------------------------------------------
@@ -106,7 +108,7 @@ select lives_ok(
 select is(
   (select item_set from public.assignments where title = 'Open 207'),
   '["00000000-0000-0000-0000-0000002070f1", "00000000-0000-0000-0000-0000002070f2"]'::jsonb,
-  'the item set is the bank''s published items, oldest first, snapshotted as ids'
+  'the item set is the bank''s published loose questions, in quiz order, snapshotted as ids'
 );
 select is(
   (select row(max_attempts, shuffle_options, pg_temp.record_of('Open 207') is null)::text
@@ -140,7 +142,7 @@ select lives_ok(
 select is(
   (select row(item_set, pg_temp.record_of_case(case_study_id) -> 'patientHeader' ->> 'setting')::text
      from public.assignments where case_study_id = '00000000-0000-0000-0000-0000002070a5'),
-  row('["00000000-0000-0000-0000-0000002070f2"]'::jsonb, 'Ward')::text,
+  row('["00000000-0000-0000-0000-0000002070f4"]'::jsonb, 'Ward')::text,
   'a case study snapshots its steps and its patient record'
 );
 select is(

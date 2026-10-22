@@ -77,7 +77,7 @@ describe("stemExcerpt", () => {
   );
 });
 
-type Result = { data?: unknown; error?: { message?: string } | null };
+type Result = { data?: unknown; error?: { message?: string; code?: string } | null };
 
 /**
  * A chainable stand-in for the Supabase client that records every call. `result` answers the list
@@ -368,5 +368,63 @@ describe("listCaseStudies", () => {
       args: ["title", "sepsis", { config: "english", type: "websearch" }],
     });
     expect(fake.calls).toContainEqual({ method: "eq", args: ["status", "published"] });
+  });
+
+  it("lists in the quiz's order without a search (#468)", async () => {
+    const fake = fakeClient({ data: [], error: null });
+    await listCaseStudies(fake.client, BANK);
+    expect(fake.calls).toContainEqual({ method: "order", args: ["quiz_position"] });
+    expect(fake.calls).toContainEqual({ method: "order", args: ["created_at"] });
+    expect(fake.calls).not.toContainEqual({
+      method: "order",
+      args: ["updated_at", { ascending: false }],
+    });
+  });
+
+  it("keeps last edited first while searching", async () => {
+    const fake = fakeClient({ data: [], error: null });
+    await listCaseStudies(
+      fake.client,
+      BANK,
+      { kind: "all" },
+      {
+        query: "sepsis",
+        type: null,
+        status: null,
+      },
+    );
+    expect(fake.calls).toContainEqual({
+      method: "order",
+      args: ["updated_at", { ascending: false }],
+    });
+    expect(fake.calls).not.toContainEqual({ method: "order", args: ["quiz_position"] });
+  });
+
+  it("falls back to last edited first on a database without the order yet", async () => {
+    const caseRow = {
+      id: "c1",
+      title: "Sepsis",
+      status: "draft",
+      updated_at: "2026-10-21T12:00:00Z",
+      case_study_items: [{ count: 2 }],
+    };
+    const fake = fakeClient(
+      { data: [], error: null },
+      { data: null, error: { code: "42703" } },
+      { data: [caseRow], error: null },
+    );
+    const listed = await listCaseStudies(fake.client, BANK);
+    expect(listed.map((entry) => entry.id)).toEqual(["c1"]);
+    expect(fake.calls).toContainEqual({
+      method: "order",
+      args: ["updated_at", { ascending: false }],
+    });
+  });
+
+  it("still says so when the list cannot be read at all", async () => {
+    const fake = fakeClient({ data: null, error: { code: "42501" } });
+    await expect(listCaseStudies(fake.client, BANK)).rejects.toThrow(
+      "Case studies could not be loaded.",
+    );
   });
 });
