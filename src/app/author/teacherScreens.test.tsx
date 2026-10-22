@@ -73,7 +73,6 @@ vi.mock("@/app/author/actions", () => ({
   createCaseStudyInBank: action(),
   createFolderInBank: action(),
   deleteFolderInBank: action(),
-  importIntoBank: action(),
   moveToFolderInBank: action(),
   renameBank: action(),
   renameFolderInBank: action(),

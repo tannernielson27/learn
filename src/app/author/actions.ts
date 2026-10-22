@@ -7,16 +7,11 @@ import type { CaseStudyFormState } from "@/components/authoring/CreateCaseStudyF
 import type { FolderFormState } from "@/components/authoring/FolderNameForm";
 import { createFolder, deleteFolder, moveToFolder, renameFolder } from "@/lib/authoring/folderData";
 import { parseFolderName, parseMoveForm } from "@/lib/authoring/folders";
-import type { FileImportResult } from "@/lib/authoring/bulkImport";
-import { importIntoBank as writeImport, TRANSFER_ERRORS } from "@/lib/authoring/importExport";
-import { readImportFolder, readImportText } from "@/lib/authoring/importForm";
-import { importRowsFor, importSummary, parseImport } from "@/lib/authoring/transfer";
 import { parseBankForm } from "@/lib/authoring/bankForm";
 import { createCaseStudy } from "@/lib/authoring/caseStudies";
 import { parseCaseStudyTitle } from "@/lib/authoring/caseStudyForm";
 import { isUuid } from "@/lib/authoring/ids";
 import { isEditorReady } from "@/lib/authoring/itemTypeGroups";
-import { checkRateLimit } from "@/lib/authoring/rateLimit";
 import { requireAuthor } from "@/lib/authoring/session";
 import { ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -91,37 +86,6 @@ export async function createCaseStudyInBank(
 
   revalidatePath(`/author/banks/${bankId}`);
   redirect(`/author/case-studies/${created.value.id}`);
-}
-
-/**
- * Imports one learn.v1 file (or pasted JSON) into a bank as new drafts, optionally filed in one of
- * its folders. The import form calls this once per file, so each file is bounded, validated and
- * written in its own single database call: a refused file writes nothing and never blocks the rest.
- */
-export async function importIntoBank(
-  bankId: string,
-  formData: FormData,
-): Promise<FileImportResult> {
-  if (!isUuid(bankId)) return { status: "error", errors: [TRANSFER_ERRORS.bankGone] };
-  const { supabase } = await requireAuthor(`/author/banks/${bankId}`);
-  const folder = readImportFolder(formData);
-  if (!folder.ok) return { status: "error", errors: [folder.error] };
-  // Asked before the file is read, since reading and checking a large file is the costly part.
-  // The count itself is taken by import_bank_content, once per call (#123), so a caller that goes
-  // straight to the Data API is bounded too and a ten-file batch still spends exactly ten.
-  const limit = await checkRateLimit(supabase, "import");
-  if (!limit.ok) return { status: "error", errors: [limit.error] };
-
-  const read = await readImportText(formData);
-  if (!read.ok) return { status: "error", errors: [read.error] };
-  const parsed = parseImport(read.text);
-  if (!parsed.ok) return { status: "error", errors: parsed.errors };
-
-  const written = await writeImport(supabase, bankId, importRowsFor(parsed), folder.folderId);
-  if (!written.ok) return { status: "error", errors: [written.error] };
-
-  revalidatePath(`/author/banks/${bankId}`);
-  return { status: "done", message: importSummary(parsed) };
 }
 
 const FOLDER_GONE: FolderFormState = { status: "error", error: "That folder no longer exists." };

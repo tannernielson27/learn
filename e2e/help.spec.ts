@@ -62,7 +62,7 @@ test("the teacher guide's contents list goes to each section", async ({ page }) 
   const contents = page.getByRole("navigation", { name: "On this page", exact: true });
   await expect(contents.getByRole("link")).toHaveText([
     "Sign up and sign in",
-    "Create or import a quiz",
+    "Create a quiz",
     "Import questions with AI",
     "Write questions",
     "Create a class and invite students",

@@ -15,7 +15,6 @@ import { DeleteFolderForm } from "@/components/authoring/DeleteFolderForm";
 import { FolderBreadcrumbs } from "@/components/authoring/FolderBreadcrumbs";
 import { FolderNameForm } from "@/components/authoring/FolderNameForm";
 import { FolderTree } from "@/components/authoring/FolderTree";
-import { ImportJsonForm } from "@/components/authoring/ImportJsonForm";
 import { ItemList } from "@/components/authoring/ItemList";
 import { PracticeBadge } from "@/components/practice/PracticeBadge";
 import { PracticeSection } from "@/components/practice/PracticeSection";
@@ -60,7 +59,6 @@ import {
   createCaseStudyInBank,
   createFolderInBank,
   deleteFolderInBank,
-  importIntoBank,
   moveToFolderInBank,
   renameBank,
   renameFolderInBank,
@@ -368,9 +366,8 @@ export default async function BankPage({
                   : "Shared with every class.",
             }}
           />
-          {/* Closed until asked for (#412): most visits to a quiz are not to import into it. */}
           {aiImport ? (
-            // #345: beside Import JSON, only where AI import is on for the deployment and workspace.
+            // #345: only where AI import is on for the deployment and workspace.
             <div className="border-t border-line pt-6">
               <Link
                 href={`/author/banks/${bank.id}/ai-import`}
@@ -380,18 +377,6 @@ export default async function BankPage({
               </Link>
             </div>
           ) : null}
-          <details className="border-t border-line pt-6">
-            <summary className="tap-target flex cursor-pointer items-center text-sm font-medium text-ink-2">
-              Import JSON
-            </summary>
-            <div className="mt-3">
-              <ImportJsonForm
-                action={importIntoBank.bind(null, bank.id)}
-                folders={folders}
-                defaultFolderId={folder?.id}
-              />
-            </div>
-          </details>
           <details className="border-t border-line pt-6">
             <summary className="tap-target flex cursor-pointer items-center text-sm font-medium text-ink-2">
               Rename quiz

@@ -1,7 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
-import { openImport, publishOpenItem } from "./authoringHelpers";
+import { publishOpenItem } from "./authoringHelpers";
+import { seedQuiz } from "./seedQuiz";
 import { signInAsNewAuthor } from "./signIn";
 
 // Needs the local Supabase stack, like auth.spec.ts. CI runs it in the `auth-e2e` job.
@@ -26,7 +27,7 @@ const fillers = (from: number, to: number) =>
 
 /**
  * Five items that mention lactate (in the stem, an option or the rationale) and 45 that do not;
- * then five more, since one import takes at most 50.
+ * then five more, since one learn.v1 file holds at most 50.
  */
 function searchBank(): [string, string] {
   const first = [
@@ -71,7 +72,7 @@ test("an author searches a bank for lactate, then narrows to published Matrix Mu
   page,
   request,
 }, testInfo) => {
-  // Sign-in, a 55-item import, a publish and several searches: longer than the default.
+  // Sign-in, 55 seeded items, a publish and several searches: longer than the default.
   test.slow();
   await signInAsNewAuthor(page, request, testInfo.project.name);
   const bankName = `Search ${testInfo.project.name} ${Date.now()}`;
@@ -82,14 +83,7 @@ test("an author searches a bank for lactate, then narrows to published Matrix Mu
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   const bankUrl = new URL(page.url()).pathname;
 
-  for (const [index, payload] of searchBank().entries()) {
-    await openImport(page);
-    await page.getByRole("textbox", { name: "Or paste JSON", exact: true }).fill(payload);
-    await page.getByRole("button", { name: "Import", exact: true }).click();
-    await expect(
-      page.getByRole("status").filter({ hasText: index === 0 ? "Imported 50" : "Imported 5" }),
-    ).toBeVisible();
-  }
+  for (const payload of searchBank()) await seedQuiz(page, request, payload);
 
   // 55 items page at 50.
   const pages = page.getByRole("navigation", { name: "Pages" });

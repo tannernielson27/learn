@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Teacher guide" };
  */
 const SECTIONS = [
   { id: "sign-in", title: "Sign up and sign in" },
-  { id: "banks", title: "Create or import a quiz" },
+  { id: "banks", title: "Create a quiz" },
   { id: "ai-import", title: "Import questions with AI" },
   { id: "items", title: "Write questions" },
   { id: "classes", title: "Create a class and invite students" },
@@ -157,18 +157,6 @@ export default function InstructorGuide() {
             Press <Ui>Create quiz</Ui>.
           </li>
         </Steps>
-        <Topic id="import" title="Import questions">
-          <Steps>
-            <li>Choose one or more LeaRN JSON files, or paste JSON.</li>
-            <li>
-              Pick a folder under <Ui>Import into</Ui> and press <Ui>Import</Ui>.
-            </li>
-          </Steps>
-          <p>
-            Imported questions arrive as drafts. A file that fails is reported without stopping the
-            others.
-          </p>
-        </Topic>
         <Topic id="folders" title="Folders, tags and search">
           <p>Sort a large quiz into folders, tag questions, and search by text or tag.</p>
         </Topic>

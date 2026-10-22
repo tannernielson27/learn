@@ -4,13 +4,13 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
 import { formatClassCode } from "../src/lib/classes/classCode";
 import { findRetiredTerms } from "../src/lib/copy/retiredTerms";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
-import { openImport } from "./authoringHelpers";
 import {
   insertAsAdmin,
   selectAsAdmin,
   signInAsInstructorInEmptyOrg,
   updateAsAdmin,
 } from "./signIn";
+import { seedQuiz } from "./seedQuiz";
 import { skipWelcomes } from "./welcome";
 
 // #417: a quiz sorted into in-quiz folders becomes several quizzes, and questions move from one quiz
@@ -54,10 +54,10 @@ async function createQuiz(page: Page, name: string): Promise<string> {
 }
 
 /**
- * Imports one multiple-choice question per stem into the open quiz, then publishes them with the
+ * Seeds one multiple-choice question per stem into the open quiz, then publishes them with the
  * local secret key (setup this spec is not about). Returns each question's id by its stem.
  */
-async function importPublished(
+async function seedPublished(
   page: Page,
   request: APIRequestContext,
   bankId: string,
@@ -68,11 +68,7 @@ async function importPublished(
     id: `move-${index + 1}`,
     stem: { kind: "markdown", value },
   }));
-  await openImport(page);
-  await page
-    .getByRole("textbox", { name: "Or paste JSON", exact: true })
-    .fill(JSON.stringify({ format: "learn.v1", items }));
-  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await seedQuiz(page, request, JSON.stringify({ format: "learn.v1", items }));
   await expect(
     page.getByRole("list", { name: "Questions" }).getByRole("link", { name: stems[0] }),
   ).toBeVisible();
@@ -113,7 +109,7 @@ test("a quiz with two folders inside it becomes two quizzes, each running only i
   const original = await createQuiz(page, "Med-Surg term");
   const cardiacStems = ["Split cardiac one", "Split cardiac two"];
   const renalStems = ["Split renal one"];
-  const ids = await importPublished(page, request, original, [...cardiacStems, ...renalStems]);
+  const ids = await seedPublished(page, request, original, [...cardiacStems, ...renalStems]);
   const idsOf = (stems: string[]) => stems.map((stem) => ids.get(stem) as string).sort();
 
   // The quiz as it was before #411: two folders inside it, each holding its questions.
@@ -208,7 +204,7 @@ test("two questions move to another quiz, and an assignment made before the move
   await createQuiz(page, "Week 6");
   const week5 = await createQuiz(page, "Week 5");
   const stems = ["Move me first", "Move me second", "Stay here"];
-  const ids = await importPublished(page, request, week5, stems);
+  const ids = await seedPublished(page, request, week5, stems);
 
   // A class, and an assignment of Week 5 made now, before anything moves.
   const code = Array.from(

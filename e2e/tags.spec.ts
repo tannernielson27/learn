@@ -1,8 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { FIXTURES } from "../src/lib/ngn/fixtures";
+import { seedQuiz } from "./seedQuiz";
 import { signInAsNewAuthor } from "./signIn";
-import { openImport } from "./authoringHelpers";
 import { giveQuizAnInQuizFolder } from "./inQuizFolders";
 
 // Needs the local Supabase stack, like auth.spec.ts. CI runs it in the `auth-e2e` job.
@@ -47,7 +47,7 @@ test("an author tags items, then filters the bank to Physiological Adaptation pl
   page,
   request,
 }, testInfo) => {
-  // Sign-in, an import, an edit and several filtered loads: longer than the default.
+  // Sign-in, seeding, an edit and several filtered loads: longer than the default.
   test.slow();
   await signInAsNewAuthor(page, request, testInfo.project.name);
   const bankName = `Tags ${testInfo.project.name} ${Date.now()}`;
@@ -59,10 +59,7 @@ test("an author tags items, then filters the bank to Physiological Adaptation pl
   // #411: folder views exist only in a quiz that has a folder inside it, as older quizzes do.
   await giveQuizAnInQuizFolder(page, request, "Week 1");
 
-  await openImport(page);
-
-  await page.getByRole("textbox", { name: "Or paste JSON", exact: true }).fill(tenItems());
-  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await seedQuiz(page, request, tenItems());
   await expect(itemLinks(page)).toHaveCount(10);
 
   // Tag item 9 in its editor: a client need, a topic typed in another case, and a CJMM step.
