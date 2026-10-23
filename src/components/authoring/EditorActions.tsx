@@ -36,7 +36,10 @@ export function EditorActions({
   onPublish,
 }: EditorActionsProps) {
   return (
-    <div className="flex flex-col gap-3 border-b border-line bg-surface-0 pb-4 lg:sticky lg:top-0 lg:z-10 lg:col-span-2 lg:pt-3">
+    <div
+      data-editor-actions
+      className="flex flex-col gap-3 border-b border-line bg-surface-0 pb-4 lg:sticky lg:top-0 lg:z-10 lg:col-span-2 lg:pt-3"
+    >
       <div className="flex flex-wrap items-center gap-3">
         {saveOnly ? (
           <Button type="button" variant="primary" disabled={busy} onClick={onSave}>

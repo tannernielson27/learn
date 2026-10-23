@@ -120,6 +120,13 @@
     /* Keeps a control scrolled into view by Tab clear of the fixed submit bar (about 5rem). */
     scroll-padding-bottom: 6rem;
   }
+  /* And clear of the editor's Save bar, sticky at the top from lg (1024px), when one is on the
+     page (code review M5). The bar is about 5rem with a status line under its buttons. */
+  @media (min-width: 64rem) {
+    html:has([data-editor-actions]) {
+      scroll-padding-top: 8rem;
+    }
+  }
   body {
     background: var(--surface-0);
     color: var(--ink-1);
