@@ -13,10 +13,10 @@ import type { StageOption } from "./stageItem";
 /** The strip across the top: where the room is on the left, a second fact on the right. */
 export function StageStrip({ left, right }: { left: ReactNode; right?: ReactNode }) {
   return (
-    <header className="flex flex-wrap items-baseline justify-between gap-x-[3cqb] gap-y-[1cqb] text-stage-label font-semibold text-ink-2">
+    <div className="flex flex-wrap items-baseline justify-between gap-x-[3cqb] gap-y-[1cqb] text-stage-label font-semibold text-ink-2">
       <p className="min-w-0">{left}</p>
       {right === undefined ? null : <p className="min-w-0">{right}</p>}
-    </header>
+    </div>
   );
 }
 

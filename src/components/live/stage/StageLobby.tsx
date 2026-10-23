@@ -20,9 +20,9 @@ export interface StageLobbyProps {
 export function StageLobby({ title, code, url, join, names }: StageLobbyProps) {
   return (
     <div className="flex h-full min-h-0 flex-col gap-[4.4cqb]">
-      <header className="flex flex-wrap items-baseline justify-between gap-x-[3cqb]">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-[3cqb]">
         <h1 className="font-read text-stage-option leading-tight">{title}</h1>
-      </header>
+      </div>
       {join ?? (
         <section aria-label="Join code" className="flex flex-col gap-[2.6cqb]">
           <p className="text-stage-option font-medium">

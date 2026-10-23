@@ -21,10 +21,10 @@ export function StageEnded({ title, summary, rate }: StageEndedProps) {
   ];
   return (
     <div className="flex h-full min-h-0 flex-col gap-[4.4cqb]">
-      <header className="flex flex-col gap-[1.1cqb]">
+      <div className="flex flex-col gap-[1.1cqb]">
         <p className="text-stage-label font-semibold text-ink-2">Live session ended</p>
         <h1 className="font-read text-stage-stem leading-tight">{title}</h1>
-      </header>
+      </div>
       <dl className="grid grid-cols-3 gap-[4.4cqb] border-t-(length:--stage-stroke) border-stage-ink pt-[3cqb]">
         {tiles.map(([value, words]) => (
           <div key={words} className="flex flex-col-reverse gap-[1.1cqb]">
