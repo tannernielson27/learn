@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useId, useRef } from "react";
+import { FieldError } from "@/components/authoring/FieldError";
 import { Button } from "@/components/ui/Button";
 import { fieldClasses } from "@/components/ui/fieldClasses";
 import { DISPLAY_NAME_MAX_LENGTH } from "@/lib/live/displayName";
@@ -71,9 +72,9 @@ export function JoinForm({ action, code }: JoinFormProps) {
           )}
         />
         {codeError ? (
-          <p id={`${fieldId}-code-error`} role="alert" className="text-sm text-incorrect">
+          <FieldError id={`${fieldId}-code-error`} role="alert">
             {codeError}
-          </p>
+          </FieldError>
         ) : (
           <p id={`${fieldId}-code-hint`} className="text-sm text-ink-2">
             Six characters, on the screen at the front.
@@ -99,9 +100,9 @@ export function JoinForm({ action, code }: JoinFormProps) {
           className={field}
         />
         {nameError ? (
-          <p id={`${fieldId}-name-error`} role="alert" className="text-sm text-incorrect">
+          <FieldError id={`${fieldId}-name-error`} role="alert">
             {nameError}
-          </p>
+          </FieldError>
         ) : (
           <p id={`${fieldId}-name-hint`} className="text-sm text-ink-2">
             Your teacher sees this name. The class sees it only before the start.
@@ -109,11 +110,7 @@ export function JoinForm({ action, code }: JoinFormProps) {
         )}
       </div>
 
-      {formError ? (
-        <p role="alert" className="text-sm text-incorrect">
-          {formError}
-        </p>
-      ) : null}
+      {formError ? <FieldError role="alert">{formError}</FieldError> : null}
 
       {/* At the foot of the screen on a phone, in thumb reach (Main mockup). */}
       <div className="mt-auto pt-2">
