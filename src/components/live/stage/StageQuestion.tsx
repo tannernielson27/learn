@@ -89,7 +89,7 @@ export function StageQuestion({
           </>
         )}
       </div>
-      <footer className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-[6cqi]">
+      <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-[6cqi]">
         <div className="flex min-w-0 flex-col gap-[1.5cqb]">
           {casePlace === null ? null : (
             <p className="text-stage-label font-semibold text-ink-2">
@@ -103,7 +103,7 @@ export function StageQuestion({
         ) : (
           <AnswerCount answered={answers.responded} total={answers.present} size="stage" />
         )}
-      </footer>
+      </div>
     </div>
   );
 }
