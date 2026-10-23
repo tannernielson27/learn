@@ -30,7 +30,7 @@ export default async function SessionReportPage({
   if (!read) notFound();
 
   return (
-    <main className="mx-auto w-full max-w-5xl min-w-0 flex-1 px-4 py-8">
+    <main className="mx-auto w-full max-w-wide min-w-0 flex-1 px-4 py-8 md:px-8">
       {read.session.status === "ended" ? (
         <SessionReportView
           sessionId={sessionId}

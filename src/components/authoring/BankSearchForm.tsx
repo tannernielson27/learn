@@ -11,6 +11,7 @@ import { UNFILED, type FolderView } from "@/lib/authoring/folders";
 import { bankViewHref } from "@/lib/authoring/tagFilter";
 import { ITEM_TYPE_LABELS, ITEM_TYPES } from "@/lib/ngn/labels";
 import { Button } from "@/components/ui/Button";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 
 export interface BankSearchFormProps {
   bankId: string;
@@ -18,9 +19,7 @@ export interface BankSearchFormProps {
   filter: BankFilter;
 }
 
-const fieldClass =
-  "tap-target w-full min-w-0 rounded-sm border border-line bg-surface-1 px-3 text-base " +
-  "text-ink-1 hover:border-line-strong";
+const fieldClass = fieldClasses("min-w-0 px-3 text-base");
 
 /**
  * Searches a bank's items by their words, type and status. A plain GET form to the bank page, so

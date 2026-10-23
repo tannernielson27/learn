@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LocalTime } from "@/components/assignments/LocalTime";
+import { ReportStepBars } from "@/components/live/report/ReportStepBars";
 import { ItemTable, StepTable } from "@/components/live/report/ReportTables";
 import { buttonClasses } from "@/components/ui/Button";
 import { assignmentReportCsvPath, assignmentReportPath } from "@/lib/assignments/assignments";
@@ -55,7 +56,7 @@ export function AssignmentReportView({
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <p className="eyebrow mb-2">Assignment report</p>
-          <h1 className="font-read text-3xl break-words text-ink-1">{title}</h1>
+          <h1 className="font-read text-display leading-tight break-words text-ink-1">{title}</h1>
           <p className="mt-1 text-sm text-ink-2">
             {report.released ? "Closed " : "Closes "}
             <LocalTime iso={closesAt} />
@@ -84,9 +85,9 @@ export function AssignmentReportView({
               <Link
                 href={assignmentReportPath(assignmentId, option)}
                 aria-current={option === view ? "page" : undefined}
-                className={`tap-target inline-flex items-center border-b-2 px-3 text-sm font-medium whitespace-nowrap transition-colors duration-fast ${
+                className={`tap-target inline-flex items-center border-b-2 px-3 text-sm font-semibold whitespace-nowrap transition-colors duration-fast ${
                   option === view
-                    ? "border-accent text-ink-1"
+                    ? "border-accent text-accent-ink"
                     : "border-transparent text-ink-2 hover:text-ink-1"
                 }`}
               >
@@ -202,6 +203,7 @@ function StepsBody({ report }: { report: AssignmentReport }) {
   const untagged = report.items.filter((item) => item.cjmmStep === null).length;
   return (
     <>
+      <ReportStepBars steps={report.steps} />
       <StepTable steps={report.steps} />
       <p className="mt-3 text-sm text-ink-2">
         Each step is the mean of its questions&apos; mean percents, from each student&apos;s best

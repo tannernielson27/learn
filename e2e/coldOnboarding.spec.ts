@@ -234,7 +234,7 @@ test("an outside instructor onboards cold and runs a live session a phone answer
       .getByRole("list", { name: "Options", exact: true })
       .getByRole("listitem")
       .filter({ hasText: MC_OPTION }),
-  ).toContainText("1 of 1 · 100%", { timeout: 15_000 });
+  ).toContainText("1 · 100%", { timeout: 15_000 });
   await expectNoAxeViolations(page);
   await shoot(page, testInfo, "9-console-result");
 

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { attemptsLabel, studentResultsPath } from "@/lib/assignments/assignments";
 import type { HistoryRow, HistoryStanding } from "@/lib/assignments/history";
 import { classLabel } from "@/lib/classes/studentClasses";
@@ -6,6 +5,7 @@ import { DEFAULT_CLASS_TIME_ZONE } from "@/lib/classes/timeZone";
 import { formatPercent, formatPoints } from "@/lib/live/reportFormat";
 import { ClassTime } from "./ClassTime";
 import type { StudentClassInfo } from "./StudentAssignmentList";
+import { HOME_LIST_CLASSES, HomeRow } from "@/components/learn/HomeRow";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 export interface AssignmentHistoryProps {
@@ -40,46 +40,33 @@ function Standing({ standing }: { standing: HistoryStanding }) {
  */
 export function AssignmentHistory({ rows, classes }: AssignmentHistoryProps) {
   if (rows.length === 0) {
-    // Under the student home's History h2.
+    // Under the student home's Results h2.
     return <EmptyState level={3} heading="No closed assignments yet" />;
   }
 
   return (
-    <ul
-      aria-label="Assignment history"
-      className="flex flex-col divide-y divide-line border-y border-line"
-    >
+    <ul aria-label="Assignment history" className={HOME_LIST_CLASSES}>
       {rows.map((row) => {
         const info = classes.get(row.classId);
         return (
-          <li
+          <HomeRow
             key={row.id}
-            className="flex flex-col gap-2 px-2 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6"
+            href={studentResultsPath(row.id)}
+            title={`Results for ${row.title}`}
+            end={
+              <div className="flex shrink-0 flex-col gap-0.5 sm:items-end sm:text-right">
+                <Standing standing={row.standing} />
+                {row.attemptsUsed > 0 ? (
+                  <p className="text-sm text-ink-2">
+                    {`${row.attemptsUsed} of ${attemptsLabel(row.maxAttempts)} used`}
+                  </p>
+                ) : null}
+              </div>
+            }
           >
-            <div className="flex min-w-0 flex-col gap-1">
-              <Link
-                href={studentResultsPath(row.id)}
-                className="tap-target inline-flex items-center font-medium break-words text-ink-1 underline decoration-line-strong underline-offset-4 hover:decoration-accent"
-              >
-                {`Results for ${row.title}`}
-              </Link>
-              <span className="text-sm break-words text-ink-2">
-                <span>{classLabel(info)}</span> · Closed{" "}
-                <ClassTime
-                  iso={row.closesAt}
-                  timeZone={info?.timeZone ?? DEFAULT_CLASS_TIME_ZONE}
-                />
-              </span>
-            </div>
-            <div className="flex shrink-0 flex-col gap-1 sm:items-end sm:text-right">
-              <Standing standing={row.standing} />
-              {row.attemptsUsed > 0 ? (
-                <p className="text-sm text-ink-2">
-                  {`${row.attemptsUsed} of ${attemptsLabel(row.maxAttempts)} used`}
-                </p>
-              ) : null}
-            </div>
-          </li>
+            <span>{classLabel(info)}</span> · Closed{" "}
+            <ClassTime iso={row.closesAt} timeZone={info?.timeZone ?? DEFAULT_CLASS_TIME_ZONE} />
+          </HomeRow>
         );
       })}
     </ul>

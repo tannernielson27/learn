@@ -5,6 +5,8 @@ import { AttemptPlayer } from "@/components/assignments/AttemptPlayer";
 import { AttemptSummary } from "@/components/assignments/AttemptSummary";
 import { ClassTime } from "@/components/assignments/ClassTime";
 import { StartAttemptForm } from "@/components/assignments/StartAttemptForm";
+import { Notice } from "@/components/ui/Notice";
+import { PageWidth } from "@/components/ui/PageWidth";
 import { loadAttemptPage, type AssignmentHeader } from "@/lib/assignments/attemptPage";
 import { attemptPageStore } from "@/lib/assignments/attemptStore";
 import { attemptsLabel, studentResultsPath } from "@/lib/assignments/assignments";
@@ -27,7 +29,9 @@ function Header({ assignment, timeZone }: { assignment: AssignmentHeader; timeZo
         </Link>
       </p>
       <p className="eyebrow mb-2">Assignment</p>
-      <h1 className="font-read text-3xl break-words text-ink-1">{assignment.title}</h1>
+      <h1 className="font-read text-display leading-tight break-words text-ink-1">
+        {assignment.title}
+      </h1>
       <p className="mt-2 text-sm text-ink-2">
         Closes <ClassTime iso={assignment.closesAt} timeZone={timeZone} /> ·{" "}
         {attemptsLabel(assignment.maxAttempts)}
@@ -62,11 +66,7 @@ export default async function StudentAssignmentPage({
 
   if (view.kind === "missing") notFound();
   if (view.kind === "failed") {
-    return (
-      <p role="alert" className="text-ink-2">
-        This assignment did not load. Reload the page.
-      </p>
-    );
+    return <Notice role="alert">This assignment did not load. Reload the page.</Notice>;
   }
   // #242: the close is said in the class's zone, as on the student home and in the reminder email.
   const timeZone = zoneOfClass(classes, view.assignment.classId);
@@ -84,11 +84,12 @@ export default async function StudentAssignmentPage({
         submit={submitAssignmentAttempt.bind(null, view.assignment.id)}
       />
     );
+    // PracticeCase: the patient record and the question side by side need the wide width.
     return (
-      <>
+      <PageWidth width="wide">
         <Header assignment={view.assignment} timeZone={timeZone} />
         <div className="mt-6">{player}</div>
-      </>
+      </PageWidth>
     );
   }
 

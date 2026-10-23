@@ -16,7 +16,8 @@ export function ShowFeedbackWords({ children }: { children: ReactNode }) {
   return <FeedbackWordsContext value={true}>{children}</FeedbackWordsContext>;
 }
 
-const VISIBLE = "ml-2 shrink-0 text-sm font-medium text-ink-1";
+// Bold, in the colour of the element it marks (OptionRow sets it), as the Foundation mockup has.
+const VISIBLE = "ml-2 shrink-0 text-sm font-bold";
 
 /** The class for a renderer's feedback word: visible unless a context turns the words off. */
 export function useFeedbackWordClass(): string {

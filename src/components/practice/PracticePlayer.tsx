@@ -3,9 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CaseStudyPlayer, type InitialStep } from "@/components/case-study/CaseStudyPlayer";
-import { ItemPlayer } from "@/components/question/ItemPlayer";
+import { ActionBar } from "@/components/question/ActionBar";
 import { SetNav } from "@/components/question/SetNav";
+import type { PractiseMissedState } from "@/components/review/PractiseMissed";
 import { Button } from "@/components/ui/Button";
+import { Notice } from "@/components/ui/Notice";
+import { ProgressBar } from "@/components/ui/ProgressBar";
 // Module by module, never a barrel: this is a screen a student loads, and the scoring engine must
 // not reach its bundle (ADR 0003, `noClientScoring.test.ts`). Types from server modules only.
 import { PracticeAnswerError, postPracticeAnswer } from "@/lib/practice/answerClient";
@@ -13,12 +16,14 @@ import {
   itemsOf,
   type PracticeAnswered,
   type PracticeEntry,
-  type PracticeItemEntry,
   type PracticeView,
 } from "@/lib/practice/entries";
 import { PRACTICE_REFUSALS } from "@/lib/practice/refusals";
+import { rowsFromPractice } from "@/lib/practice/resultsRows";
 import type { AnyResponse } from "@/lib/ngn/schemas";
 import type { KeylessItem, ScoreReveal } from "@/lib/ngn/submit";
+import { PracticeItem } from "./PracticeItem";
+import { PracticeResults } from "./PracticeResults";
 import { PracticeStartOver, type StartOverState } from "./PracticeStartOver";
 
 export type PracticeAnswerHandler = (
@@ -29,8 +34,12 @@ export type PracticeAnswerHandler = (
 
 export interface PracticePlayerProps {
   view: PracticeView;
-  /** The Server Action that opens a new run, already bound to the bank. */
-  startOver: (previous: StartOverState) => Promise<StartOverState>;
+  /** The Server Action that opens a new run, already bound to the bank. A missed run has none. */
+  startOver?: (previous: StartOverState) => Promise<StartOverState>;
+  /** "Practise the N I missed", bound to this run on the server (owner decision 6). */
+  practiseMissed?: (previous: PractiseMissedState) => Promise<PractiseMissedState>;
+  /** Where a run of missed questions goes back to once it is done. */
+  back?: { href: string; label: string };
   /** Checks one answer. Defaults to `POST /api/practice/answer`; injected by tests. */
   answer?: PracticeAnswerHandler;
 }
@@ -62,28 +71,29 @@ const REREAD = new Set(["not_found", "answered"]);
 const pending = (): Promise<never> => new Promise<never>(() => {});
 
 /**
- * A student practising a shared bank (#241): one entry at a time — an item, or a case study played
- * step by step — with a list to jump between them, Previous and Next, a count of what is done, and
- * Start over.
+ * A student practising a shared quiz (#241; PracticeCase and PracticePhone): one entry at a time —
+ * an item, or a case study played step by step — with "n of N done" and a progress bar, a list to
+ * jump between them, Previous and Next, and Start over. Once every question has an answer the run
+ * ends on its results (ResultsPhone): the total, the share by step, what was missed, "Practise the
+ * N I missed" and "Start over with all N"; any question there opens again in the player.
  *
  * Each item is the shared `ItemPlayer` with its own Submit. The submit goes to the server, which
  * scores it, records it, and only then sends back that one item's key, rationale, scoring rule and
- * score; the player turns to feedback with them, the same renderer with the rule explained. A case
- * study is the shared `CaseStudyPlayer`, whose steps submit the same way one at a time (#46), so
- * each step's key arrives with that step's answer and no sooner. This screen holds no key for
- * anything the student has not answered, and no scoring code (ADR 0003).
+ * score; the player turns to feedback with them, and Previous and "Next question" take Submit's
+ * place in the bar. A case study is the shared `CaseStudyPlayer`, whose steps submit the same way
+ * one at a time (#46), so each step's key arrives with that step's answer and no sooner. This
+ * screen holds no key for anything the student has not answered, and no scoring code (ADR 0003).
  *
  * What is answered is the server's view (`view.entries`, fresh on every reload or refresh) merged
- * with the answers this tab has just been handed back. An answered item reopens in feedback. A
- * refusal that means the screen is out of date reads the page again and says why, once; any other
- * failure is the player's own "could not be checked" beside its Submit.
- *
- * Built at 375px: one column, the list wraps, and the reveal respects reduced motion through the
- * shared player.
+ * with the answers this tab has just been handed back. A refusal that means the screen is out of
+ * date reads the page again and says why, once; any other failure is the player's own "could not
+ * be checked" beside its Submit.
  */
 export function PracticePlayer({
   view,
   startOver,
+  practiseMissed,
+  back,
   answer = postPracticeAnswer,
 }: PracticePlayerProps) {
   const router = useRouter();
@@ -93,6 +103,12 @@ export function PracticePlayer({
   const [checked, setChecked] = useState<Done>({});
   const [drafts, setDrafts] = useState<Readonly<Record<string, AnyResponse>>>({});
   const [notice, setNotice] = useState<string | null>(null);
+  // The results page is open: at once for a run already finished when it was opened, and only
+  // on "See results" for one finished here, so the last answer's own marks and rationale show
+  // first (code review, 2026-10-22). A question picked from the results closes it again.
+  const [resultsOpen, setResultsOpen] = useState(
+    () => view.total > 0 && Object.keys(serverDone(view.entries)).length >= view.total,
+  );
 
   if (view.entries.length === 0) {
     return <p className="measure text-ink-2">This quiz has no questions yet.</p>;
@@ -103,6 +119,8 @@ export function PracticePlayer({
   const at = Math.min(index, view.entries.length - 1);
   const entry = view.entries[at] as PracticeEntry;
   const answered = Object.keys(done).length;
+  const finished = view.total > 0 && answered >= view.total;
+  const isLast = at === view.entries.length - 1;
 
   const check = async (itemId: string, response: AnyResponse): Promise<ScoreReveal> => {
     setNotice(null);
@@ -119,6 +137,26 @@ export function PracticePlayer({
     }
   };
 
+  if (finished && resultsOpen) {
+    const rows = rowsFromPractice(view.entries, done);
+    return (
+      <PracticeResults
+        rows={rows}
+        kind={view.kind ?? "quiz"}
+        startOver={startOver}
+        practiseMissed={practiseMissed}
+        back={back}
+        onReview={(itemId) => {
+          const to = view.entries.findIndex((each) =>
+            itemsOf(each).some((step) => step.itemId === itemId),
+          );
+          setIndex(Math.max(0, to));
+          setResultsOpen(false);
+        }}
+      />
+    );
+  }
+
   // A step's row id by the step's own item id, which is unique within its case study.
   const rowOf = new Map<string, string>(
     entry.kind === "case_study" ? entry.steps.map((step) => [step.item.id, step.itemId]) : [],
@@ -133,11 +171,33 @@ export function PracticePlayer({
     return reveal;
   };
 
+  const standaloneDone = entry.kind === "item" && done[entry.itemId] !== undefined;
+  const toResults = () => {
+    setResultsOpen(true);
+    setIndex(0);
+  };
+
+  // A question on its own reads at the question's measure; beside a patient record it takes the
+  // room the record layout needs for its two panes (PracticeCase).
+  const withRecord = entry.kind === "case_study" || entry.record !== undefined;
+
   return (
-    <div className="pb-28">
-      <p data-testid="practice-count" className="tabular text-sm text-ink-2">
-        {`${answered} of ${view.total} done`}
-      </p>
+    <div className={withRecord ? undefined : "mx-auto max-w-190"}>
+      <div className="flex items-center gap-4">
+        <p
+          data-testid="practice-count"
+          className="tabular shrink-0 font-mono text-sm font-semibold"
+        >
+          {`${answered} of ${view.total} done`}
+        </p>
+        <ProgressBar
+          className="flex-1"
+          value={answered}
+          max={view.total}
+          label="Questions answered"
+          valueText={`${answered} of ${view.total} done`}
+        />
+      </div>
 
       <SetNav
         entries={view.entries.map((each) => ({
@@ -149,9 +209,9 @@ export function PracticePlayer({
       />
 
       {notice ? (
-        <p role="alert" className="measure mt-4 text-sm text-incorrect">
+        <Notice role="alert" className="measure mt-4">
           {notice}
-        </p>
+        </Notice>
       ) : null}
 
       <div className="mt-8">
@@ -190,53 +250,51 @@ export function PracticePlayer({
         )}
       </div>
 
-      <div className="mt-6 flex flex-wrap justify-between gap-2">
-        <Button variant="secondary" disabled={at === 0} onClick={() => setIndex(at - 1)}>
-          Previous
-        </Button>
-        <Button
-          variant="secondary"
-          disabled={at === view.entries.length - 1}
-          onClick={() => setIndex(at + 1)}
-        >
-          Next
-        </Button>
-      </div>
+      {standaloneDone ? (
+        // Answered: Previous and the way on take Submit's place (PracticePhone).
+        <ActionBar>
+          <Button variant="ghost" disabled={at === 0} onClick={() => setIndex(at - 1)}>
+            Previous
+          </Button>
+          {finished ? (
+            <Button variant="primary" size="lg" className="flex-1 md:flex-none" onClick={toResults}>
+              See results
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              size="lg"
+              className="flex-1 md:flex-none"
+              disabled={isLast}
+              onClick={() => setIndex(at + 1)}
+            >
+              Next question
+            </Button>
+          )}
+        </ActionBar>
+      ) : (
+        <div className="mt-6 flex flex-wrap justify-between gap-2">
+          <Button variant="secondary" disabled={at === 0} onClick={() => setIndex(at - 1)}>
+            Previous
+          </Button>
+          <Button variant="secondary" disabled={isLast} onClick={() => setIndex(at + 1)}>
+            Next
+          </Button>
+        </div>
+      )}
 
-      <PracticeStartOver startOver={startOver} />
+      {finished ? (
+        <p className="mt-6">
+          <Button variant="ghost" onClick={toResults}>
+            Back to your results
+          </Button>
+        </p>
+      ) : startOver ? (
+        <PracticeStartOver startOver={startOver} />
+      ) : null}
+      {/* Room for the phone's fixed bar, which the last thing on the page must clear. */}
+      {/* Answered or not: an open question's Submit bar is fixed there too, over Start over. */}
+      <div aria-hidden="true" className="h-28 md:hidden" />
     </div>
-  );
-}
-
-interface PracticeItemProps {
-  entry: PracticeItemEntry;
-  done: PracticeAnswered | undefined;
-  draft: AnyResponse | undefined;
-  onDraft: (response: AnyResponse) => void;
-  check: (response: AnyResponse) => Promise<ScoreReveal>;
-}
-
-/** One standalone item: open for an answer, or in feedback with what the server sent back. */
-function PracticeItem({ entry, done, draft, onDraft, check }: PracticeItemProps) {
-  if (done?.kind === "scored") {
-    return (
-      <ItemPlayer
-        item={entry.item}
-        initialResponse={done.response}
-        initialReveal={done.reveal}
-        submit={check}
-      />
-    );
-  }
-  if (done?.kind === "key") {
-    return <ItemPlayer item={entry.item} initialKey={done.key} submit={check} />;
-  }
-  return (
-    <ItemPlayer
-      item={entry.item}
-      initialResponse={draft}
-      onResponseChange={onDraft}
-      submit={check}
-    />
   );
 }

@@ -20,6 +20,13 @@ export const RULES: { [T in ItemType]: ItemRules<T> } = {
       if (item.content.variant === "select_n") return response.optionIds.length === item.content.n;
       return response.optionIds.length > 0;
     },
+    describeResponse: (item, response) => {
+      const count = response.optionIds.length;
+      if (item.content.variant === "select_n" && item.content.n !== undefined) {
+        return `${count} of ${item.content.n} selected`;
+      }
+      return count === 0 ? undefined : `${count} selected`;
+    },
   },
   multiple_response_grouping: {
     isComplete: (item, response) =>
@@ -51,6 +58,8 @@ export const RULES: { [T in ItemType]: ItemRules<T> } = {
   },
   highlight_text: {
     isComplete: (_item, response) => response.spanIds.length > 0,
+    describeResponse: (_item, response) =>
+      response.spanIds.length === 0 ? undefined : `${response.spanIds.length} highlighted`,
   },
   highlight_table: {
     isComplete: (_item, response) => response.spanIds.length > 0,

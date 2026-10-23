@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useId, useRef } from "react";
+import { FieldError } from "@/components/authoring/FieldError";
 import { Button } from "@/components/ui/Button";
 
 export type ShareFormState =
@@ -70,9 +71,9 @@ export function PracticeShareForm({
           ))}
         </select>
         {error ? (
-          <p id={`${id}-error`} role="alert" className="text-sm text-incorrect">
+          <FieldError id={`${id}-error`} role="alert">
             {error}
-          </p>
+          </FieldError>
         ) : null}
         {state.status === "shared" ? (
           <p role="status" className="text-sm text-ink-2">

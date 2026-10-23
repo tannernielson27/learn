@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useId, useRef } from "react";
+import { FieldError } from "@/components/authoring/FieldError";
 import { Button } from "@/components/ui/Button";
 import { fieldClasses } from "@/components/ui/fieldClasses";
 import { DISPLAY_NAME_MAX_LENGTH } from "@/lib/live/displayName";
@@ -45,7 +46,7 @@ export function JoinForm({ action, code }: JoinFormProps) {
   const field = fieldClasses("px-3 text-base");
 
   return (
-    <form action={formAction} className="flex flex-col gap-6">
+    <form action={formAction} className="flex flex-1 flex-col gap-6">
       <div className="flex flex-col gap-2">
         <label htmlFor={`${fieldId}-code`} className="text-sm font-medium text-ink-1">
           Join code
@@ -66,12 +67,14 @@ export function JoinForm({ action, code }: JoinFormProps) {
           autoFocus={code === ""}
           aria-invalid={codeError ? true : undefined}
           aria-describedby={codeError ? `${fieldId}-code-error` : `${fieldId}-code-hint`}
-          className={fieldClasses("px-3 font-mono text-xl tracking-[0.2em] uppercase")}
+          className={fieldClasses(
+            "px-4 font-mono text-2xl font-semibold tracking-[0.2em] uppercase",
+          )}
         />
         {codeError ? (
-          <p id={`${fieldId}-code-error`} role="alert" className="text-sm text-incorrect">
+          <FieldError id={`${fieldId}-code-error`} role="alert">
             {codeError}
-          </p>
+          </FieldError>
         ) : (
           <p id={`${fieldId}-code-hint`} className="text-sm text-ink-2">
             Six characters, on the screen at the front.
@@ -97,25 +100,31 @@ export function JoinForm({ action, code }: JoinFormProps) {
           className={field}
         />
         {nameError ? (
-          <p id={`${fieldId}-name-error`} role="alert" className="text-sm text-incorrect">
+          <FieldError id={`${fieldId}-name-error`} role="alert">
             {nameError}
-          </p>
+          </FieldError>
         ) : (
           <p id={`${fieldId}-name-hint`} className="text-sm text-ink-2">
-            The class sees this.
+            Your teacher sees this name. The class sees it only before the start.
           </p>
         )}
       </div>
 
-      {formError ? (
-        <p role="alert" className="text-sm text-incorrect">
-          {formError}
-        </p>
-      ) : null}
+      {formError ? <FieldError role="alert">{formError}</FieldError> : null}
 
-      <Button type="submit" variant="primary" disabled={pending} aria-disabled={pending}>
-        {pending ? "Joining…" : "Join"}
-      </Button>
+      {/* At the foot of the screen on a phone, in thumb reach (Main mockup). */}
+      <div className="mt-auto pt-2">
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          block
+          disabled={pending}
+          aria-disabled={pending}
+        >
+          {pending ? "Joining…" : "Join"}
+        </Button>
+      </div>
     </form>
   );
 }

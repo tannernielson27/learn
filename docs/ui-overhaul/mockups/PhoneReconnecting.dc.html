@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reconnecting</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="lr.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&amp;display=swap">
+<style>body{margin:0}a{color:oklch(38% 0.12 250)}a:hover{color:oklch(30% 0.12 250)}</style>
+</helmet>
+<div class="lr" style="width: 375px; height: 812px; position: relative; display: flex; flex-direction: column">
+  <div role="status" style="display: flex; gap: 12px; align-items: center; padding: 14px 20px; background: var(--ink-1); color: var(--surface-0)">
+    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h.01"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/><path d="M5 12.859a10 10 0 0 1 5.17-2.69"/><path d="M19 12.859a10 10 0 0 0-2.007-1.523"/><path d="M2 8.82a15 15 0 0 1 4.177-2.643"/><path d="M22 8.82a15 15 0 0 0-11.288-3.764"/><path d="m2 2 20 20"/></svg>
+    <div style="flex: 1">
+      <p style="font-weight: 700; font-size: 15px">Reconnecting</p>
+      <p style="font-size: 13px; opacity: 0.85">Stay on this page. Your answer is kept.</p>
+    </div>
+  </div>
+  <header style="padding: 12px 20px; background: var(--surface-1); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; font-size: 14px">
+    <p class="mono" style="font-weight: 600">Question 3 of 20</p>
+    <span style="display: flex; align-items: center; gap: 6px; color: var(--ink-2)"><span class="statusdot off"></span>Offline</span>
+  </header>
+  <main style="flex: 1; padding: 20px 20px 120px; display: flex; flex-direction: column; gap: 16px; overflow: hidden">
+    <p class="stem" style="font-size: 18px">A client with heart failure gained 2.3 kg (5 lb) in two days and is now short of breath lying flat. Which action should the nurse take first?</p>
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <div class="option is-selected"><span class="letter">A</span><span>Auscultate the lungs and check oxygen saturation</span></div>
+      <div class="option"><span class="letter">B</span><span>Encourage the client to drink more fluids</span></div>
+      <div class="option"><span class="letter">C</span><span>Document the weight and reassess tomorrow</span></div>
+      <div class="option"><span class="letter">D</span><span>Teach the client about low-sodium food choices</span></div>
+    </div>
+  </main>
+  <div class="submitbar">
+    <p class="muted" style="font-size: 14px; flex: 1">Submit comes back when you are connected.</p>
+    <button class="btn btn-lg" type="button" disabled style="min-width: 128px">Submit</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

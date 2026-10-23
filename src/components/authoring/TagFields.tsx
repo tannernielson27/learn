@@ -12,6 +12,8 @@ import {
   type ClientNeed,
 } from "@/lib/ngn/tags";
 import type { CjmmStep } from "@/lib/ngn/types";
+import { fieldClasses } from "@/components/ui/fieldClasses";
+import { FieldError } from "./FieldError";
 
 export interface TagFieldsProps {
   /** Prefix for element ids, unique on the page. */
@@ -27,8 +29,7 @@ export interface TagFieldsProps {
 
 const STEPS = [1, 2, 3, 4, 5, 6] as const;
 
-const fieldClass =
-  "w-full rounded-sm border border-line bg-surface-1 px-3 py-2 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect";
+const fieldClass = fieldClasses("px-3 py-2 text-base");
 const chipClass =
   "inline-flex items-center rounded-sm border border-line bg-surface-1 text-sm text-ink-1";
 
@@ -179,9 +180,9 @@ export function TagFields({
           </Button>
         </div>
         {problem ? (
-          <p id={ids.problem} role="alert" className="text-sm text-incorrect">
+          <FieldError id={ids.problem} role="alert">
             {problem}
-          </p>
+          </FieldError>
         ) : null}
         {topics.length > 0 ? (
           <ul aria-label="Topic tags" className="flex flex-wrap gap-2">

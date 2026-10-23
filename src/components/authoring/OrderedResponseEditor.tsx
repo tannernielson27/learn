@@ -11,6 +11,7 @@ import {
 import { describeIssues } from "@/lib/authoring/issueMessages";
 import { orderedResponseItemSchema, type ItemInputOf } from "@/lib/ngn/schemas";
 import { EditorShell, issueMessageId, type SaveResult } from "./EditorShell";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 
 export interface OrderedResponseEditorProps {
   initialValues: OrderedResponseFormValues;
@@ -22,8 +23,7 @@ export interface OrderedResponseEditorProps {
 const MIN_STEPS = 4;
 const MAX_STEPS = 6;
 const DIRTY = { shouldDirty: true } as const;
-const fieldClass =
-  "w-full rounded-sm border border-line bg-surface-1 px-3 py-2 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect";
+const fieldClass = fieldClasses("px-3 py-2 text-base");
 
 function unusedStepId(taken: ReadonlySet<string>): string {
   for (let i = 1; i < 100; i += 1) {

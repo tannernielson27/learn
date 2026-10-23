@@ -12,7 +12,11 @@ import {
   type ReactNode,
 } from "react";
 import { CaseStudyPlayer } from "@/components/case-study/CaseStudyPlayer";
-import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { Button, PRESS_CLASSES } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Notice as SystemNotice } from "@/components/ui/Notice";
+import { textLinkClasses } from "@/components/ui/TextLink";
 import type { CaseStudy } from "@/lib/ngn/schemas";
 import { scoreInProcess } from "@/lib/ngn/submit";
 import { CJMM_STEP_LABELS, type CjmmStep } from "@/lib/ngn/types";
@@ -231,12 +235,8 @@ export function CaseStudyBuilder({
   const headingId = `${ids}-heading`;
   const askId = `${ids}-ask`;
   const backLink = (
-    <p className="mb-2 text-sm">
-      <a
-        href={back.href}
-        onClick={leave}
-        className="text-accent-ink underline-offset-4 hover:underline"
-      >
+    <p className="mb-2">
+      <a href={back.href} onClick={leave} className={textLinkClasses({ size: "sm" })}>
         {back.label}
       </a>
     </p>
@@ -289,10 +289,13 @@ export function CaseStudyBuilder({
       ) : null}
 
       {notice?.kind === "previewBlocked" ? (
-        <div role="alert" className="mb-4 rounded-sm border border-line bg-surface-1 p-4 text-sm">
-          <p className="font-medium text-ink-1">This case study cannot be previewed yet.</p>
+        <SystemNotice
+          role="alert"
+          title="This case study cannot be previewed yet."
+          className="mb-4"
+        >
           <BlockerList blockers={notice.blockers} />
-        </div>
+        </SystemNotice>
       ) : null}
       {notice?.kind === "published" ? (
         <p role="status" className="mb-4 text-sm text-ink-2">
@@ -300,17 +303,18 @@ export function CaseStudyBuilder({
         </p>
       ) : null}
       {notice?.kind === "publishFailed" ? (
-        <div role="alert" className="mb-4 rounded-sm border border-line bg-surface-1 p-4 text-sm">
-          <p className="font-medium text-incorrect">{notice.error}</p>
+        // A system message, not a marked answer: neutral, never feedback red (PLAN D11).
+        <SystemNotice role="alert" title={notice.error} className="mb-4">
           <BlockerList blockers={notice.blockers} />
-        </div>
+        </SystemNotice>
       ) : null}
 
       {pending !== null ? (
-        <div
+        <Card
           role="alertdialog"
           aria-labelledby={askId}
-          className="mb-4 flex flex-col gap-3 rounded-sm border border-line bg-surface-1 p-4"
+          padding="sm"
+          className="mb-4 flex flex-col gap-3"
         >
           <p id={askId} className="text-sm font-medium text-ink-1">
             {shortNameOf(active)} has unsaved changes
@@ -324,7 +328,7 @@ export function CaseStudyBuilder({
               Keep editing
             </Button>
           </div>
-        </div>
+        </Card>
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[16rem_1fr]">
@@ -337,10 +341,12 @@ export function CaseStudyBuilder({
                   type="button"
                   aria-current={key === active ? "step" : undefined}
                   onClick={() => open(key)}
-                  className="tap-target flex w-full flex-col items-start rounded-sm border border-line px-3 py-2 text-left transition-colors duration-fast hover:bg-surface-2 aria-[current=step]:border-accent aria-[current=step]:bg-surface-1"
+                  // A control's 3:1 edge at rest (WCAG 1.4.11); the open step takes the selected
+                  // treatment, accent edge and soft fill (docs/04 §4).
+                  className={`tap-target flex w-full flex-col items-start gap-1 rounded-md border border-field-border bg-surface-1 px-3 py-2 text-left ${PRESS_CLASSES} hover:bg-surface-2 aria-[current=step]:border-accent aria-[current=step]:bg-accent-soft`}
                 >
                   <span className="text-sm font-medium text-ink-1">{nameOf(key)}</span>
-                  <span className="text-xs text-ink-2">{STATUS_LABELS[status]}</span>
+                  <Badge>{STATUS_LABELS[status]}</Badge>
                 </button>
               </li>
             ))}

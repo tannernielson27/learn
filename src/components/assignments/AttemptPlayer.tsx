@@ -4,8 +4,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { RecordLayout } from "@/components/ehr/RecordLayout";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
+import { ActionBar } from "@/components/question/ActionBar";
 import { SetNav } from "@/components/question/SetNav";
 import { Button } from "@/components/ui/Button";
+import { ProgressBar } from "@/components/ui/ProgressBar";
 // Module by module, never a barrel: this is a screen a student loads, and the scoring engine must
 // not reach its bundle (ADR 0003, `noClientScoring.test.ts`). Types from server modules only.
 import { ATTEMPT_REFUSALS, type AttemptRefusal } from "@/lib/assignments/attemptRefusals";
@@ -194,11 +196,23 @@ export function AttemptPlayer({
   const record = records?.[Math.min(at, records.length - 1)] ?? null;
 
   const page = (
-    <div className="pb-28">
+    <div className={records === undefined ? "mx-auto max-w-190" : undefined}>
       <p className="eyebrow">{`Attempt ${attemptNumber}`}</p>
-      <p data-testid="answered-count" className="tabular mt-2 text-sm text-ink-2">
-        {`${answered} of ${total} answered`}
-      </p>
+      <div className="mt-2 flex items-center gap-4">
+        <p
+          data-testid="answered-count"
+          className="tabular shrink-0 font-mono text-sm font-semibold text-ink-1"
+        >
+          {`${answered} of ${total} answered`}
+        </p>
+        <ProgressBar
+          className="flex-1"
+          value={answered}
+          max={total}
+          label="Questions answered"
+          valueText={`${answered} of ${total} answered`}
+        />
+      </div>
 
       <SetNav
         entries={items.map((each) => ({
@@ -244,8 +258,8 @@ export function AttemptPlayer({
         </div>
       ) : null}
 
-      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-surface-1/95 px-4 py-3 backdrop-blur-sm [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
-        <div className="mx-auto flex max-w-3xl flex-col gap-2">
+      <ActionBar className="flex-col items-stretch">
+        <div className="flex flex-col gap-2">
           {confirming ? (
             <section aria-labelledby="confirm-submit-heading" className="flex flex-col gap-2">
               <h2 id="confirm-submit-heading" className="text-base font-medium text-ink-1">
@@ -273,12 +287,14 @@ export function AttemptPlayer({
               </div>
             </section>
           ) : (
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3 short:flex-col short:items-stretch">
               <p role="status" data-testid="save-status" className="text-sm text-ink-2">
                 {statusText}
               </p>
               <Button
                 variant="primary"
+                size="lg"
+                className="short:px-2 short:whitespace-normal"
                 disabled={status.status === "stopped"}
                 onClick={() => setConfirming(true)}
               >
@@ -287,14 +303,23 @@ export function AttemptPlayer({
             </div>
           )}
           {error ? (
-            <p role="alert" className="text-sm text-incorrect">
+            <p role="alert" className="text-sm text-ink-1">
               {error}
             </p>
           ) : null}
         </div>
-      </div>
+      </ActionBar>
+      {/* Room for the phone's fixed bar, which the last thing on the page must clear. */}
+      <div aria-hidden="true" className="h-36 md:hidden" />
     </div>
   );
 
-  return records === undefined ? page : <RecordLayout record={record}>{page}</RecordLayout>;
+  const previous = at > 0 ? (records?.[Math.min(at, records.length) - 1] ?? null) : null;
+  return records === undefined ? (
+    page
+  ) : (
+    <RecordLayout record={record} previous={previous}>
+      {page}
+    </RecordLayout>
+  );
 }

@@ -79,7 +79,8 @@ test("a teacher makes a folder, moves two quizzes into it, and starts a live ses
   await page.getByRole("textbox", { name: "Folder name", exact: true }).fill("Med-Surg");
   await page.getByRole("button", { name: "Create folder", exact: true }).click();
   const medSurg = folderList(page).getByRole("link", { name: /^Med-Surg/ });
-  await expect(medSurg).toContainText("No quizzes");
+  // The rail's count is read with its word: "Med-Surg 0 quizzes".
+  await expect(medSurg).toContainText("0 quizzes");
   await expectNoAxeViolations(page);
   await expectGlossaryWords(page);
   await expectFits(page);
@@ -93,8 +94,11 @@ test("a teacher makes a folder, moves two quizzes into it, and starts a live ses
     .selectOption({ label: "Med-Surg" });
   await page.getByRole("button", { name: "Move", exact: true }).click();
   await expect(medSurg).toContainText("2 quizzes");
-  // Every quiz is filed, so the top of the library is its folders.
+  // Every quiz is filed, so the top of the library is its folders, and All quizzes lists them.
   await expect(quizList(page)).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Every quiz is in a folder", exact: true }),
+  ).toBeVisible();
   await shoot("library-all-filed");
 
   // Open the folder from the keyboard.
@@ -172,5 +176,5 @@ test("a folder is renamed, holds one more level of folders and no deeper, and an
   // An empty folder is deleted, and its parent opens.
   await page.getByRole("button", { name: "Delete folder", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Peds", exact: true })).toBeVisible();
-  await expect(folderList(page)).toHaveCount(0);
+  await expect(folderList(page).getByRole("link", { name: /^Week 1/ })).toHaveCount(0);
 });

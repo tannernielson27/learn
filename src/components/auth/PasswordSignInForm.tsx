@@ -4,6 +4,7 @@ import { useActionState, useEffect, useId, useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { fieldClasses } from "@/components/ui/fieldClasses";
 import { PasswordField } from "./PasswordField";
+import { FormError } from "./FormError";
 
 export type PasswordSignInState =
   { status: "idle" } | { status: "error"; error: string; field: "email" | "password" };
@@ -20,7 +21,7 @@ export interface PasswordSignInFormProps {
 }
 
 const INITIAL: PasswordSignInState = { status: "idle" };
-const FIELD = fieldClasses("px-3 text-base");
+const FIELD = fieldClasses("h-13 px-3.5 text-lg");
 
 /** Email and password, one tap to sign in. The everyday way in; the emailed link is the spare key. */
 export function PasswordSignInForm({
@@ -43,10 +44,10 @@ export function PasswordSignInForm({
   }, [state]);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form action={formAction} className="flex flex-col gap-5">
       <input type="hidden" name="next" value={next} />
       <div className="flex flex-col gap-2">
-        <label htmlFor={`${id}-email`} className="text-sm font-medium text-ink-1">
+        <label htmlFor={`${id}-email`} className="text-sm font-semibold text-ink-1">
           Email address
         </label>
         <input
@@ -73,12 +74,15 @@ export function PasswordSignInForm({
         invalid={error?.field === "password"}
         errorId={error?.field === "password" ? errorId : undefined}
       />
-      {error ? (
-        <p id={errorId} role="alert" className="text-sm text-incorrect">
-          {error.error}
-        </p>
-      ) : null}
-      <Button type="submit" variant="primary" disabled={pending} aria-disabled={pending}>
+      {error ? <FormError id={errorId}>{error.error}</FormError> : null}
+      <Button
+        type="submit"
+        variant="primary"
+        size="lg"
+        block
+        disabled={pending}
+        aria-disabled={pending}
+      >
         {pending ? "Signing in…" : "Sign in"}
       </Button>
     </form>

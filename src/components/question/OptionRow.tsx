@@ -1,4 +1,6 @@
+import { Check, X } from "lucide-react";
 import type { ReactNode } from "react";
+import { Icon } from "@/components/ui/Icon";
 import type { RichText } from "@/lib/ngn/schemas";
 import { ElementRationale } from "./ElementRationale";
 import { feedbackMarkClasses } from "./feedbackMarks";
@@ -42,13 +44,21 @@ export function FeedbackIcon({
   return (
     <span
       aria-hidden="true"
-      data-feedback-mark=""
-      className={`${className} shrink-0 font-mono text-xs ${isCorrect ? "text-correct" : "text-incorrect"}`}
+      data-feedback-mark={state}
+      className={`${className} shrink-0 leading-none ${isCorrect ? "text-correct" : "text-incorrect"}`}
     >
-      {isCorrect ? "✓" : "✕"}
+      <Icon icon={isCorrect ? Check : X} className="size-4.5" />
     </span>
   );
 }
+
+/** The colour a mark's icon and word share. */
+const FEEDBACK_INK: Record<ElementFeedback, string> = {
+  neutral: "",
+  correct: "text-correct",
+  incorrect: "text-incorrect",
+  missed: "text-correct",
+};
 
 /**
  * A single selectable option. The whole row is the label, so the tap target is the full width.
@@ -80,15 +90,16 @@ export function OptionRow({
   const labelledBy = [marker ? markerId : null, textId, hasFeedback ? feedbackId : null]
     .filter(Boolean)
     .join(" ");
-  const selectedClasses =
-    checked && mode !== "feedback" ? "border-accent ring-1 ring-accent bg-accent-soft" : "";
+  // Selected: the accent edge doubled by a ring (2px without moving the text) over the soft fill.
+  const selected = checked && mode !== "feedback";
+  const selectedClasses = selected ? "border-accent ring-1 ring-accent bg-accent-soft" : "";
   return (
     <div>
       <label
         htmlFor={id}
-        className={`option flex min-h-11 cursor-pointer items-start gap-3 rounded-sm border px-4 py-3 transition-[background-color,border-color,box-shadow] duration-fast ease-out-expo ${
-          interactive ? "hover:bg-surface-2" : "cursor-default"
-        } ${selectedClasses} ${feedbackMarkClasses(feedback, "border-line", "bg-surface-1")} ${disabled && !checked ? "opacity-50" : ""}`}
+        className={`option flex min-h-(--option-min-height) cursor-pointer items-start gap-3.5 rounded-md border px-4 py-3.5 transition-[background-color,border-color,box-shadow] duration-fast ease-out-expo ${
+          interactive && !selected ? "hover:bg-surface-2" : ""
+        } ${interactive ? "" : "cursor-default"} ${selectedClasses} ${feedbackMarkClasses(feedback, selected ? "" : "border-field-border", "bg-surface-1")} ${disabled && !checked ? "opacity-50" : ""}`}
       >
         <input
           id={id}
@@ -99,10 +110,19 @@ export function OptionRow({
           onChange={onToggle}
           aria-labelledby={labelledBy}
           aria-describedby={rationale ? rationaleId : undefined}
-          className="mt-1 size-4 shrink-0 accent-(--accent)"
+          className="mt-1 size-4.5 shrink-0 accent-(--accent)"
         />
         {marker ? (
-          <span id={markerId} aria-hidden="true" className="font-mono text-sm text-ink-2">
+          // Traditional multiple choice only (docs/04 §6): the letter in a ring, filled when chosen.
+          <span
+            id={markerId}
+            aria-hidden="true"
+            className={`-mt-0.5 grid size-7 shrink-0 place-items-center rounded-full border-[1.5px] font-mono text-xs font-semibold ${
+              selected
+                ? "border-accent bg-accent text-accent-contrast"
+                : "border-field-border text-ink-2"
+            }`}
+          >
             {marker}
           </span>
         ) : null}
@@ -110,11 +130,16 @@ export function OptionRow({
           {label}
         </span>
         {hasFeedback ? (
-          <span id={feedbackId} aria-hidden="true" className={feedbackWordClass}>
-            {feedbackLabel[feedback]}
+          // The mark: icon and word together at the row's end, in the mark's colour (Foundation).
+          <span
+            className={`mt-0.5 ml-auto inline-flex shrink-0 items-center ${FEEDBACK_INK[feedback]}`}
+          >
+            <FeedbackIcon state={feedback} className="" />
+            <span id={feedbackId} aria-hidden="true" className={feedbackWordClass}>
+              {feedbackLabel[feedback]}
+            </span>
           </span>
         ) : null}
-        <FeedbackIcon state={feedback} />
       </label>
       <ElementRationale id={rationaleId} text={rationale} className="ml-4" />
     </div>

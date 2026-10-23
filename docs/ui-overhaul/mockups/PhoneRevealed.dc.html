@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Answer showing on a student phone</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="lr.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&amp;display=swap">
+<style>body{margin:0}a{color:oklch(38% 0.12 250)}a:hover{color:oklch(30% 0.12 250)}</style>
+</helmet>
+<div class="lr" style="width: 375px; height: 812px; position: relative; display: flex; flex-direction: column">
+  <header style="padding: 12px 20px; background: var(--surface-1); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; font-size: 14px">
+    <p class="mono" style="font-weight: 600">Question 3 of 20</p>
+    <span class="badge">Answer showing</span>
+  </header>
+  <main style="flex: 1; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; overflow: hidden">
+    <section class="verdict ok" aria-label="Your result">
+      <svg class="ico ico-lg" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--correct)"><path d="M20 6 9 17l-5-5"/></svg>
+      <div>
+        <h3 style="color: var(--correct)">All correct</h3>
+        <p class="mono muted" style="font-size: 14px; margin-top: 2px">1 of 1 point</p>
+      </div>
+    </section>
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <div class="option correct"><span class="letter" style="border-color: var(--correct); background: var(--correct); color: #fff">A</span><span style="flex: 1">Auscultate the lungs and check oxygen saturation</span><span class="mark"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Correct</span></div>
+      <div class="option" style="color: var(--ink-2)"><span class="letter">B</span><span>Encourage the client to drink more fluids</span></div>
+      <div class="option" style="color: var(--ink-2)"><span class="letter">C</span><span>Document the weight and reassess tomorrow</span></div>
+      <div class="option" style="color: var(--ink-2)"><span class="letter">D</span><span>Teach the client about low-sodium food choices</span></div>
+    </div>
+    <section style="border-top: 1px solid var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 6px">
+      <h2 style="font-size: 15px; font-weight: 700">Why</h2>
+      <p class="rationale" style="font-size: 15px">Fast weight gain with orthopnea points to fluid overload. Lung sounds and saturation tell you how far it has gone and how urgently to act.</p>
+    </section>
+  </main>
+  <footer style="padding: 12px 20px 28px; border-top: 1px solid var(--line); background: var(--surface-1); display: flex; flex-direction: column; gap: 8px">
+    <p class="muted" style="font-size: 13px; text-align: center">The next question appears when your teacher moves on.</p>
+    <a class="btn btn-secondary btn-block" href="PhoneEnded.dc.html">See the end of the session</a>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

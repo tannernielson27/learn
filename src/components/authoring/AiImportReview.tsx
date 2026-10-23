@@ -1,10 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState } from "react";
-import { Button } from "@/components/ui/Button";
+import { Button, PRESS_CLASSES } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { Dialog } from "@/components/ui/Dialog";
+import { TextLink } from "@/components/ui/TextLink";
 import {
   REVIEW_FILTERS,
   filterCounts,
@@ -19,6 +20,7 @@ import {
 import type { AiImportFailure } from "@/lib/authoring/aiImportUpload";
 import type { ItemType } from "@/lib/ngn/schemas";
 import { AiImportReviewEntry, type EntryChange } from "./AiImportReviewEntry";
+import { FieldError } from "./FieldError";
 import { postJson } from "./aiImportRequests";
 
 /** What a drop or a restore is told: the entry, and the version the page showed. */
@@ -147,82 +149,70 @@ export function AiImportReview({
   const blocked = summary.blockers.length > 0;
   if (imported) {
     return (
-      <section
-        aria-labelledby={`${id}-done`}
-        className="flex flex-col gap-3 rounded-sm border border-line bg-surface-1 p-4 sm:max-w-2xl"
-      >
-        <h2 id={`${id}-done`} className="font-read text-2xl text-ink-1">
-          Imported
-        </h2>
-        <p role="status" className="text-ink-1">
-          {imported}
-        </p>
-        <Link
-          href={`/author/banks/${bankId}`}
-          className="tap-target inline-flex items-center text-accent-ink underline"
-        >
-          Open {quizName}
-        </Link>
+      <section aria-labelledby={`${id}-done`} className="sm:max-w-2xl">
+        <Card className="flex flex-col items-start gap-3">
+          <h2 id={`${id}-done`} className="font-read text-2xl text-ink-1">
+            Imported
+          </h2>
+          <p role="status" className="text-ink-1">
+            {imported}
+          </p>
+          <TextLink href={`/author/banks/${bankId}`}>Open {quizName}</TextLink>
+        </Card>
       </section>
     );
   }
   return (
     <div className="flex flex-col gap-8">
-      <section
-        aria-labelledby={`${id}-import`}
-        className="flex flex-col gap-3 rounded-sm border border-line bg-surface-1 p-4 sm:max-w-2xl"
-      >
-        <h2 id={`${id}-import`} className="font-read text-2xl text-ink-1">
-          Review the questions
-        </h2>
-        <p className="text-sm text-ink-2">
-          Nothing has been added to {quizName} yet. Drop what you do not want; questions that are
-          not importable are left out.
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
-          {/* aria-disabled while importing, not disabled: a disabled button drops focus. */}
-          <Button
-            variant="primary"
-            disabled={blocked || !actions.importBatch}
-            aria-disabled={importing || undefined}
-            aria-describedby={`${id}-why`}
-            onClick={runImport}
-            data-testid="import-button"
-          >
-            {importing ? "Importing…" : summary.label}
-          </Button>
-          <Link
-            href={`/author/banks/${bankId}`}
-            className="tap-target inline-flex items-center text-accent-ink underline"
-          >
-            Back to {quizName}
-          </Link>
-        </div>
-        <div id={`${id}-why`} className="text-sm text-ink-1">
-          {blocked ? (
-            <ul className="flex list-disc flex-col gap-1 pl-5">
-              {summary.blockers.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-          ) : actions.importBatch ? null : (
-            <p className="text-ink-2">
-              Importing is not available yet. Your review is kept until then.
-            </p>
-          )}
-          {/* Always rendered: a region that appears with its text already in it is often not read. */}
-          <p aria-live="polite" className="text-incorrect">
-            {importError}
+      <section aria-labelledby={`${id}-import`} className="sm:max-w-2xl">
+        <Card className="flex flex-col gap-3">
+          <h2 id={`${id}-import`} className="font-read text-2xl text-ink-1">
+            Review the questions
+          </h2>
+          <p className="text-sm text-ink-2">
+            Nothing has been added to {quizName} yet. Drop what you do not want; questions that are
+            not importable are left out.
           </p>
-        </div>
-        {actions.discard ? (
-          <DiscardImport
-            batchId={batchId}
-            bankId={bankId}
-            quizName={quizName}
-            discard={actions.discard}
-          />
-        ) : null}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* aria-disabled while importing, not disabled: a disabled button drops focus. */}
+            <Button
+              variant="primary"
+              disabled={blocked || !actions.importBatch}
+              aria-disabled={importing || undefined}
+              aria-describedby={`${id}-why`}
+              onClick={runImport}
+              data-testid="import-button"
+            >
+              {importing ? "Importing…" : summary.label}
+            </Button>
+            <TextLink href={`/author/banks/${bankId}`}>Back to {quizName}</TextLink>
+          </div>
+          <div id={`${id}-why`} className="text-sm text-ink-1">
+            {blocked ? (
+              <ul className="flex list-disc flex-col gap-1 pl-5">
+                {summary.blockers.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            ) : actions.importBatch ? null : (
+              <p className="text-ink-2">
+                Importing is not available yet. Your review is kept until then.
+              </p>
+            )}
+            {/* Always rendered: a region that appears with its text already in it is often not read. */}
+            <div aria-live="polite">
+              {importError ? <FieldError>{importError}</FieldError> : null}
+            </div>
+          </div>
+          {actions.discard ? (
+            <DiscardImport
+              batchId={batchId}
+              bankId={bankId}
+              quizName={quizName}
+              discard={actions.discard}
+            />
+          ) : null}
+        </Card>
       </section>
 
       <div role="group" aria-label="Show" className="flex flex-wrap gap-2">
@@ -234,10 +224,11 @@ export function AiImportReview({
               type="button"
               aria-pressed={active}
               onClick={() => setFilter(option.value)}
-              className={`tap-target rounded-sm border px-3 text-sm transition-colors duration-fast motion-reduce:transition-none ${
+              // At rest, a secondary button's 3:1 edge (WCAG 1.4.11); pressed, the selected fill.
+              className={`tap-target rounded-md border px-3 text-sm font-semibold ${PRESS_CLASSES} ${
                 active
                   ? "border-accent bg-accent-soft text-ink-1"
-                  : "border-line bg-surface-1 text-ink-1 hover:bg-surface-2"
+                  : "border-field-border bg-surface-1 text-ink-1 hover:bg-surface-2"
               }`}
             >
               {option.label} <span className="text-ink-2">({counts[option.value]})</span>
@@ -344,9 +335,9 @@ function DiscardImport({ batchId, bankId, quizName, discard }: DiscardImportProp
         }
       >
         {/* Always rendered: a region that appears with its text already in it is often not read. */}
-        <p id={messageId} aria-live="polite" className="text-sm text-incorrect">
-          {message}
-        </p>
+        <div id={messageId} aria-live="polite">
+          {message ? <FieldError>{message}</FieldError> : null}
+        </div>
       </Dialog>
     </>
   );

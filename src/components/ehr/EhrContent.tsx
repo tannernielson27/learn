@@ -17,6 +17,24 @@ export interface EhrContentProps {
   onSelectTime: (id: string) => void;
   /** A line under the patient's name: an instructor's "full record" marker (#335). */
   note?: string;
+  /** The record at the step before: a tab open now and not then is marked "New". */
+  previous?: EhrRecordView;
+}
+
+/**
+ * The tabs a step has just opened: open in `record` and not open in `previous` (absent then, or
+ * locked). Nothing is new without a step before to compare with, or when the step before was
+ * another patient's (a whole quiz plays case studies one after another, #470).
+ */
+export function newTabIds(record: EhrRecordView, previous: EhrRecordView | undefined): Set<string> {
+  if (previous === undefined) return new Set();
+  if (JSON.stringify(previous.patientHeader) !== JSON.stringify(record.patientHeader)) {
+    return new Set();
+  }
+  const before = new Set(previous.tabs.filter((tab) => !tab.locked).map((tab) => tab.id));
+  return new Set(
+    record.tabs.filter((tab) => !tab.locked && !before.has(tab.id)).map((tab) => tab.id),
+  );
 }
 
 /** A section charted more than once is one section, not several: group by what it is. */
@@ -48,7 +66,7 @@ function PatientHeader({ header }: { header: EhrRecordView["patientHeader"] }) {
   return (
     <div className="pb-3">
       <p className="eyebrow">Patient record</p>
-      <h2 className="mt-1 text-lg font-semibold">{header.name ?? description}</h2>
+      <h2 className="mt-1 text-xl font-bold">{header.name ?? description}</h2>
       <p className="mt-1 text-sm text-ink-2">{meta.join(" · ")}</p>
     </div>
   );
@@ -69,14 +87,21 @@ export function EhrContent({
   selectedTimeId,
   onSelectTime,
   note,
+  previous,
 }: EhrContentProps) {
+  const fresh = newTabIds(record, previous);
   const charted = record.timePoints.length > 1;
   const time = record.timePoints.find((point) => point.id === selectedTimeId);
   const shown = tabsAtTime(record, selectedTimeId);
   const tabs = shown.map((tab) =>
     tab.locked
       ? { id: tab.id, label: tab.title, content: null, locked: true }
-      : { id: tab.id, label: tab.title, content: <EhrBlocks blocks={tab.blocks} /> },
+      : {
+          id: tab.id,
+          label: tab.title,
+          content: <EhrBlocks blocks={tab.blocks} />,
+          ...(fresh.has(tab.id) ? { badge: "New", badgeNote: "New at this step" } : {}),
+        },
   );
   // A selection Tabs has no tab for would leave nothing open and nothing in the tab order, so the
   // first tab that can be opened stands in until the caller catches up. A locked tab never does.

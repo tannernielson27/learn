@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import type { ItemType } from "@/lib/ngn/labels";
+import { Notice } from "@/components/ui/Notice";
 import { NewItemPicker } from "./NewItemPicker";
 
 export interface NewItemChooserProps {
@@ -31,11 +32,7 @@ export function NewItemChooser({ create }: NewItemChooserProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      {error ? (
-        <p role="alert" className="text-sm text-incorrect">
-          {error}
-        </p>
-      ) : null}
+      {error ? <Notice role="alert">{error}</Notice> : null}
       <NewItemPicker onChoose={choose} busy={pending} />
     </div>
   );

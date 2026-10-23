@@ -30,6 +30,11 @@ export interface ItemRendererModule<T extends ItemType> {
   Renderer: ComponentType<ItemRendererProps<T>>;
   /** Whether the response is complete enough to submit (Select N needs exactly N, etc.). */
   isComplete: (item: PlayerItem<T>, response: ResponseOf<T>) => boolean;
+  /**
+   * What the answer holds so far, for the line beside Submit ("2 selected", "2 of 3 selected").
+   * Undefined says nothing more than that it can still change.
+   */
+  describeResponse?: (item: PlayerItem<T>, response: ResponseOf<T>) => string | undefined;
   /** Optional item-specific sentence for the score panel, e.g. naming a triad's anchor. */
   explainScore?: (item: ItemOf<T>, result: ScoreResult) => string | undefined;
 }

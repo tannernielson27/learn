@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -106,6 +106,7 @@ function fakeTransport(initial: LiveSessionState, refusal?: LiveSessionError) {
       return () => presence.delete(listener);
     },
     onAggregate: () => () => {},
+    onConnection: () => () => {},
     async aggregate(): Promise<ItemAggregate | null> {
       asked += 1;
       return tally;
@@ -200,10 +201,14 @@ function setup(initial: LiveSessionState = state(), refusal?: LiveSessionError) 
 
 const button = (name: string) => screen.getByRole("button", { name: new RegExp(`^${name}$`) });
 
+/** A button in the question the console is asking (`ConfirmDialog`). */
+const asked = (name: string) =>
+  within(screen.getByRole("dialog")).getByRole("button", { name: new RegExp(`^${name}$`) });
+
 /** End live session asks first; the second press is the one in the question. */
 async function endSession(user: ReturnType<typeof userEvent.setup>) {
   await user.click(button("End live session"));
-  await user.click(button("End live session"));
+  await user.click(asked("End live session"));
 }
 
 describe("HostLobby", () => {
@@ -214,11 +219,24 @@ describe("HostLobby", () => {
     expect(screen.getByRole("img", { name: /QR code/ })).toBeInTheDocument();
   });
 
-  it("sets the code projector-size from lg up and phone-size below it", () => {
+  it("draws the code large and mono, its two halves apart, as the room reads it aloud", () => {
     setup();
     const code = screen.getByTestId("join-code");
-    expect(code).toHaveClass("text-5xl", "lg:text-8xl", "lg:whitespace-nowrap", "tabular");
+    expect(code).toHaveClass("font-mono", "text-5xl", "tabular");
     expect(code).toHaveTextContent("AJ4 K7P");
+  });
+
+  it("offers the projector view in a new window, and on this screen", () => {
+    setup();
+    expect(screen.getByRole("link", { name: "Open in a new window" })).toHaveAttribute(
+      "href",
+      `/live/${SESSION_ID}?view=projector`,
+    );
+    expect(screen.getByRole("link", { name: "Open in a new window" })).toHaveAttribute(
+      "target",
+      "_blank",
+    );
+    expect(button("Present on this screen")).toBeEnabled();
   });
 
   it("offers only the moves the room can make from the lobby", () => {
@@ -369,13 +387,11 @@ describe("HostLobby: asking before a move that cannot be taken back", () => {
     const fake = setup(state({ status: "running", position: 1 }));
     await fake.user.click(button("End live session"));
     expect(fake.ran).toEqual([]);
-    const ask = screen.getByRole("alertdialog", { name: "End this live session?" });
+    const ask = screen.getByRole("dialog", { name: "End this live session?" });
     expect(ask).toHaveTextContent(
       "Students are disconnected and the join code stops working. You can't reopen it.",
     );
-    expect(ask).toHaveFocus();
-    // The other moves wait while the host decides.
-    expect(screen.queryByRole("button", { name: /^Next question$/ })).toBeNull();
+    expect(ask).toContainElement(document.activeElement as HTMLElement);
   });
 
   it("ends the session once the host confirms", async () => {
@@ -388,9 +404,9 @@ describe("HostLobby: asking before a move that cannot be taken back", () => {
   it("keeps the session running when the host changes their mind", async () => {
     const fake = setup(state({ status: "running", position: 1 }));
     await fake.user.click(button("End live session"));
-    await fake.user.click(button("Keep it open"));
+    await fake.user.click(asked("Keep it open"));
     expect(fake.ran).toEqual([]);
-    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(button("Next question")).toBeEnabled();
   });
 
@@ -398,24 +414,24 @@ describe("HostLobby: asking before a move that cannot be taken back", () => {
     const fake = setup(state({ status: "running", position: 1 }));
     await fake.user.click(button("Show answer"));
     expect(fake.ran).toEqual(["reveal"]);
-    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("asks before showing a student-paced room every answer", async () => {
     const fake = setup(state({ mode: "student_paced", status: "running", position: 1 }));
     await fake.user.click(button("Show answers"));
-    const ask = screen.getByRole("alertdialog", { name: "Show answers for all 3 questions?" });
+    const ask = screen.getByRole("dialog", { name: "Show answers for all 3 questions?" });
     expect(ask).toHaveTextContent("Students who haven't finished can't answer any more.");
-    await fake.user.click(button("Not yet"));
+    await fake.user.click(asked("Not yet"));
     expect(fake.ran).toEqual([]);
 
     await fake.user.click(button("Show answers"));
-    await fake.user.click(button("Show answers"));
+    await fake.user.click(asked("Show answers"));
     expect(fake.ran).toEqual(["reveal"]);
   });
 
   it("puts the roster away once the session has ended", async () => {
-    const fake = setup(state({ status: "running", position: 1 }));
+    const fake = setup(state());
     expect(screen.getByRole("heading", { name: "In this session" })).toBeInTheDocument();
     await endSession(fake.user);
     await screen.findByRole("link", { name: "Open the report" });
@@ -496,10 +512,11 @@ describe("HostLobby: the item's results (#180)", () => {
     const fake = setup(state({ status: "running", position: 1 }));
     fake.resultsIn(twoAnswered);
     expect(await screen.findByText("2 answers counted")).toBeInTheDocument();
-    expect(screen.queryAllByTestId("result-correct")).toHaveLength(0);
+    const keyRows = () => document.querySelectorAll("li[data-key]");
+    expect(keyRows()).toHaveLength(0);
 
     await fake.user.click(button("Show answer"));
-    await waitFor(() => expect(screen.getAllByTestId("result-correct").length).toBeGreaterThan(0));
+    await waitFor(() => expect(keyRows().length).toBeGreaterThan(0));
   });
 });
 
@@ -522,7 +539,9 @@ describe("HostLobby: the item timer (#182)", () => {
       "90 seconds",
       "2 minutes",
     ]);
-    expect(screen.getByText(/You still move the class on/)).toBeInTheDocument();
+    expect(
+      screen.getByText("You can add time or stop the timer during a question."),
+    ).toBeInTheDocument();
 
     await fake.user.selectOptions(select, "30 seconds");
     await waitFor(() => expect(fake.ran).toEqual(["set_timer:30"]));
@@ -600,7 +619,7 @@ describe("HostLobby: a student-paced room (#185)", () => {
     expect(screen.queryByRole("combobox")).toBeNull();
     expect(screen.queryByRole("heading", { name: "Results" })).toBeNull();
     expect(screen.queryByText(/Question 1 of 3/)).toBeNull();
-    expect(screen.getByText(/Student-paced/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Student-paced/).length).toBeGreaterThan(0);
   });
 
   it("draws the progress board, and shows every answer with one press", async () => {
@@ -611,10 +630,15 @@ describe("HostLobby: a student-paced room (#185)", () => {
     });
     await waitFor(() => expect(screen.getByTestId("answered-count-1")).toHaveTextContent("1 of 1"));
     await fake.user.click(button("Show answers"));
-    await fake.user.click(button("Show answers"));
-    await waitFor(() => expect(screen.getByText(/answers showing/)).toBeInTheDocument());
+    await fake.user.click(asked("Show answers"));
+    await waitFor(() => expect(screen.getByText(/Answers showing/)).toBeInTheDocument());
     expect(fake.ran).toEqual(["reveal"]);
     expect(button("Show answers")).toBeDisabled();
+  });
+
+  it("offers no time per question in the lobby: each phone keeps its own pace", () => {
+    setup(state({ mode: "student_paced" }));
+    expect(screen.queryByRole("combobox", { name: "Time per question" })).toBeNull();
   });
 
   it("starts from the lobby with the same Start button", async () => {
@@ -651,7 +675,7 @@ describe("HostLobby: a hidden tab (#323)", () => {
     expect(fake.resultAsks()).toBe(0);
 
     await setVisibility("visible");
-    await waitFor(() => expect(screen.getByText(/2 of 3/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId("answer-count")).toHaveTextContent("2 of 3"));
     expect(fake.resultAsks()).toBeGreaterThan(0);
 
     await setVisibility("hidden");

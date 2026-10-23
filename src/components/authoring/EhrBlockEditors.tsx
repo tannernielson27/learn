@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 import {
   EHR_LIMITS,
   addTableColumn,
@@ -19,8 +20,8 @@ import {
   type EhrVitalsBlockForm,
 } from "@/lib/authoring/forms/ehr";
 
-export const fieldClass =
-  "w-full rounded-sm border border-line bg-surface-1 px-3 py-2 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect";
+/** Every patient record field's look: the shared field edge (3:1, WCAG 1.4.11) and its states. */
+export const fieldClass = fieldClasses("px-3 py-2 text-base");
 
 /**
  * Words only a screen reader hears. Labels stay short on screen, where the tab and block they

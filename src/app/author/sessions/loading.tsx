@@ -1,4 +1,5 @@
-﻿import { SkeletonLine, SkeletonScreen } from "@/components/ui/Skeleton";
+﻿import { ReadingWidth } from "@/components/authoring/PageWidth";
+import { SkeletonLine, SkeletonScreen } from "@/components/ui/Skeleton";
 
 const ROWS = 5;
 
@@ -14,21 +15,24 @@ const ROWS = 5;
  */
 export default function SessionsLoading() {
   return (
-    <SkeletonScreen label="Loading live sessions">
-      {/* The page's own h1, word for word and class for class: static text, so it is drawn rather
+    // The page's reading column, so the list lands where its outline stood.
+    <ReadingWidth>
+      <SkeletonScreen label="Loading live sessions">
+        {/* The page's own h1, word for word and class for class: static text, so it is drawn rather
           than outlined, and the loading screen keeps its one heading. */}
-      <h1 className="mb-6 font-read text-3xl text-ink-1">Live sessions</h1>
-      <div className="flex flex-col divide-y divide-line border-y border-line">
-        {Array.from({ length: ROWS }, (_, row) => (
-          <div
-            key={row}
-            className="flex min-h-11 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-2 py-3"
-          >
-            <SkeletonLine lineClassName="h-[1.6rem] w-1/2 sm:w-2/5" className="h-4 w-full" />
-            <SkeletonLine lineClassName="h-5 w-56" className="h-3.5 w-full" />
-          </div>
-        ))}
-      </div>
-    </SkeletonScreen>
+        <h1 className="mb-6 font-read text-3xl text-ink-1">Live sessions</h1>
+        <div className="flex flex-col divide-y divide-line border-y border-line">
+          {Array.from({ length: ROWS }, (_, row) => (
+            <div
+              key={row}
+              className="flex min-h-11 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-2 py-3"
+            >
+              <SkeletonLine lineClassName="h-[1.6rem] w-1/2 sm:w-2/5" className="h-4 w-full" />
+              <SkeletonLine lineClassName="h-5 w-56" className="h-3.5 w-full" />
+            </div>
+          ))}
+        </div>
+      </SkeletonScreen>
+    </ReadingWidth>
   );
 }

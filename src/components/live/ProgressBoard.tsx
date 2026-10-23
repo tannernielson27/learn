@@ -58,7 +58,7 @@ export function ProgressBoard({ ask, itemCount, active, intervalMs }: ProgressBo
   const rows = progress?.rows ?? [];
 
   return (
-    <section aria-labelledby="progress-heading" className="mt-8">
+    <section aria-labelledby="progress-heading">
       <h2 id="progress-heading" className="font-read text-xl text-ink-1">
         Progress
       </h2>

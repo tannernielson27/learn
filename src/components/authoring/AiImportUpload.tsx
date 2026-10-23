@@ -1,14 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useRef, useState, type DragEvent, type FormEvent } from "react";
-import { Button, buttonClasses } from "@/components/ui/Button";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { Button } from "@/components/ui/Button";
+import { Notice } from "@/components/ui/Notice";
 import { driveBatch, type DriverIo } from "@/lib/authoring/aiImportDriver";
 import {
-  AI_IMPORT_ACCEPT,
   AI_IMPORT_MAX_FILES,
-  AI_IMPORT_MAX_PAGES,
   AI_IMPORT_MAX_QUESTIONS,
   RIGHTS_LABEL,
   allowanceLine,
@@ -21,7 +19,9 @@ import {
   type BatchView,
   type TrackedFile,
 } from "@/lib/authoring/aiImportUpload";
+import { AiImportDropZone } from "./AiImportDropZone";
 import { AiImportFileRows, type FileRow } from "./AiImportFileRows";
+import { AiImportReady } from "./AiImportReady";
 import { uploadToStorage, postJson } from "./aiImportRequests";
 
 type Result<T> = Promise<({ ok: true } & T) | AiImportFailure>;
@@ -89,7 +89,6 @@ export function AiImportUpload({
   const [busy, setBusy] = useState(false);
   const [alert, setAlert] = useState<string[]>([]);
   const [note, setNote] = useState<string | null>(null);
-  const [dragging, setDragging] = useState(false);
 
   const patch = (key: string, change: Partial<TrackedFile>) =>
     setFiles((list) => list.map((file) => (file.key === key ? { ...file, ...change } : file)));
@@ -271,14 +270,6 @@ export function AiImportUpload({
     }
   }
 
-  function drop(event: DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    setDragging(false);
-    if (inputRef.current && event.dataTransfer.files.length > 0) {
-      inputRef.current.files = event.dataTransfer.files;
-    }
-  }
-
   const rows: FileRow[] = files.map((file) => ({
     key: file.key,
     fileId: file.fileId,
@@ -290,32 +281,14 @@ export function AiImportUpload({
 
   if (status === "review") {
     return (
-      <section aria-labelledby={`${id}-review`} className="flex flex-col gap-4 sm:max-w-2xl">
-        <AiImportFileRows rows={rows} busy={false} />
-        <h2 id={`${id}-review`} className="font-read text-2xl text-ink-1">
-          Ready for review
-        </h2>
-        <p role="status" className="text-ink-1">
-          {questions} {questions === 1 ? "question is" : "questions are"} waiting for review.
-          Nothing has been added to {quizName} yet.
-        </p>
-        <div className="flex flex-wrap items-center gap-4">
-          {batchId ? (
-            <Link
-              href={`/author/banks/${bankId}/ai-import/${batchId}`}
-              className={buttonClasses({ variant: "primary" })}
-            >
-              Review the questions
-            </Link>
-          ) : null}
-          <Link
-            href={`/author/banks/${bankId}`}
-            className="tap-target inline-flex items-center text-accent-ink underline"
-          >
-            Back to {quizName}
-          </Link>
-        </div>
-      </section>
+      <AiImportReady
+        id={id}
+        bankId={bankId}
+        quizName={quizName}
+        batchId={batchId}
+        rows={rows}
+        questions={questions}
+      />
     );
   }
 
@@ -329,50 +302,19 @@ export function AiImportUpload({
       ) : null}
       {reading ? null : (
         <>
-          <div
-            onDragOver={(event) => {
-              event.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={drop}
-            className={`flex flex-col gap-2 rounded-sm border border-dashed p-4 transition-colors duration-150 motion-reduce:transition-none ${dragging ? "border-accent bg-accent-soft" : "border-line-strong bg-surface-1"}`}
-          >
-            <label htmlFor={`${id}-files`} className="text-sm font-medium text-ink-1">
-              Documents
-            </label>
-            <input
-              ref={inputRef}
-              id={`${id}-files`}
-              type="file"
-              multiple
-              accept={AI_IMPORT_ACCEPT}
-              aria-describedby={`${id}-hint`}
-              disabled={busy}
-              className="text-sm text-ink-1 file:tap-target file:mr-3 file:rounded-sm file:border file:border-line file:bg-surface-1 file:px-3 file:text-ink-1"
-            />
-            <p id={`${id}-hint`} className="text-sm text-ink-2">
-              Choose or drop up to {AI_IMPORT_MAX_FILES} files: PDF, Word .docx, Markdown or text,
-              each at most 25 MB, {AI_IMPORT_MAX_PAGES} pages and {AI_IMPORT_MAX_QUESTIONS}{" "}
-              questions in all. Claude copies the questions; nothing reaches {quizName} until you
-              review it.
-            </p>
-            <p className="text-sm">
-              <Link
-                href="/help/instructor#ai-import"
-                className="text-accent-ink underline underline-offset-4 hover:no-underline"
-              >
-                How AI import works
-              </Link>
-            </p>
-          </div>
+          <AiImportDropZone
+            inputRef={inputRef}
+            id={`${id}-files`}
+            quizName={quizName}
+            busy={busy}
+          />
           {batchId ? null : (
-            <label className="tap-target flex items-start gap-3 text-sm text-ink-1">
+            <label className="tap-target flex items-start gap-3 py-2 text-sm text-ink-1">
               <input
                 type="checkbox"
                 checked={rights}
                 onChange={(event) => setRights(event.target.checked)}
-                className="mt-1"
+                className="mt-0.5 size-5 shrink-0 accent-accent"
               />
               <span>{RIGHTS_LABEL}</span>
             </label>
@@ -382,16 +324,13 @@ export function AiImportUpload({
       <AiImportFileRows rows={rows} busy={busy} onRemove={remove} />
       {note ? <p className="text-sm text-ink-2">{note}</p> : null}
       {alert.length > 0 ? (
-        <div
-          role="alert"
-          className="rounded-sm border border-line bg-surface-1 p-4 text-sm text-ink-1"
-        >
+        <Notice role="alert">
           <ul className="flex list-disc flex-col gap-1 pl-5">
             {alert.map((line) => (
               <li key={line}>{line}</li>
             ))}
           </ul>
-        </div>
+        </Notice>
       ) : null}
       <div className="flex flex-wrap items-center gap-3">
         {reading ? (

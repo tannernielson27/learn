@@ -82,8 +82,8 @@ export function ItemStrip({ state, tally, busy, onGoto }: ItemStripProps) {
   const positions = Array.from({ length: state.itemCount }, (_, index) => index + 1);
 
   return (
-    <nav aria-labelledby="items-heading" className="mt-6">
-      <h2 id="items-heading" className="font-read text-xl text-ink-1">
+    <nav aria-labelledby="items-heading">
+      <h2 id="items-heading" className="text-base font-semibold text-ink-1">
         Questions
       </h2>
       <ol className="mt-3 flex flex-wrap gap-2">

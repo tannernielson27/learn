@@ -2,7 +2,9 @@
 
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { useHydrated } from "@/components/assignments/useHydrated";
+import { FieldError } from "@/components/authoring/FieldError";
 import { Button } from "@/components/ui/Button";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 import type { ClassFormState } from "./ClassNameForm";
 
 export interface ClassTimeZoneFormProps {
@@ -60,7 +62,7 @@ export function ClassTimeZoneForm({ action, currentZone, zones }: ClassTimeZoneF
           onChange={(event) => setZone(event.target.value)}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${id}-error` : `${id}-hint`}
-          className="tap-target w-full rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect"
+          className={fieldClasses("px-3 text-base")}
         >
           {zones.map((name) => (
             <option key={name} value={name}>
@@ -79,9 +81,9 @@ export function ClassTimeZoneForm({ action, currentZone, zones }: ClassTimeZoneF
           </div>
         ) : null}
         {error ? (
-          <p id={`${id}-error`} role="alert" className="text-sm text-incorrect">
+          <FieldError id={`${id}-error`} role="alert">
             {error}
-          </p>
+          </FieldError>
         ) : null}
         {state.status === "saved" ? (
           <p role="status" className="text-sm text-ink-2">

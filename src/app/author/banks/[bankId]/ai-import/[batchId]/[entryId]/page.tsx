@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { saveAiImportEntryFix } from "@/app/author/aiImportFixActions";
 import { AiImportEntryEditor } from "@/components/authoring/AiImportEntryEditor";
 import { editorFor } from "@/components/authoring/editorFor";
+import { Breadcrumbs } from "@/components/authoring/FolderBreadcrumbs";
 import { aiImportEnabled } from "@/lib/aiImport/config";
 import { readFixEntry } from "@/lib/aiImport/review/fix";
 import type { Client } from "@/lib/aiImport/upload/access";
@@ -50,17 +50,15 @@ export default async function AiImportEntryPage({
   if (!editor) notFound();
   const reviewHref = `/author/banks/${bank.id}/ai-import/${batchId}`;
 
+  // Wide: the question's editor and its preview are two panes, as on the question page.
   return (
     <>
-      <nav aria-label="Breadcrumb" className="mb-4 flex flex-wrap gap-2 text-sm text-ink-2">
-        <Link href={`/author/banks/${bank.id}`} className="underline hover:text-ink-1">
-          {bank.name}
-        </Link>
-        <span aria-hidden="true">/</span>
-        <Link href={reviewHref} className="underline hover:text-ink-1">
-          Review AI import
-        </Link>
-      </nav>
+      <Breadcrumbs
+        crumbs={[
+          { label: bank.name, href: `/author/banks/${bank.id}` },
+          { label: "Review AI import", href: reviewHref },
+        ]}
+      />
       <AiImportEntryEditor
         batchId={batchId}
         entryId={entry.id}

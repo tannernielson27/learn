@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PlayItem } from "@/components/authoring/PlayItem";
+import { PageWidth } from "@/components/ui/PageWidth";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { ITEM_TYPE_LABELS } from "@/lib/ngn/labels";
@@ -10,7 +11,8 @@ import { fromItemRow } from "@/lib/supabase/itemRows";
 
 export const metadata: Metadata = { title: "Play question" };
 
-const linkClass = "text-accent-ink underline-offset-4 hover:underline";
+const linkClass =
+  "tap-target inline-flex items-center text-accent-ink underline-offset-4 hover:underline";
 
 export default async function PlayItemPage({ params }: PageProps<"/author/items/[itemId]/play">) {
   const { itemId } = await params;
@@ -29,7 +31,9 @@ export default async function PlayItemPage({ params }: PageProps<"/author/items/
 
   const stored = fromItemRow(row);
 
-  return (
+  // A question with a patient record plays it beside the question (PracticeCase), which needs the
+  // wide width; one without stays at the reading width.
+  const page = (
     <>
       <p className="mb-2 flex flex-wrap gap-4 text-sm">
         <Link href={`/author/banks/${row.bank_id}`} className={linkClass}>
@@ -56,4 +60,5 @@ export default async function PlayItemPage({ params }: PageProps<"/author/items/
       )}
     </>
   );
+  return stored.ok && stored.value.ehr ? <PageWidth width="wide">{page}</PageWidth> : page;
 }

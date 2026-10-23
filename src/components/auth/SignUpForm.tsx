@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { textLinkClasses } from "@/components/ui/TextLink";
 import { fieldClasses } from "@/components/ui/fieldClasses";
 import { ACCOUNT_NAME_HINT } from "@/lib/auth/displayName";
 import { PASSWORD_HINT, PASSWORD_MIN_LENGTH } from "@/lib/auth/passwordRules";
@@ -11,6 +12,7 @@ import { SIGN_UP_CAPTCHA_ACTION } from "@/lib/auth/turnstile";
 import { CaptchaField } from "./CaptchaField";
 import { DisplayNameField } from "./DisplayNameField";
 import { PasswordField } from "./PasswordField";
+import { FormError } from "./FormError";
 
 export type SignUpField = "role" | "displayName" | "email" | "password" | "captcha";
 
@@ -40,11 +42,10 @@ interface Answered {
 }
 
 const INITIAL: Answered = { state: { status: "idle" }, attempt: 0 };
-const FIELD = fieldClasses("px-3 text-base");
+const FIELD = fieldClasses("h-13 px-3.5 text-lg");
 const CHOICE =
-  "tap-target flex cursor-pointer items-center gap-3 rounded-sm border border-line bg-surface-1 px-3 py-3 text-base text-ink-1 transition-colors duration-fast hover:border-line-strong has-checked:border-accent has-checked:bg-accent-soft";
-const LINK =
-  "tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline";
+  "tap-target flex cursor-pointer items-center gap-3 rounded-sm border border-line-field bg-surface-1 px-3.5 py-3 text-base text-ink-1 transition-colors duration-fast hover:border-ink-2 has-checked:border-accent has-checked:bg-accent-soft";
+const LINK = textLinkClasses();
 
 const ROLES: readonly { value: SignUpRole; label: string; detail: string }[] = [
   { value: "teacher", label: "I teach", detail: "Write quizzes for your classes." },
@@ -107,7 +108,7 @@ export function SignUpForm({ action, initialRole, classCode, captchaSiteKey }: S
           id={`${id}-ready`}
           ref={readyRef}
           tabIndex={-1}
-          className="mb-3 font-read text-2xl text-ink-1 outline-none"
+          className="mb-3 font-read text-title text-ink-1 outline-none"
         >
           Your account is ready
         </h2>
@@ -122,7 +123,7 @@ export function SignUpForm({ action, initialRole, classCode, captchaSiteKey }: S
   const emailInvalid = error?.field === "email" || exists !== null;
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form action={formAction} className="flex flex-col gap-5">
       <fieldset
         className="flex flex-col gap-2"
         aria-describedby={error?.field === "role" ? errorId : undefined}
@@ -163,7 +164,7 @@ export function SignUpForm({ action, initialRole, classCode, captchaSiteKey }: S
             errorId={error?.field === "displayName" ? errorId : undefined}
           />
           <div className="flex flex-col gap-2">
-            <label htmlFor={`${id}-email`} className="text-sm font-medium text-ink-1">
+            <label htmlFor={`${id}-email`} className="text-sm font-semibold text-ink-1">
               Email address
             </label>
             <input
@@ -199,22 +200,25 @@ export function SignUpForm({ action, initialRole, classCode, captchaSiteKey }: S
         </div>
       ) : null}
 
-      {error ? (
-        <p id={errorId} role="alert" className="text-sm text-incorrect">
-          {error.error}
-        </p>
-      ) : null}
+      {error ? <FormError id={errorId}>{error.error}</FormError> : null}
       {exists ? (
-        <p id={errorId} role="alert" className="text-sm text-incorrect">
+        <FormError id={errorId}>
           This email already has an account.{" "}
           <Link href="/sign-in" className="font-medium text-accent-ink underline">
             Sign in
           </Link>
-        </p>
+        </FormError>
       ) : null}
 
       {role ? (
-        <Button type="submit" variant="primary" disabled={pending} aria-disabled={pending}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          block
+          disabled={pending}
+          aria-disabled={pending}
+        >
           {pending ? "Creating your account…" : "Create account"}
         </Button>
       ) : null}

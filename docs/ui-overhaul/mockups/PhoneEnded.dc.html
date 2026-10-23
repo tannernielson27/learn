@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Session ended on a student phone</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="lr.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&amp;display=swap">
+<style>body{margin:0}a{color:oklch(38% 0.12 250)}a:hover{color:oklch(30% 0.12 250)}</style>
+</helmet>
+<div class="lr" style="width: 375px; height: 812px; position: relative; display: flex; flex-direction: column">
+  <main style="flex: 1; padding: 56px 24px 24px; display: flex; flex-direction: column; gap: 24px">
+    <div>
+      <p class="eyebrow">Live session ended</p>
+      <h1 class="serif" style="font-size: 30px; line-height: 1.15; margin-top: 8px">Week 7: cardiac and respiratory priorities</h1>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+      <div class="card" style="padding: 16px"><p class="mono" style="font-size: 32px; font-weight: 700">18<span class="muted" style="font-size: 18px; font-weight: 500">/20</span></p><p class="muted" style="font-size: 14px; margin-top: 4px">answered</p></div>
+      <div class="card" style="padding: 16px"><p class="mono" style="font-size: 32px; font-weight: 700">14<span class="muted" style="font-size: 18px; font-weight: 500">/18</span></p><p class="muted" style="font-size: 14px; margin-top: 4px">all correct</p></div>
+    </div>
+    <section style="display: flex; flex-direction: column; gap: 10px">
+      <h2 style="font-size: 16px; font-weight: 700">Worth another look</h2>
+      <ul class="card" style="overflow: hidden">
+        <li style="padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 12px"><span style="font-size: 15px">Q7 · Prioritize Hypotheses</span><span class="mono" style="font-size: 14px; color: var(--incorrect); font-weight: 600">Not correct</span></li>
+        <li style="padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 12px"><span style="font-size: 15px">Q12 · Analyze Cues</span><span class="mono" style="font-size: 14px; font-weight: 600">2 of 3</span></li>
+        <li style="padding: 12px 16px; display: flex; justify-content: space-between; gap: 12px"><span style="font-size: 15px">Q15 · Evaluate Outcomes</span><span class="mono muted" style="font-size: 14px">Not answered</span></li>
+      </ul>
+    </section>
+    <div class="notice">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      <span>Your teacher has the full report. If your teacher shares this quiz for practice, you can try these questions again from your class page.</span>
+    </div>
+  </main>
+  <footer style="padding: 12px 24px 32px; display: flex; flex-direction: column; gap: 8px">
+    <a class="btn btn-secondary btn-lg btn-block" href="Main.dc.html">Join another live session</a>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

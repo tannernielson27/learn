@@ -2,12 +2,18 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Notice } from "@/components/ui/Notice";
 
 export type StartOverState = { error: string | null };
 
 export interface PracticeStartOverProps {
   /** The Server Action, already bound to the bank. On success it reads the page again. */
   startOver: (previous: StartOverState) => Promise<StartOverState>;
+  /**
+   * The button's words. Given at the end of a run ("Start over with all 21"), where it sits with
+   * the other results actions as a full-width button rather than in a section of its own.
+   */
+  label?: string;
 }
 
 export const START_OVER_WARNING =
@@ -19,7 +25,7 @@ export const START_OVER_WARNING =
  * accident; Cancel puts focus back. Confirming opens a new run on the server and reads the page
  * again, which remounts the player on the new run.
  */
-export function PracticeStartOver({ startOver }: PracticeStartOverProps) {
+export function PracticeStartOver({ startOver, label }: PracticeStartOverProps) {
   const [asking, setAsking] = useState(false);
   const [returned, setReturned] = useState(false);
   const [state, action, pending] = useActionState(startOver, { error: null });
@@ -32,7 +38,7 @@ export function PracticeStartOver({ startOver }: PracticeStartOverProps) {
   }, [asking, returned]);
 
   return (
-    <section aria-label="Start over" className="mt-10 border-t border-line pt-6">
+    <section aria-label="Start over" className={label ? "" : "mt-10 border-t border-line pt-6"}>
       <div ref={wrapperRef}>
         {asking ? (
           <form action={action} className="flex flex-col items-start gap-3">
@@ -56,17 +62,24 @@ export function PracticeStartOver({ startOver }: PracticeStartOverProps) {
           </form>
         ) : (
           <div className="flex flex-col items-start gap-2">
-            <p className="measure text-sm text-ink-2">Practice never counts toward a grade.</p>
-            <Button data-focus-target variant="secondary" onClick={() => setAsking(true)}>
-              Start over
+            {label ? null : (
+              <p className="measure text-sm text-ink-2">Practice never counts toward a grade.</p>
+            )}
+            <Button
+              data-focus-target
+              variant="secondary"
+              block={label !== undefined}
+              onClick={() => setAsking(true)}
+            >
+              {label ?? "Start over"}
             </Button>
           </div>
         )}
       </div>
       {state.error ? (
-        <p role="alert" className="mt-2 text-sm text-incorrect">
+        <Notice role="alert" className="mt-2">
           {state.error}
-        </p>
+        </Notice>
       ) : null}
     </section>
   );

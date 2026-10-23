@@ -1,3 +1,4 @@
+import { ChevronLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { archiveItemAction, restoreItemAction } from "@/app/author/archiveActions";
@@ -13,11 +14,14 @@ import { requireAuthor } from "@/lib/authoring/session";
 import { HISTORY_LIMIT } from "@/lib/authoring/versionHistory";
 import { ITEM_TYPE_LABELS, ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 import { fromItemRow } from "@/lib/supabase/itemRows";
+import { Badge } from "@/components/ui/Badge";
+import { Icon } from "@/components/ui/Icon";
+import { Notice } from "@/components/ui/Notice";
+import { textLinkClasses } from "@/components/ui/TextLink";
 
 export const metadata: Metadata = { title: "Edit question" };
 
 const STATUS_LABELS = { draft: "Draft", published: "Published", archived: "Archived" } as const;
-const linkClass = "text-accent-ink underline-offset-4 hover:underline";
 
 export default async function EditItemPage({ params }: PageProps<"/author/items/[itemId]">) {
   const { itemId } = await params;
@@ -58,35 +62,47 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
 
   return (
     <>
-      <p className="mb-2 flex flex-wrap gap-4 text-sm">
-        <GuardedLink href={`/author/banks/${row.bank_id}`} className={linkClass}>
+      <div className="mb-2 flex flex-wrap items-center gap-x-6">
+        <GuardedLink
+          href={`/author/banks/${row.bank_id}`}
+          className={textLinkClasses({ size: "sm" })}
+        >
+          <Icon icon={ChevronLeft} />
           Back to quiz
         </GuardedLink>
         {exportable ? (
-          <a href={`/author/items/${row.id}/export`} download className={linkClass}>
+          <a
+            href={`/author/items/${row.id}/export`}
+            download
+            className={textLinkClasses({ size: "sm" })}
+          >
             Export JSON
           </a>
         ) : null}
-      </p>
+      </div>
       <p className="eyebrow mb-1">{label}</p>
-      <div className="mb-6 flex flex-wrap items-baseline gap-3">
-        <h1 className="font-read text-3xl text-ink-1">Edit question</h1>
-        <p className="text-sm text-ink-2">{STATUS_LABELS[row.status]}</p>
-        <DuplicateButton
-          action={duplicateItemAction.bind(null, row.id)}
-          label="Duplicate question"
-        />
-        {archived ? (
-          <ArchiveButton action={restoreItemAction.bind(null, row.id)} label="Restore question" />
-        ) : (
-          <ArchiveButton action={archiveItemAction.bind(null, row.id)} label="Archive question" />
-        )}
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <h1 className="font-read text-display text-ink-1">Edit question</h1>
+        <Badge tone={row.status === "draft" ? "accent" : "neutral"}>
+          {STATUS_LABELS[row.status]}
+        </Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          <DuplicateButton
+            action={duplicateItemAction.bind(null, row.id)}
+            label="Duplicate question"
+          />
+          {archived ? (
+            <ArchiveButton action={restoreItemAction.bind(null, row.id)} label="Restore question" />
+          ) : (
+            <ArchiveButton action={archiveItemAction.bind(null, row.id)} label="Archive question" />
+          )}
+        </div>
       </div>
       {archived ? (
-        <p className="mb-6 max-w-prose rounded-sm border border-line bg-surface-2 p-3 text-ink-1">
+        <Notice className="mb-6 max-w-reading">
           This question is archived. It is out of the quiz and cannot be played, edited or used in a
           case study. Restore it to edit it.
-        </p>
+        </Notice>
       ) : null}
       {/* The database refuses to change archived content, so an archived item offers no editor. */}
       {archived ? null : editor ? (
@@ -98,7 +114,7 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
           published={row.status === "published"}
         />
       ) : (
-        <p className="text-ink-2">This format cannot be edited here yet.</p>
+        <Notice>This format cannot be edited here yet.</Notice>
       )}
     </>
   );

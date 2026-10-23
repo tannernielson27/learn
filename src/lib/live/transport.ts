@@ -34,6 +34,18 @@ import type { LiveSessionState, SessionMode } from "./state";
 /** Drops a subscription. Calling it twice is harmless. */
 export type Unsubscribe = () => void;
 
+/**
+ * Whether the host's console can hear the room (PLAN D5), in the words the console shows:
+ * Connected, Reconnecting, Offline.
+ *
+ * - `connected`: the channel is up, so moves, the roster and the tallies are arriving.
+ * - `reconnecting`: it was up and has dropped. Realtime retries by itself; the console keeps
+ *   working over the Data API and re-reads the room the moment the channel is back.
+ * - `offline`: it has not come up yet and the first try failed. The snapshot was still read, so
+ *   the console opens, but the roster stays empty until the channel does come up.
+ */
+export type LiveConnection = "connected" | "reconnecting" | "offline";
+
 /** Who is joining. `profileId` is null for a guest who typed a name on the join page. */
 export interface ParticipantIdentity {
   displayName: string;
@@ -227,6 +239,13 @@ export interface LiveHostTransport {
   onSessionState(listener: (view: SessionView<Item>) => void): Unsubscribe;
   onPresence(listener: (roster: Participant[]) => void): Unsubscribe;
   onAggregate(listener: (aggregate: ItemAggregate) => void): Unsubscribe;
+  /**
+   * Whether the console can hear the room, each time that changes (see `LiveConnection`).
+   * `rejoined` is true when the channel has come up *again* after a drop; the adapter re-reads the
+   * room at that moment and the new view follows, so a console may simply say "Reconnected". Subscribe before
+   * `open()`, as with every other listener here: the first `connected` arrives while it opens.
+   */
+  onConnection(listener: (status: LiveConnection, rejoined: boolean) => void): Unsubscribe;
   /**
    * The tally for the item the room is on, counted **now**. Null when the room is on no item.
    *

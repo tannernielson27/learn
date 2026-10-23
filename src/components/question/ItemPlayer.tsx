@@ -223,6 +223,11 @@ export function ItemPlayer({
       submitting={submitting}
       busyLabel={busyLabel}
       submitError={submitError}
+      submitStatus={
+        rendererShown
+          ? rendererModule.describeResponse?.(playerItem, response as ResponseOf<ItemType>)
+          : undefined
+      }
       score={result}
       scoreNote={scoreNote}
       // Only once revealed: the shell shows a rationale on its own for a key with no score (#181),

@@ -13,7 +13,8 @@ export function ContinueButton() {
     <Button
       type="submit"
       variant="primary"
-      className="w-full"
+      size="lg"
+      block
       disabled={pending}
       aria-disabled={pending}
     >

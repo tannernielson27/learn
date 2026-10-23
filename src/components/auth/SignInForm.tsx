@@ -4,6 +4,7 @@ import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { fieldClasses } from "@/components/ui/fieldClasses";
 import { EmailCodeForm, type EmailCodeFormProps } from "./EmailCodeForm";
+import { FormError } from "./FormError";
 
 export type SignInState =
   { status: "idle" } | { status: "sent"; email: string } | { status: "error"; error: string };
@@ -81,7 +82,7 @@ export function SignInForm({
     <form action={formAction} noValidate={false} className="flex flex-col gap-4">
       <input type="hidden" name="next" value={next} />
       <div className="flex flex-col gap-2">
-        <label htmlFor={`${errorId}-email`} className="text-sm font-medium text-ink-1">
+        <label htmlFor={`${errorId}-email`} className="text-sm font-semibold text-ink-1">
           Email address
         </label>
         <input
@@ -101,15 +102,18 @@ export function SignInForm({
           }}
           aria-invalid={state.status === "error" ? true : undefined}
           aria-describedby={error ? errorId : undefined}
-          className={fieldClasses("px-3 text-base")}
+          className={fieldClasses("h-13 px-3.5 text-lg")}
         />
-        {error ? (
-          <p id={errorId} role="alert" className="text-sm text-incorrect">
-            {error}
-          </p>
-        ) : null}
+        {error ? <FormError id={errorId}>{error}</FormError> : null}
       </div>
-      <Button type="submit" variant="primary" disabled={pending} aria-disabled={pending}>
+      <Button
+        type="submit"
+        variant="primary"
+        size="lg"
+        block
+        disabled={pending}
+        aria-disabled={pending}
+      >
         {pending ? "Sending link…" : "Email me a sign-in link"}
       </Button>
     </form>

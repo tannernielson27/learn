@@ -8,6 +8,13 @@ The words on that surface are set in [`glossary.md`](glossary.md): one name for 
 
 Light-mode primary. Warm off-white paper surfaces, near-black ink, one deep clinical blue used **only** for interactive and selected states, and a restrained semantic set (correct green, incorrect red, flagged amber) that appears only in feedback mode. Generous line-height for reading-heavy stems and EHR notes. Hierarchy from type scale and spacing rhythm, not from boxes and shadows. Motion is short, eased, and explanatory.
 
+**Stage edition (owner-approved 2026-10-22, `docs/ui-overhaul/`).** The direction holds, made bolder where it was timid. A live session has a **projector view**, the stage: no controls, no names after the lobby, always light (projectors cannot make black, and dark slides wash out in a lit room), and the one place the type gets huge, like a lecture slide and not a game show. The serif carries large display headings (library title, stage question, end summary) as well as the record.
+
+Two amendments to "feedback mode only":
+
+- **Amber in the last 10 seconds.** A timer's bar turns `--flag` and the words "10 seconds left" appear beside it (text in `--flag-ink`). Words always, so colour is never the signal on its own; no pulse, no loop.
+- **System messages are neutral.** Errors, connection trouble and other system messages use `--notice` on `--notice-soft` with an icon, never `--incorrect`: red means a marked answer, nothing else.
+
 ## 2. Tokens (starting values; tune in Sprint 0)
 
 ```css
@@ -52,6 +59,12 @@ Light-mode primary. Warm off-white paper surfaces, near-black ink, one deep clin
 ```
 
 Dark theme: same hues, flipped lightness; accent lightened for contrast. Both themes must pass WCAG AA (4.5:1 body, 3:1 UI).
+
+**Three layers** (`src/styles/tokens.css` is the source; the block above is the history). Base: raw oklch ramps named by hue and lightness, which nothing in a component reads. Semantic: what a colour is for (`--surface-*`, `--ink-*`, `--accent*`, the feedback set, `--notice*`, `--stage-*`, `--elevation-1`), re-lit for dark. Component: what one component wears (`--field-border`, `--chart-key`, `--button-height-lg`), always a semantic token or a size. Components read only the last two.
+
+**Theme.** System, Light or Dark from the account menu, stored per browser and applied before first paint; System follows the device. The projector view ignores it and stays light.
+
+**The one shadow.** `--elevation-1`, for a dialog, a toast and a dragged token. Everything else still takes its depth from a line.
 
 ### Three font families: a recorded exception (#57, #272)
 
@@ -110,10 +123,13 @@ Drag-and-drop: dragged token lifts with a 2dp shadow and 1.02 scale; valid drop 
 - Selection: 120–200ms. Submit → feedback: staggered 40ms per element, max 320ms total. Step change in a case study: crossfade + 8px slide, 200ms.
 - Nothing loops. No celebratory effects. Score reveal is a number that settles, not a counter animation.
 - `prefers-reduced-motion`: all transitions collapse to opacity only, 80ms.
+- A timer drains smoothly and calmly; its last 10 seconds change colour and add words (§1), and nothing pulses.
 
 ## 6. Typography
 
 - Stem: `--text-lg`, 1.55 line-height, `--ink-1`.
+- Page headings are fluid with rem bounds (`--text-display`, `--text-title`); body text stays 16px.
+- The stage sets its type in container units with rem floors (`--text-stage-*`: join code about 160px, question 64px, choices 48px, numbers 96px, labels at least 32px on a 1080px stage), each `clamp()` within 2.5x of its floor so zoom still works.
 - Instructions ("Select all that apply."): `--text-sm`, `--ink-2`, italic, below the stem.
 - Options: `--text-base`, 1.5 line-height; option letters (A, B, C) only for traditional multiple choice.
 - EHR notes: `--font-read` at `--text-base`, timestamps in `--font-mono` `--text-sm`.
@@ -121,7 +137,7 @@ Drag-and-drop: dragged token lifts with a 2dp shadow and 1.02 scale; valid drop 
 
 ## 7. Iconography and imagery
 
-- Lucide icons at 20px, stroke 1.75. No emoji anywhere in product UI.
+- Lucide icons at 20px, stroke 1.75; 32px, stroke 2.5 on the stage. `lucide-react` is installed (owner-approved 2026-10-22): use it through `Icon` (`src/components/ui/Icon.tsx`), one import per icon. No emoji anywhere in product UI.
 - No illustrations in the player. The marketing page may use restrained line illustrations.
 
 ## 8. Anti-patterns (reject in review)

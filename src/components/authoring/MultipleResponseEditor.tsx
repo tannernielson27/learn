@@ -10,6 +10,8 @@ import {
 import { describeIssues } from "@/lib/authoring/issueMessages";
 import { multipleResponseItemSchema, type ItemInputOf } from "@/lib/ngn/schemas";
 import { EditorShell, issueMessageId, type SaveResult } from "./EditorShell";
+import { fieldClasses } from "@/components/ui/fieldClasses";
+import { CorrectToggle } from "./CorrectToggle";
 
 export interface MultipleResponseEditorProps {
   initialValues: MultipleResponseFormValues;
@@ -20,8 +22,7 @@ export interface MultipleResponseEditorProps {
 const MIN_OPTIONS = 5;
 const MAX_OPTIONS = 10;
 const letter = (index: number) => String.fromCharCode(65 + index);
-const fieldClass =
-  "w-full rounded-sm border border-line bg-surface-1 px-3 py-2 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect";
+const fieldClass = fieldClasses("px-3 py-2 text-base");
 
 function nextOptionId(existing: readonly { id: string }[]): string {
   const taken = new Set(existing.map((option) => option.id));
@@ -166,13 +167,15 @@ export function MultipleResponseEditor({
               className="flex flex-col gap-2 rounded-sm border border-line p-3"
             >
               <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  aria-label={`Option ${L} is correct`}
-                  aria-describedby={describedBy("correctOptionIds")}
-                  className="size-5 accent-accent"
-                  {...register(`options.${index}.correct`)}
-                />
+                <CorrectToggle>
+                  <input
+                    type="checkbox"
+                    aria-label={`Option ${L} is correct`}
+                    aria-describedby={describedBy("correctOptionIds")}
+                    className="size-5 accent-accent"
+                    {...register(`options.${index}.correct`)}
+                  />
+                </CorrectToggle>
                 <label
                   htmlFor={`${ids}-opt-${index}`}
                   className="w-16 shrink-0 text-sm font-medium text-ink-1"

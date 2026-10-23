@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Badge } from "@/components/ui/Badge";
 import { EmptyState, type EmptyStateContent } from "@/components/ui/EmptyState";
 import { NO_QUESTIONS_YET } from "@/lib/authoring/bankEmpty";
 import type { ItemSummary } from "@/lib/authoring/banks";
@@ -66,7 +67,10 @@ export function ItemList({
   }
 
   return (
-    <ul aria-label="Questions" className="flex flex-col divide-y divide-line border-y border-line">
+    <ul
+      aria-label="Questions"
+      className="flex flex-col divide-y divide-line rounded-md border border-line bg-surface-1"
+    >
       {items.map((item) => (
         <li key={item.id} className="flex items-stretch">
           {moveFormId ? (
@@ -96,12 +100,14 @@ export function ItemList({
             {item.match?.rationale ? (
               <span className="text-sm text-ink-2">Matched in the rationale</span>
             ) : null}
-            <span className="flex flex-wrap gap-x-3 text-sm text-ink-2">
+            <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">
               <span>{typeLabel(item.type)}</span>
               {item.maxPoints !== null ? (
                 <span>{item.maxPoints === 1 ? "1 point" : `${item.maxPoints} points`}</span>
               ) : null}
-              <span>{STATUS_LABELS[item.status]}</span>
+              <Badge tone={item.status === "draft" ? "accent" : "neutral"}>
+                {STATUS_LABELS[item.status]}
+              </Badge>
               <span>{formatEdited(item.updatedAt)}</span>
               {/* Counted on the server; the list never carries what the warnings are about. */}
               {item.warningCount > 0 ? (

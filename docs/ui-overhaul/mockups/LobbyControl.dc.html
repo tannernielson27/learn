@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lobby, teacher control view</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="lr.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&amp;display=swap">
+<style>body{margin:0}a{color:oklch(38% 0.12 250)}a:hover{color:oklch(30% 0.12 250)}</style>
+</helmet>
+<div class="lr" style="width: 1280px; height: 800px; display: flex; flex-direction: column">
+  <header class="topbar" style="justify-content: space-between">
+    <div style="display: flex; align-items: center; gap: 16px; min-width: 0">
+      <a class="link" href="QuizDesktop.dc.html" style="font-weight: 500"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Quiz</a>
+      <span style="width: 1px; height: 24px; background: var(--line)"></span>
+      <p style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Week 7: cardiac and respiratory priorities</p>
+      <span class="badge">Lobby</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 14px"><span class="statusdot"></span>Connected</div>
+  </header>
+  <main style="flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 32px; padding: 32px">
+    <section style="display: flex; flex-direction: column; gap: 24px">
+      <div class="card" style="padding: 28px; display: grid; grid-template-columns: minmax(0, 1fr) 168px; gap: 24px; align-items: center">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <p class="eyebrow">Join code</p>
+          <p class="mono" style="font-size: 64px; font-weight: 600; letter-spacing: 0.08em; line-height: 1">V96 RN8</p>
+          <p class="mono muted" style="font-size: 15px">learn-nclex.app/join</p>
+        </div>
+        <img src="qr.svg" alt="QR code for joining this live session" style="width: 168px; height: 168px; border: 1px solid var(--line); border-radius: 6px">
+      </div>
+      <div class="notice">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+        <div style="flex: 1">
+          <strong>Show the class the projector view</strong>
+          <span class="muted">It has the join code, the question and the results, and never shows controls. Names show only before you start.</span>
+          <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap">
+            <a class="btn btn-secondary" href="LobbyStage.dc.html">Open in a new window</a>
+            <a class="btn btn-ghost" href="LobbyStage.dc.html">Present on this screen</a>
+          </div>
+        </div>
+      </div>
+      <div class="field" style="max-width: 320px">
+        <label for="timer">Time per question</label>
+        <select id="timer"><option>30 seconds</option><option>Off</option><option>60 seconds</option></select>
+        <p class="hint">You can add time or stop the timer during a question.</p>
+      </div>
+    </section>
+    <section class="card" aria-labelledby="roster-h" style="display: flex; flex-direction: column; min-height: 0">
+      <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 20px 20px 12px">
+        <h2 id="roster-h" class="serif" style="font-size: 24px">In this session</h2>
+        <p class="mono" style="font-size: 15px"><strong>24</strong> joined</p>
+      </div>
+      <ul style="overflow: hidden; flex: 1; border-top: 1px solid var(--line)">
+        <sc-for list="{{names}}" as="n" hint-placeholder-count="8">
+          <li style="display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 0 12px 0 20px; border-bottom: 1px solid var(--line)">
+            <span style="font-size: 15px">{{n}}</span>
+            <button class="btn btn-ghost" type="button" style="min-height: 40px; padding: 0 10px; font-size: 13px; color: var(--ink-2)">Remove</button>
+          </li>
+        </sc-for>
+      </ul>
+    </section>
+  </main>
+  <footer class="controlbar" style="justify-content: space-between">
+    <p class="muted" style="font-size: 14px">20 questions · 2 case studies</p>
+    <div style="display: flex; gap: 12px">
+      <button class="btn btn-secondary" type="button">End live session</button>
+      <a class="btn btn-primary btn-lg" href="QuestionControl.dc.html" style="min-width: 180px">Start</a>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { names: ["Ada Brennan", "Priya Ramanathan-Okafor", "Marcus Oyelaran-Whitfield", "Jordan Lee", "Sofía Hernández", "Thanh Nguyen", "Grace Mbeki", "Liam O'Connor", "Fatima Al-Sayed", "Noah Kim"] };
+  }
+}
+</script>
+</body>
+</html>

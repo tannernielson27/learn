@@ -13,6 +13,9 @@ import { myClasses, resolveClassInvite } from "@/lib/supabase/classInvites";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { verifySignInCode } from "@/app/sign-in/actions";
 import { joinInvitedClass, requestInviteLink, signUpWithPassword } from "./actions";
+import { AuthFrame, AUTH_HEADING } from "@/components/auth/AuthFrame";
+import { Notice } from "@/components/ui/Notice";
+import { textLinkClasses } from "@/components/ui/TextLink";
 
 export const metadata: Metadata = {
   title: "Join a class",
@@ -21,18 +24,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const linkClass =
-  "tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline";
+const linkClass = textLinkClasses();
 
 function Shell({ children }: { children: ReactNode }) {
-  return (
-    <main className="flex flex-1 items-start justify-center px-4 pt-16 pb-12 sm:items-center sm:pt-0">
-      <div className="w-full max-w-sm">
-        <p className="mb-2 font-mono text-sm tracking-wide text-ink-2 uppercase">LeaRN</p>
-        {children}
-      </div>
-    </main>
-  );
+  return <AuthFrame>{children}</AuthFrame>;
 }
 
 const LIMITED =
@@ -65,15 +60,10 @@ export default async function ClassInvitePage({ params }: PageProps<"/c/[token]"
           // #267: every page someone lands on from a link opens on a focused heading, in a region
           // named by it, as `InviteUnavailable` does.
           <section aria-labelledby="invite-paused-heading">
-            <FocusHeading
-              id="invite-paused-heading"
-              className="mb-3 font-read text-3xl text-ink-1 outline-none"
-            >
+            <FocusHeading id="invite-paused-heading" className={`${AUTH_HEADING} outline-none`}>
               {PAUSED_HEADING}
             </FocusHeading>
-            <p role="alert" className="text-ink-1">
-              {invite.status === "rate_limited" ? LIMITED : UNAVAILABLE}
-            </p>
+            <Notice role="alert">{invite.status === "rate_limited" ? LIMITED : UNAVAILABLE}</Notice>
           </section>
         )}
       </Shell>
@@ -100,7 +90,7 @@ export default async function ClassInvitePage({ params }: PageProps<"/c/[token]"
   if (viewer.role === "instructor" || viewer.role === "admin") {
     return (
       <Shell>
-        <h1 className="mb-3 font-read text-3xl text-ink-1">{invite.className}</h1>
+        <h1 className={AUTH_HEADING}>{invite.className}</h1>
         <p className="mb-6 text-ink-1">{ALREADY_INSTRUCTOR}</p>
         <Link href="/author" className={linkClass}>
           Go to your quizzes
@@ -113,7 +103,7 @@ export default async function ClassInvitePage({ params }: PageProps<"/c/[token]"
   if (joined.some((entry) => entry.id === invite.classId)) {
     return (
       <Shell>
-        <h1 className="mb-3 font-read text-3xl text-ink-1">{invite.className}</h1>
+        <h1 className={AUTH_HEADING}>{invite.className}</h1>
         <p className="mb-6 text-ink-1">You are in this class.</p>
         <Link href={STUDENT_HOME} className={linkClass}>
           Go to your classes

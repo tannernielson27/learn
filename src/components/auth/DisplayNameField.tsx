@@ -41,7 +41,7 @@ export function DisplayNameField({
 
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="text-sm font-medium text-ink-1">
+      <label htmlFor={id} className="text-sm font-semibold text-ink-1">
         Your name
       </label>
       <input
@@ -59,7 +59,7 @@ export function DisplayNameField({
         autoFocus={autoFocus}
         aria-invalid={invalid ? true : undefined}
         aria-describedby={describedBy}
-        className={fieldClasses("px-3 text-base")}
+        className={fieldClasses("h-13 px-3.5 text-lg")}
       />
       <p id={hintId} className="text-sm text-ink-2">
         {hint}

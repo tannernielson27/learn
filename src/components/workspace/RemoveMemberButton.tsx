@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 import type { ConfirmOutcome } from "@/components/classes/ConfirmSubmit";
+import { FieldError } from "@/components/authoring/FieldError";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { removeWarning } from "@/lib/workspace/membership";
@@ -113,9 +114,9 @@ export function RemoveMemberButton({ action, name, focusOnSuccess }: RemoveMembe
         }
       >
         {/* Always rendered: a region that appears with its text already in it is often not read. */}
-        <p id={messageId} aria-live="polite" className="text-sm text-incorrect">
-          {message ? <span key={failures}>{message}</span> : null}
-        </p>
+        <div id={messageId} aria-live="polite">
+          {message ? <FieldError key={failures}>{message}</FieldError> : null}
+        </div>
       </Dialog>
     </>
   );

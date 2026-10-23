@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/Button";
+import { FieldError } from "./FieldError";
 
 export type ArchiveState = { status: "idle" } | { status: "error"; error: string };
 
@@ -36,9 +37,9 @@ export function ArchiveButton({ action, label, accessibleName }: ArchiveButtonPr
         </Button>
       </div>
       {state.status === "error" ? (
-        <p ref={alertRef} role="alert" tabIndex={-1} className="max-w-prose text-sm text-incorrect">
+        <FieldError ref={alertRef} role="alert" tabIndex={-1} className="max-w-prose">
           {state.error}
-        </p>
+        </FieldError>
       ) : null}
     </form>
   );

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { assignSource } from "@/app/author/assignments/actions";
 import { AssignPanel } from "@/components/assignments/AssignPanel";
+import { ReadingWidth } from "@/components/authoring/PageWidth";
 import { assignmentPath } from "@/lib/assignments/assignments";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
@@ -31,13 +32,15 @@ export default async function AssignBankPage({
   ]);
 
   return (
-    <AssignPanel
-      sourceName={bank.name}
-      backHref={`/author/banks/${bank.id}`}
-      backLabel="Back to quiz"
-      classes={classes}
-      exposure={exposure}
-      action={assignSource.bind(null, source)}
-    />
+    <ReadingWidth>
+      <AssignPanel
+        sourceName={bank.name}
+        backHref={`/author/banks/${bank.id}`}
+        backLabel="Back to quiz"
+        classes={classes}
+        exposure={exposure}
+        action={assignSource.bind(null, source)}
+      />
+    </ReadingWidth>
   );
 }

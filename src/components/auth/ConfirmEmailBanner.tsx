@@ -25,9 +25,9 @@ export function ConfirmEmailBanner({ action, email }: ConfirmEmailBannerProps) {
   return (
     <section
       aria-labelledby="confirm-email-heading"
-      className="mb-8 rounded-sm border border-line bg-surface-2 px-4 py-3"
+      className="mb-8 rounded-md bg-notice-soft px-4 py-3.5"
     >
-      <h2 id="confirm-email-heading" className="text-base font-medium text-ink-1">
+      <h2 id="confirm-email-heading" className="text-base font-semibold text-ink-1">
         Confirm your email address
       </h2>
       <p className="mt-1 text-sm text-ink-2">

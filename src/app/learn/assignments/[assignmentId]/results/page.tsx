@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ClassTime } from "@/components/assignments/ClassTime";
+import { Notice } from "@/components/ui/Notice";
+import { PageWidth } from "@/components/ui/PageWidth";
 import { AssignmentResults } from "@/components/assignments/results/AssignmentResults";
 import { studentAssignmentPath } from "@/lib/assignments/assignments";
 import { resultsStore } from "@/lib/assignments/attemptStore";
@@ -12,6 +14,7 @@ import { DEFAULT_CLASS_TIME_ZONE, zoneOfClass } from "@/lib/classes/timeZone";
 import { requireStudent } from "@/lib/classes/viewer";
 import { myClasses } from "@/lib/supabase/classInvites";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { practiseMissedFromAssignmentAction } from "@/app/learn/practice/missed/actions";
 
 export const metadata: Metadata = { title: "Results" };
 
@@ -32,7 +35,9 @@ function Header({
         </Link>
       </p>
       <p className="eyebrow mb-2">Results</p>
-      <h1 className="font-read text-3xl break-words text-ink-1">{assignment.title}</h1>
+      <h1 className="font-read text-display leading-tight break-words text-ink-1">
+        {assignment.title}
+      </h1>
       <p className="mt-2 text-sm text-ink-2">
         {closed ? "Closed " : "Closes "}
         <ClassTime iso={assignment.closesAt} timeZone={timeZone} />
@@ -62,11 +67,7 @@ export default async function StudentResultsPage({
 
   if (view.kind === "missing") notFound();
   if (view.kind === "failed") {
-    return (
-      <p role="alert" className="text-ink-2">
-        These results did not load. Reload the page.
-      </p>
-    );
+    return <Notice role="alert">These results did not load. Reload the page.</Notice>;
   }
   // #242: the close is said in the class's zone; a student no longer in the class gets the default.
   const classId = view.assignment.classId;
@@ -91,15 +92,17 @@ export default async function StudentResultsPage({
     );
   }
 
+  // ResultsDesktop: the summary and the questions side by side, at the wide content width.
   return (
-    <>
+    <PageWidth width="wide">
       <Header assignment={view.assignment} closed timeZone={timeZone} />
       <AssignmentResults
         best={view.best}
         attemptsMade={view.attemptsMade}
         entries={view.entries}
         record={view.record}
+        practiseMissed={practiseMissedFromAssignmentAction.bind(null, view.assignment.id)}
       />
-    </>
+    </PageWidth>
   );
 }

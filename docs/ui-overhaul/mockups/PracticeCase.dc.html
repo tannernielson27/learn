@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Case study assignment on a desktop</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="lr.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&amp;display=swap">
+<style>body{margin:0}a{color:oklch(38% 0.12 250)}a:hover{color:oklch(30% 0.12 250)}</style>
+</helmet>
+<div class="lr" style="width: 1440px; height: 900px; display: flex; flex-direction: column">
+  <header class="topbar" style="justify-content: space-between">
+    <div style="display: flex; align-items: center; gap: 20px; min-width: 0">
+      <a class="link" href="StudentHome.dc.html" style="font-weight: 500"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Your classes</a>
+      <span style="width: 1px; height: 24px; background: var(--line)"></span>
+      <p style="font-weight: 600">Case study: sudden dyspnea after hip arthroplasty</p>
+      <span class="badge">Assignment · due Thu 11:59 PM</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px">
+      <p class="mono" style="font-size: 14px; font-weight: 600">Step 3 of 6: Prioritize Hypotheses</p>
+      <div style="display: flex; gap: 4px" aria-hidden="true">
+        <span style="width: 28px; height: 6px; border-radius: 3px; background: var(--accent)"></span><span style="width: 28px; height: 6px; border-radius: 3px; background: var(--accent)"></span><span style="width: 28px; height: 6px; border-radius: 3px; background: var(--accent)"></span><span style="width: 28px; height: 6px; border-radius: 3px; background: var(--surface-2)"></span><span style="width: 28px; height: 6px; border-radius: 3px; background: var(--surface-2)"></span><span style="width: 28px; height: 6px; border-radius: 3px; background: var(--surface-2)"></span>
+      </div>
+    </div>
+  </header>
+  <div style="flex: 1; min-height: 0; display: flex; justify-content: center; gap: 0">
+    <aside aria-label="Patient record" style="width: 600px; flex: none; background: var(--surface-1); border-right: 1px solid var(--line); border-left: 1px solid var(--line); display: flex; flex-direction: column">
+      <div style="padding: 20px 24px 12px; display: flex; flex-direction: column; gap: 4px">
+        <p class="eyebrow">Patient record</p>
+        <p style="font-weight: 700; font-size: 20px">74-year-old female</p>
+        <p class="muted" style="font-size: 14px">Orthopedic unit · admitted Day 0 · total hip arthroplasty</p>
+      </div>
+      <div style="display: flex; gap: 8px; padding: 0 24px 12px">
+        <span class="badge">Day 1, 0800</span>
+        <span class="badge badge-accent">Day 1, 1400</span>
+      </div>
+      <nav class="record-tabs" aria-label="Record tabs" style="padding: 0 16px">
+        <a href="#" aria-current="false">History &amp; Physical</a>
+        <a href="#" aria-current="false">Nurses' Notes</a>
+        <a href="#" aria-current="true">Vital Signs</a>
+        <a href="#" aria-current="false">Lab Results</a>
+        <a href="#" aria-current="false">Orders</a>
+      </nav>
+      <div style="padding: 16px 24px; display: flex; flex-direction: column; gap: 16px">
+        <table class="vitals">
+          <thead><tr><th>Vital sign</th><th style="text-align: right">0800</th><th style="text-align: right">1400</th></tr></thead>
+          <tbody>
+            <tr><td>Heart rate</td><td class="num">84</td><td class="num">118<span class="tag-hl" title="High">H</span></td></tr>
+            <tr><td>Respiratory rate</td><td class="num">18</td><td class="num">28<span class="tag-hl" title="High">H</span></td></tr>
+            <tr><td>Blood pressure</td><td class="num">132/78</td><td class="num">104/62</td></tr>
+            <tr><td>SpO2 (room air)</td><td class="num">96%</td><td class="num">88%<span class="tag-hl" title="Low">L</span></td></tr>
+            <tr><td>Temperature</td><td class="num">37.1 °C</td><td class="num">37.4 °C</td></tr>
+            <tr><td>Pain (0–10)</td><td class="num">3</td><td class="num">7</td></tr>
+          </tbody>
+        </table>
+        <p class="muted" style="font-size: 13px">H and L mark values outside the reference range.</p>
+      </div>
+    </aside>
+    <main style="width: 760px; flex: none; display: flex; flex-direction: column; position: relative">
+      <div style="flex: 1; padding: 32px 40px 120px; display: flex; flex-direction: column; gap: 16px">
+        <p class="stem" style="font-size: 20px">Based on the findings at 1400, which conditions should the nurse consider most likely?</p>
+        <p class="instructions">Select all that apply.</p>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div class="option is-selected"><span class="box"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="width: 14px; height: 14px; stroke-width: 3"><path d="M20 6 9 17l-5-5"/></svg></span>Pulmonary embolism</div>
+          <div class="option"><span class="box"></span>Hospital-acquired pneumonia</div>
+          <div class="option is-selected"><span class="box"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="width: 14px; height: 14px; stroke-width: 3"><path d="M20 6 9 17l-5-5"/></svg></span>Deep vein thrombosis</div>
+          <div class="option"><span class="box"></span>Fat embolism syndrome</div>
+          <div class="option"><span class="box"></span>Opioid-induced respiratory depression</div>
+          <div class="option"><span class="box"></span>Atelectasis</div>
+        </div>
+      </div>
+      <div style="position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 40px; background: var(--surface-1); border-top: 1px solid var(--line)">
+        <button class="btn btn-ghost" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>Flag step 3</button>
+        <div style="display: flex; align-items: center; gap: 16px">
+          <p class="muted" style="font-size: 14px">2 selected</p>
+          <a class="btn btn-primary btn-lg" href="ResultsDesktop.dc.html" style="min-width: 160px">Submit</a>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

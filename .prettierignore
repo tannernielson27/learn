@@ -9,3 +9,5 @@ docs/reference
 supabase/templates/magic_link.html
 # The AI import corpus (#339): documents as an instructor would write them, not formatted
 test/ai-import/corpus/*.md
+# The approved overhaul mockups (docs/ui-overhaul/README.md): kept byte for byte as reviewed
+docs/ui-overhaul/mockups

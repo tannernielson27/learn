@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { textLinkClasses } from "@/components/ui/TextLink";
 import { NOT_IN_A_FOLDER, type FolderRow, type FolderView } from "@/lib/authoring/folders";
 
 export interface FolderBreadcrumbsProps {
@@ -59,7 +60,7 @@ function crumbsFor({
 export function Breadcrumbs({ crumbs }: { crumbs: readonly Crumb[] }) {
   return (
     <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-      <ol className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <ol className="flex flex-wrap items-center gap-x-2">
         {crumbs.map((crumb, index) => (
           <li key={`${index}-${crumb.label}`} className="flex min-w-0 items-center gap-x-2">
             {index > 0 ? (
@@ -68,10 +69,8 @@ export function Breadcrumbs({ crumbs }: { crumbs: readonly Crumb[] }) {
               </span>
             ) : null}
             {crumb.href ? (
-              <Link
-                href={crumb.href}
-                className="text-accent-ink underline-offset-4 hover:underline"
-              >
+              // A 44px target, though the line reads small (WCAG 2.5.8).
+              <Link href={crumb.href} className={textLinkClasses({ size: "sm" })}>
                 {crumb.label}
               </Link>
             ) : (

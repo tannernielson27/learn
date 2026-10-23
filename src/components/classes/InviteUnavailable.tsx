@@ -18,7 +18,7 @@ export function InviteUnavailable() {
     <section aria-labelledby="invite-unavailable-heading" className="flex flex-col gap-4">
       <FocusHeading
         id="invite-unavailable-heading"
-        className="font-read text-3xl text-ink-1 outline-none"
+        className="font-read text-display leading-tight break-words text-ink-1 outline-none"
       >
         {INVITE_UNAVAILABLE_HEADING}
       </FocusHeading>

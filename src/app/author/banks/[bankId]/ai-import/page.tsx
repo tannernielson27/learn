@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   beginAiImportReading,
@@ -10,6 +9,8 @@ import {
   startAiImport,
 } from "@/app/author/aiImportActions";
 import { AiImportUpload } from "@/components/authoring/AiImportUpload";
+import { Breadcrumbs } from "@/components/authoring/FolderBreadcrumbs";
+import { ReadingWidth } from "@/components/authoring/PageWidth";
 import { aiImportEnabled } from "@/lib/aiImport/config";
 import { workspaceEnabled } from "@/lib/aiImport/upload/access";
 import { openBatchId, readAllowance, readBatchView } from "@/lib/aiImport/upload/state";
@@ -55,12 +56,8 @@ export default async function AiImportPage({
   const initial = view ?? null;
 
   return (
-    <>
-      <nav aria-label="Breadcrumb" className="mb-4 text-sm text-ink-2">
-        <Link href={`/author/banks/${bank.id}`} className="underline hover:text-ink-1">
-          {bank.name}
-        </Link>
-      </nav>
+    <ReadingWidth>
+      <Breadcrumbs crumbs={[{ label: bank.name, href: `/author/banks/${bank.id}` }]} />
       <h1 className="mb-6 font-read text-3xl break-words text-ink-1">Import with AI</h1>
       <AiImportUpload
         key={initial ? `${initial.id}-${initial.status}` : "new"}
@@ -77,6 +74,6 @@ export default async function AiImportPage({
           finish: finishAiImport,
         }}
       />
-    </>
+    </ReadingWidth>
   );
 }

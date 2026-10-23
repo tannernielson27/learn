@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/Button";
 import type { MarkedSpan } from "@/lib/authoring/forms/highlight";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 
 export interface HighlightSpanListProps {
   spans: readonly MarkedSpan[];
@@ -15,8 +16,7 @@ export interface HighlightSpanListProps {
   onRemove: (spanId: string) => void;
 }
 
-const fieldClass =
-  "w-full rounded-sm border border-line bg-surface-1 px-3 py-2 text-base text-ink-1 hover:border-line-strong";
+const fieldClass = fieldClasses("px-3 py-2 text-base");
 
 /**
  * The selectable phrases of a highlight item, in reading order, each with its answer, an optional

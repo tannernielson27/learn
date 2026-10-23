@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ReadingWidth } from "@/components/authoring/PageWidth";
 import { QuizOrderEditor } from "@/components/authoring/QuizOrderEditor";
+import { Notice } from "@/components/ui/Notice";
+import { TextLink } from "@/components/ui/TextLink";
 import { isUuid } from "@/lib/authoring/ids";
 import { listQuizEntries } from "@/lib/authoring/quizOrderData";
 import { requireAuthor } from "@/lib/authoring/session";
@@ -25,14 +27,11 @@ export default async function QuizOrderPage({ params }: PageProps<"/author/banks
   if (!bank) notFound();
 
   return (
-    <>
-      <p className="mb-2 text-sm">
-        <Link
-          href={`/author/banks/${bank.id}`}
-          className="text-accent-ink underline-offset-4 hover:underline"
-        >
+    <ReadingWidth>
+      <p className="mb-2">
+        <TextLink href={`/author/banks/${bank.id}`} size="sm">
           {bank.name}
-        </Link>
+        </TextLink>
       </p>
       <h1 className="mb-2 font-read text-3xl text-ink-1">Change order</h1>
       <p className="mb-6 max-w-prose text-ink-2">
@@ -40,9 +39,7 @@ export default async function QuizOrderPage({ params }: PageProps<"/author/banks
         it, then save.
       </p>
       {!read.ok ? (
-        <p role="alert" className="text-sm text-incorrect">
-          {read.error}
-        </p>
+        <Notice role="alert">{read.error}</Notice>
       ) : read.entries.length < 2 ? (
         <p className="text-ink-2">
           {read.entries.length === 0
@@ -52,6 +49,6 @@ export default async function QuizOrderPage({ params }: PageProps<"/author/banks
       ) : (
         <QuizOrderEditor entries={read.entries} action={saveQuizOrderAction.bind(null, bank.id)} />
       )}
-    </>
+    </ReadingWidth>
   );
 }

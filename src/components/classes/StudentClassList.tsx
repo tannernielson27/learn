@@ -9,7 +9,7 @@ export interface StudentClassListProps {
  * A student's classes, by name, each with the workspace it belongs to: one account can be in
  * classes of more than one teacher's workspace, and two of them may share a name. The workspace
  * is left off when it is not known (a deploy running ahead of its migration). Their open
- * assignments are listed separately on /learn.
+ * assignments are listed separately on /learn. On the home it is the line under the heading.
  */
 export function StudentClassList({ classes }: StudentClassListProps) {
   if (classes.length === 0) {
@@ -23,16 +23,18 @@ export function StudentClassList({ classes }: StudentClassListProps) {
     );
   }
 
+  // The line under the home's h1 (StudentHome mockup): each class on its own row at 375px, side by
+  // side from there, its workspace beside it in the quieter ink.
   return (
     <ul
       aria-label="Your classes"
-      className="flex flex-col divide-y divide-line border-y border-line"
+      className="flex flex-col gap-x-6 gap-y-1 sm:flex-row sm:flex-wrap"
     >
       {classes.map((entry) => (
-        <li key={entry.id} className="flex flex-col gap-0.5 px-2 py-3">
-          <span className="font-medium break-words text-ink-1">{entry.name}</span>
+        <li key={entry.id} className="flex flex-wrap items-baseline gap-x-2 break-words">
+          <span className="font-medium text-ink-1">{entry.name}</span>
           {entry.workspaceName ? (
-            <span className="text-sm break-words text-ink-2">{entry.workspaceName}</span>
+            <span className="text-sm text-ink-2">{entry.workspaceName}</span>
           ) : null}
         </li>
       ))}

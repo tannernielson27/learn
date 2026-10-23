@@ -180,7 +180,7 @@ test("a student practises a shared bank on a phone, sees each key as they answer
   await student.screenshot({ path: shot("practice-sata-feedback"), fullPage: true });
 
   // The next item: one finding in each body system.
-  await student.getByRole("button", { name: "Next", exact: true }).click();
+  await student.getByRole("button", { name: "Next question", exact: true }).click();
   await student.getByRole("checkbox", { name: /Deep, rapid respirations/ }).click();
   await student.getByRole("checkbox", { name: /Heart rate 118/ }).click();
   await student.getByRole("checkbox", { name: /Drowsiness/ }).click();

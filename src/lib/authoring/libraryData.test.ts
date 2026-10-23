@@ -97,7 +97,13 @@ describe("readLibrary", () => {
         { id: WEEK_1, parentId: MED_SURG, name: "Week 1", quizCount: 0 },
       ],
       quizzes: [
-        { id: QUIZ_1, name: "Cardiac week", updatedAt: "2026-10-01T10:00:00Z", itemCount: 3 },
+        {
+          id: QUIZ_1,
+          name: "Cardiac week",
+          updatedAt: "2026-10-01T10:00:00Z",
+          itemCount: 3,
+          folderId: null,
+        },
       ],
     });
     const quizzes = calls.find((call) => call.table === "item_banks")!;
@@ -111,6 +117,27 @@ describe("readLibrary", () => {
     await readLibrary(client, { kind: "folder", id: MED_SURG });
     const quizzes = calls.find((call) => call.table === "item_banks")!;
     expect(arg(quizzes, "eq")).toEqual(["library_folder_id", MED_SURG]);
+  });
+
+  it("reads every quiz for All quizzes, each with the folder it is in", async () => {
+    const { client, calls } = fakeClient((call) =>
+      call.table === "library_folders"
+        ? { data: FOLDER_ROWS }
+        : {
+            data: [
+              { ...QUIZ_ROWS[0], library_folder_id: null },
+              { ...QUIZ_ROWS[0], id: QUIZ_2, library_folder_id: MED_SURG },
+            ],
+          },
+    );
+    const library = await readLibrary(client, { kind: "all" });
+    expect(library.quizzes.map((quiz) => [quiz.id, quiz.folderId])).toEqual([
+      [QUIZ_1, null],
+      [QUIZ_2, MED_SURG],
+    ]);
+    const quizzes = calls.find((call) => call.table === "item_banks")!;
+    expect(arg(quizzes, "is")).toBeUndefined();
+    expect(arg(quizzes, "eq")).toBeUndefined();
   });
 
   it("lists the quizzes as before, with no folders, when the database has none yet", async () => {

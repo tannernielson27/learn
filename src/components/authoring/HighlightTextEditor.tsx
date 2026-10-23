@@ -17,6 +17,7 @@ import { describeIssues } from "@/lib/authoring/issueMessages";
 import { highlightTextItemSchema, type ItemInputOf } from "@/lib/ngn/schemas";
 import { EditorShell, issueMessageId, type SaveResult } from "./EditorShell";
 import { HighlightSpanList } from "./HighlightSpanList";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 
 export interface HighlightTextEditorProps {
   initialValues: HighlightTextFormValues;
@@ -24,8 +25,7 @@ export interface HighlightTextEditorProps {
   onPublish: (item: ItemInputOf<"highlight_text">) => Promise<SaveResult>;
 }
 
-const fieldClass =
-  "w-full rounded-sm border border-line bg-surface-1 px-3 py-2 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect";
+const fieldClass = fieldClasses("px-3 py-2 text-base");
 const DIRTY = { shouldDirty: true } as const;
 
 /**

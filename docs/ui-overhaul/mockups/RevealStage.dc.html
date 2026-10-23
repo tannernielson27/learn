@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Answer showing on the projector</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="lr.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&amp;display=swap">
+<style>body{margin:0}a{color:oklch(38% 0.12 250)}a:hover{color:oklch(30% 0.12 250)}</style>
+</helmet>
+<div class="lr stage">
+  <div class="stage-pad" style="gap: 32px">
+    <header class="stage-strip" style="justify-content: space-between">
+      <p>Question <span class="mono">3</span> of <span class="mono">20</span> · Answer</p>
+      <p><span class="mono">22</span> of <span class="mono">24</span> answered</p>
+    </header>
+    <h1 style="font-size: 44px; line-height: 1.25; font-weight: 600; max-width: 1600px">A client with heart failure gained 2.3 kg (5 lb) in two days and is now short of breath lying flat. Which action should the nurse take first?</h1>
+    <div class="chart" style="gap: 22px">
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+        <div class="{{r.cls}}" style="grid-template-columns: 80px minmax(0, 1fr) 220px; gap: 28px">
+          <span class="letter" style="width: 72px; height: 72px; font-size: 34px; border-width: 3px">{{r.letter}}</span>
+          <div style="display: flex; flex-direction: column; gap: 10px; min-width: 0">
+            <div style="display: flex; align-items: center; gap: 16px; font-size: 36px; font-weight: 500">
+              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.label}}</span>
+              <sc-if value="{{r.key}}" hint-placeholder-val="{{false}}">
+                <span style="display: inline-flex; align-items: center; gap: 8px; flex: none; color: var(--correct); font-weight: 700; font-size: 32px"><svg class="ico ico-lg" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Correct</span>
+              </sc-if>
+            </div>
+            <div class="bar" style="height: 36px"><span style="width: {{r.width}}"></span></div>
+          </div>
+          <span class="count" style="font-size: 40px; font-weight: 700">{{r.count}} <span style="font-weight: 500; color: var(--ink-2); font-size: 30px">{{r.pct}}</span></span>
+        </div>
+      </sc-for>
+    </div>
+    <p style="margin-top: auto; font-family: var(--ff-read); font-size: 34px; line-height: 1.4; max-width: 1600px">Fast weight gain with orthopnea points to fluid overload. Assess breathing first: everything else can wait until you know how far it has gone.</p>
+  </div>
+  <a href="EndStage.dc.html" style="position: absolute; right: 24px; bottom: 16px; font-size: 14px; color: var(--ink-2)">Next screen</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1920,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const data = [
+      ["A", "Auscultate the lungs and check oxygen saturation", 13, true],
+      ["B", "Encourage the client to drink more fluids", 1, false],
+      ["C", "Document the weight and reassess tomorrow", 3, false],
+      ["D", "Teach the client about low-sodium food choices", 5, false],
+    ];
+    const total = 22;
+    const rows = data.map(([letter, label, count, key]) => ({
+      letter, label, count, key,
+      pct: Math.round((count / total) * 100) + "%",
+      width: Math.round((count / total) * 100) + "%",
+      cls: key ? "chart-row key" : "chart-row",
+    }));
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

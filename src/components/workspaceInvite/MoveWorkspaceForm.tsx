@@ -11,6 +11,8 @@ import {
   moveWarning,
 } from "@/lib/workspace/membership";
 import { InviteAnswerView } from "./InviteAnswerView";
+import { AUTH_HEADING } from "@/components/auth/AuthFrame";
+import { FormError } from "@/components/auth/FormError";
 
 export interface MoveWorkspaceFormProps {
   /** `moveToInvitedWorkspace`, bound to the token; on success it redirects. */
@@ -44,7 +46,7 @@ export function MoveWorkspaceForm({ action, heading, email, preview }: MoveWorks
 
   return (
     <section aria-labelledby="move-workspace-heading">
-      <h1 id="move-workspace-heading" className="mb-3 font-read text-3xl break-words text-ink-1">
+      <h1 id="move-workspace-heading" className={AUTH_HEADING}>
         {heading}
       </h1>
       <p className="mb-4 break-words text-ink-2">You are signed in as {email}.</p>
@@ -52,7 +54,7 @@ export function MoveWorkspaceForm({ action, heading, email, preview }: MoveWorks
         <h2 className="mb-1 font-medium text-ink-1">Joining means leaving your workspace</h2>
         <p className="break-words text-ink-2">{moveWarning(preview)}</p>
       </div>
-      <form action={formAction} className="flex flex-col gap-4">
+      <form action={formAction} className="flex flex-col gap-5">
         {/* Which workspace the sentence above is about: the confirmation counts only for it. */}
         <input type="hidden" name={MOVE_LEAVING_FIELD} value={preview.leavingWorkspaceId} />
         <label className="tap-target flex items-start gap-3 break-words text-ink-1">
@@ -64,12 +66,15 @@ export function MoveWorkspaceForm({ action, heading, email, preview }: MoveWorks
           />
           <span className="min-w-0">{moveConfirmLabel(preview)}</span>
         </label>
-        {state.status === "error" ? (
-          <p role="alert" className="text-sm text-incorrect">
-            {state.error}
-          </p>
-        ) : null}
-        <Button type="submit" variant="primary" disabled={pending} aria-disabled={pending}>
+        {state.status === "error" ? <FormError>{state.error}</FormError> : null}
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          block
+          disabled={pending}
+          aria-disabled={pending}
+        >
           {pending ? "Joining…" : "Leave and join workspace"}
         </Button>
       </form>

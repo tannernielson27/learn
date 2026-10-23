@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page, type APIRequestContext } from "@playwright/test";
 import { latestSignInCode, latestSignInLink, openSignInLink } from "./mailbox";
 import { createAccountWithoutRole, createAuthorAccount } from "./signIn";
+import { openAccountMenu } from "./accountMenu";
 
 // Needs the local Supabase stack (auth + test mailbox) and a build pointed at it; the preview
 // e2e job has neither, so it skips. CI runs this in the `auth-e2e` job with E2E_AUTH=1.
@@ -47,6 +48,7 @@ test("an author signs in from an emailed link, lands where they were going, then
   await page.goto("/sign-in");
   await expect(page).toHaveURL(/\/author$/);
 
+  await openAccountMenu(page);
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
   await page.goto("/author");
@@ -125,6 +127,7 @@ test("the demo account signs in without an email and lands where the person was 
     process.env.DEMO_ACCOUNT_EMAIL!.trim().toLowerCase(),
   );
 
+  await openAccountMenu(page);
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
 });
@@ -200,6 +203,7 @@ test("a link that was already used sends the person back with a reason", async (
 
   await openSignInLink(page, link);
   await expect(page).toHaveURL(/\/author$/);
+  await openAccountMenu(page);
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
 
@@ -252,6 +256,7 @@ test("an author chooses a password, then signs in with it and no email", async (
   await page.getByRole("link", { name: "Continue", exact: true }).click();
   await expect(page).toHaveURL(/\/author$/);
 
+  await openAccountMenu(page);
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
   // The address changes before the new page's title has streamed in; axe run in that gap reports
@@ -335,6 +340,7 @@ test("a new teacher signs up, with the keyboard, into an empty workspace of thei
   await expect(page).toHaveURL(/\/author$/);
 
   // The same address again is told it has an account, and nothing else.
+  await openAccountMenu(page);
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
   await page.goto("/sign-up?role=teacher");

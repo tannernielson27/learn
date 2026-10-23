@@ -3,6 +3,8 @@
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { FOLDER_NAME_MAX } from "@/lib/authoring/folders";
+import { fieldClasses } from "@/components/ui/fieldClasses";
+import { FieldError } from "./FieldError";
 
 export type FolderFormState =
   { status: "idle" } | { status: "error"; error: string } | { status: "done"; message: string };
@@ -70,16 +72,16 @@ export function FolderNameForm({
           onChange={(event) => setName(event.target.value)}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
-          className="tap-target min-w-0 flex-1 rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect"
+          className={fieldClasses("min-w-0 flex-1 px-3 text-base")}
         />
         <Button type="submit" size="sm" disabled={pending}>
           {submitLabel}
         </Button>
       </div>
       {error ? (
-        <p id={`${id}-error`} role="alert" className="text-sm text-incorrect">
+        <FieldError id={`${id}-error`} role="alert">
           {error}
-        </p>
+        </FieldError>
       ) : null}
       {state.status === "done" ? (
         <p role="status" className="text-sm text-ink-2">

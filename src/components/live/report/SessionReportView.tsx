@@ -9,6 +9,7 @@ import {
   type ReportView,
 } from "@/lib/live/reportFormat";
 import { formatSessionDate } from "./formatDate";
+import { ReportStepBars } from "./ReportStepBars";
 import { ItemTable, StepTable, StudentTable } from "./ReportTables";
 
 const VIEW_LABELS: Record<ReportView, string> = {
@@ -48,7 +49,7 @@ export function SessionReportView({
       </p>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="font-read text-3xl break-words text-ink-1">{title}</h1>
+          <h1 className="font-read text-display leading-tight break-words text-ink-1">{title}</h1>
           <p className="mt-1 text-sm text-ink-2">
             {closedAt ? formatSessionDate(closedAt) : "Ended"} ·{" "}
             {report.students.length === 1 ? "1 student" : `${report.students.length} students`} ·{" "}
@@ -67,9 +68,9 @@ export function SessionReportView({
               <Link
                 href={reportPath(sessionId, option)}
                 aria-current={option === view ? "page" : undefined}
-                className={`tap-target inline-flex items-center border-b-2 px-3 text-sm font-medium whitespace-nowrap transition-colors duration-fast ${
+                className={`tap-target inline-flex items-center border-b-2 px-3 text-sm font-semibold whitespace-nowrap transition-colors duration-fast ${
                   option === view
-                    ? "border-accent text-ink-1"
+                    ? "border-accent text-accent-ink"
                     : "border-transparent text-ink-2 hover:text-ink-1"
                 }`}
               >
@@ -111,6 +112,7 @@ function StepsBody({ report }: { report: SessionReport }) {
   const untagged = report.items.filter((item) => item.cjmmStep === null).length;
   return (
     <>
+      <ReportStepBars steps={report.steps} />
       <StepTable steps={report.steps} />
       {untagged > 0 ? (
         <p className="mt-3 text-sm text-ink-2">

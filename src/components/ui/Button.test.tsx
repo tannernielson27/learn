@@ -46,3 +46,31 @@ describe("Button", () => {
     expect(css).toContain(':active:not(:disabled, [aria-disabled="true"])');
   });
 });
+
+describe("Button sizes and the secondary edge", () => {
+  it("is 44px at md and 56px at lg, and full width when block", () => {
+    render(
+      <>
+        <Button>Medium</Button>
+        <Button size="lg" variant="primary" block>
+          Submit
+        </Button>
+      </>,
+    );
+    expect(screen.getByRole("button", { name: "Medium" })).toHaveClass(
+      "min-h-(--button-height-md)",
+    );
+    const large = screen.getByRole("button", { name: "Submit" });
+    expect(large).toHaveClass("min-h-(--button-height-lg)", "w-full", "text-lg");
+  });
+
+  it("draws a secondary button's edge with the field line, not the divider", () => {
+    expect(buttonClasses({ variant: "secondary" })).toContain("border-field-border");
+    expect(buttonClasses({ variant: "secondary" })).not.toMatch(/(^| )border-line( |$)/);
+  });
+
+  it("greys a disabled button instead of fading its colour", () => {
+    expect(buttonClasses()).toContain("disabled:bg-surface-2");
+    expect(buttonClasses()).not.toContain("opacity-50");
+  });
+});

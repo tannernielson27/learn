@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Assignment results on a desktop</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="lr.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&amp;display=swap">
+<style>body{margin:0}a{color:oklch(38% 0.12 250)}a:hover{color:oklch(30% 0.12 250)}</style>
+</helmet>
+<div class="lr" style="width: 1440px; height: 900px; display: flex; flex-direction: column">
+  <header class="topbar" style="justify-content: space-between">
+    <div style="display: flex; align-items: center; gap: 28px">
+      <a class="brand" href="StudentHome.dc.html">LeaRN</a>
+      <nav class="nav" aria-label="Main"><a href="StudentHome.dc.html" aria-current="page">Your classes</a><a href="Main.dc.html">Join a live session</a></nav>
+    </div>
+    <span class="avatar">PR</span>
+  </header>
+  <main style="flex: 1; min-height: 0; width: 1200px; margin: 0 auto; padding: 36px 0; display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 48px">
+    <section style="display: flex; flex-direction: column; gap: 24px">
+      <div>
+        <a class="link" href="StudentHome.dc.html" style="font-weight: 500; font-size: 14px"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>NUR 310 Adult Health II</a>
+        <h1 class="serif" style="font-size: 32px; line-height: 1.15; margin-top: 4px">Week 7: cardiac and respiratory priorities</h1>
+        <p class="muted" style="margin-top: 8px">Your results · attempt 1 of 2 · submitted Tuesday</p>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 12px; border-top: 3px solid var(--ink-1); padding-top: 16px">
+        <p class="mono" style="font-size: 56px; font-weight: 700; line-height: 1">14<span class="muted" style="font-size: 28px; font-weight: 500">/20</span></p>
+        <p class="muted">points · 70%</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <a class="btn btn-primary btn-lg btn-block" href="PracticePhone.dc.html">Practise the 6 I missed</a>
+        <a class="btn btn-secondary btn-block" href="#missed">Review what I missed</a>
+        <p class="muted" style="font-size: 13px">Practice is never graded. Your score here stays as it is.</p>
+      </div>
+      <section aria-labelledby="steps-h" style="display: flex; flex-direction: column; gap: 12px">
+        <h2 id="steps-h" style="font-size: 15px; font-weight: 700">By clinical judgment step</h2>
+        <sc-for list="{{steps}}" as="s" hint-placeholder-count="6">
+          <div style="display: grid; grid-template-columns: 180px minmax(0, 1fr) 48px; gap: 12px; align-items: center; font-size: 14px">
+            <span>{{s.name}}</span>
+            <div class="progress" style="height: 8px"><span style="width: {{s.pct}}; background: var(--chart-bar)"></span></div>
+            <span class="mono" style="text-align: right">{{s.pct}}</span>
+          </div>
+        </sc-for>
+      </section>
+    </section>
+    <section aria-labelledby="q-h" style="display: flex; flex-direction: column; min-height: 0">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid var(--line)">
+        <h2 id="q-h" class="serif" style="font-size: 24px">Questions</h2>
+        <div role="tablist" aria-label="Show" style="display: flex; gap: 4px; padding: 4px; border-radius: 10px; background: var(--surface-2)">
+          <button role="tab" aria-selected="false" type="button" class="btn" style="min-height: 40px; background: transparent; font-weight: 500">All 20</button>
+          <button role="tab" aria-selected="true" type="button" class="btn" style="min-height: 40px; background: var(--surface-1); box-shadow: var(--elevation-1)" id="missed">Missed 6</button>
+        </div>
+      </div>
+      <ul style="overflow: hidden">
+        <sc-for list="{{questions}}" as="q" hint-placeholder-count="6">
+          <li style="display: grid; grid-template-columns: 56px minmax(0, 1fr) 150px 24px; gap: 16px; align-items: center; min-height: 72px; padding: 12px 4px; border-bottom: 1px solid var(--line)">
+            <span class="mono muted" style="font-size: 14px">Q{{q.n}}</span>
+            <div style="min-width: 0"><p style="font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{q.stem}}</p><p class="muted" style="font-size: 13px; margin-top: 2px">{{q.step}}</p></div>
+            <span style="font-size: 14px; font-weight: 700; color: {{q.color}}">{{q.verdict}}</span>
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </li>
+        </sc-for>
+      </ul>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const steps = [["Recognize Cues", 83], ["Analyze Cues", 75], ["Prioritize Hypotheses", 50], ["Generate Solutions", 67], ["Take Action", 80], ["Evaluate Outcomes", 67]].map(([name, n]) => ({ name, pct: n + "%" }));
+    const red = "var(--incorrect)", ink = "var(--ink-1)";
+    const questions = [
+      [4, "A client with type 1 diabetes is admitted with a glucose of 486 mg/dL. For each body system…", "Analyze Cues", "Partially correct · 2/3", ink],
+      [7, "Which client should the nurse see first after receiving the morning handoff report?", "Prioritize Hypotheses", "Not correct · 0/1", red],
+      [9, "Place the steps for inserting an indwelling urinary catheter in order.", "Take Action", "Partially correct · 3/5", ink],
+      [12, "Highlight the findings in the 1400 nurses' note that require immediate follow-up.", "Recognize Cues", "Partially correct · 4/6", ink],
+      [15, "Which outcomes show that teaching about warfarin was effective?", "Evaluate Outcomes", "Not correct · 0/2", red],
+      [18, "Complete the sentence: the nurse should first ___ because ___.", "Generate Solutions", "Not correct · 0/2", red],
+    ].map(([n, stem, step, verdict, color]) => ({ n, stem, step, verdict, color }));
+    return { steps, questions };
+  }
+}
+</script>
+</body>
+</html>

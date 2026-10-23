@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Case study step on the projector</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="lr.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&amp;display=swap">
+<style>body{margin:0}a{color:oklch(38% 0.12 250)}a:hover{color:oklch(30% 0.12 250)}</style>
+</helmet>
+<div class="lr stage">
+  <div class="stage-pad" style="gap: 32px">
+    <header style="display: flex; align-items: center; justify-content: space-between; gap: 32px; padding: 20px 28px; border: 3px solid oklch(80% 0.006 260); border-radius: 14px">
+      <div style="display: flex; align-items: center; gap: 20px">
+        <svg class="ico ico-xl" viewBox="0 0 24 24" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+        <p style="font-size: 36px; font-weight: 600">74-year-old female · Orthopedic unit</p>
+      </div>
+      <p class="mono" style="font-size: 32px; font-weight: 600">Day 1, 1400</p>
+    </header>
+    <div class="stage-strip" style="justify-content: space-between">
+      <p>Step <span class="mono">3</span> of <span class="mono">6</span>: Prioritize Hypotheses</p>
+      <p>New in the record: <span style="color: var(--stage-ink)">Lab Results</span></p>
+    </div>
+    <h1 class="stage-stem" style="font-size: 56px">Based on the findings at 1400, which condition is the client most likely experiencing?</h1>
+    <ol style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px">
+      <li class="stage-option"><span class="letter">A</span>Pulmonary embolism</li>
+      <li class="stage-option"><span class="letter">B</span>Hospital-acquired pneumonia</li>
+      <li class="stage-option"><span class="letter">C</span>Fat embolism syndrome</li>
+      <li class="stage-option"><span class="letter">D</span>Atelectasis</li>
+    </ol>
+    <footer style="margin-top: auto; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 64px; align-items: end">
+      <p class="stage-label" style="font-size: 30px">Read the patient record on your phone before you answer.</p>
+      <div style="display: flex; align-items: baseline; gap: 16px; white-space: nowrap">
+        <p class="stage-num">9</p>
+        <p style="font-size: 40px; font-weight: 600">of 24 answered</p>
+      </div>
+    </footer>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1920,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

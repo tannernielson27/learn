@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/Button";
+import { FieldError } from "./FieldError";
 
 /** One file on the AI import page, as the page tracks it (#345). */
 export interface FileRow {
@@ -45,9 +46,12 @@ export function AiImportFileRows({ rows, onRemove, busy }: AiImportFileRowsProps
               </Button>
             ) : null}
           </div>
-          <p className={`text-sm ${row.tone === "refused" ? "text-incorrect" : "text-ink-2"}`}>
-            {row.stage}
-          </p>
+          {/* A refused file is a system message: ink with an alert icon, never feedback red. */}
+          {row.tone === "refused" ? (
+            <FieldError>{row.stage}</FieldError>
+          ) : (
+            <p className="text-sm text-ink-2">{row.stage}</p>
+          )}
           {row.tone === "refused" ? null : (
             <div
               role="progressbar"

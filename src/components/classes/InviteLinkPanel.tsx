@@ -35,7 +35,8 @@ export function InviteLinkPanel({ url, code, classTitle, rotateAction }: InviteL
           type="text"
           readOnly
           value={url}
-          className="tap-target w-full rounded-sm border border-line bg-surface-2 px-3 font-mono text-sm text-ink-1"
+          // Read only, so the quieter surface; the field's 3:1 edge still marks the box (WCAG 1.4.11).
+          className="tap-target w-full rounded-sm border border-line-field bg-surface-2 px-3 font-mono text-sm text-ink-1"
         />
       </div>
       <CopyLinkButton url={url} />

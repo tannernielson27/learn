@@ -28,7 +28,12 @@ export interface Library {
   /** Every folder in the workspace, for the tree, the breadcrumbs and the move choices. */
   folders: LibraryFolderRow[];
   /** The quizzes in the open view: the top level's are those in no folder. */
-  quizzes: BankSummary[];
+  quizzes: LibraryQuiz[];
+}
+
+/** A quiz as the library lists it, with the folder it is filed in (null for none). */
+export interface LibraryQuiz extends BankSummary {
+  folderId: string | null;
 }
 
 const GONE = "That folder no longer exists. Reload the page and try again.";
@@ -75,17 +80,23 @@ export async function readLibrary(client: Client, view: LibraryView): Promise<Li
   const quizzes = client
     .from("item_banks")
     .select("id, name, updated_at, library_folder_id, items(count)");
+  const filtered =
+    view.kind === "folder"
+      ? quizzes.eq("library_folder_id", view.id)
+      : view.kind === "top"
+        ? quizzes.is("library_folder_id", null)
+        : quizzes;
   const [folders, banks] = await Promise.all([
     readFolders(client),
-    (view.kind === "folder"
-      ? quizzes.eq("library_folder_id", view.id)
-      : quizzes.is("library_folder_id", null)
-    )
-      .order("updated_at", { ascending: false })
-      .limit(BANK_LIST_LIMIT),
+    filtered.order("updated_at", { ascending: false }).limit(BANK_LIST_LIMIT),
   ]);
   if (isMissingSchemaError(folders.error) || isMissingSchemaError(banks.error)) {
-    return { ready: false, folders: [], quizzes: await listBanks(client) };
+    const every = await listBanks(client);
+    return {
+      ready: false,
+      folders: [],
+      quizzes: every.map((quiz) => ({ ...quiz, folderId: null })),
+    };
   }
   if (folders.error) throw new AuthoringDataError("Folders could not be loaded.");
   if (banks.error) throw new AuthoringDataError("Quizzes could not be loaded.");
@@ -97,6 +108,7 @@ export async function readLibrary(client: Client, view: LibraryView): Promise<Li
       name: bank.name,
       updatedAt: bank.updated_at,
       itemCount: embeddedCount(bank.items),
+      folderId: bank.library_folder_id ?? null,
     })),
   };
 }

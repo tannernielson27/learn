@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Session ended on the projector</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="lr.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&amp;display=swap">
+<style>body{margin:0}a{color:oklch(38% 0.12 250)}a:hover{color:oklch(30% 0.12 250)}</style>
+</helmet>
+<div class="lr stage">
+  <div class="stage-pad" style="gap: 48px">
+    <header style="display: flex; flex-direction: column; gap: 12px">
+      <p class="stage-label">Live session ended</p>
+      <h1 class="serif" style="font-size: 72px; line-height: 1.1">Week 7: cardiac and respiratory priorities</h1>
+    </header>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 48px; border-top: 3px solid var(--stage-ink); padding-top: 32px">
+      <div><p class="stage-num">20</p><p class="stage-label" style="margin-top: 12px">questions</p></div>
+      <div><p class="stage-num">24</p><p class="stage-label" style="margin-top: 12px">in this session</p></div>
+      <div><p class="stage-num">91%</p><p class="stage-label" style="margin-top: 12px">of answers sent</p></div>
+    </div>
+    <section aria-labelledby="steps-h" style="display: flex; flex-direction: column; gap: 22px">
+      <h2 id="steps-h" style="font-size: 36px; font-weight: 600">Correct answers by clinical judgment step</h2>
+      <div class="chart" style="gap: 16px">
+        <sc-for list="{{steps}}" as="s" hint-placeholder-count="6">
+          <div class="chart-row" style="grid-template-columns: 520px minmax(0, 1fr) 120px; gap: 28px">
+            <span style="font-size: 30px; font-weight: 500">{{s.name}}</span>
+            <div class="bar" style="height: 30px"><span style="width: {{s.pct}}"></span></div>
+            <span class="count" style="font-size: 32px; font-weight: 700">{{s.pct}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+    <p class="stage-label" style="margin-top: auto">Your teacher has the full report. Your own results are on your phone.</p>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1920,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const steps = [
+      ["1. Recognize Cues", 82],
+      ["2. Analyze Cues", 74],
+      ["3. Prioritize Hypotheses", 51],
+      ["4. Generate Solutions", 69],
+      ["5. Take Action", 77],
+      ["6. Evaluate Outcomes", 63],
+    ].map(([name, n]) => ({ name, pct: n + "%" }));
+    return { steps };
+  }
+}
+</script>
+</body>
+</html>

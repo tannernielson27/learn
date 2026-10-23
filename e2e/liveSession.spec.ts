@@ -82,6 +82,22 @@ test("an instructor starts a session from a bank, sees a six-character code, and
   await expect(page.getByText("Ada Brennan")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByTestId("present-count")).toHaveText("1 phone connected");
 
+  // The projector view of the same live session, in a second window as a teacher opens it from
+  // the lobby. It is a laptop's second screen, so it is checked at the laptop's size only.
+  const projecting = testInfo.project.name === "desktop-1280";
+  const projector = projecting ? await page.context().newPage() : null;
+  const stage = projector?.getByRole("region", { name: "Projector view" });
+  if (projector && stage) {
+    await projector.setViewportSize({ width: 1920, height: 1080 });
+    await projector.goto(`${new URL(consoleUrl).pathname}?view=projector`);
+    await expect(stage.getByTestId("join-code")).toHaveText(CODE);
+    // Names show on the stage in the lobby only (owner decision 4).
+    await expect(stage.getByText("Ada Brennan", { exact: true })).toBeVisible({ timeout: 15_000 });
+    // A projector window of its own has nothing to press (code review M2).
+    await expect(stage.getByRole("button")).toHaveCount(0);
+    await expectNoAxeViolations(projector);
+  }
+
   // Starting the room moves the phone. The bank holds one item, so this is also the last one.
   await page.getByRole("button", { name: "Start", exact: true }).click();
   // Since #133 the phone shows the item itself rather than a waiting screen. Answering it is
@@ -90,6 +106,16 @@ test("an instructor starts a session from a bank, sees a six-character code, and
   await expect(student.getByRole("radio", { name: "Bradycardia" })).toBeVisible();
   await expectNoAxeViolations(student);
   await expectNoAxeViolations(page);
+  if (projector && stage) {
+    // The question and its lettered options, the same order as the phone, and no names.
+    await expect(stage.getByText("Which finding is expected?")).toBeVisible({ timeout: 15_000 });
+    await expect(
+      stage.getByRole("list", { name: "Choices", exact: true }).getByRole("listitem").first(),
+    ).toContainText("A. Bradycardia");
+    await expect(stage.getByText("Ada Brennan", { exact: true })).toHaveCount(0);
+    await expect(stage.getByText("Correct", { exact: true })).toHaveCount(0);
+    await expectNoAxeViolations(projector);
+  }
   // Nothing to advance to, and the console says so by greying the button rather than by refusing.
   await expect(page.getByRole("button", { name: "Next question", exact: true })).toBeDisabled();
 
@@ -97,6 +123,12 @@ test("an instructor starts a session from a bank, sees a six-character code, and
   // A phone that did not answer is shown the key too (#181).
   await expect(student.getByTestId("not-answered")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole("button", { name: "Show answer", exact: true })).toBeDisabled();
+  if (projector && stage) {
+    // The key, marked in words, once the answer is showing.
+    await expect(stage.getByText("Correct", { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expectNoAxeViolations(projector);
+    await projector.close();
+  }
 
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await expect(student.getByText("The live session is paused.")).toBeVisible({ timeout: 15_000 });

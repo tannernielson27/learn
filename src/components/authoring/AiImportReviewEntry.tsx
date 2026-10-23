@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useId, useState } from "react";
+import { Badge } from "@/components/ui/Badge";
 import { Button, buttonClasses } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 import {
   STATUS_LABELS,
   retypeChoices,
@@ -13,6 +16,7 @@ import type { AiImportFailure } from "@/lib/authoring/aiImportUpload";
 import { ITEM_TYPE_LABELS } from "@/lib/ngn/labels";
 import type { ItemType } from "@/lib/ngn/schemas";
 import { AiImportEntryPreview } from "./AiImportEntryPreview";
+import { FieldError } from "./FieldError";
 
 export type EntryChange = Promise<
   { ok: true; version: number; status: ReviewStatus } | AiImportFailure
@@ -101,12 +105,10 @@ export function AiImportReviewEntry({
         <h3 id={`${id}-heading`} className="font-read text-xl break-words text-ink-1">
           {heading}
         </h3>
-        <p className="text-sm text-ink-2">
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-2">
           {typeLabel}
-          <span aria-hidden="true"> · </span>
-          <span className="font-medium text-ink-1" data-testid="entry-status">
-            {STATUS_LABELS[entry.status]}
-          </span>
+          <span aria-hidden="true">·</span>
+          <Badge data-testid="entry-status">{STATUS_LABELS[entry.status]}</Badge>
         </p>
       </header>
 
@@ -127,27 +129,24 @@ export function AiImportReviewEntry({
         </p>
       ) : (
         <div className={`grid min-w-0 gap-4 ${showSource ? "lg:grid-cols-2" : ""}`}>
-          <section
-            aria-label={`${heading}, preview`}
-            className="min-w-0 rounded-sm border border-line bg-surface-0 p-3"
-          >
-            <AiImportEntryPreview
-              key={entry.version}
-              kind={entry.kind}
-              item={entry.item}
-              label={heading}
-            />
+          <section aria-label={`${heading}, preview`} className="min-w-0">
+            <Card padding="sm">
+              <AiImportEntryPreview
+                key={entry.version}
+                kind={entry.kind}
+                item={entry.item}
+                label={heading}
+              />
+            </Card>
           </section>
           {showSource ? (
-            <section
-              id={`${id}-source`}
-              aria-label={`${heading}, source`}
-              className="min-w-0 rounded-sm border border-line bg-surface-0 p-3"
-            >
-              <p className="eyebrow mb-2">From the document</p>
-              <p className="font-read text-base break-words whitespace-pre-wrap text-ink-1">
-                {entry.sourceExcerpt || "The document's text for this question was not kept."}
-              </p>
+            <section id={`${id}-source`} aria-label={`${heading}, source`} className="min-w-0">
+              <Card padding="sm">
+                <p className="eyebrow mb-2">From the document</p>
+                <p className="font-read text-base break-words whitespace-pre-wrap text-ink-1">
+                  {entry.sourceExcerpt || "The document's text for this question was not kept."}
+                </p>
+              </Card>
             </section>
           ) : null}
         </div>
@@ -217,7 +216,7 @@ export function AiImportReviewEntry({
                 onChange={(event) => setType(event.target.value as ItemType | "")}
                 disabled={pending !== null}
                 aria-describedby={`${id}-cost`}
-                className="tap-target rounded-sm border border-line bg-surface-1 px-2 text-ink-1"
+                className={fieldClasses("px-2 text-base")}
               >
                 <option value="">Choose a type</option>
                 {choices.map((choice) => (
@@ -238,11 +237,9 @@ export function AiImportReviewEntry({
         </form>
       ) : null}
 
-      {note ? (
-        <p
-          role={note.kind}
-          className={`text-sm ${note.kind === "alert" ? "text-incorrect" : "text-ink-2"}`}
-        >
+      {note?.kind === "alert" ? <FieldError role="alert">{note.text}</FieldError> : null}
+      {note?.kind === "status" ? (
+        <p role="status" className="text-sm text-ink-2">
           {note.text}
         </p>
       ) : null}

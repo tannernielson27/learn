@@ -59,6 +59,7 @@ function caseStudyTransport(initial: LiveSessionState): LiveHostTransport {
     },
     onPresence: () => () => {},
     onAggregate: () => () => {},
+    onConnection: () => () => {},
     aggregate: async () => null,
     results: async () => null,
     progress: async () => null,

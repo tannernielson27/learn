@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Question, teacher control view</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="lr.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&amp;display=swap">
+<style>body{margin:0}a{color:oklch(38% 0.12 250)}a:hover{color:oklch(30% 0.12 250)}</style>
+</helmet>
+<div class="lr" style="width: 1280px; height: 800px; display: flex; flex-direction: column">
+  <header class="topbar" style="justify-content: space-between; gap: 16px">
+    <div style="display: flex; align-items: center; gap: 16px; min-width: 0">
+      <p style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Week 7: cardiac and respiratory priorities</p>
+      <span class="badge badge-live">Live</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 16px">
+      <label class="mono" style="display: flex; align-items: center; gap: 8px; font-size: 14px">
+        <span class="muted" style="font-family: var(--ff-ui)">Question</span>
+        <select aria-label="Go to question" style="height: 40px; border: 1px solid var(--line-field); border-radius: 8px; padding: 0 8px; font: 600 14px var(--ff-mono); background: var(--surface-1)"><option>3 of 20</option></select>
+      </label>
+      <a class="btn btn-secondary" href="QuestionStage.dc.html" style="min-height: 40px"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>Projector view</a>
+      <span style="display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 14px"><span class="statusdot"></span>Connected</span>
+    </div>
+  </header>
+  <main style="flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 28px; padding: 28px 32px">
+    <section style="display: flex; flex-direction: column; gap: 16px; min-height: 0">
+      <p class="eyebrow">Question 3 · Generate Solutions · Multiple choice</p>
+      <p class="stem" style="font-size: 20px">A client with heart failure gained 2.3 kg (5 lb) in two days and is now short of breath lying flat. Which action should the nurse take first?</p>
+      <div class="chart" style="margin-top: 8px">
+        <div class="chart-row" style="grid-template-columns: 36px 1fr 96px"><span class="letter" style="width: 32px; height: 32px; font-size: 14px">A</span><div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 15px">Auscultate the lungs and check oxygen saturation</span><div class="bar" style="height: 14px"><span style="width: 61%"></span></div></div><span class="count" style="font-size: 15px">11 · 61%</span></div>
+        <div class="chart-row" style="grid-template-columns: 36px 1fr 96px"><span class="letter" style="width: 32px; height: 32px; font-size: 14px">B</span><div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 15px">Encourage the client to drink more fluids</span><div class="bar" style="height: 14px"><span style="width: 6%"></span></div></div><span class="count" style="font-size: 15px">1 · 6%</span></div>
+        <div class="chart-row" style="grid-template-columns: 36px 1fr 96px"><span class="letter" style="width: 32px; height: 32px; font-size: 14px">C</span><div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 15px">Document the weight and reassess tomorrow</span><div class="bar" style="height: 14px"><span style="width: 11%"></span></div></div><span class="count" style="font-size: 15px">2 · 11%</span></div>
+        <div class="chart-row" style="grid-template-columns: 36px 1fr 96px"><span class="letter" style="width: 32px; height: 32px; font-size: 14px">D</span><div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 15px">Teach the client about low-sodium food choices</span><div class="bar" style="height: 14px"><span style="width: 22%"></span></div></div><span class="count" style="font-size: 15px">4 · 22%</span></div>
+      </div>
+      <p class="muted" style="font-size: 13px">Only you see these counts. The projector shows them when you show the answer.</p>
+    </section>
+    <section style="display: flex; flex-direction: column; gap: 16px; min-height: 0">
+      <div class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; align-items: baseline; justify-content: space-between">
+          <p style="font-size: 15px; font-weight: 600">Answered</p>
+          <p class="mono" style="font-size: 28px; font-weight: 700">18 <span class="muted" style="font-size: 16px; font-weight: 500">of 24</span></p>
+        </div>
+        <div class="progress" style="height: 8px"><span style="width: 75%"></span></div>
+        <div class="timer"><div class="track"><div class="fill" style="width: 80%"></div></div><span class="time">0:24</span></div>
+        <div style="display: flex; gap: 8px">
+          <button class="btn btn-secondary" type="button" style="flex: 1">Add 15 seconds</button>
+          <button class="btn btn-secondary" type="button" style="flex: 1">Stop timer</button>
+        </div>
+      </div>
+      <div class="card" style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden">
+        <p style="padding: 14px 20px; font-weight: 600; font-size: 15px; border-bottom: 1px solid var(--line)">Not answered yet <span class="mono muted">6</span></p>
+        <ul style="overflow: hidden">
+          <li style="min-height: 44px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid var(--line); font-size: 15px">Marcus Oyelaran-Whitfield</li>
+          <li style="min-height: 44px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid var(--line); font-size: 15px">Hannah Schmidt-Larsen</li>
+          <li style="min-height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid var(--line); font-size: 15px">Noah Kim <span class="badge" style="font-weight: 500"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="width: 14px; height: 14px"><path d="M12 20h.01"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/><path d="m2 2 20 20"/></svg>Offline</span></li>
+          <li style="min-height: 44px; display: flex; align-items: center; padding: 0 20px; font-size: 15px" class="muted">and 3 more</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+  <footer class="controlbar" style="justify-content: space-between">
+    <div style="display: flex; gap: 8px">
+      <button class="btn btn-secondary" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>Pause</button>
+      <button class="btn btn-ghost" type="button" style="color: var(--ink-2)">End live session</button>
+    </div>
+    <div style="display: flex; gap: 12px">
+      <button class="btn btn-secondary btn-lg" type="button">Next question</button>
+      <a class="btn btn-primary btn-lg" href="RevealStage.dc.html" style="min-width: 200px"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>Show answer</a>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

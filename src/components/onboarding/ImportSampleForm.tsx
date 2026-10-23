@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { FieldError } from "@/components/authoring/FieldError";
 import { Button } from "@/components/ui/Button";
 
 export type SampleImportState = { status: "idle" } | { status: "error"; error: string };
@@ -24,11 +25,7 @@ export function ImportSampleForm({ action }: ImportSampleFormProps) {
           Importing the sample…
         </p>
       ) : null}
-      {state.status === "error" ? (
-        <p role="alert" className="text-sm text-incorrect">
-          {state.error}
-        </p>
-      ) : null}
+      {state.status === "error" ? <FieldError role="alert">{state.error}</FieldError> : null}
     </form>
   );
 }

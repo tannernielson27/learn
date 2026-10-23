@@ -1,9 +1,11 @@
 "use client";
 
-import Link from "next/link";
+import { CircleAlert } from "lucide-react";
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { fieldClasses } from "@/components/ui/fieldClasses";
+import { Icon } from "@/components/ui/Icon";
+import { TextLink } from "@/components/ui/TextLink";
 import { ALREADY_INSTRUCTOR } from "./JoinClassButton";
 
 export type JoinByCodeState =
@@ -41,12 +43,7 @@ export function JoinByCodeForm({ action, initialCode = "" }: JoinByCodeFormProps
     return (
       <div role="status" className="flex flex-col items-start gap-2">
         <p className="text-ink-1">{ALREADY_INSTRUCTOR}</p>
-        <Link
-          href="/author"
-          className="tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline"
-        >
-          Go to your quizzes
-        </Link>
+        <TextLink href="/author">Go to your quizzes</TextLink>
       </div>
     );
   }
@@ -54,7 +51,7 @@ export function JoinByCodeForm({ action, initialCode = "" }: JoinByCodeFormProps
   return (
     <form action={formAction} className="flex flex-col gap-3">
       <div className="flex flex-col gap-2">
-        <label htmlFor={`${id}-code`} className="text-sm font-medium text-ink-1">
+        <label htmlFor={`${id}-code`} className="text-sm font-semibold text-ink-1">
           Class code
         </label>
         <input
@@ -72,15 +69,17 @@ export function JoinByCodeForm({ action, initialCode = "" }: JoinByCodeFormProps
           onChange={(event) => setCode(event.target.value)}
           aria-invalid={error ? true : undefined}
           aria-describedby={[hintId, error ? errorId : null].filter(Boolean).join(" ")}
-          className={fieldClasses("max-w-64 px-3 font-mono text-base tracking-wide uppercase")}
+          className={fieldClasses("h-13 max-w-72 px-3.5 font-mono text-lg tracking-wide uppercase")}
         />
         <p id={hintId} className="text-sm text-ink-2">
           {HINT}
         </p>
       </div>
       {error ? (
-        <p id={errorId} role="alert" className="text-sm text-incorrect">
-          {error}
+        // Ink with an alert icon, as every field's error: red is for marked answers (PLAN D11).
+        <p id={errorId} role="alert" className="flex items-start gap-2 text-sm text-ink-1">
+          <Icon icon={CircleAlert} className="mt-0.5" />
+          <span>{error}</span>
         </p>
       ) : null}
       <div>

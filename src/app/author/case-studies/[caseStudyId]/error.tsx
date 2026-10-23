@@ -2,6 +2,7 @@
 
 import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
+import { ReadingWidth } from "@/components/authoring/PageWidth";
 import { RouteRecovery } from "@/components/recovery/RouteRecovery";
 import { errorDigest } from "@/components/status/errorDigest";
 
@@ -13,11 +14,13 @@ import { errorDigest } from "@/components/status/errorDigest";
 export default function CaseStudyError({ error, retry }: ErrorInfo) {
   useReportError(error);
   return (
-    <RouteRecovery
-      headline="The case study builder stopped working."
-      detail="Saved steps are safe. Try again to reload the builder; a step you had not saved may be lost."
-      onRetry={retry}
-      digest={errorDigest(error)}
-    />
+    <ReadingWidth>
+      <RouteRecovery
+        headline="The case study builder stopped working."
+        detail="Saved steps are safe. Try again to reload the builder; a step you had not saved may be lost."
+        onRetry={retry}
+        digest={errorDigest(error)}
+      />
+    </ReadingWidth>
   );
 }

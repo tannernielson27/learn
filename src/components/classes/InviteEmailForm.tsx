@@ -4,6 +4,9 @@ import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { EmailCodeForm, type EmailCodeFormProps } from "@/components/auth/EmailCodeForm";
 import { Button } from "@/components/ui/Button";
 import { InviteUnavailable } from "./InviteUnavailable";
+import { AUTH_HEADING, AUTH_SUBLINE } from "@/components/auth/AuthFrame";
+import { FormError } from "@/components/auth/FormError";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 
 export type InviteLinkState =
   | { status: "idle" }
@@ -63,7 +66,7 @@ export function InviteEmailForm({
           id={`${id}-sent`}
           ref={headingRef}
           tabIndex={-1}
-          className="mb-3 font-read text-3xl text-ink-1 outline-none"
+          className={`${AUTH_HEADING} outline-none`}
         >
           Check your email
         </h1>
@@ -80,16 +83,16 @@ export function InviteEmailForm({
 
   return (
     <section aria-labelledby={`${id}-heading`}>
-      <h1 id={`${id}-heading`} className="mb-3 font-read text-3xl text-ink-1">
+      <h1 id={`${id}-heading`} className={AUTH_HEADING}>
         Join {classTitle}
       </h1>
-      <p className="mb-6 text-ink-2">
+      <p className={AUTH_SUBLINE}>
         Enter your email and we will send you a link. Opening it signs you in and adds you to the
         class.
       </p>
-      <form action={formAction} className="flex flex-col gap-4">
+      <form action={formAction} className="flex flex-col gap-5">
         <div className="flex flex-col gap-2">
-          <label htmlFor={`${id}-email`} className="text-sm font-medium text-ink-1">
+          <label htmlFor={`${id}-email`} className="text-sm font-semibold text-ink-1">
             Email address
           </label>
           <input
@@ -109,15 +112,18 @@ export function InviteEmailForm({
             }}
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? `${id}-error` : undefined}
-            className="tap-target w-full rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect"
+            className={fieldClasses("h-13 px-3.5 text-lg")}
           />
-          {error ? (
-            <p id={`${id}-error`} role="alert" className="text-sm text-incorrect">
-              {error}
-            </p>
-          ) : null}
+          {error ? <FormError id={`${id}-error`}>{error}</FormError> : null}
         </div>
-        <Button type="submit" variant="primary" disabled={pending} aria-disabled={pending}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          block
+          disabled={pending}
+          aria-disabled={pending}
+        >
           {pending ? "Sending link…" : "Email me a link to join"}
         </Button>
       </form>

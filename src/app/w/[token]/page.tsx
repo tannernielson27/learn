@@ -25,6 +25,9 @@ import {
   moveToInvitedWorkspace,
   signOutToInvitation,
 } from "./actions";
+import { AuthFrame, AUTH_HEADING, AUTH_SUBLINE } from "@/components/auth/AuthFrame";
+import { Notice } from "@/components/ui/Notice";
+import { textLinkClasses } from "@/components/ui/TextLink";
 
 export const metadata: Metadata = {
   title: "Workspace invitation",
@@ -37,19 +40,11 @@ export const metadata: Metadata = {
 // Rendered for each request and never stored: the answer depends on the token and on who asks.
 export const dynamic = "force-dynamic";
 
-const linkClass =
-  "tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline";
-const HEADING = "mb-3 font-read text-3xl break-words text-ink-1 outline-none";
+const linkClass = textLinkClasses();
+const HEADING = `${AUTH_HEADING} outline-none`;
 
 function Shell({ children }: { children: ReactNode }) {
-  return (
-    <main className="flex flex-1 items-start justify-center px-4 pt-16 pb-12 sm:items-center sm:pt-0">
-      <div className="w-full max-w-sm">
-        <p className="mb-2 font-mono text-sm tracking-wide text-ink-2 uppercase">LeaRN</p>
-        {children}
-      </div>
-    </main>
-  );
+  return <AuthFrame>{children}</AuthFrame>;
 }
 
 /**
@@ -94,9 +89,7 @@ export default async function WorkspaceInvitePage({ params }: PageProps<"/w/[tok
           <FocusHeading id="workspace-invite-paused" className={HEADING}>
             This invitation cannot be opened just now
           </FocusHeading>
-          <p role="alert" className="text-ink-1">
-            {INVITE_UNAVAILABLE}
-          </p>
+          <Notice role="alert">{INVITE_UNAVAILABLE}</Notice>
         </section>
       </Shell>
     );
@@ -141,7 +134,7 @@ export default async function WorkspaceInvitePage({ params }: PageProps<"/w/[tok
           <h1 id="workspace-invite-other-address" className={HEADING}>
             This invitation is for another address
           </h1>
-          <p className="mb-6 break-words text-ink-2">
+          <p className={AUTH_SUBLINE}>
             It was sent to {maskEmail(invite.invitedEmail)}, and you are signed in as {viewer.email}
             . Sign out, then open the link from the email again and sign in as the address it was
             sent to.

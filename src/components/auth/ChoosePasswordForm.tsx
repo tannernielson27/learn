@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useActionState, useEffect, useId, useRef } from "react";
 import { Button } from "@/components/ui/Button";
+import { textLinkClasses } from "@/components/ui/TextLink";
 import { PASSWORD_HINT, PASSWORD_MIN_LENGTH } from "@/lib/auth/passwordRules";
 import { PasswordField } from "./PasswordField";
+import { FormError } from "./FormError";
 
 export type ChoosePasswordState =
   { status: "idle" } | { status: "saved" } | { status: "error"; error: string };
@@ -23,8 +25,7 @@ export interface ChoosePasswordFormProps {
 }
 
 const INITIAL: ChoosePasswordState = { status: "idle" };
-const LINK =
-  "tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline";
+const LINK = textLinkClasses();
 
 /** Chooses or changes the signed-in person's password. Skippable unless told otherwise: the emailed link still works. */
 export function ChoosePasswordForm({
@@ -68,7 +69,7 @@ export function ChoosePasswordForm({
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form action={formAction} className="flex flex-col gap-5">
       {/* Hidden from sight, present for password managers, which file the password under it. */}
       <input
         type="email"
@@ -90,12 +91,15 @@ export function ChoosePasswordForm({
         invalid={error !== null}
         errorId={error ? errorId : undefined}
       />
-      {error ? (
-        <p id={errorId} role="alert" className="text-sm text-incorrect">
-          {error}
-        </p>
-      ) : null}
-      <Button type="submit" variant="primary" disabled={pending} aria-disabled={pending}>
+      {error ? <FormError id={errorId}>{error}</FormError> : null}
+      <Button
+        type="submit"
+        variant="primary"
+        size="lg"
+        block
+        disabled={pending}
+        aria-disabled={pending}
+      >
         {pending ? "Saving…" : "Save password"}
       </Button>
       {skippable ? (

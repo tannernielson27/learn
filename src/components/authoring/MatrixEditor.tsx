@@ -15,6 +15,7 @@ import {
   type ItemInputOf,
 } from "@/lib/ngn/schemas";
 import { EditorShell, issueMessageId, type SaveResult } from "./EditorShell";
+import { fieldClasses } from "@/components/ui/fieldClasses";
 
 type MatrixType = "matrix_multiple_choice" | "matrix_multiple_response";
 
@@ -31,8 +32,7 @@ const MAX_ROWS = 8;
 const MIN_COLUMNS = 2;
 const MAX_COLUMNS = 4;
 
-const fieldClass =
-  "w-full rounded-sm border border-line bg-surface-1 px-3 py-2 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect";
+const fieldClass = fieldClasses("px-3 py-2 text-base");
 
 function unusedId(prefix: string, taken: ReadonlySet<string>): string {
   for (let i = 1; i < 100; i += 1) {

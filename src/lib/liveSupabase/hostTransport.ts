@@ -32,6 +32,7 @@ import {
   type TimerCommand,
   type HostSnapshot,
   type ItemAggregate,
+  type LiveConnection,
   type LiveHostTransport,
   type LiveSessionState,
   type Participant,
@@ -130,6 +131,7 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
   const views = new Set<(view: SessionView<Item>) => void>();
   const presence = new Set<(roster: Participant[]) => void>();
   const aggregates = new Set<(aggregate: ItemAggregate) => void>();
+  const connections = new Set<(status: LiveConnection, rejoined: boolean) => void>();
 
   let state: LiveSessionState = {
     status: "lobby",
@@ -248,6 +250,8 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
       }
       channel.subscribe((status) => {
         if (status === "SUBSCRIBED") {
+          // Told before the rejoin's re-read below starts, which it does not wait for.
+          notifyConnection("connected", subscribed);
           resolve();
           // A rejoin has missed every change made while the socket was down, and Realtime replays
           // nothing. Re-reading is one indexed query and is what keeps a reconnected console from
@@ -257,10 +261,20 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
           subscribed = true;
           return;
         }
-        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") resolve();
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          // A channel that was up is coming back (Realtime retries by itself); one that never was
+          // is offline until it does. Nothing is said about the close that `close()` asked for.
+          if (!closed) notifyConnection(subscribed ? "reconnecting" : "offline", false);
+          resolve();
+        }
       });
     });
   });
+
+  /** What the console hears about its channel (PLAN D5). Copied first, as for every other set. */
+  function notifyConnection(status: LiveConnection, rejoined: boolean): void {
+    for (const listener of [...connections]) listener(status, rejoined);
+  }
 
   /** A host watches the roster and is never in it, so nothing of its own is folded in. */
   function rosterNow(): Participant[] {
@@ -611,12 +625,14 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
       views.clear();
       presence.clear();
       aggregates.clear();
+      connections.clear();
       await client.removeChannel(channel);
     },
 
     onSessionState: (listener) => subscribe(views, listener),
     onPresence: (listener) => subscribe(presence, listener),
     onAggregate: (listener) => subscribe(aggregates, listener),
+    onConnection: (listener) => subscribe(connections, listener),
 
     /**
      * The same live count `open()` reports, asked for on its own. One indexed read on the host's

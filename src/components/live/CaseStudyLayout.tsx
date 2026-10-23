@@ -32,12 +32,14 @@ export interface CaseStudyLayoutProps {
  */
 export function CaseStudyLayout({ record, changing = false, children }: CaseStudyLayoutProps) {
   if (record === null && !changing) {
-    return <main className="mx-auto w-full max-w-lg flex-1 px-4 py-12">{children}</main>;
+    return (
+      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 pb-12">{children}</main>
+    );
   }
   return (
     <main className="w-full flex-1">
       <LiveRecordLayout initial={record}>
-        <div className="mx-auto w-full max-w-lg py-4 sm:py-7">{children}</div>
+        <div className="mx-auto w-full max-w-lg pb-4 sm:pb-7">{children}</div>
       </LiveRecordLayout>
     </main>
   );

@@ -17,6 +17,7 @@ import {
   parseArchiveOne,
   type ArchiveSelectionState,
 } from "@/lib/authoring/archiveSelection";
+import { FieldError } from "./FieldError";
 
 export type ArchiveSelectedAction = (
   state: ArchiveSelectionState,
@@ -123,9 +124,7 @@ export function useArchiveSelected(
         </div>
       ) : null}
       {problem ? (
-        <p role="alert" className="text-sm text-incorrect">
-          {problem}
-        </p>
+        <FieldError role="alert">{problem}</FieldError>
       ) : state.status === "done" ? (
         <div ref={outcomeRef} role="status" tabIndex={-1} className="text-sm text-ink-1">
           <p>
@@ -140,8 +139,8 @@ export function useArchiveSelected(
           <Refusals lines={state.refusals} />
         </div>
       ) : state.status === "error" ? (
-        <div ref={outcomeRef} role="alert" tabIndex={-1} className="text-sm text-incorrect">
-          <p>{state.error}</p>
+        <div ref={outcomeRef} role="alert" tabIndex={-1} className="text-sm text-ink-1">
+          <FieldError>{state.error}</FieldError>
           <Refusals lines={state.refusals} />
         </div>
       ) : null}

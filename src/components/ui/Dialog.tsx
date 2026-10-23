@@ -34,7 +34,15 @@ interface DialogBaseProps {
   description?: ReactNode;
   children?: ReactNode;
   className?: string;
+  /**
+   * The dialog's shape. `dialog` (the default): a sheet off the bottom on a phone, a centred card
+   * from 768px. `sheet-bottom`: a bottom sheet at every width. `sheet-end`: a full-height panel
+   * on the inline end, for a landscape phone or a wide screen. `Sheet` picks one of the last two.
+   */
+  shape?: DialogShape;
 }
+
+export type DialogShape = "dialog" | "sheet-bottom" | "sheet-end";
 
 export type DialogProps = DialogBaseProps &
   (
@@ -45,11 +53,21 @@ export type DialogProps = DialogBaseProps &
 // A sheet off the bottom edge on a phone; a centred card from 768px. Preflight zeroes the margin
 // a <dialog> centres itself with, so each shape sets its own. `open:flex`, never a bare `flex`:
 // a display set outright would show the dialog while it is closed.
-const frame =
-  "motion-dialog fixed inset-0 m-0 mt-auto max-h-[85dvh] w-full max-w-none flex-col overflow-hidden " +
-  "rounded-t-md border-t border-line bg-surface-1 p-0 text-ink-1 open:flex " +
-  "[padding-bottom:env(safe-area-inset-bottom)] backdrop:bg-ink-1/25 " +
-  "md:m-auto md:max-h-[min(85dvh,40rem)] md:max-w-lg md:rounded-md md:border";
+const common =
+  "motion-dialog fixed inset-0 m-0 w-full flex-col overflow-hidden bg-surface-1 p-0 text-ink-1 " +
+  "open:flex backdrop:bg-ink-1/25 ";
+const bottom =
+  "mt-auto max-h-[85dvh] max-w-none rounded-t-md border-t border-line " +
+  "[padding-bottom:env(safe-area-inset-bottom)] ";
+const FRAMES: Record<DialogShape, string> = {
+  dialog:
+    common + bottom + "md:m-auto md:max-h-[min(85dvh,40rem)] md:max-w-lg md:rounded-md md:border",
+  "sheet-bottom": common + bottom + "md:mx-auto md:max-w-2xl md:border-x",
+  "sheet-end":
+    common +
+    "ml-auto h-dvh max-h-none max-w-md border-l border-line " +
+    "[padding-bottom:env(safe-area-inset-bottom)]",
+};
 
 /**
  * The one popup in the system (#357), on the native `<dialog>` and `showModal()`. The browser
@@ -75,6 +93,7 @@ export function Dialog({
   steps,
   actions,
   className = "",
+  shape = "dialog",
 }: DialogProps) {
   const dialog = useRef<HTMLDialogElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -146,7 +165,7 @@ export function Dialog({
       aria-describedby={describedBy || undefined}
       onCancel={onCancel}
       onClose={onNativeClose}
-      className={`${frame} ${className}`.trim()}
+      className={`${FRAMES[shape]} ${className}`.trim()}
     >
       <header className="flex items-start gap-2 pt-3 pr-2 pl-4 md:pt-4 md:pr-3 md:pl-6">
         <div className="min-w-0 flex-1 pt-2">

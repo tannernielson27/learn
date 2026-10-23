@@ -10,6 +10,8 @@ import {
 import { describeIssues } from "@/lib/authoring/issueMessages";
 import { bowtieItemSchema, type ItemInputOf } from "@/lib/ngn/schemas";
 import { EditorShell, issueMessageId, type SaveResult } from "./EditorShell";
+import { fieldClasses } from "@/components/ui/fieldClasses";
+import { CorrectToggle } from "./CorrectToggle";
 
 export interface BowtieEditorProps {
   initialValues: BowtieFormValues;
@@ -18,8 +20,7 @@ export interface BowtieEditorProps {
 }
 
 const DIRTY = { shouldDirty: true } as const;
-const fieldClass =
-  "w-full rounded-sm border border-line bg-surface-1 px-3 py-2 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect";
+const fieldClass = fieldClasses("px-3 py-2 text-base");
 
 type PairColumn = "actions" | "parameters";
 
@@ -82,16 +83,18 @@ export function BowtieEditor({ initialValues, onSaveDraft, onPublish }: BowtieEd
         <p className="text-sm text-ink-2">Mark the two correct ones. {count} of 2 marked.</p>
         {values[column].map((choice, index) => (
           <div key={choice.id} className="flex flex-wrap items-center gap-3">
-            <input
-              id={`${ids}-${column}-${index}-correct`}
-              type="checkbox"
-              className="size-5 accent-accent"
-              aria-label={`${noun} ${index + 1} is correct`}
-              checked={choice.correct}
-              onChange={(event) =>
-                setValue(`${column}.${index}.correct`, event.target.checked, DIRTY)
-              }
-            />
+            <CorrectToggle>
+              <input
+                id={`${ids}-${column}-${index}-correct`}
+                type="checkbox"
+                className="size-5 accent-accent"
+                aria-label={`${noun} ${index + 1} is correct`}
+                checked={choice.correct}
+                onChange={(event) =>
+                  setValue(`${column}.${index}.correct`, event.target.checked, DIRTY)
+                }
+              />
+            </CorrectToggle>
             <label
               htmlFor={`${ids}-${column}-${index}`}
               className="w-24 shrink-0 text-sm text-ink-1"
@@ -182,15 +185,17 @@ export function BowtieEditor({ initialValues, onSaveDraft, onPublish }: BowtieEd
         <p className="text-sm text-ink-2">Mark the one correct condition.</p>
         {values.conditions.map((choice, index) => (
           <div key={choice.id} className="flex flex-wrap items-center gap-3">
-            <input
-              id={`${ids}-conditions-${index}-correct`}
-              type="radio"
-              name={`${ids}-condition`}
-              className="size-5 accent-accent"
-              aria-label={`Condition ${index + 1} is correct`}
-              checked={values.conditionId === choice.id}
-              onChange={() => setValue("conditionId", choice.id, DIRTY)}
-            />
+            <CorrectToggle>
+              <input
+                id={`${ids}-conditions-${index}-correct`}
+                type="radio"
+                name={`${ids}-condition`}
+                className="size-5 accent-accent"
+                aria-label={`Condition ${index + 1} is correct`}
+                checked={values.conditionId === choice.id}
+                onChange={() => setValue("conditionId", choice.id, DIRTY)}
+              />
+            </CorrectToggle>
             <label
               htmlFor={`${ids}-conditions-${index}`}
               className="w-24 shrink-0 text-sm text-ink-1"

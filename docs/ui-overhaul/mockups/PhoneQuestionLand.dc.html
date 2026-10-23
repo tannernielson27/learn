@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Question on a phone held sideways</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="lr.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&amp;display=swap">
+<style>body{margin:0}a{color:oklch(38% 0.12 250)}a:hover{color:oklch(30% 0.12 250)}</style>
+</helmet>
+<div class="lr" style="width: 844px; height: 390px; display: flex; flex-direction: column">
+  <header style="height: 40px; flex: none; display: flex; align-items: center; gap: 16px; padding: 0 20px 0 48px; background: var(--surface-1); border-bottom: 1px solid var(--line); font-size: 13px">
+    <p class="mono" style="font-weight: 600; white-space: nowrap">3 of 20</p>
+    <div class="timer" style="flex: 1"><div class="track" style="height: 6px"><div class="fill" style="width: 80%"></div></div><span class="time" style="font-size: 13px">0:24</span></div>
+    <span style="display: flex; align-items: center; gap: 6px; color: var(--ink-2)"><span class="statusdot"></span>Live</span>
+  </header>
+  <main style="flex: 1; min-height: 0; display: grid; grid-template-columns: 280px minmax(0, 1fr) 132px; gap: 20px; padding: 14px 20px 14px 48px">
+    <p class="stem" style="font-size: 16px; line-height: 1.5; overflow: hidden">A client with heart failure gained 2.3 kg (5 lb) in two days and is now short of breath lying flat. Which action should the nurse take first?</p>
+    <div role="radiogroup" aria-label="Choices" style="display: flex; flex-direction: column; gap: 8px; overflow: hidden">
+      <button type="button" role="radio" aria-checked="true" class="option is-selected" style="min-height: 48px; padding: 9px 13px; font-size: 14px"><span class="letter" style="width: 24px; height: 24px; font-size: 12px">A</span>Auscultate the lungs and check oxygen saturation</button>
+      <button type="button" role="radio" aria-checked="false" class="option" style="min-height: 48px; padding: 10px 14px; font-size: 14px"><span class="letter" style="width: 24px; height: 24px; font-size: 12px">B</span>Encourage the client to drink more fluids</button>
+      <button type="button" role="radio" aria-checked="false" class="option" style="min-height: 48px; padding: 10px 14px; font-size: 14px"><span class="letter" style="width: 24px; height: 24px; font-size: 12px">C</span>Document the weight and reassess tomorrow</button>
+      <button type="button" role="radio" aria-checked="false" class="option" style="min-height: 48px; padding: 10px 14px; font-size: 14px"><span class="letter" style="width: 24px; height: 24px; font-size: 12px">D</span>Teach the client about low-sodium food choices</button>
+    </div>
+    <div style="display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; border-left: 1px solid var(--line); padding-left: 16px">
+      <p class="muted" style="font-size: 12px; line-height: 1.4">You can change it until you submit.</p>
+      <a class="btn btn-primary btn-lg btn-block" href="PhoneSent.dc.html" style="padding: 0">Submit</a>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":844,"height":390}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
