@@ -117,7 +117,8 @@ test("a student whose room fails to render rejoins it, as the same participant, 
   // Back in the same room, on the item the host moved to while the phone was down.
   await expect(student.getByText(STEM, { exact: true })).toBeVisible({ timeout: 15_000 });
   await expect(student).toHaveURL(roomUrl);
-  await expect(student.getByText("Ada Brennan", { exact: true })).toBeVisible();
+  // The phone's question header carries no name (PhoneQuestion mockup): the same participant is
+  // the cookie and the host's count below, and the phone never asks for the name again.
   await expect(student.getByRole("textbox", { name: "Display name" })).toHaveCount(0);
   expect(await participantCookie(phone)).toBe(joinedAs);
   // Presence is keyed by participant id: the same participant is one phone, not a second one.

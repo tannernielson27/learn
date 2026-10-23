@@ -93,7 +93,8 @@ test("an instructor starts a session from a bank, sees a six-character code, and
     await expect(stage.getByTestId("join-code")).toHaveText(CODE);
     // Names show on the stage in the lobby only (owner decision 4).
     await expect(stage.getByText("Ada Brennan", { exact: true })).toBeVisible({ timeout: 15_000 });
-    await expect(stage.getByRole("button")).toHaveCount(1);
+    // A projector window of its own has nothing to press (code review M2).
+    await expect(stage.getByRole("button")).toHaveCount(0);
     await expectNoAxeViolations(projector);
   }
 

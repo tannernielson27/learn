@@ -74,12 +74,9 @@ describe("the projector view: lobby", () => {
     expect(within(stage()).getByTestId("join-code")).toHaveTextContent("AJ4 K7P");
     expect(stage()).toHaveTextContent("learn.test/join");
     expect(stage()).toHaveTextContent("2in this session");
-    // The one thing to press is the way back, for a teacher presenting on this screen.
-    expect(
-      within(stage())
-        .getAllByRole("button")
-        .map((b) => b.textContent),
-    ).toEqual(["Press Esc for the control view"]);
+    // A projector window of its own has nothing to press: the way back is only for a teacher
+    // presenting on the control view's screen (code review M2).
+    expect(within(stage()).queryAllByRole("button")).toEqual([]);
   });
 });
 
@@ -173,8 +170,16 @@ describe("switching between the two views on one screen", () => {
   });
 
   it("comes back from the corner button too", async () => {
-    const fake = setup("projector");
+    const fake = setup("control");
+    await fake.user.click(await screen.findByRole("button", { name: "Present on this screen" }));
     await fake.user.click(screen.getByRole("button", { name: "Press Esc for the control view" }));
     expect(await screen.findByRole("button", { name: "Start" })).toBeInTheDocument();
+  });
+
+  it("ignores Escape in a projector window of its own", async () => {
+    const fake = setup("projector");
+    await fake.user.keyboard("{Escape}");
+    expect(stage()).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Start" })).toBeNull();
   });
 });
