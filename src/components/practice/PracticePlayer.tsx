@@ -293,7 +293,8 @@ export function PracticePlayer({
         <PracticeStartOver startOver={startOver} />
       ) : null}
       {/* Room for the phone's fixed bar, which the last thing on the page must clear. */}
-      {standaloneDone ? <div aria-hidden="true" className="h-28 md:hidden" /> : null}
+      {/* Answered or not: an open question's Submit bar is fixed there too, over Start over. */}
+      <div aria-hidden="true" className="h-28 md:hidden" />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { ReconnectingBanner } from "@/components/live/phone/ReconnectingBanner";
 import { RevealedItem, refuseSecondAnswer } from "@/components/live/phone/RevealedItem";
 import { useStudentRoom } from "@/components/live/phone/useStudentRoom";
 import { RoomCount } from "@/components/live/RoomCount";
+import { ActionBar } from "@/components/question/ActionBar";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { Button } from "@/components/ui/Button";
 // Module by module rather than through `@/lib/live` and `@/lib/liveSupabase`: those barrels
@@ -242,16 +243,20 @@ function Body({
 
 /** Submit while reconnecting (PhoneReconnecting mockup): there, greyed, and saying why. */
 function HeldSubmit() {
+  // The players' own bar, so it sits where Submit sits on every size (fixed on a phone, at the
+  // end of the column from 768px, a side column held sideways), with room left for it below the
+  // last option (code review M3).
   return (
-    <div className="fixed inset-x-0 bottom-0 z-1 border-t border-line bg-surface-1 px-5 py-3 [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]">
-      <div className="mx-auto flex max-w-lg items-center justify-end gap-3">
+    <>
+      <div aria-hidden="true" className="h-28 md:hidden" />
+      <ActionBar>
         <p id="held-submit" className="flex-1 text-sm text-ink-2">
           Submit comes back when you are connected.
         </p>
         <Button variant="primary" size="lg" disabled aria-describedby="held-submit">
           Submit
         </Button>
-      </div>
-    </div>
+      </ActionBar>
+    </>
   );
 }

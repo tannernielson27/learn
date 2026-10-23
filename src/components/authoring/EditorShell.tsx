@@ -322,10 +322,11 @@ export function EditorShell<Values, Input extends ScoredInput>({
         className="min-w-0 rounded-md bg-surface-2 p-4 sm:p-6 lg:sticky lg:top-24 lg:self-start"
       >
         <p className="eyebrow mb-3">Preview · what a student sees</p>
-        {/* A phone's width, as students answer on one (Editor mockup). The transform makes this
-            box the containing block for the player's fixed submit bar. */}
+        {/* A phone's width, as students answer on one (Editor mockup). The player's submit bar
+            sits at the end of the preview here, not stuck to the teacher's window over the
+            options; the transform still contains it if a rule ever makes it fixed again. */}
         <div
-          className="mx-auto w-full max-w-sm rounded-md border border-line bg-surface-0 p-4 pb-24 shadow-elevation-1"
+          className="mx-auto w-full max-w-sm rounded-md border border-line bg-surface-0 p-4 shadow-elevation-1 [&_[data-submit-bar]]:static [&_[data-submit-bar]]:mt-6 [&_[data-submit-bar]]:w-auto [&_[data-submit-bar]]:px-0"
           style={{ transform: "translateZ(0)" }}
         >
           {/* A record reads first, as it does above the question on a phone. */}
