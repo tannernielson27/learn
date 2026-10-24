@@ -5,6 +5,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import {
   REFRESH_BACKOFF_CAP_MS,
   VIEW_POLL_MS,
+  WAKE_GAP_MS,
   createSupabaseParticipant,
   publicStateFrom,
   type RoomConnection,
@@ -997,20 +998,60 @@ describe("a phone coming back to the page (visibility, pageshow, online)", () =>
   };
 
   it("reads the room at once, and shows what moved while it slept", async () => {
+    vi.useFakeTimers();
     const live = phone([LOBBY, ON_TWO]);
     await live.enter();
+    await vi.advanceTimersByTimeAsync(WAKE_GAP_MS);
     live.transport.wake();
     await vi.waitFor(() => expect(live.recorded.views.at(-1)?.state).toMatchObject(ON_TWO.state));
     expect(live.asks()).toBe(2);
   });
 
   it("repaints nothing when nothing moved", async () => {
+    vi.useFakeTimers();
     const live = phone([LOBBY]);
     await live.enter();
+    await vi.advanceTimersByTimeAsync(WAKE_GAP_MS);
     live.transport.wake();
     await vi.waitFor(() => expect(live.asks()).toBe(2));
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await vi.advanceTimersByTimeAsync(0);
     expect(live.recorded.views).toHaveLength(1);
+  });
+
+  it("makes one read of many rapid wakes: none while one is in flight or under a second after", async () => {
+    vi.useFakeTimers();
+    let answer = () => {};
+    let holding = false;
+    const live = phone([LOBBY, ON_TWO]);
+    // The second read is held open until the test lets it land.
+    const call = live.call.getMockImplementation();
+    live.call.mockImplementation(async (...args: unknown[]) => {
+      if (holding) await new Promise<void>((resolve) => (answer = resolve));
+      return (call as (...args: unknown[]) => Promise<Response>)(...args);
+    });
+    await live.enter();
+    await vi.advanceTimersByTimeAsync(WAKE_GAP_MS);
+
+    // visibilitychange, pageshow and online, fired together and over and over.
+    holding = true;
+    for (let i = 0; i < 20; i += 1) live.transport.wake();
+    expect(live.asks()).toBe(2);
+    holding = false;
+    answer();
+    // Lands without the clock moving, so the second below is counted from here.
+    await vi.advanceTimersByTimeAsync(0);
+    expect(live.recorded.views.at(-1)?.state).toMatchObject(ON_TWO.state);
+
+    // The room was read a moment ago: more wakes inside the second ask for nothing.
+    for (let i = 0; i < 20; i += 1) live.transport.wake();
+    await vi.advanceTimersByTimeAsync(WAKE_GAP_MS - 1);
+    for (let i = 0; i < 20; i += 1) live.transport.wake();
+    expect(live.asks()).toBe(2);
+
+    // Once it has passed, a wake reads the room again.
+    await vi.advanceTimersByTimeAsync(1);
+    live.transport.wake();
+    expect(live.asks()).toBe(3);
   });
 
   it("asks nothing once the phone has left, or before it has entered", async () => {

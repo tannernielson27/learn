@@ -144,7 +144,8 @@ export interface SupabaseParticipant extends LiveSessionTransport {
   /**
    * Reads the room now, over HTTP. For a page that has just become visible again or come back
    * online: the socket reconnects by itself, but whatever moved while the phone slept should be
-   * on the screen before it does. Never throws; a read that fails is asked for again.
+   * on the screen before it does. Never throws; a read that fails is asked for again. Asks for
+   * nothing while a read is in flight, or within `WAKE_GAP_MS` of one that got through.
    */
   wake(): void;
 }
@@ -199,6 +200,13 @@ export const VIEW_POLL_MS = 4_000;
  */
 export const REFRESH_BACKOFF_MS = 2_000;
 export const REFRESH_BACKOFF_CAP_MS = 16_000;
+
+/**
+ * How long after a read of the room got through a `wake` asks for nothing. A phone coming back
+ * fires `visibilitychange`, `pageshow` and `online` together, and a room read a moment ago is the
+ * room now.
+ */
+export const WAKE_GAP_MS = 1_000;
 
 /** The answers that mean "not now" rather than "no": see `askForView`. */
 const RETRYABLE_STATUSES: ReadonlySet<number> = new Set([502, 503, 504]);
@@ -360,6 +368,9 @@ export function createSupabaseParticipant(
   let pollTimer: ReturnType<typeof setTimeout> | null = null;
   /** Whether `keepAsking` is running. */
   let asking = false;
+  /** Reads of the view not yet answered, and when one last got through (see `wake`). */
+  let readsInFlight = 0;
+  let lastReadAt = Number.NEGATIVE_INFINITY;
 
   /**
    * Takes a count from a row or a view. The count goes down when someone leaves, so a smaller
@@ -424,14 +435,20 @@ export function createSupabaseParticipant(
     const mine = generation;
     let sentAt = Date.now();
     sending();
-    let response = await askForView();
-    for (const wait of waits) {
-      if (response !== null) break;
-      await pause(wait * (0.5 + random()));
-      if (gone || mine !== generation) throw new LiveSessionError("not_joined");
-      sentAt = Date.now();
-      sending();
+    readsInFlight += 1;
+    let response: Response | null;
+    try {
       response = await askForView();
+      for (const wait of waits) {
+        if (response !== null) break;
+        await pause(wait * (0.5 + random()));
+        if (gone || mine !== generation) throw new LiveSessionError("not_joined");
+        sentAt = Date.now();
+        sending();
+        response = await askForView();
+      }
+    } finally {
+      readsInFlight -= 1;
     }
     if (response === null) {
       if (!gone && mine === generation) readFailed();
@@ -448,6 +465,7 @@ export function createSupabaseParticipant(
       if (!gone && mine === generation) readFailed();
       throw new Unreachable();
     }
+    lastReadAt = Date.now();
     if (!gone && mine === generation) readAnswered();
     if (typeof payload.serverNow === "number" && Number.isFinite(payload.serverNow)) {
       offset = clockOffset(payload.serverNow, sentAt, Date.now());
@@ -952,6 +970,8 @@ export function createSupabaseParticipant(
 
     wake(): void {
       if (gone || refused || me === null) return;
+      // A read on its way will show the room, and one that just landed did.
+      if (readsInFlight > 0 || Date.now() - lastReadAt < WAKE_GAP_MS) return;
       void refresh(true).catch(askAgainIfUnreachable);
     },
 
