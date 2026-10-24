@@ -5,7 +5,7 @@ import type { AnyResponse, Item, ItemOf, ItemType, ResponseOf } from "@/lib/ngn/
 import { ITEM_TYPE_LABELS } from "@/lib/ngn/labels";
 import { initialResponse as firstResponse, unansweredResponse } from "@/lib/ngn/presentation";
 import type { KeylessItem, Reveal, ScoreReveal, SubmitHandler } from "@/lib/ngn/submit";
-import { SAMPLE_TAG, type ScoreResult } from "@/lib/ngn/types";
+import { SAMPLE_TAG, type ScoreResult, type ScoringModel } from "@/lib/ngn/types";
 import { QuestionShell } from "./QuestionShell";
 import { RENDERERS } from "./registry";
 import { RendererShownContext } from "./RendererShown";
@@ -69,6 +69,12 @@ export interface ItemPlayerProps {
    * refusal says the session moved on). Undefined falls back to "could not be checked".
    */
   failureMessage?: (error: unknown) => string | undefined;
+  /**
+   * The scoring rule's sentence under the score, in the caller's words, by model. A live session's
+   * phone says the +/- rule in one short line; every other player leaves this out and keeps the
+   * full explanation (`SCORING_MODEL_LABELS`).
+   */
+  scoringExplanations?: Partial<Record<ScoringModel, string>>;
 }
 
 const CHECK_FAILED = "Your answer could not be checked. Try again.";
@@ -105,6 +111,7 @@ export function ItemPlayer({
   label,
   showSubmit = true,
   busyLabel,
+  scoringExplanations,
   failureMessage,
 }: ItemPlayerProps) {
   // Only a key with no marks beside it is key-only; a reveal with a score takes precedence.
@@ -230,6 +237,7 @@ export function ItemPlayer({
       }
       score={result}
       scoreNote={scoreNote}
+      scoringExplanation={result ? scoringExplanations?.[result.model] : undefined}
       // Only once revealed: the shell shows a rationale on its own for a key with no score (#181),
       // and a gallery item opened in feedback with nothing scored must not count as that.
       rationale={revealed ? rationale : undefined}

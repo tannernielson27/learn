@@ -221,7 +221,7 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   await expect(option).toBeVisible({ timeout: 15_000 });
   await option.click();
   await phone.getByRole("button", { name: "Submit", exact: true }).click();
-  await expect(phone.getByText("Answer sent.", { exact: true })).toBeVisible();
+  await expect(phone.getByText("Answer sent", { exact: true })).toBeVisible();
   await expectNoAxeViolations(phone);
   await shoot(phone, testInfo, "8-phone-answered");
 

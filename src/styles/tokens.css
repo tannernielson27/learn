@@ -259,6 +259,8 @@
   --button-height-lg: 3.5rem;
   --option-min-height: 3.5rem;
   --submitbar-height: 5rem;
+  /* The "Patient record" chip's bar on a phone: the 44px chip and 8px above and below it. */
+  --record-chip-bar: 3.75rem;
   /* The results chart: one neutral hue for every bar; the key gets the correct fill and more. */
   --chart-bar: var(--line-field);
   --chart-track: var(--surface-2);

@@ -2,8 +2,11 @@ import { Check } from "lucide-react";
 import { Icon } from "./Icon";
 
 export interface ResultsChartRow {
-  /** "A", "B", ... in the order every screen shows the options (PLAN §5.5). */
-  letter: string;
+  /**
+   * "A", "B", ... in the order every screen shows the options (PLAN §5.5). Left out for select
+   * all that apply, whose options have no letters on any screen.
+   */
+  letter?: string;
   label: string;
   count: number;
   /** Marked only once the answer is showing; a chart before the reveal has no key row. */
@@ -18,6 +21,11 @@ export interface ResultsChartProps {
   size?: "app" | "stage";
   /** What the chart is, for a screen reader: "How the class answered". */
   label?: string;
+  /**
+   * A long list on the projector: tighter rows, and each option's words on one line, so every
+   * bar fits a 1280x720 wall. The whole option is on every phone.
+   */
+  compact?: boolean;
   className?: string;
 }
 
@@ -59,30 +67,38 @@ export function ResultsChart({
   total,
   size = "app",
   label = "How the class answered",
+  compact = false,
   className = "",
 }: ResultsChartProps) {
   const look = SIZES[size];
   return (
-    <ul aria-label={label} className={`grid ${look.gap} ${className}`.trim()}>
-      {rows.map((row) => {
+    <ul
+      aria-label={label}
+      className={`grid ${compact ? "gap-[1.2cqb]" : look.gap} ${className}`.trim()}
+    >
+      {rows.map((row, index) => {
         const percent = sharePercent(row.count, total);
         const key = row.isKey === true;
         return (
           <li
-            key={row.letter}
+            key={row.letter ?? index}
             data-key={key ? "" : undefined}
-            className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4"
+            className={`grid ${row.letter === undefined ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-[auto_minmax(0,1fr)_auto]"} items-center gap-x-4`}
           >
-            <span
-              aria-hidden="true"
-              className={`grid place-items-center rounded-full font-mono font-bold ${look.letter} ${key ? "border-chart-key bg-chart-key text-accent-contrast" : "border-field-border"}`}
-            >
-              {row.letter}
-            </span>
-            <div className="flex min-w-0 flex-col gap-1.5">
-              <span className={`${look.label} flex flex-wrap items-baseline gap-x-3`}>
-                <span className="sr-only">{row.letter}. </span>
-                {row.label}
+            {row.letter === undefined ? null : (
+              <span
+                aria-hidden="true"
+                className={`grid place-items-center rounded-full font-mono font-bold ${look.letter} ${key ? "border-chart-key bg-chart-key text-accent-contrast" : "border-field-border"}`}
+              >
+                {row.letter}
+              </span>
+            )}
+            <div className={`flex min-w-0 flex-col ${compact ? "gap-0.5" : "gap-1.5"}`}>
+              <span
+                className={`${look.label} flex items-baseline gap-x-3 ${compact ? "" : "flex-wrap"}`}
+              >
+                {row.letter === undefined ? null : <span className="sr-only">{row.letter}. </span>}
+                {compact ? <span className="min-w-0 flex-1 truncate">{row.label}</span> : row.label}
                 {key ? (
                   <span
                     className={`${look.keyWord} inline-flex items-center gap-1 font-bold text-correct`}
@@ -94,7 +110,7 @@ export function ResultsChart({
               </span>
               <div
                 aria-hidden="true"
-                className={`${look.bar} relative overflow-hidden rounded-sm bg-chart-track ${key ? "outline-(length:--chart-key-outline) outline-offset-2 outline-chart-key outline-solid" : ""}`}
+                className={`${compact && size === "stage" ? "h-[2.8cqb]" : look.bar} relative overflow-hidden rounded-sm bg-chart-track ${key ? "outline-(length:--chart-key-outline) outline-offset-2 outline-chart-key outline-solid" : ""}`}
               >
                 <span
                   data-testid="results-bar"

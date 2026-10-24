@@ -214,17 +214,17 @@ describe("StudentRoom: waiting", () => {
     expect(screen.queryByTestId("reconnecting")).toBeNull();
   });
 
-  it("keeps the question and its draft while reconnecting, with Submit held off and saying why", async () => {
+  it("keeps the question, its draft and Submit while reconnecting: sending never needed the socket", async () => {
     const room = setup(running());
     room.push({ state: running(), item: KEYLESS });
     const box = await screen.findByRole("checkbox", { name: /Respiratory rate 28/ });
     await userEvent.click(box);
     room.connection("reconnecting");
+    expect(screen.getByTestId("reconnecting")).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeChecked();
     const submits = screen.getAllByRole("button", { name: /^Submit$/ });
     expect(submits).toHaveLength(1);
-    expect(submits[0]).toBeDisabled();
-    expect(submits[0]).toHaveAccessibleDescription("Submit comes back when you are connected.");
+    expect(submits[0]).toBeEnabled();
     room.connection("live", true);
     expect(screen.getByRole("button", { name: /^Submit$/ })).toBeEnabled();
     expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeChecked();
@@ -417,7 +417,9 @@ describe("StudentRoom: answering the item", () => {
 
     const sent = screen.getByTestId("answer-sent");
     expect(sent).toHaveAttribute("role", "status");
-    expect(sent).toHaveTextContent(/^Answer sent\.$/);
+    // A heading and the next step, as the PhoneSent mockup draws it.
+    expect(sent).toHaveTextContent(/^Answer sentWait for the answer to show\.$/);
+    expect(screen.getByText("Answer sent", { exact: true })).toHaveClass("text-lg");
     expect(sent.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
     expect(sent.querySelector('[data-motion="answer-sent"]')).toHaveClass("motion-arrive");
   });
@@ -508,6 +510,21 @@ describe("StudentRoom: the reveal", () => {
     // The answer this phone gave, marked against the key that has just arrived.
     expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeChecked();
     expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
+  });
+
+  it("says the +/- rule in one short line, not the practice player's paragraph", async () => {
+    const room = setup();
+    room.push({
+      state: running({ reveal: true }),
+      item: KEYLESS,
+      answered: answeredWith(),
+      revealed: revealFor({ points: 2, maxPoints: 3, model: "plus_minus", breakdown: [] }),
+    });
+    await renderersLoaded();
+
+    const score = screen.getByRole("complementary", { name: "Score" });
+    expect(score).toHaveTextContent("+/- scoring. Each wrong choice takes a point away.");
+    expect(score).not.toHaveTextContent("Each correct selection earns one point");
   });
 
   it("shows a phone that did not answer the key and the rationale, read-only, and says so", async () => {

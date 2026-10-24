@@ -629,7 +629,7 @@ describe("no retired word on any live session screen", () => {
     ["report: live session still open", "Open the live session"],
     ["list: could not be loaded", "could not be loaded"],
     ["student: lobby", "You are in."],
-    ["student: answer sent", "Answer sent."],
+    ["student: answer sent", "Wait for the answer to show."],
     ["student: answer showing, did not answer", "You did not answer this question."],
     ["student: answer too late", "Your answer was not taken."],
     ["student: reconnecting", "Stay on this page. Your answer is kept."],
