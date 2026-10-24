@@ -361,6 +361,28 @@ describe("StudentRoom: answering the item", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  it("shows an answer as sent when it timed out, landed anyway, and its retry was already_answered", async () => {
+    const user = userEvent.setup();
+    // The first request's deadline fell, but the server had the answer; the retry is told so.
+    let tries = 0;
+    const room = setup(state(), async () => {
+      tries += 1;
+      if (tries === 1) throw new DOMException("The operation timed out.", "TimeoutError");
+      throw new LiveSessionError("already_answered");
+    });
+    room.push({ state: running(), item: KEYLESS });
+    await renderersLoaded();
+
+    await user.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
+    await user.click(screen.getByRole("button", { name: /^Submit$/ }));
+    await waitFor(() => expect(screen.getByRole("button", { name: /^Submit$/ })).toBeEnabled());
+    expect(screen.queryByTestId("answer-sent")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /^Submit$/ }));
+    await waitFor(() => expect(screen.getByTestId("answer-sent")).toBeInTheDocument());
+    expect(tries).toBe(2);
+  });
+
   it("lets the student try again when the room refused the answer for another reason", async () => {
     const user = userEvent.setup();
     const room = setup(state(), async () => {
