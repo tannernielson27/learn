@@ -2127,6 +2127,18 @@ export type Database = {
           role: Database["public"]["Enums"]["org_role"];
         }[];
       };
+      participant_link: {
+        Args: {
+          account: string;
+          presented_secret: string;
+          target_participant: string;
+          target_session: string;
+        };
+        Returns: {
+          account_is_member: boolean;
+          linked_profile: string;
+        }[];
+      };
       place_case_study_step: {
         Args: { step_item: string; step_position: number; target: string };
         Returns: undefined;

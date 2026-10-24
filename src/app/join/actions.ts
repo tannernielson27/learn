@@ -12,7 +12,7 @@ import {
   parseParticipantToken,
 } from "@/lib/live/participantToken";
 import { playPath } from "@/lib/live/routes";
-import { checkParticipant, joinSession } from "@/lib/supabase/participants";
+import { checkParticipant, joinSession, participantLink } from "@/lib/supabase/participants";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { resolveSessionCode } from "@/lib/supabase/sessions";
 import { verifiedAccountId } from "@/lib/supabase/verifiedAccount";
@@ -68,6 +68,7 @@ export async function joinLiveSession(
 
   const cookieStore = await cookies();
   const held = parseParticipantToken(cookieStore.get(PARTICIPANT_COOKIE)?.value);
+  const asGuest = formData.get("guest") === "1";
 
   // Already in this room: a back button, a double-tapped Join, or the same code typed twice. Come
   // back as the participant this browser already is rather than leaving a second name in the
@@ -80,13 +81,35 @@ export async function joinLiveSession(
   if (checked !== null && !checked.ok && checked.reason === "unavailable") {
     return { status: "error", error: UNAVAILABLE };
   }
-  const returning = checked !== null && checked.ok;
+
+  let returning = checked !== null && checked.ok;
+  // Who is signed in, read only when something needs it: a browser coming back, or a join that
+  // may link. A guest's join with no participant to come back to reads nothing, as before.
+  const account = returning || !asGuest ? await verifiedAccountId() : null;
+
+  // A browser is not a person (ADR 0013). On a shared laptop the cookie may be the last
+  // student's: someone signed in as a different account does not come back as a participant
+  // linked to another, and a current member of the session's class who holds an anonymous
+  // participant joins as themselves rather than staying that guest (unless they chose "Join as a
+  // guest instead"). Signed out, the browser comes back as whoever it already is, as before.
+  if (returning && held && account !== null) {
+    const link = await participantLink(service, held, account);
+    if (!link.ok && link.reason === "unavailable") return { status: "error", error: UNAVAILABLE };
+    returning =
+      link.ok &&
+      (link.linkedProfile !== null
+        ? link.linkedProfile === account
+        : asGuest || !link.accountIsMember);
+  }
 
   let token = held;
   if (!returning) {
-    const asGuest = formData.get("guest") === "1";
-    const account = asGuest ? null : await verifiedAccountId();
-    const joined = await joinSession(service, resolved.sessionId, parsed.displayName, account);
+    const joined = await joinSession(
+      service,
+      resolved.sessionId,
+      parsed.displayName,
+      asGuest ? null : account,
+    );
     if (!joined.ok) {
       if (joined.reason === "full") return { status: "error", error: SESSION_FULL };
       // "gone" and "ended" both mean the host closed the room between resolving the code and

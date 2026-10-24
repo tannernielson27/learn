@@ -34,6 +34,34 @@
 --      names an open class session the member belongs to, and nothing otherwise. Service role
 --      only; it does not count wrong guesses, because it answers nothing about a code that is
 --      not a session of the member's own class.
+--   7. participant_link(participant, session, secret, account): for the join action only, whose
+--      account a browser's participant token is linked to, and whether the signed-in account is
+--      a current member of the session's class. The join action uses it to decide whether a
+--      browser that is already in the room comes back as that participant (a shared laptop must
+--      not hand one student's participant to another). Service role only, and only for a token
+--      whose secret matches; nothing it returns is sent to a phone.
+--
+-- Rejoining from a second device (ADR 0013, decision 1). A member who joins again replaces the
+-- participant's rejoin hash, so the first device's token stops working at once and that phone
+-- shows "You are no longer in this live session" with a line saying it may have been opened on
+-- another device. Rotating only when the old participant has not been seen for a minute was
+-- considered and not done: last_seen_at moves only when a request is made, so a phone sitting on
+-- one question looks unseen, and a refusal would need a second token or a new error for the
+-- second device. One live token per participant stays the rule.
+--
+-- The cleanup functions that read participants.profile_id. private.sweep_account_tied_elsewhere
+-- (20261012000000, replaced with one more line each by 20261014000000 and 20261015000000; those
+-- are the "workspace_sweep", "library_folders" and "ai_import" definitions, and the last is the
+-- live one) asks whether a TEACHER the never-used sweep would delete is named by a participant
+-- row of another workspace. It was always false, because nothing wrote profile_id. It can be
+-- true now only for an account that was linked as a student and is a teacher since; the sweep
+-- then skips the workspace ('teacher_tied_elsewhere') rather than clearing that participant's
+-- link through the account's deletion. That is the rule doing what it says, so it is unchanged.
+-- No sweep deletes a student's account, and step 1 of a deletion moves a student's profile to
+-- another workspace without touching participants: a student's linked participation in another
+-- workspace's sessions is neither deleted nor unlinked. The swept workspace's own sessions,
+-- with their participants linked or not, go with it, as its assignments' attempts always have.
+-- class_live_sessions.test.sql pins both.
 --
 -- Read paths: none is opened. participants.profile_id was already readable by the authors of
 -- the session's workspace (the column grant of #129) and by nobody else; no phone-facing function
@@ -247,7 +275,7 @@ revoke all on function private.guard_session_change() from public, anon, authent
 -- 20261022000000_quiz_case_studies_live.sql's function with target_class added at the end. The
 -- four-argument function is dropped rather than overloaded: with both present, a call naming two
 -- arguments (every existing caller) would match both and Postgres would refuse it as ambiguous.
-drop function public.start_session(uuid, uuid, public.session_mode, integer);
+drop function if exists public.start_session(uuid, uuid, public.session_mode, integer);
 
 create function public.start_session(
   source_bank uuid default null,
@@ -400,7 +428,7 @@ create unique index participants_session_profile_key
 
 -- 20260920140000_session_participants.sql's function with joining_profile added. Dropped and
 -- made again rather than overloaded, for the reason start_session is above.
-drop function public.join_session(uuid, text);
+drop function if exists public.join_session(uuid, text);
 
 create function public.join_session(
   target_session uuid,
@@ -500,3 +528,35 @@ $$;
 revoke all on function public.class_session_for_member(text, uuid)
   from public, anon, authenticated;
 grant execute on function public.class_session_for_member(text, uuid) to service_role;
+
+-- ---------------------------------------------------------------------------
+-- 7. Whose participant a browser holds, for the join action
+-- ---------------------------------------------------------------------------
+
+-- One row when the token's secret matches, none otherwise (an unknown, tampered or rotated token
+-- takes the same path as a wrong one, as in resume_participant). `linked_profile` is the account
+-- the participant is linked to, or null for an anonymous one; `account_is_member` says whether
+-- `account`, the id the server verified, is a current member of the session's class (false for
+-- a quick session, or a class that was deleted). The join action reads both to decide whether
+-- to come back as this participant and sends neither to the browser. Reads only: it does not
+-- touch last_seen_at, which resume_participant has just done.
+create function public.participant_link(
+  target_participant uuid,
+  target_session uuid,
+  presented_secret text,
+  account uuid
+)
+returns table (linked_profile uuid, account_is_member boolean)
+language sql stable security definer set search_path = ''
+as $$
+  select p.profile_id, private.is_class_member(s.class_id, account)
+    from public.participants p
+    join public.sessions s on s.id = p.session_id
+   where p.id = target_participant
+     and p.session_id = target_session
+     and p.rejoin_hash = extensions.digest(coalesce(presented_secret, ''), 'sha256');
+$$;
+
+revoke all on function public.participant_link(uuid, uuid, text, uuid)
+  from public, anon, authenticated;
+grant execute on function public.participant_link(uuid, uuid, text, uuid) to service_role;

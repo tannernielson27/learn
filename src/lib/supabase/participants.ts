@@ -133,6 +133,44 @@ export async function checkParticipant(
 }
 
 /**
+ * Whose participant a token names, for the join action alone (ADR 0013).
+ *
+ *   * `linkedProfile` — the account the participant is linked to, or null for an anonymous one.
+ *   * `accountIsMember` — whether `account` is a current member of the session's class.
+ *
+ * `account` must be the id the server verified, never one from the request. Neither field is
+ * ever sent to a browser: the join action reads them to decide whether a browser already in the
+ * room comes back as that participant, so that a shared laptop does not hand one student's
+ * participant to the next person who signs in on it. A token that names nobody is `unknown`, a
+ * database that did not answer `unavailable`, as for `checkParticipant`.
+ */
+export type ParticipantLink =
+  | { ok: true; linkedProfile: string | null; accountIsMember: boolean }
+  | { ok: false; reason: "unknown" | "unavailable" };
+
+export async function participantLink(
+  client: Client,
+  token: ParticipantToken,
+  account: string,
+): Promise<ParticipantLink> {
+  const { data, error } = await client.rpc("participant_link", {
+    target_participant: token.participantId,
+    target_session: token.sessionId,
+    presented_secret: token.secret,
+    account,
+  });
+  if (error) return { ok: false, reason: "unavailable" };
+
+  const row = data?.[0];
+  if (!row) return { ok: false, reason: "unknown" };
+  return {
+    ok: true,
+    linkedProfile: row.linked_profile ?? null,
+    accountIsMember: row.account_is_member === true,
+  };
+}
+
+/**
  * `checkParticipant` for a caller with one thing to do about every failure. Null covers a token
  * that names nobody **and** a database that did not answer, so only use it where "not known to be
  * a participant" is all that is being asked — joining, where the answer to both is a fresh join.

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ParticipantToken } from "@/lib/live/participantToken";
-import { checkParticipant, joinSession, resumeParticipant } from "./participants";
+import { checkParticipant, joinSession, participantLink, resumeParticipant } from "./participants";
 
 type Reply = {
   data?: unknown;
@@ -198,5 +198,46 @@ describe("checkParticipant (#407)", () => {
     for (const reply of [{ data: [], error: null }, { error: { code: "08006" } }]) {
       expect((await checkParticipant(fakeRpc(reply).client, TOKEN)).ok).toBe(false);
     }
+  });
+});
+
+describe("participantLink (ADR 0013)", () => {
+  it("asks with the token and the verified account, and says whose participant it is", async () => {
+    const fake = fakeRpc({
+      data: [{ linked_profile: PROFILE, account_is_member: true }],
+      error: null,
+    });
+    expect(await participantLink(fake.client, TOKEN, PROFILE)).toEqual({
+      ok: true,
+      linkedProfile: PROFILE,
+      accountIsMember: true,
+    });
+    expect(fake.rpc).toHaveBeenCalledWith("participant_link", {
+      target_participant: PARTICIPANT,
+      target_session: SESSION,
+      presented_secret: SECRET,
+      account: PROFILE,
+    });
+  });
+
+  it("reads an anonymous participant as linked to nobody", async () => {
+    const fake = fakeRpc({
+      data: [{ linked_profile: null, account_is_member: false }],
+      error: null,
+    });
+    expect(await participantLink(fake.client, TOKEN, PROFILE)).toEqual({
+      ok: true,
+      linkedProfile: null,
+      accountIsMember: false,
+    });
+  });
+
+  it("tells a token that names nobody from a database that did not answer", async () => {
+    expect(
+      await participantLink(fakeRpc({ data: [], error: null }).client, TOKEN, PROFILE),
+    ).toEqual({ ok: false, reason: "unknown" });
+    expect(
+      await participantLink(fakeRpc({ error: { code: "08006" } }).client, TOKEN, PROFILE),
+    ).toEqual({ ok: false, reason: "unavailable" });
   });
 });
