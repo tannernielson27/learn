@@ -47,7 +47,8 @@ export interface StudentRoomProps {
   connect?: () => SupabaseParticipant;
 }
 
-const SENT = "Answer sent.";
+const SENT = "Answer sent";
+const SENT_NEXT = "Wait for the answer to show.";
 const LATE = "Your answer was not taken.";
 
 /**
@@ -194,7 +195,7 @@ function Body({
         // A plain wrapper, as in StudentPacedRoom: the player inside is already the "Your answer"
         // landmark, and a second region of that name fails axe's landmark-unique (#274).
         <div className="mt-5">
-          <AnswerSentLine text={SENT} announce />
+          <AnswerSentLine text={SENT} detail={SENT_NEXT} announce />
           <ItemPlayer
             key={`${item.id}:sent`}
             item={item}

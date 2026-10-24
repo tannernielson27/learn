@@ -389,7 +389,9 @@ describe("StudentRoom: answering the item", () => {
 
     const sent = screen.getByTestId("answer-sent");
     expect(sent).toHaveAttribute("role", "status");
-    expect(sent).toHaveTextContent(/^Answer sent\.$/);
+    // A heading and the next step, as the PhoneSent mockup draws it.
+    expect(sent).toHaveTextContent(/^Answer sentWait for the answer to show\.$/);
+    expect(screen.getByText("Answer sent", { exact: true })).toHaveClass("text-lg");
     expect(sent.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
     expect(sent.querySelector('[data-motion="answer-sent"]')).toHaveClass("motion-arrive");
   });
