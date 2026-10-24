@@ -4,10 +4,13 @@ import { WORDMARK_CLASSES } from "@/components/ui/AppShell";
 import { textLinkClasses } from "@/components/ui/TextLink";
 import { WELCOME_PATH } from "@/lib/auth/accountPaths";
 import { joinLiveSession } from "./actions";
+import type { JoinAccount } from "./joinAccount";
 
 export interface JoinScreenProps {
   /** Already normalized, and empty when the address did not carry one. */
   code: string;
+  /** Who is joining, for a signed-in student (ADR 0013). Absent or `none` is today's screen. */
+  account?: JoinAccount;
 }
 
 /** What happens after Join, for the half of a laptop screen a phone does not have. */
@@ -30,7 +33,7 @@ const NEXT_STEPS: readonly [string, string][] = [
  * On a phone: one column, the two fields, and Join at the foot of the screen in thumb reach. From
  * `lg`: the form on the left and what happens next on the right.
  */
-export function JoinScreen({ code }: JoinScreenProps) {
+export function JoinScreen({ code, account = { kind: "none" } }: JoinScreenProps) {
   return (
     <main className="grid flex-1 lg:grid-cols-2">
       <section className="flex min-h-dvh flex-col px-5 pt-14 pb-8 lg:min-h-0 lg:border-r lg:border-line lg:bg-surface-1 lg:px-18">
@@ -44,7 +47,13 @@ export function JoinScreen({ code }: JoinScreenProps) {
             </h1>
             <p className="text-ink-2 lg:text-lg">No account needed.</p>
           </div>
-          <JoinForm action={joinLiveSession} code={code} />
+          <AccountLine account={account} />
+          <JoinForm
+            action={joinLiveSession}
+            code={code}
+            defaultName={account.kind === "member" ? (account.name ?? undefined) : undefined}
+            asGuest={account.kind === "guest"}
+          />
         </div>
         {/* #362: a class code (two groups of four) is not a join code (two of three), and a
             student holding one is in the wrong place. The welcome page sends each person on. */}
@@ -78,5 +87,48 @@ export function JoinScreen({ code }: JoinScreenProps) {
         </ol>
       </section>
     </main>
+  );
+}
+
+/**
+ * One quiet line above the form for a signed-in student (ADR 0013): who is joining and whether it
+ * counts toward a class, with the other choice as a link. Nothing at all for anyone else.
+ */
+function AccountLine({ account }: { account: JoinAccount }) {
+  if (account.kind === "none") return null;
+  const link = textLinkClasses({ size: "sm" });
+  if (account.kind === "guest") {
+    return (
+      <p className="text-sm text-ink-2">
+        Joining as a guest. Your answers do not count toward a class.{" "}
+        <Link href={account.signedInHref} className={link}>
+          Join with your account
+        </Link>
+      </p>
+    );
+  }
+  if (account.kind === "student") {
+    return (
+      <p className="text-sm text-ink-2">
+        {account.name ? `Signed in as ${account.name}. ` : ""}If this live session is for one of
+        your classes, your answers count toward it.{" "}
+        <Link href={account.guestHref} className={link}>
+          Join as a guest instead
+        </Link>
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-1 rounded-md border border-line bg-surface-1 px-4 py-3">
+      <p className="font-semibold text-ink-1">
+        {account.name
+          ? `Joining as ${account.name} for ${account.className}.`
+          : `Joining for ${account.className}.`}
+      </p>
+      <p className="text-sm text-ink-2">Your answers count toward the class.</p>
+      <Link href={account.guestHref} className={`${link} self-start`}>
+        Join as a guest instead
+      </Link>
+    </div>
   );
 }

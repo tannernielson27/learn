@@ -15,6 +15,7 @@ import { playPath } from "@/lib/live/routes";
 import { checkParticipant, joinSession } from "@/lib/supabase/participants";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { resolveSessionCode } from "@/lib/supabase/sessions";
+import { verifiedAccountId } from "@/lib/supabase/verifiedAccount";
 
 /**
  * One sentence for a code that never existed and for a session that has ended. #128's
@@ -37,6 +38,11 @@ const SESSION_FULL = JOIN_REFUSALS.full;
  * counts a wrong guess against the address and what keeps a guessing script away from everything
  * below it. Only a session id that came back from that lookup is ever passed on, so nothing a
  * browser posts chooses which session is joined.
+ *
+ * A live session for a class (ADR 0013) links a signed-in member of that class to their account.
+ * The account is the one the server verifies from the session cookie, never an id the form posts,
+ * and `join_session` decides in SQL whether it is a member; this only says who is signed in. The
+ * form's `guest` field (the join page's "Join as a guest instead") can only take an account away.
  */
 export async function joinLiveSession(
   _previous: JoinState,
@@ -78,7 +84,9 @@ export async function joinLiveSession(
 
   let token = held;
   if (!returning) {
-    const joined = await joinSession(service, resolved.sessionId, parsed.displayName);
+    const asGuest = formData.get("guest") === "1";
+    const account = asGuest ? null : await verifiedAccountId();
+    const joined = await joinSession(service, resolved.sessionId, parsed.displayName, account);
     if (!joined.ok) {
       if (joined.reason === "full") return { status: "error", error: SESSION_FULL };
       // "gone" and "ended" both mean the host closed the room between resolving the code and

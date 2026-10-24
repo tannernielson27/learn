@@ -19,6 +19,7 @@ function fakeRpc(reply: Reply) {
 const SESSION = "3f1a2b4c-5d6e-4f80-9a1b-2c3d4e5f6071";
 const PARTICIPANT = "9b8a7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d";
 const SECRET = "a".repeat(48);
+const PROFILE = "5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b";
 
 const TOKEN: ParticipantToken = {
   sessionId: SESSION,
@@ -40,6 +41,26 @@ describe("joinSession", () => {
     expect(fake.rpc).toHaveBeenCalledWith("join_session", {
       target_session: SESSION,
       chosen_name: "Sam Okafor",
+    });
+  });
+
+  it("names the signed-in account only when the server has one, for a class session to link (ADR 0013)", async () => {
+    const fake = fakeRpc({
+      data: [{ participant_id: PARTICIPANT, rejoin_secret: SECRET }],
+      error: null,
+    });
+
+    await joinSession(fake.client, SESSION, "Sam", PROFILE);
+    expect(fake.rpc).toHaveBeenCalledWith("join_session", {
+      target_session: SESSION,
+      chosen_name: "Sam",
+      joining_profile: PROFILE,
+    });
+    // A guest's call is the call it always was, so it works before the migration is pushed too.
+    await joinSession(fake.client, SESSION, "Sam", null);
+    expect(fake.rpc).toHaveBeenLastCalledWith("join_session", {
+      target_session: SESSION,
+      chosen_name: "Sam",
     });
   });
 

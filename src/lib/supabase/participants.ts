@@ -45,15 +45,23 @@ export interface ResumedParticipant {
  * Creates the participant for a session that `resolveSessionCode` has already found. The session
  * id is never taken from the browser: it is what resolving a typed code returned, which is what
  * keeps the per-address limit on wrong codes in front of this call.
+ *
+ * `profileId` is the signed-in account the server has just verified (ADR 0013), never an id from
+ * the request; null for a guest. `join_session` links it only when the session is for a class and
+ * the account is a current member of that class, and joins anonymously otherwise. A member who is
+ * already in the session gets their participant back, with a new secret.
  */
 export async function joinSession(
   client: Client,
   sessionId: string,
   displayName: string,
+  profileId: string | null = null,
 ): Promise<JoinSessionResult> {
   const { data, error } = await client.rpc("join_session", {
     target_session: sessionId,
     chosen_name: displayName,
+    // Named only when there is an account, so a guest's call is the call it always was.
+    ...(profileId ? { joining_profile: profileId } : {}),
   });
   if (error) return { ok: false, reason: joinReason(error) };
 

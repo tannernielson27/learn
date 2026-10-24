@@ -14,6 +14,13 @@ export interface JoinFormProps {
   action: (state: JoinState, formData: FormData) => Promise<JoinState>;
   /** Normalized by the page. Empty when the code was not in the address. */
   code: string;
+  /**
+   * The signed-in member's own name, filled in and still editable (ADR 0013). Only a name: the
+   * account itself is read by the server, never posted.
+   */
+  defaultName?: string;
+  /** The person chose "Join as a guest instead": posts `guest`, which can only take an account away. */
+  asGuest?: boolean;
 }
 
 const INITIAL: JoinState = { status: "idle" };
@@ -26,7 +33,7 @@ const INITIAL: JoinState = { status: "idle" };
  * A code that arrived in the address (from the QR code on the host's screen) is filled in and the
  * name field takes focus, so a scan is one tap and one word.
  */
-export function JoinForm({ action, code }: JoinFormProps) {
+export function JoinForm({ action, code, defaultName, asGuest = false }: JoinFormProps) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
   const fieldId = useId();
   const codeRef = useRef<HTMLInputElement>(null);
@@ -47,6 +54,7 @@ export function JoinForm({ action, code }: JoinFormProps) {
 
   return (
     <form action={formAction} className="flex flex-1 flex-col gap-6">
+      {asGuest ? <input type="hidden" name="guest" value="1" /> : null}
       <div className="flex flex-col gap-2">
         <label htmlFor={`${fieldId}-code`} className="text-sm font-medium text-ink-1">
           Join code
@@ -91,6 +99,7 @@ export function JoinForm({ action, code }: JoinFormProps) {
           id={`${fieldId}-name`}
           name="displayName"
           type="text"
+          defaultValue={defaultName}
           required
           maxLength={DISPLAY_NAME_MAX_LENGTH}
           autoComplete="nickname"
