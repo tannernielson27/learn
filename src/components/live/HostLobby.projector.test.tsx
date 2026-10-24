@@ -195,3 +195,81 @@ describe("switching between the two views on one screen", () => {
     expect(screen.queryByRole("button", { name: "Start" })).toBeNull();
   });
 });
+
+describe("presenting on one screen: the keyboard moves the session on", () => {
+  /** The teacher's one window, switched to the projector view in place. */
+  async function presenting(items?: readonly Item[]) {
+    const fake = setup("control", items);
+    await fake.user.click(await screen.findByRole("button", { name: "Present on this screen" }));
+    expect(stage()).toBeInTheDocument();
+    return fake;
+  }
+
+  it("runs the one primary move with Space or the right arrow, and says so quietly", async () => {
+    const fake = await presenting();
+    await fake.join("Ada Brennan");
+    expect(screen.getByTestId("stage-keys")).toHaveTextContent("Space: Start");
+
+    await fake.user.keyboard(" ");
+    expect(await within(stage()).findByRole("list", { name: "Choices" })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByTestId("stage-keys")).toHaveTextContent("Space: Show answer"),
+    );
+
+    await fake.user.keyboard("{ArrowRight}");
+    expect(await within(stage()).findByText("Correct")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByTestId("stage-keys")).toHaveTextContent("Space: Next question"),
+    );
+
+    await fake.user.keyboard(" ");
+    await waitFor(() => expect(stage()).toHaveTextContent("Question 2 of 2"));
+    // Still the projector view: the keys moved the session, not the screen.
+    expect(window.location.search).toBe("?view=projector");
+  });
+
+  it("asks first before a key ends the session, as the control bar does", async () => {
+    const fake = await presenting([MC]);
+    await fake.user.keyboard(" ");
+    await within(stage()).findByRole("list", { name: "Choices" });
+    await fake.user.keyboard(" ");
+    await within(stage()).findByText("Correct");
+    await waitFor(() =>
+      expect(screen.getByTestId("stage-keys")).toHaveTextContent("Space: End live session"),
+    );
+
+    await fake.user.keyboard(" ");
+    const ask = await screen.findByRole("dialog", { name: "End this live session?" });
+    await fake.user.click(within(ask).getByRole("button", { name: "Keep it open" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(within(stage()).queryByText("Live session ended")).toBeNull();
+    expect(stage()).toBeInTheDocument();
+  });
+
+  it("never binds End: the key that ends is only ever behind the question", async () => {
+    const fake = await presenting([MC]);
+    await fake.user.keyboard("{End}");
+    expect(within(stage()).queryByRole("list", { name: "Choices" })).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("moves nothing from a projector window of its own", async () => {
+    const fake = setup("projector");
+    await fake.user.keyboard(" ");
+    await fake.user.keyboard("{ArrowRight}");
+    expect(within(stage()).queryByRole("list", { name: "Choices" })).toBeNull();
+    expect(screen.queryByTestId("stage-keys")).toBeNull();
+  });
+});
+
+describe("the projector view: when it cannot hear the room", () => {
+  it("says so in a corner, so a stale wall is plain, and says nothing while connected", async () => {
+    const fake = setup("projector");
+    await within(stage()).findByTestId("join-code");
+    expect(within(stage()).queryByText("Reconnecting")).toBeNull();
+    act(() => fake.room.setHostConnection("reconnecting"));
+    expect(within(stage()).getByText("Reconnecting")).toBeInTheDocument();
+    act(() => fake.room.setHostConnection("connected"));
+    expect(within(stage()).queryByText("Reconnecting")).toBeNull();
+  });
+});

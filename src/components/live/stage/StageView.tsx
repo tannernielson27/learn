@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { AskFirstDialog, primaryOf, useAskFirst } from "@/components/live/control/ControlBar";
 import type { HostRoom } from "@/components/live/host/useHostRoom";
 import { useRoomResults } from "@/components/live/results/useRoomResults";
+import { ConnectionStatus } from "@/components/ui/ConnectionStatus";
 import { StageShell } from "@/components/ui/StageShell";
 import type { CaseStudyRun } from "@/lib/live/caseStudyRuns";
+import { controlCommands } from "@/lib/live/controls";
 import type { CaseStepPlace, StageView as StageViewData } from "@/lib/live/views";
 import type { EhrRecord } from "@/lib/ngn/schemas";
 import { casePlace } from "./casePlace";
@@ -32,6 +35,7 @@ export interface StageViewProps {
    * Back to the control view: Escape, or the small button in the corner. Only for a window the
    * teacher switched in place ("Present on this screen"); a window opened as the projector gets
    * none, so a stray key or click cannot put names and live counts on the wall (code review).
+   * The same window, and only it, also takes Space and the right arrow for the next move.
    */
   onExit?: () => void;
 }
@@ -57,8 +61,21 @@ function recordFor(
  * for only in the answer-showing phase, and the chart marks the key only then.
  *
  * Escape goes back to the control view, for a teacher presenting on the one screen they also
- * run the session from; the small button in the corner does the same for a pointer.
+ * run the session from; the small button in the corner does the same for a pointer. On that one
+ * screen Space and the right arrow run the control bar's primary move (Start, Show answer, Next
+ * question, End) through the bar's own path, so ending still asks first; End itself is never a
+ * key. A small line in the corner says which move a key runs.
+ *
+ * A screen that cannot hear the room says so in the other corner, so a stale wall is plain.
  */
+/** A key pressed on something that takes it already, such as a focused button or a dialog. */
+function taken(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    target.closest("button, a[href], input, select, textarea, [contenteditable], dialog") !== null
+  );
+}
+
 export function StageView({
   title,
   code,
@@ -80,14 +97,32 @@ export function StageView({
     intervalMs,
   );
 
+  const commands = controlCommands(room.state);
+  const busy = room.pending !== null;
+  const ask = useAskFirst(commands, (command) => void room.run(command));
+  const primary = commands.find((each) => each.command === primaryOf(room.state, commands));
+  // The move a key runs: only when presenting in place, and only one the room would take now.
+  const keyed = onExit !== undefined && primary?.enabled === true ? primary : null;
+  const { asked, press } = ask;
+
   useEffect(() => {
     if (onExit === undefined) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onExit();
+      // An open question takes its own keys, Escape included.
+      if (asked !== null) return;
+      if (event.key === "Escape") {
+        onExit();
+        return;
+      }
+      if (event.key !== " " && event.key !== "ArrowRight") return;
+      if (event.repeat || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (taken(event.target)) return;
+      event.preventDefault();
+      if (keyed !== null && !busy) press(keyed);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onExit]);
+  }, [onExit, asked, keyed, busy, press]);
 
   return (
     <StageShell>
@@ -102,15 +137,22 @@ export function StageView({
         runs={runs}
         results={results}
       />
-      {onExit === undefined ? null : (
-        <button
-          type="button"
-          onClick={onExit}
-          className="absolute top-2 right-6 text-sm text-ink-2 opacity-70 hover:opacity-100 focus-visible:opacity-100"
-        >
-          Press Esc for the control view
-        </button>
+      {room.connection === "connected" ? null : (
+        <ConnectionStatus status={room.connection} className="absolute top-2 left-6" />
       )}
+      {onExit === undefined ? null : (
+        <div className="absolute top-2 right-6 flex items-center gap-4 text-sm text-ink-2">
+          {keyed === null ? null : <p data-testid="stage-keys">Space: {keyed.label}</p>}
+          <button
+            type="button"
+            onClick={onExit}
+            className="opacity-70 hover:opacity-100 focus-visible:opacity-100"
+          >
+            Press Esc for the control view
+          </button>
+        </div>
+      )}
+      <AskFirstDialog ask={ask} state={room.state} busy={busy} />
     </StageShell>
   );
 }
