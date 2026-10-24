@@ -65,10 +65,16 @@ describe("the private session channel (#149)", () => {
     const live = twoRooms();
     const adaId = await joinedAda(live);
     const phone = live.resuming(adaId);
+    const statuses: string[] = [];
+    phone.onConnection((status) => statuses.push(status));
 
-    await expect(phone.resume({ ...live.identityOf(adaId), sessionId: SESSION_B })).rejects.toThrow(
-      /CHANNEL_ERROR/,
-    );
+    // The room is read over HTTP without waiting for the socket, and that read is the cookie's
+    // too: what comes back is session A's room. The channel for B is refused.
+    const view = await phone.resume({ ...live.identityOf(adaId), sessionId: SESSION_B });
+    expect(view.state.status).toBe("lobby");
+    await live.settle();
+    expect(statuses).toContain("reconnecting");
+    await phone.leave();
   });
 
   it("tells a removed participant's screen it is finished, through the real route, rather than reconnecting", async () => {
