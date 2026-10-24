@@ -52,7 +52,10 @@ export interface AnswerTally {
   joined: number;
 }
 
-/** What the stage says when the session is over (PLAN §5.11): calm numbers, no podium. */
+/**
+ * What the stage says when the session is over (PLAN §5.11): its numbers. Since the owner asked for
+ * a top 5 (2026-10-24) they sit under the podium, or stand alone when nobody scored.
+ */
 export interface EndSummary {
   /** How far the room got: the items it was put on. Every item, for a student-paced room. */
   questionsRun: number;
