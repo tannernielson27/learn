@@ -99,7 +99,20 @@ export interface HostTransportOptions {
    * `countRefresh.ts`. Zero reports every change at once, for the tests.
    */
   countRefreshMs?: number;
+  /**
+   * How often, before jitter, the console reads the room over the Data API while its channel is
+   * not up. Injectable for the tests.
+   */
+  pollMs?: number;
 }
+
+/**
+ * How often a console whose channel is not up reads the room itself, before jitter (×0.875–1.125).
+ * One indexed read of the host's own session row on the Data API, which is a different connection
+ * from the socket, and only while the socket is down: a projector on a network that drops
+ * WebSockets still follows the room.
+ */
+export const HOST_POLL_MS = 4_000;
 
 /**
  * What a state says about the room, as one string to compare: everything a state row carries but
@@ -149,6 +162,16 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
   let closed = false;
   /** Whether the channel has been up before, so a rejoin can be told from the first subscribe. */
   let subscribed = false;
+  /** Whether the channel is up now. */
+  let live = false;
+  /**
+   * Whether the channel has failed since it was last up — or, for a channel that has never been up,
+   * at all. A `SUBSCRIBED` after that has missed whatever changed meanwhile, however `open()` went.
+   */
+  let failed = false;
+  /** The next read of the room while the channel is not up (see `schedulePoll`). */
+  let pollTimer: ReturnType<typeof setTimeout> | null = null;
+  const pollMs = options.pollMs ?? HOST_POLL_MS;
   /** The last read of the answers, for the other ask on the same tick to reuse (#197). */
   let lastRead: SharedRead | null = null;
   /**
@@ -250,26 +273,61 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
       }
       channel.subscribe((status) => {
         if (status === "SUBSCRIBED") {
+          const missed = subscribed || failed;
+          live = true;
+          failed = false;
+          stopPolling();
           // Told before the rejoin's re-read below starts, which it does not wait for.
           notifyConnection("connected", subscribed);
           resolve();
           // A rejoin has missed every change made while the socket was down, and Realtime replays
           // nothing. Re-reading is one indexed query and is what keeps a reconnected console from
-          // showing a room that has moved on. Skipped on the first subscribe, where `open()` is
-          // about to read anyway.
-          if (subscribed) void onStateChanged();
+          // showing a room that has moved on. So has a first subscribe that came after a failed
+          // one: `open()` read the room then, not now. Skipped on a first subscribe that is the
+          // first try, where `open()` is about to read anyway.
+          if (missed) void onStateChanged();
           subscribed = true;
           return;
         }
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          live = false;
           // A channel that was up is coming back (Realtime retries by itself); one that never was
           // is offline until it does. Nothing is said about the close that `close()` asked for.
-          if (!closed) notifyConnection(subscribed ? "reconnecting" : "offline", false);
+          if (!closed) {
+            failed = true;
+            notifyConnection(subscribed ? "reconnecting" : "offline", false);
+            schedulePoll();
+          }
           resolve();
         }
       });
     });
   });
+
+  /**
+   * Reads the room every `pollMs` or so while the channel is not up, so a console whose socket is
+   * blocked or down still follows moves made from another window. A read that finds the room as
+   * the console last showed it tells nobody.
+   */
+  function schedulePoll(): void {
+    if (closed || live || pollTimer !== null) return;
+    pollTimer = setTimeout(
+      () => {
+        pollTimer = null;
+        if (closed || live) return;
+        void onStateChanged(true)
+          .catch(() => {})
+          .finally(schedulePoll);
+      },
+      pollMs * (0.875 + 0.25 * Math.random()),
+    );
+  }
+
+  function stopPolling(): void {
+    if (pollTimer === null) return;
+    clearTimeout(pollTimer);
+    pollTimer = null;
+  }
 
   /** What the console hears about its channel (PLAN D5). Copied first, as for every other set. */
   function notifyConnection(status: LiveConnection, rejoined: boolean): void {
@@ -393,7 +451,8 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     return new LiveSessionError(state.status === "ended" ? "not_open" : "no_timer");
   }
 
-  async function onStateChanged(): Promise<void> {
+  /** Reads the room and tells the console. `quiet`: only if it differs from what was last shown. */
+  async function onStateChanged(quiet = false): Promise<void> {
     if (closed) return;
     try {
       await readSession();
@@ -401,6 +460,7 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
       // The session was deleted out from under the console. There is nothing to report a move to.
       return;
     }
+    if (quiet && readFacts !== null && roomFacts(state) === readFacts) return;
     current = await loadItem();
     if (closed) return;
     readFacts = roomFacts(state);
@@ -621,6 +681,7 @@ export function createSupabaseHost(options: HostTransportOptions): LiveHostTrans
     async close(): Promise<void> {
       if (closed) return;
       closed = true;
+      stopPolling();
       counting.stop();
       views.clear();
       presence.clear();
