@@ -116,13 +116,15 @@ test("an instructor starts a session from a bank, sees a six-character code, and
     await expect(stage.getByText("Correct", { exact: true })).toHaveCount(0);
     await expectNoAxeViolations(projector);
   }
-  // Nothing to advance to, and the console says so by greying the button rather than by refusing.
-  await expect(page.getByRole("button", { name: "Next question", exact: true })).toBeDisabled();
+  // "Next question" waits until the answer is showing, so the reveal is never skipped.
+  await expect(page.getByRole("button", { name: "Next question", exact: true })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Show answer", exact: true }).click();
   // A phone that did not answer is shown the key too (#181).
   await expect(student.getByTestId("not-answered")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole("button", { name: "Show answer", exact: true })).toBeDisabled();
+  // Nothing to advance to, and the console says so by greying the button rather than by refusing.
+  await expect(page.getByRole("button", { name: "Next question", exact: true })).toBeDisabled();
   if (projector && stage) {
     // The key, marked in words, once the answer is showing.
     await expect(stage.getByText("Correct", { exact: true })).toBeVisible({ timeout: 15_000 });

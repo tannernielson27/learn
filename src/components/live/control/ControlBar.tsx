@@ -41,13 +41,71 @@ function question(command: AskedCommand, state: LiveSessionState) {
  * while answers come in, Next question once it is showing, and End once the last one is. Every
  * other move is secondary, and ending is quiet: it asks first, in words, rather than being red.
  */
-function primaryOf(state: LiveSessionState, commands: readonly ControlCommand[]): HostCommand {
+export function primaryOf(
+  state: LiveSessionState,
+  commands: readonly ControlCommand[],
+): HostCommand {
   if (state.status === "lobby") return "start";
   const live = (command: HostCommand) =>
     commands.some((each) => each.command === command && each.enabled);
   if (!state.reveal) return "reveal";
   // Shown on the last question: nothing is left to move on to, so ending is the next move.
   return live("advance") || !live("end") ? "advance" : "end";
+}
+
+/**
+ * Pressing a move, the one way every surface does it: a move that asks first (`confirm`) opens its
+ * question, and only the question's own button runs it. The control bar uses this, and so does the
+ * projector view's keyboard, so a key can never end a session without the same question.
+ */
+export function useAskFirst(
+  commands: readonly ControlCommand[],
+  onCommand: (command: HostCommand) => void,
+) {
+  const [asking, setAsking] = useState<AskedCommand | null>(null);
+  // A question about a move the room no longer offers (another tab ended it) is not asked.
+  const command = commands.find((each) => each.command === asking && each.enabled && each.confirm);
+  const asked = command ? (asking as AskedCommand) : null;
+  return {
+    asked,
+    press: (each: ControlCommand) => {
+      if (each.confirm) setAsking(each.command as AskedCommand);
+      else onCommand(each.command);
+    },
+    cancel: () => setAsking(null),
+    confirm: () => {
+      if (asked === null) return;
+      setAsking(null);
+      onCommand(asked);
+    },
+    label: command?.label ?? "",
+  };
+}
+
+/** The question a move that cannot be taken back asks first, in the room's own words. */
+export function AskFirstDialog({
+  ask,
+  state,
+  busy,
+}: {
+  ask: ReturnType<typeof useAskFirst>;
+  state: LiveSessionState;
+  busy: boolean;
+}) {
+  if (ask.asked === null) return null;
+  const words = question(ask.asked, state);
+  return (
+    <ConfirmDialog
+      open
+      title={words.title}
+      description={words.detail}
+      confirmLabel={ask.label}
+      cancelLabel={words.cancel}
+      busy={busy}
+      onCancel={ask.cancel}
+      onConfirm={ask.confirm}
+    />
+  );
 }
 
 /**
@@ -59,20 +117,16 @@ function primaryOf(state: LiveSessionState, commands: readonly ControlCommand[])
  * move may be taken at all is the reducer's (`canRunHostCommand`), never this bar's.
  */
 export function ControlBar({ state, commands, busy, onCommand, summary }: ControlBarProps) {
-  const [asking, setAsking] = useState<AskedCommand | null>(null);
-  // A question about a move the room no longer offers (another tab ended it) is not asked.
-  const askedCommand = commands.find(
-    (each) => each.command === asking && each.enabled && each.confirm,
-  );
-  const asked = askedCommand ? (asking as AskedCommand) : null;
+  const ask = useAskFirst(commands, onCommand);
+  const asked = ask.asked;
   const primary = primaryOf(state, commands);
+  const press = ask.press;
 
-  function press(command: ControlCommand) {
-    if (command.confirm) setAsking(command.command as AskedCommand);
-    else onCommand(command.command);
-  }
-
-  const forward = commands.filter((each) => each.command === "advance" && each.command !== primary);
+  // "Next question" waits until the answer is showing: beside "Show answer" it skipped the reveal
+  // for a teacher in a hurry. Before then, moving on without one is the question strip's job.
+  const forward = state.reveal
+    ? commands.filter((each) => each.command === "advance" && each.command !== primary)
+    : [];
   const main = commands.find((each) => each.command === primary);
   const side = commands.filter((each) => each.command !== primary && each.command !== "advance");
 
@@ -124,21 +178,7 @@ export function ControlBar({ state, commands, busy, onCommand, summary }: Contro
           {main ? draw(main, "primary", "max-sm:order-first") : null}
         </div>
       </section>
-      {asked === null ? null : (
-        <ConfirmDialog
-          open
-          title={question(asked, state).title}
-          description={question(asked, state).detail}
-          confirmLabel={askedCommand?.label ?? ""}
-          cancelLabel={question(asked, state).cancel}
-          busy={busy}
-          onCancel={() => setAsking(null)}
-          onConfirm={() => {
-            setAsking(null);
-            onCommand(asked);
-          }}
-        />
-      )}
+      <AskFirstDialog ask={ask} state={state} busy={busy} />
     </>
   );
 }

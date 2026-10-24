@@ -27,7 +27,7 @@ export interface LiveRecordLayoutProps {
  * The page's server render paints the chart at the step the room is on; after that every view the
  * phone fetches when the host moves carries the chart at the new step, and the room hands it here.
  * Neither is ever more than the server cut for that step, so this holds nothing it may not show.
- * A new server render (a reconnect's `router.refresh()`) replaces what is held, the same "adjust
+ * A new server render (a refusal's `router.refresh()`) replaces what is held, the same "adjust
  * when a prop changes" pattern `StudentRoom` uses for its state.
  *
  * In a quiz that plays case studies in place (#469) the chart comes and goes: a step shows its

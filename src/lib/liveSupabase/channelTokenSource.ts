@@ -30,7 +30,7 @@
  * Browser-safe: no `node:crypto`, no key. It only ever holds a token it was given.
  */
 import type { Unsubscribe } from "@/lib/live/transport";
-import { LIVE_ROUTES, type ChannelCredential, type RefusalPayload } from "./wire";
+import { LIVE_ROUTES, requestTimeout, type ChannelCredential, type RefusalPayload } from "./wire";
 
 /**
  * How long before expiry a token is replaced. Longer than a heartbeat, so one always lands.
@@ -96,6 +96,9 @@ export function createChannelTokenSource(options: ChannelTokenSourceOptions): Ch
         // request's authority, exactly as it is for the view and submit routes.
         credentials: "same-origin",
         body: "{}",
+        // A request the network swallowed would otherwise hold `inFlight`, and with it every later
+        // heartbeat's ask, for as long as the tab stayed open. Timed out, it is a transient failure.
+        signal: requestTimeout(),
       });
       if (!response.ok) {
         const why = await definitiveRefusal(response);

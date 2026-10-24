@@ -7,7 +7,7 @@ import type { ItemAggregate } from "@/lib/live/transport";
 import type { RoomPlace } from "@/lib/live/views";
 import type { CasePlace } from "./casePlace";
 import { JoinStrip, StageOptions, StageStem, StageStrip } from "./StageParts";
-import type { StageQuestion as StageQuestionData } from "./stageItem";
+import { crowded, type StageQuestion as StageQuestionData } from "./stageItem";
 
 export interface StageQuestionProps {
   place: RoomPlace;
@@ -44,6 +44,13 @@ export function StageQuestion({
   serverNow,
 }: StageQuestionProps) {
   const where = [place.label, paused ? "Paused" : null].filter(Boolean).join(" · ");
+  // More than a short projector holds at full size: the stem is clamped and the options compact.
+  const dense =
+    question?.options != null &&
+    crowded(
+      question.stem.value,
+      question.options.map((option) => option.label),
+    );
   return (
     <div className="flex h-full min-h-0 flex-col gap-[2.6cqb]">
       {casePlace === null ? null : (
@@ -73,18 +80,19 @@ export function StageQuestion({
         }
       />
       {/* The one part that gives way on a short projector (1280x720), so the clock and the count
-          below always stay on the wall. */}
+          below always stay on the wall. Inside it the options give way row by row (StageOptions),
+          after a long list's stem has been clamped, so every row stays on the wall too. */}
       <div className="flex min-h-0 flex-1 flex-col gap-[2.6cqb] overflow-hidden">
         {question === null ? (
           <p className="text-stage-option text-ink-2">The question is on its way.</p>
         ) : (
           <>
             <h1 className="sr-only">{place.label ?? "Question"}</h1>
-            <StageStem stem={question.stem} />
+            <StageStem stem={question.stem} clamp={dense} />
             {question.options === null ? (
               <p className="text-stage-option text-ink-2">Answer on your phone.</p>
             ) : (
-              <StageOptions options={question.options} />
+              <StageOptions options={question.options} compact={dense} />
             )}
           </>
         )}

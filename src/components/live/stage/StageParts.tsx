@@ -38,11 +38,27 @@ export function JoinStrip({ url, code }: { url: string; code: string }) {
 /**
  * The question text, the stage's largest words after the join code. A step down on a short
  * projector (1280x720), where the rem floor would otherwise push the options off the wall.
+ *
+ * `clamp` is for a crowded question (`crowded`): a step down at every size and three lines at
+ * most, so the options keep the room (the whole text is on every phone).
  */
-export function StageStem({ stem, small = false }: { stem: RichText; small?: boolean }) {
+export function StageStem({
+  stem,
+  small = false,
+  clamp = false,
+}: {
+  stem: RichText;
+  small?: boolean;
+  clamp?: boolean;
+}) {
+  const size =
+    small || clamp
+      ? "text-stage-option"
+      : "text-stage-stem [@container(max-height:50rem)]:text-stage-option";
   return (
     <div
-      className={`max-w-[80cqi] leading-tight font-semibold tracking-[-0.015em] text-stage-ink ${small ? "text-stage-option" : "text-stage-stem [@container(max-height:50rem)]:text-stage-option"} [&_p+p]:mt-[1cqb]`}
+      data-stage-stem=""
+      className={`max-w-[80cqi] leading-tight font-semibold tracking-[-0.015em] text-stage-ink ${size} ${clamp ? "line-clamp-3 shrink-0" : ""} [&_p+p]:mt-[1cqb]`}
     >
       <RichTextView text={stem} />
     </div>
@@ -50,26 +66,47 @@ export function StageStem({ stem, small = false }: { stem: RichText; small?: boo
 }
 
 /**
- * The options, lettered as every phone letters them, with no mark of any kind: this list is
- * drawn while answers are still coming in. Two columns past four options, so a long set fits.
+ * The options as every phone draws them, with no mark of any kind: this list is drawn while
+ * answers are still coming in. Lettered for multiple choice; a select-all question's rows have no
+ * letter, as on its phones. Two columns past four options, so a long set fits.
+ *
+ * The list takes the height left under the stem and its rows share it (`minmax(0, max-content)`):
+ * with room to spare each row is as tall as its words, and on a short wall every row shrinks
+ * alike and clips inside itself, so no option row is ever pushed off the stage. A crowded
+ * question's rows are tighter and their words stop at two lines.
  */
-export function StageOptions({ options }: { options: readonly StageOption[] }) {
+export function StageOptions({
+  options,
+  compact = false,
+}: {
+  options: readonly StageOption[];
+  /** A crowded question (`crowded`): tighter rows, each option's words to two lines. */
+  compact?: boolean;
+}) {
   const columns = options.length > 4 ? "grid-cols-2" : "grid-cols-1";
   return (
-    <ol aria-label="Choices" className={`grid ${columns} gap-[1.5cqb]`}>
-      {options.map((option) => (
+    <ol
+      aria-label="Choices"
+      className={`grid min-h-0 flex-1 auto-rows-[minmax(0,max-content)] content-start ${columns} gap-[1.5cqb]`}
+    >
+      {options.map((option, index) => (
         <li
-          key={option.letter}
-          className="flex items-center gap-[2.5cqb] rounded-md border-(length:--stage-stroke) border-stage-line px-[3cqb] py-[1.3cqb] text-stage-option leading-tight font-medium"
+          key={option.letter ?? index}
+          className={`flex min-h-0 items-center gap-[2.5cqb] overflow-hidden rounded-md border-(length:--stage-stroke) border-stage-line px-[3cqb] text-stage-option leading-tight font-medium ${compact ? "py-[0.8cqb]" : "py-[1.3cqb]"}`}
         >
-          <span
-            aria-hidden="true"
-            className="grid size-[6.5cqb] shrink-0 place-items-center rounded-full border-(length:--stage-stroke) border-stage-ink font-mono font-bold"
-          >
-            {option.letter}
-          </span>
-          <span className="sr-only">{option.letter}. </span>
-          <span className="min-w-0">{option.label}</span>
+          {option.letter === null ? null : (
+            <>
+              <span
+                aria-hidden="true"
+                className="grid size-[6.5cqb] shrink-0 place-items-center rounded-full border-(length:--stage-stroke) border-stage-ink font-mono font-bold"
+              >
+                {option.letter}
+              </span>
+              <span className="sr-only">{option.letter}. </span>
+            </>
+          )}
+          {/* A crowded question's words stop at two lines on the wall; each phone has them whole. */}
+          <span className={`min-w-0 ${compact ? "line-clamp-2" : ""}`}>{option.label}</span>
         </li>
       ))}
     </ol>

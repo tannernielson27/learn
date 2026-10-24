@@ -31,6 +31,8 @@ export interface QuestionShellProps {
   score?: ScoreResult;
   /** Item-specific note shown under the scoring rule in feedback mode. */
   scoreNote?: string;
+  /** The scoring rule's sentence in the caller's words; the full explanation when left out. */
+  scoringExplanation?: string;
   rationale?: RichText;
   /** Demo content written for this repo, labelled so it is never taken for a real item. */
   sample?: boolean;
@@ -63,6 +65,7 @@ export function QuestionShell({
   submitStatus,
   score,
   scoreNote,
+  scoringExplanation,
   rationale,
   sample = false,
   label = "Question",
@@ -127,7 +130,13 @@ export function QuestionShell({
 
       {mode === "feedback" && score ? (
         <>
-          <ScorePanel panel={scorePanel} score={score} note={scoreNote} rationale={rationale} />
+          <ScorePanel
+            panel={scorePanel}
+            score={score}
+            note={scoreNote}
+            explanation={scoringExplanation}
+            rationale={rationale}
+          />
           <ScoreBreakdown score={score} />
         </>
       ) : mode === "feedback" && rationale ? (

@@ -147,6 +147,10 @@ export async function readHostSession(
  *
  * The caller must have resumed the participant against their token first; this function does no
  * checking of its own and must never be reached before that.
+ *
+ * Null means the session is not there. A read that failed throws instead: a database that did not
+ * answer has not said the session is gone, and a caller that took null for that sent a student to
+ * the join form in the middle of a class (#407).
  */
 export async function readPublicSessionState(
   client: Client,
@@ -159,7 +163,8 @@ export async function readPublicSessionState(
     )
     .eq("id", sessionId)
     .maybeSingle();
-  if (error || !data) return null;
+  if (error) throw new Error("The session's state could not be read.");
+  if (!data) return null;
   return {
     status: data.status,
     position: data.current_position,
