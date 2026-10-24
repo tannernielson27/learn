@@ -255,13 +255,18 @@ describe("readPublicSessionState", () => {
     });
   });
 
-  it("fails closed when the session is gone or the read errors", async () => {
+  it("answers null when the session is gone", async () => {
     expect(
       await readPublicSessionState(fakeRow({ data: null, error: null }).client, SESSION),
     ).toBeNull();
-    expect(
-      await readPublicSessionState(fakeRow({ error: { code: "42501" } }).client, SESSION),
-    ).toBeNull();
+  });
+
+  it("throws when the read errors: a database that did not answer has not said the session is gone", async () => {
+    // Null would send a student in the middle of a class to the join form over one timed-out
+    // request; thrown, it lands on the play page's error screen, whose "Try again" reads again.
+    await expect(
+      readPublicSessionState(fakeRow({ error: { code: "57014" } }).client, SESSION),
+    ).rejects.toThrow("could not be read");
   });
 });
 

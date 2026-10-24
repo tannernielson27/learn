@@ -86,7 +86,7 @@ export function StudentPacedRoom({
   const [me] = useState(() => ({ sessionId, participantId, displayName, joinedAt }));
   const [firstChannel] = useState(channel);
 
-  // A new server render (a reconnect's `router.refresh()`) is the authority; see `StudentRoom`.
+  // A new server render (a refusal's `router.refresh()`) is the authority; see `useStudentRoom`.
   const [applied, setApplied] = useState(initial);
   if (applied !== initial) {
     setApplied(initial);
@@ -134,10 +134,11 @@ export function StudentPacedRoom({
     const offCount = joined.onCount((count) => {
       if (watching) present.set(count);
     });
-    const offConnection = joined.onConnection((status, rejoined) => {
+    // Not on a rejoin (#481): the transport re-reads the room, and see `useStudentRoom`.
+    const offConnection = joined.onConnection((status) => {
       if (!watching) return;
       setConnection(status);
-      if (rejoined || status === "refused") router.refresh();
+      if (status === "refused") router.refresh();
     });
     void joined.resume(me).catch(() => {
       if (watching) setConnection("reconnecting");
