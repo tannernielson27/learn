@@ -71,8 +71,10 @@ function taken(target: EventTarget | null): boolean {
  * Escape goes back to the control view, for a teacher presenting on the one screen they also
  * run the session from; the small button in the corner does the same for a pointer. On that one
  * screen Space and the right arrow run the control bar's primary move (Start, Show answer, Next
- * question, End live session) through the bar's own path, so ending still asks first; the End
- * key is never bound. A small line in the corner says which move a key runs.
+ * question) through the bar's own path. Ending is never bound to a key: when ending is the
+ * primary move (the last answer showing, or a student-paced room with everything shown), the keys
+ * do nothing, and the teacher ends from the control view. A small line in the corner says which
+ * move a key runs.
  *
  * A screen that cannot hear the room says so in the other corner, so a stale wall is plain.
  */
@@ -101,8 +103,10 @@ export function StageView({
   const busy = room.pending !== null;
   const ask = useAskFirst(commands, (command) => void room.run(command));
   const primary = commands.find((each) => each.command === primaryOf(room.state, commands));
-  // The move a key runs: only when presenting in place, and only one the room would take now.
-  const keyed = onExit !== undefined && primary?.enabled === true ? primary : null;
+  // The move a key runs: only when presenting in place, only one the room would take now, and
+  // never ending the session.
+  const keyed =
+    onExit !== undefined && primary?.enabled === true && primary.command !== "end" ? primary : null;
   const { asked, press } = ask;
 
   useEffect(() => {

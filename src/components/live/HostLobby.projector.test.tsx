@@ -228,22 +228,20 @@ describe("presenting on one screen: the keyboard moves the session on", () => {
     expect(window.location.search).toBe("?view=projector");
   });
 
-  it("asks first before a key ends the session, as the control bar does", async () => {
+  it("never ends the session from a key: on the last answer Space does nothing", async () => {
     const fake = await presenting([MC]);
     await fake.user.keyboard(" ");
     await within(stage()).findByRole("list", { name: "Choices" });
     await fake.user.keyboard(" ");
     await within(stage()).findByText("Correct");
-    await waitFor(() =>
-      expect(screen.getByTestId("stage-keys")).toHaveTextContent("Space: End live session"),
-    );
+    // Ending is the next move, so no key is offered for it.
+    await waitFor(() => expect(screen.queryByTestId("stage-keys")).toBeNull());
 
     await fake.user.keyboard(" ");
-    const ask = await screen.findByRole("dialog", { name: "End this live session?" });
-    await fake.user.click(within(ask).getByRole("button", { name: "Keep it open" }));
+    await fake.user.keyboard("{ArrowRight}");
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(within(stage()).queryByText("Live session ended")).toBeNull();
-    expect(stage()).toBeInTheDocument();
+    expect(within(stage()).getByText("Correct")).toBeInTheDocument();
   });
 
   it("never binds End: the key that ends is only ever behind the question", async () => {
