@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   endSession,
   readHostSession,
+  readMemberClass,
   readPublicSessionState,
   resolveSessionCode,
   startSession,
@@ -35,6 +36,7 @@ function fakeRow(reply: Reply) {
 const BANK = "00000000-0000-4000-8000-0000000000b1";
 const CASE = "00000000-0000-4000-8000-0000000000c1";
 const SESSION = "00000000-0000-4000-8000-0000000000a1";
+const CLASS = "00000000-0000-4000-8000-0000000000d1";
 
 describe("startSession", () => {
   it("starts from a bank in one call and hands back the new session", async () => {
@@ -55,6 +57,30 @@ describe("startSession", () => {
     });
     await startSession(fake.client, { kind: "bank", id: BANK }, "instructor_paced");
     expect(fake.rpc).toHaveBeenLastCalledWith("start_session", { source_bank: BANK });
+  });
+
+  it("names the class only when the session is for one (ADR 0013)", async () => {
+    const fake = fakeRpc({ data: SESSION, error: null });
+    await startSession(fake.client, { kind: "bank", id: BANK }, "instructor_paced", CLASS);
+    expect(fake.rpc).toHaveBeenCalledWith("start_session", {
+      source_bank: BANK,
+      target_class: CLASS,
+    });
+    await startSession(fake.client, { kind: "case_study", id: CASE }, "instructor_paced", CLASS);
+    expect(fake.rpc).toHaveBeenLastCalledWith("start_session", {
+      source_case_study: CASE,
+      target_class: CLASS,
+    });
+    // A quick session is the call it always was, so it works before the migration is pushed too.
+    await startSession(fake.client, { kind: "bank", id: BANK }, "instructor_paced", null);
+    expect(fake.rpc).toHaveBeenLastCalledWith("start_session", { source_bank: BANK });
+  });
+
+  it("reads a class that is not the teacher's as its own refusal", async () => {
+    const fake = fakeRpc({ error: { code: "LC001" } });
+    expect(
+      await startSession(fake.client, { kind: "bank", id: BANK }, "instructor_paced", CLASS),
+    ).toEqual({ ok: false, reason: "class" });
   });
 
   it("starts from a case study by naming the other argument, never both", async () => {
@@ -334,5 +360,33 @@ describe("resolveSessionCode", () => {
     expect(await resolveSessionCode(fake.client, "AJ4K7P", "203.0.113.7")).toEqual({
       status: "unavailable",
     });
+  });
+});
+
+describe("readMemberClass (ADR 0013)", () => {
+  const MEMBER = "00000000-0000-4000-8000-0000000000e1";
+
+  it("asks for the class of a code's session as the verified account, and reads its name", async () => {
+    const fake = fakeRpc({ data: [{ class_name: "NUR 310" }], error: null });
+    expect(await readMemberClass(fake.client, "7KQ2MZ", MEMBER)).toBe("NUR 310");
+    expect(fake.rpc).toHaveBeenCalledWith("class_session_for_member", {
+      session_code: "7KQ2MZ",
+      member: MEMBER,
+    });
+  });
+
+  it("is null for no row and for an error alike, so the page falls back to the plain form", async () => {
+    expect(await readMemberClass(fakeRpc({ data: [], error: null }).client, "7KQ2MZ", MEMBER)).toBe(
+      null,
+    );
+    expect(
+      await readMemberClass(fakeRpc({ error: { code: "08006" } }).client, "7KQ2MZ", MEMBER),
+    ).toBe(null);
+  });
+
+  it("does not spend a call on something that could not be a code", async () => {
+    const fake = fakeRpc({ data: [{ class_name: "NUR 310" }], error: null });
+    expect(await readMemberClass(fake.client, "nope", MEMBER)).toBe(null);
+    expect(fake.rpc).not.toHaveBeenCalled();
   });
 });
