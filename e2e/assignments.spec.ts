@@ -43,6 +43,15 @@ test("an instructor assigns a bank to a class and sees it listed in local time",
   await page.getByRole("textbox", { name: "Class name", exact: true }).fill(className);
   await page.getByRole("button", { name: "Create class", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: className, exact: true })).toBeVisible();
+  // A new class opens on its Overview; the list and its empty state are on the Assignments tab.
+  await expect(page).toHaveURL(/\/author\/classes\/[0-9a-f-]{36}$/);
+  const classViews = page.getByRole("navigation", { name: "Class views", exact: true });
+  await classViews.getByRole("link", { name: "Assignments", exact: true }).click();
+  await expect(page).toHaveURL(/\/author\/classes\/[0-9a-f-]{36}\?tab=assignments$/);
+  await expect(classViews.getByRole("link", { name: "Assignments", exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
   await expect(
     page.getByRole("heading", { name: "No assignments yet", exact: true }),
   ).toBeVisible();
