@@ -362,6 +362,8 @@ export function createSupabaseParticipant(
   let socket: "connecting" | "live" | "down" = "connecting";
   /** Whether, with the socket down, a read over HTTP has got through since (see `readAnswered`). */
   let viaHttp = false;
+  /** Reads in a row that did not get through, since the last one that did (see `readFailed`). */
+  let failedReads = 0;
   /** The server has finished with this phone (#149): nothing is asked or reported after it. */
   let refused = false;
   /** The next HTTP read while the socket is not live (see `schedulePoll`). */
@@ -667,14 +669,21 @@ export function createSupabaseParticipant(
    * can answer. Said once, as `"live"` with no rejoin, so the screen lets the student submit.
    */
   function readAnswered(): void {
+    failedReads = 0;
     if (socket !== "down" || viaHttp || refused) return;
     viaHttp = true;
     notifyConnection("live", false);
   }
 
-  /** The last read did not get through either, and the socket is down: nothing is reaching it. */
+  /**
+   * The last two reads did not get through either, and the socket is down: nothing is reaching
+   * it. One is not enough (#481): a single poll lost on a busy network would take Submit away from
+   * a student whose next read gets through. A 401 or an ended session is an answer, not a failed
+   * read, and ends the room at once.
+   */
   function readFailed(): void {
-    if (socket !== "down" || !viaHttp || refused) return;
+    failedReads += 1;
+    if (socket !== "down" || !viaHttp || refused || failedReads < 2) return;
     viaHttp = false;
     notifyConnection("reconnecting", false);
   }
@@ -789,6 +798,7 @@ export function createSupabaseParticipant(
             if (gone || refused) return;
             socket = "live";
             viaHttp = false;
+            failedReads = 0;
             notifyConnection("live", !opening);
             // A rejoined channel carries none of the presence the old one held either, which is
             // why `track` above runs on every subscribe and not only the first.
@@ -839,6 +849,7 @@ export function createSupabaseParticipant(
     countFromRow = false;
     socket = "connecting";
     viaHttp = false;
+    failedReads = 0;
     notifyConnection("connecting", false);
     // Its failures are reported through `onConnection`, and Realtime retries by itself.
     void openChannel(identity.sessionId, {
@@ -938,6 +949,7 @@ export function createSupabaseParticipant(
       refused = false;
       socket = "connecting";
       viaHttp = false;
+      failedReads = 0;
       views.clear();
       students.clear();
       counts.clear();

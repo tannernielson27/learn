@@ -896,7 +896,10 @@ describe("a phone whose socket never opens (campus Wi-Fi that filters WebSockets
     await vi.advanceTimersByTimeAsync(VIEW_POLL_MS / 2);
     expect(live.recorded.connections.at(-1)?.status).toBe("live");
 
+    // One read that does not get through is a blip, and Submit stays; two in a row are not.
     dropping = true;
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS);
+    expect(live.recorded.connections.at(-1)).toEqual({ status: "live", rejoined: false });
     await vi.advanceTimersByTimeAsync(VIEW_POLL_MS);
     expect(live.recorded.connections.at(-1)).toEqual({ status: "reconnecting", rejoined: false });
 
@@ -904,6 +907,42 @@ describe("a phone whose socket never opens (campus Wi-Fi that filters WebSockets
     dropping = false;
     await vi.advanceTimersByTimeAsync(VIEW_POLL_MS);
     expect(live.recorded.connections.at(-1)).toEqual({ status: "live", rejoined: false });
+  });
+
+  it("starts counting again after a read gets through: one failure at a time never says reconnecting", async () => {
+    let asked = 0;
+    const live = blocked([ON_ONE], () => {
+      asked += 1;
+      // The entry's read, the first poll after the drop, then every other poll fails.
+      return asked > 2 && asked % 2 === 1 ? "dropped" : null;
+    });
+    await live.transport.resume(ME);
+    await live.socket.subscribed();
+    live.socket.emit("CHANNEL_ERROR");
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS * 8);
+    expect(asked).toBeGreaterThanOrEqual(8);
+    expect(live.recorded.connections.map((entry) => entry.status)).toEqual([
+      "connecting",
+      "reconnecting",
+      "live",
+    ]);
+  });
+
+  it("still ends the room at once on a 401 after one failed read", async () => {
+    let asked = 0;
+    const live = blocked([ON_ONE], () => {
+      asked += 1;
+      if (asked === 3) return "dropped";
+      return asked > 3 ? 401 : null;
+    });
+    await live.transport.resume(ME);
+    await live.socket.subscribed();
+    live.socket.emit("CHANNEL_ERROR");
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS / 2);
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS);
+    expect(live.recorded.connections.at(-1)?.status).toBe("live");
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS);
+    expect(live.recorded.connections.at(-1)).toEqual({ status: "refused", rejoined: false });
   });
 
   it("reads the room again when a socket that was live drops, spread over a poll period", async () => {
