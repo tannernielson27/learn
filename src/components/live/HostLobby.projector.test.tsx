@@ -1,11 +1,12 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { LiveSessionTransport } from "@/lib/live";
 import { createInMemoryRoom } from "@/lib/live/memoryRoom";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema, type Item } from "@/lib/ngn/schemas";
 import { HostLobby } from "./HostLobby";
+import { STAGE_KEY_HOLD_MS } from "./stage/StageView";
 
 /**
  * The projector view (owner decision 3): one route, `?view=projector`, fed by the same room as the
@@ -197,8 +198,19 @@ describe("switching between the two views on one screen", () => {
 });
 
 describe("presenting on one screen: the keyboard moves the session on", () => {
+  /**
+   * The stage ignores its keys for a moment after each move, timed on `performance.now()`. Only
+   * that clock is faked, so the room, user-event and `waitFor` keep their real timers.
+   */
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+  /** Long enough after a move for the stage to take a key again. */
+  const pause = () => vi.advanceTimersByTime(STAGE_KEY_HOLD_MS);
+
   /** The teacher's one window, switched to the projector view in place. */
   async function presenting(items?: readonly Item[]) {
+    vi.useFakeTimers({ toFake: ["performance"] });
     const fake = setup("control", items);
     await fake.user.click(await screen.findByRole("button", { name: "Present on this screen" }));
     expect(stage()).toBeInTheDocument();
@@ -216,12 +228,14 @@ describe("presenting on one screen: the keyboard moves the session on", () => {
       expect(screen.getByTestId("stage-keys")).toHaveTextContent("Space: Show answer"),
     );
 
+    pause();
     await fake.user.keyboard("{ArrowRight}");
     expect(await within(stage()).findByText("Correct")).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.getByTestId("stage-keys")).toHaveTextContent("Space: Next question"),
     );
 
+    pause();
     await fake.user.keyboard(" ");
     await waitFor(() => expect(stage()).toHaveTextContent("Question 2 of 2"));
     // Still the projector view: the keys moved the session, not the screen.
@@ -232,8 +246,10 @@ describe("presenting on one screen: the keyboard moves the session on", () => {
     const fake = await presenting([MC]);
     await fake.user.keyboard(" ");
     await within(stage()).findByRole("list", { name: "Choices" });
+    pause();
     await fake.user.keyboard(" ");
     await within(stage()).findByText("Correct");
+    pause();
     // Ending is the next move, so no key is offered for it.
     await waitFor(() => expect(screen.queryByTestId("stage-keys")).toBeNull());
 
@@ -242,6 +258,23 @@ describe("presenting on one screen: the keyboard moves the session on", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(within(stage()).queryByText("Live session ended")).toBeNull();
     expect(within(stage()).getByText("Correct")).toBeInTheDocument();
+  });
+
+  it("ignores a key pressed just after a move, so a quick second press never skips the answer", async () => {
+    const fake = await presenting();
+    await fake.user.keyboard(" ");
+    await within(stage()).findByRole("list", { name: "Choices" });
+
+    // Straight after the move: the key is swallowed, and the question stays without its answer.
+    vi.advanceTimersByTime(STAGE_KEY_HOLD_MS - 100);
+    await fake.user.keyboard(" ");
+    await fake.user.keyboard("{ArrowRight}");
+    expect(within(stage()).queryByText("Correct")).toBeNull();
+    expect(within(stage()).getByRole("list", { name: "Choices" })).toBeInTheDocument();
+
+    vi.advanceTimersByTime(100);
+    await fake.user.keyboard(" ");
+    expect(await within(stage()).findByText("Correct")).toBeInTheDocument();
   });
 
   it("never binds End: the key that ends is only ever behind the question", async () => {

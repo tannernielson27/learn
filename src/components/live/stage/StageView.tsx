@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { AskFirstDialog, primaryOf, useAskFirst } from "@/components/live/control/ControlBar";
 import type { HostRoom } from "@/components/live/host/useHostRoom";
 import { useRoomResults } from "@/components/live/results/useRoomResults";
@@ -51,6 +51,13 @@ function recordFor(
   return run?.record ? { record: run.record, step: step.step } : null;
 }
 
+/**
+ * How long the stage's keys wait after the room moves (a start, a reveal, the next question), so
+ * a second press a beat behind the first never skips the answer it just put up. The buttons in the
+ * control view stay immediate.
+ */
+export const STAGE_KEY_HOLD_MS = 1_500;
+
 /** A key pressed on something that takes it already, such as a focused button or a dialog. */
 function taken(target: EventTarget | null): boolean {
   return (
@@ -74,7 +81,7 @@ function taken(target: EventTarget | null): boolean {
  * question) through the bar's own path. Ending is never bound to a key: when ending is the
  * primary move (the last answer showing, or a student-paced room with everything shown), the keys
  * do nothing, and the teacher ends from the control view. A small line in the corner says which
- * move a key runs.
+ * move a key runs. For `STAGE_KEY_HOLD_MS` after each move the keys do nothing.
  *
  * A screen that cannot hear the room says so in the other corner, so a stale wall is plain.
  */
@@ -109,6 +116,16 @@ export function StageView({
     onExit !== undefined && primary?.enabled === true && primary.command !== "end" ? primary : null;
   const { asked, press } = ask;
 
+  /** When the room last moved, on `performance.now()`; not on first paint, so a key works at once. */
+  const { status, position, reveal } = room.state;
+  const movedAt = useRef<{ move: string; at: number } | null>(null);
+  useEffect(() => {
+    const move = `${status}:${position}:${reveal}`;
+    const last = movedAt.current;
+    if (last?.move === move) return;
+    movedAt.current = { move, at: last === null ? -Infinity : performance.now() };
+  }, [status, position, reveal]);
+
   useEffect(() => {
     if (onExit === undefined) return;
     const onKey = (event: KeyboardEvent) => {
@@ -122,6 +139,8 @@ export function StageView({
       if (event.repeat || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       if (taken(event.target)) return;
       event.preventDefault();
+      const at = movedAt.current?.at ?? -Infinity;
+      if (performance.now() - at < STAGE_KEY_HOLD_MS) return;
       if (keyed !== null && !busy) press(keyed);
     };
     window.addEventListener("keydown", onKey);
