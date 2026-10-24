@@ -84,6 +84,12 @@ export interface HostRoom {
   run: (command: HostCommand | TimerCommand) => Promise<void>;
   jump: (position: number) => Promise<void>;
   chooseTime: (seconds: number | null) => Promise<void>;
+  /**
+   * `stop_timer` sent by the console itself, not by a button: no pending state and no error
+   * toast. True when the timer is stopped, including when it already was (`no_timer`: another
+   * window stopped it first). False when it did not go through; the clock then runs out as usual.
+   */
+  stopQuietly: () => Promise<boolean>;
   serverNow: () => number;
   askResults: LiveHostTransport["results"];
   askProgress: LiveHostTransport["progress"];
@@ -258,6 +264,17 @@ export function useHostRoom({
     (seconds: number | null) => perform("set_timer", (to) => to.setTimer(seconds)),
     [perform],
   );
+  const stopQuietly = useCallback(async () => {
+    const console_ = transport.current;
+    if (console_ === null) return false;
+    try {
+      await opened.current;
+      setState(await console_.stopTimer());
+      return true;
+    } catch (refused) {
+      return isLiveSessionError(refused) && refused.code === "no_timer";
+    }
+  }, []);
   /**
    * The session's clock for the countdown (#182): the database's, as the console measured it on
    * opening, so this screen and every phone count down to the same zero.
@@ -289,6 +306,7 @@ export function useHostRoom({
     run,
     jump,
     chooseTime,
+    stopQuietly,
     serverNow,
     askResults,
     askProgress,
