@@ -9,6 +9,7 @@ import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema, type AnyResponse } from "@/lib/ngn/schemas";
 import { toKeylessItem } from "@/lib/ngn/submit";
 import { renderersLoaded } from "@/components/question/testing/renderers";
+import { LIVE_BUSY_LABEL } from "./liveSubmit";
 import { StudentRoom } from "./StudentRoom";
 
 /**
@@ -145,6 +146,37 @@ describe("StudentRoom: the end of a timed question", () => {
       type: "multiple_response",
       optionIds: ["opt_a"],
     });
+  });
+
+  it("ends an answer still in the air when the grace runs out on Answer sent, not Time is up", async () => {
+    const room = await onTheQuestion();
+    let accept: (ack: SubmitAck) => void = () => {};
+    room.submit.mockImplementationOnce(
+      () =>
+        new Promise<SubmitAck>((resolve) => {
+          accept = resolve;
+        }),
+    );
+    room.push({ state: timedFor(1_000), item: KEYLESS });
+    fireEvent.click(box());
+    advance(1_000 + SUBMIT_GRACE_MS - 100);
+    await act(async () => {
+      fireEvent.click(submitButton());
+    });
+
+    // The grace runs out with the request still out: the same player stays, busy, draft and all.
+    advance(500);
+    expect(screen.queryByText(CLOSED)).toBeNull();
+    expect(box()).toBeChecked();
+    expect(screen.getByRole("button", { name: LIVE_BUSY_LABEL })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+
+    await act(async () => accept({ itemId: SATA.id, submittedAt: Date.now() + SKEW }));
+    expect(screen.getByTestId("answer-sent")).toHaveTextContent("Answer sent");
+    expect(screen.queryByText(CLOSED)).toBeNull();
+    expect(room.submit).toHaveBeenCalledTimes(1);
   });
 
   it("leaves a phone that already sent on Answer sent", async () => {

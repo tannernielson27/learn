@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/Button";
 // uses (ADR 0003, `src/components/question/noClientScoring.test.ts`).
 import type { LiveSessionState } from "@/lib/live/state";
 import type { LiveConnection } from "@/lib/live/transport";
+import type { SubmitHandler } from "@/lib/ngn/submit";
 import { phoneView, type PhoneSettledView } from "@/lib/live/views";
 import type { RoomConnection, SupabaseParticipant } from "@/lib/liveSupabase/participantTransport";
 import type { ChannelCredential } from "@/lib/liveSupabase/wire";
@@ -83,7 +84,8 @@ function liveConnection(connection: RoomConnection): LiveConnection {
  *
  * **Time up.** Submit stays through the server's grace after zero; once the grace is over (the
  * same `timeIsUp` the server refuses on, on the session's clock) the draft stays on screen,
- * read-only, and the bar where Submit was says to wait for the answer.
+ * read-only, and the bar where Submit was says to wait for the answer. An answer pressed inside the
+ * grace and still in the air when it runs out keeps its player, busy, until the server says.
  *
  * Built at 375px: one column, nothing wider than the screen, long names wrap.
  */
@@ -158,6 +160,24 @@ function Body({
   const [clockKnown, setClockKnown] = useState(false);
   if (!clockKnown && room.connection === "live") setClockKnown(true);
   const closed = useAnswersClosed(state.timer, room.serverNow, clockKnown);
+  /** The item whose answer is in the air: its player stays mounted, busy, past the grace. */
+  const [sendingFor, setSendingFor] = useState<string | null>(null);
+
+  /**
+   * `room.send`, noting the item while its answer is out. An accepted one becomes Answer sent and
+   * a late one the late screen, both from the room; only a failure lets Time is up back.
+   */
+  const sending =
+    (itemId: string): SubmitHandler =>
+    async (response) => {
+      setSendingFor(itemId);
+      try {
+        return await room.send(response);
+      } catch (failed) {
+        setSendingFor(null);
+        throw failed;
+      }
+    };
 
   switch (settled.phase) {
     case "waiting":
@@ -231,7 +251,7 @@ function Body({
           </PhoneMessage>
         );
       }
-      if (closed) {
+      if (closed && sendingFor !== item.id) {
         return (
           <div className="mt-5">
             <ItemPlayer
@@ -254,7 +274,7 @@ function Body({
             item={item}
             initialResponse={room.draft}
             onResponseChange={(response) => room.setDraft(item.id, response)}
-            submit={room.send}
+            submit={sending(item.id)}
             busyLabel={LIVE_BUSY_LABEL}
             failureMessage={liveSubmitFailure}
           />
