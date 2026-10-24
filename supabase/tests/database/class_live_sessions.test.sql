@@ -7,7 +7,7 @@
 -- than through a LATERAL join, for the reason session_participants.test.sql gives.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(35);
+select plan(64);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures, as the superuser
@@ -23,11 +23,20 @@ values
   ('00000000-0000-0000-0000-0000013c0d01', 'class-live-m@example.test', 'authenticated', 'authenticated'),
   ('00000000-0000-0000-0000-0000013c0d02', 'class-live-n@example.test', 'authenticated', 'authenticated'),
   ('00000000-0000-0000-0000-0000013c0d03', 'class-live-r@example.test', 'authenticated', 'authenticated'),
-  ('00000000-0000-0000-0000-0000013c0d04', 'class-live-x@example.test', 'authenticated', 'authenticated');
+  ('00000000-0000-0000-0000-0000013c0d04', 'class-live-x@example.test', 'authenticated', 'authenticated'),
+  -- L is a member of A1 who is taken off it while a session runs. P is a member of A1 whose
+  -- participant is already there when they join. W is a member of A1 whose profile names
+  -- workspace C, an emptied one the sweep deletes.
+  ('00000000-0000-0000-0000-0000013c0d05', 'class-live-l@example.test', 'authenticated', 'authenticated'),
+  ('00000000-0000-0000-0000-0000013c0d06', 'class-live-w@example.test', 'authenticated', 'authenticated'),
+  ('00000000-0000-0000-0000-0000013c0d07', 'class-live-p@example.test', 'authenticated', 'authenticated');
 
 insert into public.orgs (id, name) values
   ('00000000-0000-0000-0000-0000013c00a0', 'Class live A'),
   ('00000000-0000-0000-0000-0000013c00b0', 'Class live B');
+-- Self-registered, emptied 31 days ago and with no teacher: the sweep's 'memberless'.
+insert into public.orgs (id, name, self_registered, emptied_at) values
+  ('00000000-0000-0000-0000-0000013c00c0', 'Class live C', true, now() - interval '31 days');
 
 update public.profiles set org_id = '00000000-0000-0000-0000-0000013c00a0', role = 'instructor'
  where id = '00000000-0000-0000-0000-0000013c0a01';
@@ -38,12 +47,22 @@ update public.profiles set org_id = '00000000-0000-0000-0000-0000013c00a0', role
               '00000000-0000-0000-0000-0000013c0d03');
 update public.profiles set org_id = '00000000-0000-0000-0000-0000013c00b0', role = 'student'
  where id = '00000000-0000-0000-0000-0000013c0d04';
+update public.profiles set org_id = '00000000-0000-0000-0000-0000013c00a0', role = 'student'
+ where id in ('00000000-0000-0000-0000-0000013c0d05', '00000000-0000-0000-0000-0000013c0d07');
+update public.profiles set org_id = '00000000-0000-0000-0000-0000013c00c0', role = 'student'
+ where id = '00000000-0000-0000-0000-0000013c0d06';
 
 insert into public.item_banks (id, org_id, name) values
   ('00000000-0000-0000-0000-0000013c00b1', '00000000-0000-0000-0000-0000013c00a0', 'Class live bank');
 insert into public.items (id, bank_id, org_id, type, status, content, answer_key, scoring) values
   ('00000000-0000-0000-0000-0000013c00e1', '00000000-0000-0000-0000-0000013c00b1',
    '00000000-0000-0000-0000-0000013c00a0', 'multiple_choice', 'published', '{}', '{}', '{}');
+-- Workspace B's own quiz, for U.
+insert into public.item_banks (id, org_id, name) values
+  ('00000000-0000-0000-0000-0000013c00b2', '00000000-0000-0000-0000-0000013c00b0', 'Class live bank B');
+insert into public.items (id, bank_id, org_id, type, status, content, answer_key, scoring) values
+  ('00000000-0000-0000-0000-0000013c00e2', '00000000-0000-0000-0000-0000013c00b2',
+   '00000000-0000-0000-0000-0000013c00b0', 'multiple_choice', 'published', '{}', '{}', '{}');
 
 insert into public.classes (id, org_id, name) values
   ('00000000-0000-0000-0000-0000013c0ca1', '00000000-0000-0000-0000-0000013c00a0', 'NUR 310'),
@@ -53,6 +72,11 @@ insert into public.classes (id, org_id, name) values
 insert into public.class_members (class_id, profile_id) values
   ('00000000-0000-0000-0000-0000013c0ca1', '00000000-0000-0000-0000-0000013c0d01'),
   ('00000000-0000-0000-0000-0000013c0ca1', '00000000-0000-0000-0000-0000013c0d03'),
+  ('00000000-0000-0000-0000-0000013c0ca1', '00000000-0000-0000-0000-0000013c0d05'),
+  ('00000000-0000-0000-0000-0000013c0ca1', '00000000-0000-0000-0000-0000013c0d06'),
+  ('00000000-0000-0000-0000-0000013c0ca1', '00000000-0000-0000-0000-0000013c0d07'),
+  -- M is in A2 as well, for the class that is deleted while its session runs.
+  ('00000000-0000-0000-0000-0000013c0ca2', '00000000-0000-0000-0000-0000013c0d01'),
   ('00000000-0000-0000-0000-0000013c0cb1', '00000000-0000-0000-0000-0000013c0d04');
 -- Taken off the class: the removal trigger records it in private.class_removals.
 delete from public.class_members
@@ -152,6 +176,22 @@ select throws_ok(
   'P0002',
   null,
   'a teacher of another workspace cannot start A''s quiz, for a class or not'
+);
+
+-- U's own quiz, in U's own workspace, for a class of workspace A: the source is the caller's, so
+-- it is the class check that refuses.
+select throws_ok(
+  $$ select public.start_session(source_bank => '00000000-0000-0000-0000-0000013c00b2'::uuid,
+                                 target_class => '00000000-0000-0000-0000-0000013c0ca1'::uuid) $$,
+  'LC001',
+  'that class is not in your workspace',
+  'a quiz of the caller''s own workspace cannot be started for another workspace''s class'
+);
+
+select is(
+  (select count(*)::int from public.sessions where bank_id = '00000000-0000-0000-0000-0000013c00b2'),
+  0,
+  'and no session was left behind'
 );
 
 -- ---------------------------------------------------------------------------
@@ -383,6 +423,305 @@ select throws_ok(
   '22023',
   null,
   'a quick session cannot be turned into a class session after it starts'
+);
+
+-- ---------------------------------------------------------------------------
+-- A member whose participant is already there (the conflict clause's outcome)
+-- ---------------------------------------------------------------------------
+
+-- The row a second phone of P's would have written in the same instant. join_session's update
+-- finds it first; its `on conflict ... do update` answers only an insert racing another one,
+-- which one transaction cannot stage, and leads to the same place: that row, with a new secret.
+insert into public.participants (session_id, org_id, profile_id, display_name, rejoin_hash)
+  select s.id, s.org_id, '00000000-0000-0000-0000-0000013c0d07', 'Pat',
+         extensions.digest('pat-first-secret', 'sha256')
+    from public.sessions s where s.id = (select id from fixture where label = 'classy');
+insert into fixture (label, id)
+  select 'p-row', p.id from public.participants p
+   where p.session_id = (select id from fixture where label = 'classy')
+     and p.profile_id = '00000000-0000-0000-0000-0000013c0d07';
+
+set local role service_role;
+
+insert into fixture (label, id, secret)
+  select 'p', j.participant_id, j.rejoin_secret
+  from public.join_session((select id from fixture where label = 'classy'), 'Pat again',
+                           '00000000-0000-0000-0000-0000013c0d07') as j;
+
+select is(
+  (select id from fixture where label = 'p'),
+  (select id from fixture where label = 'p-row'),
+  'a member whose linked participant already exists gets that participant'
+);
+
+select results_eq(
+  $$ select count(*)::int, min(display_name) from public.participants
+      where session_id = (select id from fixture where label = 'classy')
+        and profile_id = '00000000-0000-0000-0000-0000013c0d07' $$,
+  $$ values (1, 'Pat') $$,
+  'one row for them still, under its first name'
+);
+
+select is(
+  (select count(*)::int from public.resume_participant(
+     (select id from fixture where label = 'p'),
+     (select id from fixture where label = 'classy'),
+     'pat-first-secret')),
+  0,
+  'the earlier secret is replaced'
+);
+
+select is(
+  (select count(*)::int from public.resume_participant(
+     (select id from fixture where label = 'p'),
+     (select id from fixture where label = 'classy'),
+     (select secret from fixture where label = 'p'))),
+  1,
+  'by the one just issued'
+);
+
+-- ---------------------------------------------------------------------------
+-- A member taken off the class while the session runs
+-- ---------------------------------------------------------------------------
+
+insert into fixture (label, id, secret)
+  select 'l', j.participant_id, j.rejoin_secret
+  from public.join_session((select id from fixture where label = 'classy'), 'Lee',
+                           '00000000-0000-0000-0000-0000013c0d05') as j;
+
+select is(
+  (select profile_id from public.participants where id = (select id from fixture where label = 'l')),
+  '00000000-0000-0000-0000-0000013c0d05'::uuid,
+  'L joins linked while a member'
+);
+
+reset role;
+delete from public.class_members
+ where class_id = '00000000-0000-0000-0000-0000013c0ca1'
+   and profile_id = '00000000-0000-0000-0000-0000013c0d05';
+set local role service_role;
+
+insert into fixture (label, id, secret)
+  select 'l2', j.participant_id, j.rejoin_secret
+  from public.join_session((select id from fixture where label = 'classy'), 'Lee again',
+                           '00000000-0000-0000-0000-0000013c0d05') as j;
+
+select isnt(
+  (select id from fixture where label = 'l2'),
+  (select id from fixture where label = 'l'),
+  'once removed, joining again does not take over the linked participant'
+);
+
+select is(
+  (select profile_id from public.participants where id = (select id from fixture where label = 'l2')),
+  null,
+  'it joins anonymously'
+);
+
+select is(
+  (select count(*)::int from public.resume_participant(
+     (select id from fixture where label = 'l'),
+     (select id from fixture where label = 'classy'),
+     (select secret from fixture where label = 'l'))),
+  1,
+  'and the linked participant''s own token is left as it was (ADR 0013: accepted for a live session)'
+);
+
+-- ---------------------------------------------------------------------------
+-- No phone-facing function returns the link
+-- ---------------------------------------------------------------------------
+
+select ok(
+  not exists (
+    select 1 from pg_proc p, unnest(p.proargnames) as a (arg_name)
+     where p.oid in ('public.resume_participant(uuid, uuid, text)'::regprocedure,
+                     'public.open_session_view(uuid, uuid, text)'::regprocedure)
+       and a.arg_name like '%profile%'
+  ),
+  'neither resume_participant nor open_session_view has a profile column'
+);
+
+select ok(
+  (select to_jsonb(r)::text from public.resume_participant(
+     (select id from fixture where label = 'm'),
+     (select id from fixture where label = 'classy'),
+     (select secret from fixture where label = 'm2')) as r)
+    not like '%00000000-0000-0000-0000-0000013c0d01%',
+  'resume_participant for a linked member says nothing of their profile'
+);
+
+select ok(
+  (select to_jsonb(v)::text from public.open_session_view(
+     (select id from fixture where label = 'm'),
+     (select id from fixture where label = 'classy'),
+     (select secret from fixture where label = 'm2')) as v)
+    not like '%00000000-0000-0000-0000-0000013c0d01%',
+  'nor does open_session_view'
+);
+
+-- ---------------------------------------------------------------------------
+-- Whose participant a browser holds, for the join action
+-- ---------------------------------------------------------------------------
+
+select results_eq(
+  format($$ select linked_profile, account_is_member from public.participant_link(%L, %L, %L, %L) $$,
+         (select id from fixture where label = 'm'), (select id from fixture where label = 'classy'),
+         (select secret from fixture where label = 'm2'), '00000000-0000-0000-0000-0000013c0d01'),
+  $$ values ('00000000-0000-0000-0000-0000013c0d01'::uuid, true) $$,
+  'participant_link names the member a linked token belongs to'
+);
+
+select results_eq(
+  format($$ select linked_profile, account_is_member from public.participant_link(%L, %L, %L, %L) $$,
+         (select id from fixture where label = 'm'), (select id from fixture where label = 'classy'),
+         (select secret from fixture where label = 'm2'), '00000000-0000-0000-0000-0000013c0d02'),
+  $$ values ('00000000-0000-0000-0000-0000013c0d01'::uuid, false) $$,
+  'and says a different account signed in on that browser is not a member'
+);
+
+select results_eq(
+  format($$ select linked_profile, account_is_member from public.participant_link(%L, %L, %L, %L) $$,
+         (select id from fixture where label = 'guest'), (select id from fixture where label = 'classy'),
+         (select secret from fixture where label = 'guest'), '00000000-0000-0000-0000-0000013c0d01'),
+  $$ values (null::uuid, true) $$,
+  'an anonymous token links nobody, and a member signed in on it is a member'
+);
+
+select results_eq(
+  format($$ select linked_profile, account_is_member from public.participant_link(%L, %L, %L, %L) $$,
+         (select id from fixture where label = 'quick-m'), (select id from fixture where label = 'quick'),
+         (select secret from fixture where label = 'quick-m'), '00000000-0000-0000-0000-0000013c0d01'),
+  $$ values (null::uuid, false) $$,
+  'a quick session has no class to be a member of'
+);
+
+select is_empty(
+  format($$ select * from public.participant_link(%L, %L, %L, %L) $$,
+         (select id from fixture where label = 'm'), (select id from fixture where label = 'classy'),
+         (select secret from fixture where label = 'm'), '00000000-0000-0000-0000-0000013c0d01'),
+  'a replaced secret is told nothing'
+);
+
+reset role;
+
+select ok(
+  not has_function_privilege('anon', 'public.participant_link(uuid, uuid, text, uuid)', 'execute')
+  and not has_function_privilege('authenticated', 'public.participant_link(uuid, uuid, text, uuid)', 'execute')
+  and has_function_privilege('service_role', 'public.participant_link(uuid, uuid, text, uuid)', 'execute'),
+  'participant_link is the server''s alone'
+);
+
+-- ---------------------------------------------------------------------------
+-- The workspace sweep, now that profile_id is written (ADR 0012)
+-- ---------------------------------------------------------------------------
+
+select is(
+  private.sweep_account_tied_elsewhere('00000000-0000-0000-0000-0000013c0b01',
+                                       '00000000-0000-0000-0000-0000013c00b0'),
+  false,
+  'teacher U is tied to no other workspace'
+);
+
+-- An account linked in A's session that is a teacher of B now (a student who became one).
+insert into public.participants (session_id, org_id, profile_id, display_name, rejoin_hash)
+  select s.id, s.org_id, '00000000-0000-0000-0000-0000013c0b01', 'Was a student', '\x00'::bytea
+    from public.sessions s where s.id = (select id from fixture where label = 'classy');
+
+select is(
+  private.sweep_account_tied_elsewhere('00000000-0000-0000-0000-0000013c0b01',
+                                       '00000000-0000-0000-0000-0000013c00b0'),
+  true,
+  'a linked participant in another workspace stops the deletion of that account'
+);
+
+set local role service_role;
+insert into fixture (label, id, secret)
+  select 'w', j.participant_id, j.rejoin_secret
+  from public.join_session((select id from fixture where label = 'classy'), 'Wren',
+                           '00000000-0000-0000-0000-0000013c0d06') as j;
+reset role;
+
+select is(
+  (select profile_id from public.participants where id = (select id from fixture where label = 'w')),
+  '00000000-0000-0000-0000-0000013c0d06'::uuid,
+  'W, whose profile names workspace C, is linked in A''s class session'
+);
+
+select is(
+  private.workspace_sweep_rule('00000000-0000-0000-0000-0000013c00c0'),
+  'memberless',
+  'workspace C is one the sweep deletes'
+);
+
+select lives_ok(
+  $$ select private.sweep_one_workspace('00000000-0000-0000-0000-0000013c00c0', 'memberless') $$,
+  'the sweep deletes workspace C'
+);
+
+select results_eq(
+  $$ select (select count(*)::int from public.orgs where id = '00000000-0000-0000-0000-0000013c00c0'),
+            (select org_id from public.profiles where id = '00000000-0000-0000-0000-0000013c0d06') $$,
+  $$ values (0, '00000000-0000-0000-0000-0000013c00a0'::uuid) $$,
+  'C is gone and W is moved to the workspace of their class'
+);
+
+select is(
+  (select profile_id from public.participants where id = (select id from fixture where label = 'w')),
+  '00000000-0000-0000-0000-0000013c0d06'::uuid,
+  'and W''s participation in another workspace''s session is kept, still linked'
+);
+
+-- ---------------------------------------------------------------------------
+-- A class deleted while its session runs
+-- ---------------------------------------------------------------------------
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000013c0a01","role":"authenticated"}', true);
+insert into fixture (label, id)
+  select 'doomed', public.start_session(
+    source_bank => '00000000-0000-0000-0000-0000013c00b1'::uuid,
+    target_class => '00000000-0000-0000-0000-0000013c0ca2'::uuid);
+
+set local role service_role;
+insert into fixture (label, id, secret)
+  select 'doomed-m', j.participant_id, j.rejoin_secret
+  from public.join_session((select id from fixture where label = 'doomed'), 'Mia',
+                           '00000000-0000-0000-0000-0000013c0d01') as j;
+reset role;
+
+update public.sessions set status = 'running', current_position = 1
+ where id = (select id from fixture where label = 'doomed');
+delete from public.classes where id = '00000000-0000-0000-0000-0000013c0ca2';
+
+select results_eq(
+  $$ select status::text, class_id from public.sessions
+      where id = (select id from fixture where label = 'doomed') $$,
+  $$ values ('running', null::uuid) $$,
+  'deleting a class clears the pointer on its running session, which keeps running'
+);
+
+set local role service_role;
+insert into fixture (label, id, secret)
+  select 'doomed-m2', j.participant_id, j.rejoin_secret
+  from public.join_session((select id from fixture where label = 'doomed'), 'Mia',
+                           '00000000-0000-0000-0000-0000013c0d01') as j;
+reset role;
+
+select isnt(
+  (select id from fixture where label = 'doomed-m2'),
+  (select id from fixture where label = 'doomed-m'),
+  'a later join by a former member of the deleted class is a new participant'
+);
+
+select results_eq(
+  format($$ select id = %L, profile_id from public.participants
+             where id in (%L, %L) order by id = %L desc $$,
+         (select id from fixture where label = 'doomed-m'),
+         (select id from fixture where label = 'doomed-m'),
+         (select id from fixture where label = 'doomed-m2'),
+         (select id from fixture where label = 'doomed-m')),
+  $$ values (true, '00000000-0000-0000-0000-0000013c0d01'::uuid), (false, null::uuid) $$,
+  'anonymous, while the participant linked before the deletion stays linked'
 );
 
 -- ---------------------------------------------------------------------------
