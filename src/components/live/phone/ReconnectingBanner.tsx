@@ -3,8 +3,8 @@ import { Icon } from "@/components/ui/Icon";
 
 /**
  * The phone has lost the room and is getting it back (PhoneReconnecting mockup, PLAN §5.7): a
- * dark band across the top that cannot be mistaken for the question, in words. Submit is held off
- * underneath it and the answer in progress is kept.
+ * dark band across the top that cannot be mistaken for the question, in words. The answer in
+ * progress is kept underneath it, and Submit still works: answers go over HTTP, not the socket.
  */
 export function ReconnectingBanner() {
   return (

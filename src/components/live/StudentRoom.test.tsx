@@ -214,17 +214,17 @@ describe("StudentRoom: waiting", () => {
     expect(screen.queryByTestId("reconnecting")).toBeNull();
   });
 
-  it("keeps the question and its draft while reconnecting, with Submit held off and saying why", async () => {
+  it("keeps the question, its draft and Submit while reconnecting: sending never needed the socket", async () => {
     const room = setup(running());
     room.push({ state: running(), item: KEYLESS });
     const box = await screen.findByRole("checkbox", { name: /Respiratory rate 28/ });
     await userEvent.click(box);
     room.connection("reconnecting");
+    expect(screen.getByTestId("reconnecting")).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeChecked();
     const submits = screen.getAllByRole("button", { name: /^Submit$/ });
     expect(submits).toHaveLength(1);
-    expect(submits[0]).toBeDisabled();
-    expect(submits[0]).toHaveAccessibleDescription("Submit comes back when you are connected.");
+    expect(submits[0]).toBeEnabled();
     room.connection("live", true);
     expect(screen.getByRole("button", { name: /^Submit$/ })).toBeEnabled();
     expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeChecked();
