@@ -15,8 +15,9 @@ import type { EhrRecord } from "@/lib/ngn/schemas";
 import { useAutoStopSetting } from "@/components/live/host/useAutoStopSetting";
 import { useAutoStopTimer } from "@/components/live/host/useAutoStopTimer";
 import type { HostRoom } from "@/components/live/host/useHostRoom";
+import { notAnswered } from "./notAnswered";
 import { NotAnsweredList } from "./NotAnsweredList";
-import { useNotAnswered } from "./useNotAnswered";
+import { useProgressRead } from "./useProgressRead";
 
 export interface ControlItemProps {
   sessionId: string;
@@ -51,12 +52,13 @@ export function ControlItem({
   const { state, answersOn, item, roster, pending } = room;
   const busy = pending !== null;
   const collecting = state.status === "running" && !state.reveal;
-  const waiting = useNotAnswered(room.askProgress, roster, state.position, collecting, intervalMs);
+  const read = useProgressRead(room.askProgress, state.position, collecting, intervalMs);
+  const waiting = read === null ? null : notAnswered(roster, read.progress, read.position);
   const eyebrow = [position, revealWords(state)].filter(Boolean).join(" · ");
   const timerCommand = (command: TimerCommand) => void room.run(command);
   // Here, in the control view only: a projector window has no controls and never sends it.
   const [autoStop, setAutoStop] = useAutoStopSetting();
-  const autoStopped = useAutoStopTimer(room, autoStop) !== null;
+  const autoStopped = useAutoStopTimer(room, read, autoStop) !== null;
   const timed = state.timer.seconds !== null || hasClock(state.timer);
 
   return (

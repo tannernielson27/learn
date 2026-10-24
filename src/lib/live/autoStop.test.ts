@@ -4,10 +4,10 @@ import {
   AUTO_STOP_SETTLE_MS,
   shouldAutoStop,
   stepAutoStop,
-  type AnswerCounts,
+  type AnswerWatch,
   type AutoStopMemory,
 } from "./autoStop";
-import { applyHostCommand, initialSessionState, type LiveSessionState } from "./state";
+import { applyHostCommand, goToItem, initialSessionState, type LiveSessionState } from "./state";
 
 const NOW = 1_800_000_000_000;
 
@@ -29,33 +29,30 @@ function move(state: LiveSessionState, command: Parameters<typeof applyHostComma
   return moved.state;
 }
 
-const everyone = (position = 1, n = 3): AnswerCounts => ({ position, answered: n, present: n });
+/** A progress read for `position`, this visit, that says nobody of `n` is left to answer. */
+const everyone = (position = 1, n = 3): AnswerWatch => ({ position, roster: n, waiting: 0 });
 
 describe("shouldAutoStop: when everyone in the room has answered a timed question", () => {
-  it("is true while running, timed, unrevealed, and answers reach the people present", () => {
+  it("is true while running, timed, unrevealed, and nobody is left to answer", () => {
     expect(shouldAutoStop(running(), everyone(), NOW + 5_000)).toBe(true);
   });
 
-  it("is true when more have answered than are present (someone answered then dropped)", () => {
-    expect(shouldAutoStop(running(), { position: 1, answered: 4, present: 3 }, NOW)).toBe(true);
+  it("is false while anyone is left to answer, connected or away", () => {
+    expect(shouldAutoStop(running(), { position: 1, roster: 3, waiting: 1 }, NOW)).toBe(false);
   });
 
-  it("is false while someone present has not answered", () => {
-    expect(shouldAutoStop(running(), { position: 1, answered: 2, present: 3 }, NOW)).toBe(false);
+  it("is false with nobody in the roster, even with nobody left to answer", () => {
+    expect(shouldAutoStop(running(), { position: 1, roster: 0, waiting: 0 }, NOW)).toBe(false);
   });
 
-  it("is false with nobody in the room, even with answers counted", () => {
-    expect(shouldAutoStop(running(), { position: 1, answered: 0, present: 0 }, NOW)).toBe(false);
-    expect(shouldAutoStop(running(), { position: 1, answered: 2, present: 0 }, NOW)).toBe(false);
-  });
-
-  it("is false before any count has arrived", () => {
-    expect(shouldAutoStop(running(), { position: null, answered: null, present: 3 }, NOW)).toBe(
+  it("is false before this visit's progress read is back", () => {
+    expect(shouldAutoStop(running(), { position: null, roster: 3, waiting: null }, NOW)).toBe(
       false,
     );
+    expect(shouldAutoStop(running(), { position: 1, roster: 3, waiting: null }, NOW)).toBe(false);
   });
 
-  it("is false on a count left over from the previous question", () => {
+  it("is false on a read left over from the previous question", () => {
     const second = running(2);
     expect(shouldAutoStop(second, everyone(1), NOW)).toBe(false);
     expect(shouldAutoStop(second, everyone(2), NOW)).toBe(true);
@@ -93,16 +90,16 @@ describe("shouldAutoStop: when everyone in the room has answered a timed questio
   });
 });
 
-/** Steps the memory along a list of `[now, state, counts, enabled?]` moments. */
+/** Steps the memory along a list of `[now, state, watch, enabled?]` moments. */
 function walk(
-  moments: [number, LiveSessionState, AnswerCounts, boolean?][],
+  moments: [number, LiveSessionState, AnswerWatch, boolean?][],
   from: AutoStopMemory = AUTO_STOP_IDLE,
 ) {
   let memory = from;
   const fires: number[] = [];
   let last: ReturnType<typeof stepAutoStop> | null = null;
-  for (const [now, state, counts, enabled = true] of moments) {
-    last = stepAutoStop(memory, { state, counts, enabled }, now);
+  for (const [now, state, watch, enabled = true] of moments) {
+    last = stepAutoStop(memory, { state, watch, enabled }, now);
     memory = last.memory;
     if (last.fire) fires.push(now);
   }
@@ -115,7 +112,7 @@ describe("stepAutoStop: the settle window, and firing once", () => {
   it("waits the settle window after the condition first holds, then fires once", () => {
     const first = stepAutoStop(
       AUTO_STOP_IDLE,
-      { state: q1, counts: everyone(), enabled: true },
+      { state: q1, watch: everyone(), enabled: true },
       NOW,
     );
     expect(first.fire).toBe(false);
@@ -123,7 +120,7 @@ describe("stepAutoStop: the settle window, and firing once", () => {
 
     const early = stepAutoStop(
       first.memory,
-      { state: q1, counts: everyone(), enabled: true },
+      { state: q1, watch: everyone(), enabled: true },
       NOW + 1_000,
     );
     expect(early.fire).toBe(false);
@@ -131,7 +128,7 @@ describe("stepAutoStop: the settle window, and firing once", () => {
 
     const due = stepAutoStop(
       early.memory,
-      { state: q1, counts: everyone(), enabled: true },
+      { state: q1, watch: everyone(), enabled: true },
       NOW + AUTO_STOP_SETTLE_MS,
     );
     expect(due.fire).toBe(true);
@@ -140,7 +137,7 @@ describe("stepAutoStop: the settle window, and firing once", () => {
     // The stop is in flight and the state has not caught up: it does not fire again.
     const again = stepAutoStop(
       due.memory,
-      { state: q1, counts: everyone(), enabled: true },
+      { state: q1, watch: everyone(), enabled: true },
       NOW + 5_000,
     );
     expect(again.fire).toBe(false);
@@ -150,9 +147,9 @@ describe("stepAutoStop: the settle window, and firing once", () => {
   it("cancels when the condition stops holding inside the window, and starts over", () => {
     const { fires, memory } = walk([
       [NOW, q1, everyone()],
-      // A phone joins: four present, three answered.
-      [NOW + 1_000, q1, { position: 1, answered: 3, present: 4 }],
-      [NOW + 1_600, q1, { position: 1, answered: 3, present: 4 }],
+      // A phone joins: four in the roster, one of them still to answer.
+      [NOW + 1_000, q1, { position: 1, roster: 4, waiting: 1 }],
+      [NOW + 1_600, q1, { position: 1, roster: 4, waiting: 1 }],
     ]);
     expect(fires).toEqual([]);
     expect(memory.since).toBeNull();
@@ -189,6 +186,28 @@ describe("stepAutoStop: the settle window, and firing once", () => {
       [NOW + 6_500, q2, everyone(2)],
     ]);
     expect(fires).toEqual([NOW + 1_500, NOW + 6_500]);
+  });
+
+  it("returning to an earlier question waits for a read taken on this visit", () => {
+    const q2 = running(2);
+    const moved = goToItem(q2, 1, NOW + 3_000);
+    if (!moved.ok) throw new Error(moved.message);
+    const back = moved.state;
+    const unread: AnswerWatch = { position: null, roster: 3, waiting: null };
+    const { fires } = walk([
+      [NOW, q1, everyone()],
+      [NOW + 1_500, q1, everyone()],
+      [NOW + 2_000, q2, unread],
+      // Back on question 1: until this visit's read is back, nothing is known.
+      [NOW + 3_000, back, unread],
+      [NOW + 9_000, back, unread],
+      // A new phone joined meanwhile and has not answered question 1.
+      [NOW + 9_500, back, { position: 1, roster: 4, waiting: 1 }],
+      [NOW + 12_000, back, { position: 1, roster: 4, waiting: 1 }],
+      [NOW + 13_000, back, everyone(1, 4)],
+      [NOW + 14_500, back, everyone(1, 4)],
+    ]);
+    expect(fires).toEqual([NOW + 1_500, NOW + 14_500]);
   });
 
   it("after it fired, extend_timer is refused and nothing fires again", () => {
@@ -228,8 +247,8 @@ describe("stepAutoStop: the settle window, and firing once", () => {
   it("still fires after time added earlier, before everyone had answered", () => {
     const extended = move(q1, "extend_timer", NOW + 1_000);
     const { fires } = walk([
-      [NOW, q1, { position: 1, answered: 1, present: 3 }],
-      [NOW + 1_000, extended, { position: 1, answered: 1, present: 3 }],
+      [NOW, q1, { position: 1, roster: 3, waiting: 2 }],
+      [NOW + 1_000, extended, { position: 1, roster: 3, waiting: 2 }],
       [NOW + 2_000, extended, everyone()],
       [NOW + 3_500, extended, everyone()],
     ]);
@@ -259,13 +278,13 @@ describe("stepAutoStop: the settle window, and firing once", () => {
   });
 
   it("asks for no wake-up while there is nothing to wait for", () => {
-    const { last } = walk([[NOW, q1, { position: 1, answered: 0, present: 3 }]]);
+    const { last } = walk([[NOW, q1, { position: 1, roster: 3, waiting: 3 }]]);
     expect(last.fire).toBe(false);
     expect(last.waitMs).toBeNull();
   });
 
   it("zero participants never fires, however long it waits", () => {
-    const empty: AnswerCounts = { position: 1, answered: 0, present: 0 };
+    const empty: AnswerWatch = { position: 1, roster: 0, waiting: 0 };
     const { fires } = walk([
       [NOW, q1, empty],
       [NOW + 30_000, q1, empty],

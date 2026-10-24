@@ -6,9 +6,13 @@
  * and no migration is involved. It never reveals: the teacher still presses Show answer.
  *
  * **When.** A teacher-paced room, running, on a question with a clock that has not run out and is
- * not revealed, with at least one phone in the room and at least as many answers to *this*
- * question as there are phones in the room (presence). The count must say which position it is
- * about, so a tally left over from the previous question can never satisfy it.
+ * not revealed, with at least one person in the roster and nobody left to answer *this* question.
+ * Who is left is per person, never one count against another: everyone the roster holds, connected
+ * or away, and everyone the progress read says has joined. Comparing answers (which include phones
+ * that answered and then dropped out of presence) with phones connected now would end the timer on
+ * a student still thinking. The read must have been taken for this position on this visit, so a
+ * read from the previous question, or from an earlier visit to this one, can never satisfy it. When
+ * in doubt it does nothing and the clock runs out as it always has.
  *
  * **Settling.** The rule has to hold for `AUTO_STOP_SETTLE_MS` before the stop is sent, and any
  * moment it does not hold starts the wait again, so a phone that has just joined or reconnected
@@ -24,28 +28,24 @@ import type { ItemTimer } from "./timer";
 /** How long everyone must have answered before the timer is ended. */
 export const AUTO_STOP_SETTLE_MS = 1_500;
 
-/** What the console knows about who has answered, and who is here. */
-export interface AnswerCounts {
-  /** The position the answer count is about, or null when no count has arrived. */
+/** What the console knows, person by person, about who has answered. */
+export interface AnswerWatch {
+  /** The position this visit's progress read is about, or null before the first one is back. */
   position: number | null;
-  /** Answers counted for that position, or null when no count has arrived. */
-  answered: number | null;
-  /** Phones in the room right now (presence). */
-  present: number;
+  /** People in the roster, connected or away. */
+  roster: number;
+  /** People who have not answered that position, or null when that is not known. */
+  waiting: number | null;
 }
 
 /** Whether everyone in the room has answered the question on a running clock, right now. */
-export function shouldAutoStop(
-  state: LiveSessionState,
-  counts: AnswerCounts,
-  now: number,
-): boolean {
+export function shouldAutoStop(state: LiveSessionState, watch: AnswerWatch, now: number): boolean {
   if (isStudentPaced(state)) return false;
   if (state.status !== "running" || state.position === null || state.reveal) return false;
   const { endsAt } = state.timer;
   if (endsAt === null || endsAt <= now) return false;
-  if (counts.position !== state.position || counts.answered === null) return false;
-  return counts.present >= 1 && counts.answered >= counts.present;
+  if (watch.position !== state.position || watch.waiting === null) return false;
+  return watch.roster >= 1 && watch.waiting === 0;
 }
 
 /** What the console remembers between two looks at the room. */
@@ -69,7 +69,7 @@ export const AUTO_STOP_IDLE: AutoStopMemory = {
 
 export interface AutoStopInput {
   state: LiveSessionState;
-  counts: AnswerCounts;
+  watch: AnswerWatch;
   /** The teacher's setting on this device. */
   enabled: boolean;
 }
@@ -95,13 +95,13 @@ function gainedTime(before: AutoStopMemory["clock"], after: ItemTimer): boolean 
 /** One look at the room. Never mutates. */
 export function stepAutoStop(
   memory: AutoStopMemory,
-  { state, counts, enabled }: AutoStopInput,
+  { state, watch, enabled }: AutoStopInput,
   now: number,
 ): AutoStopStep {
   const clock = { endsAt: state.timer.endsAt, remainingMs: state.timer.remainingMs };
   const fresh = memory.position !== state.position;
   const held: AutoStopMemory = fresh ? { ...AUTO_STOP_IDLE, position: state.position } : memory;
-  const holds = shouldAutoStop(state, counts, now);
+  const holds = shouldAutoStop(state, watch, now);
 
   if (held.done) return { memory: { ...held, clock }, fire: false, waitMs: null };
   if (!fresh && gainedTime(held.clock, state.timer) && (holds || held.since !== null)) {
