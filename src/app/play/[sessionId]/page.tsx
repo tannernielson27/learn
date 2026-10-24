@@ -63,7 +63,8 @@ export default async function PlaySessionPage({ params }: PageProps<"/play/[sess
   if (!checked.ok) redirect(JOIN_PATH);
   const { participant } = checked;
 
-  // Only ever after the token has been checked: this read does no checking of its own.
+  // Only ever after the token has been checked: this read does no checking of its own. A read that
+  // failed throws, onto the error screen as above; only a session that is not there is null.
   const read = await readPublicSessionState(service, sessionId);
   if (!read) redirect(JOIN_PATH);
   // #185: how the room is paced is `resume_participant`'s answer, and it picks the screen. A case

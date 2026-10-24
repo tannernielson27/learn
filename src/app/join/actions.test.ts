@@ -60,10 +60,10 @@ vi.mock("@/lib/supabase/sessions", () => ({
 }));
 
 const joinSession = vi.fn();
-const resumeParticipant = vi.fn();
+const checkParticipant = vi.fn();
 vi.mock("@/lib/supabase/participants", () => ({
   joinSession: (...args: unknown[]) => joinSession(...args),
-  resumeParticipant: (...args: unknown[]) => resumeParticipant(...args),
+  checkParticipant: (...args: unknown[]) => checkParticipant(...args),
 }));
 
 const { joinLiveSession } = await import("./actions");
@@ -102,7 +102,7 @@ beforeEach(() => {
     ok: true,
     participant: { participantId: PARTICIPANT, secret: SECRET },
   });
-  resumeParticipant.mockResolvedValue(null);
+  checkParticipant.mockResolvedValue({ ok: false, reason: "unknown" });
 });
 
 describe("joinLiveSession", () => {
@@ -174,12 +174,15 @@ describe("joinLiveSession", () => {
       value: `${SESSION}.${PARTICIPANT}.${SECRET}`,
       options: {},
     });
-    resumeParticipant.mockResolvedValue({
-      participantId: PARTICIPANT,
-      displayName: "Sam Okafor",
-      sessionStatus: "lobby",
-      mode: "instructor_paced",
-      title: "Cardiac bank",
+    checkParticipant.mockResolvedValue({
+      ok: true,
+      participant: {
+        participantId: PARTICIPANT,
+        displayName: "Sam Okafor",
+        sessionStatus: "lobby",
+        mode: "instructor_paced",
+        title: "Cardiac bank",
+      },
     });
 
     expect(await joinAndFollow(form("7KQ2MZ", "Someone Else"))).toBe(`/play/${SESSION}`);
@@ -191,7 +194,7 @@ describe("joinLiveSession", () => {
       options: expect.objectContaining({ httpOnly: true, maxAge: expect.any(Number) }),
     });
     // And the name they typed the second time does not quietly rename them.
-    expect(resumeParticipant).toHaveBeenCalledWith(SERVICE_CLIENT, {
+    expect(checkParticipant).toHaveBeenCalledWith(SERVICE_CLIENT, {
       sessionId: SESSION,
       participantId: PARTICIPANT,
       secret: SECRET,
@@ -205,7 +208,7 @@ describe("joinLiveSession", () => {
     });
 
     await joinAndFollow(form("7KQ2MZ", "Sam"));
-    expect(resumeParticipant).not.toHaveBeenCalled();
+    expect(checkParticipant).not.toHaveBeenCalled();
     expect(joinSession).toHaveBeenCalledTimes(1);
     expect(jar.get(PARTICIPANT_COOKIE)?.value).toBe(`${SESSION}.${PARTICIPANT}.${SECRET}`);
   });
@@ -213,17 +216,31 @@ describe("joinLiveSession", () => {
   it("joins afresh when the cookie is rubbish, rather than trusting its shape", async () => {
     jar.set(PARTICIPANT_COOKIE, { value: "not-a-token", options: {} });
     await joinAndFollow(form("7KQ2MZ", "Sam"));
-    expect(resumeParticipant).not.toHaveBeenCalled();
+    expect(checkParticipant).not.toHaveBeenCalled();
     expect(joinSession).toHaveBeenCalledTimes(1);
   });
 
   it("joins afresh when a token for this session is no longer good", async () => {
     jar.set(PARTICIPANT_COOKIE, { value: `${SESSION}.${PARTICIPANT}.${SECRET}`, options: {} });
-    resumeParticipant.mockResolvedValue(null);
+    checkParticipant.mockResolvedValue({ ok: false, reason: "unknown" });
 
     await joinAndFollow(form("7KQ2MZ", "Sam"));
-    expect(resumeParticipant).toHaveBeenCalledTimes(1);
+    expect(checkParticipant).toHaveBeenCalledTimes(1);
     expect(joinSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not join a second time when the database could not say who this browser is", async () => {
+    jar.set(PARTICIPANT_COOKIE, { value: `${SESSION}.${PARTICIPANT}.${SECRET}`, options: {} });
+    checkParticipant.mockResolvedValue({ ok: false, reason: "unavailable" });
+
+    expect(await joinLiveSession({ status: "idle" }, form("7KQ2MZ", "Sam"))).toEqual({
+      status: "error",
+      error: "Joining is not working just now. Try again in a moment.",
+    });
+    // One student, one name in the room: their first participant and its answers stay theirs.
+    expect(joinSession).not.toHaveBeenCalled();
+    // And the cookie that names them is left as it was.
+    expect(jar.get(PARTICIPANT_COOKIE)?.value).toBe(`${SESSION}.${PARTICIPANT}.${SECRET}`);
   });
 
   it("says so when the room is full", async () => {
