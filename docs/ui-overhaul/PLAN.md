@@ -4,11 +4,11 @@ Branch `feat/ui-overhaul`, from `origin/main` at `31f31f7`. Written 2026-10-22 a
 
 ## 0. Owner decisions that frame this plan (2026-10-22)
 
-| Decision      | Choice                                                                                                                                    | What it rules out                                                                                                           |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| How game-like | **Clinical, responsive.** Keep the exam feel of `docs/04-DESIGN-DIRECTION.md`. Borrow the structure of live-quiz apps, not their rewards. | Podium, confetti, sound effects, streaks, leaderboards, points-for-speed.                                                   |
-| Answer layout | **NCLEX layout for every question type.**                                                                                                 | Kahoot-style colour+shape answer tiles. Colour-blind work goes into feedback marks and the teacher's results chart instead. |
-| Scope         | **Whole app**: live, practice, assignments, student home, teacher library and editors, classes, workspace, reports, auth, help.           | Nothing. Gallery pages get the new tokens for free but are not redesigned.                                                  |
+| Decision      | Choice                                                                                                                                    | What it rules out                                                                                                                                             |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| How game-like | **Clinical, responsive.** Keep the exam feel of `docs/04-DESIGN-DIRECTION.md`. Borrow the structure of live-quiz apps, not their rewards. | Confetti, sound effects, streaks, leaderboards, points-for-speed. (A top 5 podium at the end of a live session was added at the owner's request, 2026-10-24.) |
+| Answer layout | **NCLEX layout for every question type.**                                                                                                 | Kahoot-style colour+shape answer tiles. Colour-blind work goes into feedback marks and the teacher's results chart instead.                                   |
+| Scope         | **Whole app**: live, practice, assignments, student home, teacher library and editors, classes, workspace, reports, auth, help.           | Nothing. Gallery pages get the new tokens for free but are not redesigned.                                                                                    |
 
 The brief's "solo mode" maps to LeaRN's **practice** (ungraded, rationale at once) and **assignments** (graded, due dates). Both already need a student account through a class; nothing in this plan changes that.
 
@@ -195,14 +195,14 @@ Sources are in `RESEARCH.md`. [V] means checked on the vendor's own page; [S] me
 8. **Timers are optional and extendable:** Kahoot [V](https://kahoot.com/accessibility/), Jackbox's extended timers, and WCAG 2.2.1. Show "0:12" as text beside the bar, never only a ring.
 9. **Self-paced follows the qbank pattern students already use.** UWorld runs Tutor mode (rationale at once) and Timed mode, plus Incorrect and Marked pools [V](https://nursing.uworld.com/blog/7-tips-for-using-the-uworld-nclex-qbank/). LeaRN's practice already works like Tutor mode, and assignments like an exam. The results screen gains "Review the ones I missed", and optionally "Practise them again" (see Checkpoint 1).
 10. **Progress "n of N" and a stable bottom action.** Duolingo puts Check/Continue in one fixed place [S](https://uxdesign.cc/duolingos-usability-analyzed-6bb44b0f2366).
-11. **Design the end of a session.** Instead of a podium:
+11. **Design the end of a session.** Superseded in part on 2026-10-24: the owner asked for a top 5 podium on the projector (`StagePodium`), so the stage now shows the podium with the summary's numbers along its foot, and the summary alone when nobody scored. The phone is unchanged:
     - the teacher's stage shows a calm summary: questions run, the answer rate, and the hardest question by step
     - the student's phone shows "You answered 8 of 10. Your teacher has the report." and a link to their results if they have an account
 
 Things the brief asked for that this plan leaves out on purpose:
 
 - color+shape answer tiles
-- podium, confetti, sound, streaks and the leaderboard re-ranking animation
+- confetti, sound, streaks and the leaderboard re-ranking animation (the podium was added later at the owner's request; see §5.11)
 
 Also note there was no mobbin.com access (it needs a login), so the plan makes no Mobbin claims.
 
