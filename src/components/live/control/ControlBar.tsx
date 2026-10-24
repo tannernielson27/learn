@@ -41,7 +41,10 @@ function question(command: AskedCommand, state: LiveSessionState) {
  * while answers come in, Next question once it is showing, and End once the last one is. Every
  * other move is secondary, and ending is quiet: it asks first, in words, rather than being red.
  */
-function primaryOf(state: LiveSessionState, commands: readonly ControlCommand[]): HostCommand {
+export function primaryOf(
+  state: LiveSessionState,
+  commands: readonly ControlCommand[],
+): HostCommand {
   if (state.status === "lobby") return "start";
   const live = (command: HostCommand) =>
     commands.some((each) => each.command === command && each.enabled);
@@ -72,7 +75,11 @@ export function ControlBar({ state, commands, busy, onCommand, summary }: Contro
     else onCommand(command.command);
   }
 
-  const forward = commands.filter((each) => each.command === "advance" && each.command !== primary);
+  // "Next question" waits until the answer is showing: beside "Show answer" it skipped the reveal
+  // for a teacher in a hurry. Before then, moving on without one is the question strip's job.
+  const forward = state.reveal
+    ? commands.filter((each) => each.command === "advance" && each.command !== primary)
+    : [];
   const main = commands.find((each) => each.command === primary);
   const side = commands.filter((each) => each.command !== primary && each.command !== "advance");
 
