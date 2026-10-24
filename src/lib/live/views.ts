@@ -210,7 +210,7 @@ export type PhoneSettledView =
   | { phase: "ended"; headline: string };
 
 export type PhoneView =
-  /** The question stays on screen with Submit held off and the draft kept (PLAN §5.7). */
+  /** The question stays on screen with the draft kept and Submit live: it goes over HTTP (PLAN §5.7). */
   { phase: "reconnecting"; underneath: PhoneSettledView } | { phase: "refused" } | PhoneSettledView;
 
 export type PhonePhase = PhoneView["phase"];

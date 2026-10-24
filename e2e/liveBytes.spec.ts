@@ -120,7 +120,8 @@ test("a live SATA and a case-study step reach the phone keyless until the reveal
   });
   await page.getByRole("button", { name: "Start", exact: true }).click();
   await expect(phone.getByText(MC_STEM)).toBeVisible({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Next question", exact: true }).click();
+  // Moves on without a reveal, so no key has been sent anywhere before the SATA is up.
+  await page.getByRole("button", { name: "Go to question 2", exact: true }).click();
   await expect(phone.getByText(SATA_STEM)).toBeVisible({ timeout: 15_000 });
 
   // Before the reveal: the page, the view, and the phone's own submit carry no key or mark.

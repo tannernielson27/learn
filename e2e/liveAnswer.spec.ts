@@ -301,13 +301,13 @@ async function readDownload(download: Download): Promise<string> {
 }
 
 /**
- * #182's demo: set 30 seconds and start; the phone counts down with the console; an answer after
- * zero is refused with "Time is up"; adding fifteen seconds gives the item back.
+ * #182's demo: set 30 seconds and start; the phone counts down with the console; past zero and
+ * its grace the phone closes Submit with "Time is up"; adding fifteen seconds gives the item back.
  *
  * It waits out a real thirty seconds, because the point is what the server's own clock decides —
  * nothing here can be faked from the browser — so it is given the time to do so.
  */
-test("a timed item counts down on the phone, and refuses an answer after zero", async ({
+test("a timed item counts down on the phone, and closes Submit after zero", async ({
   browser,
   page,
   request,
@@ -357,15 +357,16 @@ test("a timed item counts down on the phone, and refuses an answer after zero", 
     fullPage: true,
   });
 
-  // An answer picked in time, sent after zero and the two seconds of grace.
+  // An answer picked in time but not sent before zero and the two seconds of grace.
   await phone.getByRole("checkbox", { name: OPTIONS[0] as string }).click();
   await expect(phone.getByTestId("countdown-state")).toHaveText("Time is up", { timeout: 45_000 });
   await expect(page.getByTestId("countdown-state")).toHaveText("Time is up");
-  // The grace is the server's: waiting it out is the only way to be past it.
-  await phone.waitForTimeout(3_000);
-  await phone.getByRole("button", { name: "Submit", exact: true }).click();
-  await expect(phone.getByRole("heading", { name: "Time is up", exact: true })).toBeVisible();
-  await expect(phone.getByTestId("answer-late")).toBeVisible();
+  // Past the grace the phone closes Submit itself (#482) and keeps the pick on screen; the
+  // server's own refusal of a late answer is covered by StudentRoom.test.tsx and pgTAP.
+  await expect(
+    phone.getByRole("status").filter({ hasText: "Time is up. Wait for the answer." }),
+  ).toBeVisible({ timeout: 10_000 });
+  await expect(phone.getByRole("button", { name: "Submit", exact: true })).toBeDisabled();
   await expectNoAxeViolations(phone);
   await phone.screenshot({
     path: `test-results/screenshots/${testInfo.project.name}/live-timer-phone-late.png`,

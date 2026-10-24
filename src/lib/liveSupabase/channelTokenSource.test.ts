@@ -165,4 +165,15 @@ describe("the server finishing with this phone: definitive, never retried", () =
     await source.accessToken();
     expect(heard).not.toHaveBeenCalled();
   });
+  it("gives the request a deadline, and answers with the token held when it is not met", async () => {
+    const fetch = fetchAnswering(new DOMException("The operation timed out.", "TimeoutError"));
+    const { source, refusals } = due(fetch);
+    // A request the network swallowed must not hold every later heartbeat's ask with it.
+    expect(await source.accessToken()).toBe("first");
+    expect(fetch.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
+    // Transient, so it asks again next time rather than giving up.
+    expect(refusals).toEqual([]);
+    fetch.mockResolvedValueOnce(fresh("second", T0 + HOUR));
+    expect(await source.accessToken()).toBe("second");
+  });
 });

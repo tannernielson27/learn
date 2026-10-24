@@ -280,9 +280,10 @@ describe("HostLobby", () => {
   it("starts the room and then offers the moves a running room can make", async () => {
     const fake = setup();
     await fake.user.click(button("Start"));
-    expect(await screen.findByRole("button", { name: /^Next question$/ })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: /^Show answer$/ })).toBeEnabled();
     expect(fake.ran).toEqual(["start"]);
-    expect(button("Show answer")).toBeEnabled();
+    // Next question waits for the answer to show; the strip still jumps.
+    expect(screen.queryByRole("button", { name: /^Next question$/ })).toBeNull();
     expect(button("Pause")).toBeEnabled();
     expect(screen.queryByRole("button", { name: /^Start$/ })).toBeNull();
   });
@@ -293,7 +294,7 @@ describe("HostLobby", () => {
   });
 
   it("refuses to offer another item once the room is on the last one", () => {
-    setup(state({ status: "running", position: 3 }));
+    setup(state({ status: "running", position: 3, reveal: true }));
     expect(button("Next question")).toBeDisabled();
   });
 
@@ -407,7 +408,7 @@ describe("HostLobby: asking before a move that cannot be taken back", () => {
     await fake.user.click(asked("Keep it open"));
     expect(fake.ran).toEqual([]);
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(button("Next question")).toBeEnabled();
+    expect(button("Show answer")).toBeEnabled();
   });
 
   it("shows one item's answer at once, since the room moves on to the next anyway", async () => {
@@ -473,7 +474,7 @@ describe("HostLobby: how many have answered (#133)", () => {
 
     // "3 of 3 answered" over a question nobody has seen yet is worse than showing nothing.
     fake.answersIn(null);
-    await fake.user.click(button("Next question"));
+    await fake.user.click(button("Go to question 2"));
     await waitFor(() => expect(screen.queryByTestId("answer-count")).toBeNull());
   });
 

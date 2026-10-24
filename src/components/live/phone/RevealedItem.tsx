@@ -6,6 +6,13 @@ import type { SubmitHandler } from "@/lib/ngn/submit";
 const NOT_ANSWERED = "You did not answer this question.";
 
 /**
+ * The scoring rule on a live reveal, said in one line: the class is mid-discussion, and the
+ * practice player's paragraph is too much to read on a phone held up in a lecture hall. Practice
+ * and assignments keep the full explanation.
+ */
+const LIVE_SCORING = { plus_minus: "Each wrong choice takes a point away." } as const;
+
+/**
  * The item once the host has revealed it: the same renderer again, in feedback mode.
  *
  * A phone that answered sees its own answer marked against the key. A phone that did **not**
@@ -62,6 +69,7 @@ export function RevealedItem({
         initialReveal={mine}
         progress={progress}
         submit={refuseSecondAnswer}
+        scoringExplanations={LIVE_SCORING}
         label="Your answer"
       />
     </div>
