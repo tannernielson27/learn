@@ -40,7 +40,8 @@ export function JoinStrip({ url, code }: { url: string; code: string }) {
  * projector (1280x720), where the rem floor would otherwise push the options off the wall.
  *
  * `clamp` is for a crowded question (`crowded`): a step down at every size and three lines at
- * most, so the options keep the room (the whole text is on every phone).
+ * most, so the options keep the room (the whole text is on every phone). On the question stage a
+ * stem longer than that is fitted or scrolled instead (`StageStemFit`), and the clamp lifts.
  */
 export function StageStem({
   stem,
@@ -58,7 +59,7 @@ export function StageStem({
   return (
     <div
       data-stage-stem=""
-      className={`max-w-[80cqi] leading-tight font-semibold tracking-[-0.015em] text-stage-ink ${size} ${clamp ? "line-clamp-3 shrink-0" : ""} [&_p+p]:mt-[1cqb]`}
+      className={`max-w-[80cqi] leading-tight font-semibold tracking-[-0.015em] text-stage-ink ${size} ${clamp ? "line-clamp-3 shrink-0 in-data-[stem-long]:line-clamp-none" : ""} [&_p+p]:mt-[1cqb]`}
     >
       <RichTextView text={stem} />
     </div>
@@ -73,7 +74,8 @@ export function StageStem({
  * The list takes the height left under the stem and its rows share it (`minmax(0, max-content)`):
  * with room to spare each row is as tall as its words, and on a short wall every row shrinks
  * alike and clips inside itself, so no option row is ever pushed off the stage. A crowded
- * question's rows are tighter and their words stop at two lines.
+ * question's rows are tighter and their words stop at two lines. Under a stem too long for its
+ * three lines (`StageStemFit`) the list is only as tall as its rows, and the stem takes the rest.
  */
 export function StageOptions({
   options,
@@ -87,7 +89,7 @@ export function StageOptions({
   return (
     <ol
       aria-label="Choices"
-      className={`grid min-h-0 flex-1 auto-rows-[minmax(0,max-content)] content-start ${columns} gap-[1.5cqb]`}
+      className={`grid min-h-0 flex-1 auto-rows-[minmax(0,max-content)] content-start ${columns} gap-[1.5cqb] in-data-[stem-long]:flex-[0_1_auto]`}
     >
       {options.map((option, index) => (
         <li
