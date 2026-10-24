@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePrefersReducedMotion } from "@/components/question/usePrefersReducedMotion";
 import type { RichText } from "@/lib/ngn/schemas";
 import { StageStem } from "./StageParts";
-import { fitStemSize, scrollAt, scrollPlan, stemFloor } from "./stageScroll";
+import { RETURN_EASING, fitStemSize, scrollPlan, stemFloor } from "./stageScroll";
 
 /**
  * Set on the part of the stage that gives way (StageQuestion) while its stem is too long for the
@@ -28,14 +28,14 @@ const FITS: Fit = { distance: 0, lineHeight: 0 };
  * the room the options leave, then steps down in size until it fits, never under `stemFloor`.
  * Only a stem that still does not fit at the floor moves: it holds at the top, reads down slowly,
  * holds at the bottom and glides back (`scrollAt`), with a soft fade at each edge that has text
- * past it. Transform only. With reduced motion it stays at the top, faded at the bottom, where a
+ * past it. Transform only, and only while it moves. With reduced motion it stays at the top, faded at the bottom, where a
  * line says the whole question is on every phone. That line sits over the stem's own last line,
  * so it takes no room from the options, the clock or the count.
  *
  * Measured in one synchronous pass, before paint, whenever the question, the size of the part
  * that gives way, or the fonts change, so nothing flickers; the pass only writes the stem's font
- * size and a data attribute, neither of which can resize what it watches. Key it by the stem, so
- * each new question starts from the top.
+ * size and a data attribute, neither of which can resize what it watches. Key it by the stem and
+ * `clamp`, so each new question starts from the top and a change of clamp measures again.
  */
 export function StageStemFit({ stem, clamp }: { stem: RichText; clamp: boolean }) {
   const region = useRef<HTMLDivElement>(null);
@@ -60,12 +60,15 @@ export function StageStemFit({ stem, clamp }: { stem: RichText; clamp: boolean }
       // Back to #482's own layout first, so a stem that fits there is drawn exactly as it was.
       text.style.fontSize = "";
       box.removeAttribute(STEM_LONG);
-      const clipped =
-        text.scrollHeight > text.clientHeight + 1 || box.scrollHeight > box.clientHeight + 1;
-      if (!clipped) {
+      // The stem's own text is cut (a crowded question's three lines), or the part overflows,
+      // which the stem or only the options can cause.
+      const cutOff = text.scrollHeight > text.clientHeight + 1;
+      const fitsAsIs = () => {
+        text.style.fontSize = "";
+        box.removeAttribute(STEM_LONG);
         setFit((was) => (was.distance === 0 ? was : FITS));
-        return;
-      }
+      };
+      if (!cutOff && box.scrollHeight <= box.clientHeight + 1) return fitsAsIs();
       box.setAttribute(STEM_LONG, "");
       const natural = parseFloat(getComputedStyle(text).fontSize);
       const root = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
@@ -74,6 +77,9 @@ export function StageStemFit({ stem, clamp }: { stem: RichText; clamp: boolean }
         text.style.fontSize = `${px}px`;
         return text.scrollHeight <= area.clientHeight + 1;
       });
+      // A stem that is whole in #482's layout and fits the long one at its own size is not long:
+      // the options overflow, and they give way row by row as #482 draws them.
+      if (!cutOff && fits && size === natural) return fitsAsIs();
       text.style.fontSize = `${size}px`;
       const distance = fits ? 0 : Math.ceil(text.scrollHeight - area.clientHeight);
       const lineHeight = parseFloat(getComputedStyle(text).lineHeight) || size * 1.25;
@@ -111,7 +117,9 @@ export function StageStemFit({ stem, clamp }: { stem: RichText; clamp: boolean }
   const cut = fit.distance > 0;
   const still = cut && reduced;
 
-  // The loop: hold, read down, hold, glide back. Transform and the fades' opacity only.
+  // The loop: hold, read down, hold, glide back. Each move is one CSS transition on transform
+  // with a timer to the next phase, so nothing runs while the text holds, and the text is on its
+  // own layer (will-change) only while it has a loop. The fades change opacity only.
   useEffect(() => {
     const text = mover.current;
     const shade = (el: HTMLDivElement | null, on: boolean) => {
@@ -119,23 +127,40 @@ export function StageStemFit({ stem, clamp }: { stem: RichText; clamp: boolean }
     };
     if (!text) return;
     const plan = still ? null : scrollPlan(fit.distance, fit.lineHeight);
-    text.style.transform = "";
     shade(top.current, false);
     shade(bottom.current, cut);
     if (plan === null) return;
-    const start = performance.now();
-    let frame = 0;
-    const step = () => {
-      const { offset } = scrollAt(plan, performance.now() - start);
-      text.style.transform = offset === 0 ? "" : `translateY(${-offset}px)`;
-      shade(top.current, offset > 0.5);
-      shade(bottom.current, offset < plan.distance - 0.5);
-      frame = requestAnimationFrame(step);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const move = (offset: number, ms: number, easing: string) => {
+      text.style.transition = `transform ${ms}ms ${easing}`;
+      text.style.transform = `translateY(${-offset}px)`;
     };
-    frame = requestAnimationFrame(step);
+    const holdTop = () => {
+      shade(top.current, false);
+      timer = setTimeout(down, plan.holdTopMs);
+    };
+    const down = () => {
+      move(plan.distance, plan.downMs, "linear");
+      shade(top.current, true);
+      timer = setTimeout(holdBottom, plan.downMs);
+    };
+    const holdBottom = () => {
+      shade(bottom.current, false);
+      timer = setTimeout(back, plan.holdBottomMs);
+    };
+    const back = () => {
+      move(0, plan.returnMs, RETURN_EASING);
+      shade(bottom.current, true);
+      timer = setTimeout(holdTop, plan.returnMs);
+    };
+    text.style.willChange = "transform";
+    text.style.transform = "translateY(0px)";
+    holdTop();
     return () => {
-      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+      text.style.transition = "";
       text.style.transform = "";
+      text.style.willChange = "";
     };
   }, [fit, still, cut]);
 

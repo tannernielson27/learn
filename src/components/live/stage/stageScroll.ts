@@ -105,6 +105,9 @@ export type ScrollPhase = "holdTop" | "down" | "holdBottom" | "return";
 /** Eased in and out, so the glide back starts and lands softly. */
 const easeInOut = (t: number): number => (1 - Math.cos(Math.PI * t)) / 2;
 
+/** `easeInOut` as the CSS timing function the stage's glide back runs on (ease-in-out sine). */
+export const RETURN_EASING = "cubic-bezier(0.37, 0, 0.63, 1)";
+
 /** How far up the text is, `elapsedMs` after the question came up, and which part of the loop. */
 export function scrollAt(
   plan: ScrollPlan,

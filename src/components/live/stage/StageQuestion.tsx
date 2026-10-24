@@ -91,7 +91,7 @@ export function StageQuestion({
           <>
             <h1 className="sr-only">{place.label ?? "Question"}</h1>
             <StageStemFit
-              key={`${place.position}:${question.stem.value}`}
+              key={`${place.position}:${dense}:${question.stem.value}`}
               stem={question.stem}
               clamp={dense}
             />

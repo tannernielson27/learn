@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NO_TIMER } from "@/lib/live/timer";
 import { StageQuestion } from "./StageQuestion";
 import { StageStemFit, STEM_LONG } from "./StageStemFit";
-import { HOLD_BOTTOM_MS, HOLD_TOP_MS, scrollPlan } from "./stageScroll";
+import { HOLD_BOTTOM_MS, HOLD_TOP_MS, RETURN_EASING, scrollPlan } from "./stageScroll";
 
 /**
  * jsdom lays nothing out, so this gives it a model of the stage: the stem's text takes an area
@@ -16,6 +16,8 @@ const BOX = 500;
 const STAGE = 1080;
 /** The stem's height at its natural size; set per test. */
 let natural = 0;
+/** How far the options alone overflow the part in #482's layout; set per test. */
+let optionsOver = 0;
 
 const isStem = (el: Element) => el.hasAttribute("data-stage-stem");
 const isRegion = (el: Element) => el.getAttribute("data-testid") === "stage-stem-region";
@@ -37,7 +39,10 @@ function height(this: HTMLElement, scroll: boolean): number {
     return all;
   }
   if (isRegion(this)) return long(this) ? 300 : content(stemIn(this));
-  if (isBox(this)) return scroll ? Math.max(BOX, content(stemIn(this))) : BOX;
+  if (isBox(this)) {
+    if (!scroll) return BOX;
+    return Math.max(BOX, content(stemIn(this)), long(this) ? BOX : BOX + optionsOver);
+  }
   return 0;
 }
 
@@ -63,11 +68,18 @@ beforeEach(() => {
     return real(el);
   });
   vi.useFakeTimers({
-    toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance", "setTimeout"],
+    toFake: [
+      "requestAnimationFrame",
+      "cancelAnimationFrame",
+      "performance",
+      "setTimeout",
+      "clearTimeout",
+    ],
   });
 });
 
 afterEach(() => {
+  optionsOver = 0;
   vi.useRealTimers();
   vi.restoreAllMocks();
   // @ts-expect-error -- jsdom has none; a test that wants reduced motion adds one.
@@ -98,9 +110,10 @@ function draw(clamp = false) {
 const box = () => screen.getByTestId("box");
 const stem = () => stemIn(box());
 const mover = () => screen.getByTestId("stage-stem-mover");
+/** Where the text is headed: the end of the transition running now, or where it rests. */
 const offset = () => {
   const match = /translateY\((-?[\d.]+)px\)/.exec(mover().style.transform);
-  return match ? -Number(match[1]) : 0;
+  return match ? 0 - Number(match[1]) || 0 : 0;
 };
 const advance = (ms: number) => act(() => vi.advanceTimersByTime(ms));
 
@@ -115,6 +128,18 @@ describe("StageStemFit: a question that fits stays as #482 draws it", () => {
     expect(mover().style.transform).toBe("");
   });
 
+  it("leaves a short stem alone when only the options overflow the part", () => {
+    natural = 80;
+    optionsOver = 400;
+    draw(true);
+    expect(box()).not.toHaveAttribute(STEM_LONG);
+    expect(stem().style.fontSize).toBe("");
+    expect(screen.queryByTestId("stage-stem-fade-bottom")).toBeNull();
+    advance(30_000);
+    expect(mover().style.transform).toBe("");
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("leaves a crowded question's three-line stem alone when it fits in three lines", () => {
     natural = 160;
     draw(true);
@@ -125,6 +150,14 @@ describe("StageStemFit: a question that fits stays as #482 draws it", () => {
 });
 
 describe("StageStemFit: fit first", () => {
+  it("lifts the clamp for a stem past three lines, even when it fits the long layout as it is", () => {
+    natural = 280; // four lines at 64px: cut by the clamp, whole in the 300px a long stem gets
+    draw(true);
+    expect(box()).toHaveAttribute(STEM_LONG);
+    expect(stem().style.fontSize).toBe("64px");
+    expect(screen.queryByTestId("stage-stem-fade-bottom")).toBeNull();
+  });
+
   it("steps a long stem down until it fits the room the options leave, and does not move it", () => {
     natural = 400; // fits at about 55px in the 300px a long stem gets
     draw(true);
@@ -146,33 +179,51 @@ describe("StageStemFit: scroll only at the floor", () => {
     natural = 2000;
   });
 
-  it("stops at the floor and holds at the top for 6 s, the bottom faded", () => {
+  const transition = () => mover().style.transition;
+
+  it("stops at the floor and holds at the top for 6 s, the bottom faded, with no motion", () => {
     draw(true);
     expect(stem().style.fontSize).toBe("36px");
+    expect(mover().style.willChange).toBe("transform");
     advance(HOLD_TOP_MS - 50);
     expect(offset()).toBe(0);
+    expect(transition()).toBe("");
     expect(screen.getByTestId("stage-stem-fade-bottom").style.opacity).toBe("1");
     expect(screen.getByTestId("stage-stem-fade-top").style.opacity).toBe("0");
   });
 
-  it("reads down at a steady pace, with both edges faded on the way", () => {
+  it("holds on one timer, not a frame loop", () => {
+    const frames = vi.spyOn(window, "requestAnimationFrame");
     draw(true);
-    advance(HOLD_TOP_MS + 2_000);
-    expect(offset()).toBeGreaterThan(plan().speed * 2 - 2);
-    expect(offset()).toBeLessThan(plan().speed * 2 + 2);
+    advance(HOLD_TOP_MS - 50);
+    expect(frames).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(1);
+  });
+
+  it("reads down in one linear transition at the steady pace, both edges faded", () => {
+    draw(true);
+    advance(HOLD_TOP_MS + 10);
+    expect(offset()).toBe(333);
+    expect(transition()).toBe(`transform ${plan().downMs}ms linear`);
     expect(screen.getByTestId("stage-stem-fade-top").style.opacity).toBe("1");
     expect(screen.getByTestId("stage-stem-fade-bottom").style.opacity).toBe("1");
   });
 
-  it("holds at the bottom with nothing hidden below, then glides back and repeats", () => {
+  it("holds at the bottom with nothing hidden below, then glides back eased and repeats", () => {
     draw(true);
     advance(HOLD_TOP_MS + plan().downMs + HOLD_BOTTOM_MS / 2);
     expect(offset()).toBe(333);
     expect(screen.getByTestId("stage-stem-fade-bottom").style.opacity).toBe("0");
-    advance(HOLD_BOTTOM_MS / 2 + plan().returnMs + 100);
+    advance(HOLD_BOTTOM_MS / 2 + 10);
     expect(offset()).toBe(0);
-    advance(HOLD_TOP_MS + 1_000);
-    expect(offset()).toBeGreaterThan(0);
+    expect(transition()).toBe(`transform ${plan().returnMs}ms ${RETURN_EASING}`);
+    expect(screen.getByTestId("stage-stem-fade-bottom").style.opacity).toBe("1");
+    advance(plan().returnMs);
+    expect(screen.getByTestId("stage-stem-fade-top").style.opacity).toBe("0");
+    advance(HOLD_TOP_MS - 50);
+    expect(offset()).toBe(0);
+    advance(100);
+    expect(offset()).toBe(333);
   });
 
   it("moves by transform only and stops when the question leaves", () => {
@@ -180,8 +231,11 @@ describe("StageStemFit: scroll only at the floor", () => {
     advance(HOLD_TOP_MS + 1_000);
     expect(mover().style.transform).toMatch(/^translateY\(/);
     expect(mover().getAttribute("style")).not.toMatch(/top|margin|height/);
+    const moved = mover();
     unmount();
     expect(vi.getTimerCount()).toBe(0);
+    expect(moved.style.willChange).toBe("");
+    expect(moved.style.transform).toBe("");
   });
 
   it("does not move under reduced motion: clipped at the floor, faded, and says so", () => {
@@ -190,6 +244,7 @@ describe("StageStemFit: scroll only at the floor", () => {
     expect(stem().style.fontSize).toBe("36px");
     advance(60_000);
     expect(mover().style.transform).toBe("");
+    expect(mover().style.willChange).toBe("");
     expect(screen.getByText("Full question on your phone.")).toBeInTheDocument();
     expect(screen.getByTestId("stage-stem-fade-bottom").style.opacity).toBe("1");
     expect(vi.getTimerCount()).toBe(0);
@@ -202,13 +257,18 @@ describe("StageStemFit: scroll only at the floor", () => {
 });
 
 describe("StageQuestion: each new question starts from the top", () => {
-  const props = (position: number, value: string) => ({
+  const props = (
+    position: number,
+    value: string,
+    responded = 4,
+    labels = ["Raise the head of the bed", "Give oxygen"],
+  ) => ({
     place: { position, itemCount: 20, label: `Question ${position} of 20`, caseStep: null },
-    answers: { responded: 4, present: 70 },
+    answers: { responded, present: 70 },
     timer: NO_TIMER,
     question: {
       stem: { kind: "markdown" as const, value },
-      options: ["Raise the head of the bed", "Give oxygen"].map((label, index) => ({
+      options: labels.map((label, index) => ({
         letter: String.fromCharCode(65 + index),
         label,
       })),
@@ -239,5 +299,48 @@ describe("StageQuestion: each new question starts from the top", () => {
     expect(offset()).toBe(0);
     advance(1_000);
     expect(offset()).toBeGreaterThan(0);
+  });
+
+  it("keeps the loop going while the answer count ticks", () => {
+    natural = 2000;
+    const stemText = "A long stem. ".repeat(40);
+    const { rerender } = render(
+      <div data-stage="">
+        <StageQuestion {...props(3, stemText, 0)} />
+      </div>,
+    );
+    const moving = mover();
+    advance(HOLD_TOP_MS + 500);
+    const headed = offset();
+    expect(headed).toBeGreaterThan(0);
+    for (let count = 1; count <= 20; count += 1) {
+      rerender(
+        <div data-stage="">
+          <StageQuestion {...props(3, stemText, count)} />
+        </div>,
+      );
+      advance(100);
+    }
+    expect(mover()).toBe(moving);
+    expect(offset()).toBe(headed);
+    expect(vi.getTimerCount()).toBe(1);
+  });
+
+  it("measures again when the same stem's clamp changes", () => {
+    natural = 280; // past three lines when clamped, whole when not
+    const stemText = "A four-line stem.";
+    const { rerender } = render(
+      <div data-stage="">
+        <StageQuestion {...props(3, stemText, 4, ["A", "B"])} />
+      </div>,
+    );
+    const part = () => mover().closest("[data-stage] div.flex-1")!;
+    expect(part()).not.toHaveAttribute(STEM_LONG);
+    rerender(
+      <div data-stage="">
+        <StageQuestion {...props(3, stemText, 4, ["A", "B", "C", "D", "E"])} />
+      </div>,
+    );
+    expect(part()).toHaveAttribute(STEM_LONG);
   });
 });
