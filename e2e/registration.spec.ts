@@ -145,8 +145,8 @@ test("a stranger becomes a teacher, and another stranger becomes their student, 
   await expectNoAxeViolations(student);
   await shoot(student, testInfo, "4-student-home");
 
-  // 5. The teacher's roster shows the student by name.
-  await page.reload();
+  // 5. The teacher's roster, on the class page's Students tab, shows the student by name.
+  await page.goto(`${classPath}?tab=students`);
   await expect(page.getByRole("list", { name: "Roster", exact: true })).toContainText(studentName);
   await shoot(page, testInfo, "5-roster");
 
@@ -168,7 +168,7 @@ test("a stranger becomes a teacher, and another stranger becomes their student, 
   //    pages do carry the names being looked for.
   expect(await bytesOf(page.context(), "/author")).toContain(bankName);
   expect(await bytesOf(page.context(), "/author/classes")).toContain(className);
-  expect(await bytesOf(page.context(), classPath)).toContain(studentName);
+  expect(await bytesOf(page.context(), `${classPath}?tab=students`)).toContain(studentName);
 
   const desk = await anotherBrowser(browser, testInfo);
   const other = await desk.newPage();
@@ -180,7 +180,14 @@ test("a stranger becomes a teacher, and another stranger becomes their student, 
   await expect(
     other.getByRole("heading", { level: 2, name: "No quizzes yet", exact: true }),
   ).toBeVisible();
-  for (const path of ["/author", "/author/classes", bankPath, classPath, itemPath ?? ""]) {
+  for (const path of [
+    "/author",
+    "/author/classes",
+    bankPath,
+    classPath,
+    `${classPath}?tab=students`,
+    itemPath ?? "",
+  ]) {
     const bytes = await bytesAnyStatus(desk, path);
     for (const marker of [bankName, className, studentName, teacherName]) {
       expect(bytes, `${path} must not carry "${marker}"`).not.toContain(marker);
@@ -217,7 +224,7 @@ test("a stranger becomes a teacher, and another stranger becomes their student, 
   await shoot(student, testInfo, "6-two-workspaces");
 
   // Each teacher has the student on their own roster and still nothing of the other's workspace.
-  await other.reload();
+  await other.goto(`${otherClassPath}?tab=students`);
   await expect(other.getByRole("list", { name: "Roster", exact: true })).toContainText(studentName);
   for (const path of ["/author", "/author/classes", otherClassPath, bankPath, classPath]) {
     const bytes = await bytesAnyStatus(desk, path);
