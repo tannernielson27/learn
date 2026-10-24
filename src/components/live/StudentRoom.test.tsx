@@ -484,6 +484,21 @@ describe("StudentRoom: the reveal", () => {
     expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
   });
 
+  it("says the +/- rule in one short line, not the practice player's paragraph", async () => {
+    const room = setup();
+    room.push({
+      state: running({ reveal: true }),
+      item: KEYLESS,
+      answered: answeredWith(),
+      revealed: revealFor({ points: 2, maxPoints: 3, model: "plus_minus", breakdown: [] }),
+    });
+    await renderersLoaded();
+
+    const score = screen.getByRole("complementary", { name: "Score" });
+    expect(score).toHaveTextContent("+/- scoring. Each wrong choice takes a point away.");
+    expect(score).not.toHaveTextContent("Each correct selection earns one point");
+  });
+
   it("shows a phone that did not answer the key and the rationale, read-only, and says so", async () => {
     const room = setup();
     room.push({
