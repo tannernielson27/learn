@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   CLASS_TAB_LABELS,
+  CLASS_HEADER_READS,
+  CLASS_TAB_READS,
   CLASS_TABS,
   DEFAULT_CLASS_TAB,
   classTabPath,
+  classTabReads,
   parseClassTab,
 } from "./classTabs";
 
@@ -56,5 +59,28 @@ describe("parseClassTab", () => {
     42,
   ])("falls back to the overview for %j", (value) => {
     expect(parseClassTab(value)).toBe("overview");
+  });
+});
+
+describe("classTabReads", () => {
+  it("reads the roster on every tab, for the header's student count", () => {
+    expect(CLASS_HEADER_READS).toEqual(["roster"]);
+    for (const tab of CLASS_TABS) expect(classTabReads(tab).has("roster")).toBe(true);
+  });
+
+  it("reads only what each tab shows", () => {
+    const reads = (tab: (typeof CLASS_TABS)[number]) => [...classTabReads(tab)].sort();
+    expect(reads("overview")).toEqual(["assignments", "roster", "shares"]);
+    expect(reads("students")).toEqual(["roster"]);
+    expect(reads("assignments")).toEqual(["assignments", "banks", "roster", "shares"]);
+    expect(reads("settings")).toEqual(["roster"]);
+  });
+
+  it("reads the banks, the share form's choices, on Assignments only", () => {
+    expect(CLASS_TABS.filter((tab) => classTabReads(tab).has("banks"))).toEqual(["assignments"]);
+  });
+
+  it("names every tab, so a new tab says what it reads", () => {
+    expect(Object.keys(CLASS_TAB_READS).sort()).toEqual([...CLASS_TABS].sort());
   });
 });

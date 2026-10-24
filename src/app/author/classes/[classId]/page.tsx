@@ -8,7 +8,7 @@ import { listBanks } from "@/lib/authoring/banks";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { inviteUrl } from "@/lib/classes/classes";
-import { classTabPath, parseClassTab } from "@/lib/classes/classTabs";
+import { classTabPath, classTabReads, parseClassTab } from "@/lib/classes/classTabs";
 import { supportedTimeZones, timeZoneChoices } from "@/lib/classes/timeZone";
 import { canonicalSiteOrigin } from "@/lib/http/siteOrigin";
 import { listClassAssignments } from "@/lib/supabase/assignments";
@@ -21,8 +21,8 @@ export const metadata: Metadata = { title: "Class" };
 /**
  * One class: its name, its invite link and QR code, its roster (#205), its time zone (#242) and its
  * class code (#356), drawn by `ClassPageView` as a header and tabs. The open tab is `?tab=`
- * (`classTabs.ts`). Every tab's data is read on every request, as it was when the page was one
- * column, so switching tabs changes what is drawn and never what is read.
+ * (`classTabs.ts`). Only the open tab is drawn, so only what it and the header need is read
+ * (`classTabReads`); a list left unread is passed as null, which only an unread tab would show.
  */
 export default async function ClassPage({
   params,
@@ -35,12 +35,13 @@ export default async function ClassPage({
 
   const detail = await readClass(supabase, classId);
   if (!detail) notFound();
+  const reads = classTabReads(tab);
   const [roster, assignments, shares, banks] = await Promise.all([
-    classRoster(supabase, classId),
-    listClassAssignments(supabase, classId),
-    listClassShares(supabase, classId),
+    reads.has("roster") ? classRoster(supabase, classId) : null,
+    reads.has("assignments") ? listClassAssignments(supabase, classId) : null,
+    reads.has("shares") ? listClassShares(supabase, classId) : null,
     // The share form's choices; a failed read hides the form rather than failing the page.
-    listBanks(supabase).catch(() => null),
+    reads.has("banks") ? listBanks(supabase).catch(() => null) : null,
   ]);
   const url = inviteUrl(canonicalSiteOrigin(await headers()), detail.inviteToken);
 

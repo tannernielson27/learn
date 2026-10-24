@@ -8,7 +8,7 @@ import {
   CLASS_PAGE_FIXTURE_ROSTER,
   CLASS_PAGE_FIXTURE_SHARES,
 } from "@/lib/classes/classPageFixture";
-import { CLASS_TABS, type ClassTab } from "@/lib/classes/classTabs";
+import { CLASS_TABS, classTabReads, type ClassTab } from "@/lib/classes/classTabs";
 import { findRetiredTerms } from "@/lib/copy/retiredTerms";
 import { ClassPageView, type ClassPageViewProps } from "./ClassPageView";
 
@@ -45,6 +45,23 @@ function renderTab(tab: ClassTab, overrides: Partial<ClassPageViewProps> = {}) {
 const h2s = () => screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
 
 describe("ClassPageView", () => {
+  it.each(CLASS_TABS)(
+    "on %s, needs nothing the page leaves unread for it (classTabReads)",
+    (tab) => {
+      const reads = classTabReads(tab);
+      // The page passes null for a list it did not read, the same null as a failed read.
+      renderTab(tab, {
+        roster: reads.has("roster") ? CLASS_PAGE_FIXTURE_ROSTER : null,
+        assignments: reads.has("assignments") ? CLASS_PAGE_FIXTURE_ASSIGNMENTS : null,
+        shares: reads.has("shares") ? CLASS_PAGE_FIXTURE_SHARES : null,
+        banks: reads.has("banks") ? CLASS_PAGE_FIXTURE_BANKS : null,
+      });
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.queryByText(/could not be loaded/i)).not.toBeInTheDocument();
+      expect(screen.getByText("4 students")).toBeVisible();
+    },
+  );
+
   it.each(CLASS_TABS)(
     "on %s, keeps the header: the name, the count, the code and the link",
     (tab) => {
