@@ -2,8 +2,11 @@ import { Check } from "lucide-react";
 import { Icon } from "./Icon";
 
 export interface ResultsChartRow {
-  /** "A", "B", ... in the order every screen shows the options (PLAN §5.5). */
-  letter: string;
+  /**
+   * "A", "B", ... in the order every screen shows the options (PLAN §5.5). Left out for select
+   * all that apply, whose options have no letters on any screen.
+   */
+  letter?: string;
   label: string;
   count: number;
   /** Marked only once the answer is showing; a chart before the reveal has no key row. */
@@ -64,24 +67,26 @@ export function ResultsChart({
   const look = SIZES[size];
   return (
     <ul aria-label={label} className={`grid ${look.gap} ${className}`.trim()}>
-      {rows.map((row) => {
+      {rows.map((row, index) => {
         const percent = sharePercent(row.count, total);
         const key = row.isKey === true;
         return (
           <li
-            key={row.letter}
+            key={row.letter ?? index}
             data-key={key ? "" : undefined}
-            className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4"
+            className={`grid ${row.letter === undefined ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-[auto_minmax(0,1fr)_auto]"} items-center gap-x-4`}
           >
-            <span
-              aria-hidden="true"
-              className={`grid place-items-center rounded-full font-mono font-bold ${look.letter} ${key ? "border-chart-key bg-chart-key text-accent-contrast" : "border-field-border"}`}
-            >
-              {row.letter}
-            </span>
+            {row.letter === undefined ? null : (
+              <span
+                aria-hidden="true"
+                className={`grid place-items-center rounded-full font-mono font-bold ${look.letter} ${key ? "border-chart-key bg-chart-key text-accent-contrast" : "border-field-border"}`}
+              >
+                {row.letter}
+              </span>
+            )}
             <div className="flex min-w-0 flex-col gap-1.5">
               <span className={`${look.label} flex flex-wrap items-baseline gap-x-3`}>
-                <span className="sr-only">{row.letter}. </span>
+                {row.letter === undefined ? null : <span className="sr-only">{row.letter}. </span>}
                 {row.label}
                 {key ? (
                   <span

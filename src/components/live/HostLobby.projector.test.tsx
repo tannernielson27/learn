@@ -20,6 +20,9 @@ const MC = itemSchema.parse(FIXTURES.multiple_choice.canonical) as Item & {
   type: "multiple_choice";
 };
 const MATRIX = itemSchema.parse(FIXTURES.matrix_multiple_choice.canonical) as Item;
+const SATA = itemSchema.parse(FIXTURES.multiple_response.canonical) as Item & {
+  type: "multiple_response";
+};
 const RATIONALE = MC.rationale.general?.value ?? "";
 
 function setup(view: "control" | "projector", items: readonly Item[] = [MC, MATRIX]) {
@@ -112,6 +115,15 @@ describe("the projector view: a question", () => {
     );
     // No tallies by option while answers are coming in.
     expect(within(stage()).queryByText(/·\s*\d+%/)).toBeNull();
+  });
+
+  it("shows a select-all question's options without letters, as its phones show them", async () => {
+    const fake = setup("projector", [SATA]);
+    await (await fake.control()).start();
+    const choices = await within(stage()).findByRole("list", { name: "Choices" });
+    const rows = within(choices).getAllByRole("listitem");
+    expect(rows).toHaveLength(SATA.content.options.length);
+    expect(rows[0]?.textContent).toBe(SATA.content.options[0]?.label);
   });
 
   it("points a question it cannot letter at the phones", async () => {

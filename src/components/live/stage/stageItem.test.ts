@@ -20,8 +20,13 @@ describe("stageQuestion", () => {
     expect(question?.options?.[0]?.label).toBe("Auscultate the lungs and assess oxygen saturation");
   });
 
-  it("letters a select-all item the same way", () => {
-    expect(stageQuestion(sata)?.options?.[0]?.letter).toBe("A");
+  it("draws a select-all item's options without letters, as its phones do (NCLEX layout)", () => {
+    const options = stageQuestion(sata)?.options;
+    expect(options?.length).toBeGreaterThan(0);
+    expect(options?.map((option) => option.letter)).toEqual(options?.map(() => null));
+    expect(options?.[0]?.label).toBe(
+      sata.type === "multiple_response" ? sata.content.options[0]?.label : "",
+    );
   });
 
   it("draws no options for a layout the stage cannot letter, only the question text", () => {
@@ -73,6 +78,16 @@ describe("chartRows", () => {
   it("marks the key once the answer is showing", () => {
     const rows = chartRows(distribution, true);
     expect(rows?.filter((row) => row.isKey).map((row) => row.letter)).toEqual(["A"]);
+  });
+
+  it("leaves a select-all result's rows unlettered, as its phones and its stage are", () => {
+    const rows = chartRows(
+      distributionFor(sata, [{ type: "multiple_response", optionIds: ["opt_a"] }]),
+      true,
+    );
+    expect(rows?.length).toBeGreaterThan(0);
+    expect(rows?.every((row) => row.letter === undefined)).toBe(true);
+    expect(rows?.[0]?.count).toBe(1);
   });
 
   it("is nothing for a kind of result that is not one bar per option", () => {

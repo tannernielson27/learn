@@ -50,25 +50,30 @@ export function StageStem({ stem, small = false }: { stem: RichText; small?: boo
 }
 
 /**
- * The options, lettered as every phone letters them, with no mark of any kind: this list is
- * drawn while answers are still coming in. Two columns past four options, so a long set fits.
+ * The options as every phone draws them, with no mark of any kind: this list is drawn while
+ * answers are still coming in. Lettered for multiple choice; a select-all question's rows have no
+ * letter, as on its phones. Two columns past four options, so a long set fits.
  */
 export function StageOptions({ options }: { options: readonly StageOption[] }) {
   const columns = options.length > 4 ? "grid-cols-2" : "grid-cols-1";
   return (
     <ol aria-label="Choices" className={`grid ${columns} gap-[1.5cqb]`}>
-      {options.map((option) => (
+      {options.map((option, index) => (
         <li
-          key={option.letter}
+          key={option.letter ?? index}
           className="flex items-center gap-[2.5cqb] rounded-md border-(length:--stage-stroke) border-stage-line px-[3cqb] py-[1.3cqb] text-stage-option leading-tight font-medium"
         >
-          <span
-            aria-hidden="true"
-            className="grid size-[6.5cqb] shrink-0 place-items-center rounded-full border-(length:--stage-stroke) border-stage-ink font-mono font-bold"
-          >
-            {option.letter}
-          </span>
-          <span className="sr-only">{option.letter}. </span>
+          {option.letter === null ? null : (
+            <>
+              <span
+                aria-hidden="true"
+                className="grid size-[6.5cqb] shrink-0 place-items-center rounded-full border-(length:--stage-stroke) border-stage-ink font-mono font-bold"
+              >
+                {option.letter}
+              </span>
+              <span className="sr-only">{option.letter}. </span>
+            </>
+          )}
           <span className="min-w-0">{option.label}</span>
         </li>
       ))}

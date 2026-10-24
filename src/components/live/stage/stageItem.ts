@@ -8,7 +8,8 @@
  * that opens only once the answer is showing, and the chart marks the key only then too.
  *
  * Letters follow the item's order, as `MultipleChoiceItem` letters them on a phone, so "B" on
- * the wall is "B" in every hand (PLAN §5.5).
+ * the wall is "B" in every hand (PLAN §5.5). Only multiple choice has letters: a select-all
+ * question's phones draw checkboxes with none (its NCLEX layout), so the wall draws none either.
  *
  * Pure TypeScript: no React, Next or Supabase.
  */
@@ -17,13 +18,14 @@ import type { Distribution } from "@/lib/live/results";
 import type { Item, RichText } from "@/lib/ngn/schemas";
 
 export interface StageOption {
-  letter: string;
+  /** "A", "B", ... for multiple choice; null for select all that apply, whose phones letter none. */
+  letter: string | null;
   label: string;
 }
 
 export interface StageQuestion {
   stem: RichText;
-  /** One row per option, lettered; null for a layout that lives on the phones (matrix, cloze...). */
+  /** One row per option; null for a layout that lives on the phones (matrix, cloze...). */
   options: StageOption[] | null;
 }
 
@@ -36,7 +38,7 @@ export function stageQuestion(item: Item | null): StageQuestion | null {
   const options =
     item.type === "multiple_choice" || item.type === "multiple_response"
       ? item.content.options.map((option, index) => ({
-          letter: optionLetter(index),
+          letter: item.type === "multiple_choice" ? optionLetter(index) : null,
           label: option.label,
         }))
       : null;
@@ -51,15 +53,17 @@ export function stageRationale(item: Item | null, revealed: boolean): RichText |
 
 /**
  * The results chart's rows for a one-bar-per-option result, the key marked only when `revealed`.
- * Null for every other kind, which the console draws with its own result views.
+ * Lettered for multiple choice only, as the question is (`stageQuestion`). Null for every other
+ * kind, which the console draws with its own result views.
  */
 export function chartRows(
   distribution: Distribution | null,
   revealed: boolean,
 ): ResultsChartRow[] | null {
   if (distribution === null || distribution.kind !== "options") return null;
+  const lettered = distribution.itemType === "multiple_choice";
   return distribution.options.map((option, index) => ({
-    letter: optionLetter(index),
+    ...(lettered ? { letter: optionLetter(index) } : {}),
     label: option.label,
     count: option.count,
     isKey: revealed && option.correct,
