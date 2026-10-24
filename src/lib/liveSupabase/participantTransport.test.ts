@@ -467,6 +467,21 @@ describe("a move made while the subscription was coming up (#193)", () => {
     expect(live.recorded.states).toHaveLength(shown);
   });
 
+  it("asks again, later, when the read the subscription coming up asks for does not get through", async () => {
+    // The entry's read gets through; the confirm's read and its three retries are swallowed.
+    const live = phone([LOBBY, RUNNING], undefined, {
+      failing: (asked) => (asked >= 2 && asked <= 5 ? "dropped" : null),
+      pause: async () => {},
+      random: () => 0.5,
+    });
+    await live.enter();
+    live.socket.confirm();
+    await vi.waitFor(() =>
+      expect(live.recorded.views.at(-1)?.state).toMatchObject({ position: 1 }),
+    );
+    expect(live.asks()).toBe(6);
+  });
+
   it("asks nothing for a system message that is not the subscription coming up", async () => {
     const live = phone([LOBBY, RUNNING]);
     await live.enter();

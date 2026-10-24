@@ -751,7 +751,9 @@ export function createSupabaseParticipant(
      */
     opened.on("system", {}, (payload: unknown) => {
       if (gone || !postgresChangesReady(payload)) return;
-      void refresh(true).catch(() => {});
+      // Asked again if it does not get through, as on `SUBSCRIBED`: a move made in the gap is
+      // delivered to nobody, and this read is the only one looking for it.
+      void refresh(true).catch(askAgainIfUnreachable);
     });
     /*
      * No presence listener, on purpose (#426). Being seen by the host needs only `track` below.
