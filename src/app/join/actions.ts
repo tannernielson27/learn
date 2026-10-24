@@ -12,7 +12,7 @@ import {
   parseParticipantToken,
 } from "@/lib/live/participantToken";
 import { playPath } from "@/lib/live/routes";
-import { joinSession, resumeParticipant } from "@/lib/supabase/participants";
+import { checkParticipant, joinSession } from "@/lib/supabase/participants";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { resolveSessionCode } from "@/lib/supabase/sessions";
 
@@ -67,8 +67,14 @@ export async function joinLiveSession(
   // back as the participant this browser already is rather than leaving a second name in the
   // roster. A token for a different session is ignored, not resumed — joining a new room replaces
   // the old one.
-  const returning =
-    held && held.sessionId === resolved.sessionId ? await resumeParticipant(service, held) : null;
+  const checked =
+    held && held.sessionId === resolved.sessionId ? await checkParticipant(service, held) : null;
+  // A database that did not answer has not said this browser is nobody. Joining again would leave
+  // a second name for one student in the room, and the first one's answers behind it.
+  if (checked !== null && !checked.ok && checked.reason === "unavailable") {
+    return { status: "error", error: UNAVAILABLE };
+  }
+  const returning = checked !== null && checked.ok;
 
   let token = held;
   if (!returning) {

@@ -63,12 +63,27 @@ describe("the private session channel (#149)", () => {
     // The page is the one that names the room, and a tampered page could name any room. What it
     // cannot do is choose the token: the channel route mints from the cookie, and the cookie says A.
     const live = twoRooms();
+    // B is told apart from A by everything a view carries: running, on its one item.
+    const b = live.stack.sessions.find((session) => session.id === SESSION_B);
+    if (!b) throw new Error("no session B");
+    Object.assign(b, { status: "running", current_position: 1, item_set: b.item_set.slice(0, 1) });
     const adaId = await joinedAda(live);
     const phone = live.resuming(adaId);
+    const statuses: string[] = [];
+    phone.onConnection((status) => statuses.push(status));
 
-    await expect(phone.resume({ ...live.identityOf(adaId), sessionId: SESSION_B })).rejects.toThrow(
-      /CHANNEL_ERROR/,
-    );
+    // The room is read over HTTP without waiting for the socket, and that read is the cookie's
+    // too: what comes back is session A's room, not B's. The channel for B is refused.
+    const view = await phone.resume({ ...live.identityOf(adaId), sessionId: SESSION_B });
+    expect(view.state).toMatchObject({
+      status: "lobby",
+      position: null,
+      itemCount: CONFORMANCE_ITEMS.length,
+    });
+    expect(view.item).toBeNull();
+    await live.settle();
+    expect(statuses).toContain("reconnecting");
+    await phone.leave();
   });
 
   it("tells a removed participant's screen it is finished, through the real route, rather than reconnecting", async () => {
