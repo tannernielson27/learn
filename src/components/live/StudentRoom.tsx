@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { AnswerSentLine } from "@/components/live/AnswerSentLine";
 import { LIVE_BUSY_LABEL, liveSubmitFailure } from "@/components/live/liveSubmit";
 import { PhoneHeader } from "@/components/live/phone/PhoneHeader";
@@ -150,7 +151,13 @@ function Body({
   history: ReturnType<typeof useStudentRoom>["history"]["entries"];
 }) {
   const { item, answered, state } = room;
-  const closed = useAnswersClosed(state.timer, room.serverNow);
+  /**
+   * Whether this phone has heard the room once: the transport measures the session's clock from
+   * the view that sets it `"live"`, and until then `serverNow` is this phone's own (#482 review).
+   */
+  const [clockKnown, setClockKnown] = useState(false);
+  if (!clockKnown && room.connection === "live") setClockKnown(true);
+  const closed = useAnswersClosed(state.timer, room.serverNow, clockKnown);
 
   switch (settled.phase) {
     case "waiting":
