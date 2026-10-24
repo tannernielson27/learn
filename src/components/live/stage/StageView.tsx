@@ -12,13 +12,15 @@ import type { CaseStepPlace, StageView as StageViewData } from "@/lib/live/views
 import type { EhrRecord } from "@/lib/ngn/schemas";
 import { casePlace } from "./casePlace";
 import { answerRate } from "./endSummary";
-import { StageEnded } from "./StageEnded";
+import { StageEndedLive } from "./StageEndedLive";
 import { StageLobby } from "./StageLobby";
 import { StageQuestion } from "./StageQuestion";
 import { StageReveal } from "./StageReveal";
 import { chartRows, stageQuestion, stageRationale } from "./stageItem";
 
 export interface StageViewProps {
+  /** Whose top 5 the end screen asks for; absent, the end shows its summary only. */
+  sessionId?: string;
   title: string;
   code: string;
   /** "learn-nclex.app/join". */
@@ -86,6 +88,7 @@ function taken(target: EventTarget | null): boolean {
  * A screen that cannot hear the room says so in the other corner, so a stale wall is plain.
  */
 export function StageView({
+  sessionId,
   title,
   code,
   url,
@@ -150,6 +153,7 @@ export function StageView({
   return (
     <StageShell>
       <Screen
+        sessionId={sessionId}
         title={title}
         code={code}
         url={url}
@@ -181,6 +185,7 @@ export function StageView({
 }
 
 function Screen({
+  sessionId,
   title,
   code,
   url,
@@ -198,7 +203,8 @@ function Screen({
       return <StageLobby title={title} code={code} url={url} join={join} names={view.names} />;
     case "ended":
       return (
-        <StageEnded
+        <StageEndedLive
+          sessionId={sessionId}
           title={title}
           summary={view.summary}
           rate={answerRate(room.heard, view.summary.questionsRun, view.summary.joined)}

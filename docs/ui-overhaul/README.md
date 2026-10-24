@@ -8,10 +8,10 @@ Owner-approved on 2026-10-22 (Checkpoint 2). Build the screens **as shown** in `
 
 ## Owner decisions that bind every builder
 
-1. Clinical, responsive. No podium, confetti, sound, streaks or leaderboards. Motion: transform/opacity only, 120 to 320 ms, nothing loops, reduced motion = 80 ms fade.
+1. Clinical, responsive. No confetti, sound, streaks or leaderboards. The one podium is the top 5 on the projector when a live session ends (owner request, 2026-10-24; `docs/04-DESIGN-DIRECTION.md` §5). Motion: transform/opacity only, 120 to 320 ms, nothing loops, reduced motion = 80 ms fade.
 2. Every question type keeps its NCLEX layout. No colour+shape answer tiles.
 3. Live session: one route, two views. A **control view** for the teacher (names, controls, private live counts) and a **projector view** (stage) that shows no controls, opens in a second window or full screen on the same one. The stage is always light.
-4. Names show on the stage in the lobby only; counts after Start.
+4. Names show on the stage in the lobby only; counts after Start. Exception (2026-10-24): the top 5 names, with their points, on the end-of-session podium.
 5. No "Close answers" step: the reveal goes collecting → answer showing, as today.
 6. "Review what I missed" and "Practise the N I missed" on practice and assignment results. The second needs a migration: build it, but the hosted push waits for the owner.
 7. The last 10 seconds of a timer: bar turns `--flag` amber and "10 seconds left" appears as text. No pulse.
