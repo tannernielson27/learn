@@ -13,6 +13,7 @@ import {
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { classPath } from "@/lib/classes/classes";
+import { classTabPath } from "@/lib/classes/classTabs";
 import {
   createAssignment,
   deleteAssignment as removeAssignment,
@@ -58,7 +59,7 @@ function editRefusal(reason: AssignmentWriteFailure, closeOnly: boolean): string
   }
 }
 
-/** Assigns a bank or a case study to a class, then opens the class, where it is listed. */
+/** Assigns a bank or a case study to a class, then opens the class's Assignments tab. */
 export async function assignSource(
   source: AssignmentSource,
   _previous: AssignmentFormState,
@@ -73,7 +74,7 @@ export async function assignSource(
   if (!written.ok) return { status: "error", error: createRefusal(source, written.reason) };
 
   revalidatePath(classPath(parsed.value.classId));
-  redirect(classPath(parsed.value.classId));
+  redirect(classTabPath(parsed.value.classId, "assignments"));
 }
 
 /**
