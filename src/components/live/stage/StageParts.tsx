@@ -83,7 +83,6 @@ export function StageOptions({
   /** A crowded question (`crowded`): tighter rows, each option's words to two lines. */
   compact?: boolean;
 }) {
-  const long = compact;
   const columns = options.length > 4 ? "grid-cols-2" : "grid-cols-1";
   return (
     <ol
@@ -93,7 +92,7 @@ export function StageOptions({
       {options.map((option, index) => (
         <li
           key={option.letter ?? index}
-          className={`flex min-h-0 items-center gap-[2.5cqb] overflow-hidden rounded-md border-(length:--stage-stroke) border-stage-line px-[3cqb] text-stage-option leading-tight font-medium ${long ? "py-[0.8cqb]" : "py-[1.3cqb]"}`}
+          className={`flex min-h-0 items-center gap-[2.5cqb] overflow-hidden rounded-md border-(length:--stage-stroke) border-stage-line px-[3cqb] text-stage-option leading-tight font-medium ${compact ? "py-[0.8cqb]" : "py-[1.3cqb]"}`}
         >
           {option.letter === null ? null : (
             <>
@@ -107,7 +106,7 @@ export function StageOptions({
             </>
           )}
           {/* A crowded question's words stop at two lines on the wall; each phone has them whole. */}
-          <span className={`min-w-0 ${long ? "line-clamp-2" : ""}`}>{option.label}</span>
+          <span className={`min-w-0 ${compact ? "line-clamp-2" : ""}`}>{option.label}</span>
         </li>
       ))}
     </ol>

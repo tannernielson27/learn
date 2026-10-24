@@ -51,6 +51,14 @@ function recordFor(
   return run?.record ? { record: run.record, step: step.step } : null;
 }
 
+/** A key pressed on something that takes it already, such as a focused button or a dialog. */
+function taken(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    target.closest("button, a[href], input, select, textarea, [contenteditable], dialog") !== null
+  );
+}
+
 /**
  * The projector view (owner decision 3): what the room sees, with no controls on it. Always
  * light (`StageShell`), in the stage type ladder, and fed by the same hook and the same tallies
@@ -63,19 +71,11 @@ function recordFor(
  * Escape goes back to the control view, for a teacher presenting on the one screen they also
  * run the session from; the small button in the corner does the same for a pointer. On that one
  * screen Space and the right arrow run the control bar's primary move (Start, Show answer, Next
- * question, End) through the bar's own path, so ending still asks first; End itself is never a
- * key. A small line in the corner says which move a key runs.
+ * question, End live session) through the bar's own path, so ending still asks first; the End
+ * key is never bound. A small line in the corner says which move a key runs.
  *
  * A screen that cannot hear the room says so in the other corner, so a stale wall is plain.
  */
-/** A key pressed on something that takes it already, such as a focused button or a dialog. */
-function taken(target: EventTarget | null): boolean {
-  return (
-    target instanceof Element &&
-    target.closest("button, a[href], input, select, textarea, [contenteditable], dialog") !== null
-  );
-}
-
 export function StageView({
   title,
   code,
