@@ -4,7 +4,12 @@ import { act, Profiler } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { LiveSessionState, ParticipantItem, SubmitAck } from "@/lib/live";
 import { LiveSessionError, NO_TIMER } from "@/lib/live";
-import type { PacedItemPayload, StudentView, SupabaseParticipant } from "@/lib/liveSupabase";
+import type {
+  PacedItemPayload,
+  RoomConnection,
+  StudentView,
+  SupabaseParticipant,
+} from "@/lib/liveSupabase";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema, type AnyResponse, type Item } from "@/lib/ngn/schemas";
 import { toKeylessItem } from "@/lib/ngn/submit";
@@ -54,6 +59,7 @@ const commits = vi.fn();
 function fakeTransport(submit: (itemId: string, response: AnyResponse) => Promise<SubmitAck>) {
   const viewListeners = new Set<(view: StudentView) => void>();
   const countListeners = new Set<(count: number) => void>();
+  const connectionListeners = new Set<(status: RoomConnection, rejoined: boolean) => void>();
   const transport = {
     resume: vi.fn(async () => ({ state: state(), item: null, answered: null, revealed: null })),
     join: vi.fn(),
@@ -69,7 +75,10 @@ function fakeTransport(submit: (itemId: string, response: AnyResponse) => Promis
       return () => countListeners.delete(listener);
     },
     onReveal: () => () => {},
-    onConnection: () => () => {},
+    onConnection: (listener: (status: RoomConnection, rejoined: boolean) => void) => {
+      connectionListeners.add(listener);
+      return () => connectionListeners.delete(listener);
+    },
     submit: vi.fn(submit),
     serverNow: () => Date.now(),
   } as unknown as SupabaseParticipant;
@@ -84,6 +93,10 @@ function fakeTransport(submit: (itemId: string, response: AnyResponse) => Promis
     count: (count: number) =>
       act(() => {
         for (const listener of countListeners) listener(count);
+      }),
+    connection: (status: RoomConnection, rejoined = false) =>
+      act(() => {
+        for (const listener of connectionListeners) listener(status, rejoined);
       }),
   };
 }
@@ -223,6 +236,28 @@ describe("StudentPacedRoom (#185)", () => {
     const nav = screen.getByRole("navigation", { name: "Questions" });
     expect(within(nav).getAllByRole("button")).toHaveLength(2);
     expect(screen.queryByText(FIRST.rationale.general?.value ?? "")).toBeNull();
+  });
+});
+
+describe("StudentPacedRoom: the socket dropping and coming back", () => {
+  it("does not re-run the page on a rejoin, and keeps a half-finished answer", async () => {
+    const room = setup();
+    refresh.mockClear();
+    room.push({ state: state(), paced: [entry(FIRST, 1), entry(SECOND, 2)] });
+    await renderersLoaded();
+    await room.user.click(screen.getAllByRole("radio")[0] as HTMLElement);
+    room.connection("reconnecting");
+    room.connection("live", true);
+    // The transport re-reads the room over HTTP; a server render could throw on a slow database.
+    expect(refresh).not.toHaveBeenCalled();
+    expect(screen.getAllByRole("radio")[0]).toBeChecked();
+  });
+
+  it("asks the server what to show once it has finished with this phone", () => {
+    const room = setup();
+    refresh.mockClear();
+    room.connection("refused");
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 });
 

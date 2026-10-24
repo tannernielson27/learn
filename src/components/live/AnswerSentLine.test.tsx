@@ -30,4 +30,20 @@ describe("AnswerSentLine", () => {
     rerender(<AnswerSentLine text="Answer sent." announce />);
     expect(screen.getByRole("status")).toHaveTextContent("Answer sent.");
   });
+
+  it("is a heading and a sentence in an accent panel when the room gives a next step", () => {
+    render(<AnswerSentLine text="Answer sent" detail="Wait for the answer to show." announce />);
+
+    const sent = screen.getByRole("status");
+    expect(sent).toHaveAttribute("data-testid", "answer-sent");
+    expect(sent).toHaveClass("bg-accent-soft");
+    const heading = screen.getByText("Answer sent", { exact: true });
+    expect(heading).toHaveClass("text-lg", "font-semibold", "text-accent-ink");
+    expect(screen.getByText("Wait for the answer to show.", { exact: true })).toBeInTheDocument();
+    expect(sent.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    expect(sent.querySelector('[data-motion="answer-sent"]')).toHaveClass(
+      "motion-arrive",
+      "motion-reduce:animate-none",
+    );
+  });
 });

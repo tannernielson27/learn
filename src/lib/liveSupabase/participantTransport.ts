@@ -69,6 +69,7 @@ import {
   LIVE_SCHEMA,
   liveTopic,
   presentRealtimeToken,
+  requestTimeout,
   type AnsweredPayload,
   type JoinSession,
   type PacedItemPayload,
@@ -140,6 +141,13 @@ export interface SupabaseParticipant extends LiveSessionTransport {
    * made while the socket was down was simply not delivered.
    */
   onConnection(listener: (status: RoomConnection, rejoined: boolean) => void): Unsubscribe;
+  /**
+   * Reads the room now, over HTTP. For a page that has just become visible again or come back
+   * online: the socket reconnects by itself, but whatever moved while the phone slept should be
+   * on the screen before it does. Never throws; a read that fails is asked for again. Asks for
+   * nothing while a read is in flight, or within `WAKE_GAP_MS` of one that got through.
+   */
+  wake(): void;
 }
 
 export interface ParticipantTransportOptions {
@@ -176,6 +184,29 @@ const STATUSES = new Set<string>(SESSION_STATUSES);
  * waiting, which is inside the time a class waits for a slow phone anyway.
  */
 export const VIEW_RETRY_WAITS_MS: readonly number[] = [400, 800, 1600];
+
+/**
+ * How often a phone whose socket is not live reads the room over HTTP instead, before jitter: each
+ * wait is scaled by a factor between 0.875 and 1.125, so the reads fall 3.5–4.5 s apart and a class
+ * on one network does not ask in step. A read is one request with no retries of its own, so a
+ * phone polling for an hour asks about 75 times in any five minutes, far under the 600 that
+ * `take_session_view` allows one participant.
+ */
+export const VIEW_POLL_MS = 4_000;
+
+/**
+ * The waits before asking again for a move whose read did not get through, before jitter (each is
+ * scaled by 0.5–1.5): 2 s, then doubling, never more than 16 s, until a read gets through.
+ */
+export const REFRESH_BACKOFF_MS = 2_000;
+export const REFRESH_BACKOFF_CAP_MS = 16_000;
+
+/**
+ * How long after a read of the room got through a `wake` asks for nothing. A phone coming back
+ * fires `visibilitychange`, `pageshow` and `online` together, and a room read a moment ago is the
+ * room now.
+ */
+export const WAKE_GAP_MS = 1_000;
 
 /** The answers that mean "not now" rather than "no": see `askForView`. */
 const RETRYABLE_STATUSES: ReadonlySet<number> = new Set([502, 503, 504]);
@@ -327,6 +358,21 @@ export function createSupabaseParticipant(
   let count: number | null = null;
   /** Whether a state row has brought a count since this phone (re)entered. */
   let countFromRow = false;
+  /** What the channel last said: `live` once it has subscribed and tracked, `down` on a failure. */
+  let socket: "connecting" | "live" | "down" = "connecting";
+  /** Whether, with the socket down, a read over HTTP has got through since (see `readAnswered`). */
+  let viaHttp = false;
+  /** Reads in a row that did not get through, since the last one that did (see `readFailed`). */
+  let failedReads = 0;
+  /** The server has finished with this phone (#149): nothing is asked or reported after it. */
+  let refused = false;
+  /** The next HTTP read while the socket is not live (see `schedulePoll`). */
+  let pollTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Whether `keepAsking` is running. */
+  let asking = false;
+  /** Reads of the view not yet answered, and when one last got through (see `wake`). */
+  let readsInFlight = 0;
+  let lastReadAt = Number.NEGATIVE_INFINITY;
 
   /**
    * Takes a count from a row or a view. The count goes down when someone leaves, so a smaller
@@ -359,6 +405,8 @@ export function createSupabaseParticipant(
         // rather than left to the default, because it is the whole of this request's authority.
         credentials: "same-origin",
         body: "{}",
+        // A request the network swallowed is a request that never got an answer.
+        signal: requestTimeout(),
       });
       return RETRYABLE_STATUSES.has(response.status) ? null : response;
     } catch {
@@ -381,23 +429,46 @@ export function createSupabaseParticipant(
    * `sending` is called just before each request goes out, the first and every further try, so
    * a caller that orders reads by when they were sent orders them by the try that was answered.
    */
-  async function requestView(sending: () => void = () => {}): Promise<ParticipantViewPayload> {
+  async function requestView(
+    sending: () => void = () => {},
+    waits: readonly number[] = VIEW_RETRY_WAITS_MS,
+  ): Promise<ParticipantViewPayload> {
     if (me === null) throw new LiveSessionError("not_joined");
     const mine = generation;
     let sentAt = Date.now();
     sending();
-    let response = await askForView();
-    for (const wait of VIEW_RETRY_WAITS_MS) {
-      if (response !== null) break;
-      await pause(wait * (0.5 + random()));
-      if (gone || mine !== generation) throw new LiveSessionError("not_joined");
-      sentAt = Date.now();
-      sending();
+    readsInFlight += 1;
+    let response: Response | null;
+    try {
       response = await askForView();
+      for (const wait of waits) {
+        if (response !== null) break;
+        await pause(wait * (0.5 + random()));
+        if (gone || mine !== generation) throw new LiveSessionError("not_joined");
+        sentAt = Date.now();
+        sending();
+        response = await askForView();
+      }
+    } finally {
+      readsInFlight -= 1;
     }
-    if (response === null) throw new Error("The session could not be reached.");
+    if (response === null) {
+      if (!gone && mine === generation) readFailed();
+      throw new Unreachable();
+    }
+    // The only 401 the view route answers is the database saying this phone is nobody (#407).
+    if (response.status === 401 && !gone && mine === generation) refuseForGood();
     if (!response.ok) throw await asError(response);
-    const payload = (await response.json()) as ParticipantViewPayload;
+    let payload: ParticipantViewPayload;
+    try {
+      payload = (await response.json()) as ParticipantViewPayload;
+    } catch {
+      // The body did not arrive: the deadline fell while it was downloading, or the network went.
+      if (!gone && mine === generation) readFailed();
+      throw new Unreachable();
+    }
+    lastReadAt = Date.now();
+    if (!gone && mine === generation) readAnswered();
     if (typeof payload.serverNow === "number" && Number.isFinite(payload.serverNow)) {
       offset = clockOffset(payload.serverNow, sentAt, Date.now());
     }
@@ -448,12 +519,14 @@ export function createSupabaseParticipant(
    * failed and was tried again a second later has seen a later room than a read begun in between,
    * and must not be put behind it.
    */
-  async function readView(): Promise<{ payload: ParticipantViewPayload; newest: boolean }> {
+  async function readView(
+    waits?: readonly number[],
+  ): Promise<{ payload: ParticipantViewPayload; newest: boolean }> {
     let sent = 0;
     const payload = await requestView(() => {
       readsSent += 1;
       sent = readsSent;
-    });
+    }, waits);
     const newest = sent > newestShown;
     if (newest) newestShown = sent;
     return { payload, newest };
@@ -466,10 +539,10 @@ export function createSupabaseParticipant(
    * have gone undelivered (#193). If the room is exactly where the screen already has it, nothing
    * is announced, so a phone that missed nothing does not repaint.
    */
-  async function refresh(quiet = false): Promise<void> {
+  async function refresh(quiet = false, waits?: readonly number[]): Promise<void> {
     const mine = generation;
     if (gone || me === null) return;
-    const { payload, newest } = await readView();
+    const { payload, newest } = await readView(waits);
     if (gone || mine !== generation) return;
     noteCount(countFrom(payload.count), "view");
     if (!newest) return;
@@ -509,9 +582,110 @@ export function createSupabaseParticipant(
       return;
     }
     // A listener cannot await, and a failed refresh must not become an unhandled rejection in a
-    // student's browser. Nothing is retried here on purpose: the next state change asks again,
-    // and a session that has gone away has no move to report.
-    void refresh().catch(() => {});
+    // student's browser.
+    void refresh().catch(askAgainIfUnreachable);
+  }
+
+  /**
+   * Only a read that never got an answer is worth asking again for. A 401, a 409, a 429 or a 500
+   * is the server answering, and asking again would get the same answer (#407).
+   */
+  function askAgainIfUnreachable(error: unknown): void {
+    if (error instanceof Unreachable) keepAsking();
+  }
+
+  /**
+   * Asks for the room again, further and further apart, after a read for a move failed even with
+   * its own retries. A move is delivered once and Realtime replays nothing, so giving up here left
+   * the phone on the last item until the host's next move; that could be the whole question.
+   *
+   * One of these runs at a time: the room it reads is the room now, whatever moves came since. It
+   * stops when a read gets through — its own, or any read sent after it began — or when the phone
+   * leaves or the server has finished with it.
+   */
+  function keepAsking(): void {
+    if (asking || gone || refused || me === null) return;
+    asking = true;
+    const mine = generation;
+    const after = readsSent;
+    void (async () => {
+      try {
+        for (let attempt = 0; ; attempt += 1) {
+          const wait = Math.min(REFRESH_BACKOFF_MS * 2 ** attempt, REFRESH_BACKOFF_CAP_MS);
+          await pause(wait * (0.5 + random()));
+          if (gone || refused || mine !== generation || newestShown > after) return;
+          try {
+            await refresh();
+            return;
+          } catch (error) {
+            // Asked again on the next turn of the loop, unless the server answered.
+            if (!(error instanceof Unreachable)) return;
+          }
+        }
+      } finally {
+        if (mine === generation) asking = false;
+      }
+    })();
+  }
+
+  /**
+   * Whether the room should be read over HTTP on a timer: the socket is not up (still connecting,
+   * blocked by the network, or down), or it is up but no read of the room has ever got through.
+   * Not once the session has ended, nor once the server has finished with this phone.
+   */
+  function pollWanted(): boolean {
+    if (gone || refused || me === null) return false;
+    if (held !== null && held.state.status === "ended") return false;
+    return socket !== "live" || held === null;
+  }
+
+  /**
+   * Reads the room over HTTP every `VIEW_POLL_MS` or so for as long as `pollWanted` says, so a
+   * phone on a network that filters WebSockets still sees each question and can answer it. Each
+   * read is one request and a quiet one: a room that has not moved repaints nothing.
+   */
+  function schedulePoll(delay: number = VIEW_POLL_MS * (0.875 + 0.25 * random())): void {
+    if (pollTimer !== null || !pollWanted()) return;
+    const mine = generation;
+    pollTimer = setTimeout(() => {
+      pollTimer = null;
+      if (mine !== generation || !pollWanted()) return;
+      void refresh(true, [])
+        .catch(() => {})
+        .finally(() => {
+          if (mine === generation) schedulePoll();
+        });
+    }, delay);
+  }
+
+  function stopPolling(): void {
+    if (pollTimer === null) return;
+    clearTimeout(pollTimer);
+    pollTimer = null;
+  }
+
+  /**
+   * A read got through while the socket is down: the room is reachable, over HTTP, and this phone
+   * can answer. Said once, as `"live"` with no rejoin, so the screen lets the student submit.
+   */
+  function readAnswered(): void {
+    failedReads = 0;
+    if (socket !== "down" || viaHttp || refused) return;
+    viaHttp = true;
+    notifyConnection("live", false);
+  }
+
+  /**
+   * The last two reads did not get through either, and the socket is down: nothing is reaching
+   * it. One is not enough (#481): a single poll lost on a busy network would take Submit away from
+   * a student whose next read gets through. A 401 or an ended session is an answer, not a failed
+   * read, and ends the room at once.
+   */
+  function readFailed(): void {
+    failedReads += 1;
+    if (socket !== "down" || !viaHttp || refused || failedReads < 2) return;
+    viaHttp = false;
+    notifyConnection("reconnecting", false);
   }
 
   function notifyConnection(status: RoomConnection, rejoined: boolean): void {
@@ -525,13 +699,17 @@ export function createSupabaseParticipant(
    * `"refused"`, not `"reconnecting"`, because nothing is coming back. What the screen does about
    * it is its own business; `StudentRoom` asks the server for the page again.
    */
-  options.tokens?.onRefused(() => {
-    if (gone) return;
+  function refuseForGood(): void {
+    if (gone || refused) return;
+    refused = true;
+    stopPolling();
     notifyConnection("refused", false);
     const open = channel;
     channel = null;
     if (open !== null) void options.client.removeChannel(open).catch(() => {});
-  });
+  }
+
+  options.tokens?.onRefused(refuseForGood);
 
   async function openChannel(sessionId: string, entry: PresenceEntry): Promise<void> {
     await presentRealtimeToken(options.client);
@@ -573,7 +751,9 @@ export function createSupabaseParticipant(
      */
     opened.on("system", {}, (payload: unknown) => {
       if (gone || !postgresChangesReady(payload)) return;
-      void refresh(true).catch(() => {});
+      // Asked again if it does not get through, as on `SUBSCRIBED`: a move made in the gap is
+      // delivered to nobody, and this read is the only one looking for it.
+      void refresh(true).catch(askAgainIfUnreachable);
     });
     /*
      * No presence listener, on purpose (#426). Being seen by the host needs only `track` below.
@@ -611,30 +791,56 @@ export function createSupabaseParticipant(
       };
 
       opened.subscribe((status) => {
-        if (gone) return;
+        if (gone || refused) return;
         if (status === "SUBSCRIBED") {
           const opening = !settled;
           // `then(..., reject)`, not `.then(...)`: a `track` that rejects — the socket dropping in
-          // the moment after it subscribed — would otherwise leave this promise, and the entry
-          // awaiting it, pending for ever.
+          // the moment after it subscribed — would otherwise leave this promise pending for ever.
           void opened.track(entry).then(() => {
+            if (gone || refused) return;
+            socket = "live";
+            viaHttp = false;
+            failedReads = 0;
             notifyConnection("live", !opening);
             // A rejoined channel carries none of the presence the old one held either, which is
             // why `track` above runs on every subscribe and not only the first.
-            if (!answerEntry()) void refresh().catch(() => {});
+            if (!answerEntry()) void refresh().catch(askAgainIfUnreachable);
           }, answerEntry);
           return;
         }
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-          notifyConnection("reconnecting", false);
+          const was = socket;
+          socket = "down";
+          // A socket that was carrying the room until now: HTTP has to show it can before the
+          // screen is told the room is reachable again.
+          if (was === "live") viaHttp = false;
+          // Realtime retries a blocked socket every few seconds. Once a read over HTTP has got
+          // through, those retries failing again is not news to the screen.
+          if (!viaHttp) notifyConnection("reconnecting", false);
           // Harmless once the promise has settled, which is the ordinary case for CLOSED.
           answerEntry(new Error(`The session's channel could not be opened (${status}).`));
+          // The room is read over HTTP until the socket is back, the first time it fails at a
+          // random moment inside one poll period: a class whose Wi-Fi blinked drops together, and
+          // seventy first reads spread over a second would all land in that second (#481).
+          if (was !== "down") {
+            stopPolling();
+            schedulePoll(VIEW_POLL_MS * random());
+          } else {
+            schedulePoll();
+          }
         }
       });
     });
   }
 
-  /** Opens the channel for `identity` and reads the room once. Both entries end here. */
+  /**
+   * Opens the channel for `identity` and reads the room once. Both entries end here.
+   *
+   * The read does not wait for the channel. A phone on a network that filters WebSockets never
+   * gets a channel at all, and waiting for one left it on the server's first paint, with no
+   * question, for the whole class. So the room is read over HTTP straight away, the channel comes
+   * up when it can, and until it does the room is read over HTTP every few seconds.
+   */
   async function enter(mine: number, identity: ResumedIdentity): Promise<StudentView> {
     me = identity;
     gone = false;
@@ -643,13 +849,17 @@ export function createSupabaseParticipant(
     held = null;
     count = null;
     countFromRow = false;
+    socket = "connecting";
+    viaHttp = false;
+    failedReads = 0;
     notifyConnection("connecting", false);
-    await openChannel(identity.sessionId, {
+    // Its failures are reported through `onConnection`, and Realtime retries by itself.
+    void openChannel(identity.sessionId, {
       participantId: identity.participantId,
       displayName: identity.displayName,
       joinedAt: identity.joinedAt,
-    });
-    if (mine !== generation) throw new LiveSessionError("not_joined");
+    }).catch(() => {});
+    schedulePoll();
     return readAndAnnounce(mine);
   }
 
@@ -736,6 +946,12 @@ export function createSupabaseParticipant(
     async leave(): Promise<void> {
       generation += 1;
       gone = true;
+      stopPolling();
+      asking = false;
+      refused = false;
+      socket = "connecting";
+      viaHttp = false;
+      failedReads = 0;
       views.clear();
       students.clear();
       counts.clear();
@@ -767,6 +983,13 @@ export function createSupabaseParticipant(
     onConnection: (listener) => subscribe(connections, listener),
     serverNow: () => Date.now() + offset,
 
+    wake(): void {
+      if (gone || refused || me === null) return;
+      // A read on its way will show the room, and one that just landed did.
+      if (readsInFlight > 0 || Date.now() - lastReadAt < WAKE_GAP_MS) return;
+      void refresh(true).catch(askAgainIfUnreachable);
+    },
+
     async submit(itemId, response) {
       if (me === null) throw new LiveSessionError("not_joined");
       // #185: in a student-paced set the phone chooses the item, so it names its place. Looked up
@@ -780,12 +1003,22 @@ export function createSupabaseParticipant(
         body: JSON.stringify(
           position === undefined ? { itemId, response } : { itemId, response, position },
         ),
+        // A timed-out answer rejects like any other failure, so the student can send it again;
+        // if the first one did land, the server answers the second with `already_answered`.
+        signal: requestTimeout(),
       });
       if (!sent.ok) throw await asError(sent);
       const ack = (await sent.json()) as SubmitAckPayload;
       return { itemId: ack.itemId, submittedAt: ack.submittedAt };
     },
   };
+}
+
+/** A read of the view that got no answer at all, after its retries (#407). */
+class Unreachable extends Error {
+  constructor() {
+    super("The session could not be reached.");
+  }
 }
 
 /**

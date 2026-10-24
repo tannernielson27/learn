@@ -1,15 +1,34 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { NO_TIMER, type LiveSessionState } from "@/lib/live";
 import type { Database } from "@/lib/supabase/database.types";
 import {
+  REFRESH_BACKOFF_CAP_MS,
+  VIEW_POLL_MS,
+  WAKE_GAP_MS,
   createSupabaseParticipant,
   publicStateFrom,
   type RoomConnection,
   type StudentView,
+  type SupabaseParticipant,
 } from "./participantTransport";
 import type { ChannelRefusal } from "./channelTokenSource";
-import { liveTopic, type ParticipantViewPayload } from "./wire";
+import {
+  LIVE_REQUEST_TIMEOUT_MS,
+  liveTopic,
+  requestTimeout,
+  type ParticipantViewPayload,
+} from "./wire";
+
+/**
+ * Every phone a test opened, left once it is over: a phone whose socket never came up keeps
+ * reading the room on a timer, and that timer must not outlive its test.
+ */
+const opened: SupabaseParticipant[] = [];
+afterEach(async () => {
+  await Promise.all(opened.splice(0).map((transport) => transport.leave()));
+  vi.useRealTimers();
+});
 
 /**
  * The half of the participant transport a whole fake stack cannot pose: a socket whose lifecycle
@@ -180,6 +199,7 @@ function phone(
     ...(network.pause === undefined ? {} : { pause: network.pause }),
     ...(network.random === undefined ? {} : { random: network.random }),
   });
+  opened.push(transport);
 
   const recorded: Recorded = { views: [], states: [], counts: [], connections: [] };
   transport.onStudentView((view) => recorded.views.push(view));
@@ -192,9 +212,13 @@ function phone(
     transport,
     recorded,
     asks: () => call.mock.calls.length,
+    call,
     /** Resumes and brings the socket up, the way the fake stack would. */
     async enter(): Promise<StudentView> {
       const opened = transport.resume(ME);
+      // The room is read without waiting for the socket, so the entry may fail before it is up;
+      // the caller is handed that failure below, not an unhandled rejection meanwhile.
+      opened.catch(() => {});
       await socket.subscribed();
       socket.emit("SUBSCRIBED");
       return opened;
@@ -443,6 +467,21 @@ describe("a move made while the subscription was coming up (#193)", () => {
     expect(live.recorded.states).toHaveLength(shown);
   });
 
+  it("asks again, later, when the read the subscription coming up asks for does not get through", async () => {
+    // The entry's read gets through; the confirm's read and its three retries are swallowed.
+    const live = phone([LOBBY, RUNNING], undefined, {
+      failing: (asked) => (asked >= 2 && asked <= 5 ? "dropped" : null),
+      pause: async () => {},
+      random: () => 0.5,
+    });
+    await live.enter();
+    live.socket.confirm();
+    await vi.waitFor(() =>
+      expect(live.recorded.views.at(-1)?.state).toMatchObject({ position: 1 }),
+    );
+    expect(live.asks()).toBe(6);
+  });
+
   it("asks nothing for a system message that is not the subscription coming up", async () => {
     const live = phone([LOBBY, RUNNING]);
     await live.enter();
@@ -563,8 +602,11 @@ describe("a view that did not get through (#407)", () => {
     const live = phone([ON_ONE, ON_TWO], undefined, {
       failing,
       random: () => random,
-      pause: async (ms) => {
+      // Over at once, but after a turn of the event loop: a phone that keeps asking a server that
+      // never answers must not starve the test's own timers.
+      pause: (ms) => {
         waits.push(ms);
+        return new Promise((resolve) => setTimeout(resolve, 0));
       },
     });
     return { live, waits };
@@ -584,32 +626,44 @@ describe("a view that did not get through (#407)", () => {
     },
   );
 
-  it("gives up after four tries, with a longer wait before each", async () => {
-    const { live, waits } = waiting((asked) => (asked > 1 ? 503 : null));
+  it("does not give up after four tries: it keeps asking, further apart, until one gets through", async () => {
+    // Requests 2 to 9 fail: the move's own four tries, and the first round of asking again.
+    const { live, waits } = waiting((asked) => (asked > 1 && asked < 10 ? 503 : null));
     await live.enter();
     live.socket.deliver({ new: stateRow({ item_position: 2 }) });
 
-    await vi.waitFor(() => expect(live.asks()).toBe(5));
+    await vi.waitFor(() => expect(live.recorded.states.at(-1)).toMatchObject({ position: 2 }));
+    expect(live.asks()).toBe(10);
+    // Each round is a read with its own three retries, and the rounds are 2 s, then 4 s, apart.
+    expect(waits).toEqual([400, 800, 1600, 2_000, 400, 800, 1600, 4_000]);
+  });
+
+  it("caps the wait between rounds, and stops asking once the phone has left", async () => {
+    const { live, waits } = waiting((asked) => (asked > 1 ? 503 : null));
+    await live.enter();
+    live.socket.deliver({ new: stateRow({ item_position: 2 }) });
+    const rounds = () => waits.filter((wait) => wait >= 2_000);
+    await vi.waitFor(() => expect(rounds().length).toBeGreaterThanOrEqual(6));
+    expect(rounds().slice(0, 6)).toEqual([2_000, 4_000, 8_000, 16_000, 16_000, 16_000]);
+    expect(Math.max(...waits)).toBe(REFRESH_BACKOFF_CAP_MS);
+
+    await live.transport.leave();
+    const asked = live.asks();
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(live.asks()).toBe(5);
-    expect(waits).toEqual([400, 800, 1600]);
+    expect(live.asks()).toBeLessThanOrEqual(asked + 1);
     // Still on the item it had: nothing was shown that the server did not say.
     expect(live.recorded.states.at(-1)).toMatchObject({ position: 1 });
-
-    // And not for good. The host's next move is a new read, which gets through.
-    live.socket.deliver({ new: stateRow({ item_position: 2, reveal: true }) });
-    await vi.waitFor(() => expect(live.asks()).toBe(9));
   });
 
   it("spreads a class out: the same failure is not retried at the same moment", async () => {
-    const early = waiting((asked) => (asked > 1 ? 503 : null), 0);
-    const late = waiting((asked) => (asked > 1 ? 503 : null), 0.999);
+    const early = waiting((asked) => (asked > 1 && asked < 6 ? 503 : null), 0);
+    const late = waiting((asked) => (asked > 1 && asked < 6 ? 503 : null), 0.999);
     for (const { live } of [early, late]) {
       await live.enter();
       live.socket.deliver({ new: stateRow({ item_position: 2 }) });
-      await vi.waitFor(() => expect(live.asks()).toBe(5));
+      await vi.waitFor(() => expect(live.asks()).toBe(6));
     }
-    expect(early.waits).toEqual([200, 400, 800]);
+    expect(early.waits).toEqual([200, 400, 800, 1_000]);
     expect(late.waits[0]).toBeGreaterThan(590);
     expect(late.waits[2]).toBeLessThanOrEqual(2_400);
   });
@@ -701,18 +755,17 @@ describe("a socket that drops", () => {
 
   it("reads the room when the channel comes up after the first attempt failed", async () => {
     const live = phone();
-    // The socket fails before it ever subscribes, so nothing read the room.
+    // The socket fails before it ever subscribes. The room is read over HTTP all the same.
     const opening = live.transport.resume(ME);
     await live.socket.subscribed();
     live.socket.emit("CHANNEL_ERROR");
-    await expect(opening).rejects.toThrow();
-    expect(live.asks()).toBe(0);
-
-    // Realtime retries by itself and gets through. Nothing was replayed while it was down and
-    // nobody has fetched the item, so coming up has to mean asking — not just tracking presence.
-    live.socket.emit("SUBSCRIBED");
-    await vi.waitFor(() => expect(live.recorded.views).toHaveLength(1));
+    await expect(opening).resolves.toMatchObject({ state: LOBBY.state });
     expect(live.asks()).toBe(1);
+
+    // Realtime retries by itself and gets through. Nothing was replayed while it was down, so
+    // coming up has to mean asking again — not just tracking presence.
+    live.socket.emit("SUBSCRIBED");
+    await vi.waitFor(() => expect(live.asks()).toBe(2));
     expect(live.socket.tracked).toHaveLength(1);
     // And the caller is told it rejoined, so a screen holding a stale server render asks again.
     expect(live.recorded.connections.at(-1)).toEqual({ status: "live", rejoined: true });
@@ -765,6 +818,424 @@ describe("a socket that drops", () => {
     live.socket.sync();
     await vi.waitFor(() => expect(live.asks()).toBe(1));
     expect(live.recorded.states).toHaveLength(before);
+  });
+});
+
+describe("a phone whose socket never opens (campus Wi-Fi that filters WebSockets)", () => {
+  const ON_ONE: ParticipantViewPayload = {
+    ...LOBBY,
+    state: at({ status: "running", position: 1, itemCount: 2, reveal: false }),
+  };
+  const ON_TWO: ParticipantViewPayload = {
+    ...LOBBY,
+    state: at({ status: "running", position: 2, itemCount: 2, reveal: false }),
+  };
+  const ENDED: ParticipantViewPayload = {
+    ...LOBBY,
+    state: at({ status: "ended", position: 2, itemCount: 2, reveal: false }),
+  };
+
+  /** A phone with its jitter pinned to the middle, so a poll comes every `VIEW_POLL_MS` exactly. */
+  function blocked(
+    views: ParticipantViewPayload[],
+    failing?: ScriptedNetwork["failing"],
+  ): ReturnType<typeof phone> {
+    vi.useFakeTimers();
+    return phone(views, undefined, {
+      random: () => 0.5,
+      ...(failing === undefined ? {} : { failing }),
+    });
+  }
+
+  it("shows the room over HTTP without waiting for the socket", async () => {
+    const live = blocked([ON_ONE]);
+    // No SUBSCRIBED, ever.
+    const view = await live.transport.resume(ME);
+    expect(view.state).toMatchObject({ status: "running", position: 1 });
+    expect(live.recorded.views).toHaveLength(1);
+    expect(live.asks()).toBe(1);
+  });
+
+  it("reads the room every four seconds or so until the socket is live, and lands on each move", async () => {
+    const live = blocked([ON_ONE, ON_ONE, ON_TWO]);
+    await live.transport.resume(ME);
+
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS - 1);
+    expect(live.asks()).toBe(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(live.asks()).toBe(2);
+    // The room had not moved: nothing is repainted.
+    expect(live.recorded.views).toHaveLength(1);
+
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS);
+    expect(live.asks()).toBe(3);
+    expect(live.recorded.views.at(-1)?.state).toMatchObject({ position: 2 });
+
+    // The socket comes up: the channel carries the room from here, and the polling stops.
+    await live.socket.subscribed();
+    live.socket.emit("SUBSCRIBED");
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS * 5);
+    expect(live.asks()).toBe(3);
+  });
+
+  it("says the room is reachable once a read gets through, and stops saying reconnecting while it is", async () => {
+    const live = blocked([ON_ONE]);
+    await live.transport.resume(ME);
+    await live.socket.subscribed();
+
+    live.socket.emit("TIMED_OUT");
+    expect(live.recorded.connections.map((entry) => entry.status)).toEqual([
+      "connecting",
+      "reconnecting",
+    ]);
+    // The first failure is followed by a read at a random moment inside one poll period.
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS);
+    expect(live.asks()).toBe(2);
+    expect(live.recorded.connections.at(-1)).toEqual({ status: "live", rejoined: false });
+
+    // Realtime goes on retrying the blocked socket. Each failure is not news to the screen, which
+    // keeps its Submit: answers go over HTTP, not over the socket.
+    live.socket.emit("CHANNEL_ERROR");
+    live.socket.emit("TIMED_OUT");
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS * 3);
+    expect(live.recorded.connections.at(-1)).toEqual({ status: "live", rejoined: false });
+    expect(live.recorded.connections.filter((entry) => entry.status === "live")).toHaveLength(1);
+  });
+
+  it("says reconnecting when the reads stop getting through as well", async () => {
+    let dropping = false;
+    const live = blocked([ON_ONE], () => (dropping ? "dropped" : null));
+    await live.transport.resume(ME);
+    await live.socket.subscribed();
+    live.socket.emit("CHANNEL_ERROR");
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS / 2);
+    expect(live.recorded.connections.at(-1)?.status).toBe("live");
+
+    // One read that does not get through is a blip, and Submit stays; two in a row are not.
+    dropping = true;
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS);
+    expect(live.recorded.connections.at(-1)).toEqual({ status: "live", rejoined: false });
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS);
+    expect(live.recorded.connections.at(-1)).toEqual({ status: "reconnecting", rejoined: false });
+
+    // And back again when one does.
+    dropping = false;
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS);
+    expect(live.recorded.connections.at(-1)).toEqual({ status: "live", rejoined: false });
+  });
+
+  it("starts counting again after a read gets through: one failure at a time never says reconnecting", async () => {
+    let asked = 0;
+    const live = blocked([ON_ONE], () => {
+      asked += 1;
+      // The entry's read, the first poll after the drop, then every other poll fails.
+      return asked > 2 && asked % 2 === 1 ? "dropped" : null;
+    });
+    await live.transport.resume(ME);
+    await live.socket.subscribed();
+    live.socket.emit("CHANNEL_ERROR");
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS * 8);
+    expect(asked).toBeGreaterThanOrEqual(8);
+    expect(live.recorded.connections.map((entry) => entry.status)).toEqual([
+      "connecting",
+      "reconnecting",
+      "live",
+    ]);
+  });
+
+  it("still ends the room at once on a 401 after one failed read", async () => {
+    let asked = 0;
+    const live = blocked([ON_ONE], () => {
+      asked += 1;
+      if (asked === 3) return "dropped";
+      return asked > 3 ? 401 : null;
+    });
+    await live.transport.resume(ME);
+    await live.socket.subscribed();
+    live.socket.emit("CHANNEL_ERROR");
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS / 2);
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS);
+    expect(live.recorded.connections.at(-1)?.status).toBe("live");
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS);
+    expect(live.recorded.connections.at(-1)).toEqual({ status: "refused", rejoined: false });
+  });
+
+  it("reads the room again when a socket that was live drops, spread over a poll period", async () => {
+    const live = blocked([ON_ONE, ON_TWO]);
+    await live.enter();
+    expect(live.asks()).toBe(1);
+
+    live.socket.emit("CHANNEL_ERROR");
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS / 2);
+    expect(live.asks()).toBe(2);
+    expect(live.recorded.views.at(-1)?.state).toMatchObject({ position: 2 });
+  });
+
+  it("spreads a class's first read after a drop over the whole poll period, not one second", async () => {
+    vi.useFakeTimers();
+    const late = phone([ON_ONE, ON_TWO], undefined, { random: () => 0.999 });
+    // The read on the way in is never spread: it goes at once.
+    const entering = late.enter();
+    expect(late.asks()).toBe(1);
+    await entering;
+
+    late.socket.emit("CHANNEL_ERROR");
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS * 0.99);
+    expect(late.asks()).toBe(1);
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS * 0.01);
+    expect(late.asks()).toBe(2);
+  });
+
+  it("keeps reading when the socket is live but no read of the room has got through", async () => {
+    const live = blocked([ON_ONE], (asked) => (asked <= 4 ? 503 : null));
+    const entering = live.enter();
+    entering.catch(() => {});
+    // The entry's own four tries, 0.4 s, 0.8 s and 1.6 s apart.
+    await vi.advanceTimersByTimeAsync(2_800);
+    await expect(entering).rejects.toThrow("The session could not be reached.");
+    expect(live.recorded.views).toHaveLength(0);
+
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS);
+    expect(live.recorded.views.at(-1)?.state).toMatchObject({ position: 1 });
+    // Then stops: the socket is live and the room has been read.
+    const asked = live.asks();
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS * 5);
+    expect(live.asks()).toBe(asked);
+  });
+
+  it("stops reading once the session has ended", async () => {
+    const live = blocked([ON_ONE, ENDED]);
+    await live.transport.resume(ME);
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS);
+    expect(live.recorded.views.at(-1)?.state.status).toBe("ended");
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS * 10);
+    expect(live.asks()).toBe(2);
+  });
+
+  it("stops reading once the phone leaves", async () => {
+    const live = blocked([ON_ONE]);
+    await live.transport.resume(ME);
+    await live.transport.leave();
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS * 10);
+    expect(live.asks()).toBe(1);
+  });
+
+  it("takes a 401 from the view as final: says refused, closes the channel, stops reading", async () => {
+    const live = blocked([ON_ONE], (asked) => (asked > 1 ? 401 : null));
+    await live.transport.resume(ME);
+    await live.socket.subscribed();
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS);
+    expect(live.asks()).toBe(2);
+    expect(live.recorded.connections.at(-1)).toEqual({ status: "refused", rejoined: false });
+    expect(live.socket.client.removeChannel).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS * 10);
+    expect(live.asks()).toBe(2);
+    live.socket.emit("SUBSCRIBED");
+    expect(live.recorded.connections.at(-1)?.status).toBe("refused");
+  });
+
+  it("stays far under the view route's rate limit over an hour with no socket", async () => {
+    const live = blocked([ON_ONE]);
+    await live.transport.resume(ME);
+    await vi.advanceTimersByTimeAsync(55 * 60_000);
+    const before = live.asks();
+    await vi.advanceTimersByTimeAsync(5 * 60_000);
+    // `take_session_view` allows 600 in five minutes; one read every four seconds is 75.
+    expect(live.asks() - before).toBeLessThanOrEqual(80);
+    expect(live.asks()).toBeLessThanOrEqual(60 * 15 + 1);
+  });
+
+  it("spreads its reads: no two phones poll in step", async () => {
+    vi.useFakeTimers();
+    const early = phone([ON_ONE], undefined, { random: () => 0 });
+    const late = phone([ON_ONE], undefined, { random: () => 0.999 });
+    await early.transport.resume(ME);
+    await late.transport.resume(ME);
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS * 0.875);
+    expect(early.asks()).toBe(2);
+    expect(late.asks()).toBe(1);
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS * 0.25);
+    expect(late.asks()).toBe(2);
+  });
+});
+
+describe("a phone coming back to the page (visibility, pageshow, online)", () => {
+  const ON_TWO: ParticipantViewPayload = {
+    ...LOBBY,
+    state: at({ status: "running", position: 2, itemCount: 2, reveal: false }),
+  };
+
+  it("reads the room at once, and shows what moved while it slept", async () => {
+    vi.useFakeTimers();
+    const live = phone([LOBBY, ON_TWO]);
+    await live.enter();
+    await vi.advanceTimersByTimeAsync(WAKE_GAP_MS);
+    live.transport.wake();
+    await vi.waitFor(() => expect(live.recorded.views.at(-1)?.state).toMatchObject(ON_TWO.state));
+    expect(live.asks()).toBe(2);
+  });
+
+  it("repaints nothing when nothing moved", async () => {
+    vi.useFakeTimers();
+    const live = phone([LOBBY]);
+    await live.enter();
+    await vi.advanceTimersByTimeAsync(WAKE_GAP_MS);
+    live.transport.wake();
+    await vi.waitFor(() => expect(live.asks()).toBe(2));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(live.recorded.views).toHaveLength(1);
+  });
+
+  it("makes one read of many rapid wakes: none while one is in flight or under a second after", async () => {
+    vi.useFakeTimers();
+    let answer = () => {};
+    let holding = false;
+    const live = phone([LOBBY, ON_TWO]);
+    // The second read is held open until the test lets it land.
+    const call = live.call.getMockImplementation();
+    live.call.mockImplementation(async (...args: unknown[]) => {
+      if (holding) await new Promise<void>((resolve) => (answer = resolve));
+      return (call as (...args: unknown[]) => Promise<Response>)(...args);
+    });
+    await live.enter();
+    await vi.advanceTimersByTimeAsync(WAKE_GAP_MS);
+
+    // visibilitychange, pageshow and online, fired together and over and over.
+    holding = true;
+    for (let i = 0; i < 20; i += 1) live.transport.wake();
+    expect(live.asks()).toBe(2);
+    holding = false;
+    answer();
+    // Lands without the clock moving, so the second below is counted from here.
+    await vi.advanceTimersByTimeAsync(0);
+    expect(live.recorded.views.at(-1)?.state).toMatchObject(ON_TWO.state);
+
+    // The room was read a moment ago: more wakes inside the second ask for nothing.
+    for (let i = 0; i < 20; i += 1) live.transport.wake();
+    await vi.advanceTimersByTimeAsync(WAKE_GAP_MS - 1);
+    for (let i = 0; i < 20; i += 1) live.transport.wake();
+    expect(live.asks()).toBe(2);
+
+    // Once it has passed, a wake reads the room again.
+    await vi.advanceTimersByTimeAsync(1);
+    live.transport.wake();
+    expect(live.asks()).toBe(3);
+  });
+
+  it("asks nothing once the phone has left, or before it has entered", async () => {
+    const live = phone([LOBBY]);
+    live.transport.wake();
+    await live.enter();
+    await live.transport.leave();
+    live.transport.wake();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(live.asks()).toBe(1);
+  });
+});
+
+describe("a request the network swallows", () => {
+  it("gives every request a deadline: the view and the answer", async () => {
+    const live = phone();
+    await live.enter();
+    await live.transport.submit("item", { type: "multiple_choice", optionId: "a" });
+    for (const [, init] of live.call.mock.calls as unknown as [string, RequestInit][]) {
+      expect(init.signal).toBeInstanceOf(AbortSignal);
+    }
+    expect(live.call).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects an answer that timed out, so the student can send it again", async () => {
+    const socket = fakeSocket();
+    const timedOut = new DOMException("The operation timed out.", "TimeoutError");
+    let answers = 0;
+    const call = vi.fn(async (url: string) => {
+      if (url.endsWith("/api/live/view")) return Response.json(LOBBY);
+      answers += 1;
+      if (answers === 1) throw timedOut;
+      return Response.json({ refusal: "already_answered", error: "x" }, { status: 409 });
+    });
+    const transport = createSupabaseParticipant({
+      client: socket.client,
+      fetch: call as unknown as typeof globalThis.fetch,
+    });
+    opened.push(transport);
+    await transport.resume(ME);
+
+    const response = { type: "multiple_choice", optionId: "a" } as const;
+    await expect(transport.submit("item", response)).rejects.toBe(timedOut);
+    // The first one did land after all: the server says so, and the screen treats that as sent.
+    await expect(transport.submit("item", response)).rejects.toMatchObject({
+      code: "already_answered",
+    });
+  });
+
+  it("counts a view that timed out as one that never got an answer, and tries again", async () => {
+    const socket = fakeSocket();
+    let asked = 0;
+    const call = vi.fn(async () => {
+      asked += 1;
+      if (asked === 1) throw new DOMException("The operation timed out.", "TimeoutError");
+      return Response.json(LOBBY);
+    });
+    const transport = createSupabaseParticipant({
+      client: socket.client,
+      fetch: call as unknown as typeof globalThis.fetch,
+      pause: async () => {},
+    });
+    opened.push(transport);
+    await expect(transport.resume(ME)).resolves.toMatchObject({ state: LOBBY.state });
+    expect(asked).toBe(2);
+  });
+
+  it("counts a body that never finished arriving as no answer, and asks again", async () => {
+    const socket = fakeSocket();
+    let asked = 0;
+    const call = vi.fn(async () => {
+      asked += 1;
+      if (asked === 1) {
+        // Headers in, then the deadline falls while the body is still on its way.
+        return new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.error(new DOMException("The operation timed out.", "TimeoutError"));
+            },
+          }),
+        );
+      }
+      return Response.json(LOBBY);
+    });
+    const transport = createSupabaseParticipant({
+      client: socket.client,
+      fetch: call as unknown as typeof globalThis.fetch,
+      pause: async () => {},
+    });
+    opened.push(transport);
+    const opening = transport.resume(ME);
+    opening.catch(() => {});
+    await socket.subscribed();
+    socket.emit("SUBSCRIBED");
+    await expect(opening).rejects.toThrow("The session could not be reached.");
+    // The entry's read is the page's to report; the next one, from the poll or a move, gets through.
+    transport.wake();
+    await vi.waitFor(() => expect(asked).toBe(2));
+  });
+
+  it("aborts after eight seconds, also where the browser has no AbortSignal.timeout", () => {
+    vi.useFakeTimers();
+    const native = AbortSignal.timeout;
+    try {
+      // Safari before 16.
+      Object.defineProperty(AbortSignal, "timeout", { value: undefined, configurable: true });
+      const signal = requestTimeout();
+      vi.advanceTimersByTime(LIVE_REQUEST_TIMEOUT_MS - 1);
+      expect(signal.aborted).toBe(false);
+      vi.advanceTimersByTime(1);
+      expect(signal.aborted).toBe(true);
+    } finally {
+      Object.defineProperty(AbortSignal, "timeout", { value: native, configurable: true });
+    }
+    expect(requestTimeout()).toBeInstanceOf(AbortSignal);
   });
 });
 

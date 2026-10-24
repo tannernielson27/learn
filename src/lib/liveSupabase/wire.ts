@@ -236,3 +236,22 @@ export async function presentRealtimeToken(
     // Reported by the subscribe that follows, as CHANNEL_ERROR.
   }
 }
+
+/**
+ * How long a phone waits for one of this adapter's routes to answer before it gives up on the
+ * request: the view, the answer, a channel token. Long enough for a slow campus network, short
+ * enough that a request the network swallowed does not leave a phone waiting for good.
+ */
+export const LIVE_REQUEST_TIMEOUT_MS = 8_000;
+
+/**
+ * A signal that aborts after `ms`. `AbortSignal.timeout` where the browser has it, and an
+ * `AbortController` with a timer where it does not (Safari before 16): a missing method must not
+ * turn every request a phone makes into a `TypeError`.
+ */
+export function requestTimeout(ms: number = LIVE_REQUEST_TIMEOUT_MS): AbortSignal {
+  if (typeof AbortSignal.timeout === "function") return AbortSignal.timeout(ms);
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), ms);
+  return controller.signal;
+}

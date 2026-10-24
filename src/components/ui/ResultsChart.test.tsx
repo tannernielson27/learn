@@ -18,6 +18,23 @@ describe("ResultsChart", () => {
     expect(rows[1]).toHaveTextContent("1 · 5%");
   });
 
+  it("draws rows without letters when the options have none (select all that apply)", () => {
+    const unlettered = ROWS.map(({ label, count, isKey }) => ({ label, count, isKey }));
+    render(<ResultsChart rows={unlettered} total={22} size="stage" />);
+    const rows = screen.getAllByRole("listitem");
+    expect(rows).toHaveLength(3);
+    expect(rows[1]).toHaveTextContent(/^Encourage fluids1 · 5%$/);
+    expect(rows[0]).toHaveTextContent("Correct");
+  });
+
+  it("keeps a long list's words to one line on the projector, with the key still in words", () => {
+    render(<ResultsChart rows={ROWS} total={22} size="stage" compact />);
+    const rows = screen.getAllByRole("listitem");
+    expect(within(rows[0]).getByText("Auscultate the lungs")).toHaveClass("truncate");
+    expect(rows[0]).toHaveTextContent("Correct");
+    expect(screen.getAllByTestId("results-bar")).toHaveLength(3);
+  });
+
   it("marks the key three ways: fill, outline, and a check with the word", () => {
     render(<ResultsChart rows={ROWS} total={22} />);
     const [key, other] = screen.getAllByRole("listitem");

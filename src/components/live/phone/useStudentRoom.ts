@@ -50,6 +50,9 @@ export interface StudentRoomData {
   history: ReturnType<typeof usePhoneHistory>;
 }
 
+/** How far apart, at most, a class's phones read the room after their network comes back. */
+export const REJOIN_REFRESH_SPREAD_MS = 2_000;
+
 /**
  * A student's phone's one connection to the room (#132, #133), held apart from what it draws.
  *
@@ -59,12 +62,22 @@ export interface StudentRoomData {
  *
  * **Reconnecting.** Realtime replays nothing, so a phone that slept through a move comes back to
  * a room it thinks is still on item two. The transport re-tracks its presence and re-reads the
- * room; this also asks the server for the page again — `router.refresh()`, which re-runs the
- * server render and hands down a fresh `initial` without touching any state held here. That is
- * why it is a refresh and not a reload: **an answer in progress survives it.**
+ * room over HTTP, and that view carries everything the screen draws: the state, the item, this
+ * phone's answer, the reveal and the chart at the room's step. Who the phone is (name, title,
+ * participant) is fixed for the life of the page, and the channel token source refreshes itself.
+ *
+ * So a rejoin does **not** ask for the page again (#481). A `router.refresh()` re-runs the server
+ * render, which throws when the database is briefly unavailable (#407); the error screen that
+ * follows unmounts a room that was working over HTTP and drops the answer in progress. Seventy
+ * phones whose Wi-Fi blinked would also ask the server for the page in one burst.
+ *
+ * **Coming back to the page.** A phone that was locked, switched away from, restored from the
+ * back-forward cache or offline has the transport read the room at once (`wake`): the socket
+ * reconnects by itself, but the question should be on the screen before it does.
  *
  * **When the server is done with this phone (#149).** The transport reports `"refused"` — never
- * followed by a rejoin — and this does the same `router.refresh()`: a participant who is gone is
+ * followed by a rejoin — and this does ask for the page again, with `router.refresh()`: the
+ * server render is what decides where the phone goes from here. A participant who is gone is
  * redirected to the join form, and an ended session renders its own ended screen.
  */
 export function useStudentRoom({
@@ -107,9 +120,9 @@ export function useStudentRoom({
   const history = usePhoneHistory(sessionId, participantId);
 
   /**
-   * A new `initial` only ever arrives with a new server render (`router.refresh()` below), and
-   * React's "adjust state when a prop changes" pattern lets it land instead of being shadowed by
-   * whatever the socket last said. The item, the answer and the reveal are not touched.
+   * A new `initial` only ever arrives with a new server render (a refusal's `router.refresh()`
+   * below), and React's "adjust state when a prop changes" pattern lets it land instead of being
+   * shadowed by whatever the socket last said. The item, the answer and the reveal are not touched.
    */
   const [applied, setApplied] = useState(initial);
   if (applied !== initial) {
@@ -160,11 +173,34 @@ export function useStudentRoom({
     const offCount = joined.onCount((count) => {
       if (watching) present.set(count);
     });
-    const offConnection = joined.onConnection((status, rejoined) => {
+    const offConnection = joined.onConnection((status) => {
       if (!watching) return;
       setConnection(status);
-      if (rejoined || status === "refused") routerRef.current.refresh();
+      if (status === "refused") routerRef.current.refresh();
     });
+
+    /**
+     * Back on the screen, or back on the network: read the room now. Coming back online is
+     * spread like a rejoin, because a whole class's Wi-Fi comes back at once; the page being
+     * shown again is one student's own doing.
+     */
+    const wake = () => {
+      if (watching) joined.wake();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") wake();
+    };
+    let waking: ReturnType<typeof setTimeout> | null = null;
+    const onOnline = () => {
+      if (waking !== null) return;
+      waking = setTimeout(() => {
+        waking = null;
+        wake();
+      }, Math.random() * REJOIN_REFRESH_SPREAD_MS);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("pageshow", wake);
+    window.addEventListener("online", onOnline);
 
     /**
      * A failed open leaves the screen on the server's first paint and says so. Realtime retries
@@ -176,6 +212,10 @@ export function useStudentRoom({
 
     return () => {
       watching = false;
+      if (waking !== null) clearTimeout(waking);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pageshow", wake);
+      window.removeEventListener("online", onOnline);
       offView();
       offCount();
       offConnection();
