@@ -28,8 +28,9 @@ export const metadata: Metadata = { title: "Live session" };
  * #132 adds the room. The four facts the phone starts from are read here rather than waited for,
  * because Realtime delivers *changes* and replays nothing: a student who opens their phone into a
  * room already on item four would otherwise sit on a blank screen until the host happened to move.
- * Everything after that first paint arrives over the channel, and a reconnect re-runs this render
- * through `router.refresh()`.
+ * Everything after that first paint arrives over the channel or the phone's own reads of the view;
+ * a reconnect re-reads the view and does not re-run this render (#481). A refusal does, through
+ * `router.refresh()`, and so does the error screen's Try again.
  *
  * No answer key, no item and no item set reaches this page (ADR 0003). `resume_participant`
  * returns a name and a session's status, mode and title; `readPublicSessionState` returns four

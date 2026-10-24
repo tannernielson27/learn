@@ -230,15 +230,20 @@ describe("StudentRoom: waiting", () => {
     expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeChecked();
   });
 
-  it("re-reads the page from the server when the socket comes back, and not on the first join", async () => {
-    const room = setup();
-    room.connection("live", false);
-    expect(refresh).not.toHaveBeenCalled();
-    room.connection("reconnecting");
-    room.connection("live", true);
-    // Realtime replays nothing, so a phone that slept through a move has to ask again: within
-    // two seconds, spread so a class whose Wi-Fi came back at once does not ask at once.
-    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1), { timeout: 3_000 });
+  it("does not re-run the page from the server when the socket comes back", async () => {
+    vi.useFakeTimers();
+    try {
+      const room = setup();
+      room.connection("live", false);
+      room.connection("reconnecting");
+      room.connection("live", true);
+      // The transport re-reads the room over HTTP on a rejoin. A server render on top of that
+      // could throw on a slow database and put the error screen up over a working room (#481).
+      await act(() => vi.advanceTimersByTimeAsync(10_000));
+      expect(refresh).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("asks the server what to show when it has finished with this phone, without saying reconnecting (#149)", () => {

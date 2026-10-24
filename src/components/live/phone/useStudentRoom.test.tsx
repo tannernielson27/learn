@@ -90,43 +90,28 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("asking for the page again after the socket rejoins", () => {
-  it("waits a random moment of up to two seconds, so a class does not ask at once", async () => {
+describe("asking for the page again", () => {
+  it("does not re-run the page when the socket rejoins: the transport has read the room already", async () => {
+    // The page throws when the database is slow (#407), and its error screen unmounts the room
+    // and drops the draft. A rejoin is not worth that: the transport re-reads the room over HTTP.
     vi.useFakeTimers();
-    vi.spyOn(Math, "random").mockReturnValue(0.5);
     const room = setup();
+    room.push({ state: RUNNING, item: ITEM });
+    act(() => room.hook.result.current.setDraft(ITEM.id, ANSWER));
     room.connection("reconnecting");
-    room.connection("live", true);
-    expect(refresh).not.toHaveBeenCalled();
-    await act(() => vi.advanceTimersByTimeAsync(REJOIN_REFRESH_SPREAD_MS / 2 - 1));
-    expect(refresh).not.toHaveBeenCalled();
-    await act(() => vi.advanceTimersByTimeAsync(1));
-    expect(refresh).toHaveBeenCalledTimes(1);
-  });
-
-  it("asks once for several rejoins inside that moment", async () => {
-    vi.useFakeTimers();
-    const room = setup();
     room.connection("live", true);
     room.connection("reconnecting");
     room.connection("live", true);
-    await act(() => vi.advanceTimersByTimeAsync(REJOIN_REFRESH_SPREAD_MS));
-    expect(refresh).toHaveBeenCalledTimes(1);
+    await act(() => vi.advanceTimersByTimeAsync(REJOIN_REFRESH_SPREAD_MS * 10));
+    expect(refresh).not.toHaveBeenCalled();
+    expect(room.hook.result.current.draft).toEqual(ANSWER);
+    expect(room.hook.result.current.connection).toBe("live");
   });
 
   it("asks at once when the server has finished with this phone", () => {
     const room = setup();
     room.connection("refused");
     expect(refresh).toHaveBeenCalledTimes(1);
-  });
-
-  it("does not ask after the page has gone", async () => {
-    vi.useFakeTimers();
-    const room = setup();
-    room.connection("live", true);
-    room.hook.unmount();
-    await act(() => vi.advanceTimersByTimeAsync(REJOIN_REFRESH_SPREAD_MS));
-    expect(refresh).not.toHaveBeenCalled();
   });
 });
 
