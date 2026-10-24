@@ -21,7 +21,8 @@ export interface StageRevealProps {
 /**
  * The answer showing on the projector (RevealStage mockup): how the class answered, option by
  * option on the shared chart with the key marked three ways (fill, outline, and the word
- * "Correct"), and the general rationale under it. The peak of the loop, kept calm: the bars grow
+ * "Correct"), and the general rationale under it, clamped to about four lines so it can never
+ * squeeze the chart in the fixed stage. The peak of the loop, kept calm: the bars grow
  * once and nothing counts up (PLAN §7).
  *
  * A layout without one bar per option (matrix, cloze, bowtie...) shows the question and the
@@ -58,7 +59,8 @@ export function StageReveal({
           <StageStem stem={question.stem} small />
         </div>
       )}
-      <div className="min-h-0 flex-1 overflow-hidden">
+      {/* The chart keeps a floor of its own: whatever the rationale holds, the bars show. */}
+      <div className="min-h-[45cqb] flex-1 overflow-hidden">
         {rows === null ? (
           <p className="text-stage-option text-ink-2">Each phone shows its own marks.</p>
         ) : (
@@ -66,7 +68,11 @@ export function StageReveal({
         )}
       </div>
       {rationale === null ? null : (
-        <div className="max-w-[84cqi] shrink-0 font-read text-stage-label leading-snug text-stage-ink [@container(max-height:50rem)]:text-2xl">
+        // About four lines, and the part that gives way: the whole rationale is on every phone.
+        <div
+          data-testid="stage-rationale"
+          className="line-clamp-4 min-h-0 max-w-[84cqi] font-read text-stage-label leading-snug text-stage-ink [@container(max-height:50rem)]:text-2xl"
+        >
           <RichTextView text={rationale} />
         </div>
       )}

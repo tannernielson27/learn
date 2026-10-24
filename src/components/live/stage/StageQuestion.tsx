@@ -9,6 +9,9 @@ import type { CasePlace } from "./casePlace";
 import { JoinStrip, StageOptions, StageStem, StageStrip } from "./StageParts";
 import type { StageQuestion as StageQuestionData } from "./stageItem";
 
+/** Past this many options the stem is clamped so the options keep the wall (1280x720 included). */
+const LONG_LIST = 4;
+
 export interface StageQuestionProps {
   place: RoomPlace;
   /** The console's tally for this question, the same one the control view counts from. */
@@ -73,14 +76,18 @@ export function StageQuestion({
         }
       />
       {/* The one part that gives way on a short projector (1280x720), so the clock and the count
-          below always stay on the wall. */}
+          below always stay on the wall. Inside it the options give way row by row (StageOptions),
+          after a long list's stem has been clamped, so every row stays on the wall too. */}
       <div className="flex min-h-0 flex-1 flex-col gap-[2.6cqb] overflow-hidden">
         {question === null ? (
           <p className="text-stage-option text-ink-2">The question is on its way.</p>
         ) : (
           <>
             <h1 className="sr-only">{place.label ?? "Question"}</h1>
-            <StageStem stem={question.stem} />
+            <StageStem
+              stem={question.stem}
+              clamp={question.options !== null && question.options.length > LONG_LIST}
+            />
             {question.options === null ? (
               <p className="text-stage-option text-ink-2">Answer on your phone.</p>
             ) : (
