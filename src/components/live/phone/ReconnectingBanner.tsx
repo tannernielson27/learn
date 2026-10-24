@@ -11,7 +11,7 @@ export function ReconnectingBanner() {
     <div
       role="status"
       data-testid="reconnecting"
-      className="-mx-4 flex items-center gap-3 bg-ink-1 px-5 py-3.5 text-surface-0"
+      className="-mx-[var(--record-gutter,1rem)] flex items-center gap-3 bg-ink-1 px-5 py-3.5 text-surface-0"
     >
       <Icon icon={WifiOff} />
       <div className="min-w-0">
