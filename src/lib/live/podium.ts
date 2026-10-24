@@ -61,20 +61,19 @@ export function rankPodium(scores: readonly PodiumScore[]): Podium | null {
     .filter((each) => hundredths(each.points) > 0)
     .sort((a, b) => hundredths(b.points) - hundredths(a.points) || byName(a, b));
 
-  const ranked: PodiumEntry[] = [];
-  scored.forEach((each, index) => {
-    const previous = ranked[index - 1];
-    const same = previous !== undefined && hundredths(previous.points) === hundredths(each.points);
-    const place = same ? previous.place : index + 1;
-    if (place > PODIUM_PLACES) return;
-    if (same) previous.tied = true;
-    ranked.push({
-      displayName: each.displayName,
-      points: hundredths(each.points) / 100,
-      place,
-      tied: same,
-    });
-  });
+  // Sorted best first, so a place is where its total first appears, counting from 1 (1, 1, 3).
+  const ranked = scored
+    .map((each): PodiumEntry => {
+      const total = hundredths(each.points);
+      const same = scored.filter((other) => hundredths(other.points) === total).length;
+      return {
+        displayName: each.displayName,
+        points: total / 100,
+        place: scored.findIndex((other) => hundredths(other.points) === total) + 1,
+        tied: same > 1,
+      };
+    })
+    .filter((entry) => entry.place <= PODIUM_PLACES);
 
   if (ranked.length === 0) return null;
   return {
@@ -109,16 +108,12 @@ export interface PodiumGroup {
 
 /** The entries by shared place, best first, each with its turn in the bottom-up reveal. */
 export function podiumGroups(entries: readonly PodiumEntry[]): PodiumGroup[] {
-  const groups: Omit<PodiumGroup, "step">[] = [];
-  for (const entry of entries) {
-    const last = groups.at(-1);
-    if (last !== undefined && last.place === entry.place) {
-      last.entries.push(entry);
-      last.tied = true;
-    } else {
-      groups.push({ place: entry.place, tied: entry.tied, entries: [entry] });
-    }
-  }
+  const groups = entries.reduce<Omit<PodiumGroup, "step">[]>((acc, entry) => {
+    const last = acc.at(-1);
+    return last !== undefined && last.place === entry.place
+      ? [...acc.slice(0, -1), { ...last, tied: true, entries: [...last.entries, entry] }]
+      : [...acc, { place: entry.place, tied: entry.tied, entries: [entry] }];
+  }, []);
   return groups.map((group, index) => ({ ...group, step: groups.length - 1 - index }));
 }
 
