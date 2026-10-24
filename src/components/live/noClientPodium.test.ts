@@ -10,6 +10,7 @@ const PODIUM_FILES = [
   path.join(SRC, "components", "live", "stage", "StagePodium.tsx"),
   path.join(SRC, "components", "live", "stage", "StageEndedLive.tsx"),
   path.join(SRC, "lib", "supabase", "podiumRoute.ts"),
+  path.join(SRC, "lib", "live", "podium.ts"),
 ];
 
 /** Everything a participant's browser runs, and the pages and routes that serve them. */
