@@ -27,6 +27,14 @@ describe("ResultsChart", () => {
     expect(rows[0]).toHaveTextContent("Correct");
   });
 
+  it("keeps a long list's words to one line on the projector, with the key still in words", () => {
+    render(<ResultsChart rows={ROWS} total={22} size="stage" compact />);
+    const rows = screen.getAllByRole("listitem");
+    expect(within(rows[0]).getByText("Auscultate the lungs")).toHaveClass("truncate");
+    expect(rows[0]).toHaveTextContent("Correct");
+    expect(screen.getAllByTestId("results-bar")).toHaveLength(3);
+  });
+
   it("marks the key three ways: fill, outline, and a check with the word", () => {
     render(<ResultsChart rows={ROWS} total={22} />);
     const [key, other] = screen.getAllByRole("listitem");

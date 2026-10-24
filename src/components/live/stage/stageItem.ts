@@ -45,6 +45,26 @@ export function stageQuestion(item: Item | null): StageQuestion | null {
   return { stem: { kind: item.stem.kind, value: item.stem.value }, options };
 }
 
+/** More options than this, and the stage draws the list compact (`crowded`). */
+const ROOMY_OPTIONS = 4;
+/**
+ * More characters than this across the question text and its options, and the stage draws them
+ * compact. About what a 1280x720 projector holds at the stage sizes: a three-line stem and four
+ * one-line options.
+ */
+const ROOMY_CHARACTERS = 360;
+
+/**
+ * Whether a question has more to show than a short projector holds at full size (1280x720). A
+ * crowded question's stem is clamped and its options are drawn compact, so every option row and
+ * every bar stays on the wall; the whole text is on every phone.
+ */
+export function crowded(stem: string, labels: readonly string[]): boolean {
+  if (labels.length > ROOMY_OPTIONS) return true;
+  const characters = labels.reduce((sum, label) => sum + label.length, stem.length);
+  return characters > ROOMY_CHARACTERS;
+}
+
 /** The item's general rationale, only once the answer is showing. */
 export function stageRationale(item: Item | null, revealed: boolean): RichText | null {
   if (!revealed || item === null) return null;

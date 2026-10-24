@@ -21,6 +21,11 @@ export interface ResultsChartProps {
   size?: "app" | "stage";
   /** What the chart is, for a screen reader: "How the class answered". */
   label?: string;
+  /**
+   * A long list on the projector: tighter rows, and each option's words on one line, so every
+   * bar fits a 1280x720 wall. The whole option is on every phone.
+   */
+  compact?: boolean;
   className?: string;
 }
 
@@ -62,11 +67,15 @@ export function ResultsChart({
   total,
   size = "app",
   label = "How the class answered",
+  compact = false,
   className = "",
 }: ResultsChartProps) {
   const look = SIZES[size];
   return (
-    <ul aria-label={label} className={`grid ${look.gap} ${className}`.trim()}>
+    <ul
+      aria-label={label}
+      className={`grid ${compact ? "gap-[1.2cqb]" : look.gap} ${className}`.trim()}
+    >
       {rows.map((row, index) => {
         const percent = sharePercent(row.count, total);
         const key = row.isKey === true;
@@ -84,10 +93,12 @@ export function ResultsChart({
                 {row.letter}
               </span>
             )}
-            <div className="flex min-w-0 flex-col gap-1.5">
-              <span className={`${look.label} flex flex-wrap items-baseline gap-x-3`}>
+            <div className={`flex min-w-0 flex-col ${compact ? "gap-0.5" : "gap-1.5"}`}>
+              <span
+                className={`${look.label} flex items-baseline gap-x-3 ${compact ? "" : "flex-wrap"}`}
+              >
                 {row.letter === undefined ? null : <span className="sr-only">{row.letter}. </span>}
-                {row.label}
+                {compact ? <span className="min-w-0 flex-1 truncate">{row.label}</span> : row.label}
                 {key ? (
                   <span
                     className={`${look.keyWord} inline-flex items-center gap-1 font-bold text-correct`}
@@ -99,7 +110,7 @@ export function ResultsChart({
               </span>
               <div
                 aria-hidden="true"
-                className={`${look.bar} relative overflow-hidden rounded-sm bg-chart-track ${key ? "outline-(length:--chart-key-outline) outline-offset-2 outline-chart-key outline-solid" : ""}`}
+                className={`${compact && size === "stage" ? "h-[2.8cqb]" : look.bar} relative overflow-hidden rounded-sm bg-chart-track ${key ? "outline-(length:--chart-key-outline) outline-offset-2 outline-chart-key outline-solid" : ""}`}
               >
                 <span
                   data-testid="results-bar"

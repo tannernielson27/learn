@@ -32,14 +32,35 @@ describe("StageReveal: a long rationale on a short projector", () => {
   it("clamps the rationale to about four lines and lets it give way", () => {
     draw();
     const rationale = screen.getByTestId("stage-rationale");
-    expect(rationale).toHaveClass("line-clamp-4", "min-h-0");
+    expect(rationale).toHaveClass("line-clamp-4", "min-h-0", "shrink-[100]");
     expect(rationale).not.toHaveClass("shrink-0");
   });
 
   it("gives the chart a floor, so every bar shows whatever the rationale holds", () => {
     draw();
     const chart = screen.getByRole("list", { name: "How the class answered" }).parentElement;
-    expect(chart).toHaveClass("flex-1", "min-h-[45cqb]");
+    expect(chart).toHaveClass("flex-auto", "min-h-[45cqb]");
     expect(screen.getAllByTestId("results-bar")).toHaveLength(2);
+  });
+
+  it("gives a long chart the whole wall: the question steps aside and the rows are compact", () => {
+    const rows = Array.from({ length: 6 }, (_, index) => ({
+      letter: String.fromCharCode(65 + index),
+      label: `Option ${index + 1}`,
+      count: index,
+    }));
+    render(
+      <StageReveal
+        place={{ position: 3, itemCount: 20, label: "Question 3 of 20", caseStep: null }}
+        answers={null}
+        question={{ stem: { kind: "markdown", value: "Which actions?" }, options: null }}
+        rows={rows}
+        total={15}
+        rationale={null}
+      />,
+    );
+    expect(screen.getByTestId("stage-reveal-stem")).toHaveClass("hidden");
+    expect(screen.getByText("Option 6")).toHaveClass("truncate");
+    expect(screen.getAllByTestId("results-bar")).toHaveLength(6);
   });
 });

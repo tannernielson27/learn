@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { distributionFor } from "@/lib/live/results";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema, type Item } from "@/lib/ngn/schemas";
-import { chartRows, stageQuestion, stageRationale } from "./stageItem";
+import { chartRows, crowded, stageQuestion, stageRationale } from "./stageItem";
 
 const mc = itemSchema.parse(FIXTURES.multiple_choice.canonical) as Item;
 const sata = itemSchema.parse(FIXTURES.multiple_response.canonical) as Item;
@@ -93,5 +93,34 @@ describe("chartRows", () => {
   it("is nothing for a kind of result that is not one bar per option", () => {
     expect(chartRows(null, true)).toBeNull();
     expect(chartRows(distributionFor(matrix, []), true)).toBeNull();
+  });
+});
+
+describe("crowded", () => {
+  const LONG_STEM =
+    "A client two days after a total hip arthroplasty reports sudden dyspnea. ".repeat(3);
+  const short = (count: number) => Array.from({ length: count }, (_, i) => `Option ${i + 1}`);
+
+  it("is a six-option question with a long stem, whatever its words", () => {
+    expect(crowded(LONG_STEM, short(6))).toBe(true);
+    expect(crowded("Which?", short(5))).toBe(true);
+  });
+
+  it("leaves an ordinary four-option question at full size", () => {
+    expect(crowded("Which action should the nurse take first?", short(4))).toBe(false);
+    expect(
+      crowded(
+        mc.stem.value,
+        mc.type === "multiple_choice" ? mc.content.options.map((o) => o.label) : [],
+      ),
+    ).toBe(false);
+  });
+
+  it("is four options too long to sit beside a long stem on a short projector", () => {
+    const long = Array.from(
+      { length: 4 },
+      () => "Raise the head of the bed, apply oxygen and then call the provider",
+    );
+    expect(crowded(LONG_STEM, long)).toBe(true);
   });
 });

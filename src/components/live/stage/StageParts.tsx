@@ -39,8 +39,8 @@ export function JoinStrip({ url, code }: { url: string; code: string }) {
  * The question text, the stage's largest words after the join code. A step down on a short
  * projector (1280x720), where the rem floor would otherwise push the options off the wall.
  *
- * `clamp` is for a question with a long list of options: a step down at every size and four
- * lines at most, so the options keep the room (the whole text is on every phone).
+ * `clamp` is for a crowded question (`crowded`): a step down at every size and three lines at
+ * most, so the options keep the room (the whole text is on every phone).
  */
 export function StageStem({
   stem,
@@ -58,7 +58,7 @@ export function StageStem({
   return (
     <div
       data-stage-stem=""
-      className={`max-w-[80cqi] leading-tight font-semibold tracking-[-0.015em] text-stage-ink ${size} ${clamp ? "line-clamp-4 shrink-0" : ""} [&_p+p]:mt-[1cqb]`}
+      className={`max-w-[80cqi] leading-tight font-semibold tracking-[-0.015em] text-stage-ink ${size} ${clamp ? "line-clamp-3 shrink-0" : ""} [&_p+p]:mt-[1cqb]`}
     >
       <RichTextView text={stem} />
     </div>
@@ -72,9 +72,18 @@ export function StageStem({
  *
  * The list takes the height left under the stem and its rows share it (`minmax(0, max-content)`):
  * with room to spare each row is as tall as its words, and on a short wall every row shrinks
- * alike and clips inside itself, so no option row is ever pushed off the stage.
+ * alike and clips inside itself, so no option row is ever pushed off the stage. A crowded
+ * question's rows are tighter and their words stop at two lines.
  */
-export function StageOptions({ options }: { options: readonly StageOption[] }) {
+export function StageOptions({
+  options,
+  compact = false,
+}: {
+  options: readonly StageOption[];
+  /** A crowded question (`crowded`): tighter rows, each option's words to two lines. */
+  compact?: boolean;
+}) {
+  const long = compact;
   const columns = options.length > 4 ? "grid-cols-2" : "grid-cols-1";
   return (
     <ol
@@ -84,7 +93,7 @@ export function StageOptions({ options }: { options: readonly StageOption[] }) {
       {options.map((option, index) => (
         <li
           key={option.letter ?? index}
-          className="flex min-h-0 items-center gap-[2.5cqb] overflow-hidden rounded-md border-(length:--stage-stroke) border-stage-line px-[3cqb] py-[1.3cqb] text-stage-option leading-tight font-medium"
+          className={`flex min-h-0 items-center gap-[2.5cqb] overflow-hidden rounded-md border-(length:--stage-stroke) border-stage-line px-[3cqb] text-stage-option leading-tight font-medium ${long ? "py-[0.8cqb]" : "py-[1.3cqb]"}`}
         >
           {option.letter === null ? null : (
             <>
@@ -97,7 +106,8 @@ export function StageOptions({ options }: { options: readonly StageOption[] }) {
               <span className="sr-only">{option.letter}. </span>
             </>
           )}
-          <span className="min-w-0">{option.label}</span>
+          {/* A crowded question's words stop at two lines on the wall; each phone has them whole. */}
+          <span className={`min-w-0 ${long ? "line-clamp-2" : ""}`}>{option.label}</span>
         </li>
       ))}
     </ol>
