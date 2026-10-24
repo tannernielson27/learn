@@ -85,7 +85,10 @@ export function PhoneWaiting({
   );
 }
 
-/** The server will not let this phone back in: it was removed, or its session closed. */
+/**
+ * The server will not let this phone back in: it was removed, its session closed, or the student
+ * joined again on another device.
+ */
 export function PhoneRefused() {
   return (
     <PhoneMessage
@@ -97,6 +100,11 @@ export function PhoneRefused() {
       }
     >
       <p className="text-ink-2">Your teacher has the answers you sent.</p>
+      {/* A signed-in student who joins again on another device takes their place with them
+          (ADR 0013), and this phone cannot tell that from being removed, so it says both. */}
+      <p className="text-ink-2">
+        If you joined this live session on another device, carry on there.
+      </p>
     </PhoneMessage>
   );
 }
