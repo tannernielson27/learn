@@ -26,15 +26,18 @@ export function InviteLinkField({ url }: InviteLinkFieldProps) {
       <label htmlFor="invite-link" className="text-sm font-medium text-ink-1">
         Invite link
       </label>
-      <input
-        id="invite-link"
-        type="text"
-        readOnly
-        value={url}
-        // Read only, so the quieter surface; the field's 3:1 edge still marks the box (WCAG 1.4.11).
-        className="tap-target w-full min-w-0 rounded-sm border border-line-field bg-surface-2 px-3 font-mono text-sm text-ink-1"
-      />
-      <CopyLinkButton url={url} />
+      {/* Beside each other on a phone, to keep the class page's header short; stacked from 640px. */}
+      <div className="flex flex-wrap items-start gap-3 sm:flex-col sm:flex-nowrap sm:items-stretch sm:gap-2">
+        <input
+          id="invite-link"
+          type="text"
+          readOnly
+          value={url}
+          // Read only, so the quieter surface; the field's 3:1 edge still marks the box (WCAG 1.4.11).
+          className="tap-target min-w-0 flex-[1_1_9rem] rounded-sm border border-line-field bg-surface-2 px-3 font-mono text-sm text-ink-1 sm:w-full sm:flex-none"
+        />
+        <CopyLinkButton url={url} />
+      </div>
     </div>
   );
 }
@@ -54,18 +57,24 @@ export function ClassCodeBlock({ code, labelAs: Label = "h3" }: ClassCodeBlockPr
   return (
     <div className="flex flex-col gap-2">
       <Label className="text-sm font-medium text-ink-1">Class code</Label>
-      <p
-        data-testid="class-code"
-        className="font-mono text-3xl tracking-[0.15em] break-all text-ink-1"
-      >
-        {formatClassCode(code)}
-      </p>
-      <p className="max-w-prose text-sm text-ink-2">Students type it after signing in.</p>
-      <CopyTextButton
-        text={normalizeClassCode(code)}
-        label="Copy class code"
-        failedMessage="Could not copy. Write the code down from the page instead."
-      />
+      {/* On a phone the code and its button share a row and the hint goes under both; from 640px
+          the code stands alone, projector-sized, above the hint and the button. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:flex-col sm:flex-nowrap sm:items-start">
+        <p
+          data-testid="class-code"
+          className="font-mono text-2xl break-all text-ink-1 sm:text-3xl sm:tracking-[0.15em]"
+        >
+          {formatClassCode(code)}
+        </p>
+        <p className="order-last basis-full text-sm text-ink-2 sm:order-none sm:max-w-prose sm:basis-auto">
+          Students type it after signing in.
+        </p>
+        <CopyTextButton
+          text={normalizeClassCode(code)}
+          label="Copy class code"
+          failedMessage="Could not copy. Write the code down from the page instead."
+        />
+      </div>
     </div>
   );
 }

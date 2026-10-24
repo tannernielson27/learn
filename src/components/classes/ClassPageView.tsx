@@ -191,14 +191,14 @@ export function ClassPageView({
   };
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6 sm:gap-8">
       <ClassHeader
         name={detail.name}
         studentCount={roster === null ? null : roster.length}
         url={url}
         code={detail.joinCode}
       />
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-6 sm:gap-8">
         <ClassTabs classId={detail.id} current={tab} />
         <div className="min-w-0">{panels[tab]()}</div>
       </div>

@@ -56,3 +56,29 @@ test("the class page's tabs are reached with Tab and show where focus is", async
     expect((await link.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
   }
 });
+
+// On a phone the real page's bar and padding put the header about 150px down, and every tab
+// switch is a page load that starts at the top. The header has to leave the tabs and the open
+// tab's first heading on that first screen, so it is measured from its own top: the gallery's
+// chrome above it is not the real page's.
+const PHONE_FIRST_SCREEN = 700 - 150;
+
+for (const [tab, label] of TABS) {
+  test(`on a phone, the ${label} tab's heading is on the first screen`, async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== "phone-375", "the budget is for a phone");
+    await page.goto(tab === "overview" ? "/gallery/class-page" : `/gallery/class-page?tab=${tab}`);
+    const demo = page.getByTestId("class-page-demo");
+    await expect(demo).toHaveAttribute("data-hydrated", "true");
+    await page.evaluate(() => document.fonts.ready);
+
+    const top = (await demo.locator("header").boundingBox())?.y ?? 0;
+    const nav = await demo.getByRole("navigation", { name: "Class views" }).boundingBox();
+    const heading = await demo.getByRole("heading", { level: 2 }).first().boundingBox();
+    expect((nav?.y ?? Infinity) + (nav?.height ?? 0) - top).toBeLessThan(PHONE_FIRST_SCREEN);
+    expect((heading?.y ?? Infinity) + (heading?.height ?? 0) - top).toBeLessThan(
+      PHONE_FIRST_SCREEN,
+    );
+  });
+}
