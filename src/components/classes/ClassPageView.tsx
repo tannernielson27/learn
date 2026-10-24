@@ -13,6 +13,7 @@ import { ClassHeader } from "./ClassHeader";
 import { ClassNameForm, type ClassNameFormProps } from "./ClassNameForm";
 import { ClassOverviewPanel } from "./ClassOverviewPanel";
 import { ClassRoster } from "./ClassRoster";
+import { ClassTabPanel } from "./ClassTabPanel";
 import { ClassTabs } from "./ClassTabs";
 import { ClassTimeZoneForm } from "./ClassTimeZoneForm";
 import type { ConfirmSubmitProps } from "./ConfirmSubmit";
@@ -200,7 +201,7 @@ export function ClassPageView({
       />
       <div className="flex flex-col gap-6 sm:gap-8">
         <ClassTabs classId={detail.id} current={tab} />
-        <div className="min-w-0">{panels[tab]()}</div>
+        <ClassTabPanel tab={tab}>{panels[tab]()}</ClassTabPanel>
       </div>
     </div>
   );

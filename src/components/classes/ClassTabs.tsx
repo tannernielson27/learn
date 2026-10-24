@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { CLASS_TAB_LABELS, CLASS_TABS, classTabPath, type ClassTab } from "@/lib/classes/classTabs";
+import { requestClassTabFocus } from "./ClassTabPanel";
 
 export interface ClassTabsProps {
   classId: string;
@@ -12,7 +15,8 @@ export interface ClassTabsProps {
  * the ARIA tabs pattern, because each part is its own page load with its own history entry.
  *
  * On a phone the row scrolls sideways inside itself, never the page. The focus ring is drawn
- * inside each link so the scrolling row cannot clip it.
+ * inside each link so the scrolling row cannot clip it. Following one moves focus to the new
+ * panel's heading (`ClassTabPanel`); a click that opens a new browser tab does not ask it to.
  */
 export function ClassTabs({ classId, current }: ClassTabsProps) {
   return (
@@ -23,6 +27,15 @@ export function ClassTabs({ classId, current }: ClassTabsProps) {
             <Link
               href={classTabPath(classId, tab)}
               aria-current={tab === current ? "page" : undefined}
+              onClick={(event) => {
+                const newTab =
+                  event.button !== 0 ||
+                  event.metaKey ||
+                  event.ctrlKey ||
+                  event.shiftKey ||
+                  event.altKey;
+                if (tab !== current && !newTab) requestClassTabFocus(tab);
+              }}
               className={`tap-target inline-flex items-center border-b-2 px-3 text-sm font-semibold whitespace-nowrap transition-colors duration-fast focus-visible:outline-offset-[-2px] ${
                 tab === current
                   ? "border-accent text-accent-ink"
