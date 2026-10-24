@@ -873,8 +873,8 @@ describe("a phone whose socket never opens (campus Wi-Fi that filters WebSockets
       "connecting",
       "reconnecting",
     ]);
-    // The first failure is followed by a read within a second, not a whole poll later.
-    await vi.advanceTimersByTimeAsync(1_000);
+    // The first failure is followed by a read at a random moment inside one poll period.
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS);
     expect(live.asks()).toBe(2);
     expect(live.recorded.connections.at(-1)).toEqual({ status: "live", rejoined: false });
 
@@ -893,7 +893,7 @@ describe("a phone whose socket never opens (campus Wi-Fi that filters WebSockets
     await live.transport.resume(ME);
     await live.socket.subscribed();
     live.socket.emit("CHANNEL_ERROR");
-    await vi.advanceTimersByTimeAsync(1_000);
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS / 2);
     expect(live.recorded.connections.at(-1)?.status).toBe("live");
 
     dropping = true;
@@ -906,15 +906,30 @@ describe("a phone whose socket never opens (campus Wi-Fi that filters WebSockets
     expect(live.recorded.connections.at(-1)).toEqual({ status: "live", rejoined: false });
   });
 
-  it("reads the room again when a socket that was live drops, spread over a second", async () => {
+  it("reads the room again when a socket that was live drops, spread over a poll period", async () => {
     const live = blocked([ON_ONE, ON_TWO]);
     await live.enter();
     expect(live.asks()).toBe(1);
 
     live.socket.emit("CHANNEL_ERROR");
-    await vi.advanceTimersByTimeAsync(1_000);
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS / 2);
     expect(live.asks()).toBe(2);
     expect(live.recorded.views.at(-1)?.state).toMatchObject({ position: 2 });
+  });
+
+  it("spreads a class's first read after a drop over the whole poll period, not one second", async () => {
+    vi.useFakeTimers();
+    const late = phone([ON_ONE, ON_TWO], undefined, { random: () => 0.999 });
+    // The read on the way in is never spread: it goes at once.
+    const entering = late.enter();
+    expect(late.asks()).toBe(1);
+    await entering;
+
+    late.socket.emit("CHANNEL_ERROR");
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS * 0.99);
+    expect(late.asks()).toBe(1);
+    await vi.advanceTimersByTimeAsync(VIEW_POLL_MS * 0.01);
+    expect(late.asks()).toBe(2);
   });
 
   it("keeps reading when the socket is live but no read of the room has got through", async () => {

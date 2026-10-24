@@ -807,11 +807,12 @@ export function createSupabaseParticipant(
           if (!viaHttp) notifyConnection("reconnecting", false);
           // Harmless once the promise has settled, which is the ordinary case for CLOSED.
           answerEntry(new Error(`The session's channel could not be opened (${status}).`));
-          // The room is read over HTTP until the socket is back: soon (spread over a second, so a
-          // class whose Wi-Fi blinked does not ask at once) the first time it fails.
+          // The room is read over HTTP until the socket is back, the first time it fails at a
+          // random moment inside one poll period: a class whose Wi-Fi blinked drops together, and
+          // seventy first reads spread over a second would all land in that second (#481).
           if (was !== "down") {
             stopPolling();
-            schedulePoll(1_000 * random());
+            schedulePoll(VIEW_POLL_MS * random());
           } else {
             schedulePoll();
           }
