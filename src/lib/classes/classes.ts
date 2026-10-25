@@ -49,3 +49,18 @@ export function parseClassForm(formData: FormData): ClassFormResult {
   }
   return { ok: true, name };
 }
+
+/** One student's progress in one class, for its teacher. */
+export function classStudentPath(classId: string, profileId: string): string {
+  return `${classPath(classId)}/students/${profileId}`;
+}
+
+/** The class's progress grid as CSV. */
+export function classProgressCsvPath(classId: string): string {
+  return `${classPath(classId)}/progress/csv`;
+}
+
+/** Where a teacher picks a quiz to start a live session for this class. */
+export function classStartPath(classId: string): string {
+  return `${classPath(classId)}/start`;
+}
