@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { expect, test, type APIRequestContext, type Browser, type Page } from "@playwright/test";
+import { bytesOf, wireText } from "./bytes";
 import { latestSignInLink, openSignInLink } from "./mailbox";
 import {
   createAccountWithoutRole,
@@ -13,10 +14,10 @@ import { skipWelcomes } from "./welcome";
 
 // A student sees their own live session results (20261025010000_student_live_results.sql). A
 // teacher starts a live session for a class; a signed-in member joins and answers question 1. While
-// the session runs, the student's home lists nothing and the results page is not found. Once it
-// ends, the home lists it with the score and its page shows the answer with the rationale. Another
-// member of the same class gets not-found. Needs the local Supabase stack; CI runs it in the
-// `auth-e2e` job.
+// the session runs, the student's home lists nothing and the results page is not found, its bytes
+// naming no key or rationale. Once it ends, the home lists it with the score and its page shows
+// the answer with the rationale, and its bytes carry them: the control. Another member of the same
+// class gets not-found. Needs the local Supabase stack; CI runs it in the `auth-e2e` job.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
 
 // supabase/seed.sql: the "Samples" quiz plays its multiple choice question first.
@@ -24,6 +25,8 @@ const SAMPLES_BANK = "00000000-0000-4000-8000-000000000002";
 const MC_ITEM = "00000000-0000-4000-8000-000000000100";
 const MC_RATIONALE = "Rapid weight gain with orthopnea suggests fluid overload.";
 const CLASS_CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+/** The field names only a key, a rationale or a mark carries, as in scripts/gallery-closed.mjs. */
+const FORBIDDEN = ["answerKey", "correctOptionId", "rationale", "scoring", "maxPoints"] as const;
 
 async function makeClass(request: APIRequestContext, orgId: string, name: string) {
   const code = Array.from(
@@ -147,6 +150,14 @@ test("a student sees their own live session results once it ends, and nobody els
     liveSessions(member.page).getByRole("heading", { name: "No live sessions yet", exact: true }),
   ).toBeVisible();
   expect((await member.page.goto(`/learn/live/${sessionId}`))?.status()).toBe(404);
+  // The bytes of that response, HTML and inline Flight, name no key, rationale or mark. The control
+  // is the same route after the end, below.
+  const running = await member.page.context().request.get(`/learn/live/${sessionId}`);
+  expect(running.status()).toBe(404);
+  const runningBytes = wireText(await running.text());
+  expect(runningBytes.length).toBeGreaterThan(0);
+  expect(runningBytes).not.toContain(MC_RATIONALE);
+  for (const name of FORBIDDEN) expect(runningBytes).not.toContain(name);
 
   // The teacher ends it.
   await page.getByRole("button", { name: "End live session", exact: true }).click();
@@ -169,6 +180,10 @@ test("a student sees their own live session results once it ends, and nobody els
     member.page.getByRole("heading", { level: 1, name: session.title, exact: true }),
   ).toBeVisible();
   await expect(member.page.getByText(MC_RATIONALE, { exact: true }).first()).toBeVisible();
+  // The control: the same route's bytes now carry the key, the rationale and the mark.
+  const endedBytes = await bytesOf(member.page.context(), `/learn/live/${sessionId}`);
+  expect(endedBytes).toContain(MC_RATIONALE);
+  for (const name of FORBIDDEN) expect(endedBytes).toContain(name);
 
   // Another member of the same class, signed in: not found, and nothing on their home.
   expect((await other.page.goto(`/learn/live/${sessionId}`))?.status()).toBe(404);
