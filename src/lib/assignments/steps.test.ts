@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { StepAttempt } from "@/lib/supabase/steps";
-import { assignmentStepMarks, buildMyStepStandings, practiceStepMarks } from "./steps";
+import {
+  assignmentStepMarks,
+  buildMyStepStandings,
+  liveStepMarks,
+  practiceStepMarks,
+} from "./steps";
 
 const attempt = (
   assignmentId: string,
@@ -82,5 +87,26 @@ describe("practiceStepMarks (#241)", () => {
     expect(four).toMatchObject({ items: 5, points: 3, ranked: true, percent: 60 });
     expect(four?.bySource.assignments.items).toBe(2);
     expect(four?.bySource.practice.items).toBe(3);
+  });
+});
+
+describe("liveStepMarks", () => {
+  it("marks live answers as their own source", () => {
+    expect(liveStepMarks([m(3, 1), m(null, 0, 2)])).toEqual([
+      { source: "live", cjmmStep: 3, points: 1, maxPoints: 1 },
+      { source: "live", cjmmStep: null, points: 0, maxPoints: 2 },
+    ]);
+  });
+
+  it("ranks live answers with the assignments and practice and keeps the counts apart", () => {
+    const { steps } = buildMyStepStandings(
+      [attempt("w1", 1, 2, [m(4, 1), m(4, 1)])],
+      [m(4, 0)],
+      [m(4, 0), m(4, 1)],
+    );
+    const four = steps.find((s) => s.step === 4);
+    expect(four).toMatchObject({ items: 5, points: 3, ranked: true, percent: 60 });
+    expect(four?.bySource.live.items).toBe(2);
+    expect(four?.bySource.practice.items).toBe(1);
   });
 });

@@ -16,7 +16,8 @@
  * The same submit at close comes before "Your steps" (#239), read beside the history through
  * `public.my_step_marks`, under the same rules, and ranked by `buildMyStepStandings` together
  * with the student's practice marks (#241, `public.my_practice_step_marks`), which are their own
- * source and never count toward a grade.
+ * source and never count toward a grade, and with their own answers in ended live sessions
+ * (`public.my_live_step_marks`), a third source.
  */
 import type { ExpiredFilter } from "@/lib/supabase/attempts";
 import type { StepStandings } from "@/lib/ngn/stepStandings";
@@ -34,6 +35,8 @@ export interface HistoryStore {
   stepAttempts(): Promise<StepAttempt[] | null>;
   /** The student's practice marks by step (#241). Null on an error. */
   practiceMarks(): Promise<StepAttemptMark[] | null>;
+  /** The student's own answers in ended live sessions, by step. Null on an error. */
+  liveMarks(): Promise<StepAttemptMark[] | null>;
 }
 
 /** How the student stands on one closed assignment. */
@@ -96,14 +99,18 @@ export async function loadStudentRecord(
   studentId: string,
 ): Promise<StudentRecord> {
   await submitAtClose(store, studentId);
-  const [assignments, attempts, practice] = await Promise.all([
+  const [assignments, attempts, practice, live] = await Promise.all([
     store.history(),
     store.stepAttempts(),
     store.practiceMarks(),
+    store.liveMarks(),
   ]);
   return {
     history: assignments === null ? null : buildHistory(assignments),
-    // Either source missing would be a quietly different ranking, so the section says it failed.
-    steps: attempts === null || practice === null ? null : buildMyStepStandings(attempts, practice),
+    // Any source missing would be a quietly different ranking, so the section says it failed.
+    steps:
+      attempts === null || practice === null || live === null
+        ? null
+        : buildMyStepStandings(attempts, practice, live),
   };
 }

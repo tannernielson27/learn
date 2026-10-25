@@ -122,28 +122,31 @@ describe("buildStepStandings (#239)", () => {
     ]);
   });
 
-  it("keeps the counts from each source apart, and ranks on both together", () => {
+  it("keeps the counts from each source apart, and ranks on all of them together", () => {
     const { steps } = buildStepStandings([
       ...marks(1, 3, 0, "assignments"),
       ...marks(1, 2, 2, "practice"),
+      ...marks(1, 1, 1, "live"),
       mark(null, 1, 1, "practice"),
     ]);
     const recognize = steps.find((s) => s.step === 1);
     expect(recognize).toMatchObject({
-      items: 5,
-      points: 2,
-      maxPoints: 5,
-      percent: 40,
+      items: 6,
+      points: 3,
+      maxPoints: 6,
+      percent: 50,
       ranked: true,
     });
     expect(recognize?.bySource).toEqual({
       assignments: { items: 3, points: 0, maxPoints: 3 },
       practice: { items: 2, points: 2, maxPoints: 2 },
+      live: { items: 1, points: 1, maxPoints: 1 },
     });
     const { untagged } = buildStepStandings([mark(null, 1, 1, "practice")]);
     expect(untagged.bySource).toEqual({
       assignments: { items: 0, points: 0, maxPoints: 0 },
       practice: { items: 1, points: 1, maxPoints: 1 },
+      live: { items: 0, points: 0, maxPoints: 0 },
     });
   });
 

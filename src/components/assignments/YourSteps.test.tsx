@@ -74,6 +74,21 @@ describe("YourSteps (#239)", () => {
     expect(first).toHaveTextContent("5 questions: 3 from assignments, 2 from practice");
   });
 
+  it("shows live sessions as a source of their own", () => {
+    renderSteps([...marks(1, 3, 1), ...marks(1, 2, 2, "live")]);
+    const [first] = within(screen.getByRole("list")).getAllByRole("listitem");
+    expect(first).toHaveTextContent("5 questions: 3 from assignments, 2 from live sessions");
+  });
+
+  it("says where the answers come from, live sessions included", () => {
+    renderSteps(marks(1, 1, 1));
+    expect(
+      screen.getByText(
+        "Weakest first, from your best attempt at each closed assignment, your first answers in practice and your answers in ended live sessions.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("says how many answered questions have no step", () => {
     renderSteps([...marks(null, 2, 1), ...marks(1, 1, 1)]);
     expect(screen.getByText("2 questions have no step and are not counted.")).toBeInTheDocument();

@@ -7,6 +7,9 @@
  * Practice (#241) adds its own marks with `source: "practice"` beside these: each item's first
  * practice answer (`public.my_practice_step_marks`), ranked together with the assignments and
  * counted apart, as #239 designed.
+ *
+ * Live answers add a third source with `source: "live"`: the student's own answers in ended live
+ * sessions they were linked in (`public.my_live_step_marks`), each answer counted once.
  */
 import { buildStepStandings, type StepMark, type StepStandings } from "@/lib/ngn/stepStandings";
 import type { StepAttempt, StepAttemptMark } from "@/lib/supabase/steps";
@@ -42,9 +45,24 @@ export function practiceStepMarks(marks: readonly StepAttemptMark[]): StepMark[]
   }));
 }
 
+/** Live answers in ended sessions, as the live source. */
+export function liveStepMarks(marks: readonly StepAttemptMark[]): StepMark[] {
+  return marks.map((mark) => ({
+    source: "live",
+    cjmmStep: mark.cjmmStep,
+    points: mark.points,
+    maxPoints: mark.maxPoints,
+  }));
+}
+
 export function buildMyStepStandings(
   attempts: readonly StepAttempt[],
   practice: readonly StepAttemptMark[] = [],
+  live: readonly StepAttemptMark[] = [],
 ): StepStandings {
-  return buildStepStandings([...assignmentStepMarks(attempts), ...practiceStepMarks(practice)]);
+  return buildStepStandings([
+    ...assignmentStepMarks(attempts),
+    ...practiceStepMarks(practice),
+    ...liveStepMarks(live),
+  ]);
 }

@@ -76,6 +76,8 @@ const state = vi.hoisted(() => ({
   practicePage: { kind: "missing" } as unknown,
   invite: { status: "invalid" } as unknown,
   report: null as unknown,
+  live: [] as unknown[] | null,
+  livePage: { kind: "missing" } as unknown,
 }));
 
 const action = () => vi.fn(async () => ({ error: null }));
@@ -145,6 +147,9 @@ vi.mock("@/lib/assignments/attemptStore", () => ({
   assignmentReportStore: () => ({}),
 }));
 vi.mock("@/lib/practice/store", () => ({ practicePageStore: () => ({}) }));
+vi.mock("@/lib/supabase/liveResults", () => ({ readMyLiveResults: async () => state.live }));
+vi.mock("@/lib/learn/liveResultsStore", () => ({ liveResultsStore: () => ({}) }));
+vi.mock("@/lib/learn/liveResultPage", () => ({ loadLiveResultPage: async () => state.livePage }));
 vi.mock("@/lib/assignments/history", async (original) => ({
   ...(await original<typeof import("@/lib/assignments/history")>()),
   loadStudentRecord: async () => ({ history: state.history, steps: state.steps }),
@@ -259,6 +264,20 @@ function fullHome() {
     ...stepMarks(2, 2, 0),
     ...stepMarks(null, 3, 1),
   ]);
+  state.live = [
+    {
+      sessionId: row(5),
+      title: "Cardiac quiz",
+      classId: CLASS_A,
+      className: "NUR 310",
+      closedAt: "2026-10-27T15:00:00Z",
+      questionCount: 3,
+      answered: 2,
+      points: 2,
+      possible: 4,
+      marks: [],
+    },
+  ];
 }
 
 function emptyHome() {
@@ -268,6 +287,7 @@ function emptyHome() {
   state.practice = [];
   state.history = [];
   state.steps = buildStepStandings([]);
+  state.live = [];
 }
 
 const taking = (items: Item[], record: unknown = null) => ({
@@ -414,6 +434,10 @@ async function resultsPage(): Promise<ReactElement> {
   const { default: Page } = await import("./assignments/[assignmentId]/results/page");
   return Page(assignmentParams);
 }
+async function liveResultsPage(): Promise<ReactElement> {
+  const { default: Page } = await import("./live/[sessionId]/page");
+  return Page({ params: Promise.resolve({ sessionId: row(5) }) } as never);
+}
 async function practice(): Promise<ReactElement> {
   const { default: Page } = await import("./practice/[bankId]/page");
   return Page({ params: Promise.resolve({ bankId: QUIZ }) } as never);
@@ -460,6 +484,7 @@ const SCREENS: readonly Screen[] = [
       state.practice = null;
       state.history = null;
       state.steps = null;
+      state.live = null;
     },
     element: home,
   },
@@ -571,6 +596,37 @@ const SCREENS: readonly Screen[] = [
       state.resultsPage = { kind: "failed" };
     },
     element: resultsPage,
+  },
+  {
+    name: "live session results, a marked answer",
+    arrange: () => {
+      state.classes = CLASSES;
+      const { entries } = results();
+      state.livePage = {
+        kind: "results",
+        header: {
+          id: row(5),
+          title: "Cardiac quiz",
+          classId: CLASS_A,
+          className: "NUR 310",
+          closedAt: "2026-10-27T15:00:00Z",
+        },
+        entries: entries.map((entry, index) => ({
+          ...entry,
+          rowId: String(index + 1),
+          position: index + 1,
+          record: null,
+        })),
+      };
+    },
+    element: liveResultsPage,
+  },
+  {
+    name: "live session results, could not be loaded",
+    arrange: () => {
+      state.livePage = { kind: "failed" };
+    },
+    element: liveResultsPage,
   },
   {
     name: "practice, answering a question",

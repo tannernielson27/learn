@@ -7,6 +7,7 @@ import { StudentAssignmentList } from "@/components/assignments/StudentAssignmen
 import { YourSteps } from "@/components/assignments/YourSteps";
 import { ConfirmEmailBanner } from "@/components/auth/ConfirmEmailBanner";
 import { JoinByCodeForm } from "@/components/classes/JoinByCodeForm";
+import { LiveSessionHistory } from "@/components/learn/LiveSessionHistory";
 import { StudentClassList } from "@/components/classes/StudentClassList";
 import { PickUpCard } from "@/components/learn/PickUpCard";
 import { StudentWelcome } from "@/components/onboarding/StudentWelcome";
@@ -18,6 +19,7 @@ import { loadStudentRecord } from "@/lib/assignments/history";
 import { pickUp } from "@/lib/assignments/pickUp";
 import { isEmailUnconfirmed } from "@/lib/auth/emailConfirmation";
 import { spansWorkspaces, studentClassInfo } from "@/lib/classes/studentClasses";
+import { buildLiveHistory } from "@/lib/learn/liveHistory";
 import { requireStudent } from "@/lib/classes/viewer";
 import {
   readStudentWelcomeState,
@@ -27,6 +29,7 @@ import {
 import { listOpenAssignments } from "@/lib/supabase/assignments";
 import { listMyAttemptProgress } from "@/lib/supabase/attempts";
 import { myClasses } from "@/lib/supabase/classInvites";
+import { readMyLiveResults } from "@/lib/supabase/liveResults";
 import { readMyPracticeBanks } from "@/lib/supabase/practice";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { joinClassWithCode, markStudentOnboarded } from "../actions";
@@ -47,7 +50,9 @@ const H2 = "mb-3 text-lg font-semibold text-ink-1";
  * each linking to where it is taken (#208) with how their attempts stand, and (#238) their history:
  * every closed assignment in their current classes with their best score, linking to its results
  * (#210), and (#239) their clinical judgment steps, weakest first, from the same closed work and
- * (#241) their practice. Practice lists the quizzes shared with their classes.
+ * (#241) their practice. Practice lists the quizzes shared with their classes. Live sessions lists
+ * the ended live sessions they joined signed in for their class, with their own score, each
+ * linking to its results; their answers there count toward their steps too.
  * A student whose classes span more than one workspace reads the workspace on every such row.
  * Anyone who is not a student is sent to their own home by `requireStudent`.
  *
@@ -59,17 +64,20 @@ const H2 = "mb-3 text-lg font-semibold text-ink-1";
 export default async function StudentHomePage() {
   const { supabase, userId, email } = await requireStudent();
   const now = new Date();
-  const [claims, classes, assignments, practice, { history, steps }, welcome] = await Promise.all([
-    // Read from the token already verified for this request; asked here, on the home only, so
-    // the banner never sits over an assignment someone is in the middle of.
-    supabase.auth.getClaims().then(({ data }) => data?.claims),
-    myClasses(supabase),
-    listOpenAssignments(supabase, now),
-    readMyPracticeBanks(supabase),
-    loadStudentRecord(historyStore(supabase, createSupabaseServiceClient()), userId),
-    // #365: three columns of the student's own profile, for a welcome shown once.
-    readStudentWelcomeState(supabase, userId),
-  ]);
+  const [claims, classes, assignments, practice, { history, steps }, welcome, live] =
+    await Promise.all([
+      // Read from the token already verified for this request; asked here, on the home only, so
+      // the banner never sits over an assignment someone is in the middle of.
+      supabase.auth.getClaims().then(({ data }) => data?.claims),
+      myClasses(supabase),
+      listOpenAssignments(supabase, now),
+      readMyPracticeBanks(supabase),
+      loadStudentRecord(historyStore(supabase, createSupabaseServiceClient()), userId),
+      // #365: three columns of the student's own profile, for a welcome shown once.
+      readStudentWelcomeState(supabase, userId),
+      // Ended sessions only, and only the student's own linked participant rows.
+      readMyLiveResults(supabase),
+    ]);
   // #242: due times are shown in each class's zone, not the device's. A student whose classes
   // span more than one workspace also gets the workspace beside each class name, and on each
   // practice quiz, which names no class.
@@ -152,6 +160,16 @@ export default async function StudentHomePage() {
               <DidNotLoad>Your results did not load. Reload the page.</DidNotLoad>
             ) : (
               <AssignmentHistory rows={history} classes={classInfo} />
+            )}
+          </section>
+          <section aria-labelledby="live-history-heading">
+            <h2 id="live-history-heading" className={H2}>
+              Live sessions
+            </h2>
+            {live === null ? (
+              <DidNotLoad>Your live sessions did not load. Reload the page.</DidNotLoad>
+            ) : (
+              <LiveSessionHistory rows={buildLiveHistory(live)} classes={classInfo} />
             )}
           </section>
           <section aria-labelledby="practice-heading">

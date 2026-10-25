@@ -14,8 +14,8 @@
  */
 import { CJMM_STEP_LABELS, type CjmmStep } from "./types";
 
-/** Where a mark came from: a closed assignment, or (#241) practice. */
-export const STEP_SOURCES = ["assignments", "practice"] as const;
+/** Where a mark came from: a closed assignment, (#241) practice, or an ended live session. */
+export const STEP_SOURCES = ["assignments", "practice", "live"] as const;
 export type StepSource = (typeof STEP_SOURCES)[number];
 
 /** Owner decision (S10 kickoff 4): a step needs this many items before it is ranked. */
