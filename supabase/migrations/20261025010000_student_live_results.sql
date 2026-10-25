@@ -60,7 +60,8 @@
 
 -- participants_session_profile_key leads with session_id, so "this student's participants" would
 -- be a scan of every participant ever. Partial: anonymous rows, nearly all of them, are left out.
-create index participants_profile_id_idx
+-- `if not exists`: 20261025000000_class_progress creates the same index, and sorts first.
+create index if not exists participants_profile_id_idx
   on public.participants (profile_id)
   where profile_id is not null;
 
