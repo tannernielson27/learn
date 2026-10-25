@@ -4,14 +4,15 @@
  * Two jobs. Quoting per RFC 4180: a field holding a comma, a double quote, CR or LF is wrapped in
  * double quotes with its own quotes doubled, and every record ends in CRLF. And formula injection:
  * a display name is typed by a student, and a cell that starts with `=`, `+`, `-` or `@` (or a
- * tab or CR, which some spreadsheets skip before looking) is run as a formula when the file is
- * opened. Such a text cell gets a leading single quote, which spreadsheets read as "this is text"
- * (OWASP's CSV injection advice). Numbers are written as numbers: a negative score is data.
+ * tab, CR or LF, or any run of whitespace before one of those four, since some spreadsheets skip
+ * leading whitespace before looking) is run as a formula when the file is opened. Such a text cell
+ * gets a leading single quote, which spreadsheets read as "this is text" (OWASP's CSV injection
+ * advice). Numbers are written as numbers: a negative score is data.
  */
 
 export type CsvCell = string | number | null | undefined;
 
-const FORMULA_START = /^[=+\-@\t\r]/;
+const FORMULA_START = /^(?:[=+\-@\t\r\n]|\s+[=+\-@])/;
 const NEEDS_QUOTES = /[",\r\n]/;
 
 export function neutraliseFormula(value: string): string {

@@ -47,6 +47,14 @@ describe("classProgressCsv", () => {
     });
     expect(lines(classProgressCsv(progress))[1]?.startsWith("'=HYPERLINK(1)")).toBe(true);
   });
+
+  it("keeps a typed name behind leading whitespace from running as a formula", () => {
+    const progress = buildClassProgress({
+      rows: PROGRESS_FIXTURE.rows.map((row) => ({ ...row, name: " =HYPERLINK(1)" })),
+      steps: [],
+    });
+    expect(lines(classProgressCsv(progress))[1]?.startsWith("' =HYPERLINK(1)")).toBe(true);
+  });
 });
 
 describe("classProgressCsvFilename", () => {
