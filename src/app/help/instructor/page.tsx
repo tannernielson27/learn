@@ -294,12 +294,16 @@ export default function InstructorGuide() {
           </p>
         </Topic>
         <Topic id="time-zone" title="Time zone">
-          <p>Set it on the class page, so open and close times show in your local time.</p>
+          <p>
+            Set it under <Ui>Settings</Ui> on the class page, so open and close times show in your
+            local time.
+          </p>
         </Topic>
         <Topic id="remove" title="Remove a student">
           <p>
             A removed student cannot rejoin with the link or code they have. To stop both working
-            for everyone, replace the link: the class code and QR code change too.
+            for everyone, replace the link under <Ui>Settings</Ui>: the class code and QR code
+            change too.
           </p>
         </Topic>
       </Section>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { classPath } from "@/lib/classes/classes";
+import { studentCountLabel } from "@/lib/classes/classOverview";
 import type { ClassSummary } from "@/lib/supabase/classes";
 import { EmptyState, type EmptyStateAction } from "@/components/ui/EmptyState";
 
@@ -7,10 +8,6 @@ export interface ClassListProps {
   classes: readonly ClassSummary[];
   /** With no classes yet: where one is made, on the page that lists them. */
   emptyAction?: EmptyStateAction;
-}
-
-function studentCount(count: number): string {
-  return count === 1 ? "1 student" : `${count} students`;
 }
 
 export function ClassList({ classes, emptyAction }: ClassListProps) {
@@ -28,7 +25,7 @@ export function ClassList({ classes, emptyAction }: ClassListProps) {
             className="tap-target flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-2 py-3 transition-colors duration-fast hover:bg-surface-2"
           >
             <span className="font-medium text-ink-1">{entry.name}</span>
-            <span className="text-sm text-ink-2">{studentCount(entry.memberCount)}</span>
+            <span className="text-sm text-ink-2">{studentCountLabel(entry.memberCount)}</span>
           </Link>
         </li>
       ))}

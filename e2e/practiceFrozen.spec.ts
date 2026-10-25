@@ -163,7 +163,7 @@ test("a practice run keeps an item the instructor unpublishes mid-run, with the 
   // Stopping the share closes the run at once: the page and the answer route are a 404.
   const runId = (JSON.parse(reveal.sent ?? "{}") as { runId?: string }).runId;
   expect(runId).toMatch(/^[0-9a-f-]{36}$/);
-  await page.goto(`/author/classes/${klass.id}`);
+  await page.goto(`/author/classes/${klass.id}?tab=assignments`);
   const classPractice = page.getByRole("region", { name: "Practice", exact: true });
   await classPractice
     .getByRole("button", { name: `Stop sharing Frozen week ${stamp}`, exact: true })

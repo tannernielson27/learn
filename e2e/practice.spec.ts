@@ -243,7 +243,7 @@ test("a student practises a shared bank on a phone, sees each key as they answer
   await outsider.context.close();
 
   // Stop sharing from the class page: at once, the student's page and answer route are a 404.
-  await page.goto(`/author/classes/${cardiac.id}`);
+  await page.goto(`/author/classes/${cardiac.id}?tab=assignments`);
   const classPractice = page.getByRole("region", { name: "Practice", exact: true });
   await classPractice.getByRole("button", { name: "Stop sharing Samples", exact: true }).click();
   await classPractice.getByRole("button", { name: "Stop sharing", exact: true }).click();

@@ -95,7 +95,9 @@ test("an instructor sees progress while open, then the report and its CSV after 
   expect(Date.now(), "the window closed before the open-state checks ran").toBeLessThan(
     closesAt - 10_000,
   );
-  // While open: progress only, reached from the class page.
+  // While open: progress only, reached from the class page. The bare class address is the
+  // Overview tab (`classTabPath` gives the overview no `?tab=`), whose "Open now" names this, the
+  // class's one open assignment, with the link to its progress.
   await page.goto(classPage);
   await page.getByRole("link", { name: `View progress for ${title}`, exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${reportPath}$`));
