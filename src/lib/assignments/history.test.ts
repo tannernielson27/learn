@@ -109,6 +109,10 @@ describe("loadStudentRecord (#238, #239)", () => {
         calls.push("practiceMarks");
         return [{ cjmmStep: 1, points: 1, maxPoints: 1 }];
       }),
+      liveMarks: vi.fn(async () => {
+        calls.push("liveMarks");
+        return [{ cjmmStep: 1, points: 1, maxPoints: 2 }];
+      }),
       ...overrides,
     };
     return { store, calls };
@@ -121,13 +125,21 @@ describe("loadStudentRecord (#238, #239)", () => {
       expect.objectContaining({ studentId: "student-1" }),
     );
     expect(calls[0]).toBe("autoSubmit");
-    expect([...calls].sort()).toEqual(["autoSubmit", "history", "practiceMarks", "stepAttempts"]);
+    expect([...calls].sort()).toEqual([
+      "autoSubmit",
+      "history",
+      "liveMarks",
+      "practiceMarks",
+      "stepAttempts",
+    ]);
     expect(history?.[0]?.standing).toMatchObject({ kind: "scored" });
     // #241: practice counts beside the assignments, and is kept apart by source.
     const stepOne = steps?.steps.find((s) => s.step === 1);
-    expect(stepOne).toMatchObject({ items: 2, points: 1 });
+    expect(stepOne).toMatchObject({ items: 3, points: 2 });
     expect(stepOne?.bySource.assignments).toEqual({ items: 1, points: 0, maxPoints: 1 });
     expect(stepOne?.bySource.practice).toEqual({ items: 1, points: 1, maxPoints: 1 });
+    // Live answers in ended sessions count as a third source.
+    expect(stepOne?.bySource.live).toEqual({ items: 1, points: 1, maxPoints: 2 });
   });
 
   it("still reads when the submit at close fails", async () => {
@@ -160,5 +172,10 @@ describe("loadStudentRecord (#238, #239)", () => {
     const third = await loadStudentRecord(noPractice.store, "student-1");
     expect(third.history).toHaveLength(1);
     expect(third.steps).toBeNull();
+
+    const noLive = fakeStore({ liveMarks: vi.fn(async () => null) });
+    const fourth = await loadStudentRecord(noLive.store, "student-1");
+    expect(fourth.history).toHaveLength(1);
+    expect(fourth.steps).toBeNull();
   });
 });

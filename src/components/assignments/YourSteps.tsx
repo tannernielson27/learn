@@ -15,6 +15,7 @@ export interface YourStepsProps {
 const SOURCE_LABEL: Readonly<Record<StepSource, string>> = {
   assignments: "assignments",
   practice: "practice",
+  live: "live sessions",
 };
 
 const questionsLabel = (count: number): string =>
@@ -76,7 +77,8 @@ function UntaggedNote({ items }: { items: number }) {
 
 /**
  * A student's clinical judgment steps (#239): the six steps, weakest first, from their best
- * attempt at each closed assignment. A step needs five questions before it is ranked; until then it
+ * attempt at each closed assignment, their first answers in practice and their answers in ended
+ * live sessions. A step needs five questions before it is ranked; until then it
  * reads "Not enough answers yet" and has no percent. The list is ordered, so a screen reader hears
  * the steps in rank order, each as a heading with its percent and count. A Server Component.
  */
@@ -90,8 +92,8 @@ export function YourSteps({ standings }: YourStepsProps) {
   return (
     <>
       <p className="mb-3 text-sm text-ink-2">
-        Weakest first, from your best attempt at each closed assignment and your first answers in
-        practice.
+        Weakest first, from your best attempt at each closed assignment, your first answers in
+        practice and your answers in ended live sessions.
       </p>
       <ol
         aria-label="Your clinical judgment steps"

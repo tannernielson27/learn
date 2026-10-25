@@ -127,7 +127,8 @@ test("a fresh instructor and their first student see what to do next on every em
   await expectEmptyState(student, 3, "Nothing shared for practice yet");
   await expectEmptyState(student, 3, "No closed assignments yet");
   await expectEmptyState(student, 3, "No answers yet");
-  await expect(student.locator("[data-empty-state]")).toHaveCount(4);
+  await expectEmptyState(student, 3, "No live sessions yet");
+  await expect(student.locator("[data-empty-state]")).toHaveCount(5);
   await expectNoAxeViolations(student);
   await shoot(student, project, "student-home-empty");
 

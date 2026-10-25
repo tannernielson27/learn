@@ -2078,6 +2078,42 @@ export type Database = {
           workspace_number: number;
         }[];
       };
+      my_live_result: {
+        Args: { target_session: string };
+        Returns: {
+          case_study_records: Json;
+          class_id: string;
+          class_name: string;
+          closed_at: string;
+          patient_record: Json;
+          questions: Json;
+          session_id: string;
+          title: string;
+        }[];
+      };
+      my_live_results: {
+        Args: never;
+        Returns: {
+          answered: number;
+          class_id: string;
+          class_name: string;
+          closed_at: string;
+          marks: Json;
+          points: number;
+          possible: number;
+          question_count: number;
+          session_id: string;
+          title: string;
+        }[];
+      };
+      my_live_step_marks: {
+        Args: never;
+        Returns: {
+          cjmm_step: number;
+          max_points: number;
+          points: number;
+        }[];
+      };
       my_practice_banks: {
         Args: never;
         Returns: {
