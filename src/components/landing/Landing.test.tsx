@@ -84,6 +84,20 @@ describe("Landing (#264)", () => {
     expect(screen.getByRole("link", { name: "Join a live session" })).toBeInTheDocument();
   });
 
+  // fix/landing-hero: the hero's actions are one size, so none sits taller or shorter than another.
+  it("draws every hero action at the same large size, signed in or out", () => {
+    for (const entry of [SIGN_IN, { href: "/author", label: "Go to your quizzes" }]) {
+      const { unmount } = render(<Landing entry={entry} />);
+      const names = [entry.label, ...("also" in entry ? [entry.also.label] : [])];
+      for (const name of [...names, "Join a live session"]) {
+        expect(screen.getByRole("link", { name }).className).toContain(
+          "min-h-(--button-height-lg)",
+        );
+      }
+      unmount();
+    }
+  });
+
   it("shows one sample, labeled Sample, sized up front so nothing shifts", () => {
     render(<Landing entry={SIGN_IN} />);
     const figure = screen.getByRole("figure");

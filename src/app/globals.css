@@ -318,6 +318,29 @@
   }
 }
 
+/* The top 5 arriving on the stage at the end of a live session (StagePodium), from the bottom up:
+   each place rises and fades in --podium-step turns after the first, 600ms apart, so 1st lands
+   within about 3s. Transform and opacity only. Reduced motion: no animation at all, every place is
+   simply there (the component also leaves the class off). */
+@layer components {
+  .motion-podium {
+    animation: podium-rise 520ms var(--ease-out-expo) both;
+    animation-delay: calc(min(var(--podium-step, 0), 4) * 600ms);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .motion-podium {
+      animation: none;
+    }
+  }
+}
+
+@keyframes podium-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6cqb);
+  }
+}
+
 @keyframes grow-x {
   from {
     transform: scaleX(0);

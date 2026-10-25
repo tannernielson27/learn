@@ -232,7 +232,8 @@ test("a live case study: the phone's chart moves with the room and nothing later
   await closeChart(phone);
 
   // Step 2: the labs tab is there, locked, and cannot be opened; its text is not on the page.
-  await page.getByRole("button", { name: "Next question", exact: true }).click();
+  // "Next question" waits for a reveal; the question strip moves on without one.
+  await page.getByRole("button", { name: "Go to question 2", exact: true }).click();
   await expect(phone.getByText("Chart step 2: which action comes first?")).toBeVisible({
     timeout: 15_000,
   });
@@ -253,7 +254,8 @@ test("a live case study: the phone's chart moves with the room and nothing later
   }
 
   // Step 3, with no reload: the 0130 note arrives and the labs tab opens.
-  await page.getByRole("button", { name: "Next question", exact: true }).click();
+  // "Next question" waits for a reveal; the question strip moves on without one.
+  await page.getByRole("button", { name: "Go to question 3", exact: true }).click();
   await expect(phone.getByText("Chart step 3: which action comes first?")).toBeVisible({
     timeout: 15_000,
   });
@@ -269,7 +271,8 @@ test("a live case study: the phone's chart moves with the room and nothing later
 
   // The control on the bytes: step 4's page and view carry the 0200 note and the labs.
   await closeChart(phone);
-  await page.getByRole("button", { name: "Next question", exact: true }).click();
+  // "Next question" waits for a reveal; the question strip moves on without one.
+  await page.getByRole("button", { name: "Go to question 4", exact: true }).click();
   await expect(phone.getByText("Chart step 4: which action comes first?")).toBeVisible({
     timeout: 15_000,
   });
