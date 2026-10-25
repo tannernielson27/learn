@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { caseStudyLiveStartMessage, LIVE_CLASS_REFUSAL } from "./liveStart";
+import { caseStudyLiveStartMessage, classLiveStartMessage, LIVE_CLASS_REFUSAL } from "./liveStart";
 
 describe("caseStudyLiveStartMessage (#184)", () => {
   it("says nothing when no start was refused", () => {
@@ -29,5 +29,23 @@ describe("caseStudyLiveStartMessage (#184)", () => {
 
   it("reads the first of a repeated query parameter", () => {
     expect(caseStudyLiveStartMessage(["gone", "empty"])).toBe("That case study no longer exists.");
+  });
+});
+
+describe("classLiveStartMessage", () => {
+  it("says nothing when no start was refused", () => {
+    expect(classLiveStartMessage(undefined)).toBeUndefined();
+  });
+
+  it("says what went wrong in words of its own, and never echoes the address", () => {
+    expect(classLiveStartMessage("quiz")).toBe("Choose a quiz to start.");
+    expect(classLiveStartMessage("empty")).toBe(
+      "Publish a question in that quiz before starting a live session.",
+    );
+    expect(classLiveStartMessage("gone")).toBe("That quiz no longer exists. Choose another quiz.");
+    expect(classLiveStartMessage(["class", "gone"])).toBe("This class is not in your workspace.");
+    expect(classLiveStartMessage("<script>")).toBe(
+      "The live session could not be started. Try again.",
+    );
   });
 });

@@ -55,4 +55,25 @@ describe("ClassHeader", () => {
     renderHeader();
     expect(screen.queryByRole("button", { name: "Replace the link" })).not.toBeInTheDocument();
   });
+
+  it("offers to start a live session for the class when the page says where", () => {
+    render(
+      <ClassHeader
+        name="NUR 310 Adult Health"
+        studentCount={4}
+        url={URL_TEXT}
+        code="ABCD2345"
+        startHref="/author/classes/c1/start"
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Start a live session" })).toHaveAttribute(
+      "href",
+      "/author/classes/c1/start",
+    );
+  });
+
+  it("offers nothing to start without an address for it", () => {
+    renderHeader();
+    expect(screen.queryByRole("link", { name: "Start a live session" })).not.toBeInTheDocument();
+  });
 });
