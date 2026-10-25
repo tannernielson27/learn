@@ -68,6 +68,27 @@ export async function startCaseStudyLiveSession(
 }
 
 /**
+ * Starts a live session for one class from the class page's "Start a live session" (ADR 0013):
+ * the class is fixed by the page, the form names the quiz and the pacing, and the start is
+ * `startLiveSession`'s, with the same call to `start_session`. Every refusal goes back to the
+ * class's start page with its reason, a quiz that is not a quiz included, so nothing about the
+ * quiz's own page is assumed.
+ */
+export async function startClassLiveSession(classId: string, form?: FormData): Promise<never> {
+  if (!isUuid(classId)) redirect("/author/classes");
+  const back = `/author/classes/${classId}/start`;
+  const { supabase } = await requireAuthor(back);
+
+  const bankId = form?.get("bankId");
+  if (typeof bankId !== "string" || !isUuid(bankId)) redirect(`${back}?live=quiz`);
+  const paced = form?.get("pacing") === "student_paced" ? "student_paced" : "instructor_paced";
+  const started = await startSession(supabase, { kind: "bank", id: bankId }, paced, classId);
+  if (!started.ok) redirect(`${back}?live=${started.reason}`);
+
+  redirect(`/live/${started.sessionId}`);
+}
+
+/**
  * Ending a session is no longer a Server Function. #132 made the console a live connection, and
  * `LiveHostTransport.end()` is the move it makes — the same path `start`, `advance`, `reveal` and
  * `pause` take, guarded once by `applyHostCommand` and once by #128's trigger. A second way to end

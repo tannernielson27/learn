@@ -26,3 +26,18 @@ export function caseStudyLiveStartMessage(
   if (reason === "class") return LIVE_CLASS_REFUSAL;
   return "The live session could not be started. Try again.";
 }
+
+/**
+ * Why a class's live session could not start from the class page, carried back on the query
+ * string. Read as untrusted text, like `caseStudyLiveStartMessage`: only known reasons get a
+ * sentence, and nothing typed into the URL is shown back.
+ */
+export function classLiveStartMessage(value: string | string[] | undefined): string | undefined {
+  const reason = Array.isArray(value) ? value[0] : value;
+  if (reason === undefined) return undefined;
+  if (reason === "quiz") return "Choose a quiz to start.";
+  if (reason === "empty") return "Publish a question in that quiz before starting a live session.";
+  if (reason === "gone") return "That quiz no longer exists. Choose another quiz.";
+  if (reason === "class") return "This class is not in your workspace.";
+  return "The live session could not be started. Try again.";
+}

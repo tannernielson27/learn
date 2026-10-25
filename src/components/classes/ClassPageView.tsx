@@ -3,12 +3,15 @@ import { AssignmentList, type AssignmentListProps } from "@/components/assignmen
 import { PracticeSection } from "@/components/practice/PracticeSection";
 import type { PracticeShareFormProps } from "@/components/practice/PracticeShareForm";
 import { Notice } from "@/components/ui/Notice";
+import { classStartPath } from "@/lib/classes/classes";
 import { summarizeClass } from "@/lib/classes/classOverview";
+import type { ClassProgress, ProgressSort } from "@/lib/classes/progress";
 import type { ClassTab } from "@/lib/classes/classTabs";
 import { stopSharingWarning } from "@/lib/practice/shares";
 import type { AssignmentSummary } from "@/lib/supabase/assignments";
 import type { ClassDetail, RosterEntry } from "@/lib/supabase/classes";
 import type { ShareEntry } from "@/lib/supabase/practiceShares";
+import type { SessionSummary } from "@/lib/supabase/sessionReport";
 import { ClassHeader } from "./ClassHeader";
 import { ClassNameForm, type ClassNameFormProps } from "./ClassNameForm";
 import { ClassOverviewPanel } from "./ClassOverviewPanel";
@@ -18,6 +21,8 @@ import { ClassTabs } from "./ClassTabs";
 import { ClassTimeZoneForm } from "./ClassTimeZoneForm";
 import type { ConfirmSubmitProps } from "./ConfirmSubmit";
 import { ReplaceInviteLink } from "./InviteLinkPanel";
+import { ClassProgressPanel } from "./progress/ClassProgressPanel";
+import { ClassSessionsPanel } from "./progress/ClassSessionsPanel";
 
 /** The Server Functions the class page's forms call, each already bound to this class. */
 export interface ClassPageActions {
@@ -41,6 +46,12 @@ export interface ClassPageViewProps {
   shares: readonly ShareEntry[] | null;
   /** The share form's choices; null hides the form. */
   banks: readonly { id: string; name: string }[] | null;
+  /** The class's progress, read on the Progress tab only; null when unread or unreadable. */
+  progress?: ClassProgress | null;
+  /** How the Progress tab's grid is sorted, from the address. */
+  progressSort?: ProgressSort;
+  /** The class's live sessions, read on the Live sessions tab only. */
+  sessions?: readonly SessionSummary[] | null;
   /** The time zones offered, worked out on the server so hydration matches. */
   zones: readonly string[];
   /** When the page was rendered: decides each assignment's state. */
@@ -54,8 +65,10 @@ const HEADING = "text-lg font-medium text-ink-1";
 /**
  * One class (#205): a header with its name, its size, its class code (#356) and its invite link,
  * then its parts as tabs kept in the address (`classTabs.ts`). Overview summarises; Students is
- * the roster; Assignments holds the assignments and the practice shares (#240); Settings holds
- * the name, the time zone (#242) and replacing the invite link. Only the open tab is drawn.
+ * the roster; Progress is each student across the class's live sessions and assignments; Live
+ * sessions lists the sessions started for the class (ADR 0013); Assignments holds the assignments
+ * and the practice shares (#240); Settings holds the name, the time zone (#242) and replacing the
+ * invite link. Only the open tab is drawn.
  *
  * Each part keeps the sections, headings and focus targets it had when the page was one column,
  * so their forms behave as they did: only where they sit has changed.
@@ -67,6 +80,9 @@ export function ClassPageView({
   assignments,
   shares,
   banks,
+  progress = null,
+  progressSort = "name",
+  sessions = null,
   zones,
   now,
   tab,
@@ -104,6 +120,12 @@ export function ClassPageView({
         )}
       </section>
     ),
+
+    progress: () => (
+      <ClassProgressPanel classId={detail.id} progress={progress} sort={progressSort} />
+    ),
+
+    sessions: () => <ClassSessionsPanel classId={detail.id} sessions={sessions} />,
 
     assignments: () => (
       // Two columns from 1024px: the assignments, and the quizzes shared for practice beside them.
@@ -198,6 +220,7 @@ export function ClassPageView({
         studentCount={roster === null ? null : roster.length}
         url={url}
         code={detail.joinCode}
+        startHref={classStartPath(detail.id)}
       />
       <div className="flex flex-col gap-6 sm:gap-8">
         <ClassTabs classId={detail.id} current={tab} />

@@ -13,10 +13,12 @@ import {
 const CLASS = "00000000-0000-4000-8000-00000000c1a5";
 
 describe("class page tabs", () => {
-  it("are Overview, Students, Assignments and Settings, in that order", () => {
+  it("are Overview, Students, Progress, Live sessions, Assignments and Settings, in that order", () => {
     expect(CLASS_TABS.map((tab) => CLASS_TAB_LABELS[tab])).toEqual([
       "Overview",
       "Students",
+      "Progress",
+      "Live sessions",
       "Assignments",
       "Settings",
     ]);
@@ -37,6 +39,8 @@ describe("classTabPath", () => {
     expect(classTabPath(CLASS, "students")).toBe(`/author/classes/${CLASS}?tab=students`);
     expect(classTabPath(CLASS, "assignments")).toBe(`/author/classes/${CLASS}?tab=assignments`);
     expect(classTabPath(CLASS, "settings")).toBe(`/author/classes/${CLASS}?tab=settings`);
+    expect(classTabPath(CLASS, "progress")).toBe(`/author/classes/${CLASS}?tab=progress`);
+    expect(classTabPath(CLASS, "sessions")).toBe(`/author/classes/${CLASS}?tab=sessions`);
   });
 });
 
@@ -52,7 +56,7 @@ describe("parseClassTab", () => {
     "Students",
     "roster",
     "live-sessions",
-    "progress",
+    "Progress",
     "__proto__",
     "toString",
     ["students", "settings"],
@@ -74,6 +78,12 @@ describe("classTabReads", () => {
     expect(reads("students")).toEqual(["roster"]);
     expect(reads("assignments")).toEqual(["assignments", "banks", "roster", "shares"]);
     expect(reads("settings")).toEqual(["roster"]);
+    expect(reads("progress")).toEqual(["progress", "roster"]);
+    expect(reads("sessions")).toEqual(["roster", "sessions"]);
+  });
+
+  it("reads the class's progress, the heaviest read, on Progress only", () => {
+    expect(CLASS_TABS.filter((tab) => classTabReads(tab).has("progress"))).toEqual(["progress"]);
   });
 
   it("reads the banks, the share form's choices, on Assignments only", () => {

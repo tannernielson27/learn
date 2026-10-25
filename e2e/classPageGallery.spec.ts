@@ -6,6 +6,8 @@ import { expect, test } from "@playwright/test";
 const TABS = [
   ["overview", "Overview"],
   ["students", "Students"],
+  ["progress", "Progress"],
+  ["sessions", "Live sessions"],
   ["assignments", "Assignments"],
   ["settings", "Settings"],
 ] as const;
@@ -82,3 +84,38 @@ for (const [tab, label] of TABS) {
     );
   });
 }
+
+test("the Progress tab's grid scrolls inside its own region and every cell says its value", async ({
+  page,
+}) => {
+  await page.goto("/gallery/class-page?tab=progress&sort=overall");
+  const demo = page.getByTestId("class-page-demo");
+  await expect(demo).toHaveAttribute("data-hydrated", "true");
+  const grid = demo.getByRole("region", { name: "Progress by student", exact: true });
+  await expect(grid.getByRole("rowheader").first()).toHaveText("Kai Ortiz");
+  for (const cell of await grid.getByTestId("progress-cell").all()) {
+    expect((await cell.innerText()).trim()).not.toBe("");
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+});
+
+test("a student's progress: layout, accessibility and its baseline", async ({ page }) => {
+  await page.goto("/gallery/class-student");
+  const demo = page.getByTestId("class-student-demo");
+  await page.evaluate(() => document.fonts.ready);
+  await expect(
+    demo.getByRole("heading", { level: 1, name: "Kai Ortiz", exact: true }),
+  ).toBeVisible();
+  await expect(demo.getByRole("region", { name: "Weakest first", exact: true })).toBeVisible();
+  await expect(demo.getByTestId("timeline-result")).toHaveCount(6);
+
+  const { violations } = await new AxeBuilder({ page }).analyze();
+  expect(violations).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+
+  await expect(demo).toHaveScreenshot("class-student.png");
+});

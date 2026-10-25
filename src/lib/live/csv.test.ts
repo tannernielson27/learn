@@ -2,16 +2,26 @@ import { describe, expect, it } from "vitest";
 import { csvField, neutraliseFormula, toCsv } from "./csv";
 
 describe("neutraliseFormula", () => {
-  it.each(["=SUM(A1:A2)", "+1+1", "-2+3", "@SUM(1)", "\tA", "\rA"])(
+  it.each(["=SUM(A1:A2)", "+1+1", "-2+3", "@SUM(1)", "\tA", "\rA", "\nA", "\n=1"])(
     "prefixes a single quote to %j so a spreadsheet reads it as text",
     (value) => {
       expect(neutraliseFormula(value)).toBe(`'${value}`);
     },
   );
 
-  it.each(["Ava", "", " =1", "1=1", "O'Neil", "'already quoted"])("leaves %j alone", (value) => {
-    expect(neutraliseFormula(value)).toBe(value);
-  });
+  it.each([" =1", "  +1", " -2", " @SUM(1)", "\u00a0=1", "\u3000=1", "\f=1", "\v=1"])(
+    "prefixes a single quote to %j, since some spreadsheets skip leading whitespace",
+    (value) => {
+      expect(neutraliseFormula(value)).toBe(`'${value}`);
+    },
+  );
+
+  it.each(["Ava", "", " Ava", "  ", " 1=1", "1=1", "O'Neil", "'already quoted"])(
+    "leaves %j alone",
+    (value) => {
+      expect(neutraliseFormula(value)).toBe(value);
+    },
+  );
 });
 
 describe("csvField", () => {
@@ -29,6 +39,8 @@ describe("csvField", () => {
   it("neutralises before quoting, so the quote goes around the prefixed value", () => {
     expect(csvField('=HYPERLINK("http://x","y")')).toBe(`"'=HYPERLINK(""http://x"",""y"")"`);
     expect(csvField("\r=1")).toBe(`"'\r=1"`);
+    expect(csvField("\n=1")).toBe(`"'\n=1"`);
+    expect(csvField(" =1")).toBe("' =1");
   });
 
   it("writes numbers as numbers, a negative one included", () => {

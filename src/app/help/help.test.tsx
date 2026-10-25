@@ -105,6 +105,7 @@ describe("/help/instructor", () => {
       "invite",
       "class-code",
       "time-zone",
+      "class-progress",
       "remove",
       "assign-students",
       "assign-close",

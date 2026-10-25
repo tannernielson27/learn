@@ -16,12 +16,16 @@ describe("ClassTabs", () => {
     expect(all.map((link) => link.textContent)).toEqual([
       "Overview",
       "Students",
+      "Progress",
+      "Live sessions",
       "Assignments",
       "Settings",
     ]);
     expect(all.map((link) => link.getAttribute("href"))).toEqual([
       `/author/classes/${CLASS}`,
       `/author/classes/${CLASS}?tab=students`,
+      `/author/classes/${CLASS}?tab=progress`,
+      `/author/classes/${CLASS}?tab=sessions`,
       `/author/classes/${CLASS}?tab=assignments`,
       `/author/classes/${CLASS}?tab=settings`,
     ]);
