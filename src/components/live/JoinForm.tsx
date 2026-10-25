@@ -69,6 +69,14 @@ export function JoinForm({ action, code, defaultName, asGuest = false }: JoinFor
           // Long enough for the spaced form people copy off a screen: "ABC DEF".
           maxLength={SESSION_CODE_LENGTH + 3}
           autoComplete="off"
+          // The phone keyboard's Enter says "Next" here and moves to the name, as it says.
+          enterKeyHint="next"
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" || nameRef.current === null) return;
+            if (nameRef.current.value.trim() !== "") return;
+            event.preventDefault();
+            nameRef.current.focus();
+          }}
           autoCapitalize="characters"
           autoCorrect="off"
           spellCheck={false}
@@ -103,6 +111,7 @@ export function JoinForm({ action, code, defaultName, asGuest = false }: JoinFor
           required
           maxLength={DISPLAY_NAME_MAX_LENGTH}
           autoComplete="nickname"
+          enterKeyHint="go"
           autoFocus={code !== ""}
           aria-invalid={nameError ? true : undefined}
           aria-describedby={nameError ? `${fieldId}-name-error` : `${fieldId}-name-hint`}

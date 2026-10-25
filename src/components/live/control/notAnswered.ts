@@ -20,3 +20,24 @@ export function notAnswered(
   );
   return roster.filter((person) => !answered.has(person.participantId));
 }
+
+/**
+ * How many people have not answered `position`, for ending the timer early; null when that is not
+ * known yet. Everyone counts: the whole roster, connected or away (a locked screen is still a
+ * student in the room), and anyone the read says has joined whom presence never saw (a phone on
+ * the HTTP fallback never tracks presence). Someone who really left keeps it from ending early, and
+ * the clock runs out as it would have.
+ */
+export function stillToAnswer(
+  roster: readonly RosterEntry[],
+  progress: SessionProgress | null,
+  position: number | null,
+): number | null {
+  const waiting = notAnswered(roster, progress, position);
+  if (waiting === null || progress === null || position === null) return null;
+  const known = new Set(roster.map((person) => person.participantId));
+  const unseen = progress.rows.filter(
+    (row) => !known.has(row.participantId) && !row.positions.includes(position),
+  );
+  return waiting.length + unseen.length;
+}

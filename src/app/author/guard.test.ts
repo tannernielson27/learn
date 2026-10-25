@@ -74,7 +74,7 @@ describe("authoring guards", () => {
       // Each handler delegates to a src/lib function that starts with authorForRoute; those have
       // their own tests for the forbidden answer.
       expect(source).toMatch(
-        /from "@\/lib\/(authoring\/exportRoute|authoring\/scoreRoute|liveSupabase\/reportCsvRoute|assignments\/reportCsvRoute|classes\/progressCsvRoute)"/,
+        /from "@\/lib\/(authoring\/exportRoute|authoring\/scoreRoute|liveSupabase\/reportCsvRoute|assignments\/reportCsvRoute|classes\/progressCsvRoute|supabase\/podiumRoute)"/,
       );
     },
   );
@@ -103,6 +103,7 @@ describe("the guarded route handlers", () => {
     "src/lib/liveSupabase/reportCsvRoute.ts",
     "src/lib/assignments/reportCsvRoute.ts",
     "src/lib/classes/progressCsvRoute.ts",
+    "src/lib/supabase/podiumRoute.ts",
   ])("%s checks the author", (file) => {
     expect(readFileSync(path.resolve(file), "utf8")).toMatch(/await authorForRoute\(\)/);
   });

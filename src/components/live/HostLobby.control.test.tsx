@@ -94,9 +94,23 @@ describe("the control view: one primary move at a time", () => {
   it("is End once the last question's answer is showing", async () => {
     const fake = setup();
     await fake.user.click(screen.getByRole("button", { name: "Start" }));
+    await fake.user.click(await screen.findByRole("button", { name: "Show answer" }));
     await fake.user.click(await screen.findByRole("button", { name: "Next question" }));
     await fake.user.click(await screen.findByRole("button", { name: "Show answer" }));
     await waitFor(() => expect(primary().map((b) => b.textContent)).toEqual(["End live session"]));
+  });
+
+  it("keeps Next question off the bar until the answer is showing, so the reveal is never skipped", async () => {
+    const fake = setup();
+    await fake.user.click(screen.getByRole("button", { name: "Start" }));
+    await waitFor(() => expect(primary().map((b) => b.textContent)).toEqual(["Show answer"]));
+    expect(screen.queryByRole("button", { name: "Next question" })).toBeNull();
+    // Moving on without a reveal is still there, on the question strip.
+    expect(screen.getByRole("button", { name: "Go to question 2" })).toBeEnabled();
+
+    await fake.user.click(screen.getByRole("button", { name: "Show answer" }));
+    await waitFor(() => expect(primary().map((b) => b.textContent)).toEqual(["Next question"]));
+    expect(screen.getAllByRole("button", { name: "Next question" })).toHaveLength(1);
   });
 });
 

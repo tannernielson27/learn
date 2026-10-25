@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RosterEntry, SessionProgress } from "@/lib/live";
-import { notAnswered } from "./notAnswered";
+import { notAnswered, stillToAnswer } from "./notAnswered";
 
 const entry = (id: string, name: string, present = true): RosterEntry => ({
   participantId: id,
@@ -38,5 +38,58 @@ describe("notAnswered", () => {
   it("is unknown until the first read has come back, or off a question", () => {
     expect(notAnswered(roster, null, 1)).toBeNull();
     expect(notAnswered(roster, progress([]), null)).toBeNull();
+  });
+});
+
+describe("stillToAnswer", () => {
+  it("counts everyone in the roster, away or not, who has not answered", () => {
+    expect(
+      stillToAnswer(
+        roster,
+        progress([
+          ["p1", [1]],
+          ["p2", [1]],
+        ]),
+        1,
+      ),
+    ).toBe(1);
+    expect(
+      stillToAnswer(
+        roster,
+        progress([
+          ["p1", [1]],
+          ["p2", [1]],
+          ["p3", [1]],
+        ]),
+        1,
+      ),
+    ).toBe(0);
+  });
+
+  it("counts someone the read says joined whom presence never saw", () => {
+    const read = progress([
+      ["p1", [1]],
+      ["p2", [1]],
+      ["p3", [1]],
+      ["p4", []],
+    ]);
+    expect(stillToAnswer(roster, read, 1)).toBe(1);
+    expect(
+      stillToAnswer(
+        roster,
+        progress([
+          ["p1", [1]],
+          ["p2", [1]],
+          ["p3", [1]],
+          ["p4", [1]],
+        ]),
+        1,
+      ),
+    ).toBe(0);
+  });
+
+  it("is unknown until the first read has come back, or off a question", () => {
+    expect(stillToAnswer(roster, null, 1)).toBeNull();
+    expect(stillToAnswer(roster, progress([]), null)).toBeNull();
   });
 });

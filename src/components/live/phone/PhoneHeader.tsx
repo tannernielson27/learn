@@ -23,6 +23,10 @@ export interface PhoneHeaderProps {
  * (PhoneQuestionLand mockup, PLAN §6).
  *
  * The page's one `h1` is the session's title, here, so every state has the same heading.
+ *
+ * Full bleed: it cancels its column's gutter (`--record-gutter` in a case study's `RecordLayout`,
+ * the page's 1rem otherwise), so its border runs to both edges. In a case study it sticks just
+ * under the "Patient record" chip's bar (`--record-sticky-top`), so both stay in reach.
  */
 export function PhoneHeader({
   progress,
@@ -33,7 +37,7 @@ export function PhoneHeader({
   badge,
 }: PhoneHeaderProps) {
   return (
-    <header className="sticky top-0 z-1 -mx-4 flex flex-col gap-2.5 border-b border-line bg-surface-1 px-5 pt-3.5 pb-3 [@media(max-height:479px)]:flex-row [@media(max-height:479px)]:items-center [@media(max-height:479px)]:gap-4 [@media(max-height:479px)]:py-1.5">
+    <header className="sticky top-[var(--record-sticky-top,0px)] z-1 -mx-[var(--record-gutter,1rem)] flex flex-col gap-2.5 border-b border-line bg-surface-1 px-5 pt-3.5 pb-3 [@media(max-height:479px)]:flex-row [@media(max-height:479px)]:items-center [@media(max-height:479px)]:gap-4 [@media(max-height:479px)]:py-1.5">
       <div className="flex min-w-0 items-center justify-between gap-3 text-sm [@media(max-height:479px)]:contents">
         <div className="min-w-0">
           <h1 className={progress === null ? "truncate font-semibold text-ink-1" : "sr-only"}>

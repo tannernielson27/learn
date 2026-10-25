@@ -97,11 +97,12 @@ describe("HostResults (#180)", () => {
     expect(screen.getAllByText("Correct").length).toBe(keyRows().length);
   });
 
-  it("draws one-bar-per-option results on the shared chart, lettered in the item's order", async () => {
+  it("draws one-bar-per-option results on the shared chart, unlettered for select all as its phones are", async () => {
     setup();
     const chart = await screen.findByRole("list", { name: "Options" });
     expect(chart.querySelectorAll("li")).toHaveLength(item.content.options.length);
-    expect(chart.querySelector("li")).toHaveTextContent(/A\./);
+    expect(chart.querySelector("li")).not.toHaveTextContent(/A\./);
+    expect(chart.querySelector("li")).toHaveTextContent(first?.label ?? "");
     expect(screen.getAllByText("1 · 100%").length).toBe(2);
   });
 

@@ -368,7 +368,9 @@ export default function InstructorGuide() {
           </li>
           <li>
             For the projector, press <Ui>Open in a new window</Ui> or{" "}
-            <Ui>Present on this screen</Ui> in the lobby: that view shows no controls.
+            <Ui>Present on this screen</Ui> in the lobby: that view shows no controls. On this
+            screen, Space or the right arrow key takes the next step, and Esc goes back to the
+            controls. No key ends the live session: end it from the controls.
           </li>
           <li>
             Set <Ui>Time per question</Ui> if you want a timer, then press <Ui>Start</Ui>.

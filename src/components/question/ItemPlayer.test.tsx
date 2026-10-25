@@ -99,6 +99,33 @@ describe("ItemPlayer with multiple response", () => {
     expect(screen.getAllByText("Missed")).toHaveLength(1);
   });
 
+  it("explains the scoring rule in full by default, and in the caller's words when given", async () => {
+    const { unmount } = render(<ItemPlayer item={sata} submit={scoreInProcess(sata)} />);
+    await renderersLoaded();
+    await userEvent.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await feedbackShown();
+    expect(screen.getByRole("complementary", { name: "Score" })).toHaveTextContent(
+      "Each correct selection earns one point and each incorrect selection removes one.",
+    );
+    unmount();
+
+    render(
+      <ItemPlayer
+        item={sata}
+        submit={scoreInProcess(sata)}
+        scoringExplanations={{ plus_minus: "Each wrong choice takes a point away." }}
+      />,
+    );
+    await renderersLoaded();
+    await userEvent.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await feedbackShown();
+    const score = screen.getByRole("complementary", { name: "Score" });
+    expect(score).toHaveTextContent("+/- scoring. Each wrong choice takes a point away.");
+    expect(score).not.toHaveTextContent("Each correct selection earns one point");
+  });
+
   it("Select N caps selections and requires exactly N to submit", async () => {
     render(<ItemPlayer item={selectN} submit={scoreInProcess(selectN)} />);
     await renderersLoaded();
