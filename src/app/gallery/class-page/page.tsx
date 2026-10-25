@@ -1,5 +1,6 @@
 import { CLASS_PAGE_FIXTURE_CLASS } from "@/lib/classes/classPageFixture";
 import { parseClassTab } from "@/lib/classes/classTabs";
+import { parseProgressSort } from "@/lib/classes/progress";
 import { supportedTimeZones, timeZoneChoices } from "@/lib/classes/timeZone";
 import { ClassPageDemo } from "./demo";
 
@@ -13,18 +14,20 @@ import { ClassPageDemo } from "./demo";
  * sidebar in every full-page gallery baseline.
  */
 export default async function ClassPageGallery({ searchParams }: PageProps<"/gallery/class-page">) {
-  const tab = parseClassTab((await searchParams).tab);
+  const query = await searchParams;
+  const tab = parseClassTab(query.tab);
   return (
     <article>
       <p className="eyebrow">Composites</p>
       {/* Not a heading: the class name is this page's h1, as it is on the real page. */}
       <p className="mt-2 text-2xl font-semibold">Class page</p>
       <p className="mt-2 mb-8 max-w-prose text-ink-2">
-        One class with four students, three assignments and a quiz shared for practice. Every form
-        answers that it is not available here.
+        One class with four students, three live sessions, three assignments and a quiz shared for
+        practice, and one student taken off it. Every form answers that it is not available here.
       </p>
       <ClassPageDemo
         tab={tab}
+        sort={parseProgressSort(query.sort)}
         zones={timeZoneChoices(supportedTimeZones(), CLASS_PAGE_FIXTURE_CLASS.timeZone)}
       />
     </article>

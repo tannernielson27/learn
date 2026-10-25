@@ -48,6 +48,8 @@ const GALLERY_PATHS = [
   "/gallery/ai-import",
   // The class page's layout, from a fixture with no key in it; 404 on production all the same.
   "/gallery/class-page",
+  // One student's progress in that class, from the same kind of fixture.
+  "/gallery/class-student",
   "/gallery",
 ];
 
