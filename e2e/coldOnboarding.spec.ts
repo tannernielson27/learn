@@ -173,8 +173,8 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   await shoot(student, testInfo, "6-student-home");
   await studentPhone.close();
 
-  // The instructor sees them on the roster.
-  await page.goto(classUrl);
+  // The instructor sees them on the roster, on the class page's Students tab.
+  await page.goto(`${classUrl}?tab=students`);
   await expect(page.getByRole("list", { name: "Roster", exact: true })).toContainText(studentEmail);
 
   // 5. A live session from the sample bank; a phone joins by code from the landing page.
@@ -221,7 +221,7 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   await expect(option).toBeVisible({ timeout: 15_000 });
   await option.click();
   await phone.getByRole("button", { name: "Submit", exact: true }).click();
-  await expect(phone.getByText("Answer sent.", { exact: true })).toBeVisible();
+  await expect(phone.getByText("Answer sent", { exact: true })).toBeVisible();
   await expectNoAxeViolations(phone);
   await shoot(phone, testInfo, "8-phone-answered");
 

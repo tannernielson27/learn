@@ -122,6 +122,7 @@ Drag-and-drop: dragged token lifts with a 2dp shadow and 1.02 scale; valid drop 
 - Only `transform`, `opacity`, `clip-path`. No animated layout properties.
 - Selection: 120–200ms. Submit → feedback: staggered 40ms per element, max 320ms total. Step change in a case study: crossfade + 8px slide, 200ms.
 - Nothing loops. No celebratory effects. Score reveal is a number that settles, not a counter animation.
+- One owner-approved exception (2026-10-24): the top 5 podium on the projector when a live session ends (`StagePodium`). Places rise and fade in from 5th to 1st, about 0.6s apart, done within about 3s; transform and opacity only, and under reduced motion everything is there at once with no motion. No confetti, sound or badges with it, and never on a phone.
 - `prefers-reduced-motion`: all transitions collapse to opacity only, 80ms.
 - A timer drains smoothly and calmly; its last 10 seconds change colour and add words (§1), and nothing pulses.
 

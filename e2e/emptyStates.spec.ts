@@ -75,10 +75,15 @@ test("a fresh instructor and their first student see what to do next on every em
   await page.getByRole("textbox", { name: "Class name", exact: true }).fill(className);
   await page.getByRole("button", { name: "Create class", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/classes\/[0-9a-f-]{36}$/);
+  const classUrl = page.url();
+  // The roster is on the Students tab; its empty state points at the invite link in the header.
+  await page.goto(`${classUrl}?tab=students`);
   await expectEmptyState(page, 3, "Nobody has joined yet");
   await expect(
     page.getByRole("link", { name: "Go to the invite link", exact: true }),
-  ).toHaveAttribute("href", "#invite-heading");
+  ).toHaveAttribute("href", "#invite-link");
+  await expectNoAxeViolations(page);
+  await page.goto(`${classUrl}?tab=assignments`);
   await expectEmptyState(page, 3, "No assignments yet");
   await expectNoAxeViolations(page);
   const invite = await page.getByRole("textbox", { name: "Invite link", exact: true }).inputValue();

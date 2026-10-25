@@ -46,6 +46,8 @@ const GALLERY_PATHS = [
   // #349: the AI import review screen for the teacher guide's figure. Its staged questions carry
   // an `answerKey` field (empty), so it is probed like the item pages.
   "/gallery/ai-import",
+  // The class page's layout, from a fixture with no key in it; 404 on production all the same.
+  "/gallery/class-page",
   "/gallery",
 ];
 

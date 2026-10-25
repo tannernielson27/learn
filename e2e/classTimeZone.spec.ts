@@ -107,8 +107,8 @@ test("the class's time zone moves the due times on the student home", async ({
     `Closes ${formatInZone(closesAt, "America/Denver")}`,
   );
 
-  // The instructor moves the class to New York from the class page.
-  await page.goto(classPage);
+  // The instructor moves the class to New York from the class page's Settings tab.
+  await page.goto(`${classPage}?tab=settings`);
   const zone = page.getByRole("combobox", { name: "Time zone", exact: true });
   await expect(zone).toHaveValue("America/Denver");
   await zone.selectOption("America/New_York");
@@ -166,8 +166,8 @@ test("a student removed after attempting stays in the report, under Removed from
   await student.getByRole("button", { name: "Submit now", exact: true }).click();
   await expect(student.getByTestId("submitted-notice")).toBeVisible({ timeout: 15_000 });
 
-  // Then the instructor takes them off the class.
-  await page.goto(classPage);
+  // Then the instructor takes them off the class, on the class page's Students tab.
+  await page.goto(`${classPage}?tab=students`);
   await page.getByRole("button", { name: `Remove ${email}`, exact: true }).click();
   await page.getByRole("button", { name: "Remove from class", exact: true }).click();
   // The class had one student, so the roster list gives way to its empty state (a list that is

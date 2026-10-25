@@ -29,9 +29,11 @@ export function CopyTextButton({ text, label, failedMessage }: CopyTextButtonPro
 
   const message = state === "copied" ? "Copied." : state === "failed" ? failedMessage : "";
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    // The message goes under the button on a phone, where the button shares a row with what it
+    // copies, so saying "Copied." never pushes the button onto a line of its own.
+    <div className="flex flex-col items-start sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
       <Button onClick={copy}>{label}</Button>
-      <p role="status" className="text-sm text-ink-2">
+      <p role="status" className="text-sm text-ink-2 not-empty:mt-2 sm:not-empty:mt-0">
         {message}
       </p>
     </div>

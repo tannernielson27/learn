@@ -176,6 +176,7 @@ export function HostLobby({
   if (view === "projector") {
     return (
       <StageView
+        sessionId={sessionId}
         title={title}
         code={code}
         url={printedJoinUrl(studentUrl)}
