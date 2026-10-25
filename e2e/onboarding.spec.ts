@@ -191,7 +191,7 @@ test("the imported sample is ready to assign and to run live straight away", asy
     fullPage: true,
   });
   await page.getByRole("button", { name: "Assign", exact: true }).click();
-  await expect(page).toHaveURL(/\/author\/classes\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/\/author\/classes\/[0-9a-f-]{36}\?tab=assignments$/);
   await expect(
     page
       .getByRole("list", { name: "Assignments", exact: true })

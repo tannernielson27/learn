@@ -1,23 +1,29 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { InviteLinkPanel } from "./InviteLinkPanel";
+import {
+  ClassCodeBlock,
+  InviteLinkField,
+  InviteQrCode,
+  ReplaceInviteLink,
+} from "./InviteLinkPanel";
 
 const URL_TEXT = "https://learn.example/c/AbC_-0123456789abcdefghijklmnopq";
 const CODE = "ABCD2345";
 
 function renderPanel() {
+  // The parts the class page places in its header, its overview and its settings.
   return render(
-    <InviteLinkPanel
-      url={URL_TEXT}
-      code={CODE}
-      classTitle="NUR 310"
-      rotateAction={async () => {}}
-    />,
+    <>
+      <InviteLinkField url={URL_TEXT} />
+      <ClassCodeBlock code={CODE} />
+      <InviteQrCode url={URL_TEXT} classTitle="NUR 310" />
+      <ReplaceInviteLink rotateAction={async () => {}} />
+    </>,
   );
 }
 
-describe("InviteLinkPanel", () => {
+describe("the invite parts", () => {
   it("shows the link in a labelled box, a copy button, a QR code and a way to replace it", () => {
     renderPanel();
     const box = screen.getByRole("textbox", { name: "Invite link" });
@@ -48,5 +54,12 @@ describe("InviteLinkPanel", () => {
     renderPanel();
     await user.click(screen.getByRole("button", { name: "Replace the link" }));
     expect(await screen.findByText(/link, class code and QR code stop working/)).toBeVisible();
+  });
+
+  it("labels the code as plain text where a heading would be out of order", () => {
+    render(<ClassCodeBlock code={CODE} labelAs="p" />);
+    expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+    expect(screen.getByText("Class code")).toBeInTheDocument();
+    expect(screen.getByTestId("class-code")).toHaveTextContent(/^ABCD-2345$/);
   });
 });

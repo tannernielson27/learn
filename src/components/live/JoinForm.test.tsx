@@ -47,6 +47,26 @@ describe("JoinForm", () => {
     expect(codeField()).toHaveFocus();
   });
 
+  it("labels the phone keyboard's Enter key Next on the code and Go on the name", () => {
+    setup({ status: "idle" });
+    expect(codeField()).toHaveAttribute("enterkeyhint", "next");
+    expect(nameField()).toHaveAttribute("enterkeyhint", "go");
+  });
+
+  it("moves on to the name when Enter is pressed on the code, rather than sending half a form", async () => {
+    const { action, user } = setup({ status: "idle" });
+    await user.type(codeField(), "7kq2mz{Enter}");
+    expect(nameField()).toHaveFocus();
+    expect(action).not.toHaveBeenCalled();
+  });
+
+  it("sends the form from the code field once the name is filled in", async () => {
+    const { action, user } = setup({ status: "idle" });
+    await user.type(nameField(), "Sam Okafor");
+    await user.type(codeField(), "7kq2mz{Enter}");
+    expect(action).toHaveBeenCalledTimes(1);
+  });
+
   it("ties a code error to the code field, announces it and moves focus there", async () => {
     const message = "Enter the six-character join code on the screen.";
     const { user } = setup({ status: "error", field: "code", error: message });

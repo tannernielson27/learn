@@ -41,11 +41,14 @@ export function ScorePanel({
   panel,
   score,
   note,
+  explanation,
   rationale,
 }: {
   panel: RefObject<HTMLElement | null>;
   score: ScoreResult;
   note?: string;
+  /** The rule in other words (a live phone's one short line); the model's own when left out. */
+  explanation?: string;
   rationale?: RichText;
 }) {
   const model = SCORING_MODEL_LABELS[score.model];
@@ -83,7 +86,7 @@ export function ScorePanel({
       </div>
       <p className="mt-2 text-sm">
         <span className="font-medium">{model.name}.</span>{" "}
-        <span className="text-ink-2">{model.explanation}</span>
+        <span className="text-ink-2">{explanation ?? model.explanation}</span>
       </p>
       {note ? <p className="mt-2 text-sm text-ink-1">{note}</p> : null}
       {rationale ? (

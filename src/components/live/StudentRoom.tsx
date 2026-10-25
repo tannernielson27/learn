@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { AnswerSentLine } from "@/components/live/AnswerSentLine";
 import { LIVE_BUSY_LABEL, liveSubmitFailure } from "@/components/live/liveSubmit";
 import { PhoneHeader } from "@/components/live/phone/PhoneHeader";
@@ -11,6 +12,7 @@ import {
 } from "@/components/live/phone/PhoneStates";
 import { ReconnectingBanner } from "@/components/live/phone/ReconnectingBanner";
 import { RevealedItem, refuseSecondAnswer } from "@/components/live/phone/RevealedItem";
+import { useAnswersClosed } from "@/components/live/phone/useAnswersClosed";
 import { useStudentRoom } from "@/components/live/phone/useStudentRoom";
 import { RoomCount } from "@/components/live/RoomCount";
 import { ActionBar } from "@/components/question/ActionBar";
@@ -22,6 +24,7 @@ import { Button } from "@/components/ui/Button";
 // uses (ADR 0003, `src/components/question/noClientScoring.test.ts`).
 import type { LiveSessionState } from "@/lib/live/state";
 import type { LiveConnection } from "@/lib/live/transport";
+import type { SubmitHandler } from "@/lib/ngn/submit";
 import { phoneView, type PhoneSettledView } from "@/lib/live/views";
 import type { RoomConnection, SupabaseParticipant } from "@/lib/liveSupabase/participantTransport";
 import type { ChannelCredential } from "@/lib/liveSupabase/wire";
@@ -47,8 +50,10 @@ export interface StudentRoomProps {
   connect?: () => SupabaseParticipant;
 }
 
-const SENT = "Answer sent.";
+const SENT = "Answer sent";
+const SENT_NEXT = "Wait for the answer to show.";
 const LATE = "Your answer was not taken.";
+const CLOSED = "Time is up. Wait for the answer.";
 
 /**
  * The room's connection in the words the phone's states use. Still connecting is shown as
@@ -73,8 +78,14 @@ function liveConnection(connection: RoomConnection): LiveConnection {
  * `ParticipantItem` brands all three `never`; `phoneView` strips them again. The answer goes to
  * `/api/live/submit`, which scores it beside the key and answers with no marks (ADR 0003).
  *
- * **Reconnecting** keeps the question on screen with the draft in it and Submit held off, under
- * a dark banner (PLAN §5.7).
+ * **Reconnecting** keeps the question on screen with the draft in it and Submit live, under a
+ * dark banner (PLAN §5.7): the answer goes over plain HTTP, so a Wi-Fi blip on the socket is no
+ * reason to lose it.
+ *
+ * **Time up.** Submit stays through the server's grace after zero; once the grace is over (the
+ * same `timeIsUp` the server refuses on, on the session's clock) the draft stays on screen,
+ * read-only, and the bar where Submit was says to wait for the answer. An answer pressed inside the
+ * grace and still in the air when it runs out keeps its player, busy, until the server says.
  *
  * Built at 375px: one column, nothing wider than the screen, long names wrap.
  */
@@ -124,13 +135,7 @@ export function StudentRoom(props: StudentRoomProps) {
       {settled === null ? (
         <PhoneRefused />
       ) : (
-        <Body
-          settled={settled}
-          room={room}
-          displayName={displayName}
-          reconnecting={reconnecting}
-          history={history.entries}
-        />
+        <Body settled={settled} room={room} displayName={displayName} history={history.entries} />
       )}
     </div>
   );
@@ -140,16 +145,39 @@ function Body({
   settled,
   room,
   displayName,
-  reconnecting,
   history,
 }: {
   settled: PhoneSettledView;
   room: ReturnType<typeof useStudentRoom>;
   displayName: string;
-  reconnecting: boolean;
   history: ReturnType<typeof useStudentRoom>["history"]["entries"];
 }) {
   const { item, answered, state } = room;
+  /**
+   * Whether this phone has heard the room once: the transport measures the session's clock from
+   * the view that sets it `"live"`, and until then `serverNow` is this phone's own (#482 review).
+   */
+  const [clockKnown, setClockKnown] = useState(false);
+  if (!clockKnown && room.connection === "live") setClockKnown(true);
+  const closed = useAnswersClosed(state.timer, room.serverNow, clockKnown);
+  /** The item whose answer is in the air: its player stays mounted, busy, past the grace. */
+  const [sendingFor, setSendingFor] = useState<string | null>(null);
+
+  /**
+   * `room.send`, noting the item while its answer is out. An accepted one becomes Answer sent and
+   * a late one the late screen, both from the room; only a failure lets Time is up back.
+   */
+  const sending =
+    (itemId: string): SubmitHandler =>
+    async (response) => {
+      setSendingFor(itemId);
+      try {
+        return await room.send(response);
+      } catch (failed) {
+        setSendingFor(null);
+        throw failed;
+      }
+    };
 
   switch (settled.phase) {
     case "waiting":
@@ -194,7 +222,7 @@ function Body({
         // A plain wrapper, as in StudentPacedRoom: the player inside is already the "Your answer"
         // landmark, and a second region of that name fails axe's landmark-unique (#274).
         <div className="mt-5">
-          <AnswerSentLine text={SENT} announce />
+          <AnswerSentLine text={SENT} detail={SENT_NEXT} announce />
           <ItemPlayer
             key={`${item.id}:sent`}
             item={item}
@@ -207,7 +235,8 @@ function Body({
         </div>
       );
     // Time up keeps Submit for the server's grace after zero: the header's clock says the time
-    // is up, and the server's refusal is what puts up "Time is up" below.
+    // is up. Past the grace the server would refuse it, so the draft is drawn read-only and the
+    // bar says so before anyone presses; a refusal that lands anyway puts up "Time is up" below.
     case "timeUp":
     case "answering":
       if (item === null) {
@@ -222,6 +251,22 @@ function Body({
           </PhoneMessage>
         );
       }
+      if (closed && sendingFor !== item.id) {
+        return (
+          <div className="mt-5">
+            <ItemPlayer
+              key={`${item.id}:closed`}
+              item={item}
+              // Review, not feedback: what was chosen stays, and nothing is marked.
+              initialMode="review"
+              initialResponse={room.draft}
+              submit={refuseSecondAnswer}
+              label="Your answer"
+            />
+            <HeldSubmit reason={CLOSED} />
+          </div>
+        );
+      }
       return (
         <div className="mt-5">
           <ItemPlayer
@@ -229,20 +274,20 @@ function Body({
             item={item}
             initialResponse={room.draft}
             onResponseChange={(response) => room.setDraft(item.id, response)}
-            submit={room.send}
+            submit={sending(item.id)}
             busyLabel={LIVE_BUSY_LABEL}
             failureMessage={liveSubmitFailure}
-            // Held off while the phone cannot reach the room; the draft stays in the player.
-            showSubmit={!reconnecting}
           />
-          {reconnecting ? <HeldSubmit /> : null}
         </div>
       );
   }
 }
 
-/** Submit while reconnecting (PhoneReconnecting mockup): there, greyed, and saying why. */
-function HeldSubmit() {
+/**
+ * Submit once the time is up (the PhoneReconnecting mockup's held bar): there, greyed, and saying
+ * why, so the screen does not change shape under a thumb about to press it.
+ */
+function HeldSubmit({ reason }: { reason: string }) {
   // The players' own bar, so it sits where Submit sits on every size (fixed on a phone, at the
   // end of the column from 768px, a side column held sideways), with room left for it below the
   // last option (code review M3).
@@ -250,8 +295,8 @@ function HeldSubmit() {
     <>
       <div aria-hidden="true" className="h-28 md:hidden" />
       <ActionBar>
-        <p id="held-submit" className="flex-1 text-sm text-ink-2">
-          Submit comes back when you are connected.
+        <p id="held-submit" role="status" className="flex-1 text-sm text-ink-2">
+          {reason}
         </p>
         <Button variant="primary" size="lg" disabled aria-describedby="held-submit">
           Submit

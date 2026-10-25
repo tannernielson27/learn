@@ -52,7 +52,10 @@ export interface AnswerTally {
   joined: number;
 }
 
-/** What the stage says when the session is over (PLAN §5.11): calm numbers, no podium. */
+/**
+ * What the stage says when the session is over (PLAN §5.11): its numbers. Since the owner asked for
+ * a top 5 (2026-10-24) they sit under the podium, or stand alone when nobody scored.
+ */
 export interface EndSummary {
   /** How far the room got: the items it was put on. Every item, for a student-paced room. */
   questionsRun: number;
@@ -207,7 +210,7 @@ export type PhoneSettledView =
   | { phase: "ended"; headline: string };
 
 export type PhoneView =
-  /** The question stays on screen with Submit held off and the draft kept (PLAN §5.7). */
+  /** The question stays on screen with the draft kept and Submit live: it goes over HTTP (PLAN §5.7). */
   { phase: "reconnecting"; underneath: PhoneSettledView } | { phase: "refused" } | PhoneSettledView;
 
 export type PhonePhase = PhoneView["phase"];

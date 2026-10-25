@@ -18,6 +18,24 @@ async function expectNoAxeViolations(page: Page): Promise<void> {
   expect(axe.violations).toEqual([]);
 }
 
+/** The class page's tabs are links (`?tab=`): follow one and check it is marked as the page. */
+async function openClassTab(
+  page: Page,
+  label: "Overview" | "Students" | "Assignments" | "Settings",
+): Promise<void> {
+  const nav = page.getByRole("navigation", { name: "Class views", exact: true });
+  await nav.getByRole("link", { name: label, exact: true }).click();
+  await expect(page).toHaveURL(
+    label === "Overview"
+      ? /\/author\/classes\/[0-9a-f-]{36}$/
+      : new RegExp(`/author/classes/[0-9a-f-]{36}\\?tab=${label.toLowerCase()}$`),
+  );
+  await expect(nav.getByRole("link", { name: label, exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+}
+
 async function createClass(page: Page, name: string): Promise<string> {
   await page.getByRole("link", { name: "Classes", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/classes$/);
@@ -42,6 +60,8 @@ test("a student joins a class from its invite link and the roster shows them", a
   await expect(
     page.getByRole("img", { name: `QR code for the ${className} invite link`, exact: true }),
   ).toBeVisible();
+  // The roster is on the Students tab.
+  await openClassTab(page, "Students");
   await expect(
     page.getByRole("heading", { name: "Nobody has joined yet", exact: true }),
   ).toBeVisible();
@@ -115,6 +135,8 @@ test("a student joins a class from its invite link and the roster shows them", a
   const codeBefore = (await classCode.textContent()) ?? "";
 
   // Replacing the link kills the old one at once, and a stranger cannot tell it from nonsense.
+  // It is on the Settings tab; the link and the code are in the header on every tab.
+  await openClassTab(page, "Settings");
   await page.getByRole("button", { name: "Replace the link", exact: true }).click();
   await page.getByRole("button", { name: "Replace it now", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Invite link", exact: true })).not.toHaveValue(
@@ -140,6 +162,7 @@ test("a student joins a class from its invite link and the roster shows them", a
   // Removing the student takes the class off their home; the account stays.
   // With the keyboard only (#272): the row goes away, and focus lands on the Roster heading
   // rather than falling to the document body.
+  await openClassTab(page, "Students");
   await page.getByRole("button", { name: `Remove ${email}`, exact: true }).focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
@@ -214,6 +237,7 @@ test("a student joins with an email and a password, with no email to wait for", 
   });
   // The header shows the name rather than the address.
   await expect(student.getByTestId("signed-in-name")).toHaveText(name);
+  await openClassTab(page, "Students");
   await page.reload();
   const roster = page.getByRole("list", { name: "Roster", exact: true });
   await expect(roster).toContainText(name);
@@ -424,6 +448,7 @@ test("an account with no role types a class code, lands in the class and is on t
   await student.goto("/welcome");
   await expect(student).toHaveURL(/\/learn$/);
 
+  await openClassTab(page, "Students");
   await page.reload();
   const roster = page.getByRole("list", { name: "Roster", exact: true });
   await expect(roster).toContainText(name);

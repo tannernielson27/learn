@@ -28,7 +28,12 @@ const PANE =
   "lg:sticky lg:top-0 lg:block lg:max-h-dvh lg:w-[45%] lg:max-w-160 lg:shrink-0 lg:overflow-y-auto lg:border-x lg:border-line lg:bg-surface-1 lg:px-6 lg:pt-5 lg:pb-24 " +
   "@max-[56.25rem]/record:hidden " +
   "@min-[56.25rem]/record:sticky @min-[56.25rem]/record:top-0 @min-[56.25rem]/record:block @min-[56.25rem]/record:max-h-dvh @min-[56.25rem]/record:w-[45%] @min-[56.25rem]/record:max-w-160 @min-[56.25rem]/record:shrink-0 @min-[56.25rem]/record:overflow-y-auto @min-[56.25rem]/record:border-x @min-[56.25rem]/record:border-line @min-[56.25rem]/record:bg-surface-1 @min-[56.25rem]/record:px-6 @min-[56.25rem]/record:pt-5 @min-[56.25rem]/record:pb-24";
-const OVERLAY = "lg:hidden @max-[56.25rem]/record:block @min-[56.25rem]/record:hidden";
+/*
+ * Inside `RecordLayout` the chip's wrapper is `display: contents` below the two-pane width, so the
+ * chip's sticky bar sticks against the whole layout rather than a box only as tall as itself, and
+ * stays in reach however far the question scrolls.
+ */
+const OVERLAY = "lg:hidden @max-[56.25rem]/record:contents @min-[56.25rem]/record:hidden";
 
 /** Whether an element is laid out at all: the pane is `display: none` until its container fits it. */
 function useShown(ref: RefObject<HTMLElement | null>): boolean | null {
@@ -159,7 +164,7 @@ export function EhrPanel({ record, previous, openTabId, note, className = "" }: 
       </aside>
 
       <div className={OVERLAY} onKeyDown={onDrawerKeyDown}>
-        <div className="sticky top-0 z-20 border-b border-line bg-surface-1 px-4 py-2">
+        <div className="sticky top-0 z-20 flex h-(--record-chip-bar) items-center border-b border-line bg-surface-1 px-4">
           <button
             ref={chip}
             type="button"

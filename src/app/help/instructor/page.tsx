@@ -294,12 +294,16 @@ export default function InstructorGuide() {
           </p>
         </Topic>
         <Topic id="time-zone" title="Time zone">
-          <p>Set it on the class page, so open and close times show in your local time.</p>
+          <p>
+            Set it under <Ui>Settings</Ui> on the class page, so open and close times show in your
+            local time.
+          </p>
         </Topic>
         <Topic id="remove" title="Remove a student">
           <p>
             A removed student cannot rejoin with the link or code they have. To stop both working
-            for everyone, replace the link: the class code and QR code change too.
+            for everyone, replace the link under <Ui>Settings</Ui>: the class code and QR code
+            change too.
           </p>
         </Topic>
       </Section>
@@ -352,7 +356,9 @@ export default function InstructorGuide() {
           </li>
           <li>
             For the projector, press <Ui>Open in a new window</Ui> or{" "}
-            <Ui>Present on this screen</Ui> in the lobby: that view shows no controls.
+            <Ui>Present on this screen</Ui> in the lobby: that view shows no controls. On this
+            screen, Space or the right arrow key takes the next step, and Esc goes back to the
+            controls. No key ends the live session: end it from the controls.
           </li>
           <li>
             Set <Ui>Time per question</Ui> if you want a timer, then press <Ui>Start</Ui>.

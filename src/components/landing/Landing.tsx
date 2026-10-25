@@ -82,18 +82,27 @@ export interface LandingProps {
 export function Landing({ entry }: LandingProps) {
   return (
     <main className="mx-auto w-full max-w-wide flex-1 px-5 pt-10 pb-16 sm:px-6 sm:pt-16 lg:px-8">
-      <p className="eyebrow">LeaRN</p>
-
-      <div className="mt-4 grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-12">
+      {/*
+        The hero (fix/landing-hero): two equal columns from 1024px, 5:7 from 1280px where the copy
+        column is wide enough for both actions side by side, centred against each other so neither
+        hangs. Gaps are on the spacing scale (24, 32, 48).
+      */}
+      <div className="grid gap-12 lg:grid-cols-2 lg:items-center xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
         <div>
-          <h1 className="font-read text-display leading-tight text-ink-1">
+          <p className="eyebrow">LeaRN</p>
+          <h1 className="mt-4 font-read text-display leading-tight text-ink-1">
             Live learning for the Next Generation NCLEX.
           </h1>
-          <p className="mt-5 max-w-prose text-lg leading-relaxed text-ink-2">
+          <p className="mt-6 max-w-prose text-lg leading-relaxed text-ink-2">
             Quizzes in every NCLEX question format, scored like the exam. For nursing teachers and
             their students.
           </p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          {/*
+            One two-column grid for both rows, so every action is the same width and height and
+            Join a live session sits under the account, with its note where Sign in sits. The rule
+            spans the actions and no more.
+          */}
+          <div className="mt-8 grid max-w-md gap-3 sm:grid-cols-2">
             <Link href={entry.href} className={PRIMARY}>
               {entry.label}
             </Link>
@@ -102,12 +111,12 @@ export function Landing({ entry }: LandingProps) {
                 {entry.also.label}
               </Link>
             ) : null}
-          </div>
-          <div className="mt-6 flex flex-col gap-3 border-t border-line pt-6 sm:flex-row sm:items-center sm:gap-5">
-            <Link href="/join" className={PRIMARY}>
-              Join a live session
-            </Link>
-            <p className="text-ink-2">In class now? No account needed.</p>
+            <div className="mt-3 border-t border-line pt-6 sm:col-span-2 sm:grid sm:grid-cols-subgrid sm:items-center">
+              <Link href="/join" className={`${PRIMARY} w-full`}>
+                Join a live session
+              </Link>
+              <p className="mt-3 text-ink-2 sm:mt-0">In class now? No account needed.</p>
+            </div>
           </div>
         </div>
 
@@ -118,7 +127,7 @@ export function Landing({ entry }: LandingProps) {
             width={SAMPLE.width}
             height={SAMPLE.height}
             alt={SAMPLE.alt}
-            sizes="(min-width: 1024px) 640px, 100vw"
+            sizes="(min-width: 1280px) 680px, (min-width: 1024px) 50vw, 100vw"
             // Beside the headline from 1024px up, so it is not left to lazy loading.
             loading="eager"
             className="h-auto w-full rounded-md border border-line"

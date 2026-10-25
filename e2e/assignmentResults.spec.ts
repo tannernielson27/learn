@@ -120,7 +120,7 @@ test("a student sees nothing before the close, then their score, keys and ration
 
   // #233: the invite page is public, so it must not carry who is already on the roster. The
   // control: the instructor's roster response does carry the student's address.
-  expect(await bytesOf(page.context(), `/author/classes/${classId}`)).toContain(email);
+  expect(await bytesOf(page.context(), `/author/classes/${classId}?tab=students`)).toContain(email);
   const stranger = await browser.newContext();
   expect(await bytesOf(stranger, invite)).not.toContain(email);
   await stranger.close();
@@ -195,7 +195,7 @@ test("a student sees nothing before the close, then their score, keys and ration
   // the header shows the name once there is one), the instructor's roster carries A's name and
   // email, and a student's attempt page carries that student's attempt id.
   expect(await bytesOf(phone, "/learn")).toContain(displayName);
-  const roster = await bytesOf(page.context(), `/author/classes/${classId}`);
+  const roster = await bytesOf(page.context(), `/author/classes/${classId}?tab=students`);
   expect(roster).toContain(displayName);
   expect(roster).toContain(email);
   const classmateTaking = await bytesOf(other.context, bankPath);

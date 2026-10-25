@@ -74,6 +74,10 @@ Verbs:
 
 "Delete assignment" stays as it is. The button is offered only before an assignment opens, when no student has seen it and it holds no answers. That is the same rule as an empty folder, so it is not an exception to archive-only.
 
+Added on 2026-10-24, with the end-of-session podium (owner request):
+
+- **Top 5**: the heading over the podium on the projector when a live session ends, the five best places by the report's totals. A place reads "1st", or "1st, tied" when it is shared, with "points" beside it. Not "winner", "leaderboard" or "ranking".
+
 ## Words we do not use
 
 In the interface, that is. Most of these are fine in code and comments.
