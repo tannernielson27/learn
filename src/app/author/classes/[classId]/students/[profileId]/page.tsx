@@ -15,15 +15,16 @@ export const metadata: Metadata = { title: "Student" };
  * One student's progress in one class, for the class's teacher. The class is read under row level
  * security and the progress through `class_progress`, which answers only a teacher of the class's
  * own workspace; a class they cannot see, or a student who is not (and was never) in it, is
- * not-found, exactly like an id that does not exist. A student or an account with no role never
+ * not-found, exactly like an id that does not exist. A malformed id is not-found before the
+ * author check, so it costs no auth round trip. A student or an account with no role never
  * gets this far: `requireAuthor` sends them home.
  */
 export default async function ClassStudentPage({
   params,
 }: PageProps<"/author/classes/[classId]/students/[profileId]">) {
   const { classId, profileId } = await params;
-  const { supabase } = await requireAuthor(classStudentPath(classId, profileId));
   if (!isUuid(classId) || !isUuid(profileId)) notFound();
+  const { supabase } = await requireAuthor(classStudentPath(classId, profileId));
 
   const detail = await readClass(supabase, classId);
   if (!detail) notFound();
