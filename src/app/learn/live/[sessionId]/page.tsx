@@ -32,7 +32,7 @@ export default async function StudentLiveResultsPage({
 
   const { supabase } = await requireStudent();
   const [view, classes] = await Promise.all([
-    loadLiveResultPage(liveResultsStore(supabase, createSupabaseServiceClient()), sessionId),
+    loadLiveResultPage(liveResultsStore(supabase, createSupabaseServiceClient), sessionId),
     myClasses(supabase),
   ]);
 
