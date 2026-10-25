@@ -1,4 +1,4 @@
-# ADR 0014 — A student sees their own live session results
+# ADR 0015 — A student sees their own live session results
 
 - **Status:** Accepted, 2026-10-25. Follows ADR 0013 (a live session can be run for a class).
 - **Deciders:** product owner (the intent: a signed-in student sees their own results from class live sessions, with keys and rationales once a session has ended), Claude (builder; every choice under "Decisions made while building" was made without the owner and is the conservative one)
@@ -11,7 +11,7 @@ Since ADR 0013 a signed-in member who joins a live session for their class has t
 
 - **The student home has a Live sessions section**, in the style of the assignment Results list: each ended class live session the student joined signed in, most recently ended first, with the class, when it ended, their score and how many questions they answered. Each links to `/learn/live/[sessionId]`.
 - **The results page shows each question with their answer, correct or not, and the rationale**, laid out as an assignment's results after close: their total, "Review what I missed", the share by step, the questions with their verdicts, and one question at a time in the review view. An answer is drawn against the key it was scored with (`session_responses.reveal`).
-- **Only ended sessions, only the student who answered.** Three security definer functions answer only `auth.uid()`, only about participant rows linked to it, and only once the session's status is `ended`: `my_live_results()`, `my_live_result(target_session)` and `my_live_step_marks()` (migration `20261025000000_student_live_results`). Anyone else, and a session still running, reads as not-found. Keys and rationales are read with the service role only after `my_live_result` has answered.
+- **Only ended sessions, only the student who answered.** Three security definer functions answer only `auth.uid()`, only about participant rows linked to it, and only once the session's status is `ended`: `my_live_results()`, `my_live_result(target_session)` and `my_live_step_marks()` (migration `20261025010000_student_live_results`). Anyone else, and a session still running, reads as not-found. Keys and rationales are read with the service role only after `my_live_result` has answered.
 - **Live answers count toward Your clinical judgment steps** as a third source, "live sessions", beside assignments and practice.
 - **The live phone path is unchanged** and imports none of this (`src/components/live/noClientStudentLiveResults.test.ts`). The "Join a live session" link and joining with no account are unchanged.
 
@@ -31,5 +31,5 @@ Each was made without the owner, during a build that merges after the live class
 
 ## Consequences
 
-- **Migration order.** `20261025000000_student_live_results` must be pushed after `20261024000000_class_live_sessions` (PR #488) and before this app is deployed (docs/05 §7.2, row 63). Without it the home's Live sessions and steps sections say they did not load.
+- **Migration order.** `20261025010000_student_live_results` must be pushed after `20261024000000_class_live_sessions` (PR #488) and before this app is deployed (docs/05 §7.2, row 63). Without it the home's Live sessions and steps sections say they did not load.
 - **Glossary.** No new term: "Live session", "Results" (a student's word) and "Clinical judgment step" as decided.

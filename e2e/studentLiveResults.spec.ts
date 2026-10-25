@@ -11,7 +11,7 @@ import {
 } from "./signIn";
 import { skipWelcomes } from "./welcome";
 
-// A student sees their own live session results (20261025000000_student_live_results.sql). A
+// A student sees their own live session results (20261025010000_student_live_results.sql). A
 // teacher starts a live session for a class; a signed-in member joins and answers question 1. While
 // the session runs, the student's home lists nothing and the results page is not found. Once it
 // ends, the home lists it with the score and its page shows the answer with the rationale. Another

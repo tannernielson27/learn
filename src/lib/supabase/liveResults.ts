@@ -5,7 +5,7 @@ import type { StepAttemptMark } from "./steps";
 
 /**
  * A student's own live session results, through `public.my_live_results`, `public.my_live_result`
- * and `public.my_live_step_marks` (20261025000000_student_live_results.sql), as the student.
+ * and `public.my_live_step_marks` (20261025010000_student_live_results.sql), as the student.
  *
  * Each function answers only the caller, only about participant rows linked to their account, and
  * only for sessions that have ended. So for one session "no rows" means "not yours to read": not

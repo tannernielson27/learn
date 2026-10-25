@@ -1,4 +1,4 @@
--- A student's own live session results (20261025000000_student_live_results.sql): only ended
+-- A student's own live session results (20261025010000_student_live_results.sql): only ended
 -- sessions, only participant rows linked to the caller, never an anonymous participant, never a
 -- question the session did not reach, and never another student's answer. Runs with
 -- `pnpm exec supabase test db`. Uses its own fixture ids so it never counts the seed's rows.
