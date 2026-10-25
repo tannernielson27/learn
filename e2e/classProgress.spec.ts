@@ -134,7 +134,7 @@ test("a class's progress shows who attended, and a student's page links to the r
 
   // 6. A teacher of another workspace: not-found, and nothing of the student's.
   const other = await (await browser.newContext()).newPage();
-  await signInAsInstructorInEmptyOrg(other, request, `progress-other ${stamp}`);
+  await signInAsInstructorInEmptyOrg(other, request, `progress-other-${testInfo.project.name}`);
   const response = await other.goto(studentPath);
   expect(response?.status()).toBe(404);
   await expect(other.getByText(present, { exact: true })).toHaveCount(0);
