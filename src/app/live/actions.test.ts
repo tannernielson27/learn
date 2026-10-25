@@ -38,7 +38,8 @@ vi.mock("@/lib/supabase/sessions", () => ({
   startSession: (...args: Parameters<typeof startSession>) => startSession(...args),
 }));
 
-const { startCaseStudyLiveSession, startLiveSession } = await import("./actions");
+const { startCaseStudyLiveSession, startClassLiveSession, startLiveSession } =
+  await import("./actions");
 
 const CASE = "00000000-0000-4000-8000-000000000003";
 const BANK = "00000000-0000-4000-8000-000000000002";
@@ -149,5 +150,61 @@ describe("startLiveSession", () => {
     await expect(startLiveSession(BANK, startForm({ classId: CLASS }))).rejects.toThrow(
       `redirect:/author/banks/${BANK}?live=class`,
     );
+  });
+});
+
+describe("startClassLiveSession", () => {
+  const back = `/author/classes/${CLASS}/start`;
+
+  it("starts the chosen quiz for this class, with the pacing chosen, and opens the console", async () => {
+    startSession.mockResolvedValue({ ok: true, sessionId: SESSION });
+    await expect(
+      startClassLiveSession(CLASS, startForm({ bankId: BANK, pacing: "student_paced" })),
+    ).rejects.toThrow(`redirect:/live/${SESSION}`);
+    expect(requireAuthor).toHaveBeenCalledWith(back);
+    expect(startSession).toHaveBeenCalledWith(
+      AUTHOR_CLIENT,
+      { kind: "bank", id: BANK },
+      "student_paced",
+      CLASS,
+    );
+  });
+
+  it("is teacher-paced unless the form says otherwise, and the class is never the form's", async () => {
+    startSession.mockResolvedValue({ ok: true, sessionId: SESSION });
+    const other = "00000000-0000-4000-8000-0000000000d9";
+    await expect(
+      startClassLiveSession(CLASS, startForm({ bankId: BANK, classId: other })),
+    ).rejects.toThrow(`redirect:/live/${SESSION}`);
+    expect(startSession).toHaveBeenCalledWith(
+      AUTHOR_CLIENT,
+      { kind: "bank", id: BANK },
+      "instructor_paced",
+      CLASS,
+    );
+  });
+
+  it("asks for a quiz when the form names none, before starting anything", async () => {
+    for (const form of [undefined, startForm({}), startForm({ bankId: "../x" })]) {
+      await expect(startClassLiveSession(CLASS, form)).rejects.toThrow(
+        `redirect:${back}?live=quiz`,
+      );
+    }
+    expect(startSession).not.toHaveBeenCalled();
+  });
+
+  it("sends a refusal back to the class's start page with its reason", async () => {
+    startSession.mockResolvedValue({ ok: false, reason: "class" });
+    await expect(startClassLiveSession(CLASS, startForm({ bankId: BANK }))).rejects.toThrow(
+      `redirect:${back}?live=class`,
+    );
+  });
+
+  it("refuses a class id that is not one before asking anyone", async () => {
+    await expect(startClassLiveSession("../banks", startForm({ bankId: BANK }))).rejects.toThrow(
+      "redirect:/author/classes",
+    );
+    expect(requireAuthor).not.toHaveBeenCalled();
+    expect(startSession).not.toHaveBeenCalled();
   });
 });

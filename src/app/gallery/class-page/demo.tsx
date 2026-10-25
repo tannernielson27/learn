@@ -12,7 +12,12 @@ import {
   CLASS_PAGE_FIXTURE_ROSTER,
   CLASS_PAGE_FIXTURE_SHARES,
 } from "@/lib/classes/classPageFixture";
+import {
+  PROGRESS_FIXTURE,
+  PROGRESS_FIXTURE_SESSION_LIST,
+} from "@/lib/classes/classProgressFixture";
 import type { ClassTab } from "@/lib/classes/classTabs";
+import { buildClassProgress, type ProgressSort } from "@/lib/classes/progress";
 
 const NOT_HERE = "Not in the gallery.";
 
@@ -28,7 +33,17 @@ const ACTIONS: ClassPageActions = {
   stopSharingFor: () => async () => ({ ok: false, message: NOT_HERE }),
 };
 
-export function ClassPageDemo({ tab, zones }: { tab: ClassTab; zones: readonly string[] }) {
+const PROGRESS = buildClassProgress(PROGRESS_FIXTURE);
+
+export function ClassPageDemo({
+  tab,
+  zones,
+  sort = "name",
+}: {
+  tab: ClassTab;
+  zones: readonly string[];
+  sort?: ProgressSort;
+}) {
   // e2e waits for this before a screenshot: local times are rewritten once hydrated.
   const hydrated = useHydrated();
   return (
@@ -40,6 +55,9 @@ export function ClassPageDemo({ tab, zones }: { tab: ClassTab; zones: readonly s
         assignments={CLASS_PAGE_FIXTURE_ASSIGNMENTS}
         shares={CLASS_PAGE_FIXTURE_SHARES}
         banks={CLASS_PAGE_FIXTURE_BANKS}
+        progress={PROGRESS}
+        progressSort={sort}
+        sessions={PROGRESS_FIXTURE_SESSION_LIST}
         zones={zones}
         now={CLASS_PAGE_FIXTURE_NOW}
         tab={tab}

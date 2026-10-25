@@ -299,6 +299,18 @@ export default function InstructorGuide() {
             local time.
           </p>
         </Topic>
+        <Topic id="class-progress" title="Progress">
+          <p>
+            Under <Ui>Progress</Ui> on the class page, each student has a row: their overall
+            percent, how many live sessions they attended, and a cell for every live session and
+            assignment. A live session counts for the class when you start it from the class
+            page&apos;s <Ui>Start a live session</Ui>, or choose the class under{" "}
+            <Ui>For a class</Ui> on a quiz. Students signed in to the class are counted; guests are
+            not. Scores show once a live session ends and once an assignment closes. Select a
+            student&apos;s name for their own page, with their weakest clinical judgment steps
+            first.
+          </p>
+        </Topic>
         <Topic id="remove" title="Remove a student">
           <p>
             A removed student cannot rejoin with the link or code they have. To stop both working
