@@ -1830,6 +1830,38 @@ export type Database = {
           tries: number;
         }[];
       };
+      class_progress: {
+        Args: { target_class: string };
+        Returns: {
+          activity_id: string;
+          activity_kind: string;
+          activity_state: string;
+          attempt_number: number;
+          attempts_used: number;
+          attended: boolean;
+          display_name: string;
+          email: string;
+          membership: string;
+          occurred_at: string;
+          percent: number;
+          points: number;
+          possible: number;
+          profile_id: string;
+          status: string;
+          title: string;
+        }[];
+      };
+      class_progress_steps: {
+        Args: { target_class: string };
+        Returns: {
+          answered: number;
+          mean_percent: number;
+          points: number;
+          possible: number;
+          profile_id: string;
+          step: number;
+        }[];
+      };
       class_roster: {
         Args: { target_class: string };
         Returns: {
