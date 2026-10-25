@@ -35,7 +35,7 @@ export interface HostSession {
 export type SessionSource = { kind: "bank"; id: string } | { kind: "case_study"; id: string };
 
 export type StartSessionResult =
-  { ok: true; sessionId: string } | { ok: false; reason: "gone" | "empty" | "failed" };
+  { ok: true; sessionId: string } | { ok: false; reason: "gone" | "empty" | "class" | "failed" };
 
 export type EndSessionResult =
   { ok: true; closedAt: string } | { ok: false; reason: "gone" | "failed" };
@@ -58,30 +58,39 @@ export type ResolvedCode =
 
 /**
  * Starts a session from a bank or a case study. Every real decision — which org, which items, the
- * join code, the collision retry — is made inside `start_session`, under the caller's own row
- * level security. This only names the source and translates the refusals.
+ * join code, the collision retry, whether the class is the teacher's — is made inside
+ * `start_session`, under the caller's own row level security. This only names the source and
+ * translates the refusals.
+ *
+ * `classId` starts it for a class (ADR 0013): anyone still joins with the code, and a signed-in
+ * member of that class is linked to their account. Null is a quick session, as every session was.
  */
 export async function startSession(
   supabase: Client,
   source: SessionSource,
   paced: SessionMode = "instructor_paced",
+  classId: string | null = null,
 ): Promise<StartSessionResult> {
   // #185: named only when it is not the default, so an instructor-paced start is the call it was.
+  // The class likewise, so a quick session is the call it was before the class existed.
   const pacing = paced === "student_paced" ? { paced } : {};
+  const forClass = classId ? { target_class: classId } : {};
   const args =
     source.kind === "bank"
-      ? { source_bank: source.id, ...pacing }
-      : { source_case_study: source.id, ...pacing };
+      ? { source_bank: source.id, ...pacing, ...forClass }
+      : { source_case_study: source.id, ...pacing, ...forClass };
   const { data, error } = await supabase.rpc("start_session", args);
   if (error) return { ok: false, reason: startReason(error) };
   if (!data) return { ok: false, reason: "failed" };
   return { ok: true, sessionId: data };
 }
 
-function startReason(error: PostgrestError): "gone" | "empty" | "failed" {
+function startReason(error: PostgrestError): "gone" | "empty" | "class" | "failed" {
   // A source in another org, or one that has been deleted, reads the same way: gone.
   if (error.code === "P0002") return "gone";
   if (error.code === "22023") return "empty";
+  // A class that is not in the teacher's workspace, or no longer exists (start_session's LC001).
+  if (error.code === "LC001") return "class";
   return "failed";
 }
 
@@ -212,4 +221,27 @@ export async function resolveSessionCode(
     mode: row.session_mode,
     title: row.session_title,
   };
+}
+
+/**
+ * The name of the class a code's live session is for, when `memberId` is a current member of it;
+ * null for anything else, an error included. Only for the join page to say "Joining as … for …"
+ * (ADR 0013): it decides nothing. Whether a participant is linked is `join_session`'s own check.
+ *
+ * `memberId` must be the account the server has just verified, never one from the request. The
+ * function is granted to the service role alone, so `client` is the service-role client.
+ */
+export async function readMemberClass(
+  client: Client,
+  typed: string,
+  memberId: string,
+): Promise<string | null> {
+  const code = normalizeSessionCode(typed);
+  if (!isSessionCode(code)) return null;
+  const { data, error } = await client.rpc("class_session_for_member", {
+    session_code: code,
+    member: memberId,
+  });
+  if (error) return null;
+  return data?.[0]?.class_name ?? null;
 }

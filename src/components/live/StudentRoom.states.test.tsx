@@ -119,6 +119,10 @@ describe("refused", () => {
     expect(
       screen.getByRole("heading", { name: "You are no longer in this live session." }),
     ).toBeInTheDocument();
+    // A member who joined again on a second device sends the first one here (ADR 0013).
+    expect(
+      screen.getByText("If you joined this live session on another device, carry on there."),
+    ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Join a live session" })).toHaveAttribute(
       "href",
       "/join",

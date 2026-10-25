@@ -1640,6 +1640,7 @@ export type Database = {
           bank_id: string | null;
           case_study_id: string | null;
           case_study_records: Json | null;
+          class_id: string | null;
           closed_at: string | null;
           code: string;
           created_at: string;
@@ -1663,6 +1664,7 @@ export type Database = {
           bank_id?: string | null;
           case_study_id?: string | null;
           case_study_records?: Json | null;
+          class_id?: string | null;
           closed_at?: string | null;
           code: string;
           created_at?: string;
@@ -1686,6 +1688,7 @@ export type Database = {
           bank_id?: string | null;
           case_study_id?: string | null;
           case_study_records?: Json | null;
+          class_id?: string | null;
           closed_at?: string | null;
           code?: string;
           created_at?: string;
@@ -1718,6 +1721,13 @@ export type Database = {
             columns: ["case_study_id", "org_id"];
             isOneToOne: false;
             referencedRelation: "case_studies";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "sessions_class_org_fkey";
+            columns: ["class_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "classes";
             referencedColumns: ["id", "org_id"];
           },
           {
@@ -1830,6 +1840,12 @@ export type Database = {
           signed_in: boolean;
         }[];
       };
+      class_session_for_member: {
+        Args: { member: string; session_code: string };
+        Returns: {
+          class_name: string;
+        }[];
+      };
       complete_assignment_reminder: {
         Args: { message_id?: string; target: string };
         Returns: boolean;
@@ -1905,7 +1921,11 @@ export type Database = {
       join_class: { Args: { token: string }; Returns: string };
       join_class_by_code: { Args: { p_code: string }; Returns: string };
       join_session: {
-        Args: { chosen_name: string; target_session: string };
+        Args: {
+          chosen_name: string;
+          joining_profile?: string;
+          target_session: string;
+        };
         Returns: {
           participant_id: string;
           rejoin_secret: string;
@@ -2105,6 +2125,18 @@ export type Database = {
           joined_at: string;
           profile_id: string;
           role: Database["public"]["Enums"]["org_role"];
+        }[];
+      };
+      participant_link: {
+        Args: {
+          account: string;
+          presented_secret: string;
+          target_participant: string;
+          target_session: string;
+        };
+        Returns: {
+          account_is_member: boolean;
+          linked_profile: string;
         }[];
       };
       place_case_study_step: {
@@ -2325,6 +2357,7 @@ export type Database = {
           paced?: Database["public"]["Enums"]["session_mode"];
           source_bank?: string;
           source_case_study?: string;
+          target_class?: string;
         };
         Returns: string;
       };

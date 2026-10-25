@@ -21,6 +21,7 @@ import { DuplicateButton } from "@/components/authoring/DuplicateButton";
 import { EhrEditorLoader } from "@/components/authoring/EhrEditorLoader";
 import { editorFor, storedItemOf } from "@/components/authoring/editorFor";
 import { ItemEditorLoader } from "@/components/authoring/ItemEditorLoader";
+import { LiveClassSelect } from "@/components/authoring/LiveClassSelect";
 import { StepItemPanel } from "@/components/authoring/StepItemPanel";
 import { StepTypeChooser } from "@/components/authoring/StepTypeChooser";
 import { ReadingWidth } from "@/components/authoring/PageWidth";
@@ -36,6 +37,7 @@ import { requireAuthor } from "@/lib/authoring/session";
 import { caseStudyLiveStartMessage } from "@/lib/live/liveStart";
 import { ITEM_TYPE_LABELS, ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 import { ehrRecordSchema } from "@/lib/ngn/schemas";
+import { listClasses } from "@/lib/supabase/classes";
 import type { CjmmStep } from "@/lib/ngn/types";
 
 export const metadata: Metadata = { title: "Case study" };
@@ -60,6 +62,8 @@ export default async function CaseStudyPage({
     .eq("id", caseStudyId)
     .maybeSingle();
   if (!row) notFound();
+  // ADR 0013: "For a class" beside Start, only where a published case study can be started.
+  const classes = row.status === "published" ? await listClasses(supabase) : null;
 
   // The rail and the blockers describe publishing, so a step is ready once it is published and
   // carries the rationale publishing now needs.
@@ -140,7 +144,12 @@ export default async function CaseStudyPage({
         />
         {/* Only a published case study can be run: start_session refuses anything else (#184). */}
         {row.status === "published" ? (
-          <form action={startCaseStudyLiveSession.bind(null, row.id)}>
+          <form
+            action={startCaseStudyLiveSession.bind(null, row.id)}
+            className="flex flex-wrap items-end gap-2"
+          >
+            {/* ADR 0013: a live session for a class. No class is the default and comes first. */}
+            <LiveClassSelect id="live-class" classes={classes} />
             <Button type="submit" variant="secondary" size="sm">
               Start a live session
             </Button>

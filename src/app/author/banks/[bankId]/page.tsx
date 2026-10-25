@@ -50,6 +50,7 @@ import { readMoveContext } from "@/lib/authoring/quizMoveData";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { bankViewHref, isFiltering, parseTagFilter, tagFacets } from "@/lib/authoring/tagFilter";
+import { LIVE_CLASS_REFUSAL } from "@/lib/live/liveStart";
 import { stopSharingWarning } from "@/lib/practice/shares";
 import { listClasses } from "@/lib/supabase/classes";
 import { listBankShares } from "@/lib/supabase/practiceShares";
@@ -74,6 +75,7 @@ function liveStartMessage(value: string | string[] | undefined): string | undefi
   if (reason === undefined) return undefined;
   if (reason === "empty") return "Publish a question in this quiz before starting a live session.";
   if (reason === "gone") return "That quiz no longer exists.";
+  if (reason === "class") return LIVE_CLASS_REFUSAL;
   return "The live session could not be started. Try again.";
 }
 
@@ -197,6 +199,7 @@ export default async function BankPage({
         assignHref={assignmentPath({ kind: "bank", id: bank.id })}
         practiceHref={`#${PRACTICE_ID}`}
         liveRefusal={liveRefusal}
+        classes={classes}
       />
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] xl:gap-10">

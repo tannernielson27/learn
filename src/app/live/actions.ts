@@ -6,6 +6,17 @@ import { requireAuthor } from "@/lib/authoring/session";
 import { startSession } from "@/lib/supabase/sessions";
 
 /**
+ * The class a start form names (ADR 0013), or null for "No class (anyone joins)". Anything that is
+ * not a uuid is read as no class rather than refused, so a form posted without the field starts
+ * the quick session every earlier version started. Whether the class is the teacher's is
+ * `start_session`'s check, not this one.
+ */
+function chosenClass(form: FormData | undefined): string | null {
+  const value = form?.get("classId");
+  return typeof value === "string" && isUuid(value) ? value : null;
+}
+
+/**
  * Starts a live session from a bank and opens its console. Every check that matters is the
  * database's: `start_session` runs as the caller, so row level security decides whether the bank
  * is theirs and the host policy decides whether the row may be written. requireAuthor is here so
@@ -20,7 +31,12 @@ export async function startLiveSession(bankId: string, form?: FormData): Promise
   const { supabase } = await requireAuthor(`/author/banks/${bankId}`);
 
   const paced = form?.get("pacing") === "student_paced" ? "student_paced" : "instructor_paced";
-  const started = await startSession(supabase, { kind: "bank", id: bankId }, paced);
+  const started = await startSession(
+    supabase,
+    { kind: "bank", id: bankId },
+    paced,
+    chosenClass(form),
+  );
   if (!started.ok) redirect(`/author/banks/${bankId}?live=${started.reason}`);
 
   redirect(`/live/${started.sessionId}`);
@@ -32,12 +48,20 @@ export async function startLiveSession(bankId: string, form?: FormData): Promise
  * the same reasons — `start_session` refuses a case study that is not published or has a step in
  * draft, and row level security refuses one in another org.
  */
-export async function startCaseStudyLiveSession(caseStudyId: string): Promise<never> {
+export async function startCaseStudyLiveSession(
+  caseStudyId: string,
+  form?: FormData,
+): Promise<never> {
   if (!isUuid(caseStudyId)) redirect("/author");
   const back = `/author/case-studies/${caseStudyId}`;
   const { supabase } = await requireAuthor(back);
 
-  const started = await startSession(supabase, { kind: "case_study", id: caseStudyId });
+  const started = await startSession(
+    supabase,
+    { kind: "case_study", id: caseStudyId },
+    "instructor_paced",
+    chosenClass(form),
+  );
   if (!started.ok) redirect(`${back}?live=${started.reason}`);
 
   redirect(`/live/${started.sessionId}`);

@@ -45,15 +45,23 @@ export interface ResumedParticipant {
  * Creates the participant for a session that `resolveSessionCode` has already found. The session
  * id is never taken from the browser: it is what resolving a typed code returned, which is what
  * keeps the per-address limit on wrong codes in front of this call.
+ *
+ * `profileId` is the signed-in account the server has just verified (ADR 0013), never an id from
+ * the request; null for a guest. `join_session` links it only when the session is for a class and
+ * the account is a current member of that class, and joins anonymously otherwise. A member who is
+ * already in the session gets their participant back, with a new secret.
  */
 export async function joinSession(
   client: Client,
   sessionId: string,
   displayName: string,
+  profileId: string | null = null,
 ): Promise<JoinSessionResult> {
   const { data, error } = await client.rpc("join_session", {
     target_session: sessionId,
     chosen_name: displayName,
+    // Named only when there is an account, so a guest's call is the call it always was.
+    ...(profileId ? { joining_profile: profileId } : {}),
   });
   if (error) return { ok: false, reason: joinReason(error) };
 
@@ -121,6 +129,44 @@ export async function checkParticipant(
       mode: row.session_mode,
       title: row.session_title,
     },
+  };
+}
+
+/**
+ * Whose participant a token names, for the join action alone (ADR 0013).
+ *
+ *   * `linkedProfile` — the account the participant is linked to, or null for an anonymous one.
+ *   * `accountIsMember` — whether `account` is a current member of the session's class.
+ *
+ * `account` must be the id the server verified, never one from the request. Neither field is
+ * ever sent to a browser: the join action reads them to decide whether a browser already in the
+ * room comes back as that participant, so that a shared laptop does not hand one student's
+ * participant to the next person who signs in on it. A token that names nobody is `unknown`, a
+ * database that did not answer `unavailable`, as for `checkParticipant`.
+ */
+export type ParticipantLink =
+  | { ok: true; linkedProfile: string | null; accountIsMember: boolean }
+  | { ok: false; reason: "unknown" | "unavailable" };
+
+export async function participantLink(
+  client: Client,
+  token: ParticipantToken,
+  account: string,
+): Promise<ParticipantLink> {
+  const { data, error } = await client.rpc("participant_link", {
+    target_participant: token.participantId,
+    target_session: token.sessionId,
+    presented_secret: token.secret,
+    account,
+  });
+  if (error) return { ok: false, reason: "unavailable" };
+
+  const row = data?.[0];
+  if (!row) return { ok: false, reason: "unknown" };
+  return {
+    ok: true,
+    linkedProfile: row.linked_profile ?? null,
+    accountIsMember: row.account_is_member === true,
   };
 }
 

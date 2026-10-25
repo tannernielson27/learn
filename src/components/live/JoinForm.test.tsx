@@ -125,3 +125,32 @@ describe("JoinForm", () => {
     expect(document.body.textContent ?? "").not.toMatch(/\p{Extended_Pictographic}/u);
   });
 });
+
+describe("JoinForm for a signed-in student (ADR 0013)", () => {
+  it("fills in the name it is given, and leaves it editable", async () => {
+    const action = vi.fn<JoinFormProps["action"]>(async () => ({ status: "idle" }));
+    render(<JoinForm action={action} code="7KQ2MZ" defaultName="Mia Chen" />);
+    expect(nameField()).toHaveValue("Mia Chen");
+    const user = userEvent.setup();
+    await user.clear(nameField());
+    await user.type(nameField(), "Mia C");
+    await user.click(joinButton());
+    const sent = action.mock.calls[0]?.[1];
+    expect(sent?.get("displayName")).toBe("Mia C");
+    // Not a guest unless asked: the server reads the account itself.
+    expect(sent?.get("guest")).toBeNull();
+  });
+
+  it("posts guest only when the person chose to join as a guest, and still nothing else", async () => {
+    const action = vi.fn<JoinFormProps["action"]>(async () => ({ status: "idle" }));
+    render(<JoinForm action={action} code="7KQ2MZ" asGuest />);
+    expect(screen.getAllByRole("textbox")).toHaveLength(2);
+    const user = userEvent.setup();
+    await user.type(nameField(), "Sam");
+    await user.click(joinButton());
+    const sent = action.mock.calls[0]?.[1];
+    expect(sent?.get("guest")).toBe("1");
+    // There is no field an account id could be posted in.
+    expect([...(sent?.keys() ?? [])].sort()).toEqual(["code", "displayName", "guest"]);
+  });
+});

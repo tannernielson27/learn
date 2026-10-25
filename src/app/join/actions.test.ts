@@ -61,9 +61,17 @@ vi.mock("@/lib/supabase/sessions", () => ({
 
 const joinSession = vi.fn();
 const checkParticipant = vi.fn();
+const participantLink = vi.fn();
 vi.mock("@/lib/supabase/participants", () => ({
   joinSession: (...args: unknown[]) => joinSession(...args),
   checkParticipant: (...args: unknown[]) => checkParticipant(...args),
+  participantLink: (...args: unknown[]) => participantLink(...args),
+}));
+
+// ADR 0013: who is signed in, as the server verified it. Null is signed out.
+const verifiedAccountId = vi.fn<() => Promise<string | null>>();
+vi.mock("@/lib/supabase/verifiedAccount", () => ({
+  verifiedAccountId: () => verifiedAccountId(),
 }));
 
 const { joinLiveSession } = await import("./actions");
@@ -72,6 +80,8 @@ const SESSION = "3f1a2b4c-5d6e-4f80-9a1b-2c3d4e5f6071";
 const OTHER_SESSION = "11112222-3333-4444-8555-666677778888";
 const PARTICIPANT = "9b8a7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d";
 const SECRET = "a".repeat(48);
+const MEMBER = "5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b";
+const SOMEONE_ELSE = "0f1e2d3c-4b5a-4968-8776-655443322110";
 
 const OPEN: ResolvedCode = {
   status: "open",
@@ -103,6 +113,8 @@ beforeEach(() => {
     participant: { participantId: PARTICIPANT, secret: SECRET },
   });
   checkParticipant.mockResolvedValue({ ok: false, reason: "unknown" });
+  participantLink.mockResolvedValue({ ok: true, linkedProfile: null, accountIsMember: false });
+  verifiedAccountId.mockResolvedValue(null);
 });
 
 describe("joinLiveSession", () => {
@@ -113,7 +125,7 @@ describe("joinLiveSession", () => {
     // `resolve_session_code` is granted to.
     expect(resolveSessionCode).toHaveBeenCalledWith(SERVICE_CLIENT, "7KQ2MZ", "203.0.113.42");
     // The session id is the one the lookup returned, never anything the browser sent.
-    expect(joinSession).toHaveBeenCalledWith(SERVICE_CLIENT, SESSION, "Sam Okafor");
+    expect(joinSession).toHaveBeenCalledWith(SERVICE_CLIENT, SESSION, "Sam Okafor", null);
   });
 
   it("writes the token the database issued, in an httpOnly cookie", async () => {
@@ -281,3 +293,186 @@ describe("joinLiveSession", () => {
     expect(resolveSessionCode).not.toHaveBeenCalled();
   });
 });
+
+describe("joinLiveSession for a class session (ADR 0013)", () => {
+  it("passes a signed-in member's verified account, for the database to link", async () => {
+    verifiedAccountId.mockResolvedValue(MEMBER);
+    expect(await joinAndFollow(form("7KQ2MZ", "Mia Chen"))).toBe(`/play/${SESSION}`);
+    expect(joinSession).toHaveBeenCalledWith(SERVICE_CLIENT, SESSION, "Mia Chen", MEMBER);
+    expect(jar.get(PARTICIPANT_COOKIE)?.value).toBe(`${SESSION}.${PARTICIPANT}.${SECRET}`);
+  });
+
+  it("passes a signed-in non-member's account the same way: membership is the database's check", async () => {
+    // join_session links only a current member of the session's class and joins anyone else
+    // anonymously, so the action claims nothing about membership and asks for nothing more.
+    verifiedAccountId.mockResolvedValue(SOMEONE_ELSE);
+    expect(await joinAndFollow(form("7KQ2MZ", "Noor"))).toBe(`/play/${SESSION}`);
+    expect(joinSession).toHaveBeenCalledWith(SERVICE_CLIENT, SESSION, "Noor", SOMEONE_ELSE);
+  });
+
+  it("joins a signed-out person as a guest, exactly as before", async () => {
+    verifiedAccountId.mockResolvedValue(null);
+    await joinAndFollow(form("7KQ2MZ", "Sam"));
+    expect(joinSession).toHaveBeenCalledWith(SERVICE_CLIENT, SESSION, "Sam", null);
+  });
+
+  it("never takes an account from the form, whatever a browser posts", async () => {
+    const forged = form("7KQ2MZ", "Sam");
+    for (const name of ["profileId", "profile_id", "joining_profile", "memberId", "userId"]) {
+      forged.set(name, MEMBER);
+    }
+
+    // Signed out: still a guest.
+    verifiedAccountId.mockResolvedValue(null);
+    await joinAndFollow(forged);
+    expect(joinSession).toHaveBeenLastCalledWith(SERVICE_CLIENT, SESSION, "Sam", null);
+
+    // Signed in as someone else: that someone, never the posted id.
+    verifiedAccountId.mockResolvedValue(SOMEONE_ELSE);
+    await joinAndFollow(forged);
+    expect(joinSession).toHaveBeenLastCalledWith(SERVICE_CLIENT, SESSION, "Sam", SOMEONE_ELSE);
+  });
+
+  it("joins a signed-in person who chose to be a guest as a guest, without reading their account", async () => {
+    verifiedAccountId.mockResolvedValue(MEMBER);
+    const asGuest = form("7KQ2MZ", "Sam");
+    asGuest.set("guest", "1");
+    await joinAndFollow(asGuest);
+    expect(joinSession).toHaveBeenCalledWith(SERVICE_CLIENT, SESSION, "Sam", null);
+    expect(verifiedAccountId).not.toHaveBeenCalled();
+  });
+
+  it("reads no account for a code that does not resolve", async () => {
+    resolveSessionCode.mockResolvedValue({ status: "unknown" });
+    await joinLiveSession({ status: "idle" }, form("7KQ2MZ", "Sam"));
+    expect(verifiedAccountId).not.toHaveBeenCalled();
+  });
+
+  it("comes back as a signed-out browser's participant without asking whose it is", async () => {
+    holdParticipant();
+    verifiedAccountId.mockResolvedValue(null);
+    expect(await joinAndFollow(form("7KQ2MZ", "Mia Chen"))).toBe(`/play/${SESSION}`);
+    expect(joinSession).not.toHaveBeenCalled();
+    expect(participantLink).not.toHaveBeenCalled();
+  });
+});
+
+describe("joinLiveSession on a shared browser (ADR 0013)", () => {
+  const OLD_TOKEN = `${SESSION}.${PARTICIPANT}.${SECRET}`;
+  const NEW_PARTICIPANT = "77776666-5555-4444-8333-222211110000";
+  const NEW_SECRET = "b".repeat(48);
+
+  beforeEach(() => {
+    holdParticipant();
+    joinSession.mockResolvedValue({
+      ok: true,
+      participant: { participantId: NEW_PARTICIPANT, secret: NEW_SECRET },
+    });
+  });
+
+  it("asks whose participant the cookie names with the verified account, and the token", async () => {
+    verifiedAccountId.mockResolvedValue(MEMBER);
+    participantLink.mockResolvedValue({ ok: true, linkedProfile: MEMBER, accountIsMember: true });
+    await joinAndFollow(form("7KQ2MZ", "Mia Chen"));
+    expect(participantLink).toHaveBeenCalledWith(
+      SERVICE_CLIENT,
+      { sessionId: SESSION, participantId: PARTICIPANT, secret: SECRET },
+      MEMBER,
+    );
+  });
+
+  it("comes back as the member's own linked participant", async () => {
+    verifiedAccountId.mockResolvedValue(MEMBER);
+    participantLink.mockResolvedValue({ ok: true, linkedProfile: MEMBER, accountIsMember: true });
+    expect(await joinAndFollow(form("7KQ2MZ", "Mia Chen"))).toBe(`/play/${SESSION}`);
+    expect(joinSession).not.toHaveBeenCalled();
+    expect(jar.get(PARTICIPANT_COOKIE)?.value).toBe(OLD_TOKEN);
+  });
+
+  it("does not hand one student's linked participant to someone else signed in on the same browser", async () => {
+    verifiedAccountId.mockResolvedValue(SOMEONE_ELSE);
+    participantLink.mockResolvedValue({ ok: true, linkedProfile: MEMBER, accountIsMember: false });
+    expect(await joinAndFollow(form("7KQ2MZ", "Noor"))).toBe(`/play/${SESSION}`);
+    expect(joinSession).toHaveBeenCalledWith(SERVICE_CLIENT, SESSION, "Noor", SOMEONE_ELSE);
+    expect(jar.get(PARTICIPANT_COOKIE)?.value).toBe(`${SESSION}.${NEW_PARTICIPANT}.${NEW_SECRET}`);
+  });
+
+  it("does not either when that someone else chose to join as a guest: they join as a new guest", async () => {
+    verifiedAccountId.mockResolvedValue(SOMEONE_ELSE);
+    participantLink.mockResolvedValue({ ok: true, linkedProfile: MEMBER, accountIsMember: false });
+    const asGuest = form("7KQ2MZ", "Noor");
+    asGuest.set("guest", "1");
+    await joinAndFollow(asGuest);
+    expect(joinSession).toHaveBeenCalledWith(SERVICE_CLIENT, SESSION, "Noor", null);
+    expect(jar.get(PARTICIPANT_COOKIE)?.value).toBe(`${SESSION}.${NEW_PARTICIPANT}.${NEW_SECRET}`);
+  });
+
+  it("joins a member who holds an anonymous participant as themselves, not as that guest", async () => {
+    verifiedAccountId.mockResolvedValue(MEMBER);
+    participantLink.mockResolvedValue({ ok: true, linkedProfile: null, accountIsMember: true });
+    await joinAndFollow(form("7KQ2MZ", "Mia Chen"));
+    expect(joinSession).toHaveBeenCalledWith(SERVICE_CLIENT, SESSION, "Mia Chen", MEMBER);
+    expect(jar.get(PARTICIPANT_COOKIE)?.value).toBe(`${SESSION}.${NEW_PARTICIPANT}.${NEW_SECRET}`);
+  });
+
+  it("keeps a member who chose to be a guest as the guest they already are", async () => {
+    verifiedAccountId.mockResolvedValue(MEMBER);
+    participantLink.mockResolvedValue({ ok: true, linkedProfile: null, accountIsMember: true });
+    const asGuest = form("7KQ2MZ", "Mia");
+    asGuest.set("guest", "1");
+    await joinAndFollow(asGuest);
+    expect(joinSession).not.toHaveBeenCalled();
+    expect(jar.get(PARTICIPANT_COOKIE)?.value).toBe(OLD_TOKEN);
+  });
+
+  it("keeps a signed-in non-member as the guest they already are", async () => {
+    verifiedAccountId.mockResolvedValue(SOMEONE_ELSE);
+    participantLink.mockResolvedValue({ ok: true, linkedProfile: null, accountIsMember: false });
+    await joinAndFollow(form("7KQ2MZ", "Noor"));
+    expect(joinSession).not.toHaveBeenCalled();
+    expect(jar.get(PARTICIPANT_COOKIE)?.value).toBe(OLD_TOKEN);
+  });
+
+  it("joins afresh when the token stopped naming anyone between the two reads", async () => {
+    verifiedAccountId.mockResolvedValue(MEMBER);
+    participantLink.mockResolvedValue({ ok: false, reason: "unknown" });
+    await joinAndFollow(form("7KQ2MZ", "Mia Chen"));
+    expect(joinSession).toHaveBeenCalledWith(SERVICE_CLIENT, SESSION, "Mia Chen", MEMBER);
+  });
+
+  it("neither comes back nor joins twice when the database could not say whose it is", async () => {
+    verifiedAccountId.mockResolvedValue(MEMBER);
+    participantLink.mockResolvedValue({ ok: false, reason: "unavailable" });
+    expect(await joinLiveSession({ status: "idle" }, form("7KQ2MZ", "Mia Chen"))).toEqual({
+      status: "error",
+      error: "Joining is not working just now. Try again in a moment.",
+    });
+    expect(joinSession).not.toHaveBeenCalled();
+    expect(redirected).not.toHaveBeenCalled();
+    expect(jar.get(PARTICIPANT_COOKIE)?.value).toBe(OLD_TOKEN);
+  });
+
+  it("asks nothing about a token the database already said names nobody", async () => {
+    verifiedAccountId.mockResolvedValue(MEMBER);
+    checkParticipant.mockResolvedValue({ ok: false, reason: "unknown" });
+    await joinAndFollow(form("7KQ2MZ", "Mia Chen"));
+    expect(participantLink).not.toHaveBeenCalled();
+    expect(joinSession).toHaveBeenCalledWith(SERVICE_CLIENT, SESSION, "Mia Chen", MEMBER);
+  });
+});
+
+/** This browser holds a good token for SESSION. */
+function holdParticipant() {
+  jar.set(PARTICIPANT_COOKIE, { value: `${SESSION}.${PARTICIPANT}.${SECRET}`, options: {} });
+  checkParticipant.mockResolvedValue({
+    ok: true,
+    participant: {
+      participantId: PARTICIPANT,
+      displayName: "Mia Chen",
+      joinedAt: 0,
+      sessionStatus: "lobby",
+      mode: "instructor_paced",
+      title: "Cardiac bank",
+    },
+  });
+}

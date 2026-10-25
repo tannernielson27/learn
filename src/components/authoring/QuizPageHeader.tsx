@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PracticeBadge } from "@/components/practice/PracticeBadge";
 import { buttonClasses } from "@/components/ui/Button";
 import { Notice } from "@/components/ui/Notice";
+import { LiveClassSelect } from "./LiveClassSelect";
 import { StartLiveButton } from "./StartLiveButton";
 
 export interface QuizPageHeaderProps {
@@ -20,6 +21,8 @@ export interface QuizPageHeaderProps {
   practiceHref: string;
   /** Why the last Start was refused, carried back on the query string. */
   liveRefusal?: string;
+  /** The teacher's classes, for "For a class" (ADR 0013); null or empty leaves it out. */
+  classes?: readonly { id: string; name: string }[] | null;
 }
 
 /**
@@ -35,6 +38,7 @@ export function QuizPageHeader({
   assignHref,
   practiceHref,
   liveRefusal,
+  classes = null,
 }: QuizPageHeaderProps) {
   return (
     <header className="flex flex-col gap-2">
@@ -79,6 +83,8 @@ export function QuizPageHeader({
               Student-paced
             </label>
           </fieldset>
+          {/* ADR 0013: a live session for a class. No class is the default and comes first. */}
+          <LiveClassSelect id="live-class" classes={classes} />
         </form>
       </div>
       {liveRefusal ? (

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ParticipantToken } from "@/lib/live/participantToken";
-import { checkParticipant, joinSession, resumeParticipant } from "./participants";
+import { checkParticipant, joinSession, participantLink, resumeParticipant } from "./participants";
 
 type Reply = {
   data?: unknown;
@@ -19,6 +19,7 @@ function fakeRpc(reply: Reply) {
 const SESSION = "3f1a2b4c-5d6e-4f80-9a1b-2c3d4e5f6071";
 const PARTICIPANT = "9b8a7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d";
 const SECRET = "a".repeat(48);
+const PROFILE = "5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b";
 
 const TOKEN: ParticipantToken = {
   sessionId: SESSION,
@@ -40,6 +41,26 @@ describe("joinSession", () => {
     expect(fake.rpc).toHaveBeenCalledWith("join_session", {
       target_session: SESSION,
       chosen_name: "Sam Okafor",
+    });
+  });
+
+  it("names the signed-in account only when the server has one, for a class session to link (ADR 0013)", async () => {
+    const fake = fakeRpc({
+      data: [{ participant_id: PARTICIPANT, rejoin_secret: SECRET }],
+      error: null,
+    });
+
+    await joinSession(fake.client, SESSION, "Sam", PROFILE);
+    expect(fake.rpc).toHaveBeenCalledWith("join_session", {
+      target_session: SESSION,
+      chosen_name: "Sam",
+      joining_profile: PROFILE,
+    });
+    // A guest's call is the call it always was, so it works before the migration is pushed too.
+    await joinSession(fake.client, SESSION, "Sam", null);
+    expect(fake.rpc).toHaveBeenLastCalledWith("join_session", {
+      target_session: SESSION,
+      chosen_name: "Sam",
     });
   });
 
@@ -177,5 +198,46 @@ describe("checkParticipant (#407)", () => {
     for (const reply of [{ data: [], error: null }, { error: { code: "08006" } }]) {
       expect((await checkParticipant(fakeRpc(reply).client, TOKEN)).ok).toBe(false);
     }
+  });
+});
+
+describe("participantLink (ADR 0013)", () => {
+  it("asks with the token and the verified account, and says whose participant it is", async () => {
+    const fake = fakeRpc({
+      data: [{ linked_profile: PROFILE, account_is_member: true }],
+      error: null,
+    });
+    expect(await participantLink(fake.client, TOKEN, PROFILE)).toEqual({
+      ok: true,
+      linkedProfile: PROFILE,
+      accountIsMember: true,
+    });
+    expect(fake.rpc).toHaveBeenCalledWith("participant_link", {
+      target_participant: PARTICIPANT,
+      target_session: SESSION,
+      presented_secret: SECRET,
+      account: PROFILE,
+    });
+  });
+
+  it("reads an anonymous participant as linked to nobody", async () => {
+    const fake = fakeRpc({
+      data: [{ linked_profile: null, account_is_member: false }],
+      error: null,
+    });
+    expect(await participantLink(fake.client, TOKEN, PROFILE)).toEqual({
+      ok: true,
+      linkedProfile: null,
+      accountIsMember: false,
+    });
+  });
+
+  it("tells a token that names nobody from a database that did not answer", async () => {
+    expect(
+      await participantLink(fakeRpc({ data: [], error: null }).client, TOKEN, PROFILE),
+    ).toEqual({ ok: false, reason: "unknown" });
+    expect(
+      await participantLink(fakeRpc({ error: { code: "08006" } }).client, TOKEN, PROFILE),
+    ).toEqual({ ok: false, reason: "unavailable" });
   });
 });
