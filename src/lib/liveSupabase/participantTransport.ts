@@ -1007,6 +1007,9 @@ export function createSupabaseParticipant(
         // if the first one did land, the server answers the second with `already_answered`.
         signal: requestTimeout(),
       });
+      // As from the view: the only 401 is the database saying this phone is nobody (#407), as a
+      // phone whose member joined again on another device is (ADR 0013).
+      if (sent.status === 401) refuseForGood();
       if (!sent.ok) throw await asError(sent);
       const ack = (await sent.json()) as SubmitAckPayload;
       return { itemId: ack.itemId, submittedAt: ack.submittedAt };
