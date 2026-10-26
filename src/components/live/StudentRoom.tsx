@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnswerSentLine } from "@/components/live/AnswerSentLine";
 import { LIVE_BUSY_LABEL, liveSubmitFailure } from "@/components/live/liveSubmit";
 import { PhoneHeader } from "@/components/live/phone/PhoneHeader";
@@ -162,6 +162,19 @@ function Body({
   const closed = useAnswersClosed(state.timer, room.serverNow, clockKnown);
   /** The item whose answer is in the air: its player stays mounted, busy, past the grace. */
   const [sendingFor, setSendingFor] = useState<string | null>(null);
+  /**
+   * Submit unmounts the button that was pressed, which drops focus on the page. The item whose
+   * answer this phone just sent puts focus on the Answer sent panel instead, once; an answer that
+   * was already in when the page opened, or a return to it (#183), does not take focus.
+   */
+  const focusSentFor = useRef<string | null>(null);
+  const sentPanel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (settled.phase !== "answerSent" || item === null) return;
+    if (focusSentFor.current !== item.id) return;
+    focusSentFor.current = null;
+    sentPanel.current?.focus();
+  }, [settled.phase, item]);
 
   /**
    * `room.send`, noting the item while its answer is out. An accepted one becomes Answer sent and
@@ -171,10 +184,12 @@ function Body({
     (itemId: string): SubmitHandler =>
     async (response) => {
       setSendingFor(itemId);
+      focusSentFor.current = itemId;
       try {
         return await room.send(response);
       } catch (failed) {
         setSendingFor(null);
+        focusSentFor.current = null;
         throw failed;
       }
     };
@@ -222,7 +237,7 @@ function Body({
         // A plain wrapper, as in StudentPacedRoom: the player inside is already the "Your answer"
         // landmark, and a second region of that name fails axe's landmark-unique (#274).
         <div className="mt-5">
-          <AnswerSentLine text={SENT} detail={SENT_NEXT} announce />
+          <AnswerSentLine ref={sentPanel} text={SENT} detail={SENT_NEXT} announce />
           <ItemPlayer
             key={`${item.id}:sent`}
             item={item}

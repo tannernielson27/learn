@@ -345,6 +345,28 @@ describe("StudentRoom: answering the item", () => {
     expect(document.querySelectorAll("[data-feedback-mark]")).toHaveLength(0);
   });
 
+  it("moves focus to the Answer sent panel after Submit, rather than dropping it on the page", async () => {
+    const user = userEvent.setup();
+    const room = setup();
+    room.push({ state: running(), item: KEYLESS });
+    await renderersLoaded();
+
+    await user.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
+    await user.click(screen.getByRole("button", { name: /^Submit$/ }));
+
+    // The button pressed is gone; a screen reader is put on what it produced, as QuestionShell does.
+    await waitFor(() => expect(screen.getByTestId("answer-sent")).toHaveFocus());
+  });
+
+  it("does not take focus for an answer sent before the page was opened", async () => {
+    const room = setup();
+    room.push({ state: running(), item: KEYLESS, answered: answeredWith() });
+    await renderersLoaded();
+
+    expect(screen.getByTestId("answer-sent")).toBeInTheDocument();
+    expect(screen.getByTestId("answer-sent")).not.toHaveFocus();
+  });
+
   it("takes a double submit the server refused as the answer already being in", async () => {
     const user = userEvent.setup();
     const room = setup(state(), async () => {
