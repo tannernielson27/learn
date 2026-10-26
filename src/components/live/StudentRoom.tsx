@@ -123,6 +123,12 @@ export function StudentRoom(props: StudentRoomProps) {
 
   return (
     <div className="flex flex-1 flex-col">
+      {/* Always mounted, so a change is heard: the next question, the reveal and the end arrive
+          over the channel with nothing pressed, and nothing else on the phone says them aloud. */}
+      <p data-testid="phone-announcement" aria-live="polite" className="sr-only">
+        {/* Keyed by the question, so a move straight to the next one is new words to hear. */}
+        <span key={item?.id ?? "none"}>{announcement(settled)}</span>
+      </p>
       {reconnecting ? <ReconnectingBanner /> : null}
       <PhoneHeader
         progress={progressLabel}
@@ -139,6 +145,27 @@ export function StudentRoom(props: StudentRoomProps) {
       )}
     </div>
   );
+}
+
+/**
+ * What the live region says for each state, in words of its own: the visible heading and header
+ * say the same in theirs, and the place ("Question 2 of 5") is said once, in the header. Answer
+ * sent and time up are left out: the sent panel and the countdown announce themselves.
+ */
+function announcement(settled: PhoneSettledView | null): string {
+  if (settled === null) return "";
+  switch (settled.phase) {
+    case "answering":
+      return "Answer the question on your screen.";
+    case "answerShowing":
+      return "The answer is on your screen.";
+    case "paused":
+      return "Your teacher has paused the live session.";
+    case "ended":
+      return "Your teacher has ended the live session.";
+    default:
+      return "";
+  }
 }
 
 function Body({

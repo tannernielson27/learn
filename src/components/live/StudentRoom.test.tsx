@@ -628,6 +628,39 @@ describe("StudentRoom: the reveal", () => {
   });
 });
 
+describe("StudentRoom: what a screen reader hears as the room moves", () => {
+  const announced = () => screen.getByTestId("phone-announcement");
+
+  it("has one polite live region, there from the first paint and quiet in the lobby", () => {
+    setup();
+    expect(announced()).toHaveAttribute("aria-live", "polite");
+    expect(announced()).toHaveTextContent("");
+  });
+
+  it("says a new question has arrived, then that the answer is showing, then the end", async () => {
+    const room = setup();
+    room.push({ state: running(), item: KEYLESS });
+    await renderersLoaded();
+    expect(announced()).toHaveTextContent("Answer the question on your screen.");
+
+    room.push({
+      state: running({ reveal: true }),
+      item: KEYLESS,
+      answered: null,
+      revealed: revealFor(null),
+    });
+    await renderersLoaded();
+    expect(announced()).toHaveTextContent("The answer is on your screen.");
+
+    room.push({ state: running({ position: 2 }), item: { ...KEYLESS, id: "next-item" } });
+    await renderersLoaded();
+    expect(announced()).toHaveTextContent("Answer the question on your screen.");
+
+    room.push({ state: state({ status: "ended", position: 2 }), item: null });
+    expect(announced()).toHaveTextContent("Your teacher has ended the live session.");
+  });
+});
+
 describe("StudentRoom: the item timer (#182)", () => {
   /** An item whose time runs out `left` ms from now on the session's clock. */
   const timedFor = (left: number, over: Partial<LiveSessionState> = {}) =>
