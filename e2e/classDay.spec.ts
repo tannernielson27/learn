@@ -511,6 +511,13 @@ test("class day: a timed live session for a class, on phones and the projector, 
   await expect(
     member.page.getByRole("heading", { level: 1, name: title, exact: true }),
   ).toBeVisible();
+  // The page opens on question 1, which the member left blank (its key and rationale alone), so
+  // question 2, the one they answered, is picked from the list before its rationale is looked for.
+  await member.page
+    .getByRole("list", { name: "All questions", exact: true })
+    .getByRole("button", { name: /^Q2, / })
+    .click();
+  await expect(member.page.getByRole("region", { name: "Question 2", exact: true })).toBeVisible();
   await expect(member.page.getByText(Q2_RATIONALE, { exact: true }).first()).toBeVisible();
 
   // The guest has no account, so no home and no results: both send them to sign in.
