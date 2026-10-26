@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { QuizEntry } from "@/lib/authoring/quizOrder";
@@ -76,7 +76,9 @@ describe("QuizOrderEditor", () => {
     await user.click(screen.getByRole("button", { name: 'Move "Sepsis" up' }));
     await user.click(screen.getByRole("button", { name: "Save order" }));
     expect(action.mock.calls[0][1].getAll("entry")).toEqual(["c1", "i1", "i2"]);
-    expect(await screen.findByText("Order saved.")).toHaveFocus();
+    // The line appears on commit; focus moves to it in the effect that runs after.
+    const saved = await screen.findByText("Order saved.");
+    await waitFor(() => expect(saved).toHaveFocus());
     expect(screen.getByRole("button", { name: "Save order" })).toBeDisabled();
     expect(screen.queryByText("Not saved yet.")).not.toBeInTheDocument();
   });
