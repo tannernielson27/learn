@@ -6,6 +6,10 @@ import { signInAsNewAuthor } from "./signIn";
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
 
 async function expectNoAxeViolations(page: Page) {
+  // Right after an in-place update (a save, a step switch) the document can briefly have no
+  // <title>, and axe run in that window reports document-title; CI saw it on tablet-768, passing on
+  // retry. Wait for the title first: a page that never gets one still fails here.
+  await expect(page).toHaveTitle(/\S/);
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
 }
