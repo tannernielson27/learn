@@ -95,9 +95,14 @@ select is(pg_temp.answer('laptop', 1, '00000000-0000-0000-0000-0000000eede1'), '
   'case 1: the second device answering the same question is told it is already answered');
 reset role;
 
+-- Counted by the member's profile, not by one participant id, so a second participant row for Mia
+-- would show here too. `points` is numeric(8, 2); trim_scale keeps a stray 0.5 visible.
 select is(
-  (select count(*)::int || ':' || sum(points)::text from public.session_responses
-    where session_id = pg_temp.fx('s') and participant_id = pg_temp.fx('phone')),
+  (select count(*)::int || ':' || trim_scale(sum(r.points))::text
+     from public.session_responses r
+     join public.participants p on p.id = r.participant_id
+    where r.session_id = pg_temp.fx('s')
+      and p.profile_id = '00000000-0000-0000-0000-0000000eedd1'),
   '1:1',
   'case 1: one answer and one point for the member, not two'
 );

@@ -41,8 +41,18 @@ async function rosterMember(
   return { email, userId };
 }
 
-/** Signs `email` in on `page` with an emailed link, as classLiveSession.spec.ts does. */
-async function signIn(page: Page, request: APIRequestContext, email: string) {
+/**
+ * Signs `email` in on `page` with an emailed link, as classLiveSession.spec.ts does, and returns
+ * the link it opened. A second device signing in to the same address passes the first device's
+ * link as `spent`: that email is still inside latestSignInLink's clock-skew window, so without it
+ * the second device can open the link the first already used and land on `/sign-in?error=link`.
+ */
+async function signIn(
+  page: Page,
+  request: APIRequestContext,
+  email: string,
+  spent?: string,
+): Promise<string> {
   await skipWelcomes(page);
   await page.goto("/sign-in");
   const since = new Date();
@@ -52,8 +62,19 @@ async function signIn(page: Page, request: APIRequestContext, email: string) {
     .click();
   await page.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
-  await openSignInLink(page, await latestSignInLink(request, email, since));
+  let link = "";
+  await expect
+    .poll(
+      async () => {
+        link = await latestSignInLink(request, email, since);
+        return link;
+      },
+      { timeout: 30_000, message: `no new sign-in link arrived for ${email}` },
+    )
+    .not.toBe(spent);
+  await openSignInLink(page, link);
   await expect(page).toHaveURL(/\/learn$/);
+  return link;
 }
 
 /** The teacher's class session, started from the quiz page: its id and join code. */
@@ -113,8 +134,8 @@ test("one member on a phone and a laptop is one participant, and the first devic
 
   const phone = await (await browser.newContext()).newPage();
   const laptop = await (await browser.newContext()).newPage();
-  await signIn(phone, request, member.email);
-  await signIn(laptop, request, member.email);
+  const phoneLink = await signIn(phone, request, member.email);
+  await signIn(laptop, request, member.email, phoneLink);
   await joinSignedIn(phone, room.code);
   await joinSignedIn(laptop, room.code);
 
