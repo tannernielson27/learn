@@ -76,10 +76,16 @@ const Q2_CORRECT = "opt_c";
 const Q2_WRONG = "opt_d";
 const Q2_RATIONALE = "Class day rationale two: oxygenation is the immediate threat to life.";
 
-function labelOf(id: string): string {
-  const option = Q2_OPTIONS.find((each) => each.id === id);
+/**
+ * A question 2 option's accessible name on the phone. A multiple choice radio is named by its
+ * letter and its label (OptionRow's aria-labelledby: the marker, then the text), so "C Raise the
+ * head of the bed and increase the oxygen as prescribed", never the bare label.
+ */
+function optionName(id: string): string {
+  const index = Q2_OPTIONS.findIndex((each) => each.id === id);
+  const option = Q2_OPTIONS[index];
   if (!option) throw new Error(`no option ${id}`);
-  return option.label;
+  return `${String.fromCharCode(65 + index)} ${option.label}`;
 }
 
 const RATIONALES = [Q1_RATIONALE, Q2_RATIONALE] as const;
@@ -187,6 +193,36 @@ async function submitKeyless(phone: Page): Promise<void> {
   await expect(phone.getByTestId("answer-sent")).toBeVisible();
 }
 
+/** The room's screens, for the diagnostics below; filled in as each one opens. */
+let room: Partial<Record<"teacher" | "member" | "guest" | "projector", Page>> = {};
+
+/**
+ * On a failure, what each screen of the room showed: a screenshot and its visible text, so a CI
+ * run says which state a phone was in rather than only which locator it waited for. Runs after a
+ * timeout too, before the pages close. Each read is bounded, since a page may be what hung.
+ */
+test.afterEach(async ({}, testInfo) => {
+  if (testInfo.status === testInfo.expectedStatus) return;
+  for (const [name, screen] of Object.entries(room)) {
+    if (!screen || screen.isClosed()) continue;
+    try {
+      await testInfo.attach(`${name}.png`, {
+        body: await screen.screenshot({ fullPage: true, timeout: 10_000 }),
+        contentType: "image/png",
+      });
+      await testInfo.attach(`${name}.txt`, {
+        body: `${screen.url()}\n\n${await screen.locator("body").innerText({ timeout: 10_000 })}`,
+        contentType: "text/plain",
+      });
+    } catch (failed) {
+      await testInfo.attach(`${name}.txt`, {
+        body: `could not read ${name}: ${String(failed)}`,
+        contentType: "text/plain",
+      });
+    }
+  }
+});
+
 /** Every box is wholly inside a 1280x720 stage, and tall enough to hold a line of text. */
 function expectOnStage(box: { x: number; y: number; width: number; height: number } | null) {
   expect(box).not.toBeNull();
@@ -212,6 +248,7 @@ test("class day: a timed live session for a class, on phones and the projector, 
   // One question waits out a real 30 seconds on the server's clock.
   test.setTimeout(300_000);
   const stamp = `${Date.now() % 1_000_000}`;
+  room = { teacher: page };
 
   // 1. A teacher alone in a workspace, with a class and a short published quiz.
   const orgId = await signInAsInstructorInEmptyOrg(page, request, `class-day-${stamp}`);
@@ -230,6 +267,7 @@ test("class day: a timed live session for a class, on phones and the projector, 
   const memberName = `Mia Chen ${stamp}`;
   const guestName = `Guest Rider ${stamp}`;
   const member = await signedInMember(browser, request, origin, orgId, madeClass.id, memberName);
+  room.member = member.page;
 
   // ...and starts a live session of it for that class.
   await page.goto(`/author/banks/${quizId}`);
@@ -261,6 +299,7 @@ test("class day: a timed live session for a class, on phones and the projector, 
   const playPath = new URL(member.page.url()).pathname;
 
   const guest = await (await browser.newContext({ ...PHONE, baseURL: origin })).newPage();
+  room.guest = guest;
   const guestJoin = await bytesOf(guest.context(), `/join/${code}`);
   expect(guestJoin).toContain(code);
   expectKeyless(guestJoin, RATIONALES, LIVE_KEY_MARKERS);
@@ -332,6 +371,7 @@ test("class day: a timed live session for a class, on phones and the projector, 
 
   // 5. The projector, in a window of its own at 1280x720, on the long question with six options.
   const stage = await page.context().newPage();
+  room.projector = stage;
   await stage.setViewportSize({ width: 1280, height: 720 });
   const projectorPath = `/live/${sessionId}?view=projector`;
   const projectorBytes = await bytesOf(page.context(), projectorPath);
@@ -363,11 +403,11 @@ test("class day: a timed live session for a class, on phones and the projector, 
 
   // 4. Each phone picks an answer; then the teacher pauses the room (the console's lock for every
   // phone) and resumes it, and each phone has its question back with its pick still in it.
-  const memberPick = member.page.getByRole("radio", { name: labelOf(Q2_CORRECT), exact: true });
-  const guestPick = guest.getByRole("radio", { name: labelOf(Q2_WRONG), exact: true });
-  await memberPick.click();
+  const memberPick = member.page.getByRole("radio", { name: optionName(Q2_CORRECT), exact: true });
+  const guestPick = guest.getByRole("radio", { name: optionName(Q2_WRONG), exact: true });
+  await memberPick.click({ timeout: 15_000 });
   await expect(memberPick).toBeChecked();
-  await guestPick.click();
+  await guestPick.click({ timeout: 15_000 });
   await expect(guestPick).toBeChecked();
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   for (const phone of phones) {
