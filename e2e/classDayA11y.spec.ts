@@ -102,7 +102,9 @@ async function join(
 
 const MC_STEM = "Class day: which action should the nurse take first?";
 const MR_STEM = "Class day: which findings require follow-up? Select all that apply.";
-const MC_RIGHT = "Auscultate the lungs and assess oxygen saturation";
+// A multiple choice radio is named by its letter and its label (OptionRow's aria-labelledby);
+// a multiple response checkbox by its label alone.
+const MC_RIGHT = "A Auscultate the lungs and assess oxygen saturation";
 const MR_PICK = "New confusion per family";
 
 /** The two fixtures with stems of their own, published with the local secret key. */
