@@ -72,7 +72,10 @@ jobs:
   auth-e2e:
     name: auth e2e (${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 30, not 20: on 2026-10-26 the Playwright install alone took 9 minutes on a slow apt mirror
+    # and shards were cancelled after every test had passed. The cache below takes the browser
+    # download out of that step; the system packages still come from apt on every run.
+    timeout-minutes: 30
     strategy:
       # A failure in one third should not hide what the other two would have said.
       fail-fast: false
@@ -86,7 +89,21 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      # The browser is cached by the Playwright version the lockfile installed, so a Playwright
+      # bump downloads a new one and nothing else does. The system libraries it needs are not in
+      # the cache (they live outside ~/.cache), so a hit still installs those, and only those.
+      - name: Playwright version
+        id: playwright
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v5
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+      - if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
       # Postgres, auth, the API gateway, the test mailbox and Realtime. Realtime joined the list
       # with #132: a lobby's roster is presence and a student's screen moves on a `postgres_changes`
       # message, so without it there is no way to test the half of a live session that is live.
