@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { BankFormState } from "@/components/authoring/CreateBankForm";
 import type { CaseStudyFormState } from "@/components/authoring/CreateCaseStudyForm";
@@ -13,11 +14,17 @@ import { parseCaseStudyTitle } from "@/lib/authoring/caseStudyForm";
 import { isUuid } from "@/lib/authoring/ids";
 import { isEditorReady } from "@/lib/authoring/itemTypeGroups";
 import { requireAuthor } from "@/lib/authoring/session";
+import { PARTICIPANT_COOKIE } from "@/lib/live/participantToken";
 import { ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-/** Signs out this browser only; other devices keep their sessions. */
+/**
+ * Signs out this browser only; other devices keep their sessions. The live session participant
+ * goes too (ADR 0013): it may be linked to this account, and the next person on a shared browser
+ * must not carry on as them.
+ */
 export async function signOut(): Promise<never> {
+  (await cookies()).delete(PARTICIPANT_COOKIE);
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut({ scope: "local" });
   redirect("/sign-in");

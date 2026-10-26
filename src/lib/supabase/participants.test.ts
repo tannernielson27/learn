@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ParticipantToken } from "@/lib/live/participantToken";
-import { checkParticipant, joinSession, participantLink, resumeParticipant } from "./participants";
+import {
+  checkParticipant,
+  heldBySomeoneElse,
+  joinSession,
+  participantLink,
+  resumeParticipant,
+} from "./participants";
 
 type Reply = {
   data?: unknown;
@@ -220,6 +226,24 @@ describe("participantLink (ADR 0013)", () => {
     });
   });
 
+  it("asks for a signed-out browser with no account, so it only learns whose participant it is", async () => {
+    const fake = fakeRpc({
+      data: [{ linked_profile: PROFILE, account_is_member: false }],
+      error: null,
+    });
+    expect(await participantLink(fake.client, TOKEN, null)).toEqual({
+      ok: true,
+      linkedProfile: PROFILE,
+      accountIsMember: false,
+    });
+    expect(fake.rpc).toHaveBeenCalledWith("participant_link", {
+      target_participant: PARTICIPANT,
+      target_session: SESSION,
+      presented_secret: SECRET,
+      account: null,
+    });
+  });
+
   it("reads an anonymous participant as linked to nobody", async () => {
     const fake = fakeRpc({
       data: [{ linked_profile: null, account_is_member: false }],
@@ -239,5 +263,55 @@ describe("participantLink (ADR 0013)", () => {
     expect(
       await participantLink(fakeRpc({ error: { code: "08006" } }).client, TOKEN, PROFILE),
     ).toEqual({ ok: false, reason: "unavailable" });
+  });
+});
+
+describe("heldBySomeoneElse (ADR 0013, decision 2)", () => {
+  const OTHER = "0f1e2d3c-4b5a-4968-8776-655443322110";
+  const linkedTo = (profile: string | null) =>
+    fakeRpc({ data: [{ linked_profile: profile, account_is_member: false }], error: null });
+
+  it("is false for the signed-in account the participant is linked to", async () => {
+    const fake = linkedTo(PROFILE);
+    expect(await heldBySomeoneElse(fake.client, TOKEN, { status: "signed_in", id: PROFILE })).toBe(
+      false,
+    );
+    expect(fake.rpc).toHaveBeenCalledWith(
+      "participant_link",
+      expect.objectContaining({ account: PROFILE }),
+    );
+  });
+
+  it("is true for a linked participant when someone else, or nobody, is signed in", async () => {
+    expect(
+      await heldBySomeoneElse(linkedTo(PROFILE).client, TOKEN, { status: "signed_in", id: OTHER }),
+    ).toBe(true);
+    const fake = linkedTo(PROFILE);
+    expect(await heldBySomeoneElse(fake.client, TOKEN, { status: "signed_out" })).toBe(true);
+    expect(fake.rpc).toHaveBeenCalledWith(
+      "participant_link",
+      expect.objectContaining({ account: null }),
+    );
+  });
+
+  it("is false for an anonymous participant, whoever is signed in", async () => {
+    for (const viewer of [{ status: "signed_out" }, { status: "signed_in", id: OTHER }] as const) {
+      expect(await heldBySomeoneElse(linkedTo(null).client, TOKEN, viewer)).toBe(false);
+    }
+  });
+
+  it("is false, without asking, when the account could not be checked", async () => {
+    // Decision 3: a failed check must not take a member out of the room mid-class.
+    const fake = linkedTo(PROFILE);
+    expect(await heldBySomeoneElse(fake.client, TOKEN, { status: "unavailable" })).toBe(false);
+    expect(fake.rpc).not.toHaveBeenCalled();
+  });
+
+  it("is false when the database could not say whose participant it is", async () => {
+    for (const reply of [{ data: [], error: null }, { error: { code: "08006" } }]) {
+      expect(await heldBySomeoneElse(fakeRpc(reply).client, TOKEN, { status: "signed_out" })).toBe(
+        false,
+      );
+    }
   });
 });

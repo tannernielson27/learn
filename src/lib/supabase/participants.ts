@@ -2,6 +2,7 @@ import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import type { ParticipantToken } from "@/lib/live/participantToken";
 import type { Database } from "./database.types";
 import type { SessionMode, SessionStatus } from "./sessions";
+import type { VerifiedAccount } from "./verifiedAccount";
 
 type Client = SupabaseClient<Database>;
 
@@ -133,12 +134,14 @@ export async function checkParticipant(
 }
 
 /**
- * Whose participant a token names, for the join action alone (ADR 0013).
+ * Whose participant a token names, for the join action and `heldBySomeoneElse` (ADR 0013).
  *
  *   * `linkedProfile` — the account the participant is linked to, or null for an anonymous one.
  *   * `accountIsMember` — whether `account` is a current member of the session's class.
  *
- * `account` must be the id the server verified, never one from the request. Neither field is
+ * `account` must be the id the server verified, never one from the request, or null for a browser
+ * where nobody is signed in: then `accountIsMember` is false and only `linkedProfile` says
+ * anything. Neither field is
  * ever sent to a browser: the join action reads them to decide whether a browser already in the
  * room comes back as that participant, so that a shared laptop does not hand one student's
  * participant to the next person who signs in on it. A token that names nobody is `unknown`, a
@@ -151,13 +154,15 @@ export type ParticipantLink =
 export async function participantLink(
   client: Client,
   token: ParticipantToken,
-  account: string,
+  account: string | null,
 ): Promise<ParticipantLink> {
   const { data, error } = await client.rpc("participant_link", {
     target_participant: token.participantId,
     target_session: token.sessionId,
     presented_secret: token.secret,
-    account,
+    // The generated type says string; the function takes null, and `is_class_member` answers
+    // false for it.
+    account: account as string,
   });
   if (error) return { ok: false, reason: "unavailable" };
 
@@ -168,6 +173,27 @@ export async function participantLink(
     linkedProfile: row.linked_profile ?? null,
     accountIsMember: row.account_is_member === true,
   };
+}
+
+/**
+ * Whether a browser holding this token holds someone else's participant: one linked to an account
+ * (ADR 0013) that is not the one signed in here, including when nobody is. The phone's page asks
+ * it before resuming, so a cookie left behind on a shared browser does not let the next person
+ * carry on as that student.
+ *
+ * False whenever it cannot be sure. An account check that was `unavailable` is not asked about at
+ * all, and a database that did not answer is not a reason either: a failed check must not take a
+ * member out of the room mid-class (decision 3), and the page has just matched the token.
+ */
+export async function heldBySomeoneElse(
+  client: Client,
+  token: ParticipantToken,
+  viewer: VerifiedAccount,
+): Promise<boolean> {
+  if (viewer.status === "unavailable") return false;
+  const account = viewer.status === "signed_in" ? viewer.id : null;
+  const link = await participantLink(client, token, account);
+  return link.ok && link.linkedProfile !== null && link.linkedProfile !== account;
 }
 
 /**

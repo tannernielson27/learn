@@ -6,6 +6,7 @@ import {
   participantCookieOptions,
 } from "@/lib/live/participantToken";
 import type { ResolvedCode } from "@/lib/supabase/sessions";
+import type { VerifiedAccount } from "@/lib/supabase/verifiedAccount";
 
 /**
  * The Server Function is the seam where a typed code, a name and a cookie meet. What is worth
@@ -68,10 +69,16 @@ vi.mock("@/lib/supabase/participants", () => ({
   participantLink: (...args: unknown[]) => participantLink(...args),
 }));
 
-// ADR 0013: who is signed in, as the server verified it. Null is signed out.
+// ADR 0013: who is signed in, as the server verified it. Null is signed out. `verifiedAccount`
+// reads it, so a test that needs the third answer (the check could not be made) says so with
+// `verifiedAccount.mockResolvedValueOnce({ status: "unavailable" })`.
 const verifiedAccountId = vi.fn<() => Promise<string | null>>();
+const verifiedAccount = vi.fn(async (): Promise<VerifiedAccount> => {
+  const id = await verifiedAccountId();
+  return id === null ? { status: "signed_out" } : { status: "signed_in", id };
+});
 vi.mock("@/lib/supabase/verifiedAccount", () => ({
-  verifiedAccountId: () => verifiedAccountId(),
+  verifiedAccount: () => verifiedAccount(),
 }));
 
 const { joinLiveSession } = await import("./actions");
@@ -316,6 +323,12 @@ describe("joinLiveSession for a class session (ADR 0013)", () => {
     expect(joinSession).toHaveBeenCalledWith(SERVICE_CLIENT, SESSION, "Sam", null);
   });
 
+  it("joins as a guest when the account could not be checked, rather than failing at the door", async () => {
+    verifiedAccount.mockResolvedValueOnce({ status: "unavailable" });
+    await joinAndFollow(form("7KQ2MZ", "Sam"));
+    expect(joinSession).toHaveBeenCalledWith(SERVICE_CLIENT, SESSION, "Sam", null);
+  });
+
   it("never takes an account from the form, whatever a browser posts", async () => {
     const forged = form("7KQ2MZ", "Sam");
     for (const name of ["profileId", "profile_id", "joining_profile", "memberId", "userId"]) {
@@ -339,21 +352,26 @@ describe("joinLiveSession for a class session (ADR 0013)", () => {
     asGuest.set("guest", "1");
     await joinAndFollow(asGuest);
     expect(joinSession).toHaveBeenCalledWith(SERVICE_CLIENT, SESSION, "Sam", null);
-    expect(verifiedAccountId).not.toHaveBeenCalled();
+    expect(verifiedAccount).not.toHaveBeenCalled();
   });
 
   it("reads no account for a code that does not resolve", async () => {
     resolveSessionCode.mockResolvedValue({ status: "unknown" });
     await joinLiveSession({ status: "idle" }, form("7KQ2MZ", "Sam"));
-    expect(verifiedAccountId).not.toHaveBeenCalled();
+    expect(verifiedAccount).not.toHaveBeenCalled();
   });
 
-  it("comes back as a signed-out browser's participant without asking whose it is", async () => {
+  it("comes back as a signed-out browser's anonymous participant, as before", async () => {
     holdParticipant();
     verifiedAccountId.mockResolvedValue(null);
     expect(await joinAndFollow(form("7KQ2MZ", "Mia Chen"))).toBe(`/play/${SESSION}`);
     expect(joinSession).not.toHaveBeenCalled();
-    expect(participantLink).not.toHaveBeenCalled();
+    // Asked with no account: all a signed-out browser learns is whether the participant is linked.
+    expect(participantLink).toHaveBeenCalledWith(
+      SERVICE_CLIENT,
+      { sessionId: SESSION, participantId: PARTICIPANT, secret: SECRET },
+      null,
+    );
   });
 });
 
@@ -449,6 +467,37 @@ describe("joinLiveSession on a shared browser (ADR 0013)", () => {
     });
     expect(joinSession).not.toHaveBeenCalled();
     expect(redirected).not.toHaveBeenCalled();
+    expect(jar.get(PARTICIPANT_COOKIE)?.value).toBe(OLD_TOKEN);
+  });
+
+  it("does not hand a linked participant to a signed-out browser: whoever is there joins as a guest", async () => {
+    // The student signed out, or their sign-in lapsed, and the cookie stayed. Nothing says the
+    // person at the keyboard is that student, so they join anonymously under the name they typed.
+    verifiedAccountId.mockResolvedValue(null);
+    participantLink.mockResolvedValue({ ok: true, linkedProfile: MEMBER, accountIsMember: false });
+    expect(await joinAndFollow(form("7KQ2MZ", "Noor"))).toBe(`/play/${SESSION}`);
+    expect(joinSession).toHaveBeenCalledWith(SERVICE_CLIENT, SESSION, "Noor", null);
+    expect(jar.get(PARTICIPANT_COOKIE)?.value).toBe(`${SESSION}.${NEW_PARTICIPANT}.${NEW_SECRET}`);
+  });
+
+  it("comes back as whoever the browser already is when the account could not be checked", async () => {
+    // Decision 3: a failed check is not a signed-out browser. A member whose sign-in could not be
+    // verified mid-class keeps their participant rather than being split into a second name.
+    verifiedAccount.mockResolvedValueOnce({ status: "unavailable" });
+    expect(await joinAndFollow(form("7KQ2MZ", "Mia Chen"))).toBe(`/play/${SESSION}`);
+    expect(participantLink).not.toHaveBeenCalled();
+    expect(joinSession).not.toHaveBeenCalled();
+    expect(jar.get(PARTICIPANT_COOKIE)?.value).toBe(OLD_TOKEN);
+  });
+
+  it("neither comes back nor joins twice for a signed-out browser when the database could not say", async () => {
+    verifiedAccountId.mockResolvedValue(null);
+    participantLink.mockResolvedValue({ ok: false, reason: "unavailable" });
+    expect(await joinLiveSession({ status: "idle" }, form("7KQ2MZ", "Noor"))).toEqual({
+      status: "error",
+      error: "Joining is not working just now. Try again in a moment.",
+    });
+    expect(joinSession).not.toHaveBeenCalled();
     expect(jar.get(PARTICIPANT_COOKIE)?.value).toBe(OLD_TOKEN);
   });
 
