@@ -185,7 +185,9 @@ test("a student sees their own live session results once it ends, and nobody els
   await expect(
     member.page.getByRole("heading", { level: 1, name: session.title, exact: true }),
   ).toBeVisible();
-  await expect(member.page.getByText(MC_RATIONALE, { exact: true }).first()).toBeVisible();
+  // The seeded rationale is one paragraph that goes on after this sentence, so it is matched as
+  // part of that paragraph's text, not as the whole of it.
+  await expect(member.page.getByText(MC_RATIONALE).first()).toBeVisible();
   // The control: the same route's bytes now carry the key, the rationale and the mark.
   const endedBytes = await bytesOf(member.page.context(), `/learn/live/${sessionId}`);
   expect(endedBytes).toContain(MC_RATIONALE);
