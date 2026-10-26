@@ -115,6 +115,11 @@ export function useStudentRoom({
    * refused against, so the next item opens fresh, and so does this one if the host adds time.
    */
   const [lateFor, setLateFor] = useState<{ itemId: string; endsAt: number | null } | null>(null);
+  /** The room's end time as last drawn, for a late refusal that lands after the host added time. */
+  const endsAtRef = useRef(state.timer.endsAt);
+  useEffect(() => {
+    endsAtRef.current = state.timer.endsAt;
+  });
   /** Who this phone is, fixed for the life of the page: what the channel is keyed with. */
   const [me] = useState(() => ({ sessionId, participantId, displayName, joinedAt }));
   const history = usePhoneHistory(sessionId, participantId);
@@ -253,6 +258,9 @@ export function useStudentRoom({
       note({ state, item: current, answered: mine, revealed: null });
     } catch (refused) {
       if (isLiveSessionError(refused) && refused.code === "time_up") {
+        // Refused against the end this answer was sent under, and the host has added time since:
+        // it is not late now. Not sent, so Submit comes back with the draft in it.
+        if (endsAtRef.current !== state.timer.endsAt) throw new Error("Refused before more time.");
         setLateFor({ itemId: current.id, endsAt: state.timer.endsAt });
         return new Promise<ScoreReveal>(() => {});
       }
