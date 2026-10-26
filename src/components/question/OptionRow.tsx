@@ -126,7 +126,7 @@ export function OptionRow({
             {marker}
           </span>
         ) : null}
-        <span id={textId} aria-hidden="true" className="flex-1">
+        <span id={textId} aria-hidden="true" className="min-w-0 flex-1 break-words">
           {label}
         </span>
         {hasFeedback ? (
