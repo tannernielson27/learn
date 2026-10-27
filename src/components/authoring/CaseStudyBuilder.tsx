@@ -256,7 +256,6 @@ export function CaseStudyBuilder({
           >
             Back to editing
           </Button>
-          <p className="text-sm text-ink-2">The saved case study, as a student sees it.</p>
         </div>
         <div
           ref={previewRegion}

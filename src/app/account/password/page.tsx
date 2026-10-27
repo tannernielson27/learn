@@ -33,18 +33,12 @@ export default async function ChoosePasswordPage({ searchParams }: PageProps<"/a
       {justConfirmed ? (
         <>
           <h1 className={AUTH_HEADING}>Your email is confirmed</h1>
-          <p className={AUTH_SUBLINE}>
-            An account for {viewer.email} was made with a password before anyone had shown the
-            address was theirs. To keep it yours, that password no longer works and every other
-            device has been signed out. Choose a new password to finish.
-          </p>
+          <p className={AUTH_SUBLINE}>For your security, choose a new password.</p>
         </>
       ) : (
         <>
           <h1 className={AUTH_HEADING}>Choose a password</h1>
-          <p className={AUTH_SUBLINE}>
-            For {viewer.email}. With a password you can sign in without waiting for an email.
-          </p>
+          <p className={AUTH_SUBLINE}>For {viewer.email}.</p>
         </>
       )}
       <ChoosePasswordForm

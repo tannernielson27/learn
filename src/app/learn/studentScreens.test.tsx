@@ -100,7 +100,6 @@ vi.mock("@/app/sign-in/actions", () => ({
 }));
 vi.mock("@/app/learn/actions", () => ({
   joinClassWithCode: vi.fn(async () => ({ status: "idle" })),
-  markStudentOnboarded: action(),
 }));
 vi.mock("@/app/learn/assignments/[assignmentId]/actions", () => ({
   startAssignmentAttempt: action(),
@@ -174,10 +173,6 @@ vi.mock("@/components/live/report/ReportTables", async (original) => ({
 }));
 vi.mock("@/lib/assignments/reportLoader", () => ({
   loadAssignmentReport: async () => state.report,
-}));
-vi.mock("@/lib/onboarding/studentWelcome", async (original) => ({
-  ...(await original<typeof import("@/lib/onboarding/studentWelcome")>()),
-  readStudentWelcomeState: async () => null,
 }));
 
 // --- what the faked reads answer -----------------------------------------------------------------

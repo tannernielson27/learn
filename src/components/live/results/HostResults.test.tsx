@@ -108,9 +108,9 @@ describe("HostResults (#180)", () => {
 
   it("says the counts are private until the answer is shown", async () => {
     const { view, props } = setup();
-    expect(await screen.findByText(/Only you see these counts/)).toBeInTheDocument();
+    expect(await screen.findByText("Only you see these.")).toBeInTheDocument();
     view.rerender(<HostResults {...props} revealed />);
-    expect(screen.queryByText(/Only you see these counts/)).toBeNull();
+    expect(screen.queryByText("Only you see these.")).toBeNull();
   });
 
   it("hides the tallies on request, and remembers it for this session", async () => {
@@ -120,7 +120,7 @@ describe("HostResults (#180)", () => {
 
     await user.click(screen.getByRole("button", { name: "Hide results" }));
     expect(screen.queryByText("1 answer counted")).toBeNull();
-    expect(screen.getByText(/Results are hidden/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show results" })).toBeInTheDocument();
 
     // A reload of the console keeps them hidden.
     view.unmount();

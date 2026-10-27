@@ -131,9 +131,7 @@ const itemButton = (name: string) => screen.getByRole("button", { name });
 describe("StudentPacedRoom (#185)", () => {
   it("waits in the lobby with the sentence every other screen uses", () => {
     setup();
-    expect(
-      screen.getByRole("heading", { name: "You are in. Wait for your teacher to start." }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "You’re in." })).toBeInTheDocument();
   });
 
   it("lists every item, moves with Next and Previous, and answers any of them", async () => {
@@ -220,7 +218,8 @@ describe("StudentPacedRoom (#185)", () => {
       ],
     });
     await renderersLoaded();
-    expect(screen.getByTestId("paced-count")).toHaveTextContent(/answers are showing/);
+    expect(screen.getByText("Answers showing")).toBeInTheDocument();
+    expect(screen.getByTestId("paced-count")).toHaveTextContent("1 of 2 answered");
     expect(screen.getByRole("complementary", { name: "Score" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
 

@@ -53,14 +53,10 @@ export function ChoosePasswordForm({
           id={`${id}-saved`}
           ref={savedRef}
           tabIndex={-1}
-          className="mb-2 text-xl font-medium text-ink-1 outline-none"
+          className="mb-4 text-xl font-medium text-ink-1 outline-none"
         >
           Password saved
         </h2>
-        <p className="mb-6 text-ink-2">
-          Next time, sign in with {email} and this password. Any other device signed in to this
-          account has been signed out.
-        </p>
         <Link href={next} className={LINK}>
           Continue
         </Link>

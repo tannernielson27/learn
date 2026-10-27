@@ -71,7 +71,7 @@ export function ClassTimeZoneForm({ action, currentZone, zones }: ClassTimeZoneF
           ))}
         </select>
         <p id={`${id}-hint`} className="text-sm text-ink-2">
-          Students see due times, and reminder emails give them, in this zone.
+          Used for due times.
         </p>
         {suggestion ? (
           <div>

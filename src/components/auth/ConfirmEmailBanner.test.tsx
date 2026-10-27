@@ -10,11 +10,10 @@ function setup(result: ConfirmEmailState) {
 }
 
 describe("ConfirmEmailBanner", () => {
-  it("asks, names the address, and says nothing is locked", () => {
+  it("asks and names the address, in one line", () => {
     setup({ status: "idle" });
     expect(screen.getByRole("heading", { name: "Confirm your email address" })).toBeInTheDocument();
-    expect(screen.getByText(/a@school\.edu/)).toBeInTheDocument();
-    expect(screen.getByText(/Nothing is locked meanwhile/)).toBeInTheDocument();
+    expect(screen.getByText("We sent a link to a@school.edu.")).toBeInTheDocument();
   });
 
   it("sends the email again and says so politely", async () => {

@@ -4,6 +4,7 @@ import { itemSchema } from "@/lib/ngn/schemas";
 import { toItemRow } from "@/lib/supabase/itemRows";
 import {
   AuthoringDataError,
+  listBanks,
   listCaseStudies,
   listItems,
   listTaggedRows,
@@ -123,6 +124,22 @@ const row = (overrides: Record<string, unknown> = {}) => ({
   rationale_match: false,
   total_count: 120,
   ...overrides,
+});
+
+describe("listBanks", () => {
+  it("counts each quiz's questions without its archived ones", async () => {
+    const fake = fakeClient({
+      data: [
+        { id: BANK, name: "Skyler", updated_at: "2026-10-26T17:00:00Z", items: [{ count: 0 }] },
+      ],
+      error: null,
+    });
+    const banks = await listBanks(fake.client);
+    expect(fake.calls).toContainEqual({ method: "neq", args: ["items.status", "archived"] });
+    expect(banks).toEqual([
+      { id: BANK, name: "Skyler", updatedAt: "2026-10-26T17:00:00Z", itemCount: 0 },
+    ]);
+  });
 });
 
 describe("listItems", () => {

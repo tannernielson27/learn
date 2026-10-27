@@ -23,44 +23,28 @@ const dialog = () => screen.getByRole("dialog");
 const button = (name: string) => screen.getByRole("button", { name });
 
 describe("TeacherWelcome (#364)", () => {
-  it("opens on the first step, greeting the teacher by name", () => {
+  // One step: a plain dialog with its one button, and none of a stepped dialog's chrome.
+  it("greets the teacher by name in one step, with no step count, Skip or Next", () => {
     setup();
     expect(dialog()).toHaveAccessibleName("Welcome, Ada Lovelace");
-    expect(screen.getByRole("status")).toHaveTextContent("Step 1 of 3");
-    expect(dialog()).toHaveTextContent("no other teacher can see them");
-    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+    expect(dialog()).toHaveTextContent("No other teacher can see what you make in it.");
+    expect(screen.queryByRole("status")).toBeNull();
+    for (const name of ["Skip", "Next", "Back"]) {
+      expect(screen.queryByRole("button", { name })).toBeNull();
+    }
   });
 
-  it("walks forward and back through the three steps", async () => {
+  it("records it as seen on Get started, closes, and moves focus to the checklist", async () => {
     const { user, onDone } = setup();
-    await user.click(button("Next"));
-    expect(dialog()).toHaveAccessibleName("Create a quiz or import the sample");
-    expect(screen.getByRole("status")).toHaveTextContent("Step 2 of 3");
-    await user.click(button("Next"));
-    expect(dialog()).toHaveAccessibleName("Then a class, and your first live session");
-    expect(screen.getByRole("status")).toHaveTextContent("Step 3 of 3");
-    expect(screen.queryByRole("button", { name: "Next" })).toBeNull();
-    await user.click(button("Back"));
-    expect(dialog()).toHaveAccessibleName("Create a quiz or import the sample");
-    await user.click(button("Back"));
-    expect(dialog()).toHaveAccessibleName("Welcome, Ada Lovelace");
-    expect(onDone).not.toHaveBeenCalled();
-  });
-
-  it("records it as seen on finishing, closes, and moves focus to the checklist", async () => {
-    const { user, onDone } = setup();
-    await user.click(button("Next"));
-    await user.click(button("Next"));
     await user.click(button("Get started"));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(onDone).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("heading", { name: "Get started" })).toHaveFocus();
   });
 
-  it.each(["Skip", "Close"])("records it as seen on %s, from any step", async (name) => {
+  it("records it as seen on Close", async () => {
     const { user, onDone } = setup();
-    await user.click(button("Next"));
-    await user.click(button(name));
+    await user.click(button("Close"));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(onDone).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("heading", { name: "Get started" })).toHaveFocus();
@@ -68,7 +52,7 @@ describe("TeacherWelcome (#364)", () => {
 
   it("records it once, however many times it is told to end", async () => {
     const { user, onDone } = setup();
-    await user.dblClick(button("Skip"));
+    await user.dblClick(button("Get started"));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(onDone).toHaveBeenCalledTimes(1);
   });
@@ -78,7 +62,7 @@ describe("TeacherWelcome (#364)", () => {
       throw new Error("network");
     });
     render(<TeacherWelcome steps={STEPS} onDone={onDone} focusAfter="nowhere" />);
-    await userEvent.setup().click(button("Skip"));
+    await userEvent.setup().click(button("Get started"));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(onDone).toHaveBeenCalledTimes(1);
   });

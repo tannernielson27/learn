@@ -44,13 +44,13 @@ describe("InvitePanel", () => {
     expect(password).toHaveAccessibleDescription("At least 8 characters.");
   });
 
-  it("asks for a name first, says who sees it, and caps it at 80 characters", () => {
+  it("asks for a name first and caps it at 80 characters", () => {
     setup();
     const name = screen.getByRole("textbox", { name: "Your name" });
     expect(name).toBeRequired();
     expect(name).toHaveAttribute("autocomplete", "name");
     expect(name).toHaveAttribute("maxlength", "80");
-    expect(name).toHaveAccessibleDescription("Your teacher sees this on the class roster.");
+    expect(name).not.toHaveAttribute("aria-describedby");
     const fields = screen.getAllByRole("textbox");
     expect(fields[0]).toBe(name);
   });
@@ -71,9 +71,7 @@ describe("InvitePanel", () => {
     const name = screen.getByRole("textbox", { name: "Your name" });
     expect(name).toHaveFocus();
     expect(name).toHaveAttribute("aria-invalid", "true");
-    expect(name).toHaveAccessibleDescription(
-      "Your teacher sees this on the class roster. Enter your name.",
-    );
+    expect(name).toHaveAccessibleDescription("Enter your name.");
   });
 
   it("says when the address already has an account, on the password, and offers the link", async () => {

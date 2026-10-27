@@ -165,7 +165,7 @@ describe("AssignmentResults", () => {
     render(<AssignmentResults {...BASE} entries={entries} practiseMissed={practise} />);
     await renderersLoaded();
     expect(screen.getByRole("button", { name: "Practise the 1 I missed" })).toBeInTheDocument();
-    expect(screen.getByText(/Practice is never graded/)).toBeInTheDocument();
+    expect(screen.getByText("Not graded.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Review what I missed" }));
     await renderersLoaded();
     expect(screen.getByRole("region", { name: "Question 2" })).toHaveFocus();

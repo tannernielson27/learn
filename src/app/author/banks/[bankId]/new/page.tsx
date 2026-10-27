@@ -28,8 +28,7 @@ export default async function NewItemPage({ params }: PageProps<"/author/banks/[
           {bank.name}
         </TextLink>
       </p>
-      <h1 className="mb-2 font-read text-3xl text-ink-1">New question</h1>
-      <p className="mb-6 text-ink-2">Choose a format.</p>
+      <h1 className="mb-6 font-read text-3xl text-ink-1">New question</h1>
       <NewItemChooser create={createItem.bind(null, bank.id)} />
     </ReadingWidth>
   );

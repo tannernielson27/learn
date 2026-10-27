@@ -5,14 +5,13 @@ import { SetUpWorkspace } from "@/components/auth/SetUpWorkspace";
 import { JoinByCodeForm } from "@/components/classes/JoinByCodeForm";
 import { Button } from "@/components/ui/Button";
 import { ACCOUNT_PATH, WELCOME_PATH } from "@/lib/auth/accountPaths";
-import { shownName } from "@/lib/auth/displayName";
 import { signedInHome } from "@/lib/auth/landing";
 import { carriedClassCode } from "@/lib/auth/signUp";
 import { readViewer } from "@/lib/classes/viewer";
 import { signOut } from "../author/actions";
 import { joinClassWithCode } from "../learn/actions";
 import { setUpWorkspace } from "./actions";
-import { AuthFrame, AUTH_HEADING, AUTH_SUBLINE } from "@/components/auth/AuthFrame";
+import { AuthFrame, AUTH_HEADING_ALONE } from "@/components/auth/AuthFrame";
 import { textLinkClasses } from "@/components/ui/TextLink";
 
 export const metadata: Metadata = { title: "Welcome" };
@@ -40,32 +39,33 @@ export default async function WelcomePage({ searchParams }: PageProps<"/welcome"
 
   const join = (
     <section key="join" aria-labelledby="welcome-join">
-      <h2 id="welcome-join" className="mb-2 text-lg font-semibold text-ink-1">
+      <h2 id="welcome-join" className="mb-4 text-lg font-semibold text-ink-1">
         Join your class
       </h2>
-      <p className="mb-4 text-ink-2">Use the class code or invite link from your teacher.</p>
       <JoinByCodeForm action={joinClassWithCode} initialCode={classCode ?? undefined} />
     </section>
   );
 
   const teach = (
     <section key="teach" aria-labelledby="welcome-workspace">
-      <h2 id="welcome-workspace" className="mb-2 text-lg font-semibold text-ink-1">
+      <h2
+        id="welcome-workspace"
+        className={`${teaching ? "mb-2" : "mb-4"} text-lg font-semibold text-ink-1`}
+      >
         {teaching ? "Your workspace is not set up yet" : "I teach"}
       </h2>
-      <p className="mb-4 text-ink-2">
-        {teaching
-          ? "Your account is ready, but the workspace is not. Try again."
-          : "A workspace holds your quizzes and classes."}
-      </p>
+      {teaching ? (
+        <p className="mb-4 text-ink-2">
+          Your account is ready, but the workspace is not. Try again.
+        </p>
+      ) : null}
       <SetUpWorkspace action={setUpWorkspace} />
     </section>
   );
 
   return (
     <AuthFrame>
-      <h1 className={AUTH_HEADING}>Welcome to LeaRN</h1>
-      <p className={AUTH_SUBLINE}>Signed in as {shownName(viewer)}.</p>
+      <h1 className={AUTH_HEADING_ALONE}>Welcome to LeaRN</h1>
 
       <div className="mb-8 flex flex-col gap-8 divide-y divide-line [&>section+section]:pt-8">
         {teaching ? [teach, join] : [join, teach]}

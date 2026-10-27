@@ -90,9 +90,7 @@ export function InviteSignUpForm({
         >
           Your account is ready
         </h1>
-        <p className={AUTH_SUBLINE}>
-          You are in {classTitle}. Sign in with the email address and password you just chose.
-        </p>
+        <p className={AUTH_SUBLINE}>You’re in {classTitle}.</p>
         <Link
           href={`/sign-in?next=${encodeURIComponent(STUDENT_HOME)}`}
           className={textLinkClasses()}
@@ -108,10 +106,7 @@ export function InviteSignUpForm({
       <h1 id={`${id}-heading`} className={AUTH_HEADING}>
         Join {classTitle}
       </h1>
-      <p className={AUTH_SUBLINE}>
-        Enter your name and email address, and choose a password. If you already have a LeaRN
-        account, use its password.
-      </p>
+      <p className={AUTH_SUBLINE}>Already have an account? Use its password.</p>
       <form action={formAction} className="flex flex-col gap-5">
         <DisplayNameField
           id={`${id}-name`}

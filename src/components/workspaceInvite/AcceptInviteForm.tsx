@@ -9,7 +9,7 @@ import { DEFAULT_AFTER_SIGN_IN } from "@/lib/auth/nextPath";
 import { PASSWORD_HINT, PASSWORD_MIN_LENGTH } from "@/lib/auth/passwordRules";
 import type { InviteAccountState } from "@/lib/workspace/invite";
 import { InviteAnswerView } from "./InviteAnswerView";
-import { AUTH_HEADING, AUTH_SUBLINE } from "@/components/auth/AuthFrame";
+import { AUTH_HEADING, AUTH_HEADING_ALONE, AUTH_SUBLINE } from "@/components/auth/AuthFrame";
 import { FormError } from "@/components/auth/FormError";
 import { textLinkClasses } from "@/components/ui/TextLink";
 
@@ -97,12 +97,9 @@ export function AcceptInviteForm({
 
   return (
     <section aria-labelledby={`${id}-heading`}>
-      <h1 id={`${id}-heading`} className={AUTH_HEADING}>
+      <h1 id={`${id}-heading`} className={AUTH_HEADING_ALONE}>
         {heading}
       </h1>
-      <p className={AUTH_SUBLINE}>
-        Enter your name and choose a password to make your account and join the workspace.
-      </p>
       <form action={formAction} className="flex flex-col gap-5">
         <DisplayNameField
           id={`${id}-name`}
@@ -123,12 +120,8 @@ export function AcceptInviteForm({
             autoComplete="username"
             readOnly
             value={invitedEmail}
-            aria-describedby={`${id}-email-hint`}
             className={FIELD}
           />
-          <p id={`${id}-email-hint`} className="text-sm text-ink-2">
-            The invitation was sent to this address, so the account is made on it.
-          </p>
         </div>
         <PasswordField
           id={`${id}-password`}

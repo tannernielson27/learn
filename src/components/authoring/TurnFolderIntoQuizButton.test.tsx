@@ -7,13 +7,12 @@ import { TurnFolderIntoQuizButton } from "./TurnFolderIntoQuizButton";
 type Turn = () => Promise<ConfirmOutcome | void>;
 const KEPT = ["Its 2 live session reports keep their questions."];
 
-function draw(action: Turn, hasSubfolders = true) {
+function draw(action: Turn) {
   render(
     <TurnFolderIntoQuizButton
       action={action}
       folderName="Cardiac"
       quizName="Cardiac (2)"
-      hasSubfolders={hasSubfolders}
       staysBehind={KEPT}
     />,
   );
@@ -30,7 +29,7 @@ describe("TurnFolderIntoQuizButton", () => {
     draw(action);
     const dialog = await open();
     expect(dialog).toHaveAccessibleDescription(
-      'A new quiz, "Cardiac (2)", goes beside this one in the library with everything in this folder and the folders inside it. The new quiz has no folders inside it.',
+      'Creates the quiz "Cardiac (2)" with this folder\'s contents.',
     );
     expect(
       within(dialog).getByRole("list", { name: "What stays with this quiz" }),
@@ -38,13 +37,6 @@ describe("TurnFolderIntoQuizButton", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(action).not.toHaveBeenCalled();
-  });
-
-  it("leaves out the folders inside it when there are none", async () => {
-    draw(vi.fn<Turn>(), false);
-    expect(await open()).toHaveAccessibleDescription(
-      'A new quiz, "Cardiac (2)", goes beside this one in the library with everything in this folder. The new quiz has no folders inside it.',
-    );
   });
 
   it("keeps the dialog open with the reason when it is refused", async () => {

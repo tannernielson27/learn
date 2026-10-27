@@ -42,9 +42,6 @@ export function StageEnded({ title, summary, rate }: StageEndedProps) {
           </div>
         ))}
       </dl>
-      <p className="mt-auto text-stage-label font-semibold text-ink-2">
-        Your teacher has the full report. Your own results are on your phone.
-      </p>
     </div>
   );
 }

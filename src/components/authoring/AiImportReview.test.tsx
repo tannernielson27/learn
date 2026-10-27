@@ -122,7 +122,7 @@ describe("AiImportReview (#346)", () => {
     expect(within(preview).getByText("Correct")).toBeTruthy();
     expect(within(preview).queryByText("Missed")).toBeNull();
     expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
-    expect(screen.getByText("No key yet. This is how students will see it.")).toBeTruthy();
+    expect(screen.getByText("No key yet.")).toBeTruthy();
   });
 
   it("blocks the import while a kept question needs an answer or a fix, and says why", () => {
@@ -315,7 +315,7 @@ describe("AiImportReview (#346)", () => {
     ]);
     expect(screen.getByRole("heading", { name: "Case study: Ectopic pregnancy" })).toBeTruthy();
     expect(screen.queryByRole("combobox", { name: "Change type" })).toBeNull();
-    expect(screen.getByText(/cannot be shown step by step yet/)).toBeTruthy();
+    expect(screen.getByText("Can't preview yet.")).toBeTruthy();
     expect(screen.getByTestId("import-button").textContent).toBe("Import 1 case study");
   });
 });

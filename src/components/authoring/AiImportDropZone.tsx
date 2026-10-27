@@ -2,19 +2,13 @@
 
 import { useState, type DragEvent, type RefObject } from "react";
 import { TextLink } from "@/components/ui/TextLink";
-import {
-  AI_IMPORT_ACCEPT,
-  AI_IMPORT_MAX_FILES,
-  AI_IMPORT_MAX_PAGES,
-  AI_IMPORT_MAX_QUESTIONS,
-} from "@/lib/authoring/aiImportUpload";
+import { AI_IMPORT_ACCEPT, AI_IMPORT_MAX_FILES } from "@/lib/authoring/aiImportUpload";
 
 export interface AiImportDropZoneProps {
   /** The file input the upload form reads when it is sent. */
   inputRef: RefObject<HTMLInputElement | null>;
   /** The input's id, for its label. */
   id: string;
-  quizName: string;
   busy: boolean;
 }
 
@@ -23,7 +17,7 @@ export interface AiImportDropZoneProps {
  * so choosing and dropping reach the form the same way. The edge turns accent while a file is over
  * it; colour only, and the border never changes width, so nothing moves.
  */
-export function AiImportDropZone({ inputRef, id, quizName, busy }: AiImportDropZoneProps) {
+export function AiImportDropZone({ inputRef, id, busy }: AiImportDropZoneProps) {
   const [dragging, setDragging] = useState(false);
 
   function drop(event: DragEvent<HTMLDivElement>) {
@@ -58,9 +52,7 @@ export function AiImportDropZone({ inputRef, id, quizName, busy }: AiImportDropZ
         className="max-w-full text-sm text-ink-1 file:tap-target file:mr-3 file:rounded-md file:border file:border-field-border file:bg-surface-1 file:px-3 file:font-semibold file:text-ink-1"
       />
       <p id={`${id}-hint`} className="text-sm text-ink-2">
-        Choose or drop up to {AI_IMPORT_MAX_FILES} files: PDF, Word .docx, Markdown or text, each at
-        most 25 MB, {AI_IMPORT_MAX_PAGES} pages and {AI_IMPORT_MAX_QUESTIONS} questions in all.
-        Claude copies the questions; nothing reaches {quizName} until you review it.
+        PDF, Word, Markdown or text · up to {AI_IMPORT_MAX_FILES} files, 25 MB each.
       </p>
       <p>
         <TextLink href="/help/instructor#ai-import" size="sm">

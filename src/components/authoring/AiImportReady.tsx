@@ -30,8 +30,7 @@ export function AiImportReady({
         Ready for review
       </h2>
       <p role="status" className="text-ink-1">
-        {questions} {questions === 1 ? "question is" : "questions are"} waiting for review. Nothing
-        has been added to {quizName} yet.
+        {questions} {questions === 1 ? "question is" : "questions are"} waiting for review.
       </p>
       <div className="flex flex-wrap items-center gap-4">
         {batchId ? (
