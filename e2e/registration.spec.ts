@@ -62,18 +62,6 @@ async function signUp(
   await page.getByRole("button", { name: "Create account", exact: true }).click();
 }
 
-/** Walks a three-step welcome to its last button. */
-async function walkWelcome(page: Page, firstTitle: string, finish: string): Promise<void> {
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toHaveAccessibleName(firstTitle);
-  await dialog.getByRole("button", { name: "Next", exact: true }).click();
-  await expect(dialog.getByRole("status")).toHaveText("Step 2 of 3");
-  await dialog.getByRole("button", { name: "Next", exact: true }).click();
-  await expect(dialog.getByRole("status")).toHaveText("Step 3 of 3");
-  await dialog.getByRole("button", { name: finish, exact: true }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-}
-
 /** A page's bytes whatever its status: a page that is refused must not carry the marker either. */
 async function bytesAnyStatus(context: BrowserContext, path: string): Promise<string> {
   return wireText(await (await context.request.get(path)).text());
