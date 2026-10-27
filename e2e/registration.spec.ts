@@ -97,7 +97,11 @@ test("a stranger becomes a teacher, and another stranger becomes their student, 
   await signUp(page, "teacher", teacherName, address(`reg-teacher-${project}`));
   await expect(page).toHaveURL(/\/author$/);
   await shoot(page, testInfo, "1-teacher-welcome");
-  await walkWelcome(page, `Welcome, ${teacherName}`, "Get started");
+  // The teacher's welcome is one line and one button; the checklist does the rest.
+  const welcome = page.getByRole("dialog");
+  await expect(welcome).toHaveAccessibleName(`Welcome, ${teacherName}`);
+  await welcome.getByRole("button", { name: "Get started", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   const checklist = page.getByRole("region", { name: "Get started", exact: true });
   await expect(checklist.getByText("0 of 3 done", { exact: true })).toBeVisible();
   await expectNoAxeViolations(page);
