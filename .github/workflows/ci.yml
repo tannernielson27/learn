@@ -72,7 +72,10 @@ jobs:
   auth-e2e:
     name: auth e2e (${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 30, not 20: on 2026-10-26 the Playwright install alone took 9 minutes on a slow apt mirror
+    # and shards were cancelled after every test had passed. The cache below takes the browser
+    # download out of that step; the system packages still come from apt on every run.
+    timeout-minutes: 30
     strategy:
       # A failure in one third should not hide what the other two would have said.
       fail-fast: false
@@ -86,7 +89,21 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      # The browser is cached by the Playwright version the lockfile installed, so a Playwright
+      # bump downloads a new one and nothing else does. The system libraries it needs are not in
+      # the cache (they live outside ~/.cache), so a hit still installs those, and only those.
+      - name: Playwright version
+        id: playwright
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v5
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+      - if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
       # Postgres, auth, the API gateway, the test mailbox and Realtime. Realtime joined the list
       # with #132: a lobby's roster is presence and a student's screen moves on a `postgres_changes`
       # message, so without it there is no way to test the half of a live session that is live.
@@ -98,7 +115,7 @@ jobs:
             | sed -n 's/^API_URL=/NEXT_PUBLIC_SUPABASE_URL=/p; s/^PUBLISHABLE_KEY=/NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=/p; s/^SECRET_KEY=/SUPABASE_SECRET_KEY=/p; s/^JWT_SECRET=/SUPABASE_JWT_SIGNING_KEY=/p' \
             | tr -d '"' >> "$GITHUB_ENV"
       - name: Sign in, then author banks and items
-        run: pnpm e2e e2e/auth.spec.ts e2e/authoring.spec.ts e2e/caseStudyBuilder.spec.ts e2e/transfer.spec.ts e2e/folders.spec.ts e2e/tags.spec.ts e2e/history.spec.ts e2e/duplicate.spec.ts e2e/search.spec.ts e2e/warnings.spec.ts e2e/archive.spec.ts e2e/liveSession.spec.ts e2e/join.spec.ts e2e/liveAnswer.spec.ts e2e/routeRecovery.spec.ts e2e/classes.spec.ts e2e/assignments.spec.ts e2e/takeAssignment.spec.ts e2e/assignmentReport.spec.ts e2e/assignmentResults.spec.ts e2e/classTimeZone.spec.ts e2e/studentHistory.spec.ts e2e/practiceShare.spec.ts e2e/liveBytes.spec.ts e2e/practice.spec.ts e2e/landing.spec.ts e2e/emailPreview.spec.ts e2e/errorPages.spec.ts e2e/help.spec.ts e2e/onboarding.spec.ts e2e/yourSteps.spec.ts e2e/practiceFrozen.spec.ts e2e/emptyStates.spec.ts e2e/coldOnboarding.spec.ts e2e/registration.spec.ts e2e/workspaceInvite.spec.ts e2e/studentWorkspaces.spec.ts e2e/teacherNav.spec.ts e2e/libraryFolders.spec.ts e2e/chartReveal.spec.ts e2e/moveBetweenQuizzes.spec.ts e2e/tabTiming.spec.ts e2e/aiImport.spec.ts e2e/aiImportReview.spec.ts e2e/aiImportFix.spec.ts e2e/aiImportCommit.spec.ts e2e/aiImportFlow.spec.ts e2e/quizOrder.spec.ts e2e/classProgress.spec.ts e2e/classDayA11y.spec.ts --shard=${{ matrix.shard }}/3
+        run: pnpm e2e e2e/auth.spec.ts e2e/authoring.spec.ts e2e/caseStudyBuilder.spec.ts e2e/transfer.spec.ts e2e/folders.spec.ts e2e/tags.spec.ts e2e/history.spec.ts e2e/duplicate.spec.ts e2e/search.spec.ts e2e/warnings.spec.ts e2e/archive.spec.ts e2e/liveSession.spec.ts e2e/join.spec.ts e2e/liveAnswer.spec.ts e2e/routeRecovery.spec.ts e2e/classes.spec.ts e2e/assignments.spec.ts e2e/takeAssignment.spec.ts e2e/assignmentReport.spec.ts e2e/assignmentResults.spec.ts e2e/classTimeZone.spec.ts e2e/studentHistory.spec.ts e2e/practiceShare.spec.ts e2e/liveBytes.spec.ts e2e/practice.spec.ts e2e/landing.spec.ts e2e/emailPreview.spec.ts e2e/errorPages.spec.ts e2e/help.spec.ts e2e/onboarding.spec.ts e2e/yourSteps.spec.ts e2e/practiceFrozen.spec.ts e2e/emptyStates.spec.ts e2e/coldOnboarding.spec.ts e2e/registration.spec.ts e2e/workspaceInvite.spec.ts e2e/studentWorkspaces.spec.ts e2e/teacherNav.spec.ts e2e/libraryFolders.spec.ts e2e/chartReveal.spec.ts e2e/moveBetweenQuizzes.spec.ts e2e/tabTiming.spec.ts e2e/aiImport.spec.ts e2e/aiImportReview.spec.ts e2e/aiImportFix.spec.ts e2e/aiImportCommit.spec.ts e2e/aiImportFlow.spec.ts e2e/quizOrder.spec.ts e2e/classProgress.spec.ts e2e/classLiveSession.spec.ts e2e/studentLiveResults.spec.ts e2e/classDayA11y.spec.ts --shard=${{ matrix.shard }}/3
         env:
           E2E_AUTH: "1"
           # The local-only demo account from supabase/seed-demo.sql, not a secret.

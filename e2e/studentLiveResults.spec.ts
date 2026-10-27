@@ -101,10 +101,10 @@ test("a student sees their own live session results once it ends, and nobody els
   await expect(page).toHaveURL(/\/live\/[0-9a-f-]{36}$/);
   const sessionId = new URL(page.url()).pathname.split("/").at(-1) ?? "";
   const code = (await page.getByTestId("join-code").innerText()).replace(/\s/g, "");
-  const [session] = await selectAsAdmin<{ title: string; org_id: string }>(
+  const [session] = await selectAsAdmin<{ title: string }>(
     request,
     "sessions",
-    `id=eq.${sessionId}&select=title,org_id`,
+    `id=eq.${sessionId}&select=title`,
   );
   if (!session) throw new Error("the session is missing");
 
@@ -122,27 +122,33 @@ test("a student sees their own live session results once it ends, and nobody els
   );
   if (!participant) throw new Error("the member was not linked");
 
-  // The room moves to question 1, and the member's answer is recorded as the submit route records
-  // it: right, one point of one.
+  // The room moves to question 1, and the member answers it on their phone through the submit
+  // route, the only writer of session_responses: right, one point of one. The radio is named by
+  // its letter and its label (OptionRow's aria-labelledby), so the key's option is picked by both.
   await page.getByRole("button", { name: "Start", exact: true }).click();
-  const [mc] = await selectAsAdmin<{ answer_key: { correctOptionId: string } }>(
-    request,
-    "items",
-    `id=eq.${MC_ITEM}&select=answer_key`,
-  );
+  const [mc] = await selectAsAdmin<{
+    content: { content: { options: { id: string; label: string }[] } };
+    answer_key: { correctOptionId: string };
+  }>(request, "items", `id=eq.${MC_ITEM}&select=content,answer_key`);
   if (!mc) throw new Error("the seeded question is missing");
-  await insertAsAdmin(request, "session_responses", {
-    session_id: sessionId,
-    org_id: session.org_id,
-    participant_id: participant.id,
-    item_id: MC_ITEM,
-    item_position: 1,
-    response: { type: "multiple_choice", optionId: mc.answer_key.correctOptionId },
-    points: 1,
-    max_points: 1,
-    model: "zero_one",
-    breakdown: [],
-  });
+  const options = mc.content.content.options;
+  const keyIndex = options.findIndex((option) => option.id === mc.answer_key.correctOptionId);
+  const keyOption = options[keyIndex];
+  if (!keyOption) throw new Error("the seeded question's key names no option");
+  await member.page
+    .getByRole("radio", {
+      name: `${String.fromCharCode(65 + keyIndex)} ${keyOption.label}`,
+      exact: true,
+    })
+    .click({ timeout: 15_000 });
+  await member.page.getByRole("button", { name: "Submit", exact: true }).click();
+  await expect(member.page.getByTestId("answer-sent")).toBeVisible();
+  const [written] = await selectAsAdmin<{ points: number; max_points: number }>(
+    request,
+    "session_responses",
+    `session_id=eq.${sessionId}&participant_id=eq.${participant.id}&select=points,max_points`,
+  );
+  expect(written).toEqual({ points: 1, max_points: 1 });
 
   // Still running: nothing listed, and its results page is not found.
   await member.page.goto("/learn");
@@ -179,7 +185,9 @@ test("a student sees their own live session results once it ends, and nobody els
   await expect(
     member.page.getByRole("heading", { level: 1, name: session.title, exact: true }),
   ).toBeVisible();
-  await expect(member.page.getByText(MC_RATIONALE, { exact: true }).first()).toBeVisible();
+  // The seeded rationale is one paragraph that goes on after this sentence, so it is matched as
+  // part of that paragraph's text, not as the whole of it.
+  await expect(member.page.getByText(MC_RATIONALE).first()).toBeVisible();
   // The control: the same route's bytes now carry the key, the rationale and the mark.
   const endedBytes = await bytesOf(member.page.context(), `/learn/live/${sessionId}`);
   expect(endedBytes).toContain(MC_RATIONALE);
