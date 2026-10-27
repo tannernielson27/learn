@@ -33,18 +33,12 @@ export default async function QuizOrderPage({ params }: PageProps<"/author/banks
           {bank.name}
         </TextLink>
       </p>
-      <h1 className="mb-2 font-read text-3xl text-ink-1">Change order</h1>
-      <p className="mb-6 max-w-prose text-ink-2">
-        Students meet the questions and case studies in this order. Move one with its arrows or drag
-        it, then save.
-      </p>
+      <h1 className="mb-6 font-read text-3xl text-ink-1">Change order</h1>
       {!read.ok ? (
         <Notice role="alert">{read.error}</Notice>
       ) : read.entries.length < 2 ? (
         <p className="text-ink-2">
-          {read.entries.length === 0
-            ? "This quiz has no questions or case studies to put in order yet."
-            : "This quiz has one question or case study, so there is no order to change yet."}
+          {read.entries.length === 0 ? "Nothing to order yet." : "Add another question to reorder."}
         </p>
       ) : (
         <QuizOrderEditor entries={read.entries} action={saveQuizOrderAction.bind(null, bank.id)} />

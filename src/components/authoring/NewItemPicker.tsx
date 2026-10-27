@@ -11,7 +11,7 @@ export interface NewItemPickerProps {
   busy?: boolean;
 }
 
-const COMING_LATER = "Editor coming in Sprint 5";
+const COMING_LATER = "Coming soon";
 
 export function NewItemPicker({ onChoose, busy = false }: NewItemPickerProps) {
   const laterId = useId();
@@ -53,7 +53,7 @@ export function NewItemPicker({ onChoose, busy = false }: NewItemPickerProps) {
                   <span>{ITEM_TYPE_LABELS[type]}</span>
                   {ready ? null : (
                     <span aria-hidden="true" className="shrink-0 font-mono text-xs">
-                      Sprint 5
+                      Soon
                     </span>
                   )}
                 </button>

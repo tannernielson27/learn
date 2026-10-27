@@ -251,17 +251,15 @@ describe("removing a colleague", () => {
     expect(columns.sort()).toEqual(["founder_id", "name, self_registered"]);
   });
 
-  it("tells the inviter who can remove a colleague, and that a teacher elsewhere may move", async () => {
+  // The invite form follows its heading; the cap is in the count and the form's own errors.
+  it("puts the invite form straight under its heading, with nothing to explain it", async () => {
     await renderPage();
-    expect(screen.getByText("They join as a teacher with the same access as you.")).toBeVisible();
-    // The rest is kept, folded away until asked for (#412).
-    const copy = screen.getByText("What a colleague can do").closest("details")!;
-    expect(copy).not.toHaveAttribute("open");
-    expect(copy).toHaveTextContent(
-      "Only the person who started the workspace can remove a colleague",
-    );
-    expect(copy).toHaveTextContent("can accept only by leaving that workspace");
-    expect(copy).not.toHaveTextContent("cannot be removed once they join");
+    const section = screen.getByRole("heading", { name: "Invite a colleague" }).parentElement!;
+    expect(section.querySelector("details")).toBeNull();
+    expect(section.querySelector("p")).toBeNull();
+    expect(
+      within(section).getByRole("textbox", { name: "Colleague's email address" }),
+    ).toBeVisible();
   });
 });
 

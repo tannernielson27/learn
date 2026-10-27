@@ -1,6 +1,5 @@
-import { act, render, renderHook, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import type { LiveHostTransport, LiveSessionTransport } from "@/lib/live";
 import { createInMemoryRoom } from "@/lib/live/memoryRoom";
 import { FIXTURES } from "@/lib/ngn/fixtures";
@@ -9,9 +8,9 @@ import { useHostRoom } from "./host/useHostRoom";
 import { HostLobby } from "./HostLobby";
 
 /**
- * Ending the timer once everyone has answered, through the in-memory room with a control window
- * and a projector window open on it together: only the control window sends `stop_timer`, it
- * sends it once, it never shows the answer, and it says so quietly.
+ * Ending the timer and showing the answer once everyone has answered, through the in-memory room
+ * with a control window and a projector window open on it together: only the control window
+ * sends `stop_timer` and `reveal`, it sends each once, and it says so quietly. There is no setting.
  */
 
 const SESSION_ID = "00000000-0000-4000-8000-00000000a003";
@@ -19,15 +18,10 @@ const CODE = "AJ4K7P";
 const MC = itemSchema.parse(FIXTURES.multiple_choice.canonical) as Item;
 const SATA = itemSchema.parse(FIXTURES.multiple_response.canonical) as Item;
 const ANSWER = { type: "multiple_choice", optionId: "opt_a" } as const;
-const KEY = "learn.live.autoStopTimer";
-
-afterEach(() => {
-  window.localStorage.clear();
-});
-
 function spied(host: LiveHostTransport) {
   const stopTimer = vi.fn(() => host.stopTimer());
-  return { host: { ...host, stopTimer }, stopTimer };
+  const reveal = vi.fn(() => host.reveal());
+  return { host: { ...host, stopTimer, reveal }, stopTimer, reveal };
 }
 
 function lobby(view: "control" | "projector", host: LiveHostTransport, initial: never) {
@@ -77,8 +71,8 @@ async function setup(windows: ("control" | "projector")[]) {
   return { room, consoles, phones };
 }
 
-describe("ending the timer once everyone has answered", () => {
-  it("is sent once, by the control window only, and the answer stays hidden", async () => {
+describe("ending the timer and showing the answer once everyone has answered", () => {
+  it("is sent once, by the control window only, and the answer shows", async () => {
     const { room, consoles, phones } = await setup(["control", "projector"]);
     await waitFor(() => expect(room.currentState().timer.endsAt).not.toBeNull());
 
@@ -94,18 +88,20 @@ describe("ending the timer once everyone has answered", () => {
     await act(async () => {
       await phones[1]!.submit(MC.id, ANSWER);
     });
-    await waitFor(() => expect(room.currentState().timer.endsAt).toBeNull(), { timeout: 4_000 });
-    expect(await screen.findByText("Everyone answered. Timer ended.")).toBeInTheDocument();
+    await waitFor(() => expect(room.currentState().reveal).toBe(true), { timeout: 4_000 });
+    expect(room.currentState().timer.endsAt).toBeNull();
+    expect(await screen.findByText("Everyone answered. Answer showing.")).toBeInTheDocument();
 
     const [control, projector] = consoles;
     expect(control!.stopTimer).toHaveBeenCalledTimes(1);
+    expect(control!.reveal).toHaveBeenCalledTimes(1);
     expect(projector!.stopTimer).not.toHaveBeenCalled();
-    expect(room.currentState().reveal).toBe(false);
+    expect(projector!.reveal).not.toHaveBeenCalled();
     expect(room.currentState().status).toBe("running");
     expect(screen.queryByRole("alert")).toBeNull();
   }, 10_000);
 
-  it("two control windows: the stop lands once and neither shows an error", async () => {
+  it("two control windows: the answer shows once and neither shows an error", async () => {
     const { room, consoles, phones } = await setup(["control", "control"]);
     await waitFor(() => expect(room.currentState().timer.endsAt).not.toBeNull());
     for (const phone of phones) {
@@ -113,7 +109,8 @@ describe("ending the timer once everyone has answered", () => {
         await phone.submit(MC.id, ANSWER);
       });
     }
-    await waitFor(() => expect(room.currentState().timer.endsAt).toBeNull(), { timeout: 4_000 });
+    await waitFor(() => expect(room.currentState().reveal).toBe(true), { timeout: 4_000 });
+    expect(room.currentState().timer.endsAt).toBeNull();
     await act(async () => {
       await new Promise((done) => setTimeout(done, 300));
     });
@@ -155,26 +152,36 @@ describe("ending the timer once everyone has answered", () => {
     unmount();
   });
 
-  it("does nothing once the teacher turns the setting off, and remembers it on this device", async () => {
-    const { room, phones } = await setup(["control"]);
-    const user = userEvent.setup();
-    const box = await screen.findByRole("checkbox", {
-      name: "End the timer when everyone has answered",
-    });
-    expect(box).toBeChecked();
-    await user.click(box);
-    expect(box).not.toBeChecked();
-    expect(window.localStorage.getItem(KEY)).toBe("0");
-
-    for (const phone of phones) {
-      await act(async () => {
-        await phone.submit(MC.id, ANSWER);
-      });
-    }
+  it("a reveal that finds the answer already showing counts as done, with no error", async () => {
+    const room = createInMemoryRoom({ items: [MC, SATA], code: CODE, sessionId: SESSION_ID });
+    const other = room.host();
+    await other.open();
+    await other.start();
+    const late = room.host();
+    const connect = () => late;
+    const { result, unmount } = renderHook(() =>
+      useHostRoom({
+        sessionId: SESSION_ID,
+        initial: room.currentState(),
+        connect,
+        tallyIntervalMs: 1_000,
+      }),
+    );
+    await other.reveal();
+    let revealed = false;
     await act(async () => {
-      await new Promise((done) => setTimeout(done, 2_000));
+      revealed = await result.current.revealQuietly();
     });
-    expect(room.currentState().timer.endsAt).not.toBeNull();
-    expect(within(document.body).queryByText("Everyone answered. Timer ended.")).toBeNull();
-  }, 10_000);
+    expect(revealed).toBe(true);
+    expect(result.current.error).toBeNull();
+    expect(result.current.pending).toBeNull();
+    expect(room.currentState().reveal).toBe(true);
+    unmount();
+  });
+
+  it("offers no setting to turn it off", async () => {
+    await setup(["control"]);
+    expect(await screen.findByRole("button", { name: "Stop timer" })).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
 });

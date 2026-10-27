@@ -19,7 +19,7 @@ export default function HostError({ error, retry }: ErrorInfo) {
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
       <RouteRecovery
         headline="This page stopped working."
-        detail="The live session is not affected, and students stay in it. Try again."
+        detail="Students are still in."
         onRetry={retry}
         digest={errorDigest(error)}
       >

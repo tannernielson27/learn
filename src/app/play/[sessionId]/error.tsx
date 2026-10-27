@@ -25,7 +25,7 @@ import { errorDigest } from "@/components/status/errorDigest";
  * the host's roster shows the same one entry again, not a second one. Nobody is asked for a name.
  *
  * What does not survive is anything only the unmounted component held: an answer chosen but not
- * sent. The copy says so rather than promising it.
+ * sent. The copy promises only the place.
  */
 export default function PlayError({ error, retry }: ErrorInfo) {
   useReportError(error);
@@ -33,7 +33,7 @@ export default function PlayError({ error, retry }: ErrorInfo) {
     <main className="mx-auto w-full max-w-lg flex-1 px-4 py-12">
       <RouteRecovery
         headline="This screen stopped working."
-        detail="Your place is kept. Try again to rejoin; an answer you had not sent may need choosing again."
+        detail="Your place is kept."
         onRetry={retry}
         digest={errorDigest(error)}
       />

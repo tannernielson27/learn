@@ -99,10 +99,7 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
         </div>
       </div>
       {archived ? (
-        <Notice className="mb-6 max-w-reading">
-          This question is archived. It is out of the quiz and cannot be played, edited or used in a
-          case study. Restore it to edit it.
-        </Notice>
+        <Notice className="mb-6 max-w-reading">Archived. Restore it to edit.</Notice>
       ) : null}
       {/* The database refuses to change archived content, so an archived item offers no editor. */}
       {archived ? null : editor ? (

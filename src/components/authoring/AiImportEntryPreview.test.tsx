@@ -21,12 +21,12 @@ describe("AiImportEntryPreview (#346)", () => {
 
   it("says a question that could not be built cannot be shown", () => {
     render(<AiImportEntryPreview kind="item" item={null} label="Question 1" />);
-    expect(screen.getByText(/could not be built from the document/)).toBeTruthy();
+    expect(screen.getByText("Can't preview yet.")).toBeTruthy();
   });
 
   it("says an item too incomplete to draw cannot be shown", () => {
     render(<AiImportEntryPreview kind="item" item={{ type: "bowtie" }} label="Question 1" />);
-    expect(screen.getByText(/not complete, so it cannot be shown yet/)).toBeTruthy();
+    expect(screen.getByText("Can't preview yet.")).toBeTruthy();
   });
 });
 

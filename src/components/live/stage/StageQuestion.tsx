@@ -107,7 +107,7 @@ export function StageQuestion({
         <div className="flex min-w-0 flex-col gap-[1.5cqb]">
           {casePlace === null ? null : (
             <p className="text-stage-label font-semibold text-ink-2">
-              Read the patient record on your phone before you answer.
+              Patient record is on your phone.
             </p>
           )}
           <Countdown timer={timer} now={serverNow} size="stage" />

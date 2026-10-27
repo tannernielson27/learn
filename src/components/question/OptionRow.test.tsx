@@ -8,6 +8,7 @@ import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema } from "@/lib/ngn/schemas";
 import { scoreInProcess } from "@/lib/ngn/submit";
 import { ItemPlayer } from "./ItemPlayer";
+import { OptionRow } from "./OptionRow";
 import { feedbackShown } from "./testing/feedback";
 import { renderersLoaded } from "./testing/renderers";
 
@@ -51,5 +52,27 @@ describe("option rows", () => {
     expect(screen.getByRole("checkbox", { name: `${TEMP} Incorrect` })).toBeChecked();
     expect(exposedText("Correct")).toHaveLength(0);
     expect(exposedText("Incorrect")).toHaveLength(0);
+  });
+});
+
+describe("an option with one long unbroken word", () => {
+  // A drug name or a URL with no space in it set the row's minimum width, and at 320px it ran
+  // past the edge of the screen. The text may shrink below its longest word and break inside it.
+  it("lets the text shrink and wrap inside the word rather than widen the row", () => {
+    const word = "Hydroxychloroquinesulfatepentahydrate-extended-release";
+    render(
+      <OptionRow
+        id="long"
+        name="long"
+        kind="radio"
+        label={word}
+        checked={false}
+        feedback="neutral"
+        mode="answer"
+        onToggle={() => {}}
+      />,
+    );
+    const text = screen.getByText(word);
+    expect(text).toHaveClass("min-w-0", "break-words");
   });
 });

@@ -160,9 +160,6 @@ export function ClassOverviewPanel({
         <h2 id="invite-heading" className={HEADING}>
           Invite students
         </h2>
-        <p className="max-w-prose text-ink-2">
-          Anyone with the link or the class code can join. Share them with your class only.
-        </p>
         <InviteQrCode url={url} classTitle={classTitle} className="w-56 max-w-full sm:w-64" />
         <TextLink href={classTabPath(classId, "settings")} size="sm" className="self-start">
           Replace the link in Settings

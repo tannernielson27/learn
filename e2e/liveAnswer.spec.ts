@@ -126,7 +126,7 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
   // Nothing to answer yet, and nothing to count.
   await expect(page.getByTestId("answer-count")).toHaveCount(0);
   for (const phone of [...phones, quiet]) {
-    await expect(phone.getByText("You are in. Wait for your teacher to start.")).toBeVisible();
+    await expect(phone.getByText("You’re in.", { exact: true })).toBeVisible();
   }
 
   await page.getByRole("button", { name: "Start", exact: true }).click();
@@ -275,7 +275,7 @@ async function readTheReport(page: Page, bankName: string) {
   await expect(page).toHaveURL(/\?view=steps$/);
   // The item written above carries no step, so the view says why it is empty.
   await expect(
-    page.getByText(/No question in this live session is tagged with a clinical judgment step/),
+    page.getByText("No questions are tagged with a clinical judgment step.", { exact: true }),
   ).toBeVisible();
   await expectNoAxeViolations(page);
 

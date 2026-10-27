@@ -80,23 +80,18 @@ describe("YourSteps (#239)", () => {
     expect(first).toHaveTextContent("5 questions: 3 from assignments, 2 from live sessions");
   });
 
-  it("says where the answers come from, live sessions included", () => {
+  it("says the order in two words", () => {
     renderSteps(marks(1, 1, 1));
-    expect(
-      screen.getByText(
-        "Weakest first, from your best attempt at each closed assignment, your first answers in practice and your answers in ended live sessions.",
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Weakest first.")).toBeInTheDocument();
   });
 
-  it("says how many answered questions have no step", () => {
+  it("says nothing of answered questions with no step", () => {
     renderSteps([...marks(null, 2, 1), ...marks(1, 1, 1)]);
-    expect(screen.getByText("2 questions have no step and are not counted.")).toBeInTheDocument();
+    expect(screen.queryByText(/no step/)).toBeNull();
   });
 
   it("shows items with no step even when no step has any", () => {
     renderSteps(marks(null, 1, 1));
-    expect(screen.getByText("1 question has no step and is not counted.")).toBeInTheDocument();
     expect(screen.getByRole("list")).toBeInTheDocument();
   });
 });

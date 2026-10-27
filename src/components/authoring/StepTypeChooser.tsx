@@ -17,7 +17,6 @@ export function StepTypeChooser({ caseStudyId, position }: StepTypeChooserProps)
   const { onStepStarted } = useItemEditorHost();
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-ink-2">Choose a format for this question.</p>
       <NewItemChooser
         create={async (type) => {
           const result = await startStepItem(caseStudyId, position, type);

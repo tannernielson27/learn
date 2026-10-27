@@ -227,7 +227,7 @@ export function QuizMoveForm({
               </>
             }
           >
-            <StaysBehindList lines={staysBehind} />
+            {staysBehind.length > 0 ? <StaysBehindList lines={staysBehind} /> : null}
           </Dialog>
         </div>
       ) : null}

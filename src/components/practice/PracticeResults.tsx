@@ -68,7 +68,6 @@ export function PracticeResults({
                 {back.label}
               </Link>
             ) : null}
-            <p className="text-sm text-ink-2">Practice is never graded.</p>
           </div>
           <StepBars steps={stepShares(rows)} />
         </div>

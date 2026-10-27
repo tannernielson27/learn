@@ -16,7 +16,7 @@ export default function PlayItemError({ error, retry }: ErrorInfo) {
   return (
     <RouteRecovery
       headline="This could not be played."
-      detail="Try again to start it over. Nothing here was saved, so nothing is lost."
+      detail="Nothing is lost."
       onRetry={retry}
       digest={errorDigest(error)}
     />

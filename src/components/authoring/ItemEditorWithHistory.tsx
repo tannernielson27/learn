@@ -117,7 +117,6 @@ export function ItemEditorWithHistory({
           <p id={askId} className="text-sm font-medium text-ink-1">
             This question has unsaved changes
           </p>
-          <p className="text-sm text-ink-2">Stay to save them, or discard them and leave.</p>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" onClick={discardAndLeave}>
               Discard changes

@@ -68,12 +68,11 @@ describe("the control view: whether it can hear the room", () => {
         "reconnecting",
       ),
     );
-    expect(screen.getByText(/Live updates are paused on this screen/)).toBeInTheDocument();
+    // The header's status and the notice under it, which is a title alone.
+    expect(screen.getAllByText("Reconnecting")).toHaveLength(2);
 
     act(() => fake.room.setHostConnection("connected"));
-    await waitFor(() =>
-      expect(screen.queryByText(/Live updates are paused on this screen/)).toBeNull(),
-    );
+    await waitFor(() => expect(screen.queryAllByText("Reconnecting")).toHaveLength(0));
     expect(screen.getByText("Connected")).toBeInTheDocument();
   });
 });

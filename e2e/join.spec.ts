@@ -94,7 +94,7 @@ test("a student scans the code, types a name, and comes back to the same place o
   await expect(student).toHaveURL(/\/play\/[0-9a-f-]{36}$/);
   const seat = student.url();
   await expect(student.getByText("Joined as")).toContainText("Sam Okafor");
-  await expect(student.getByText("You are in. Wait for your teacher to start.")).toBeVisible();
+  await expect(student.getByText("You’re in.", { exact: true })).toBeVisible();
   await expectNoAxeViolations(student);
 
   // Reload: the same seat, not a second one.

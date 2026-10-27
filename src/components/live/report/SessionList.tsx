@@ -29,7 +29,6 @@ export function SessionList({ sessions }: SessionListProps) {
       <EmptyState
         level={2}
         heading="No live sessions yet"
-        body="Start one from a quiz."
         action={{ href: "/author", label: "Go to your quizzes" }}
       />
     );

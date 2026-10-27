@@ -188,7 +188,7 @@ describe("MemberList, removing a colleague", () => {
     const { ran } = renderAsFounder();
     const dialog = await openFor("Mary Seacole");
     expect(dialog).toHaveAccessibleDescription(removeWarning("Mary Seacole"));
-    expect(dialog).toHaveTextContent("a new, empty workspace of their own");
+    expect(dialog).toHaveTextContent("What they made stays here.");
     expect(ran).not.toHaveBeenCalled();
   });
 
