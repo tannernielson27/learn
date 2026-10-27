@@ -5,14 +5,13 @@ import { HostRecord } from "@/components/live/HostRecord";
 import { ItemStrip } from "@/components/live/ItemStrip";
 import { Roster } from "@/components/live/Roster";
 import { HostResults } from "@/components/live/results/HostResults";
-import { AutoStopChoice, TimeChoice, TimerButtons } from "@/components/live/TimerControls";
+import { TimeChoice, TimerButtons } from "@/components/live/TimerControls";
 import { RichTextView } from "@/components/question/QuestionShell";
 import { AnswerCount } from "@/components/ui/AnswerCount";
 import { ProgressBar } from "@/components/ui/ProgressBar";
-import { hasClock, type LiveSessionState, type TimerCommand } from "@/lib/live";
+import type { LiveSessionState, TimerCommand } from "@/lib/live";
 import type { CaseStudyRun } from "@/lib/live/caseStudyRuns";
 import type { EhrRecord } from "@/lib/ngn/schemas";
-import { useAutoStopSetting } from "@/components/live/host/useAutoStopSetting";
 import { useAutoStopTimer } from "@/components/live/host/useAutoStopTimer";
 import type { HostRoom } from "@/components/live/host/useHostRoom";
 import { notAnswered } from "./notAnswered";
@@ -57,9 +56,7 @@ export function ControlItem({
   const eyebrow = [position, revealWords(state)].filter(Boolean).join(" · ");
   const timerCommand = (command: TimerCommand) => void room.run(command);
   // Here, in the control view only: a projector window has no controls and never sends it.
-  const [autoStop, setAutoStop] = useAutoStopSetting();
-  const autoStopped = useAutoStopTimer(room, read, autoStop) !== null;
-  const timed = state.timer.seconds !== null || hasClock(state.timer);
+  const autoRevealed = useAutoStopTimer(room, read) !== null;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:gap-8">
@@ -113,10 +110,9 @@ export function ControlItem({
           />
           <Countdown timer={state.timer} now={room.serverNow} />
           <p role="status" className="text-sm text-ink-2 empty:hidden">
-            {autoStopped ? "Everyone answered. Timer ended." : null}
+            {autoRevealed ? "Everyone answered. Answer showing." : null}
           </p>
           <TimerButtons state={state} busy={busy} onCommand={timerCommand} />
-          {timed ? <AutoStopChoice on={autoStop} onChange={setAutoStop} /> : null}
         </section>
 
         {collecting ? <NotAnsweredList people={waiting} /> : null}

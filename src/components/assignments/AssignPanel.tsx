@@ -52,10 +52,7 @@ export function AssignPanel({
       </Link>
       <p className="eyebrow mb-1">Assign</p>
       <h1 className="mb-2 font-read text-3xl break-words text-ink-1">{sourceName}</h1>
-      <p className="mb-6 max-w-prose text-ink-2">
-        Students in the class see it from the open time until the close time, in their own time
-        zone. What it contains is fixed now: later edits to it do not change this assignment.
-      </p>
+      <p className="mb-6 max-w-prose text-ink-2">Later edits won&apos;t change this assignment.</p>
       <PracticeNote exposure={exposure} />
       {classes === null ? (
         <p role="alert" className="text-ink-2">
@@ -66,7 +63,6 @@ export function AssignPanel({
         <EmptyState
           level={2}
           heading="No class to assign to yet"
-          body="Create a class first, then come back here to assign this to it."
           action={{ href: CLASSES_PATH, label: "Create a class" }}
         />
       ) : (

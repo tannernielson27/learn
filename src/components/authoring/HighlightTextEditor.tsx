@@ -70,7 +70,7 @@ export function HighlightTextEditor({
       setMarkNote("Select a phrase in the passage first. It cannot overlap another span.");
       return;
     }
-    setMarkNote(`Marked a span. Choose whether it is correct below.`);
+    setMarkNote("Marked.");
     setValue("passage", result.text, DIRTY);
   }
 
@@ -134,17 +134,12 @@ export function HighlightTextEditor({
         <label htmlFor={`${ids}-passage`} className="text-sm font-medium text-ink-1">
           Passage
         </label>
-        <p id={`${ids}-passage-help`} className="text-sm text-ink-2">
-          Select a phrase and choose Mark span.
-        </p>
         <textarea
           id={`${ids}-passage`}
           rows={6}
           className={fieldClass}
           aria-invalid={hasIssue("passage") ? true : undefined}
-          aria-describedby={[`${ids}-passage-help`, describedBy("passage")]
-            .filter(Boolean)
-            .join(" ")}
+          aria-describedby={describedBy("passage")}
           {...passageField}
           ref={(element) => {
             passageField.ref(element);

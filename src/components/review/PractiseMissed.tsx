@@ -14,7 +14,7 @@ export interface PractiseMissedProps {
   className?: string;
 }
 
-export const PRACTICE_NEVER_GRADED = "Practice is never graded. Your score here stays as it is.";
+export const PRACTICE_NEVER_GRADED = "Not graded.";
 
 /**
  * "Practise the N I missed" (owner decision 6): a new practice run of only those questions. The

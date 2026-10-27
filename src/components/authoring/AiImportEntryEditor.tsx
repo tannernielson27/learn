@@ -120,9 +120,6 @@ export function AiImportEntryEditor({
         <Badge data-testid="entry-status">{STATUS_LABELS[status]}</Badge>
       </div>
       <div className="mb-6 flex max-w-prose flex-col gap-3">
-        <p className="text-sm text-ink-2">
-          Nothing reaches the quiz until the import. Save brings your changes back to the review.
-        </p>
         {reasons.length > 0 ? (
           <ul
             aria-label="What to check"
@@ -153,7 +150,6 @@ export function AiImportEntryEditor({
           <p id={askId} className="text-sm font-medium text-ink-1">
             This question has unsaved changes
           </p>
-          <p className="text-sm text-ink-2">Stay to save them, or discard them and leave.</p>
           <div className="flex flex-wrap gap-2">
             <Button
               size="sm"

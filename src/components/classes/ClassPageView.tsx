@@ -152,7 +152,6 @@ export function ClassPageView({
         <div className="min-w-0">
           <PracticeSection
             headingClassName={HEADING}
-            intro="The class sees each answer and rationale as it practices a shared quiz."
             shares={shares}
             options={banks}
             list={{

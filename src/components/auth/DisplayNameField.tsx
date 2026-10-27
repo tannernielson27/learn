@@ -1,6 +1,6 @@
 import type { Ref } from "react";
 import { fieldClasses } from "@/components/ui/fieldClasses";
-import { ACCOUNT_NAME_HINT, ACCOUNT_NAME_MAX_LENGTH } from "@/lib/auth/displayName";
+import { ACCOUNT_NAME_MAX_LENGTH } from "@/lib/auth/displayName";
 
 export interface DisplayNameFieldProps {
   id: string;
@@ -12,7 +12,7 @@ export interface DisplayNameFieldProps {
    */
   value?: string;
   onValueChange?: (value: string) => void;
-  /** Shown under the field and read with it: who sees the name. */
+  /** Shown under the field and read with it, when the form needs one. None by default. */
   hint?: string;
   /** The id of the error message that describes this field, when there is one. */
   errorId?: string;
@@ -30,14 +30,14 @@ export function DisplayNameField({
   defaultValue,
   value,
   onValueChange,
-  hint = ACCOUNT_NAME_HINT,
+  hint,
   errorId,
   invalid = false,
   autoFocus = false,
   inputRef,
 }: DisplayNameFieldProps) {
-  const hintId = `${id}-hint`;
-  const describedBy = [hintId, errorId].filter(Boolean).join(" ");
+  const hintId = hint ? `${id}-hint` : undefined;
+  const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
 
   return (
     <div className="flex flex-col gap-2">
@@ -61,9 +61,11 @@ export function DisplayNameField({
         aria-describedby={describedBy}
         className={fieldClasses("h-13 px-3.5 text-lg")}
       />
-      <p id={hintId} className="text-sm text-ink-2">
-        {hint}
-      </p>
+      {hint ? (
+        <p id={hintId} className="text-sm text-ink-2">
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 }

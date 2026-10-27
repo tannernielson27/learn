@@ -35,7 +35,7 @@ export function JoinWorkspaceButton({ action, heading, email }: JoinWorkspaceBut
         {heading}
       </h1>
       <p className={AUTH_SUBLINE}>
-        You are signed in as {email}. Joining makes this account a teacher in the workspace.
+        Signed in as {email}. Joining makes this account a teacher here.
       </p>
       <form action={formAction} className="flex flex-col gap-3">
         {state.status === "error" ? <FormError>{state.error}</FormError> : null}

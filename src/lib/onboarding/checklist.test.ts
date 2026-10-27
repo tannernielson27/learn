@@ -39,12 +39,12 @@ describe("checklistSteps", () => {
   });
 
   // #283: the sample arrives published, so no step tells the author to publish it first.
-  it("says the sample is ready to use, and asks for publishing only of the teacher's own questions", () => {
-    const [bank, , assign] = checklistSteps({ ...EMPTY, banks: [SAMPLE] });
-    expect(bank!.hint).toContain("published and ready to use");
-    expect(bank!.hint).not.toContain("drafts");
-    expect(assign!.hint).not.toMatch(/only published/i);
-    expect(assign!.hint).toContain("Questions you write are used once you publish them");
+  it("says what the sample holds in one short line, and asks for no publishing", () => {
+    const [bank, klass, assign] = checklistSteps({ ...EMPTY, banks: [SAMPLE] });
+    expect(bank!.hint).toBe("One of every question type.");
+    expect(klass!.hint).toBeUndefined();
+    expect(assign!.hint).toBe("Do either from a quiz.");
+    expect(assign!.hint).not.toMatch(/publish/i);
   });
 
   // #416: one line a step, in the glossary's words.

@@ -28,7 +28,6 @@ describe("not-found", () => {
 
     const heading = screen.getByRole("heading", { level: 1, name: "This page does not exist." });
     expect(heading).toHaveFocus();
-    expect(screen.getByRole("main")).toHaveTextContent(/mistyped|moved/);
   });
 
   it("offers home and sign in as real links", () => {

@@ -9,9 +9,8 @@ describe("HostRecord (#335)", () => {
   it("shows the instructor the whole staged record, marked with the class's step", () => {
     render(<HostRecord record={ehrRecordSchema.parse(stagedEhr)} position={2} />);
     expect(screen.getByTestId("host-record")).toHaveTextContent("Patient record· Step 2");
-    expect(screen.getByTestId("record-note")).toHaveTextContent(
-      "Full patient record. The class is on step 2, and phones show only what step 2 has reached.",
-    );
+    // The summary says the step, so no note under it says it again.
+    expect(screen.queryByTestId("record-note")).toBeNull();
     // The whole record: the labs, locked on a phone at step 2, are open here.
     const labs = screen.getByRole("tab", { name: "Lab Results", hidden: true });
     expect(labs).not.toHaveAttribute("aria-disabled");
@@ -39,7 +38,7 @@ describe("HostRecord in a quiz that plays case studies in place (#469)", () => {
       /^Patient record: Ectopic pregnancy(?!·)/,
     );
     expect(screen.getByTestId("record-note")).toHaveTextContent(
-      "Full patient record. Each phone shows only what the step on its screen has reached.",
+      "Each phone shows up to its own step.",
     );
   });
 });

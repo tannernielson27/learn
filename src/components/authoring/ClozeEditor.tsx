@@ -306,17 +306,12 @@ export function ClozeEditor<T extends ClozeType>({
         <label htmlFor={`${ids}-sentence`} className="text-sm font-medium text-ink-1">
           Sentence
         </label>
-        <p id={`${ids}-sentence-help`} className="text-sm text-ink-2">
-          Place the cursor and choose Insert blank.
-        </p>
         <textarea
           id={`${ids}-sentence`}
           rows={3}
           className={`font-mono ${fieldClass}`}
           aria-invalid={hasIssue("sentence") ? true : undefined}
-          aria-describedby={[`${ids}-sentence-help`, describedBy("sentence")]
-            .filter(Boolean)
-            .join(" ")}
+          aria-describedby={describedBy("sentence")}
           {...sentenceField}
           ref={(element) => {
             sentenceField.ref(element);

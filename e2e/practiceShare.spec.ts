@@ -103,10 +103,9 @@ test("share a bank for practice, be warned on assigning it, and stop sharing", a
   await stop.focus();
   await page.keyboard.press("Enter");
   await expect(
-    classPractice.getByText(
-      `Students in ${className} lose ${bankName} from practice at once. Answers they have already seen stay seen.`,
-      { exact: true },
-    ),
+    classPractice.getByText(`Students in ${className} lose ${bankName} from practice at once.`, {
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(classPractice.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
   await expectNoAxeViolations(page);

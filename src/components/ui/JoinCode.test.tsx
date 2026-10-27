@@ -29,7 +29,7 @@ describe("JoinCode", () => {
     expect(
       screen.getByRole("img", { name: "QR code for joining this live session" }),
     ).toBeVisible();
-    expect(screen.getByText("Or scan from the front rows")).toBeInTheDocument();
+    expect(screen.getByText("Or scan")).toBeInTheDocument();
     expect(screen.getByTestId("join-code")).toHaveClass("text-(length:--joincode-size-stage)");
   });
 

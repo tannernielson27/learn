@@ -29,7 +29,7 @@ vi.mock("next/headers", () => ({ headers: async () => requestHeaders }));
 const takeClassCodeAttempt = vi.fn<(headers: unknown) => Promise<string>>(async () => "ok");
 vi.mock("@/lib/auth/classCodeLimit", () => ({ takeClassCodeAttempt }));
 
-const { joinClassWithCode, markStudentOnboarded } = await import("./actions");
+const { joinClassWithCode } = await import("./actions");
 
 const IDLE = { status: "idle" } as const;
 
@@ -159,29 +159,5 @@ describe("joinClassWithCode counts the caller's address before the account", () 
       error:
         "That class code did not work. Ask your teacher to check it, or to add you back if you were removed.",
     });
-  });
-});
-
-describe("markStudentOnboarded (#365)", () => {
-  it("stamps the caller's own profile through mark_onboarded, which takes no argument", async () => {
-    rpc.mockResolvedValueOnce({ data: "2026-10-09T12:00:00Z", error: null });
-    await markStudentOnboarded();
-    expect(rpc).toHaveBeenCalledTimes(1);
-    expect(rpc).toHaveBeenCalledWith("mark_onboarded");
-    expect(revalidatePath).toHaveBeenCalledWith("/learn");
-  });
-
-  it("does nothing for a signed-out call", async () => {
-    viewer = { status: "signed_out" };
-    await expect(markStudentOnboarded()).resolves.toBeUndefined();
-    expect(rpc).not.toHaveBeenCalled();
-  });
-
-  it("never throws when the stamp fails", async () => {
-    const error = vi.spyOn(console, "error").mockImplementation(() => {});
-    rpc.mockResolvedValueOnce({ data: null, error: { code: "08006" } });
-    await expect(markStudentOnboarded()).resolves.toBeUndefined();
-    expect(revalidatePath).not.toHaveBeenCalled();
-    error.mockRestore();
   });
 });

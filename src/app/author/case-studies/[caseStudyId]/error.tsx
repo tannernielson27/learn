@@ -17,7 +17,7 @@ export default function CaseStudyError({ error, retry }: ErrorInfo) {
     <ReadingWidth>
       <RouteRecovery
         headline="The case study builder stopped working."
-        detail="Saved steps are safe. Try again to reload the builder; a step you had not saved may be lost."
+        detail="Saved steps are safe. Unsaved changes may be lost."
         onRetry={retry}
         digest={errorDigest(error)}
       />

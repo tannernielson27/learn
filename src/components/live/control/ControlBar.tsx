@@ -26,7 +26,7 @@ function question(command: AskedCommand, state: LiveSessionState) {
   return command === "end"
     ? {
         title: "End this live session?",
-        detail: "Students are disconnected and the join code stops working. You can't reopen it.",
+        detail: "Students are disconnected. You can't reopen it.",
         cancel: "Keep it open",
       }
     : {

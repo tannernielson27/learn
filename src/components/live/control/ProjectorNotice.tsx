@@ -25,10 +25,6 @@ export function ProjectorNotice({ projectorHref, onPresent }: ProjectorNoticePro
         <h2 id="projector-heading" className="font-semibold">
           Show the class the projector view
         </h2>
-        <p className="text-ink-2">
-          It has the join code, the question and the results, and never shows controls. Names show
-          only before you start.
-        </p>
         <div className="mt-2 flex flex-wrap gap-2">
           <a
             href={projectorHref}

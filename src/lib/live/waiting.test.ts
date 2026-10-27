@@ -16,7 +16,7 @@ const state = (over: Partial<LiveSessionState> = {}): LiveSessionState => ({
 describe("waitingCopy", () => {
   it("tells someone in the lobby that they are in and what happens next, in one line", () => {
     const copy = waitingCopy(state());
-    expect(copy.headline).toBe("You are in. Wait for your teacher to start.");
+    expect(copy.headline).toBe("You’re in.");
     expect(copy.progress).toBeNull();
   });
 

@@ -50,7 +50,7 @@ export function GetStarted({ steps, importSample, hide }: GetStartedProps) {
                   {step.done ? "Done" : "Not done"}
                 </span>
               </p>
-              <p className="max-w-prose text-sm text-ink-2">{step.hint}</p>
+              {step.hint ? <p className="max-w-prose text-sm text-ink-2">{step.hint}</p> : null}
               <StepActions step={step} importSample={importSample} />
             </div>
           </li>

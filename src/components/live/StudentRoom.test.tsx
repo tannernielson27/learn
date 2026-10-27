@@ -148,9 +148,7 @@ describe("StudentRoom: waiting", () => {
 
   it("waits in the lobby with the sentence every other screen uses", () => {
     setup();
-    expect(
-      screen.getByRole("heading", { name: "You are in. Wait for your teacher to start." }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "You’re in." })).toBeInTheDocument();
   });
 
   it("says when the session has ended, and shows no item", () => {
@@ -343,6 +341,28 @@ describe("StudentRoom: answering the item", () => {
     expect(screen.getByRole("checkbox", { name: /Respiratory rate 28/ })).toBeChecked();
     expect(screen.queryAllByText("Incorrect")).toHaveLength(0);
     expect(document.querySelectorAll("[data-feedback-mark]")).toHaveLength(0);
+  });
+
+  it("moves focus to the Answer sent panel after Submit, rather than dropping it on the page", async () => {
+    const user = userEvent.setup();
+    const room = setup();
+    room.push({ state: running(), item: KEYLESS });
+    await renderersLoaded();
+
+    await user.click(screen.getByRole("checkbox", { name: /Respiratory rate 28/ }));
+    await user.click(screen.getByRole("button", { name: /^Submit$/ }));
+
+    // The button pressed is gone; a screen reader is put on what it produced, as QuestionShell does.
+    await waitFor(() => expect(screen.getByTestId("answer-sent")).toHaveFocus());
+  });
+
+  it("does not take focus for an answer sent before the page was opened", async () => {
+    const room = setup();
+    room.push({ state: running(), item: KEYLESS, answered: answeredWith() });
+    await renderersLoaded();
+
+    expect(screen.getByTestId("answer-sent")).toBeInTheDocument();
+    expect(screen.getByTestId("answer-sent")).not.toHaveFocus();
   });
 
   it("takes a double submit the server refused as the answer already being in", async () => {
@@ -603,6 +623,39 @@ describe("StudentRoom: the reveal", () => {
     room.push({ state: running({ reveal: true }), item: KEYLESS, answered: null, revealed: null });
     expect(screen.getByText("The answer is showing.")).toBeInTheDocument();
     expect(document.body.textContent).not.toContain("Tachypnea, hypoxemia");
+  });
+});
+
+describe("StudentRoom: what a screen reader hears as the room moves", () => {
+  const announced = () => screen.getByTestId("phone-announcement");
+
+  it("has one polite live region, there from the first paint and quiet in the lobby", () => {
+    setup();
+    expect(announced()).toHaveAttribute("aria-live", "polite");
+    expect(announced()).toHaveTextContent("");
+  });
+
+  it("says a new question has arrived, then that the answer is showing, then the end", async () => {
+    const room = setup();
+    room.push({ state: running(), item: KEYLESS });
+    await renderersLoaded();
+    expect(announced()).toHaveTextContent("Answer the question on your screen.");
+
+    room.push({
+      state: running({ reveal: true }),
+      item: KEYLESS,
+      answered: null,
+      revealed: revealFor(null),
+    });
+    await renderersLoaded();
+    expect(announced()).toHaveTextContent("The answer is on your screen.");
+
+    room.push({ state: running({ position: 2 }), item: { ...KEYLESS, id: "next-item" } });
+    await renderersLoaded();
+    expect(announced()).toHaveTextContent("Answer the question on your screen.");
+
+    room.push({ state: state({ status: "ended", position: 2 }), item: null });
+    expect(announced()).toHaveTextContent("Your teacher has ended the live session.");
   });
 });
 

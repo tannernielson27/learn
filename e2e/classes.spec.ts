@@ -14,6 +14,10 @@ function studentEmail(label: string): string {
 }
 
 async function expectNoAxeViolations(page: Page): Promise<void> {
+  // Right after an in-place update the document can briefly have no <title>, and axe run in that
+  // window reports document-title; CI saw it on tablet-768, passing on retry. Wait for the title
+  // first: a page that never gets one still fails here.
+  await expect(page).toHaveTitle(/\S/);
   const axe = await new AxeBuilder({ page }).analyze();
   expect(axe.violations).toEqual([]);
 }

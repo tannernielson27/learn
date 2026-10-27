@@ -24,7 +24,6 @@ export default function HelpIndex() {
       <header>
         <p className="eyebrow">Help</p>
         <h1 className="mt-2 font-read text-display leading-tight text-ink-1">Using LeaRN</h1>
-        <p className="measure mt-3 text-lg text-ink-2">Two guides for teachers.</p>
       </header>
 
       <ul className="flex flex-col divide-y divide-line border-y border-line">
@@ -48,8 +47,7 @@ export default function HelpIndex() {
               <TextLink href="/join" kind="inline">
                 Join
               </TextLink>{" "}
-              and type the six-character join code on the screen, or scan its QR code. You need no
-              account.
+              and type the code, or scan the QR code. No account needed.
             </dd>
           </div>
           <div id="students-class" className="scroll-mt-4">
