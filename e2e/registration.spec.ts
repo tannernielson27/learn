@@ -175,7 +175,7 @@ test("a stranger becomes a teacher, and another stranger becomes their student, 
   const otherName = `Grace Hopper ${stamp}`;
   await signUp(other, "teacher", otherName, address(`reg-other-${project}`));
   await expect(other).toHaveURL(/\/author$/);
-  await other.getByRole("button", { name: "Skip", exact: true }).click();
+  await other.getByRole("button", { name: "Close", exact: true }).click();
   await expect(other.getByRole("dialog")).toHaveCount(0);
   await expect(
     other.getByRole("heading", { level: 2, name: "No quizzes yet", exact: true }),

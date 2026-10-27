@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import type { WelcomeStep } from "@/lib/onboarding/teacherWelcome";
 
@@ -23,6 +24,8 @@ export interface WelcomeDialogProps {
  * `onDone` is called in the background, and focus goes to `focusAfter`, which is what the last
  * step points at. Closing never waits on the server: if recording fails, the worst case is that
  * the welcome shows once more.
+ *
+ * A welcome of one step is a plain dialog with its one button: no "Step 1 of 1", Skip or Next.
  */
 export function WelcomeDialog({ steps, finishLabel, onDone, focusAfter }: WelcomeDialogProps) {
   const [open, setOpen] = useState(true);
@@ -52,21 +55,29 @@ export function WelcomeDialog({ steps, finishLabel, onDone, focusAfter }: Welcom
     });
   };
 
+  const foot =
+    steps.length === 1
+      ? {
+          actions: (
+            <Button variant="primary" onClick={end}>
+              {finishLabel}
+            </Button>
+          ),
+        }
+      : {
+          steps: {
+            current,
+            total: steps.length,
+            onNext: () => setCurrent((n) => Math.min(n + 1, steps.length)),
+            onBack: () => setCurrent((n) => Math.max(n - 1, 1)),
+            onFinish: end,
+            onSkip: end,
+            finishLabel,
+          },
+        };
+
   return (
-    <Dialog
-      open={open}
-      onClose={end}
-      title={step.title}
-      steps={{
-        current,
-        total: steps.length,
-        onNext: () => setCurrent((n) => Math.min(n + 1, steps.length)),
-        onBack: () => setCurrent((n) => Math.max(n - 1, 1)),
-        onFinish: end,
-        onSkip: end,
-        finishLabel,
-      }}
-    >
+    <Dialog open={open} onClose={end} title={step.title} {...foot}>
       <div className="flex max-w-prose flex-col gap-3 text-ink-1">
         {step.body.map((paragraph) => (
           <p key={paragraph}>{paragraph}</p>

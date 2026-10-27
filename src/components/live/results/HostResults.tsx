@@ -60,20 +60,15 @@ export function HostResults({
           {hidden ? "Show results" : "Hide results"}
         </Button>
       </div>
-      <div id="results-body">
-        {hidden ? (
-          <p className="text-base text-ink-2">Results are hidden.</p>
-        ) : current === null ? (
+      {/* min-h-6 holds the line "No answers yet." takes, so hiding results does not jump. */}
+      <div id="results-body" className="min-h-6">
+        {hidden ? null : current === null ? (
           <p className="text-base text-ink-2">No answers yet.</p>
         ) : (
           <RoomResults distribution={current} revealed={revealed} />
         )}
       </div>
-      {revealed || hidden ? null : (
-        <p className="text-sm text-ink-2">
-          Only you see these counts. The projector shows them when you show the answer.
-        </p>
-      )}
+      {revealed || hidden ? null : <p className="text-sm text-ink-2">Only you see these.</p>}
     </section>
   );
 }

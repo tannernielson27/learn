@@ -151,7 +151,12 @@ describe("AssignmentReportView, while open", () => {
     renderView("items", false);
     expect(screen.queryByRole("table")).toBeNull();
     const section = screen.getByRole("region", { name: "Questions" });
-    expect(within(section).getByText(/Scores show once the assignment closes/)).toBeVisible();
+    expect(within(section).getByText("Scores show after it closes.")).toBeVisible();
+  });
+
+  it("says once, over the progress, that scores wait for the close", () => {
+    renderView("students", false);
+    expect(screen.getAllByText("Scores show after it closes.")).toHaveLength(1);
   });
 });
 

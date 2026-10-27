@@ -142,7 +142,7 @@ test("an instructor starts a session from a bank, sees a six-character code, and
   await expect(student.getByText("This live session has ended.")).toBeVisible({ timeout: 15_000 });
   await student.close();
 
-  // The ended page strikes the code through and points at the report.
+  // The ended page points at the report.
   await expect(page.getByRole("link", { name: "Open the report", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "End live session", exact: true })).toHaveCount(0);
   await expectNoAxeViolations(page);

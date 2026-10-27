@@ -389,9 +389,7 @@ describe("HostLobby: asking before a move that cannot be taken back", () => {
     await fake.user.click(button("End live session"));
     expect(fake.ran).toEqual([]);
     const ask = screen.getByRole("dialog", { name: "End this live session?" });
-    expect(ask).toHaveTextContent(
-      "Students are disconnected and the join code stops working. You can't reopen it.",
-    );
+    expect(ask).toHaveTextContent("Students are disconnected. You can't reopen it.");
     expect(ask).toContainElement(document.activeElement as HTMLElement);
   });
 
@@ -540,9 +538,7 @@ describe("HostLobby: the item timer (#182)", () => {
       "90 seconds",
       "2 minutes",
     ]);
-    expect(
-      screen.getByText("You can add time or stop the timer during a question."),
-    ).toBeInTheDocument();
+    expect(select).not.toHaveAttribute("aria-describedby");
 
     await fake.user.selectOptions(select, "30 seconds");
     await waitFor(() => expect(fake.ran).toEqual(["set_timer:30"]));

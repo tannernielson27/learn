@@ -147,7 +147,7 @@ describe("route error boundaries", () => {
     renderInSegment(HostError);
 
     const alert = screen.getByRole("alert");
-    expect(alert).toHaveTextContent("The live session is not affected");
+    expect(alert).toHaveTextContent("Students are still in.");
     expect(alert).not.toHaveTextContent(/still running/);
     expect(screen.getByRole("link", { name: "Back to live sessions" })).toHaveAttribute(
       "href",

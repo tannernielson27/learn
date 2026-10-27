@@ -15,7 +15,6 @@ import { textLinkClasses } from "@/components/ui/TextLink";
 import type { LiveSessionState } from "@/lib/live";
 import type { CaseStudyRun } from "@/lib/live/caseStudyRuns";
 import { reportPath } from "@/lib/live/reportFormat";
-import { formatSessionCode } from "@/lib/live/sessionCode";
 import type { ControlView as ControlViewData } from "@/lib/live/views";
 import type { EhrRecord } from "@/lib/ngn/schemas";
 import { ControlBar, questions } from "./ControlBar";
@@ -100,12 +99,7 @@ export function ControlView(props: ControlViewProps) {
         <p aria-hidden="true" className="font-read text-2xl break-words text-ink-1 sm:hidden">
           {title}
         </p>
-        {connection === "connected" ? null : (
-          <Notice icon={WifiOff} title="Reconnecting">
-            Live updates are paused on this screen. The live session is still open, and students
-            stay in it.
-          </Notice>
-        )}
+        {connection === "connected" ? null : <Notice icon={WifiOff} title="Reconnecting" />}
         {error === null ? null : (
           <Notice role="alert" title="That did not go through">
             {error}
@@ -155,17 +149,11 @@ function Phase(props: ControlViewProps) {
   if (view.phase === "ended") {
     return (
       <section aria-labelledby="ended-heading" className="flex max-w-2xl flex-col gap-4">
-        <p className="eyebrow">Live session ended</p>
         <h2 id="ended-heading" className="font-read text-3xl text-ink-1">
           This live session has ended.
         </h2>
         <p className="text-ink-2">
-          {questions(view.summary.questionsRun)} run · {view.summary.joined} in this session. The
-          join code{" "}
-          <span data-testid="join-code" className="font-mono text-ink-2 line-through">
-            {formatSessionCode(code)}
-          </span>{" "}
-          no longer works.
+          {questions(view.summary.questionsRun)} run · {view.summary.joined} in this session.
         </p>
         <p>
           <Link href={reportPath(sessionId)} className={textLinkClasses()}>

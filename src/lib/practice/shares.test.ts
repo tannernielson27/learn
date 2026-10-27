@@ -70,9 +70,9 @@ describe("sharedBadge", () => {
 });
 
 describe("stopSharingWarning", () => {
-  it("says the bank leaves practice now and that seen answers stay seen", () => {
+  it("says the bank leaves practice now", () => {
     expect(stopSharingWarning("NUR 310", "Cardiac week")).toBe(
-      "Students in NUR 310 lose Cardiac week from practice at once. Answers they have already seen stay seen.",
+      "Students in NUR 310 lose Cardiac week from practice at once.",
     );
   });
 });

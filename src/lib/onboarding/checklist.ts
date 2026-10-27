@@ -24,8 +24,8 @@ export type StepId = "bank" | "class" | "assign";
 export interface ChecklistStep {
   id: StepId;
   title: string;
-  /** One line on what the step means and where it is done. */
-  hint: string;
+  /** One short line where the title and link need it, or none. */
+  hint?: string;
   done: boolean;
   /** Where the step is done, or null when there is nowhere to go yet. */
   href: string | null;
@@ -46,7 +46,7 @@ export function checklistSteps(progress: OrgProgress): ChecklistStep[] {
     {
       id: "bank",
       title: "Create a quiz or import the sample",
-      hint: "The sample has one question of every type and a case study, published and ready to use.",
+      hint: "One of every question type.",
       done: progress.banks.length > 0,
       href: "#new-bank-heading",
       linkLabel: "Write your own",
@@ -55,7 +55,6 @@ export function checklistSteps(progress: OrgProgress): ChecklistStep[] {
     {
       id: "class",
       title: "Create a class",
-      hint: "Students join with its class code or invite link.",
       done: progress.hasClass,
       href: CLASSES_PATH,
       linkLabel: "Go to your classes",
@@ -64,9 +63,7 @@ export function checklistSteps(progress: OrgProgress): ChecklistStep[] {
     {
       id: "assign",
       title: "Assign a quiz or start a live session",
-      hint: latest
-        ? "Do either from a quiz. Questions you write are used once you publish them."
-        : "You need a quiz first.",
+      hint: latest ? "Do either from a quiz." : "You need a quiz first.",
       done: progress.hasAssignmentOrSession,
       href: latest ? `/author/banks/${latest.id}` : null,
       linkLabel: latest ? `Open ${latest.name}` : "",

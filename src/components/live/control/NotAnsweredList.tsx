@@ -37,7 +37,7 @@ export function NotAnsweredList({ people }: NotAnsweredListProps) {
       {people === null ? (
         <p className="px-5 py-3 text-sm text-ink-2">Checking who has answered.</p>
       ) : people.length === 0 ? (
-        <p className="px-5 py-3 text-sm text-ink-2">Everyone in this session has answered.</p>
+        <p className="px-5 py-3 text-sm text-ink-2">Everyone has answered.</p>
       ) : (
         <ul className="min-h-0 overflow-y-auto">
           {shown.map((person) => (

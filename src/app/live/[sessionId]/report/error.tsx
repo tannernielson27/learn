@@ -17,7 +17,7 @@ export default function ReportError({ error, retry }: ErrorInfo) {
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
       <RouteRecovery
         headline="The report couldn't be loaded."
-        detail="The answers are saved. Try again."
+        detail="The answers are saved."
         onRetry={retry}
         digest={errorDigest(error)}
       >

@@ -34,9 +34,8 @@ export function HostRecord({ record, position, title, paced = false }: HostRecor
   // console has never shown it: it stays as it was.
   if (!isStagedRecord(record)) return null;
   const step = stepAtPosition(position);
-  const note = paced
-    ? "Full patient record. Each phone shows only what the step on its screen has reached."
-    : `Full patient record. The class is on step ${step}, and phones show only what step ${step} has reached.`;
+  // The summary already says which step the class is on; a paced room has no class step.
+  const note = paced ? "Each phone shows up to its own step." : undefined;
 
   return (
     <details data-testid="host-record" className="rounded-md border border-line bg-surface-1">

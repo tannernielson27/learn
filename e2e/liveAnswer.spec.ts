@@ -275,7 +275,7 @@ async function readTheReport(page: Page, bankName: string) {
   await expect(page).toHaveURL(/\?view=steps$/);
   // The item written above carries no step, so the view says why it is empty.
   await expect(
-    page.getByText(/No question in this live session is tagged with a clinical judgment step/),
+    page.getByText("No questions are tagged with a clinical judgment step.", { exact: true }),
   ).toBeVisible();
   await expectNoAxeViolations(page);
 
