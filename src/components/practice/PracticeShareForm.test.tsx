@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -47,8 +47,10 @@ describe("PracticeShareForm", () => {
     await user.click(screen.getByRole("button", { name: "Share for practice" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("no longer exists");
     const select = screen.getByRole("combobox", { name: "Class" });
-    expect(select).toHaveFocus();
     expect(select).toHaveAttribute("aria-invalid", "true");
+    // The alert is in the DOM as soon as React commits, but focus moves in the effect that runs
+    // after the commit; on a busy machine findByRole can resolve in between.
+    await waitFor(() => expect(select).toHaveFocus());
   });
 
   it("says why there is nothing to choose", () => {
