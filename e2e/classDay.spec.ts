@@ -24,10 +24,10 @@ import { skipWelcomes } from "./welcome";
 
 // Class day, end to end (owner's live session for about 70 students on phones, 2026-10-27): a
 // teacher starts a live session of a short quiz for their class, a signed-in member of the class
-// and a guest join on phones, a timed question runs out, a second ends early because everyone
-// answered, the teacher pauses and resumes the room, the projector holds a long question with six
-// options at 1280x720, the answer is shown, the session ends on the podium, and afterwards the
-// class's Progress tab and the member's own home have the session while the guest is nowhere.
+// and a guest join on phones, a timed question runs out, the projector holds a long question with
+// six options at 1280x720, the teacher pauses and resumes the room, the second question ends early
+// and shows its answer because everyone answered, the session ends on the podium, and afterwards
+// the class's Progress tab and the member's own home have the session while the guest is nowhere.
 // Throughout, neither phone is handed a key, a mark or a rationale before the answer is shown;
 // the control is the same route after the reveal. Needs the local Supabase stack with Realtime;
 // CI runs it in the `auth-e2e` job.
@@ -314,9 +314,7 @@ test("class day: a timed live session for a class, on phones and the projector, 
     timeout: 15_000,
   });
   for (const phone of phones) {
-    await expect(
-      phone.getByText("You are in. Wait for your teacher to start.", { exact: true }),
-    ).toBeVisible();
+    await expect(phone.getByText("You’re in.", { exact: true })).toBeVisible();
   }
 
   // 3a. Thirty seconds a question, chosen in the lobby; question 1 is left to run out.
@@ -430,23 +428,23 @@ test("class day: a timed live session for a class, on phones and the projector, 
   await expect(memberPick).toBeChecked();
   await expect(guestPick).toBeChecked();
 
-  // 3b. Everyone present answers, and the timer ends early by itself.
+  // 3b. Everyone present answers, and the timer ends early by itself and the answer shows (#507).
   await submitKeyless(member.page);
+  // Still before the reveal, after one answer: nothing keyed yet. Checked before the last answer,
+  // since the last one reveals by itself.
+  await expectPhoneKeyless(guest, new URL(guest.url()).pathname, Q2_STEM_START);
   await submitKeyless(guest);
   await expect(page.getByTestId("answer-count")).toHaveText("2 of 2 answered", {
     timeout: 15_000,
   });
   await expect(
-    page.getByRole("status").filter({ hasText: "Everyone answered. Timer ended." }),
+    page.getByRole("status").filter({ hasText: "Everyone answered. Answer showing." }),
   ).toBeVisible({ timeout: 20_000 });
   for (const phone of [...phones, stage]) {
     await expect(phone.getByTestId("countdown")).toHaveCount(0, { timeout: 15_000 });
   }
-  // Still before the reveal, after both answers: nothing keyed yet.
-  await expectPhoneKeyless(guest, new URL(guest.url()).pathname, Q2_STEM_START);
 
-  // 6. The reveal, and its control: now the view route carries question 2's key and rationale.
-  await page.getByRole("button", { name: "Show answer", exact: true }).click();
+  // 6. The reveal: now the view route carries question 2's key and rationale.
   for (const phone of phones) {
     await expect(phone.getByRole("complementary", { name: "Score", exact: true })).toBeVisible({
       timeout: 15_000,
