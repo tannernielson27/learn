@@ -157,9 +157,7 @@ test.describe("live session on a phone", () => {
     );
 
     // Waiting for the teacher.
-    await expect(
-      phone.getByText("You are in. Wait for your teacher to start.", { exact: true }),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(phone.getByText("You’re in.", { exact: true })).toBeVisible({ timeout: 15_000 });
     await checkScreen(phone, testInfo, "phone-waiting");
 
     const perItem = page.getByRole("combobox", { name: "Time per question", exact: true });
