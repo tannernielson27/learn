@@ -64,22 +64,13 @@ export interface AiImportEntryPreviewProps {
 
 export function AiImportEntryPreview({ kind, item, label }: AiImportEntryPreviewProps) {
   if (item === null || item === undefined) {
-    return (
-      <p className="text-sm text-ink-2">
-        This question could not be built from the document, so it cannot be shown yet. Its source is
-        below.
-      </p>
-    );
+    return <p className="text-sm text-ink-2">Can&apos;t preview yet.</p>;
   }
 
   if (kind === "case_study") {
     const parsed = caseStudySchema.safeParse(item);
     if (!parsed.success) {
-      return (
-        <p className="text-sm text-ink-2">
-          This case study is missing answers, so it cannot be shown step by step yet.
-        </p>
-      );
+      return <p className="text-sm text-ink-2">Can&apos;t preview yet.</p>;
     }
     const caseStudy = parsed.data;
     return (
@@ -105,25 +96,17 @@ export function AiImportEntryPreview({ kind, item, label }: AiImportEntryPreview
   const parsed = itemSchema.safeParse(item);
   if (parsed.success) return <KeyedItem item={parsed.data} label={label} />;
   if (!drawable(item)) {
-    return (
-      <p className="text-sm text-ink-2">
-        This question is not complete, so it cannot be shown yet. Its source is below.
-      </p>
-    );
+    return <p className="text-sm text-ink-2">Can&apos;t preview yet.</p>;
   }
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-sm text-ink-2">No key yet. This is how students will see it.</p>
+      <p className="text-sm text-ink-2">No key yet.</p>
       <UnkeyedItem item={item as Record<string, unknown>} label={label} />
     </div>
   );
 }
 
-const CANNOT_DRAW = (
-  <p className="text-sm text-ink-2">
-    This question cannot be drawn until it is fixed. Its source is below.
-  </p>
-);
+const CANNOT_DRAW = <p className="text-sm text-ink-2">Can&apos;t preview yet.</p>;
 
 const noSubscription = () => () => {};
 

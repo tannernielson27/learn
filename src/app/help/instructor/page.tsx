@@ -100,12 +100,9 @@ export default function InstructorGuide() {
 
       <Section id="sign-in">
         <Topic id="sign-up" title="Create your account">
-          <Steps>
-            <li>
-              Open <Ui>Create an account</Ui> and choose <Ui>I teach</Ui>.
-            </li>
-            <li>Type your name, your email address and a password.</li>
-          </Steps>
+          <p>
+            Open <Ui>Create an account</Ui> and choose <Ui>I teach</Ui>.
+          </p>
           <p>You are signed in at once, in a workspace no other teacher can see.</p>
           <p>
             Confirm your address from the email that follows. It is what lets you back in if you
@@ -113,9 +110,6 @@ export default function InstructorGuide() {
           </p>
         </Topic>
         <Topic id="password" title="Sign in, or reset your password">
-          <p>
-            Open <Ui>Sign in</Ui> and type your email address and password.
-          </p>
           <List>
             <li>
               Forgot it? Press <Ui>Forgot your password?</Ui>, then <Ui>Email me a sign-in link</Ui>
@@ -125,12 +119,7 @@ export default function InstructorGuide() {
               <Ui>Sign in with an emailed link instead</Ui> signs you in without a password.
             </li>
             <li>
-              To change your password, open the account menu (your initials, top right), choose{" "}
-              <Ui>Account</Ui> and press <Ui>Change your password</Ui>.
-            </li>
-            <li>
-              The account menu also holds <Ui>Help</Ui>, the theme (<Ui>System</Ui>, <Ui>Light</Ui>{" "}
-              or <Ui>Dark</Ui>) and <Ui>Sign out</Ui>.
+              Change your password under <Ui>Account</Ui>.
             </li>
             <li>
               If no email arrives, check the spelling. The form never says whether an address has an
@@ -148,15 +137,10 @@ export default function InstructorGuide() {
       </Section>
 
       <Section id="banks">
-        <p>A quiz holds your questions and case studies.</p>
-        <Steps>
-          <li>
-            On your library, under <Ui>New quiz</Ui>, type a name.
-          </li>
-          <li>
-            Press <Ui>Create quiz</Ui>.
-          </li>
-        </Steps>
+        <p>
+          A quiz holds your questions and case studies. Create one under <Ui>New quiz</Ui> on your
+          library.
+        </p>
         <Topic id="folders" title="Folders, tags and search">
           <p>Sort a large quiz into folders, tag questions, and search by text or tag.</p>
         </Topic>
@@ -272,15 +256,9 @@ export default function InstructorGuide() {
       </Section>
 
       <Section id="classes">
-        <Steps>
-          <li>
-            Open <Ui>Classes</Ui>.
-          </li>
-          <li>
-            Type a <Ui>Class name</Ui> and press <Ui>Create class</Ui>.
-          </li>
-        </Steps>
-        <p>The class page shows an invite link, its QR code and an eight-character class code.</p>
+        <p>
+          Create a class under <Ui>Classes</Ui>.
+        </p>
         <Topic id="invite" title="Invite link and QR code">
           <p>
             A student opens the link, types their name and email address and chooses a password.
@@ -290,13 +268,13 @@ export default function InstructorGuide() {
         <Topic id="class-code" title="Class code">
           <p>
             A student who has an account, or creates one first, types it under <Ui>Join a class</Ui>
-            . It is two groups of four, so it is not mistaken for a live session&apos;s join code.
+            .
           </p>
         </Topic>
         <Topic id="time-zone" title="Time zone">
           <p>
-            Set it under <Ui>Settings</Ui> on the class page, so open and close times show in your
-            local time.
+            Set it under <Ui>Settings</Ui> on the class page. Open and close times show in the
+            class&apos;s time zone, for you and your students.
           </p>
         </Topic>
         <Topic id="class-progress" title="Progress">
@@ -362,10 +340,7 @@ export default function InstructorGuide() {
             In a quiz or a case study, choose <Ui>Teacher-paced</Ui> or <Ui>Student-paced</Ui> and
             press <Ui>Start a live session</Ui>.
           </li>
-          <li>
-            Put the lobby on the projector. Students go to the join page, type the six-character
-            join code or scan the QR code, and give a display name. They need no account.
-          </li>
+          <li>Put the lobby on the projector. Students join from it, no account needed.</li>
           <li>
             For the projector, press <Ui>Open in a new window</Ui> or{" "}
             <Ui>Present on this screen</Ui> in the lobby: that view shows no controls. On this
@@ -374,9 +349,6 @@ export default function InstructorGuide() {
           </li>
           <li>
             Set <Ui>Time per question</Ui> if you want a timer, then press <Ui>Start</Ui>.
-          </li>
-          <li>
-            Press <Ui>End live session</Ui> when you are done.
           </li>
         </Steps>
         <Topic id="pacing" title="Teacher-paced and student-paced">
@@ -438,12 +410,9 @@ export default function InstructorGuide() {
           In practice, students answer a quiz on their own and see the answer and rationale after
           each question. It is not graded.
         </p>
-        <Steps>
-          <li>
-            In the quiz, under <Ui>Practice</Ui>, choose <Ui>Share for practice</Ui>.
-          </li>
-          <li>Pick a class.</li>
-        </Steps>
+        <p>
+          In the quiz, under <Ui>Practice</Ui>, choose <Ui>Share for practice</Ui>.
+        </p>
         <p>
           Students find it under <Ui>Practice</Ui> on their home. <Ui>Stop sharing</Ui> closes it at
           once, including for students part-way through.

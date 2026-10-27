@@ -13,8 +13,6 @@ export interface TurnFolderIntoQuizButtonProps {
   folderName: string;
   /** The name the new quiz will have: the folder's, numbered if a quiz already has it. */
   quizName: string;
-  /** Whether the folder has folders inside it, whose content goes too. */
-  hasSubfolders: boolean;
   /** What stays with this quiz when questions leave it. */
   staysBehind: readonly string[];
 }
@@ -34,7 +32,6 @@ export function TurnFolderIntoQuizButton({
   action,
   folderName,
   quizName,
-  hasSubfolders,
   staysBehind,
 }: TurnFolderIntoQuizButtonProps) {
   const [open, setOpen] = useState(false);
@@ -74,7 +71,6 @@ export function TurnFolderIntoQuizButton({
     if (outcome && !outcome.ok) fail(outcome.message);
   }
 
-  const inside = hasSubfolders ? " and the folders inside it" : "";
   return (
     <>
       <div>
@@ -86,7 +82,7 @@ export function TurnFolderIntoQuizButton({
         open={open}
         onClose={close}
         title={`Turn "${folderName}" into a quiz?`}
-        description={`A new quiz, "${quizName}", goes beside this one in the library with everything in this folder${inside}. The new quiz has no folders inside it.`}
+        description={`Creates the quiz "${quizName}" with this folder's contents.`}
         actions={
           <>
             <Button variant="ghost" onClick={close}>

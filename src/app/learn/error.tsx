@@ -24,8 +24,9 @@ export default function LearnError({ error, retry }: ErrorInfo) {
       headline="This page could not be shown."
       detail={
         digest
-          ? "Try again to load it. If it keeps happening, pass on the reference below."
-          : "Try again to load it."
+          ? "Still broken? Share this reference:"
+          : // Without a reference, the line that says what to do keeps the alert from standing empty.
+            "Try again to load it."
       }
       onRetry={retry}
       digest={digest}

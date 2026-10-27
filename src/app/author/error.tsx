@@ -17,7 +17,7 @@ export default function AuthorError({ error, retry }: ErrorInfo) {
     <ReadingWidth>
       <RouteRecovery
         headline="This page could not be shown."
-        detail="Try again to load it. Changes you had not saved may be lost."
+        detail="Unsaved changes may be lost."
         onRetry={retry}
         digest={errorDigest(error)}
       />
