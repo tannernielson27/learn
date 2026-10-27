@@ -21,15 +21,13 @@ async function submit(user: ReturnType<typeof userEvent.setup>, email: string) {
 }
 
 describe("InviteColleagueForm", () => {
-  it("asks for one email address and says how long the link lasts", () => {
+  it("asks for one email address, with no hint under it", () => {
     setup({ status: "idle" });
     expect(field()).toHaveAttribute("type", "email");
     expect(field()).toHaveAttribute("name", "email");
     expect(field()).toBeRequired();
     expect(field()).toHaveAttribute("maxlength", "254");
-    expect(field()).toHaveAccessibleDescription(
-      "The link works for this address only and lasts 7 days.",
-    );
+    expect(field()).not.toHaveAttribute("aria-describedby");
     expect(screen.getAllByRole("textbox")).toHaveLength(1);
   });
 

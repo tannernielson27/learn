@@ -196,9 +196,7 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   await phone.getByRole("textbox", { name: "Display name", exact: true }).fill(PHONE_NAME);
   await phone.getByRole("button", { name: "Join", exact: true }).click();
   await expect(phone).toHaveURL(/\/play\/[0-9a-f-]{36}$/);
-  await expect(
-    phone.getByText("You are in. Wait for your teacher to start.", { exact: true }),
-  ).toBeVisible();
+  await expect(phone.getByText("You’re in.", { exact: true })).toBeVisible();
 
   // Presence arrives on the console with no reload.
   await expect(page.getByText(PHONE_NAME, { exact: true })).toBeVisible({ timeout: 15_000 });

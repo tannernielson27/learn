@@ -68,15 +68,9 @@ describe("removeColleague", () => {
 
 describe("removeWarning", () => {
   it("names the colleague and says plainly what happens", () => {
-    const warning = removeWarning("Mary Seacole");
-    expect(warning).toMatch(/^Mary Seacole loses access to this workspace at once/);
-    expect(warning).toContain("Everything they made here stays here.");
-    expect(warning).toContain("a new, empty workspace of their own");
-    expect(warning).toContain("Any live session they are running ends now");
-    expect(warning).toContain("revoked");
-    expect(warning).toContain("and so is any still waiting for them");
-    expect(warning).toContain("They are signed out everywhere");
-    expect(warning).toContain("Any teacher still in this workspace can invite them back.");
+    expect(removeWarning("Mary Seacole")).toBe(
+      "Mary Seacole loses access to this workspace. What they made stays here. You can invite them back.",
+    );
   });
 });
 

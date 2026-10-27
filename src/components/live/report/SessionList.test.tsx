@@ -51,7 +51,7 @@ describe("SessionList", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "No live sessions yet" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Start one from a quiz.")).toBeInTheDocument();
+    expect(document.querySelector("[data-empty-state] p")).toBeNull();
     expect(screen.getByRole("link", { name: "Go to your quizzes" })).toHaveAttribute(
       "href",
       "/author",

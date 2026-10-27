@@ -1,9 +1,10 @@
 /**
- * Ending the timer once everyone has answered, as Kahoot does: the rule, and the settle window.
+ * Ending the timer and showing the answer once everyone has answered, as Kahoot does: the rule,
+ * and the settle window.
  *
- * **What it sends.** Nothing new. The console sends the existing `stop_timer` — the "Stop timer"
- * button's own command — so the database's rules are the ones that already hold for that button,
- * and no migration is involved. It never reveals: the teacher still presses Show answer.
+ * **What it sends.** Nothing new. The console sends the existing `stop_timer` (the "Stop timer"
+ * button's command) and then `reveal` (the "Show answer" button's), so the database's rules are
+ * the ones that already hold for those buttons, and no migration is involved.
  *
  * **When.** A teacher-paced room, running, on a question with a clock that has not run out and is
  * not revealed, with at least one person in the roster and nobody left to answer *this* question.
@@ -25,7 +26,7 @@
 import { isStudentPaced, type LiveSessionState } from "./state";
 import type { ItemTimer } from "./timer";
 
-/** How long everyone must have answered before the timer is ended. */
+/** How long everyone must have answered before the timer is ended and the answer shown. */
 export const AUTO_STOP_SETTLE_MS = 1_500;
 
 /** What the console knows, person by person, about who has answered. */
@@ -70,7 +71,7 @@ export const AUTO_STOP_IDLE: AutoStopMemory = {
 export interface AutoStopInput {
   state: LiveSessionState;
   watch: AnswerWatch;
-  /** The teacher's setting on this device. */
+  /** False holds it off. The console always passes true: there is no setting. */
   enabled: boolean;
 }
 

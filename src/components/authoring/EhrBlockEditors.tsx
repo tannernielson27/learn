@@ -123,9 +123,6 @@ function TableBlockEditor({
     <div className="flex flex-col gap-3">
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm text-ink-1">Column headings</legend>
-        <p className="text-xs text-ink-2">
-          The first column heads each row. Leave it blank for measures by time.
-        </p>
         {block.columns.map((heading, column) => (
           <div key={column} className="flex flex-wrap items-end gap-2">
             <div className="flex min-w-0 flex-1 flex-col gap-1">

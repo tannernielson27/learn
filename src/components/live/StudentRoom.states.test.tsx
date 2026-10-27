@@ -101,14 +101,12 @@ describe("the phone's header on a question", () => {
     expect(screen.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
-  it("says the answer is showing in a badge, and when the next question comes", async () => {
+  it("says the answer is showing in a badge, and nothing more under the question", async () => {
     const room = setup(state());
     room.push({ state: state({ reveal: true }), item: KEYLESS, revealed: reveal(null) });
     await renderersLoaded();
     expect(within(screen.getByRole("banner")).getByText("Answer showing")).toBeInTheDocument();
-    expect(
-      screen.getByText("The next question appears when your teacher moves on."),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/when your teacher moves on/)).toBeNull();
   });
 });
 
@@ -150,7 +148,7 @@ describe("the end of the session on a phone", () => {
     const worth = screen.getByRole("region", { name: "Worth another look" });
     expect(worth).toHaveTextContent("Question 1 · Generate Solutions");
     expect(worth).toHaveTextContent("Not correct");
-    expect(screen.getByText("Your teacher has the full report.")).toBeInTheDocument();
+    expect(screen.queryByText("Live session ended")).toBeNull();
     expect(screen.getByRole("link", { name: "Join another live session" })).toHaveAttribute(
       "href",
       "/join",

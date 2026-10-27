@@ -35,7 +35,7 @@ export const TALLY_INTERVAL_MS = 3_000;
 /** What is in flight: a move, a timer button, a new time per item, or a jump (#183). */
 export type Pending = HostCommand | TimerCommand | "set_timer" | "goto";
 
-export const OFFLINE = "Live updates stopped. The live session is still open. Reload to catch up.";
+export const OFFLINE = "Live updates stopped. Reload to catch up.";
 const FAILED = "That did not go through. Try again.";
 
 const COMMANDS: Record<
@@ -90,6 +90,13 @@ export interface HostRoom {
    * window stopped it first). False when it did not go through; the clock then runs out as usual.
    */
   stopQuietly: () => Promise<boolean>;
+  /**
+   * `reveal` sent by the console itself once everyone has answered: no pending state and no error
+   * toast. True when the answer is showing, including when it already was (`already_revealed`:
+   * another window showed it first). False when it did not go through; the teacher's Show answer
+   * button is still there.
+   */
+  revealQuietly: () => Promise<boolean>;
   serverNow: () => number;
   askResults: LiveHostTransport["results"];
   askProgress: LiveHostTransport["progress"];
@@ -275,6 +282,17 @@ export function useHostRoom({
       return isLiveSessionError(refused) && refused.code === "no_timer";
     }
   }, []);
+  const revealQuietly = useCallback(async () => {
+    const console_ = transport.current;
+    if (console_ === null) return false;
+    try {
+      await opened.current;
+      setState(await console_.reveal());
+      return true;
+    } catch (refused) {
+      return isLiveSessionError(refused) && refused.code === "already_revealed";
+    }
+  }, []);
   /**
    * The session's clock for the countdown (#182): the database's, as the console measured it on
    * opening, so this screen and every phone count down to the same zero.
@@ -307,6 +325,7 @@ export function useHostRoom({
     jump,
     chooseTime,
     stopQuietly,
+    revealQuietly,
     serverNow,
     askResults,
     askProgress,

@@ -70,9 +70,7 @@ export function SignInPanel({
   return (
     <>
       {mode === "forgot" ? (
-        <p className="mb-4 text-ink-2">
-          We will email you a link that signs you in. Then you can choose a new password.
-        </p>
+        <p className="mb-4 text-ink-2">We’ll email you a link to reset it.</p>
       ) : null}
       <SignInForm
         // A new form for each mode: a link already sent for one must not show under the other.

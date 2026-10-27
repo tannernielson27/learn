@@ -75,9 +75,7 @@ test("a student whose room fails to render rejoins it, as the same participant, 
   await student.getByRole("button", { name: "Join", exact: true }).click();
   await expect(student).toHaveURL(/\/play\/[0-9a-f-]{36}$/);
   const roomUrl = student.url();
-  await expect(
-    student.getByText("You are in. Wait for your teacher to start.", { exact: true }),
-  ).toBeVisible();
+  await expect(student.getByText("You’re in.", { exact: true })).toBeVisible();
   await expect(page.getByTestId("present-count")).toHaveText("1 phone connected", {
     timeout: 15_000,
   });

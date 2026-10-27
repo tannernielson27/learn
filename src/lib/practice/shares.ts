@@ -38,7 +38,7 @@ export function sharedBadge(classNames: readonly string[]): string | null {
 
 /** What the Stop sharing confirmation says before it happens. */
 export function stopSharingWarning(className: string, bankName: string): string {
-  return `Students in ${className} lose ${bankName} from practice at once. Answers they have already seen stay seen.`;
+  return `Students in ${className} lose ${bankName} from practice at once.`;
 }
 
 /** The class (on the bank page) or the bank (on the class page) chosen in a share form. */

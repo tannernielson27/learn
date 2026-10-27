@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnswerSentLine } from "@/components/live/AnswerSentLine";
 import { LIVE_BUSY_LABEL, liveSubmitFailure } from "@/components/live/liveSubmit";
 import { PhoneHeader } from "@/components/live/phone/PhoneHeader";
@@ -123,6 +123,12 @@ export function StudentRoom(props: StudentRoomProps) {
 
   return (
     <div className="flex flex-1 flex-col">
+      {/* Always mounted, so a change is heard: the next question, the reveal and the end arrive
+          over the channel with nothing pressed, and nothing else on the phone says them aloud. */}
+      <p data-testid="phone-announcement" aria-live="polite" className="sr-only">
+        {/* Keyed by the question, so a move straight to the next one is new words to hear. */}
+        <span key={item?.id ?? "none"}>{announcement(settled)}</span>
+      </p>
       {reconnecting ? <ReconnectingBanner /> : null}
       <PhoneHeader
         progress={progressLabel}
@@ -139,6 +145,27 @@ export function StudentRoom(props: StudentRoomProps) {
       )}
     </div>
   );
+}
+
+/**
+ * What the live region says for each state, in words of its own: the visible heading and header
+ * say the same in theirs, and the place ("Question 2 of 5") is said once, in the header. Answer
+ * sent and time up are left out: the sent panel and the countdown announce themselves.
+ */
+function announcement(settled: PhoneSettledView | null): string {
+  if (settled === null) return "";
+  switch (settled.phase) {
+    case "answering":
+      return "Answer the question on your screen.";
+    case "answerShowing":
+      return "The answer is on your screen.";
+    case "paused":
+      return "Your teacher has paused the live session.";
+    case "ended":
+      return "Your teacher has ended the live session.";
+    default:
+      return "";
+  }
 }
 
 function Body({
@@ -162,6 +189,19 @@ function Body({
   const closed = useAnswersClosed(state.timer, room.serverNow, clockKnown);
   /** The item whose answer is in the air: its player stays mounted, busy, past the grace. */
   const [sendingFor, setSendingFor] = useState<string | null>(null);
+  /**
+   * Submit unmounts the button that was pressed, which drops focus on the page. The item whose
+   * answer this phone just sent puts focus on the Answer sent panel instead, once; an answer that
+   * was already in when the page opened, or a return to it (#183), does not take focus.
+   */
+  const focusSentFor = useRef<string | null>(null);
+  const sentPanel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (settled.phase !== "answerSent" || item === null) return;
+    if (focusSentFor.current !== item.id) return;
+    focusSentFor.current = null;
+    sentPanel.current?.focus();
+  }, [settled.phase, item]);
 
   /**
    * `room.send`, noting the item while its answer is out. An accepted one becomes Answer sent and
@@ -171,10 +211,12 @@ function Body({
     (itemId: string): SubmitHandler =>
     async (response) => {
       setSendingFor(itemId);
+      focusSentFor.current = itemId;
       try {
         return await room.send(response);
       } catch (failed) {
         setSendingFor(null);
+        focusSentFor.current = null;
         throw failed;
       }
     };
@@ -195,10 +237,6 @@ function Body({
     case "paused":
       return (
         <PhoneMessage heading={settled.headline}>
-          <p className="text-ink-2">
-            {settled.answered ? "Your answer is in." : "Your answer so far is kept."} Wait for your
-            teacher to carry on.
-          </p>
           <RoomCount present={room.present} />
         </PhoneMessage>
       );
@@ -208,21 +246,14 @@ function Body({
         // already on the board.
         return <PhoneMessage heading="The answer is showing." />;
       }
-      return (
-        <>
-          <RevealedItem item={item} answered={answered} revealed={settled.revealed} />
-          <p className="pb-6 text-center text-sm text-ink-2">
-            The next question appears when your teacher moves on.
-          </p>
-        </>
-      );
+      return <RevealedItem item={item} answered={answered} revealed={settled.revealed} />;
     case "answerSent":
       if (item === null || answered === null) return null;
       return (
         // A plain wrapper, as in StudentPacedRoom: the player inside is already the "Your answer"
         // landmark, and a second region of that name fails axe's landmark-unique (#274).
         <div className="mt-5">
-          <AnswerSentLine text={SENT} detail={SENT_NEXT} announce />
+          <AnswerSentLine ref={sentPanel} text={SENT} detail={SENT_NEXT} announce />
           <ItemPlayer
             key={`${item.id}:sent`}
             item={item}

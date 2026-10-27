@@ -14,7 +14,7 @@ describe("JoinByCodeForm (#362)", () => {
     setup({ status: "idle" });
     const field = screen.getByRole("textbox", { name: "Class code" });
     expect(field).toBeRequired();
-    expect(field).toHaveAccessibleDescription("Like ABCD-2345. Your teacher has it.");
+    expect(field).toHaveAccessibleDescription("Like ABCD-2345");
     expect(field).toHaveAttribute("autocapitalize", "characters");
   });
 

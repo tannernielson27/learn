@@ -62,9 +62,6 @@ export function ProgressBoard({ ask, itemCount, active, intervalMs }: ProgressBo
       <h2 id="progress-heading" className="font-read text-xl text-ink-1">
         Progress
       </h2>
-      <p className="mt-1 text-sm text-ink-2">
-        Nothing is marked right or wrong until you show answers.
-      </p>
       {rows.length === 0 ? (
         <p className="mt-3 text-sm text-ink-2">Nobody has joined yet.</p>
       ) : (

@@ -69,9 +69,7 @@ export function SignInForm({
         >
           Check your email
         </h2>
-        <p className="mb-6 text-ink-2">
-          We sent a sign-in link to {state.email}. It works once and expires in an hour.
-        </p>
+        <p className="mb-6 text-ink-2">We sent a sign-in link to {state.email}.</p>
         <Button onClick={() => setDismissed(state)}>Use a different email</Button>
         {codeAction ? <EmailCodeForm action={codeAction} email={state.email} next={next} /> : null}
       </section>

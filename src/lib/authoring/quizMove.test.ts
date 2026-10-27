@@ -77,10 +77,8 @@ describe("staysBehind", () => {
     ]);
   });
 
-  it("says so when nothing uses the quiz", () => {
-    expect(staysBehind({ assignments: 0, liveSessions: 0, practiceClasses: [] })).toEqual([
-      "No assignment, live session or practice uses this quiz yet.",
-    ]);
+  it("lists nothing when nothing uses the quiz", () => {
+    expect(staysBehind({ assignments: 0, liveSessions: 0, practiceClasses: [] })).toEqual([]);
   });
 
   it("uses the glossary's words", () => {
