@@ -93,6 +93,8 @@ export async function listBanks(client: Client): Promise<BankSummary[]> {
   const { data, error } = await client
     .from("item_banks")
     .select("id, name, updated_at, items(count)")
+    // Count what the quiz page lists: archived questions are left out there too.
+    .neq("items.status", "archived")
     .order("updated_at", { ascending: false })
     .limit(BANK_LIST_LIMIT);
   if (error) throw new AuthoringDataError("Quizzes could not be loaded.");

@@ -623,19 +623,19 @@ describe("no retired word on any live session screen", () => {
     ["teacher: student-paced, progress board", "Ana Reyes"],
     ["teacher: ended", "Open the report"],
     ["teacher: live updates not running", "Live updates stopped."],
-    ["teacher: results hidden", "Results are hidden."],
+    ["teacher: results hidden", "Show results"],
     ["teacher: confirm end", "End this live session?"],
     ["teacher: confirm show answers (student-paced)", "Show answers for all 3 questions?"],
     ["report: live session still open", "Open the live session"],
     ["list: could not be loaded", "could not be loaded"],
-    ["student: lobby", "You are in."],
+    ["student: lobby", "You’re in."],
     ["student: answer sent", "Wait for the answer to show."],
     ["student: answer showing, did not answer", "You did not answer this question."],
     ["student: answer too late", "Your answer was not taken."],
     ["student: reconnecting", "Stay on this page. Your answer is kept."],
     ["student-paced: loading", "Loading the questions."],
     ["student-paced: answer sent", "Answer sent."],
-    ["student-paced: answers showing", "The answers are showing."],
+    ["student-paced: answers showing", "Answers showing"],
   ];
   it.each(REACHED)("%s reaches its state", async (name, shown) => {
     const build = SCREENS.find(([each]) => each === name)?.[1];

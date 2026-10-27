@@ -302,12 +302,7 @@ export function AiImportUpload({
       ) : null}
       {reading ? null : (
         <>
-          <AiImportDropZone
-            inputRef={inputRef}
-            id={`${id}-files`}
-            quizName={quizName}
-            busy={busy}
-          />
+          <AiImportDropZone inputRef={inputRef} id={`${id}-files`} busy={busy} />
           {batchId ? null : (
             <label className="tap-target flex items-start gap-3 py-2 text-sm text-ink-1">
               <input

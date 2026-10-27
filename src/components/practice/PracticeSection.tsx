@@ -6,8 +6,10 @@ import { PracticeShareList, type PracticeShareListProps } from "./PracticeShareL
 export interface PracticeSectionProps {
   /** Heading level and look follow the page: the bank page's sections are larger. */
   headingClassName: string;
-  /** One short line. The rest is on the help page the section links to (#412). */
-  intro: string;
+  /**
+   * One short line, or none: the help link the section ends its intro with says the rest (#412).
+   */
+  intro?: string;
   /** The current shares, or null when they could not be read. */
   shares: readonly ShareEntry[] | null;
   /** Every class (bank page) or bank (class page) of the org, or null when unreadable. */
@@ -43,7 +45,7 @@ export function PracticeSection({
         Practice
       </h2>
       <p className="max-w-prose text-ink-2">
-        {intro}{" "}
+        {intro ? `${intro} ` : null}
         <Link
           href="/help/instructor#practice"
           className="text-accent-ink underline underline-offset-4 hover:no-underline"

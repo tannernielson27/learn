@@ -78,7 +78,7 @@ describe("leaving a standalone item with unsaved changes", () => {
     expect(fireEvent.click(screen.getByRole("link", { name: "Back to quiz" }))).toBe(false);
 
     const ask = screen.getByRole("alertdialog", { name: "This question has unsaved changes" });
-    expect(ask).toHaveTextContent("Stay to save them, or discard them and leave.");
+    expect(ask).toHaveTextContent("Discard changes");
     expect(ask).toHaveFocus();
   });
 

@@ -70,10 +70,7 @@ export function InviteEmailForm({
         >
           Check your email
         </h1>
-        <p className="text-ink-2">
-          We sent a link to {state.email}. Open it to finish joining. It works once and expires in
-          an hour.
-        </p>
+        <p className="text-ink-2">We sent a link to {state.email}.</p>
         {codeAction && codeNext ? (
           <EmailCodeForm action={codeAction} email={state.email} next={codeNext} />
         ) : null}
@@ -86,10 +83,7 @@ export function InviteEmailForm({
       <h1 id={`${id}-heading`} className={AUTH_HEADING}>
         Join {classTitle}
       </h1>
-      <p className={AUTH_SUBLINE}>
-        Enter your email and we will send you a link. Opening it signs you in and adds you to the
-        class.
-      </p>
+      <p className={AUTH_SUBLINE}>We’ll email you a link to join.</p>
       <form action={formAction} className="flex flex-col gap-5">
         <div className="flex flex-col gap-2">
           <label htmlFor={`${id}-email`} className="text-sm font-semibold text-ink-1">

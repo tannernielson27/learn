@@ -30,7 +30,7 @@ export default function GlobalError({ error, retry }: ErrorInfo) {
         <StatusFrame>
           <RouteRecovery
             headline="LeaRN could not show this page."
-            detail="Try again to load it. If you were in a live session, your place is kept."
+            detail="If you were in a live session, your place is kept."
             onRetry={retry}
             digest={errorDigest(error)}
           >

@@ -136,7 +136,7 @@ test("an author searches a bank for lactate, then narrows to published Matrix Mu
   );
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page)).toContainText([RISING]);
-  await expect(page.getByText("A type filter lists questions only.")).toBeVisible();
+  await expect(page.getByText("Case studies are hidden while filtering.")).toBeVisible();
 
   // The URL keeps the search.
   await page.reload();

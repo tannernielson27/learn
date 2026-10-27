@@ -95,7 +95,7 @@ export function HighlightTableEditor({
       setMarkNote("Select a phrase in that cell first. It cannot overlap another span.");
       return;
     }
-    setMarkNote("Marked a span. Choose whether it is correct below.");
+    setMarkNote("Marked.");
     setValue(`rows.${row}.cells.${column}.text`, result.text, DIRTY);
   }
 
@@ -231,7 +231,6 @@ export function HighlightTableEditor({
 
       <div className="flex flex-col gap-4">
         <p className="text-sm font-medium text-ink-1">Rows</p>
-        <p className="text-sm text-ink-2">Select a phrase in a cell and choose Mark span.</p>
         {values.rows.map((row, rowIndex) => {
           const legendId = `${ids}-row-${rowIndex}-legend`;
           return (

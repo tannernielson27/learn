@@ -50,16 +50,13 @@ import { SignInForm } from "@/components/auth/SignInForm";
 import { SignUpForm } from "@/components/auth/SignUpForm";
 import { Landing } from "@/components/landing/Landing";
 import { GetStarted } from "@/components/onboarding/GetStarted";
-import { StudentWelcome } from "@/components/onboarding/StudentWelcome";
 import { TeacherWelcome } from "@/components/onboarding/TeacherWelcome";
-import { ACCOUNT_NAME_HINT } from "@/lib/auth/displayName";
 import { landingEntry } from "@/lib/auth/landing";
 import { findRetiredTerms, readableStrings, visibleWordCount } from "@/lib/copy/retiredTerms";
 import { EMAIL_PREVIEWS } from "@/lib/email/preview";
 import { renderMagicLinkTemplate } from "@/lib/email/templates/magicLink";
 import { renderWelcomeEmail } from "@/lib/email/templates/welcome";
 import { checklistSteps, type OrgProgress } from "@/lib/onboarding/checklist";
-import { STUDENT_WELCOME_FINISH, studentWelcomeSteps } from "@/lib/onboarding/studentWelcome";
 import {
   TEACHER_WELCOME_FINISH,
   teacherWelcomeSteps,
@@ -239,7 +236,6 @@ async function signUpPages(): Promise<Surface[]> {
       "",
       press("Create account", "Your account is ready"),
     ),
-    text("Sign up, name hint for a student", [ACCOUNT_NAME_HINT]),
     await page("Welcome", welcome, titleOf(welcomeMetadata)),
     await page("Welcome, workspace not set up", welcomeRetry, titleOf(welcomeMetadata)),
     await page(
@@ -251,7 +247,6 @@ async function signUpPages(): Promise<Surface[]> {
 
 async function onboardingSurfaces(): Promise<Surface[]> {
   const teacher = teacherWelcomeSteps("Ada");
-  const student = studentWelcomeSteps("Sam", ["NUR 310"]);
   return [
     await page(
       "Get started checklist, new workspace",
@@ -274,11 +269,6 @@ async function onboardingSurfaces(): Promise<Surface[]> {
       "Teacher welcome, invited colleague, all steps",
       stepsText(teacherWelcomeSteps("Ada", { invited: true }), TEACHER_WELCOME_FINISH),
     ),
-    await page(
-      "Student welcome, first step as drawn",
-      <StudentWelcome steps={student} onDone={noop} focusAfter="x" />,
-    ),
-    text("Student welcome, all steps", stepsText(student, STUDENT_WELCOME_FINISH)),
   ];
 }
 
