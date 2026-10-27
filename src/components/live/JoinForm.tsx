@@ -82,7 +82,7 @@ export function JoinForm({ action, code, defaultName, asGuest = false }: JoinFor
           spellCheck={false}
           autoFocus={code === ""}
           aria-invalid={codeError ? true : undefined}
-          aria-describedby={codeError ? `${fieldId}-code-error` : `${fieldId}-code-hint`}
+          aria-describedby={codeError ? `${fieldId}-code-error` : undefined}
           className={fieldClasses(
             "px-4 font-mono text-2xl font-semibold tracking-[0.2em] uppercase",
           )}
@@ -91,11 +91,7 @@ export function JoinForm({ action, code, defaultName, asGuest = false }: JoinFor
           <FieldError id={`${fieldId}-code-error`} role="alert">
             {codeError}
           </FieldError>
-        ) : (
-          <p id={`${fieldId}-code-hint`} className="text-sm text-ink-2">
-            Six characters, on the screen at the front.
-          </p>
-        )}
+        ) : null}
       </div>
 
       <div className="flex flex-col gap-2">
@@ -114,18 +110,14 @@ export function JoinForm({ action, code, defaultName, asGuest = false }: JoinFor
           enterKeyHint="go"
           autoFocus={code !== ""}
           aria-invalid={nameError ? true : undefined}
-          aria-describedby={nameError ? `${fieldId}-name-error` : `${fieldId}-name-hint`}
+          aria-describedby={nameError ? `${fieldId}-name-error` : undefined}
           className={field}
         />
         {nameError ? (
           <FieldError id={`${fieldId}-name-error`} role="alert">
             {nameError}
           </FieldError>
-        ) : (
-          <p id={`${fieldId}-name-hint`} className="text-sm text-ink-2">
-            Your teacher sees this name. The class sees it only before the start.
-          </p>
-        )}
+        ) : null}
       </div>
 
       {formError ? <FieldError role="alert">{formError}</FieldError> : null}

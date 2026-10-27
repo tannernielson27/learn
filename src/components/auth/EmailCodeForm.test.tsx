@@ -15,9 +15,7 @@ describe("EmailCodeForm (#306)", () => {
     const field = screen.getByRole("textbox", { name: "Code from the email" });
     expect(field).toHaveAttribute("autocomplete", "one-time-code");
     expect(field).toHaveAttribute("inputmode", "numeric");
-    expect(
-      screen.getByText(/type the code from the email to sign in on this device/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/^Or enter the code from the email\.$/)).toBeInTheDocument();
   });
 
   it("posts the code with the address it was sent to and where to go after", async () => {

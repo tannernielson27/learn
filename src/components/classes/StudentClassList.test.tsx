@@ -51,12 +51,12 @@ describe("StudentClassList", () => {
     expect(item).toHaveTextContent(/^NUR 310$/);
   });
 
-  it("says how to join a class when there are none", () => {
+  it("says there is no class yet, in a heading alone, when there are none", () => {
     render(<StudentClassList classes={[]} />);
     expect(
       screen.getByRole("heading", { level: 2, name: "You are not in a class yet" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/your teacher’s invite link/)).toBeInTheDocument();
+    expect(document.querySelector("[data-empty-state] p")).toBeNull();
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
   });
 });

@@ -13,7 +13,6 @@ import { cleanDisplayName, displayNameLength } from "@/lib/live/displayName";
  */
 
 export const ACCOUNT_NAME_MAX_LENGTH = 80;
-export const ACCOUNT_NAME_HINT = "Your teacher sees this on the class roster.";
 export const ACCOUNT_NAME_EMPTY = "Enter your name.";
 export const ACCOUNT_NAME_TOO_LONG = `Use ${ACCOUNT_NAME_MAX_LENGTH} characters or fewer for your name.`;
 

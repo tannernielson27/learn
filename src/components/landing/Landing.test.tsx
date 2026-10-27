@@ -38,18 +38,6 @@ describe("Landing (#264)", () => {
     expect(document.querySelector("form")).toBeNull();
   });
 
-  it("says how teachers and students each get in, one line each", () => {
-    render(<Landing entry={SIGN_IN} />);
-    const access = screen.getByRole("region", { name: "How to get in" });
-    expect(within(access).getByText("Teachers").nextElementSibling).toHaveTextContent(
-      "Create an account. You get a workspace of your own.",
-    );
-    expect(within(access).getByText("Students").nextElementSibling).toHaveTextContent(
-      /join your class with its invite link or class code/,
-    );
-    expect(access).not.toHaveTextContent(/invite-only|by invitation|site's owner/i);
-  });
-
   it("names who it is for and what it does", () => {
     render(<Landing entry={SIGN_IN} />);
     const what = screen.getByRole("region", { name: "What LeaRN does" });
@@ -62,16 +50,18 @@ describe("Landing (#264)", () => {
       expect(what).toHaveTextContent(phrase);
     }
     expect(what).toHaveTextContent(/join code.*no account needed/i);
-    expect(screen.getByText(/for nursing teachers and their students/i)).toBeInTheDocument();
+    expect(
+      screen.getByText("Every NCLEX question format, scored like the exam."),
+    ).toBeInTheDocument();
   });
 
   // #416: the page says each thing once.
-  it("has two sections under the headline and no third", () => {
+  it("has one section under the headline and no second", () => {
     render(<Landing entry={SIGN_IN} />);
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
       "What LeaRN does",
-      "How to get in",
     ]);
+    expect(screen.queryByRole("region", { name: "How to get in" })).toBeNull();
   });
 
   it("swaps Sign in for the signed-in visitor's own home", () => {

@@ -320,7 +320,7 @@ describe("PracticePlayer (#241)", () => {
     const ui = setup();
     await ui.user.click(screen.getByRole("button", { name: "Start over" }));
     expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
-    expect(screen.getByText(/Your first answers still count/)).toBeInTheDocument();
+    expect(screen.getByText("Start over? Every question starts unanswered.")).toBeInTheDocument();
     await ui.user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.getByRole("button", { name: "Start over" })).toHaveFocus();
 

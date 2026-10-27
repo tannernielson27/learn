@@ -74,7 +74,7 @@ test("an instructor starts a session from a bank, sees a six-character code, and
   await student.getByRole("textbox", { name: "Display name" }).fill("Ada Brennan");
   await student.getByRole("button", { name: "Join", exact: true }).click();
   await expect(student).toHaveURL(/\/play\/[0-9a-f-]{36}$/);
-  await expect(student.getByText("You are in. Wait for your teacher to start.")).toBeVisible();
+  await expect(student.getByText("You’re in.", { exact: true })).toBeVisible();
   await expectNoAxeViolations(student);
 
   // Presence, not a reload and not a database read: the name and the count arrive on the host's

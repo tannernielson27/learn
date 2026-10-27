@@ -272,8 +272,8 @@ test("an instructor in the shared org is never shown the teacher welcome", async
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
-// #365: the welcome a new student sees once, the first time they are on their home in a class.
-test("a new student who joins by code is welcomed in three steps, once", async ({
+// The student welcome (#365) is gone: a new student who joins by code lands on their classes.
+test("a new student who joins by code lands on their classes, with no welcome", async ({
   page,
   browser,
   request,
@@ -303,43 +303,17 @@ test("a new student who joins by code is welcomed in three steps, once", async (
   await page.getByLabel("Password", { exact: true }).fill("correct horse battery");
   await page.getByRole("button", { name: "Create account", exact: true }).click();
   await expect(page).toHaveURL(/\/welcome$/);
-  // No welcome before there is a class to be welcomed to.
-  await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.getByRole("textbox", { name: "Class code", exact: true }).fill(code);
   await page.getByRole("button", { name: "Join the class", exact: true }).click();
   await expect(page).toHaveURL(/\/learn$/);
 
-  const dialog = page.getByRole("dialog");
-  const count = dialog.getByRole("status");
-  await expect(dialog).toHaveAccessibleName("Welcome, Kai Ortiz");
-  await expect(dialog).toContainText(`You are in ${className}.`);
-  await expect(count).toHaveText("Step 1 of 3");
-  await expectNoAxeViolations(page);
-  await page.screenshot({ path: `test-results/screenshots/${project}/student-welcome-1.png` });
-
-  await dialog.getByRole("button", { name: "Next", exact: true }).focus();
-  await page.keyboard.press("Enter");
-  await expect(dialog).toHaveAccessibleName("Assignments and practice");
-  await expect(count).toHaveText("Step 2 of 3");
-  await expectNoAxeViolations(page);
-  await page.screenshot({ path: `test-results/screenshots/${project}/student-welcome-2.png` });
-
-  await page.keyboard.press("Enter");
-  await expect(dialog).toHaveAccessibleName("Results and live sessions");
-  await expect(count).toHaveText("Step 3 of 3");
-  await expectNoAxeViolations(page);
-  await page.screenshot({ path: `test-results/screenshots/${project}/student-welcome-3.png` });
-
-  await dialog.getByRole("button", { name: "Go to my classes", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  const heading = page.getByRole("heading", { level: 1, name: "Your classes", exact: true });
-  await expect(heading).toBeFocused();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Your classes", exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("list", { name: "Your classes", exact: true })).toContainText(
     className,
   );
-
-  // Once per account.
-  await page.reload();
-  await expect(heading).toBeVisible();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expectNoAxeViolations(page);
+  await page.screenshot({ path: `test-results/screenshots/${project}/student-home-first.png` });
 });
