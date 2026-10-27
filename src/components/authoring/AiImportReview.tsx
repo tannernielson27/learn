@@ -169,10 +169,7 @@ export function AiImportReview({
           <h2 id={`${id}-import`} className="font-read text-2xl text-ink-1">
             Review the questions
           </h2>
-          <p className="text-sm text-ink-2">
-            Nothing has been added to {quizName} yet. Drop what you do not want; questions that are
-            not importable are left out.
-          </p>
+          <p className="text-sm text-ink-2">Nothing has been added to {quizName} yet.</p>
           <div className="flex flex-wrap items-center gap-3">
             {/* aria-disabled while importing, not disabled: a disabled button drops focus. */}
             <Button
@@ -205,12 +202,7 @@ export function AiImportReview({
             </div>
           </div>
           {actions.discard ? (
-            <DiscardImport
-              batchId={batchId}
-              bankId={bankId}
-              quizName={quizName}
-              discard={actions.discard}
-            />
+            <DiscardImport batchId={batchId} bankId={bankId} discard={actions.discard} />
           ) : null}
         </Card>
       </section>
@@ -264,7 +256,6 @@ export function AiImportReview({
 interface DiscardImportProps {
   batchId: string;
   bankId: string;
-  quizName: string;
   discard: NonNullable<AiImportReviewActions["discard"]>;
 }
 
@@ -272,7 +263,7 @@ interface DiscardImportProps {
  * "Discard this import" (#348). Pressing it changes nothing: a dialog says what goes, and its own
  * button is the one that acts. Success goes back to the quiz; a refusal keeps the dialog open.
  */
-function DiscardImport({ batchId, bankId, quizName, discard }: DiscardImportProps) {
+function DiscardImport({ batchId, bankId, discard }: DiscardImportProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -316,7 +307,7 @@ function DiscardImport({ batchId, bankId, quizName, discard }: DiscardImportProp
         open={open}
         onClose={close}
         title="Discard this import?"
-        description={`Every question found in these files is deleted, and so are the uploaded files. Nothing is added to ${quizName}.`}
+        description="Every question found in these files is deleted, and so are the uploaded files."
         actions={
           <>
             <Button variant="ghost" onClick={close}>

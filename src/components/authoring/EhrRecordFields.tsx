@@ -185,15 +185,13 @@ export function EhrRecordFields({
         </p>
       </Card>
       {steps ? (
-        <p className="text-sm text-ink-2">
-          Set when students see each time point, tab and block.{" "}
-          {/* A new tab, so the patient record being written stays open. Underlined, as a link
-              inside a line of text must be (axe link-in-text-block). */}
+        <p>
+          {/* A new tab, so the patient record being written stays open. */}
           <a
             href="/help/items#case-study"
             target="_blank"
             rel="noopener noreferrer"
-            className={textLinkClasses({ kind: "inline" })}
+            className={textLinkClasses({ size: "sm" })}
           >
             How a case study unfolds<span className="sr-only"> (opens in a new tab)</span>
           </a>
@@ -234,9 +232,6 @@ export function EhrRecordFields({
 
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-1 text-sm font-medium text-ink-1">Time points</legend>
-        <p className="text-sm text-ink-2">
-          With two or more time points, the patient record gets a time selector.
-        </p>
         {values.timePoints.map((point, index) => {
           const field = `timePoints.${index}.label`;
           return (

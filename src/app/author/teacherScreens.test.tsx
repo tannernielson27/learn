@@ -755,7 +755,7 @@ describe("moving to another quiz, and turning a folder into one (#417)", () => {
     // The confirm step is drawn closed, so its words are on the page for the glossary scan.
     expect(screen.getByText('Turn "Week 1" into a quiz?')).toBeInTheDocument();
     expect(
-      screen.getByText(/^A new quiz, "Week 1", goes beside this one in the library/),
+      screen.getByText('Creates the quiz "Week 1" with this folder\'s contents.'),
     ).toBeInTheDocument();
   });
 

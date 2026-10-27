@@ -133,10 +133,11 @@ test("a quiz with two folders inside it becomes two quizzes, each running only i
   await expect(page.getByRole("heading", { level: 1, name: "Cardiac", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Turn into a quiz", exact: true }).click();
   const confirm = page.getByRole("dialog", { name: 'Turn "Cardiac" into a quiz?' });
-  await expect(confirm).toContainText('A new quiz, "Cardiac", goes beside this one in the library');
+  await expect(confirm).toContainText('Creates the quiz "Cardiac" with this folder\'s contents.');
+  // Nothing uses this quiz yet, so nothing is listed as staying with it.
   await expect(
     confirm.getByRole("list", { name: "What stays with this quiz", exact: true }),
-  ).toContainText("No assignment, live session or practice uses this quiz yet.");
+  ).toHaveCount(0);
   await expectNoAxeViolations(page);
   await expectGlossaryWords(page);
   await shoot("turn-folder-confirm");

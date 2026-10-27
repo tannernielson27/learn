@@ -258,11 +258,7 @@ export default async function BankPage({
               {archived ? "Archived case studies" : "Case studies"}
             </h2>
             {tagFiltered || search.type ? (
-              <p className="text-ink-2">
-                {tagFiltered
-                  ? "Tag filters list questions only. Clear them to see case studies."
-                  : "A type filter lists questions only. Choose Any type to see case studies."}
-              </p>
+              <p className="text-ink-2">Case studies are hidden while filtering.</p>
             ) : (
               <CaseStudyList
                 caseStudies={caseStudies}
@@ -276,7 +272,7 @@ export default async function BankPage({
           <div id={PRACTICE_ID} className="scroll-mt-4">
             <PracticeSection
               headingClassName="font-read text-title text-ink-1"
-              intro="A class you share with sees each answer and rationale as it practices."
+              intro=""
               shares={shares}
               options={classes}
               list={{

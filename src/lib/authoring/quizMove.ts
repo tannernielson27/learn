@@ -57,7 +57,7 @@ const listOf = (names: readonly string[]): string =>
 
 /**
  * What does not follow a question out of this quiz, one line each, for the confirm step. Every line
- * is about the quiz in hand; when nothing uses it, one line says so.
+ * is about the quiz in hand; when nothing uses it, there are none.
  */
 export function staysBehind(uses: QuizUses): string[] {
   const lines: string[] = [];
@@ -77,9 +77,6 @@ export function staysBehind(uses: QuizUses): string[] {
   }
   if (uses.practiceClasses.length > 0) {
     lines.push(`Practice with ${listOf(uses.practiceClasses)} stays with this quiz.`);
-  }
-  if (lines.length === 0) {
-    lines.push("No assignment, live session or practice uses this quiz yet.");
   }
   return lines;
 }

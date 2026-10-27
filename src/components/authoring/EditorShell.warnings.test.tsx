@@ -102,7 +102,9 @@ describe("EditorShell quality warnings", () => {
     );
 
     const warnings = screen.getByRole("region", { name: "Quality warnings" });
-    expect(within(warnings).getByText(/do not stop publishing/)).toBeInTheDocument();
+    expect(
+      within(warnings).getByRole("heading", { name: "Worth a second look" }),
+    ).toBeInTheDocument();
     await user.click(
       within(warnings).getByRole("button", { name: /Every option is marked correct/ }),
     );
