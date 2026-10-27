@@ -57,17 +57,14 @@ export function ClassCodeBlock({ code, labelAs: Label = "h3" }: ClassCodeBlockPr
   return (
     <div className="flex flex-col gap-2">
       <Label className="text-sm font-medium text-ink-1">Class code</Label>
-      {/* On a phone the code and its button share a row and the hint goes under both; from 640px
-          the code stands alone, projector-sized, above the hint and the button. */}
+      {/* On a phone the code and its button share a row; from 640px the code stands alone,
+          projector-sized, above the button. */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:flex-col sm:flex-nowrap sm:items-start">
         <p
           data-testid="class-code"
           className="font-mono text-2xl break-all text-ink-1 sm:text-3xl sm:tracking-[0.15em]"
         >
           {formatClassCode(code)}
-        </p>
-        <p className="order-last basis-full text-sm text-ink-2 sm:order-none sm:max-w-prose sm:basis-auto">
-          Students type it after signing in.
         </p>
         <CopyTextButton
           text={normalizeClassCode(code)}

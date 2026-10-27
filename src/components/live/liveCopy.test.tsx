@@ -623,7 +623,7 @@ describe("no retired word on any live session screen", () => {
     ["teacher: student-paced, progress board", "Ana Reyes"],
     ["teacher: ended", "Open the report"],
     ["teacher: live updates not running", "Live updates stopped."],
-    ["teacher: results hidden", "Results are hidden."],
+    ["teacher: results hidden", "Show results"],
     ["teacher: confirm end", "End this live session?"],
     ["teacher: confirm show answers (student-paced)", "Show answers for all 3 questions?"],
     ["report: live session still open", "Open the live session"],

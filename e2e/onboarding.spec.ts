@@ -157,7 +157,7 @@ test("the imported sample is ready to assign and to run live straight away", asy
   });
 
   const checklist = page.getByRole("region", { name: "Get started", exact: true });
-  await expect(checklist.getByText("published and ready to use", { exact: false })).toBeVisible();
+  await expect(checklist.getByText("One of every question type.", { exact: true })).toBeVisible();
   await expect(checklist.getByText(/only published/i)).toHaveCount(0);
   await checklist.getByRole("button", { name: "Import the sample quiz", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/banks\/[0-9a-f-]{36}$/);
@@ -214,7 +214,7 @@ test("the imported sample is ready to assign and to run live straight away", asy
 
 // #364: the welcome a new teacher sees once. No account is made beforehand: signing up as a
 // teacher is what makes a self-registered workspace.
-test("a new teacher is welcomed in three steps, once, and lands on the checklist", async ({
+test("a new teacher is welcomed in one step, once, and lands on the checklist", async ({
   page,
 }, testInfo) => {
   const project = testInfo.project.name;
@@ -226,32 +226,16 @@ test("a new teacher is welcomed in three steps, once, and lands on the checklist
   await page.getByRole("button", { name: "Create account", exact: true }).click();
   await expect(page).toHaveURL(/\/author$/);
 
+  // A title and one line: the checklist beside it says the rest, so there is no step count.
   const dialog = page.getByRole("dialog");
-  const count = dialog.getByRole("status");
   await expect(dialog).toHaveAccessibleName("Welcome, Grace Hopper");
-  await expect(count).toHaveText("Step 1 of 3");
-  await expect(dialog).toContainText("no other teacher can see them");
+  await expect(dialog).toContainText("No other teacher can see what you make in it.");
+  await expect(dialog.getByRole("status")).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "Next", exact: true })).toHaveCount(0);
   await expectNoAxeViolations(page);
   await page.screenshot({ path: `test-results/screenshots/${project}/teacher-welcome-1.png` });
 
-  // With the keyboard: Next keeps the focus, so Enter walks it.
-  await dialog.getByRole("button", { name: "Next", exact: true }).focus();
-  await page.keyboard.press("Enter");
-  await expect(dialog).toHaveAccessibleName("Create a quiz or import the sample");
-  await expect(count).toHaveText("Step 2 of 3");
-  await expectNoAxeViolations(page);
-  await page.screenshot({ path: `test-results/screenshots/${project}/teacher-welcome-2.png` });
-
-  await page.keyboard.press("Enter");
-  await expect(dialog).toHaveAccessibleName("Then a class, and your first live session");
-  await expect(count).toHaveText("Step 3 of 3");
-  await expectNoAxeViolations(page);
-  await page.screenshot({ path: `test-results/screenshots/${project}/teacher-welcome-3.png` });
-
-  // Back works, and the last button is the checklist's own name.
-  await dialog.getByRole("button", { name: "Back", exact: true }).click();
-  await expect(count).toHaveText("Step 2 of 3");
-  await dialog.getByRole("button", { name: "Next", exact: true }).click();
+  // Its one button is the checklist's own name, and hands the focus to it.
   await dialog.getByRole("button", { name: "Get started", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   const checklist = page.getByRole("heading", { level: 2, name: "Get started", exact: true });

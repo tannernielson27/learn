@@ -35,7 +35,7 @@ export const TALLY_INTERVAL_MS = 3_000;
 /** What is in flight: a move, a timer button, a new time per item, or a jump (#183). */
 export type Pending = HostCommand | TimerCommand | "set_timer" | "goto";
 
-export const OFFLINE = "Live updates stopped. The live session is still open. Reload to catch up.";
+export const OFFLINE = "Live updates stopped. Reload to catch up.";
 const FAILED = "That did not go through. Try again.";
 
 const COMMANDS: Record<

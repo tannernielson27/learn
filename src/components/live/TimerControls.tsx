@@ -33,13 +33,11 @@ export interface TimeChoiceProps {
 
 /**
  * How long each question gets (#182). The choice applies from the next question the room moves
- * to — `chooseTimer` says why — and the hint under it says so once a question is up, so a teacher
- * who picks a minute halfway through is not surprised that the clock on the screen did not jump.
+ * to; `chooseTimer` says why.
  *
  * A native `select`, which is keyboard- and screen-reader-operable without any help, at 44px tall.
  */
 export function TimeChoice({ state, busy, onChoose, className = "" }: TimeChoiceProps) {
-  const onItem = state.status === "running" || state.status === "paused";
   const current = state.timer.seconds;
   // A time set some other way than this console (the column allows 5 to 3600 seconds) is still
   // shown as what it is, rather than as a choice it is not.
@@ -54,7 +52,6 @@ export function TimeChoice({ state, busy, onChoose, className = "" }: TimeChoice
         id="timer-seconds"
         value={valueOf(current)}
         disabled={busy}
-        aria-describedby="timer-hint"
         onChange={(event) =>
           onChoose(event.target.value === OFF ? null : Number(event.target.value))
         }
@@ -67,11 +64,6 @@ export function TimeChoice({ state, busy, onChoose, className = "" }: TimeChoice
         ))}
         {unlisted ? <option value={valueOf(current)}>{current} seconds</option> : null}
       </select>
-      <p id="timer-hint" className="text-sm text-ink-2">
-        {onItem
-          ? "A new time applies from the next question."
-          : "You can add time or stop the timer during a question."}
-      </p>
     </div>
   );
 }

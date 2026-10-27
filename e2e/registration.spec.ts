@@ -62,18 +62,6 @@ async function signUp(
   await page.getByRole("button", { name: "Create account", exact: true }).click();
 }
 
-/** Walks a three-step welcome to its last button. */
-async function walkWelcome(page: Page, firstTitle: string, finish: string): Promise<void> {
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toHaveAccessibleName(firstTitle);
-  await dialog.getByRole("button", { name: "Next", exact: true }).click();
-  await expect(dialog.getByRole("status")).toHaveText("Step 2 of 3");
-  await dialog.getByRole("button", { name: "Next", exact: true }).click();
-  await expect(dialog.getByRole("status")).toHaveText("Step 3 of 3");
-  await dialog.getByRole("button", { name: finish, exact: true }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-}
-
 /** A page's bytes whatever its status: a page that is refused must not carry the marker either. */
 async function bytesAnyStatus(context: BrowserContext, path: string): Promise<string> {
   return wireText(await (await context.request.get(path)).text());
@@ -97,7 +85,11 @@ test("a stranger becomes a teacher, and another stranger becomes their student, 
   await signUp(page, "teacher", teacherName, address(`reg-teacher-${project}`));
   await expect(page).toHaveURL(/\/author$/);
   await shoot(page, testInfo, "1-teacher-welcome");
-  await walkWelcome(page, `Welcome, ${teacherName}`, "Get started");
+  // The teacher's welcome is one line and one button; the checklist does the rest.
+  const welcome = page.getByRole("dialog");
+  await expect(welcome).toHaveAccessibleName(`Welcome, ${teacherName}`);
+  await welcome.getByRole("button", { name: "Get started", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   const checklist = page.getByRole("region", { name: "Get started", exact: true });
   await expect(checklist.getByText("0 of 3 done", { exact: true })).toBeVisible();
   await expectNoAxeViolations(page);
@@ -174,7 +166,7 @@ test("a stranger becomes a teacher, and another stranger becomes their student, 
   const otherName = `Grace Hopper ${stamp}`;
   await signUp(other, "teacher", otherName, address(`reg-other-${project}`));
   await expect(other).toHaveURL(/\/author$/);
-  await other.getByRole("button", { name: "Skip", exact: true }).click();
+  await other.getByRole("button", { name: "Close", exact: true }).click();
   await expect(other.getByRole("dialog")).toHaveCount(0);
   await expect(
     other.getByRole("heading", { level: 2, name: "No quizzes yet", exact: true }),

@@ -11,12 +11,7 @@ import {
   readFounderId,
   readWorkspace,
 } from "@/lib/supabase/workspace";
-import {
-  memberCountLabel,
-  WORKSPACE_DAILY_INVITES,
-  WORKSPACE_MEMBER_CAP,
-  WORKSPACE_PATH,
-} from "@/lib/workspace/workspace";
+import { memberCountLabel, WORKSPACE_PATH } from "@/lib/workspace/workspace";
 import { inviteColleague, removeMember, resendInvite, revokeInvite } from "./actions";
 
 export const metadata: Metadata = { title: "Workspace" };
@@ -90,36 +85,9 @@ export default async function WorkspacePage() {
       {canInvite ? (
         <>
           <section aria-labelledby="invite-heading" className="mb-10">
-            <h2 id="invite-heading" className="mb-2 text-lg font-medium text-ink-1">
+            <h2 id="invite-heading" className="mb-4 text-lg font-medium text-ink-1">
               Invite a colleague
             </h2>
-            <p className="mb-2 max-w-prose text-ink-2">
-              They join as a teacher with the same access as you.
-            </p>
-            {/* Everything a teacher needs before inviting, kept and closed (#412). */}
-            <details className="mb-4 max-w-prose text-sm text-ink-2">
-              <summary className="tap-target inline-flex cursor-pointer items-center font-medium">
-                What a colleague can do
-              </summary>
-              <ul className="mt-1 flex list-disc flex-col gap-1 pl-5">
-                <li>
-                  See and edit every quiz, class and assignment, see every student&apos;s name,
-                  email address and results, start live sessions, and send or revoke invitations.
-                </li>
-                <li>
-                  Only the person who started the workspace can remove a colleague. Any teacher can
-                  invite them back.
-                </li>
-                <li>
-                  A workspace holds up to {WORKSPACE_MEMBER_CAP} teachers, and you can send{" "}
-                  {WORKSPACE_DAILY_INVITES} invitations a day.
-                </li>
-                <li>
-                  A student account cannot accept. A teacher in another workspace can accept only by
-                  leaving that workspace, and is asked to confirm first.
-                </li>
-              </ul>
-            </details>
             <InviteColleagueForm action={inviteColleague} />
           </section>
 

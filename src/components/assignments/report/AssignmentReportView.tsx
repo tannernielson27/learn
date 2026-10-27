@@ -72,12 +72,6 @@ export function AssignmentReportView({
         ) : null}
       </header>
 
-      {report.released ? null : (
-        <p role="status" className="measure mt-4 text-sm text-ink-2">
-          Scores show once the assignment closes. Until then this is progress only.
-        </p>
-      )}
-
       <nav aria-label="Report views" className="mt-6 border-b border-line">
         <ul className="-mb-px flex gap-1 overflow-x-auto">
           {REPORT_VIEWS.map((option) => (
@@ -105,6 +99,9 @@ export function AssignmentReportView({
   );
 }
 
+/** Said once, where the scores will be: above the progress table, or in place of a view. */
+const NOT_CLOSED = "Scores show after it closes.";
+
 function ReportBody({
   report,
   view,
@@ -120,6 +117,7 @@ function ReportBody({
   if (view === "students") {
     return (
       <>
+        {report.released ? null : <p className="mb-4 text-sm text-ink-2">{NOT_CLOSED}</p>}
         {report.students.length === 0 ? (
           <p className="text-ink-2">Nobody is in this class now.</p>
         ) : (
@@ -135,7 +133,7 @@ function ReportBody({
     return <p className="text-ink-2">Nobody is in this class now.</p>;
   }
   if (!report.released) {
-    return <p className="text-ink-2">Scores show once the assignment closes.</p>;
+    return <p className="text-ink-2">{NOT_CLOSED}</p>;
   }
   if (view === "items") {
     return (
@@ -205,13 +203,11 @@ function StepsBody({ report }: { report: AssignmentReport }) {
     <>
       <ReportStepBars steps={report.steps} />
       <StepTable steps={report.steps} />
-      <p className="mt-3 text-sm text-ink-2">
-        Each step is the mean of its questions&apos; mean percents, from each student&apos;s best
-        attempt.
-        {untagged > 0
-          ? ` ${untagged === 1 ? "1 question" : `${untagged} questions`} without a step ${untagged === 1 ? "is" : "are"} left out.`
-          : ""}
-      </p>
+      {untagged > 0 ? (
+        <p className="mt-3 text-sm text-ink-2">
+          {`${untagged === 1 ? "1 question" : `${untagged} questions`} without a step ${untagged === 1 ? "is" : "are"} left out.`}
+        </p>
+      ) : null}
     </>
   );
 }

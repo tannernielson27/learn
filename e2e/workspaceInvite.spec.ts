@@ -237,9 +237,9 @@ test("a teacher invites a colleague, who makes an account from the email and sha
   // The welcome is the short one for someone who joined a workspace that is not theirs alone.
   const welcome = colleague.getByRole("dialog");
   await expect(welcome).toHaveAccessibleName(`Welcome, ${colleagueName}`);
-  await expect(welcome).toContainText("You have joined a shared workspace.");
+  await expect(welcome).toContainText("You share this workspace's quizzes");
   await shoot(colleague, testInfo, "3-colleague-welcome");
-  await welcome.getByRole("button", { name: "Skip", exact: true }).click();
+  await welcome.getByRole("button", { name: "Get started", exact: true }).click();
   await expect(colleague.getByRole("dialog")).toHaveCount(0);
   await expect(colleague.getByRole("link", { name: bankName }).first()).toBeVisible();
   // An accepted invitation is the proof the address is theirs: nobody asks them to confirm it.
@@ -504,7 +504,7 @@ test("an account with no role joins with one button, and one someone else may ha
   //    nothing of theirs is ended and nobody asks for a new password.
   await own.goto(ownPath);
   await expect(invitationHeading(own, teacherName)).toBeVisible();
-  await expect(own.getByText(`You are signed in as ${ownEmail}.`)).toBeVisible();
+  await expect(own.getByText(`Signed in as ${ownEmail}.`)).toBeVisible();
   await expectNoAxeViolations(own);
   await shoot(own, testInfo, "7-join");
   await own.getByRole("button", { name: "Join workspace", exact: true }).click();
@@ -697,9 +697,9 @@ test("the founder removes a colleague, who starts again in a workspace of their 
   await removeButton.click();
   const dialog = page.getByRole("dialog", { name: `Remove ${colleagueName}?`, exact: true });
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("loses access to this workspace at once");
-  await expect(dialog).toContainText("a new, empty workspace of their own");
-  await expect(dialog).toContainText("Any teacher still in this workspace can invite them back.");
+  await expect(dialog).toContainText(
+    `${colleagueName} loses access to this workspace. What they made stays here. You can invite them back.`,
+  );
   await expectNoAxeViolations(page);
   await shoot(page, testInfo, "8-remove-dialog");
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();

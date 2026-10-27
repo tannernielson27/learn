@@ -107,7 +107,7 @@ describe("SessionReportView", () => {
     );
     expect(screen.queryByRole("table")).toBeNull();
     expect(
-      screen.getByText(/No question in this live session is tagged with a clinical judgment step/),
+      screen.getByText("No questions are tagged with a clinical judgment step."),
     ).toBeInTheDocument();
   });
 

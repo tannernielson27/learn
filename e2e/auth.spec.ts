@@ -322,11 +322,11 @@ test("a new teacher signs up, with the keyboard, into an empty workspace of thei
 
   // Signed in at once, with no email to wait for, in a workspace that holds nothing of anyone's.
   await expect(page).toHaveURL(/\/author$/);
-  // #364: a new teacher is welcomed by name, once. onboarding.spec.ts walks it; here it is skipped.
+  // #364: a new teacher is welcomed by name, once. onboarding.spec.ts covers it; here it is closed.
   await expect(
     page.getByRole("dialog", { name: "Welcome, Ada Lovelace", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Skip", exact: true }).click();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 1, name: "Library", exact: true })).toBeVisible();
   await expect(
