@@ -37,7 +37,7 @@ export function waitingCopy(state: LiveSessionState): WaitingCopy {
 
   switch (state.status) {
     case "lobby":
-      return { headline: "You are in. Wait for your teacher to start.", progress };
+      return { headline: "You’re in.", progress };
     case "paused":
       return { headline: "The live session is paused.", progress };
     case "ended":

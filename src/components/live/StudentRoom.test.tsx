@@ -148,9 +148,7 @@ describe("StudentRoom: waiting", () => {
 
   it("waits in the lobby with the sentence every other screen uses", () => {
     setup();
-    expect(
-      screen.getByRole("heading", { name: "You are in. Wait for your teacher to start." }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "You’re in." })).toBeInTheDocument();
   });
 
   it("says when the session has ended, and shows no item", () => {

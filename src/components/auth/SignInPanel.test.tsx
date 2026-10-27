@@ -106,7 +106,7 @@ describe("SignInPanel", () => {
   it("sends a forgotten password through the link to choosing a new one, then on to next", async () => {
     const { linkAction, user } = setup({ next: "/learn" });
     await user.click(screen.getByRole("button", { name: "Forgot your password?" }));
-    expect(screen.getByText(/Then you can choose a new password/)).toBeInTheDocument();
+    expect(screen.getByText("We’ll email you a link to reset it.")).toBeInTheDocument();
     await user.type(screen.getByRole("textbox", { name: "Email address" }), "a@school.edu");
     await user.click(screen.getByRole("button", { name: "Email me a sign-in link" }));
     expect(linkAction.mock.calls[0]![1].get("next")).toBe("/account/password?next=%2Flearn");

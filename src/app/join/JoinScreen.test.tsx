@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { JoinScreen } from "./JoinScreen";
 
@@ -14,25 +14,15 @@ describe("JoinScreen (Main and JoinDesktop mockups)", () => {
     expect(screen.getByRole("button", { name: "Join" })).toBeInTheDocument();
   });
 
-  it("says what happens next, in three steps, beside the form on a laptop", () => {
+  it("shows the form alone, with no second column beside it", () => {
     render(<JoinScreen code="" />);
-    const next = screen.getByRole("region", { name: "What happens next" });
-    expect(next).toHaveClass("hidden", "lg:flex");
-    expect(
-      within(next)
-        .getAllByRole("listitem")
-        .map((step) => step.textContent),
-    ).toEqual([
-      expect.stringContaining("Wait for your teacher"),
-      expect.stringContaining("Answer on this screen"),
-      expect.stringContaining("See the answer together"),
-    ]);
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
   });
 
   it("sends a student holding a class code to the right place", () => {
     render(<JoinScreen code="" />);
     expect(screen.getByRole("link", { name: "Join your class" })).toBeInTheDocument();
-    expect(screen.getByText(/Have a class code like ABCD-2345\?/)).toBeInTheDocument();
+    expect(screen.getByText(/Have a class code\?/)).toBeInTheDocument();
   });
 });
 

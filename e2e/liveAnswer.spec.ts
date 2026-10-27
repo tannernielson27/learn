@@ -126,7 +126,7 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
   // Nothing to answer yet, and nothing to count.
   await expect(page.getByTestId("answer-count")).toHaveCount(0);
   for (const phone of [...phones, quiet]) {
-    await expect(phone.getByText("You are in. Wait for your teacher to start.")).toBeVisible();
+    await expect(phone.getByText("You’re in.", { exact: true })).toBeVisible();
   }
 
   await page.getByRole("button", { name: "Start", exact: true }).click();

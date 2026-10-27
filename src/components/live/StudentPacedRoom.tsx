@@ -225,7 +225,8 @@ export function StudentPacedRoom({
       {header}
 
       <p role="status" data-testid="paced-count" className="tabular mt-6 text-sm text-ink-2">
-        {state.reveal ? SHOWING : `${done} of ${set.length} answered`}
+        {/* The header's badge says the answers are showing, so this line keeps the count. */}
+        {`${done} of ${set.length} answered`}
       </p>
 
       <SetNav

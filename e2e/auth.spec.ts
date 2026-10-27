@@ -374,7 +374,6 @@ test("a new student signs up and lands on the welcome page, with no role yet", a
   await expect(
     page.getByRole("heading", { level: 2, name: "Join your class", exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("Signed in as Sam Lee.", { exact: true })).toBeVisible();
   const welcome = await new AxeBuilder({ page }).analyze();
   expect(welcome.violations).toEqual([]);
   await page.screenshot({

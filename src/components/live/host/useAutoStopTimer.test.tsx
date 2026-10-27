@@ -50,25 +50,24 @@ const read = (who: number[], position = 1, also: number[] = []): ProgressRead =>
 interface Props {
   value: AutoStopRoom;
   progress: ProgressRead | null;
-  on: boolean;
 }
 
 function setup(room: Partial<AutoStopRoom>, progress: ProgressRead | null = read([1, 2])) {
   const stopQuietly = vi.fn(async () => true);
+  const revealQuietly = vi.fn(async () => true);
   const base: AutoStopRoom = {
     state: started(),
     roster: [person(1), person(2)],
     serverNow: () => Date.now(),
     stopQuietly,
+    revealQuietly,
     ...room,
   };
-  const hook = renderHook(
-    ({ value, progress: held, on }: Props) => useAutoStopTimer(value, held, on),
-    { initialProps: { value: base, progress, on: true } },
-  );
-  const rerender = (props: Partial<Props>) =>
-    hook.rerender({ value: base, progress, on: true, ...props });
-  return { ...hook, rerender, base, stopQuietly };
+  const hook = renderHook(({ value, progress: held }: Props) => useAutoStopTimer(value, held), {
+    initialProps: { value: base, progress },
+  });
+  const rerender = (props: Partial<Props>) => hook.rerender({ value: base, progress, ...props });
+  return { ...hook, rerender, base, stopQuietly, revealQuietly };
 }
 
 async function wait(ms: number) {
@@ -87,21 +86,35 @@ afterEach(() => {
 });
 
 describe("useAutoStopTimer", () => {
-  it("sends stop_timer once, after the settle window, and reports the question it ended", async () => {
-    const { result, stopQuietly, rerender } = setup({});
+  it("stops the timer then shows the answer, once, after the settle window", async () => {
+    const { result, stopQuietly, revealQuietly, rerender } = setup({});
     expect(stopQuietly).not.toHaveBeenCalled();
 
     await wait(AUTO_STOP_SETTLE_MS - 1);
     expect(stopQuietly).not.toHaveBeenCalled();
+    expect(revealQuietly).not.toHaveBeenCalled();
 
     await wait(1);
     expect(stopQuietly).toHaveBeenCalledTimes(1);
+    expect(revealQuietly).toHaveBeenCalledTimes(1);
+    expect(stopQuietly.mock.invocationCallOrder[0]).toBeLessThan(
+      revealQuietly.mock.invocationCallOrder[0]!,
+    );
     expect(result.current).toBe(1);
 
-    // New reads and presence syncs keep arriving while the stop lands: still once.
+    // New reads and presence syncs keep arriving while the sends land: still once.
     rerender({ progress: read([1, 2]) });
     await wait(10_000);
     expect(stopQuietly).toHaveBeenCalledTimes(1);
+    expect(revealQuietly).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the status line once the room shows the answer", async () => {
+    const { result, rerender, base } = setup({});
+    await wait(AUTO_STOP_SETTLE_MS);
+    expect(result.current).toBe(1);
+    rerender({ value: { ...base, state: { ...base.state, reveal: true } } });
+    expect(result.current).toBe(1);
   });
 
   it("does not fire while a connected student is still thinking, however many answered then left", async () => {
@@ -187,18 +200,20 @@ describe("useAutoStopTimer", () => {
     expect(stopQuietly).toHaveBeenCalledTimes(1);
   });
 
-  it("does nothing with the setting off", async () => {
-    const { stopQuietly, result, rerender } = setup({});
-    rerender({ on: false });
-    await wait(10_000);
-    expect(stopQuietly).not.toHaveBeenCalled();
+  it("does not reveal, and shows nothing, when the stop did not go through", async () => {
+    const refused = vi.fn(async () => false);
+    const { result, revealQuietly } = setup({ stopQuietly: refused });
+    await wait(AUTO_STOP_SETTLE_MS);
+    expect(refused).toHaveBeenCalledTimes(1);
+    expect(revealQuietly).not.toHaveBeenCalled();
     expect(result.current).toBeNull();
   });
 
-  it("shows nothing when the stop did not go through", async () => {
+  it("shows nothing when the reveal did not go through", async () => {
     const refused = vi.fn(async () => false);
-    const { result } = setup({ stopQuietly: refused });
+    const { result, stopQuietly } = setup({ revealQuietly: refused });
     await wait(AUTO_STOP_SETTLE_MS);
+    expect(stopQuietly).toHaveBeenCalledTimes(1);
     expect(refused).toHaveBeenCalledTimes(1);
     expect(result.current).toBeNull();
   });
