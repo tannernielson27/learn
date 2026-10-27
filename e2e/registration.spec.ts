@@ -129,7 +129,7 @@ test("a stranger becomes a teacher, and another stranger becomes their student, 
   expect(code).toMatch(CLASS_CODE);
   await shoot(page, testInfo, "2-class-code");
 
-  // 4. A student signs up with no invite, types the code, and is welcomed once into the class.
+  // 4. A student signs up with no invite, types the code, and lands on the class.
   const phone = await anotherBrowser(browser, testInfo);
   const student = await phone.newPage();
   await signUp(student, "student", studentName, address(`reg-student-${project}`));
@@ -137,8 +137,7 @@ test("a stranger becomes a teacher, and another stranger becomes their student, 
   await student.getByRole("textbox", { name: "Class code", exact: true }).fill(code);
   await student.getByRole("button", { name: "Join the class", exact: true }).click();
   await expect(student).toHaveURL(/\/learn$/);
-  await shoot(student, testInfo, "3-student-welcome");
-  await walkWelcome(student, `Welcome, ${studentName}`, "Go to my classes");
+  await expect(student.getByRole("dialog")).toHaveCount(0);
   await expect(student.getByRole("list", { name: "Your classes", exact: true })).toContainText(
     className,
   );

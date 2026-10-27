@@ -44,14 +44,6 @@ const WHAT_IT_DOES = [
   },
 ] as const;
 
-const HOW_TO_GET_IN = [
-  { term: "Teachers", detail: "Create an account. You get a workspace of your own." },
-  {
-    term: "Students",
-    detail: "Create an account, then join your class with its invite link or class code.",
-  },
-] as const;
-
 type Row = { term: string; detail: string };
 
 function Rows({ rows }: { rows: readonly Row[] }) {
@@ -94,8 +86,7 @@ export function Landing({ entry }: LandingProps) {
             Live learning for the Next Generation NCLEX.
           </h1>
           <p className="mt-6 max-w-prose text-lg leading-relaxed text-ink-2">
-            Quizzes in every NCLEX question format, scored like the exam. For nursing teachers and
-            their students.
+            Every NCLEX question format, scored like the exam.
           </p>
           {/*
             One two-column grid for both rows, so every action is the same width and height and
@@ -132,9 +123,6 @@ export function Landing({ entry }: LandingProps) {
             loading="eager"
             className="h-auto w-full rounded-md border border-line"
           />
-          <figcaption className="mt-3 text-sm text-ink-2">
-            Step 1 of a case study, with the patient record beside the question.
-          </figcaption>
         </figure>
       </div>
 
@@ -143,13 +131,6 @@ export function Landing({ entry }: LandingProps) {
           What LeaRN does
         </h2>
         <Rows rows={WHAT_IT_DOES} />
-      </section>
-
-      <section aria-labelledby="access-heading" className="mt-12 border-t border-line pt-8">
-        <h2 id="access-heading" className="text-xl font-semibold text-ink-1">
-          How to get in
-        </h2>
-        <Rows rows={HOW_TO_GET_IN} />
       </section>
 
       <div className="mt-16 flex flex-col gap-2 text-sm text-ink-2 sm:flex-row sm:items-center sm:justify-between">

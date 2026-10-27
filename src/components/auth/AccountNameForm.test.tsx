@@ -14,15 +14,13 @@ function setup(result: AccountNameState, name: string | null = "Ana Reyes") {
 }
 
 describe("AccountNameForm", () => {
-  it("shows the current name, says where it appears, and caps it at 80 characters", () => {
+  it("shows the current name and caps it at 80 characters", () => {
     setup({ status: "idle" });
     const field = screen.getByRole("textbox", { name: "Your name" });
     expect(field).toHaveValue("Ana Reyes");
     expect(field).toBeRequired();
     expect(field).toHaveAttribute("maxlength", "80");
-    expect(field).toHaveAccessibleDescription(
-      "Shown at the top of each page and on class rosters.",
-    );
+    expect(field).not.toHaveAttribute("aria-describedby");
   });
 
   it("starts empty for an account with no name yet", () => {
