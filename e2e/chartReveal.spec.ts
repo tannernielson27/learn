@@ -284,7 +284,7 @@ test("a live case study: the phone's chart moves with the room and nothing later
   // The instructor's console shows the whole record, marked with the class's step.
   const hostRecord = page.getByTestId("host-record");
   await hostRecord.locator("summary").click();
-  await expect(hostRecord.getByTestId("record-note")).toContainText("The class is on step 4");
+  await expect(hostRecord.locator("summary")).toContainText("Step 4");
 
   await page.getByRole("button", { name: "End live session", exact: true }).click();
   await page.getByRole("button", { name: "End live session", exact: true }).click();

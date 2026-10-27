@@ -49,7 +49,8 @@ export interface AttemptPlayerProps {
 }
 
 const STATUS_COPY: Record<Exclude<SaveStatus, "stopped">, string> = {
-  idle: "Answers save as you go.",
+  // Nothing until the first change: the line keeps its height (`min-h-5`) so nothing moves.
+  idle: "",
   saving: "Saving",
   saved: "Saved",
   retrying: "Not saved, retrying",
@@ -288,7 +289,7 @@ export function AttemptPlayer({
             </section>
           ) : (
             <div className="flex items-center justify-between gap-3 short:flex-col short:items-stretch">
-              <p role="status" data-testid="save-status" className="text-sm text-ink-2">
+              <p role="status" data-testid="save-status" className="min-h-5 text-sm text-ink-2">
                 {statusText}
               </p>
               <Button

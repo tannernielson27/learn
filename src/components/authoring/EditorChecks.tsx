@@ -49,8 +49,7 @@ export function EditorChecks({
 
       {warnings.length > 0 ? (
         <Card padding="sm" role="region" aria-label="Quality warnings">
-          <Heading className="text-sm font-semibold text-ink-1">Worth a second look</Heading>
-          <p className="mb-1 text-sm text-ink-2">These do not stop publishing.</p>
+          <Heading className="mb-1 text-sm font-semibold text-ink-1">Worth a second look</Heading>
           <ul className="flex flex-col">
             {warnings.map((warning) => (
               <li key={warning.field}>

@@ -67,14 +67,6 @@ function StepItem({ standing }: { standing: StepStanding }) {
   );
 }
 
-function UntaggedNote({ items }: { items: number }) {
-  if (items === 0) return null;
-  const verb = items === 1 ? "has no step and is" : "have no step and are";
-  return (
-    <p className="mt-3 text-sm text-ink-2">{`${questionsLabel(items)} ${verb} not counted.`}</p>
-  );
-}
-
 /**
  * A student's clinical judgment steps (#239): the six steps, weakest first, from their best
  * attempt at each closed assignment, their first answers in practice and their answers in ended
@@ -91,10 +83,7 @@ export function YourSteps({ standings }: YourStepsProps) {
 
   return (
     <>
-      <p className="mb-3 text-sm text-ink-2">
-        Weakest first, from your best attempt at each closed assignment, your first answers in
-        practice and your answers in ended live sessions.
-      </p>
+      <p className="mb-3 text-sm text-ink-2">Weakest first.</p>
       <ol
         aria-label="Your clinical judgment steps"
         className="flex flex-col divide-y divide-line border-y border-line"
@@ -103,7 +92,6 @@ export function YourSteps({ standings }: YourStepsProps) {
           <StepItem key={standing.step} standing={standing} />
         ))}
       </ol>
-      <UntaggedNote items={standings.untagged.items} />
     </>
   );
 }

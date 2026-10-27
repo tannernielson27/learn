@@ -20,8 +20,7 @@ export interface PendingInvitesProps {
   focusAfterChange?: string;
 }
 
-export const RESEND_WARNING =
-  "The link already sent stops working and a new one is emailed. It counts toward your 5 invitations a day.";
+export const RESEND_WARNING = "The old link stops working.";
 export const REVOKE_WARNING = "The link in their email stops working.";
 
 /**

@@ -37,13 +37,11 @@ describe("SignUpForm (#361)", () => {
   it("shows the fields once a role is chosen, and lets the choice change", async () => {
     const { user } = setup({ status: "idle" });
     await user.click(screen.getByRole("radio", { name: /I teach/ }));
-    expect(screen.getByRole("textbox", { name: "Your name" })).toHaveAccessibleDescription(
-      /in your workspace’s name/,
+    expect(screen.getByRole("textbox", { name: "Your name" })).not.toHaveAttribute(
+      "aria-describedby",
     );
     await user.click(screen.getByRole("radio", { name: /I am a student/ }));
-    expect(screen.getByRole("textbox", { name: "Your name" })).toHaveAccessibleDescription(
-      /class roster/,
-    );
+    expect(screen.getByRole("textbox", { name: "Your name" })).toBeInTheDocument();
   });
 
   it("starts on the role the link named", () => {

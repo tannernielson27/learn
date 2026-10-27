@@ -8,6 +8,7 @@ export interface StaysBehindListProps {
 
 /** The confirm step's list of what a move leaves with the quiz in hand (#417). */
 export function StaysBehindList({ lines }: StaysBehindListProps) {
+  if (lines.length === 0) return null;
   return (
     <ul aria-label="What stays with this quiz" className="flex flex-col gap-2">
       {lines.map((line) => (

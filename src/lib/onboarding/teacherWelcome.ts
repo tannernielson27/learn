@@ -1,14 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
-import { checklistSteps } from "./checklist";
 
 type Client = SupabaseClient<Database>;
 
 /**
- * The welcome a new teacher sees once, the first time they reach the author home (#364). It sits
- * next to the Get started checklist (`checklist.ts`) on purpose: the welcome says what the three
- * checklist steps are, in the same order, and is written from the checklist's own titles, so the
- * two cannot drift into saying different things. It adds only what the checklist does not say.
+ * The welcome a new teacher sees once, the first time they reach the author home (#364): a title
+ * and one line. The Get started checklist (`checklist.ts`) beside it says what to do; the welcome
+ * says only what the checklist does not, whose workspace this is.
  */
 
 export interface WelcomeStep {
@@ -17,71 +15,25 @@ export interface WelcomeStep {
   body: readonly string[];
 }
 
-/** The last step's button: it closes the welcome and hands over to the checklist. */
+/** The welcome's button: it closes the welcome and hands over to the checklist. */
 export const TEACHER_WELCOME_FINISH = "Get started";
 
-const CHECKLIST = checklistSteps({ banks: [], hasClass: false, hasAssignmentOrSession: false });
-type ChecklistId = (typeof CHECKLIST)[number]["id"];
-const stepOf = (id: ChecklistId) => CHECKLIST.find((step) => step.id === id)!;
-const titleOf = (id: ChecklistId): string => stepOf(id).title;
-const hintOf = (id: ChecklistId): string => stepOf(id).hint;
-/** A checklist title in the middle of a sentence. */
-const lower = (title: string): string => title.charAt(0).toLowerCase() + title.slice(1);
-
-const STUDENTS_SEE =
-  "Students see only what you assign, share for practice or use in a live session.";
-
 /**
- * What a colleague who came in by invitation sees instead: two steps. They did not make this
- * workspace and are not alone in it, so "no other teacher can see them" would be untrue, and the
- * sample bank is the workspace's to import or not, which the Get started list still offers.
- */
-function invitedWelcomeSteps(name: string | undefined): WelcomeStep[] {
-  return [
-    {
-      title: name ? `Welcome, ${name}` : "Welcome to LeaRN",
-      body: [
-        "You have joined a shared workspace. You and the other teachers in it see and work on the same quizzes, classes and results.",
-        STUDENTS_SEE,
-      ],
-    },
-    {
-      title: "Where to start",
-      body: [
-        "Open a quiz to see what is already here, or write your own.",
-        `${titleOf("class")} and share its class code or invite link. Then ${lower(titleOf("assign"))}.`,
-      ],
-    },
-  ];
-}
-
-/**
- * The three steps, greeting the teacher by name when they have one. A teacher who was invited into
- * a colleague's workspace gets the two of `invitedWelcomeSteps` instead.
+ * One step, greeting the teacher by name when they have one. A colleague who came in by
+ * invitation did not make this workspace and is not alone in it, so they are told it is shared.
  */
 export function teacherWelcomeSteps(
   displayName: string | null,
   options: { invited?: boolean } = {},
 ): WelcomeStep[] {
   const name = displayName?.trim();
-  if (options.invited) return invitedWelcomeSteps(name);
   return [
     {
       title: name ? `Welcome, ${name}` : "Welcome to LeaRN",
       body: [
-        "This is your workspace. Its quizzes, classes and results are yours: no other teacher can see them.",
-        STUDENTS_SEE,
-      ],
-    },
-    {
-      title: titleOf("bank"),
-      body: ["A quiz holds your questions and case studies.", hintOf("bank")],
-    },
-    {
-      title: "Then a class, and your first live session",
-      body: [
-        `${titleOf("class")} and share its class code or invite link.`,
-        `${titleOf("assign")}, and watch the answers come in.`,
+        options.invited
+          ? "You share this workspace's quizzes, classes and results with the other teachers in it."
+          : "This is your workspace. No other teacher can see what you make in it.",
       ],
     },
   ];

@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { RoomCount, type PresentCount } from "@/components/live/RoomCount";
 import { buttonClasses } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
-import { Notice } from "@/components/ui/Notice";
 import { CJMM_STEP_LABELS, type CjmmStep } from "@/lib/ngn/types";
 import { JOIN_PATH } from "@/lib/live/routes";
 import { endTally, worthWords, type PhoneHistory, type SeenItem } from "./history";
@@ -78,9 +77,7 @@ export function PhoneWaiting({
         </span>
       </p>
       <RoomCount present={present} />
-      <p className="text-sm text-ink-2">
-        Stay on this page. If your phone sleeps, it reconnects on its own.
-      </p>
+      <p className="text-sm text-ink-2">Keep this page open.</p>
     </PhoneMessage>
   );
 }
@@ -99,7 +96,6 @@ export function PhoneRefused() {
         </Link>
       }
     >
-      <p className="text-ink-2">Your teacher has the answers you sent.</p>
       {/* A signed-in student who joins again on another device takes their place with them
           (ADR 0013), and this phone cannot tell that from being removed, so it says both. */}
       <p className="text-ink-2">
@@ -132,7 +128,6 @@ export function PhoneEnded({
   const tally = endTally(history);
   return (
     <PhoneMessage
-      eyebrow="Live session ended"
       heading={headline}
       action={
         <Link
@@ -188,7 +183,6 @@ export function PhoneEnded({
           )}
         </>
       )}
-      <Notice>Your teacher has the full report.</Notice>
     </PhoneMessage>
   );
 }

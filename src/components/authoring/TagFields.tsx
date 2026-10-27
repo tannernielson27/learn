@@ -128,7 +128,6 @@ export function TagFields({
           <p className="text-sm font-medium text-ink-1">Clinical judgment step</p>
           <p className="flex flex-wrap items-center gap-2 text-sm text-ink-2">
             <span className={`${chipClass} px-2 py-1`}>{stepTagLabel(cjmmStep)}</span>
-            Set by its place in the case study.
           </p>
         </div>
       ) : null}
@@ -160,7 +159,7 @@ export function TagFields({
           Add topic tags
         </label>
         <p id={ids.hint} className="text-sm text-ink-2">
-          Separate with commas. Up to {TAG_LIMITS.count} tags of {TAG_LIMITS.length} characters.
+          Separate with commas.
         </p>
         <div className="flex gap-2">
           <input

@@ -239,7 +239,7 @@ describe("/w/[token]: someone signed in", () => {
     await renderPage();
     expect(screen.getByRole("button", { name: "Join workspace" })).toBeVisible();
     expect(screen.queryByLabelText("Password")).toBeNull();
-    expect(screen.getByText(/You are signed in as Grace\.Hopper@School\.edu/)).toBeVisible();
+    expect(screen.getByText(/^Signed in as Grace\.Hopper@School\.edu\./)).toBeVisible();
   });
 
   it("as another address: told to sign out, and shown the invited address only in part", async () => {

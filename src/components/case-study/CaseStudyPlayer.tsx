@@ -158,7 +158,7 @@ export function CaseStudyPlayer<T extends PlayableItem>({
   const record = records?.[Math.min(index, records.length - 1)] ?? caseStudy.ehr;
   const note =
     records === undefined && caseStudy.ehr !== undefined && isStagedRecord(caseStudy.ehr)
-      ? `Full patient record. A student at step ${Math.min(index + 1, total)} sees only what that step has reached.`
+      ? "Full patient record. Students see it step by step."
       : undefined;
 
   const update = (at: number, change: StepState) =>

@@ -30,11 +30,7 @@ export default async function ConfirmPage({ searchParams }: PageProps<"/auth/con
   return (
     <AuthFrame>
       <h1 className={AUTH_HEADING}>Finish signing in</h1>
-      <p className={AUTH_SUBLINE}>
-        Pressing the button signs you in on this device, even if you asked for the link on another
-        one. The link works once. To sign in on the device where you asked instead, type the code
-        from the email there.
-      </p>
+      <p className={AUTH_SUBLINE}>Continue to sign in on this device.</p>
       <form action={confirmSignIn}>
         <input type="hidden" name="token_hash" value={link.tokenHash} />
         <input type="hidden" name="type" value="email" />

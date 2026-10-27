@@ -124,9 +124,7 @@ export function AiImportReviewEntry({
       ) : null}
 
       {dropped ? (
-        <p className="text-sm text-ink-2">
-          Dropped. It will not be imported unless you restore it.
-        </p>
+        <p className="text-sm text-ink-2">Dropped.</p>
       ) : (
         <div className={`grid min-w-0 gap-4 ${showSource ? "lg:grid-cols-2" : ""}`}>
           <section aria-label={`${heading}, preview`} className="min-w-0">

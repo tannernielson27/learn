@@ -14,13 +14,7 @@ export interface StudentClassListProps {
 export function StudentClassList({ classes }: StudentClassListProps) {
   if (classes.length === 0) {
     // Right under the student home's h1.
-    return (
-      <EmptyState
-        level={2}
-        heading="You are not in a class yet"
-        body="Type your class code below, or open your teacher’s invite link."
-      />
-    );
+    return <EmptyState level={2} heading="You are not in a class yet" />;
   }
 
   // The line under the home's h1 (StudentHome mockup): each class on its own row at 375px, side by

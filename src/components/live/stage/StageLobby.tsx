@@ -38,12 +38,7 @@ export function StageLobby({ title, code, url, join, names }: StageLobbyProps) {
       )}
       <hr className="border-t-(length:--stage-stroke) border-stage-line" />
       <section aria-label="In this session" className="flex min-h-0 flex-col gap-[2.6cqb]">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-[3cqb]">
-          <StageNumber value={names.length} words="in this session" />
-          <p className="text-stage-label font-semibold text-ink-2">
-            Your teacher starts when everyone is in
-          </p>
-        </div>
+        <StageNumber value={names.length} words="in this session" />
         <ul className="flex max-h-[21cqb] min-h-0 flex-wrap gap-x-[1.5cqb] gap-y-[1.3cqb] overflow-hidden">
           {names.map((name, index) => (
             <li

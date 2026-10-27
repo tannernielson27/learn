@@ -56,7 +56,7 @@ describe("AttemptPlayer (#208)", () => {
     const view = setup();
     await renderersLoaded();
     expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
-    expect(screen.getByTestId("save-status")).toHaveTextContent("Answers save as you go.");
+    expect(screen.getByTestId("save-status")).toBeEmptyDOMElement();
 
     await view.user.click(screen.getByRole("radio", { name: /Auscultate the lungs/ }));
     expect(screen.getByTestId("save-status")).toHaveTextContent("Saving");

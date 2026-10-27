@@ -192,10 +192,7 @@ export default async function CaseStudyPage({
         </p>
         {header}
         <Card tone="inset" padding="sm" className="mb-6 max-w-prose">
-          <p className="text-ink-1">
-            This case study is archived. It is out of the quiz, and its patient record and questions
-            cannot change. Restore it to edit it.
-          </p>
+          <p className="text-ink-1">Archived. Restore it to edit.</p>
         </Card>
       </ReadingWidth>
     );

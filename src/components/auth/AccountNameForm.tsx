@@ -15,7 +15,6 @@ export interface AccountNameFormProps {
 }
 
 const INITIAL: AccountNameState = { status: "idle" };
-export const ACCOUNT_PAGE_NAME_HINT = "Shown at the top of each page and on class rosters.";
 
 /** Names or renames the signed-in account (#358). The form stays put; a line says it saved. */
 export function AccountNameForm({ action, name }: AccountNameFormProps) {
@@ -37,7 +36,6 @@ export function AccountNameForm({ action, name }: AccountNameFormProps) {
         <DisplayNameField
           id={`${id}-name`}
           defaultValue={current}
-          hint={ACCOUNT_PAGE_NAME_HINT}
           inputRef={inputRef}
           invalid={error !== null}
           errorId={error ? errorId : undefined}

@@ -31,13 +31,12 @@ describe("ChoosePasswordForm", () => {
     expect(screen.queryByRole("link", { name: "Not now" })).toBeNull();
   });
 
-  it("sends the password to the action, then says it is saved and where to go", async () => {
+  it("sends the password to the action, then says it is saved and links on", async () => {
     const { action, user } = setup({ status: "saved" });
     await user.type(screen.getByLabelText("New password"), "correct horse");
     await user.click(screen.getByRole("button", { name: "Save password" }));
     expect(action.mock.calls[0]![1].get("password")).toBe("correct horse");
     expect(await screen.findByRole("heading", { name: "Password saved" })).toHaveFocus();
-    expect(screen.getByText(/a@school\.edu/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Continue" })).toHaveAttribute("href", "/learn");
   });
 
