@@ -87,7 +87,6 @@ export function QuizFolderPanel({
               action={turnInto.action}
               folderName={folder.name}
               quizName={turnInto.quizName}
-              hasSubfolders={folders.some((row) => row.parentId === folder.id)}
               staysBehind={turnInto.staysBehind}
             />
           ) : null}

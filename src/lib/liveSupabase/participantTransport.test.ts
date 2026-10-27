@@ -1170,6 +1170,30 @@ describe("a request the network swallows", () => {
     });
   });
 
+  it("takes a 401 from the answer as final, as from the view: this phone's token was replaced", async () => {
+    // ADR 0013 decision 1: the same member joined on another device, and this phone's secret is
+    // gone. Its next answer is the first request to find out; the room must not wait for a move.
+    const socket = fakeSocket();
+    const call = vi.fn(async (url: string) =>
+      url.endsWith("/api/live/view")
+        ? Response.json(LOBBY)
+        : Response.json({ refusal: "not_joined", error: "x" }, { status: 401 }),
+    );
+    const transport = createSupabaseParticipant({
+      client: socket.client,
+      fetch: call as unknown as typeof globalThis.fetch,
+    });
+    opened.push(transport);
+    const connections: string[] = [];
+    transport.onConnection((status) => connections.push(status));
+    await transport.resume(ME);
+
+    await expect(
+      transport.submit("item", { type: "multiple_choice", optionId: "a" }),
+    ).rejects.toMatchObject({ code: "not_joined" });
+    expect(connections.at(-1)).toBe("refused");
+  });
+
   it("counts a view that timed out as one that never got an answer, and tries again", async () => {
     const socket = fakeSocket();
     let asked = 0;

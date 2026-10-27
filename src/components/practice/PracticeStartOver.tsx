@@ -16,8 +16,7 @@ export interface PracticeStartOverProps {
   label?: string;
 }
 
-export const START_OVER_WARNING =
-  "Start over with every question unanswered? Your first answers still count in your clinical judgment steps.";
+export const START_OVER_WARNING = "Start over? Every question starts unanswered.";
 
 /**
  * "Start over" for a practice run (#241), asked twice, as `ConfirmSubmit` asks: the first press
@@ -61,10 +60,7 @@ export function PracticeStartOver({ startOver, label }: PracticeStartOverProps) 
             </div>
           </form>
         ) : (
-          <div className="flex flex-col items-start gap-2">
-            {label ? null : (
-              <p className="measure text-sm text-ink-2">Practice never counts toward a grade.</p>
-            )}
+          <div className="flex flex-col items-start">
             <Button
               data-focus-target
               variant="secondary"

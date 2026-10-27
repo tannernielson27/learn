@@ -10,7 +10,6 @@ import { JoinByCodeForm } from "@/components/classes/JoinByCodeForm";
 import { LiveSessionHistory } from "@/components/learn/LiveSessionHistory";
 import { StudentClassList } from "@/components/classes/StudentClassList";
 import { PickUpCard } from "@/components/learn/PickUpCard";
-import { StudentWelcome } from "@/components/onboarding/StudentWelcome";
 import { PracticeBankList } from "@/components/practice/PracticeBankList";
 import { buttonClasses } from "@/components/ui/Button";
 import { Notice } from "@/components/ui/Notice";
@@ -21,22 +20,15 @@ import { isEmailUnconfirmed } from "@/lib/auth/emailConfirmation";
 import { spansWorkspaces, studentClassInfo } from "@/lib/classes/studentClasses";
 import { buildLiveHistory } from "@/lib/learn/liveHistory";
 import { requireStudent } from "@/lib/classes/viewer";
-import {
-  readStudentWelcomeState,
-  showStudentWelcome,
-  studentWelcomeSteps,
-} from "@/lib/onboarding/studentWelcome";
 import { listOpenAssignments } from "@/lib/supabase/assignments";
 import { listMyAttemptProgress } from "@/lib/supabase/attempts";
 import { myClasses } from "@/lib/supabase/classInvites";
 import { readMyLiveResults } from "@/lib/supabase/liveResults";
 import { readMyPracticeBanks } from "@/lib/supabase/practice";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
-import { joinClassWithCode, markStudentOnboarded } from "../actions";
+import { joinClassWithCode } from "../actions";
 
 export const metadata: Metadata = { title: "Your classes" };
-
-const STUDENT_HOME_HEADING_ID = "student-home-heading";
 
 /** A part that did not load: a neutral system message, not feedback red (PLAN D11). */
 function DidNotLoad({ children }: { children: ReactNode }) {
@@ -64,20 +56,17 @@ const H2 = "mb-3 text-lg font-semibold text-ink-1";
 export default async function StudentHomePage() {
   const { supabase, userId, email } = await requireStudent();
   const now = new Date();
-  const [claims, classes, assignments, practice, { history, steps }, welcome, live] =
-    await Promise.all([
-      // Read from the token already verified for this request; asked here, on the home only, so
-      // the banner never sits over an assignment someone is in the middle of.
-      supabase.auth.getClaims().then(({ data }) => data?.claims),
-      myClasses(supabase),
-      listOpenAssignments(supabase, now),
-      readMyPracticeBanks(supabase),
-      loadStudentRecord(historyStore(supabase, createSupabaseServiceClient()), userId),
-      // #365: three columns of the student's own profile, for a welcome shown once.
-      readStudentWelcomeState(supabase, userId),
-      // Ended sessions only, and only the student's own linked participant rows.
-      readMyLiveResults(supabase),
-    ]);
+  const [claims, classes, assignments, practice, { history, steps }, live] = await Promise.all([
+    // Read from the token already verified for this request; asked here, on the home only, so
+    // the banner never sits over an assignment someone is in the middle of.
+    supabase.auth.getClaims().then(({ data }) => data?.claims),
+    myClasses(supabase),
+    listOpenAssignments(supabase, now),
+    readMyPracticeBanks(supabase),
+    loadStudentRecord(historyStore(supabase, createSupabaseServiceClient()), userId),
+    // Ended sessions only, and only the student's own linked participant rows.
+    readMyLiveResults(supabase),
+  ]);
   // #242: due times are shown in each class's zone, not the device's. A student whose classes
   // span more than one workspace also gets the workspace beside each class name, and on each
   // practice quiz, which names no class.
@@ -98,27 +87,9 @@ export default async function StudentHomePage() {
         <ConfirmEmailBanner action={resendConfirmation} email={email} />
       ) : null}
       <header className="mb-8 flex flex-col gap-2">
-        {/* Focusable from script, not a tab stop: the student welcome (#365) hands focus here. */}
-        <h1
-          id={STUDENT_HOME_HEADING_ID}
-          tabIndex={-1}
-          className="font-read text-display leading-tight text-ink-1 outline-none"
-        >
-          Your classes
-        </h1>
+        <h1 className="font-read text-display leading-tight text-ink-1">Your classes</h1>
         {inAClass ? <StudentClassList classes={classes} /> : null}
       </header>
-      {/* #365: drawn from the name, the class names and fixed copy; nothing of any assignment. */}
-      {showStudentWelcome(welcome, classes?.length ?? 0) ? (
-        <StudentWelcome
-          steps={studentWelcomeSteps(
-            welcome?.displayName ?? null,
-            (classes ?? []).map((entry) => entry.name),
-          )}
-          onDone={markStudentOnboarded}
-          focusAfter={STUDENT_HOME_HEADING_ID}
-        />
-      ) : null}
       {/* #362: no class yet, so the class code is the next thing to do, and comes first. */}
       {classes === null ? (
         <div className="mb-8">
@@ -196,10 +167,7 @@ export default async function StudentHomePage() {
           </section>
           {/* #362: folded away for a student who has classes, where it is an occasional action. */}
           {inAClass ? (
-            <section aria-labelledby="join-class-heading">
-              <h2 id="join-class-heading" className={H2}>
-                Join a class
-              </h2>
+            <div>
               <details>
                 <summary className="tap-target inline-flex cursor-pointer items-center rounded-sm font-semibold text-accent-ink underline-offset-4 hover:underline">
                   Join another class
@@ -208,7 +176,7 @@ export default async function StudentHomePage() {
                   <JoinByCodeForm action={joinClassWithCode} />
                 </div>
               </details>
-            </section>
+            </div>
           ) : null}
           {/* No account needed for a live session; the button is the whole of it (mockup). */}
           <Link href="/join" className={buttonClasses({ variant: "secondary", block: true })}>

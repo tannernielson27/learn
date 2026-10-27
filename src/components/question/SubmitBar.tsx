@@ -13,16 +13,15 @@ export interface SubmitBarProps {
   busyLabel: string;
   /** Why the last check failed, shown in place of the status line. */
   submitError?: string;
-  /** What the answer holds so far, e.g. "2 selected". The default says it can still change. */
+  /** What the answer holds so far, e.g. "2 selected". Nothing is shown without one. */
   status?: string;
 }
 
 export const INCOMPLETE = "Complete the question to submit.";
-export const CHANGEABLE = "You can change it until you submit.";
 
 /**
- * The one place Submit lives: an `ActionBar` with the status line ("You can change it until you
- * submit", "2 selected") and a 56px Submit in thumb reach on a phone.
+ * The one place Submit lives: an `ActionBar` with the status line ("2 selected", or nothing) and a
+ * 56px Submit in thumb reach on a phone.
  */
 export function SubmitBar({
   canSubmit,
@@ -60,12 +59,13 @@ export function SubmitBar({
   } else {
     // Not a live region: the controls already announce each change, and a renderer such as the
     // ordered response keeps the page's one status region for its own moves.
-    line = <span className="text-sm text-ink-2">{status ?? CHANGEABLE}</span>;
+    line = status ? <span className="text-sm text-ink-2">{status}</span> : null;
   }
 
   return (
     <ActionBar>
-      <div className="min-w-0 flex-1 short:flex-none">{line}</div>
+      {/* min-h-5 holds the line's height while it is empty, so a count appearing moves nothing. */}
+      <div className="min-h-5 min-w-0 flex-1 short:flex-none">{line}</div>
       {/* aria-disabled, never disabled (#59): a disabled button cannot take focus, so a screen
             reader never reaches the reason beside it. It stays focusable, says it is unavailable,
             is described by the reason, and `submit` ignores the press. The aria-disabled: classes

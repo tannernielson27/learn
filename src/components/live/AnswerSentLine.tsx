@@ -1,3 +1,5 @@
+import type { Ref } from "react";
+
 interface AnswerSentLineProps {
   /** The visible words, owned by the room that shows them. */
   text: string;
@@ -8,6 +10,8 @@ interface AnswerSentLineProps {
   detail?: string;
   /** Announce the line to a screen reader as it appears (StudentRoom does; StudentPacedRoom does not). */
   announce?: boolean;
+  /** The panel, for a room that moves focus onto it after Submit. Panel form (`detail`) only. */
+  ref?: Ref<HTMLDivElement>;
 }
 
 function Check({ className }: { className: string }) {
@@ -36,10 +40,12 @@ function Check({ className }: { className: string }) {
  * With a `detail` it is the PhoneSent mockup's panel instead: the check in an accent disc, a heading
  * and the next step under it, so a student glancing at the phone knows the answer is in.
  */
-export function AnswerSentLine({ text, detail, announce = false }: AnswerSentLineProps) {
+export function AnswerSentLine({ text, detail, announce = false, ref }: AnswerSentLineProps) {
   if (detail !== undefined) {
     return (
       <div
+        ref={ref}
+        tabIndex={ref ? -1 : undefined}
         role={announce ? "status" : undefined}
         data-testid="answer-sent"
         className="measure mb-5 rounded-md bg-accent-soft p-4"

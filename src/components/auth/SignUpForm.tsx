@@ -5,7 +5,6 @@ import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { textLinkClasses } from "@/components/ui/TextLink";
 import { fieldClasses } from "@/components/ui/fieldClasses";
-import { ACCOUNT_NAME_HINT } from "@/lib/auth/displayName";
 import { PASSWORD_HINT, PASSWORD_MIN_LENGTH } from "@/lib/auth/passwordRules";
 import type { SignUpRole } from "@/lib/auth/signUp";
 import { SIGN_UP_CAPTCHA_ACTION } from "@/lib/auth/turnstile";
@@ -47,15 +46,10 @@ const CHOICE =
   "tap-target flex cursor-pointer items-center gap-3 rounded-sm border border-line-field bg-surface-1 px-3.5 py-3 text-base text-ink-1 transition-colors duration-fast hover:border-ink-2 has-checked:border-accent has-checked:bg-accent-soft";
 const LINK = textLinkClasses();
 
-const ROLES: readonly { value: SignUpRole; label: string; detail: string }[] = [
-  { value: "teacher", label: "I teach", detail: "Write quizzes for your classes." },
-  { value: "student", label: "I am a student", detail: "Join your teacher’s class." },
+const ROLES: readonly { value: SignUpRole; label: string }[] = [
+  { value: "teacher", label: "I teach" },
+  { value: "student", label: "I am a student" },
 ];
-
-const NAME_HINT: Record<SignUpRole, string> = {
-  teacher: "Shown on each page and in your workspace’s name.",
-  student: ACCOUNT_NAME_HINT,
-};
 
 /**
  * Open sign-up (#361): the role first, then a name, an email address and a password. The fields
@@ -108,11 +102,10 @@ export function SignUpForm({ action, initialRole, classCode, captchaSiteKey }: S
           id={`${id}-ready`}
           ref={readyRef}
           tabIndex={-1}
-          className="mb-3 font-read text-title text-ink-1 outline-none"
+          className="mb-4 font-read text-title text-ink-1 outline-none"
         >
           Your account is ready
         </h2>
-        <p className="mb-4 text-ink-2">Sign in with the password you just chose.</p>
         <Link href={`/sign-in?next=${encodeURIComponent(state.next)}`} className={LINK}>
           Sign in
         </Link>
@@ -141,10 +134,7 @@ export function SignUpForm({ action, initialRole, classCode, captchaSiteKey }: S
               onChange={() => setRole(option.value)}
               className="size-5 shrink-0 accent-accent"
             />
-            <span className="flex flex-col">
-              <span className="font-medium">{option.label}</span>
-              <span className="text-sm text-ink-2">{option.detail}</span>
-            </span>
+            <span className="font-medium">{option.label}</span>
           </label>
         ))}
       </fieldset>
@@ -158,7 +148,6 @@ export function SignUpForm({ action, initialRole, classCode, captchaSiteKey }: S
             id={`${id}-name`}
             value={name}
             onValueChange={setName}
-            hint={NAME_HINT[role]}
             inputRef={nameRef}
             invalid={error?.field === "displayName"}
             errorId={error?.field === "displayName" ? errorId : undefined}

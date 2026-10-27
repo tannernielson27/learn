@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { checklistSteps } from "./checklist";
 import { readTeacherWelcomeState, showTeacherWelcome, teacherWelcomeSteps } from "./teacherWelcome";
 
 type Client = Parameters<typeof readTeacherWelcomeState>[0];
@@ -28,29 +27,20 @@ function client(replies: { profiles: Reply; orgs: Reply; org_invites?: ListReply
 }
 
 describe("teacherWelcomeSteps (#364)", () => {
-  it("is three steps: the workspace, a quiz, then a class and a live session", () => {
+  // The Get started checklist beside it says what to do; the welcome is a title and one line.
+  it("is one step: a greeting and one line on whose workspace this is", () => {
     const steps = teacherWelcomeSteps("Ada Lovelace");
-    expect(steps.map((step) => step.title)).toEqual([
-      "Welcome, Ada Lovelace",
-      "Create a quiz or import the sample",
-      "Then a class, and your first live session",
+    expect(steps).toEqual([
+      {
+        title: "Welcome, Ada Lovelace",
+        body: ["This is your workspace. No other teacher can see what you make in it."],
+      },
     ]);
-    expect(steps[0]!.body.join(" ")).toMatch(/no other teacher can see them/);
-    expect(steps[1]!.body.join(" ")).toMatch(/A quiz holds your questions and case studies/);
-    expect(steps[2]!.body.join(" ")).toMatch(/class code or invite link/);
   });
 
   it("greets a teacher with no name without one", () => {
     expect(teacherWelcomeSteps(null)[0]!.title).toBe("Welcome to LeaRN");
     expect(teacherWelcomeSteps("   ")[0]!.title).toBe("Welcome to LeaRN");
-  });
-
-  it("names the checklist's own steps, so the two cannot disagree", () => {
-    const checklist = checklistSteps({ banks: [], hasClass: false, hasAssignmentOrSession: false });
-    const said = teacherWelcomeSteps(null)
-      .flatMap((step) => [step.title, ...step.body])
-      .join(" ");
-    for (const step of checklist) expect(said).toContain(step.title);
   });
 
   it("has no emoji and no markup in its copy", () => {
@@ -66,14 +56,15 @@ describe("teacherWelcomeSteps for a colleague who was invited", () => {
   const steps = teacherWelcomeSteps("Grace Hopper", { invited: true });
   const copy = steps.flatMap((step) => [step.title, ...step.body]).join(" ");
 
-  it("is the short welcome: two steps, greeting them by name", () => {
-    expect(steps.map((step) => step.title)).toEqual(["Welcome, Grace Hopper", "Where to start"]);
+  it("is one step too, greeting them by name", () => {
+    expect(steps.map((step) => step.title)).toEqual(["Welcome, Grace Hopper"]);
+    expect(steps[0]!.body).toHaveLength(1);
     expect(teacherWelcomeSteps(null, { invited: true })[0]!.title).toBe("Welcome to LeaRN");
   });
 
   it("says the workspace is shared, and never that nobody else can see it", () => {
-    expect(copy).toMatch(/shared workspace/);
-    expect(copy).toMatch(/the other teachers in it see and work on the same quizzes/);
+    expect(copy).toMatch(/You share this workspace/);
+    expect(copy).toMatch(/with the other teachers in it/);
     expect(copy).not.toMatch(/no other teacher/);
     expect(copy).not.toMatch(/your workspace/i);
   });
@@ -89,8 +80,8 @@ describe("teacherWelcomeSteps for a colleague who was invited", () => {
   });
 
   it("is not what a teacher in a workspace of their own sees", () => {
-    expect(teacherWelcomeSteps("Grace Hopper", { invited: false })).toHaveLength(3);
-    expect(teacherWelcomeSteps("Grace Hopper")).toHaveLength(3);
+    expect(teacherWelcomeSteps("Grace Hopper", { invited: false })).not.toEqual(steps);
+    expect(teacherWelcomeSteps("Grace Hopper")[0]!.body[0]).toMatch(/No other teacher/);
   });
 });
 

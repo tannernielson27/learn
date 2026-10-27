@@ -128,8 +128,7 @@ export function useArchiveSelected(
       ) : state.status === "done" ? (
         <div ref={outcomeRef} role="status" tabIndex={-1} className="text-sm text-ink-1">
           <p>
-            {state.message} Nothing is erased: Archived lists them, and Restore brings each one
-            back.{" "}
+            {state.message}{" "}
             {archivedHref ? (
               <Link href={archivedHref} className="font-medium text-accent-ink underline">
                 Show archived
@@ -149,9 +148,7 @@ export function useArchiveSelected(
         onClose={() => setAsking(null)}
         title={asking?.title ?? "Archive?"}
         description={
-          asking?.clears === false
-            ? "It leaves this quiz's lists. Nothing is erased: Archived lists it, and Restore brings it back."
-            : "They leave this quiz's lists. Nothing is erased: Archived lists them, and Restore brings each one back."
+          asking?.clears === false ? "You can restore it later." : "You can restore them later."
         }
         actions={
           <>

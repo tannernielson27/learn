@@ -71,11 +71,10 @@ export function StageReveal({
         </div>
       )}
       {/* The chart takes the room its bars need, never less than a floor of its own, whatever the
-          rationale holds. */}
+          rationale holds. A question with no chart keeps the same room, so the rationale sits
+          where it always does. */}
       <div className="min-h-[45cqb] flex-auto overflow-hidden">
-        {rows === null ? (
-          <p className="text-stage-option text-ink-2">Each phone shows its own marks.</p>
-        ) : (
+        {rows === null ? null : (
           <ResultsChart rows={rows} total={total} size="stage" compact={long} />
         )}
       </div>

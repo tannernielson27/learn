@@ -87,7 +87,7 @@ export function JoinCode({ code, url, qrUrl, size = "app", className = "" }: Joi
       {qrUrl ? (
         <figure className="m-0 flex flex-col items-center gap-2">
           <JoinQr url={qrUrl} className={look.qr} />
-          <figcaption className={look.caption}>Or scan from the front rows</figcaption>
+          <figcaption className={look.caption}>Or scan</figcaption>
         </figure>
       ) : null}
     </section>

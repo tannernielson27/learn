@@ -101,12 +101,7 @@ function ReportBody({ report, view }: { report: SessionReport; view: ReportView 
 
 function StepsBody({ report }: { report: SessionReport }) {
   if (report.steps.length === 0) {
-    return (
-      <p className="text-ink-2">
-        No question in this live session is tagged with a clinical judgment step. Tag questions in
-        the quiz to see this view.
-      </p>
-    );
+    return <p className="text-ink-2">No questions are tagged with a clinical judgment step.</p>;
   }
   // How a step's percent is worked out is in the teacher guide (#reports), not under the table.
   const untagged = report.items.filter((item) => item.cjmmStep === null).length;

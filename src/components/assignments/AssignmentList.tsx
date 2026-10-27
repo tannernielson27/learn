@@ -149,7 +149,7 @@ function AssignmentRow({
           label="Delete"
           ariaLabel={`Delete ${entry.title}`}
           confirmLabel="Delete assignment"
-          warning="It has not opened, so no student has seen it. This cannot be undone."
+          warning="This cannot be undone."
           focusOnSuccess={focusAfterDelete}
         />
       ) : null}

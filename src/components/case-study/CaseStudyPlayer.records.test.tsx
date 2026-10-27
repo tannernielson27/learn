@@ -54,7 +54,7 @@ describe("CaseStudyPlayer with a chart per step (#335)", () => {
     render(<CaseStudyPlayer caseStudy={study} submitFor={scoreInProcess} />);
     await renderersLoaded();
     expect(screen.getAllByTestId("record-note")[0]).toHaveTextContent(
-      "Full patient record. A student at step 1 sees only what that step has reached.",
+      "Full patient record. Students see it step by step.",
     );
     // The whole record: the labs are open to the author at step 1.
     expect(labs()).toHaveAccessibleName("Lab Results");

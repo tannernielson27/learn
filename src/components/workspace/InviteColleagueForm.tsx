@@ -54,18 +54,14 @@ export function InviteColleagueForm({ action }: InviteColleagueFormProps) {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           aria-invalid={error ? true : undefined}
-          aria-describedby={error ? `${id}-error` : `${id}-hint`}
+          aria-describedby={error ? `${id}-error` : undefined}
           className={fieldClasses("px-3 text-base")}
         />
         {error ? (
           <FieldError id={`${id}-error`} role="alert">
             {error}
           </FieldError>
-        ) : (
-          <p id={`${id}-hint`} className="text-sm text-ink-2">
-            The link works for this address only and lasts 7 days.
-          </p>
-        )}
+        ) : null}
         {state.status === "sent" ? (
           <p role="status" className="text-sm break-words text-ink-1">
             Invitation sent to {state.email}.

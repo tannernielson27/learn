@@ -39,7 +39,7 @@ export const REMOVE_REFUSED: Readonly<Record<Exclude<RemovedMember, "removed">, 
 
 /** What the founder reads before they confirm. `name` is the colleague's own words: text only. */
 export function removeWarning(name: string): string {
-  return `${name} loses access to this workspace at once: every quiz, class, assignment and result in it. Everything they made here stays here. They keep their account and start again in a new, empty workspace of their own. Any live session they are running ends now. Invitations they sent that nobody has accepted are revoked, and so is any still waiting for them. They are signed out everywhere and sign in again with the password they have. Any teacher still in this workspace can invite them back.`;
+  return `${name} loses access to this workspace. What they made stays here. You can invite them back.`;
 }
 
 export interface RemoveDeps {

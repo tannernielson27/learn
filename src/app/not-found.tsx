@@ -17,10 +17,6 @@ export default function NotFound() {
   return (
     <StatusFrame>
       <StatusPanel headline="This page does not exist.">
-        <p className="measure text-ink-2">
-          The link may be mistyped, or the page may have moved. Check the address, or start again
-          from one of these.
-        </p>
         <StatusLinks />
       </StatusPanel>
     </StatusFrame>

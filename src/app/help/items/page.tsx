@@ -137,10 +137,6 @@ export default function ItemGuide() {
       <header>
         <p className="eyebrow">Help</p>
         <h1 className="mt-2 font-read text-display leading-tight text-ink-1">Question guide</h1>
-        <p className="measure mt-3 text-lg text-ink-2">
-          What each question format tests, how it is scored, and one tip. Scores are whole numbers
-          from 0 to the question’s maximum.
-        </p>
       </header>
 
       <Contents />
