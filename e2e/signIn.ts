@@ -81,16 +81,19 @@ function localAdmin(): LocalAdmin {
  * #139 turned `shouldCreateUser` off, so the sign-in form no longer signs anyone up: an address
  * with no account is answered exactly like one that has an account and is simply never mailed.
  * A test that only filled the form would wait out `latestSignInLink` for an email that was never
- * sent. This admin call stands in for the Supabase dashboard.
+ * sent. This admin call stands in for the Supabase dashboard. A `password`, when given, lets a
+ * spec sign the account in a second time without asking for another email, which the auth email
+ * rate limit refuses for the same address within seconds.
  */
 export async function createAccountWithoutRole(
   request: APIRequestContext,
   email: string,
+  password?: string,
 ): Promise<string> {
   const { url, headers } = localAdmin();
   const created = await request.post(`${url}/auth/v1/admin/users`, {
     headers,
-    data: { email, email_confirm: true },
+    data: { email, email_confirm: true, ...(password ? { password } : {}) },
   });
   if (!created.ok()) {
     throw new Error(`could not create ${email}: ${created.status()} ${await created.text()}`);
