@@ -11,8 +11,7 @@ import { MultipleChoiceEditor } from "./MultipleChoiceEditor";
 const saved = () =>
   toMultipleChoiceForm(multipleChoiceItemSchema.parse(FIXTURES.multiple_choice.canonical));
 
-const WARNING =
-  "This question is published. Saving a draft takes it out of live sessions, assignments and practice until you publish again.";
+const WARNING = "Saving a draft unpublishes it.";
 
 // The host owns whether the item is published, as ItemEditorWithHistory does.
 function Hosted({ published: initial }: { published: boolean }) {

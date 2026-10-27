@@ -321,7 +321,7 @@ export function EditorShell<Values, Input extends ScoredInput>({
         aria-label="Preview"
         className="min-w-0 rounded-md bg-surface-2 p-4 sm:p-6 lg:sticky lg:top-24 lg:self-start"
       >
-        <p className="eyebrow mb-3">Preview · what a student sees</p>
+        <p className="eyebrow mb-3">Preview</p>
         {/* A phone's width, as students answer on one (Editor mockup). The player's submit bar
             sits at the end of the preview here, not stuck to the teacher's window over the
             options; the transform still contains it if a rule ever makes it fixed again. */}

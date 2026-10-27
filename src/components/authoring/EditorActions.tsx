@@ -75,8 +75,7 @@ export function EditorActions({
       {error ? <Notice role="alert">{error}</Notice> : null}
       {published ? (
         <p id={unpublishId} className="text-sm text-ink-2">
-          This question is published. Saving a draft takes it out of live sessions, assignments and
-          practice until you publish again.
+          Saving a draft unpublishes it.
         </p>
       ) : null}
     </div>
