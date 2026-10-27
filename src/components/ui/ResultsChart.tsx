@@ -22,8 +22,8 @@ export interface ResultsChartProps {
   /** What the chart is, for a screen reader: "How the class answered". */
   label?: string;
   /**
-   * A long list on the projector: tighter rows, and each option's words on one line, so every
-   * bar fits a 1280x720 wall. The whole option is on every phone.
+   * A long list on the projector: tighter rows, so every bar fits a 1280x720 wall. Each option's
+   * words stay whole and wrap: once the answer is showing, the room reads the key in full.
    */
   compact?: boolean;
   className?: string;
@@ -95,10 +95,10 @@ export function ResultsChart({
             )}
             <div className={`flex min-w-0 flex-col ${compact ? "gap-0.5" : "gap-1.5"}`}>
               <span
-                className={`${look.label} flex items-baseline gap-x-3 ${compact ? "" : "flex-wrap"}`}
+                className={`${look.label} flex flex-wrap items-baseline gap-x-3 ${compact ? "leading-tight" : ""}`}
               >
                 {row.letter === undefined ? null : <span className="sr-only">{row.letter}. </span>}
-                {compact ? <span className="min-w-0 flex-1 truncate">{row.label}</span> : row.label}
+                {row.label}
                 {key ? (
                   <span
                     className={`${look.keyWord} inline-flex items-center gap-1 font-bold text-correct`}

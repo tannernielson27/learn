@@ -26,6 +26,7 @@ const MATRIX = itemSchema.parse(FIXTURES.matrix_multiple_choice.canonical) as It
 const SATA = itemSchema.parse(FIXTURES.multiple_response.canonical) as Item & {
   type: "multiple_response";
 };
+const BOWTIE = itemSchema.parse(FIXTURES.bowtie.canonical) as Item & { type: "bowtie" };
 const RATIONALE = MC.rationale.general?.value ?? "";
 const STUDENT_URL = `https://learn.test/join/${CODE}`;
 const QR_LABEL = "QR code for joining this live session";
@@ -180,6 +181,22 @@ describe("the projector view: the answer showing", () => {
     expect(stage().querySelectorAll("li[data-key]")).toHaveLength(1);
     expect(within(stage()).getAllByText("1 · 100%")).toHaveLength(1);
     expect(stage()).toHaveTextContent(RATIONALE.slice(0, 40));
+  });
+
+  it("draws no key before the answer is showing, and the bowtie filled with it after", async () => {
+    const fake = setup("projector", [BOWTIE]);
+    const control = await fake.control();
+    await control.start();
+    expect(await within(stage()).findByText("Answer on your phone.")).toBeInTheDocument();
+    // Before the reveal: no key view, and nothing from the key or the rationale on the wall.
+    expect(within(stage()).queryByTestId("stage-key")).toBeNull();
+    expect(stage()).not.toHaveTextContent("Correct");
+    expect(stage()).not.toHaveTextContent("Not correct");
+    expect(stage()).not.toHaveTextContent("Acute myocardial infarction");
+    await control.reveal();
+    const key = await within(stage()).findByTestId("stage-key");
+    await waitFor(() => expect(within(key).getAllByText("Correct")).toHaveLength(5));
+    expect(within(key).getByTestId("stage-not-correct")).toHaveTextContent("Panic attack");
   });
 });
 

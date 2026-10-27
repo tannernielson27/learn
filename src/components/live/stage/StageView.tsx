@@ -17,6 +17,7 @@ import { StageLobby } from "./StageLobby";
 import { StageQuestion } from "./StageQuestion";
 import { StageReveal } from "./StageReveal";
 import { chartRows, stageQuestion, stageRationale } from "./stageItem";
+import { stageKey } from "./stageKey";
 
 export interface StageViewProps {
   /** Whose top 5 the end screen asks for; absent, the end shows its summary only. */
@@ -79,8 +80,9 @@ function taken(target: EventTarget | null): boolean {
  * as the control view, so the wall and the teacher's screen never disagree.
  *
  * **No key before the reveal.** The question is read through `stageQuestion`, which copies the
- * question text and the option words and nothing else; the chart and the rationale are asked
- * for only in the answer-showing phase, and the chart marks the key only then.
+ * question text and the option words and nothing else; the chart, the key view (`stageKey`) and
+ * the rationale are asked for only in the answer-showing phase, and each opens only once the
+ * room's reveal is set.
  *
  * Escape goes back to the control view, for a teacher presenting on the one screen they also
  * run the session from; the small button in the corner does the same for a pointer. On that one
@@ -227,6 +229,7 @@ function Screen({
           question={stageQuestion(room.item)}
           rows={rows}
           total={results?.responded ?? 0}
+          keyed={stageKey(room.item, room.state.reveal)}
           rationale={stageRationale(room.item, room.state.reveal)}
         />
       );
