@@ -31,6 +31,11 @@ export interface HostLobbyProps {
   qrCode: ReactNode;
   /** The projector lobby's join panel (`JoinCode` at stage size), drawn on the server likewise. */
   stageJoin?: ReactNode;
+  /**
+   * The QR code beside the projector's join strip once the room has started: the same join URL
+   * as `qrCode`, drawn on the server likewise and sized by the strip.
+   */
+  stageJoinQr?: ReactNode;
   /** Which of the two views to open on: `?view=projector` asks for the projector. */
   view?: LiveView;
   /** What the server read a moment ago. The console renders from this before it connects. */
@@ -99,6 +104,7 @@ export function HostLobby({
   studentUrl,
   qrCode,
   stageJoin,
+  stageJoinQr,
   view: firstView = "control",
   initial,
   connect,
@@ -181,6 +187,7 @@ export function HostLobby({
         code={code}
         url={printedJoinUrl(studentUrl)}
         join={stageJoin}
+        joinQr={stageJoinQr}
         room={room}
         view={stageView(input)}
         {...(record === undefined ? {} : { record })}

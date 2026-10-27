@@ -27,6 +27,11 @@ export interface StageViewProps {
   url: string;
   /** The lobby's join panel, drawn on the server (`JoinCode` at stage size, with its QR code). */
   join?: ReactNode;
+  /**
+   * The join URL's QR code for the small join strip once the room has started, drawn on the
+   * server like `join`. The projector's alone: no phone is handed one.
+   */
+  joinQr?: ReactNode;
   room: HostRoom;
   view: StageViewData;
   /** The record a session started from one case study was started with. */
@@ -93,6 +98,7 @@ export function StageView({
   code,
   url,
   join,
+  joinQr,
   room,
   view,
   record,
@@ -158,6 +164,7 @@ export function StageView({
         code={code}
         url={url}
         join={join}
+        joinQr={joinQr}
         room={room}
         view={view}
         record={record}
@@ -190,6 +197,7 @@ function Screen({
   code,
   url,
   join,
+  joinQr,
   room,
   view,
   record,
@@ -236,6 +244,7 @@ function Screen({
           paused={view.phase === "paused"}
           url={url}
           code={code}
+          joinQr={joinQr}
           serverNow={room.serverNow}
         />
       );

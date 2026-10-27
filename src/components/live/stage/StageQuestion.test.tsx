@@ -1,6 +1,9 @@
 import { render, screen, within } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
+import { SessionQrCode } from "@/components/live/SessionQrCode";
 import { NO_TIMER } from "@/lib/live/timer";
+import type { CasePlace } from "./casePlace";
 import { StageQuestion } from "./StageQuestion";
 import type { StageQuestion as StageQuestionData } from "./stageItem";
 
@@ -23,17 +26,25 @@ const question = (count: number): StageQuestionData => ({
   })),
 });
 
-function draw(data: StageQuestionData) {
+function draw(
+  data: StageQuestionData,
+  {
+    joinQr,
+    casePlace = null,
+    paused = false,
+  }: { joinQr?: ReactNode; casePlace?: CasePlace | null; paused?: boolean } = {},
+) {
   render(
     <StageQuestion
       place={{ position: 3, itemCount: 20, label: "Question 3 of 20", caseStep: null }}
       answers={{ responded: 4, present: 70 }}
       timer={NO_TIMER}
       question={data}
-      casePlace={null}
-      paused={false}
+      casePlace={casePlace}
+      paused={paused}
       url="learn-nclex.app/join"
       code="AJ4K7P"
+      {...(joinQr === undefined ? {} : { joinQr })}
       serverNow={() => 0}
     />,
   );
@@ -83,5 +94,49 @@ describe("StageQuestion: a long question on a short projector", () => {
     draw(question(6));
     expect(screen.getByTestId("answer-count")).toBeInTheDocument();
     expect(screen.getByTestId("answer-count").closest(".overflow-hidden")).toBeNull();
+  });
+});
+
+describe("StageQuestion: a QR code beside the join code", () => {
+  const LABEL = "QR code for joining this live session";
+  const qr = <SessionQrCode url="https://learn.test/join/AJ4K7P" label={LABEL} />;
+  const strip = () => screen.getByTestId("stage-join-strip");
+  /** The QR code's place in the strip: its own item, right before the join words. */
+  const plate = () => screen.getByTestId("stage-join-qr");
+
+  const phases: [string, { paused?: boolean; casePlace?: CasePlace }][] = [
+    ["a question", {}],
+    ["a paused question", { paused: true }],
+    [
+      "a case study step with nothing new in the record",
+      { casePlace: { patient: "68-year-old male · Medical unit", time: "0800", newTabs: [] } },
+    ],
+  ];
+
+  it.each(phases)("sits right beside the join words on %s, which stay as text", (_, at) => {
+    draw(question(4), { joinQr: qr, ...at });
+    expect(within(plate()).getByRole("img", { name: LABEL })).toBeInTheDocument();
+    expect(plate().nextElementSibling).toContainElement(strip());
+    expect(strip()).toHaveTextContent("Join at learn-nclex.app/join · AJ4 K7P");
+  });
+
+  it("takes no more height in the strip than its line, so the question is not pushed down", () => {
+    draw(question(4), { joinQr: qr });
+    expect(plate()).toHaveClass("h-[1lh]");
+  });
+
+  it("goes with the join words when what is new in the record takes their place", () => {
+    draw(question(4), {
+      joinQr: qr,
+      casePlace: { patient: "68-year-old male · Medical unit", time: "0800", newTabs: ["Vitals"] },
+    });
+    expect(screen.queryByTestId("stage-join-strip")).toBeNull();
+    expect(screen.queryByRole("img", { name: LABEL })).toBeNull();
+  });
+
+  it("draws the strip as before when no QR code is handed down", () => {
+    draw(question(4));
+    expect(screen.queryByTestId("stage-join-qr")).toBeNull();
+    expect(strip()).toHaveTextContent("AJ4 K7P");
   });
 });

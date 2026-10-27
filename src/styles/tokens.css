@@ -310,6 +310,12 @@
   --stage-pad-block: max(1rem, 5.5556cqb);
   --stage-pad-inline: max(1.5rem, 4.1667cqi);
   --stage-stroke: 3px;
+  /*
+   * The QR code beside the join code once the room has started (StageStrip): 86px on a 1080px
+   * stage, about two lines of the strip, and never under 64px, so the front rows can still scan
+   * it off a 720p projector. The lobby's own is the big one.
+   */
+  --stage-join-qr: max(4rem, 8cqb);
 }
 
 @media (prefers-reduced-motion: reduce) {

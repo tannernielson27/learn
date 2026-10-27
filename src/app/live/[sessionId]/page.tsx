@@ -69,6 +69,10 @@ export default async function LiveSessionPage({
             className="justify-between"
           />
         }
+        // The small one beside the projector's join strip once the room has started.
+        stageJoinQr={
+          <SessionQrCode url={studentUrl} label="QR code for joining this live session" />
+        }
         caseStudy={session.caseStudy}
         {...(record === null ? {} : { record })}
         {...(runs.length === 0 ? {} : { runs })}
