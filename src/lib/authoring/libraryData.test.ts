@@ -57,6 +57,7 @@ function fakeClient(answer: Answer) {
         "update",
         "delete",
         "eq",
+        "neq",
         "is",
         "in",
         "order",
@@ -108,6 +109,15 @@ describe("readLibrary", () => {
     });
     const quizzes = calls.find((call) => call.table === "item_banks")!;
     expect(arg(quizzes, "is")).toEqual(["library_folder_id", null]);
+  });
+
+  it("counts a quiz's questions without its archived ones, as the quiz page lists them", async () => {
+    const { client, calls } = fakeClient((call) =>
+      call.table === "library_folders" ? { data: FOLDER_ROWS } : { data: QUIZ_ROWS },
+    );
+    await readLibrary(client, { kind: "all" });
+    const quizzes = calls.find((call) => call.table === "item_banks")!;
+    expect(arg(quizzes, "neq")).toEqual(["items.status", "archived"]);
   });
 
   it("reads an open folder's own quizzes", async () => {

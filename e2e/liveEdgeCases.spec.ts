@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { latestSignInLink, openSignInLink } from "./mailbox";
 import {
@@ -29,30 +29,21 @@ async function rosterMember(
   orgId: string,
   classId: string,
   name: string,
-): Promise<{ email: string; userId: string }> {
+): Promise<{ email: string; password: string; userId: string }> {
   const email = uniqueEmail("live-edge-member");
-  const userId = await createAccountWithoutRole(request, email);
+  const password = `e2e-${randomUUID()}`;
+  const userId = await createAccountWithoutRole(request, email, password);
   await updateAsAdmin(request, "profiles", `id=eq.${userId}`, {
     org_id: orgId,
     role: "student",
     display_name: name,
   });
   await insertAsAdmin(request, "class_members", { class_id: classId, profile_id: userId });
-  return { email, userId };
+  return { email, password, userId };
 }
 
-/**
- * Signs `email` in on `page` with an emailed link, as classLiveSession.spec.ts does, and returns
- * the link it opened. A second device signing in to the same address passes the first device's
- * link as `spent`: that email is still inside latestSignInLink's clock-skew window, so without it
- * the second device can open the link the first already used and land on `/sign-in?error=link`.
- */
-async function signIn(
-  page: Page,
-  request: APIRequestContext,
-  email: string,
-  spent?: string,
-): Promise<string> {
+/** Signs `email` in on `page` with an emailed link, as classLiveSession.spec.ts does. */
+async function signIn(page: Page, request: APIRequestContext, email: string): Promise<void> {
   await skipWelcomes(page);
   await page.goto("/sign-in");
   const since = new Date();
@@ -62,19 +53,22 @@ async function signIn(
     .click();
   await page.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
-  let link = "";
-  await expect
-    .poll(
-      async () => {
-        link = await latestSignInLink(request, email, since);
-        return link;
-      },
-      { timeout: 30_000, message: `no new sign-in link arrived for ${email}` },
-    )
-    .not.toBe(spent);
-  await openSignInLink(page, link);
+  await openSignInLink(page, await latestSignInLink(request, email, since));
   await expect(page).toHaveURL(/\/learn$/);
-  return link;
+}
+
+/**
+ * Signs `email` in on `page` with its password: a second device for an address that has just been
+ * sent a sign-in link. Asking for another link within seconds hits the auth email rate limit for
+ * that address, and reusing the first link fails because it is one-time.
+ */
+async function signInWithPassword(page: Page, email: string, password: string): Promise<void> {
+  await skipWelcomes(page);
+  await page.goto("/sign-in");
+  await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page).toHaveURL(/\/learn$/);
 }
 
 /** The teacher's class session, started from the quiz page: its id and join code. */
@@ -134,8 +128,8 @@ test("one member on a phone and a laptop is one participant, and the first devic
 
   const phone = await (await browser.newContext()).newPage();
   const laptop = await (await browser.newContext()).newPage();
-  const phoneLink = await signIn(phone, request, member.email);
-  await signIn(laptop, request, member.email, phoneLink);
+  await signIn(phone, request, member.email);
+  await signInWithPassword(laptop, member.email, member.password);
   await joinSignedIn(phone, room.code);
   await joinSignedIn(laptop, room.code);
 
