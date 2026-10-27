@@ -104,26 +104,3 @@ export function TimerButtons({ state, busy, onCommand }: TimerButtonsProps) {
     </div>
   );
 }
-
-export interface AutoStopChoiceProps {
-  on: boolean;
-  onChange: (on: boolean) => void;
-}
-
-/**
- * Whether the timer ends by itself once everyone in this session has answered. Remembered on this
- * device (`useAutoStopSetting`); it never shows the answer, which is still the teacher's move.
- */
-export function AutoStopChoice({ on, onChange }: AutoStopChoiceProps) {
-  return (
-    <label className="tap-target flex items-center gap-2 text-sm text-ink-1">
-      <input
-        type="checkbox"
-        className="size-5 accent-accent"
-        checked={on}
-        onChange={(event) => onChange(event.target.checked)}
-      />
-      End the timer when everyone has answered
-    </label>
-  );
-}
