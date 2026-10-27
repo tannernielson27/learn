@@ -51,14 +51,8 @@ test("a visitor learns what LeaRN is and finds Sign in and Join, and no gallery"
     "href",
     "/sign-in",
   );
-  await expect(
-    page.getByText("Create an account. You get a workspace of your own.", { exact: true }),
-  ).toBeVisible();
-  // #416: each thing is said once, in two sections.
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText([
-    "What LeaRN does",
-    "How to get in",
-  ]);
+  // #416: each thing is said once, in one section; the buttons above say how to get in.
+  await expect(page.getByRole("heading", { level: 2 })).toHaveText(["What LeaRN does"]);
   await expect(page.getByText(/invite-only/i)).toHaveCount(0);
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",

@@ -169,7 +169,7 @@ describe("phoneView", () => {
   it("waits in the lobby with the count", () => {
     expect(phoneView(phone({ state: initialSessionState(3) }))).toEqual({
       phase: "waiting",
-      headline: "You are in. Wait for your teacher to start.",
+      headline: "You’re in.",
       joined: 3,
     });
   });

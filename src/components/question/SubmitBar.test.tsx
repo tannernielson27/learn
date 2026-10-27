@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { CHANGEABLE, INCOMPLETE, SubmitBar } from "./SubmitBar";
+import { INCOMPLETE, SubmitBar } from "./SubmitBar";
 
 function renderBar(props: Partial<Parameters<typeof SubmitBar>[0]> = {}) {
   const onSubmit = vi.fn();
@@ -18,9 +18,11 @@ function renderBar(props: Partial<Parameters<typeof SubmitBar>[0]> = {}) {
 }
 
 describe("SubmitBar", () => {
-  it("says the answer can still change, or what it holds, once it is complete", async () => {
+  it("shows no line until there is something to count, and keeps its height", async () => {
     const { onSubmit, button } = renderBar();
-    expect(screen.getByText(CHANGEABLE)).toBeInTheDocument();
+    const holder = button.previousElementSibling;
+    expect(holder).toBeEmptyDOMElement();
+    expect(holder).toHaveClass("min-h-5");
     await userEvent.click(button);
     expect(onSubmit).toHaveBeenCalledOnce();
   });
@@ -28,7 +30,6 @@ describe("SubmitBar", () => {
   it("puts the renderer's own status in that line", () => {
     renderBar({ status: "2 selected" });
     expect(screen.getByText("2 selected")).toBeInTheDocument();
-    expect(screen.queryByText(CHANGEABLE)).toBeNull();
   });
 
   it("says why it cannot submit yet, and the press sends nothing", async () => {

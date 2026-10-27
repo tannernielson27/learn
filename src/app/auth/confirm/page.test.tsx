@@ -48,7 +48,7 @@ describe("/auth/confirm (#305)", () => {
   it("says which device will be signed in", async () => {
     await renderPage({ token_hash: "abc", type: "email", next: "/learn" });
 
-    expect(screen.getByText(/signs you in on this device/i)).toBeInTheDocument();
+    expect(screen.getByText("Continue to sign in on this device.")).toBeInTheDocument();
   });
 
   it("sends a link that cannot be read straight to sign-in, without a button", async () => {

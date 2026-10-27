@@ -107,12 +107,10 @@ describe("JoinForm", () => {
     expect(nameField()).not.toHaveAttribute("aria-invalid");
   });
 
-  it("describes each field while nothing is wrong, so the hints are read out", () => {
+  it("describes neither field while nothing is wrong", () => {
     setup({ status: "idle" });
-    expect(codeField()).toHaveAccessibleDescription("Six characters, on the screen at the front.");
-    expect(nameField()).toHaveAccessibleDescription(
-      "Your teacher sees this name. The class sees it only before the start.",
-    );
+    expect(codeField()).not.toHaveAttribute("aria-describedby");
+    expect(nameField()).not.toHaveAttribute("aria-describedby");
   });
 
   it("makes Join the full-width main action, at the phone's large size", () => {

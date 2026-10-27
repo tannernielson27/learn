@@ -237,10 +237,6 @@ function Body({
     case "paused":
       return (
         <PhoneMessage heading={settled.headline}>
-          <p className="text-ink-2">
-            {settled.answered ? "Your answer is in." : "Your answer so far is kept."} Wait for your
-            teacher to carry on.
-          </p>
           <RoomCount present={room.present} />
         </PhoneMessage>
       );
@@ -250,14 +246,7 @@ function Body({
         // already on the board.
         return <PhoneMessage heading="The answer is showing." />;
       }
-      return (
-        <>
-          <RevealedItem item={item} answered={answered} revealed={settled.revealed} />
-          <p className="pb-6 text-center text-sm text-ink-2">
-            The next question appears when your teacher moves on.
-          </p>
-        </>
-      );
+      return <RevealedItem item={item} answered={answered} revealed={settled.revealed} />;
     case "answerSent":
       if (item === null || answered === null) return null;
       return (
