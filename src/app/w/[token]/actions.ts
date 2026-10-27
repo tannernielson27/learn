@@ -1,12 +1,13 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { parseAccountName } from "@/lib/auth/displayName";
 import { EMAIL_UNCONFIRMED_KEY } from "@/lib/auth/emailConfirmation";
 import { DEFAULT_AFTER_SIGN_IN } from "@/lib/auth/nextPath";
 import { checkNewPassword, PASSWORD_WEAK } from "@/lib/auth/password";
 import { clientIp } from "@/lib/auth/signInRateLimit";
+import { PARTICIPANT_COOKIE } from "@/lib/live/participantToken";
 import { earlierAccessDeps } from "@/lib/supabase/emailConfirmed";
 import { acceptOrgInvite, resolveOrgInvite } from "@/lib/supabase/orgInvites";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -201,9 +202,11 @@ export async function createAccountAndAccept(
 
 /**
  * "Sign out", for someone who opened an invitation signed in as another address: signs this
- * browser out and comes back to the invitation, now as a visitor.
+ * browser out and comes back to the invitation, now as a visitor. The live session participant
+ * goes too, as with every sign out (ADR 0013).
  */
 export async function signOutToInvitation(token: string): Promise<never> {
+  (await cookies()).delete(PARTICIPANT_COOKIE);
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut({ scope: "local" });
   redirect(workspaceInvitePath(token));

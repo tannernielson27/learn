@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PARTICIPANT_COOKIE } from "@/lib/live/participantToken";
 import type { MemoryRateLimitStore } from "@/lib/rateLimit/testing/memoryStore";
 import { RateLimitUnavailableError } from "@/lib/rateLimit/store";
 import {
@@ -36,7 +37,11 @@ const requestHeaders = new Headers({
   "x-forwarded-for": "198.51.100.66",
   origin: "https://learn.example",
 });
-vi.mock("next/headers", () => ({ headers: async () => requestHeaders }));
+const deletedCookies = vi.fn<(name: string) => void>();
+vi.mock("next/headers", () => ({
+  headers: async () => requestHeaders,
+  cookies: async () => ({ delete: deletedCookies }),
+}));
 
 const redirected = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -689,5 +694,11 @@ describe("signOutToInvitation", () => {
   it("signs this browser out and comes back to the invitation", async () => {
     await expect(signOutToInvitation(TOKEN)).rejects.toThrow(`redirect:/w/${TOKEN}`);
     expect(signOut).toHaveBeenCalledWith({ scope: "local" });
+  });
+
+  it("leaves no live session participant behind for the next person on this browser", async () => {
+    // ADR 0013: a participant may be linked to the account that just signed out.
+    await expect(signOutToInvitation(TOKEN)).rejects.toThrow(/^redirect:/);
+    expect(deletedCookies).toHaveBeenCalledWith(PARTICIPANT_COOKIE);
   });
 });

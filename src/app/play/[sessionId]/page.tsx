@@ -10,10 +10,11 @@ import { JOIN_PATH } from "@/lib/live/routes";
 import { pacedState } from "@/lib/live/state";
 import { mintChannelToken, readChannelSigningKey } from "@/lib/supabase/channelToken";
 import { roomRecord } from "@/lib/liveSupabase/viewEntries";
-import { checkParticipant } from "@/lib/supabase/participants";
+import { checkParticipant, heldBySomeoneElse } from "@/lib/supabase/participants";
 import { readSessionRecords } from "@/lib/supabase/sessionRecord";
 import { readPublicSessionState } from "@/lib/supabase/sessions";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { verifiedAccount } from "@/lib/supabase/verifiedAccount";
 
 export const metadata: Metadata = { title: "Live session" };
 
@@ -62,6 +63,10 @@ export default async function PlaySessionPage({ params }: PageProps<"/play/[sess
     throw new Error("The session could not be reached to check a participant.");
   }
   if (!checked.ok) redirect(JOIN_PATH);
+  // ADR 0013: a participant linked to an account is that student's, not this browser's. On a
+  // shared browser where someone else is signed in, or nobody is, the join form decides who this
+  // is. An account check that could not be made resumes as before (decision 3).
+  if (await heldBySomeoneElse(service, token, await verifiedAccount())) redirect(JOIN_PATH);
   const { participant } = checked;
 
   // Only ever after the token has been checked: this read does no checking of its own. A read that

@@ -15,7 +15,7 @@ import { playPath } from "@/lib/live/routes";
 import { checkParticipant, joinSession, participantLink } from "@/lib/supabase/participants";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { resolveSessionCode } from "@/lib/supabase/sessions";
-import { verifiedAccountId } from "@/lib/supabase/verifiedAccount";
+import { verifiedAccount } from "@/lib/supabase/verifiedAccount";
 
 /**
  * One sentence for a code that never existed and for a session that has ended. #128's
@@ -85,14 +85,17 @@ export async function joinLiveSession(
   let returning = checked !== null && checked.ok;
   // Who is signed in, read only when something needs it: a browser coming back, or a join that
   // may link. A guest's join with no participant to come back to reads nothing, as before.
-  const account = returning || !asGuest ? await verifiedAccountId() : null;
+  const viewer = returning || !asGuest ? await verifiedAccount() : null;
+  const account = viewer?.status === "signed_in" ? viewer.id : null;
 
   // A browser is not a person (ADR 0013). On a shared laptop the cookie may be the last
-  // student's: someone signed in as a different account does not come back as a participant
-  // linked to another, and a current member of the session's class who holds an anonymous
+  // student's: nobody comes back as a participant linked to an account other than the one signed
+  // in, signed out included, and a current member of the session's class who holds an anonymous
   // participant joins as themselves rather than staying that guest (unless they chose "Join as a
-  // guest instead"). Signed out, the browser comes back as whoever it already is, as before.
-  if (returning && held && account !== null) {
+  // guest instead"). Signed out, a browser holding an anonymous participant comes back as it, as
+  // before. An account that could not be checked is asked nothing: the browser comes back as
+  // whoever it already is (decision 3), which is what it did before anyone was ever linked.
+  if (returning && held && viewer !== null && viewer.status !== "unavailable") {
     const link = await participantLink(service, held, account);
     if (!link.ok && link.reason === "unavailable") return { status: "error", error: UNAVAILABLE };
     returning =
