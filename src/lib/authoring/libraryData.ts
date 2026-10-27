@@ -79,7 +79,9 @@ function folderRows(
 export async function readLibrary(client: Client, view: LibraryView): Promise<Library> {
   const quizzes = client
     .from("item_banks")
-    .select("id, name, updated_at, library_folder_id, items(count)");
+    .select("id, name, updated_at, library_folder_id, items(count)")
+    // Count what the quiz page lists: archived questions are left out there too.
+    .neq("items.status", "archived");
   const filtered =
     view.kind === "folder"
       ? quizzes.eq("library_folder_id", view.id)
