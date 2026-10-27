@@ -134,7 +134,9 @@ describe("StudentRoom: the teacher ends the session mid-question (case 3)", () =
     fireEvent.click(box());
 
     room.push({ state: running({ status: "ended" }), item: KEYLESS });
-    expect(screen.getByText("Live session ended")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "This live session has ended." }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Submit$/ })).toBeNull();
     expect(screen.queryByRole("timer")).toBeNull();
   });
@@ -149,7 +151,9 @@ describe("StudentRoom: the teacher ends the session mid-question (case 3)", () =
 
     room.push({ state: running({ status: "ended" }), item: KEYLESS });
     await act(async () => request.reject(new LiveSessionError("not_open")));
-    expect(screen.getByText("Live session ended")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "This live session has ended." }),
+    ).toBeInTheDocument();
     expect(busy()).toBeNull();
   });
 
@@ -162,7 +166,9 @@ describe("StudentRoom: the teacher ends the session mid-question (case 3)", () =
     expect(busy()).toBeNull();
 
     room.push({ state: running({ status: "ended" }), item: KEYLESS });
-    expect(screen.getByText("Live session ended")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "This live session has ended." }),
+    ).toBeInTheDocument();
   });
 
   it("ends on the ended screen when an accepted answer's acknowledgement lands after the end", async () => {
@@ -174,7 +180,9 @@ describe("StudentRoom: the teacher ends the session mid-question (case 3)", () =
 
     room.push({ state: running({ status: "ended" }), item: KEYLESS });
     await act(async () => request.resolve({ itemId: SATA.id, submittedAt: Date.now() }));
-    expect(screen.getByText("Live session ended")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "This live session has ended." }),
+    ).toBeInTheDocument();
     expect(busy()).toBeNull();
   });
 
@@ -182,7 +190,9 @@ describe("StudentRoom: the teacher ends the session mid-question (case 3)", () =
     const room = await onTheQuestion();
     room.push({ state: running({ status: "ended" }), item: KEYLESS });
     room.connection("refused");
-    expect(screen.getByText("Live session ended")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "This live session has ended." }),
+    ).toBeInTheDocument();
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 });
