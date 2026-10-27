@@ -45,7 +45,13 @@ test("the projector's answer key: every type fits the wall, key marked", async (
 
   for (const type of TYPES) {
     const stage = page.getByTestId(`stage-reveal-${type}`);
-    await expect(stage.getByText(/Correct/).first()).toBeVisible();
+    // Matrix and grouping draw a grid and row cards and show one per width, so skip the hidden one.
+    await expect(
+      stage
+        .getByText(/Correct/)
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible();
     // Nothing on the wall takes focus: the stage's own keys (Space, the right arrow) still work.
     if (!type.startsWith("multiple-choice") && type !== "multiple-response") {
       await expect(stage.getByTestId("stage-key")).toHaveAttribute("inert", "");
