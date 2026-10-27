@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Countdown } from "@/components/live/Countdown";
 import { AnswerCount } from "@/components/ui/AnswerCount";
 import type { ItemTimer } from "@/lib/live/timer";
@@ -22,6 +23,8 @@ export interface StageQuestionProps {
   paused: boolean;
   url: string;
   code: string;
+  /** The join URL's QR code for the join strip, drawn on the server. None when absent. */
+  joinQr?: ReactNode;
   serverNow: () => number;
 }
 
@@ -42,9 +45,12 @@ export function StageQuestion({
   paused,
   url,
   code,
+  joinQr,
   serverNow,
 }: StageQuestionProps) {
   const where = [place.label, paused ? "Paused" : null].filter(Boolean).join(" · ");
+  // What is new in the record at a case study step takes the join strip's place, QR code and all.
+  const newInRecord = casePlace !== null && casePlace.newTabs.length > 0;
   // More than a short projector holds at full size: the stem is clamped and the options compact.
   const dense =
     question?.options != null &&
@@ -70,7 +76,7 @@ export function StageQuestion({
       <StageStrip
         left={<span className="tabular">{where}</span>}
         right={
-          casePlace !== null && casePlace.newTabs.length > 0 ? (
+          newInRecord ? (
             <>
               New in the record:{" "}
               <span className="text-stage-ink">{casePlace.newTabs.join(", ")}</span>
@@ -79,6 +85,7 @@ export function StageQuestion({
             <JoinStrip url={url} code={code} />
           )
         }
+        qr={newInRecord ? null : joinQr}
       />
       {/* The one part that gives way on a short projector (1280x720), so the clock and the count
           below always stay on the wall. Inside it the options give way row by row (StageOptions),

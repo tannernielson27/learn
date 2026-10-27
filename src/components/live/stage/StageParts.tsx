@@ -10,11 +10,36 @@ import type { StageOption } from "./stageItem";
  * projector and a 1080p one read the same from the back row.
  */
 
-/** The strip across the top: where the room is on the left, a second fact on the right. */
-export function StageStrip({ left, right }: { left: ReactNode; right?: ReactNode }) {
+/**
+ * The strip across the top: where the room is on the left, a second fact on the right.
+ *
+ * `qr` is the join URL's QR code (`SessionQrCode`, drawn on the server), set just before the
+ * right-hand words. It is about two lines of the strip tall (`--stage-join-qr`), for the front
+ * rows, but takes one line's height in the layout and spills evenly above and below it into the
+ * gaps around the strip, so its height never moves the question down. Its width can: a strip that
+ * only just fit on one line takes two. It is a flex item of its own so that then it stays up
+ * beside the place and the words take the next line whole, rather than being broken around it.
+ */
+export function StageStrip({
+  left,
+  right,
+  qr,
+}: {
+  left: ReactNode;
+  right?: ReactNode;
+  qr?: ReactNode;
+}) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-x-[3cqb] gap-y-[1cqb] text-stage-label font-semibold text-ink-2">
       <p className="min-w-0">{left}</p>
+      {qr == null ? null : (
+        <span
+          data-testid="stage-join-qr"
+          className="relative ml-auto h-[1lh] w-(--stage-join-qr) shrink-0 self-center [&>svg]:absolute [&>svg]:top-1/2 [&>svg]:left-0 [&>svg]:size-(--stage-join-qr) [&>svg]:-translate-y-1/2"
+        >
+          {qr}
+        </span>
+      )}
       {right === undefined ? null : <p className="min-w-0">{right}</p>}
     </div>
   );
@@ -22,13 +47,15 @@ export function StageStrip({ left, right }: { left: ReactNode; right?: ReactNode
 
 /**
  * A small join strip, so a late student can still get in after the start (PLAN §5.2). The code
- * stays mono with a gap between its halves, as on the lobby screen.
+ * stays mono with a gap between its halves, as on the lobby screen. Its QR code, when there is
+ * one, sits just before it (`StageStrip`'s `qr`).
  */
 export function JoinStrip({ url, code }: { url: string; code: string }) {
   return (
     <span data-testid="stage-join-strip">
       Join at <span className="font-mono text-stage-ink">{url}</span> ·{" "}
-      <span className="font-mono font-bold tracking-[0.06em] text-stage-ink">
+      {/* Never split across lines: half a code on each is no code at all. */}
+      <span className="font-mono font-bold tracking-[0.06em] whitespace-nowrap text-stage-ink">
         {formatSessionCode(code)}
       </span>
     </span>

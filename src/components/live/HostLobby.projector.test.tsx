@@ -3,9 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { LiveSessionTransport } from "@/lib/live";
 import { createInMemoryRoom } from "@/lib/live/memoryRoom";
+import { encodeQr, qrSvgPath } from "@/lib/live/qrCode";
 import { FIXTURES } from "@/lib/ngn/fixtures";
 import { itemSchema, type Item } from "@/lib/ngn/schemas";
 import { HostLobby } from "./HostLobby";
+import { SessionQrCode } from "./SessionQrCode";
 import { STAGE_KEY_HOLD_MS } from "./stage/StageView";
 
 /**
@@ -25,6 +27,8 @@ const SATA = itemSchema.parse(FIXTURES.multiple_response.canonical) as Item & {
   type: "multiple_response";
 };
 const RATIONALE = MC.rationale.general?.value ?? "";
+const STUDENT_URL = `https://learn.test/join/${CODE}`;
+const QR_LABEL = "QR code for joining this live session";
 
 function setup(view: "control" | "projector", items: readonly Item[] = [MC, MATRIX]) {
   const room = createInMemoryRoom({ items, code: CODE, sessionId: SESSION_ID, now: () => NOW });
@@ -34,8 +38,10 @@ function setup(view: "control" | "projector", items: readonly Item[] = [MC, MATR
       sessionId={SESSION_ID}
       title="Cardiac basics"
       code={CODE}
-      studentUrl={`https://learn.test/join/${CODE}`}
+      studentUrl={STUDENT_URL}
       qrCode={null}
+      // As the page draws it: the same join URL as the lobby's QR code, code and all.
+      stageJoinQr={<SessionQrCode url={STUDENT_URL} label={QR_LABEL} />}
       view={view}
       initial={room.currentState()}
       connect={() => host}
@@ -100,6 +106,29 @@ describe("the projector view: a question", () => {
     expect(within(stage()).queryByText("Ada Brennan")).toBeNull();
     // Late students can still join.
     expect(within(stage()).getByTestId("stage-join-strip")).toHaveTextContent("AJ4 K7P");
+  });
+
+  it("puts a QR code of the join URL beside the join code, so a scan lands in the room", async () => {
+    const fake = setup("projector");
+    await (await fake.control()).start();
+    const qr = within(await within(stage()).findByTestId("stage-join-qr")).getByRole("img", {
+      name: QR_LABEL,
+    });
+    expect(qr.querySelector("path")).toHaveAttribute("d", qrSvgPath(encodeQr(STUDENT_URL)!));
+    // One QR code on the wall: the lobby's own is not drawn behind it.
+    expect(within(stage()).getAllByRole("img", { name: QR_LABEL })).toHaveLength(1);
+  });
+
+  it("keeps it up while the room is paused", async () => {
+    const fake = setup("projector");
+    const control = await fake.control();
+    await control.start();
+    await within(stage()).findByRole("list", { name: "Choices" });
+    await control.pause();
+    await waitFor(() => expect(stage()).toHaveTextContent("Paused"));
+    expect(
+      within(within(stage()).getByTestId("stage-join-qr")).getByRole("img", { name: QR_LABEL }),
+    ).toBeInTheDocument();
   });
 
   it("counts the answers in, never who sent them", async () => {
