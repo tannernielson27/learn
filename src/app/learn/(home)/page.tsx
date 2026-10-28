@@ -56,28 +56,34 @@ const H2 = "mb-3 text-lg font-semibold text-ink-1";
 export default async function StudentHomePage() {
   const { supabase, userId, email } = await requireStudent();
   const now = new Date();
-  const [claims, classes, assignments, practice, { history, steps }, live] = await Promise.all([
-    // Read from the token already verified for this request; asked here, on the home only, so
-    // the banner never sits over an assignment someone is in the middle of.
-    supabase.auth.getClaims().then(({ data }) => data?.claims),
-    myClasses(supabase),
-    listOpenAssignments(supabase, now),
-    readMyPracticeBanks(supabase),
-    loadStudentRecord(historyStore(supabase, createSupabaseServiceClient()), userId),
-    // Ended sessions only, and only the student's own linked participant rows.
-    readMyLiveResults(supabase),
-  ]);
+  // #208: how this student's attempts stand at each open assignment; a failed read just leaves the
+  // counts off. perf-audit #15: read as soon as the open assignments are in, beside the history.
+  const openRead = listOpenAssignments(supabase, now);
+  const progressRead = openRead.then((open) =>
+    listMyAttemptProgress(
+      supabase,
+      (open ?? []).map((entry) => entry.id),
+    ),
+  );
+  const [claims, classes, assignments, practice, { history, steps }, live, counts] =
+    await Promise.all([
+      // Read from the token already verified for this request; asked here, on the home only, so
+      // the banner never sits over an assignment someone is in the middle of.
+      supabase.auth.getClaims().then(({ data }) => data?.claims),
+      myClasses(supabase),
+      openRead,
+      readMyPracticeBanks(supabase),
+      loadStudentRecord(historyStore(supabase, createSupabaseServiceClient()), userId),
+      // Ended sessions only, and only the student's own linked participant rows.
+      readMyLiveResults(supabase),
+      progressRead,
+    ]);
   // #242: due times are shown in each class's zone, not the device's. A student whose classes
   // span more than one workspace also gets the workspace beside each class name, and on each
   // practice quiz, which names no class.
   const classInfo = studentClassInfo(classes);
   const acrossWorkspaces = spansWorkspaces(classes);
-  // #208: how this student's attempts stand at each; a failed read just leaves the counts off.
-  const progress =
-    (await listMyAttemptProgress(
-      supabase,
-      (assignments ?? []).map((entry) => entry.id),
-    )) ?? undefined;
+  const progress = counts ?? undefined;
   const pick = pickUp(assignments, progress, practice);
   const inAClass = classes !== null && classes.length > 0;
 
