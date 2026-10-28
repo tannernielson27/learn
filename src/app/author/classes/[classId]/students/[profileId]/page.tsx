@@ -26,12 +26,15 @@ export default async function ClassStudentPage({
   if (!isUuid(classId) || !isUuid(profileId)) notFound();
   const { supabase } = await requireAuthor(classStudentPath(classId, profileId));
 
-  const detail = await readClass(supabase, classId);
+  // Both start together; the class is awaited first, so a class this teacher cannot see is still
+  // a 404 even when `class_progress` would have failed for it.
+  const detailRead = readClass(supabase, classId);
+  const progressRead = readClassProgress(supabase, classId);
+  // Awaited below; this only keeps a failure from going unobserved if the page stops first.
+  progressRead.catch(() => undefined);
+  const detail = await detailRead;
   if (!detail) notFound();
-  const progress = studentProgress(
-    buildClassProgress(await readClassProgress(supabase, classId)),
-    profileId,
-  );
+  const progress = studentProgress(buildClassProgress(await progressRead), profileId);
   if (!progress) notFound();
 
   return <StudentProgressView classId={detail.id} className={detail.name} progress={progress} />;

@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { WELCOME_PATH } from "@/lib/auth/accountPaths";
+import { readVerifiedProfile } from "@/lib/auth/verifiedProfile";
 import { STUDENT_HOME } from "@/lib/classes/classes";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
@@ -23,25 +24,17 @@ export type RouteAuthor =
 
 /**
  * The real access check (the proxy's redirect is only optimistic). Verifies the session token,
- * then the profile: an author is an instructor or admin with an org. RLS still decides every row.
+ * then the profile (one shared read per request: `readVerifiedProfile`): an author is an instructor or admin with an org. RLS still decides every row.
  * Route handlers use this directly, since they answer with a status code rather than a redirect.
  */
 export async function authorForRoute(): Promise<RouteAuthor> {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.auth.getClaims();
-  const userId = data?.claims?.sub;
+  const { supabase, userId, email, profile } = await readVerifiedProfile();
   if (!userId) return { status: "signed_out" };
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("org_id, role")
-    .eq("id", userId)
-    .maybeSingle();
   if (!profile?.org_id || (profile.role !== "instructor" && profile.role !== "admin")) {
     return { status: "forbidden", role: profile?.role === "student" ? "student" : null };
   }
 
-  const email = typeof data.claims.email === "string" ? data.claims.email : "";
   return { status: "ok", supabase, userId, email, orgId: profile.org_id };
 }
 

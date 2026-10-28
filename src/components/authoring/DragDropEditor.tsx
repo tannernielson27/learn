@@ -8,6 +8,7 @@ import {
   fromDragdropRationaleForm,
   type DragDropFormValues,
 } from "@/lib/authoring/forms/dragdrop";
+import { unusedId } from "@/lib/authoring/freeIds";
 import { describeIssues } from "@/lib/authoring/issueMessages";
 import {
   dragdropClozeItemSchema,
@@ -32,13 +33,6 @@ const MIN_WORDS = 4;
 const MAX_WORDS = 8;
 const DIRTY = { shouldDirty: true } as const;
 const fieldClass = fieldClasses("px-3 py-2 text-base");
-
-function unusedId(prefix: string, taken: ReadonlySet<string>): string {
-  for (let i = 1; i < 100; i += 1) {
-    if (!taken.has(`${prefix}${i}`)) return `${prefix}${i}`;
-  }
-  return `${prefix}${Date.now()}`;
-}
 
 /**
  * Drag-and-drop cloze and rationale share one editor: the sentence works as in the drop-down cloze

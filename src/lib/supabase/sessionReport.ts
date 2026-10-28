@@ -34,7 +34,11 @@ export interface SessionSummary {
 
 export interface SessionReportData {
   session: Omit<SessionSummary, "participantCount">;
-  input: SessionReportInput;
+  /**
+   * What the report is built from; null until the session has ended, when there is no report yet
+   * and nothing past the session row is read (perf-audit #17).
+   */
+  input: SessionReportInput | null;
 }
 
 /** How many sessions the list shows. Cross-session history is out of scope (#186). */
@@ -69,6 +73,7 @@ export async function listRecentSessions(supabase: Client): Promise<SessionSumma
 
 /**
  * Everything the report is built from, or null when the session is not one this author can see.
+ * A session that has not ended comes back with its header and no input.
  * Throws when a read fails part way, so a half-read session is never shown as a real report.
  */
 export async function readSessionReport(
@@ -77,6 +82,15 @@ export async function readSessionReport(
 ): Promise<SessionReportData | null> {
   const session = await readSessionRow(supabase, sessionId);
   if (!session) return null;
+  const header = {
+    id: session.id,
+    title: session.title,
+    status: session.status,
+    openedAt: session.opened_at,
+    closedAt: session.closed_at,
+  };
+  // Every caller answers "not yet" for a session that has not ended, so its rows are not read.
+  if (session.status !== "ended") return { session: header, input: null };
 
   const itemIds = itemIdsOf(session.item_set);
   const [items, participants, responses] = await Promise.all([
@@ -86,13 +100,7 @@ export async function readSessionReport(
   ]);
 
   return {
-    session: {
-      id: session.id,
-      title: session.title,
-      status: session.status,
-      openedAt: session.opened_at,
-      closedAt: session.closed_at,
-    },
+    session: header,
     input: {
       // #469: each step of a case study a whole quiz played in place, under its case study.
       items: inCaseStudies(toReportItems(itemIds, items), placesOf(session.case_study_records)),

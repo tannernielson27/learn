@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { redirectForAccess } from "@/lib/auth/routeAccess";
 import { galleryIsAvailable, isGalleryPath } from "@/lib/gallery/availability";
 import { updateSession } from "@/lib/supabase/proxy";
-import { inviteResponseHeaders } from "@/lib/workspace/invite";
+import { inviteResponseHeaders } from "@/lib/workspace/invitePage";
 
 /**
  * ADR 0003 / #146: the gallery ships answer keys to the browser by design, so it is closed on the

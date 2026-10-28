@@ -27,7 +27,8 @@ function client(row: { host_id: string } | null, error: { message: string } | nu
 
 const ended = (status = "ended") => ({
   session: { id: SESSION, title: "Cardiac week 3", status, openedAt: "", closedAt: null },
-  input: REPORT_FIXTURE,
+  // readSessionReport reads no input for a session that has not ended.
+  input: status === "ended" ? REPORT_FIXTURE : null,
 });
 
 beforeEach(() => {

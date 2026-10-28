@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
+import { memo, useEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
 import { ClipboardList } from "lucide-react";
 import { Icon } from "@/components/ui/Icon";
 import { useMediaQuery } from "@/components/ui/useMediaQuery";
@@ -75,8 +75,18 @@ export interface EhrPanelProps {
  * Pane and overlay each render the record, and CSS shows one — the same trick the matrix and row
  * tables use. The open tab lives here, so the reader never loses their place when the layout
  * changes underneath them.
+ *
+ * Memoized (perf audit #33): a case study or an assignment re-renders on every answer change, and
+ * its record does not change with the answer. The callers pass the record views they were handed,
+ * so equal props are the same objects and the chart, every tab panel included, is left alone.
  */
-export function EhrPanel({ record, previous, openTabId, note, className = "" }: EhrPanelProps) {
+export const EhrPanel = memo(function EhrPanel({
+  record,
+  previous,
+  openTabId,
+  note,
+  className = "",
+}: EhrPanelProps) {
   // Pointing at a section charted once also sets the clock, since it is only there at its own
   // time. A section charted at every time gives no reason to move it.
   const timeOf = (tabId: string | undefined) =>
@@ -191,4 +201,4 @@ export function EhrPanel({ record, previous, openTabId, note, className = "" }: 
       </div>
     </>
   );
-}
+});

@@ -63,4 +63,23 @@ describe("readOrgProgress", () => {
     const failed = { data: null, error: { code: "08006" } };
     expect(await readOrgProgress(fakeClient({ sessions: failed }).client, ORG, BANKS)).toBeNull();
   });
+
+  it("starts its reads before the banks are known, and takes them when they come (perf-audit #14)", async () => {
+    const fake = fakeClient({ classes: ROW });
+    let give: (banks: typeof BANKS) => void = () => {};
+    const banks = new Promise<typeof BANKS>((resolve) => {
+      give = resolve;
+    });
+    const read = readOrgProgress(fake.client, ORG, banks);
+    expect(fake.asked).toHaveLength(3);
+    give(BANKS);
+    expect(await read).toEqual({ banks: BANKS, hasClass: true, hasAssignmentOrSession: false });
+  });
+
+  it("rejects when the list of banks fails, as the page's own read would", async () => {
+    const fake = fakeClient({});
+    await expect(
+      readOrgProgress(fake.client, ORG, Promise.reject(new Error("Quizzes could not be loaded."))),
+    ).rejects.toThrow("Quizzes could not be loaded.");
+  });
 });

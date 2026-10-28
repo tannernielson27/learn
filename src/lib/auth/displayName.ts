@@ -1,5 +1,12 @@
 import { z } from "zod";
 import { cleanDisplayName, displayNameLength } from "@/lib/live/displayName";
+import {
+  ACCOUNT_NAME_EMPTY,
+  ACCOUNT_NAME_MAX_LENGTH,
+  ACCOUNT_NAME_TOO_LONG,
+} from "./displayNameLimits";
+
+export { ACCOUNT_NAME_EMPTY, ACCOUNT_NAME_MAX_LENGTH, ACCOUNT_NAME_TOO_LONG };
 
 /**
  * The name on an account (#358): `profiles.display_name`, which the instructor's roster and the
@@ -11,10 +18,6 @@ import { cleanDisplayName, displayNameLength } from "@/lib/live/displayName";
  * escaping cannot help with. The cap is the column's own check, `length(display_name) <= 80`,
  * counted in characters as Postgres counts them, and a longer name is refused, never cut.
  */
-
-export const ACCOUNT_NAME_MAX_LENGTH = 80;
-export const ACCOUNT_NAME_EMPTY = "Enter your name.";
-export const ACCOUNT_NAME_TOO_LONG = `Use ${ACCOUNT_NAME_MAX_LENGTH} characters or fewer for your name.`;
 
 /**
  * U+0085, the C1 next-line. `cleanDisplayName` keeps it as whitespace, but JavaScript's `\s` does
