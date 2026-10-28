@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { RecordLayout } from "@/components/ehr/RecordLayout";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { ActionBar } from "@/components/question/ActionBar";
@@ -61,6 +61,33 @@ const UNSAVED = "Some answers are not saved yet. Check your connection and try a
 /** Never called: an assignment's items have no Submit of their own (`showSubmit={false}`). */
 const noItemSubmit = (): Promise<ScoreReveal> =>
   Promise.reject(new Error("An assignment's items are submitted together."));
+
+/**
+ * One item of the set, drawn again only when its own props change (#35): a save's status line
+ * changes the page around it, not the item. `initialResponse` is read once, at mount, and is the
+ * same object until the student changes the answer, which redraws the item anyway.
+ */
+const AttemptItem = memo(function AttemptItem({
+  itemId,
+  item,
+  initialResponse,
+  onChange,
+}: {
+  itemId: string;
+  item: AttemptItemPayload["item"];
+  initialResponse: AnyResponse | undefined;
+  onChange: (itemId: string, response: AnyResponse) => void;
+}) {
+  return (
+    <ItemPlayer
+      item={item}
+      initialResponse={initialResponse}
+      onResponseChange={(response) => onChange(itemId, response)}
+      submit={noItemSubmit}
+      showSubmit={false}
+    />
+  );
+});
 
 /**
  * One autosaver per mounted player. Made in an effect rather than during render, so React's
@@ -150,11 +177,25 @@ export function AttemptPlayer({
   const [error, setError] = useState<string | null>(null);
 
   const saver = useAutosaver(attemptId, save, (next, refusal) => {
-    setStatus({ status: next, refusal });
+    // A retry that fails the same way says nothing new, so the page is not drawn again (#35).
+    setStatus((held) =>
+      held.status === next && held.refusal === refusal ? held : { status: next, refusal },
+    );
     // A refusal reads the page for what happened; a saved answer to the last step this page holds
     // reads it for the next step and its chart, which the server sends only now (#335).
     if (next === "stopped" || (next === "saved" && waitingForNext)) router.refresh();
   });
+
+  // The same function on every render, so the item is not drawn again when only the status line
+  // or the count changes (#35). It reads nothing that changes: setters and the saver's handle.
+  const change = useCallback(
+    (itemId: string, response: AnyResponse) => {
+      setAnswers((held) => ({ ...held, [itemId]: response }));
+      setError(null);
+      saver.change(itemId, response);
+    },
+    [saver],
+  );
 
   if (items.length === 0) {
     return <p className="measure text-ink-2">This assignment has no questions.</p>;
@@ -167,12 +208,6 @@ export function AttemptPlayer({
     status.status === "stopped"
       ? ATTEMPT_REFUSALS[status.refusal ?? "failed"]
       : STATUS_COPY[status.status];
-
-  const change = (itemId: string, response: AnyResponse) => {
-    setAnswers((held) => ({ ...held, [itemId]: response }));
-    setError(null);
-    saver.change(itemId, response);
-  };
 
   const submitNow = async () => {
     if (submitting) return;
@@ -225,13 +260,12 @@ export function AttemptPlayer({
       />
 
       <div className="mt-8">
-        <ItemPlayer
+        <AttemptItem
           key={entry.itemId}
+          itemId={entry.itemId}
           item={entry.item}
           initialResponse={answers[entry.itemId]}
-          onResponseChange={(response) => change(entry.itemId, response)}
-          submit={noItemSubmit}
-          showSubmit={false}
+          onChange={change}
         />
       </div>
 
