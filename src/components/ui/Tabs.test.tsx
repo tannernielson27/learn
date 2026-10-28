@@ -54,6 +54,8 @@ describe("Tabs", () => {
  */
 const METRICS = ["scrollWidth", "clientWidth", "scrollLeft"] as const;
 let metrics: Record<(typeof METRICS)[number], number>;
+/** How many times the strip has been put under a ResizeObserver. */
+let observed = 0;
 
 describe("Tabs strip arrows", () => {
   beforeEach(() => {
@@ -72,6 +74,7 @@ describe("Tabs strip arrows", () => {
       class {
         constructor(private readonly onResize: () => void) {}
         observe() {
+          observed += 1;
           this.onResize();
         }
         disconnect() {}
@@ -84,6 +87,7 @@ describe("Tabs strip arrows", () => {
     for (const prop of METRICS) delete proto[prop];
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    observed = 0;
   });
 
   const arrows = (container: HTMLElement) => ({
@@ -115,6 +119,28 @@ describe("Tabs strip arrows", () => {
       left: 240,
       behavior: "smooth",
     });
+  });
+
+  // Perf audit #33: a patient record hands over a new list on every render of its own.
+  it("keeps watching the strip it has when the same tabs come again as a new list", () => {
+    metrics = { scrollWidth: 300, clientWidth: 300, scrollLeft: 0 };
+    const { rerender } = render(<Tabs label="Patient record" tabs={tabs} />);
+    expect(observed).toBe(1);
+    rerender(<Tabs label="Patient record" tabs={tabs.map((tab) => ({ ...tab }))} />);
+    expect(observed).toBe(1);
+  });
+
+  it("measures the strip again when the tabs on it change", () => {
+    metrics = { scrollWidth: 300, clientWidth: 300, scrollLeft: 0 };
+    const { container, rerender } = render(<Tabs label="Patient record" tabs={tabs} />);
+    expect(arrows(container).end).toBeNull();
+    metrics = { scrollWidth: 900, clientWidth: 300, scrollLeft: 0 };
+    const more = [...tabs, { id: "orders", label: "Orders", content: <p>Orders content</p> }];
+    rerender(<Tabs label="Patient record" tabs={more} />);
+    expect(arrows(container).end).toBeEnabled();
+    // A new badge widens a chip just as a new tab does.
+    rerender(<Tabs label="Patient record" tabs={more.map((tab) => ({ ...tab, badge: "New" }))} />);
+    expect(observed).toBe(3);
   });
 
   it("keeps the arrows out of the tab order and out of the accessibility tree", () => {

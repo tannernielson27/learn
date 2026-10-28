@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { sampleEhr } from "@/lib/ngn/fixtures";
@@ -8,16 +8,27 @@ const chip = () => screen.getByRole("button", { name: "Patient record" });
 const pane = () => screen.getByRole("complementary", { name: "Patient record" });
 const sheet = () => screen.getByRole("dialog", { name: "Patient record" });
 
-/** jsdom ships no matchMedia, so the panel falls back to the phone sheet unless one is stubbed. */
-const stubViewport = (width: number) =>
+/** Everything listening for a media query's answer to change. */
+const listeners = new Set<() => void>();
+
+/**
+ * jsdom ships no matchMedia, so the panel falls back to the phone sheet unless one is stubbed. A
+ * new width tells every listener, as a browser does when the window is resized.
+ */
+const stubViewport = (width: number) => {
   vi.stubGlobal("matchMedia", (media: string) => ({
     matches: width >= Number(/min-width:\s*(\d+)px/.exec(media)?.[1] ?? 0),
     media,
-    addEventListener: () => {},
-    removeEventListener: () => {},
+    addEventListener: (_type: string, listener: () => void) => listeners.add(listener),
+    removeEventListener: (_type: string, listener: () => void) => listeners.delete(listener),
   }));
+  act(() => listeners.forEach((listener) => listener()));
+};
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  listeners.clear();
+});
 
 describe("EhrPanel", () => {
   it("renders the record as a pane, with the first tab open", () => {

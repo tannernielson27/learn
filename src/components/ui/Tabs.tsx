@@ -73,6 +73,12 @@ export function Tabs({
     tab?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   }, [selected]);
 
+  // What the chips' widths depend on. The strip is measured again when it changes, not whenever
+  // a caller hands over a new list of the same tabs (perf audit #33: a record does on each render).
+  const chips = tabs
+    .map((tab) => [tab.id, tab.label, tab.badge ?? "", tab.locked ? "1" : ""].join("\u0000"))
+    .join("\u0001");
+
   // Measuring happens only in the observer's and the listener's callbacks, never in the effect
   // body: the first reading comes from ResizeObserver, which reports as soon as it starts.
   // Showing the arrows only ever narrows the strip, so the two can never flip each other forever.
@@ -101,7 +107,7 @@ export function Tabs({
       observer.disconnect();
       el.removeEventListener("scroll", measure);
     };
-  }, [tabs]);
+  }, [chips]);
 
   const page = (direction: -1 | 1) => {
     const el = strip.current;
