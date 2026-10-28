@@ -20,7 +20,7 @@ import { createChannelTokenSource } from "@/lib/liveSupabase/channelTokenSource"
 import type { AnsweredPayload, ChannelCredential } from "@/lib/liveSupabase/wire";
 import type { AnyResponse } from "@/lib/ngn/schemas";
 import type { ScoreReveal, SubmitHandler } from "@/lib/ngn/submit";
-import { createSupabaseChannelClient } from "@/lib/supabase/browser";
+import { createSupabaseChannelClient } from "@/lib/supabase/channelClient";
 import { usePhoneHistory } from "./usePhoneHistory";
 
 export interface StudentRoomOptions {
