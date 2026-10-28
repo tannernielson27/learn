@@ -17,7 +17,7 @@
  *
  * Pure TypeScript: no React, Next or Supabase.
  */
-import { runAt, type CaseStudyRun } from "./caseStudyRuns";
+import { runAt, type CaseStudyRun } from "./runPlace";
 import { controlCommands, type ControlCommand } from "./controls";
 import { positionLabel } from "./positionLabel";
 import { isStudentPaced, type LiveSessionState } from "./state";

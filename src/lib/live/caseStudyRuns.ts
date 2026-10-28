@@ -10,29 +10,16 @@
  * The step a position is at is its offset from the case study's first position, plus one: the
  * rule a session run from one case study already reads its record by (`stepAtPosition`).
  *
+ * The server's half: it imports zod, so no browser module may import it for `runAt`.
+ *
  * Pure TypeScript: no React, Next or Supabase.
  */
 import { z } from "zod";
-import { CASE_STUDY_STEP_COUNT, ehrRecordSchema, type EhrRecord } from "@/lib/ngn/schemas";
-import type { CjmmStep } from "@/lib/ngn/types";
+import { CASE_STUDY_STEP_COUNT, ehrRecordSchema } from "@/lib/ngn/schemas";
+import type { CaseStudyRun } from "./runPlace";
 
-export interface CaseStudyRun {
-  caseStudyId: string;
-  /** The case study's title when the session started. */
-  title: string;
-  /** One-based: where its step 1 sits in the session's set. */
-  firstPosition: number;
-  /** How many steps follow from there, step 1 included. */
-  stepCount: number;
-  /** Its patient record as the session started with it, whole; null when it had none. */
-  record: EhrRecord | null;
-}
-
-/** Where a position falls: the case study it belongs to and the step it is. */
-export interface RunPlace {
-  run: CaseStudyRun;
-  step: CjmmStep;
-}
+// The types and `runAt` live in `runPlace.ts`, which the phone imports without zod.
+export { runAt, type CaseStudyRun, type RunPlace } from "./runPlace";
 
 const storedRunSchema = z.object({
   case_study_id: z.string().min(1),
@@ -71,13 +58,4 @@ export function parseCaseStudyRuns(value: unknown): CaseStudyRun[] {
     covered = run.firstPosition + run.stepCount - 1;
     return true;
   });
-}
-
-/** The case study and step at a one-based position, or null on a loose question or no position. */
-export function runAt(runs: readonly CaseStudyRun[], position: number | null): RunPlace | null {
-  if (position === null || !Number.isInteger(position)) return null;
-  const run = runs.find(
-    (each) => position >= each.firstPosition && position < each.firstPosition + each.stepCount,
-  );
-  return run === undefined ? null : { run, step: (position - run.firstPosition + 1) as CjmmStep };
 }

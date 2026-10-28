@@ -11,7 +11,7 @@ import {
 } from "@/components/live/stage/liveView";
 import { StageView } from "@/components/live/stage/StageView";
 import { isStudentPaced, type LiveHostTransport, type LiveSessionState } from "@/lib/live";
-import { runAt, type CaseStudyRun } from "@/lib/live/caseStudyRuns";
+import { runAt, type CaseStudyRun } from "@/lib/live/runPlace";
 import { positionLabel } from "@/lib/live/positionLabel";
 import { controlView, stageView } from "@/lib/live/views";
 import type { EhrRecord } from "@/lib/ngn/schemas";
