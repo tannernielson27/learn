@@ -79,9 +79,18 @@ export async function submitAttempt(
 }
 
 /**
+ * How many attempts the submit at close records at once. Each `record_attempt_submission` locks
+ * only its own attempt row and writes only that attempt's responses, so attempts do not wait on
+ * each other; a few at a time turns a 500-attempt close from 500 round trips in a row into about
+ * 63, without opening hundreds of requests to the database together.
+ */
+export const AUTO_SUBMIT_CONCURRENCY = 8;
+
+/**
  * Submits every attempt that is due, with what each saved, and says how many this run recorded.
  * Items are read once per assignment. An attempt that cannot be scored now (its items could not be
- * read) is left open for the next run rather than recorded wrongly.
+ * read) is left open for the next run rather than recorded wrongly. Attempts are taken in the
+ * list's order, `AUTO_SUBMIT_CONCURRENCY` at a time.
  */
 export async function autoSubmitExpired(
   store: AutoSubmitStore,
@@ -90,17 +99,20 @@ export async function autoSubmitExpired(
   const due = await store.expired(filter);
   if (due === null) return 0;
 
-  const sets = new Map<string, SetItem[] | null>();
+  // The read itself is kept, so attempts of one assignment that start together share it.
+  const sets = new Map<string, Promise<SetItem[] | null>>();
   let recorded = 0;
   // Each attempt on its own: the list comes back in a stable order, so one that throws every time
   // would otherwise hold up every attempt behind it on every run (#212 runs this for everyone).
-  for (const attempt of due) {
+  async function submitOne(attempt: ExpiredAttempt): Promise<void> {
     try {
-      if (!sets.has(attempt.assignmentId)) {
-        sets.set(attempt.assignmentId, await readSet(store, attempt));
+      let read = sets.get(attempt.assignmentId);
+      if (read === undefined) {
+        read = readSet(store, attempt);
+        sets.set(attempt.assignmentId, read);
       }
-      const set = sets.get(attempt.assignmentId);
-      if (!set) continue;
+      const set = await read;
+      if (!set) return;
       const result = await store.record({
         attemptId: attempt.attemptId,
         studentId: attempt.studentId,
@@ -116,6 +128,19 @@ export async function autoSubmitExpired(
       });
     }
   }
+
+  const queue: readonly ExpiredAttempt[] = due;
+  let next = 0;
+  async function worker(): Promise<void> {
+    while (next < queue.length) {
+      const attempt = queue[next];
+      next += 1;
+      if (attempt) await submitOne(attempt);
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(AUTO_SUBMIT_CONCURRENCY, queue.length) }, () => worker()),
+  );
   return recorded;
 }
 
