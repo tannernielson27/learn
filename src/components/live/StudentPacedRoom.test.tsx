@@ -317,7 +317,10 @@ describe("StudentPacedRoom in a quiz that plays case studies in place (#469)", (
     expect(chart()).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Next question" }));
-    expect(chart()).toBeInTheDocument();
+    // The panel is its own chunk, which a client-only render awaits once.
+    expect(
+      await screen.findByRole("complementary", { name: "Patient record" }),
+    ).toBeInTheDocument();
     expect(screen.getAllByText(/Orthopedic unit/).length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole("button", { name: "Previous question" }));

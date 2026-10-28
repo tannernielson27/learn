@@ -1,8 +1,21 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
-import { RecordLayout } from "@/components/ehr/RecordLayout";
+import dynamic from "next/dynamic";
+import { Suspense, createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { RecordFrame } from "@/components/ehr/RecordFrame";
 import type { EhrRecordView } from "@/lib/ngn/chartReveal";
+
+/**
+ * The patient record's panel as its own chunk, so a phone in a bank session never downloads it:
+ * only a case-study room renders this layout, and the rooms import this file for
+ * `useShowLiveRecord` alone. The page's server render still paints the panel, so a case study's
+ * first paint is what it was. The panel has a Suspense boundary of its own: with none, a panel
+ * still loading would suspend the room around it, and the room hydrates without waiting for it.
+ */
+// The `import()` is written inline so Next sees it and preloads the chunk with a server render.
+const EhrPanel = dynamic(() =>
+  import("@/components/ehr/EhrPanel").then((module) => module.EhrPanel),
+);
 
 /** How the room inside hands the layout a new chart, or none. Null outside a case-study room. */
 const ShowRecord = createContext<((record: EhrRecordView | null) => void) | null>(null);
@@ -41,9 +54,24 @@ export function LiveRecordLayout({ initial, children }: LiveRecordLayoutProps) {
     setApplied(initial);
     setRecord(initial);
   }
+  // A quiz room that starts on a loose question has no panel in its server render; fetching the
+  // chunk now means the first step that brings a chart does not wait for it.
+  useEffect(() => {
+    void import("@/components/ehr/EhrPanel");
+  }, []);
   return (
     <ShowRecord.Provider value={setRecord}>
-      <RecordLayout record={record}>{children}</RecordLayout>
+      <RecordFrame
+        panel={
+          record === null ? null : (
+            <Suspense fallback={null}>
+              <EhrPanel record={record} />
+            </Suspense>
+          )
+        }
+      >
+        {children}
+      </RecordFrame>
     </ShowRecord.Provider>
   );
 }

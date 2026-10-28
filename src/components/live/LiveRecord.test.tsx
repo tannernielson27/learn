@@ -28,6 +28,8 @@ describe("LiveRecordLayout (#335)", () => {
     );
     const labs = () =>
       screen.getAllByRole("tab", { name: /^Lab Results/, hidden: true })[0] as HTMLElement;
+    // The panel is its own chunk, which a client-only render awaits once.
+    await screen.findAllByRole("tab", { name: /^Lab Results/, hidden: true });
     expect(labs()).toHaveAttribute("aria-disabled", "true");
     expect(screen.queryByText(/0130: Pale/)).toBeNull();
 
@@ -37,7 +39,7 @@ describe("LiveRecordLayout (#335)", () => {
     expect(screen.getAllByText(/Serum hCG/).length).toBeGreaterThan(0);
   });
 
-  it("puts the chart away and brings another back without remounting the room (#469)", () => {
+  it("puts the chart away and brings another back without remounting the room (#469)", async () => {
     const mounts = { count: 0 };
     function Counted() {
       useEffect(() => {
@@ -53,7 +55,9 @@ describe("LiveRecordLayout (#335)", () => {
     const chart = () => screen.queryByRole("complementary", { name: "Patient record" });
     expect(chart()).toBeNull();
     act(() => show(recordAtStep(staged, 1)));
-    expect(chart()).toBeInTheDocument();
+    expect(
+      await screen.findByRole("complementary", { name: "Patient record" }),
+    ).toBeInTheDocument();
     act(() => show(null));
     expect(chart()).toBeNull();
     expect(screen.getByText("room")).toBeInTheDocument();
