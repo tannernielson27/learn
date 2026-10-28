@@ -9,6 +9,7 @@
  * The order matters once. An assignment whose window (and its two seconds of grace) has closed is
  * given its submit at close first — for this student and this assignment only — so that the
  * attempts read afterwards say "submitted" rather than leaving an open attempt no one can finish.
+ * (An open window reads the attempts beside the assignment; a closed one reads them again.)
  */
 import { parseCaseStudyRuns, runAt, type CaseStudyRun } from "@/lib/live/caseStudyRuns";
 import { reachedStep, recordAtStep, type EhrRecordView } from "@/lib/ngn/chartReveal";
@@ -151,13 +152,19 @@ export async function loadAttemptPage(
   studentId: string,
   now: Date,
 ): Promise<AttemptPageView> {
+  // Both are the student's own reads under RLS, so the attempts start beside the assignment. Only
+  // an open window uses that read: once closed, the attempts are read again after the submit at
+  // close, as the order above requires. The service-role reads still wait for the assignment.
+  const attemptsRead = store.attempts(assignmentId);
+  // Awaited below; this only keeps a failure from going unobserved if the page stops first.
+  attemptsRead.catch(() => undefined);
   const assignment = await store.assignment(assignmentId);
   if (assignment === null) return { kind: "missing" };
 
   const closed = isClosed(assignment.closesAt, now);
   if (closed) await store.autoSubmit({ assignmentId, studentId });
 
-  const attempts = await store.attempts(assignmentId);
+  const attempts = closed ? await store.attempts(assignmentId) : await attemptsRead;
   if (attempts === null) return { kind: "failed" };
   const open = attempts.find((attempt) => attempt.submittedAt === null);
 
