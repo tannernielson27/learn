@@ -33,7 +33,7 @@ type Row = Database["public"]["Functions"]["my_step_marks"]["Returns"][number];
  * numeric over PostgREST is a number, but a driver may hand back a string. Nothing else is a
  * number here: `Number` would read `[]`, `true` or `""` as a score.
  */
-function toNumber(value: unknown): number | null {
+export function toNumber(value: unknown): number | null {
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
   if (typeof value !== "string" || value.trim() === "") return null;
   const parsed = Number(value);
