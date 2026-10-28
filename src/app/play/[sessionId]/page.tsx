@@ -71,7 +71,13 @@ export default async function PlaySessionPage({ params }: PageProps<"/play/[sess
 
   // Only ever after the token has been checked: this read does no checking of its own. A read that
   // failed throws, onto the error screen as above; only a session that is not there is null.
-  const read = await readPublicSessionState(service, sessionId);
+  const stateRead = readPublicSessionState(service, sessionId);
+  // The records, below, are also only read after the token has been checked; they need nothing
+  // from the state, so the two reads of the row go out together (perf-audit #16).
+  const recordsRead = readSessionRecords(service, sessionId);
+  // Awaited below; this only keeps a failure from going unobserved if the page stops first.
+  recordsRead.catch(() => undefined);
+  const read = await stateRead;
   if (!read) redirect(JOIN_PATH);
   // #185: how the room is paced is `resume_participant`'s answer, and it picks the screen. A case
   // study on its own always runs instructor-paced (`sessions_student_paced_bank_only`).
@@ -83,7 +89,7 @@ export default async function PlaySessionPage({ params }: PageProps<"/play/[sess
   // quiz that plays case studies in place has a chart only on their steps, so the layout is the
   // record's from the start and the chart comes and goes with the room; a student-paced room's
   // charts arrive with its set.
-  const { record: whole, runs } = await readSessionRecords(service, sessionId);
+  const { record: whole, runs } = await recordsRead;
   const changing = runs.length > 0;
   const record =
     participant.mode === "student_paced" && changing
