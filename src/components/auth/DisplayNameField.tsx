@@ -1,6 +1,6 @@
 import type { Ref } from "react";
 import { fieldClasses } from "@/components/ui/fieldClasses";
-import { ACCOUNT_NAME_MAX_LENGTH } from "@/lib/auth/displayName";
+import { ACCOUNT_NAME_MAX_LENGTH } from "@/lib/auth/displayNameLimits";
 
 export interface DisplayNameFieldProps {
   id: string;
