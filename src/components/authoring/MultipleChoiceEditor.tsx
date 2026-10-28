@@ -7,6 +7,7 @@ import {
   fromMultipleChoiceForm,
   type MultipleChoiceFormValues,
 } from "@/lib/authoring/forms/multipleChoice";
+import { nextOptionId } from "@/lib/authoring/freeIds";
 import { describeIssues } from "@/lib/authoring/issueMessages";
 import { multipleChoiceItemSchema, type ItemInputOf } from "@/lib/ngn/schemas";
 import { EditorShell, issueMessageId, type SaveResult } from "./EditorShell";
@@ -28,15 +29,6 @@ const MIN_OPTIONS = 4;
 const letter = (index: number) => String.fromCharCode(65 + index);
 
 const fieldClass = fieldClasses("px-3 py-2 text-base");
-
-function nextOptionId(existing: readonly { id: string }[]): string {
-  const taken = new Set(existing.map((option) => option.id));
-  for (let i = 0; i < 26; i += 1) {
-    const candidate = `opt_${String.fromCharCode(97 + i)}`;
-    if (!taken.has(candidate)) return candidate;
-  }
-  return `opt_${Date.now()}`;
-}
 
 export function MultipleChoiceEditor({
   initialValues,

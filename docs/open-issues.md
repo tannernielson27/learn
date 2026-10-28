@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-10-15 (S12 finished: #333 to #347 merged, #348 and #349 in review, #348's migration not yet applied; the case-study half of #347 cut).
+Last updated: 2026-10-27 (S15 billing filed: #514 to #523; ADR 0016).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -466,6 +466,39 @@ Only the stories this file has been told about are listed here; the milestone on
 With #426 (draft PR) a phone tracks itself in Presence and is sent nobody else's: "12 in this session" becomes `participant_count` on `live.session_public_state`, written with each state change and by the host console's `refresh_participant_count` (at most once every 3 s, only for someone new). Reading Realtime's server source showed the client change alone would not stop the messages, because a socket that tracks has presence turned on for it; the migration also takes presence out of what a participant's token may read. The count is now everyone who has joined, so a phone that has left is still counted, as its name stays (greyed) on the host's roster.
 
 With #335 (PR #435) a student is sent the chart of each step they have reached and nothing later: live, by the play page and every view the phone fetches when the host moves; practice and take-home, the steps up to the first unanswered one and each one's chart. Until its migration is pushed, a student's own client can still select `assignments.patient_record` directly. With #336 (PR #438) the case study's patient record editor sets both, step by step, and saving a staged record keeps them.
+
+## S15: Billing
+
+Demo: a stranger signs up as a teacher, starts a free trial in the Stripe sandbox, and their workspace turns read-only when the trial is cancelled, while their student finishes an open assignment.
+
+A workspace pays $39.99 a month, flat, for up to 10 teachers, after a 7-day free trial with a card at Checkout. The decision record is `docs/adr/0016-billing.md`; the owner's Stripe steps are docs/05 §7.15. Issue titles keep the words they were filed with; the interface follows docs/glossary.md ("subscription", "free trial", "Billing", "beta access"; never "paywall").
+
+| #                                                           | Title                                                                             | Gates             | Status                                                                |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------- | ----------------- | --------------------------------------------------------------------- |
+| [#514](https://github.com/tannernielson27/learn/issues/514) | docs(billing): ADR 0016, glossary and owner steps for the paywall                 | none              | In review; ADR is 0016, not the 0013 of the issue title; no migration |
+| [#515](https://github.com/tannernielson27/learn/issues/515) | chore(infra): production Supabase project split before live billing               | none              | To do; owner steps in docs/05 §7.3; blocks every live Stripe key      |
+| [#516](https://github.com/tannernielson27/learn/issues/516) | chore(infra): learnursing.app domain and Stripe account activation                | none              | To do; owner steps in docs/05 §7.15 steps 3 and 4                     |
+| [#517](https://github.com/tannernielson27/learn/issues/517) | feat(db): workspace billing state, access grants and the access check             | security, db      | In progress (`feat/517-billing-tables`)                               |
+| [#518](https://github.com/tannernielson27/learn/issues/518) | feat(billing): Stripe library, webhook and catalog script                         | security          | To do; needs #517                                                     |
+| [#519](https://github.com/tannernielson27/learn/issues/519) | feat(billing): free trial, subscribe and manage billing on the workspace page     | e2e               | To do; needs #518                                                     |
+| [#520](https://github.com/tannernielson27/learn/issues/520) | feat(billing): private beta passes the owner issues and revokes                   | security          | To do; needs #517                                                     |
+| [#521](https://github.com/tannernielson27/learn/issues/521) | feat(billing): enforce access in the app and the database behind BILLING_ENFORCED | security, db, e2e | To do; needs #517, #519, #520                                         |
+| [#522](https://github.com/tannernielson27/learn/issues/522) | feat(billing): trial and payment banners, pricing, terms and privacy pages        | none              | To do; needs #519                                                     |
+| [#523](https://github.com/tannernielson27/learn/issues/523) | test(billing): end-to-end walk, sandbox walk and go-live checklist                | e2e               | To do; last; gates docs/05 §7.15 step 11                              |
+
+Suggested order: #514 first. #515 and #516 are the owner's and can run alongside everything else, but both must be done before any live key (docs/05 §7.15). Then #517; #518 and #520 after it; #519 after #518; #521 after #519 and #520; #522 after #519; #523 last.
+
+Parallelization: #517, #520 and #521 each add a migration; never build two migrations at once, and number them at merge time. #519, #521 and #522 all edit the workspace page and the author session (`src/app/author/workspace/page.tsx`, `src/lib/authoring/session.ts`); build them one at a time.
+
+Owner decisions, 2026-10-27, all final:
+
+1. **Flat $39.99 a month per workspace**, up to 10 teachers (the existing cap). Not per teacher. Students never pay.
+2. **A 7-day free trial through Stripe's hosted Checkout, card required**, which converts to paid on its own.
+3. **A lapsed workspace is read-only for teachers**: view, export, reports and Billing work; creating, editing, starting, assigning and inviting do not. Open assignments run to their close. Students never see a billing message.
+4. **Beta testers get a private beta pass**, an owner-issued link bound to one address and used once, which gives free access until revoked. Nothing in the interface hints it exists. No Stripe promotion codes.
+5. **Every self-registered workspace that exists when billing ships is grandfathered** until revoked. The shared LeaRN workspace is exempt.
+6. **The production Supabase split happens before live Stripe keys**, and no Stripe key goes into Vercel Preview until then.
+7. **The production domain becomes `learnursing.app`.**
 
 ## No milestone
 

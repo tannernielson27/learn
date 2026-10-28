@@ -13,6 +13,7 @@ import {
   fromGroupingForm,
   type GroupingFormValues,
 } from "@/lib/authoring/forms/multipleResponseGrouping";
+import { unusedId } from "@/lib/authoring/freeIds";
 import { describeIssues } from "@/lib/authoring/issueMessages";
 import { multipleResponseGroupingItemSchema, type ItemInputOf } from "@/lib/ngn/schemas";
 import { EditorShell, issueMessageId, type SaveResult } from "./EditorShell";
@@ -33,14 +34,6 @@ const MAX_OPTIONS = 4;
 
 const letter = (index: number) => String.fromCharCode(65 + index);
 const fieldClass = fieldClasses("px-3 py-2 text-base");
-
-function unusedId(base: string, taken: ReadonlySet<string>): string {
-  for (let i = 1; i < 100; i += 1) {
-    const candidate = `${base}${i}`;
-    if (!taken.has(candidate)) return candidate;
-  }
-  return `${base}${Date.now()}`;
-}
 
 function allIds(values: GroupingFormValues): Set<string> {
   return new Set(values.rows.flatMap((row) => [row.id, ...row.options.map((option) => option.id)]));

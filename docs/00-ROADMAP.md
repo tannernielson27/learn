@@ -46,7 +46,7 @@ will see on test day, on any phone or laptop browser.
 - AI-assisted item generation from documents (v2; the JSON item contract is designed so it can plug in).
 - Native mobile apps.
 - Computerized adaptive testing / ability estimation. (Percent-correct and per-step analytics only.)
-- Billing and multi-tenant org hierarchy beyond a simple `org -> class` model.
+- Billing and multi-tenant org hierarchy beyond a simple `org -> class` model. (Billing came later: from S15 a workspace pays a flat monthly subscription after a free trial; see ADR 0016 and docs/open-issues.md S15. The org hierarchy stays out of scope.)
 - LMS integrations (LTI), SSO.
 
 ## 5. Phases and sprints
@@ -182,7 +182,7 @@ The accounts, roles, roster and invite link shipped early, in Sprint 9.
 
 Parked:
 
-- Adaptive practice, spaced repetition, LMS/LTI, billing, mobile apps.
+- Adaptive practice, spaced repetition, LMS/LTI, billing, mobile apps. (Billing was taken up on 2026-10-27 as S15: ADR 0016, docs/open-issues.md S15.)
 
 ## 6. Milestone summary
 

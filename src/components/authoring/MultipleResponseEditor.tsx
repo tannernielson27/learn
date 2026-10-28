@@ -7,6 +7,7 @@ import {
   fromMultipleResponseForm,
   type MultipleResponseFormValues,
 } from "@/lib/authoring/forms/multipleResponse";
+import { nextOptionId } from "@/lib/authoring/freeIds";
 import { describeIssues } from "@/lib/authoring/issueMessages";
 import { multipleResponseItemSchema, type ItemInputOf } from "@/lib/ngn/schemas";
 import { EditorShell, issueMessageId, type SaveResult } from "./EditorShell";
@@ -23,15 +24,6 @@ const MIN_OPTIONS = 5;
 const MAX_OPTIONS = 10;
 const letter = (index: number) => String.fromCharCode(65 + index);
 const fieldClass = fieldClasses("px-3 py-2 text-base");
-
-function nextOptionId(existing: readonly { id: string }[]): string {
-  const taken = new Set(existing.map((option) => option.id));
-  for (let i = 0; i < 26; i += 1) {
-    const candidate = `opt_${String.fromCharCode(97 + i)}`;
-    if (!taken.has(candidate)) return candidate;
-  }
-  return `opt_${Date.now()}`;
-}
 
 export function MultipleResponseEditor({
   initialValues,

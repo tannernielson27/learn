@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { Button } from "@/components/ui/Button";
-import type { JoinWorkspaceState } from "@/lib/workspace/invite";
+import type { JoinWorkspaceState } from "@/lib/workspace/invitePage";
 import { InviteAnswerView } from "./InviteAnswerView";
 import { AUTH_HEADING, AUTH_SUBLINE } from "@/components/auth/AuthFrame";
 import { FormError } from "@/components/auth/FormError";

@@ -30,7 +30,7 @@ import { createChannelTokenSource } from "@/lib/liveSupabase/channelTokenSource"
 import type { AnsweredPayload, PacedItemPayload } from "@/lib/liveSupabase/wire";
 import type { AnyResponse } from "@/lib/ngn/schemas";
 import type { ScoreReveal } from "@/lib/ngn/submit";
-import { createSupabaseChannelClient } from "@/lib/supabase/browser";
+import { createSupabaseChannelClient } from "@/lib/supabase/channelClient";
 
 /** The same props `StudentRoom` takes: the play page picks one of the two by the session's mode. */
 export type StudentPacedRoomProps = StudentRoomProps;

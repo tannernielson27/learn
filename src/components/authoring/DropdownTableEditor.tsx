@@ -13,6 +13,7 @@ import {
   fromDropdownTableForm,
   type DropdownTableFormValues,
 } from "@/lib/authoring/forms/dropdownTable";
+import { unusedId } from "@/lib/authoring/freeIds";
 import { describeIssues } from "@/lib/authoring/issueMessages";
 import { dropdownTableItemSchema, type ItemInputOf } from "@/lib/ngn/schemas";
 import { EditorShell, issueMessageId, type SaveResult } from "./EditorShell";
@@ -33,13 +34,6 @@ const MAX_CHOICES = 6;
 
 const letter = (index: number) => String.fromCharCode(65 + index);
 const fieldClass = fieldClasses("px-3 py-2 text-base");
-
-function unusedId(prefix: string, taken: ReadonlySet<string>): string {
-  for (let i = 1; i < 100; i += 1) {
-    if (!taken.has(`${prefix}${i}`)) return `${prefix}${i}`;
-  }
-  return `${prefix}${Date.now()}`;
-}
 
 const takenIds = (values: DropdownTableFormValues) =>
   new Set(values.rows.flatMap((row) => [row.id, ...row.choices.map((choice) => choice.id)]));

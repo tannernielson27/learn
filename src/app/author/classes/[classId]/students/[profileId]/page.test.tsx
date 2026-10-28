@@ -23,7 +23,7 @@ const readClass = vi.fn<(client: unknown, id: string) => Promise<null>>(async ()
 vi.mock("@/lib/supabase/classes", () => ({
   readClass: (client: unknown, id: string) => readClass(client, id),
 }));
-const readClassProgress = vi.fn();
+const readClassProgress = vi.fn(async () => ({ rows: [], steps: [] }));
 vi.mock("@/lib/supabase/classProgress", () => ({ readClassProgress }));
 
 const { default: ClassStudentPage } = await import("./page");
@@ -61,6 +61,8 @@ describe("ClassStudentPage", () => {
     await expect(visit(CLASS, STUDENT)).rejects.toThrow("notFound");
     expect(requireAuthor).toHaveBeenCalledOnce();
     expect(readClass).toHaveBeenCalledWith({}, CLASS);
-    expect(readClassProgress).not.toHaveBeenCalled();
+    // Read beside the class, as the author: `class_progress` answers only the class's own teacher,
+    // and a class they cannot see is a 404 whatever it says.
+    expect(readClassProgress).toHaveBeenCalledWith({}, CLASS);
   });
 });

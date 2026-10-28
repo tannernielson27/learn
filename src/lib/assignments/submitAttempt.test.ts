@@ -9,6 +9,7 @@ import type {
 } from "@/lib/supabase/attempts";
 import type { SetItem } from "./attemptScoring";
 import {
+  AUTO_SUBMIT_CONCURRENCY,
   autoSubmitExpired,
   submitAttempt,
   type AutoSubmitStore,
@@ -235,5 +236,62 @@ describe("autoSubmitExpired", () => {
       },
     );
     expect(await autoSubmitExpired(fake)).toBe(1);
+  });
+  it("records several attempts at once, never more than its bound, and counts each once", async () => {
+    // Every record waits until the test lets it go, so the peak is what the loop started at once.
+    const releases: Array<() => void> = [];
+    let inFlight = 0;
+    let peak = 0;
+    const list = Array.from({ length: AUTO_SUBMIT_CONCURRENCY * 2 + 3 }, (_, index) =>
+      due(`00000000-0000-0000-0000-${String(index).padStart(12, "0")}`, `b${index % 3}`, {}),
+    );
+    const { fake, recorded } = autoStore(list, {
+      record: vi.fn(async (input: RecordInput) => {
+        recorded.push(input);
+        inFlight += 1;
+        peak = Math.max(peak, inFlight);
+        await new Promise<void>((resolve) => releases.push(resolve));
+        inFlight -= 1;
+        return { ok: true, value: "2026-09-23T12:00:00Z" } as const;
+      }),
+    });
+    let finished = false;
+    const run = autoSubmitExpired(fake).finally(() => {
+      finished = true;
+    });
+    while (!finished) {
+      await vi.waitFor(() => expect(finished || releases.length > 0).toBe(true));
+      releases.shift()?.();
+    }
+    expect(await run).toBe(list.length);
+    expect(peak).toBe(AUTO_SUBMIT_CONCURRENCY);
+    // Each attempt recorded exactly once, and the items read once per assignment.
+    expect(recorded.map((input) => input.attemptId).sort()).toEqual(
+      list.map((attempt) => attempt.attemptId).sort(),
+    );
+    expect(fake.items).toHaveBeenCalledTimes(3);
+  });
+
+  it("reads an assignment's items once when its attempts start together", async () => {
+    let release = () => {};
+    const { fake } = autoStore(
+      [
+        due("00000000-0000-0000-0000-0000000000a1", "b", {}),
+        due("00000000-0000-0000-0000-0000000000a2", "b", {}),
+      ],
+      {
+        items: vi.fn(
+          () =>
+            new Promise<SetItem[]>((resolve) => {
+              release = () => resolve(SET);
+            }),
+        ),
+      },
+    );
+    const run = autoSubmitExpired(fake);
+    await vi.waitFor(() => expect(fake.items).toHaveBeenCalled());
+    release();
+    expect(await run).toBe(2);
+    expect(fake.items).toHaveBeenCalledTimes(1);
   });
 });

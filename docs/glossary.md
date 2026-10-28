@@ -78,6 +78,15 @@ Added on 2026-10-24, with the end-of-session podium (owner request):
 
 - **Top 5**: the heading over the podium on the projector when a live session ends, the five best places by the report's totals. A place reads "1st", or "1st, tied" when it is shared, with "points" beside it. Not "winner", "leaderboard" or "ranking".
 
+Added on 2026-10-27, with billing (owner decisions, ADR 0016, #514). Only the person who started a workspace sees the buttons; other teachers see the status and who to ask. Students never see any of these words.
+
+| Term             | What it is, in one line                                                                                                                                                                                       | Replaces (today) | Code name (table, route, type)                                                 | Do not use it for                                                                                                                             |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Subscription** | What a workspace pays each month, $39.99, for up to 10 teachers: "Subscribe", "Your subscription renews on 3 December".                                                                                       | New              | `workspace_billing` (`status`, `current_period_end`), `stripe_subscription_id` | "Plan", "plan tier", "membership", "license" or "seat". There is one price and nothing to compare.                                            |
+| **Free trial**   | The first 7 days of a subscription, card entered at the start, which turn into the paid subscription on their own: "Start your free trial", "Your free trial ends on 3 November".                             | New              | `workspace_billing.status` `trialing`, `private.trial_uses`                    | A workspace that has free access for another reason. One free trial per person and per workspace, so never "your next trial".                 |
+| **Billing**      | The section of the workspace page where the person who started the workspace subscribes, sees what is paid and opens Stripe to change the card or cancel; also the one-sentence link from any refused action. | New              | `/author/workspace` Billing section, `workspace_billing`                       | Anything a student sees. Never "paywall", "upgrade" or "payment wall" for a refused action: say what cannot be done and link to Billing.      |
+| **Beta access**  | Free access given by the owner to one tester's workspace until the owner ends it. Named only on the page the tester's private link opens.                                                                     | New              | `access_grants` kind `beta`, `private.beta_passes`, `/b/[token]`               | Grandfathered or exempt workspaces, which are told nothing. Never "comp", "promo", "coupon" or "code". Nothing outside `/b/` hints it exists. |
+
 ## Words we do not use
 
 In the interface, that is. Most of these are fine in code and comments.
@@ -95,3 +104,5 @@ In the interface, that is. Most of these are fine in code and comments.
 - **Practice bank**, **practice run**: say "practice quiz", or just "practice".
 - **Launch**, **Run**, **Make**: say "Start" for a live session, and "New" then "Create" for everything else.
 - **Delete** for a quiz, a question, a case study or a class: say "Archive".
+- **Paywall**, **plan**, **plan tier**, **upgrade**, **seat**, **license**: say "subscription", "free trial" and "Billing". There is one price for the workspace, not per teacher.
+- **Comp**, **promo**, **coupon**, **promotion code**: there are none. Beta access is named only on its own page.

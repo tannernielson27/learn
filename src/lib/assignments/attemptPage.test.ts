@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { roundTrips } from "@/lib/testing/roundTrips";
 import { FIXTURES, sampleCaseStudy } from "@/lib/ngn/fixtures";
 import { recordAtStep } from "@/lib/ngn/chartReveal";
 import { stagedCaseStudy, stagedEhr } from "@/lib/ngn/fixtures/chart-reveal";
@@ -327,19 +328,30 @@ describe("loadAttemptPage, the other states", () => {
 
   it("submits an open attempt at close for this student first, then reads the attempts", async () => {
     const order: string[] = [];
+    let submitted = false;
     const fake = store({
       assignment: vi.fn(async () => assignment({ closesAt: "2026-09-23T11:59:57Z" })),
       autoSubmit: vi.fn(async () => {
         order.push("autoSubmit");
+        submitted = true;
         return 1;
       }),
+      // What the attempts say depends on whether the submit at close has run.
       attempts: vi.fn(async () => {
         order.push("attempts");
-        return [{ ...openAttempt, submittedAt: "2026-09-23T11:59:57Z", autoSubmitted: true }];
+        return submitted
+          ? [{ ...openAttempt, submittedAt: "2026-09-23T11:59:57Z", autoSubmitted: true }]
+          : [openAttempt];
       }),
     });
     const view = await loadAttemptPage(fake, ASSIGNMENT, STUDENT, NOW);
-    expect(order).toEqual(["autoSubmit", "attempts"]);
+    // The read started beside the assignment is not used once it turns out closed: the attempts
+    // shown are the ones read after the submit at close.
+    expect(order.slice(-2)).toEqual(["autoSubmit", "attempts"]);
+    expect(view).toMatchObject({
+      kind: "summary",
+      attempts: [expect.objectContaining({ autoSubmitted: true })],
+    });
     expect(fake.autoSubmit).toHaveBeenCalledWith({ assignmentId: ASSIGNMENT, studentId: STUDENT });
     expect(view).toMatchObject({ kind: "summary", closed: true, canStart: false });
     expect(fake.items).not.toHaveBeenCalled();
@@ -360,5 +372,32 @@ describe("loadAttemptPage, the other states", () => {
     const view = await loadAttemptPage(fake, ASSIGNMENT, STUDENT, NOW);
     expect(view).toMatchObject({ kind: "summary", closed: true, canStart: false });
     expect(fake.items).not.toHaveBeenCalled();
+  });
+
+  it("reads the attempts beside the assignment while it is open: 2 round trips in a row, not 3", async () => {
+    const rt = roundTrips();
+    const fake = store({
+      assignment: () => rt.trip("assignment", assignment()),
+      attempts: () => rt.trip("attempts", [openAttempt]),
+      answers: () => rt.trip("answers", {}),
+      items: () => rt.trip("items", setOf([MC, MR])),
+      record: () => rt.trip("record", { ok: true as const, record: null }),
+    });
+    const result = await rt.run(() => loadAttemptPage(fake, ASSIGNMENT, STUDENT, NOW));
+    expect(result.ok && result.value.kind).toBe("taking");
+    expect(rt.waveOf("assignment")).toBe(1);
+    expect(rt.waveOf("attempts")).toBe(1);
+    // The service-role reads still wait for the student's own read of the assignment.
+    expect(rt.waveOf("items")).toBe(2);
+    expect(rt.waveOf("record")).toBe(2);
+    expect(result.waves).toBe(2);
+  });
+
+  it("is still missing, and reads nothing with the service role, when the student may not see it", async () => {
+    const fake = store({ assignment: vi.fn(async () => null) });
+    expect(await loadAttemptPage(fake, ASSIGNMENT, STUDENT, NOW)).toEqual({ kind: "missing" });
+    expect(fake.items).not.toHaveBeenCalled();
+    expect(fake.record).not.toHaveBeenCalled();
+    expect(fake.autoSubmit).not.toHaveBeenCalled();
   });
 });

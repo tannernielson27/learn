@@ -5,7 +5,7 @@ import type { RecordInput, RecordOutcome, RunSlots } from "@/lib/practice/answer
 import type { PracticeCaseStudyRow, PracticeRun, PracticeSlot } from "@/lib/practice/view";
 import type { Database, Json } from "./database.types";
 import { fromItemRow } from "./itemRows";
-import type { StepAttemptMark } from "./steps";
+import { toNumber, type StepAttemptMark } from "./steps";
 
 /**
  * Practice runs (#241).
@@ -183,14 +183,6 @@ export async function readMyPracticeBanks(client: Client): Promise<PracticeBank[
 function workspaceNameOf(value: unknown): string | null {
   if (typeof value !== "string") return null;
   return value.trim() === "" ? null : value;
-}
-
-/** numeric over PostgREST is a number, but a driver may hand back a string. */
-function toNumber(value: unknown): number | null {
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  if (typeof value !== "string" || value.trim() === "") return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
 }
 
 /** The student's practice marks by step (#239's "practice" source): a step and two numbers each. */

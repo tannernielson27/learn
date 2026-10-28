@@ -4,6 +4,15 @@
 
 export type CjmmStep = 1 | 2 | 3 | 4 | 5 | 6;
 
+// The two step constants live here rather than in `schemas/common.ts`, which re-exports them, so
+// a student's player can read them without importing zod (`case-study/noClientZod.test.ts`).
+
+/** A case study has one item per clinical judgment step, so this is also how long one runs. */
+export const CASE_STUDY_STEP_COUNT = 6;
+
+/** The step a time point or block with no `fromStep` appears at. */
+export const FIRST_STEP = 1;
+
 export const CJMM_STEP_LABELS: Record<CjmmStep, string> = {
   1: "Recognize Cues",
   2: "Analyze Cues",

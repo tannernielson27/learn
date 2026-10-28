@@ -37,10 +37,12 @@ export default async function ClassPage({
   const { supabase } = await requireAuthor(classTabPath(classId, tab));
   if (!isUuid(classId)) notFound();
 
-  const detail = await readClass(supabase, classId);
-  if (!detail) notFound();
+  // The class row and the open tab's reads start together: each tab read is under RLS or through a
+  // function that answers only this class's own teacher, so none waits on the row. The row is
+  // awaited first, so a class this teacher cannot see is still a 404.
+  const detailRead = readClass(supabase, classId);
   const reads = classTabReads(tab);
-  const [roster, assignments, shares, banks, progress, sessions] = await Promise.all([
+  const tabReads = Promise.all([
     reads.has("roster") ? classRoster(supabase, classId) : null,
     reads.has("assignments") ? listClassAssignments(supabase, classId) : null,
     reads.has("shares") ? listClassShares(supabase, classId) : null,
@@ -60,6 +62,11 @@ export default async function ClassPage({
       : null,
     reads.has("sessions") ? listClassSessions(supabase, classId) : null,
   ]);
+  // Awaited below; this only keeps a failure from going unobserved if the page stops first.
+  tabReads.catch(() => undefined);
+  const detail = await detailRead;
+  if (!detail) notFound();
+  const [roster, assignments, shares, banks, progress, sessions] = await tabReads;
   const url = inviteUrl(canonicalSiteOrigin(await headers()), detail.inviteToken);
 
   return (

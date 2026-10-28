@@ -40,7 +40,8 @@ export async function reportCsvDownload(request: Request, sessionId: string): Pr
     return refuse(500, "The report could not be read. Try again.");
   }
   if (!read) return refuse(404, NOT_FOUND);
-  if (read.session.status !== "ended") {
+  // A session that has not ended is read with no input.
+  if (read.session.status !== "ended" || read.input === null) {
     return refuse(409, "The report is ready once the live session has ended.");
   }
 
