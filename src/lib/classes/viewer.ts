@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { WELCOME_PATH } from "@/lib/auth/accountPaths";
 import type { Database } from "@/lib/supabase/database.types";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { readVerifiedProfile } from "@/lib/auth/verifiedProfile";
+import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import { STUDENT_HOME } from "./classes";
 
 type ServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -23,20 +24,12 @@ export type Viewer = { status: "signed_out" } | SignedInViewer;
 /**
  * Who is looking, verified: `getClaims` checks the token rather than trusting the cookie, and the
  * role comes from the viewer's own profile row, which RLS lets them read. For the student home and
- * the class invite page, which answer students, authors and visitors differently.
+ * the class invite page, which answer students, authors and visitors differently. One shared read
+ * per request with the page's own check (`readVerifiedProfile`).
  */
 export async function readViewer(): Promise<Viewer> {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.auth.getClaims();
-  const userId = data?.claims?.sub;
+  const { supabase, userId, email, profile } = await readVerifiedProfile();
   if (!userId) return { status: "signed_out" };
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("org_id, role, display_name")
-    .eq("id", userId)
-    .maybeSingle();
-  const email = typeof data.claims.email === "string" ? data.claims.email : "";
   return {
     status: "signed_in",
     supabase,
