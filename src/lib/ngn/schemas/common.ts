@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { normalizeTags, TAG_LIMITS } from "../tags";
+import { CASE_STUDY_STEP_COUNT, FIRST_STEP } from "../types";
+
+// Defined beside `CjmmStep`, without zod, so a student's player can import them.
+export { CASE_STUDY_STEP_COUNT, FIRST_STEP };
 
 /** Stable identifier: letters, digits, underscore, hyphen. */
 export const idSchema = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/, "invalid id");
@@ -18,9 +22,6 @@ export const cjmmStepSchema = z.union([
   z.literal(5),
   z.literal(6),
 ]);
-
-/** A case study has one item per clinical judgment step, so this is also how long one runs. */
-export const CASE_STUDY_STEP_COUNT = 6;
 
 export const scoringModelSchema = z.enum(["zero_one", "plus_minus", "rationale"]);
 
@@ -113,9 +114,6 @@ export type EhrTab = z.infer<typeof ehrTabSchema>;
 
 export const ehrTimePointSchema = labeledSchema.extend({ fromStep: fromStepSchema });
 export type EhrTimePoint = z.infer<typeof ehrTimePointSchema>;
-
-/** The step a time point or block with no `fromStep` appears at. */
-export const FIRST_STEP = 1;
 
 export const ehrRecordSchema = z
   .object({

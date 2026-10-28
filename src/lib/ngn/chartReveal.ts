@@ -8,16 +8,9 @@
  *
  * Pure TypeScript: no React, Next or Supabase (ADR 0001).
  */
-import {
-  CASE_STUDY_STEP_COUNT,
-  FIRST_STEP,
-  type EhrBlock,
-  type EhrRecord,
-  type EhrTab,
-  type Labeled,
-  type TabAccess,
-} from "./schemas";
-import type { CjmmStep } from "./types";
+import type { EhrBlock, EhrRecord, EhrTab, Labeled, TabAccess } from "./schemas";
+// From `types`, not `schemas`: a value import of the schemas would put zod on the student's phone.
+import { CASE_STUDY_STEP_COUNT, FIRST_STEP, type CjmmStep } from "./types";
 
 /** `Omit` over a union collapses it; distributing first keeps the three block kinds apart. */
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
