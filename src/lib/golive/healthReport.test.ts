@@ -162,6 +162,29 @@ describe("handleHealth", () => {
     expect(body.ready).toBe(false);
   });
 
+  it("reports billing's variables as booleans and its setup, never a key, and never in ready (#518)", async () => {
+    const secret = "sk_test_fakevalue";
+    const env = { ...FULL_ENV, STRIPE_SECRET_KEY: secret };
+    const detail = await handleHealth(get({ authorization: `Bearer ${TOKEN}` }), deps({ env }));
+    const bytes = await detail.text();
+    expect(bytes).not.toContain(secret);
+    const body = JSON.parse(bytes);
+    expect(body.billingEnv).toEqual({
+      STRIPE_SECRET_KEY: true,
+      STRIPE_WEBHOOK_SECRET: false,
+      STRIPE_PRICE_LOOKUP_KEY: false,
+    });
+    expect(body.stripe).toBe("incomplete");
+    expect(body.ready).toBe(true);
+
+    const anyone = await (await handleHealth(get(), deps({ env }))).text();
+    expect(anyone).not.toMatch(/stripe/i);
+  });
+
+  it("reports off with no Stripe variable at all", () => {
+    expect(summarizeEnv(FULL_ENV).stripe).toBe("off");
+  });
+
   it("refuses a wrong token without asking Supabase", async () => {
     const supabase = vi.fn(async () => ({ status: "ok" as const, project: "x" }));
     const response = await handleHealth(get({ authorization: "Bearer wrong" }), deps({ supabase }));

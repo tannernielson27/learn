@@ -2,7 +2,9 @@
  * The judgements behind `pnpm golive:check` (#237). Each takes what was read and returns one line;
  * nothing here touches the network, so every pass and fail path is a plain unit test.
  */
+import { STRIPE_SETUP_STATES, type StripeSetup } from "../billing/stripeConfig.ts";
 import {
+  BILLING_ENV,
   REQUIRED_ENV,
   SIGN_UP_CAPTCHA_STATES,
   type DetailedHealth,
@@ -204,6 +206,7 @@ export function healthChecks(reading: HealthReading, expectedProject: string): C
       line("env", "every required variable is set on the site", "fail", "health unreadable"),
       line("demo", "the demo account is off", "fail", "health unreadable"),
       line("captcha", CAPTCHA_TITLE, "fail", "health unreadable"),
+      line("stripe", STRIPE_TITLE, "manual", "health unreadable"),
     ];
   }
   const { body } = reading;
@@ -212,6 +215,7 @@ export function healthChecks(reading: HealthReading, expectedProject: string): C
     envCheck(reading),
     demoCheck(reading),
     captchaCheck(reading),
+    stripeCheck(reading),
   ];
 }
 
@@ -313,6 +317,73 @@ function captchaCheck(reading: Exclude<HealthReading, { kind: "unreadable" }>): 
   }
   const refused = state === "missing" || state === "misconfigured";
   return line("captcha", CAPTCHA_TITLE, refused ? "fail" : "pass", CAPTCHA_DETAIL[state]);
+}
+
+const STRIPE_TITLE = "billing's Stripe variables are live keys, or unset (docs/05 §7.15)";
+
+const STRIPE_DETAIL: Record<StripeSetup, { status: CheckStatus; detail: string }> = {
+  live: { status: "pass", detail: "a live key and its webhook secret are set" },
+  off: {
+    status: "manual",
+    detail:
+      "no Stripe key: billing does nothing here, which is right until the production split (§7.15 steps 5-7)",
+  },
+  test: {
+    status: "manual",
+    detail:
+      "sandbox keys: no real payment can be taken; production takes live keys after the split (§7.15 steps 6-7)",
+  },
+  incomplete: {
+    status: "fail",
+    detail: "one of the key and the webhook secret without the other, so the webhook answers 503",
+  },
+  misconfigured: {
+    status: "fail",
+    detail:
+      "a value of the wrong shape (a publishable key, a webhook secret that is not whsec_, a bad lookup key) or a NEXT_PUBLIC_STRIPE_ copy",
+  },
+  live_refused: {
+    status: "fail",
+    detail: "a live key on a deployment that is not production, which the app refuses",
+  },
+};
+
+const isStripeSetup = (value: unknown): value is StripeSetup =>
+  STRIPE_SETUP_STATES.some((state) => state === value);
+
+/**
+ * #518: billing never counts towards `ready` (it ships switched off), so this line is manual
+ * until live keys are set, and fails only for a setup the app refuses. Which variable is missing
+ * comes from the per-variable booleans, never a value.
+ */
+function stripeCheck(reading: Exclude<HealthReading, { kind: "unreadable" }>): CheckResult {
+  if (reading.kind !== "detailed") {
+    return line(
+      "stripe",
+      STRIPE_TITLE,
+      "manual",
+      "Vercel > Settings > Environment Variables, Production: the STRIPE_ variables (docs/05 §7.15 steps 6-7); set GOLIVE_HEALTH_TOKEN to the deployment's CRON_SECRET to have this checked",
+    );
+  }
+  const state: unknown = reading.body.stripe;
+  if (!isStripeSetup(state)) {
+    return line(
+      "stripe",
+      STRIPE_TITLE,
+      "manual",
+      "the site did not report its Stripe setup: the deployment is older than this line",
+    );
+  }
+  const { status, detail } = STRIPE_DETAIL[state];
+  // The lookup key has a default (`learn_monthly_v1`), so only the two secrets can be missing.
+  const unset = BILLING_ENV.filter(
+    ({ name }) => name !== "STRIPE_PRICE_LOOKUP_KEY" && reading.body.billingEnv?.[name] === false,
+  );
+  const missing =
+    status === "fail" && unset.length > 0
+      ? `; unset: ${unset.map(({ name, docs }) => `${name} (${docs})`).join(", ")}`
+      : "";
+  return line("stripe", STRIPE_TITLE, status, `${detail}${missing}`);
 }
 
 /** What no script can see: each names the docs/05 step that settles it. */

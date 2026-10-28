@@ -21,6 +21,7 @@
     "db:types": "node scripts/db-types.mjs",
     "test:db": "node scripts/test-db.mjs",
     "load:live": "node --env-file-if-exists=.env.local scripts/load-live.mjs",
+    "stripe:catalog": "node --env-file-if-exists=.env.local scripts/stripe-catalog.mjs",
     "eval:ai-import": "vitest run --config test/ai-import/vitest.eval.config.mts",
     "golive:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning scripts/golive-check.ts"
   },
@@ -39,6 +40,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-hook-form": "^7.88.0",
+    "stripe": "^23.0.1",
     "zod": "^4.5.4"
   },
   "devDependencies": {

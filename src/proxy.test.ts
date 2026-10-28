@@ -97,6 +97,15 @@ describe("the proxy matcher still covers the gallery", () => {
   // the proxy docs call that out as the way proxy coverage disappears in a refactor.
   const matcher = config.matcher;
 
+  it("never runs on Stripe's webhook, which has no session and must not be redirected (#518)", () => {
+    // Every entry is a fixed prefix; none is a catch-all and none is under /api.
+    for (const entry of matcher) {
+      expect(entry.startsWith("/api")).toBe(false);
+      expect(entry.startsWith("/:")).toBe(false);
+      expect(entry).not.toContain("(");
+    }
+  });
+
   it("names the gallery root and everything under it", () => {
     expect(matcher).toContain("/gallery");
     expect(matcher).toContain("/gallery/:path*");
