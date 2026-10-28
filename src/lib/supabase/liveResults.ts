@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isUuid } from "@/lib/authoring/ids";
 import type { Database, Json } from "./database.types";
-import type { StepAttemptMark } from "./steps";
+import { toNumber, type StepAttemptMark } from "./steps";
 
 /**
  * A student's own live session results, through `public.my_live_results`, `public.my_live_result`
@@ -71,17 +71,6 @@ export interface MyLiveResult {
 
 export type MyLiveResultRead =
   { kind: "failed" } | { kind: "missing" } | { kind: "found"; result: MyLiveResult };
-
-/**
- * numeric over PostgREST is a number, but a driver may hand back a string. Nothing else is a
- * number here: `Number` would read `[]`, `true` or `""` as a score.
- */
-function toNumber(value: unknown): number | null {
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  if (typeof value !== "string" || value.trim() === "") return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
 
 const isObject = (value: unknown): value is Record<string, Json | undefined> =>
   typeof value === "object" && value !== null && !Array.isArray(value);

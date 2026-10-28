@@ -8,6 +8,7 @@ import {
   fromMatrixMultipleResponseForm,
   type MatrixFormValues,
 } from "@/lib/authoring/forms/matrix";
+import { unusedId } from "@/lib/authoring/freeIds";
 import { describeIssues } from "@/lib/authoring/issueMessages";
 import {
   matrixMultipleChoiceItemSchema,
@@ -33,13 +34,6 @@ const MIN_COLUMNS = 2;
 const MAX_COLUMNS = 4;
 
 const fieldClass = fieldClasses("px-3 py-2 text-base");
-
-function unusedId(prefix: string, taken: ReadonlySet<string>): string {
-  for (let i = 1; i < 100; i += 1) {
-    if (!taken.has(`${prefix}${i}`)) return `${prefix}${i}`;
-  }
-  return `${prefix}${Date.now()}`;
-}
 
 const takenIds = (values: MatrixFormValues) =>
   new Set([...values.rows.map((row) => row.id), ...values.columns.map((column) => column.id)]);
