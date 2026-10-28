@@ -74,6 +74,8 @@ describe("reportCsvDownload", () => {
     readSessionReport.mockResolvedValue({
       ...ended,
       session: { ...ended.session, status: "running", closedAt: null },
+      // readSessionReport reads no input for a session that has not ended.
+      input: null,
     });
     expect((await reportCsvDownload(fromPage(), SESSION)).status).toBe(409);
   });

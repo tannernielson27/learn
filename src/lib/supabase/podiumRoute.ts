@@ -44,7 +44,8 @@ export async function sessionPodiumResponse(
 
     const read = await readSessionReport(author.supabase, sessionId);
     if (!read) return answer(404, { error: NOT_FOUND });
-    if (read.session.status !== "ended") {
+    // A session that has not ended is read with no input.
+    if (read.session.status !== "ended" || read.input === null) {
       return answer(409, { error: "The top 5 is ready once the live session has ended." });
     }
     return answer(200, { podium: podiumOfReport(buildSessionReport(read.input)) });
