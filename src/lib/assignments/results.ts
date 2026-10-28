@@ -181,10 +181,15 @@ export async function loadResultsPage(
 ): Promise<ResultsView> {
   await submitAtClose(store, { assignmentId, studentId });
 
+  // The assignment row (as the student, no keys) is wanted in both answers below and needs nothing
+  // from the result, so it is read beside it rather than after it.
+  const assignmentRead = store.assignment(assignmentId);
+  // Awaited below; this only keeps a failure from going unobserved if the page stops first.
+  assignmentRead.catch(() => undefined);
   const read = await store.result(assignmentId);
   if (read.kind === "failed") return { kind: "failed" };
   if (read.kind === "withheld") {
-    const assignment = await store.assignment(assignmentId);
+    const assignment = await assignmentRead;
     return assignment
       ? {
           kind: "pending",
@@ -200,10 +205,7 @@ export async function loadResultsPage(
 
   const { result } = read;
   // The assignment row only names the class; a removed student reads none, and still has results.
-  const [set, assignment] = await Promise.all([
-    store.items(result.itemSet),
-    store.assignment(assignmentId),
-  ]);
+  const [set, assignment] = await Promise.all([store.items(result.itemSet), assignmentRead]);
   if (set === null) return { kind: "failed" };
 
   const best = bestOf(result.attempts);
