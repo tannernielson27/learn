@@ -26,9 +26,11 @@ export default async function ClassLiveStartPage({
   const { supabase } = await requireAuthor(classStartPath(classId));
   if (!isUuid(classId)) notFound();
 
+  // The quiz list does not need the class, so it is read beside it; a failed list is no list.
+  const quizzesRead = listBanks(supabase).catch(() => null);
   const detail = await readClass(supabase, classId);
   if (!detail) notFound();
-  const quizzes = await listBanks(supabase).catch(() => null);
+  const quizzes = await quizzesRead;
 
   return (
     <div className="flex flex-col gap-6">
