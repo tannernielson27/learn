@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { roundTrips } from "@/lib/testing/roundTrips";
 import { FIXTURES, sampleCaseStudy } from "@/lib/ngn/fixtures";
 import { caseStudySchema, itemSchema, type AnyResponse, type Item } from "@/lib/ngn/schemas";
 import { md } from "@/lib/ngn/fixtures/types";
@@ -136,6 +137,21 @@ describe("loadResultsPage before the close", () => {
     const fake = store({ kind: "withheld" }, undefined, { assignment: vi.fn(async () => null) });
     expect(await loadResultsPage(fake, ASSIGNMENT, STUDENT)).toEqual({ kind: "missing" });
     expect(fake.items).not.toHaveBeenCalled();
+  });
+
+  it("reads the assignment beside the result, after the submit at close: 2 round trips, not 3", async () => {
+    const rt = roundTrips();
+    const fake = store({ kind: "withheld" }, undefined, {
+      autoSubmit: () => rt.trip("autoSubmit", 0),
+      result: () => rt.trip("result", { kind: "withheld" as const }),
+      assignment: () => rt.trip("assignment", header),
+    });
+    const outcome = await rt.run(() => loadResultsPage(fake, ASSIGNMENT, STUDENT));
+    expect(outcome.ok && outcome.value.kind).toBe("pending");
+    expect(rt.waveOf("autoSubmit")).toBe(1);
+    expect(rt.waveOf("result")).toBe(2);
+    expect(rt.waveOf("assignment")).toBe(2);
+    expect(outcome.waves).toBe(2);
   });
 
   it("fails when the result cannot be read, without reading the items", async () => {
