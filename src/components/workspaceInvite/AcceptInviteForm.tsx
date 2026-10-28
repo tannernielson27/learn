@@ -7,7 +7,7 @@ import { PasswordField } from "@/components/auth/PasswordField";
 import { Button } from "@/components/ui/Button";
 import { DEFAULT_AFTER_SIGN_IN } from "@/lib/auth/nextPath";
 import { PASSWORD_HINT, PASSWORD_MIN_LENGTH } from "@/lib/auth/passwordRules";
-import type { InviteAccountState } from "@/lib/workspace/invite";
+import type { InviteAccountState } from "@/lib/workspace/invitePage";
 import { InviteAnswerView } from "./InviteAnswerView";
 import { AUTH_HEADING, AUTH_HEADING_ALONE, AUTH_SUBLINE } from "@/components/auth/AuthFrame";
 import { FormError } from "@/components/auth/FormError";
