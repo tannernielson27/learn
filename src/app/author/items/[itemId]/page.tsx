@@ -29,27 +29,30 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
 
   const { supabase } = await requireAuthor(`/author/items/${itemId}`);
   // Authors may read their own org's keys (ADR 0003); RLS limits this row to the author's org.
-  const { data: row } = await supabase
+  const rowRead = supabase
     .from("items")
     .select(
       "id, bank_id, type, cjmm_step, tags, version, status, content, answer_key, rationale, scoring",
     )
     .eq("id", itemId)
     .maybeSingle();
+  // Published snapshots, newest first. They hold answer keys, so they are read only here, for the
+  // item's author; RLS limits them to the author's org. One extra row says whether there are more.
+  // Read beside the item, which they do not depend on, rather than after it.
+  const versionsRead = supabase
+    .from("item_versions")
+    .select("version, created_at, snapshot")
+    .eq("item_id", itemId)
+    .order("version", { ascending: false })
+    .limit(HISTORY_LIMIT + 1);
+  const [{ data: row }, versionsResult] = await Promise.all([rowRead, versionsRead]);
   if (!row) notFound();
 
   const editor = editorFor(row.id, row.type, storedItemOf(row));
 
-  // Published snapshots, newest first. They hold answer keys, so they are read only here, for the
-  // item's author; RLS limits them to the author's org. One extra row says whether there are more.
-  // A type with no editor yet has nowhere to show them, so they are not read at all.
+  // A type with no editor yet has nowhere to show them, so they are left unused.
   const { data: versionRows, error: versionsError } = editor
-    ? await supabase
-        .from("item_versions")
-        .select("version, created_at, snapshot")
-        .eq("item_id", itemId)
-        .order("version", { ascending: false })
-        .limit(HISTORY_LIMIT + 1)
+    ? versionsResult
     : { data: [], error: null };
   const versions = versionRows ?? [];
 
