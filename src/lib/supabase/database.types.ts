@@ -3,6 +3,47 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      access_grants: {
+        Row: {
+          created_at: string;
+          expires_at: string | null;
+          granted_by: string;
+          id: string;
+          kind: string;
+          org_id: string;
+          reason: string | null;
+          revoked_at: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          expires_at?: string | null;
+          granted_by: string;
+          id?: string;
+          kind: string;
+          org_id: string;
+          reason?: string | null;
+          revoked_at?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          expires_at?: string | null;
+          granted_by?: string;
+          id?: string;
+          kind?: string;
+          org_id?: string;
+          reason?: string | null;
+          revoked_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "access_grants_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "orgs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       ai_import_batches: {
         Row: {
           bank_id: string | null;
@@ -1746,6 +1787,59 @@ export type Database = {
           },
         ];
       };
+      workspace_billing: {
+        Row: {
+          billing_email: string | null;
+          cancel_at_period_end: boolean;
+          created_at: string;
+          current_period_end: string | null;
+          livemode: boolean;
+          org_id: string;
+          price_lookup_key: string | null;
+          status: string | null;
+          stripe_customer_id: string;
+          stripe_subscription_id: string | null;
+          trial_end: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          billing_email?: string | null;
+          cancel_at_period_end?: boolean;
+          created_at?: string;
+          current_period_end?: string | null;
+          livemode: boolean;
+          org_id: string;
+          price_lookup_key?: string | null;
+          status?: string | null;
+          stripe_customer_id: string;
+          stripe_subscription_id?: string | null;
+          trial_end?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          billing_email?: string | null;
+          cancel_at_period_end?: boolean;
+          created_at?: string;
+          current_period_end?: string | null;
+          livemode?: boolean;
+          org_id?: string;
+          price_lookup_key?: string | null;
+          status?: string | null;
+          stripe_customer_id?: string;
+          stripe_subscription_id?: string | null;
+          trial_end?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workspace_billing_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: true;
+            referencedRelation: "orgs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -1829,6 +1923,10 @@ export type Database = {
           title: string;
           tries: number;
         }[];
+      };
+      claim_stripe_event: {
+        Args: { p_id: string; p_livemode: boolean; p_type: string };
+        Returns: boolean;
       };
       class_progress: {
         Args: { target_class: string };
@@ -2004,6 +2102,10 @@ export type Database = {
         }[];
       };
       mark_onboarded: { Args: never; Returns: string };
+      may_start_trial: {
+        Args: { p_org: string; p_profile: string };
+        Returns: boolean;
+      };
       missed_practice_run: {
         Args: { student: string; target_run: string };
         Returns: {
@@ -2289,6 +2391,10 @@ export type Database = {
           submitted_at: string;
         }[];
       };
+      record_trial_use: {
+        Args: { p_org: string; p_profile: string; p_subscription: string };
+        Returns: undefined;
+      };
       refresh_participant_count: {
         Args: { present: number; target: string };
         Returns: undefined;
@@ -2441,6 +2547,19 @@ export type Database = {
       };
       take_rate_limit: { Args: { action_name: string }; Returns: boolean };
       turn_folder_into_quiz: { Args: { target_folder: string }; Returns: Json };
+      workspace_access: {
+        Args: never;
+        Returns: {
+          cancel_at_period_end: boolean;
+          current_period_end: string;
+          grant_kind: string;
+          has_access: boolean;
+          is_founder: boolean;
+          source: string;
+          status: string;
+          trial_end: string;
+        }[];
+      };
     };
     Enums: {
       content_status: "draft" | "published" | "archived";
