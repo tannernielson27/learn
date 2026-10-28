@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { redirectForAccess } from "@/lib/auth/routeAccess";
 import { galleryIsAvailable, isGalleryPath } from "@/lib/gallery/availability";
 import { updateSession } from "@/lib/supabase/proxy";
+import { betaPassResponseHeaders } from "@/lib/betaPass/link";
 import { inviteResponseHeaders } from "@/lib/workspace/invitePage";
 
 /**
@@ -37,7 +38,12 @@ export async function proxy(request: NextRequest) {
   // A workspace invitation's path is its secret: every answer under /w/, the page and the answer
   // to a post alike, tells the browser to send no Referer from it. So does a page that carries the
   // invitation in its own `next`, as /sign-in?next=/w/<token> does.
-  for (const [name, value] of Object.entries(inviteResponseHeaders(url.pathname, url.search))) {
+  // A beta pass, /b/<token>, is the same kind of secret and gets the same policy (#520).
+  const secretLinkHeaders = {
+    ...inviteResponseHeaders(url.pathname, url.search),
+    ...betaPassResponseHeaders(url.pathname, url.search),
+  };
+  for (const [name, value] of Object.entries(secretLinkHeaders)) {
     response.headers.set(name, value);
   }
   const access = redirectForAccess(url, signedIn);
@@ -67,7 +73,8 @@ export async function proxy(request: NextRequest) {
 // which only works if the proxy runs there. Sign-up and the welcome page (#361) are the same pair:
 // /sign-up reads the session to send a signed-in visitor home, and /welcome is protected.
 // A workspace invitation, /w/<token>, reads the session as the class invite does, and is also
-// here so the proxy can send its Referrer-Policy.
+// here so the proxy can send its Referrer-Policy. A beta pass, /b/<token> (#520), is here for
+// both reasons too.
 export const config = {
   matcher: [
     "/",
@@ -78,6 +85,7 @@ export const config = {
     "/account/:path*",
     "/c/:path*",
     "/w/:path*",
+    "/b/:path*",
     "/sign-in",
     "/sign-up",
     "/welcome",

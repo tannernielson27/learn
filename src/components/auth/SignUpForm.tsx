@@ -32,6 +32,10 @@ export interface SignUpFormProps {
   classCode: string | null;
   /** `captchaSiteKey()` from the page. Null draws no widget. */
   captchaSiteKey: string | null;
+  /** From `/sign-up?next=`, already checked by the page; carried through for a teacher. */
+  next?: string | null;
+  /** Sign-in, carrying `next` when there is one. */
+  signInHref?: string;
 }
 
 /** The action's answer, numbered, so the CAPTCHA can tell one answer from the next. */
@@ -56,7 +60,14 @@ const ROLES: readonly { value: SignUpRole; label: string }[] = [
  * wait for the role because what they say depends on it; the choice stays above them and can be
  * changed. Whatever was typed survives an answer that asks for another try, except the password.
  */
-export function SignUpForm({ action, initialRole, classCode, captchaSiteKey }: SignUpFormProps) {
+export function SignUpForm({
+  action,
+  initialRole,
+  classCode,
+  captchaSiteKey,
+  next = null,
+  signInHref = "/sign-in",
+}: SignUpFormProps) {
   const [answered, formAction, pending] = useActionState(
     async (previous: Answered, formData: FormData): Promise<Answered> => ({
       state: await action(previous.state, formData),
@@ -144,6 +155,7 @@ export function SignUpForm({ action, initialRole, classCode, captchaSiteKey }: S
           {role === "student" && classCode ? (
             <input type="hidden" name="code" value={classCode} />
           ) : null}
+          {role === "teacher" && next ? <input type="hidden" name="next" value={next} /> : null}
           <DisplayNameField
             id={`${id}-name`}
             value={name}
@@ -193,7 +205,7 @@ export function SignUpForm({ action, initialRole, classCode, captchaSiteKey }: S
       {exists ? (
         <FormError id={errorId}>
           This email already has an account.{" "}
-          <Link href="/sign-in" className="font-medium text-accent-ink underline">
+          <Link href={signInHref} className="font-medium text-accent-ink underline">
             Sign in
           </Link>
         </FormError>
