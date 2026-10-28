@@ -31,7 +31,7 @@ export default async function SessionReportPage({
 
   return (
     <main className="mx-auto w-full max-w-wide min-w-0 flex-1 px-4 py-8 md:px-8">
-      {read.session.status === "ended" ? (
+      {read.session.status === "ended" && read.input !== null ? (
         <SessionReportView
           sessionId={sessionId}
           title={read.session.title}

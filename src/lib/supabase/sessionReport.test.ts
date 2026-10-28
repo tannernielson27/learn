@@ -81,6 +81,20 @@ describe("readSessionReport", () => {
     expect(fake.calls.every((call) => call.table === "sessions")).toBe(true);
   });
 
+  it.each(["lobby", "running", "paused"])(
+    "reads nothing past the session row while the session is %s (perf-audit #17)",
+    async (status) => {
+      const fake = fakeClient({
+        ...okReplies(),
+        sessions: { data: { ...sessionRow, status, closed_at: null }, error: null },
+      });
+      const read = await readSessionReport(fake.client, SESSION);
+      expect(read?.session).toMatchObject({ id: SESSION, status });
+      expect(read?.input).toBeNull();
+      expect(fake.calls.every((call) => call.table === "sessions")).toBe(true);
+    },
+  );
+
   it("builds the report input in session order from the rows it can see", async () => {
     const fake = fakeClient(okReplies());
     const read = await readSessionReport(fake.client, SESSION);
@@ -91,16 +105,16 @@ describe("readSessionReport", () => {
       openedAt: "2026-09-22T10:00:00Z",
       closedAt: "2026-09-22T10:40:00Z",
     });
-    expect(read?.input.items).toEqual([
+    expect(read?.input?.items).toEqual([
       { position: 1, itemId: ITEM_A, ref: "mc-vitals", type: "multiple_choice", cjmmStep: 1 },
       { position: 2, itemId: ITEM_B, ref: "bowtie-act", type: "bowtie", cjmmStep: 5 },
       // An item the author can no longer read keeps its place, named by its id.
       { position: 3, itemId: ITEM_GONE, ref: ITEM_GONE, type: null, cjmmStep: null },
     ]);
-    expect(read?.input.participants).toEqual([
+    expect(read?.input?.participants).toEqual([
       { id: "p-ava", displayName: "Ava", joinedAt: "2026-09-22T10:01:00Z" },
     ]);
-    expect(read?.input.responses).toEqual([
+    expect(read?.input?.responses).toEqual([
       { participantId: "p-ava", itemPosition: 1, points: 1, maxPoints: 1 },
     ]);
   });
@@ -142,7 +156,7 @@ describe("readSessionReport", () => {
       sessions: { data: { ...sessionRow, item_set: {} }, error: null },
     });
     const read = await readSessionReport(fake.client, SESSION);
-    expect(read?.input.items).toEqual([]);
+    expect(read?.input?.items).toEqual([]);
     expect(fake.calls.some((call) => call.table === "items")).toBe(false);
   });
 
@@ -161,7 +175,7 @@ describe("readSessionReport", () => {
       },
     });
     const read = await readSessionReport(fake.client, SESSION);
-    expect(read?.input.items.map((item) => item.caseStudy ?? null)).toEqual([
+    expect(read?.input?.items.map((item) => item.caseStudy ?? null)).toEqual([
       null,
       { id: "c-1", title: "Hip", step: 1, stepCount: 2 },
       { id: "c-1", title: "Hip", step: 2, stepCount: 2 },
@@ -195,8 +209,8 @@ describe("readSessionReport", () => {
     } as unknown as Client;
     const read = await readSessionReport(client, SESSION);
     expect(asked).toBe(2);
-    expect(read?.input.items).toHaveLength(3);
-    expect(read?.input.items.every((item) => item.caseStudy === undefined)).toBe(true);
+    expect(read?.input?.items).toHaveLength(3);
+    expect(read?.input?.items.every((item) => item.caseStudy === undefined)).toBe(true);
   });
 
   it("gives an item with a step out of range no step", async () => {
@@ -206,7 +220,7 @@ describe("readSessionReport", () => {
       items: { data: [{ id: ITEM_A, type: "bowtie", cjmm_step: 9, ref: null }], error: null },
     });
     const read = await readSessionReport(fake.client, SESSION);
-    expect(read?.input.items[0]).toMatchObject({ ref: ITEM_A, cjmmStep: null });
+    expect(read?.input?.items[0]).toMatchObject({ ref: ITEM_A, cjmmStep: null });
   });
 
   it("throws rather than show half a report when a read fails", async () => {
