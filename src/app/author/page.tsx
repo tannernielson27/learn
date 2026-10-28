@@ -77,9 +77,27 @@ function countLine(view: LibraryView, count: number): string {
 export default async function AuthorHomePage({ searchParams }: PageProps<"/author">) {
   const view = parseLibraryView((await searchParams).folder);
   const { supabase, orgId, userId, email } = await requireAuthor("/author");
+  const atTop = view.kind === "top";
+  // Get started and the welcome belong to the top of the library only.
+  const hidden = !atTop || hiddenFor((await cookies()).get(GET_STARTED_COOKIE)?.value, userId);
+  const libraryRead = readLibrary(supabase, view);
+  // perf-audit #14: the checklist's reads and the welcome's need nothing the library says, so
+  // they start beside it; only the list of every quiz, where the open view does not hold it,
+  // waits for the library.
+  const progressRead = hidden
+    ? null
+    : readOrgProgress(
+        supabase,
+        orgId,
+        libraryRead.then((library) => everyQuiz(supabase, library, view)),
+      );
+  const welcomeRead = atTop ? readTeacherWelcomeState(supabase, userId, orgId) : null;
+  // Awaited below; this only keeps a failure from going unobserved if the page stops first.
+  progressRead?.catch(() => undefined);
+  welcomeRead?.catch(() => undefined);
   // All in one round trip: the badges are one read of the org's shares, not one per bank.
   const [library, sharedWith, claims] = await Promise.all([
-    readLibrary(supabase, view),
+    libraryRead,
     listSharedClassNamesByBank(supabase),
     // Read from the token already verified for this request. A teacher who signed up has an
     // address nobody has confirmed yet; the home asks, as the student home does, and never blocks.
@@ -89,16 +107,8 @@ export default async function AuthorHomePage({ searchParams }: PageProps<"/autho
   // A folder id that is not one of this workspace's folders reads as not found.
   if (view.kind === "folder" && trail.length === 0) notFound();
   const folder = trail.at(-1) ?? null;
-  const atTop = view.kind === "top";
 
-  // Get started and the welcome belong to the top of the library only.
-  const hidden = !atTop || hiddenFor((await cookies()).get(GET_STARTED_COOKIE)?.value, userId);
-  const [progress, welcome] = await Promise.all([
-    hidden
-      ? null
-      : everyQuiz(supabase, library, view).then((all) => readOrgProgress(supabase, orgId, all)),
-    atTop ? readTeacherWelcomeState(supabase, userId, orgId) : null,
-  ]);
+  const [progress, welcome] = await Promise.all([progressRead, welcomeRead]);
   const steps = progress ? checklistSteps(progress) : [];
 
   const { quizzes } = library;
