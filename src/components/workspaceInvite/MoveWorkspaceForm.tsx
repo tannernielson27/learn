@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { Button } from "@/components/ui/Button";
-import type { JoinWorkspaceState } from "@/lib/workspace/invite";
+import type { JoinWorkspaceState } from "@/lib/workspace/invitePage";
 import {
   MOVE_CONFIRM_FIELD,
   MOVE_LEAVING_FIELD,

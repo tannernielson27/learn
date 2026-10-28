@@ -8,7 +8,7 @@ import {
   INVITE_REFUSED,
   INVITE_REFUSED_HEADING,
   type InviteAnswer,
-} from "@/lib/workspace/invite";
+} from "@/lib/workspace/invitePage";
 
 const HEADING = "font-read text-display leading-tight break-words text-ink-1 outline-none";
 
