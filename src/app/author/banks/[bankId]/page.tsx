@@ -105,25 +105,26 @@ export default async function BankPage({
     ? workspaceEnabled(author).then((on) => on === true)
     : Promise.resolve(false);
   aiImportOn.catch(() => undefined);
-  const { data: bank } = await supabase
-    .from("item_banks")
-    .select("id, name")
-    .eq("id", bankId)
-    .maybeSingle();
-  if (!bank) notFound();
-
+  // perf-audit #13: the quiz row, its folders and the reads that do not depend on the view all
+  // start together. Each is a read of this quiz under RLS, so for a quiz this author cannot see
+  // they find nothing; the row is still awaited first, so that quiz is a 404 as before.
+  const bankRead = supabase.from("item_banks").select("id, name").eq("id", bankId).maybeSingle();
   // #411: a quiz offers folders inside it only if it already has one. Without any, every view is
   // the whole quiz, so a stale "Not in a folder" link still lists everything.
-  // The reads that do not depend on the view start now, beside the folders.
+  const foldersRead = listFolders(supabase, bankId);
   const besideFolders = Promise.all([
-    quizLibraryTrail(supabase, bank.id),
-    listBankShares(supabase, bank.id),
+    quizLibraryTrail(supabase, bankId),
+    listBankShares(supabase, bankId),
     listClasses(supabase),
-    readMoveContext(supabase, bank.id),
+    readMoveContext(supabase, bankId),
   ]);
   // Awaited below; this only keeps a failure from going unobserved if the page stops first.
+  foldersRead.catch(() => undefined);
   besideFolders.catch(() => undefined);
-  const folders = await listFolders(supabase, bank.id);
+  const { data: bank } = await bankRead;
+  if (!bank) notFound();
+
+  const folders = await foldersRead;
   const inQuizFolders = offersInQuizFolders(folders);
   const view: FolderView = inQuizFolders ? askedView : { kind: "all" };
   if (!inQuizFolders && askedView.kind === "folder") notFound();
