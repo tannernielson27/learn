@@ -9,7 +9,13 @@ import { parseAccountName } from "@/lib/auth/displayName";
 import { checkNewPassword, PASSWORD_WEAK } from "@/lib/auth/password";
 import { parseSignInForm } from "@/lib/auth/signInForm";
 import { takeSignInAddress } from "@/lib/auth/signInRateLimit";
-import { afterSignUpPath, carriedClassCode, parseSignUpRole, signUp } from "@/lib/auth/signUp";
+import {
+  afterSignUpPath,
+  carriedClassCode,
+  carriedNext,
+  parseSignUpRole,
+  signUp,
+} from "@/lib/auth/signUp";
 import { takeSignUpAttempt } from "@/lib/auth/signUpLimit";
 import { SIGN_UP_CAPTCHA_ACTION } from "@/lib/auth/turnstile";
 import { sendWelcomeEmail } from "@/lib/auth/welcomeEmail";
@@ -93,7 +99,11 @@ export async function createAccount(
     );
   }
 
-  const next = afterSignUpPath(result, carriedClassCode(formData.get("code")));
+  const next = afterSignUpPath(
+    result,
+    carriedClassCode(formData.get("code")),
+    carriedNext(formData.get("next")),
+  );
   if (!result.signedIn) return { status: "created_signed_out", next };
   redirect(next);
 }

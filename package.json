@@ -21,6 +21,7 @@
     "db:types": "node scripts/db-types.mjs",
     "test:db": "node scripts/test-db.mjs",
     "load:live": "node --env-file-if-exists=.env.local scripts/load-live.mjs",
+    "beta-pass": "node --env-file-if-exists=.env.local scripts/beta-pass.mjs",
     "stripe:catalog": "node --env-file-if-exists=.env.local scripts/stripe-catalog.mjs",
     "eval:ai-import": "vitest run --config test/ai-import/vitest.eval.config.mts",
     "golive:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning scripts/golive-check.ts"

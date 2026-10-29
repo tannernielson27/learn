@@ -2048,6 +2048,19 @@ export type Database = {
         Args: { new_case_study: Json; new_items: Json; target_bank: string };
         Returns: Json;
       };
+      issue_beta_pass: {
+        Args: {
+          p_created_by: string;
+          p_email: string;
+          p_note: string;
+          p_token_hash: string;
+        };
+        Returns: {
+          expires_at: string;
+          pass_id: string;
+          status: string;
+        }[];
+      };
       join_class: { Args: { token: string }; Returns: string };
       join_class_by_code: { Args: { p_code: string }; Returns: string };
       join_session: {
@@ -2087,6 +2100,24 @@ export type Database = {
           total_count: number;
           type: string;
           updated_at: string;
+        }[];
+      };
+      list_beta_passes: {
+        Args: never;
+        Returns: {
+          created_at: string;
+          created_by: string;
+          email: string;
+          expires_at: string;
+          grant_active: boolean;
+          id: string;
+          note: string;
+          redeemed_at: string;
+          redeemed_by: string;
+          redeemed_org: string;
+          revoked_at: string;
+          state: string;
+          workspace_name: string;
         }[];
       };
       list_quiz_entries: {
@@ -2395,6 +2426,10 @@ export type Database = {
         Args: { p_org: string; p_profile: string; p_subscription: string };
         Returns: undefined;
       };
+      redeem_beta_pass: {
+        Args: { p_token: string; p_user: string };
+        Returns: undefined;
+      };
       refresh_participant_count: {
         Args: { present: number; target: string };
         Returns: undefined;
@@ -2473,6 +2508,13 @@ export type Database = {
           session_mode: Database["public"]["Enums"]["session_mode"];
           session_status: Database["public"]["Enums"]["session_status"];
           session_title: string;
+        }[];
+      };
+      revoke_beta_pass: {
+        Args: { p_email: string };
+        Returns: {
+          grants_revoked: number;
+          passes_revoked: number;
         }[];
       };
       revoke_org_invite: { Args: { p_invite: string }; Returns: string };

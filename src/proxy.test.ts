@@ -205,6 +205,26 @@ describe("the proxy matcher still covers the gallery", () => {
       expect((await proxy(request(pathname))).headers.get("referrer-policy"), pathname).toBeNull();
     }
   });
+
+  it("runs on a beta pass and keeps its token out of every Referer, on the way there too", async () => {
+    expect(matcher).toContain("/b/:path*");
+    const token = "AbC_-0123456789abcdefghijklmnopq";
+    const next = encodeURIComponent(`/b/${token}`);
+    updateSession.mockImplementation(async () => ({
+      response: NextResponse.next(),
+      signedIn: false,
+    }));
+    for (const pathname of [
+      `/b/${token}`,
+      `/sign-in?next=${next}`,
+      `/sign-up?role=teacher&next=${next}`,
+    ]) {
+      const response = await proxy(request(pathname));
+      // Never sent to sign-in: the page itself says what a visitor can do.
+      expect(response.headers.get("location"), pathname).toBeNull();
+      expect(response.headers.get("referrer-policy"), pathname).toBe("no-referrer");
+    }
+  });
 });
 
 describe("a signed-in visit to sign-in goes to that person's own home in one redirect", () => {
