@@ -94,6 +94,7 @@ describe("runGoLiveCheck", () => {
       env: "pass",
       demo: "pass",
       captcha: "pass",
+      stripe: "manual",
       cron: "pass",
       "rate-limit-sweep": "pass",
       backup: "pass",

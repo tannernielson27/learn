@@ -267,10 +267,10 @@ describe("healthChecks", () => {
     expect(lines.env.detail).toContain("refused");
   });
 
-  it("fails all four lines when health could not be read", () => {
+  it("fails the four required lines when health could not be read; billing's stays manual", () => {
     const lines = healthChecks({ kind: "unreadable", reason: "HTTP 500" }, REF);
-    expect(lines.map((l) => l.id)).toEqual(["site", "env", "demo", "captcha"]);
-    expect(lines.map((l) => l.status)).toEqual(["fail", "fail", "fail", "fail"]);
+    expect(lines.map((l) => l.id)).toEqual(["site", "env", "demo", "captcha", "stripe"]);
+    expect(lines.map((l) => l.status)).toEqual(["fail", "fail", "fail", "fail", "manual"]);
     expect(lines[0].detail).toContain("HTTP 500");
   });
 });
@@ -278,7 +278,7 @@ describe("healthChecks", () => {
 describe("healthChecks: the sign-up CAPTCHA's Turnstile keys (#359)", () => {
   it("prints the line after the demo account's, with the same title whatever it found", () => {
     const ids = healthChecks(detailed(), REF).map((l) => l.id);
-    expect(ids).toEqual(["site", "env", "demo", "captcha"]);
+    expect(ids).toEqual(["site", "env", "demo", "captcha", "stripe"]);
     const readings: HealthReading[] = [
       detailed(),
       detailed({ signUpCaptcha: "missing" }),
@@ -333,6 +333,48 @@ describe("healthChecks: the sign-up CAPTCHA's Turnstile keys (#359)", () => {
         expect(result.detail).toContain("§7.12 step 2");
       }
     }
+  });
+});
+
+describe("healthChecks: billing's Stripe variables (#518)", () => {
+  const billingEnv = (secret: boolean, webhook: boolean, lookup = false) => ({
+    STRIPE_SECRET_KEY: secret,
+    STRIPE_WEBHOOK_SECRET: webhook,
+    STRIPE_PRICE_LOOKUP_KEY: lookup,
+  });
+
+  it("passes live keys", () => {
+    const result = byId(detailed({ stripe: "live", billingEnv: billingEnv(true, true) })).stripe;
+    expect(result.status).toBe("pass");
+  });
+
+  it.each(["off", "test"] as const)("is manual for %s: billing ships switched off", (stripe) => {
+    const result = byId(detailed({ stripe })).stripe;
+    expect(result.status).toBe("manual");
+    expect(result.detail).toContain("§7.15");
+  });
+
+  it("fails a half-set pair and names the missing secret, never the lookup key", () => {
+    const result = byId(
+      detailed({ stripe: "incomplete", billingEnv: billingEnv(true, false, false) }),
+    ).stripe;
+    expect(result.status).toBe("fail");
+    expect(result.detail).toContain("STRIPE_WEBHOOK_SECRET (§7.15 step 6)");
+    expect(result.detail).not.toContain("STRIPE_PRICE_LOOKUP_KEY");
+    expect(result.detail).not.toContain("STRIPE_SECRET_KEY");
+  });
+
+  it.each(["misconfigured", "live_refused"] as const)("fails %s", (stripe) => {
+    const result = byId(detailed({ stripe, billingEnv: billingEnv(true, true) })).stripe;
+    expect(result.status).toBe("fail");
+    expect(result.detail).not.toContain("unset");
+  });
+
+  it("is manual for a deployment older than the line, and without the detailed view", () => {
+    expect(byId(detailed()).stripe.detail).toContain("older than this line");
+    const result = byId({ kind: "public", body: publicBody(), tokenRefused: false }).stripe;
+    expect(result.status).toBe("manual");
+    expect(result.detail).toContain("GOLIVE_HEALTH_TOKEN");
   });
 });
 

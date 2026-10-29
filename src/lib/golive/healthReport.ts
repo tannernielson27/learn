@@ -16,11 +16,14 @@
  * memoised per server instance, so a flood that skips the CDN still reaches Supabase at most once
  * per instance every few seconds. The secret, 32+ random characters, is the boundary for the detail.
  */
+import { readStripeConfig } from "@/lib/billing/stripeConfig";
 import { httpsOrigin } from "@/lib/http/siteOrigin";
 import { bearerMatches, MIN_SECRET_LENGTH } from "@/lib/reminders/cronRoute";
 import {
+  BILLING_ENV,
   DEMO_ENV,
   REQUIRED_ENV,
+  type BillingEnvName,
   type DetailedHealth,
   type PublicHealth,
   type RequiredEnvName,
@@ -60,15 +63,27 @@ function usableSecret(value: string | undefined): boolean {
 /** The two setups in which every sign-up is refused (#359). */
 const SIGN_UP_REFUSED: readonly SignUpCaptcha[] = ["missing", "misconfigured"];
 
-/** Booleans only. CRON_SECRET counts only when the cron route would accept it (32+ characters). */
-export function summarizeEnv(env: EnvSnapshot): Pick<DetailedHealth, "env" | "demoAccount"> {
+/**
+ * Booleans and one state only. CRON_SECRET counts only when the cron route would accept it (32+
+ * characters). Billing's variables and its `stripe` setup are reported but never count towards
+ * `ready` (#518): billing ships switched off.
+ */
+export function summarizeEnv(
+  env: EnvSnapshot,
+): Pick<DetailedHealth, "env" | "demoAccount" | "billingEnv" | "stripe"> {
   const entries = REQUIRED_ENV.map(({ name }): [RequiredEnvName, boolean] => [
     name,
     usable(name, env[name], env.VERCEL_ENV),
   ]);
+  const billing = BILLING_ENV.map(({ name }): [BillingEnvName, boolean] => [
+    name,
+    present(env[name]),
+  ]);
   return {
     env: Object.fromEntries(entries) as Record<RequiredEnvName, boolean>,
     demoAccount: DEMO_ENV.some((name) => present(env[name])),
+    billingEnv: Object.fromEntries(billing) as Record<BillingEnvName, boolean>,
+    stripe: readStripeConfig(env).setup,
   };
 }
 

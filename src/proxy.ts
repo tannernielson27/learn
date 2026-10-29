@@ -75,6 +75,8 @@ export async function proxy(request: NextRequest) {
 // A workspace invitation, /w/<token>, reads the session as the class invite does, and is also
 // here so the proxy can send its Referrer-Policy. A beta pass, /b/<token> (#520), is here for
 // both reasons too.
+// Never `/api/stripe/webhook` (#518): Stripe calls it with no session, and a redirect would lose
+// the event. Nothing under /api is matched; keep it that way if a catch-all is ever added.
 export const config = {
   matcher: [
     "/",
