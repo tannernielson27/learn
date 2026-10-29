@@ -1,6 +1,6 @@
 import { WELCOME_PATH } from "./accountPaths";
 import { EMAIL_UNCONFIRMED_KEY } from "./emailConfirmation";
-import { DEFAULT_AFTER_SIGN_IN } from "./nextPath";
+import { DEFAULT_AFTER_SIGN_IN, safeNextPath } from "./nextPath";
 
 interface AuthFailure {
   code?: string;
@@ -40,6 +40,17 @@ export function carriedClassCode(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const code = value.trim();
   return CLASS_CODE_SHAPE.test(code) ? code : null;
+}
+
+/**
+ * Where `/sign-up?next=` asks a new teacher to go instead of authoring, or null: a same-site path
+ * `safeNextPath` lets through, such as a link the teacher was sent and signs up from. A student's
+ * way on is the class code, so a student never follows it.
+ */
+export function carriedNext(value: unknown): string | null {
+  if (typeof value !== "string" || !value) return null;
+  const next = safeNextPath(value);
+  return next === DEFAULT_AFTER_SIGN_IN ? null : next;
 }
 
 export interface SignUpInput {
@@ -123,8 +134,12 @@ async function makeWorkspace(
 }
 
 /** Where a new account goes once it is signed in. */
-export function afterSignUpPath(outcome: SignUpOutcome, classCode: string | null): string {
-  if (outcome.home === "teacher") return DEFAULT_AFTER_SIGN_IN;
+export function afterSignUpPath(
+  outcome: SignUpOutcome,
+  classCode: string | null,
+  teacherNext: string | null = null,
+): string {
+  if (outcome.home === "teacher") return teacherNext ?? DEFAULT_AFTER_SIGN_IN;
   if (outcome.workspaceFailed) return `${WELCOME_PATH}?teach=1`;
   return classCode ? `${WELCOME_PATH}?code=${encodeURIComponent(classCode)}` : WELCOME_PATH;
 }

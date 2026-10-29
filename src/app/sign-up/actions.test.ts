@@ -221,6 +221,15 @@ describe("createAccount: a student (#361)", () => {
     expect(profileUpdate).toHaveBeenCalledWith({ display_name: "Ada Lovelace" });
   });
 
+  it("sends a teacher on to a carried next, and drops one that leaves the site", async () => {
+    await expect(
+      createAccount(IDLE, form({ next: "/b/AbC_-0123456789abcdefghijklmnopq" })),
+    ).rejects.toThrow("redirect:/b/AbC_-0123456789abcdefghijklmnopq");
+    await expect(
+      createAccount(IDLE, form({ email: "c@school.edu", next: "//evil.example" })),
+    ).rejects.toThrow(/^redirect:\/author$/);
+  });
+
   it("carries a class code through, and drops one that is not code-shaped", async () => {
     await expect(createAccount(IDLE, form({ role: "student", code: "ABCD2345" }))).rejects.toThrow(
       "redirect:/welcome?code=ABCD2345",

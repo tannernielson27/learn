@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SignUpForm } from "@/components/auth/SignUpForm";
 import { signedInHome } from "@/lib/auth/landing";
-import { carriedClassCode, parseSignUpRole } from "@/lib/auth/signUp";
+import { carriedClassCode, carriedNext, parseSignUpRole } from "@/lib/auth/signUp";
 import { captchaSiteKey } from "@/lib/auth/turnstile";
 import { readViewer } from "@/lib/classes/viewer";
 import { createAccount } from "./actions";
@@ -13,8 +13,9 @@ import { textLinkClasses } from "@/components/ui/TextLink";
 export const metadata: Metadata = { title: "Create an account" };
 
 /**
- * Open sign-up (#361, ADR 0009). `?role=teacher|student` starts on that choice, and `?code=` is a
- * class code carried through for a student. Someone already signed in has no use for this page
+ * Open sign-up (#361, ADR 0009). `?role=teacher|student` starts on that choice, `?code=` is a
+ * class code carried through for a student, and `?next=` is where a new teacher goes afterwards
+ * (`carriedNext`), with sign-in carrying it too. Someone already signed in has no use for this page
  * and is sent to their own home.
  */
 export default async function SignUpPage({ searchParams }: PageProps<"/sign-up">) {
@@ -25,6 +26,8 @@ export default async function SignUpPage({ searchParams }: PageProps<"/sign-up">
   const classCode = carriedClassCode(params.code);
   // A link that carries a class code is a student's link.
   const initialRole = parseSignUpRole(params.role) ?? (classCode ? "student" : null);
+  const next = carriedNext(params.next);
+  const signInHref = next ? `/sign-in?next=${encodeURIComponent(next)}` : "/sign-in";
 
   return (
     <AuthFrame>
@@ -33,11 +36,13 @@ export default async function SignUpPage({ searchParams }: PageProps<"/sign-up">
         action={createAccount}
         initialRole={initialRole}
         classCode={classCode}
+        next={next}
+        signInHref={signInHref}
         captchaSiteKey={captchaSiteKey()}
       />
       <p className="mt-6 text-sm text-ink-2">
         Have an account?{" "}
-        <Link href="/sign-in" className={textLinkClasses({ size: "sm" })}>
+        <Link href={signInHref} className={textLinkClasses({ size: "sm" })}>
           Sign in
         </Link>
       </p>

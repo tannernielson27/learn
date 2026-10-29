@@ -33,17 +33,17 @@ export function signInToAcceptPath(token: string): string {
 const NEXT_DEPTH = 4;
 
 /**
- * Whether a query string's `next` is an invitation page, or a page whose own `next` is one.
+ * Whether a query string's `next` is a page `matches` accepts, or a page whose own `next` is one.
  * "Sign in to accept" is `/sign-in?next=/w/<token>`, so the token is in that page's address too.
  */
-function nextIsWorkspaceInvite(search: string): boolean {
+export function nextLeadsTo(search: string, matches: (pathname: string) => boolean): boolean {
   let query = search;
   for (let depth = 0; depth < NEXT_DEPTH; depth += 1) {
     // `URLSearchParams` never throws: a value it cannot decode is kept as it was written.
     const next = new URLSearchParams(query).get("next");
     if (!next) return false;
     const mark = next.indexOf("?");
-    if (isWorkspaceInvitePath(mark < 0 ? next : next.slice(0, mark))) return true;
+    if (matches(mark < 0 ? next : next.slice(0, mark))) return true;
     if (mark < 0) return false;
     query = next.slice(mark);
   }
@@ -59,7 +59,7 @@ export function inviteResponseHeaders(
   pathname: string,
   search = "",
 ): Readonly<Record<string, string>> {
-  return isWorkspaceInvitePath(pathname) || nextIsWorkspaceInvite(search)
+  return isWorkspaceInvitePath(pathname) || nextLeadsTo(search, isWorkspaceInvitePath)
     ? { "Referrer-Policy": "no-referrer" }
     : {};
 }

@@ -54,6 +54,8 @@ export const RATE_LIMIT_BUCKETS = [
   "workspace_invite_email",
   // Posts to an invitation page, per calling address (`src/lib/workspace/acceptLimit.ts`).
   "workspace_invite_accept",
+  // #520: posts to a beta pass page, per calling address (`src/lib/betaPass/redeemLimit.ts`).
+  "beta_pass_redeem",
   // #342: AI import's Claude calls, per teacher (`src/lib/aiImport/parseLimit.ts`).
   "ai_import_parse",
   // #343: AI import's extract calls, per teacher (`src/lib/aiImport/parseLimit.ts`).

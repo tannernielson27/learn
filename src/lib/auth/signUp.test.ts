@@ -3,6 +3,7 @@ import { EMAIL_UNCONFIRMED_KEY } from "./emailConfirmation";
 import {
   afterSignUpPath,
   carriedClassCode,
+  carriedNext,
   parseSignUpRole,
   signUp,
   workspaceName,
@@ -107,6 +108,30 @@ describe("afterSignUpPath (#361)", () => {
     expect(afterSignUpPath({ home: "no_role", workspaceFailed: true }, null)).toBe(
       "/welcome?teach=1",
     );
+  });
+
+  it("sends a teacher on to a carried next, and never a student", () => {
+    expect(afterSignUpPath({ home: "teacher", workspaceFailed: false }, null, "/b/x")).toBe("/b/x");
+    expect(afterSignUpPath({ home: "no_role", workspaceFailed: false }, null, "/b/x")).toBe(
+      "/welcome",
+    );
+    expect(afterSignUpPath({ home: "no_role", workspaceFailed: true }, null, "/b/x")).toBe(
+      "/welcome?teach=1",
+    );
+  });
+});
+
+describe("carriedNext", () => {
+  it("keeps a same-site path", () => {
+    expect(carriedNext("/b/AbC_-0123456789abcdefghijklmnopq")).toBe(
+      "/b/AbC_-0123456789abcdefghijklmnopq",
+    );
+  });
+
+  it("drops anything that would leave the site, sign-in itself, and the default", () => {
+    for (const value of ["//evil.example", "https://evil.example", "/sign-in", "/author", "", 7]) {
+      expect(carriedNext(value)).toBeNull();
+    }
   });
 });
 
