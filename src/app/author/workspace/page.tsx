@@ -1,18 +1,24 @@
 import type { Metadata } from "next";
 import { ReadingWidth } from "@/components/authoring/PageWidth";
 import { Notice } from "@/components/ui/Notice";
+import { BillingSection } from "@/components/workspace/BillingSection";
 import { InviteColleagueForm } from "@/components/workspace/InviteColleagueForm";
 import { MemberList } from "@/components/workspace/MemberList";
 import { PendingInvites } from "@/components/workspace/PendingInvites";
 import { requireAuthor } from "@/lib/authoring/session";
+import type { WorkspaceAccess } from "@/lib/billing/access";
+import { trialOnOffer } from "@/lib/billing/checkout";
+import { billingReadDeps } from "@/lib/billing/checkoutDeps";
 import {
   listMembers,
   listOpenInvites,
   readFounderId,
   readWorkspace,
 } from "@/lib/supabase/workspace";
+import { readWorkspaceAccess } from "@/lib/supabase/workspaceAccess";
 import { memberCountLabel, WORKSPACE_PATH } from "@/lib/workspace/workspace";
 import { inviteColleague, removeMember, resendInvite, revokeInvite } from "./actions";
+import { openPortalAction, startCheckoutAction } from "./billingActions";
 
 export const metadata: Metadata = { title: "Workspace" };
 
@@ -29,17 +35,25 @@ export const metadata: Metadata = { title: "Workspace" };
  * colleague's row (ADR 0011). That is a courtesy of the page: `remove_org_member` checks the
  * founder itself. The founder is read on its own, so a database that does not have the column yet
  * still draws the page, with nobody marked and no Remove.
+ *
+ * Billing (#519) is read once from `workspace_access()`. A database without the billing migration
+ * answers nothing there, and the page then has no Billing section. Whether a free trial is still
+ * on offer is asked only of the person who started the workspace, with Stripe set up, and only
+ * when there is no subscription; the Server Function asks again before any Checkout.
  */
-export default async function WorkspacePage() {
+export default async function WorkspacePage({ searchParams }: PageProps<"/author/workspace">) {
   const { supabase, orgId, userId } = await requireAuthor(WORKSPACE_PATH);
-  const [workspace, members, invites, founderId] = await Promise.all([
+  const [workspace, members, invites, founderId, access, query] = await Promise.all([
     readWorkspace(supabase, orgId),
     listMembers(supabase),
     listOpenInvites(supabase),
     readFounderId(supabase, orgId),
+    readWorkspaceAccess(supabase),
+    searchParams,
   ]);
   const canInvite = workspace?.selfRegistered === true;
   const canRemove = canInvite && founderId === userId;
+  const billing = access ? await billingProps(access, { userId, orgId }) : null;
 
   return (
     <ReadingWidth>
@@ -121,6 +135,29 @@ export default async function WorkspacePage() {
           </p>
         </section>
       ) : null}
+
+      {access && billing ? (
+        <div className="mt-10">
+          <BillingSection
+            access={access}
+            configured={billing.configured}
+            trialAvailable={billing.trialAvailable}
+            confirmed={query.billing === "started"}
+            checkoutAction={startCheckoutAction}
+            portalAction={openPortalAction}
+          />
+        </div>
+      ) : null}
     </ReadingWidth>
   );
+}
+
+async function billingProps(
+  access: WorkspaceAccess,
+  caller: { userId: string; orgId: string },
+): Promise<{ configured: boolean; trialAvailable: boolean }> {
+  const deps = billingReadDeps();
+  const configured = deps.config !== null;
+  const asks = configured && access.canManage && access.state.kind === "none";
+  return { configured, trialAvailable: asks ? await trialOnOffer(caller, deps) : false };
 }
