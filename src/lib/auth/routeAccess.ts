@@ -7,7 +7,8 @@ import { safeNextPath } from "./nextPath";
 // A workspace invitation, /w/<token>, is not here either: the colleague it was sent to may have no
 // account yet, and the page itself answers a visitor, the invited account and anyone else apart.
 // Sign-in may send someone back to it (`safeNextPath` keeps it), which is how an invited person
-// who already has an account accepts.
+// who already has an account accepts. A beta pass, /b/<token> (#520), is not here for the same
+// reasons.
 const PROTECTED_PREFIXES = ["/author", "/learn", "/account", "/welcome"];
 const SIGN_IN_PATH = "/sign-in";
 
