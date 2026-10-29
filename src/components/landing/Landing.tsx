@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { buttonClasses } from "@/components/ui/Button";
-import { TextLink } from "@/components/ui/TextLink";
+import { SiteFooter } from "@/components/site/SiteFooter";
 import type { LandingEntry } from "@/lib/auth/landing";
 
 /**
@@ -73,75 +73,72 @@ export interface LandingProps {
  */
 export function Landing({ entry }: LandingProps) {
   return (
-    <main className="mx-auto w-full max-w-wide flex-1 px-5 pt-10 pb-16 sm:px-6 sm:pt-16 lg:px-8">
-      {/*
+    <>
+      <main className="mx-auto w-full max-w-wide flex-1 px-5 pt-10 pb-16 sm:px-6 sm:pt-16 lg:px-8">
+        {/*
         The hero (fix/landing-hero): two equal columns from 1024px, 5:7 from 1280px where the copy
         column is wide enough for both actions side by side, centred against each other so neither
         hangs. Gaps are on the spacing scale (24, 32, 48).
       */}
-      <div className="grid gap-12 lg:grid-cols-2 lg:items-center xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-        <div>
-          <p className="eyebrow">LeaRN</p>
-          <h1 className="mt-4 font-read text-display leading-tight text-ink-1">
-            Live learning for the Next Generation NCLEX.
-          </h1>
-          <p className="mt-6 max-w-prose text-lg leading-relaxed text-ink-2">
-            Every NCLEX question format, scored like the exam.
-          </p>
-          {/*
+        <div className="grid gap-12 lg:grid-cols-2 lg:items-center xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+          <div>
+            <p className="eyebrow">LeaRN</p>
+            <h1 className="mt-4 font-read text-display leading-tight text-ink-1">
+              Live learning for the Next Generation NCLEX.
+            </h1>
+            <p className="mt-6 max-w-prose text-lg leading-relaxed text-ink-2">
+              Every NCLEX question format, scored like the exam.
+            </p>
+            {/*
             One two-column grid for both rows, so every action is the same width and height and
             Join a live session sits under the account, with its note where Sign in sits. The rule
             spans the actions and no more.
           */}
-          <div className="mt-8 grid max-w-md gap-3 sm:grid-cols-2">
-            <Link href={entry.href} className={PRIMARY}>
-              {entry.label}
-            </Link>
-            {entry.also ? (
-              <Link href={entry.also.href} className={SECONDARY}>
-                {entry.also.label}
+            <div className="mt-8 grid max-w-md gap-3 sm:grid-cols-2">
+              <Link href={entry.href} className={PRIMARY}>
+                {entry.label}
               </Link>
-            ) : null}
-            <div className="mt-3 border-t border-line pt-6 sm:col-span-2 sm:grid sm:grid-cols-subgrid sm:items-center">
-              <Link href="/join" className={`${PRIMARY} w-full`}>
-                Join a live session
-              </Link>
-              <p className="mt-3 text-ink-2 sm:mt-0">In class now? No account needed.</p>
+              {entry.also ? (
+                <Link href={entry.also.href} className={SECONDARY}>
+                  {entry.also.label}
+                </Link>
+              ) : null}
+              <div className="mt-3 border-t border-line pt-6 sm:col-span-2 sm:grid sm:grid-cols-subgrid sm:items-center">
+                <Link href="/join" className={`${PRIMARY} w-full`}>
+                  Join a live session
+                </Link>
+                <p className="mt-3 text-ink-2 sm:mt-0">In class now? No account needed.</p>
+              </div>
             </div>
           </div>
+
+          <figure className="m-0">
+            <p className="eyebrow mb-2">Sample</p>
+            <Image
+              src={SAMPLE.src}
+              width={SAMPLE.width}
+              height={SAMPLE.height}
+              alt={SAMPLE.alt}
+              sizes="(min-width: 1280px) 680px, (min-width: 1024px) 50vw, 100vw"
+              // Beside the headline from 1024px up, so it is not left to lazy loading.
+              loading="eager"
+              className="h-auto w-full rounded-md border border-line"
+            />
+          </figure>
         </div>
 
-        <figure className="m-0">
-          <p className="eyebrow mb-2">Sample</p>
-          <Image
-            src={SAMPLE.src}
-            width={SAMPLE.width}
-            height={SAMPLE.height}
-            alt={SAMPLE.alt}
-            sizes="(min-width: 1280px) 680px, (min-width: 1024px) 50vw, 100vw"
-            // Beside the headline from 1024px up, so it is not left to lazy loading.
-            loading="eager"
-            className="h-auto w-full rounded-md border border-line"
-          />
-        </figure>
-      </div>
-
-      <section aria-labelledby="what-heading" className="mt-16 border-t border-line pt-8 sm:mt-20">
-        <h2 id="what-heading" className="text-xl font-semibold text-ink-1">
-          What LeaRN does
-        </h2>
-        <Rows rows={WHAT_IT_DOES} />
-      </section>
-
-      <div className="mt-16 flex flex-col gap-2 text-sm text-ink-2 sm:flex-row sm:items-center sm:justify-between">
-        <p>Every patient shown in LeaRN is fictional.</p>
-        {/* #269: the teacher and question guides are public. */}
-        <nav aria-label="Footer">
-          <TextLink href="/help" size="sm">
-            Help
-          </TextLink>
-        </nav>
-      </div>
-    </main>
+        <section
+          aria-labelledby="what-heading"
+          className="mt-16 border-t border-line pt-8 sm:mt-20"
+        >
+          <h2 id="what-heading" className="text-xl font-semibold text-ink-1">
+            What LeaRN does
+          </h2>
+          <Rows rows={WHAT_IT_DOES} />
+        </section>
+      </main>
+      {/* #269: the teacher and question guides are public. #522: one footer for every public page. */}
+      <SiteFooter />
+    </>
   );
 }

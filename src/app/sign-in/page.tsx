@@ -13,6 +13,7 @@ import {
   verifySignInCode,
 } from "./actions";
 import { AuthFrame, AUTH_HEADING_ALONE } from "@/components/auth/AuthFrame";
+import { SiteFooter } from "@/components/site/SiteFooter";
 import { textLinkClasses } from "@/components/ui/TextLink";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -26,29 +27,32 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
   const linkError = params.error === "link";
 
   return (
-    <AuthFrame>
-      {/* #267: a dead link lands on a page that says what to do next, heading first, with the
+    <>
+      <AuthFrame>
+        {/* #267: a dead link lands on a page that says what to do next, heading first, with the
             form to send a new one right under the reason. */}
-      {linkError ? (
-        <FocusHeading className={`${HEADING} outline-none`}>Get a new sign-in link</FocusHeading>
-      ) : (
-        <h1 className={HEADING}>Sign in</h1>
-      )}
-      <SignInPanel
-        passwordAction={signInWithEmailPassword}
-        linkAction={requestSignInLink}
-        codeAction={verifySignInCode}
-        next={next}
-        linkError={linkError}
-      />
-      {/* #361: sign-up is open, so the page that turns a stranger away says where to start. */}
-      <p className="mt-6 text-sm text-ink-2">
-        New here?{" "}
-        <Link href={SIGN_UP_PATH} className={textLinkClasses({ size: "sm" })}>
-          Create an account
-        </Link>
-      </p>
-      {readDemoAccount() ? <DemoSignIn action={signInAsDemo} next={next} /> : null}
-    </AuthFrame>
+        {linkError ? (
+          <FocusHeading className={`${HEADING} outline-none`}>Get a new sign-in link</FocusHeading>
+        ) : (
+          <h1 className={HEADING}>Sign in</h1>
+        )}
+        <SignInPanel
+          passwordAction={signInWithEmailPassword}
+          linkAction={requestSignInLink}
+          codeAction={verifySignInCode}
+          next={next}
+          linkError={linkError}
+        />
+        {/* #361: sign-up is open, so the page that turns a stranger away says where to start. */}
+        <p className="mt-6 text-sm text-ink-2">
+          New here?{" "}
+          <Link href={SIGN_UP_PATH} className={textLinkClasses({ size: "sm" })}>
+            Create an account
+          </Link>
+        </p>
+        {readDemoAccount() ? <DemoSignIn action={signInAsDemo} next={next} /> : null}
+      </AuthFrame>
+      <SiteFooter />
+    </>
   );
 }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useId, useRef, useState } from "react";
+import { SignUpConsent } from "@/components/site/SignUpConsent";
 import { Button } from "@/components/ui/Button";
 import { textLinkClasses } from "@/components/ui/TextLink";
 import { fieldClasses } from "@/components/ui/fieldClasses";
@@ -223,6 +224,7 @@ export function SignUpForm({
           {pending ? "Creating your account…" : "Create account"}
         </Button>
       ) : null}
+      {role ? <SignUpConsent /> : null}
     </form>
   );
 }
