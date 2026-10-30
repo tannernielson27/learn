@@ -53,6 +53,8 @@ export interface StripeBilling extends StripeReader {
     sessions: {
       create(params: Stripe.Checkout.SessionCreateParams): Promise<Stripe.Checkout.Session>;
       retrieve(id: string): Promise<Stripe.Checkout.Session>;
+      list(params: Stripe.Checkout.SessionListParams): Promise<{ data: Stripe.Checkout.Session[] }>;
+      expire(id: string): Promise<Stripe.Checkout.Session>;
     };
   };
   billingPortal: {
@@ -153,6 +155,21 @@ export function checkoutParams(input: {
 }
 
 /**
+ * Expires every Checkout Session still open for the customer, so only the newest one can be
+ * paid. Stripe keeps a session open for 24 hours; this customer belongs to one workspace only.
+ */
+async function expireOpenCheckouts(stripe: StripeBilling, customerId: string): Promise<void> {
+  const open = await stripe.checkout.sessions.list({
+    customer: customerId,
+    status: "open",
+    limit: 100,
+  });
+  for (const session of open.data) {
+    await stripe.checkout.sessions.expire(session.id);
+  }
+}
+
+/**
  * Start the free trial, or subscribe: a Checkout Session for the caller's workspace, with a trial
  * only when `may_start_trial` says so. Refused for anyone but the person who started the
  * workspace, and for a workspace already on a subscription.
@@ -219,6 +236,12 @@ export async function startCheckout(
       });
       return refuse("failed");
     }
+
+    // A Checkout page left open in another tab could still be paid, and a second subscription
+    // would bill the workspace twice. The sync above has already seen any page that was paid, so
+    // what is still open is closed before a new one is made.
+    step = "closing earlier Checkout pages";
+    await expireOpenCheckouts(stripe, customerId);
 
     step = "creating the Checkout Session";
     const session = await stripe.checkout.sessions.create(

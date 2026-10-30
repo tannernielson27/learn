@@ -70,6 +70,7 @@ function setup(
     config?: StripeConfig | null;
     prices?: { id: string }[];
     session?: Partial<Stripe.Checkout.Session>;
+    open?: string[];
   } = {},
 ) {
   const state = {
@@ -83,6 +84,9 @@ function setup(
   const checkouts: Stripe.Checkout.SessionCreateParams[] = [];
   const portals: Stripe.BillingPortal.SessionCreateParams[] = [];
   const retrieved: string[] = [];
+  /** Checkout Sessions Stripe still holds open for the customer, oldest first. */
+  const open: string[] = [...(options.open ?? [])];
+  const expired: string[] = [];
 
   const stripe: StripeBilling = {
     ...reader.reader,
@@ -113,10 +117,25 @@ function setup(
       sessions: {
         create: vi.fn(async (params: Stripe.Checkout.SessionCreateParams) => {
           checkouts.push(params);
+          open.push(`cs_test_${checkouts.length}`);
           return {
             id: "cs_test_1",
             url: "https://checkout.stripe.test/c/pay/cs_test_1",
           } as Stripe.Checkout.Session;
+        }),
+        list: vi.fn(async (params: Stripe.Checkout.SessionListParams) => ({
+          data:
+            params.customer === CUSTOMER && params.status === "open"
+              ? open.map((id) => ({ id, status: "open" }) as Stripe.Checkout.Session)
+              : [],
+        })),
+        expire: vi.fn(async (id: string) => {
+          const at = open.indexOf(id);
+          if (at === -1)
+            throw Object.assign(new Error("not open"), { type: "StripeInvalidRequestError" });
+          open.splice(at, 1);
+          expired.push(id);
+          return { id, status: "expired" } as Stripe.Checkout.Session;
         }),
         retrieve: vi.fn(async (id: string) => {
           retrieved.push(id);
@@ -151,7 +170,20 @@ function setup(
     origin: ORIGIN,
     log,
   };
-  return { deps, stripe, db, state, created, checkouts, portals, retrieved, log, allow };
+  return {
+    deps,
+    stripe,
+    db,
+    state,
+    created,
+    checkouts,
+    portals,
+    retrieved,
+    open,
+    expired,
+    log,
+    allow,
+  };
 }
 
 describe("startCheckout", () => {
@@ -204,6 +236,37 @@ describe("startCheckout", () => {
     await startCheckout(FOUNDER, t.deps);
     expect(t.created).toEqual([]);
     expect(t.checkouts.map((params) => params.customer)).toEqual([CUSTOMER, CUSTOMER]);
+  });
+
+  it("closes a Checkout page left open in another tab before opening a new one", async () => {
+    const t = setup({ rows: [row()], open: ["cs_test_old"] });
+    expect((await startCheckout(FOUNDER, t.deps)).ok).toBe(true);
+    expect(t.expired).toEqual(["cs_test_old"]);
+    expect(t.stripe.checkout.sessions.list).toHaveBeenCalledWith({
+      customer: CUSTOMER,
+      status: "open",
+      limit: 100,
+    });
+    await startCheckout(FOUNDER, t.deps);
+    // Only the newest page can still be paid.
+    expect(t.expired).toEqual(["cs_test_old", "cs_test_1"]);
+    expect(t.open).toEqual(["cs_test_2"]);
+  });
+
+  it("opens no new Checkout when an earlier page cannot be closed", async () => {
+    const t = setup({ rows: [row()], open: ["cs_test_old"] });
+    t.stripe.checkout.sessions.expire = async () => {
+      throw Object.assign(new Error("This session is not open"), {
+        type: "StripeInvalidRequestError",
+      });
+    };
+    expect(await startCheckout(FOUNDER, t.deps)).toEqual({ ok: false, reason: "failed" });
+    expect(t.checkouts).toEqual([]);
+    expect(t.log).toHaveBeenCalledWith("checkout failed while closing earlier Checkout pages", {
+      org: ORG,
+      error: "StripeInvalidRequestError",
+      code: undefined,
+    });
   });
 
   it("a double press before the row exists makes one customer (the idempotency key)", async () => {

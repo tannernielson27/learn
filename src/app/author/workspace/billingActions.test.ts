@@ -75,6 +75,8 @@ const stripe = {
   checkout: {
     sessions: {
       create: vi.fn(async () => ({ url: "https://checkout.stripe.test/c/pay/cs_test_1" })),
+      list: vi.fn(async () => ({ data: [] })),
+      expire: vi.fn(async (id: string) => ({ id, status: "expired" })),
       retrieve: vi.fn(async (id: string) => ({
         id,
         client_reference_id: stripeState.sessionOrg,
