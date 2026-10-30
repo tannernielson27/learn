@@ -74,12 +74,15 @@ export async function proxy(request: NextRequest) {
 // /sign-up reads the session to send a signed-in visitor home, and /welcome is protected.
 // A workspace invitation, /w/<token>, reads the session as the class invite does, and is also
 // here so the proxy can send its Referrer-Policy. A beta pass, /b/<token> (#520), is here for
-// both reasons too.
+// both reasons too. Pricing (#522) reads the session for its one link, as the landing page does;
+// it is not protected, so a signed-out visitor is let straight through. The terms and the privacy
+// policy read nothing and are not here.
 // Never `/api/stripe/webhook` (#518): Stripe calls it with no session, and a redirect would lose
 // the event. Nothing under /api is matched; keep it that way if a catch-all is ever added.
 export const config = {
   matcher: [
     "/",
+    "/pricing",
     "/author/:path*",
     "/learn",
     "/learn/:path*",

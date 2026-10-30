@@ -8,6 +8,7 @@ import { readViewer } from "@/lib/classes/viewer";
 import { WORKSPACE_PATH } from "@/lib/workspace/workspace";
 import { saveDisplayName } from "./actions";
 import { AuthFrame, AUTH_HEADING, AUTH_SUBLINE } from "@/components/auth/AuthFrame";
+import { LegalLinks } from "@/components/site/SiteFooter";
 import { textLinkClasses } from "@/components/ui/TextLink";
 
 export const metadata: Metadata = { title: "Your account" };
@@ -55,6 +56,8 @@ export default async function AccountPage() {
           {home.label}
         </Link>
       </p>
+      {/* #522: the account page has no site footer, so the terms and contact are one line here. */}
+      <LegalLinks className="mt-8 border-t border-line pt-4 text-ink-2" />
     </AuthFrame>
   );
 }
