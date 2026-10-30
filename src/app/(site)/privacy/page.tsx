@@ -158,8 +158,8 @@ const SECTIONS: readonly LegalSection[] = [
         </p>
         <p>
           Documents uploaded for AI import are removed once the import is finished or discarded, or
-          after 7 days unused. Encrypted backups are kept for 14 days. IP addresses used for limits
-          are kept only briefly.
+          after 7 days unused. Encrypted backups are kept for 14 days. IP addresses recorded for
+          limits are used for nothing else and are cleared out automatically over time.
         </p>
       </>
     ),
