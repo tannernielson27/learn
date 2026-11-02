@@ -76,6 +76,16 @@ describe("billingRowFrom", () => {
     expect(row.current_period_end).toBe(iso(T.periodEnd));
   });
 
+  it("reads a portal cancel, which sets cancel_at at the period end, as not renewing", () => {
+    const row = (sub: Stripe.Subscription) =>
+      billingRowFrom({ orgId: ORG, customerId: CUSTOMER, customer: customer(), subscription: sub });
+    expect(row(subscription({ cancel_at: T.periodEnd })).cancel_at_period_end).toBe(true);
+    expect(row(subscription({ cancel_at: T.periodEnd - 60 })).cancel_at_period_end).toBe(true);
+    // A cancel date after this period still renews once more before it.
+    expect(row(subscription({ cancel_at: T.periodEnd + 60 })).cancel_at_period_end).toBe(false);
+    expect(row(subscription({ cancel_at: null })).cancel_at_period_end).toBe(false);
+  });
+
   it("writes a customer with no subscription yet as a row with no status", () => {
     const row = billingRowFrom({
       orgId: ORG,
