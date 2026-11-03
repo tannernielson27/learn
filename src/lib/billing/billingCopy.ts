@@ -47,13 +47,17 @@ export const BILLING_REFUSAL_MESSAGES: Record<BillingRefusal, string> = {
   failed: "Billing could not be opened just now. Try again in a moment.",
 };
 
-// Pinned to UTC so a date renders the same on the server and in any browser, as the rest of the
-// workspace page does. Day before month, as the glossary's examples read: "3 November 2026".
+// Pinned to one zone so a date renders the same on the server and in any browser. Mountain time,
+// where LeaRN's teachers are: in UTC, a trial started after 5 pm read a day later here than on
+// Stripe's Checkout, portal and emails. Day before month, as the glossary's examples read:
+// "3 November 2026".
+const BILLING_TIME_ZONE = "America/Denver";
+
 const DATE = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "long",
   year: "numeric",
-  timeZone: "UTC",
+  timeZone: BILLING_TIME_ZONE,
 });
 
 /** "3 November 2026", or null for a value that is not a date. */
