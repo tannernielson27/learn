@@ -16,9 +16,14 @@ function as(access: WorkspaceAccess, canManage: boolean): WorkspaceAccess {
 }
 
 describe("formatBillingDate", () => {
-  it("reads day, month and year in UTC", () => {
+  it("reads day, month and year in Mountain time, the date Stripe's pages and emails show", () => {
     expect(formatBillingDate("2026-11-03T15:00:00Z")).toBe("3 November 2026");
-    expect(formatBillingDate("2026-11-03T23:30:00-05:00")).toBe("4 November 2026");
+    // A trial started at 6:04 pm MST ends at 01:04 UTC a week later: still the 9th in Utah.
+    expect(formatBillingDate("2026-11-10T01:04:22Z")).toBe("9 November 2026");
+    expect(formatBillingDate("2026-11-10T07:00:00Z")).toBe("10 November 2026");
+    // Daylight time: midnight MDT is 06:00 UTC.
+    expect(formatBillingDate("2026-07-01T05:59:00Z")).toBe("30 June 2026");
+    expect(formatBillingDate("2026-07-01T06:00:00Z")).toBe("1 July 2026");
   });
 
   it("is null for nothing or for something that is not a date", () => {
