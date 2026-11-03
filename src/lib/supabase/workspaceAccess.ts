@@ -18,3 +18,18 @@ export async function readWorkspaceAccess(client: Client): Promise<WorkspaceAcce
   }
   return toWorkspaceAccess(Array.isArray(data) ? data[0] : null);
 }
+
+/**
+ * Whether the caller's workspace has ever had free access (#522): any `access_grants` row, which
+ * RLS limits to the teacher's own workspace. Asked only once `workspace_access()` has said the
+ * workspace has no access, so any row there is one that was revoked or has expired. False on a
+ * failure, so the banner errs towards saying nothing.
+ */
+export async function readHadGrant(client: Client): Promise<boolean> {
+  const { data, error } = await client.from("access_grants").select("kind").limit(1);
+  if (error) {
+    console.error("[billing] access_grants could not answer", { code: error.code });
+    return false;
+  }
+  return (data?.length ?? 0) > 0;
+}

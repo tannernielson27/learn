@@ -1,4 +1,5 @@
 import { SignedInAs } from "@/components/auth/SignedInAs";
+import { BillingBanner } from "@/components/billing/BillingBanner";
 import { GuardedLink, LeaveGuardProvider } from "@/components/authoring/LeaveGuard";
 import { TeacherNav } from "@/components/authoring/TeacherNav";
 import { AccountMenu, MENU_ITEM_CLASSES } from "@/components/ui/AccountMenu";
@@ -6,6 +7,7 @@ import { AppShell, WORDMARK_CLASSES } from "@/components/ui/AppShell";
 import { textLinkClasses } from "@/components/ui/TextLink";
 import { ACCOUNT_PATH } from "@/lib/auth/accountPaths";
 import { shownName } from "@/lib/auth/displayName";
+import { readBillingBanner } from "@/lib/billing/requestAccess";
 import { readViewer } from "@/lib/classes/viewer";
 import { accountInitials } from "@/lib/ui/initials";
 import { signOut } from "./actions";
@@ -16,6 +18,9 @@ export default async function AuthorLayout({ children }: LayoutProps<"/author">)
   // The navigation is a teacher's. /author/no-access is drawn for an account that is not one yet.
   const teaches = signedIn && (viewer.role === "instructor" || viewer.role === "admin");
   const name = signedIn ? shownName(viewer) : "";
+  // #522: a teacher's billing state, read once for the request and shared with the workspace
+  // page's Billing section. Nothing is read for anyone else, and nothing without Stripe set up.
+  const banner = teaches ? await readBillingBanner(viewer.supabase) : null;
 
   return (
     // The header's links ask the page first, so leaving unsaved work (in the case study builder)
@@ -32,6 +37,7 @@ export default async function AuthorLayout({ children }: LayoutProps<"/author">)
           </GuardedLink>
         }
         nav={teaches ? <TeacherNav /> : null}
+        notice={<BillingBanner banner={banner} />}
         account={
           signedIn ? (
             <>
