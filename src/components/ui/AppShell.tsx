@@ -21,6 +21,11 @@ export interface AppShellProps {
    * screens one at a time (PLAN §6).
    */
   width?: ContentWidth;
+  /**
+   * A full-width system message between the bar and the content, such as the author pages'
+   * billing banner (#522). Nothing when null.
+   */
+  notice?: ReactNode;
   children: ReactNode;
 }
 
@@ -47,6 +52,7 @@ export function AppShell({
   nav,
   account,
   width = "reading",
+  notice,
   children,
 }: AppShellProps) {
   return (
@@ -68,6 +74,7 @@ export function AppShell({
           <div className="ml-auto flex h-16 min-w-0 items-center gap-3">{account}</div>
         ) : null}
       </header>
+      {notice}
       <main className={`mx-auto w-full flex-1 px-4 py-8 ${WIDTHS[width]}`.trim()}>{children}</main>
     </div>
   );
