@@ -18,7 +18,7 @@ import {
 import { archiveSelection } from "@/lib/authoring/archiveSelectionData";
 import { isUuid } from "@/lib/authoring/ids";
 import { checkRateLimit } from "@/lib/authoring/rateLimit";
-import { requireAuthor } from "@/lib/authoring/session";
+import { requireWriter } from "@/lib/authoring/writer";
 import type { Database } from "@/lib/supabase/database.types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -31,7 +31,7 @@ type Change = (client: SupabaseClient<Database>, id: string) => Promise<ArchiveR
  */
 async function change(id: string, path: string, gone: string, run: Change): Promise<ArchiveState> {
   if (!isUuid(id)) return { status: "error", error: gone };
-  const { supabase } = await requireAuthor(`${path}/${id}`);
+  const { supabase } = await requireWriter(`${path}/${id}`);
   const limit = await checkRateLimit(supabase, "save");
   if (!limit.ok) return { status: "error", error: limit.error };
   const result = await run(supabase, id);
@@ -75,7 +75,7 @@ export async function archiveSelectedAction(
   const selection = parseArchiveSelection(formData);
   if (!selection.ok) return { status: "error", error: selection.error, refusals: [] };
 
-  const { supabase } = await requireAuthor(`/author/banks/${bankId}`);
+  const { supabase } = await requireWriter(`/author/banks/${bankId}`);
   const limit = await checkRateLimit(supabase, "save");
   if (!limit.ok) return { status: "error", error: limit.error, refusals: [] };
 

@@ -13,7 +13,7 @@ import { createCaseStudy } from "@/lib/authoring/caseStudies";
 import { parseCaseStudyTitle } from "@/lib/authoring/caseStudyForm";
 import { isUuid } from "@/lib/authoring/ids";
 import { isEditorReady } from "@/lib/authoring/itemTypeGroups";
-import { requireAuthor } from "@/lib/authoring/session";
+import { requireWriter } from "@/lib/authoring/writer";
 import { PARTICIPANT_COOKIE } from "@/lib/live/participantToken";
 import { ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -37,7 +37,7 @@ export async function createBank(
   const parsed = parseBankForm(formData);
   if (!parsed.ok) return { status: "error", error: parsed.error };
 
-  const { supabase, orgId, userId } = await requireAuthor("/author");
+  const { supabase, orgId, userId } = await requireWriter("/author");
   const { data, error } = await supabase
     .from("item_banks")
     .insert({ name: parsed.name, org_id: orgId, created_by: userId })
@@ -58,7 +58,7 @@ export async function renameBank(
   const parsed = parseBankForm(formData);
   if (!parsed.ok) return { status: "error", error: parsed.error };
 
-  const { supabase } = await requireAuthor(`/author/banks/${bankId}`);
+  const { supabase } = await requireWriter(`/author/banks/${bankId}`);
   const { data, error } = await supabase
     .from("item_banks")
     .update({ name: parsed.name })
@@ -82,7 +82,7 @@ export async function createCaseStudyInBank(
   const parsed = parseCaseStudyTitle(formData);
   if (!parsed.ok) return { status: "error", error: parsed.error };
 
-  const { supabase, orgId, userId } = await requireAuthor(`/author/banks/${bankId}`);
+  const { supabase, orgId, userId } = await requireWriter(`/author/banks/${bankId}`);
   const created = await createCaseStudy(supabase, {
     bankId,
     orgId,
@@ -109,7 +109,7 @@ export async function createFolderInBank(
   const parsed = parseFolderName(formData);
   if (!parsed.ok) return { status: "error", error: parsed.error };
 
-  const { supabase, orgId, userId } = await requireAuthor(`/author/banks/${bankId}`);
+  const { supabase, orgId, userId } = await requireWriter(`/author/banks/${bankId}`);
   const created = await createFolder(supabase, {
     bankId,
     orgId,
@@ -133,7 +133,7 @@ export async function renameFolderInBank(
   const parsed = parseFolderName(formData);
   if (!parsed.ok) return { status: "error", error: parsed.error };
 
-  const { supabase } = await requireAuthor(`/author/banks/${bankId}?folder=${folderId}`);
+  const { supabase } = await requireWriter(`/author/banks/${bankId}?folder=${folderId}`);
   const renamed = await renameFolder(supabase, bankId, folderId, parsed.name);
   if (!renamed.ok) return { status: "error", error: renamed.error };
 
@@ -151,7 +151,7 @@ export async function deleteFolderInBank(
 ): Promise<FolderFormState> {
   if (!isUuid(bankId) || !isUuid(folderId)) return FOLDER_GONE;
 
-  const { supabase } = await requireAuthor(`/author/banks/${bankId}?folder=${folderId}`);
+  const { supabase } = await requireWriter(`/author/banks/${bankId}?folder=${folderId}`);
   const deleted = await deleteFolder(supabase, bankId, folderId);
   if (!deleted.ok) return { status: "error", error: deleted.error };
 
@@ -170,7 +170,7 @@ export async function moveToFolderInBank(
   const parsed = parseMoveForm(formData);
   if (!parsed.ok) return { status: "error", error: parsed.error };
 
-  const { supabase } = await requireAuthor(`/author/banks/${bankId}`);
+  const { supabase } = await requireWriter(`/author/banks/${bankId}`);
   const moved = await moveToFolder(supabase, bankId, parsed);
   if (!moved.ok) return { status: "error", error: moved.error };
 
@@ -189,7 +189,7 @@ export async function createItem(bankId: string, type: ItemType): Promise<Create
     return { error: "That question type cannot be written yet." };
   }
 
-  const { supabase, orgId, userId } = await requireAuthor(`/author/banks/${bankId}/new`);
+  const { supabase, orgId, userId } = await requireWriter(`/author/banks/${bankId}/new`);
   const { data, error } = await supabase
     .from("items")
     .insert({

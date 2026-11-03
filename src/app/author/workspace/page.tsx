@@ -15,7 +15,7 @@ import {
   readFounderId,
   readWorkspace,
 } from "@/lib/supabase/workspace";
-import { readWorkspaceAccess } from "@/lib/supabase/workspaceAccess";
+import { readWorkspaceAccessOnce } from "@/lib/supabase/workspaceAccess";
 import { memberCountLabel, WORKSPACE_PATH } from "@/lib/workspace/workspace";
 import { inviteColleague, removeMember, resendInvite, revokeInvite } from "./actions";
 import { openPortalAction, startCheckoutAction } from "./billingActions";
@@ -36,7 +36,7 @@ export const metadata: Metadata = { title: "Workspace" };
  * founder itself. The founder is read on its own, so a database that does not have the column yet
  * still draws the page, with nobody marked and no Remove.
  *
- * Billing (#519) is read once from `workspace_access()`. A database without the billing migration
+ * Billing (#519) is read once from `workspace_access()`, shared with the read-only check (#521). A database without the billing migration
  * answers nothing there, and the page then has no Billing section. Whether a free trial is still
  * on offer is asked only of the person who started the workspace, with Stripe set up, and only
  * when there is no subscription; the Server Function asks again before any Checkout.
@@ -48,7 +48,7 @@ export default async function WorkspacePage({ searchParams }: PageProps<"/author
     listMembers(supabase),
     listOpenInvites(supabase),
     readFounderId(supabase, orgId),
-    readWorkspaceAccess(supabase),
+    readWorkspaceAccessOnce(supabase),
     searchParams,
   ]);
   const canInvite = workspace?.selfRegistered === true;

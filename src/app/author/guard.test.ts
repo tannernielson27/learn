@@ -20,6 +20,24 @@ const EXEMPT_PAGES = new Set(["author/no-access/page.tsx"]);
 /** Server Functions that are not authoring. */
 const EXEMPT_ACTIONS = new Set(["signOut"]);
 
+/**
+ * #521: Server Functions that change nothing a read-only workspace may not change, and so check
+ * the author with `requireAuthor` alone. Every other one creates, changes or runs something and
+ * goes through `requireWriter`, which refuses a read-only workspace (billing enforced, no access).
+ * A new Server Function is a writer unless it is added here, with its reason.
+ */
+const READ_ONLY_SAFE_ACTIONS = new Set([
+  // The teacher's own onboarding state, not workspace content.
+  "hideGetStarted",
+  "markOnboarded",
+  // They take access away: a lapsed workspace can still tidy who is in it.
+  "revokeInvite",
+  "removeMember",
+  // Billing is how a lapsed workspace gets access back.
+  "startCheckoutAction",
+  "openPortalAction",
+]);
+
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const full = path.join(dir, name);
@@ -46,8 +64,8 @@ function bodyOf(source: string, name: string): string {
   return next === -1 ? rest : rest.slice(0, next);
 }
 
-/** Local helpers that themselves call requireAuthor, so an action may go through one. */
-function guardedHelpers(source: string): string[] {
+/** Local helpers that themselves call `guard`, so an action may go through one. */
+function guardedHelpers(source: string, guard = /require(Author|Writer)\(/): string[] {
   // `[<(]`: a helper may be generic, as `saveDraft<Values>(` is.
   return [...source.matchAll(/\n(?:async )?function (\w+)[<(]/g)]
     .map((match) => match[1]!)
@@ -55,7 +73,7 @@ function guardedHelpers(source: string): string[] {
       const start = source.search(new RegExp(`function ${name}[<(]`));
       const rest = source.slice(start);
       const next = rest.slice(1).search(/\n(export |async function |function )/);
-      return (next === -1 ? rest : rest.slice(0, next + 1)).includes("requireAuthor(");
+      return guard.test(next === -1 ? rest : rest.slice(0, next + 1));
     });
 }
 
@@ -86,12 +104,22 @@ describe("authoring guards", () => {
   for (const file of actionFiles) {
     const source = readFileSync(file, "utf8");
     const helpers = guardedHelpers(source);
+    const writerHelpers = guardedHelpers(source, /requireWriter\(/);
     const actions = exportedActions(source).filter((name) => !EXEMPT_ACTIONS.has(name));
     it.each(actions)(`${relative(file)}: %s checks the author`, (name) => {
       const body = bodyOf(source, name);
       const guarded =
-        body.includes("requireAuthor(") || helpers.some((helper) => body.includes(`${helper}(`));
+        /require(Author|Writer)\(/.test(body) ||
+        helpers.some((helper) => body.includes(`${helper}(`));
       expect(guarded).toBe(true);
+    });
+    const writers = actions.filter((name) => !READ_ONLY_SAFE_ACTIONS.has(name));
+    it.each(writers)(`${relative(file)}: %s refuses a read-only workspace (#521)`, (name) => {
+      const body = bodyOf(source, name);
+      const gated =
+        body.includes("requireWriter(") ||
+        writerHelpers.some((helper) => body.includes(`${helper}(`));
+      expect(gated).toBe(true);
     });
   }
 });

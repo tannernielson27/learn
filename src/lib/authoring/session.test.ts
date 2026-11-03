@@ -9,7 +9,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 let claims: Record<string, unknown> | null;
 let profile: { org_id: string | null; role: string | null } | null;
 
+/** What `workspace_access()` answers (#521); only read when billing is enforced. */
+let accessRow: Record<string, unknown> | null;
+let accessError: { code: string } | null;
+const rpc = vi.fn(async () => ({
+  data: accessError ? null : accessRow ? [accessRow] : [],
+  error: accessError,
+}));
+
 const client = {
+  rpc,
   auth: { getClaims: async () => ({ data: claims ? { claims } : null }) },
   from: () => ({
     select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: profile, error: null }) }) }),
@@ -34,7 +43,11 @@ const ORG = "00000000-0000-4000-8000-000000000001";
 beforeEach(() => {
   claims = { sub: USER, email: "person@example.test" };
   profile = { org_id: ORG, role: "instructor" };
+  accessRow = null;
+  accessError = null;
+  rpc.mockClear();
   redirected.mockClear();
+  vi.unstubAllEnvs();
 });
 
 describe("authorForRoute", () => {
@@ -90,5 +103,82 @@ describe("requireAuthor", () => {
   it("hands an author its session", async () => {
     expect(await requireAuthor("/author")).toMatchObject({ userId: USER, orgId: ORG });
     expect(redirected).not.toHaveBeenCalled();
+  });
+});
+
+describe("authorForRoute: the read-only state (#521)", () => {
+  const lapsed = {
+    has_access: false,
+    source: "none",
+    grant_kind: null,
+    status: null,
+    trial_end: null,
+    current_period_end: null,
+    cancel_at_period_end: null,
+    is_founder: true,
+  };
+
+  it("reads nothing and is never read-only while BILLING_ENFORCED is unset", async () => {
+    accessRow = lapsed;
+    expect(await authorForRoute()).toMatchObject({ status: "ok", readOnly: null });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it.each(["false", "1", "TRUE"])("is not enforced by BILLING_ENFORCED=%s", async (value) => {
+    vi.stubEnv("BILLING_ENFORCED", value);
+    accessRow = lapsed;
+    expect(await authorForRoute()).toMatchObject({ status: "ok", readOnly: null });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("is read-only for the person who started a lapsed workspace, who may subscribe", async () => {
+    vi.stubEnv("BILLING_ENFORCED", "true");
+    accessRow = lapsed;
+    expect(await authorForRoute()).toMatchObject({
+      status: "ok",
+      readOnly: { readOnly: true, canManage: true },
+    });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith("workspace_access");
+  });
+
+  it("is read-only for another teacher of a lapsed workspace, who must ask", async () => {
+    vi.stubEnv("BILLING_ENFORCED", "true");
+    accessRow = { ...lapsed, is_founder: false };
+    expect(await authorForRoute()).toMatchObject({
+      readOnly: { readOnly: true, canManage: false },
+    });
+  });
+
+  it("is not read-only when enforced and the workspace has access", async () => {
+    vi.stubEnv("BILLING_ENFORCED", "true");
+    accessRow = { ...lapsed, has_access: true, source: "grant", grant_kind: "beta" };
+    expect(await authorForRoute()).toMatchObject({ status: "ok", readOnly: null });
+  });
+
+  it("leaves a failed read to the database rather than refusing every teacher", async () => {
+    vi.stubEnv("BILLING_ENFORCED", "true");
+    accessError = { code: "PGRST202" };
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await authorForRoute()).toMatchObject({ status: "ok", readOnly: null });
+    logged.mockRestore();
+  });
+
+  it("never reads billing for a student or a signed-out visitor", async () => {
+    vi.stubEnv("BILLING_ENFORCED", "true");
+    profile = { org_id: ORG, role: "student" };
+    await authorForRoute();
+    claims = null;
+    await authorForRoute();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("hands requireAuthor's caller the same state, so a write gate reads nothing more", async () => {
+    vi.stubEnv("BILLING_ENFORCED", "true");
+    accessRow = lapsed;
+    expect(await requireAuthor("/author")).toMatchObject({
+      readOnly: { readOnly: true, canManage: true },
+    });
+    expect(rpc).toHaveBeenCalledTimes(1);
   });
 });

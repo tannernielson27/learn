@@ -173,12 +173,25 @@ describe("handleHealth", () => {
       STRIPE_SECRET_KEY: true,
       STRIPE_WEBHOOK_SECRET: false,
       STRIPE_PRICE_LOOKUP_KEY: false,
+      BILLING_ENFORCED: false,
     });
     expect(body.stripe).toBe("incomplete");
     expect(body.ready).toBe(true);
 
     const anyone = await (await handleHealth(get(), deps({ env }))).text();
     expect(anyone).not.toMatch(/stripe/i);
+  });
+
+  it.each([
+    ["true", true],
+    ["TRUE", false],
+    ["1", false],
+    [" true", false],
+    ["", false],
+  ])("reports BILLING_ENFORCED=%j as enforced: %s (#521)", (value, enforced) => {
+    expect(
+      summarizeEnv({ ...FULL_ENV, BILLING_ENFORCED: value }).billingEnv?.BILLING_ENFORCED,
+    ).toBe(enforced);
   });
 
   it("reports off with no Stripe variable at all", () => {

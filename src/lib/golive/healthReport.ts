@@ -16,6 +16,7 @@
  * memoised per server instance, so a flood that skips the CDN still reaches Supabase at most once
  * per instance every few seconds. The secret, 32+ random characters, is the boundary for the detail.
  */
+import { billingEnforced } from "@/lib/billing/enforcement";
 import { readStripeConfig } from "@/lib/billing/stripeConfig";
 import { httpsOrigin } from "@/lib/http/siteOrigin";
 import { bearerMatches, MIN_SECRET_LENGTH } from "@/lib/reminders/cronRoute";
@@ -77,7 +78,8 @@ export function summarizeEnv(
   ]);
   const billing = BILLING_ENV.map(({ name }): [BillingEnvName, boolean] => [
     name,
-    present(env[name]),
+    // Whether enforcement is on, not merely set: only "true" turns it on (#521).
+    name === "BILLING_ENFORCED" ? billingEnforced(env) : present(env[name]),
   ]);
   return {
     env: Object.fromEntries(entries) as Record<RequiredEnvName, boolean>,

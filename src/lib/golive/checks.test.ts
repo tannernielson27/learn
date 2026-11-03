@@ -341,6 +341,7 @@ describe("healthChecks: billing's Stripe variables (#518)", () => {
     STRIPE_SECRET_KEY: secret,
     STRIPE_WEBHOOK_SECRET: webhook,
     STRIPE_PRICE_LOOKUP_KEY: lookup,
+    BILLING_ENFORCED: false,
   });
 
   it("passes live keys", () => {

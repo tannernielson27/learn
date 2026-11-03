@@ -32,6 +32,8 @@ export const BILLING_ENV = [
   { name: "STRIPE_SECRET_KEY", docs: "§7.15 step 7" },
   { name: "STRIPE_WEBHOOK_SECRET", docs: "§7.15 step 6" },
   { name: "STRIPE_PRICE_LOOKUP_KEY", docs: "§7.15 step 7" },
+  // Optional and off by default (#521): reported as on only for the exact value "true".
+  { name: "BILLING_ENFORCED", docs: "§7.15 step 11" },
 ] as const;
 
 export type BillingEnvName = (typeof BILLING_ENV)[number]["name"];

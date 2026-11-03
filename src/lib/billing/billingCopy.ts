@@ -142,3 +142,18 @@ export function billingConfirmation(access: WorkspaceAccess): string | null {
   if (access.state.kind === "active") return "Thank you. Your subscription has started.";
   return null;
 }
+
+/**
+ * Why a write was refused in a read-only workspace (#521, docs/glossary.md "Billing"): one
+ * sentence, saying what cannot be done and who can change it. Never "paywall" or "upgrade".
+ */
+export const READ_ONLY_HEADING = "Your workspace is read-only";
+export const READ_ONLY_FOR_FOUNDER =
+  "Your workspace has no subscription, so nothing can be created or changed until you subscribe in Billing.";
+export const READ_ONLY_FOR_COLLEAGUE =
+  "Your workspace has no subscription, so nothing can be created or changed: ask the person who started your workspace to subscribe.";
+export const READ_ONLY_BILLING_LINK = "Go to Billing";
+
+export function readOnlySentence(canManage: boolean): string {
+  return canManage ? READ_ONLY_FOR_FOUNDER : READ_ONLY_FOR_COLLEAGUE;
+}

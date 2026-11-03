@@ -7,6 +7,7 @@ import type { ConfirmOutcome } from "@/components/classes/ConfirmSubmit";
 import type { InviteColleagueState } from "@/components/workspace/InviteColleagueForm";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
+import { requireWriter } from "@/lib/authoring/writer";
 import { getMailer } from "@/lib/email";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import {
@@ -55,12 +56,24 @@ interface VerifiedAuthor {
   email: string;
 }
 
-async function verifiedAuthor(): Promise<VerifiedAuthor> {
-  const { supabase, orgId } = await requireAuthor(WORKSPACE_PATH);
+async function verifiedUser(
+  author: Promise<{ supabase: AuthorClient; orgId: string }>,
+): Promise<VerifiedAuthor> {
+  const { supabase, orgId } = await author;
   const { data, error } = await supabase.auth.getUser();
   const user = error ? null : data.user;
   if (!user) redirect(`/sign-in?next=${encodeURIComponent(WORKSPACE_PATH)}`);
   return { supabase, orgId, userId: user.id, email: user.email ?? "" };
+}
+
+/** For revoking an invitation and removing a colleague: they take access away, never refused. */
+async function verifiedAuthor(): Promise<VerifiedAuthor> {
+  return verifiedUser(requireAuthor(WORKSPACE_PATH));
+}
+
+/** For inviting, which a read-only workspace may not do (#521). */
+async function verifiedWriter(): Promise<VerifiedAuthor> {
+  return verifiedUser(requireWriter(WORKSPACE_PATH));
 }
 
 /**
@@ -93,7 +106,7 @@ export async function inviteColleague(
   _previous: InviteColleagueState,
   formData: FormData,
 ): Promise<InviteColleagueState> {
-  const { supabase, orgId, userId, email } = await verifiedAuthor();
+  const { supabase, orgId, userId, email } = await verifiedWriter();
   const parsed = parseInviteAddress(formData.get("email"));
   if (!parsed.ok) return { status: "error", error: parsed.error };
 
@@ -134,7 +147,7 @@ export async function revokeInvite(inviteId: string): Promise<ConfirmOutcome> {
  * read from the teacher's own row, never from the request. See `resendInvitation`.
  */
 export async function resendInvite(inviteId: string): Promise<ConfirmOutcome> {
-  const { supabase, orgId, userId, email } = await verifiedAuthor();
+  const { supabase, orgId, userId, email } = await verifiedWriter();
   if (!isUuid(inviteId)) return { ok: false, message: INVITE_GONE };
 
   const workspace = await readWorkspace(supabase, orgId);

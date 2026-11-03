@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toWorkspaceAccess, type WorkspaceAccess } from "@/lib/billing/access";
 import type { Database } from "./database.types";
@@ -18,3 +19,10 @@ export async function readWorkspaceAccess(client: Client): Promise<WorkspaceAcce
   }
   return toWorkspaceAccess(Array.isArray(data) ? data[0] : null);
 }
+
+/**
+ * `readWorkspaceAccess`, at most once per server render for one client (React's `cache`, as
+ * `readVerifiedProfile` is): the read-only check (#521) and the workspace page share one read.
+ * Outside a render (Server Functions, Route Handlers) every call reads afresh.
+ */
+export const readWorkspaceAccessOnce = cache(readWorkspaceAccess);
