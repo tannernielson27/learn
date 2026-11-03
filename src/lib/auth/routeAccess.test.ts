@@ -18,6 +18,12 @@ describe("redirectForAccess", () => {
     expect(target?.searchParams.get("next")).toBe(path);
   });
 
+  // #522: the business pages are for anyone, signed in or out.
+  it.each(["/pricing", "/terms", "/privacy"])("lets anyone through to %s", (path) => {
+    expect(redirectForAccess(at(path), false)).toBeNull();
+    expect(redirectForAccess(at(path), true)).toBeNull();
+  });
+
   it("lets a signed-in author through", () => {
     expect(redirectForAccess(at("/author/banks/1"), true)).toBeNull();
   });

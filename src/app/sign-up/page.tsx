@@ -6,8 +6,10 @@ import { signedInHome } from "@/lib/auth/landing";
 import { carriedClassCode, carriedNext, parseSignUpRole } from "@/lib/auth/signUp";
 import { captchaSiteKey } from "@/lib/auth/turnstile";
 import { readViewer } from "@/lib/classes/viewer";
+import { PRICING_PATH } from "@/lib/site/links";
 import { createAccount } from "./actions";
 import { AuthFrame, AUTH_HEADING_ALONE } from "@/components/auth/AuthFrame";
+import { SiteFooter } from "@/components/site/SiteFooter";
 import { textLinkClasses } from "@/components/ui/TextLink";
 
 export const metadata: Metadata = { title: "Create an account" };
@@ -30,22 +32,31 @@ export default async function SignUpPage({ searchParams }: PageProps<"/sign-up">
   const signInHref = next ? `/sign-in?next=${encodeURIComponent(next)}` : "/sign-in";
 
   return (
-    <AuthFrame>
-      <h1 className={AUTH_HEADING_ALONE}>Create an account</h1>
-      <SignUpForm
-        action={createAccount}
-        initialRole={initialRole}
-        classCode={classCode}
-        next={next}
-        signInHref={signInHref}
-        captchaSiteKey={captchaSiteKey()}
-      />
-      <p className="mt-6 text-sm text-ink-2">
-        Have an account?{" "}
-        <Link href={signInHref} className={textLinkClasses({ size: "sm" })}>
-          Sign in
-        </Link>
-      </p>
-    </AuthFrame>
+    <>
+      <AuthFrame>
+        <h1 className={AUTH_HEADING_ALONE}>Create an account</h1>
+        <SignUpForm
+          action={createAccount}
+          initialRole={initialRole}
+          classCode={classCode}
+          next={next}
+          signInHref={signInHref}
+          captchaSiteKey={captchaSiteKey()}
+        />
+        <p className="mt-6 text-sm text-ink-2">
+          Have an account?{" "}
+          <Link href={signInHref} className={textLinkClasses({ size: "sm" })}>
+            Sign in
+          </Link>
+        </p>
+        {/* #522: a teacher deciding whether to sign up can see the price first. */}
+        <p className="mt-2 text-sm text-ink-2">
+          <Link href={PRICING_PATH} className={textLinkClasses({ size: "sm" })}>
+            See pricing
+          </Link>
+        </p>
+      </AuthFrame>
+      <SiteFooter />
+    </>
   );
 }
