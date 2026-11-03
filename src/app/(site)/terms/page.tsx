@@ -17,8 +17,8 @@ const MAIL = (
 );
 
 /**
- * The Terms of Service (#522). A draft in plain English that the owner reviews with counsel
- * before billing goes live; the assumptions behind it are listed on the pull request. Stripe's
+ * The Terms of Service (#522), in plain English, approved by the owner on 2026-11-03; the
+ * assumptions behind it are listed on the pull request. Stripe's
  * account review looks for a section headed "Refunds", so it has one of its own.
  */
 const SECTIONS: readonly LegalSection[] = [

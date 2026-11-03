@@ -168,7 +168,7 @@ describe("/terms (#522)", () => {
   it("dates itself, names who runs LeaRN, and uses the glossary's words", () => {
     const page = <TermsPage />;
     render(page);
-    expect(screen.getByText(/^Last updated/)).toHaveTextContent("Last updated 29 October 2026");
+    expect(screen.getByText(/^Last updated/)).toHaveTextContent("Last updated 3 November 2026");
     expect(
       screen.getByText(/operated by Tanner Nielson, a sole proprietor doing business as LeaRN/),
     ).toBeInTheDocument();
@@ -234,7 +234,7 @@ describe("/privacy (#522)", () => {
   it("dates itself and uses the glossary's words", () => {
     const page = <PrivacyPage />;
     render(page);
-    expect(screen.getByText(/^Last updated/)).toHaveTextContent("Last updated 29 October 2026");
+    expect(screen.getByText(/^Last updated/)).toHaveTextContent("Last updated 3 November 2026");
     expectGlossaryWording(renderToStaticMarkup(page));
     expect(privacyMetadata.title).toBe("Privacy Policy");
   });

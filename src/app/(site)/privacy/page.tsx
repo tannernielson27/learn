@@ -259,7 +259,7 @@ const SECTIONS: readonly LegalSection[] = [
 
 /**
  * The Privacy Policy (#522). Every claim is checked against the code; see `PROVIDERS` for where.
- * A draft the owner reviews with counsel before billing goes live.
+ * Approved by the owner on 2026-11-03.
  */
 export default function PrivacyPage() {
   return (

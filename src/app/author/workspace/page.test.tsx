@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -13,6 +13,14 @@ vi.mock("next/navigation", () => ({
     throw new Error(`redirect:${to}`);
   },
 }));
+vi.mock("./billingActions", () => ({
+  startCheckoutAction: vi.fn(async () => ({ status: "idle" })),
+  openPortalAction: vi.fn(async () => ({ status: "idle" })),
+}));
+/** The service-role client: only `may_start_trial`, and only with Stripe set up. */
+const service = { rpc: vi.fn(async () => ({ data: mayStartTrial, error: null })) };
+let mayStartTrial = true;
+vi.mock("@/lib/supabase/service", () => ({ createSupabaseServiceClient: () => service }));
 vi.mock("./actions", () => ({
   inviteColleague: vi.fn(async () => ({ status: "idle" })),
   removeMember: vi.fn(async () => ({ ok: true })),
@@ -31,6 +39,8 @@ let tables: Record<string, Reply>;
 let members: Reply;
 /** What the read of `orgs.founder_id` answers. It is a read of its own, apart from the name. */
 let founder: Reply;
+/** What `workspace_access()` answers: no row unless a test gives one. */
+let billing: Reply;
 const selected: [table: string, columns: unknown][] = [];
 
 function builderFor(table: string) {
@@ -54,14 +64,20 @@ function builderFor(table: string) {
 const client = {
   auth: { getClaims: async () => ({ data: claims ? { claims } : null }) },
   from: vi.fn((table: string) => builderFor(table)),
-  rpc: vi.fn<(name: string) => Promise<Reply>>(async () => members),
+  rpc: vi.fn<(name: string) => Promise<Reply>>(async (name) =>
+    name === "workspace_access" ? billing : members,
+  ),
 };
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient: async () => client }));
 
 const { default: WorkspacePage } = await import("./page");
 
-async function renderPage() {
-  return render(await WorkspacePage());
+function pageProps(query: Record<string, string> = {}) {
+  return { params: Promise.resolve({}), searchParams: Promise.resolve(query) };
+}
+
+async function renderPage(query: Record<string, string> = {}) {
+  return render(await WorkspacePage(pageProps(query)));
 }
 
 beforeEach(() => {
@@ -96,6 +112,9 @@ beforeEach(() => {
     error: null,
   };
   founder = { data: { founder_id: USER }, error: null };
+  billing = { data: [], error: null };
+  mayStartTrial = true;
+  vi.unstubAllEnvs();
 });
 
 /** The workspace with a second teacher in it, who came in by invitation. */
@@ -118,14 +137,16 @@ function withColleague() {
 describe("who reaches /author/workspace", () => {
   it("sends a signed-out visitor to sign in, and back here afterwards", async () => {
     claims = null;
-    await expect(WorkspacePage()).rejects.toThrow("redirect:/sign-in?next=%2Fauthor%2Fworkspace");
+    await expect(WorkspacePage(pageProps())).rejects.toThrow(
+      "redirect:/sign-in?next=%2Fauthor%2Fworkspace",
+    );
     expect(client.rpc).not.toHaveBeenCalled();
     expect(client.from).not.toHaveBeenCalledWith("org_invites");
   });
 
   it("sends a student to the student home, having read no member and no invitation", async () => {
     tables.profiles = { data: { org_id: ORG, role: "student" }, error: null };
-    await expect(WorkspacePage()).rejects.toThrow("redirect:/learn");
+    await expect(WorkspacePage(pageProps())).rejects.toThrow("redirect:/learn");
     expect(client.rpc).not.toHaveBeenCalled();
     expect(client.from).not.toHaveBeenCalledWith("org_invites");
     expect(client.from).not.toHaveBeenCalledWith("orgs");
@@ -133,7 +154,7 @@ describe("who reaches /author/workspace", () => {
 
   it("sends an account with no role to the welcome page", async () => {
     tables.profiles = { data: { org_id: null, role: null }, error: null };
-    await expect(WorkspacePage()).rejects.toThrow("redirect:/welcome");
+    await expect(WorkspacePage(pageProps())).rejects.toThrow("redirect:/welcome");
     expect(client.rpc).not.toHaveBeenCalled();
   });
 });
@@ -297,5 +318,116 @@ describe("a workspace that cannot be read", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Your workspace" })).toBeVisible();
     expect(screen.getByRole("alert")).toHaveTextContent("The workspace could not be loaded.");
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  });
+});
+
+/** One `workspace_access()` row; the rest of the page is the founder's own workspace. */
+function accessRow(overrides: Record<string, unknown> = {}) {
+  return {
+    data: [
+      {
+        has_access: false,
+        source: "none",
+        grant_kind: null,
+        status: null,
+        trial_end: null,
+        current_period_end: null,
+        cancel_at_period_end: false,
+        is_founder: true,
+        ...overrides,
+      },
+    ],
+    error: null,
+  };
+}
+
+function withStripe() {
+  vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_fake");
+  vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_fake");
+}
+
+const billingSection = () => screen.getByRole("region", { name: "Billing" });
+
+describe("the Billing section (#519)", () => {
+  it("is not drawn when workspace_access() answers nothing or fails", async () => {
+    await renderPage();
+    expect(screen.queryByRole("region", { name: "Billing" })).toBeNull();
+    cleanup();
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    billing = { data: null, error: { code: "PGRST202" } };
+    await renderPage();
+    expect(screen.queryByRole("region", { name: "Billing" })).toBeNull();
+    expect(screen.getByRole("heading", { level: 1, name: "Ada's workspace" })).toBeVisible();
+    logged.mockRestore();
+  });
+
+  it("offers the person who started the workspace the free trial, with Stripe set up", async () => {
+    withStripe();
+    billing = accessRow();
+    await renderPage();
+    expect(
+      within(billingSection()).getByRole("button", { name: "Start your free trial" }),
+    ).toBeVisible();
+    expect(service.rpc).toHaveBeenCalledWith("may_start_trial", { p_profile: USER, p_org: ORG });
+  });
+
+  it("offers Subscribe once this person or workspace has had a trial", async () => {
+    withStripe();
+    billing = accessRow();
+    mayStartTrial = false;
+    await renderPage();
+    expect(within(billingSection()).getByRole("button", { name: "Subscribe" })).toBeVisible();
+    expect(within(billingSection()).queryByRole("button", { name: /free trial/ })).toBeNull();
+  });
+
+  it("shows the status but no button without Stripe, and asks nothing of the service role", async () => {
+    billing = accessRow();
+    await renderPage();
+    expect(billingSection()).toHaveTextContent("This workspace does not have a subscription.");
+    expect(within(billingSection()).queryByRole("button")).toBeNull();
+    expect(service.rpc).not.toHaveBeenCalled();
+  });
+
+  it("gives a colleague the status and who to ask, and never asks about a trial", async () => {
+    withStripe();
+    billing = accessRow({
+      is_founder: false,
+      has_access: true,
+      source: "subscription",
+      status: "active",
+      current_period_end: "2026-12-03T15:00:00Z",
+    });
+    await renderPage();
+    expect(billingSection()).toHaveTextContent("Your subscription renews on 3 December 2026.");
+    expect(billingSection()).toHaveTextContent(
+      "The person who started this workspace manages billing.",
+    );
+    expect(within(billingSection()).queryByRole("button")).toBeNull();
+    expect(service.rpc).not.toHaveBeenCalled();
+  });
+
+  it("says a workspace on a grant has free access, and nothing else", async () => {
+    withStripe();
+    billing = accessRow({ has_access: true, source: "grant", grant_kind: "beta" });
+    await renderPage();
+    expect(billingSection()).toHaveTextContent(
+      "This workspace has free access. There is nothing to pay.",
+    );
+    expect(billingSection()).not.toHaveTextContent(/beta|\$/i);
+    expect(within(billingSection()).queryByRole("button")).toBeNull();
+  });
+
+  it("thanks the teacher back from Checkout once the trial shows", async () => {
+    billing = accessRow({
+      has_access: true,
+      source: "subscription",
+      status: "trialing",
+      trial_end: "2026-11-03T15:00:00Z",
+    });
+    await renderPage({ billing: "started" });
+    expect(within(billingSection()).getByRole("status")).toHaveTextContent(
+      "Thank you. Your free trial has started.",
+    );
+    expect(billingSection()).toHaveTextContent("Your free trial ends on 3 November 2026.");
   });
 });
