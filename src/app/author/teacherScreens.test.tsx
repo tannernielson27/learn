@@ -47,6 +47,7 @@ const state = vi.hoisted(() => ({
   invites: [] as unknown[] | null,
   workspace: { name: "Ward 4 teaching", selfRegistered: true } as unknown,
   founderId: null as string | null,
+  access: null as import("@/lib/billing/access").WorkspaceAccess | null,
   moveContext: null as unknown,
 }));
 
@@ -120,6 +121,10 @@ vi.mock("@/app/author/workspace/actions", () => ({
   removeMember: action(),
   resendInvite: action(),
   revokeInvite: action(),
+}));
+vi.mock("@/app/author/workspace/billingActions", () => ({
+  openPortalAction: action(),
+  startCheckoutAction: action(),
 }));
 vi.mock("@/app/live/actions", () => ({ startLiveSession: action() }));
 vi.mock("@/app/sign-in/actions", () => ({ resendConfirmation: action() }));
@@ -203,6 +208,9 @@ vi.mock("@/lib/supabase/workspace", () => ({
   listOpenInvites: async () => state.invites,
   readFounderId: async () => state.founderId,
   readWorkspace: async () => state.workspace,
+}));
+vi.mock("@/lib/supabase/workspaceAccess", () => ({
+  readWorkspaceAccess: async () => state.access,
 }));
 vi.mock("@/lib/onboarding/progress", () => ({ readOrgProgress: async () => null }));
 vi.mock("@/lib/onboarding/teacherWelcome", async (original) => ({
@@ -312,6 +320,7 @@ function fill() {
   ];
   state.workspace = { name: "Ward 4 teaching", selfRegistered: true };
   state.founderId = USER;
+  state.access = null;
   state.moveContext = {
     quizzes: [{ id: "b2", name: "Renal week" }],
     uses: { assignments: 1, liveSessions: 2 },
@@ -361,6 +370,9 @@ const bankPage = (query: Query = {}) =>
     params: Promise.resolve({ bankId: BANK }),
     searchParams: Promise.resolve(query),
   });
+
+const workspacePage = () =>
+  workspace.default({ params: Promise.resolve({}), searchParams: Promise.resolve({}) });
 
 interface Screen {
   name: string;
@@ -516,7 +528,19 @@ const SCREENS: Screen[] = [
     name: "/author/workspace",
     title: workspace.metadata.title,
     counted: true,
-    draw: () => workspace.default(),
+    draw: () => workspacePage(),
+  },
+  {
+    name: "/author/workspace, with its Billing section",
+    title: workspace.metadata.title,
+    setup: () => {
+      state.access = {
+        hasAccess: false,
+        canManage: true,
+        state: { kind: "none", status: null },
+      };
+    },
+    draw: () => workspacePage(),
   },
   {
     name: "/author/workspace, the shared workspace",
@@ -524,7 +548,7 @@ const SCREENS: Screen[] = [
     setup: () => {
       state.workspace = { name: "LeaRN", selfRegistered: false };
     },
-    draw: () => workspace.default(),
+    draw: () => workspacePage(),
   },
   {
     name: "/author/workspace, nothing loads",
@@ -534,7 +558,7 @@ const SCREENS: Screen[] = [
       state.members = null;
       state.invites = null;
     },
-    draw: () => workspace.default(),
+    draw: () => workspacePage(),
   },
   {
     name: "/author/classes",

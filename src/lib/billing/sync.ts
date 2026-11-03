@@ -127,6 +127,21 @@ export function newestSubscription(
 }
 
 /**
+ * Whether the subscription will not renew past this period. The Customer Portal's cancel (API
+ * 2026-09-30) sets `cancel_at` to the period end and leaves `cancel_at_period_end` false, so
+ * both are read. A `cancel_at` later than this period still renews in between.
+ */
+function endsThisPeriod(
+  subscription: Stripe.Subscription | null,
+  periodEnd: number | undefined,
+): boolean {
+  if (!subscription) return false;
+  if (subscription.cancel_at_period_end) return true;
+  const cancelAt = subscription.cancel_at;
+  return cancelAt != null && periodEnd != null && cancelAt <= periodEnd;
+}
+
+/**
  * The row for one workspace, from the customer and its newest subscription. Since API
  * 2025-03-31 `current_period_end` lives on the subscription item, not the subscription; a
  * workspace subscription has exactly one item (the one price), so the first is the one.
@@ -149,7 +164,7 @@ export function billingRowFrom(input: {
     price_lookup_key: price?.lookup_key ?? null,
     current_period_end: isoFromUnix(item?.current_period_end),
     trial_end: isoFromUnix(subscription?.trial_end),
-    cancel_at_period_end: subscription?.cancel_at_period_end ?? false,
+    cancel_at_period_end: endsThisPeriod(subscription, item?.current_period_end),
     billing_email: email,
     livemode: subscription?.livemode ?? ("livemode" in customer ? customer.livemode : false),
   };
