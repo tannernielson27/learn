@@ -218,7 +218,9 @@ begin
 end;
 $$;
 
--- Every gated write a teacher of L can make, and how a refusal shows.
+-- Every gated write a teacher of L can make, and how a refusal shows. Each writes only the
+-- columns granted to authenticated (org_id, created_by and the like come from defaults), so a
+-- 42501 here is the gate and never a column privilege.
 create temporary table writes (n int primary key, label text, q text, refused text);
 insert into writes (n, label, q, refused) values
   (1, 'create a quiz',
@@ -271,8 +273,7 @@ insert into writes (n, label, q, refused) values
    $$ delete from public.library_folders
        where id = '00000000-0000-0000-0000-000000521d1a' $$, 'none'),
   (17, 'create a class',
-   $$ insert into public.classes (org_id, name)
-      values ('00000000-0000-0000-0000-000000521f0a', 'NUR 599') $$, '42501'),
+   $$ insert into public.classes (name) values ('NUR 599') $$, '42501'),
   (18, 'rename a class',
    $$ update public.classes set name = 'NUR 598'
        where id = '00000000-0000-0000-0000-000000521ca1' $$, 'none'),
@@ -282,18 +283,18 @@ insert into writes (n, label, q, refused) values
          and profile_id = '00000000-0000-0000-0000-000000521a03' $$, 'none'),
   (20, 'assign a quiz',
    $$ insert into public.assignments
-        (org_id, class_id, bank_id, title, opens_at, closes_at, max_attempts)
-      values ('00000000-0000-0000-0000-000000521f0a', '00000000-0000-0000-0000-000000521ca1',
+        (class_id, bank_id, title, opens_at, closes_at, max_attempts)
+      values ('00000000-0000-0000-0000-000000521ca1',
               '00000000-0000-0000-0000-000000521b0a', 'New 521', now() + interval '1 day',
               now() + interval '2 days', 1) $$, '42501'),
   (21, 'edit an assignment',
-   $$ update public.assignments set title = 'Edited 521'
+   $$ update public.assignments set max_attempts = 3
        where id = '00000000-0000-0000-0000-000000521aa2' $$, 'none'),
   (22, 'delete an assignment',
    $$ delete from public.assignments where id = '00000000-0000-0000-0000-000000521aa2' $$, 'none'),
   (23, 'share a quiz for practice',
-   $$ insert into public.bank_practice_shares (org_id, bank_id, class_id)
-      values ('00000000-0000-0000-0000-000000521f0a', '00000000-0000-0000-0000-000000521b0a',
+   $$ insert into public.bank_practice_shares (bank_id, class_id)
+      values ('00000000-0000-0000-0000-000000521b0a',
               '00000000-0000-0000-0000-000000521ca2') $$, '42501'),
   (24, 'stop sharing for practice',
    $$ delete from public.bank_practice_shares
@@ -303,8 +304,8 @@ insert into writes (n, label, q, refused) values
    $$ select public.start_session(source_bank => '00000000-0000-0000-0000-000000521b0a') $$,
    '42501'),
   (26, 'start an AI import',
-   $$ insert into public.ai_import_batches (org_id, created_by)
-      values ('00000000-0000-0000-0000-000000521f0a', '00000000-0000-0000-0000-000000521a01') $$,
+   $$ insert into public.ai_import_batches (org_id)
+      values ('00000000-0000-0000-0000-000000521f0a') $$,
    '42501'),
   (27, 'retarget an AI import',
    $$ update public.ai_import_batches set bank_id = '00000000-0000-0000-0000-000000521b0a'
