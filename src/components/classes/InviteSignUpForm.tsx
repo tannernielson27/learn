@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { DisplayNameField } from "@/components/auth/DisplayNameField";
 import { PasswordField } from "@/components/auth/PasswordField";
+import { SignUpConsent } from "@/components/site/SignUpConsent";
 import { Button } from "@/components/ui/Button";
 import { fieldClasses } from "@/components/ui/fieldClasses";
 import { PASSWORD_HINT, PASSWORD_MIN_LENGTH } from "@/lib/auth/passwordRules";
@@ -157,6 +158,7 @@ export function InviteSignUpForm({
         >
           {pending ? "Joining…" : "Join the class"}
         </Button>
+        <SignUpConsent />
       </form>
     </section>
   );

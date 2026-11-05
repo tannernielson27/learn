@@ -154,6 +154,22 @@ describe("the proxy matcher still covers the gallery", () => {
     expect(matcher).toContain("/");
   });
 
+  // #522: the business pages are public. Pricing reads the session to pick its link, as the
+  // landing page does, so the proxy runs there and lets a visitor through; the terms and the
+  // privacy policy are static and the proxy never runs on them at all.
+  it("lets a signed-out visitor reach pricing, and stays off the terms and privacy pages", async () => {
+    expect(matcher).toContain("/pricing");
+    updateSession.mockResolvedValue({ response: NextResponse.next(), signedIn: false });
+    const pricing = await proxy(request("/pricing"));
+    expect(pricing.status).toBe(200);
+    expect(pricing.headers.get("location")).toBeNull();
+
+    for (const path of ["/terms", "/privacy"]) {
+      expect(matcher.some((entry) => entry === path || path.startsWith(`${entry}/`))).toBe(false);
+      expect(matcher.some((entry) => entry.startsWith(path))).toBe(false);
+    }
+  });
+
   it("runs on a workspace invitation and keeps its token out of every Referer", async () => {
     expect(matcher).toContain("/w/:path*");
 

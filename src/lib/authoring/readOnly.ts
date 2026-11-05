@@ -1,6 +1,6 @@
 import { billingEnforced, readOnlyFor, type ReadOnlyState } from "@/lib/billing/enforcement";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
-import { readWorkspaceAccessOnce } from "@/lib/supabase/workspaceAccess";
+import { readWorkspaceAccessOnce } from "@/lib/billing/requestAccess";
 
 type ServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { DisplayNameField } from "@/components/auth/DisplayNameField";
 import { PasswordField } from "@/components/auth/PasswordField";
+import { SignUpConsent } from "@/components/site/SignUpConsent";
 import { Button } from "@/components/ui/Button";
 import { DEFAULT_AFTER_SIGN_IN } from "@/lib/auth/nextPath";
 import { PASSWORD_HINT, PASSWORD_MIN_LENGTH } from "@/lib/auth/passwordRules";
@@ -143,6 +144,7 @@ export function AcceptInviteForm({
         >
           {pending ? "Joining…" : "Create account and join"}
         </Button>
+        <SignUpConsent />
       </form>
       <p className="mt-6 border-t border-line pt-4 text-sm text-ink-2">
         Already have a LeaRN account on this address?{" "}

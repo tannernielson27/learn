@@ -36,6 +36,20 @@ async function fill(
 }
 
 describe("InvitePanel", () => {
+  // #522: creating an account agrees to the terms, said once beside the button, with no checkbox.
+  it("says creating an account agrees to the Terms of Service and Privacy Policy", async () => {
+    setup();
+    expect(screen.getByText(/^By creating an account, you agree to the/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Terms of Service" })).toHaveAttribute(
+      "href",
+      "/terms",
+    );
+    expect(screen.getByRole("link", { name: "Privacy Policy" })).toHaveAttribute(
+      "href",
+      "/privacy",
+    );
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
   it("opens on an email address and a new password, with the rule beside it", () => {
     setup();
     expect(screen.getByRole("heading", { level: 1, name: "Join NUR 310" })).toBeInTheDocument();

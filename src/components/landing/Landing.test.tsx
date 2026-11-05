@@ -10,11 +10,24 @@ const SIGN_IN = {
 };
 
 describe("Landing (#264)", () => {
-  // #269: the help pages are public, so the front page's footer points at them.
-  it("links to help from its footer", () => {
+  // #269: the help pages are public, so the front page's footer points at them. #522: so are
+  // pricing, the terms and the privacy policy, in the one site footer.
+  it("links to help, pricing, terms and privacy from the site footer", () => {
     render(<Landing entry={SIGN_IN} />);
-    const footer = screen.getByRole("navigation", { name: "Footer" });
-    expect(within(footer).getByRole("link", { name: "Help" })).toHaveAttribute("href", "/help");
+    const footer = within(screen.getByRole("contentinfo")).getByRole("navigation", {
+      name: "Footer",
+    });
+    for (const [name, href] of [
+      ["Help", "/help"],
+      ["Pricing", "/pricing"],
+      ["Terms", "/terms"],
+      ["Privacy", "/privacy"],
+    ]) {
+      expect(within(footer).getByRole("link", { name })).toHaveAttribute("href", href);
+    }
+    expect(screen.getByRole("contentinfo")).toHaveTextContent(
+      "Every patient shown in LeaRN is fictional.",
+    );
   });
 
   it("says what LeaRN is in its one headline", () => {
@@ -24,7 +37,7 @@ describe("Landing (#264)", () => {
     expect(headings[0]).toHaveTextContent("Live learning for the Next Generation NCLEX");
   });
 
-  it("offers an account first, then Sign in and Join a live session, and no form or pricing", () => {
+  it("offers an account first, then Sign in and Join a live session, and no form", () => {
     render(<Landing entry={SIGN_IN} />);
     const actions = screen.getAllByRole("link").slice(0, 3);
     expect(actions.map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
@@ -32,7 +45,9 @@ describe("Landing (#264)", () => {
       ["Sign in", "/sign-in"],
       ["Join a live session", "/join"],
     ]);
-    expect(screen.queryByRole("link", { name: /pricing|contact/i })).toBeNull();
+    // #522: pricing is offered, but only in the footer, after the hero's actions.
+    const main = screen.getByRole("main");
+    expect(within(main).queryByRole("link", { name: /pricing|contact/i })).toBeNull();
     expect(screen.queryByRole("textbox")).toBeNull();
     expect(screen.queryByRole("form")).toBeNull();
     expect(document.querySelector("form")).toBeNull();

@@ -128,6 +128,20 @@ async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("AcceptInviteForm", () => {
+  // #522: creating an account agrees to the terms, said once beside the button, with no checkbox.
+  it("says creating an account agrees to the Terms of Service and Privacy Policy", async () => {
+    setupForm({ status: "idle" });
+    expect(screen.getByText(/^By creating an account, you agree to the/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Terms of Service" })).toHaveAttribute(
+      "href",
+      "/terms",
+    );
+    expect(screen.getByRole("link", { name: "Privacy Policy" })).toHaveAttribute(
+      "href",
+      "/privacy",
+    );
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
   it("posts a name and a password, and never the address", async () => {
     const { action, user } = setupForm({ status: "idle" });
     const email = screen.getByLabelText("Email address");

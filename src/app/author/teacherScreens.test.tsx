@@ -211,7 +211,6 @@ vi.mock("@/lib/supabase/workspace", () => ({
 }));
 vi.mock("@/lib/supabase/workspaceAccess", () => ({
   readWorkspaceAccess: async () => state.access,
-  readWorkspaceAccessOnce: async () => state.access,
 }));
 vi.mock("@/lib/onboarding/progress", () => ({ readOrgProgress: async () => null }));
 vi.mock("@/lib/onboarding/teacherWelcome", async (original) => ({
