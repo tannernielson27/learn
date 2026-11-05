@@ -1,8 +1,11 @@
+import { randomBytes } from "node:crypto";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { latestSignInLink, openSignInLink } from "./mailbox";
 import { createAccountWithoutRole, insertAsAdmin, selectAsAdmin, updateAsAdmin } from "./signIn";
 import { skipWelcomes } from "./welcome";
+
+const CLASS_CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
 // #521, ADR 0016 "A lapsed workspace is read-only": with billing enforced in the app
 // (BILLING_ENFORCED=true) and in the database (private.billing_config.enforced), a teacher whose
@@ -106,9 +109,16 @@ test("a lapsed teacher reads but cannot create, and their student finishes an op
     version: 1,
     created_by: teacherId,
   });
+  // The service role may not call private.new_invite_token(), so the class brings its own
+  // token and code, as classProgress.spec.ts writes one.
   const klass = await insertAsAdmin<{ id: string }>(request, "classes", {
     org_id: org.id,
     name: `NUR 521 ${project}`,
+    invite_token: randomBytes(24).toString("base64url"),
+    join_code: Array.from(
+      randomBytes(8),
+      (byte) => CLASS_CODE_ALPHABET[byte % CLASS_CODE_ALPHABET.length],
+    ).join(""),
   });
   const studentEmail = address("lapsed-student", project);
   const studentId = await createAccountWithoutRole(request, studentEmail);
