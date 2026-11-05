@@ -16,11 +16,13 @@
 export const PRODUCTION_BASE = "https://learn-tanner-nielsons-projects.vercel.app";
 
 // Every address the production deployment answers on (Vercel project `learn`, #405), not only the
-// one above.
+// one above. learnursing.app is production's own domain (#516); the apex redirects to www.
 const PRODUCTION_HOSTS = new Set([
   new URL(PRODUCTION_BASE).hostname,
   "learn-nine-alpha.vercel.app",
   "learn-git-main-tanner-nielsons-projects.vercel.app",
+  "www.learnursing.app",
+  "learnursing.app",
 ]);
 
 // Production's Supabase project, refused by ref whatever production's `/api/health` says (#405).
