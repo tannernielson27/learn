@@ -126,11 +126,11 @@ Rules:
 
 ### 7.1 Which Supabase project each environment uses
 
-| Env            | Supabase project                                                | How it is wired                                                                        | Demo account                                       | Sample content                             |
-| -------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------ |
-| **Local**      | local stack, or the preview project                             | `.env.local`; local stack is `http://127.0.0.1:55321` after `pnpm exec supabase start` | `supabase/seed-demo.sql` (`demo@learn.test`)       | `supabase/seed.sql` via `db reset`         |
-| **Preview**    | `learn` — ref `vauokqoyvewtzubqajgh`                            | Vercel "Preview" scope                                                                 | none — clear `DEMO_ACCOUNT_*` in the Preview scope | whatever the two of us have authored there |
-| **Production** | its own project — ref `<prod-ref>` _(owner to create; see 7.3)_ | Vercel "Production" scope                                                              | one shared instructor account, created by hand     | loaded once from `supabase/seed.sql`       |
+| Env            | Supabase project                                                    | How it is wired                                                                        | Demo account                                       | Sample content                                                      |
+| -------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------- |
+| **Local**      | local stack, or the preview project                                 | `.env.local`; local stack is `http://127.0.0.1:55321` after `pnpm exec supabase start` | `supabase/seed-demo.sql` (`demo@learn.test`)       | `supabase/seed.sql` via `db reset`                                  |
+| **Preview**    | `learn` — ref `vauokqoyvewtzubqajgh`                                | Vercel "Preview" scope                                                                 | none — clear `DEMO_ACCOUNT_*` in the Preview scope | a copy of production as of the split, until §7.3a step 10 scrubs it |
+| **Production** | `learn-prod` — ref `xptnbfrrqpzsdhuxilcr` (split 2026-11-05, §7.3a) | Vercel "Production" scope                                                              | none (`DEMO_ACCOUNT_*` unset)                      | restored from production's backup                                   |
 
 `/api/health` says which one a deployment actually reached:
 
@@ -296,6 +296,13 @@ Run from the repo root, on a machine with the repo checked out. Steps 1–2 and 
    - `gh workflow run db-backup.yml` against the new `PROD_DB_URL` ends green.
 9. **[ ] Tell the code which project is production.** Claude adds `<prod-ref>` to `PRODUCTION_REFS` in `scripts/load-live/safety.mjs`, so a load test refuses the new project by its ref. The old ref stays on the list until step 10 is done, because it still holds real people's data.
 10. **[ ] Empty the old project of real people.** Once production has run on `learn-prod` for a week without a problem, the old project's copy of real accounts and answers is only a liability: previews, sandbox keys and test runs all reach it. Claude writes the scrub as a migration-free script and runs it on the local stack first; the owner runs it on `vauokqoyvewtzubqajgh`. Until then, keep treating previews as if they were production.
+
+**Done 2026-11-05** (22:52–23:20 UTC, no one signed in). What the run added to the steps above:
+
+- **Step 4:** the dump's `history.sql` named columns (`created_by`, `idempotency_key`, `rollback`) that `scripts/db-backup-history.sql` did not create, so the first restore failed on it and rolled back whole. The script now creates them. Every row count then matched the old project (5 accounts, 90 questions, 24 sessions, 67 migrations, the grant), with no `TRUNCATE` for `anon`.
+- **Step 5:** Vault is not in the backup and the old `CRON_SECRET` could not be read back, so a new one went into the new Vault and into Vercel from the same file. Check: `select private.call_reminder_route();` then `net._http_response` shows `200`.
+- **Step 6:** the old ES256 key's private half was gone, and Supabase never lets its own keys be extracted. A new one from `supabase gen signing-key --algorithm ES256` was imported into `learn-prod` (JWT Keys → standby → import → rotate) and set in Vercel with `vercel env add SUPABASE_JWT_SIGNING_KEY production --sensitive --force < file`. Check it before the first class: an anon token signed with it is let through to Postgres (`42501` on a table `anon` may not read), and one signed with any other key is refused (`PGRST301`).
+- **Step 8:** `golive:check` 8 pass, 0 fail; Auth's `/auth/v1/settings` shows sign-up and anonymous sign-ins off. The previous production deployment is the instant rollback.
 
 **If something goes wrong before step 8:** nothing has changed for anyone. Production still points at the old project, which was never written to. Delete `learn-prod` and start again. **After step 8:** put the six Production variables back to the old project's values and redeploy; anything written to `learn-prod` in between is then the only thing lost.
 
