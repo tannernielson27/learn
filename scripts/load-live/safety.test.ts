@@ -99,6 +99,9 @@ describe("checkTarget", () => {
     for (const base of [
       "https://learn-nine-alpha.vercel.app",
       "https://learn-git-main-tanner-nielsons-projects.vercel.app",
+      "https://www.learnursing.app",
+      "https://learnursing.app",
+      "https://WWW.LearNursing.app/",
     ]) {
       const verdict = checkTarget({ ...LOAD, base });
       expect(verdict.ok ? "" : verdict.reason).toMatch(/production deployment/);

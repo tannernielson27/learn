@@ -6,7 +6,7 @@ export const USAGE = `Usage:
   pnpm golive:check -- --url <site> --project-ref <ref> [--publishable-key <sb_publishable_...>]
   pnpm golive:check -- --url <site> --local
 
-  --url <site>              the deployment to check, e.g. https://learn-tanner-nielsons-projects.vercel.app
+  --url <site>              the deployment to check, e.g. https://www.learnursing.app
   --project-ref <ref>       the hosted Supabase project; queries run through the Supabase CLI's login
                             (pnpm exec supabase login, or SUPABASE_ACCESS_TOKEN)
   --local                   the local stack instead (pnpm exec supabase start)
