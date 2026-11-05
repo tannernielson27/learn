@@ -27,7 +27,9 @@ const PRODUCTION_HOSTS = new Set([
 
 // Production's Supabase project, refused by ref whatever production's `/api/health` says (#405).
 // The health comparison stays the main check; this one does not depend on production answering.
-const PRODUCTION_REFS = new Set(["vauokqoyvewtzubqajgh"]);
+// learn-prod since the split (#515, 2026-11-05); vauokqoyvewtzubqajgh served production before it
+// and still holds real people's data until it is scrubbed (docs/05 §7.3a step 10).
+const PRODUCTION_REFS = new Set(["xptnbfrrqpzsdhuxilcr", "vauokqoyvewtzubqajgh"]);
 
 const LOOPBACK = new Set(["127.0.0.1", "localhost", "[::1]"]);
 
