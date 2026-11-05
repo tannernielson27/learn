@@ -152,7 +152,7 @@ test("a lapsed teacher reads but cannot create, and their student finishes an op
   await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page).toHaveURL(/\/author\/read-only\?next=/);
   await expect(page.getByRole("heading", { level: 1, name: READ_ONLY_HEADING })).toBeVisible();
-  await expect(page.getByRole("alert")).toHaveText(
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(
     "Your workspace has no subscription, so nothing can be created or changed until you subscribe in Billing.",
   );
   await expect(page.getByRole("link", { name: "Go to Billing", exact: true })).toHaveAttribute(
