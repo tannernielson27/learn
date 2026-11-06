@@ -9,11 +9,14 @@ import { describe, expect, it } from "vitest";
 const ROOT = path.resolve(import.meta.dirname, "..");
 const workflow = readFileSync(path.join(ROOT, ".github/workflows/ci.yml"), "utf8");
 
-/** The specs the `auth e2e` step names: the `pnpm e2e` line run with E2E_AUTH set. */
+/**
+ * The specs the `auth e2e` job names: its `pnpm e2e` lines run with E2E_AUTH set, the main step's
+ * and the billing enforcement step's (#521), which runs one spec inside a multi-line script.
+ */
 const listed = new Set(
   workflow
     .split(/\r?\n/)
-    .filter((line) => /^\s*run: pnpm e2e /.test(line))
+    .filter((line) => /^\s*(run: )?pnpm e2e /.test(line))
     .flatMap((line) => line.match(/e2e\/[\w.-]+\.spec\.ts/g) ?? []),
 );
 

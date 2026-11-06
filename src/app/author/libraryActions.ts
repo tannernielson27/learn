@@ -15,7 +15,7 @@ import {
   renameLibraryFolder,
 } from "@/lib/authoring/libraryData";
 import { parseQuizMoveForm } from "@/lib/authoring/libraryFolders";
-import { requireAuthor } from "@/lib/authoring/session";
+import { requireWriter } from "@/lib/authoring/writer";
 import { LIBRARY_PATH } from "@/lib/authoring/teacherNav";
 
 // Library folders (#411): folders that hold quizzes. Every write runs under the caller's RLS, so a
@@ -36,7 +36,7 @@ export async function createLibraryFolderAction(
   const parsed = parseFolderName(formData);
   if (!parsed.ok) return { status: "error", error: parsed.error };
 
-  const { supabase, orgId } = await requireAuthor(folderPath(parentId));
+  const { supabase, orgId } = await requireWriter(folderPath(parentId));
   const created = await createLibraryFolder(supabase, { orgId, parentId, name: parsed.name });
   if (!created.ok) return { status: "error", error: created.error };
 
@@ -53,7 +53,7 @@ export async function renameLibraryFolderAction(
   const parsed = parseFolderName(formData);
   if (!parsed.ok) return { status: "error", error: parsed.error };
 
-  const { supabase } = await requireAuthor(folderPath(folderId));
+  const { supabase } = await requireWriter(folderPath(folderId));
   const renamed = await renameLibraryFolder(supabase, folderId, parsed.name);
   if (!renamed.ok) return { status: "error", error: renamed.error };
 
@@ -65,7 +65,7 @@ export async function renameLibraryFolderAction(
 export async function deleteLibraryFolderAction(folderId: string): Promise<FolderFormState> {
   if (!isUuid(folderId)) return FOLDER_GONE;
 
-  const { supabase } = await requireAuthor(folderPath(folderId));
+  const { supabase } = await requireWriter(folderPath(folderId));
   const deleted = await deleteLibraryFolder(supabase, folderId);
   if (!deleted.ok) return { status: "error", error: deleted.error };
 
@@ -81,7 +81,7 @@ export async function moveQuizzesAction(
   const parsed = parseQuizMoveForm(formData);
   if (!parsed.ok) return { status: "error", error: parsed.error };
 
-  const { supabase } = await requireAuthor(LIBRARY_PATH);
+  const { supabase } = await requireWriter(LIBRARY_PATH);
   const moved = await moveQuizzes(supabase, parsed);
   if (!moved.ok) return { status: "error", error: moved.error };
 
@@ -99,7 +99,7 @@ export async function createQuizInFolderAction(
   const parsed = parseBankForm(formData);
   if (!parsed.ok) return { status: "error", error: parsed.error };
 
-  const { supabase, orgId, userId } = await requireAuthor(folderPath(folderId));
+  const { supabase, orgId, userId } = await requireWriter(folderPath(folderId));
   const created = await createQuizInFolder(supabase, {
     name: parsed.name,
     orgId,

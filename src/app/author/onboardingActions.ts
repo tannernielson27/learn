@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { SampleImportState } from "@/components/onboarding/ImportSampleForm";
 import { requireAuthor } from "@/lib/authoring/session";
+import { requireWriter } from "@/lib/authoring/writer";
 import { GET_STARTED_COOKIE, GET_STARTED_COOKIE_MAX_AGE } from "@/lib/onboarding/checklist";
 import { importSampleBank } from "@/lib/onboarding/sampleImport";
 
@@ -14,7 +15,7 @@ import { importSampleBank } from "@/lib/onboarding/sampleImport";
  * form's state and data carry nothing it needs, so it reads neither.
  */
 export async function importSample(): Promise<SampleImportState> {
-  const { supabase, orgId, userId } = await requireAuthor("/author");
+  const { supabase, orgId, userId } = await requireWriter("/author");
   const result = await importSampleBank(supabase, { orgId, userId });
   if (!result.ok) return { status: "error", error: result.error };
 

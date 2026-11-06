@@ -73,6 +73,7 @@ When enforcement is on (below) and a workspace has no access:
 - **The app gate**: `authorForRoute` gains a read-only state, and every write action checks it (#521). This is what turns a refused write into one sentence and a link rather than an error.
 - **The database gate**: the write policies on banks, folders, items, case studies, classes, assignments, practice shares and org invites, and `start_session`, add `private.current_org_has_access()` (#521). Fact 4 is why: without it a lapsed teacher's own browser could write through PostgREST, which the app never sees. The read policies do not change, so read-only is read-only in both places.
 - **Students are untouched in both**: no student path, policy or function reads the access check.
+- **As built (#521).** The database gate is `private.write_allowed()` (true unless `enforced` and the caller's workspace has no access), added as one `as restrictive` policy per gated write beside the existing policies rather than by restating them, so nothing can be loosened; definer paths (`rotate_class_invite`, invitations, the AI import commit) check it themselves. Starting a live session is gated; running one is not. Revoking an invitation and removing a colleague are not refused: they take access away. A refused write in the app lands on `/author/read-only`, which says the one sentence and, for anyone but the person who started the workspace, "ask the person who started your workspace" rather than a name.
 
 ### Shipping dark: `BILLING_ENFORCED`
 

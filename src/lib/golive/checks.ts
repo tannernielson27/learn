@@ -375,9 +375,13 @@ function stripeCheck(reading: Exclude<HealthReading, { kind: "unreadable" }>): C
     );
   }
   const { status, detail } = STRIPE_DETAIL[state];
-  // The lookup key has a default (`learn_monthly_v1`), so only the two secrets can be missing.
+  // The lookup key has a default (`learn_monthly_v1`) and enforcement is off unless set, so only
+  // the two secrets can be missing.
   const unset = BILLING_ENV.filter(
-    ({ name }) => name !== "STRIPE_PRICE_LOOKUP_KEY" && reading.body.billingEnv?.[name] === false,
+    ({ name }) =>
+      name !== "STRIPE_PRICE_LOOKUP_KEY" &&
+      name !== "BILLING_ENFORCED" &&
+      reading.body.billingEnv?.[name] === false,
   );
   const missing =
     status === "fail" && unset.length > 0

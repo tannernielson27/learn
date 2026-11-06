@@ -138,6 +138,37 @@ jobs:
           pnpm load:live --base http://127.0.0.1:3100 --host --participants 5 --think 200-1000 \
             --ramp 500 --lobby-ms 2000 --reveal-ms 300 --step-timeout 20000 --max-minutes 3 \
             --seed 187 --out "$RUNNER_TEMP/load-live-results.json"
+      # #521: billing enforcement, on in the app and in the database at once. Both switches are
+      # deployment-wide (BILLING_ENFORCED is the server's environment; billing_config.enforced is
+      # one row), so this runs on its own after every other spec, with one worker, against the
+      # build the e2e step made, and turns the database's switch back off however it ends.
+      - name: Billing enforcement e2e
+        if: matrix.shard == 1
+        timeout-minutes: 8
+        run: |
+          test -f .next/BUILD_ID || { echo "No production build: the e2e step did not build one."; exit 1; }
+          db_url="$(pnpm exec supabase status -o env | sed -n 's/^DB_URL=//p' | tr -d '"')"
+          # The load smoke's `kill` stops pnpm, not the `next start` under it, which can keep 3100;
+          # this spec then met that unenforced server. Port 3100 is the one Auth redirects to
+          # (supabase/config.toml), so stop whatever holds it and make sure it is free.
+          # Next renames its process to next-server, so match both, and free the port itself too.
+          pkill -f "next-server|next start" || true
+          fuser -k 3100/tcp 2>/dev/null || true
+          for i in $(seq 1 20); do curl -s -o /dev/null http://127.0.0.1:3100 || break; sleep 0.5; done
+          if curl -s -o /dev/null http://127.0.0.1:3100; then echo "port 3100 is still in use"; exit 1; fi
+          psql "$db_url" -v ON_ERROR_STOP=1 -c "update private.billing_config set enforced = true where id"
+          BILLING_ENFORCED=true AI_IMPORT_FAKE=1 SUPABASE_MAILBOX_URL=http://127.0.0.1:55324 \
+            pnpm start --port 3100 > "$RUNNER_TEMP/next-enforced.log" 2>&1 &
+          server=$!
+          trap 'kill $server; psql "$db_url" -c "update private.billing_config set enforced = false where id"' EXIT
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:3100/api/health > /dev/null && break; sleep 1; done
+          curl -sf http://127.0.0.1:3100/api/health > /dev/null || { echo "next start never answered /api/health"; cat "$RUNNER_TEMP/next-enforced.log"; exit 1; }
+          kill -0 $server 2>/dev/null || { echo "the enforced server exited"; cat "$RUNNER_TEMP/next-enforced.log"; exit 1; }
+          pnpm e2e e2e/billingEnforcement.spec.ts --workers=1 || { tail -50 "$RUNNER_TEMP/next-enforced.log"; exit 1; }
+        env:
+          E2E_AUTH: "1"
+          E2E_BILLING_ENFORCED: "1"
+          PLAYWRIGHT_BASE_URL: http://localhost:3100
       # The screens these specs photograph with `page.screenshot`, at 375, 768 and 1280. Kept on a
       # green run too (#412), so a change of wording or layout can be looked at before it merges:
       #   gh run download <run-id> --name auth-e2e-screens-1

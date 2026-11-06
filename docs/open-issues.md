@@ -482,7 +482,7 @@ A workspace pays $39.99 a month, flat, for up to 10 teachers, after a 7-day free
 | [#518](https://github.com/tannernielson27/learn/issues/518) | feat(billing): Stripe library, webhook and catalog script                         | security          | To do; needs #517                                                     |
 | [#519](https://github.com/tannernielson27/learn/issues/519) | feat(billing): free trial, subscribe and manage billing on the workspace page     | e2e               | To do; needs #518                                                     |
 | [#520](https://github.com/tannernielson27/learn/issues/520) | feat(billing): private beta passes the owner issues and revokes                   | security          | To do; needs #517                                                     |
-| [#521](https://github.com/tannernielson27/learn/issues/521) | feat(billing): enforce access in the app and the database behind BILLING_ENFORCED | security, db, e2e | To do; needs #517, #519, #520                                         |
+| [#521](https://github.com/tannernielson27/learn/issues/521) | feat(billing): enforce access in the app and the database behind BILLING_ENFORCED | security, db, e2e | In review (`feat/521-billing-enforcement`)                            |
 | [#522](https://github.com/tannernielson27/learn/issues/522) | feat(billing): trial and payment banners, pricing, terms and privacy pages        | none              | To do; needs #519                                                     |
 | [#523](https://github.com/tannernielson27/learn/issues/523) | test(billing): end-to-end walk, sandbox walk and go-live checklist                | e2e               | To do; last; gates docs/05 §7.15 step 11                              |
 

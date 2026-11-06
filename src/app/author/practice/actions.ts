@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { ConfirmOutcome } from "@/components/classes/ConfirmSubmit";
 import type { ShareFormState } from "@/components/practice/PracticeShareForm";
 import { isUuid } from "@/lib/authoring/ids";
-import { requireAuthor } from "@/lib/authoring/session";
+import { requireWriter } from "@/lib/authoring/writer";
 import { classPath } from "@/lib/classes/classes";
 import { parseShareTarget, shareRefusal } from "@/lib/practice/shares";
 import { sharePractice, stopPractice } from "@/lib/supabase/practiceShares";
@@ -29,7 +29,7 @@ function revalidateShare(bankId: string, classId: string): void {
 }
 
 async function share(returnTo: string, bankId: string, classId: string): Promise<ShareFormState> {
-  const { supabase } = await requireAuthor(returnTo);
+  const { supabase } = await requireWriter(returnTo);
   const outcome = await sharePractice(supabase, bankId, classId);
   if (!outcome.ok) return { status: "error", error: shareRefusal(outcome.reason) };
   revalidateShare(bankId, classId);
@@ -67,7 +67,7 @@ export async function shareClassWithBank(
  */
 export async function stopSharing(bankId: string, classId: string): Promise<ConfirmOutcome> {
   if (!isUuid(bankId) || !isUuid(classId)) return STOP_FAILED;
-  const { supabase } = await requireAuthor(bankPath(bankId));
+  const { supabase } = await requireWriter(bankPath(bankId));
   const write = await stopPractice(supabase, bankId, classId);
   if (!write.ok) {
     console.error("[practice] a share could not be stopped", { bankId, classId, code: write.code });

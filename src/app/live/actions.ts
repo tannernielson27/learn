@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { isUuid } from "@/lib/authoring/ids";
-import { requireAuthor } from "@/lib/authoring/session";
+import { requireWriter } from "@/lib/authoring/writer";
 import { startSession } from "@/lib/supabase/sessions";
 
 /**
@@ -28,7 +28,7 @@ function chosenClass(form: FormData | undefined): string | null {
  */
 export async function startLiveSession(bankId: string, form?: FormData): Promise<never> {
   if (!isUuid(bankId)) redirect("/author");
-  const { supabase } = await requireAuthor(`/author/banks/${bankId}`);
+  const { supabase } = await requireWriter(`/author/banks/${bankId}`);
 
   const paced = form?.get("pacing") === "student_paced" ? "student_paced" : "instructor_paced";
   const started = await startSession(
@@ -54,7 +54,7 @@ export async function startCaseStudyLiveSession(
 ): Promise<never> {
   if (!isUuid(caseStudyId)) redirect("/author");
   const back = `/author/case-studies/${caseStudyId}`;
-  const { supabase } = await requireAuthor(back);
+  const { supabase } = await requireWriter(back);
 
   const started = await startSession(
     supabase,
@@ -77,7 +77,7 @@ export async function startCaseStudyLiveSession(
 export async function startClassLiveSession(classId: string, form?: FormData): Promise<never> {
   if (!isUuid(classId)) redirect("/author/classes");
   const back = `/author/classes/${classId}/start`;
-  const { supabase } = await requireAuthor(back);
+  const { supabase } = await requireWriter(back);
 
   const bankId = form?.get("bankId");
   if (typeof bankId !== "string" || !isUuid(bankId)) redirect(`${back}?live=quiz`);

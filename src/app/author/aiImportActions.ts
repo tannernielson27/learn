@@ -16,7 +16,7 @@ import {
   type ReviewActionDeps,
 } from "@/lib/aiImport/review/actions";
 import { discardBatch, importBatch, type CommitDeps } from "@/lib/aiImport/commit/actions";
-import { requireAuthor } from "@/lib/authoring/session";
+import { requireWriter } from "@/lib/authoring/writer";
 import { sharedRateLimitStore } from "@/lib/rateLimit/postgresStore";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -27,7 +27,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 /** The verified teacher (others are sent away, as from every authoring Server Function). */
 async function guardedDeps(): Promise<ActionDeps> {
-  const session = await requireAuthor("/author");
+  const session = await requireWriter("/author");
   return {
     author: async () => ({ status: "ok", ...session }),
     service: createSupabaseServiceClient,
@@ -61,7 +61,7 @@ export async function finishAiImport(batchId: string) {
 
 /** Review (#346): the same checks, then the teacher's own session and a version check. */
 async function reviewDeps(): Promise<ReviewActionDeps> {
-  const session = await requireAuthor("/author");
+  const session = await requireWriter("/author");
   return { author: async () => ({ status: "ok", ...session }) };
 }
 
@@ -78,7 +78,7 @@ export async function restoreAiImportEntry(input: EntryActionInput) {
  * service client only to remove the uploaded files once the database has let them go.
  */
 async function commitDeps(): Promise<CommitDeps> {
-  const session = await requireAuthor("/author");
+  const session = await requireWriter("/author");
   return {
     author: async () => ({ status: "ok", ...session }),
     service: createSupabaseServiceClient,

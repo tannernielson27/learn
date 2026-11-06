@@ -10,7 +10,7 @@ import {
 } from "@/lib/authoring/caseStudies";
 import { isUuid } from "@/lib/authoring/ids";
 import { checkRateLimit } from "@/lib/authoring/rateLimit";
-import { requireAuthor } from "@/lib/authoring/session";
+import { requireWriter } from "@/lib/authoring/writer";
 import { ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 import type { CjmmStep } from "@/lib/ngn/types";
 
@@ -28,7 +28,7 @@ export async function saveCaseStudyRecord(
   values: unknown,
 ): Promise<SaveResult> {
   if (!isUuid(caseStudyId)) return { ok: false, error: CASE_STUDY_ERRORS.gone };
-  const { supabase } = await requireAuthor(`/author/case-studies/${caseStudyId}`);
+  const { supabase } = await requireWriter(`/author/case-studies/${caseStudyId}`);
   const limit = await checkRateLimit(supabase, "save");
   if (!limit.ok) return limit;
   const result = await saveRecordForm(supabase, caseStudyId, values);
@@ -55,7 +55,7 @@ export async function startStepItem(
     return { error: "That format cannot be written here yet." };
   }
 
-  const { supabase } = await requireAuthor(`/author/case-studies/${caseStudyId}`);
+  const { supabase } = await requireWriter(`/author/case-studies/${caseStudyId}`);
   const limit = await checkRateLimit(supabase, "step");
   if (!limit.ok) return { error: limit.error };
   const result = await startStep(supabase, {
@@ -78,7 +78,7 @@ export type PublishCaseStudyResult =
  */
 export async function publishCaseStudyAction(caseStudyId: string): Promise<PublishCaseStudyResult> {
   if (!isUuid(caseStudyId)) return { ok: false, error: CASE_STUDY_ERRORS.gone };
-  const { supabase } = await requireAuthor(`/author/case-studies/${caseStudyId}`);
+  const { supabase } = await requireWriter(`/author/case-studies/${caseStudyId}`);
   const limit = await checkRateLimit(supabase, "publish");
   if (!limit.ok) return limit;
   const result = await publishCaseStudy(supabase, caseStudyId);

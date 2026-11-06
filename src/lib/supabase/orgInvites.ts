@@ -151,6 +151,7 @@ const MOVE_REFUSALS = [
   "admin_account",
   "teaches_shared",
   "founder_with_members",
+  "has_subscription",
   "students_depend",
 ] as const;
 export type MoveRefusal = (typeof MOVE_REFUSALS)[number];

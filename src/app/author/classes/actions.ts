@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import type { ClassFormState } from "@/components/classes/ClassNameForm";
 import type { ConfirmOutcome } from "@/components/classes/ConfirmSubmit";
 import { isUuid } from "@/lib/authoring/ids";
-import { requireAuthor } from "@/lib/authoring/session";
+import { requireWriter } from "@/lib/authoring/writer";
 import { classPath, CLASSES_PATH, parseClassForm } from "@/lib/classes/classes";
 import { parseTimeZoneForm, TIME_ZONE_ERROR } from "@/lib/classes/timeZone";
 import {
@@ -28,7 +28,7 @@ export async function createClass(
   const parsed = parseClassForm(formData);
   if (!parsed.ok) return { status: "error", error: parsed.error };
 
-  const { supabase } = await requireAuthor(CLASSES_PATH);
+  const { supabase } = await requireWriter(CLASSES_PATH);
   const created = await insertClass(supabase, parsed.name);
   if (!created.ok) return { status: "error", error: "The class could not be created. Try again." };
 
@@ -45,7 +45,7 @@ export async function renameClass(
   const parsed = parseClassForm(formData);
   if (!parsed.ok) return { status: "error", error: parsed.error };
 
-  const { supabase } = await requireAuthor(classPath(classId));
+  const { supabase } = await requireWriter(classPath(classId));
   if (!(await updateClassName(supabase, classId, parsed.name))) {
     return { status: "error", error: GONE };
   }
@@ -64,7 +64,7 @@ export async function setTimeZone(
   const parsed = parseTimeZoneForm(formData);
   if (!parsed.ok) return { status: "error", error: parsed.error };
 
-  const { supabase } = await requireAuthor(classPath(classId));
+  const { supabase } = await requireWriter(classPath(classId));
   const outcome = await updateTimeZone(supabase, classId, parsed.zone);
   if (outcome === "gone") return { status: "error", error: GONE };
   if (outcome === "invalid") return { status: "error", error: TIME_ZONE_ERROR };
@@ -81,7 +81,7 @@ export async function setTimeZone(
  */
 export async function rotateInvite(classId: string): Promise<ConfirmOutcome> {
   if (!isUuid(classId)) return { ok: false, message: GONE };
-  const { supabase } = await requireAuthor(classPath(classId));
+  const { supabase } = await requireWriter(classPath(classId));
   const write = await rotateToken(supabase, classId);
   if (!write.ok) {
     console.error("[classes] an invite link could not be replaced", { classId, code: write.code });
@@ -98,7 +98,7 @@ export async function rotateInvite(classId: string): Promise<ConfirmOutcome> {
  */
 export async function removeStudent(classId: string, profileId: string): Promise<ConfirmOutcome> {
   if (!isUuid(classId) || !isUuid(profileId)) return { ok: false, message: REMOVE_FAILED };
-  const { supabase } = await requireAuthor(classPath(classId));
+  const { supabase } = await requireWriter(classPath(classId));
   const write = await deleteMembership(supabase, classId, profileId);
   if (!write.ok) {
     console.error("[classes] a student could not be removed", { classId, code: write.code });

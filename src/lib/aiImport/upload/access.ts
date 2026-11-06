@@ -7,7 +7,8 @@ import { aiImportEnabled, type AiImportEnv } from "../config";
 /**
  * Who may use AI import's upload page and its requests (#345). Every Server Function and route
  * starts here: a signed-in teacher with a workspace, AI import on for the deployment
- * (`AI_IMPORT_ENABLED`) and for the workspace (`orgs.ai_import_enabled`). The workspace and user
+ * (`AI_IMPORT_ENABLED`) and for the workspace (`orgs.ai_import_enabled`), and, when billing is
+ * enforced, a workspace that has access (#521; `authorForRoute`'s `readOnly`). The workspace and user
  * come from the verified session, never from the request.
  */
 
@@ -43,6 +44,8 @@ export async function aiImportAccess(deps: AccessDeps): Promise<AiImportAccess> 
   const author = await deps.author();
   if (author.status === "signed_out") return { status: "signed_out" };
   if (author.status === "forbidden") return { status: "forbidden" };
+  // A read-only workspace (#521: billing enforced, no access) has AI import switched off.
+  if (author.readOnly) return { status: "disabled" };
   const { supabase, userId, email, orgId } = author;
   const session: AuthorSession = { supabase, userId, email, orgId };
   if (!aiImportEnabled(deps.env)) return { status: "disabled" };

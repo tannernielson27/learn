@@ -11,7 +11,7 @@ import {
   type AssignmentSource,
 } from "@/lib/assignments/assignments";
 import { isUuid } from "@/lib/authoring/ids";
-import { requireAuthor } from "@/lib/authoring/session";
+import { requireWriter } from "@/lib/authoring/writer";
 import { classPath } from "@/lib/classes/classes";
 import { classTabPath } from "@/lib/classes/classTabs";
 import {
@@ -65,7 +65,7 @@ export async function assignSource(
   _previous: AssignmentFormState,
   formData: FormData,
 ): Promise<AssignmentFormState> {
-  const { supabase } = await requireAuthor(assignmentPath(source));
+  const { supabase } = await requireWriter(assignmentPath(source));
   if (!isUuid(source.id)) return { status: "error", error: createRefusal(source, "gone") };
   const parsed = parseAssignmentForm(formData, new Date());
   if (!parsed.ok) return { status: "error", error: parsed.error };
@@ -88,7 +88,7 @@ export async function editAssignment(
   _previous: AssignmentFormState,
   formData: FormData,
 ): Promise<AssignmentFormState> {
-  const { supabase } = await requireAuthor(classPath(classId));
+  const { supabase } = await requireWriter(classPath(classId));
   if (!isUuid(classId) || !isUuid(assignmentId)) return { status: "error", error: GONE };
 
   const now = new Date();
@@ -110,7 +110,7 @@ export async function editAssignment(
 
 /** Deletes one that has not opened. Once it has, the database refuses and nothing changes. */
 export async function deleteAssignment(classId: string, assignmentId: string): Promise<void> {
-  const { supabase } = await requireAuthor(classPath(classId));
+  const { supabase } = await requireWriter(classPath(classId));
   if (isUuid(classId) && isUuid(assignmentId)) await removeAssignment(supabase, assignmentId);
   revalidatePath(classPath(classId));
 }

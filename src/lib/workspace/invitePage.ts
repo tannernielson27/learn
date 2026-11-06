@@ -110,6 +110,7 @@ export const INVITE_REFUSALS = [
   "admin_account",
   "teaches_shared",
   "founder_with_members",
+  "has_subscription",
   "students_depend",
   "shared_workspace",
   "members_full",
@@ -144,6 +145,8 @@ export const INVITE_REFUSED: Readonly<Record<InviteRefusal, string>> = {
     "This account teaches in the LeaRN workspace, and an account there cannot move to another one. Ask to be invited at another email address.",
   founder_with_members:
     "You started the workspace you teach in now, and other teachers are still in it. Remove them on your workspace page first, or ask to be invited at another email address.",
+  has_subscription:
+    "You started the workspace you teach in now, and it has a subscription. Cancel it in Billing on your workspace page first, or ask to be invited at another email address.",
   students_depend:
     "You are the only teacher in the workspace you teach in now, and it still has students in a class, an assignment that has not closed or a live session that has not ended. Leaving would leave them with no teacher. Remove the students and close those first, or ask to be invited at another email address.",
   shared_workspace: "This workspace can no longer take new teachers by invitation.",

@@ -35,7 +35,7 @@ import { isUuid } from "@/lib/authoring/ids";
 import { withinItemSizeLimit } from "@/lib/authoring/payloadSize";
 import { checkPublishable } from "@/lib/authoring/publishCheck";
 import { checkRateLimit, isRateLimitedError, RATE_LIMIT_ERRORS } from "@/lib/authoring/rateLimit";
-import { requireAuthor } from "@/lib/authoring/session";
+import { requireWriter } from "@/lib/authoring/writer";
 import { nextPublishedVersion } from "@/lib/authoring/versions";
 import type { ItemType } from "@/lib/ngn/labels";
 import type { Item } from "@/lib/ngn/schemas";
@@ -82,7 +82,7 @@ async function saveDraft<Values>(
   const draft = parse(values);
   if (!draft.ok) return { ok: false, error: draft.error };
 
-  const { supabase } = await requireAuthor(`/author/items/${itemId}`);
+  const { supabase } = await requireWriter(`/author/items/${itemId}`);
   const limit = await checkRateLimit(supabase, "save");
   if (!limit.ok) return limit;
   // A case study step's position decides its clinical judgment step, not the submitted form.
@@ -122,7 +122,7 @@ async function publish(itemId: string, type: ItemType, input: unknown): Promise<
   const checked = checkPublishable(input, type);
   if (!checked.ok) return { ok: false, error: checked.error };
 
-  const { supabase, orgId } = await requireAuthor(`/author/items/${itemId}`);
+  const { supabase, orgId } = await requireWriter(`/author/items/${itemId}`);
   const limit = await checkRateLimit(supabase, "publish");
   if (!limit.ok) return limit;
   const { data: latest, error: latestError } = await supabase
