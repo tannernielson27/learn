@@ -6,6 +6,7 @@ import { defineConfig, devices } from "@playwright/test";
  * app on port 3100, since Next recommends testing production output rather than `next dev`.
  */
 const remote = process.env.PLAYWRIGHT_BASE_URL;
+const bypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
 const baseURL = remote ?? "http://localhost:3100";
 
 export default defineConfig({
@@ -30,8 +31,17 @@ export default defineConfig({
   },
   use: {
     baseURL,
-    // Ask Vercel previews not to inject their toolbar into automated sessions.
-    extraHTTPHeaders: remote ? { "x-vercel-skip-toolbar": "1" } : undefined,
+    // Ask Vercel previews not to inject their toolbar into automated sessions. Previews sit behind
+    // Vercel Authentication (ADR 0017), so CI also sends the project's automation bypass secret;
+    // `x-vercel-set-bypass-cookie` makes every later request in the page carry it as a cookie.
+    extraHTTPHeaders: remote
+      ? {
+          "x-vercel-skip-toolbar": "1",
+          ...(bypassSecret
+            ? { "x-vercel-protection-bypass": bypassSecret, "x-vercel-set-bypass-cookie": "true" }
+            : {}),
+        }
+      : undefined,
     contextOptions: { reducedMotion: "reduce" },
     trace: "retain-on-failure",
   },

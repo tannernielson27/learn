@@ -32,8 +32,10 @@ create table if not exists private.device_gate_devices (
   id uuid primary key default gen_random_uuid(),
   name text not null check (length(name) between 1 and 60),
   -- WebAuthn's credential id and COSE public key, both base64url.
-  credential_id text not null unique check (credential_id ~ '^[A-Za-z0-9_-]{16,1366}$'),
-  public_key text not null check (public_key ~ '^[A-Za-z0-9_-]{16,2048}$'),
+  credential_id text not null unique
+    check (credential_id ~ '^[A-Za-z0-9_-]+$' and length(credential_id) between 16 and 1366),
+  public_key text not null
+    check (public_key ~ '^[A-Za-z0-9_-]+$' and length(public_key) between 16 and 2048),
   counter bigint not null default 0 check (counter >= 0),
   transports text[] not null default '{}',
   created_at timestamptz not null default now(),
