@@ -1,0 +1,84 @@
+name: staging migrations
+
+# ADR 0017: a merge to main deploys to staging.learnursing.app, which runs on the `learn` Supabase
+# project. This applies any new migration there, so staging always runs main's code on main's
+# schema. Production's migrations are applied by the release workflow, never here.
+#
+# The repo is public. This never runs for a pull request, so a fork can never reach
+# STAGING_DB_URL; it runs only for what has already merged to main.
+#
+# Run it by hand: gh workflow run staging-migrate.yml
+on:
+  push:
+    branches: [main]
+    paths: ["supabase/migrations/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-migrate-staging
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: push migrations to staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      # The CLI release that package.json pins, verified against its published checksum, as in
+      # db-backup.yml.
+      SUPABASE_CLI_VERSION: 2.117.0
+      SUPABASE_CLI_SHA256: 913d1b8303a1bfa05a4f52909f60cbc2f8247f7f9444283c37dbe9eaef0d95de
+    steps:
+      - name: Check the secret
+        id: secrets
+        env:
+          STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${STAGING_DB_URL:-}" ]; then
+            echo "::notice title=staging migrations skipped::STAGING_DB_URL is not set. docs/05 §7.16 says how to set it."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "::add-mask::$STAGING_DB_URL"
+          password="$(printf '%s' "$STAGING_DB_URL" | sed -nE 's#^[a-z]+://[^:/@]+:([^@]+)@.*#\1#p')"
+          if [ -n "$password" ]; then
+            echo "::add-mask::$password"
+            echo "::add-mask::$(printf '%b' "${password//%/\\x}")"
+          fi
+          # Never production: the release workflow is the only way a migration reaches it.
+          if printf '%s' "$STAGING_DB_URL" | grep -q 'xptnbfrrqpzsdhuxilcr'; then
+            echo "::error::STAGING_DB_URL points at learn-prod. It must be the learn project's."
+            exit 1
+          fi
+          echo "run=true" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.secrets.outputs.run == 'true'
+        with:
+          persist-credentials: false
+
+      - name: Install the Supabase CLI
+        if: steps.secrets.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          curl -fsSL -o "$RUNNER_TEMP/supabase.deb" \
+            "https://github.com/supabase/cli/releases/download/v${SUPABASE_CLI_VERSION}/supabase_${SUPABASE_CLI_VERSION}_linux_amd64.deb"
+          echo "${SUPABASE_CLI_SHA256}  $RUNNER_TEMP/supabase.deb" | sha256sum --check --strict
+          sudo dpkg -i "$RUNNER_TEMP/supabase.deb" > /dev/null
+          supabase --version | grep -Fx "$SUPABASE_CLI_VERSION" || { echo "::error::unexpected Supabase CLI version"; exit 1; }
+
+      - name: List what will be applied
+        if: steps.secrets.outputs.run == 'true'
+        env:
+          STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+        run: supabase db push --db-url "$STAGING_DB_URL" --dry-run
+
+      - name: Apply
+        if: steps.secrets.outputs.run == 'true'
+        env:
+          STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+        run: supabase db push --db-url "$STAGING_DB_URL" --yes

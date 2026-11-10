@@ -1989,6 +1989,60 @@ export type Database = {
           token: string;
         }[];
       };
+      device_gate_add_device: {
+        Args: {
+          p_counter: number;
+          p_credential_id: string;
+          p_invite_hash?: string;
+          p_name: string;
+          p_public_key: string;
+          p_transports: string[];
+        };
+        Returns: string;
+      };
+      device_gate_create_invite: {
+        Args: {
+          p_created_by: string;
+          p_token_hash: string;
+          p_ttl_seconds: number;
+        };
+        Returns: string;
+      };
+      device_gate_credential: {
+        Args: { p_credential_id: string };
+        Returns: {
+          counter: number;
+          device_id: string;
+          public_key: string;
+          transports: string[];
+        }[];
+      };
+      device_gate_device_active: {
+        Args: { p_device_id: string };
+        Returns: boolean;
+      };
+      device_gate_invite_open: {
+        Args: { p_token_hash: string };
+        Returns: boolean;
+      };
+      device_gate_list_devices: {
+        Args: never;
+        Returns: {
+          created_at: string;
+          id: string;
+          last_used_at: string;
+          name: string;
+          revoked_at: string;
+        }[];
+      };
+      device_gate_record_use: {
+        Args: { p_counter: number; p_device_id: string };
+        Returns: boolean;
+      };
+      device_gate_revoke_device: {
+        Args: { p_device_id: string };
+        Returns: boolean;
+      };
       duplicate_case_study: {
         Args: { source_case_study: string };
         Returns: string;
