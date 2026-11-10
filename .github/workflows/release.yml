@@ -8,7 +8,7 @@ name: release
 # (Vercel builds it), and wait until www.learnursing.app reports that commit. Migrations go first
 # because every migration must keep working with the app already deployed (docs/05 §7).
 #
-# The `production` environment asks the owner to approve each run before any step starts.
+# The `release` environment (GitHub settings, not Vercel's "Production") asks the owner to approve each run before any step starts.
 #
 # Run it: Actions → release → Run workflow, or `gh workflow run release.yml`. Leave the commit
 # blank to release what staging runs now.
@@ -32,11 +32,11 @@ jobs:
   release:
     name: release to production
     # Only main's copy of this file may run with PROD_DB_URL. A branch's edited copy is refused
-    # here, and the `production` environment also allows main alone (docs/05 §7.16).
+    # here, and the `release` environment also allows main alone (docs/05 §7.16).
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 40
-    environment: production
+    environment: release
     env:
       SUPABASE_CLI_VERSION: 2.117.0
       SUPABASE_CLI_SHA256: 913d1b8303a1bfa05a4f52909f60cbc2f8247f7f9444283c37dbe9eaef0d95de
