@@ -31,9 +31,9 @@ export default defineConfig({
   },
   use: {
     baseURL,
-    // Ask Vercel previews not to inject their toolbar into automated sessions. Previews sit behind
-    // Vercel Authentication (ADR 0017), so CI also sends the project's automation bypass secret;
-    // `x-vercel-set-bypass-cookie` makes every later request in the page carry it as a cookie.
+    // Ask Vercel previews not to inject their toolbar into automated sessions. CI also sends the
+    // project's automation bypass secret, so the run still works if Deployment Protection is ever
+    // turned back on (ADR 0017); `x-vercel-set-bypass-cookie` carries it on every later request.
     extraHTTPHeaders: remote
       ? {
           "x-vercel-skip-toolbar": "1",
