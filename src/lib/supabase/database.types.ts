@@ -2001,7 +2001,11 @@ export type Database = {
         Returns: string;
       };
       device_gate_create_invite: {
-        Args: { p_created_by: string; p_token_hash: string; p_ttl_seconds: number };
+        Args: {
+          p_created_by: string;
+          p_token_hash: string;
+          p_ttl_seconds: number;
+        };
         Returns: string;
       };
       device_gate_credential: {
