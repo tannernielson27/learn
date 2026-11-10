@@ -18,11 +18,11 @@ What the platform offers, checked on 2026-11-10:
 
 ## Decision
 
-1. **Three environments.** A pull request gets a preview on its own vercel.app address, behind Vercel Authentication, on `learn`. A merge to `main` deploys to **staging.learnursing.app**, on `learn`, and `.github/workflows/staging-migrate.yml` applies its migrations there. **Production** is the `production` branch, on `learn-prod`.
+1. **Three environments.** A pull request gets a preview on its own vercel.app address, on `learn`. A merge to `main` deploys to **staging.learnursing.app**, on `learn`, and `.github/workflows/staging-migrate.yml` applies its migrations there. **Production** is the `production` branch, on `learn-prod`.
 2. **Production moves only by a release.** `.github/workflows/release.yml` takes a commit that is on `main`, passed CI's `check` job, and is what staging runs. It applies production's migrations, fast-forwards `production` to that commit (Vercel builds it) and waits until www.learnursing.app reports it. The `release` GitHub environment makes the owner approve each run. Rolling back is still Vercel's "Promote to Production" on the previous deployment.
 3. **Staging is behind a device gate of our own** (`src/lib/deviceGate/`). A device gets in by registering a passkey, with the enrollment code (`DEVICE_GATE_ENROLL_CODE`) for the first one, or a one-time invite link made on a device already in. After that it unlocks with the passkey, and it holds a signed session cookie for 30 days. The proxy checks that the device is still registered on every request, so revoking one in `/device-gate/devices` locks it out at once. The gate covers pages and `/api` alike, except the gate itself, `/api/health`, Stripe's signed webhook and the cron routes, which check their own secrets.
 4. **The gate is keyed to the host, not to a variable.** On staging.learnursing.app with no `DEVICE_GATE_SECRET`, every request gets a 503; on any other host the gate does nothing. A missing variable can lock staging, never open it. Production's tables for it stay empty.
-5. **Previews keep Vercel Authentication** (Standard Protection, which leaves custom domains to us). A passkey belongs to one host, so the gate cannot cover the per-PR addresses.
+5. **No Vercel Authentication** (changed on 2026-11-10, the day this was accepted). Its Standard Protection exempts only production's custom domains. It covered staging.learnursing.app as well, so a phone had to sign in to Vercel before it ever reached the passkey gate. Exempting that one domain needs the paid add-on. The owner chose the passkey gate alone. A passkey belongs to one host, so the gate cannot cover the per-PR vercel.app addresses: those are unlisted but public, as they were before 2026-11-10, and they reach only `learn`.
 
 ## Consequences
 
@@ -34,7 +34,7 @@ What the platform offers, checked on 2026-11-10:
 
 ## Risks accepted
 
-- **The staging deployment also answers on its vercel.app addresses**, where the gate does nothing. Those addresses are behind Vercel Authentication (Standard Protection covers everything but custom domains), so they are not open.
+- **Previews, and the staging deployment's own vercel.app addresses, are public to anyone who has the address.** The gate does nothing there. They reach `learn`, which holds only the owner's accounts and test content. Each address is unguessable and is shown only in the pull request and in Vercel. Never put live keys or real people's data on `learn`.
 - **A challenge cookie can be replayed for its five minutes.** Doing that takes the cookie (HttpOnly, sent only over TLS) and the matching passkey answer together. Anyone who has both already controls the device.
 - **No per-IP limit on the gate's API.** The enrollment code is 128 random bits (`openssl rand -hex 16`), and an unlock needs a registered passkey. Guessing is not a plan.
 - **Invite tokens are in the query string**, so Vercel's request logs see them. Only the owner reads those logs, a token works once and for a day, and the page sends no Referer.

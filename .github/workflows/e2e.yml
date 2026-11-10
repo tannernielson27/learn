@@ -34,8 +34,8 @@ jobs:
         timeout-minutes: 10
         env:
           PLAYWRIGHT_BASE_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
-          # Previews are behind Vercel Authentication (ADR 0017). Vercel → Settings → Deployment
-          # Protection → Protection Bypass for Automation holds this value.
+          # Only needed when Vercel Deployment Protection is on (off since 2026-11-10, ADR 0017).
+          # Vercel → Settings → Deployment Protection → Protection Bypass for Automation holds it.
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
       - uses: actions/upload-artifact@v7
         if: always()
