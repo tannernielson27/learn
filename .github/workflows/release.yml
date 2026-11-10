@@ -1,0 +1,153 @@
+name: release
+
+# ADR 0017: production is whatever the `production` branch points at. This is the only thing that
+# moves it. It releases a commit that is on main, passed CI, and is what staging runs right now,
+# so what goes live is exactly what was tested on staging.learnursing.app.
+#
+# In order: check the commit, apply production's migrations, move `production` to the commit
+# (Vercel builds it), and wait until www.learnursing.app reports that commit. Migrations go first
+# because every migration must keep working with the app already deployed (docs/05 §7).
+#
+# The `production` environment asks the owner to approve each run before any step starts.
+#
+# Run it: Actions → release → Run workflow, or `gh workflow run release.yml`. Leave the commit
+# blank to release what staging runs now.
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit on main to release (blank: whatever staging runs now)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  checks: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: release to production
+    # Only main's copy of this file may run with PROD_DB_URL. A branch's edited copy is refused
+    # here, and the `production` environment also allows main alone (docs/05 §7.16).
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    environment: production
+    env:
+      SUPABASE_CLI_VERSION: 2.117.0
+      SUPABASE_CLI_SHA256: 913d1b8303a1bfa05a4f52909f60cbc2f8247f7f9444283c37dbe9eaef0d95de
+      STAGING_URL: https://staging.learnursing.app
+      PRODUCTION_URL: https://www.learnursing.app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Choose the commit
+        id: target
+        env:
+          REQUESTED: ${{ inputs.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git fetch --quiet origin main production || git fetch --quiet origin main
+
+          staging="$(curl -fsS "$STAGING_URL/api/health" | jq -r '.version // empty')"
+          [[ "$staging" =~ ^[0-9a-f]{12}$ ]] \
+            || { echo "::error::Staging's /api/health gave no commit ('$staging')."; exit 1; }
+          echo "Staging runs $staging"
+
+          if [ -n "$REQUESTED" ]; then
+            [[ "$REQUESTED" =~ ^[0-9a-f]{7,40}$ ]] \
+              || { echo "::error::The commit must be 7 to 40 lower-case hex digits."; exit 1; }
+            target="$(git rev-parse --verify "${REQUESTED}^{commit}")"
+          else
+            target="$(git rev-parse --verify "${staging}^{commit}")"
+          fi
+          short="${target:0:12}"
+
+          git merge-base --is-ancestor "$target" origin/main \
+            || { echo "::error::$short is not on main."; exit 1; }
+          [ "$short" = "$staging" ] \
+            || { echo "::error::Staging runs $staging, not $short. Release only what staging runs."; exit 1; }
+
+          ci="$(gh api "repos/$GITHUB_REPOSITORY/commits/$target/check-runs?check_name=check" \
+                  --jq '[.check_runs[].conclusion] | if length == 0 then "missing" else (if all(. == "success") then "success" else "failed" end) end')"
+          [ "$ci" = "success" ] || { echo "::error::CI's check job on $short is $ci."; exit 1; }
+
+          if git rev-parse --verify --quiet origin/production > /dev/null; then
+            git merge-base --is-ancestor origin/production "$target" \
+              || { echo "::error::production is not an ancestor of $short, so this would not be a fast-forward."; exit 1; }
+            if [ "$(git rev-parse origin/production)" = "$target" ]; then
+              echo "::notice::$short is already released."
+            fi
+          fi
+
+          echo "sha=$target" >> "$GITHUB_OUTPUT"
+          echo "short=$short" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Releasing \`$short\`"
+            echo
+            echo "Changes since the last release:"
+            echo
+            git log --oneline "origin/production..$target" 2>/dev/null | sed 's/^/- /' || echo "- (first release)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check the production database secret
+        env:
+          PROD_DB_URL: ${{ secrets.PROD_DB_URL }}
+        run: |
+          set -euo pipefail
+          [ -n "${PROD_DB_URL:-}" ] || { echo "::error::PROD_DB_URL is not set."; exit 1; }
+          echo "::add-mask::$PROD_DB_URL"
+          password="$(printf '%s' "$PROD_DB_URL" | sed -nE 's#^[a-z]+://[^:/@]+:([^@]+)@.*#\1#p')"
+          if [ -n "$password" ]; then
+            echo "::add-mask::$password"
+            echo "::add-mask::$(printf '%b' "${password//%/\\x}")"
+          fi
+
+      - name: Install the Supabase CLI
+        run: |
+          set -euo pipefail
+          curl -fsSL -o "$RUNNER_TEMP/supabase.deb" \
+            "https://github.com/supabase/cli/releases/download/v${SUPABASE_CLI_VERSION}/supabase_${SUPABASE_CLI_VERSION}_linux_amd64.deb"
+          echo "${SUPABASE_CLI_SHA256}  $RUNNER_TEMP/supabase.deb" | sha256sum --check --strict
+          sudo dpkg -i "$RUNNER_TEMP/supabase.deb" > /dev/null
+          supabase --version | grep -Fx "$SUPABASE_CLI_VERSION" || { echo "::error::unexpected Supabase CLI version"; exit 1; }
+
+      - name: Apply production's migrations
+        env:
+          PROD_DB_URL: ${{ secrets.PROD_DB_URL }}
+          TARGET: ${{ steps.target.outputs.sha }}
+        run: |
+          set -euo pipefail
+          # The migrations of the commit being released, not of main's tip.
+          git checkout --quiet "$TARGET"
+          supabase db push --db-url "$PROD_DB_URL" --dry-run
+          supabase db push --db-url "$PROD_DB_URL" --yes
+
+      - name: Move production to the commit
+        env:
+          TARGET: ${{ steps.target.outputs.sha }}
+        run: git push origin "$TARGET:refs/heads/production"
+
+      - name: Wait for www.learnursing.app to run it
+        env:
+          SHORT: ${{ steps.target.outputs.short }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 90); do
+            live="$(curl -fsS "$PRODUCTION_URL/api/health" | jq -r '.version' || true)"
+            if [ "$live" = "$SHORT" ]; then
+              echo "Production runs $SHORT."
+              echo "Production runs \`$SHORT\`." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "::error::After 30 minutes production still runs $live. Check the Vercel deployment for $SHORT."
+          exit 1

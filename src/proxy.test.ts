@@ -10,8 +10,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const updateSession = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase/proxy", () => ({ updateSession }));
+const isDeviceActive = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/deviceGate/store", () => ({ createGateStore: () => ({ isDeviceActive }) }));
 
 import { config, proxy } from "./proxy";
+import { SESSION_COOKIE, STAGING_HOST } from "@/lib/deviceGate/config";
+import { SESSION_MATCHER } from "@/lib/deviceGate/sessionPaths";
+import { signToken } from "@/lib/deviceGate/token";
 
 const FORBIDDEN = ["answerKey", "correctOptionId", "rationale", "scoring", "maxPoints"];
 
@@ -95,7 +100,8 @@ describe("the proxy matcher still covers the gallery", () => {
   // Next requires `matcher` to be a statically analysable constant, so this reads the value it
   // actually ships. Losing an entry here would take the gate off every gallery route silently —
   // the proxy docs call that out as the way proxy coverage disappears in a refactor.
-  const matcher = config.matcher;
+  // The plain paths. The one object entry is the staging device gate, tested on its own below.
+  const matcher = config.matcher.filter((entry): entry is string => typeof entry === "string");
 
   it("never runs on Stripe's webhook, which has no session and must not be redirected (#518)", () => {
     // Every entry is a fixed prefix; none is a catch-all and none is under /api.
@@ -309,5 +315,99 @@ describe("a signed-in visit to sign-in goes to that person's own home in one red
     });
     const response = await proxy(request("/sign-in"));
     expect(response.cookies.get("sb-session")?.value).toBe("fresh");
+  });
+});
+
+describe("the staging device gate in the proxy (ADR 0017)", () => {
+  const SECRET = "s".repeat(40);
+  const saved = process.env.DEVICE_GATE_SECRET;
+
+  beforeEach(() => {
+    updateSession.mockReset();
+    isDeviceActive.mockReset();
+    process.env.DEVICE_GATE_SECRET = SECRET;
+  });
+
+  afterEach(() => {
+    if (saved === undefined) delete process.env.DEVICE_GATE_SECRET;
+    else process.env.DEVICE_GATE_SECRET = saved;
+  });
+
+  const staging = (pathname: string, init: { cookie?: string; accept?: string } = {}) => {
+    const headers = new Headers({ host: STAGING_HOST, accept: init.accept ?? "text/html" });
+    if (init.cookie) headers.set("cookie", init.cookie);
+    return new NextRequest(new URL(pathname, `https://${STAGING_HOST}`), { headers });
+  };
+
+  const sessionFor = (deviceId: string) =>
+    signToken({ k: "session", d: deviceId, exp: Math.floor(Date.now() / 1000) + 60 }, SECRET);
+
+  it("keeps the session block of the matcher the same as SESSION_MATCHER", () => {
+    const strings = config.matcher.filter((entry) => typeof entry === "string");
+    expect(strings).toEqual([...SESSION_MATCHER]);
+  });
+
+  it("matches every path, /api included, but only on the staging host", () => {
+    const gate = config.matcher.filter((entry) => typeof entry !== "string");
+    expect(gate).toEqual([
+      {
+        source: "/((?!_next/static/|_next/image(?:/|$)|favicon\\.ico$).*)",
+        has: [{ type: "host", value: STAGING_HOST }],
+      },
+    ]);
+  });
+
+  it("sends a page load with no device to the gate page, with the way back", async () => {
+    const response = await proxy(staging("/author/quizzes?tab=2"));
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      `https://${STAGING_HOST}/device-gate?next=${encodeURIComponent("/author/quizzes?tab=2")}`,
+    );
+    expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+    expect(updateSession).not.toHaveBeenCalled();
+  });
+
+  it("refuses an API call with no device, without a redirect", async () => {
+    const response = await proxy(staging("/api/ai-import/start", { accept: "application/json" }));
+    expect(response.status).toBe(401);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("lets a registered device through, and does session work only where it always did", async () => {
+    const cookie = `${SESSION_COOKIE}=${await sessionFor("device-1")}`;
+    isDeviceActive.mockResolvedValue(true);
+    updateSession.mockResolvedValue({ response: NextResponse.next(), signedIn: false });
+
+    const terms = await proxy(staging("/terms", { cookie }));
+    expect(terms.status).toBe(200);
+    expect(terms.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+    expect(updateSession).not.toHaveBeenCalled();
+
+    const pricing = await proxy(staging("/pricing", { cookie }));
+    expect(pricing.status).toBe(200);
+    expect(updateSession).toHaveBeenCalledTimes(1);
+    expect(isDeviceActive).toHaveBeenCalledWith("device-1");
+  });
+
+  it("locks a revoked device out", async () => {
+    const cookie = `${SESSION_COOKIE}=${await sessionFor("device-1")}`;
+    isDeviceActive.mockResolvedValue(false);
+    const response = await proxy(staging("/", { cookie }));
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(`https://${STAGING_HOST}/device-gate`);
+  });
+
+  it("refuses everything on the staging host when the secret is missing", async () => {
+    delete process.env.DEVICE_GATE_SECRET;
+    const response = await proxy(staging("/device-gate"));
+    expect(response.status).toBe(503);
+  });
+
+  it("does nothing on any other host", async () => {
+    updateSession.mockResolvedValue({ response: NextResponse.next(), signedIn: false });
+    const response = await proxy(request("/pricing"));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-robots-tag")).toBeNull();
+    expect(isDeviceActive).not.toHaveBeenCalled();
   });
 });

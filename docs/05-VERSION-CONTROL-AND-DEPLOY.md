@@ -101,11 +101,14 @@ Concurrency: one run per branch, newer pushes cancel older runs.
 
 **Environments:**
 
-| Env        | Trigger         | URL                          | Env vars                                              |
-| ---------- | --------------- | ---------------------------- | ----------------------------------------------------- |
-| Local      | `pnpm dev`      | localhost:3000               | `.env.local` (git-ignored) copied from `.env.example` |
-| Preview    | any PR push     | per-deploy URL in PR comment | Vercel "Preview" scope                                |
-| Production | merge to `main` | production URL               | Vercel "Production" scope                             |
+| Env        | Trigger                      | URL                          | Env vars                                              |
+| ---------- | ---------------------------- | ---------------------------- | ----------------------------------------------------- |
+| Local      | `pnpm dev`                   | localhost:3000               | `.env.local` (git-ignored) copied from `.env.example` |
+| Preview    | any PR push                  | per-deploy URL in PR comment | Vercel "Preview" scope                                |
+| Staging    | merge to `main`              | staging.learnursing.app      | Vercel "Preview" scope, overridden for branch `main`  |
+| Production | the release workflow (§7.16) | www.learnursing.app          | Vercel "Production" scope                             |
+
+Since ADR 0017 (2026-11-10) Vercel's production branch is `production`, not `main`, and only `.github/workflows/release.yml` moves it. A merge to `main` is a preview deployment of branch `main`, which Vercel serves at staging.learnursing.app.
 
 Which Supabase project each one talks to is in [§7.1](#71-which-supabase-project-each-environment-uses).
 
@@ -115,13 +118,13 @@ Rules:
 - Public variables are prefixed `NEXT_PUBLIC_`; everything else is server-only.
 - Preview and production point at **different** Supabase projects (ADR 0006), so a bad migration on a branch can never touch real class data. See §7.1.
 
-**Rollback:** Vercel → Deployments → previous production deployment → "Promote to Production". Then open a `fix/*` PR. Never force-push `main`.
+**Rollback:** Vercel → Deployments → previous production deployment → "Promote to Production". Then open a `fix/*` PR, merge it, check it on staging and release it (§7.16). Never force-push `main` or `production`.
 
 ## 7. Database (Supabase)
 
 - Schema changes are SQL migrations in `supabase/migrations/`, created with `supabase migration new <name>`, committed in the PR that needs them.
 - CI runs the migrations against a throwaway local Supabase (Docker) to verify they apply cleanly.
-- Every migration must be backward compatible with the currently deployed app (add columns, don't rename; drop only in a later PR), because a merge to `main` reaches production immediately.
+- Every migration must be backward compatible with the currently deployed app (add columns, don't rename; drop only in a later PR), because the release workflow applies production's migrations before the new app is live, and staging's are applied as `main` deploys (§7.16).
 - Nothing is ever changed by hand in the dashboard. The schema exists only in `supabase/migrations/`, which is what makes standing up a new project a replay rather than a rewrite.
 
 ### 7.1 Which Supabase project each environment uses
@@ -213,6 +216,7 @@ Everything in `supabase/migrations/` today, in filename order — this is the re
 | 65  | `20261028000000_beta_passes`                    | owner-issued beta passes and their redemption into a beta grant; nothing enforced yet    | **not applied**            |
 | 66  | `20261102000000_trial_use_once`                 | one trial record per Stripe subscription (#518 follow-up)                                | **not applied**            |
 | 67  | `20261103000000_billing_enforcement`            | write policies and functions refuse a workspace without access when `enforced` (#521)    | **not applied**            |
+| 68  | `20261110000000_device_gate`                    | the staging device gate's passkeys and invite links; empty on production (ADR 0017)      | **not applied**            |
 
 Checked 2026-09-24 with `pnpm exec supabase migration list --linked`: rows 1–38 are applied to `vauokqoyvewtzubqajgh`, local and remote histories match (rows 4–21 were pushed on 2026-09-22 and 23, row 22 straight after #214 merged, row 23 straight after #220, row 24 straight after #222, row 25 straight after #224, row 26 straight after #226, row 27 straight after #228, row 28 straight after #230, row 29 straight after #245, row 30 after #247 and row 31 after #251 and row 32 after #254 and row 33 after #255 and row 34 after #257 and row 35 after #258 and row 36 after #261, all on 2026-09-24; the owner pushed row 37 (#284) on 2026-09-26, about a day after its merge, because the permission classifier refused the orchestrator's push, and row 38 straight after #286 the same day). Checked 2026-09-26. Re-run that command before trusting this column; a new row is **not applied** until someone pushes it.
 
@@ -759,6 +763,23 @@ A workspace pays $39.99 a month after a 7-day free trial, through Stripe's hoste
 4. **Revoke.** `pnpm beta-pass revoke tester@school.edu` revokes every pass for the address and the free access any of them gave. Nothing is deleted. Once enforcement is on (step 11), that workspace has no access until it subscribes; what its teachers are shown when that happens is #522.
 
 **Invoices for a school.** Not built. If a school needs an invoice or a purchase order, create the subscription by hand in the dashboard on the workspace's customer with **Email invoice to the customer to pay manually** (`collection_method: send_invoice`). The webhook mirrors its status like any other, so access follows it.
+
+### 7.16 Staging and releases (ADR 0017)
+
+**How a change reaches teachers.** PR → its own preview (Vercel login) → merge to `main` → **staging.learnursing.app**, with any new migration applied to `learn` by `staging-migrate.yml` → try it there → **Release** → www.learnursing.app.
+
+**Releasing.** GitHub → Actions → **release** → Run workflow. Leave the commit blank to release what staging runs now (or `gh workflow run release.yml`). It waits for the owner's approval (the `production` environment), then refuses unless the commit is on `main`, passed CI's `check` job and is what staging's `/api/health` reports. It applies production's migrations (`PROD_DB_URL`), fast-forwards `production` to the commit, and waits until www.learnursing.app's `/api/health` reports it. The run's summary lists the commits released.
+
+**Opening staging on a device.** Go to staging.learnursing.app. The first device: **Add this device**, give it a name, type the enrollment code (`DEVICE_GATE_ENROLL_CODE`, in Vercel Preview for branch `main`), **Create passkey**. Every later device: on a device already in, open `/device-gate/devices` → **Make an invite link**, and open the link on the new device within 24 hours. After that a device unlocks with its passkey; it stays in for 30 days. **Revoke** on the devices page locks a device out at once. To lock every device, change `DEVICE_GATE_SECRET` and redeploy staging.
+
+**What staging needs, once (owner):**
+
+1. **[ ] Vercel** (Claude can do these through the API): production branch `production`; the domain `staging.learnursing.app` on branch `main`; for Preview, branch `main` only: `SITE_URL=https://staging.learnursing.app`, `DEVICE_GATE_SECRET` (`openssl rand -hex 32`) and `DEVICE_GATE_ENROLL_CODE` (`openssl rand -hex 16`, kept in a password manager). Optionally the `learn-dev` sandbox keys: `STRIPE_SECRET_KEY`, `STRIPE_PRICE_LOOKUP_KEY=learn_monthly_v1` and the `STRIPE_WEBHOOK_SECRET` of a sandbox endpoint at `https://staging.learnursing.app/api/stripe/webhook`.
+2. **[ ] GitHub:** `gh secret set STAGING_DB_URL` with `learn`'s session pooler string (Supabase → `learn` → Connect → Session pooler; reset the database password there if it is not to hand). Environment `production`: the owner as required reviewer, deployment branches `main` only. A ruleset on `production`: no deletion, no force push, and updates only by GitHub Actions, so the release workflow is the one way to move it.
+3. **[ ] Supabase `learn`:** Authentication → URL Configuration: Site URL `https://staging.learnursing.app`; Redirect URLs `https://staging.learnursing.app/**` and `https://*-tanner-nielsons-projects.vercel.app/**`. Authentication → Attack Protection: CAPTCHA off (staging sends none). Keep `cron.job` empty, so staging never sends reminders.
+4. **[ ] The scrub** (§7.3a step 10). `learn` must hold only the owner's own accounts and test content. On 2026-11-10 one other person's account was left (a teacher, no student answers); the owner deletes it in `learn`'s SQL Editor with `delete from auth.users where email = '<address>';`. Their questions stay, with no author.
+
+`/api/health` on staging reports `"project": "vauokqoyvewtzubqajgh"`; on www.learnursing.app, `"xptnbfrrqpzsdhuxilcr"`.
 
 ## 8. Working together day to day
 

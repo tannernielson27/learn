@@ -24,4 +24,4 @@ Next.js 16.3 (App Router) · React 19.2 · TypeScript 5.9 · Tailwind 4.3 · Zod
 
 ## Git
 
-Trunk-based. Branch `feat|fix|chore|docs|refactor|test/<summary>` from `main`, open a PR, squash-merge. PR titles are Conventional Commits (`feat(ngn): ...`). Never push to `main`. See `docs/05-VERSION-CONTROL-AND-DEPLOY.md`.
+Trunk-based. Branch `feat|fix|chore|docs|refactor|test/<summary>` from `main`, open a PR, squash-merge. PR titles are Conventional Commits (`feat(ngn): ...`). Never push to `main` or `production`. A merge to `main` deploys to staging.learnursing.app (the `learn` project); production moves only when the owner runs the release workflow (ADR 0017, docs/05 §7.16). See `docs/05-VERSION-CONTROL-AND-DEPLOY.md`.

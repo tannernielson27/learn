@@ -4,6 +4,10 @@ import { galleryIsAvailable, isGalleryPath } from "@/lib/gallery/availability";
 import { updateSession } from "@/lib/supabase/proxy";
 import { betaPassResponseHeaders } from "@/lib/betaPass/link";
 import { inviteResponseHeaders } from "@/lib/workspace/invitePage";
+import { decideGate, type GateDecision } from "@/lib/deviceGate/decide";
+import { SESSION_COOKIE } from "@/lib/deviceGate/config";
+import { needsSessionWork } from "@/lib/deviceGate/sessionPaths";
+import { createGateStore } from "@/lib/deviceGate/store";
 
 /**
  * ADR 0003 / #146: the gallery ships answer keys to the browser by design, so it is closed on the
@@ -25,8 +29,58 @@ function galleryClosed(): NextResponse {
   });
 }
 
+/**
+ * ADR 0017: staging.learnursing.app opens only for a device with a registered passkey. Off the
+ * staging host this is one string comparison and `not-gated`; nothing else changes for production.
+ */
+function gateDecision(request: NextRequest, url: URL): Promise<GateDecision> {
+  return decideGate(
+    {
+      host: request.headers.get("host"),
+      pathname: url.pathname,
+      search: url.search,
+      method: request.method,
+      accept: request.headers.get("accept"),
+      isRsc: request.headers.has("rsc"),
+      sessionToken: request.cookies.get(SESSION_COOKIE)?.value ?? null,
+    },
+    { isDeviceActive: (deviceId) => createGateStore().isDeviceActive(deviceId) },
+  );
+}
+
+const NO_INDEX = "noindex, nofollow";
+
+function gateRefusal(decision: GateDecision, url: URL): NextResponse | null {
+  const plain = (body: string, status: number) =>
+    new NextResponse(body, {
+      status,
+      headers: { "content-type": "text/plain; charset=utf-8", "x-robots-tag": NO_INDEX },
+    });
+  if (decision.kind === "misconfigured") return plain("Staging is not configured", 503);
+  if (decision.kind === "deny") return plain("Unauthorized", 401);
+  if (decision.kind === "redirect") {
+    const redirect = NextResponse.redirect(new URL(decision.location, url.origin));
+    redirect.headers.set("x-robots-tag", NO_INDEX);
+    return redirect;
+  }
+  return null;
+}
+
 export async function proxy(request: NextRequest) {
   const url = new URL(request.url);
+
+  const gate = await gateDecision(request, url);
+  const refusal = gateRefusal(gate, url);
+  if (refusal) return refusal;
+  if (gate.kind !== "not-gated") {
+    // The staging host. Only the paths the session matcher always covered do session work; the
+    // rest (the gate page, /api, /terms and the like) go straight through, as they did before.
+    if (!needsSessionWork(url.pathname)) {
+      const next = NextResponse.next();
+      next.headers.set("x-robots-tag", NO_INDEX);
+      return next;
+    }
+  }
 
   // Before `updateSession`, deliberately. The gallery never needed a session in either direction,
   // and answering here keeps the "no auth round trip" the matcher comment below is about.
@@ -78,7 +132,12 @@ export async function proxy(request: NextRequest) {
 // it is not protected, so a signed-out visitor is let straight through. The terms and the privacy
 // policy read nothing and are not here.
 // Never `/api/stripe/webhook` (#518): Stripe calls it with no session, and a redirect would lose
-// the event. Nothing under /api is matched; keep it that way if a catch-all is ever added.
+// the event. Nothing under /api is matched by the first block; keep it that way.
+//
+// The last entry is the staging device gate (ADR 0017): every path on staging.learnursing.app but
+// the build's static files, so the gate covers pages and /api alike there. It only ever matches
+// that host, so production's requests reach the proxy exactly as they did before. The first block
+// must stay the same as SESSION_MATCHER in src/lib/deviceGate/sessionPaths.ts (proxy.test.ts).
 export const config = {
   matcher: [
     "/",
@@ -97,5 +156,9 @@ export const config = {
     "/auth/:path*",
     "/gallery",
     "/gallery/:path*",
+    {
+      source: "/((?!_next/static/|_next/image(?:/|$)|favicon\\.ico$).*)",
+      has: [{ type: "host", value: "staging.learnursing.app" }],
+    },
   ],
 };
