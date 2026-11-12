@@ -25,6 +25,8 @@ jobs:
   migrate:
     name: push migrations to staging
     runs-on: ubuntu-24.04
+    # STAGING_DB_URL is a secret of the `staging` environment, which only main may use (docs/05 §7.17).
+    environment: staging
     timeout-minutes: 15
     env:
       # The CLI release that package.json pins, verified against its published checksum, as in
