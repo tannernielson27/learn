@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { FIXTURES } from "@/lib/ngn/fixtures";
@@ -63,7 +63,9 @@ describe("ItemPlayer with multiple choice", () => {
     await feedbackShown();
     // The submit bar is gone, so focus must go somewhere: the result is where the reader wants it.
     const score = screen.getByRole("complementary", { name: "Score" });
-    expect(document.activeElement).toBe(score);
+    // QuestionShell moves focus in an effect that runs after the panel commits, so under a loaded
+    // CI runner the panel can be on the page a moment before it holds focus. Wait for it.
+    await waitFor(() => expect(document.activeElement).toBe(score), { timeout: 10_000 });
     // The verdict first, then the points in words: "1 / 1" read aloud is "1 slash 1".
     expect(score).toHaveAccessibleDescription(/All correct.*1 of 1 point/);
     // Headings, so a reader can move between the parts of the feedback rather than through it.
