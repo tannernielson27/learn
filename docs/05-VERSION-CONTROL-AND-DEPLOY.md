@@ -537,7 +537,7 @@ First load barely moves, because `instrumentation-client.ts` only starts a dynam
 
    The file holds the **private** key (`AGE-SECRET-KEY-1...`). Put it in your password manager as a secure note, keep one offline copy (a USB stick or a printout in a drawer), and delete the file. Never put it in the repo, in a GitHub secret, in Vercel or in a chat. Lose it and every backup is unreadable; leak it and anyone can read the last 14 days of backups, so make a new pair, replace the secret in step 2 and delete the old artifacts (`gh run list -w db-backup.yml`, then `gh run delete <id>` for each).
 
-2. **[ ] Set the two repository secrets** (GitHub → repo → Settings → Secrets and variables → Actions, or `gh secret set`, which reads the value from the prompt and keeps it out of shell history):
+2. **[ ] Set the two secrets** (`gh secret set`, which reads the value from the prompt and keeps it out of shell history). `BACKUP_AGE_RECIPIENT` is a repository secret; `PROD_DB_URL` is a secret of the `backup` and `release` environments, never of the repository (§7.17): `gh secret set PROD_DB_URL --env backup` and `gh secret set PROD_DB_URL --env release`.
    - `BACKUP_AGE_RECIPIENT` = the `age1...` public key. The script refuses a value that is not a public key, and refuses outright a value that is a secret key.
    - `PROD_DB_URL` = the production project's **session pooler** string: Supabase → the production project → Connect → Session pooler. It looks like `postgresql://postgres.<prod-ref>:<password>@aws-0-us-east-1.pooler.supabase.com:5432/postgres`, with the database password from §7.3 step 1 (percent-encode any `@ : / ? #` in it). The session pooler because GitHub's runners have IPv4 only and the direct connection is IPv6 only; not the transaction pooler (port 6543), which `pg_dump` cannot use.
 
@@ -775,11 +775,28 @@ A workspace pays $39.99 a month after a 7-day free trial, through Stripe's hoste
 **What staging needs, once (owner):**
 
 1. **[ ] Vercel** (Claude can do these through the API): production branch `production`; the domain `staging.learnursing.app` on branch `main`; for Preview, branch `main` only: `SITE_URL=https://staging.learnursing.app`, `DEVICE_GATE_SECRET` (`openssl rand -hex 32`) and `DEVICE_GATE_ENROLL_CODE` (`openssl rand -hex 16`, kept in a password manager). Optionally the `learn-dev` sandbox keys: `STRIPE_SECRET_KEY`, `STRIPE_PRICE_LOOKUP_KEY=learn_monthly_v1` and the `STRIPE_WEBHOOK_SECRET` of a sandbox endpoint at `https://staging.learnursing.app/api/stripe/webhook`.
-2. **[ ] GitHub:** `gh secret set STAGING_DB_URL` with `learn`'s session pooler string (Supabase → `learn` → Connect → Session pooler). Reset the database password to letters and digits only if it is not to hand: other characters must be percent-encoded in the URL, and a wrong one fails as `password authentication failed`. Then `gh workflow run staging-migrate.yml`. Environment `release` (done 2026-11-10): the owner as required reviewer, deployment branches `main` only. Leave the `Production` and `Preview` environments alone: they are Vercel's. A ruleset on `production` (done 2026-11-10): no deletion, no force push. A personal repository cannot let only GitHub Actions update a branch, so the rule that only the release workflow moves `production` is ours to keep: never push to it by hand.
+2. **[ ] GitHub:** `gh secret set STAGING_DB_URL --env staging` with `learn`'s session pooler string (Supabase → `learn` → Connect → Session pooler). Reset the database password to letters and digits only if it is not to hand: other characters must be percent-encoded in the URL, and a wrong one fails as `password authentication failed`. Then `gh workflow run staging-migrate.yml`. Environment `release` (done 2026-11-10): the owner as required reviewer, deployment branches `main` only. Leave the `Production` and `Preview` environments alone: they are Vercel's. The `production` branch and its deploy key: §7.17.
 3. **[ ] Supabase `learn`:** Authentication → URL Configuration: Site URL `https://staging.learnursing.app`; Redirect URLs `https://staging.learnursing.app/**` and `https://*-tanner-nielsons-projects.vercel.app/**`. Authentication → Attack Protection: CAPTCHA off (staging sends none). Keep `cron.job` empty, so staging never sends reminders.
 4. **[ ] The scrub** (§7.3a step 10). `learn` must hold only the owner's own accounts and test content. On 2026-11-10 one other person's account was left (a teacher, no student answers); the owner deletes it in `learn`'s SQL Editor with `delete from auth.users where email = '<address>';`. Their questions stay, with no author.
 
 `/api/health` on staging reports `"project": "vauokqoyvewtzubqajgh"`; on www.learnursing.app, `"xptnbfrrqpzsdhuxilcr"`.
+
+### 7.17 Collaborators: what write access can and cannot reach (2026-11-11)
+
+Anyone with write access can push a branch, and a branch can carry a workflow that prints any **repository** secret. So no secret that reaches real people's data is a repository secret:
+
+| Secret                                                    | Where it lives                      | Who can use it                                                                  |
+| --------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------- |
+| `PROD_DB_URL`                                             | environments `backup` and `release` | jobs on `main` only; `release` also waits for the owner's approval              |
+| `PRODUCTION_DEPLOY_KEY`                                   | environment `release`               | an approved release run on `main`                                               |
+| `STAGING_DB_URL`                                          | environment `staging`               | jobs on `main` only                                                             |
+| `BACKUP_AGE_RECIPIENT`, `VERCEL_AUTOMATION_BYPASS_SECRET` | repository                          | any workflow; neither reaches data (a public key, and previews that are public) |
+
+**`production` moves only by the release.** Its ruleset forbids deletion, force pushes and every update except by the deploy key whose private half is `PRODUCTION_DEPLOY_KEY` (the public half is the repository deploy key "release: production branch"). Pushing to `production` by hand, as owner or collaborator, is refused. Rotating the key: `ssh-keygen -t ed25519 -N "" -f prodkey`, replace the deploy key with `prodkey.pub` (write access), `gh secret set PRODUCTION_DEPLOY_KEY --env release < prodkey`, delete both files.
+
+**Changes to `.github/` need the owner.** `main` decides what the `backup` and `release` jobs run, and a collaborator can merge their own pull request once CI passes (approvals are 0). So `.github/CODEOWNERS` names the owner for `/.github/`, and the ruleset "main: code owners approve .github" requires a code owner's approval on any pull request that touches it. The owner (repository admin) may bypass it for their own pull requests. Everything else still merges on green CI alone.
+
+**What review still has to catch.** Any app change runs with production's Vercel secrets once it is released. Read what a release contains before approving it: its run summary lists the commits.
 
 ## 8. Working together day to day
 

@@ -1,2 +1,5 @@
-# Either owner can review anything. Add the collaborator's handle on the same line.
-* @tannernielson27
+# Code owners (docs/05 §7.17). A ruleset on main requires a code owner's approval on any pull
+# request that touches a path listed here; everything else merges on green CI alone.
+#
+# .github/ decides what the backup and release jobs run with production's database secret.
+/.github/ @tannernielson27

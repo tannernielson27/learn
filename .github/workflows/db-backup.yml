@@ -26,6 +26,9 @@ jobs:
     name: dump, encrypt, upload
     # Pinned, not ubuntu-latest: the apt package names and the PGDG codename below are this release's.
     runs-on: ubuntu-24.04
+    # PROD_DB_URL is a secret of the `backup` environment, which only main may use. A collaborator's
+    # branch cannot read it, whatever its copy of this file says (docs/05 §7.17).
+    environment: backup
     timeout-minutes: 30
     # The secrets are given only to the two steps that read them, never to an action.
     env:
