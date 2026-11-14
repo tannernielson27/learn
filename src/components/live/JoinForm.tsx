@@ -21,6 +21,11 @@ export interface JoinFormProps {
   defaultName?: string;
   /** The person chose "Join as a guest instead": posts `guest`, which can only take an account away. */
   asGuest?: boolean;
+  /**
+   * A refusal to show before anything is posted: the code a plain GET form sent to `/join` could
+   * not name a live session (#563). Marks the code field, as the action's own refusal would.
+   */
+  codeError?: string;
 }
 
 const INITIAL: JoinState = { status: "idle" };
@@ -33,8 +38,19 @@ const INITIAL: JoinState = { status: "idle" };
  * A code that arrived in the address (from the QR code on the host's screen) is filled in and the
  * name field takes focus, so a scan is one tap and one word.
  */
-export function JoinForm({ action, code, defaultName, asGuest = false }: JoinFormProps) {
-  const [state, formAction, pending] = useActionState(action, INITIAL);
+export function JoinForm({
+  action,
+  code,
+  defaultName,
+  asGuest = false,
+  codeError: arrivedError,
+}: JoinFormProps) {
+  const [state, formAction, pending] = useActionState(
+    action,
+    arrivedError === undefined
+      ? INITIAL
+      : ({ status: "error", field: "code", error: arrivedError } satisfies JoinState),
+  );
   const fieldId = useId();
   const codeRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);

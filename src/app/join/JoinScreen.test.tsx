@@ -98,3 +98,16 @@ describe("JoinScreen for a signed-in student (ADR 0013)", () => {
     expect(ids(none.innerHTML)).toBe(ids(plain.innerHTML));
   });
 });
+
+// #563: the landing page's join code form, without JavaScript, sends its code to `/join?code=`.
+describe("JoinScreen with a refused code from the address", () => {
+  it("marks the code field with the join form's message, and takes focus there", () => {
+    render(<JoinScreen code="" codeError="Enter the six-character join code on the screen." />);
+    const field = screen.getByRole("textbox", { name: "Join code" });
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveAccessibleDescription("Enter the six-character join code on the screen.");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Enter the six-character join code on the screen.",
+    );
+  });
+});

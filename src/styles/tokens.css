@@ -53,6 +53,18 @@
   --blue-82: oklch(82% 0.09 250);
   --blue-94: oklch(94% 0.03 250);
 
+  /*
+   * Lecture-hall navy: the marketing pages' brand band only (#563, docs/design/landing-563/B.md).
+   * Not the clinical blue: nothing interactive is ever drawn in it.
+   */
+  --navy-14: oklch(14.5% 0.035 258);
+  --navy-21: oklch(21% 0.055 258);
+  --navy-26: oklch(26% 0.06 258);
+  --navy-34: oklch(34% 0.06 258);
+  --navy-64: oklch(64% 0.05 255);
+  --navy-84: oklch(84% 0.03 250);
+  --navy-97: oklch(97% 0.01 250);
+
   /* Feedback hues */
   --green-27: oklch(27% 0.04 150);
   --green-50: oklch(50% 0.13 150);
@@ -179,6 +191,28 @@
   --stage-surface: var(--white);
   --stage-ink: var(--neutral-15);
   --stage-line: var(--neutral-80);
+
+  /*
+   * The brand band (#563): the deep surface at the top and foot of the public marketing pages, like
+   * a dark lecture hall with the always-light projector lit inside it. A surface, not a state:
+   * the clinical blue still means interaction. Marketing pages only (landing, pricing, the site
+   * header); never inside the app, the player or a live session. Every pair passes WCAG AA:
+   * brand-ink 16:1, brand-ink-2 10.9:1 and brand-line-strong 5.3:1 on the band, and the focus
+   * ring 10:1.
+   */
+  --brand-surface: var(--navy-21);
+  --brand-surface-raised: var(--navy-26);
+  --brand-ink: var(--navy-97);
+  --brand-ink-2: var(--navy-84);
+  --brand-line: var(--navy-34);
+  --brand-line-strong: var(--navy-64);
+  --brand-focus: var(--blue-82);
+  /* The band's main action: the one lit button, paper on navy (17:1). */
+  --brand-action: var(--paper-98);
+  --brand-action-hover: var(--blue-94);
+  --brand-action-ink: var(--navy-21);
+  /* A phone's frame in the landing page's picture of a live session. */
+  --device-bezel: var(--neutral-15);
 }
 
 [data-theme="light"] {
@@ -218,6 +252,14 @@
     --notice-soft: var(--neutral-26);
 
     --elevation-1: 0 1px 2px var(--shade-dark), 0 4px 12px var(--shade-dark);
+
+    /* The band goes deeper than the dark page, so the hall stays darker than the projector. */
+    --brand-surface: var(--navy-14);
+    --brand-surface-raised: var(--navy-21);
+    --brand-line: var(--navy-26);
+    --brand-action: var(--paper-94);
+    --brand-action-hover: var(--blue-94);
+    --brand-action-ink: var(--navy-14);
   }
 }
 
@@ -248,6 +290,13 @@
   --notice-soft: var(--neutral-26);
 
   --elevation-1: 0 1px 2px var(--shade-dark), 0 4px 12px var(--shade-dark);
+
+  --brand-surface: var(--navy-14);
+  --brand-surface-raised: var(--navy-21);
+  --brand-line: var(--navy-26);
+  --brand-action: var(--paper-94);
+  --brand-action-hover: var(--blue-94);
+  --brand-action-ink: var(--navy-14);
 }
 
 /* 3. Component ------------------------------------------------------------------------------ */
@@ -316,6 +365,28 @@
    * it off a 720p projector. The lobby's own is the big one.
    */
   --stage-join-qr: max(4rem, 8cqb);
+
+  /*
+   * The marketing pages' type (#563): bold Inter display with tight tracking and strong scale
+   * contrast. Rem-bounded, each max within 2.5x its min (WCAG 1.4.4).
+   */
+  --text-hero: clamp(2.25rem, 1.55rem + 3vw, 4.5rem);
+  --text-section: clamp(1.75rem, 1.35rem + 1.7vw, 3rem);
+  --text-numeral: clamp(3rem, 2.4rem + 2.4vw, 5.5rem);
+  --tracking-display: -0.035em;
+  /*
+   * The landing page's picture of a live session: a projector and phones drawn small. Sized in
+   * the picture's own container units (it is a `container-type: inline-size` region) with rem
+   * floors, as the real stage is.
+   */
+  --text-demo-label: clamp(0.5625rem, 1.9cqi, 0.875rem);
+  --text-demo-stem: clamp(0.75rem, 3.1cqi, 1.625rem);
+  --text-demo-option: clamp(0.625rem, 2.3cqi, 1.125rem);
+  --text-demo-number: clamp(1.25rem, 5.6cqi, 3rem);
+  --text-demo-phone: clamp(0.5625rem, 1.75cqi, 0.8125rem);
+  /* A phone's corners: the one radius outside the two, because a phone is not a card. */
+  --radius-device: 1.25rem;
+  --radius-device-screen: 0.875rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

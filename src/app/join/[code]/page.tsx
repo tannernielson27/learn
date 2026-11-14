@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { isSessionCode, normalizeSessionCode } from "@/lib/live/sessionCode";
+import { checkJoinCode } from "@/lib/live/joinForm";
 import { JoinScreen } from "../JoinScreen";
 import { readJoinAccount } from "../joinAccount";
 
@@ -22,7 +22,7 @@ export default async function JoinWithCodePage({
   searchParams,
 }: PageProps<"/join/[code]">) {
   const [{ code }, { guest }] = await Promise.all([params, searchParams]);
-  const normalized = normalizeSessionCode(code);
-  const valid = isSessionCode(normalized) ? normalized : "";
+  const checked = checkJoinCode(code);
+  const valid = checked.ok ? checked.code : "";
   return <JoinScreen code={valid} account={await readJoinAccount(valid, guest === "1")} />;
 }

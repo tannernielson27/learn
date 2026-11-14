@@ -32,6 +32,17 @@
   --color-stage-surface: var(--stage-surface);
   --color-stage-ink: var(--stage-ink);
   --color-stage-line: var(--stage-line);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-surface-raised: var(--brand-surface-raised);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-ink-2: var(--brand-ink-2);
+  --color-brand-line: var(--brand-line);
+  --color-brand-line-strong: var(--brand-line-strong);
+  --color-brand-focus: var(--brand-focus);
+  --color-brand-action: var(--brand-action);
+  --color-brand-action-hover: var(--brand-action-hover);
+  --color-brand-action-ink: var(--brand-action-ink);
+  --color-device-bezel: var(--device-bezel);
   --color-transparent: transparent;
   --color-current: currentColor;
 
@@ -43,6 +54,8 @@
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-full: 9999px;
+  --radius-device: var(--radius-device);
+  --radius-device-screen: var(--radius-device-screen);
 
   --ease-out-expo: var(--ease-out-expo);
 
@@ -59,6 +72,16 @@
   --text-stage-option: var(--text-stage-option);
   --text-stage-number: var(--text-stage-number);
   --text-stage-label: var(--text-stage-label);
+  /* The marketing pages (#563): `text-hero`, `text-numeral`, and the landing picture's sizes. */
+  --text-hero: var(--text-hero);
+  --text-section: var(--text-section);
+  --text-numeral: var(--text-numeral);
+  --text-demo-label: var(--text-demo-label);
+  --text-demo-stem: var(--text-demo-stem);
+  --text-demo-option: var(--text-demo-option);
+  --text-demo-number: var(--text-demo-number);
+  --text-demo-phone: var(--text-demo-phone);
+  --tracking-display: var(--tracking-display);
 
   /* Content widths for AppShell: `max-w-reading`, `max-w-wide`. */
   --container-reading: var(--content-reading);
@@ -135,6 +158,15 @@
   :focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+  }
+  /* On the marketing pages' navy band the clinical blue is too dark to see (2.2:1), so the ring
+     is the light blue (10:1). A light or paper island inside the band keeps its own. */
+  [data-surface="brand"] :focus-visible {
+    outline-color: var(--brand-focus);
+  }
+  [data-surface="brand"] [data-theme] :focus-visible,
+  [data-surface="brand"] [data-surface="paper"] :focus-visible {
+    outline-color: var(--accent);
   }
   ::selection {
     background: var(--accent-soft);
@@ -350,5 +382,42 @@
 @keyframes fade-in {
   from {
     opacity: 0;
+  }
+}
+
+/*
+ * The landing page's picture of a live session (#563): the phones rise in front of the projector,
+ * one choice settles on each and the count arrives, once, when the picture scrolls into view.
+ * About 1.4s in all; transform and opacity only; nothing loops.
+ *
+ * The first frame is hidden only where a script can play it (`scripting: enabled`) and motion is
+ * welcome. Without JavaScript, or under reduced motion, the page is drawn at its last frame and
+ * stays there. `PlayOnce` sets `data-motion` to `played` when the picture is seen.
+ */
+@layer components {
+  .demo-rise,
+  .demo-pick,
+  .demo-count {
+    transition:
+      opacity var(--duration-slow) var(--ease-out-expo),
+      transform 600ms var(--ease-out-expo);
+    transition-delay: calc(var(--demo-step, 0) * 160ms);
+  }
+  @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+    [data-motion="waiting"] .demo-rise {
+      opacity: 0;
+      transform: translateY(1.5rem);
+    }
+    [data-motion="waiting"] .demo-pick,
+    [data-motion="waiting"] .demo-count {
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .demo-rise,
+    .demo-pick,
+    .demo-count {
+      transition: none;
+    }
   }
 }

@@ -2,14 +2,18 @@ export interface AnswerCountProps {
   answered: number;
   /** How many could answer: everyone who has joined. */
   total: number;
-  /** `app` for the console; `stage` for the projector, the number in the stage ladder. */
-  size?: "app" | "stage";
+  /**
+   * `app` for the console; `stage` for the projector, the number in the stage ladder; `demo` for
+   * the landing page's small picture of a projector (#563).
+   */
+  size?: "app" | "stage" | "demo";
   className?: string;
 }
 
 const SIZES = {
   app: { number: "text-2xl", rest: "text-base" },
   stage: { number: "text-stage-number", rest: "text-stage-label" },
+  demo: { number: "text-demo-number", rest: "text-demo-option" },
 } as const;
 
 /**

@@ -13,7 +13,7 @@ import TermsPage, { metadata as termsMetadata } from "./terms/page";
 
 const VISITOR = {
   href: "/sign-up",
-  label: "Create an account",
+  label: "Start your free trial",
   also: { href: "/sign-in", label: "Sign in" },
 };
 
@@ -31,7 +31,7 @@ function expectGlossaryWording(html: string) {
 }
 
 describe("the public pages' layout (#522)", () => {
-  it("draws the wordmark home, Pricing and Sign in, and the site footer", () => {
+  it("draws the wordmark home, Pricing, Help and Sign in on the brand band, and the footer", () => {
     render(
       <SiteLayout>
         <p>Page</p>
@@ -46,8 +46,12 @@ describe("the public pages' layout (#522)", () => {
         .map((link) => [link.textContent, link.getAttribute("href")]),
     ).toEqual([
       ["Pricing", "/pricing"],
+      ["Help", "/help"],
       ["Sign in", "/sign-in"],
     ]);
+    // #563: the bar is on the navy band, the marketing pages' brand surface, not the app's bar.
+    expect(header.closest('[data-surface="brand"]')).toHaveClass("bg-brand-surface");
+    expect(screen.getByRole("main")).toHaveTextContent("Page");
     expect(screen.getByRole("contentinfo")).toHaveTextContent("Every patient shown in LeaRN");
   });
 });
@@ -72,9 +76,9 @@ describe("/pricing (#522)", () => {
     expect(text).toContain("Cancel any time from Manage billing");
   });
 
-  it("offers a visitor an account, and a signed-in teacher their quizzes", async () => {
+  it("offers a visitor the free trial, and a signed-in teacher their quizzes", async () => {
     const { unmount } = render(await PricingPage());
-    expect(screen.getByRole("link", { name: "Create an account" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Start your free trial" })).toHaveAttribute(
       "href",
       "/sign-up",
     );
@@ -82,7 +86,7 @@ describe("/pricing (#522)", () => {
 
     readLandingEntry.mockResolvedValue({ href: "/author", label: "Go to your quizzes" });
     render(await PricingPage());
-    expect(screen.queryByRole("link", { name: "Create an account" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Start your free trial" })).toBeNull();
     expect(screen.getByRole("link", { name: "Go to your quizzes" })).toHaveAttribute(
       "href",
       "/author",

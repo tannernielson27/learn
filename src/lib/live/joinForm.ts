@@ -32,10 +32,38 @@ export type JoinField = "code" | "displayName";
 export type JoinFormResult =
   { ok: true; code: string; displayName: string } | { ok: false; field: JoinField; error: string };
 
+export type JoinCodeCheck = { ok: true; code: string } | { ok: false; error: string };
+
+/**
+ * A typed join code, normalised and checked: the one door for every place a code is typed (the
+ * join form, the landing page's join code form, `/join?code=` and `/join/[code]`, #563). It says
+ * only whether the code could name a live session, never whether one is open.
+ */
+export function checkJoinCode(typed: string): JoinCodeCheck {
+  const code = normalizeSessionCode(typed);
+  return isSessionCode(code) ? { ok: true, code } : { ok: false, error: JOIN_CODE_ERROR };
+}
+
+export type JoinCodeQuery =
+  { status: "absent" } | { status: "valid"; code: string } | { status: "invalid"; error: string };
+
+/**
+ * The `code` a plain GET form put in the address (`/join?code=…`, the landing page without
+ * JavaScript). Absent when there is none; otherwise checked as any typed code is.
+ */
+export function joinCodeFromQuery(value: string | string[] | undefined): JoinCodeQuery {
+  if (value === undefined) return { status: "absent" };
+  const checked = checkJoinCode(Array.isArray(value) ? (value[0] ?? "") : value);
+  return checked.ok
+    ? { status: "valid", code: checked.code }
+    : { status: "invalid", error: checked.error };
+}
+
 export function parseJoinForm(formData: FormData): JoinFormResult {
   const typedCode = formData.get("code");
-  const code = normalizeSessionCode(typeof typedCode === "string" ? typedCode : "");
-  if (!isSessionCode(code)) return { ok: false, field: "code", error: JOIN_CODE_ERROR };
+  const checked = checkJoinCode(typeof typedCode === "string" ? typedCode : "");
+  if (!checked.ok) return { ok: false, field: "code", error: checked.error };
+  const code = checked.code;
 
   const name = parseDisplayName(formData.get("displayName"));
   if (!name.ok) return { ok: false, field: "displayName", error: name.error };

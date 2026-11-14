@@ -1,4 +1,5 @@
 import { TextLink, textLinkClasses } from "@/components/ui/TextLink";
+import { Wordmark } from "./Wordmark";
 import {
   HELP_PATH,
   PRICING_PATH,
@@ -28,12 +29,19 @@ function ContactLink() {
  * policy, help, sign-in and sign-up. Never on a live session, the player, joining, the student
  * home, the library or the account pages, which have work of their own to show at the bottom.
  * The year is the one the page was rendered in, so a static page shows its build's.
+ *
+ * #563: on paper under a strong rule, with the wordmark and the line it stands for, so every
+ * public page ends the way the landing page does.
  */
 export function SiteFooter() {
   return (
-    <footer className="border-t border-line">
-      <div className="mx-auto flex w-full max-w-wide flex-col gap-2 px-5 py-6 text-sm text-ink-2 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-        <nav aria-label="Footer">
+    <footer className="mx-auto w-full max-w-wide px-5 sm:px-6 lg:px-8">
+      <div className="grid gap-6 border-t-2 border-ink-1 py-8 text-sm text-ink-2 lg:grid-cols-12 lg:gap-8">
+        <div className="flex flex-col gap-1 lg:col-span-4">
+          <Wordmark className="self-start" />
+          <p>Live learning for the Next Generation NCLEX.</p>
+        </div>
+        <nav aria-label="Footer" className="lg:col-span-5">
           <ul className="-mx-1.5 flex flex-wrap items-center gap-x-4">
             {LINKS.map((link) => (
               <li key={link.href} className="px-1.5">
@@ -47,7 +55,7 @@ export function SiteFooter() {
             </li>
           </ul>
         </nav>
-        <div className="flex flex-col gap-1 sm:flex-row sm:gap-4">
+        <div className="flex flex-col gap-1 lg:col-span-3 lg:items-end lg:text-right">
           <p>Every patient shown in LeaRN is fictional.</p>
           <p>&copy; {new Date().getFullYear()} LeaRN</p>
         </div>
