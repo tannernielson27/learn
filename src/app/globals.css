@@ -438,9 +438,11 @@
     transform-origin: left center;
     animation: busy-fill 2400ms var(--ease-out-expo) both;
   }
+  /* Never full: a full bar reads as "done" while the work is still going (#575 review). */
   @media (prefers-reduced-motion: reduce) {
     .motion-busy {
       animation: none;
+      transform: scaleX(0.4);
     }
   }
 }
@@ -450,6 +452,6 @@
     transform: scaleX(0.08);
   }
   to {
-    transform: scaleX(1);
+    transform: scaleX(0.85);
   }
 }
