@@ -2,10 +2,10 @@
 
 import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
-import { RouteRecovery } from "@/components/recovery/RouteRecovery";
 import { errorDigest } from "@/components/status/errorDigest";
 import { StatusFrame } from "@/components/status/StatusFrame";
 import { StatusLinks } from "@/components/status/StatusLinks";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 /**
  * Any page with no closer boundary of its own (#267): the student home, the invite and join
@@ -18,7 +18,8 @@ export default function RootError({ error, retry }: ErrorInfo) {
   const digest = errorDigest(error);
   return (
     <StatusFrame>
-      <RouteRecovery
+      <ErrorState
+        kind="load"
         headline="LeaRN could not show this page."
         detail={
           digest
@@ -30,7 +31,7 @@ export default function RootError({ error, retry }: ErrorInfo) {
         digest={digest}
       >
         <StatusLinks />
-      </RouteRecovery>
+      </ErrorState>
     </StatusFrame>
   );
 }

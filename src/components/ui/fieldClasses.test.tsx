@@ -28,8 +28,24 @@ describe("fieldClasses", () => {
     );
   });
 
-  it("draws an invalid field with the incorrect border", () => {
-    expect(classList()).toContain("aria-invalid:border-incorrect");
+  // Owner decision 2026-11-14: red only ever marks an answer, so an invalid field never wears it.
+  it("draws an invalid field with the strong ink edge, never feedback red", () => {
+    expect(classList()).toEqual(
+      expect.arrayContaining([
+        "aria-invalid:border-field-invalid",
+        "aria-invalid:inset-ring",
+        "aria-invalid:inset-ring-field-invalid",
+      ]),
+    );
+    expect(FIELD_CLASSES).not.toMatch(/incorrect/);
+    const tokens = readFileSync(join(process.cwd(), "src/styles/tokens.css"), "utf8");
+    expect(tokens).toContain("--field-invalid: var(--rule-strong);");
+    const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
+    expect(css).toContain("--color-field-invalid: var(--field-invalid);");
+  });
+
+  it("sets a read-only field on the second surface", () => {
+    expect(classList()).toContain("[&[readonly]]:bg-surface-2");
   });
 
   it("dims a disabled field", () => {
@@ -66,7 +82,7 @@ describe("fieldClasses", () => {
     );
     const code = screen.getByLabelText("Join code");
     expect(code).toHaveAttribute("aria-invalid", "true");
-    expect(code).toHaveClass("aria-invalid:border-incorrect", "border-line-field", "px-3");
+    expect(code).toHaveClass("aria-invalid:border-field-invalid", "border-line-field", "px-3");
     const name = screen.getByLabelText("Display name");
     expect(name).toBeDisabled();
     expect(name).toHaveClass("disabled:opacity-50");

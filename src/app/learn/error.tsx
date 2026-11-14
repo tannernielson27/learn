@@ -2,8 +2,8 @@
 
 import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
-import { RouteRecovery } from "@/components/recovery/RouteRecovery";
 import { errorDigest } from "@/components/status/errorDigest";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { TextLink } from "@/components/ui/TextLink";
 import { STUDENT_HOME } from "@/lib/classes/classes";
 
@@ -20,7 +20,8 @@ export default function LearnError({ error, retry }: ErrorInfo) {
   useReportError(error);
   const digest = errorDigest(error);
   return (
-    <RouteRecovery
+    <ErrorState
+      kind="load"
       headline="This page could not be shown."
       detail={
         digest
@@ -32,6 +33,6 @@ export default function LearnError({ error, retry }: ErrorInfo) {
       digest={digest}
     >
       <TextLink href={STUDENT_HOME}>Back to your classes</TextLink>
-    </RouteRecovery>
+    </ErrorState>
   );
 }

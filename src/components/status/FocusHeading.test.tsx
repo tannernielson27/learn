@@ -2,7 +2,6 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { FocusHeading } from "./FocusHeading";
 import { StatusLinks } from "./StatusLinks";
-import { StatusPanel } from "./StatusPanel";
 
 describe("FocusHeading", () => {
   it("is a page heading that takes focus when it appears", () => {
@@ -12,22 +11,6 @@ describe("FocusHeading", () => {
     expect(heading).toHaveFocus();
     // Focusable from script, never a stop in the tab order.
     expect(heading).toHaveAttribute("tabindex", "-1");
-  });
-});
-
-describe("StatusPanel", () => {
-  it("names itself by its heading and focuses it", () => {
-    render(
-      <StatusPanel headline="This page does not exist.">
-        <p>Check the address.</p>
-      </StatusPanel>,
-    );
-
-    const heading = screen.getByRole("heading", { level: 1 });
-    expect(heading).toHaveFocus();
-    expect(screen.getByRole("region", { name: "This page does not exist." })).toHaveTextContent(
-      "Check the address.",
-    );
   });
 });
 

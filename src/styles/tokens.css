@@ -280,6 +280,12 @@
 [data-theme] {
   /* A field's and a secondary button's edge: the 3:1 line, never the 1.4:1 divider. */
   --field-border: var(--line-field);
+  /*
+   * An invalid field's edge (owner decision 2026-11-14): the strong ink rule, never feedback red,
+   * which only ever marks an answer. Far past 3:1 on the field in both themes; the alert icon and
+   * the words under the field carry the meaning, so the edge is never the only signal.
+   */
+  --field-invalid: var(--rule-strong);
   --button-height-md: var(--tap-min);
   --button-height-lg: 3.5rem;
   --option-min-height: 3.5rem;

@@ -12,7 +12,9 @@ const fixture = multipleChoiceFixture.canonical;
 describe("LiveClass", () => {
   it("is one captioned figure: the projector's question, its choices and the count", () => {
     render(<LiveClass />);
-    const figure = screen.getByRole("figure", { name: /a live session as the class sees it/i });
+    const figure = screen.getByRole("figure", { name: "A live session as the class sees it" });
+    // A short name, and the caption's sentence as the description (#563 deferred fix).
+    expect(figure).toHaveAccessibleDescription(/count of who has answered, never who/);
     const projector = within(figure).getByTestId("live-class-projector");
     expect(projector).toHaveTextContent(fixture.stem.value);
     const choices = within(projector).getByRole("list", { name: "Choices" });
@@ -47,7 +49,8 @@ describe("LiveClass", () => {
     expect(hidden).not.toBeNull();
     expect(hidden).toHaveTextContent("Answer sent");
     expect(hidden).toHaveTextContent("Submit");
-    expect(screen.getByRole("figure")).toHaveAccessibleName(
+    // The caption's long sentence describes the figure; its name stays short (#563).
+    expect(screen.getByRole("figure")).toHaveAccessibleDescription(
       expect.stringContaining(
         `one student has chosen ${LIVE_CLASS_DEMO.chosen}, one has sent ${LIVE_CLASS_DEMO.sent}`,
       ),

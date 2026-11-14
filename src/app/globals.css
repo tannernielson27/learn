@@ -29,6 +29,7 @@
   --color-chart-track: var(--chart-track);
   --color-chart-key: var(--chart-key);
   --color-field-border: var(--field-border);
+  --color-field-invalid: var(--field-invalid);
   --color-stage-surface: var(--stage-surface);
   --color-stage-ink: var(--stage-ink);
   --color-stage-line: var(--stage-line);
@@ -426,5 +427,29 @@
   }
   to {
     opacity: 0;
+  }
+}
+
+/* A busy button's progress mark (ui/Button, #563): a thin bar along the foot of the button that
+   fills once, slowly, and then holds; it never loops (§5). Transform only, so the label and the
+   button's width never move. Under reduced motion the bar is simply there, full. */
+@layer components {
+  .motion-busy {
+    transform-origin: left center;
+    animation: busy-fill 2400ms var(--ease-out-expo) both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .motion-busy {
+      animation: none;
+    }
+  }
+}
+
+@keyframes busy-fill {
+  from {
+    transform: scaleX(0.08);
+  }
+  to {
+    transform: scaleX(1);
   }
 }

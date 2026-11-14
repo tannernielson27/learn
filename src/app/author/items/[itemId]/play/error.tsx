@@ -2,8 +2,8 @@
 
 import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
-import { RouteRecovery } from "@/components/recovery/RouteRecovery";
 import { errorDigest } from "@/components/status/errorDigest";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 /**
  * An item or a case study being played, when the player around the question fails to render
@@ -14,7 +14,8 @@ import { errorDigest } from "@/components/status/errorDigest";
 export default function PlayItemError({ error, retry }: ErrorInfo) {
   useReportError(error);
   return (
-    <RouteRecovery
+    <ErrorState
+      kind="load"
       headline="This could not be played."
       detail="Nothing is lost."
       onRetry={retry}

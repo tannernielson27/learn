@@ -19,7 +19,13 @@ const step = (index: number) => ({ "--step": index }) as CSSProperties;
  */
 export function LiveClass({ demo = LIVE_CLASS_DEMO }: { demo?: LiveClassDemo }) {
   return (
-    <figure aria-labelledby="live-class-caption" className="m-0">
+    // A short name for the figure, and the caption's longer sentence as its description, so a
+    // screen reader's list of figures reads a name rather than a paragraph.
+    <figure
+      aria-label="A live session as the class sees it"
+      aria-describedby="live-class-caption"
+      className="m-0"
+    >
       <PlayOnce>
         <Projector demo={demo} />
         {/* The phones stand in front of the screen's lower frame, never over the question or

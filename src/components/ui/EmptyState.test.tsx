@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import { EmptyState } from "./EmptyState";
 
 describe("EmptyState", () => {
@@ -41,5 +42,54 @@ describe("EmptyState", () => {
       <EmptyState level={2} heading="No classes yet" body="Make one to invite students." />,
     );
     expect(container.querySelector("[data-empty-state]")).not.toBeNull();
+  });
+
+  it("is the first-use state unless told otherwise, the next step drawn as a button", () => {
+    const { container } = render(
+      <EmptyState
+        level={2}
+        heading="No quizzes yet"
+        action={{ href: "/author/new", label: "Create a quiz" }}
+      />,
+    );
+    expect(container.querySelector("[data-empty-state='first-use']")).not.toBeNull();
+    expect(screen.getByRole("heading", { level: 2 })).toHaveClass("font-read");
+    expect(screen.getByRole("link", { name: "Create a quiz" })).toHaveClass("tap-target");
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+});
+
+describe("EmptyState no results (#563)", () => {
+  it("says in one status line that nothing matched, with no heading of its own", () => {
+    const { container } = render(
+      <EmptyState
+        variant="no-results"
+        heading="No quizzes match “cardiac”."
+        action={{ href: "/author", label: "Clear search" }}
+      />,
+    );
+    expect(container.querySelector("[data-empty-state='no-results']")).not.toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent("No quizzes match “cardiac”.");
+    expect(screen.queryByRole("heading")).toBeNull();
+    expect(screen.getByRole("link", { name: "Clear search" })).toHaveAttribute("href", "/author");
+  });
+
+  it("clears a filter the page holds with a button", async () => {
+    const onClear = vi.fn();
+    render(<EmptyState variant="no-results" heading="Nothing matches." onClear={onClear} />);
+    await userEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    expect(onClear).toHaveBeenCalledTimes(1);
+  });
+
+  it("takes the page's own words for the button", () => {
+    render(
+      <EmptyState
+        variant="no-results"
+        heading="Nothing matches."
+        onClear={() => {}}
+        clearLabel="Show every student"
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Show every student" })).toBeInTheDocument();
   });
 });

@@ -62,7 +62,7 @@ export function PracticeShareForm({
           defaultValue={choices[0]?.id}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${id}-error` : undefined}
-          className="tap-target w-full rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 hover:border-line-strong aria-invalid:border-incorrect"
+          className="tap-target w-full rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 hover:border-line-strong aria-invalid:border-field-invalid aria-invalid:inset-ring aria-invalid:inset-ring-field-invalid"
         >
           {choices.map((choice) => (
             <option key={choice.id} value={choice.id}>

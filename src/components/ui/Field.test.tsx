@@ -35,4 +35,33 @@ describe("Field", () => {
       "Six letters and numbers.",
     );
   });
+
+  it("links its hint and its error under the field, in that order (#563)", () => {
+    render(<Field label="Email" id="email" hint="Your school address." error="Enter an email." />);
+    const input = screen.getByRole("textbox", { name: "Email" });
+    expect(input).toHaveAttribute("aria-describedby", "email-hint email-error");
+    expect(input).toHaveAccessibleDescription("Your school address. Enter an email.");
+    const error = document.getElementById("email-error")!;
+    expect(error.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+    // The neutral alert edge, never the feedback red (owner decision 2026-11-14).
+    expect(input.className).toContain("aria-invalid:border-field-invalid");
+    expect(input.className).not.toMatch(/incorrect/);
+  });
+
+  it("has no error line, and is not invalid, without an error", () => {
+    render(<Field label="Email" id="email" />);
+    expect(document.getElementById("email-error")).toBeNull();
+    expect(screen.getByRole("textbox")).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("can be read-only or disabled", () => {
+    render(
+      <>
+        <Field label="Code" readOnly defaultValue="V96RN8" />
+        <Field label="Name" disabled />
+      </>,
+    );
+    expect(screen.getByRole("textbox", { name: "Code" })).toHaveAttribute("readonly");
+    expect(screen.getByRole("textbox", { name: "Name" })).toBeDisabled();
+  });
 });

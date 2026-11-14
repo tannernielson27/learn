@@ -3,8 +3,8 @@
 import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
 import { ReadingWidth } from "@/components/authoring/PageWidth";
-import { RouteRecovery } from "@/components/recovery/RouteRecovery";
 import { errorDigest } from "@/components/status/errorDigest";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 /**
  * Any authoring page that fails to render (#164). It sits inside the authoring layout, so the
@@ -15,7 +15,8 @@ export default function AuthorError({ error, retry }: ErrorInfo) {
   useReportError(error);
   return (
     <ReadingWidth>
-      <RouteRecovery
+      <ErrorState
+        kind="load"
         headline="This page could not be shown."
         detail="Unsaved changes may be lost."
         onRetry={retry}
