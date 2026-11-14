@@ -38,7 +38,12 @@ export function PlayOnce({ className, children }: { className?: string; children
     }
     const observer = new IntersectionObserver(
       (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return;
+        // Seen, or already scrolled past (a jump to the foot of the page): the last frame either
+        // way, so the picture is never left hidden above the reader.
+        const seen = entries.some(
+          (entry) => entry.isIntersecting || entry.boundingClientRect.bottom < 0,
+        );
+        if (!seen) return;
         set("played");
         observer.disconnect();
       },

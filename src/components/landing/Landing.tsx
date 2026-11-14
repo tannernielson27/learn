@@ -73,7 +73,7 @@ export function Landing({ entry }: LandingProps) {
           aria-labelledby="hero-heading"
           className="bg-brand-surface text-brand-ink"
         >
-          <div className="mx-auto grid w-full max-w-wide gap-12 px-5 pt-6 pb-16 sm:px-6 sm:pt-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-center lg:gap-12 lg:px-8 lg:pt-16 lg:pb-0">
+          <div className="mx-auto grid w-full max-w-wide gap-12 px-5 pt-6 pb-16 sm:px-6 sm:pt-12 lg:grid-cols-[minmax(0,11fr)_minmax(0,13fr)] lg:items-center lg:gap-12 lg:px-8 lg:pt-16 lg:pb-0">
             <div className="lg:pb-24">
               <p className="text-sm font-semibold text-brand-ink-2">{WHO_FOR.eyebrow}</p>
               <h1
@@ -110,7 +110,7 @@ export function Landing({ entry }: LandingProps) {
               </div>
             </div>
             {/* From 1024px the phones stand below the band's edge, into the paper. */}
-            <div className="relative z-10 lg:-mb-16">
+            <div className="relative z-10 lg:-mb-16 lg:self-end">
               <LiveClassDemo />
             </div>
           </div>

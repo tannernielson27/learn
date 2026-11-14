@@ -2,7 +2,8 @@ import { act, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LiveClassDemo } from "./LiveClassDemo";
 
-type Callback = (entries: { isIntersecting: boolean }[]) => void;
+type Entry = { isIntersecting: boolean; boundingClientRect: { bottom: number } };
+type Callback = (entries: Entry[]) => void;
 
 /** An IntersectionObserver the test drives by hand, counting what it observes. */
 function fakeObserver() {
@@ -59,12 +60,24 @@ describe("the landing picture's motion (#563)", () => {
     expect(motion()).toHaveAttribute("data-motion", "waiting");
     expect(observer.observed).toBe(1);
 
-    act(() => observer.callback?.([{ isIntersecting: false }]));
+    act(() =>
+      observer.callback?.([{ isIntersecting: false, boundingClientRect: { bottom: 900 } }]),
+    );
     expect(motion()).toHaveAttribute("data-motion", "waiting");
 
-    act(() => observer.callback?.([{ isIntersecting: true }]));
+    act(() => observer.callback?.([{ isIntersecting: true, boundingClientRect: { bottom: 400 } }]));
     expect(motion()).toHaveAttribute("data-motion", "played");
     expect(observer.disconnected).toBeGreaterThan(0);
+  });
+
+  it("settles on the last frame when the reader has already scrolled past it", () => {
+    preferReducedMotion(false);
+    const observer = fakeObserver();
+    render(<LiveClassDemo />);
+    act(() =>
+      observer.callback?.([{ isIntersecting: false, boundingClientRect: { bottom: -200 } }]),
+    );
+    expect(motion()).toHaveAttribute("data-motion", "played");
   });
 
   it("shows the last frame in a browser that cannot watch for it", () => {

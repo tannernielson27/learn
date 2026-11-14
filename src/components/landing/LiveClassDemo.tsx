@@ -42,7 +42,7 @@ function Projector({ demo }: { demo: LiveDemo }) {
           >
             <span
               aria-hidden="true"
-              className="grid size-[4.4cqi] shrink-0 place-items-center rounded-full border-2 border-stage-ink font-mono font-bold"
+              className="grid size-[5cqi] shrink-0 place-items-center rounded-full border-2 border-stage-ink font-mono font-bold"
             >
               {option.letter}
             </span>
@@ -116,20 +116,18 @@ function Phone({
           data-theme="light"
           className="flex aspect-[9/17] flex-col gap-[1.4cqi] overflow-hidden rounded-device-screen bg-surface-0 p-[2cqi] text-demo-phone leading-snug text-ink-1"
         >
-          <div className="flex items-center justify-between font-semibold">
-            <span className="font-mono">Question 3 of 20</span>
-            <span className="flex items-center gap-[0.6cqi] text-ink-2">
-              <span className="size-[1cqi] rounded-full bg-correct" />
-              Live
-            </span>
+          <div className="flex shrink-0 items-center justify-between gap-[1cqi] font-semibold whitespace-nowrap">
+            <span>Question 3 of 20</span>
+            {/* The connection dot of the PhoneQuestion mockup; its word does not fit this small. */}
+            <span className="size-[1cqi] shrink-0 rounded-full bg-correct" />
           </div>
-          <div className="h-[0.6cqi] overflow-hidden rounded-full bg-surface-2">
+          <div className="h-[0.6cqi] shrink-0 overflow-hidden rounded-full bg-surface-2">
             <div
               className="h-full origin-left rounded-full bg-ink-2"
               style={{ transform: `scaleX(${demo.timeShare})` }}
             />
           </div>
-          <p className="line-clamp-4 font-medium">{demo.stem}</p>
+          <p className="line-clamp-4 shrink-0 font-medium">{demo.stem}</p>
           {sent ? (
             <div
               className="demo-pick mt-[1cqi] flex flex-col items-center gap-[1cqi] text-center"
@@ -142,7 +140,7 @@ function Phone({
               <span className="text-ink-2">Wait for the answer to show.</span>
             </div>
           ) : (
-            <ol className="flex flex-col gap-[0.9cqi]">
+            <ol className="flex min-h-0 flex-col gap-[0.9cqi] overflow-hidden">
               {demo.options.map((option, i) => (
                 <PhoneOption
                   key={option.letter}
