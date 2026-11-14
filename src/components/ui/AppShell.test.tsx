@@ -60,8 +60,8 @@ describe("AppShell", () => {
     expect(account).toHaveClass("h-16", "ml-auto");
     expect(account).toContainElement(screen.getByRole("button", { name: "Account menu" }));
     // On a phone the nav row is last and full width; from 1024px it joins the bar's one row.
-    expect(navRow).toHaveClass("order-last", "basis-full", "@5xl/shell:order-none");
-    expect(banner).toHaveClass("flex-wrap", "@5xl/shell:flex-nowrap");
+    expect(navRow).toHaveClass("order-last", "basis-full", "@min-[63rem]/shell:order-none");
+    expect(banner).toHaveClass("flex-wrap", "@min-[63rem]/shell:flex-nowrap");
   });
 
   it("gives the nav list one row that scrolls, never wraps, and 44px links", () => {

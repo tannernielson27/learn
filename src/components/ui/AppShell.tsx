@@ -49,15 +49,15 @@ export const WORDMARK_CLASSES =
  * The classes a primary navigation's list wears in the bar (#563): one row that never wraps. On a
  * phone it scrolls sideways under the wordmark, with the shell's gutter at its start, its right
  * edge fading so a cut-off item reads as "more this way", and the scrollbar hidden (a swipe, a
- * trackpad and Tab all move it). From 1024px it is an ordinary row beside the wordmark. Its links
- * draw their focus ring inside themselves (`APP_NAV_LINK_CLASSES`), since the row clips anything
- * outside its 44px.
+ * trackpad and Tab all move it; scroll padding keeps a focused link clear of the fade). From
+ * 1024px it is an ordinary row beside the wordmark. Its links draw their focus ring inside
+ * themselves (`APP_NAV_LINK_CLASSES`), since the row clips anything outside its 44px.
  */
 export const APP_NAV_LIST_CLASSES =
   "flex h-11 flex-nowrap items-center gap-1 overflow-x-auto overscroll-x-contain " +
-  "px-(--shell-gutter) pr-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden " +
+  "no-scrollbar scroll-pr-8 scroll-pl-(--shell-gutter) px-(--shell-gutter) pr-8 " +
   "mask-r-from-[calc(100%-2rem)] " +
-  "@5xl/shell:h-16 @5xl/shell:overflow-visible @5xl/shell:px-0 @5xl/shell:mask-none";
+  "@min-[63rem]/shell:h-16 @min-[63rem]/shell:overflow-visible @min-[63rem]/shell:px-0 @min-[63rem]/shell:mask-none";
 
 /**
  * A primary navigation link: muted until hovered, and the page the person is on in full ink on the
@@ -83,7 +83,8 @@ const WIDTHS: Record<ContentWidth, string> = {
  * and the page's main action stays in the first screen; from 1024px it sits beside the wordmark.
  *
  * The shell is a size container (`@container/shell`), so the bar follows its own width: on a page
- * that is the window, and in the gallery it is the specimen's frame.
+ * that is the window, and in the gallery it is the specimen's frame. Its "1024px" step is 63rem of
+ * shell, so a 1024px window that gives up to 16px to a scrollbar still gets the desktop bar.
  *
  * Not a client component: the layouts that use it read the session on the server, and only the
  * pieces that need the browser (the navigation's current link, the menu) are client components.
@@ -101,17 +102,17 @@ export function AppShell({
   const Header = landmarks ? "header" : "div";
   const Main = landmarks ? "main" : "div";
   return (
-    <div className="@container/shell flex flex-1 flex-col [--shell-gutter:1rem] @min-[40rem]/shell:[--shell-gutter:1.5rem] @5xl/shell:[--shell-gutter:2rem]">
+    <div className="@container/shell flex flex-1 flex-col [--shell-gutter:1rem] @min-[40rem]/shell:[--shell-gutter:1.5rem] @min-[63rem]/shell:[--shell-gutter:2rem]">
       <Header
         data-app-bar=""
-        className="flex flex-wrap items-center border-b border-line bg-surface-1 px-(--shell-gutter) @5xl/shell:flex-nowrap @5xl/shell:gap-x-6"
+        className="flex flex-wrap items-center border-b border-line bg-surface-1 px-(--shell-gutter) @min-[63rem]/shell:flex-nowrap @min-[63rem]/shell:gap-x-6"
       >
         <div className="flex h-16 shrink-0 items-center">
           {brand ?? <Wordmark href={homeHref} />}
         </div>
         {nav ? (
           // Its own row on a phone, edge to edge so the row scrolls under the gutters.
-          <div className="order-last -mx-(--shell-gutter) min-w-0 basis-full @5xl/shell:order-none @5xl/shell:mx-0 @5xl/shell:basis-auto">
+          <div className="order-last -mx-(--shell-gutter) min-w-0 basis-full @min-[63rem]/shell:order-none @min-[63rem]/shell:mx-0 @min-[63rem]/shell:basis-auto">
             {nav}
           </div>
         ) : null}

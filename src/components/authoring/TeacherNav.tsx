@@ -10,17 +10,23 @@ import { GuardedLink } from "./LeaveGuard";
 const FADE_PX = 32;
 
 /**
- * Scrolls the row, without animating, so the current link is whole and clear of the fade: on a
- * phone "Workspace" starts off the screen, and the teacher should see where they are.
+ * Scrolls the row, without animating, so a link is whole and clear of the fade. A browser scrolls
+ * a focused link into view only when none of it shows, so a half-shown one is brought in here.
  */
-export function revealCurrent(list: HTMLElement): void {
-  const current = list.querySelector<HTMLElement>("[aria-current]");
-  if (!current || list.scrollWidth <= list.clientWidth) return;
+export function revealLink(list: HTMLElement, link: Element): void {
+  if (list.scrollWidth <= list.clientWidth) return;
   const row = list.getBoundingClientRect();
-  const item = current.getBoundingClientRect();
+  const item = link.getBoundingClientRect();
   const start = Number.parseFloat(getComputedStyle(list).paddingLeft) || 0;
   if (item.left < row.left + start) list.scrollLeft -= row.left + start - item.left;
   else if (item.right > row.right - FADE_PX) list.scrollLeft += item.right - (row.right - FADE_PX);
+}
+
+/** The current link, whole: on a phone "Workspace" starts off the screen, and the teacher should
+ * see where they are. */
+export function revealCurrent(list: HTMLElement): void {
+  const current = list.querySelector("[aria-current]");
+  if (current) revealLink(list, current);
 }
 
 export interface TeacherNavProps {
@@ -49,7 +55,11 @@ export function TeacherNav({ currentPath, label = "Main" }: TeacherNavProps = {}
 
   return (
     <nav aria-label={label}>
-      <ul ref={list} className={APP_NAV_LIST_CLASSES}>
+      <ul
+        ref={list}
+        className={APP_NAV_LIST_CLASSES}
+        onFocus={(event) => revealLink(event.currentTarget, event.target)}
+      >
         {TEACHER_NAV.map((item) => {
           const current = teacherNavCurrent(item, pathname);
           return (

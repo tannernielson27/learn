@@ -61,7 +61,7 @@ function Specimen({
     <div
       data-testid={id}
       className={`relative flex flex-col overflow-hidden rounded-md border border-line bg-surface-0 ${
-        frame === "phone" ? PHONE : "min-w-[64rem]"
+        frame === "phone" ? PHONE : "min-w-[66rem]"
       }`}
     >
       {children}
@@ -70,7 +70,7 @@ function Specimen({
   return (
     <figure className="grid min-w-0 gap-2">
       <figcaption className="text-sm font-semibold text-ink-2">{caption}</figcaption>
-      {/* The desktop frame is 1024px whatever the window, so a phone scrolls it, not the page. */}
+      {/* The desktop frame is 1056px whatever the window, so a phone scrolls it, not the page. */}
       {frame === "desktop" ? <div className="min-w-0 overflow-x-auto pb-1">{shell}</div> : shell}
     </figure>
   );
@@ -198,7 +198,7 @@ export function AppShellSpecimens() {
           The navigation sits beside the wordmark on the bar&apos;s one row. The content column is
           centred with the same gutters, whatever width the page asks for.
         </p>
-        <Specimen caption="Teacher, without a notice" frame="desktop" id="shell-teacher-desktop">
+        <Specimen caption="Teacher" frame="desktop" id="shell-teacher-desktop">
           <AppShell
             landmarks={false}
             homeHref="#library"
@@ -207,24 +207,6 @@ export function AppShellSpecimens() {
             account={<Menu who={TEACHER} />}
           >
             <PageHeader level={2} title="Classes" action={<Button>New class</Button>} />
-          </AppShell>
-        </Specimen>
-        <Specimen
-          caption="Teacher, with the billing notice"
-          frame="desktop"
-          id="shell-notice-desktop"
-        >
-          <AppShell
-            landmarks={false}
-            homeHref="#library"
-            width="wide"
-            nav={
-              <TeacherNav currentPath="/author" label="Main, teacher on a desktop with a notice" />
-            }
-            notice={<BillingBanner banner={bannerFixture("payment-failed")} />}
-            account={<Menu who={TEACHER} />}
-          >
-            <TeacherPage />
           </AppShell>
         </Specimen>
         <Specimen caption="Student" frame="desktop" id="shell-student-desktop">

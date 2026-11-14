@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LeaveGuardProvider, useLeaveGuard } from "./LeaveGuard";
-import { TeacherNav, revealCurrent } from "./TeacherNav";
+import { TeacherNav, revealCurrent, revealLink } from "./TeacherNav";
 
 let pathname = "/author";
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
@@ -124,5 +124,13 @@ describe("TeacherNav's phone row (#563)", () => {
     const whole = row({ left: 0, right: 375 }, { left: 100, right: 200 });
     revealCurrent(whole);
     expect(whole.scrollLeft).toBe(100);
+  });
+
+  it("brings a half-shown link in when the keyboard lands on it", () => {
+    const list = row({ left: 0, right: 375 }, { left: 0, right: 0 });
+    const first = list.querySelector("a")!;
+    first.getBoundingClientRect = () => ({ left: 320, right: 420 }) as DOMRect;
+    revealLink(list, first);
+    expect(list.scrollLeft).toBe(100 + 420 - (375 - 32));
   });
 });
