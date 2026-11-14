@@ -1,4 +1,9 @@
 import type { ReactNode } from "react";
+import {
+  CONTENTS_ANCHOR_OFFSET,
+  ContentsNav,
+  type ContentsEntry,
+} from "@/components/ui/ContentsNav";
 
 /**
  * The help guides in the public site's editorial direction (#563, docs/design/landing-563/A.md,
@@ -8,69 +13,14 @@ import type { ReactNode } from "react";
  * Static markup only: help reads no session and ships no script of its own.
  */
 
-/** One entry in "On this page": a section, and the topics or formats inside it. */
-export interface ContentsEntry {
-  id: string;
-  title: string;
-  children?: readonly { id: string; title: string }[];
-}
+export { sectionNumber, type ContentsEntry } from "@/components/ui/ContentsNav";
 
-/** A section's number as the landing page sets it: two digits, mono. */
-export const sectionNumber = (index: number): string => String(index + 1).padStart(2, "0");
+/** Where an anchor lands: the shared contents offset, so every guide and legal page agree. */
+export const ANCHOR_OFFSET = CONTENTS_ANCHOR_OFFSET;
 
-/**
- * Where an anchor lands. Clear of the top edge, so a heading reached from "On this page" or from
- * another screen's link sits a little below it, never under the browser's own bar.
- */
-export const ANCHOR_OFFSET = "scroll-mt-8";
-
-// Each a 44px standalone link: the list is a set of targets, not a sentence (WCAG 2.5.8).
-const CONTENTS_LINK =
-  "tap-target inline-flex items-center py-1 text-sm leading-snug text-ink-1 underline-offset-4 " +
-  "decoration-accent hover:text-accent-ink hover:underline";
-
-/**
- * "On this page" (#563). On a phone it is the list at the top of the guide; the formats inside a
- * section wrap as a run of links so the list stays short. From 1024px it stands beside the text,
- * sticky, and scrolls on its own if it is taller than the window.
- */
+/** "On this page" (#563): the shared contents list, under the guides' own name for it. */
 export function OnThisPage({ entries }: { entries: readonly ContentsEntry[] }) {
-  return (
-    <nav
-      aria-label="On this page"
-      className="lg:sticky lg:top-8 lg:max-h-[calc(100dvh-4rem)] lg:overflow-y-auto lg:pr-2"
-    >
-      <p className="eyebrow">On this page</p>
-      <ol className="mt-3 border-t border-rule-strong">
-        {entries.map((entry, index) => (
-          <li key={entry.id} className="flex items-start gap-3 border-b border-line py-1">
-            <span
-              aria-hidden="true"
-              className="tabular flex min-h-11 w-6 shrink-0 items-center font-mono text-xs text-ink-2"
-            >
-              {sectionNumber(index)}
-            </span>
-            <div className="min-w-0 flex-1">
-              <a href={`#${entry.id}`} className={`${CONTENTS_LINK} font-semibold`}>
-                {entry.title}
-              </a>
-              {entry.children ? (
-                <ul className="-mt-1 flex flex-wrap gap-x-4 pb-2 lg:flex-col lg:gap-x-0 lg:pb-1">
-                  {entry.children.map((child) => (
-                    <li key={child.id}>
-                      <a href={`#${child.id}`} className={`${CONTENTS_LINK} text-ink-2`}>
-                        {child.title}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-          </li>
-        ))}
-      </ol>
-    </nav>
-  );
+  return <ContentsNav label="On this page" labelId="on-this-page" entries={entries} />;
 }
 
 /**

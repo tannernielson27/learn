@@ -61,17 +61,20 @@ for (const { path, heading, shot } of PAGES) {
 test("the teacher guide's contents list goes to each section", async ({ page }) => {
   await page.goto("/help/instructor");
   const contents = page.getByRole("navigation", { name: "On this page", exact: true });
-  await expect(contents.getByRole("link")).toHaveText([
-    "Sign up and sign in",
-    "Create a quiz",
-    "Import questions with AI",
-    "Write questions",
-    "Create a class and invite students",
-    "Assign a quiz",
-    "Start a live session",
-    "Read the reports",
-    "Share a quiz for practice",
-  ]);
+  // Each link carries its section's number for the eye (#575), so match the title it ends with.
+  await expect(contents.getByRole("link")).toHaveText(
+    [
+      "Sign up and sign in",
+      "Create a quiz",
+      "Import questions with AI",
+      "Write questions",
+      "Create a class and invite students",
+      "Assign a quiz",
+      "Start a live session",
+      "Read the reports",
+      "Share a quiz for practice",
+    ].map((title) => new RegExp(`${title}$`)),
+  );
   await contents.getByRole("link", { name: "Start a live session", exact: true }).click();
   await expect(page).toHaveURL(/#live$/);
   await expect(

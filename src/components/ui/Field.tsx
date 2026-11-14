@@ -1,7 +1,6 @@
-import { CircleAlert } from "lucide-react";
 import { useId, type InputHTMLAttributes, type ReactNode } from "react";
 import { fieldClasses } from "./fieldClasses";
-import { Icon } from "./Icon";
+import { FieldError } from "./FieldError";
 
 export interface FieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
   /** The visible label, which is also the input's name. Always shown: no placeholder labels. */
@@ -9,9 +8,9 @@ export interface FieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
   /** A line under the field that helps before anything is typed. */
   hint?: ReactNode;
   /**
-   * What is wrong with what was typed. Marks the field invalid (its edge turns `--incorrect`, as
-   * every field's does) and is read with it. The words stay in ink with an alert icon: red text is
-   * for marking answers (PLAN D11).
+   * What is wrong with what was typed. Marks the field invalid (its edge turns the strong ink rule,
+   * `--field-invalid`, as every field's does) and is read with it through `aria-describedby`. The
+   * words stay in ink with an alert icon: red is for marking answers (owner decision 2026-11-14).
    */
   error?: ReactNode;
   /** `code`: a Join code's mono, spaced, centred capitals. */
@@ -63,12 +62,7 @@ export function Field({
           {hint}
         </p>
       ) : null}
-      {error ? (
-        <p id={errorId} className="flex items-start gap-2 text-sm text-ink-1">
-          <Icon icon={CircleAlert} className="mt-0.5" />
-          <span>{error}</span>
-        </p>
-      ) : null}
+      {error ? <FieldError id={errorId}>{error}</FieldError> : null}
     </div>
   );
 }

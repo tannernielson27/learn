@@ -2,8 +2,8 @@
 
 import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
-import { RouteRecovery } from "@/components/recovery/RouteRecovery";
 import { errorDigest } from "@/components/status/errorDigest";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 /**
  * The student room, when something outside the question renderer fails to render (#164). A class
@@ -31,7 +31,8 @@ export default function PlayError({ error, retry }: ErrorInfo) {
   useReportError(error);
   return (
     <main className="mx-auto w-full max-w-lg flex-1 px-4 py-12">
-      <RouteRecovery
+      <ErrorState
+        kind="load"
         headline="This screen stopped working."
         detail="Your place is kept."
         onRetry={retry}

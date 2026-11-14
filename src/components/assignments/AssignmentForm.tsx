@@ -30,7 +30,7 @@ const INITIAL: AssignmentFormState = { status: "idle" };
 
 const fieldClass =
   "tap-target w-full rounded-sm border border-line bg-surface-1 px-3 text-base text-ink-1 " +
-  "hover:border-line-strong aria-invalid:border-incorrect";
+  "hover:border-line-strong aria-invalid:border-field-invalid aria-invalid:inset-ring aria-invalid:inset-ring-field-invalid";
 
 /**
  * Assigns a bank or a case study to a class, or edits an assignment's window. Times are typed in
