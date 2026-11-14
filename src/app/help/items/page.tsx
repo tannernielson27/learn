@@ -2,6 +2,13 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { HelpFigure } from "@/components/help/HelpFigure";
 import {
+  ANCHOR_OFFSET,
+  GuidePage,
+  GuideSection,
+  sectionNumber,
+  type ContentsEntry,
+} from "@/components/help/HelpGuide";
+import {
   CJMM_GUIDE,
   COMPOSITE_GUIDE,
   HELP_FIGURES,
@@ -11,7 +18,6 @@ import {
 } from "@/lib/help/itemGuide";
 import { ITEM_TYPES, ITEM_TYPE_LABELS, type ItemType } from "@/lib/ngn/labels";
 import { CJMM_STEP_LABELS, type CjmmStep } from "@/lib/ngn/types";
-import { textLinkClasses } from "@/components/ui/TextLink";
 
 export const metadata: Metadata = { title: "Question guide" };
 
@@ -66,60 +72,44 @@ function Field({ term, children }: { term: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-0.5">
       <dt className="text-sm font-semibold text-ink-2">{term}</dt>
-      <dd className="text-ink-1">{children}</dd>
+      <dd className="leading-relaxed text-ink-1">{children}</dd>
     </div>
   );
 }
 
-function SectionHeading({ id, children }: { id: string; children: ReactNode }) {
-  return (
-    <h2 id={id} className="border-b border-line pb-2 text-xl font-semibold text-ink-1">
-      {children}
-    </h2>
-  );
-}
+/** The guide's four sections, in order, with the formats and composites under theirs. */
+const SECTIONS = [
+  { id: "scoring", title: "Scoring models" },
+  {
+    id: "formats",
+    title: "Question formats",
+    children: ITEM_TYPES.map((type) => ({
+      id: helpSectionId(type),
+      title: ITEM_TYPE_LABELS[type],
+    })),
+  },
+  {
+    id: "composites",
+    title: "Case studies and Trend questions",
+    children: COMPOSITE_GUIDE.map((entry) => ({ id: entry.id, title: entry.title })),
+  },
+  { id: "steps", title: "The six clinical judgment steps" },
+] as const satisfies readonly ContentsEntry[];
 
-function Contents() {
-  // Each a 44px standalone link: the list is a set of targets, not a sentence (WCAG 2.5.8).
-  const link = textLinkClasses({ size: "sm" });
-  return (
-    <nav aria-label="On this page" className="rounded-md border border-line bg-surface-1 p-4">
-      <p className="eyebrow">On this page</p>
-      <ul className="mt-2 grid gap-x-6 text-sm sm:grid-cols-2">
-        <li>
-          <a href="#scoring" className={link}>
-            Scoring models
-          </a>
-        </li>
-        {ITEM_TYPES.map((type) => (
-          <li key={type}>
-            <a href={`#${helpSectionId(type)}`} className={link}>
-              {ITEM_TYPE_LABELS[type]}
-            </a>
-          </li>
-        ))}
-        {COMPOSITE_GUIDE.map((entry) => (
-          <li key={entry.id}>
-            <a href={`#${entry.id}`} className={link}>
-              {entry.title}
-            </a>
-          </li>
-        ))}
-        <li>
-          <a href="#steps" className={link}>
-            The six clinical judgment steps
-          </a>
-        </li>
-      </ul>
-    </nav>
-  );
-}
+type SectionId = (typeof SECTIONS)[number]["id"];
+
+const numberOf = (id: SectionId): string =>
+  sectionNumber(SECTIONS.findIndex((section) => section.id === id));
+const titleOf = (id: SectionId): string => SECTIONS.find((section) => section.id === id)!.title;
+
+/** A format, a composite or a step inside a section: between hairlines, with its own anchor. */
+const ENTRY = `${ANCHOR_OFFSET} border-t border-line pt-6`;
 
 function ItemSection({ type }: { type: ItemType }) {
   const entry = ITEM_GUIDE[type];
   const figure = TYPE_FIGURES[type];
   return (
-    <section id={helpSectionId(type)} className="scroll-mt-4">
+    <section id={helpSectionId(type)} className={ENTRY}>
       <h3 className="text-lg font-semibold text-ink-1">{ITEM_TYPE_LABELS[type]}</h3>
       <dl className="measure mt-2 flex flex-col gap-3">
         <Field term="What it tests">{entry.tests}</Field>
@@ -133,40 +123,40 @@ function ItemSection({ type }: { type: ItemType }) {
 
 export default function ItemGuide() {
   return (
-    <article className="flex flex-col gap-10">
-      <header>
-        <p className="eyebrow">Help</p>
-        <h1 className="mt-2 font-read text-display leading-tight text-ink-1">Question guide</h1>
-      </header>
-
-      <Contents />
-
-      <section aria-labelledby="scoring" className="flex flex-col gap-4">
-        <SectionHeading id="scoring">Scoring models</SectionHeading>
-        <dl className="measure flex flex-col gap-3">
+    <GuidePage title="Question guide" contents={SECTIONS}>
+      <GuideSection id="scoring" number={numberOf("scoring")} title={titleOf("scoring")}>
+        <dl className="measure flex flex-col gap-4">
           {MODELS.map((model) => (
             <Field key={model.name} term={model.name}>
               {model.rule}
             </Field>
           ))}
         </dl>
-      </section>
+      </GuideSection>
 
-      <section aria-labelledby="formats" className="flex flex-col gap-8">
-        <SectionHeading id="formats">Question formats</SectionHeading>
+      <GuideSection
+        id="formats"
+        number={numberOf("formats")}
+        title={titleOf("formats")}
+        className="flex flex-col gap-10"
+      >
         {ITEM_TYPES.map((type) => (
           <ItemSection key={type} type={type} />
         ))}
-      </section>
+      </GuideSection>
 
-      <section aria-labelledby="composites" className="flex flex-col gap-8">
-        <SectionHeading id="composites">Case studies and Trend questions</SectionHeading>
+      <GuideSection
+        id="composites"
+        number={numberOf("composites")}
+        title={titleOf("composites")}
+        className="flex flex-col gap-10"
+      >
         {COMPOSITE_GUIDE.map((entry) => {
           const figure = COMPOSITE_FIGURES[entry.id];
           return (
-            <section key={entry.id} id={entry.id} className="scroll-mt-4">
+            <section key={entry.id} id={entry.id} className={ENTRY}>
               <h3 className="text-lg font-semibold text-ink-1">{entry.title}</h3>
-              <div className="measure mt-2 flex flex-col gap-2 text-ink-1">
+              <div className="measure mt-2 flex flex-col gap-2 leading-relaxed text-ink-1">
                 {entry.body.map((paragraph) => (
                   <p key={paragraph}>{paragraph}</p>
                 ))}
@@ -178,16 +168,20 @@ export default function ItemGuide() {
             </section>
           );
         })}
-      </section>
+      </GuideSection>
 
-      <section aria-labelledby="steps" className="flex flex-col gap-6">
-        <SectionHeading id="steps">The six clinical judgment steps</SectionHeading>
-        <p className="measure text-ink-1">
+      <GuideSection
+        id="steps"
+        number={numberOf("steps")}
+        title={titleOf("steps")}
+        className="flex flex-col gap-8"
+      >
+        <p className="measure leading-relaxed text-ink-1">
           From the NCSBN Clinical Judgment Measurement Model. A case study has one question for each
           step, in this order. Tag any other question with the step it tests.
         </p>
         {STEPS.map((step) => (
-          <section key={step} id={`step-${step}`} className="scroll-mt-4">
+          <section key={step} id={`step-${step}`} className={ENTRY}>
             <h3 className="text-lg font-semibold text-ink-1">
               {step}. {CJMM_STEP_LABELS[step]}
             </h3>
@@ -197,7 +191,7 @@ export default function ItemGuide() {
             </dl>
           </section>
         ))}
-      </section>
-    </article>
+      </GuideSection>
+    </GuidePage>
   );
 }

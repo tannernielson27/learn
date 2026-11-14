@@ -24,7 +24,7 @@ No new font. No shadow beyond `--elevation-1` (none is used here).
 
 - **Pricing** (done): the headline and the price side by side from 1024px, the price at hero size in a ruled column, the questions under a near-black rule.
 - **Terms and privacy** (done through the layout): the new header and footer; the text keeps its reading width.
-- **Help**: the same header and footer; guide titles in `.display-section`; each guide section opens with a rule and a mono number, as the landing does.
+- **Help** (done): the same header and footer, with the help pages' own links in a row under the header. Guide titles in `.display-section`; each guide section opens with a rule and a mono number, as the landing does. The index is a contents page: the two guides as numbered entries between hairlines. A guide's "On this page" is the list at the top on a phone and sticky beside the text from 1024px. A control's name (`Ui`) is set as interface text: semibold UI face on `--surface-2` with a `--line` edge.
 - **Sign-in and sign-up**: the wordmark over a single column on paper, the heading in `.display-section`, the form unchanged. No drawing.
 - **/join**: the wordmark swaps in for the plain one. Nothing else changes: a phone in class needs the form, not the brand.
 - **Later, the app**: the wordmark in AppShell, `.display-section` for library and quiz titles. Section rules and numbers stay on the public site; the app keeps its quieter lines.

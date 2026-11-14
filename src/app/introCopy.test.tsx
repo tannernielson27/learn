@@ -19,6 +19,8 @@ const { readViewer, action } = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  // The help layout's own navigation marks the page it is on (#563).
+  usePathname: () => "/help",
   redirect: (to: string) => {
     throw new Error(`redirect:${to}`);
   },
