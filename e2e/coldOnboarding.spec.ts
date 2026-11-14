@@ -21,7 +21,7 @@ import { skipWelcomes } from "./welcome";
 // real time (S11 kickoff decision 9).
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
 
-const HEADLINE = "Live learning for the Next Generation NCLEX.";
+const HEADLINE = "Next Generation NCLEX quizzes, live in class.";
 /** Two groups of three from the unambiguous alphabet, exactly as the console shows it. */
 const CODE = /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{3} [23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{3}$/;
 /** The sample's multiple-choice item, which the phone answers, and its keyed option. */
@@ -103,7 +103,7 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1, name: HEADLINE, exact: true })).toBeVisible();
   await shoot(page, testInfo, "1-landing");
-  await page.getByRole("link", { name: "Sign in", exact: true }).click();
+  await page.getByRole("main").getByRole("link", { name: "Sign in", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Sign in", exact: true })).toBeVisible();
   const since = new Date();
   await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
@@ -191,8 +191,13 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   const phone = await liveContext.newPage();
   await skipWelcomes(phone);
   await phone.goto("/");
-  await phone.getByRole("link", { name: "Join a live session", exact: true }).click();
+  // #563: the code goes in on the landing page itself, and the join page has it filled in.
   await phone.getByRole("textbox", { name: "Join code", exact: true }).fill(code);
+  await phone.getByRole("button", { name: "Join", exact: true }).click();
+  await expect(phone).toHaveURL(/\/join\/[0-9A-Z]{6}$/);
+  await expect(phone.getByRole("textbox", { name: "Join code", exact: true })).toHaveValue(
+    code.replace(/\s/g, ""),
+  );
   await phone.getByRole("textbox", { name: "Display name", exact: true }).fill(PHONE_NAME);
   await phone.getByRole("button", { name: "Join", exact: true }).click();
   await expect(phone).toHaveURL(/\/play\/[0-9a-f-]{36}$/);

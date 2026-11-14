@@ -21,15 +21,16 @@ export interface LandingEntry extends LandingLink {
 
 /**
  * The landing page's first link (#264). A visitor is offered an account, with Sign in beside it
- * (#366, ADR 0009: sign-up is open); anyone already signed in is offered their own home instead,
- * so the page never asks a signed-in instructor to sign in again. An account with no role goes to
- * the welcome page (#362), where it joins a class or sets up a workspace.
+ * (#366, ADR 0009: sign-up is open), named for what it starts: the free trial (#563). Anyone
+ * already signed in is offered their own home instead, so the page never asks a signed-in
+ * instructor to sign in again. An account with no role goes to the welcome page (#362), where it
+ * joins a class or sets up a workspace.
  */
 export function landingEntry(visitor: LandingVisitor): LandingEntry {
   if (visitor.status === "signed_out") {
     return {
       href: SIGN_UP_PATH,
-      label: "Create an account",
+      label: "Start your free trial",
       also: { href: "/sign-in", label: "Sign in" },
     };
   }

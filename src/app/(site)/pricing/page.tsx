@@ -51,65 +51,79 @@ const FAQ = [
  * The public price (#522). One subscription, nothing to compare, so there is no table: the
  * price, what it covers, one action and a few answers. The action is the landing page's own
  * (`landingEntry`), so a signed-in teacher is offered their quizzes rather than a second account.
+ *
+ * #563: the site's editorial look. The headline and the price sit side by side from 1024px, the
+ * price in a ruled column of its own; the questions follow under a near-black rule.
  */
 export default async function PricingPage() {
   const entry = await readLandingEntry();
 
   return (
-    <article className="flex flex-col gap-10">
-      <header>
-        <p className="eyebrow">Pricing</p>
-        <h1 className="mt-2 font-read text-display leading-tight text-ink-1">
-          One price for the whole workspace.
-        </h1>
-        <p className="measure mt-4 text-lg leading-relaxed text-ink-2">
-          LeaRN is paid for by the workspace, not by each teacher, and never by students.
-        </p>
-      </header>
+    <article className="flex flex-col gap-16 sm:gap-20">
+      <div className="grid gap-10 lg:grid-cols-12 lg:gap-12">
+        <header className="lg:col-span-6">
+          <p className="eyebrow">Pricing</p>
+          <h1 className="display-section mt-4">One price for the whole workspace.</h1>
+          <p className="measure mt-6 text-lg leading-relaxed text-ink-2">
+            LeaRN is paid for by the workspace, not by each teacher, and never by students.
+          </p>
+        </header>
 
-      <section aria-labelledby="price-heading">
-        <h2 id="price-heading" className="sr-only">
-          Subscription
-        </h2>
-        <p className="font-read text-display leading-tight text-ink-1">
-          $39.99 <span className="font-ui text-lg text-ink-2">a month per workspace</span>
-        </p>
-        <ul className="measure mt-6 flex flex-col divide-y divide-line border-y border-line">
-          {INCLUDED.map((line) => (
-            <li key={line} className="py-3 leading-relaxed text-ink-1">
-              {line}
-            </li>
-          ))}
-        </ul>
-        <p className="mt-8">
-          <Link href={entry.href} className={buttonClasses({ variant: "primary", size: "lg" })}>
-            {entry.label}
-          </Link>
-        </p>
-      </section>
+        <section
+          aria-labelledby="price-heading"
+          className="border-t border-rule-strong pt-6 lg:col-span-5 lg:col-start-8 lg:mt-3"
+        >
+          <h2 id="price-heading" className="sr-only">
+            Subscription
+          </h2>
+          <p className="display-hero">
+            $39.99{" "}
+            <span className="block pt-3 font-ui text-lg tracking-normal text-ink-2">
+              a month per workspace
+            </span>
+          </p>
+          <ul className="mt-8 flex flex-col divide-y divide-line border-y border-line">
+            {INCLUDED.map((line) => (
+              <li key={line} className="py-3 leading-relaxed text-ink-1">
+                {line}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-8">
+            <Link
+              href={entry.href}
+              className={buttonClasses({ variant: "primary", size: "lg", block: true })}
+            >
+              {entry.label}
+            </Link>
+          </p>
+        </section>
+      </div>
 
-      <section aria-labelledby="faq-heading">
-        <h2 id="faq-heading" className="text-xl font-semibold text-ink-1">
-          Common questions
-        </h2>
-        <dl className="measure mt-3 flex flex-col gap-4 text-ink-1">
-          {FAQ.map((entry) => (
-            <div key={entry.id}>
-              <dt className="font-semibold">{entry.question}</dt>
-              <dd className="mt-1 leading-relaxed text-ink-2">{entry.answer}</dd>
+      <section aria-labelledby="faq-heading" className="border-t border-rule-strong pt-6">
+        <div className="grid gap-8 lg:grid-cols-12 lg:gap-12">
+          <h2 id="faq-heading" className="display-section lg:col-span-4">
+            Common questions
+          </h2>
+          <dl className="flex flex-col divide-y divide-line text-ink-1 lg:col-span-7 lg:col-start-6">
+            {FAQ.map((entry) => (
+              <div key={entry.id} className="py-4 first:pt-0">
+                <dt className="font-semibold">{entry.question}</dt>
+                <dd className="measure mt-1 leading-relaxed text-ink-2">{entry.answer}</dd>
+              </div>
+            ))}
+            <div className="py-4">
+              <dt className="font-semibold">Can a school pay for a program?</dt>
+              <dd className="measure mt-1 leading-relaxed text-ink-2">
+                Yes. Email{" "}
+                <a href={SUPPORT_MAILTO} className={textLinkClasses({ kind: "inline" })}>
+                  {SUPPORT_EMAIL}
+                </a>{" "}
+                and we will work out the right setup with you.
+              </dd>
             </div>
-          ))}
-          <div>
-            <dt className="font-semibold">Can a school pay for a program?</dt>
-            <dd className="mt-1 leading-relaxed text-ink-2">
-              Yes. Email{" "}
-              <a href={SUPPORT_MAILTO} className={textLinkClasses({ kind: "inline" })}>
-                {SUPPORT_EMAIL}
-              </a>{" "}
-              and we will work out the right setup with you.
-            </dd>
-          </div>
-        </dl>
+          </dl>
+        </div>
       </section>
     </article>
   );

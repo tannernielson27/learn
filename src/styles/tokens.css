@@ -96,6 +96,12 @@
   /* Fluid headings, rem-bounded (WCAG 1.4.4: never a viewport-only size, max at most 2.5x min). */
   --text-display: clamp(1.75rem, 1.4rem + 1.2vw, 2.5rem);
   --text-title: clamp(1.375rem, 1.2rem + 0.6vw, 1.75rem);
+  /*
+   * The public site's display sizes (#563): the landing headline and the site's section heads.
+   * Serif, and the one place outside the projector where type gets large. Max within 2.5x of min.
+   */
+  --text-hero: clamp(2.375rem, 1.5rem + 2.6vw, 4.75rem);
+  --text-section: clamp(1.75rem, 1.3rem + 1.8vw, 3rem);
 
   /* Space: an 8pt grid; 4 and 12 are for inside components */
   --space-1: 0.25rem;
@@ -130,6 +136,8 @@
   /* AppShell's content widths: today's reading column, the wide pages, and no cap at all. */
   --content-reading: 48rem;
   --content-wide: 75rem;
+  /* The public site's column (#563): wide enough for the landing page's asymmetric grid at 1920. */
+  --content-site: 86rem;
 }
 
 /* 2. Semantic, light (the default, and any element marked `data-theme="light"`) -------------- */
@@ -171,6 +179,15 @@
 
   /* The one shadow: a dragged token, a dialog, a toast. */
   --elevation-1: 0 1px 2px var(--shade-light), 0 4px 12px var(--shade-light);
+
+  /*
+   * The public site (#563): a deeper paper for a band across the page, the near-black rule that
+   * opens a section, and the line the landing page draws its projector and phones with (3:1
+   * against the page, WCAG 1.4.11).
+   */
+  --surface-band: var(--paper-94);
+  --rule-strong: var(--neutral-20);
+  --device-line: var(--neutral-48);
 
   /*
    * The projector stage is always light (projectors cannot make black; dark slides wash out in a
@@ -218,6 +235,10 @@
     --notice-soft: var(--neutral-26);
 
     --elevation-1: 0 1px 2px var(--shade-dark), 0 4px 12px var(--shade-dark);
+
+    --surface-band: var(--neutral-15);
+    --rule-strong: var(--paper-94);
+    --device-line: var(--neutral-62);
   }
 }
 
@@ -248,6 +269,10 @@
   --notice-soft: var(--neutral-26);
 
   --elevation-1: 0 1px 2px var(--shade-dark), 0 4px 12px var(--shade-dark);
+
+  --surface-band: var(--neutral-15);
+  --rule-strong: var(--paper-94);
+  --device-line: var(--neutral-62);
 }
 
 /* 3. Component ------------------------------------------------------------------------------ */
@@ -271,6 +296,19 @@
   --text-score: clamp(2.75rem, 2.2rem + 1.6vw, 3.5rem);
   --joincode-size-stage: var(--text-stage-code);
   --toast-offset: var(--space-4);
+  /*
+   * The landing page's drawing of a live session (#563). A phone's corner is the one radius
+   * outside the two: at 8px a phone reads as a card. Drawing only, never a control.
+   */
+  --radius-device: 1.5rem;
+  --demo-step: 450ms;
+  /* Its projector's type, in the drawing's own container units with rem floors (within 2.5x). */
+  --text-demo-label: clamp(0.6875rem, 1.9cqi, 0.9375rem);
+  --text-demo-stem: clamp(0.9375rem, 3.3cqi, 1.75rem);
+  --text-demo-option: clamp(0.75rem, 2.3cqi, 1.1875rem);
+  --text-demo-number: clamp(1.75rem, 6.5cqi, 3.75rem);
+  /* A drawn phone's words: a picture of a screen, hidden from screen readers. */
+  --text-demo-phone: 0.6875rem;
 
   /*
    * The projector ladder (PLAN §6), in container units of the stage (StageShell is a

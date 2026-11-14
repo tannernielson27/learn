@@ -101,7 +101,7 @@ export default function InstructorGuide() {
       <Section id="sign-in">
         <Topic id="sign-up" title="Create your account">
           <p>
-            Open <Ui>Create an account</Ui> and choose <Ui>I teach</Ui>.
+            Open <Ui>Start your free trial</Ui> on the home page and choose <Ui>I teach</Ui>.
           </p>
           <p>You are signed in at once, in a workspace no other teacher can see.</p>
           <p>

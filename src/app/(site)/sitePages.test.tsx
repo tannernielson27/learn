@@ -13,7 +13,7 @@ import TermsPage, { metadata as termsMetadata } from "./terms/page";
 
 const VISITOR = {
   href: "/sign-up",
-  label: "Create an account",
+  label: "Start your free trial",
   also: { href: "/sign-in", label: "Sign in" },
 };
 
@@ -72,9 +72,9 @@ describe("/pricing (#522)", () => {
     expect(text).toContain("Cancel any time from Manage billing");
   });
 
-  it("offers a visitor an account, and a signed-in teacher their quizzes", async () => {
+  it("offers a visitor the free trial, and a signed-in teacher their quizzes", async () => {
     const { unmount } = render(await PricingPage());
-    expect(screen.getByRole("link", { name: "Create an account" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Start your free trial" })).toHaveAttribute(
       "href",
       "/sign-up",
     );
@@ -82,7 +82,7 @@ describe("/pricing (#522)", () => {
 
     readLandingEntry.mockResolvedValue({ href: "/author", label: "Go to your quizzes" });
     render(await PricingPage());
-    expect(screen.queryByRole("link", { name: "Create an account" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Start your free trial" })).toBeNull();
     expect(screen.getByRole("link", { name: "Go to your quizzes" })).toHaveAttribute(
       "href",
       "/author",

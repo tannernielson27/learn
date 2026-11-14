@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DISPLAY_NAME_EMPTY, DISPLAY_NAME_TOO_LONG } from "./displayName";
-import { JOIN_CODE_ERROR, parseJoinForm } from "./joinForm";
+import { JOIN_CODE_ERROR, parseJoinCode, parseJoinForm } from "./joinForm";
 
 function form(code: unknown, displayName: unknown): FormData {
   const data = new FormData();
@@ -70,5 +70,21 @@ describe("parseJoinForm", () => {
   it("cleans the name it returns, so nothing downstream has to remember to", () => {
     const parsed = parseJoinForm(form("7KQ2MZ", "  Sam   Okafor "));
     expect(parsed.ok && parsed.displayName).toBe("Sam Okafor");
+  });
+});
+
+// #563: the landing page asks for the code alone and sends it on to /join/[code]. The same rule,
+// said once, so the two forms cannot drift apart.
+describe("parseJoinCode", () => {
+  it("normalizes the code the way the join form does", () => {
+    for (const typed of ["7kq2mz", "7KQ 2MZ", "7kq-2mz", "  7 K Q 2 M Z  "]) {
+      expect(parseJoinCode(typed)).toEqual({ ok: true, code: "7KQ2MZ" });
+    }
+  });
+
+  it("refuses an empty, short, long, missing or out-of-alphabet code with the join form's words", () => {
+    for (const typed of ["", "   ", "7KQ2M", "7KQ2MZX", "7KQ2M0", "IOIOIO", null, 42]) {
+      expect(parseJoinCode(typed)).toEqual({ ok: false, error: JOIN_CODE_ERROR });
+    }
   });
 });
