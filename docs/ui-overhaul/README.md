@@ -41,6 +41,8 @@ Owner-approved on 2026-10-22 (Checkpoint 2). Build the screens **as shown** in `
 | `EditorDesktop.dc.html`                                                                                                     | `/author/items/[itemId]`                                                         | `EditorShell` (520 lines: split it), the editors                                             | D     |
 | `Foundation.dc.html`                                                                                                        | `/gallery/primitives`, `/gallery/tokens`                                         | `components/ui/*`, `styles/tokens.css`                                                       | F0    |
 
+The public site (landing, pricing, terms, privacy) follows the editorial direction picked for #563, not a mockup here: see `docs/04-DESIGN-DIRECTION.md` §10 to §12.
+
 Screens with no mockup (classes, workspace, sessions list, reports, AI import, case study builder, auth, account, help, landing, error and not-found pages) take the new AppShell, tokens and components with their current structure, widened per PLAN.md §6. No new layouts there without a mockup.
 
 ## Rules for builders
