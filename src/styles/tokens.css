@@ -308,7 +308,7 @@
   --text-demo-option: clamp(0.75rem, 2.3cqi, 1.1875rem);
   --text-demo-number: clamp(1.75rem, 6.5cqi, 3.75rem);
   /* A drawn phone's words: a picture of a screen, hidden from screen readers. */
-  --text-demo-phone: 0.625rem;
+  --text-demo-phone: 0.6875rem;
 
   /*
    * The projector ladder (PLAN §6), in container units of the stage (StageShell is a
