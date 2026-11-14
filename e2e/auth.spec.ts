@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page, type APIRequestContext } from "@playwright/test";
 import { latestSignInCode, latestSignInLink, openSignInLink } from "./mailbox";
 import { createAccountWithoutRole, createAuthorAccount } from "./signIn";
-import { openAccountMenu } from "./accountMenu";
+import { expectSignedInAs, openAccountMenu } from "./accountMenu";
 
 // Needs the local Supabase stack (auth + test mailbox) and a build pointed at it; the preview
 // e2e job has neither, so it skips. CI runs this in the `auth-e2e` job with E2E_AUTH=1.
@@ -42,7 +42,7 @@ test("an author signs in from an emailed link, lands where they were going, then
 
   await expect(page).toHaveURL(/\/author$/);
   await expect(page.getByRole("heading", { level: 1, name: "Library" })).toBeVisible();
-  await expect(page.getByTestId("signed-in-email")).toHaveText(email);
+  await expectSignedInAs(page, "signed-in-email", email);
 
   // Signed in, the sign-in page moves straight on.
   await page.goto("/sign-in");
@@ -123,7 +123,9 @@ test("the demo account signs in without an email and lands where the person was 
   await page.getByRole("button", { name: "Use the demo account" }).click();
   await expect(page).toHaveURL(/\/author$/);
   await expect(page.getByRole("heading", { level: 1, name: "Library" })).toBeVisible();
-  await expect(page.getByTestId("signed-in-email")).toHaveText(
+  await expectSignedInAs(
+    page,
+    "signed-in-email",
     process.env.DEMO_ACCOUNT_EMAIL!.trim().toLowerCase(),
   );
 
@@ -157,7 +159,7 @@ test("a mail scanner that opens the link first spends nothing (#305)", async ({
   });
   await page.getByRole("button", { name: "Continue to LeaRN" }).click();
   await expect(page).toHaveURL(/\/author$/);
-  await expect(page.getByTestId("signed-in-email")).toHaveText(email);
+  await expectSignedInAs(page, "signed-in-email", email);
 });
 
 test("an author who opened the email elsewhere signs in here with its code (#306)", async ({
@@ -190,7 +192,7 @@ test("an author who opened the email elsewhere signs in here with its code (#306
   await field.fill(code);
   await page.getByRole("button", { name: "Sign in with the code" }).click();
   await expect(page).toHaveURL(/\/author$/);
-  await expect(page.getByTestId("signed-in-email")).toHaveText(email);
+  await expectSignedInAs(page, "signed-in-email", email);
 });
 
 test("a link that was already used sends the person back with a reason", async ({
@@ -280,7 +282,7 @@ test("an author chooses a password, then signs in with it and no email", async (
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(/\/author$/);
-  await expect(page.getByTestId("signed-in-email")).toHaveText(email);
+  await expectSignedInAs(page, "signed-in-email", email);
 });
 
 // #361: open sign-up. No account is made beforehand: the form is the only thing that makes one.

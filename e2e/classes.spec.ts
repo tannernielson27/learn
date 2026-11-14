@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { confirmLinkIn, latestEmail, latestSignInLink, openSignInLink } from "./mailbox";
 import { signInAsNewAuthor } from "./signIn";
 import { skipWelcomes } from "./welcome";
-import { openAccountMenu } from "./accountMenu";
+import { expectSignedInAs, openAccountMenu } from "./accountMenu";
 
 // #205: a class, its invite link, and a student who joins through it. Needs the local Supabase
 // stack (auth, the Mailpit test mailbox) and a build pointed at it, like auth.spec.ts.
@@ -112,7 +112,7 @@ test("a student joins a class from its invite link and the roster shows them", a
   await expect(student.getByRole("list", { name: "Your classes", exact: true })).toContainText(
     className,
   );
-  await expect(student.getByTestId("signed-in-email")).toHaveText(email);
+  await expectSignedInAs(student, "signed-in-email", email);
   await expectNoAxeViolations(student);
   await student.screenshot({
     path: `test-results/screenshots/${project}/student-home.png`,
@@ -240,7 +240,7 @@ test("a student joins with an email and a password, with no email to wait for", 
     fullPage: true,
   });
   // The header shows the name rather than the address.
-  await expect(student.getByTestId("signed-in-name")).toHaveText(name);
+  await expectSignedInAs(student, "signed-in-name", name);
   await openClassTab(page, "Students");
   await page.reload();
   const roster = page.getByRole("list", { name: "Roster", exact: true });
@@ -277,7 +277,7 @@ test("a student joins with an email and a password, with no email to wait for", 
   student.on("request", record);
   await student.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(student).toHaveURL(/\/learn$/);
-  await expect(student.getByTestId("signed-in-name")).toHaveText(name);
+  await expectSignedInAs(student, "signed-in-name", name);
   student.off("request", record);
   expect(visited.filter((pathname) => pathname.startsWith("/author"))).toEqual([]);
 
@@ -303,7 +303,7 @@ test("a student joins with an email and a password, with no email to wait for", 
     student.getByRole("link", { name: "Change your password", exact: true }),
   ).toHaveAttribute("href", "/account/password?next=%2Faccount");
   await student.goto("/learn");
-  await expect(student.getByTestId("signed-in-name")).toHaveText(renamed);
+  await expectSignedInAs(student, "signed-in-name", renamed);
   await page.reload();
   await expect(page.getByRole("list", { name: "Roster", exact: true })).toContainText(renamed);
 
@@ -385,7 +385,7 @@ test("confirming from another browser retires the password the account was made 
   await expect(owner).toHaveURL(/\/learn$/);
   await stranger.getByLabel("Password", { exact: true }).fill(chosen);
   await stranger.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(stranger.getByTestId("signed-in-name")).toHaveText("Ana Reyes");
+  await expectSignedInAs(stranger, "signed-in-name", "Ana Reyes");
 
   await first.close();
   await second.close();

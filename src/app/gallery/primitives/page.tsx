@@ -53,6 +53,17 @@ export default function PrimitivesPage() {
       <ErrorStates />
       <ContentsStates />
 
+      <section id="gallery-appshell" className="mt-12">
+        <h2 className="text-lg font-semibold">AppShell</h2>
+        <p className="mt-1 max-w-prose text-sm text-ink-2">
+          The frame of every signed-in page, for a teacher and a student, with the account menu open
+          and closed, on a phone and a desktop, with and without the billing notice.
+        </p>
+        <p className="mt-3">
+          <TextLink href="/gallery/app-shell">See the app shell states</TextLink>
+        </p>
+      </section>
+
       <section className="mt-10">
         <h2 className="text-lg font-semibold">TextLink, Icon and Badge</h2>
         <div className="mt-3 flex flex-wrap items-center gap-4">

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ClassTime } from "@/components/assignments/ClassTime";
 import { LiveSessionResults } from "@/components/learn/LiveSessionResults";
@@ -13,6 +12,7 @@ import { loadLiveResultPage } from "@/lib/learn/liveResultPage";
 import { liveResultsStore } from "@/lib/learn/liveResultsStore";
 import { myClasses } from "@/lib/supabase/classInvites";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { BackLink } from "@/components/ui/BackLink";
 
 export const metadata: Metadata = { title: "Results" };
 
@@ -48,10 +48,8 @@ export default async function StudentLiveResultsPage({
 
   return (
     <PageWidth width="wide">
-      <p className="mb-2 text-sm text-ink-2">
-        <Link href={STUDENT_HOME} className="tap-target inline-flex items-center hover:text-ink-1">
-          Your classes
-        </Link>
+      <p className="mb-2">
+        <BackLink href={STUDENT_HOME}>Your classes</BackLink>
       </p>
       <p className="eyebrow mb-2">Live session results</p>
       <h1 className="font-read text-display leading-tight break-words text-ink-1">

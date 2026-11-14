@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import { backLinkClasses } from "@/components/ui/BackLink";
 import { describe, expect, it } from "vitest";
 import { buildAssignmentReport, type AssignmentReportInput } from "@/lib/assignments/report";
 import { inCaseStudies } from "@/lib/live/report";
@@ -77,6 +78,10 @@ describe("AssignmentReportView, once closed", () => {
       "href",
       `/author/classes/${CLASS}`,
     );
+    // #563: the one back-link look, with its chevron.
+    const back = screen.getByRole("link", { name: "Back to class" });
+    expect(back).toHaveClass(...backLinkClasses().split(" "));
+    expect(back.querySelector("svg")).not.toBeNull();
   });
 
   it("switches views with links that keep the view in the address", () => {

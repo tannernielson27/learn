@@ -26,24 +26,23 @@ export default async function StudentLayout({ children }: LayoutProps<"/learn">)
       width="full"
       account={
         signedIn ? (
-          <>
-            <SignedInAs displayName={viewer.displayName} email={viewer.email} />
-            <AccountMenu
-              name={name}
-              initials={accountInitials(name)}
-              signOut={signOut}
-              links={
-                <>
-                  <Link href={ACCOUNT_PATH} className={MENU_ITEM_CLASSES}>
-                    Account
-                  </Link>
-                  <Link href="/help" className={MENU_ITEM_CLASSES}>
-                    Help
-                  </Link>
-                </>
-              }
-            />
-          </>
+          // The bar shows only the initials; the name and email are inside (docs/04 §11).
+          <AccountMenu
+            name={name}
+            identity={<SignedInAs displayName={viewer.displayName} email={viewer.email} />}
+            initials={accountInitials(name)}
+            signOut={signOut}
+            links={
+              <>
+                <Link href={ACCOUNT_PATH} className={MENU_ITEM_CLASSES}>
+                  Account
+                </Link>
+                <Link href="/help" className={MENU_ITEM_CLASSES}>
+                  Help
+                </Link>
+              </>
+            }
+          />
         ) : null
       }
     >

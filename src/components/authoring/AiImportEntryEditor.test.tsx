@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { backLinkClasses } from "@/components/ui/BackLink";
 import { matrixFormFromStored } from "@/lib/authoring/forms/matrix";
 import { fromMatrixMultipleChoiceDraft } from "@/lib/ngn/draft";
 import { AiImportEntryEditor, type AiImportEntryEditorProps } from "./AiImportEntryEditor";
@@ -77,6 +78,10 @@ describe("AiImportEntryEditor", () => {
       "href",
       `/author/banks/b/ai-import/${BATCH}`,
     );
+    // #563: the one back-link look, with its chevron, on the guarded link.
+    const back = screen.getByRole("link", { name: "Back to the review" });
+    expect(back).toHaveClass(...backLinkClasses().split(" "));
+    expect(back.querySelector("svg")).not.toBeNull();
     expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Publish" })).not.toBeInTheDocument();
   });

@@ -8,6 +8,7 @@ import { requireAuthor } from "@/lib/authoring/session";
 import { ITEM_TYPE_LABELS } from "@/lib/ngn/labels";
 import { toKeylessItem } from "@/lib/ngn/submit";
 import { fromItemRow } from "@/lib/supabase/itemRows";
+import { BackLink } from "@/components/ui/BackLink";
 
 export const metadata: Metadata = { title: "Play question" };
 
@@ -36,9 +37,7 @@ export default async function PlayItemPage({ params }: PageProps<"/author/items/
   const page = (
     <>
       <p className="mb-2 flex flex-wrap gap-4 text-sm">
-        <Link href={`/author/banks/${row.bank_id}`} className={linkClass}>
-          Back to quiz
-        </Link>
+        <BackLink href={`/author/banks/${row.bank_id}`}>Back to quiz</BackLink>
         <Link href={`/author/items/${row.id}`} className={linkClass}>
           Edit question
         </Link>

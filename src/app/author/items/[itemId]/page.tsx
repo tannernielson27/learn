@@ -1,4 +1,3 @@
-import { ChevronLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { archiveItemAction, restoreItemAction } from "@/app/author/archiveActions";
@@ -15,9 +14,9 @@ import { HISTORY_LIMIT } from "@/lib/authoring/versionHistory";
 import { ITEM_TYPE_LABELS, ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 import { fromItemRow } from "@/lib/supabase/itemRows";
 import { Badge } from "@/components/ui/Badge";
-import { Icon } from "@/components/ui/Icon";
 import { Notice } from "@/components/ui/Notice";
 import { textLinkClasses } from "@/components/ui/TextLink";
+import { BackLinkMark, backLinkClasses } from "@/components/ui/BackLink";
 
 export const metadata: Metadata = { title: "Edit question" };
 
@@ -66,12 +65,9 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
   return (
     <>
       <div className="mb-2 flex flex-wrap items-center gap-x-6">
-        <GuardedLink
-          href={`/author/banks/${row.bank_id}`}
-          className={textLinkClasses({ size: "sm" })}
-        >
-          <Icon icon={ChevronLeft} />
-          Back to quiz
+        <GuardedLink href={`/author/banks/${row.bank_id}`} className={backLinkClasses()}>
+          <BackLinkMark />
+          <span>Back to quiz</span>
         </GuardedLink>
         {exportable ? (
           <a

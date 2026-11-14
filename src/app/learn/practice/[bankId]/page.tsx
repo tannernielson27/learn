@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PracticePlayer } from "@/components/practice/PracticePlayer";
 import { Notice } from "@/components/ui/Notice";
@@ -12,6 +11,7 @@ import { practicePageStore } from "@/lib/practice/store";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { practiseMissedFromRunAction } from "../missed/actions";
 import { startPracticeOverAction } from "./actions";
+import { BackLink } from "@/components/ui/BackLink";
 
 export const metadata: Metadata = { title: "Practice" };
 
@@ -38,10 +38,8 @@ export default async function PracticePage({ params }: PageProps<"/learn/practic
 
   return (
     <PageWidth width="wide">
-      <p className="mb-2 text-sm text-ink-2">
-        <Link href={STUDENT_HOME} className="tap-target inline-flex items-center hover:text-ink-1">
-          Your classes
-        </Link>
+      <p className="mb-2">
+        <BackLink href={STUDENT_HOME}>Your classes</BackLink>
       </p>
       <p className="eyebrow mb-2">Practice</p>
       {page.kind === "failed" ? (

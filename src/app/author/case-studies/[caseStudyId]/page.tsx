@@ -29,7 +29,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Notice } from "@/components/ui/Notice";
-import { TextLink, textLinkClasses } from "@/components/ui/TextLink";
+import { textLinkClasses } from "@/components/ui/TextLink";
 import { caseStudyBlockers, stepsReadyLabel } from "@/lib/authoring/caseStudyReadiness";
 import { ehrFormFromStored, previewRecord } from "@/lib/authoring/forms/ehr";
 import { isUuid } from "@/lib/authoring/ids";
@@ -39,6 +39,7 @@ import { ITEM_TYPE_LABELS, ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 import { ehrRecordSchema } from "@/lib/ngn/schemas";
 import { listClasses } from "@/lib/supabase/classes";
 import type { CjmmStep } from "@/lib/ngn/types";
+import { BackLink } from "@/components/ui/BackLink";
 
 export const metadata: Metadata = { title: "Case study" };
 
@@ -186,9 +187,7 @@ export default async function CaseStudyPage({
       // One column: with no builder there is no rail.
       <ReadingWidth>
         <p className="mb-2">
-          <TextLink href={bankHref} size="sm">
-            Back to quiz
-          </TextLink>
+          <BackLink href={bankHref}>Back to quiz</BackLink>
         </p>
         {header}
         <Card tone="inset" padding="sm" className="mb-6 max-w-prose">

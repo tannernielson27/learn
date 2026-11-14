@@ -16,8 +16,14 @@ export const MENU_ITEM_CLASSES =
   "transition-colors duration-fast hover:bg-surface-2";
 
 export interface AccountMenuProps {
-  /** Who is signed in, as the menu's heading. */
+  /** Who is signed in, as the menu's heading when there is no `identity`. */
   name: string;
+  /**
+   * Who is signed in, at the top of the open panel: the layout's `SignedInAs`, with the name and
+   * the email address (owner decision 2026-11-14, docs/04 §11: the email lives here, not in the
+   * bar). The name alone when not given.
+   */
+  identity?: ReactNode;
   /** Up to two letters on the button (`accountInitials`). */
   initials: string;
   /**
@@ -45,9 +51,56 @@ function closeOnLink(event: MouseEvent<HTMLElement>) {
  * ordinary links and controls, not an ARIA `menu`, so Tab and the arrow keys work as they do
  * everywhere else. The theme is the same store the root layout applies before paint.
  */
-export function AccountMenu({ name, initials, links, signOut }: AccountMenuProps) {
-  const panelId = useId();
+type PanelProps = Pick<AccountMenuProps, "name" | "identity" | "links" | "signOut">;
+
+/** The panel's look: a card under the bar, as wide as a phone allows. */
+const PANEL_CLASSES =
+  "w-72 max-w-[calc(100%-2rem)] rounded-md border border-line bg-surface-1 p-2 text-ink-1 shadow-elevation-1";
+
+/** What the panel holds, open or drawn on its own: who, the theme, the links, Sign out. */
+function PanelContents({ name, identity, links, signOut }: PanelProps) {
   const theme = useSyncExternalStore(subscribeTheme, readTheme, serverTheme);
+  return (
+    <>
+      {identity ?? <p className="truncate px-3 py-2.5 font-semibold">{name}</p>}
+      <hr className="my-1 border-line" />
+      <div className="px-1 pt-2 pb-2">
+        <SegmentedControl
+          label="Theme"
+          size="sm"
+          options={THEME_CHOICES}
+          value={theme}
+          onChange={applyTheme}
+          className="w-full [&>button]:flex-1"
+        />
+        <p className="px-2 pt-2 text-xs text-ink-2">The projector view is always light.</p>
+      </div>
+      <hr className="my-1 border-line" />
+      {/* The layout outlives a client navigation, so a followed link closes the panel itself;
+          otherwise it would stay open, with focus inside it, over the next page. */}
+      <nav aria-label="Help and account" className="flex flex-col" onClick={closeOnLink}>
+        {links}
+      </nav>
+      <form action={signOut}>
+        <button type="submit" className={MENU_ITEM_CLASSES}>
+          Sign out
+        </button>
+      </form>
+    </>
+  );
+}
+
+/**
+ * The account menu (owner decision 9): who is signed in, Account, Help, the colour theme, and
+ * Sign out. The bar shows only the initials; the name and the email address are inside.
+ *
+ * A disclosure on the native `popover` attribute (PLAN §8): the browser puts it in the top layer,
+ * closes it on Escape or a click outside, and returns focus to the button. It is a panel of
+ * ordinary links and controls, not an ARIA `menu`, so Tab and the arrow keys work as they do
+ * everywhere else. The theme is the same store the root layout applies before paint.
+ */
+export function AccountMenu({ name, identity, initials, links, signOut }: AccountMenuProps) {
+  const panelId = useId();
 
   return (
     <>
@@ -67,33 +120,22 @@ export function AccountMenu({ name, initials, links, signOut }: AccountMenuProps
       <div
         id={panelId}
         popover="auto"
-        className="motion-toast inset-auto top-16 right-4 m-0 w-72 max-w-[calc(100%-2rem)] rounded-md border border-line bg-surface-1 p-2 text-ink-1 shadow-elevation-1"
+        className={`motion-toast inset-auto top-16 right-4 m-0 ${PANEL_CLASSES}`}
       >
-        <p className="truncate px-3 py-2.5 font-semibold">{name}</p>
-        <hr className="my-1 border-line" />
-        <div className="px-1 pt-2 pb-2">
-          <SegmentedControl
-            label="Theme"
-            size="sm"
-            options={THEME_CHOICES}
-            value={theme}
-            onChange={applyTheme}
-            className="w-full [&>button]:flex-1"
-          />
-          <p className="px-2 pt-2 text-xs text-ink-2">The projector view is always light.</p>
-        </div>
-        <hr className="my-1 border-line" />
-        {/* The layout outlives a client navigation, so a followed link closes the panel itself;
-            otherwise it would stay open, with focus inside it, over the next page. */}
-        <nav aria-label="Help and account" className="flex flex-col" onClick={closeOnLink}>
-          {links}
-        </nav>
-        <form action={signOut}>
-          <button type="submit" className={MENU_ITEM_CLASSES}>
-            Sign out
-          </button>
-        </form>
+        <PanelContents name={name} identity={identity} links={links} signOut={signOut} />
       </div>
     </>
+  );
+}
+
+/**
+ * The panel drawn open in place, for the gallery's specimen of the open menu (`/gallery/app-shell`):
+ * the same contents, without the popover, so it sits where the page puts it.
+ */
+export function AccountMenuPanel(props: PanelProps) {
+  return (
+    <div data-account-panel="" className={PANEL_CLASSES}>
+      <PanelContents {...props} />
+    </div>
   );
 }

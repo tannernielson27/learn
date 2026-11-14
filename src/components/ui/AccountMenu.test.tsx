@@ -1,24 +1,29 @@
+import type { ReactNode } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AccountMenu, MENU_ITEM_CLASSES } from "./AccountMenu";
+import { SignedInAs } from "@/components/auth/SignedInAs";
+import { AccountMenu, AccountMenuPanel, MENU_ITEM_CLASSES } from "./AccountMenu";
 
-function menu(signOut = vi.fn()) {
+const LINKS = (
+  <>
+    <a href="/account" className={MENU_ITEM_CLASSES}>
+      Account
+    </a>
+    <a href="/help" className={MENU_ITEM_CLASSES}>
+      Help
+    </a>
+  </>
+);
+
+function menu(signOut = vi.fn(), identity?: ReactNode) {
   render(
     <AccountMenu
       name="Chidinma Okonkwo"
+      identity={identity}
       initials="CO"
       signOut={signOut}
-      links={
-        <>
-          <a href="/account" className={MENU_ITEM_CLASSES}>
-            Account
-          </a>
-          <a href="/help" className={MENU_ITEM_CLASSES}>
-            Help
-          </a>
-        </>
-      }
+      links={LINKS}
     />,
   );
   return signOut;
@@ -39,6 +44,39 @@ describe("AccountMenu", () => {
     const panel = document.getElementById(panelId!)!;
     expect(panel).toHaveAttribute("popover", "auto");
     expect(panel).toHaveTextContent("Chidinma Okonkwo");
+  });
+
+  it("holds who is signed in, name and email, inside the panel and not on the button", () => {
+    menu(vi.fn(), <SignedInAs displayName="Chidinma Okonkwo" email="c.okonkwo@school.edu" />);
+    const button = screen.getByRole("button", { name: "Account menu" });
+    expect(button).not.toHaveTextContent("c.okonkwo@school.edu");
+    expect(button).not.toHaveTextContent("Chidinma");
+    const panel = document.getElementById(button.getAttribute("popovertarget")!)!;
+    // The name heads the panel, with the email address under it.
+    const top = panel.firstElementChild!;
+    expect(top).toHaveTextContent("Chidinma Okonkwo");
+    expect(top).toHaveTextContent("c.okonkwo@school.edu");
+    expect(screen.getByTestId("signed-in-name")).toHaveTextContent("Chidinma Okonkwo");
+    expect(screen.getByTestId("signed-in-address")).toHaveTextContent("c.okonkwo@school.edu");
+    expect(panel).toContainElement(screen.getByTestId("signed-in-address"));
+  });
+
+  it("draws the open panel in place for the gallery, with the same contents", () => {
+    render(
+      <AccountMenuPanel
+        name="Chidinma Okonkwo"
+        identity={<SignedInAs displayName={null} email="c.okonkwo@school.edu" />}
+        signOut={vi.fn()}
+        links={LINKS}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Account menu" })).toBeNull();
+    expect(screen.getByTestId("signed-in-email")).toHaveTextContent("c.okonkwo@school.edu");
+    expect(screen.getByRole("navigation", { name: "Help and account" })).toHaveTextContent(
+      "AccountHelp",
+    );
+    expect(screen.getByRole("button", { name: "Sign out" })).toHaveAttribute("type", "submit");
+    expect(document.querySelector("[popover]")).toBeNull();
   });
 
   it("holds Account, Help and Sign out", () => {
