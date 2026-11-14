@@ -15,10 +15,14 @@ const LINKS = [
   { href: PRIVACY_PATH, label: "Privacy" },
 ] as const;
 
-/** A mail link wears a text link's classes; `next/link` is for pages, not for `mailto:`. */
+/**
+ * A mail link wears a text link's classes; `next/link` is for pages, not for `mailto:`. Each link
+ * centres its word in the 44px target, so a short word ("Help") does not leave a wider gap after
+ * it than before it.
+ */
 function ContactLink() {
   return (
-    <a href={SUPPORT_MAILTO} className={textLinkClasses({ size: "sm" })}>
+    <a href={SUPPORT_MAILTO} className={`${textLinkClasses({ size: "sm" })} justify-center`}>
       Contact
     </a>
   );
@@ -48,7 +52,7 @@ export function SiteFooter() {
             <ul className="-mx-1.5 flex flex-wrap items-center gap-x-4">
               {LINKS.map((link) => (
                 <li key={link.href} className="px-1.5">
-                  <TextLink href={link.href} size="sm">
+                  <TextLink href={link.href} size="sm" className="justify-center">
                     {link.label}
                   </TextLink>
                 </li>
@@ -74,12 +78,12 @@ export function LegalLinks({ className = "" }: { className?: string }) {
     <nav aria-label="Legal" className={className}>
       <ul className="-mx-1.5 flex flex-wrap items-center gap-x-4">
         <li className="px-1.5">
-          <TextLink href={TERMS_PATH} size="sm">
+          <TextLink href={TERMS_PATH} size="sm" className="justify-center">
             Terms
           </TextLink>
         </li>
         <li className="px-1.5">
-          <TextLink href={PRIVACY_PATH} size="sm">
+          <TextLink href={PRIVACY_PATH} size="sm" className="justify-center">
             Privacy
           </TextLink>
         </li>
