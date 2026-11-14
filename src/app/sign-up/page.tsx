@@ -8,7 +8,12 @@ import { captchaSiteKey } from "@/lib/auth/turnstile";
 import { readViewer } from "@/lib/classes/viewer";
 import { PRICING_PATH } from "@/lib/site/links";
 import { createAccount } from "./actions";
-import { AuthFrame, AUTH_HEADING_ALONE } from "@/components/auth/AuthFrame";
+import {
+  AuthFrame,
+  AUTH_HEADING,
+  AUTH_HEADING_ALONE,
+  AUTH_SUBLINE,
+} from "@/components/auth/AuthFrame";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { textLinkClasses } from "@/components/ui/TextLink";
 
@@ -30,11 +35,20 @@ export default async function SignUpPage({ searchParams }: PageProps<"/sign-up">
   const initialRole = parseSignUpRole(params.role) ?? (classCode ? "student" : null);
   const next = carriedNext(params.next);
   const signInHref = next ? `/sign-in?next=${encodeURIComponent(next)}` : "/sign-in";
+  // #563: "Start your free trial" lands here with no role, so the trial is named under the
+  // heading for anyone who could be a teacher. A student's link (a role or a class code) has no
+  // use for a price. The facts are the ones /pricing states.
+  const forTeacher = initialRole !== "student";
 
   return (
     <>
       <AuthFrame>
-        <h1 className={AUTH_HEADING_ALONE}>Create an account</h1>
+        <h1 className={forTeacher ? AUTH_HEADING : AUTH_HEADING_ALONE}>Create an account</h1>
+        {forTeacher ? (
+          <p className={AUTH_SUBLINE}>
+            Teachers get a 7-day free trial, then $39.99 a month per workspace. Free for students.
+          </p>
+        ) : null}
         <SignUpForm
           action={createAccount}
           initialRole={initialRole}

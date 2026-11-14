@@ -14,6 +14,13 @@ describe("JoinScreen (Main and JoinDesktop mockups)", () => {
     expect(screen.getByRole("button", { name: "Join" })).toBeInTheDocument();
   });
 
+  it("takes the site's wordmark home and nothing else of the site (#563)", () => {
+    render(<JoinScreen code="" />);
+    expect(screen.getByRole("link", { name: "LeaRN" })).toHaveAttribute("href", "/");
+    expect(screen.queryByRole("banner")).not.toBeInTheDocument();
+    expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument();
+  });
+
   it("shows the form alone, with no second column beside it", () => {
     render(<JoinScreen code="" />);
     expect(screen.queryByRole("region")).not.toBeInTheDocument();

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("./actions", () => ({
@@ -44,5 +44,17 @@ describe("sign-in page", () => {
 
     expect(screen.getByRole("heading", { level: 1, name: "Sign in" })).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("wears the public site's look: the wordmark home and a display heading (#563)", async () => {
+    await renderPage({});
+
+    expect(within(screen.getByRole("main")).getByRole("link", { name: "LeaRN" })).toHaveAttribute(
+      "href",
+      "/",
+    );
+    expect(screen.getByRole("heading", { level: 1, name: "Sign in" })).toHaveClass(
+      "display-section",
+    );
   });
 });
