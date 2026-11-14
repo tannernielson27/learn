@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Marker } from "@/components/site/Marker";
 import { buttonClasses } from "@/components/ui/Button";
 import { textLinkClasses } from "@/components/ui/TextLink";
 import { readLandingEntry } from "@/lib/auth/visitor";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/site/links";
+import { OFFER, trialEntry } from "@/lib/site/offer";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -51,15 +53,16 @@ const FAQ = [
  * The public price (#522). One subscription, nothing to compare, so there is no table: the
  * price, what it covers, one action and a few answers. The action is the landing page's own
  * (`landingEntry`), so a signed-in teacher is offered their quizzes rather than a second account.
+ * #563: drawn like the landing page, a time stamp over each part and the price on a ruled card.
  */
 export default async function PricingPage() {
-  const entry = await readLandingEntry();
+  const entry = trialEntry(await readLandingEntry());
 
   return (
     <article className="flex flex-col gap-10">
       <header>
-        <p className="eyebrow">Pricing</p>
-        <h1 className="mt-2 font-read text-display leading-tight text-ink-1">
+        <Marker time="1200">Pricing</Marker>
+        <h1 className="mt-3 font-read text-display leading-tight text-ink-1">
           One price for the whole workspace.
         </h1>
         <p className="measure mt-4 text-lg leading-relaxed text-ink-2">
@@ -67,21 +70,30 @@ export default async function PricingPage() {
         </p>
       </header>
 
-      <section aria-labelledby="price-heading">
+      <section
+        aria-labelledby="price-heading"
+        className="rounded-md border border-line bg-surface-1"
+      >
         <h2 id="price-heading" className="sr-only">
           Subscription
         </h2>
-        <p className="font-read text-display leading-tight text-ink-1">
-          $39.99 <span className="font-ui text-lg text-ink-2">a month per workspace</span>
+        <p className="flex flex-wrap items-baseline gap-x-3 border-b border-line px-5 py-5">
+          <span className="font-read text-display leading-none text-ink-1 tabular">
+            {OFFER.price}
+          </span>{" "}
+          <span className="text-lg text-ink-2">{OFFER.per}</span>
         </p>
-        <ul className="measure mt-6 flex flex-col divide-y divide-line border-y border-line">
-          {INCLUDED.map((line) => (
-            <li key={line} className="py-3 leading-relaxed text-ink-1">
-              {line}
+        <ol className="flex flex-col divide-y divide-line px-5">
+          {INCLUDED.map((line, index) => (
+            <li key={line} className="flex gap-4 py-3 leading-relaxed text-ink-1">
+              <span aria-hidden="true" className="pt-1 font-mono text-xs text-brand tabular">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span>{line}</span>
             </li>
           ))}
-        </ul>
-        <p className="mt-8">
+        </ol>
+        <p className="border-t border-line px-5 py-4">
           <Link href={entry.href} className={buttonClasses({ variant: "primary", size: "lg" })}>
             {entry.label}
           </Link>
@@ -89,17 +101,18 @@ export default async function PricingPage() {
       </section>
 
       <section aria-labelledby="faq-heading">
-        <h2 id="faq-heading" className="text-xl font-semibold text-ink-1">
+        <Marker time="1215">Questions</Marker>
+        <h2 id="faq-heading" className="mt-3 text-xl font-semibold text-ink-1">
           Common questions
         </h2>
-        <dl className="measure mt-3 flex flex-col gap-4 text-ink-1">
+        <dl className="measure mt-3 flex flex-col divide-y divide-line border-y border-line text-ink-1">
           {FAQ.map((entry) => (
-            <div key={entry.id}>
+            <div key={entry.id} className="py-4">
               <dt className="font-semibold">{entry.question}</dt>
               <dd className="mt-1 leading-relaxed text-ink-2">{entry.answer}</dd>
             </div>
           ))}
-          <div>
+          <div className="py-4">
             <dt className="font-semibold">Can a school pay for a program?</dt>
             <dd className="mt-1 leading-relaxed text-ink-2">
               Yes. Email{" "}

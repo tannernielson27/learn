@@ -26,6 +26,17 @@ describe("SiteFooter (#522)", () => {
   });
 });
 
+// #563: the public site's own wordmark closes the page, as it opens it.
+describe("SiteFooter's wordmark (#563)", () => {
+  it("names LeaRN with its RN in record ink", () => {
+    render(<SiteFooter />);
+    const footer = screen.getByRole("contentinfo");
+    const rn = within(footer).getByText("RN");
+    expect(rn.className).toContain("text-brand");
+    expect(rn.parentElement).toHaveTextContent(/^LeaRN$/);
+  });
+});
+
 describe("LegalLinks (#522)", () => {
   it("is one short line of terms, privacy and contact, and nothing else", () => {
     render(<LegalLinks />);

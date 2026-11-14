@@ -45,7 +45,7 @@ export function JoinForm({
   asGuest = false,
   codeError: arrivedError,
 }: JoinFormProps) {
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, pending] = useActionState<JoinState, FormData>(
     action,
     arrivedError ? { status: "error", field: "code", error: arrivedError } : INITIAL,
   );

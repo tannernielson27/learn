@@ -11,7 +11,7 @@ import { endTally, worthWords, type PhoneHistory, type SeenItem } from "./histor
 /**
  * The phone's named states between questions (PLAN §5.6, Socrative's model): one sentence each
  * and at most one action. Each is a full-height column with the sentence as its heading, so a
- * student glancing down from the front of the room reads it at once.
+ * student glancing down from the front of the class reads it at once.
  */
 
 /** One state: an optional mark, a heading, a line under it and at most one action. */

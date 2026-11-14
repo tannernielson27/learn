@@ -1,4 +1,5 @@
 import { TextLink, textLinkClasses } from "@/components/ui/TextLink";
+import { Wordmark } from "./Wordmark";
 import {
   HELP_PATH,
   PRICING_PATH,
@@ -28,11 +29,20 @@ function ContactLink() {
  * policy, help, sign-in and sign-up. Never on a live session, the player, joining, the student
  * home, the library or the account pages, which have work of their own to show at the bottom.
  * The year is the one the page was rendered in, so a static page shows its build's.
+ *
+ * #563: closed like the foot of a patient record page, with the wordmark, a mono line saying the
+ * patients are fictional, and the links on one rule.
  */
 export function SiteFooter() {
   return (
-    <footer className="border-t border-line">
-      <div className="mx-auto flex w-full max-w-wide flex-col gap-2 px-5 py-6 text-sm text-ink-2 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+    <footer className="border-t border-line bg-surface-0">
+      <div className="mx-auto flex w-full max-w-wide flex-col gap-4 px-5 py-8 text-sm text-ink-2 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+        <div className="flex flex-col gap-1">
+          <Wordmark size="sm" />
+          <p className="font-mono text-xs tracking-[0.04em]">
+            Every patient shown in LeaRN is fictional.
+          </p>
+        </div>
         <nav aria-label="Footer">
           <ul className="-mx-1.5 flex flex-wrap items-center gap-x-4">
             {LINKS.map((link) => (
@@ -47,10 +57,7 @@ export function SiteFooter() {
             </li>
           </ul>
         </nav>
-        <div className="flex flex-col gap-1 sm:flex-row sm:gap-4">
-          <p>Every patient shown in LeaRN is fictional.</p>
-          <p>&copy; {new Date().getFullYear()} LeaRN</p>
-        </div>
+        <p className="font-mono text-xs tabular">&copy; {new Date().getFullYear()} LeaRN</p>
       </div>
     </footer>
   );

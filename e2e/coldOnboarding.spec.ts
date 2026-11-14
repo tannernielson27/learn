@@ -191,8 +191,10 @@ test("an outside instructor onboards cold and runs a live session a phone answer
   const phone = await liveContext.newPage();
   await skipWelcomes(phone);
   await phone.goto("/");
-  await phone.getByRole("link", { name: "Join a live session", exact: true }).click();
+  // #563: the join code goes in on the landing page itself, then the name on the join page.
   await phone.getByRole("textbox", { name: "Join code", exact: true }).fill(code);
+  await phone.getByRole("button", { name: "Join", exact: true }).click();
+  await expect(phone).toHaveURL(/\/join\/[0-9A-Z]{6}$/);
   await phone.getByRole("textbox", { name: "Display name", exact: true }).fill(PHONE_NAME);
   await phone.getByRole("button", { name: "Join", exact: true }).click();
   await expect(phone).toHaveURL(/\/play\/[0-9a-f-]{36}$/);

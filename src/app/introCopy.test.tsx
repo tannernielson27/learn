@@ -22,6 +22,8 @@ vi.mock("next/navigation", () => ({
   redirect: (to: string) => {
     throw new Error(`redirect:${to}`);
   },
+  // The landing page's join field (#563) navigates with the router.
+  useRouter: () => ({ push: () => undefined }),
 }));
 vi.mock("@/lib/classes/viewer", () => ({ readViewer }));
 vi.mock("@/lib/auth/demoAccount", () => ({

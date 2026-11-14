@@ -32,6 +32,9 @@
   --color-stage-surface: var(--stage-surface);
   --color-stage-ink: var(--stage-ink);
   --color-stage-line: var(--stage-line);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-callout-line: var(--callout-line);
   --color-transparent: transparent;
   --color-current: currentColor;
 
@@ -53,6 +56,7 @@
   /* Fluid headings and the projector ladder: `text-display`, `text-stage-stem`, ... */
   --text-display: var(--text-display);
   --text-title: var(--text-title);
+  --text-hero: var(--text-hero);
   --text-score: var(--text-score);
   --text-stage-code: var(--text-stage-code);
   --text-stage-stem: var(--text-stage-stem);
@@ -100,6 +104,23 @@
     scale: var(--press-scale);
   }
 }
+/* Grid paper (#563): a flowsheet's rules on the page colour, for a surface that holds pictures or
+   large type, never behind running text. Minor rules every --grid-step, major every fifth. */
+@utility grid-paper {
+  background-color: var(--surface-0);
+  background-image:
+    linear-gradient(to right, var(--grid-major) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-major) 1px, transparent 1px),
+    linear-gradient(to right, var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-minor) 1px, transparent 1px);
+  background-size:
+    var(--grid-major-step) var(--grid-major-step),
+    var(--grid-major-step) var(--grid-major-step),
+    var(--grid-step) var(--grid-step),
+    var(--grid-step) var(--grid-step);
+  background-position: -1px -1px;
+}
+
 /* For strips that carry their own paging control, so the bar is not a second, uglier one. */
 @utility no-scrollbar {
   scrollbar-width: none;
@@ -350,5 +371,43 @@
 @keyframes fade-in {
   from {
     opacity: 0;
+  }
+}
+
+/* The landing page's live session specimen (#563, SpecimenMotion). Each moving part carries
+   `data-cue` (how it arrives) and `--cue-at` (when, in ms). Hidden while armed; played once, on
+   transform and opacity only, when the specimen scrolls into view; done within about 2.4s. The
+   server draws `still`, the finished picture, which is all reduced motion ever sees. */
+@layer components {
+  [data-specimen="armed"] [data-cue] {
+    opacity: 0;
+  }
+  [data-specimen="playing"] [data-cue] {
+    animation: fade-up var(--duration-slow) var(--ease-out-expo) both;
+    animation-delay: var(--cue-at, 0ms);
+  }
+  [data-specimen="playing"] [data-cue="fade"] {
+    animation-name: fade-in;
+  }
+  [data-specimen="playing"] [data-cue="settle"] {
+    animation-name: settle;
+  }
+  [data-specimen="playing"] [data-cue="draw-x"] {
+    animation-name: grow-x;
+  }
+  [data-specimen="playing"] [data-cue="draw-y"] {
+    animation-name: grow-y;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [data-specimen] [data-cue] {
+      animation: none;
+      opacity: 1;
+    }
+  }
+}
+
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
   }
 }
