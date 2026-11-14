@@ -37,3 +37,12 @@ describe("the public offer (#563)", () => {
     expect(OFFER_TRIAL_TERMS).toMatch(/card at checkout.*trial ends unless you cancel/);
   });
 });
+
+// The page's price and what checkout charges are kept in two places: tie them together, so a
+// change to one without the other fails here, not on a customer's card statement.
+describe("the offer and the Stripe catalog", () => {
+  it("shows the amount the catalog's monthly price charges", async () => {
+    const { PRICE_TERMS } = await import("../../../scripts/stripe-catalog-lib.mjs");
+    expect(OFFER_PRICE).toBe(`$${(PRICE_TERMS.unit_amount / 100).toFixed(2)}`);
+  });
+});

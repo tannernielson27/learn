@@ -27,7 +27,7 @@ export const metadata: Metadata = {
  */
 const INCLUDED = [
   `${OFFER_TEACHER_CAP}, sharing quizzes, classes and results.`,
-  `A ${OFFER_TRIAL}, one per person and per workspace.`,
+  `A ${OFFER_TRIAL}.`,
   `${OFFER_STUDENTS_FREE}. Students never pay and are never asked for a card.`,
   "Cancel any time from Manage billing.",
 ] as const;
