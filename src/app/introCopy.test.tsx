@@ -22,6 +22,8 @@ vi.mock("next/navigation", () => ({
   redirect: (to: string) => {
     throw new Error(`redirect:${to}`);
   },
+  // #563: the landing page's join code form navigates with the router.
+  useRouter: () => ({ push: () => {} }),
 }));
 vi.mock("@/lib/classes/viewer", () => ({ readViewer }));
 vi.mock("@/lib/auth/demoAccount", () => ({
@@ -364,7 +366,7 @@ describe("the words that introduce and explain LeaRN (#416)", () => {
     counted.push(...all);
     // Each state was reached, and each page was read as far as its own words.
     const read = (name: string) => all.find((surface) => surface.name === name)?.read ?? "";
-    expect(read("Landing")).toContain("Join a live session");
+    expect(read("Landing")).toContain("In class now? No account needed.");
     expect(read("Landing")).toContain("LeaRN:");
     expect(read("Sign in")).toContain("Use the demo account");
     expect(read("Sign in, link sent")).toContain("Check your email");
