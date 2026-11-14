@@ -1,10 +1,21 @@
 import { render, screen, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Landing } from "@/components/landing/Landing";
 import { findRetiredTerms } from "@/lib/copy/retiredTerms";
+import {
+  OFFER_PERIOD,
+  OFFER_PRICE,
+  OFFER_SUMMARY,
+  OFFER_TEACHERS,
+  OFFER_TRIAL,
+  OFFER_TRIAL_TERMS,
+} from "@/lib/site/offer";
 
 const readLandingEntry = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/auth/visitor", () => ({ readLandingEntry }));
+// The landing page's join code form posts to a Server Action that redirects.
+vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 
 import SiteLayout from "./layout";
 import PricingPage, { metadata as pricingMetadata } from "./pricing/page";
@@ -89,6 +100,24 @@ describe("/pricing (#522)", () => {
     );
   });
 
+  it("says what the free trial commits to right under its button, and only there", async () => {
+    const { unmount } = render(await PricingPage());
+    const button = screen.getByRole("link", { name: "Start your free trial" });
+    expect(button).toHaveAccessibleDescription(OFFER_TRIAL_TERMS);
+    // The terms follow the button directly, before the list of what the price covers.
+    const terms = screen.getByText(OFFER_TRIAL_TERMS);
+    expect(terms.previousElementSibling).toBe(button);
+    expect(terms.parentElement?.nextElementSibling?.tagName).toBe("UL");
+    unmount();
+
+    readLandingEntry.mockResolvedValue({ href: "/author", label: "Go to your quizzes" });
+    render(await PricingPage());
+    expect(screen.getByRole("link", { name: "Go to your quizzes" })).not.toHaveAttribute(
+      "aria-describedby",
+    );
+    expect(screen.queryByText(OFFER_TRIAL_TERMS)).toBeNull();
+  });
+
   it("answers five short questions, schools among them", async () => {
     render(await PricingPage());
     const faq = screen.getByRole("region", { name: "Common questions" });
@@ -116,6 +145,79 @@ describe("/pricing (#522)", () => {
     expectGlossaryWording(renderToStaticMarkup(page));
     expect(pricingMetadata.title).toBe("Pricing");
     expect(pricingMetadata.description).toMatch(/\$39\.99/);
+  });
+});
+
+describe("the offer's facts, one source for every public page (#563)", () => {
+  beforeEach(() => {
+    readLandingEntry.mockReset();
+    readLandingEntry.mockResolvedValue(VISITOR);
+  });
+
+  function pageText(): string {
+    return (document.body.textContent ?? "").replace(/\s+/g, " ");
+  }
+
+  it("shows the same price, period, trial and teacher cap on the landing page and /pricing", async () => {
+    const facts = [OFFER_PRICE, OFFER_PERIOD, OFFER_TRIAL, `Up to ${OFFER_TEACHERS} teachers`];
+
+    const landing = render(<Landing entry={VISITOR} />);
+    const landingText = pageText();
+    expect(landingText).toContain(OFFER_SUMMARY);
+    landing.unmount();
+
+    render(await PricingPage());
+    const pricingText = pageText();
+    for (const fact of [...facts, "Free for students"]) {
+      expect(landingText).toContain(fact);
+      expect(pricingText).toContain(fact);
+    }
+    expect(pricingMetadata.description).toContain(OFFER_PRICE);
+    expect(pricingMetadata.description).toContain(OFFER_TRIAL);
+    expect(pricingMetadata.description).toContain(`up to ${OFFER_TEACHERS} teachers`);
+  });
+
+  it("matches the terms, whose approved words are not built from it", () => {
+    render(<TermsPage />);
+    const subscription = screen.getByRole("region", { name: "Subscription and free trial" });
+    expect(subscription).toHaveTextContent(
+      `A workspace costs ${OFFER_PRICE} a month for up to ${OFFER_TEACHERS} teachers`,
+    );
+    expect(subscription).toHaveTextContent(`A new subscription starts with a ${OFFER_TRIAL}.`);
+    expect(subscription).toHaveTextContent(/You enter a card at checkout/);
+    expect(screen.getByRole("region", { name: "Workspaces" })).toHaveTextContent(
+      `up to ${OFFER_TEACHERS} teachers can share`,
+    );
+  });
+
+  it("never prints a price or a cap the module does not hold", async () => {
+    render(await PricingPage());
+    const prices = pageText().match(/\$\d+(?:\.\d{2})?/g) ?? [];
+    expect(new Set(prices)).toEqual(new Set([OFFER_PRICE]));
+  });
+});
+
+describe("the legal pages' layout (#563)", () => {
+  it.each([
+    ["/terms", TermsPage],
+    ["/privacy", PrivacyPage],
+  ])("%s lists every section in its contents, numbered, linking to each", (_path, Page) => {
+    render(<Page />);
+    const sections = screen.getAllByRole("heading", { level: 2 });
+    const contents = screen.getByRole("navigation", { name: "Contents" });
+    const links = within(contents).getAllByRole("link");
+    expect(links.map((link) => link.textContent)).toEqual(
+      sections.map(
+        (heading, index) => `${String(index + 1).padStart(2, "0")}${heading.textContent}`,
+      ),
+    );
+    for (const [index, link] of links.entries()) {
+      const id = link.getAttribute("href")?.slice(1) ?? "";
+      expect(document.getElementById(id)).toContainElement(sections[index] ?? null);
+    }
+    // The section numbers are drawn for the eye; a screen reader hears each heading once.
+    expect(links[0]?.querySelector("[aria-hidden='true']")).toHaveTextContent("01");
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   });
 });
 
