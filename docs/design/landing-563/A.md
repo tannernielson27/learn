@@ -26,8 +26,8 @@ No new font. No shadow beyond `--elevation-1` (none is used here).
 - **Terms and privacy** (done): the new header and footer; the title in `.display-section` and the date in the mono label style; each section opens under a near-black rule with its mono number, and its text keeps the reading width (68ch). The contents sit sticky in the narrow left column from 1024px and are a plain list above the text on a phone.
 - **Offer facts**: the price, the trial, the teacher cap and "free for students" come from `src/lib/site/offer.ts`, which reads billing and the workspace's limits. The terms keep their own approved words; a test checks they still agree.
 - **Help**: the same header and footer; guide titles in `.display-section`; each guide section opens with a rule and a mono number, as the landing does.
-- **Sign-in and sign-up**: the wordmark over a single column on paper, the heading in `.display-section`, the form unchanged. No drawing.
-- **/join**: the wordmark swaps in for the plain one. Nothing else changes: a phone in class needs the form, not the brand.
+- **Sign-in and sign-up** (done, in `AuthFrame`, so the account, welcome and invitation pages share it): the wordmark over a single column on paper, a near-black rule opening the column, the heading in `.display-section`, the form unchanged, and the site footer. No site header: its Sign in would repeat the page, and the form must be in the first screen. Sign-up names the 7-day free trial under the heading unless the link is a student's. No drawing.
+- **/join** (done): the wordmark swaps in for the plain one. Nothing else changes: a phone in class needs the form, not the brand. The join code and name fields carry a scroll margin, so when the phone keyboard scrolls one into view, Join comes with it.
 - **Later, the app**: the wordmark in AppShell, `.display-section` for library and quiz titles. Section rules and numbers stay on the public site; the app keeps its quieter lines.
 
 ## Decisions
