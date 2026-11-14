@@ -1,42 +1,24 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { SiteFooter } from "@/components/site/SiteFooter";
-import { AppShell } from "@/components/ui/AppShell";
-import { PRICING_PATH } from "@/lib/site/links";
-
-const linkClass =
-  "tap-target inline-flex items-center rounded-md px-3 text-sm font-semibold text-ink-2 transition-colors duration-fast hover:bg-surface-2 hover:text-ink-1";
+import { SiteHeader } from "@/components/site/SiteHeader";
 
 /**
  * The business pages (#522): pricing, the terms and the privacy policy. A route group, so the
  * URLs stay /pricing, /terms and /privacy. The root layout draws no header, so this one draws the
- * shell's bar with the wordmark home and, on the right, Pricing and Sign in; the site footer
- * closes every page. No session is read here: pricing reads it itself, for its one action.
+ * site's bar (#563: the public site's own, not the signed-in app's `AppShell`) with the wordmark
+ * home and, on the right, Pricing and Sign in; the site footer closes every page. No session is
+ * read here: pricing reads it itself, for its one action.
+ *
+ * The column is the reading width the terms and the privacy policy were written for; pricing
+ * widens itself.
  */
 export default function SiteLayout({ children }: { children: ReactNode }) {
   return (
     <>
-      <AppShell
-        homeHref="/"
-        account={
-          <nav aria-label="Site">
-            <ul className="flex items-center gap-1">
-              <li>
-                <Link href={PRICING_PATH} className={linkClass}>
-                  Pricing
-                </Link>
-              </li>
-              <li>
-                <Link href="/sign-in" className={linkClass}>
-                  Sign in
-                </Link>
-              </li>
-            </ul>
-          </nav>
-        }
-      >
+      <SiteHeader />
+      <main className="mx-auto w-full max-w-site flex-1 px-4 pt-10 pb-16 sm:px-6 sm:pt-14 lg:px-10">
         {children}
-      </AppShell>
+      </main>
       <SiteFooter />
     </>
   );

@@ -47,10 +47,10 @@ for (const { path, heading, title } of PAGES) {
   });
 }
 
-test("pricing offers a visitor an account", async ({ page }) => {
+test("pricing offers a visitor the free trial", async ({ page }) => {
   await page.goto("/pricing");
   await expect(page.getByText("a month per workspace", { exact: true })).toBeVisible();
-  await page.getByRole("link", { name: "Create an account", exact: true }).click();
+  await page.getByRole("link", { name: "Start your free trial", exact: true }).click();
   await expect(page).toHaveURL(/\/sign-up$/);
   await expect(page.getByRole("link", { name: "See pricing" })).toHaveAttribute("href", "/pricing");
 });

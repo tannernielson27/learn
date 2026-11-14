@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { landingEntry } from "./landing";
 
 describe("landingEntry (#264)", () => {
-  it("offers a visitor an account first, and Sign in beside it (#366)", () => {
+  // #563: the same account, called what it starts (docs/glossary.md, Free trial).
+  it("offers a visitor the free trial first, and Sign in beside it (#366)", () => {
     expect(landingEntry({ status: "signed_out" })).toEqual({
       href: "/sign-up",
-      label: "Create an account",
+      label: "Start your free trial",
       also: { href: "/sign-in", label: "Sign in" },
     });
   });

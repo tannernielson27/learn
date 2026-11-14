@@ -6,6 +6,7 @@ import {
   SUPPORT_MAILTO,
   TERMS_PATH,
 } from "@/lib/site/links";
+import { Wordmark } from "./Wordmark";
 
 const LINKS = [
   { href: PRICING_PATH, label: "Pricing" },
@@ -28,26 +29,37 @@ function ContactLink() {
  * policy, help, sign-in and sign-up. Never on a live session, the player, joining, the student
  * home, the library or the account pages, which have work of their own to show at the bottom.
  * The year is the one the page was rendered in, so a static page shows its build's.
+ *
+ * #563: the site's editorial close. A near-black rule, the wordmark and the line that says what
+ * LeaRN is, the links beside them from 1024px, and the small print under a hairline.
  */
 export function SiteFooter() {
   return (
-    <footer className="border-t border-line">
-      <div className="mx-auto flex w-full max-w-wide flex-col gap-2 px-5 py-6 text-sm text-ink-2 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-        <nav aria-label="Footer">
-          <ul className="-mx-1.5 flex flex-wrap items-center gap-x-4">
-            {LINKS.map((link) => (
-              <li key={link.href} className="px-1.5">
-                <TextLink href={link.href} size="sm">
-                  {link.label}
-                </TextLink>
+    <footer className="mt-auto bg-surface-band">
+      <div className="mx-auto w-full max-w-site px-4 sm:px-6 lg:px-10">
+        <div className="flex flex-col gap-6 border-t border-rule-strong pt-8 pb-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex flex-col gap-2">
+            <Wordmark />
+            <p className="max-w-xs font-read text-lg leading-snug text-ink-2">
+              Live learning for the Next Generation NCLEX.
+            </p>
+          </div>
+          <nav aria-label="Footer">
+            <ul className="-mx-1.5 flex flex-wrap items-center gap-x-4">
+              {LINKS.map((link) => (
+                <li key={link.href} className="px-1.5">
+                  <TextLink href={link.href} size="sm">
+                    {link.label}
+                  </TextLink>
+                </li>
+              ))}
+              <li className="px-1.5">
+                <ContactLink />
               </li>
-            ))}
-            <li className="px-1.5">
-              <ContactLink />
-            </li>
-          </ul>
-        </nav>
-        <div className="flex flex-col gap-1 sm:flex-row sm:gap-4">
+            </ul>
+          </nav>
+        </div>
+        <div className="flex flex-col gap-1 border-t border-line py-5 text-sm text-ink-2 sm:flex-row sm:justify-between sm:gap-4">
           <p>Every patient shown in LeaRN is fictional.</p>
           <p>&copy; {new Date().getFullYear()} LeaRN</p>
         </div>

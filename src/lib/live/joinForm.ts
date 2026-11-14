@@ -32,10 +32,22 @@ export type JoinField = "code" | "displayName";
 export type JoinFormResult =
   { ok: true; code: string; displayName: string } | { ok: false; field: JoinField; error: string };
 
+export type JoinCodeResult = { ok: true; code: string } | { ok: false; error: string };
+
+/**
+ * The code alone, as typed or posted: normalized, then checked against the alphabet. The join
+ * form reads its code through this, and so does the landing page's code-only form (#563), so a
+ * code one accepts the other accepts too. Anything that is not a string reads as empty.
+ */
+export function parseJoinCode(typed: unknown): JoinCodeResult {
+  const code = normalizeSessionCode(typeof typed === "string" ? typed : "");
+  return isSessionCode(code) ? { ok: true, code } : { ok: false, error: JOIN_CODE_ERROR };
+}
+
 export function parseJoinForm(formData: FormData): JoinFormResult {
-  const typedCode = formData.get("code");
-  const code = normalizeSessionCode(typeof typedCode === "string" ? typedCode : "");
-  if (!isSessionCode(code)) return { ok: false, field: "code", error: JOIN_CODE_ERROR };
+  const parsed = parseJoinCode(formData.get("code"));
+  if (!parsed.ok) return { ok: false, field: "code", error: parsed.error };
+  const { code } = parsed;
 
   const name = parseDisplayName(formData.get("displayName"));
   if (!name.ok) return { ok: false, field: "displayName", error: name.error };

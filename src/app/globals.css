@@ -32,6 +32,9 @@
   --color-stage-surface: var(--stage-surface);
   --color-stage-ink: var(--stage-ink);
   --color-stage-line: var(--stage-line);
+  --color-surface-band: var(--surface-band);
+  --color-rule-strong: var(--rule-strong);
+  --color-device-line: var(--device-line);
   --color-transparent: transparent;
   --color-current: currentColor;
 
@@ -43,6 +46,7 @@
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-full: 9999px;
+  --radius-device: var(--radius-device);
 
   --ease-out-expo: var(--ease-out-expo);
 
@@ -53,6 +57,13 @@
   /* Fluid headings and the projector ladder: `text-display`, `text-stage-stem`, ... */
   --text-display: var(--text-display);
   --text-title: var(--text-title);
+  --text-hero: var(--text-hero);
+  --text-section: var(--text-section);
+  --text-demo-label: var(--text-demo-label);
+  --text-demo-stem: var(--text-demo-stem);
+  --text-demo-option: var(--text-demo-option);
+  --text-demo-number: var(--text-demo-number);
+  --text-demo-phone: var(--text-demo-phone);
   --text-score: var(--text-score);
   --text-stage-code: var(--text-stage-code);
   --text-stage-stem: var(--text-stage-stem);
@@ -63,6 +74,7 @@
   /* Content widths for AppShell: `max-w-reading`, `max-w-wide`. */
   --container-reading: var(--content-reading);
   --container-wide: var(--content-wide);
+  --container-site: var(--content-site);
 
   /* M3 window size classes (PLAN §6): sm 640, md 768, lg 1024 as Tailwind has them, plus
      xl 1280 (large) and 2xl 1600 (extra-large). */
@@ -173,6 +185,24 @@
     font-family: var(--ff-mono);
     font-size: var(--text-sm);
     color: var(--ink-2);
+  }
+  /* The public site's display type (#563): the landing headline and a price, then section heads.
+     Serif, tight, and the only large type outside the projector. */
+  .display-hero {
+    font-family: var(--ff-read);
+    font-size: var(--text-hero);
+    font-weight: 500;
+    line-height: 1.02;
+    letter-spacing: -0.022em;
+    color: var(--ink-1);
+  }
+  .display-section {
+    font-family: var(--ff-read);
+    font-size: var(--text-section);
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    color: var(--ink-1);
   }
   .eyebrow {
     font-family: var(--ff-mono);
@@ -349,6 +379,52 @@
 
 @keyframes fade-in {
   from {
+    opacity: 0;
+  }
+}
+
+/* The landing page's live session plays once, when it scrolls into view (#563, LiveClassDemo).
+   With no attribute the drawing is its last frame: no JavaScript, reduced motion and a test all
+   see that. `ready` (set before it is seen) holds each step at its start; `play` runs them
+   --demo-step apart, done within about 2s. Transform and opacity only, nothing loops. */
+@layer components {
+  [data-demo="ready"] [data-demo-step] {
+    opacity: 0;
+    transform: translateY(var(--motion-shift));
+  }
+  [data-demo="play"] [data-demo-step] {
+    animation: fade-up var(--duration-slow) var(--ease-out-expo) both;
+    animation-delay: calc(var(--step, 0) * var(--demo-step));
+  }
+  /* What a step replaces (the earlier count): there until its step, then gone. */
+  [data-demo-before] {
+    opacity: 0;
+  }
+  [data-demo="ready"] [data-demo-before] {
+    opacity: 1;
+  }
+  [data-demo="play"] [data-demo-before] {
+    animation: fade-out var(--duration-fast) linear both;
+    animation-delay: calc(var(--step, 0) * var(--demo-step));
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [data-demo] [data-demo-step] {
+      opacity: 1;
+      transform: none;
+      animation: none;
+    }
+    [data-demo] [data-demo-before] {
+      opacity: 0;
+      animation: none;
+    }
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
     opacity: 0;
   }
 }

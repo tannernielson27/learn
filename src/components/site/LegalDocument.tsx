@@ -23,7 +23,7 @@ export function LegalDocument({
   sections: readonly LegalSection[];
 }) {
   return (
-    <article className="flex flex-col gap-8">
+    <article className="flex max-w-reading flex-col gap-8">
       <header>
         <p className="eyebrow">{eyebrow}</p>
         <h1 className="mt-2 font-read text-display leading-tight text-ink-1">{title}</h1>
