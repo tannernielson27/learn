@@ -1,43 +1,23 @@
-import Link from "next/link";
+import { HelpNav } from "@/components/help/HelpNav";
 import { SiteFooter } from "@/components/site/SiteFooter";
-import { AppShell } from "@/components/ui/AppShell";
-
-const NAV = [
-  { href: "/help", label: "Help" },
-  { href: "/help/instructor", label: "Teacher guide" },
-  { href: "/help/items", label: "Question guide" },
-] as const;
-
-const linkClass =
-  "tap-target inline-flex items-center rounded-md px-3 text-sm font-semibold text-ink-2 transition-colors duration-fast hover:bg-surface-2 hover:text-ink-1";
+import { SiteHeader } from "@/components/site/SiteHeader";
 
 /**
  * Help is public and static (#269, kickoff decision 6): no session is read here, and /help is
- * not on the proxy's matcher, so a signed-out visitor reads it without an auth round trip. So it
- * has the shell's bar and its own navigation, and no account menu. Public, so it ends with the
- * site footer (#522).
+ * not on the proxy's matcher, so a signed-out visitor reads it without an auth round trip.
+ *
+ * #563: the public site's header and footer, as pricing and the terms have them, with the help
+ * pages' own navigation in a row under the header. The column is the site's; each page sets its
+ * text at reading width inside it.
  */
 export default function HelpLayout({ children }: LayoutProps<"/help">) {
   return (
     <>
-      <AppShell
-        homeHref="/"
-        nav={
-          <nav aria-label="Help">
-            <ul className="flex flex-wrap items-center gap-1">
-              {NAV.map((entry) => (
-                <li key={entry.href}>
-                  <Link href={entry.href} className={linkClass}>
-                    {entry.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        }
-      >
+      <SiteHeader />
+      <HelpNav />
+      <main className="mx-auto w-full max-w-site flex-1 px-4 pt-10 pb-16 sm:px-6 sm:pt-14 sm:pb-24 lg:px-10">
         {children}
-      </AppShell>
+      </main>
       <SiteFooter />
     </>
   );

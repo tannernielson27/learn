@@ -1,7 +1,15 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { HelpFigure } from "@/components/help/HelpFigure";
-import { TextLink, textLinkClasses } from "@/components/ui/TextLink";
+import {
+  ANCHOR_OFFSET,
+  GuidePage,
+  GuideSection,
+  Ui,
+  sectionNumber,
+  type ContentsEntry,
+} from "@/components/help/HelpGuide";
+import { TextLink } from "@/components/ui/TextLink";
 import { HELP_FIGURES } from "@/lib/help/itemGuide";
 
 export const metadata: Metadata = { title: "Teacher guide" };
@@ -24,16 +32,19 @@ const SECTIONS = [
 
 type SectionId = (typeof SECTIONS)[number]["id"];
 
-const titleOf = (id: SectionId): string => SECTIONS.find((section) => section.id === id)!.title;
+const CONTENTS: ContentsEntry[] = SECTIONS.map(({ id, title }) => ({ id, title }));
 
 function Section({ id, children }: { id: SectionId; children: ReactNode }) {
+  const index = SECTIONS.findIndex((section) => section.id === id);
   return (
-    <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-4">
-      <h2 id={`${id}-title`} className="border-b border-line pb-2 text-xl font-semibold text-ink-1">
-        {titleOf(id)}
-      </h2>
-      <div className="measure mt-3 flex flex-col gap-3 text-ink-1">{children}</div>
-    </section>
+    <GuideSection
+      id={id}
+      number={sectionNumber(index)}
+      title={SECTIONS[index]!.title}
+      className="measure flex flex-col gap-4 leading-relaxed text-ink-1"
+    >
+      {children}
+    </GuideSection>
   );
 }
 
@@ -43,61 +54,44 @@ function Section({ id, children }: { id: SectionId; children: ReactNode }) {
  */
 function Topic({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
-    <div id={id} data-help-topic className="mt-2 flex scroll-mt-4 flex-col gap-2">
-      <h3 className="font-semibold text-ink-1">{title}</h3>
+    <div
+      id={id}
+      data-help-topic
+      className={`${ANCHOR_OFFSET} mt-4 flex flex-col gap-2 border-t border-line pt-5 first:mt-0`}
+    >
+      <h3 className="text-lg font-semibold text-ink-1">{title}</h3>
       {children}
     </div>
   );
 }
 
-/** A control's name as it appears on screen. */
-function Ui({ children }: { children: ReactNode }) {
-  return <strong className="font-semibold">{children}</strong>;
-}
-
 function Steps({ children }: { children: ReactNode }) {
-  return <ol className="flex list-decimal flex-col gap-2 pl-5">{children}</ol>;
+  return (
+    <ol className="flex list-decimal flex-col gap-2 pl-6 marker:font-mono marker:text-sm marker:text-ink-2">
+      {children}
+    </ol>
+  );
 }
 
 function List({ children }: { children: ReactNode }) {
-  return <ul className="flex list-disc flex-col gap-2 pl-5">{children}</ul>;
-}
-
-function Contents() {
-  return (
-    <nav aria-label="On this page" className="rounded-md border border-line bg-surface-1 p-4">
-      <p className="eyebrow">On this page</p>
-      {/* Each a 44px standalone link: the list is a set of targets, not a sentence (WCAG 2.5.8). */}
-      <ol className="mt-2 grid list-decimal gap-x-6 pl-5 text-sm marker:text-ink-2 sm:grid-cols-2">
-        {SECTIONS.map((section) => (
-          <li key={section.id}>
-            <a href={`#${section.id}`} className={textLinkClasses({ size: "sm" })}>
-              {section.title}
-            </a>
-          </li>
-        ))}
-      </ol>
-    </nav>
-  );
+  return <ul className="flex list-disc flex-col gap-2 pl-6 marker:text-ink-2">{children}</ul>;
 }
 
 export default function InstructorGuide() {
   return (
-    <article className="flex flex-col gap-10">
-      <header>
-        <p className="eyebrow">Help</p>
-        <h1 className="mt-2 font-read text-display leading-tight text-ink-1">Teacher guide</h1>
-        <p className="measure mt-3 text-lg text-ink-2">
+    <GuidePage
+      title="Teacher guide"
+      lead={
+        <p>
           For how each format is scored, see the{" "}
           <TextLink href="/help/items" kind="inline">
             question guide
           </TextLink>
           .
         </p>
-      </header>
-
-      <Contents />
-
+      }
+      contents={CONTENTS}
+    >
       <Section id="sign-in">
         <Topic id="sign-up" title="Create your account">
           <p>
@@ -169,16 +163,16 @@ export default function InstructorGuide() {
         <Topic id="ai-import-review" title="Review what it found">
           <List>
             <li>
-              <Ui>Ready:</Ui> imports as it is.
+              <Ui>Ready</Ui>: imports as it is.
             </li>
             <li>
-              <Ui>Needs an answer:</Ui> the document marks no answer.
+              <Ui>Needs an answer</Ui>: the document marks no answer.
             </li>
             <li>
-              <Ui>Needs a fix:</Ui> something did not read cleanly. The card says what.
+              <Ui>Needs a fix</Ui>: something did not read cleanly. The card says what.
             </li>
             <li>
-              <Ui>Not importable:</Ui> not an NGN question, such as a discussion prompt. It is left
+              <Ui>Not importable</Ui>: not an NGN question, such as a discussion prompt. It is left
               out.
             </li>
           </List>
@@ -354,11 +348,11 @@ export default function InstructorGuide() {
         <Topic id="pacing" title="Teacher-paced and student-paced">
           <List>
             <li>
-              <Ui>Teacher-paced:</Ui> you move the class on. Press <Ui>Next question</Ui>, or pick
+              <Ui>Teacher-paced</Ui>: you move the class on. Press <Ui>Next question</Ui>, or pick
               any question on the strip to skip ahead or go back.
             </li>
             <li>
-              <Ui>Student-paced:</Ui> each phone moves through the quiz alone, and you watch a
+              <Ui>Student-paced</Ui>: each phone moves through the quiz alone, and you watch a
               progress board.
             </li>
           </List>
@@ -390,11 +384,11 @@ export default function InstructorGuide() {
       <Section id="reports">
         <List>
           <li>
-            <Ui>Live sessions:</Ui> press <Ui>Open the report</Ui> after you end a live session.
+            <Ui>Live sessions</Ui>: press <Ui>Open the report</Ui> after you end a live session.
             Earlier ones are under <Ui>Live sessions</Ui>.
           </li>
           <li>
-            <Ui>Assignments:</Ui> <Ui>View progress</Ui> shows who has started and submitted while
+            <Ui>Assignments</Ui>: <Ui>View progress</Ui> shows who has started and submitted while
             the assignment is open, with no scores. <Ui>View report</Ui> has the scores after it
             closes.
           </li>
@@ -425,6 +419,6 @@ export default function InstructorGuide() {
           </p>
         </Topic>
       </Section>
-    </article>
+    </GuidePage>
   );
 }

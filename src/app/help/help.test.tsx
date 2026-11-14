@@ -28,6 +28,29 @@ describe("/help/items", () => {
     }
   });
 
+  // #563: the four sections are numbered, and the contents list names each before its entries.
+  it("numbers its sections and lists each in its contents", () => {
+    const { container } = render(<ItemGuide />);
+    const contents = screen.getByRole("navigation", { name: "On this page" });
+    const sections = [
+      ["scoring", "Scoring models"],
+      ["formats", "Question formats"],
+      ["composites", "Case studies and Trend questions"],
+      ["steps", "The six clinical judgment steps"],
+    ] as const;
+    sections.forEach(([id, title], index) => {
+      const section = container.querySelector(`section#${id}`) as HTMLElement;
+      expect(section, `no section#${id}`).not.toBeNull();
+      expect(within(section).getAllByRole("heading", { level: 2 })[0]).toHaveTextContent(title);
+      expect(section).toHaveTextContent(`0${index + 1}`);
+      expect(within(contents).getByRole("link", { name: title })).toHaveAttribute("href", `#${id}`);
+    });
+    expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(sections.length);
+    for (const id of ["case-study", "trend"]) {
+      expect(contents.querySelector(`a[href="#${id}"]`), `no link to #${id}`).not.toBeNull();
+    }
+  });
+
   it("covers the case study, the Trend question and all six clinical judgment steps", () => {
     render(<ItemGuide />);
     expect(screen.getByRole("heading", { level: 3, name: "Case study" })).toBeInTheDocument();
@@ -85,6 +108,15 @@ describe("/help/instructor", () => {
       expect(within(section).getByRole("heading", { level: 2 })).toHaveTextContent(title);
       expect(within(contents).getByRole("link", { name: title })).toHaveAttribute("href", `#${id}`);
     }
+  });
+
+  // #563: a button's name is set as interface text, and a colon stays outside it.
+  it("sets each control's name as interface text", () => {
+    render(<InstructorGuide />);
+    const label = screen.getByText("Start your free trial");
+    expect(label.tagName).toBe("STRONG");
+    expect(label).toHaveClass("bg-surface-2", "font-ui");
+    expect(screen.getByText("Ready")).toHaveTextContent(/^Ready$/);
   });
 
   it("gives each topic a screen might link to an anchor of its own", () => {
@@ -155,6 +187,17 @@ describe("/help/instructor", () => {
 });
 
 describe("/help", () => {
+  // #563: a contents page, the two guides as numbered entries with a line each.
+  it("lists the two guides as numbered entries", () => {
+    render(<HelpIndex />);
+    expect(screen.getByRole("heading", { level: 1, name: "Using LeaRN" })).toBeInTheDocument();
+    const [list] = screen.getAllByRole("list");
+    const entries = within(list as HTMLElement).getAllByRole("listitem");
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toHaveTextContent(/^01Teacher guideQuizzes, questions/);
+    expect(entries[1]).toHaveTextContent(/^02Question guideEvery question format/);
+  });
+
   it("links to both guides and has a paragraph for students", () => {
     render(<HelpIndex />);
     expect(screen.getByRole("link", { name: "Teacher guide" })).toHaveAttribute(

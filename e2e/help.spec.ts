@@ -84,6 +84,23 @@ test("the teacher guide's contents list goes to each section", async ({ page }) 
   ).toBeInViewport();
 });
 
+// #563: from 1024px "On this page" stands beside the text and stays there as the reader goes.
+test("the question guide's contents stay beside the text on a wide screen", async ({
+  page,
+}, testInfo) => {
+  test.skip(!testInfo.project.name.startsWith("desktop"), "sticky from 1024px only");
+  await page.goto("/help/items");
+  const contents = page.getByRole("navigation", { name: "On this page", exact: true });
+  await contents
+    .getByRole("link", { name: "The six clinical judgment steps", exact: true })
+    .click();
+  await expect(page).toHaveURL(/#steps$/);
+  await expect(
+    page.getByRole("heading", { level: 2, name: "The six clinical judgment steps", exact: true }),
+  ).toBeInViewport();
+  await expect(contents).toBeInViewport();
+});
+
 test("the question guide has a section for every question format", async ({ page }, testInfo) => {
   await page.goto("/help/items");
   for (const type of ITEM_TYPES) {
