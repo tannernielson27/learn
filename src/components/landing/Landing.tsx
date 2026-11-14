@@ -6,6 +6,7 @@ import { buttonClasses } from "@/components/ui/Button";
 import { TextLink } from "@/components/ui/TextLink";
 import type { LandingEntry } from "@/lib/auth/landing";
 import { PRICING_PATH } from "@/lib/site/links";
+import { OFFER_FACTS, OFFER_PERIOD, OFFER_PRICE, OFFER_SUMMARY } from "@/lib/site/offer";
 import { JoinCodeForm } from "./JoinCodeForm";
 import { LiveClass } from "./LiveClass";
 
@@ -61,13 +62,6 @@ const BEYOND = [
   },
 ] as const;
 
-/** The subscription's facts, as /pricing says them (ADR 0016). */
-const PRICE_FACTS = [
-  "Up to 10 teachers in one workspace",
-  "A 7-day free trial",
-  "Free for students, who are never asked for a card",
-] as const;
-
 export interface LandingProps {
   /** Start your free trial and Sign in for a visitor, or the signed-in visitor's own home. */
   entry: LandingEntry;
@@ -112,9 +106,7 @@ export function Landing({ entry }: LandingProps) {
                 </Link>
               ) : null}
             </div>
-            <p className="mt-3 max-w-md text-sm text-ink-2">
-              7-day free trial, then $39.99 a month per workspace. Free for students.
-            </p>
+            <p className="mt-3 max-w-md text-sm text-ink-2">{OFFER_SUMMARY}</p>
             {/* The student's door: in the first screen of a phone, set apart under a rule. */}
             <div className="mt-6 max-w-md border-t border-rule-strong pt-4 sm:mt-10 sm:pt-5">
               <JoinCodeForm />
@@ -184,13 +176,13 @@ export function Landing({ entry }: LandingProps) {
         >
           <div className="grid gap-8 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:items-end">
             <p className="display-hero">
-              $39.99
+              {OFFER_PRICE}
               <span className="block pt-3 font-ui text-lg tracking-normal text-ink-2">
-                a month per workspace
+                {OFFER_PERIOD}
               </span>
             </p>
             <ul className="flex flex-col divide-y divide-line border-y border-line">
-              {PRICE_FACTS.map((fact) => (
+              {OFFER_FACTS.map((fact) => (
                 <li key={fact} className="py-3 text-ink-1">
                   {fact}
                 </li>

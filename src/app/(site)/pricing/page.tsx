@@ -2,21 +2,33 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { buttonClasses } from "@/components/ui/Button";
 import { textLinkClasses } from "@/components/ui/TextLink";
+import { SIGN_UP_PATH } from "@/lib/auth/accountPaths";
 import { readLandingEntry } from "@/lib/auth/visitor";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/site/links";
+import {
+  OFFER_DESCRIPTION,
+  OFFER_PERIOD,
+  OFFER_PRICE,
+  OFFER_STUDENTS_FREE,
+  OFFER_TEACHER_CAP,
+  OFFER_TRIAL,
+  OFFER_TRIAL_DAYS,
+  OFFER_TRIAL_TERMS,
+} from "@/lib/site/offer";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description:
-    "One subscription per workspace: $39.99 a month for up to 10 teachers, with a 7-day free " +
-    "trial. Free for students.",
+  description: OFFER_DESCRIPTION,
 };
 
-/** What the subscription is (ADR 0016, owner facts of 2026-10-29). Every line is true today. */
+/**
+ * What the subscription is (ADR 0016, owner facts of 2026-10-29). Every line is true today. The
+ * trial's terms are not repeated here: they sit under the button, where the choice is made.
+ */
 const INCLUDED = [
-  "Up to 10 teachers in one workspace, sharing quizzes, classes and results.",
-  "A 7-day free trial. You enter a card at checkout, and the subscription starts on its own when the trial ends unless you cancel first.",
-  "Free for students. Students never pay and are never asked for a card.",
+  `${OFFER_TEACHER_CAP}, sharing quizzes, classes and results.`,
+  `A ${OFFER_TRIAL}, one per person and per workspace.`,
+  `${OFFER_STUDENTS_FREE}. Students never pay and are never asked for a card.`,
   "Cancel any time from Manage billing.",
 ] as const;
 
@@ -31,7 +43,8 @@ const FAQ = [
     id: "after-trial",
     question: "What happens after the free trial?",
     answer:
-      "When the 7 days end, the card you entered is charged $39.99, then again every month. Cancel before the trial ends and nothing is charged.",
+      `When the ${OFFER_TRIAL_DAYS} days end, the card you entered is charged ${OFFER_PRICE}, then ` +
+      "again every month. Cancel before the trial ends and nothing is charged.",
   },
   {
     id: "cancel",
@@ -47,16 +60,24 @@ const FAQ = [
   },
 ] as const;
 
+// A question in the serif, as the landing page sets its small heads; its answer at reading width.
+const QUESTION = "font-read text-xl leading-snug text-ink-1";
+const ANSWER = "measure mt-2 leading-relaxed text-ink-2";
+
 /**
  * The public price (#522). One subscription, nothing to compare, so there is no table: the
- * price, what it covers, one action and a few answers. The action is the landing page's own
+ * price, one action with what it commits to, what the price covers, and a few answers. The action is the landing page's own
  * (`landingEntry`), so a signed-in teacher is offered their quizzes rather than a second account.
  *
  * #563: the site's editorial look. The headline and the price sit side by side from 1024px, the
- * price in a ruled column of its own; the questions follow under a near-black rule.
+ * price in a ruled column of its own; the questions follow under a near-black rule. The offer's
+ * facts come from `@/lib/site/offer`, which the landing page reads too.
  */
 export default async function PricingPage() {
   const entry = await readLandingEntry();
+  // A signed-in teacher is offered their quizzes, which commits to nothing; only the free trial
+  // button carries its terms.
+  const isTrial = entry.href === SIGN_UP_PATH;
 
   return (
     <article className="flex flex-col gap-16 sm:gap-20">
@@ -77,11 +98,26 @@ export default async function PricingPage() {
             Subscription
           </h2>
           <p className="display-hero">
-            $39.99{" "}
+            {OFFER_PRICE}{" "}
             <span className="block pt-3 font-ui text-lg tracking-normal text-ink-2">
-              a month per workspace
+              {OFFER_PERIOD}
             </span>
           </p>
+          {/* The action and what it commits to, together: on a phone both sit in the first screen. */}
+          <div className="mt-8">
+            <Link
+              href={entry.href}
+              aria-describedby={isTrial ? "trial-terms" : undefined}
+              className={buttonClasses({ variant: "primary", size: "lg", block: true })}
+            >
+              {entry.label}
+            </Link>
+            {isTrial ? (
+              <p id="trial-terms" className="mt-3 text-sm leading-relaxed text-ink-2">
+                {OFFER_TRIAL_TERMS}
+              </p>
+            ) : null}
+          </div>
           <ul className="mt-8 flex flex-col divide-y divide-line border-y border-line">
             {INCLUDED.map((line) => (
               <li key={line} className="py-3 leading-relaxed text-ink-1">
@@ -89,14 +125,6 @@ export default async function PricingPage() {
               </li>
             ))}
           </ul>
-          <p className="mt-8">
-            <Link
-              href={entry.href}
-              className={buttonClasses({ variant: "primary", size: "lg", block: true })}
-            >
-              {entry.label}
-            </Link>
-          </p>
         </section>
       </div>
 
@@ -106,15 +134,15 @@ export default async function PricingPage() {
             Common questions
           </h2>
           <dl className="flex flex-col divide-y divide-line text-ink-1 lg:col-span-7 lg:col-start-6">
-            {FAQ.map((entry) => (
-              <div key={entry.id} className="py-4 first:pt-0">
-                <dt className="font-semibold">{entry.question}</dt>
-                <dd className="measure mt-1 leading-relaxed text-ink-2">{entry.answer}</dd>
+            {FAQ.map((item) => (
+              <div key={item.id} className="py-5 first:pt-0">
+                <dt className={QUESTION}>{item.question}</dt>
+                <dd className={ANSWER}>{item.answer}</dd>
               </div>
             ))}
-            <div className="py-4">
-              <dt className="font-semibold">Can a school pay for a program?</dt>
-              <dd className="measure mt-1 leading-relaxed text-ink-2">
+            <div className="pt-5">
+              <dt className={QUESTION}>Can a school pay for a program?</dt>
+              <dd className={ANSWER}>
                 Yes. Email{" "}
                 <a href={SUPPORT_MAILTO} className={textLinkClasses({ kind: "inline" })}>
                   {SUPPORT_EMAIL}
