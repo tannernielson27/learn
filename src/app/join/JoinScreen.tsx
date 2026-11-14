@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { JoinForm } from "@/components/live/JoinForm";
-import { WORDMARK_CLASSES } from "@/components/ui/AppShell";
+import { Wordmark } from "@/components/site/Wordmark";
 import { textLinkClasses } from "@/components/ui/TextLink";
 import { WELCOME_PATH } from "@/lib/auth/accountPaths";
 import { joinLiveSession } from "./actions";
@@ -23,9 +23,10 @@ export interface JoinScreenProps {
 export function JoinScreen({ code, account = { kind: "none" } }: JoinScreenProps) {
   return (
     <main className="flex min-h-dvh flex-1 flex-col px-5 pt-14 pb-8 lg:px-18">
-      <Link href="/" className={`${WORDMARK_CLASSES} self-start`}>
-        LeaRN
-      </Link>
+      {/* #563: the site's wordmark, and nothing else of the site: a phone in class needs the form. */}
+      <p className="self-start">
+        <Wordmark />
+      </p>
       <div className="mt-12 flex w-full max-w-md flex-1 flex-col gap-8 self-center lg:my-auto lg:flex-none">
         <div className="flex flex-col gap-2">
           <h1 className="font-read text-4xl leading-tight text-ink-1 lg:text-5xl">

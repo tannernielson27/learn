@@ -50,7 +50,8 @@ export function JoinForm({ action, code, defaultName, asGuest = false }: JoinFor
     else codeRef.current?.focus();
   }, [state]);
 
-  const field = fieldClasses("px-3 text-base");
+  // Room for Join under the name when the keyboard scrolls it into view (#563).
+  const field = fieldClasses("scroll-mb-28 px-3 text-base");
 
   return (
     <form action={formAction} className="flex flex-1 flex-col gap-6">
@@ -83,8 +84,10 @@ export function JoinForm({ action, code, defaultName, asGuest = false }: JoinFor
           autoFocus={code === ""}
           aria-invalid={codeError ? true : undefined}
           aria-describedby={codeError ? `${fieldId}-code-error` : undefined}
+          // #563: room under the field when the phone keyboard scrolls it into view, so the name
+          // and Join come with it rather than hiding under the keyboard.
           className={fieldClasses(
-            "px-4 font-mono text-2xl font-semibold tracking-[0.2em] uppercase",
+            "scroll-mb-36 px-4 font-mono text-2xl font-semibold tracking-[0.2em] uppercase",
           )}
         />
         {codeError ? (

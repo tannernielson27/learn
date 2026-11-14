@@ -15,6 +15,8 @@ Two amendments to "feedback mode only":
 - **Amber in the last 10 seconds.** A timer's bar turns `--flag` and the words "10 seconds left" appear beside it (text in `--flag-ink`). Words always, so colour is never the signal on its own; no pulse, no loop.
 - **System messages are neutral.** Errors, connection trouble and other system messages use `--notice` on `--notice-soft` with an icon, never `--incorrect`: red means a marked answer, nothing else.
 
+**Public site edition (#563).** The public pages (landing, pricing, terms, privacy) read like a well-set journal page: the serif at display size, near-black rules that open each section, and an asymmetric grid. That is the second place, after the stage, where type gets large. §10 has the rules, §11 says how they carry into the signed-in app, and §12 is the bar every UI change must meet.
+
 ## 2. Tokens (starting values; tune in Sprint 0)
 
 ```css
@@ -65,6 +67,28 @@ Dark theme: same hues, flipped lightness; accent lightened for contrast. Both th
 **Theme.** System, Light or Dark from the account menu, stored per browser and applied before first paint; System follows the device. The projector view ignores it and stays light.
 
 **The one shadow.** `--elevation-1`, for a dialog, a toast and a dragged token. Everything else still takes its depth from a line.
+
+### Tokens added for the public site (#563)
+
+Read from `src/styles/tokens.css`. Base and component tokens are the same in both themes. The Tailwind names come from `@theme` in `src/app/globals.css`.
+
+| Token                | Layer     | Light                                      | Dark                                | Tailwind             | Used for                                            |
+| -------------------- | --------- | ------------------------------------------ | ----------------------------------- | -------------------- | --------------------------------------------------- |
+| `--text-hero`        | Base      | `clamp(2.375rem, 1.5rem + 2.6vw, 4.75rem)` | same                                | `text-hero`          | `.display-hero`: the landing headline and a price   |
+| `--text-section`     | Base      | `clamp(1.75rem, 1.3rem + 1.8vw, 3rem)`     | same                                | `text-section`       | `.display-section`: section heads, `/pricing` title |
+| `--content-site`     | Base      | `86rem`                                    | same                                | `max-w-site`         | The public site's column                            |
+| `--surface-band`     | Semantic  | `--paper-94` (oklch 94% 0.005 85)          | `--neutral-15` (oklch 15% 0.01 260) | `bg-surface-band`    | One band across a page, and the footer              |
+| `--rule-strong`      | Semantic  | `--neutral-20` (oklch 20% 0.01 260)        | `--paper-94` (oklch 94% 0.005 85)   | `border-rule-strong` | The rule that opens a section; the wordmark's box   |
+| `--device-line`      | Semantic  | `--neutral-48` (oklch 48% 0.012 260)       | `--neutral-62` (oklch 62% 0.01 260) | `border-device-line` | The line a drawing is made of (3:1 on the page)     |
+| `--radius-device`    | Component | `1.5rem`                                   | same                                | `rounded-device`     | A drawn phone's corner. Drawings only               |
+| `--demo-step`        | Component | `450ms`                                    | same                                | none                 | The gap between the drawing's steps                 |
+| `--text-demo-label`  | Component | `clamp(0.6875rem, 1.9cqi, 0.9375rem)`      | same                                | `text-demo-label`    | The drawn projector's labels                        |
+| `--text-demo-stem`   | Component | `clamp(0.9375rem, 3.3cqi, 1.75rem)`        | same                                | `text-demo-stem`     | The drawn projector's question                      |
+| `--text-demo-option` | Component | `clamp(0.75rem, 2.3cqi, 1.1875rem)`        | same                                | `text-demo-option`   | The drawn projector's choices                       |
+| `--text-demo-number` | Component | `clamp(1.75rem, 6.5cqi, 3.75rem)`          | same                                | `text-demo-number`   | The drawn projector's count                         |
+| `--text-demo-phone`  | Component | `0.6875rem`                                | same                                | `text-demo-phone`    | A drawn phone's words (hidden from screen readers)  |
+
+`--radius-device` is the one radius outside the two: at 8px a phone reads as a card. Nothing that can be pressed may use it.
 
 ### Three font families: a recorded exception (#57, #272)
 
@@ -139,7 +163,7 @@ Drag-and-drop: dragged token lifts with a 2dp shadow and 1.02 scale; valid drop 
 ## 7. Iconography and imagery
 
 - Lucide icons at 20px, stroke 1.75; 32px, stroke 2.5 on the stage. `lucide-react` is installed (owner-approved 2026-10-22): use it through `Icon` (`src/components/ui/Icon.tsx`), one import per icon. No emoji anywhere in product UI.
-- No illustrations in the player. The marketing page may use restrained line illustrations.
+- No illustrations in the player. The public site may use restrained line illustrations; today the drawing of a live session on the landing page is the only one (§10).
 
 ## 8. Anti-patterns (reject in review)
 
@@ -152,3 +176,60 @@ Drag-and-drop: dragged token lifts with a 2dp shadow and 1.02 scale; valid drop 
 ## 9. References to gather in Sprint 0
 
 Pearson VUE NCLEX tutorial screenshots (layout fidelity), Socrative (session flow), UWorld and Archer NGN players (EHR panel patterns), Linear and Notion (restraint, motion). Save to `docs/design/references/` with one line each on what to borrow and what to avoid.
+
+## 10. Public site (#563)
+
+The public pages are the landing page, `/pricing`, terms and privacy. They share `SiteHeader` (the wordmark, Pricing, Sign in) and `SiteFooter`. They do not use `AppShell`. The direction was picked from three spikes; the record is in [`design/landing-563/A.md`](design/landing-563/A.md).
+
+**Display type.** Two sizes, both in Source Serif 4 at weight 500, both rem-bounded within 2.5x so zoom works.
+
+- `.display-hero` (`--text-hero`, line-height 1.02): the landing headline and the price, on the landing page and `/pricing`. Nowhere else.
+- `.display-section` (`--text-section`, line-height 1.1): a section head on the public site, and the page title of `/pricing`.
+- Everything else keeps the app's scale: body 16px in Inter, `--text-lg` for a lead.
+
+**Section openings.** A section opens with a 1px `--rule-strong` line (near-black in light, paper in dark). On the landing page a mono number sits above each section head (`01`, `02`, in `.eyebrow`, hidden from screen readers); `/pricing` has one section and no number. A near-black rule may also set apart one block (the join code form in the landing's first screen, the price column on `/pricing`) and closes the page above the footer. Inside a section, lines and list dividers stay `--line`.
+
+**Grid.** Inside `max-w-site` (`--content-site`), with 16px side gutters on a phone, 24px from 640px and 40px from 1024px. From 1024px a section is a 12-column grid: the number, head and lead in a narrow left column (4 of 12), the content in the wide right one (8). The landing's first screen splits 6 and 6, then 5 and 6 from 1280px with a column of air between. `/pricing` sets its head in 6 and the price in 5, starting at column 8. Below 1024px everything is one column.
+
+**Band.** `--surface-band`, a deeper paper, sits under one section per page (the price on the landing page) and under the footer. Never under a card or a control.
+
+**The drawing.** The live session on the landing page is drawn in HTML and lines, not a screenshot: a projector screen with a roller line and phones in front of it. It uses `--device-line` for its outlines (3:1 against the page in both themes) and `--radius-device` for the phones' corners. It shows a gallery fixture's question and choice words only, never a key. It plays once when it scrolls into view (`[data-demo]` in `globals.css`): three steps `--demo-step` apart, done in under 1.5s, transform and opacity only. With reduced motion or no JavaScript it shows the last frame. Because it plays once and briefly, it needs no pause control.
+
+**Clinical blue.** Only on what can be pressed (the buttons, the join code form, links) and on a drawing of a control in its selected or sent state. Never on a rule, a number, a head or a band.
+
+**Wordmark.** `Wordmark` (`src/components/site/Wordmark.tsx`): "Lea" in the serif and "RN" in a hairline `--rule-strong` box. Styled text, not an image, so it follows the theme and reads as "LeaRN".
+
+## 11. How the direction carries into the app
+
+These are rules for future work (round 3 of #563, the signed-in app). They describe no page on main today.
+
+- **Wordmark.** `AppShell` takes `Wordmark` in place of `WORDMARK_CLASSES`.
+- **Titles.** The library, a quiz and other top-level page titles use `.display-section`. `.display-hero` stays on the public site.
+- **Quieter lines.** Section rules in `--rule-strong` and mono section numbers stay on the public site. The app keeps `--line` dividers and takes its hierarchy from type and space (§1). No band under app content.
+- **Unchanged.** The player, the stage, feedback marks and the EHR layout keep §3 to §6.
+- **Primitives first.** Before any screen changes, these are designed and shown in `/gallery/primitives`, each with every state below. Each exists in `src/components/ui/` today; round 3 restyles them, it does not fork them.
+
+| Primitive   | States it must have                                                                                      |
+| ----------- | -------------------------------------------------------------------------------------------------------- |
+| Button      | Primary, secondary, ghost; sm, md, lg; rest, hover, pressed, focus-visible, disabled, busy (label kept)  |
+| Field       | Empty, filled, focus-visible, disabled, read-only, with hint, with error (words under the field, linked) |
+| Notice      | Status and alert; with and without a title; with an action; light and dark                               |
+| AppShell    | Teacher and student; signed in with the account menu open and closed; phone nav and desktop nav          |
+| Page header | Title only; with a lead; with a main action; with a back link; long title wrapping at 320px              |
+| Empty state | First use (nothing made yet, with the next step) and no results (a filter or search found nothing)       |
+| Loading     | A skeleton in the shape of the page, labelled for screen readers, still under reduced motion             |
+| Error       | Could not load (with Try again), not found, and no access; neutral `Notice` colours, never feedback red  |
+
+## 12. Quality bar for every UI PR
+
+A PR that changes UI meets every line, or says which line it misses and why.
+
+- [ ] No sideways scroll at any width from 320px to 1920px.
+- [ ] The page's main action is in the first screen at 375x667.
+- [ ] axe reports no violations, in light and in dark.
+- [ ] Focus is visible on every control (§4).
+- [ ] Every target is at least 44px (`--tap-min`).
+- [ ] Public pages: LCP under 2.5s, CLS under 0.1, and at most 150kb of gzipped JavaScript.
+- [ ] Empty, loading and error states are designed, not left to chance (§11).
+- [ ] Screenshots at 375px and 1280px, before and after, in the PR.
+- [ ] One "docs/04 rules followed" line per change, naming the sections (for example, "§10 section openings, §5 motion").

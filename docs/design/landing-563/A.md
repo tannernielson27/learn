@@ -6,10 +6,12 @@ The public site reads like a well-set journal page. Warm paper, near-black ink, 
 
 ## Departures from docs/04
 
-- **Large serif outside the projector.** docs/04 keeps huge type for the stage. The front door needs a voice, so the site gets two display sizes (`--text-hero`, `--text-section`), both rem-bounded within 2.5x.
-- **A third radius, for drawing only.** A phone at 8px reads as a card. `--radius-device` is used by the drawn phones and nothing that can be pressed.
-- **Near-black rules.** docs/04 takes depth from a 1.4:1 `--line`. Section openings use `--rule-strong` (ink) so the page has a spine on a wide screen. Lines inside sections stay `--line`.
-- **Restrained line illustration.** docs/04 §7 allows it on the marketing page; the live session drawing is the only one.
+All four are adopted into docs/04 (#563): §2 lists the tokens, §10 has the rules and §11 says how they carry into the app.
+
+- **Large serif outside the projector.** Adopted into docs/04 (#563). docs/04 keeps huge type for the stage. The front door needs a voice, so the site gets two display sizes (`--text-hero`, `--text-section`), both rem-bounded within 2.5x.
+- **A third radius, for drawing only.** Adopted into docs/04 (#563). A phone at 8px reads as a card. `--radius-device` is used by the drawn phones and nothing that can be pressed.
+- **Near-black rules.** Adopted into docs/04 (#563). docs/04 takes depth from a 1.4:1 `--line`. Section openings use `--rule-strong` (ink) so the page has a spine on a wide screen. Lines inside sections stay `--line`.
+- **Restrained line illustration.** Adopted into docs/04 (#563). docs/04 §7 allows it on the marketing page; the live session drawing is the only one.
 
 No new font. No shadow beyond `--elevation-1` (none is used here).
 
@@ -26,8 +28,8 @@ No new font. No shadow beyond `--elevation-1` (none is used here).
 - **Terms and privacy** (done): the new header and footer; the title in `.display-section` and the date in the mono label style; each section opens under a near-black rule with its mono number, and its text keeps the reading width (68ch). The contents sit sticky in the narrow left column from 1024px and are a plain list above the text on a phone.
 - **Offer facts**: the price, the trial, the teacher cap and "free for students" come from `src/lib/site/offer.ts`, which reads billing and the workspace's limits. The terms keep their own approved words; a test checks they still agree.
 - **Help** (done): the same header and footer, with the help pages' own links in a row under the header. Guide titles in `.display-section`; each guide section opens with a rule and a mono number, as the landing does. The index is a contents page: the two guides as numbered entries between hairlines. A guide's "On this page" is the list at the top on a phone and sticky beside the text from 1024px. A control's name (`Ui`) is set as interface text: semibold UI face on `--surface-2` with a `--line` edge.
-- **Sign-in and sign-up**: the wordmark over a single column on paper, the heading in `.display-section`, the form unchanged. No drawing.
-- **/join**: the wordmark swaps in for the plain one. Nothing else changes: a phone in class needs the form, not the brand.
+- **Sign-in and sign-up** (done, in `AuthFrame`, so the account, welcome and invitation pages share it): the wordmark over a single column on paper, a near-black rule opening the column, the heading in `.display-section`, the form unchanged, and the site footer. No site header: its Sign in would repeat the page, and the form must be in the first screen. Sign-up names the 7-day free trial under the heading unless the link is a student's. No drawing.
+- **/join** (done): the wordmark swaps in for the plain one. Nothing else changes: a phone in class needs the form, not the brand. The join code and name fields carry a scroll margin, so when the phone keyboard scrolls one into view, Join comes with it.
 - **Later, the app**: the wordmark in AppShell, `.display-section` for library and quiz titles. Section rules and numbers stay on the public site; the app keeps its quieter lines.
 
 ## Decisions
