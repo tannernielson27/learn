@@ -7,6 +7,7 @@ import { carriedClassCode, carriedNext, parseSignUpRole } from "@/lib/auth/signU
 import { captchaSiteKey } from "@/lib/auth/turnstile";
 import { readViewer } from "@/lib/classes/viewer";
 import { PRICING_PATH } from "@/lib/site/links";
+import { OFFER_SUMMARY } from "@/lib/site/offer";
 import { createAccount } from "./actions";
 import {
   AuthFrame,
@@ -44,11 +45,7 @@ export default async function SignUpPage({ searchParams }: PageProps<"/sign-up">
     <>
       <AuthFrame>
         <h1 className={forTeacher ? AUTH_HEADING : AUTH_HEADING_ALONE}>Create an account</h1>
-        {forTeacher ? (
-          <p className={AUTH_SUBLINE}>
-            Teachers get a 7-day free trial, then $39.99 a month per workspace. Free for students.
-          </p>
-        ) : null}
+        {forTeacher ? <p className={AUTH_SUBLINE}>Teachers get a {OFFER_SUMMARY}</p> : null}
         <SignUpForm
           action={createAccount}
           initialRole={initialRole}
