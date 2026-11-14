@@ -22,8 +22,9 @@ No new font. No shadow beyond `--elevation-1` (none is used here).
 
 ## How it carries
 
-- **Pricing** (done): the headline and the price side by side from 1024px, the price at hero size in a ruled column, the questions under a near-black rule.
-- **Terms and privacy** (done through the layout): the new header and footer; the text keeps its reading width.
+- **Pricing** (done): the headline and the price side by side from 1024px, the price at hero size in a ruled column, then the button with the free trial's terms directly under it, then what the price covers; the questions under a near-black rule, each in the serif.
+- **Terms and privacy** (done): the new header and footer; the title in `.display-section` and the date in the mono label style; each section opens under a near-black rule with its mono number, and its text keeps the reading width (68ch). The contents sit sticky in the narrow left column from 1024px and are a plain list above the text on a phone.
+- **Offer facts**: the price, the trial, the teacher cap and "free for students" come from `src/lib/site/offer.ts`, which reads billing and the workspace's limits. The terms keep their own approved words; a test checks they still agree.
 - **Help** (done): the same header and footer, with the help pages' own links in a row under the header. Guide titles in `.display-section`; each guide section opens with a rule and a mono number, as the landing does. The index is a contents page: the two guides as numbered entries between hairlines. A guide's "On this page" is the list at the top on a phone and sticky beside the text from 1024px. A control's name (`Ui`) is set as interface text: semibold UI face on `--surface-2` with a `--line` edge.
 - **Sign-in and sign-up**: the wordmark over a single column on paper, the heading in `.display-section`, the form unchanged. No drawing.
 - **/join**: the wordmark swaps in for the plain one. Nothing else changes: a phone in class needs the form, not the brand.
