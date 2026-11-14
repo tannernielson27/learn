@@ -100,7 +100,7 @@
    * The public site's display sizes (#563): the landing headline and the site's section heads.
    * Serif, and the one place outside the projector where type gets large. Max within 2.5x of min.
    */
-  --text-hero: clamp(2.375rem, 1.6rem + 3.6vw, 5.5rem);
+  --text-hero: clamp(2.375rem, 1.5rem + 2.6vw, 4.75rem);
   --text-section: clamp(1.75rem, 1.3rem + 1.8vw, 3rem);
 
   /* Space: an 8pt grid; 4 and 12 are for inside components */

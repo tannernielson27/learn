@@ -35,8 +35,9 @@ const KEY_MARKERS = [
   '"points"',
   '"score"',
   "zero_one",
-  fixture.rationale.general.value,
-  ...Object.values(fixture.rationale.perElement ?? {}).map((text) => text.value),
+  ...[fixture.rationale?.general, ...Object.values(fixture.rationale?.perElement ?? {})].flatMap(
+    (text) => (text === undefined ? [] : [text.value]),
+  ),
 ];
 
 function keyMarkersIn(html: string): string[] {

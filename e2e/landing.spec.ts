@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { bytesOf, expectKeyless, KEY_MARKERS } from "./bytes";
 import { signInAsNewAuthor } from "./signIn";
 
@@ -14,6 +14,14 @@ const DEMO_RATIONALE = [
 // the signed-in half needs the local stack and runs in the auth-e2e job with E2E_AUTH=1.
 
 const HEADLINE = "Next Generation NCLEX quizzes, live in class.";
+
+/** The count where it settles: 18, with the earlier 15 gone and hidden from screen readers. */
+async function expectSettledCount(count: Locator) {
+  await expect(count.locator("[data-demo-step]")).toHaveText("18");
+  await expect(count.locator("[data-demo-before]")).toHaveAttribute("aria-hidden", "true");
+  await expect(count.locator("[data-demo-before]")).toHaveCSS("opacity", "0");
+  await expect(count).toContainText("of 24 answered");
+}
 
 async function expectNoAxeViolations(page: Page) {
   const results = await new AxeBuilder({ page }).analyze();
@@ -85,7 +93,7 @@ test("a visitor learns what LeaRN is and finds the free trial, Sign in and Join,
   // The drawing of a live session is HTML, finished once it has played, with the live count.
   const figure = page.getByRole("figure");
   await figure.scrollIntoViewIfNeeded();
-  await expect(figure.getByTestId("live-class-count")).toHaveText("18 of 24 answered");
+  await expectSettledCount(figure.getByTestId("live-class-count"));
   expect(await layoutShift(page)).toBeLessThan(0.1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
@@ -129,14 +137,17 @@ for (const javaScriptEnabled of [true, false]) {
       await field.fill("v96 rn8");
       await field.press("Enter");
       await expect(page).toHaveURL(/\/join\/V96RN8$/);
-      await expect(page.getByRole("textbox", { name: "Join code", exact: true })).toHaveValue(
-        "V96RN8",
-      );
-
+      // The join page reads who is signed in, so it needs the stack to draw its form.
+      if (process.env.E2E_AUTH === "1") {
+        await expect(page.getByRole("textbox", { name: "Join code", exact: true })).toHaveValue(
+          "V96RN8",
+        );
+      }
       await page.goto("/");
       await page.getByRole("textbox", { name: "Join code", exact: true }).fill("nope");
       await page.getByRole("button", { name: "Join", exact: true }).click();
-      await expect(page.getByRole("alert")).toHaveText(
+      const form = page.getByRole("form", { name: "Join a live session" });
+      await expect(form.getByRole("alert")).toHaveText(
         "Enter the six-character join code on the screen.",
       );
       await expect(page).toHaveURL(/\/$/);
@@ -154,7 +165,7 @@ test("the live session is the finished drawing under reduced motion", async ({ b
     const play = page.getByTestId("live-class-play");
     await play.scrollIntoViewIfNeeded();
     await expect(play).not.toHaveAttribute("data-demo");
-    await expect(page.getByTestId("live-class-count")).toHaveText("18 of 24 answered");
+    await expectSettledCount(page.getByTestId("live-class-count"));
   } finally {
     await context.close();
   }

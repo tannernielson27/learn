@@ -92,11 +92,11 @@ function Projector({ demo }: { demo: LiveClassDemo }) {
         aria-hidden="true"
         className="-mx-2 h-2 rounded-t-sm border border-b-0 border-device-line"
       />
-      <div className="border border-device-line p-1.5 pb-7 sm:p-2 sm:pb-8">
+      <div className="@container border border-device-line p-1.5 pb-7 sm:p-2 sm:pb-8">
         <div
           data-theme="light"
           data-testid="live-class-projector"
-          className="@container flex flex-col gap-[3cqi] bg-stage-surface px-[4.5cqi] py-[4cqi] text-stage-ink"
+          className="flex flex-col gap-[3cqi] bg-stage-surface px-[4.5cqi] py-[4cqi] text-stage-ink"
         >
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-demo-label font-semibold text-ink-2">
             <p className="tabular">{demo.place}</p>
@@ -185,11 +185,7 @@ function PhoneTop({ demo }: { demo: LiveClassDemo }) {
   return (
     <>
       <div className="flex items-center justify-between border-b border-line pb-1.5">
-        <span className="font-mono font-semibold tabular">{demo.place}</span>
-        <span className="flex items-center gap-1 text-ink-2">
-          <span className="size-1.5 rounded-full bg-ink-2" />
-          Live
-        </span>
+        <span className="font-mono font-semibold whitespace-nowrap tabular">{demo.place}</span>
       </div>
       <p className="line-clamp-3 font-medium">{demo.question.stem.value}</p>
     </>
