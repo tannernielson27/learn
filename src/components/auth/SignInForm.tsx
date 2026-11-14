@@ -65,7 +65,7 @@ export function SignInForm({
           id={`${errorId}-sent`}
           ref={headingRef}
           tabIndex={-1}
-          className="mb-2 text-xl font-medium text-ink-1 outline-none"
+          className="mb-2 font-read text-title text-ink-1 outline-none"
         >
           Check your email
         </h2>
