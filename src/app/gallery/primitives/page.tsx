@@ -1,10 +1,8 @@
 import { Folder, Users } from "lucide-react";
 import { AnswerCount } from "@/components/ui/AnswerCount";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ConnectionStatus } from "@/components/ui/ConnectionStatus";
-import { Field } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { JoinCode } from "@/components/ui/JoinCode";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -13,6 +11,16 @@ import { TextLink } from "@/components/ui/TextLink";
 import { PrimitivesDemo } from "./demo";
 import { DialogDemo } from "./dialog-demo";
 import { FoundationDemo } from "./foundation-demo";
+import {
+  ButtonLadder,
+  ContentsStates,
+  EmptyStates,
+  ErrorStates,
+  FieldStates,
+  LoadingStates,
+  NoticeStates,
+  PageHeaderStates,
+} from "./states-demo";
 
 const CHART = [
   {
@@ -36,25 +44,14 @@ export default function PrimitivesPage() {
         minimum tap target.
       </p>
 
-      <section className="mt-10">
-        <h2 className="text-lg font-semibold">Button</h2>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <Button variant="primary">Submit</Button>
-          <Button variant="secondary">Flag for review</Button>
-          <Button variant="ghost">Skip</Button>
-          <Button variant="primary" size="sm">
-            Next
-          </Button>
-          <Button variant="secondary" size="sm" disabled>
-            Disabled
-          </Button>
-        </div>
-        <div className="mt-3 max-w-sm">
-          <Button variant="primary" size="lg" block>
-            Large, for the main action on phones
-          </Button>
-        </div>
-      </section>
+      <ButtonLadder />
+      <FieldStates />
+      <NoticeStates />
+      <PageHeaderStates />
+      <EmptyStates />
+      <LoadingStates />
+      <ErrorStates />
+      <ContentsStates />
 
       <section className="mt-10">
         <h2 className="text-lg font-semibold">TextLink, Icon and Badge</h2>
@@ -73,12 +70,6 @@ export default function PrimitivesPage() {
           <Badge>Draft</Badge>
           <Badge tone="accent">New</Badge>
         </div>
-      </section>
-
-      <section className="mt-10 grid max-w-xl gap-4">
-        <h2 className="text-lg font-semibold">Field</h2>
-        <Field label="Your name" hint="Your teacher sees this on the class roster." />
-        <Field label="Join code" appearance="code" defaultValue="V96RN8" error="Check the code." />
       </section>
 
       <PrimitivesDemo />

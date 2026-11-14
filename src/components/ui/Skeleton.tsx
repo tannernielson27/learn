@@ -113,8 +113,8 @@ export function SkeletonPage({
   const columnKeys = Array.from({ length: Math.max(columns, 2) }, (_, index) => index);
   return (
     <SkeletonScreen label={label}>
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
-        <div className="min-w-0 flex-1">
+      <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
+        <div className="min-w-0 flex-[1_1_20rem]">
           {title ? (
             <h1 className={PAGE_TITLE_CLASSES}>{title}</h1>
           ) : (

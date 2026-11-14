@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import type { EmptyStateAction, EmptyStateContent } from "@/lib/emptyState";
-import { Button, buttonClasses } from "./Button";
+import { buttonClasses } from "./Button";
 import { textLinkClasses } from "./TextLink";
 
 export type { EmptyStateAction, EmptyStateContent } from "@/lib/emptyState";
@@ -86,9 +86,10 @@ function NoResults({
           {action.label}
         </Link>
       ) : onClear ? (
-        <Button variant="ghost" size="sm" onClick={onClear}>
+        // Drawn as the link beside it would be, so the two clears line up with the line.
+        <button type="button" onClick={onClear} className={textLinkClasses({ size: "sm" })}>
           {clearLabel}
-        </Button>
+        </button>
       ) : null}
     </div>
   );

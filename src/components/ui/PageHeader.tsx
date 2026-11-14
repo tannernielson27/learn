@@ -30,8 +30,10 @@ export interface PageHeaderProps {
 
 /**
  * The top of an app page (#563, docs/04 §11): the back link, the title, the lead, and the main
- * action. On a phone they stack and the action comes after the words, still in the first screen;
- * from 640px the action stands at the end of the title's row, aligned with its last line. No rule
+ * action. The title asks for 20rem; where the action fits beside that it stands at the end of the
+ * row, aligned with the title's last line, and where it does not (a phone, a narrow column) it
+ * wraps under the words, still in the first screen. The row follows its own width, not the
+ * viewport's, so a long title is never squeezed into a column of letters. No rule
  * and no box: the app takes its hierarchy from type and space (§1).
  */
 export function PageHeader({
@@ -47,8 +49,8 @@ export function PageHeader({
   return (
     <header className={`flex min-w-0 flex-col gap-2 ${className}`.trim()}>
       {back ? <BackLink href={back.href}>{back.label}</BackLink> : null}
-      <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
-        <div className="min-w-0">
+      <div className="flex min-w-0 flex-wrap items-end justify-between gap-x-8 gap-y-5">
+        <div className="min-w-0 flex-[1_1_20rem]">
           <Heading id={titleId} className={PAGE_TITLE_CLASSES}>
             {title}
           </Heading>

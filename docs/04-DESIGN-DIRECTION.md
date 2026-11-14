@@ -209,16 +209,25 @@ These are rules for future work (round 3 of #563, the signed-in app). They descr
 - **Unchanged.** The player, the stage, feedback marks and the EHR layout keep §3 to §6.
 - **Primitives first.** Before any screen changes, these are designed and shown in `/gallery/primitives`, each with every state below. Each exists in `src/components/ui/` today; round 3 restyles them, it does not fork them.
 
-| Primitive   | States it must have                                                                                      |
-| ----------- | -------------------------------------------------------------------------------------------------------- |
-| Button      | Primary, secondary, ghost; sm, md, lg; rest, hover, pressed, focus-visible, disabled, busy (label kept)  |
-| Field       | Empty, filled, focus-visible, disabled, read-only, with hint, with error (words under the field, linked) |
-| Notice      | Status and alert; with and without a title; with an action; light and dark                               |
-| AppShell    | Teacher and student; signed in with the account menu open and closed; phone nav and desktop nav          |
-| Page header | Title only; with a lead; with a main action; with a back link; long title wrapping at 320px              |
-| Empty state | First use (nothing made yet, with the next step) and no results (a filter or search found nothing)       |
-| Loading     | A skeleton in the shape of the page, labelled for screen readers, still under reduced motion             |
-| Error       | Could not load (with Try again), not found, and no access; neutral `Notice` colours, never feedback red  |
+| Primitive   | Where                          | States it must have                                                                                                                                    |
+| ----------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Button      | `ui/Button`                    | Primary, secondary, ghost; sm, md, lg; rest, hover, pressed, focus-visible, disabled, busy (label and width kept)                                      |
+| Field       | `ui/Field`, `ui/FieldError`    | Empty, filled, focus-visible, disabled, read-only, with hint, with error (words under the field, linked by `aria-describedby`)                         |
+| Notice      | `ui/Notice`                    | Status and alert, which look different (the alert adds the strong rule and an alert mark); with and without a title; with an action; light and dark    |
+| AppShell    | `ui/AppShell`                  | Teacher and student; signed in with the account menu open and closed; phone nav and desktop nav                                                        |
+| Page header | `ui/PageHeader`                | Title only; with a lead; with a main action; with a back link; long title wrapping at 320px. `PAGE_TITLE_CLASSES` is the one title style               |
+| Back link   | `ui/BackLink`                  | One look: a chevron and words naming where it goes, in the accent ink, 44px. `backLinkClasses()` for a guarded link                                    |
+| Empty state | `ui/EmptyState`                | First use (a heading, one line, the next step as a button-link) and no results (one status line and a clear action)                                    |
+| Loading     | `ui/Skeleton` (`SkeletonPage`) | A header plus a list, or a header plus a table, labelled for screen readers by one status line; no block moves                                         |
+| Error       | `ui/ErrorState`                | Could not load (with Try again), not found, and no access; neutral `Notice` colours, never feedback red. Every `error.tsx` and `not-found.tsx` uses it |
+| Contents    | `ui/ContentsNav`               | The numbered, sticky contents of the legal pages and the help guides, with `sectionNumber` and one anchor offset (`scroll-mt-8`)                       |
+
+**Owner decisions, 2026-11-14.** These are rules for every app screen:
+
+- **Field errors are neutral.** An invalid field takes the strong ink edge (`--field-invalid`, the `--rule-strong` ink, drawn 2px without moving anything), an alert icon and the words under the field, linked with `aria-describedby`. Never `--incorrect`: red only ever marks an answer. The edge stays at least 3:1 and the words at least 4.5:1 in both themes.
+- **The teacher's email lives in the avatar menu**, not in the bar.
+- **Eyebrows are quieter in the app.** The all-caps, tracked `.eyebrow` stays on the public site. In the app a small label stays only where it adds information, in normal (sentence) case.
+- **Busy, not disabled.** A button that is working keeps its label and its width and stays focusable (`busy`); its mark fills once and never loops. `disabled` is for a control that cannot be used yet.
 
 ## 12. Quality bar for every UI PR
 
