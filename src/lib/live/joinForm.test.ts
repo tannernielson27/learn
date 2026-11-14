@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DISPLAY_NAME_EMPTY, DISPLAY_NAME_TOO_LONG } from "./displayName";
-import { JOIN_CODE_ERROR, parseJoinForm } from "./joinForm";
+import { JOIN_CODE_ERROR, parseJoinForm, readJoinCode } from "./joinForm";
 
 function form(code: unknown, displayName: unknown): FormData {
   const data = new FormData();
@@ -70,5 +70,20 @@ describe("parseJoinForm", () => {
   it("cleans the name it returns, so nothing downstream has to remember to", () => {
     const parsed = parseJoinForm(form("7KQ2MZ", "  Sam   Okafor "));
     expect(parsed.ok && parsed.displayName).toBe("Sam Okafor");
+  });
+});
+
+// #563: the landing page's join field and `/join?code=` send a code on to `/join/[code]`.
+describe("readJoinCode", () => {
+  it("sends a code on to the join page for it, forgiving case, spaces and hyphens", () => {
+    for (const typed of ["7KQ2MZ", "7kq2mz", "7KQ 2MZ", "7kq-2mz", "  7 K Q 2 M Z  "]) {
+      expect(readJoinCode(typed)).toEqual({ ok: true, code: "7KQ2MZ", href: "/join/7KQ2MZ" });
+    }
+  });
+
+  it("says what a join code is for an empty field, a wrong length and a letter not in codes", () => {
+    for (const typed of ["", "   ", "7KQ2M", "7KQ2MZA", "7KQ2M0", "OI1OI1", undefined, null, 7]) {
+      expect(readJoinCode(typed)).toEqual({ ok: false, error: JOIN_CODE_ERROR });
+    }
   });
 });

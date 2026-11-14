@@ -11,6 +11,8 @@ export interface JoinScreenProps {
   code: string;
   /** Who is joining, for a signed-in student (ADR 0013). Absent or `none` is today's screen. */
   account?: JoinAccount;
+  /** A code that arrived as `/join?code=…` and could not be one (#563): said at the field. */
+  codeError?: string;
 }
 
 /**
@@ -20,7 +22,7 @@ export interface JoinScreenProps {
  * On a phone: one column, the two fields, and Join at the foot of the screen in thumb reach. From
  * `lg`: the same column, centred on the page.
  */
-export function JoinScreen({ code, account = { kind: "none" } }: JoinScreenProps) {
+export function JoinScreen({ code, account = { kind: "none" }, codeError }: JoinScreenProps) {
   return (
     <main className="flex min-h-dvh flex-1 flex-col px-5 pt-14 pb-8 lg:px-18">
       <Link href="/" className={`${WORDMARK_CLASSES} self-start`}>
@@ -40,6 +42,7 @@ export function JoinScreen({ code, account = { kind: "none" } }: JoinScreenProps
             code={code}
             defaultName={account.kind === "member" ? (account.name ?? undefined) : undefined}
             asGuest={account.kind === "guest"}
+            codeError={codeError}
           />
           {/* #362: a class code (two groups of four) is not a join code (two of three), and a
               student holding one is in the wrong place. The welcome page sends each person on. */}

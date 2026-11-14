@@ -1,4 +1,5 @@
 import { parseDisplayName } from "./displayName";
+import { joinPath } from "./routes";
 import { isSessionCode, normalizeSessionCode } from "./sessionCode";
 
 /**
@@ -41,4 +42,20 @@ export function parseJoinForm(formData: FormData): JoinFormResult {
   if (!name.ok) return { ok: false, field: "displayName", error: name.error };
 
   return { ok: true, code, displayName: name.value };
+}
+
+export type JoinCodeResult =
+  { ok: true; code: string; href: string } | { ok: false; error: string };
+
+/**
+ * A join code typed somewhere other than the join page itself: the landing page's own field
+ * (#563), and `/join?code=…`, which is where that field's plain GET form lands without JavaScript.
+ * Both send the code on to `/join/[code]`, the page a QR code opens, so a student finishes on the
+ * one join screen with the code filled in and only their name to type. The same rules as the join
+ * form: case, spaces and hyphens are forgiven, and nothing else is.
+ */
+export function readJoinCode(typed: unknown): JoinCodeResult {
+  const code = normalizeSessionCode(typeof typed === "string" ? typed : "");
+  if (!isSessionCode(code)) return { ok: false, error: JOIN_CODE_ERROR };
+  return { ok: true, code, href: joinPath(code) };
 }
