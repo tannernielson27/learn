@@ -78,3 +78,35 @@ test("the landing page's footer links every public page and passes axe", async (
     path: `test-results/screenshots/${testInfo.project.name}/landing-footer.png`,
   });
 });
+
+test("pricing shows the free trial's terms beside its button in a phone's first screen", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.goto("/pricing");
+  const button = page.getByRole("link", { name: "Start your free trial", exact: true });
+  await expect(button).toBeInViewport();
+  await expect(button).toHaveAccessibleDescription(/card at checkout/);
+  await expect(page.getByText(/You enter a card at checkout/)).toBeInViewport();
+});
+
+for (const path of ["/terms", "/privacy"]) {
+  test(`${path} contents link to each section and stay beside the text from 1024px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(path);
+    const contents = page.getByRole("navigation", { name: "Contents" });
+    const links = contents.getByRole("link");
+    const count = await links.count();
+    await expect(page.getByRole("heading", { level: 2 })).toHaveCount(count);
+
+    const last = links.nth(count - 1);
+    const href = (await last.getAttribute("href")) ?? "";
+    await last.click();
+    await expect(page).toHaveURL(new RegExp(`${href}$`));
+    await expect(page.locator(href).getByRole("heading", { level: 2 })).toBeInViewport();
+    // Sticky: the contents are still on screen at the foot of the document.
+    await expect(contents).toBeInViewport();
+  });
+}
