@@ -82,8 +82,9 @@ const WIDTHS: Record<ContentWidth, string> = {
  * asks for. On a phone the navigation is a 44px row under the bar, so the whole header is 108px
  * and the page's main action stays in the first screen; from 1024px it sits beside the wordmark.
  *
- * The shell is a size container (`@container/shell`), so the bar follows its own width: on a page
- * that is the window, and in the gallery it is the specimen's frame. Its "1024px" step is 63rem of
+ * The bar sits in a size container (`@container/shell`), so it follows its own width: on a page
+ * that is the window, and in the gallery it is the specimen's frame. The page around it is not a
+ * container, so fixed Submit bars and sheets keep the viewport. Its "1024px" step is 63rem of
  * shell, so a 1024px window that gives up to 16px to a scrollbar still gets the desktop bar.
  *
  * Not a client component: the layouts that use it read the session on the server, and only the
@@ -102,24 +103,31 @@ export function AppShell({
   const Header = landmarks ? "header" : "div";
   const Main = landmarks ? "main" : "div";
   return (
-    <div className="@container/shell flex flex-1 flex-col [--shell-gutter:1rem] @min-[40rem]/shell:[--shell-gutter:1.5rem] @min-[63rem]/shell:[--shell-gutter:2rem]">
-      <Header
-        data-app-bar=""
-        className="flex flex-wrap items-center border-b border-line bg-surface-1 px-(--shell-gutter) @min-[63rem]/shell:flex-nowrap @min-[63rem]/shell:gap-x-6"
-      >
-        <div className="flex h-16 shrink-0 items-center">
-          {brand ?? <Wordmark href={homeHref} />}
-        </div>
-        {nav ? (
-          // Its own row on a phone, edge to edge so the row scrolls under the gutters.
-          <div className="order-last -mx-(--shell-gutter) min-w-0 basis-full @min-[63rem]/shell:order-none @min-[63rem]/shell:mx-0 @min-[63rem]/shell:basis-auto">
-            {nav}
+    // The gutter follows the window for the page (PageWidth reads the same variable against 100vw).
+    // Only the bar is a size container: container-type makes its element the containing block
+    // for position: fixed, and the pages hold fixed Submit bars and sheets that must keep the
+    // viewport (#576 review). The bar re-states the gutter by its own width, so the gallery's
+    // narrow specimen frame draws the phone bar.
+    <div className="flex flex-1 flex-col [--shell-gutter:1rem] min-[40rem]:[--shell-gutter:1.5rem] min-[63rem]:[--shell-gutter:2rem]">
+      <div className="@container/shell">
+        <Header
+          data-app-bar=""
+          className="flex flex-wrap items-center border-b border-line bg-surface-1 px-(--shell-gutter) [--shell-gutter:1rem] @min-[40rem]/shell:[--shell-gutter:1.5rem] @min-[63rem]/shell:flex-nowrap @min-[63rem]/shell:gap-x-6 @min-[63rem]/shell:[--shell-gutter:2rem]"
+        >
+          <div className="flex h-16 shrink-0 items-center">
+            {brand ?? <Wordmark href={homeHref} />}
           </div>
-        ) : null}
-        {account ? (
-          <div className="ml-auto flex h-16 shrink-0 items-center gap-3">{account}</div>
-        ) : null}
-      </Header>
+          {nav ? (
+            // Its own row on a phone, edge to edge so the row scrolls under the gutters.
+            <div className="order-last -mx-(--shell-gutter) min-w-0 basis-full @min-[63rem]/shell:order-none @min-[63rem]/shell:mx-0 @min-[63rem]/shell:basis-auto">
+              {nav}
+            </div>
+          ) : null}
+          {account ? (
+            <div className="ml-auto flex h-16 shrink-0 items-center gap-3">{account}</div>
+          ) : null}
+        </Header>
+      </div>
       {notice}
       <Main className={`mx-auto w-full flex-1 px-(--shell-gutter) py-8 ${WIDTHS[width]}`.trim()}>
         {children}

@@ -126,7 +126,23 @@ describe("AppShell", () => {
       </AppShell>,
     );
     const notice = screen.getByRole("status");
-    expect(screen.getByRole("banner").nextElementSibling).toBe(notice);
+    // The bar sits in its own size container (see below), so the notice follows that wrapper.
+    expect(screen.getByRole("banner").parentElement?.nextElementSibling).toBe(notice);
     expect(notice.nextElementSibling).toBe(screen.getByRole("main"));
+  });
+
+  // #576 review: container-type makes its element the containing block for position: fixed, and
+  // pages hold fixed Submit bars and sheets. Only the bar's wrapper may be a container.
+  it("makes only the bar a size container, never the content's ancestors", () => {
+    render(
+      <AppShell homeHref="/">
+        <p>Body</p>
+      </AppShell>,
+    );
+    const main = screen.getByRole("main");
+    for (let el = main.parentElement; el; el = el.parentElement) {
+      expect(el.className).not.toMatch(/@container/);
+    }
+    expect(screen.getByRole("banner").parentElement?.className).toMatch(/@container\/shell/);
   });
 });
