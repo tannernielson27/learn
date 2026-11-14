@@ -6,10 +6,12 @@ The public site reads like a well-set journal page. Warm paper, near-black ink, 
 
 ## Departures from docs/04
 
-- **Large serif outside the projector.** docs/04 keeps huge type for the stage. The front door needs a voice, so the site gets two display sizes (`--text-hero`, `--text-section`), both rem-bounded within 2.5x.
-- **A third radius, for drawing only.** A phone at 8px reads as a card. `--radius-device` is used by the drawn phones and nothing that can be pressed.
-- **Near-black rules.** docs/04 takes depth from a 1.4:1 `--line`. Section openings use `--rule-strong` (ink) so the page has a spine on a wide screen. Lines inside sections stay `--line`.
-- **Restrained line illustration.** docs/04 §7 allows it on the marketing page; the live session drawing is the only one.
+All four are adopted into docs/04 (#563): §2 lists the tokens, §10 has the rules and §11 says how they carry into the app.
+
+- **Large serif outside the projector.** Adopted into docs/04 (#563). docs/04 keeps huge type for the stage. The front door needs a voice, so the site gets two display sizes (`--text-hero`, `--text-section`), both rem-bounded within 2.5x.
+- **A third radius, for drawing only.** Adopted into docs/04 (#563). A phone at 8px reads as a card. `--radius-device` is used by the drawn phones and nothing that can be pressed.
+- **Near-black rules.** Adopted into docs/04 (#563). docs/04 takes depth from a 1.4:1 `--line`. Section openings use `--rule-strong` (ink) so the page has a spine on a wide screen. Lines inside sections stay `--line`.
+- **Restrained line illustration.** Adopted into docs/04 (#563). docs/04 §7 allows it on the marketing page; the live session drawing is the only one.
 
 No new font. No shadow beyond `--elevation-1` (none is used here).
 
