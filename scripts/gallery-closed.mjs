@@ -50,6 +50,8 @@ const GALLERY_PATHS = [
   "/gallery/class-page",
   // One student's progress in that class, from the same kind of fixture.
   "/gallery/class-student",
+  // #563: the teacher's library, from a fixture of quiz and folder names with no key in it.
+  "/gallery/library",
   "/gallery",
 ];
 

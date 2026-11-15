@@ -96,4 +96,25 @@ describe("BankList", () => {
     });
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
   });
+
+  it("says when nothing matches, and clears the search back into the field (#563)", () => {
+    render(
+      <QuizSearch names={banks.map((bank) => bank.name)}>
+        <QuizSearchField />
+        <BankList banks={banks} searchable />
+      </QuizSearch>,
+    );
+    const field = screen.getByRole("searchbox", { name: "Search quizzes" });
+    fireEvent.change(field, { target: { value: "renal" } });
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+    // One status, in the no-results state where the rows were; the empty list leaves no frame.
+    const said = screen.getAllByRole("status").map((status) => status.textContent);
+    expect(said.filter(Boolean)).toEqual(["No quizzes here match “renal”."]);
+    expect(document.querySelector('[data-empty-state="no-results"]')).not.toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
+    expect(field).toHaveValue("");
+    expect(field).toHaveFocus();
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    expect(document.querySelector("[data-empty-state]")).toBeNull();
+  });
 });

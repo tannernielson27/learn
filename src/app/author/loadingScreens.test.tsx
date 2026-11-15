@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { PAGE_TITLE_CLASSES } from "@/components/ui/PageHeader";
 import ClassesLoading from "./classes/(list)/loading";
 import SessionsLoading from "./sessions/loading";
 import WorkspaceLoading from "./workspace/loading";
@@ -37,14 +38,9 @@ describe("Live sessions loading state", () => {
 });
 
 describe("Classes loading state", () => {
-  it("draws the page's own h1, so it does not move when the list arrives", () => {
+  it("draws the page's own h1 in the page title's style, so it does not move (#563)", () => {
     render(<ClassesLoading />);
-    expect(screen.getByRole("heading", { level: 1 })).toHaveClass(
-      "mb-6",
-      "font-read",
-      "text-3xl",
-      "text-ink-1",
-    );
+    expect(screen.getByRole("heading", { level: 1 })).toHaveClass(...PAGE_TITLE_CLASSES.split(" "));
   });
 });
 

@@ -63,6 +63,19 @@ describe("GetStarted", () => {
     );
   });
 
+  it("draws a done step as done: no import button, no link to do it again (#563)", () => {
+    setup({ ...EMPTY, banks: [{ id: "b", name: "Cardiac" }], hasClass: true });
+    const quizStep = stepRow("Create a quiz");
+    expect(within(quizStep).queryByRole("button")).toBeNull();
+    expect(within(quizStep).queryByRole("link")).toBeNull();
+    expect(within(quizStep).queryByText("One of every question type.")).toBeNull();
+    expect(within(stepRow("Create a class")).queryByRole("link")).toBeNull();
+    // The step still to do keeps its way there.
+    expect(
+      within(stepRow("Assign a quiz")).getByRole("link", { name: "Open Cardiac" }),
+    ).toBeVisible();
+  });
+
   it("links each step to where it is done", () => {
     setup({ ...EMPTY, banks: [SAMPLE] });
     expect(screen.getByRole("link", { name: "Go to your classes" })).toHaveAttribute(

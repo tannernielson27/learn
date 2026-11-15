@@ -19,24 +19,30 @@ export interface InviteLinkFieldProps {
   url: string;
 }
 
-/** The invite link in a read-only box, and a button that copies it. */
+/**
+ * The invite link in a read-only box, and a button that copies it. In the class header (#563) its
+ * label, box and button are three cells of the header's grid from 640px (`sm:contents`), so the
+ * box takes the row's width and shows the whole link instead of a cut-off one.
+ */
 export function InviteLinkField({ url }: InviteLinkFieldProps) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 sm:contents">
       <label htmlFor="invite-link" className="text-sm font-medium text-ink-1">
         Invite link
       </label>
-      {/* Beside each other on a phone, to keep the class page's header short; stacked from 640px. */}
-      <div className="flex flex-wrap items-start gap-3 sm:flex-col sm:flex-nowrap sm:items-stretch sm:gap-2">
+      {/* Beside each other on a phone, to keep the class page's header short. */}
+      <div className="flex flex-wrap items-start gap-3 sm:contents">
         <input
           id="invite-link"
           type="text"
           readOnly
           value={url}
           // Read only, so the quieter surface; the field's 3:1 edge still marks the box (WCAG 1.4.11).
-          className="tap-target min-w-0 flex-[1_1_9rem] rounded-sm border border-line-field bg-surface-2 px-3 font-mono text-sm text-ink-1 sm:w-full sm:flex-none"
+          className="tap-target min-w-0 flex-[1_1_9rem] rounded-sm border border-line-field bg-surface-2 px-3 font-mono text-sm text-ink-2 sm:w-full"
         />
-        <CopyLinkButton url={url} />
+        <div className="sm:justify-self-start">
+          <CopyLinkButton url={url} />
+        </div>
       </div>
     </div>
   );
@@ -52,25 +58,30 @@ export interface ClassCodeBlockProps {
   labelAs?: "h3" | "p";
 }
 
-/** The class code, large enough to read off a projector, and a button that copies it. */
+/**
+ * The class code, large enough to read off the board, and a button that copies it. Like the
+ * invite link, three cells of the class header's grid from 640px; set in the mono at the body's
+ * scale up, not the display size, so it no longer outweighs the class's name (#563).
+ */
 export function ClassCodeBlock({ code, labelAs: Label = "h3" }: ClassCodeBlockProps) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 sm:contents">
       <Label className="text-sm font-medium text-ink-1">Class code</Label>
-      {/* On a phone the code and its button share a row; from 640px the code stands alone,
-          projector-sized, above the button. */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:flex-col sm:flex-nowrap sm:items-start">
+      {/* On a phone the code and its button share a row. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:contents">
         <p
           data-testid="class-code"
-          className="font-mono text-2xl break-all text-ink-1 sm:text-3xl sm:tracking-[0.15em]"
+          className="font-mono text-2xl tracking-[0.08em] break-all text-ink-1"
         >
           {formatClassCode(code)}
         </p>
-        <CopyTextButton
-          text={normalizeClassCode(code)}
-          label="Copy class code"
-          failedMessage="Could not copy. Write the code down from the page instead."
-        />
+        <div className="sm:justify-self-start">
+          <CopyTextButton
+            text={normalizeClassCode(code)}
+            label="Copy class code"
+            failedMessage="Could not copy. Write the code down from the page instead."
+          />
+        </div>
       </div>
     </div>
   );

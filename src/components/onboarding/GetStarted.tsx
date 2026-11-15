@@ -44,13 +44,18 @@ export function GetStarted({ steps, importSample, hide }: GetStartedProps) {
           <li key={step.id} className="flex gap-3 py-3">
             <StepMark done={step.done} number={index + 1} />
             <div className="flex min-w-0 flex-col items-start gap-1">
-              <p className="font-medium text-ink-1">{step.title}</p>
+              {/* A done step steps back: its title in the secondary ink, and nothing to press. */}
+              <p className={step.done ? "font-medium text-ink-2" : "font-medium text-ink-1"}>
+                {step.title}
+              </p>
               <p className="text-sm text-ink-2">
                 <span className={step.done ? "font-medium text-ink-1" : undefined}>
                   {step.done ? "Done" : "Not done"}
                 </span>
               </p>
-              {step.hint ? <p className="max-w-prose text-sm text-ink-2">{step.hint}</p> : null}
+              {step.hint && !step.done ? (
+                <p className="max-w-prose text-sm text-ink-2">{step.hint}</p>
+              ) : null}
               <StepActions step={step} importSample={importSample} />
             </div>
           </li>
@@ -72,6 +77,15 @@ function StepActions({
   step: ChecklistStep;
   importSample: GetStartedProps["importSample"];
 }) {
+  // Done is done (#563): no button and no link to do it again. The one exception is the sample
+  // quiz, once imported: the way to open it, rather than a second copy.
+  if (step.done) {
+    return step.sampleBankId ? (
+      <Link href={`/author/banks/${step.sampleBankId}`} className={LINK}>
+        Open the sample quiz
+      </Link>
+    ) : null;
+  }
   if (step.id !== "bank") {
     return step.href ? (
       <Link href={step.href} className={LINK}>
