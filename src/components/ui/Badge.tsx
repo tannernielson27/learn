@@ -3,7 +3,7 @@ import type { HTMLAttributes } from "react";
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   /** `neutral` for a state ("Draft"), `accent` for something new or selected. */
   tone?: "neutral" | "accent";
-  /** A green dot before the word, for a live session. The word still says it. */
+  /** A dot in the accent before the word, for a live session (never green: green marks answers, docs/04 §1). The word still says it. */
   live?: boolean;
 }
 
@@ -26,7 +26,7 @@ export function Badge({
       {...rest}
     >
       {live ? (
-        <span aria-hidden="true" data-live-dot="" className="size-2 rounded-full bg-correct" />
+        <span aria-hidden="true" data-live-dot="" className="size-2 rounded-full bg-accent" />
       ) : null}
       {children}
     </span>

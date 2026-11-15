@@ -151,4 +151,15 @@ describe("the console's connection notice", () => {
     expect(screen.getAllByRole("alert")).toHaveLength(1);
     expect(screen.queryByText("That did not go through")).toBeNull();
   });
+
+  it("hides the OFFLINE words as a second notice while the channel reconnects (#563)", async () => {
+    const fake = setup((host) => ({ ...host, open: () => Promise.reject(new Error("down")) }));
+    await screen.findByRole("alert");
+    act(() => fake.room.setHostConnection("reconnecting"));
+    await waitFor(() =>
+      expect(document.querySelector('[data-notice="status"]')).toHaveTextContent("Reconnecting"),
+    );
+    expect(screen.queryByText("That did not go through")).toBeNull();
+    expect(screen.queryByText("Live updates stopped. Reload to catch up.")).toBeNull();
+  });
 });

@@ -4,7 +4,7 @@ import { ConnectionStatus } from "./ConnectionStatus";
 
 describe("ConnectionStatus", () => {
   it.each([
-    ["connected", "Connected", "bg-correct"],
+    ["connected", "Connected", "bg-accent"],
     ["reconnecting", "Reconnecting", "bg-flag"],
     ["offline", "Offline", "bg-flag"],
   ] as const)("says %s in words beside a dot", (status, word, dot) => {

@@ -64,7 +64,7 @@ export function PhoneWaiting({
     <PhoneMessage
       heading={headline}
       mark={
-        <span className="grid size-14 place-items-center rounded-full bg-correct-soft text-correct">
+        <span className="grid size-14 place-items-center rounded-full bg-accent-soft text-accent-ink">
           <Icon icon={Check} />
         </span>
       }

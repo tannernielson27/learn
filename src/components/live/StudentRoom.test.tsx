@@ -151,6 +151,12 @@ describe("StudentRoom: waiting", () => {
     expect(screen.getByRole("heading", { name: "You’re in." })).toBeInTheDocument();
   });
 
+  it("marks the join in the accent, never the green that marks an answer (#563)", () => {
+    setup();
+    expect(document.querySelector(".bg-correct-soft, .text-correct")).toBeNull();
+    expect(document.querySelector(".bg-accent-soft.text-accent-ink")).not.toBeNull();
+  });
+
   it("says when the session has ended, and shows no item", () => {
     const room = setup();
     room.push({ state: state({ status: "ended", position: 4 }), item: KEYLESS });

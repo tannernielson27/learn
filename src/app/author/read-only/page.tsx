@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ReadingWidth } from "@/components/authoring/PageWidth";
 import { Notice } from "@/components/ui/Notice";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { TextLink } from "@/components/ui/TextLink";
 import { safeNextPath } from "@/lib/auth/nextPath";
 import { requireAuthor } from "@/lib/authoring/session";
@@ -31,8 +32,8 @@ export default async function ReadOnlyPage({ searchParams }: PageProps<"/author/
 
   return (
     <ReadingWidth>
-      <h1 className="mb-6 font-read text-3xl text-ink-1">{READ_ONLY_HEADING}</h1>
-      <Notice role="alert" className="mb-6">
+      <PageHeader title={READ_ONLY_HEADING} className="mb-6" />
+      <Notice role="alert" live={false} className="mb-6">
         {readOnlySentence(readOnly.canManage)}
       </Notice>
       <div className="flex flex-wrap gap-x-6 gap-y-3">
