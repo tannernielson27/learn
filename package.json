@@ -20,6 +20,7 @@
     "e2e:install": "playwright install chromium",
     "db:types": "node scripts/db-types.mjs",
     "test:db": "node scripts/test-db.mjs",
+    "seed:demo-sessions": "node scripts/seed-demo-sessions.mjs",
     "load:live": "node --env-file-if-exists=.env.local scripts/load-live.mjs",
     "stripe:catalog": "node --env-file-if-exists=.env.local scripts/stripe-catalog.mjs",
     "beta-pass": "node --env-file-if-exists=.env.local scripts/beta-pass.mjs",
