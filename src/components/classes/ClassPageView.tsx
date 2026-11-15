@@ -11,7 +11,7 @@ import { stopSharingWarning } from "@/lib/practice/shares";
 import type { AssignmentSummary } from "@/lib/supabase/assignments";
 import type { ClassDetail, RosterEntry } from "@/lib/supabase/classes";
 import type { ShareEntry } from "@/lib/supabase/practiceShares";
-import type { SessionSummary } from "@/lib/supabase/sessionReport";
+import type { SessionListRow } from "@/lib/supabase/sessionReport";
 import { ClassHeader } from "./ClassHeader";
 import { ClassNameForm, type ClassNameFormProps } from "./ClassNameForm";
 import { ClassOverviewPanel } from "./ClassOverviewPanel";
@@ -51,7 +51,7 @@ export interface ClassPageViewProps {
   /** How the Progress tab's grid is sorted, from the address. */
   progressSort?: ProgressSort;
   /** The class's live sessions, read on the Live sessions tab only. */
-  sessions?: readonly SessionSummary[] | null;
+  sessions?: readonly SessionListRow[] | null;
   /** The time zones offered, worked out on the server so hydration matches. */
   zones: readonly string[];
   /** When the page was rendered: decides each assignment's state. */

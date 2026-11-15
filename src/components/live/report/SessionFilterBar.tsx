@@ -15,6 +15,7 @@ const STATUS_OPTIONS: readonly { value: SessionStatusFilter; label: string }[] =
   { value: "all", label: "All" },
   { value: "ended", label: "Ended" },
   { value: "open", label: "In progress" },
+  { value: "archived", label: "Archived" },
 ];
 
 const WHO_OPTIONS: readonly { value: SessionWhoFilter; label: string }[] = [

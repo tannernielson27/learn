@@ -32,6 +32,8 @@ function fakeClient(replies: Record<string, Reply>) {
       "eq",
       "neq",
       "ilike",
+      "is",
+      "not",
       "in",
       "order",
       "limit",
@@ -194,7 +196,7 @@ describe("readSessionReport", () => {
       (call) => call.table === "sessions" && call.method === "select",
     );
     expect(selected?.args[0]).toBe(
-      "id, title, status, opened_at, closed_at, item_set, case_study_records",
+      "id, title, status, opened_at, closed_at, host_id, item_set, case_study_records",
     );
   });
 

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ReadingWidth } from "@/components/authoring/PageWidth";
 import { SessionFilterBar } from "@/components/live/report/SessionFilterBar";
-import { GroupedSessionList, SessionList } from "@/components/live/report/SessionList";
+import { ManagedSessionList } from "@/components/live/report/ManagedSessionList";
+import { SessionList } from "@/components/live/report/SessionList";
 import { buttonClasses } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Notice } from "@/components/ui/Notice";
@@ -56,13 +57,17 @@ export default async function SessionsPage({ searchParams }: PageProps<"/author/
               heading={
                 filters.q !== ""
                   ? `No live sessions match “${filters.q}”.`
-                  : "No live sessions match these filters."
+                  : filters.status === "archived"
+                    ? "No archived live sessions."
+                    : "No live sessions match these filters."
               }
               action={{ href: SESSIONS_PATH, label: "Clear filters" }}
             />
           ) : (
             <>
-              <GroupedSessionList
+              <ManagedSessionList
+                viewerId={userId}
+                archivedView={filters.status === "archived"}
                 groups={groupSessionsByDate(rows.slice(0, filters.show), new Date())}
               />
               {rows.length > filters.show && filters.show < SESSION_SHOW_MAX ? (
