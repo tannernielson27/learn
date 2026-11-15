@@ -81,7 +81,7 @@ export const STATUS_LABELS: Record<ContentStatus, string> = {
   archived: "Archived",
 };
 
-/** "6 questions match: “lactate”, Matrix Multiple Choice, Published." */
+/** "6 questions match: “lactate”, Matrix multiple choice, Published." */
 export function searchSummary(total: number, search: ItemSearch): string {
   const parts = [
     ...(search.query ? [`“${search.query}”`] : []),

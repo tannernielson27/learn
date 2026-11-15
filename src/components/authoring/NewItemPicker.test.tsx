@@ -15,7 +15,7 @@ describe("NewItemPicker", () => {
   it("starts an item of the chosen type", async () => {
     const onChoose = vi.fn();
     render(<NewItemPicker onChoose={onChoose} />);
-    await userEvent.click(screen.getByRole("button", { name: /Extended Multiple Response/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Extended multiple response/ }));
     expect(onChoose).toHaveBeenCalledWith("multiple_response");
   });
 

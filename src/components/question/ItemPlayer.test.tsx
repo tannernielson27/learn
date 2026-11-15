@@ -150,7 +150,7 @@ describe("ItemPlayer with sample content", () => {
   it("labels an item tagged sample, so it is never shown as if it were real", async () => {
     render(<ItemPlayer item={mc} submit={scoreInProcess(mc)} />);
     await renderersLoaded();
-    const question = screen.getByRole("region", { name: "Multiple Choice question" });
+    const question = screen.getByRole("region", { name: "Multiple choice question" });
     expect(within(question).getByText("Sample")).toBeInTheDocument();
     // In sentence case, untracked: never the public site's eyebrow capitals (#563).
     expect(within(question).getByText("Sample")).not.toHaveClass("eyebrow", "uppercase");

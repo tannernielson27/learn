@@ -15,7 +15,7 @@ async function expectNoAxeViolations(page: Page): Promise<void> {
 
 async function addPublishedItem(page: Page, bankName: string, stem: string): Promise<void> {
   await page.getByRole("link", { name: "New question", exact: true }).click();
-  await page.getByRole("button", { name: "Multiple Choice", exact: true }).click();
+  await page.getByRole("button", { name: "Multiple choice", exact: true }).click();
   await fillMultipleChoice(page, stem, ["Bradycardia", "Tachycardia", "Hypotension", "Edema"], 1);
   await publishOpenItem(page);
   await page.getByRole("link", { name: "Back to quiz", exact: true }).click();

@@ -62,7 +62,7 @@ test("an instructor assigns a bank to a class and sees it listed in local time",
   await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   await page.getByRole("link", { name: "New question" }).click();
-  await page.getByRole("button", { name: "Multiple Choice", exact: true }).click();
+  await page.getByRole("button", { name: "Multiple choice", exact: true }).click();
   await fillMultipleChoice(
     page,
     "Which finding is expected?",

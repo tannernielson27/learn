@@ -136,7 +136,7 @@ test("a reader finds how a drop-down rationale question is scored", async ({ pag
   await expect(page).toHaveURL(/\/help\/items$/);
   await page
     .getByRole("navigation", { name: "On this page" })
-    .getByRole("link", { name: "Drop-Down Rationale", exact: true })
+    .getByRole("link", { name: "Drop-down rationale", exact: true })
     .click();
   await expect(page).toHaveURL(/#dropdown-rationale$/);
   const section = page.locator("section#dropdown-rationale");

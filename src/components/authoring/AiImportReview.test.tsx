@@ -275,7 +275,7 @@ describe("AiImportReview (#346)", () => {
     const fix = screen.getAllByRole("article")[2]!;
     expect(within(fix).getByText(/counts towards this month's AI import allowance/)).toBeTruthy();
     const select = within(fix).getByRole("combobox", { name: "Change type" });
-    expect(within(select).queryByRole("option", { name: "Multiple Choice" })).toBeNull();
+    expect(within(select).queryByRole("option", { name: "Multiple choice" })).toBeNull();
     await user.selectOptions(select, "bowtie");
     await user.click(within(fix).getByRole("button", { name: "Read again as this type" }));
     expect(requests.postJson).toHaveBeenCalledWith("/api/ai-import/retype", {

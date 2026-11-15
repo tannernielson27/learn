@@ -13,7 +13,7 @@ export interface ItemPageHeaderProps {
   bankHref: string;
   /** Export JSON, for a valid saved question only (docs/transfer-format.md). */
   exportHref?: string;
-  /** The type's name as the catalogue spells it ("Multiple Choice"); shown in sentence case. */
+  /** The type's name as the catalogue spells it ("Multiple choice"); shown in sentence case. */
   typeLabel: string;
   status: keyof typeof STATUS_LABELS;
   /** Restore and Duplicate for an archived question, which has no editor to hold them. */

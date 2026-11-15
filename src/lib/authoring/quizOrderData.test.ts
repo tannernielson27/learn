@@ -41,7 +41,7 @@ describe("listQuizEntries", () => {
           kind: "item",
           id: "i1",
           label: "Which finding needs follow-up?",
-          format: "Multiple Choice",
+          format: "Multiple choice",
           status: "Published",
         },
       ],

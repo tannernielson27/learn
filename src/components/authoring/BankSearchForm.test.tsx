@@ -30,7 +30,7 @@ describe("BankSearchForm", () => {
     expect(type).toHaveAttribute("name", "type");
     expect(within(type).getByRole("option", { name: "Any type", hidden: true })).toHaveValue("");
     expect(
-      within(type).getByRole("option", { name: "Matrix Multiple Choice", hidden: true }),
+      within(type).getByRole("option", { name: "Matrix multiple choice", hidden: true }),
     ).toHaveValue("matrix_multiple_choice");
     const status = filters().getByRole("combobox", { name: "Status", hidden: true });
     expect(

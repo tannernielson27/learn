@@ -63,7 +63,7 @@ export const ITEM_GUIDE: Record<ItemType, ItemGuideEntry> = {
       "Making several calls per row: rows by columns, with any number of selections in each row (at least one per row is typical).",
     model: "plus_minus",
     scoring: "+/-, applied to each row and then summed.",
-    tip: "Use it when a finding can belong to more than one column, such as a sign seen in two conditions. If each row has exactly one answer, use Matrix Multiple Choice instead.",
+    tip: "Use it when a finding can belong to more than one column, such as a sign seen in two conditions. If each row has exactly one answer, use Matrix multiple choice instead.",
   },
   dropdown_cloze: {
     tests:
@@ -112,7 +112,7 @@ export const ITEM_GUIDE: Record<ItemType, ItemGuideEntry> = {
       "The drop-down rationale sentence, answered from a word bank: a dyad (2 blanks) or a triad (3 blanks).",
     model: "rationale",
     scoring:
-      "Rationale scoring, as for Drop-Down Rationale. Dyad: 1 point only if both are correct. Triad: 2 points max, and 0 if the anchor is wrong.",
+      "Rationale scoring, as for Drop-down rationale. Dyad: 1 point only if both are correct. Triad: 2 points max, and 0 if the anchor is wrong.",
     tip: "Put plausible wrong words in the word bank for both the condition and the evidence, so neither blank can be solved alone.",
   },
   ordered_response: {
@@ -169,28 +169,28 @@ export interface CjmmGuideEntry {
 export const CJMM_GUIDE: Record<CjmmStep, CjmmGuideEntry> = {
   1: {
     asks: "Which information in the patient record matters, and which is noise?",
-    formats: "Highlight Text or Table, select all that apply, Matrix Multiple Response.",
+    formats: "Highlight text or table, select all that apply, Matrix multiple response.",
   },
   2: {
     asks: "What could these cues mean? Link the findings to the conditions they point to.",
-    formats: "Drop-Down Cloze or Rationale, Matrix Multiple Choice, Multiple Response Grouping.",
+    formats: "Drop-down cloze or rationale, Matrix multiple choice, Multiple response grouping.",
   },
   3: {
     asks: "Which explanation is most likely, and which is most urgent?",
-    formats: "Drop-Down Rationale, Drag-and-Drop Rationale, Select N.",
+    formats: "Drop-down rationale, Drag-and-drop rationale, Select N.",
   },
   4: {
     asks: "What outcomes are wanted, and which interventions could reach them?",
-    formats: "Select all that apply, Drop-Down Table, Matrix Multiple Choice or Response.",
+    formats: "Select all that apply, Drop-down table, Matrix multiple choice or response.",
   },
   5: {
     asks: "Which interventions should the nurse carry out now?",
-    formats: "Drag-and-Drop Cloze, Matrix Multiple Choice, Select N.",
+    formats: "Drag-and-drop cloze, Matrix multiple choice, Select N.",
   },
   6: {
     asks: "Did the interventions work? Compare what happened with what was expected.",
     formats:
-      "Matrix Multiple Choice (improved / no change / declined), Highlight, select all that apply.",
+      "Matrix multiple choice (improved / no change / declined), Highlight, select all that apply.",
   },
 };
 
@@ -214,7 +214,7 @@ export const HELP_FIGURES = {
     baseline: "desktop-1280/dropdown-rationale.png",
     width: 1280,
     height: 1327,
-    alt: "A Drop-Down Rationale question: a postpartum client’s findings, then the sentence “The client is most likely experiencing __ as evidenced by __ and __” with three unanswered drop-downs.",
+    alt: "A Drop-down rationale question: a postpartum client’s findings, then the sentence “The client is most likely experiencing __ as evidenced by __ and __” with three unanswered drop-downs.",
   },
   bowtie: {
     src: "help/bowtie.png",
@@ -228,7 +228,7 @@ export const HELP_FIGURES = {
     baseline: "desktop-1280/case-study.png",
     width: 1280,
     height: 1327,
-    alt: "Step 1 of 6 of a case study, Recognize Cues: the patient record on the left and a Highlight Text question on the right.",
+    alt: "Step 1 of 6 of a case study, Recognize Cues: the patient record on the left and a Highlight text question on the right.",
   },
   trend: {
     src: "help/trend.png",

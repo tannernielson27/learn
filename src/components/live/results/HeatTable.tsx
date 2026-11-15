@@ -8,7 +8,7 @@ export interface HeatRow {
   cells: readonly ChoiceCount[];
 }
 
-/** "Answers by position", or "Ordered Response: answers by position" when a page has several. */
+/** "Answers by position", or "Ordered response: answers by position" when a page has several. */
 export const heatLabel = (label: string, name?: string): string =>
   name === undefined ? label : `${name}: ${label.charAt(0).toLowerCase()}${label.slice(1)}`;
 

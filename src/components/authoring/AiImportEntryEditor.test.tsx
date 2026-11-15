@@ -65,7 +65,7 @@ describe("AiImportEntryEditor", () => {
     const user = userEvent.setup({ delay: null });
     render(<AiImportEntryEditor {...props()} />);
     expect(screen.getByRole("heading", { level: 1, name: "Edit Question 2" })).toBeInTheDocument();
-    expect(screen.getByText("Matrix Multiple Choice")).toBeInTheDocument();
+    expect(screen.getByText("Matrix multiple choice")).toBeInTheDocument();
     expect(screen.getByTestId("entry-status")).toHaveTextContent("Needs an answer");
     expect(
       within(screen.getByRole("list", { name: "What to check" })).getByText(

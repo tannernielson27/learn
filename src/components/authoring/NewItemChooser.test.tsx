@@ -7,7 +7,7 @@ describe("NewItemChooser", () => {
   it("creates an item of the chosen type", async () => {
     const create = vi.fn<NewItemChooserProps["create"]>(async () => ({ error: "" }));
     render(<NewItemChooser create={create} />);
-    await userEvent.click(screen.getByRole("button", { name: /Matrix Multiple Choice/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Matrix multiple choice/ }));
     expect(create).toHaveBeenCalledWith("matrix_multiple_choice");
   });
 
@@ -17,14 +17,14 @@ describe("NewItemChooser", () => {
       .mockResolvedValueOnce({ error: "The item could not be created. Try again." })
       .mockResolvedValueOnce({ error: "" });
     render(<NewItemChooser create={create} />);
-    const choice = screen.getByRole("button", { name: "Multiple Choice" });
+    const choice = screen.getByRole("button", { name: "Multiple choice" });
     await userEvent.click(choice);
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "The item could not be created. Try again.",
     );
     // The alert renders as soon as the error is set; the transition ends a moment later.
     await waitFor(() => expect(choice).not.toHaveAttribute("aria-disabled", "true"));
-    await userEvent.click(screen.getByRole("button", { name: /^Multiple Choice/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Multiple choice/ }));
     expect(create).toHaveBeenCalledTimes(2);
   });
 
@@ -34,8 +34,8 @@ describe("NewItemChooser", () => {
       () => new Promise((resolve) => (finish = resolve)),
     );
     render(<NewItemChooser create={create} />);
-    await userEvent.click(screen.getByRole("button", { name: /^Multiple Choice/ }));
-    await userEvent.click(screen.getByRole("button", { name: /Matrix Multiple Choice/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Multiple choice/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Matrix multiple choice/ }));
     expect(create).toHaveBeenCalledTimes(1);
     finish({ error: "" });
   });

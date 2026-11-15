@@ -10,7 +10,7 @@ import { StepTypeChooser } from "./StepTypeChooser";
 export interface StepItemPanelProps {
   caseStudyId: string;
   position: CjmmStep;
-  /** The step question's format, as teachers know it ("Matrix Multiple Choice"). */
+  /** The step question's format, as teachers know it ("Matrix multiple choice"). */
   typeLabel: string;
   /** The question is published, so saving a draft of it would unpublish it (#413). */
   published?: boolean;

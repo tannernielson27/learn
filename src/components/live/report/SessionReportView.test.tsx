@@ -113,13 +113,13 @@ describe("SessionReportView", () => {
   it("shows each item column as its number, and names it by number, type and step", () => {
     renderView("students", report, GRID);
     const head = screen.getByRole("columnheader", {
-      name: "Q1 · Multiple Choice · Recognize Cues",
+      name: "Q1 · Multiple choice · Recognize Cues",
     });
     expect(head).toHaveTextContent(/^Q1$/);
     // The tooltip adds the question's own words (#563); the name stays number, type and step.
     expect(head).toHaveAttribute(
       "title",
-      "Q1 · Multiple Choice · Recognize Cues: Which of the client's vital signs should the nurse report to the provider first?",
+      "Q1 · Multiple choice · Recognize Cues: Which of the client's vital signs should the nurse report to the provider first?",
     );
     // The internal id is for the CSV and a tooltip, never the column name.
     expect(screen.queryByRole("columnheader", { name: /mc-vitals/ })).toBeNull();
@@ -221,10 +221,10 @@ describe("SessionReportView", () => {
   it("names each question by number and type, with its step in its own column and its id only in a tooltip", () => {
     renderView("items");
     const head = screen.getByRole("rowheader", {
-      name: "Q2 · Extended Multiple Response",
+      name: "Q2 · Extended multiple response",
     });
     expect(head).toHaveAttribute("title", "Question id: mr-assess");
-    expect(screen.getByRole("rowheader", { name: "Q4 · Drop-Down Cloze" })).toBeInTheDocument();
+    expect(screen.getByRole("rowheader", { name: "Q4 · Drop-down cloze" })).toBeInTheDocument();
   });
 
   it("shows the class at each tagged CJMM step", () => {
@@ -278,7 +278,7 @@ describe("SessionReportView for a quiz that played a case study in place (#469)"
       within(groupBody)
         .getAllByRole("rowheader")
         .map((cell) => cell.firstChild?.textContent),
-    ).toEqual(["Case study: Hip arthroplasty", "Q2 · Extended Multiple Response", "Q3 · Bowtie"]);
+    ).toEqual(["Case study: Hip arthroplasty", "Q2 · Extended multiple response", "Q3 · Bowtie"]);
   });
 
   it("heads the case study's columns with its title in the students view", () => {
@@ -287,7 +287,7 @@ describe("SessionReportView for a quiz that played a case study in place (#469)"
     expect(heading).toHaveAttribute("colspan", "2");
     expect(
       screen.getByRole("columnheader", {
-        name: "Q2 · Extended Multiple Response · Recognize Cues",
+        name: "Q2 · Extended multiple response · Recognize Cues",
       }),
     ).toBeInTheDocument();
   });

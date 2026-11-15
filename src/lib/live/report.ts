@@ -178,7 +178,7 @@ export const questionNumber = (item: Pick<ItemRow, "position">): string => `Q${i
 
 /**
  * What a teacher reads a question by in the report (#565): its place, its item type and its
- * clinical judgment step, as "Q3 · Extended Multiple Response · Recognize Cues". A part that is
+ * clinical judgment step, as "Q3 · Extended multiple response · Recognize Cues". A part that is
  * not known is left out. The question's own words go under it (`questionText`, #563), not in it.
  * The internal `ref` is not part of it either; it stays in the CSV and a tooltip.
  *
