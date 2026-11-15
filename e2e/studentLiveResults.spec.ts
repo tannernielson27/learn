@@ -94,6 +94,8 @@ test("a student sees their own live session results once it ends, and nobody els
 
   // The teacher starts it for the class.
   await page.goto(`/author/banks/${SAMPLES_BANK}`);
+  // #563: pacing and the class are in the Live session options panel beside Start.
+  await page.getByRole("button", { name: "Live session options", exact: true }).click();
   await page
     .getByRole("combobox", { name: "For a class", exact: true })
     .selectOption({ label: `NUR 310 ${stamp}` });
