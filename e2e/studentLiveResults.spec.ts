@@ -152,11 +152,11 @@ test("a student sees their own live session results once it ends, and nobody els
   );
   expect(written).toEqual({ points: 1, max_points: 1 });
 
-  // Still running: nothing listed, and its results page is not found.
+  // Still running: nothing listed (#563: an empty Live sessions section collapses away), and its
+  // results page is not found.
   await member.page.goto("/learn");
-  await expect(
-    liveSessions(member.page).getByRole("heading", { name: "No live sessions yet", exact: true }),
-  ).toBeVisible();
+  await expect(member.page.getByRole("heading", { level: 1, name: "Your classes" })).toBeVisible();
+  await expect(liveSessions(member.page)).toHaveCount(0);
   expect((await member.page.goto(`/learn/live/${sessionId}`))?.status()).toBe(404);
   // The bytes of that response, HTML and inline Flight, name no key, rationale or mark. The control
   // is the same route after the end, below.
@@ -198,9 +198,8 @@ test("a student sees their own live session results once it ends, and nobody els
   // Another member of the same class, signed in: not found, and nothing on their home.
   expect((await other.page.goto(`/learn/live/${sessionId}`))?.status()).toBe(404);
   await other.page.goto("/learn");
-  await expect(
-    liveSessions(other.page).getByRole("heading", { name: "No live sessions yet", exact: true }),
-  ).toBeVisible();
+  await expect(other.page.getByRole("heading", { level: 1, name: "Your classes" })).toBeVisible();
+  await expect(liveSessions(other.page)).toHaveCount(0);
 
   await member.page.context().close();
   await other.page.context().close();

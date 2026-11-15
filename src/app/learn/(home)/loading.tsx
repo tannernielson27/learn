@@ -1,3 +1,4 @@
+import { PAGE_TITLE_CLASSES } from "@/components/ui/PageHeader";
 import { Skeleton, SkeletonLine, SkeletonScreen } from "@/components/ui/Skeleton";
 
 const ROWS = 3;
@@ -23,7 +24,8 @@ function Heading() {
 }
 
 /**
- * The student home in outline while it loads: the real h1, then the pick-up card and the lists
+ * The student home in outline while it loads: the real h1, the join code box in its own place and
+ * size (#563), then the pick-up card and the lists
  * as quiet ruled shapes of their own size, in the page's own columns. The blocks hold still:
  * nothing loops (design doc §5).
  *
@@ -34,10 +36,15 @@ function Heading() {
 export default function StudentHomeLoading() {
   return (
     <SkeletonScreen label="Loading your classes">
-      <div className="mb-8 flex flex-col gap-2">
+      <div className="flex flex-col gap-2">
         {/* The page's own h1, word for word: static text, so the loading screen keeps its heading. */}
-        <h1 className="font-read text-display leading-tight text-ink-1">Your classes</h1>
-        <SkeletonLine still lineClassName="h-6 w-48" className="h-4 w-full" />
+        <h1 className={PAGE_TITLE_CLASSES}>Your classes</h1>
+        <SkeletonLine still lineClassName="mt-1 h-7 w-48" className="h-4 w-full" />
+      </div>
+      <div className="mt-6 mb-10 flex max-w-xl flex-col gap-3 rounded-md border border-line p-4 sm:p-5">
+        <SkeletonLine still lineClassName="h-6 w-64" className="h-4 w-full" />
+        <SkeletonLine still lineClassName="h-5 w-20" className="h-3.5 w-full" />
+        <Skeleton still className="h-(--button-height-md) w-full" />
       </div>
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:gap-12">
         <div className="flex min-w-0 flex-col gap-10">

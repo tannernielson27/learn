@@ -2,42 +2,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AttemptPlayer } from "@/components/assignments/AttemptPlayer";
+import { AssignmentPageHeader } from "@/components/assignments/AssignmentPageHeader";
 import { AttemptSummary } from "@/components/assignments/AttemptSummary";
-import { ClassTime } from "@/components/assignments/ClassTime";
 import { StartAttemptForm } from "@/components/assignments/StartAttemptForm";
 import { Notice } from "@/components/ui/Notice";
 import { PageWidth } from "@/components/ui/PageWidth";
-import { loadAttemptPage, type AssignmentHeader } from "@/lib/assignments/attemptPage";
+import { loadAttemptPage } from "@/lib/assignments/attemptPage";
 import { attemptPageStore } from "@/lib/assignments/attemptStore";
-import { attemptsLabel, studentResultsPath } from "@/lib/assignments/assignments";
+import { studentResultsPath } from "@/lib/assignments/assignments";
 import { isUuid } from "@/lib/authoring/ids";
-import { STUDENT_HOME } from "@/lib/classes/classes";
 import { zoneOfClass } from "@/lib/classes/timeZone";
 import { requireStudent } from "@/lib/classes/viewer";
 import { myClasses } from "@/lib/supabase/classInvites";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { startAssignmentAttempt, submitAssignmentAttempt } from "./actions";
-import { BackLink } from "@/components/ui/BackLink";
 
 export const metadata: Metadata = { title: "Assignment" };
-
-function Header({ assignment, timeZone }: { assignment: AssignmentHeader; timeZone: string }) {
-  return (
-    <>
-      <p className="mb-2">
-        <BackLink href={STUDENT_HOME}>Your classes</BackLink>
-      </p>
-      <p className="eyebrow mb-2">Assignment</p>
-      <h1 className="font-read text-display leading-tight break-words text-ink-1">
-        {assignment.title}
-      </h1>
-      <p className="mt-2 text-sm text-ink-2">
-        Closes <ClassTime iso={assignment.closesAt} timeZone={timeZone} /> ·{" "}
-        {attemptsLabel(assignment.maxAttempts)}
-      </p>
-    </>
-  );
-}
 
 /**
  * One assignment, as its student takes it (#208). Everything is decided on the server by
@@ -86,7 +66,7 @@ export default async function StudentAssignmentPage({
     // PracticeCase: the patient record and the question side by side need the wide width.
     return (
       <PageWidth width="wide">
-        <Header assignment={view.assignment} timeZone={timeZone} />
+        <AssignmentPageHeader assignment={view.assignment} timeZone={timeZone} />
         <div className="mt-6">{player}</div>
       </PageWidth>
     );
@@ -96,7 +76,7 @@ export default async function StudentAssignmentPage({
   const submitted = latest?.submittedAt != null;
   return (
     <>
-      <Header assignment={view.assignment} timeZone={timeZone} />
+      <AssignmentPageHeader assignment={view.assignment} timeZone={timeZone} />
       {view.closed ? (
         <>
           <p role="status" className="measure mt-6 text-ink-1">

@@ -1,14 +1,18 @@
 import type { StudentClass } from "@/lib/supabase/classInvites";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { spansWorkspaces } from "@/lib/classes/studentClasses";
 
 export interface StudentClassListProps {
   classes: readonly StudentClass[];
 }
 
 /**
- * A student's classes, by name, each with the workspace it belongs to: one account can be in
- * classes of more than one teacher's workspace, and two of them may share a name. The workspace
- * is left off when it is not known (a deploy running ahead of its migration). Their open
+ * A student's classes, by name. One account can be in classes of more than one teacher's
+ * workspace, and two of them may share a name, so a student whose classes span more than one
+ * workspace reads each class's workspace beside it, under the same rule as the rows below
+ * (`spansWorkspaces`). A student in one workspace reads the class names alone: the workspace's
+ * name beside every class said nothing to them and read as a glitch (#563). The workspace is also
+ * left off when it is not known (a deploy running ahead of its migration). Their open
  * assignments are listed separately on /learn. On the home it is the line under the heading.
  */
 export function StudentClassList({ classes }: StudentClassListProps) {
@@ -17,6 +21,7 @@ export function StudentClassList({ classes }: StudentClassListProps) {
     return <EmptyState level={2} heading="You are not in a class yet" />;
   }
 
+  const withWorkspace = spansWorkspaces(classes);
   // The line under the home's h1 (StudentHome mockup): each class on its own row at 375px, side by
   // side from there, its workspace beside it in the quieter ink.
   return (
@@ -27,7 +32,7 @@ export function StudentClassList({ classes }: StudentClassListProps) {
       {classes.map((entry) => (
         <li key={entry.id} className="flex flex-wrap items-baseline gap-x-2 break-words">
           <span className="font-medium text-ink-1">{entry.name}</span>
-          {entry.workspaceName ? (
+          {withWorkspace && entry.workspaceName ? (
             <span className="text-sm text-ink-2">{entry.workspaceName}</span>
           ) : null}
         </li>

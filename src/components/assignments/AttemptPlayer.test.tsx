@@ -9,7 +9,7 @@ import { recordAtStep, recordsThrough } from "@/lib/ngn/chartReveal";
 import { stagedEhr } from "@/lib/ngn/fixtures/chart-reveal";
 import { ehrRecordSchema, itemSchema, type AnyResponse, type Item } from "@/lib/ngn/schemas";
 import { toKeylessItem } from "@/lib/ngn/submit";
-import { AttemptPlayer } from "./AttemptPlayer";
+import { AttemptPlayer, unopenedNote } from "./AttemptPlayer";
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
@@ -216,5 +216,62 @@ describe("AttemptPlayer, a whole quiz with a case study in place (#470)", () => 
     expect(chart()).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Previous" }));
     expect(chart()).toBeNull();
+  });
+});
+
+describe("AttemptPlayer's frame (#563)", () => {
+  const submitButton = () => screen.getByRole("button", { name: "Submit assignment" });
+
+  it("keeps Submit secondary until every question is answered, then makes it primary", async () => {
+    const answer = { type: "multiple_choice", optionId: "opt_a" } as const;
+    const view = setup(payload(answer));
+    await renderersLoaded();
+    expect(submitButton()).toHaveClass("bg-surface-1");
+    expect(submitButton()).not.toHaveClass("bg-accent");
+    // Usable at any time all the same: it asks first, saying what is unanswered.
+    await view.user.click(submitButton());
+    expect(screen.getByText(/1 of 2 answered\. You cannot change answers/)).toBeInTheDocument();
+    await view.user.click(screen.getByRole("button", { name: "Keep working" }));
+
+    await view.user.click(screen.getByRole("button", { name: "Next" }));
+    const second = SECOND as Extract<Item, { type: "multiple_choice" }>;
+    const label = second.content.options[0]?.label ?? "";
+    await view.user.click(screen.getByRole("radio", { name: new RegExp(label.slice(0, 20)) }));
+    expect(screen.getByTestId("answered-count")).toHaveTextContent("2 of 2 answered");
+    expect(submitButton()).toHaveClass("bg-accent");
+  });
+
+  it("says why the count is more than the buttons when later steps are not sent yet", async () => {
+    render(
+      <AttemptPlayer
+        attemptId={ATTEMPT}
+        attemptNumber={1}
+        items={payload()}
+        total={8}
+        submit={vi.fn(async () => undefined)}
+        save={async () => ({ ok: true })}
+      />,
+    );
+    await renderersLoaded();
+    expect(screen.getByTestId("answered-count")).toHaveTextContent("0 of 8 answered");
+    expect(
+      within(screen.getByRole("navigation", { name: "Questions" })).getAllByRole("button"),
+    ).toHaveLength(2);
+    expect(screen.getByTestId("unopened-note")).toHaveTextContent(
+      "Questions 3 to 8 open as you answer the case study.",
+    );
+  });
+
+  it("has no such line when every question is on the list", async () => {
+    setup();
+    await renderersLoaded();
+    expect(screen.queryByTestId("unopened-note")).toBeNull();
+    expect(screen.getByText("Attempt 1")).not.toHaveClass("eyebrow");
+  });
+
+  it("words the line for one question and for several", () => {
+    expect(unopenedNote(2, 2)).toBeNull();
+    expect(unopenedNote(20, 21)).toBe("Question 21 opens when you answer question 20.");
+    expect(unopenedNote(16, 21)).toBe("Questions 17 to 21 open as you answer the case study.");
   });
 });

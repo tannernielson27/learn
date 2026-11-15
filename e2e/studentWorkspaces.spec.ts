@@ -8,9 +8,9 @@ import { skipWelcomes } from "./welcome";
 // The workspace beside a row on the student home (#398, and practice rows since
 // 20261011010000_practice_workspace_name.sql). A student in classes of one workspace reads no
 // workspace on an open-assignment row, a history row or a practice row; once the same account is
-// in a class of a second workspace, each of those rows names its workspace. The class list names
-// the workspace either way, which is this test's control. Needs the local Supabase stack; CI runs
-// it in the `auth-e2e` job.
+// in a class of a second workspace, each of those rows names its workspace. The class list follows
+// the same rule (#563); its two names in step 2 are this test's control. Needs the local Supabase
+// stack; CI runs it in the `auth-e2e` job.
 //
 // An assignment cannot be created already closed, and moving its close into the past is refused
 // by the guard trigger, so the history row waits out a short real window, as
@@ -149,9 +149,11 @@ test("a student in two workspaces reads the workspace on assignment, history and
   await expect(historyRow).toHaveCount(1);
   await expect(samplesRow).toHaveCount(1);
 
-  // 1. One workspace. Control: its name is on the page, beside the class in the class list.
+  // 1. One workspace. #563: the class list names no workspace either; the control that the name
+  // is there to show is step 2, where both workspaces' names appear.
   await expect(classes(page).getByRole("listitem")).toHaveCount(1);
-  await expect(classes(page).getByText(firstWorkspace, { exact: true })).toBeVisible();
+  await expect(classes(page)).toContainText(firstClassName);
+  await expect(classes(page)).not.toContainText(firstWorkspace);
   // The rows name the class and no workspace.
   await expect(openRow).toContainText(firstClassName);
   await expect(historyRow.getByText(firstClassName, { exact: true })).toBeVisible();
@@ -167,6 +169,7 @@ test("a student in two workspaces reads the workspace on assignment, history and
   await page.getByRole("textbox", { name: "Class code", exact: true }).fill(secondClass.code);
   await page.getByRole("button", { name: "Join the class", exact: true }).click();
   await expect(classes(page).getByRole("listitem")).toHaveCount(2);
+  await expect(classes(page).getByText(firstWorkspace, { exact: true })).toBeVisible();
   await expect(classes(page).getByText(secondWorkspace, { exact: true })).toBeVisible();
 
   // Now each row says which workspace it is from: beside the class on assignment and history

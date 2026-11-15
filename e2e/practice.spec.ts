@@ -261,10 +261,13 @@ test("a student practises a shared bank on a phone, sees each key as they answer
   });
   expect(stoppedAnswer.status()).toBe(404);
   expect(await stoppedAnswer.text()).not.toContain(MC_RATIONALE);
+  // #563: with nothing shared, the Practice section collapses away.
   await student.goto("/learn");
   await expect(
-    student.getByRole("heading", { name: "Nothing shared for practice yet", exact: true }),
+    student.getByRole("heading", { level: 1, name: "Your classes", exact: true }),
   ).toBeVisible();
+  await expect(student.getByRole("list", { name: "Practice quizzes", exact: true })).toHaveCount(0);
+  await expect(student.getByRole("region", { name: "Practice", exact: true })).toHaveCount(0);
 
   await phone.context.close();
 });

@@ -123,12 +123,16 @@ test("a fresh instructor and their first student see what to do next on every em
   await expect(student.getByRole("list", { name: "Your classes", exact: true })).toContainText(
     className,
   );
-  await expectEmptyState(student, 3, "No open assignments");
-  await expectEmptyState(student, 3, "Nothing shared for practice yet");
-  await expectEmptyState(student, 3, "No closed assignments yet");
-  await expectEmptyState(student, 3, "No answers yet");
-  await expectEmptyState(student, 3, "No live sessions yet");
-  await expect(student.locator("[data-empty-state]")).toHaveCount(5);
+  // #563: one first-use state for the whole home in place of five empty lists, which collapse
+  // away, and the join code form first, in the first screen.
+  await expectEmptyState(student, 2, "Nothing here yet");
+  await expect(student.locator("[data-empty-state]")).toHaveCount(1);
+  for (const gone of ["Assignments", "Results", "Live sessions", "Practice"]) {
+    await expect(student.getByRole("region", { name: gone, exact: true })).toHaveCount(0);
+  }
+  await expect(
+    student.getByRole("form", { name: "Join a live session", exact: true }),
+  ).toBeVisible();
   await expectNoAxeViolations(student);
   await shoot(student, project, "student-home-empty");
 

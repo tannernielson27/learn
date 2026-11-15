@@ -60,6 +60,12 @@ const GALLERY_PATHS = [
   // #563: the teacher's reports, from a fixture of question text and points with no key in it.
   "/gallery/reports",
   "/gallery/reports?state=session",
+  // #563: the student's home and the frame of an assignment, from fixtures; the assignment's items
+  // are keyless, as a student's page is, and 404 on production all the same.
+  "/gallery/student",
+  "/gallery/student?state=home",
+  "/gallery/student?state=workspaces",
+  "/gallery/student?state=assignment",
   "/gallery",
 ];
 

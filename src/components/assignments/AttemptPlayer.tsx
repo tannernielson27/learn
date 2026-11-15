@@ -63,6 +63,20 @@ const noItemSubmit = (): Promise<ScoreReveal> =>
   Promise.reject(new Error("An assignment's items are submitted together."));
 
 /**
+ * Why the count says more questions than there are buttons (#563). A case study's later steps, and
+ * anything after them in the set, are sent only once the step before is answered (#335), so the
+ * list holds the questions reached so far while the count is of the whole set. This line says so
+ * under the list, in the words a student reads, rather than leaving 16 buttons under "of 21".
+ */
+export function unopenedNote(reached: number, total: number): string | null {
+  if (reached >= total) return null;
+  const first = reached + 1;
+  return first === total
+    ? `Question ${total} opens when you answer question ${reached}.`
+    : `Questions ${first} to ${total} open as you answer the case study.`;
+}
+
+/**
  * One item of the set, drawn again only when its own props change (#35): a save's status line
  * changes the page around it, not the item. `initialResponse` is read once, at mount, and is the
  * same object until the student changes the answer, which redraws the item anyway.
@@ -204,6 +218,7 @@ export function AttemptPlayer({
   const at = Math.min(index, items.length - 1);
   const entry = items[at] as AttemptItemPayload;
   const answered = items.filter((each) => answers[each.itemId] !== undefined).length;
+  const unopened = unopenedNote(items.length, total);
   const statusText =
     status.status === "stopped"
       ? ATTEMPT_REFUSALS[status.refusal ?? "failed"]
@@ -233,7 +248,8 @@ export function AttemptPlayer({
 
   const page = (
     <div className={records === undefined ? "mx-auto max-w-190" : undefined}>
-      <p className="eyebrow">{`Attempt ${attemptNumber}`}</p>
+      {/* A small label in sentence case, not the public site's eyebrow (docs/04 §11, 2026-11-14). */}
+      <p className="text-sm font-semibold text-ink-2">{`Attempt ${attemptNumber}`}</p>
       <div className="mt-2 flex items-center gap-4">
         <p
           data-testid="answered-count"
@@ -258,6 +274,11 @@ export function AttemptPlayer({
         current={at}
         onSelect={setIndex}
       />
+      {unopened ? (
+        <p data-testid="unopened-note" className="mt-3 text-sm text-ink-2">
+          {unopened}
+        </p>
+      ) : null}
 
       <div className="mt-8">
         <AttemptItem
@@ -326,8 +347,10 @@ export function AttemptPlayer({
               <p role="status" data-testid="save-status" className="min-h-5 text-sm text-ink-2">
                 {statusText}
               </p>
+              {/* Quiet until every question is answered, then the page's main action (#563). It
+                  works at any time: the confirm says how many are still unanswered. */}
               <Button
-                variant="primary"
+                variant={answered === total ? "primary" : "secondary"}
                 size="lg"
                 className="short:px-2 short:whitespace-normal"
                 disabled={status.status === "stopped"}
