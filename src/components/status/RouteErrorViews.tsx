@@ -4,8 +4,7 @@ import type { ReactNode } from "react";
 import { ReadingWidth } from "@/components/authoring/PageWidth";
 import { WayBack } from "@/components/recovery/WayBack";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { StatusFrame } from "./StatusFrame";
-import { StatusLinks } from "./StatusLinks";
+import { type RouteErrorViewProps, referenceLine } from "./RootErrorViews";
 
 /**
  * What each route's `error.tsx` draws (#164, #267, #563), side by side so the copy reads as one
@@ -14,26 +13,6 @@ import { StatusLinks } from "./StatusLinks";
  * hand these only `retry` and the digest, never the error, so neither its message nor its stack
  * can reach the page. `/gallery/states` draws the same views with no error behind them.
  */
-export interface RouteErrorViewProps {
-  /** Next's `retry`: asks the server for the segment again, then re-renders it. */
-  retry: () => void;
-  /** The error's digest, shown as a reference; absent for an error thrown in the browser. */
-  digest?: string;
-  /**
-   * False draws a page that would be its own main as a `div`, for the gallery, whose layout holds
-   * the one main. Views drawn inside a layout's `AppShell` have no main of their own.
-   */
-  landmark?: boolean;
-}
-
-/** The line under a headline that has nothing else to say: the reference, or what to do. */
-function referenceLine(digest: string | undefined): string {
-  return digest
-    ? "Still broken? Share the reference below."
-    : // Without a reference, the line that says what to do keeps the alert from standing empty.
-      "Try again to load it.";
-}
-
 /** A live page outside any `AppShell`: the host console, its report, the student room. */
 function LiveFrame({
   width,
@@ -173,42 +152,5 @@ export function LearnErrorView({ retry, digest }: RouteErrorViewProps) {
   );
 }
 
-/**
- * Any page with no closer boundary: the public pages, sign-in, join, invites. No `AppShell` frames
- * these, so the status frame brings the wordmark, and the ways out are home and sign in.
- */
-export function RootErrorView({ retry, digest, landmark }: RouteErrorViewProps) {
-  return (
-    <StatusFrame landmark={landmark}>
-      <ErrorState
-        kind="load"
-        headline="This page could not be shown."
-        detail={referenceLine(digest)}
-        onRetry={retry}
-        digest={digest}
-      >
-        <StatusLinks />
-      </ErrorState>
-    </StatusFrame>
-  );
-}
-
-/**
- * The root layout itself failing (`global-error.tsx`). Written for a student as much as a teacher:
- * on a live session's page Try again is the same rejoin the room's own boundary does.
- */
-export function GlobalErrorView({ retry, digest, landmark }: RouteErrorViewProps) {
-  return (
-    <StatusFrame landmark={landmark}>
-      <ErrorState
-        kind="load"
-        headline="This page could not be shown."
-        detail="If you were in a live session, your place is kept."
-        onRetry={retry}
-        digest={digest}
-      >
-        <StatusLinks />
-      </ErrorState>
-    </StatusFrame>
-  );
-}
+// The root views live apart so `global-error.tsx` imports only the frame, the links and ErrorState.
+export { GlobalErrorView, RootErrorView, type RouteErrorViewProps } from "./RootErrorViews";

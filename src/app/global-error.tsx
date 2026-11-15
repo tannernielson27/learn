@@ -2,7 +2,7 @@
 
 import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
-import { GlobalErrorView } from "@/components/status/RouteErrorViews";
+import { GlobalErrorView } from "@/components/status/RootErrorViews";
 import { errorDigest } from "@/components/status/errorDigest";
 import "./globals.css";
 
