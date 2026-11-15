@@ -56,6 +56,9 @@ test("a refused press reads as one sentence, announced, and the button comes bac
   const demo = page.getByTestId("billing-demo");
   await expect(demo).toHaveAttribute("data-hydrated", "true");
   await demo.getByRole("button", { name: "Start your free trial" }).click();
-  await expect(demo.getByRole("alert")).toHaveText("Not in the gallery.");
+  // The section's own alert (no subscription) comes first; the refusal is the one under it.
+  await expect(demo.getByRole("alert").filter({ hasText: "Not in the gallery." })).toHaveText(
+    "Not in the gallery.",
+  );
   await expect(demo.getByRole("button", { name: "Start your free trial" })).toBeEnabled();
 });

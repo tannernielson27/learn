@@ -39,4 +39,18 @@ describe("BillingBanner", () => {
     // No emoji: every character is plain text.
     expect(region().textContent ?? "").not.toMatch(/\p{Extended_Pictographic}/u);
   });
+
+  it.each([
+    ["payment-failed", "alert"],
+    ["payment-failed-colleague", "alert"],
+    ["access-ended", "alert"],
+    ["access-ended-colleague", "alert"],
+    ["trial-ending", "status"],
+    ["subscription-ending", "status"],
+  ] as const)("%s takes the %s look, and is never a live region", (name, tone) => {
+    render(<BillingBanner banner={bannerFixture(name)} />);
+    expect(region()).toHaveAttribute("data-tone", tone);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByRole("status")).toBeNull();
+  });
 });

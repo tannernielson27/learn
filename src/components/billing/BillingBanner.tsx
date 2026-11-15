@@ -1,8 +1,18 @@
-import { CreditCard } from "lucide-react";
+import { CircleAlert, CreditCard } from "lucide-react";
 import { GuardedLink } from "@/components/authoring/LeaveGuard";
 import { Icon } from "@/components/ui/Icon";
 import { textLinkClasses } from "@/components/ui/TextLink";
-import type { BillingBanner as BillingBannerData } from "@/lib/billing/banner";
+import type { BillingBanner as BillingBannerData, BillingBannerKind } from "@/lib/billing/banner";
+
+/**
+ * A failed payment and ended free access stop work (or will, once billing is enforced): they take
+ * the alert's look, the strong rule down the leading edge and the alert mark, as `Notice role="alert"`
+ * does (#563). An ending trial or subscription is a heads-up and stays calm.
+ */
+export const BANNER_ALERT_KINDS: ReadonlySet<BillingBannerKind> = new Set([
+  "payment_failed",
+  "access_ended",
+]);
 
 /**
  * The billing banner across the top of every author page (#522, ADR 0016): one sentence, and
@@ -17,14 +27,18 @@ import type { BillingBanner as BillingBannerData } from "@/lib/billing/banner";
  */
 export function BillingBanner({ banner }: { banner: BillingBannerData | null }) {
   if (!banner) return null;
+  const alert = BANNER_ALERT_KINDS.has(banner.kind);
   return (
     <section
       aria-label="Billing notice"
       data-billing-banner={banner.kind}
-      className="border-b border-line bg-notice-soft px-4 py-3 text-notice md:px-8"
+      data-tone={alert ? "alert" : "status"}
+      className={`border-b border-line bg-notice-soft py-3 pr-4 text-notice md:pr-8 ${
+        alert ? "border-l-4 border-l-rule-strong pl-3 md:pl-7" : "pl-4 md:pl-8"
+      }`}
     >
       <div className="flex items-start gap-3">
-        <Icon icon={CreditCard} className="mt-0.5 shrink-0" />
+        <Icon icon={alert ? CircleAlert : CreditCard} className="mt-0.5 shrink-0" />
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1">
           <p className="text-base leading-snug">
             <span className="font-semibold">{banner.message}</span>

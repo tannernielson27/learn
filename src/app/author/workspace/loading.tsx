@@ -17,10 +17,11 @@ export default function WorkspaceLoading() {
       <SkeletonScreen label="Loading the workspace">
         <SkeletonLine lineClassName="mb-1 h-5" className="h-3.5 w-24" />
         {/* The page's h1 is the workspace's name, not known yet. A real h1 named for the page, in
-          the name's line box, so the screen keeps its one heading and nothing shifts. */}
-        <h1 className="mb-8 flex h-[2.7rem] items-center">
+          the title's line box (`PageHeader`'s `.display-section`), so the screen keeps its one
+          heading and nothing shifts. */}
+        <h1 className="mb-8 flex h-[1.1em] items-center text-section">
           <span className="sr-only">Workspace</span>
-          <Skeleton className="h-8 w-64 max-w-full" />
+          <Skeleton className="h-[0.75em] w-64 max-w-full" />
         </h1>
 
         <div className="mb-10">

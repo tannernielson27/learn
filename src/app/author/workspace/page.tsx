@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ReadingWidth } from "@/components/authoring/PageWidth";
 import { Notice } from "@/components/ui/Notice";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { BillingSection } from "@/components/workspace/BillingSection";
 import { InviteColleagueForm } from "@/components/workspace/InviteColleagueForm";
 import { MemberList } from "@/components/workspace/MemberList";
@@ -59,11 +60,10 @@ export default async function WorkspacePage({ searchParams }: PageProps<"/author
   return (
     <ReadingWidth>
       {/* The way back to the library is the layout's navigation (#412). */}
-      <p className="mb-1 font-mono text-sm tracking-wide text-ink-2 uppercase">Workspace</p>
+      {/* A small label in sentence case: it says what the name below is (docs/04 §11). */}
+      <p className="mb-1 text-sm font-medium text-ink-2">Workspace</p>
       {/* The name is a teacher's own words: text, never markup. */}
-      <h1 className="mb-8 font-read text-3xl break-words text-ink-1">
-        {workspace ? workspace.name : "Your workspace"}
-      </h1>
+      <PageHeader className="mb-8" title={workspace ? workspace.name : "Your workspace"} />
       {workspace ? null : (
         <Notice role="alert" className="mb-8">
           The workspace could not be loaded. Reload the page to try again.

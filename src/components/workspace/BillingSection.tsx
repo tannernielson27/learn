@@ -5,12 +5,8 @@ import { FormError } from "@/components/auth/FormError";
 import { Button } from "@/components/ui/Button";
 import { Notice } from "@/components/ui/Notice";
 import type { WorkspaceAccess } from "@/lib/billing/access";
-import {
-  BILLING_ACTION_LABELS,
-  billingConfirmation,
-  billingView,
-  type BillingAction,
-} from "@/lib/billing/billingCopy";
+import { BILLING_ACTION_LABELS, billingConfirmation, billingView } from "@/lib/billing/billingCopy";
+import { billingActionVariant, billingTone } from "./billingPresentation";
 
 export type BillingActionState = { status: "idle" } | { status: "error"; error: string };
 
@@ -40,6 +36,11 @@ const INITIAL: BillingActionState = { status: "idle" };
  * sentence or two, and at most one button, for the person who started the workspace only. The
  * buttons are a courtesy: the Server Functions check who is asking again. Free access says only
  * that; it never names where it came from.
+ *
+ * The state is one `Notice` (#563): a status for free access, a trial or a subscription, and an
+ * alert for a failed payment or a workspace without access (`billingTone`). Its first sentence is
+ * the title, and the one button sits under the words, as the main action where acting is the
+ * point (`billingActionVariant`). After a confirmed Checkout the thanks lead the same notice.
  */
 export function BillingSection({
   access,
@@ -51,48 +52,38 @@ export function BillingSection({
 }: BillingSectionProps) {
   const view = billingView(access, { configured, trialAvailable });
   const thanks = confirmed ? billingConfirmation(access) : null;
+  const [title, ...body] = thanks ? [thanks, ...view.lines] : view.lines;
+  const [state, submit, pending] = useActionState(
+    view.action === "portal" ? portalAction : checkoutAction,
+    INITIAL,
+  );
 
   return (
-    <section aria-labelledby="billing-heading">
-      <h2 id="billing-heading" className="mb-3 text-lg font-medium text-ink-1">
+    <section aria-labelledby="billing-heading" className="flex max-w-prose flex-col gap-4">
+      <h2 id="billing-heading" className="text-lg font-medium text-ink-1">
         Billing
       </h2>
-      {thanks ? <Notice className="mb-4">{thanks}</Notice> : null}
-      <div className="flex max-w-prose flex-col gap-1 text-ink-1">
-        {view.lines.map((line) => (
-          <p key={line}>{line}</p>
-        ))}
-      </div>
-      {view.action ? (
-        <BillingButton
-          action={view.action}
-          formAction={view.action === "portal" ? portalAction : checkoutAction}
-        />
-      ) : null}
-    </section>
-  );
-}
-
-function BillingButton({
-  action,
-  formAction,
-}: {
-  action: BillingAction;
-  formAction: BillingFormAction;
-}) {
-  const [state, submit, pending] = useActionState(formAction, INITIAL);
-  return (
-    <form action={submit} className="mt-4 flex flex-col gap-3 sm:max-w-md">
+      <Notice
+        role={billingTone(access)}
+        title={title}
+        action={
+          view.action ? (
+            <form action={submit}>
+              {/* Busy, not disabled (docs/04 §11): the label and the width stay while Stripe opens. */}
+              <Button
+                type="submit"
+                variant={billingActionVariant(access, view.action)}
+                busy={pending}
+              >
+                {BILLING_ACTION_LABELS[view.action]}
+              </Button>
+            </form>
+          ) : null
+        }
+      >
+        {body.length > 0 ? body.map((line) => <p key={line}>{line}</p>) : null}
+      </Notice>
       {state.status === "error" ? <FormError>{state.error}</FormError> : null}
-      <div>
-        <Button
-          type="submit"
-          variant={action === "portal" ? "secondary" : "primary"}
-          disabled={pending}
-        >
-          {pending ? "Opening…" : BILLING_ACTION_LABELS[action]}
-        </Button>
-      </div>
-    </form>
+    </section>
   );
 }
