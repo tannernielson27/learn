@@ -15,8 +15,16 @@ export function wordmarkClasses(size: WordmarkSize = "md"): string {
 export function WordmarkMark() {
   return (
     <>
-      <span className="font-normal">Lea</span>
-      <span className="ml-0.5 rounded-sm border border-rule-strong px-1 pt-0.5 pb-1 font-semibold">
+      {/* The link is a flex box, so each part is its own item and a browser names it "Lea RN".
+          One name for the ear; the drawn parts are for the eye (#576). */}
+      <span className="sr-only">LeaRN</span>
+      <span aria-hidden="true" className="font-normal">
+        Lea
+      </span>
+      <span
+        aria-hidden="true"
+        className="ml-0.5 rounded-sm border border-rule-strong px-1 pt-0.5 pb-1 font-semibold"
+      >
         RN
       </span>
     </>

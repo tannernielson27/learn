@@ -12,6 +12,8 @@ test("the app shell: a one-row phone bar, the nav as one scrolling row, identity
 
   const phone = page.getByTestId("shell-teacher-phone");
   const bar = phone.locator("[data-app-bar]");
+  // A real browser names the wordmark's flex parts apart ("Lea RN"); it must read as one word.
+  await expect(bar.getByRole("link", { name: "LeaRN", exact: true })).toBeVisible();
   // The wordmark and the account button on one 64px row, the nav on one 44px row: 112px at most.
   expect((await bar.boundingBox())?.height ?? 0).toBeLessThanOrEqual(112);
   const nav = phone.getByRole("navigation", { name: "Main, teacher on a phone" });
