@@ -8,7 +8,11 @@ describe("Wordmark (#563)", () => {
     render(<Wordmark />);
     const link = screen.getByRole("link", { name: "LeaRN" });
     expect(link).toHaveAttribute("href", "/");
-    expect(link.textContent).toBe("LeaRN");
+    // One spoken name, whatever the layout does to the drawn parts (a flex box spaces them, #576).
+    expect(link.querySelector(".sr-only")?.textContent).toBe("LeaRN");
+    for (const part of link.querySelectorAll("span:not(.sr-only)")) {
+      expect(part).toHaveAttribute("aria-hidden", "true");
+    }
   });
 
   it("sets RN apart, for the registered nurse in the name", () => {

@@ -8,6 +8,7 @@ import type { AssignmentReport } from "@/lib/assignments/report";
 import { classPath } from "@/lib/classes/classes";
 import { REPORT_VIEWS, type ReportView } from "@/lib/live/reportFormat";
 import { ProgressTable, ScoreTable } from "./AssignmentStudentTable";
+import { BackLink } from "@/components/ui/BackLink";
 
 const VIEW_LABELS: Record<ReportView, string> = {
   students: "Students",
@@ -45,13 +46,8 @@ export function AssignmentReportView({
   const { counts } = report;
   return (
     <>
-      <p className="mb-2 text-sm text-ink-2">
-        <Link
-          href={classPath(classId)}
-          className="tap-target inline-flex items-center hover:text-ink-1"
-        >
-          Back to class
-        </Link>
+      <p className="mb-2">
+        <BackLink href={classPath(classId)}>Back to class</BackLink>
       </p>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">

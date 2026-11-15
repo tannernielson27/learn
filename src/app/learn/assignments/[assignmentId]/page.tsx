@@ -17,16 +17,15 @@ import { requireStudent } from "@/lib/classes/viewer";
 import { myClasses } from "@/lib/supabase/classInvites";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { startAssignmentAttempt, submitAssignmentAttempt } from "./actions";
+import { BackLink } from "@/components/ui/BackLink";
 
 export const metadata: Metadata = { title: "Assignment" };
 
 function Header({ assignment, timeZone }: { assignment: AssignmentHeader; timeZone: string }) {
   return (
     <>
-      <p className="mb-2 text-sm text-ink-2">
-        <Link href={STUDENT_HOME} className="tap-target inline-flex items-center hover:text-ink-1">
-          Your classes
-        </Link>
+      <p className="mb-2">
+        <BackLink href={STUDENT_HOME}>Your classes</BackLink>
       </p>
       <p className="eyebrow mb-2">Assignment</p>
       <h1 className="font-read text-display leading-tight break-words text-ink-1">

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { backLinkClasses } from "@/components/ui/BackLink";
 import { describe, expect, it, vi } from "vitest";
 import { AssignPanel, type AssignPanelProps } from "./AssignPanel";
 
@@ -49,5 +50,15 @@ describe("AssignPanel practice warning (#240)", () => {
     expect(screen.getByRole("note")).toHaveTextContent(
       "Could not check whether students can see these answers in practice.",
     );
+  });
+});
+
+describe("AssignPanel's way back (#563)", () => {
+  it("is the one back link, with its words and its place", () => {
+    renderPanel();
+    const back = screen.getByRole("link", { name: "Back to quiz" });
+    expect(back).toHaveAttribute("href", "/author/banks/b1");
+    expect(back).toHaveClass(...backLinkClasses().split(" "));
+    expect(back.querySelector("svg")).not.toBeNull();
   });
 });

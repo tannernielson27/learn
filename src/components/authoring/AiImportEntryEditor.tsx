@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { textLinkClasses } from "@/components/ui/TextLink";
 import {
   STATUS_LABELS,
   type ReviewReason,
@@ -16,6 +15,7 @@ import type { SaveResult } from "./EditorShell";
 import { ItemEditorHostContext, type ItemEditorHost } from "./ItemEditorHost";
 import { ItemEditorSwitch, type ItemEditorLoaderProps } from "./ItemEditorSwitch";
 import { GuardedLink, useLeaveGuard, type LeaveGuard } from "./LeaveGuard";
+import { BackLinkMark, backLinkClasses } from "@/components/ui/BackLink";
 
 /** What a save is told: the entry, the version the page last had, and the form as it stands. */
 export interface EntryFixInput {
@@ -110,8 +110,9 @@ export function AiImportEntryEditor({
   return (
     <>
       <p className="mb-2">
-        <GuardedLink href={reviewHref} className={textLinkClasses({ size: "sm" })}>
-          Back to the review
+        <GuardedLink href={reviewHref} className={backLinkClasses()}>
+          <BackLinkMark />
+          <span>Back to the review</span>
         </GuardedLink>
       </p>
       <p className="eyebrow mb-1">{ITEM_TYPE_LABELS[editor.type]}</p>

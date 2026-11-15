@@ -16,12 +16,12 @@ import { Badge } from "@/components/ui/Badge";
 import { Button, PRESS_CLASSES } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Notice as SystemNotice } from "@/components/ui/Notice";
-import { textLinkClasses } from "@/components/ui/TextLink";
 import type { CaseStudy } from "@/lib/ngn/schemas";
 import { scoreInProcess } from "@/lib/ngn/submit";
 import { CJMM_STEP_LABELS, type CjmmStep } from "@/lib/ngn/types";
 import { ItemEditorHostContext, type ItemEditorHost } from "./ItemEditorHost";
 import { useLeaveGuard, type LeaveGuard } from "./LeaveGuard";
+import { BackLinkMark, backLinkClasses } from "@/components/ui/BackLink";
 
 export type StepStatus = "empty" | "draft" | "attention" | "ready";
 
@@ -236,8 +236,9 @@ export function CaseStudyBuilder({
   const askId = `${ids}-ask`;
   const backLink = (
     <p className="mb-2">
-      <a href={back.href} onClick={leave} className={textLinkClasses({ size: "sm" })}>
-        {back.label}
+      <a href={back.href} onClick={leave} className={backLinkClasses()}>
+        <BackLinkMark />
+        <span>{back.label}</span>
       </a>
     </p>
   );

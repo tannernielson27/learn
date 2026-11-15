@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ClassTime } from "@/components/assignments/ClassTime";
 import { Notice } from "@/components/ui/Notice";
@@ -15,6 +14,7 @@ import { requireStudent } from "@/lib/classes/viewer";
 import { myClasses } from "@/lib/supabase/classInvites";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { practiseMissedFromAssignmentAction } from "@/app/learn/practice/missed/actions";
+import { BackLink } from "@/components/ui/BackLink";
 
 export const metadata: Metadata = { title: "Results" };
 
@@ -29,10 +29,8 @@ function Header({
 }) {
   return (
     <>
-      <p className="mb-2 text-sm text-ink-2">
-        <Link href={STUDENT_HOME} className="tap-target inline-flex items-center hover:text-ink-1">
-          Your classes
-        </Link>
+      <p className="mb-2">
+        <BackLink href={STUDENT_HOME}>Your classes</BackLink>
       </p>
       <p className="eyebrow mb-2">Results</p>
       <h1 className="font-read text-display leading-tight break-words text-ink-1">
@@ -80,13 +78,10 @@ export default async function StudentResultsPage({
         <p role="status" data-testid="results-pending" className="measure mt-6 text-ink-1">
           Results show when the assignment closes.
         </p>
-        <p className="mt-4 text-sm">
-          <Link
-            href={studentAssignmentPath(view.assignment.id)}
-            className="tap-target inline-flex items-center text-ink-1 underline decoration-line-strong underline-offset-4 hover:decoration-accent"
-          >
+        <p className="mt-4">
+          <BackLink href={studentAssignmentPath(view.assignment.id)}>
             Back to the assignment
-          </Link>
+          </BackLink>
         </p>
       </>
     );

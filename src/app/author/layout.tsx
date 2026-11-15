@@ -2,8 +2,9 @@ import { SignedInAs } from "@/components/auth/SignedInAs";
 import { BillingBanner } from "@/components/billing/BillingBanner";
 import { GuardedLink, LeaveGuardProvider } from "@/components/authoring/LeaveGuard";
 import { TeacherNav } from "@/components/authoring/TeacherNav";
+import { WordmarkMark, wordmarkClasses } from "@/components/site/Wordmark";
 import { AccountMenu, MENU_ITEM_CLASSES } from "@/components/ui/AccountMenu";
-import { AppShell, WORDMARK_CLASSES } from "@/components/ui/AppShell";
+import { AppShell } from "@/components/ui/AppShell";
 import { textLinkClasses } from "@/components/ui/TextLink";
 import { ACCOUNT_PATH } from "@/lib/auth/accountPaths";
 import { shownName } from "@/lib/auth/displayName";
@@ -32,34 +33,33 @@ export default async function AuthorLayout({ children }: LayoutProps<"/author">)
         homeHref="/author"
         width="wide"
         brand={
-          <GuardedLink href="/author" className={WORDMARK_CLASSES}>
-            LeaRN
+          <GuardedLink href="/author" className={wordmarkClasses()}>
+            <WordmarkMark />
           </GuardedLink>
         }
         nav={teaches ? <TeacherNav /> : null}
         notice={<BillingBanner banner={banner} />}
         account={
           signedIn ? (
-            <>
-              <SignedInAs displayName={viewer.displayName} email={viewer.email} />
-              <AccountMenu
-                name={name}
-                initials={accountInitials(name)}
-                signOut={signOut}
-                links={
-                  <>
-                    {/* #358: the name, and the way to the password, are both on /account. */}
-                    <GuardedLink href={ACCOUNT_PATH} className={MENU_ITEM_CLASSES}>
-                      Account
-                    </GuardedLink>
-                    {/* #269: the guides are public pages outside /author. */}
-                    <GuardedLink href="/help" className={MENU_ITEM_CLASSES}>
-                      Help
-                    </GuardedLink>
-                  </>
-                }
-              />
-            </>
+            // The bar shows only the initials; the name and email are inside (docs/04 §11).
+            <AccountMenu
+              name={name}
+              identity={<SignedInAs displayName={viewer.displayName} email={viewer.email} />}
+              initials={accountInitials(name)}
+              signOut={signOut}
+              links={
+                <>
+                  {/* #358: the name, and the way to the password, are both on /account. */}
+                  <GuardedLink href={ACCOUNT_PATH} className={MENU_ITEM_CLASSES}>
+                    Account
+                  </GuardedLink>
+                  {/* #269: the guides are public pages outside /author. */}
+                  <GuardedLink href="/help" className={MENU_ITEM_CLASSES}>
+                    Help
+                  </GuardedLink>
+                </>
+              }
+            />
           ) : (
             // #269: the guides are public, so a viewer who is not signed in (or not yet a teacher,
             // on /author/no-access) still has the way to them that the menu gives everyone else.

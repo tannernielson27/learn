@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LeaveGuardProvider, useLeaveGuard } from "./LeaveGuard";
-import { TeacherNav } from "./TeacherNav";
+import { TeacherNav, revealCurrent, revealLink } from "./TeacherNav";
 
 let pathname = "/author";
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
@@ -77,5 +77,60 @@ describe("TeacherNav", () => {
     );
     await user.click(screen.getByRole("link", { name: "Classes" }));
     expect(guard.mock.calls.map(([href]) => href)).toEqual(["/author/classes"]);
+  });
+});
+
+/** A row of the given box, scrolled to `scrollLeft`, with its current link at `item`. */
+function row(box: { left: number; right: number }, item: { left: number; right: number }) {
+  const list = document.createElement("ul");
+  list.innerHTML = '<li><a href="/a">A</a></li><li><a href="/b" aria-current="page">B</a></li>';
+  Object.defineProperties(list, {
+    scrollWidth: { value: 400 },
+    clientWidth: { value: box.right - box.left },
+  });
+  list.scrollLeft = 100;
+  list.getBoundingClientRect = () => ({ ...box }) as DOMRect;
+  list.querySelector("[aria-current]")!.getBoundingClientRect = () => ({ ...item }) as DOMRect;
+  return list;
+}
+
+describe("TeacherNav's phone row (#563)", () => {
+  it("draws the four links as one row that never wraps", () => {
+    render(<TeacherNav />);
+    const list = within(screen.getByRole("navigation", { name: "Main" })).getByRole("list");
+    expect(list).toHaveClass("flex-nowrap", "overflow-x-auto");
+    expect(list).not.toHaveClass("flex-wrap");
+  });
+
+  it("marks a fixture's path and names itself apart, for a gallery specimen", () => {
+    render(<TeacherNav currentPath="/author/workspace" label="Teacher, phone" />);
+    const nav = screen.getByRole("navigation", { name: "Teacher, phone" });
+    expect(within(nav).getByRole("link", { name: "Workspace" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("scrolls a current link cut off by the fade into view, and leaves a whole one alone", () => {
+    const cut = row({ left: 0, right: 375 }, { left: 300, right: 400 });
+    revealCurrent(cut);
+    // 400 - (375 - 32): clear of the 32px fade.
+    expect(cut.scrollLeft).toBe(157);
+
+    const behind = row({ left: 0, right: 375 }, { left: -40, right: 40 });
+    revealCurrent(behind);
+    expect(behind.scrollLeft).toBe(60);
+
+    const whole = row({ left: 0, right: 375 }, { left: 100, right: 200 });
+    revealCurrent(whole);
+    expect(whole.scrollLeft).toBe(100);
+  });
+
+  it("brings a half-shown link in when the keyboard lands on it", () => {
+    const list = row({ left: 0, right: 375 }, { left: 0, right: 0 });
+    const first = list.querySelector("a")!;
+    first.getBoundingClientRect = () => ({ left: 320, right: 420 }) as DOMRect;
+    revealLink(list, first);
+    expect(list.scrollLeft).toBe(100 + 420 - (375 - 32));
   });
 });

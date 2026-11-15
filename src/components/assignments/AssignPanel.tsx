@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { CLASSES_PATH } from "@/lib/classes/classes";
 import { practiceWarning, type PracticeExposure } from "@/lib/practice/shares";
 import { AssignmentForm, type AssignmentFormProps } from "./AssignmentForm";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { BackLink } from "@/components/ui/BackLink";
 
 const COULD_NOT_CHECK = "Could not check whether students can see these answers in practice.";
 
@@ -33,9 +33,6 @@ export interface AssignPanelProps {
   exposure: PracticeExposure | null;
 }
 
-const linkClass =
-  "tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline";
-
 /** The Assign page for a bank or a case study (#207): pick a class, a window and attempts. */
 export function AssignPanel({
   sourceName,
@@ -47,9 +44,9 @@ export function AssignPanel({
 }: AssignPanelProps) {
   return (
     <>
-      <Link href={backHref} className={`${linkClass} mb-4`}>
+      <BackLink href={backHref} className="mb-4">
         {backLabel}
-      </Link>
+      </BackLink>
       <p className="eyebrow mb-1">Assign</p>
       <h1 className="mb-2 font-read text-3xl break-words text-ink-1">{sourceName}</h1>
       <p className="mb-6 max-w-prose text-ink-2">Later edits won&apos;t change this assignment.</p>
