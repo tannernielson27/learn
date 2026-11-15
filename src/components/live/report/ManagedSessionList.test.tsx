@@ -1,6 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { MENU_ITEM_CLASSES } from "@/components/ui/AccountMenu";
+import { installPopover } from "@/components/ui/testing/popover";
 import type { SessionSummary } from "@/lib/supabase/sessionReport";
 import { ManagedSessionList } from "./ManagedSessionList";
 
@@ -37,6 +39,12 @@ const groups = [
     ],
   },
 ];
+
+let uninstall = () => {};
+beforeEach(() => {
+  uninstall = installPopover();
+});
+afterEach(() => uninstall());
 
 describe("ManagedSessionList (#565)", () => {
   it("offers actions only on the viewer's own sessions", () => {
@@ -81,5 +89,43 @@ describe("ManagedSessionList (#565)", () => {
     render(<ManagedSessionList groups={groups} viewerId={ME} archivedView />);
     await user.click(screen.getByRole("button", { name: "More actions for Mine, ended" }));
     expect(screen.getByRole("button", { name: "Restore" })).toBeVisible();
+  });
+});
+
+describe("ManagedSessionList's row menu (#563)", () => {
+  it("is the shared popover, its rows the account menu's", () => {
+    render(<ManagedSessionList groups={groups} viewerId={ME} archivedView={false} />);
+    const more = screen.getByRole("button", { name: "More actions for Mine, ended" });
+    expect(more).toHaveAttribute("type", "button");
+    const panel = document.getElementById(more.getAttribute("popovertarget")!)!;
+    expect(panel).toHaveAttribute("popover", "auto");
+    // Closed until pressed: its rows are there, not shown.
+    const rename = within(panel).getByRole("button", { name: "Rename", hidden: true });
+    expect(rename).not.toBeVisible();
+    expect(rename.className).toBe(MENU_ITEM_CLASSES);
+  });
+
+  it("closes on Escape and gives focus back to its button", async () => {
+    const user = userEvent.setup();
+    render(<ManagedSessionList groups={groups} viewerId={ME} archivedView={false} />);
+    const more = screen.getByRole("button", { name: "More actions for Mine, ended" });
+    await user.click(more);
+    const rename = screen.getByRole("button", { name: "Rename" });
+    expect(rename).toBeVisible();
+    await user.tab();
+    expect(rename).toHaveFocus();
+    await user.keyboard("{Escape}");
+    expect(rename).not.toBeVisible();
+    expect(more).toHaveFocus();
+  });
+
+  it("closes when a row is chosen, then opens the rename dialog", async () => {
+    const user = userEvent.setup();
+    render(<ManagedSessionList groups={groups} viewerId={ME} archivedView={false} />);
+    await user.click(screen.getByRole("button", { name: "More actions for Mine, ended" }));
+    const rename = screen.getByRole("button", { name: "Rename" });
+    await user.click(rename);
+    expect(rename).not.toBeVisible();
+    expect(screen.getByRole("dialog", { name: "Rename live session" })).toBeInTheDocument();
   });
 });

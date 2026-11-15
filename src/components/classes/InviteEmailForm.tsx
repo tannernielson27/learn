@@ -7,6 +7,7 @@ import { InviteUnavailable } from "./InviteUnavailable";
 import { AUTH_HEADING, AUTH_SUBLINE } from "@/components/auth/AuthFrame";
 import { FormError } from "@/components/auth/FormError";
 import { fieldClasses } from "@/components/ui/fieldClasses";
+import { PAGE_LABEL_CLASSES } from "@/components/ui/PageHeader";
 
 export type InviteLinkState =
   | { status: "idle" }
@@ -61,7 +62,7 @@ export function InviteEmailForm({
   if (state.status === "sent") {
     return (
       <section aria-labelledby={`${id}-sent`}>
-        <p className="mb-2 font-mono text-sm tracking-wide text-ink-2 uppercase">{classTitle}</p>
+        <p className={`mb-2 ${PAGE_LABEL_CLASSES}`}>{classTitle}</p>
         <h1
           id={`${id}-sent`}
           ref={headingRef}

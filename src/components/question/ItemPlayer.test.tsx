@@ -152,6 +152,8 @@ describe("ItemPlayer with sample content", () => {
     await renderersLoaded();
     const question = screen.getByRole("region", { name: "Multiple Choice question" });
     expect(within(question).getByText("Sample")).toBeInTheDocument();
+    // In sentence case, untracked: never the public site's eyebrow capitals (#563).
+    expect(within(question).getByText("Sample")).not.toHaveClass("eyebrow", "uppercase");
   });
 
   it("leaves an untagged item unlabelled", async () => {

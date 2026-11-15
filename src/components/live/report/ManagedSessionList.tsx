@@ -1,17 +1,19 @@
 "use client";
 
 import { MoreHorizontal } from "lucide-react";
-import { useEffect, useId, useRef, useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import {
   archiveSessionsAction,
   renameSessionAction,
   restoreSessionsAction,
 } from "@/app/author/sessions/actions";
+import { MENU_ITEM_CLASSES } from "@/components/ui/AccountMenu";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Field } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { Notice } from "@/components/ui/Notice";
+import { Popover } from "@/components/ui/Popover";
 import type { SessionSummary } from "@/lib/supabase/sessionReport";
 import { SESSION_TITLE_MAX, type HousekeepingResult } from "@/lib/supabase/sessionHousekeeping";
 import { groupId, SessionRowLink } from "./SessionList";
@@ -157,10 +159,7 @@ export function ManagedSessionList({ groups, viewerId, archivedView }: ManagedSe
       <div className="flex flex-col gap-8">
         {groups.map((group) => (
           <section key={group.label} aria-labelledby={groupId(group.label)}>
-            <h2
-              id={groupId(group.label)}
-              className="mb-2 text-sm font-medium tracking-wide text-ink-2 uppercase"
-            >
+            <h2 id={groupId(group.label)} className="mb-2 text-sm font-medium text-ink-2">
               {group.label}
             </h2>
             <ul
@@ -188,6 +187,7 @@ export function ManagedSessionList({ groups, viewerId, archivedView }: ManagedSe
                   <SessionRowLink session={session} className="flex-1" />
                   {!selecting && mine(session) ? (
                     <RowMenu
+                      sessionId={session.id}
                       title={session.title}
                       canArchive={archivable(session)}
                       archivedView={archivedView}
@@ -215,86 +215,54 @@ export function ManagedSessionList({ groups, viewerId, archivedView }: ManagedSe
 }
 
 /**
- * A row's own actions behind a "More actions" button: a small disclosure, not an ARIA menu, so
- * Tab moves through it as through any two buttons. Escape or a click elsewhere closes it.
+ * A row's own actions behind a "More actions" button (#563): the shared `Popover`, as the editor's
+ * More menu is, on the browser's own popover. Its rows are plain buttons, not an ARIA menu, so Tab
+ * moves through them as through any two buttons; Escape or a click elsewhere closes it and focus
+ * goes back to the button. Choosing a row closes it first, so the rename dialog opens over a page
+ * with nothing else open.
  */
 function RowMenu({
+  sessionId,
   title,
   canArchive,
   archivedView,
   onRename,
   onArchive,
 }: {
+  sessionId: string;
   title: string;
   canArchive: boolean;
   archivedView: boolean;
   onRename: () => void;
   onArchive: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const id = useId();
-  const box = useRef<HTMLDivElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const outside = (event: PointerEvent) => {
-      if (!box.current?.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
-  }, [open]);
-
+  // A session id is a UUID, so the panel's id is a valid CSS name for its anchor.
+  const id = `session-actions-${sessionId}`;
   const choose = (action: () => void) => {
-    setOpen(false);
+    document.getElementById(id)?.hidePopover?.();
     action();
   };
 
   return (
-    <div
-      ref={box}
-      className="relative shrink-0"
-      onKeyDown={(event) => {
-        if (event.key === "Escape" && open) {
-          event.stopPropagation();
-          setOpen(false);
-          trigger.current?.focus();
-        }
-      }}
-    >
-      <button
-        ref={trigger}
-        type="button"
-        aria-label={`More actions for ${title}`}
-        aria-expanded={open}
-        aria-controls={id}
-        onClick={() => setOpen((was) => !was)}
-        className="tap-target inline-flex items-center justify-center rounded-sm text-ink-2 hover:bg-surface-2 hover:text-ink-1"
-      >
-        <Icon icon={MoreHorizontal} />
-      </button>
-      <div
+    <div className="shrink-0">
+      <Popover
         id={id}
-        hidden={!open}
-        className="absolute top-full right-0 z-10 mt-1 flex min-w-40 flex-col rounded-sm border border-line bg-surface-1 py-1 shadow-md"
+        width="sm"
+        accessibleName={`More actions for ${title}`}
+        label={<Icon icon={MoreHorizontal} />}
+        buttonClassName="tap-target inline-flex items-center justify-center rounded-sm text-ink-2 hover:bg-surface-2 hover:text-ink-1"
       >
-        <button
-          type="button"
-          onClick={() => choose(onRename)}
-          className="tap-target px-3 text-left text-sm text-ink-1 hover:bg-surface-2"
-        >
-          Rename
-        </button>
-        {canArchive ? (
-          <button
-            type="button"
-            onClick={() => choose(onArchive)}
-            className="tap-target px-3 text-left text-sm text-ink-1 hover:bg-surface-2"
-          >
-            {archivedView ? "Restore" : "Archive"}
+        <div className="flex flex-col gap-1">
+          <button type="button" onClick={() => choose(onRename)} className={MENU_ITEM_CLASSES}>
+            Rename
           </button>
-        ) : null}
-      </div>
+          {canArchive ? (
+            <button type="button" onClick={() => choose(onArchive)} className={MENU_ITEM_CLASSES}>
+              {archivedView ? "Restore" : "Archive"}
+            </button>
+          ) : null}
+        </div>
+      </Popover>
     </div>
   );
 }
