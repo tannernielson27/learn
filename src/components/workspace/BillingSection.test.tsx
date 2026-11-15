@@ -90,9 +90,9 @@ describe("BillingSection", () => {
       { status: "error", error: "Too many tries. Wait a few minutes, then try again." },
     );
     await user.click(screen.getByRole("button", { name: "Start your free trial" }));
-    // The state's own alert (no subscription) and the refusal under it.
+    // The refusal is the only live alert: the state above it is not a live region.
     expect(await screen.findByText(/^Too many tries\./)).toBeInTheDocument();
-    expect(screen.getAllByRole("alert").at(-1)).toHaveTextContent("Too many tries.");
+    expect(screen.getByRole("alert")).toHaveTextContent("Too many tries.");
     expect(screen.getByRole("button", { name: "Start your free trial" })).toBeEnabled();
     expect(checkoutAction).toHaveBeenCalledTimes(1);
     expect(portalAction).not.toHaveBeenCalled();
@@ -107,12 +107,14 @@ describe("BillingSection", () => {
 
   it("thanks the teacher after a confirmed Checkout, once the trial shows", () => {
     setup("trial", { confirmed: true });
-    expect(screen.getByRole("status")).toHaveTextContent("Thank you. Your free trial has started.");
+    expect(section().querySelector("[data-notice]")).toHaveTextContent(
+      "Thank you. Your free trial has started.",
+    );
   });
 
   it("does not thank anyone when the page shows no subscription", () => {
     setup("start-trial", { confirmed: true });
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(section()).not.toHaveTextContent("Thank you");
   });
 
   describe("one notice per state, and one main action (#563)", () => {
@@ -123,7 +125,7 @@ describe("BillingSection", () => {
     it("a failed payment is an alert, with Manage billing as the main action", () => {
       setup("payment-failed");
       expect(notice()).toHaveAttribute("data-notice", "alert");
-      expect(screen.getByRole("alert")).toHaveTextContent("A payment did not go through.");
+      expect(notice()).toHaveTextContent("A payment did not go through.");
       expect(fill("Manage billing")).toBe(true);
     });
 
@@ -153,6 +155,16 @@ describe("BillingSection", () => {
       expect(notice()).toHaveAttribute("data-notice", "status");
       expect(screen.queryByRole("button")).toBeNull();
     });
+
+    it.each(["payment-failed", "start-trial", "trial", "free"] as const)(
+      "%s is on the page when it loads, so it is not a live region",
+      (name) => {
+        setup(name);
+        expect(notice()).not.toHaveAttribute("role");
+        expect(screen.queryByRole("alert")).toBeNull();
+        expect(screen.queryByRole("status")).toBeNull();
+      },
+    );
 
     it("the first sentence is the notice's title", () => {
       setup("payment-failed");

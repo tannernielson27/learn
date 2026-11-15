@@ -38,7 +38,8 @@ const INITIAL: BillingActionState = { status: "idle" };
  * that; it never names where it came from.
  *
  * The state is one `Notice` (#563): a status for free access, a trial or a subscription, and an
- * alert for a failed payment or a workspace without access (`billingTone`). Its first sentence is
+ * alert for a failed payment or a workspace without access (`billingTone`), shown with the alert's
+ * look but no live role, since it is on the page when it loads. Its first sentence is
  * the title, and the one button sits under the words, as the main action where acting is the
  * point (`billingActionVariant`). After a confirmed Checkout the thanks lead the same notice.
  */
@@ -65,6 +66,7 @@ export function BillingSection({
       </h2>
       <Notice
         role={billingTone(access)}
+        live={false}
         title={title}
         action={
           view.action ? (
