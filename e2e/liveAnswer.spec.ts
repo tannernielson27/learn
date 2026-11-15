@@ -261,21 +261,28 @@ async function readTheReport(page: Page, bankName: string) {
   await expect(page).toHaveURL(/\/live\/[0-9a-f-]{36}\/report$/);
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
-  const scores = page.getByRole("region", { name: "Scores by student" });
-  await expect(scores.getByRole("row", { name: /^Ada Brennan/ })).toContainText("2 / 2");
-  await expect(scores.getByRole("row", { name: /^Chidi Okeke/ })).toContainText("0 / 2");
-  // #565: a question column shows "Q1" and is named by number, item type and step, never its id.
-  await expect(scores.getByRole("columnheader", { name: /^Q1 · / })).toHaveText("Q1");
-  await expectNoPageScroll(page);
-  await expectNoAxeViolations(page);
-
-  await page.getByRole("link", { name: "Questions", exact: true }).click();
+  // #565: the report opens on its questions, under a summary of the session.
+  await expect(page.getByText("Class average", { exact: true })).toBeVisible();
   const questions = page.getByRole("region", { name: "Results by question" });
   await expect(questions).toBeVisible();
   await expect(
     questions.getByRole("columnheader", { name: /^Answered \(of \d+\)$/ }),
   ).toBeVisible();
   await expect(questions.getByRole("rowheader", { name: /^Q1 · / })).toBeVisible();
+  await expectNoPageScroll(page);
+  await expectNoAxeViolations(page);
+
+  await page.getByRole("link", { name: "Students", exact: true }).click();
+  await expect(page).toHaveURL(/\?view=students$/);
+  const scores = page.getByRole("region", { name: "Scores by student" });
+  await expect(scores.getByRole("row", { name: /^Ada Brennan/ })).toContainText("2 / 2");
+  await expect(scores.getByRole("row", { name: /^Chidi Okeke/ })).toContainText("0 / 2");
+  await expectNoPageScroll(page);
+  await expectNoAxeViolations(page);
+
+  // The full table of points: a question column shows "Q1", named by number, type and step.
+  await page.getByRole("link", { name: "Show points for every question", exact: true }).click();
+  await expect(scores.getByRole("columnheader", { name: /^Q1 · / })).toHaveText("Q1");
   await expectNoAxeViolations(page);
 
   await page.getByRole("link", { name: "Clinical judgment steps", exact: true }).click();

@@ -1,23 +1,29 @@
 import { buttonClasses } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TabLinks } from "@/components/ui/TabLinks";
-import type { SessionReport } from "@/lib/live/report";
+import { summarizeReport, type SessionReport } from "@/lib/live/report";
 import {
-  REPORT_VIEWS,
+  DEFAULT_STUDENT_VIEW,
   reportCsvPath,
   reportPath,
   SESSIONS_PATH,
   type ReportView,
+  type StudentViewOptions,
 } from "@/lib/live/reportFormat";
 import { formatSessionDate } from "./formatDate";
 import { ReportStepBars } from "./ReportStepBars";
-import { ItemTable, StepTable, StudentTable } from "./ReportTables";
+import { ReportSummaryStrip } from "./ReportSummaryStrip";
+import { ItemTable, StepTable } from "./ReportTables";
+import { StudentResults } from "./StudentSummaryTable";
 
 const VIEW_LABELS: Record<ReportView, string> = {
   students: "Students",
   items: "Questions",
   steps: "Clinical judgment steps",
 };
+
+/** Questions first, the view the report opens on (#565). */
+const LIVE_VIEW_ORDER: readonly ReportView[] = ["items", "students", "steps"];
 
 /** The way back from a report, open or ended, to the list it was opened from. */
 export const REPORT_BACK = { href: SESSIONS_PATH, label: "Back to live sessions" } as const;
@@ -28,6 +34,8 @@ export interface SessionReportViewProps {
   closedAt: string | null;
   report: SessionReport;
   view: ReportView;
+  /** How the students view is drawn and sorted (#565). */
+  studentOptions?: StudentViewOptions;
 }
 
 /**
@@ -43,6 +51,7 @@ export function SessionReportView({
   closedAt,
   report,
   view,
+  studentOptions = DEFAULT_STUDENT_VIEW,
 }: SessionReportViewProps) {
   return (
     <>
@@ -63,10 +72,19 @@ export function SessionReportView({
         }
       />
 
+      {report.students.length > 0 ? (
+        <ReportSummaryStrip
+          sessionId={sessionId}
+          students={report.students.length}
+          questions={report.items.length}
+          summary={summarizeReport(report)}
+        />
+      ) : null}
+
       <TabLinks
         label="Report views"
         className="mt-6"
-        links={REPORT_VIEWS.map((option) => ({
+        links={LIVE_VIEW_ORDER.map((option) => ({
           href: reportPath(sessionId, option),
           label: VIEW_LABELS[option],
           current: option === view,
@@ -74,13 +92,28 @@ export function SessionReportView({
       />
 
       <section aria-label={VIEW_LABELS[view]} className="mt-6">
-        <ReportBody report={report} view={view} />
+        <ReportBody
+          sessionId={sessionId}
+          report={report}
+          view={view}
+          studentOptions={studentOptions}
+        />
       </section>
     </>
   );
 }
 
-function ReportBody({ report, view }: { report: SessionReport; view: ReportView }) {
+function ReportBody({
+  sessionId,
+  report,
+  view,
+  studentOptions,
+}: {
+  sessionId: string;
+  report: SessionReport;
+  view: ReportView;
+  studentOptions: StudentViewOptions;
+}) {
   if (view === "steps") return <StepsBody report={report} />;
   if (report.students.length === 0) {
     return <p className="text-ink-2">Nobody joined.</p>;
@@ -88,7 +121,14 @@ function ReportBody({ report, view }: { report: SessionReport; view: ReportView 
   if (view === "items") {
     return <ItemTable items={report.items} participantCount={report.students.length} />;
   }
-  return <StudentTable items={report.items} students={report.students} />;
+  return (
+    <StudentResults
+      sessionId={sessionId}
+      items={report.items}
+      students={report.students}
+      options={studentOptions}
+    />
+  );
 }
 
 function StepsBody({ report }: { report: SessionReport }) {

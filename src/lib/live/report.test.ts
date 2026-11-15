@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   buildSessionReport,
+  byScore,
   groupByCaseStudy,
   inCaseStudies,
+  markOfScore,
   questionLabel,
   questionNumber,
   stepLabel,
+  summarizeReport,
   type ReportItemInput,
   type SessionReportInput,
 } from "./report";
@@ -234,6 +237,42 @@ describe("a session that played a case study in place (#469)", () => {
   });
 });
 
+describe("summarizeReport (#565)", () => {
+  it("averages the students' percents and names the lowest-scoring question", () => {
+    const summary = summarizeReport(report);
+    const percents = report.students.flatMap((s) => (s.percent === null ? [] : [s.percent]));
+    expect(summary.classAverage).toBeCloseTo(
+      percents.reduce((sum, p) => sum + p, 0) / percents.length,
+    );
+    const lowest = Math.min(
+      ...report.items.flatMap((item) => (item.meanPercent === null ? [] : [item.meanPercent])),
+    );
+    expect(summary.hardest?.meanPercent).toBe(lowest);
+  });
+
+  it("has nothing to say about a room nobody joined", () => {
+    expect(summarizeReport(buildSessionReport({ ...REPORT_FIXTURE, participants: [] }))).toEqual({
+      classAverage: null,
+      hardest: null,
+    });
+  });
+
+  it("takes the first of two equally hard questions", () => {
+    const tied = buildSessionReport({
+      items: [
+        { position: 1, itemId: "a", ref: "a", type: null, cjmmStep: null },
+        { position: 2, itemId: "b", ref: "b", type: null, cjmmStep: null },
+      ],
+      participants: [{ id: "p", displayName: "Ada", joinedAt: "2026-01-01T00:00:00Z" }],
+      responses: [
+        { participantId: "p", itemPosition: 1, points: 0, maxPoints: 1 },
+        { participantId: "p", itemPosition: 2, points: 0, maxPoints: 1 },
+      ],
+    });
+    expect(summarizeReport(tied).hardest?.position).toBe(1);
+  });
+});
+
 describe("questionLabel (#565)", () => {
   it("names a question by its number, item type and clinical judgment step", () => {
     expect(questionLabel({ position: 3, type: "multiple_response", cjmmStep: 1 })).toBe(
@@ -274,5 +313,34 @@ describe("questionLabel (#565)", () => {
 
   it("gives the bare number for a narrow column", () => {
     expect(questionNumber({ position: 12 })).toBe("Q12");
+  });
+});
+
+describe("byScore (#565)", () => {
+  const row = (name: string, percent: number | null) => ({
+    participantId: name,
+    displayName: name,
+    scores: [],
+    answered: 0,
+    points: 0,
+    possible: 0,
+    percent,
+  });
+
+  it("puts the highest percent first and anyone without one last, keeping ties in order", () => {
+    expect(
+      byScore([row("A", 50), row("B", null), row("C", 90), row("D", 50), row("E", null)]).map(
+        (student) => student.displayName,
+      ),
+    ).toEqual(["C", "A", "D", "B", "E"]);
+  });
+});
+
+describe("markOfScore", () => {
+  it("marks an answer full, partial or none, and no answer as null", () => {
+    expect(markOfScore({ points: 2, maxPoints: 2 })).toBe("full");
+    expect(markOfScore({ points: 1, maxPoints: 2 })).toBe("partial");
+    expect(markOfScore({ points: 0, maxPoints: 2 })).toBe("none");
+    expect(markOfScore(null)).toBeNull();
   });
 });

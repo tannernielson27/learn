@@ -207,6 +207,44 @@ export function buildSessionReport(input: SessionReportInput): SessionReport {
   };
 }
 
+/**
+ * Students highest score first (#565), a student with no percent last; equal scores keep the
+ * name order the report already has.
+ */
+export function byScore(students: readonly StudentRow[]): StudentRow[] {
+  return [...students].sort((a, b) => {
+    if (a.percent === null || b.percent === null) {
+      return (a.percent === null ? 1 : 0) - (b.percent === null ? 1 : 0);
+    }
+    return b.percent - a.percent;
+  });
+}
+
+/** How one answer went, as the students view marks it; null when it was not answered. */
+export function markOfScore(score: Score | null): "full" | "partial" | "none" | null {
+  return score === null ? null : markOf(score);
+}
+
+/** The report at a glance, above its tables (#565). */
+export interface ReportSummary {
+  /** The mean of the students' percents, as the Students view prints them; null with nobody. */
+  classAverage: number | null;
+  /** The question with the lowest average %, the first of a tie; null when none was answered. */
+  hardest: ItemRow | null;
+}
+
+export function summarizeReport(report: SessionReport): ReportSummary {
+  const percents = report.students.flatMap((student) =>
+    student.percent === null ? [] : [student.percent],
+  );
+  let hardest: ItemRow | null = null;
+  for (const item of report.items) {
+    if (item.meanPercent === null) continue;
+    if (hardest === null || item.meanPercent < (hardest.meanPercent ?? Infinity)) hardest = item;
+  }
+  return { classAverage: mean(percents), hardest };
+}
+
 /** Answers that belong to someone on the roster at a position in the session; the rest are ignored. */
 function indexScores(
   input: SessionReportInput,

@@ -27,7 +27,17 @@ function fakeClient(replies: Record<string, Reply>) {
       return { ...base, data: base.data.slice(range[0], range[1] + 1) };
     };
     const chain: Record<string, unknown> = {};
-    for (const method of ["select", "eq", "in", "order", "limit", "range", "maybeSingle"]) {
+    for (const method of [
+      "select",
+      "eq",
+      "neq",
+      "ilike",
+      "in",
+      "order",
+      "limit",
+      "range",
+      "maybeSingle",
+    ]) {
       chain[method] = (...args: unknown[]) => {
         calls.push({ table, method, args });
         if (method === "range") range = [args[0] as number, args[1] as number];
@@ -303,6 +313,36 @@ describe("listRecentSessions", () => {
   it("answers null when the list cannot be read", async () => {
     const fake = fakeClient({ sessions: { data: null, error: { message: "down" } } });
     expect(await listRecentSessions(fake.client)).toBeNull();
+  });
+
+  it("narrows by title, status and host when asked (#565)", async () => {
+    const fake = fakeClient({ sessions: { data: [], error: null } });
+    await listRecentSessions(fake.client, {
+      q: "50%",
+      status: "ended",
+      hostId: "host-1",
+      limit: 101,
+    });
+    expect(fake.calls).toEqual(
+      expect.arrayContaining([
+        { table: "sessions", method: "ilike", args: ["title", "%50\\%%"] },
+        { table: "sessions", method: "eq", args: ["status", "ended"] },
+        { table: "sessions", method: "eq", args: ["host_id", "host-1"] },
+        { table: "sessions", method: "order", args: ["id", { ascending: false }] },
+        { table: "sessions", method: "limit", args: [101] },
+      ]),
+    );
+  });
+
+  it("asks for every session still open as anything but ended", async () => {
+    const fake = fakeClient({ sessions: { data: [], error: null } });
+    await listRecentSessions(fake.client, { status: "open" });
+    expect(fake.calls).toContainEqual({
+      table: "sessions",
+      method: "neq",
+      args: ["status", "ended"],
+    });
+    expect(fake.calls.some((call) => call.method === "ilike")).toBe(false);
   });
 });
 
