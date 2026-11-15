@@ -70,8 +70,20 @@ const okReplies = (): Record<string, Reply> => ({
   sessions: { data: sessionRow, error: null },
   items: {
     data: [
-      { id: ITEM_B, type: "bowtie", cjmm_step: 5, ref: "bowtie-act" },
-      { id: ITEM_A, type: "multiple_choice", cjmm_step: 1, ref: "mc-vitals" },
+      {
+        id: ITEM_B,
+        type: "bowtie",
+        cjmm_step: 5,
+        ref: "bowtie-act",
+        stem: "Complete the diagram.",
+      },
+      {
+        id: ITEM_A,
+        type: "multiple_choice",
+        cjmm_step: 1,
+        ref: "mc-vitals",
+        stem: "Which vital sign?",
+      },
     ],
     error: null,
   },
@@ -118,10 +130,24 @@ describe("readSessionReport", () => {
       closedAt: "2026-09-22T10:40:00Z",
     });
     expect(read?.input?.items).toEqual([
-      { position: 1, itemId: ITEM_A, ref: "mc-vitals", type: "multiple_choice", cjmmStep: 1 },
-      { position: 2, itemId: ITEM_B, ref: "bowtie-act", type: "bowtie", cjmmStep: 5 },
+      {
+        position: 1,
+        itemId: ITEM_A,
+        ref: "mc-vitals",
+        stem: "Which vital sign?",
+        type: "multiple_choice",
+        cjmmStep: 1,
+      },
+      {
+        position: 2,
+        itemId: ITEM_B,
+        ref: "bowtie-act",
+        stem: "Complete the diagram.",
+        type: "bowtie",
+        cjmmStep: 5,
+      },
       // An item the author can no longer read keeps its place, named by its id.
-      { position: 3, itemId: ITEM_GONE, ref: ITEM_GONE, type: null, cjmmStep: null },
+      { position: 3, itemId: ITEM_GONE, ref: ITEM_GONE, stem: null, type: null, cjmmStep: null },
     ]);
     expect(read?.input?.participants).toEqual([
       { id: "p-ava", displayName: "Ava", joinedAt: "2026-09-22T10:01:00Z" },
@@ -139,7 +165,7 @@ describe("readSessionReport", () => {
       .map((call) => `${call.table}: ${String(call.args[0])}`);
     expect(selected).toEqual(
       expect.arrayContaining([
-        "items: id, type, cjmm_step, ref:content->>id",
+        "items: id, type, cjmm_step, ref:content->>id, stem:content->stem->>value",
         "participants: id, display_name, joined_at",
         "session_responses: participant_id, item_position, points, max_points",
       ]),
@@ -352,8 +378,15 @@ describe("readReportItems", () => {
   it("lists a set's items in the set's order, keeping one it can no longer read", async () => {
     const fake = fakeClient(okReplies());
     expect(await readReportItems(fake.client, [ITEM_B, ITEM_GONE])).toEqual([
-      { position: 1, itemId: ITEM_B, ref: "bowtie-act", type: "bowtie", cjmmStep: 5 },
-      { position: 2, itemId: ITEM_GONE, ref: ITEM_GONE, type: null, cjmmStep: null },
+      {
+        position: 1,
+        itemId: ITEM_B,
+        ref: "bowtie-act",
+        stem: "Complete the diagram.",
+        type: "bowtie",
+        cjmmStep: 5,
+      },
+      { position: 2, itemId: ITEM_GONE, ref: ITEM_GONE, stem: null, type: null, cjmmStep: null },
     ]);
   });
 

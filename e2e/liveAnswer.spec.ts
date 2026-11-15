@@ -299,8 +299,9 @@ async function readTheReport(page: Page, bankName: string) {
   ]);
   expect(download.suggestedFilename()).toMatch(/\.csv$/);
   const csv = await readDownload(download);
-  expect(csv).toContain("Ada Brennan,2,2,2,100\r\n");
-  expect(csv).toContain("Chidi Okeke,0,0,2,0\r\n");
+  // The question text column (#563) follows every older one, so the older ones end in a comma.
+  expect(csv).toContain("Ada Brennan,2,2,2,100,");
+  expect(csv).toContain("Chidi Okeke,0,0,2,0,");
 
   await page.goto("/author/sessions");
   await expect(page.getByRole("link", { name: new RegExp(bankName) }).first()).toBeVisible();

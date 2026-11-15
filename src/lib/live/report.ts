@@ -25,8 +25,14 @@ export interface ReportItemInput {
   /** Where the item sat in the session, counting from 1. */
   position: number;
   itemId: string;
-  /** The item's own stable id (`content.id`), which an author recognises. */
+  /** The item's own stable id (`content.id`), kept for the CSV's columns. */
   ref: string;
+  /**
+   * The question text (`content.stem.value`, markdown), which names the question on the page and
+   * in the CSV (#563). Absent or null where it was not read; the question is then named by its
+   * number and `ref`, as before.
+   */
+  stem?: string | null;
   type: string | null;
   cjmmStep: CjmmStep | null;
   /** The case study it was a step of (#469), or absent for a loose question. */
@@ -74,6 +80,8 @@ export interface ItemRow {
   position: number;
   itemId: string;
   ref: string;
+  /** The question text (markdown), or null where it was not read. */
+  stem: string | null;
   type: string | null;
   cjmmStep: CjmmStep | null;
   /** The case study it was a step of (#469); null for a loose question. */
@@ -171,7 +179,7 @@ export const questionNumber = (item: Pick<ItemRow, "position">): string => `Q${i
 /**
  * What a teacher reads a question by in the report (#565): its place, its item type and its
  * clinical judgment step, as "Q3 · Extended Multiple Response · Recognize Cues". A part that is
- * not known is left out. Never the question's own words: the report loads no stems, by design.
+ * not known is left out. The question's own words go under it (`questionText`, #563), not in it.
  * The internal `ref` is not part of it either; it stays in the CSV and a tooltip.
  *
  * `withStep: false` leaves the step out, for a table whose Step column already names it.
@@ -287,6 +295,7 @@ function itemRow(
     position: item.position,
     itemId: item.itemId,
     ref: item.ref,
+    stem: item.stem ?? null,
     type: item.type,
     cjmmStep: item.cjmmStep,
     caseStudy: item.caseStudy ? { ...item.caseStudy } : null,

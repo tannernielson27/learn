@@ -115,12 +115,31 @@ describe("AssignmentReportView, once closed", () => {
     expect(region).toHaveAttribute("tabindex", "0");
     const ava = within(region).getByRole("row", { name: /^Ava/ });
     expect(within(ava).getByText("Submitted")).toBeInTheDocument();
-    expect(within(ava).getByText("1.5 / 2")).toBeInTheDocument();
     expect(within(ava).getByText("75%")).toBeInTheDocument();
     expect(within(ava).getByText("2 of 2")).toBeInTheDocument();
     const cleo = within(region).getByRole("row", { name: /^Cleo/ });
     expect(within(cleo).getByText("Not started")).toBeInTheDocument();
     expect(within(cleo).getByText("0 of 2")).toBeInTheDocument();
+  });
+
+  // #563: the best attempt said once, as a percent, rather than "1.5 / 2" beside "75%".
+
+  it("keeps the student's name in a sticky first column of a table that scrolls in its own box", () => {
+    renderView("students");
+    const region = screen.getByRole("region", { name: "Scores by student" });
+    expect(region).toHaveAttribute("tabindex", "0");
+    expect(region).toHaveClass("overflow-x-auto");
+    expect(within(region).getByRole("columnheader", { name: "Student" })).toHaveClass(
+      "sticky",
+      "left-0",
+    );
+    expect(within(region).getByRole("rowheader", { name: "Ava" })).toHaveClass("sticky", "left-0");
+  });
+
+  it("heads the page with the title alone, the report named in the lead", () => {
+    const { container } = renderView("students");
+    expect(container.querySelector(".eyebrow")).toBeNull();
+    expect(screen.getByText(/^Assignment report, closed/)).toBeInTheDocument();
   });
 
   it("shows items with the percent fully correct", () => {
@@ -178,7 +197,44 @@ describe("AssignmentReportView, with nobody in the class", () => {
         view="students"
       />,
     );
-    expect(screen.getByText(/Nobody has joined this class yet/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Nobody has joined this class yet" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Invite students" })).toHaveAttribute(
+      "href",
+      `/author/classes/${CLASS}#invite-heading`,
+    );
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+});
+
+describe("AssignmentReportView, with nothing submitted yet (#563)", () => {
+  const nobody = (released: boolean, view: "students" | "items" = "students") =>
+    render(
+      <AssignmentReportView
+        assignmentId={ASSIGNMENT}
+        classId={CLASS}
+        title="Week 5"
+        closesAt="2026-09-23T17:00:00Z"
+        maxAttempts={1}
+        report={buildAssignmentReport({ ...INPUT, released, attempts: [] })}
+        view={view}
+      />,
+    );
+
+  it("says what happens next while it is open, in place of a table of nobody", () => {
+    nobody(false);
+    expect(
+      screen.getByRole("heading", { level: 2, name: "No submissions yet" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText(/Scores show after it closes/)).toHaveLength(1);
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  it("says nobody submitted once it has closed, in every view", () => {
+    nobody(true, "items");
+    expect(screen.getByRole("heading", { level: 2, name: "No submissions" })).toBeInTheDocument();
+    expect(screen.queryByRole("table")).toBeNull();
   });
 });
 

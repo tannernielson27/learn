@@ -8,6 +8,7 @@ import {
   type StepRow,
   type StudentRow,
 } from "@/lib/live/report";
+import { questionText } from "@/lib/live/questionLabel";
 import { formatPercent, formatPoints, questionAnchor } from "@/lib/live/reportFormat";
 
 export const HEAD =
@@ -68,22 +69,11 @@ export function CaseStudyHeadRow({
   );
 }
 
-/**
- * A table that scrolls sideways inside its own box, never the page (#186's 375px criterion).
- * Focusable and named, so a keyboard can scroll it and axe's scrollable-region rule holds.
- */
-export function ScrollRegion({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div
-      role="region"
-      aria-label={label}
-      tabIndex={0}
-      className="max-w-full overflow-x-auto rounded-sm border border-line bg-surface-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-    >
-      {children}
-    </div>
-  );
-}
+// One scrolling table box for every report (#563): the edge cues and the sticky first column live
+// in ./ScrollRegion.
+import { ScrollRegion } from "./ScrollRegion";
+
+export { ScrollRegion };
 
 export function StudentTable({
   items,
@@ -108,11 +98,12 @@ export function StudentTable({
               {items.map((item) => {
                 // A column per question is narrow: "Q3" to see, the whole label to hear and hover.
                 const label = questionLabel(item);
+                const words = questionText(item.stem).full;
                 return (
                   <th
                     key={item.position}
                     scope="col"
-                    title={label}
+                    title={words ? `${label}: ${words}` : label}
                     aria-label={label}
                     className={`${HEAD} text-right`}
                   >
@@ -226,6 +217,7 @@ function ItemTableRow({
       {/* The question's own id is for the author who wrote it: a tooltip here, a column in the CSV. */}
       <th scope="row" title={`Question id: ${item.ref}`} className={ROW_HEAD}>
         {questionLabel(item, { withStep: false })}
+        <QuestionWords stem={item.stem} />
       </th>
       <td className={STEP_CELL}>{stepLabel(item.cjmmStep)}</td>
       <td className={CELL}>{item.responded}</td>
@@ -280,5 +272,21 @@ export function StepTable({ steps }: { steps: readonly StepRow[] }) {
         </table>
       </ScrollRegion>
     </>
+  );
+}
+
+/**
+ * The question's own words under its label (#563 on #565): the start of the text, the whole of it
+ * on hover. Nothing when the text could not be read.
+ */
+function QuestionWords({ stem }: { stem: string | null | undefined }) {
+  const { excerpt, full } = questionText(stem);
+  if (!excerpt) return null;
+  return (
+    // For the eye: the row keeps #565's name (number, type and step), which tests and screen
+    // readers rely on; the whole question shows on hover.
+    <span aria-hidden="true" title={full} className="mt-0.5 block text-sm font-normal text-ink-2">
+      {excerpt}
+    </span>
   );
 }

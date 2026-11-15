@@ -1,5 +1,5 @@
 import { toCsv, type CsvCell } from "@/lib/live/csv";
-import { itemHeader } from "@/lib/live/reportCsv";
+import { itemHeader, questionColumns, withQuestions } from "@/lib/live/reportCsv";
 import { STUDENT_STATUS_LABEL, type AssignmentReport, type AssignmentStudentRow } from "./report";
 
 /** Two decimal places, as a number, so the spreadsheet can still add it up. */
@@ -25,8 +25,9 @@ function rowOf(student: AssignmentStudentRow): CsvCell[] {
  * with nothing submitted has every score cell empty. Escaping and the formula-injection guard are
  * `toCsv`'s.
  *
- * The last column (#242) is `member` for a current member and `removed` for a student taken off the
- * class after attempting; removed students come after the class.
+ * The `Class status` column (#242) is `member` for a current member and `removed` for a student
+ * taken off the class after attempting; removed students come after the class. After it, each
+ * question's text (#563, `questionColumns`), so every older column keeps its place.
  *
  * Only a released report (the assignment has closed) can be written: before that there are no
  * scores to put in the file, and the route refuses first.
@@ -43,5 +44,10 @@ export function assignmentReportCsv(report: AssignmentReport): string {
     "Status",
     "Class status",
   ];
-  return toCsv([header, ...report.students.map(rowOf), ...report.removed.map(rowOf)]);
+  return toCsv(
+    withQuestions(
+      [header, ...report.students.map(rowOf), ...report.removed.map(rowOf)],
+      questionColumns(report.items),
+    ),
+  );
 }

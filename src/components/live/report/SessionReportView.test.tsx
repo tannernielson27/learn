@@ -116,7 +116,11 @@ describe("SessionReportView", () => {
       name: "Q1 · Multiple Choice · Recognize Cues",
     });
     expect(head).toHaveTextContent(/^Q1$/);
-    expect(head).toHaveAttribute("title", "Q1 · Multiple Choice · Recognize Cues");
+    // The tooltip adds the question's own words (#563); the name stays number, type and step.
+    expect(head).toHaveAttribute(
+      "title",
+      "Q1 · Multiple Choice · Recognize Cues: Which of the client's vital signs should the nurse report to the provider first?",
+    );
     // The internal id is for the CSV and a tooltip, never the column name.
     expect(screen.queryByRole("columnheader", { name: /mc-vitals/ })).toBeNull();
   });
@@ -273,7 +277,7 @@ describe("SessionReportView for a quiz that played a case study in place (#469)"
     expect(
       within(groupBody)
         .getAllByRole("rowheader")
-        .map((cell) => cell.textContent),
+        .map((cell) => cell.firstChild?.textContent),
     ).toEqual(["Case study: Hip arthroplasty", "Q2 · Extended Multiple Response", "Q3 · Bowtie"]);
   });
 

@@ -206,14 +206,16 @@ interface ItemFacts {
   type: string;
   cjmm_step: number | null;
   ref: string | null;
+  stem: string | null;
 }
 
 async function readItems(supabase: Client, ids: readonly string[]): Promise<ItemFacts[]> {
   if (ids.length === 0) return [];
-  // `content->>id` only: the report needs the item's name and step, never its stem or options.
+  // The item's name, step and question text (#563: the report names each question by its stem),
+  // never its options, key or rationale. Read with the author's own client on teacher-only pages.
   const { data, error } = await supabase
     .from("items")
-    .select("id, type, cjmm_step, ref:content->>id")
+    .select("id, type, cjmm_step, ref:content->>id, stem:content->stem->>value")
     .in("id", [...new Set(ids)]);
   if (error || !data) throw new Error(`could not read items: ${error?.message ?? "no data"}`);
   return data as ItemFacts[];
@@ -231,6 +233,7 @@ function toReportItems(ids: readonly string[], facts: readonly ItemFacts[]): Rep
       position: index + 1,
       itemId: id,
       ref: fact?.ref ?? id,
+      stem: fact?.stem ?? null,
       type: fact?.type ?? null,
       cjmmStep: fact && isCjmmStep(fact.cjmm_step) ? fact.cjmm_step : null,
     };

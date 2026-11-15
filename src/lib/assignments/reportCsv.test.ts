@@ -9,7 +9,14 @@ const ITEM_B = "00000000-0000-0000-0000-0000000000a2";
 const INPUT: AssignmentReportInput = {
   released: true,
   items: [
-    { position: 1, itemId: ITEM_A, ref: "mc-vitals", type: "multiple_choice", cjmmStep: 1 },
+    {
+      position: 1,
+      itemId: ITEM_A,
+      ref: "mc-vitals",
+      stem: "Which finding comes _first_?",
+      type: "multiple_choice",
+      cjmmStep: 1,
+    },
     { position: 2, itemId: ITEM_B, ref: "mr-assess", type: "multiple_response", cjmmStep: 2 },
   ],
   students: [
@@ -54,27 +61,34 @@ const INPUT: AssignmentReportInput = {
 
 const lines = assignmentReportCsv(buildAssignmentReport(INPUT)).split("\r\n");
 
+/**
+ * The question columns (#563), after every older column, so each line before #563 is the start of
+ * the same line now: the first question's text, and the second's empty, as it was not read.
+ */
+const QUESTIONS = ",Which finding comes first?,";
+
 describe("assignmentReportCsv", () => {
   it("heads like the session CSV, then the attempts and the status", () => {
     expect(lines[0]).toBe(
-      "Student,Q1 mc-vitals,Q2 mr-assess,Points,Possible,Percent,Attempts used,Status,Class status",
+      "Student,Q1 mc-vitals,Q2 mr-assess,Points,Possible,Percent,Attempts used,Status,Class status" +
+        ",Q1 question,Q2 question",
     );
   });
 
   it("writes each student's best attempt, with the attempts they used", () => {
-    expect(lines).toContain("Ava,1,1.5,2.5,3,83.33,1,Submitted,member");
+    expect(lines).toContain(`Ava,1,1.5,2.5,3,83.33,1,Submitted,member${QUESTIONS}`);
   });
 
   it("leaves an unanswered item empty, and every score empty for a student with none", () => {
-    expect(lines).toContain("'+1 555,,,,,,0,Not started,member");
+    expect(lines).toContain(`'+1 555,,,,,,0,Not started,member${QUESTIONS}`);
   });
 
   it("neutralises a display name written as a spreadsheet formula", () => {
-    expect(lines).toContain("'=cmd|' /C calc'!A0,1,,1,3,33.33,2,Submitted,member");
+    expect(lines).toContain(`'=cmd|' /C calc'!A0,1,,1,3,33.33,2,Submitted,member${QUESTIONS}`);
   });
 
   it("quotes a display name with a comma in it", () => {
-    expect(lines).toContain('"Cleo, RN",,,,,,0,Not started,member');
+    expect(lines).toContain(`"Cleo, RN",,,,,,0,Not started,member${QUESTIONS}`);
   });
 
   it("has a header, a row per student and a final CRLF", () => {
@@ -102,7 +116,7 @@ describe("assignmentReportCsv", () => {
       }),
     ).split("\r\n");
     expect(withRemoved).toHaveLength(1 + INPUT.students.length + 1 + 1);
-    expect(withRemoved.at(-2)).toBe("Aaron,,2,2,3,66.67,1,Submitted,removed");
+    expect(withRemoved.at(-2)).toBe(`Aaron,,2,2,3,66.67,1,Submitted,removed${QUESTIONS}`);
   });
 
   it("refuses a report whose scores are not released", () => {
@@ -120,7 +134,7 @@ describe("assignmentReportCsv for a whole quiz with a case study in place (#470)
     const mixed = assignmentReportCsv(buildAssignmentReport({ ...INPUT, items })).split("\r\n");
     expect(mixed[0]).toBe(
       'Student,Q1 mc-vitals,"Q2 mr-assess (Case study: Hip, Step 1 of 1)",' +
-        "Points,Possible,Percent,Attempts used,Status,Class status",
+        "Points,Possible,Percent,Attempts used,Status,Class status,Q1 question,Q2 question",
     );
     expect(mixed.slice(1)).toEqual(lines.slice(1));
   });
