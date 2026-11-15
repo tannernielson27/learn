@@ -10,6 +10,11 @@ export interface LibraryFolderControlsProps {
   createFolder?: FolderAction;
   renameFolder?: FolderAction;
   deleteFolder?: FolderAction;
+  /**
+   * `rail` (the default) under the folder rail, set apart by a line from 1024px. `toolbar` beside
+   * the list, where a library with no folders yet keeps New folder without an empty rail (#563).
+   */
+  placement?: "rail" | "toolbar";
 }
 
 const SUMMARY_CLASS =
@@ -17,17 +22,25 @@ const SUMMARY_CLASS =
 
 /**
  * New folder, and Rename and Delete for the open one (#411), under the folder rail from 1024px
- * (Library mockup) and under the chips on a phone. Each is a disclosure, so the rail stays a list.
+ * (Library mockup) and under the chips on a phone; with no folders yet, beside the list instead.
+ * Each is a disclosure, so the rail stays a list.
  */
 export function LibraryFolderControls({
   folder,
   createFolder,
   renameFolder,
   deleteFolder,
+  placement = "rail",
 }: LibraryFolderControlsProps) {
   const key = folder?.id ?? "top";
   return (
-    <div className="flex flex-col gap-1 lg:border-t lg:border-line lg:pt-3">
+    <div
+      className={
+        placement === "rail"
+          ? "flex flex-col gap-1 lg:border-t lg:border-line lg:pt-3"
+          : "flex flex-col gap-1"
+      }
+    >
       {createFolder ? (
         <details key={`new-folder-details-${key}`}>
           <summary className={SUMMARY_CLASS}>New folder</summary>

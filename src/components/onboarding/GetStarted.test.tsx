@@ -63,6 +63,25 @@ describe("GetStarted", () => {
     );
   });
 
+  it("draws a done step as done: no link to do it again (#563)", () => {
+    setup({ ...EMPTY, banks: [{ id: "b", name: "Cardiac" }], hasClass: true });
+    const quizStep = stepRow("Create a quiz");
+    // A quiz of the teacher's own marks it done, but this is still the one place to bring in the
+    // sample (#577 review), so its import stays; nothing else does.
+    expect(
+      within(quizStep)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(["Import the sample quiz"]);
+    expect(within(quizStep).queryByRole("link")).toBeNull();
+    expect(within(quizStep).queryByText("One of every question type.")).toBeNull();
+    expect(within(stepRow("Create a class")).queryByRole("link")).toBeNull();
+    // The step still to do keeps its way there.
+    expect(
+      within(stepRow("Assign a quiz")).getByRole("link", { name: "Open Cardiac" }),
+    ).toBeVisible();
+  });
+
   it("links each step to where it is done", () => {
     setup({ ...EMPTY, banks: [SAMPLE] });
     expect(screen.getByRole("link", { name: "Go to your classes" })).toHaveAttribute(
