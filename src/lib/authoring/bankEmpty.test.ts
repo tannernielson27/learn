@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { NO_BANK_FILTER, type BankFilter } from "./bankSearch";
-import { bankCaseStudiesEmpty, bankItemsEmpty, type BankEmptyView } from "./bankEmpty";
+import {
+  bankCaseStudiesEmpty,
+  bankItemsEmpty,
+  emptyQuizSteps,
+  type BankEmptyView,
+} from "./bankEmpty";
 import type { FolderView } from "./folders";
 
 const BANK = "00000000-0000-4000-8000-0000000000b1";
@@ -99,5 +104,49 @@ describe("bankCaseStudiesEmpty (#266)", () => {
     expect(bankCaseStudiesEmpty(view({ view: { kind: "unfiled" } })).heading).toBe(
       "Every case study is in a folder",
     );
+  });
+});
+
+describe("an empty quiz's first steps (#563)", () => {
+  const all: BankEmptyView = {
+    bankId: "b1",
+    view: { kind: "all" },
+    filter: NO_BANK_FILTER,
+    page: 1,
+  };
+
+  it("offers import with AI beside writing, where it is on", () => {
+    const steps = emptyQuizSteps({
+      bankId: "b1",
+      aiImport: true,
+      caseStudyHref: "#new-case-study",
+    });
+    expect(bankItemsEmpty(all, steps)).toEqual({
+      heading: "No questions yet",
+      action: { href: "/author/banks/b1/new", label: "Write the first question" },
+      more: [{ href: "/author/banks/b1/ai-import", label: "Import questions with AI" }],
+    });
+    expect(bankCaseStudiesEmpty(all, steps)).toEqual({
+      heading: "No case studies yet",
+      action: { href: "#new-case-study", label: "Start a case study" },
+    });
+  });
+
+  it("leaves import with AI out where it is off", () => {
+    const steps = emptyQuizSteps({ bankId: "b1", aiImport: false, caseStudyHref: "#x" });
+    expect(bankItemsEmpty(all, steps).more).toBeUndefined();
+  });
+
+  it("marks a search or a filter that hid everything as no results", () => {
+    expect(bankItemsEmpty({ ...all, filter: { ...NO_BANK_FILTER, query: "x" } }).noResults).toBe(
+      true,
+    );
+    expect(
+      bankItemsEmpty({ ...all, filter: { ...NO_BANK_FILTER, tags: ["sepsis"] } }).noResults,
+    ).toBe(true);
+    expect(
+      bankCaseStudiesEmpty({ ...all, filter: { ...NO_BANK_FILTER, query: "x" } }).noResults,
+    ).toBe(true);
+    expect(bankItemsEmpty(all).noResults).toBeUndefined();
   });
 });

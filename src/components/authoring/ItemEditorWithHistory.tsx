@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
 import type { HistoryEntry } from "./historyEntries";
 import { ItemEditorHostContext, type ItemEditorHost } from "./ItemEditorHost";
@@ -19,6 +19,8 @@ export interface ItemEditorWithHistoryProps {
   loadFailed?: boolean;
   /** The item is published as the page opened, so saving a draft would unpublish it. */
   published?: boolean;
+  /** Duplicate and Archive, for the editor's More menu (#563). */
+  more?: ReactNode;
 }
 
 /** Where to go once the author has agreed to discard unsaved changes. */
@@ -40,6 +42,7 @@ export function ItemEditorWithHistory({
   truncated,
   loadFailed = false,
   published: openedPublished = false,
+  more,
 }: ItemEditorWithHistoryProps) {
   const router = useRouter();
   const askId = useId();
@@ -60,9 +63,10 @@ export function ItemEditorWithHistory({
       onBusyChange: setBusy,
       published,
       onPublishedChange: setPublished,
+      more,
       ...(restored ? { savedValues: savedDraft } : {}),
     }),
-    [restored, savedDraft, published],
+    [restored, savedDraft, published, more],
   );
 
   // Every way off the page by link or Duplicate asks first while there are unsaved changes; the

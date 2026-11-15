@@ -9,6 +9,7 @@ import {
 import { importedSentence } from "@/lib/authoring/aiImportReview";
 import { AiImportReview } from "@/components/authoring/AiImportReview";
 import { Breadcrumbs } from "@/components/authoring/FolderBreadcrumbs";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { ReadingWidth } from "@/components/authoring/PageWidth";
 import { Card } from "@/components/ui/Card";
 import { TextLink } from "@/components/ui/TextLink";
@@ -63,7 +64,7 @@ export default async function AiImportReviewPage({
       .maybeSingle();
     return (
       <ReadingWidth>
-        <h1 className="mb-6 font-read text-3xl break-words text-ink-1">AI import</h1>
+        <PageHeader title="AI import" className="mb-6" />
         <section className="sm:max-w-2xl">
           <Card className="flex flex-col items-start gap-3">
             <h2 className="font-read text-2xl text-ink-1">Imported</h2>
@@ -92,7 +93,7 @@ export default async function AiImportReviewPage({
           { label: "Import with AI", href: `/author/banks/${bank.id}/ai-import?batch=${batch.id}` },
         ]}
       />
-      <h1 className="mb-6 font-read text-3xl break-words text-ink-1">Review AI import</h1>
+      <PageHeader title="Review AI import" className="mb-6" />
       <AiImportReview
         bankId={bank.id}
         quizName={bank.name}

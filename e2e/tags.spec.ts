@@ -42,6 +42,19 @@ function tenItems(): string {
 const itemLinks = (page: Page) =>
   page.getByRole("list", { name: "Questions" }).getByRole("link", { name: /^Tag demo item/ });
 const filterBar = (page: Page) => page.getByRole("region", { name: "Filter by tag" });
+// What is filtered, as chips that take a filter off, outside the Filters panel (#563).
+const activeFilters = (page: Page) => page.getByRole("region", { name: "Active filters" });
+/** #563: Type, Status and the tag panel are behind the search row's Filters button. */
+// The panel is the browser's own popover, so it can stay open across a soft navigation (a tag
+// link); a second click would shut it. Open it only when it is shut (#578 review).
+const openFilters = async (page: Page) => {
+  if (await page.locator("#bank-filters").isVisible()) return;
+  await page
+    .getByRole("search", { name: "Search questions" })
+    .getByRole("button", { name: /^Filters/ })
+    .click();
+  await expect(page.locator("#bank-filters")).toBeVisible();
+};
 
 test("an author tags items, then filters the bank to Physiological Adaptation plus sepsis", async ({
   page,
@@ -85,17 +98,19 @@ test("an author tags items, then filters the bank to Physiological Adaptation pl
   );
 
   // Physiological Adaptation, then sepsis: only items carrying both are left.
+  await openFilters(page);
   await filterBar(page)
     .getByRole("link", { name: `${PA}, 7 questions`, exact: true })
     .click();
   await expect(itemLinks(page)).toHaveCount(7);
+  await openFilters(page);
   await filterBar(page).getByRole("link", { name: "sepsis, 5 questions", exact: true }).click();
   await expect(page).toHaveURL(/\?tag=Physiological\+Adaptation&tag=sepsis$/);
   await expect(itemLinks(page)).toHaveCount(5);
   for (const stem of ["Tag demo item 1", "Tag demo item 4", "Tag demo item 9"]) {
     await expect(itemLinks(page).filter({ hasText: stem })).toHaveCount(1);
   }
-  await expect(filterBar(page)).toContainText(`5 questions have all of: ${PA}, sepsis.`);
+  await expect(activeFilters(page)).toContainText(`5 questions have all of: ${PA}, sepsis.`);
 
   // The URL keeps the filter, and it combines with the folder view.
   await page.reload();
@@ -113,9 +128,17 @@ test("an author tags items, then filters the bank to Physiological Adaptation pl
   });
 
   // Removing one tag widens the list; clearing shows everything again.
-  await filterBar(page).getByRole("link", { name: "Remove filter sepsis, 5 questions" }).click();
+  // The chip outside the panel, and the chosen chip inside it, both take the tag off.
+  await openFilters(page);
+  await expect(
+    filterBar(page).getByRole("link", { name: "Remove filter sepsis, 5 questions" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await activeFilters(page)
+    .getByRole("link", { name: "Remove filter sepsis", exact: true })
+    .click();
   await expect(itemLinks(page)).toHaveCount(7);
-  await filterBar(page).getByRole("link", { name: "Clear filters" }).click();
+  await activeFilters(page).getByRole("link", { name: "Clear filters" }).click();
   await expect(page).toHaveURL(/\?folder=unfiled$/);
   await expect(itemLinks(page)).toHaveCount(10);
 });

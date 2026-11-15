@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -413,6 +413,42 @@ describe("where a teacher writes, the glossary's words are used (#413)", () => {
     );
     await userEvent.setup().click(screen.getByRole("button", { name: "Change format" }));
     expect(allHits(document.body.innerHTML)).toEqual([]);
+  });
+});
+
+describe("the question editor's frame (#563)", () => {
+  it("titles the page, with the type in sentence case on its metadata line", async () => {
+    state.itemRow = itemRow(FIXTURES.multiple_choice.canonical);
+    render(await drawItemPage());
+    const title = screen.getByRole("heading", { level: 1, name: "Edit question" });
+    expect(title).toHaveClass("display-section");
+    const header = title.closest("header")!;
+    expect(within(header).getByText("Multiple choice", { exact: true })).toBeInTheDocument();
+    // The tracked capitals stay on the public site.
+    expect(header.querySelector(".eyebrow")).toBeNull();
+  });
+
+  it("puts Duplicate and Archive behind More, beside Save draft and Publish", async () => {
+    state.itemRow = itemRow(FIXTURES.multiple_choice.canonical);
+    render(await drawItemPage());
+    const actions = await screen.findByRole("button", { name: "Publish" });
+    const bar = actions.closest("[data-editor-actions]") as HTMLElement;
+    expect(within(bar).getByRole("button", { name: "Save draft" })).toBeInTheDocument();
+    const more = within(bar).getByRole("button", { name: "More" });
+    const panel = within(document.getElementById(more.getAttribute("popovertarget")!)!);
+    for (const name of ["Duplicate question", "Archive question"]) {
+      expect(panel.getByRole("button", { name, hidden: true })).toBeInTheDocument();
+      // Only the one, inside the menu.
+      expect(screen.getAllByRole("button", { name, hidden: true })).toHaveLength(1);
+    }
+  });
+
+  it("keeps Restore and Duplicate in view on an archived question, which has no editor", async () => {
+    state.itemRow = itemRow(FIXTURES.multiple_choice.canonical, "archived");
+    render(await drawItemPage());
+    expect(screen.getByRole("button", { name: "Restore question" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Duplicate question" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "More" })).toBeNull();
   });
 });
 
