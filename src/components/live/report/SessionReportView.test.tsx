@@ -1,13 +1,20 @@
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { buildSessionReport, inCaseStudies } from "@/lib/live/report";
 import { REPORT_FIXTURE } from "@/lib/live/reportFixture";
+import type { StudentViewOptions } from "@/lib/live/reportFormat";
 import { SessionReportView } from "./SessionReportView";
 
 const SESSION = "00000000-0000-4000-8000-0000000000a1";
 const report = buildSessionReport(REPORT_FIXTURE);
 
-const renderView = (view: "students" | "items" | "steps", data = report) =>
+const GRID = { layout: "grid", sort: "name" } as const;
+
+const renderView = (
+  view: "students" | "items" | "steps",
+  data = report,
+  studentOptions?: StudentViewOptions,
+) =>
   render(
     <SessionReportView
       sessionId={SESSION}
@@ -15,6 +22,7 @@ const renderView = (view: "students" | "items" | "steps", data = report) =>
       closedAt="2026-09-22T10:40:00Z"
       report={data}
       view={view}
+      studentOptions={studentOptions}
     />,
   );
 
@@ -23,6 +31,10 @@ describe("SessionReportView", () => {
     renderView("students");
     expect(screen.getByRole("heading", { level: 1, name: "Cardiac week 3" })).toBeInTheDocument();
     expect(screen.getByText(/Sep 22, 2026/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back to live sessions" })).toHaveAttribute(
+      "href",
+      "/author/sessions",
+    );
   });
 
   it("switches views with links that keep the view in the address", () => {
@@ -30,16 +42,42 @@ describe("SessionReportView", () => {
     const nav = screen.getByRole("navigation", { name: "Report views" });
     expect(within(nav).getByRole("link", { name: "Students" })).toHaveAttribute(
       "href",
-      `/live/${SESSION}/report`,
+      `/live/${SESSION}/report?view=students`,
     );
     expect(within(nav).getByRole("link", { name: "Clinical judgment steps" })).toHaveAttribute(
       "href",
       `/live/${SESSION}/report?view=steps`,
     );
-    expect(within(nav).getByRole("link", { name: "Questions" })).toHaveAttribute(
-      "aria-current",
-      "page",
+    const questions = within(nav).getByRole("link", { name: "Questions" });
+    expect(questions).toHaveAttribute("href", `/live/${SESSION}/report`);
+    expect(questions).toHaveAttribute("aria-current", "page");
+  });
+
+  it("puts Questions first, the view the report opens on (#565)", () => {
+    renderView("items");
+    const nav = screen.getByRole("navigation", { name: "Report views" });
+    expect(
+      within(nav)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual(["Questions", "Students", "Clinical judgment steps"]);
+  });
+
+  it("sums the session up above the tabs and links the hardest question to its row", () => {
+    renderView("items");
+    expect(screen.getByText("Class average")).toBeInTheDocument();
+    const hardest = screen.getByText("Hardest question").parentElement as HTMLElement;
+    const link = within(hardest).getByRole("link");
+    expect(link.getAttribute("href")).toMatch(
+      new RegExp(`^/live/${SESSION}/report#question-\\d+$`),
     );
+    const anchor = link.getAttribute("href")?.split("#")[1] ?? "";
+    expect(document.getElementById(anchor)?.tagName).toBe("TR");
+  });
+
+  it("has no summary when nobody joined", () => {
+    renderView("items", buildSessionReport({ ...REPORT_FIXTURE, participants: [] }));
+    expect(screen.queryByText("Class average")).toBeNull();
   });
 
   it("offers the CSV as a download", () => {
@@ -59,7 +97,7 @@ describe("SessionReportView", () => {
   });
 
   it("shows each student's score per item, a dash where they did not answer, and the total", () => {
-    renderView("students");
+    renderView("students", report, GRID);
     const row = screen.getByRole("row", { name: /^Ben/ });
     const cells = within(row)
       .getAllByRole("cell")
@@ -72,36 +110,83 @@ describe("SessionReportView", () => {
     expect(screen.getByRole("rowheader", { name: "=cmd|' /C calc'!A0" })).toBeInTheDocument();
   });
 
-  // #563: a teacher knows a question by its text, not by the ref an author never sees.
-  it("names each question column by its number and the start of its text", () => {
-    renderView("students");
-    const full =
-      "Q1 Which of the client's vital signs should the nurse report to the provider first?";
-    const head = screen.getByRole("columnheader", { name: full });
-    expect(head).toHaveAttribute("scope", "col");
-    expect(head).toHaveAttribute("title", full);
-    // The eye reads the number over about 60 characters of the text, cut with an ellipsis.
-    const shown = head.querySelector("[aria-hidden='true']");
-    expect(shown).toHaveTextContent(
-      "Q1 Which of the client's vital signs should the nurse report t…",
-    );
-    expect(screen.queryByText(/mc-vitals/)).toBeNull();
-  });
-
-  it("names a question whose text was not read by its number and ref, as before", () => {
-    renderView("students");
-    expect(screen.getByRole("columnheader", { name: "Q4 untagged" })).toHaveAttribute(
+  it("shows each item column as its number, and names it by number, type and step", () => {
+    renderView("students", report, GRID);
+    const head = screen.getByRole("columnheader", {
+      name: "Q1 · Multiple Choice · Recognize Cues",
+    });
+    expect(head).toHaveTextContent(/^Q1$/);
+    // The tooltip adds the question's own words (#563); the name stays number, type and step.
+    expect(head).toHaveAttribute(
       "title",
-      "Q4 untagged",
+      "Q1 · Multiple Choice · Recognize Cues: Which of the client's vital signs should the nurse report to the provider first?",
+    );
+    // The internal id is for the CSV and a tooltip, never the column name.
+    expect(screen.queryByRole("columnheader", { name: /mc-vitals/ })).toBeNull();
+  });
+
+  it("says in one line what each table shows", () => {
+    renderView("students", report, GRID);
+    expect(screen.getByText(/Points each student earned on each question/)).toBeInTheDocument();
+  });
+
+  it("shows a compact row per student by default: score, percent and a mark per question (#565)", () => {
+    renderView("students");
+    expect(screen.getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual([
+      "Student",
+      "Score",
+      "Percent",
+      "Each question",
+    ]);
+    const row = screen.getByRole("row", { name: /^Ben/ });
+    const cells = within(row).getAllByRole("cell");
+    expect(cells.slice(0, 2).map((cell) => cell.textContent)).toEqual(["2 / 6", "33%"]);
+    // The marks are heard once as a sentence, not one by one.
+    expect(cells[2]).toHaveTextContent("0 all right, 1 some right, 1 none right, 2 not answered");
+  });
+
+  it("names each mark in a tooltip and keeps them out of the accessibility tree", () => {
+    renderView("students");
+    const row = screen.getByRole("row", { name: /^Ben/ });
+    const marks = row.querySelector("[aria-hidden='true']") as HTMLElement;
+    expect(marks.children).toHaveLength(report.items.length);
+    expect(marks.children[2]).toHaveAttribute("title", expect.stringMatching(/not answered$/));
+  });
+
+  it("sorts by score, highest first, from a link that keeps the choice in the address", () => {
+    renderView("students", report, { layout: "compact", sort: "score" });
+    const names = screen.getAllByRole("rowheader").map((cell) => cell.textContent);
+    const percents = report.students
+      .filter((student) => names.includes(student.displayName))
+      .map((student) => student.percent);
+    expect(percents).toHaveLength(names.length);
+    const shown = names.map(
+      (name) => report.students.find((student) => student.displayName === name)?.percent ?? -1,
+    );
+    expect(shown).toEqual([...shown].sort((a, b) => b - a));
+    const sort = screen.getByRole("navigation", { name: "Sort students" });
+    expect(within(sort).getByRole("link", { name: "By score" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(within(sort).getByRole("link", { name: "By name" })).toHaveAttribute(
+      "href",
+      `/live/${SESSION}/report?view=students`,
     );
   });
 
-  it("keeps every column header in one row when no case study was played", () => {
+  it("offers the full table of points, and the way back from it", () => {
     renderView("students");
-    const rows = within(screen.getByRole("table")).getAllByRole("row");
-    const head = rows[0] as HTMLElement;
-    expect(head.closest("thead")?.querySelectorAll("tr")).toHaveLength(1);
-    expect(within(head).queryAllByRole("cell")).toEqual([]);
+    expect(screen.getByRole("link", { name: "Show points for every question" })).toHaveAttribute(
+      "href",
+      `/live/${SESSION}/report?view=students&layout=grid`,
+    );
+    cleanup();
+    renderView("students", report, GRID);
+    expect(screen.getByRole("link", { name: "Show the summary instead" })).toHaveAttribute(
+      "href",
+      `/live/${SESSION}/report?view=students`,
+    );
   });
 
   it("shows how each item went", () => {
@@ -110,7 +195,36 @@ describe("SessionReportView", () => {
     const cells = within(row)
       .getAllByRole("cell")
       .map((cell) => cell.textContent);
-    expect(cells).toEqual(["Step 1", "2 of 4", "2.5 / 3", "83%", "1", "1", "0"]);
+    expect(cells).toEqual(["1 · Recognize Cues", "2", "2.5 / 3", "83%", "1", "1", "0"]);
+  });
+
+  it("heads the questions view in plain words", () => {
+    renderView("items");
+    const table = screen.getByRole("table");
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .map((cell) => cell.textContent),
+    ).toEqual([
+      "Question",
+      "Step",
+      "Answered (of 4)",
+      "Average",
+      "Average %",
+      "All right",
+      "Some right",
+      "None right",
+    ]);
+    expect(screen.getByText(/How the class did on each question/)).toBeInTheDocument();
+  });
+
+  it("names each question by number and type, with its step in its own column and its id only in a tooltip", () => {
+    renderView("items");
+    const head = screen.getByRole("rowheader", {
+      name: "Q2 · Extended Multiple Response",
+    });
+    expect(head).toHaveAttribute("title", "Question id: mr-assess");
+    expect(screen.getByRole("rowheader", { name: "Q4 · Drop-Down Cloze" })).toBeInTheDocument();
   });
 
   it("shows the class at each tagged CJMM step", () => {
@@ -120,6 +234,7 @@ describe("SessionReportView", () => {
       .getAllByRole("cell")
       .map((cell) => cell.textContent);
     expect(cells).toEqual(["2", "5", "75%"]);
+    expect(screen.getByRole("columnheader", { name: "Average %" })).toBeInTheDocument();
     expect(screen.queryByRole("row", { name: /Analyze Cues/ })).toBeNull();
     expect(screen.getByText(/1 question without a step is left out/)).toBeInTheDocument();
   });
@@ -141,7 +256,7 @@ describe("SessionReportView", () => {
   it("says so when nobody joined", () => {
     renderView("students", buildSessionReport({ ...REPORT_FIXTURE, participants: [] }));
     expect(screen.queryByRole("table")).toBeNull();
-    expect(screen.getByRole("heading", { level: 2, name: "Nobody joined" })).toBeInTheDocument();
+    expect(screen.getByText("Nobody joined.")).toBeInTheDocument();
   });
 });
 
@@ -159,34 +274,22 @@ describe("SessionReportView for a quiz that played a case study in place (#469)"
     const group = within(table).getByRole("rowheader", { name: "Case study: Hip arthroplasty" });
     expect(group).toHaveAttribute("scope", "rowgroup");
     const groupBody = group.closest("tbody") as HTMLElement;
-    const names = within(groupBody).getAllByRole("rowheader");
-    expect(names).toHaveLength(3);
-    expect(names[0]).toHaveAccessibleName("Case study: Hip arthroplasty");
-    expect(names[1]).toHaveAccessibleName("Q2 Select the findings that need follow-up.");
-    expect(names[2]).toHaveAccessibleName(
-      "Q3 Complete the diagram: the condition, two actions, and two parameters to monitor.",
-    );
+    expect(
+      within(groupBody)
+        .getAllByRole("rowheader")
+        .map((cell) => cell.firstChild?.textContent),
+    ).toEqual(["Case study: Hip arthroplasty", "Q2 · Extended Multiple Response", "Q3 · Bowtie"]);
   });
 
   it("heads the case study's columns with its title in the students view", () => {
-    renderView("students", mixed);
+    renderView("students", mixed, GRID);
     const heading = screen.getByRole("columnheader", { name: "Case study: Hip arthroplasty" });
     expect(heading).toHaveAttribute("colspan", "2");
     expect(
-      screen.getByRole("columnheader", { name: "Q2 Select the findings that need follow-up." }),
+      screen.getByRole("columnheader", {
+        name: "Q2 · Extended Multiple Response · Recognize Cues",
+      }),
     ).toBeInTheDocument();
-  });
-
-  // #563: no empty band over the other columns; each of them heads both rows.
-  it("spans every other header over both rows, so no header row has an empty cell", () => {
-    renderView("students", mixed);
-    const head = screen.getByRole("table").querySelector("thead") as HTMLElement;
-    expect(head.querySelectorAll("tr")).toHaveLength(2);
-    expect(head.querySelectorAll("td")).toHaveLength(0);
-    for (const name of ["Student", "Total", "Percent", "Q4 untagged"]) {
-      expect(within(head).getByRole("columnheader", { name })).toHaveAttribute("rowspan", "2");
-    }
-    expect(within(head).getByRole("columnheader", { name: "Student" })).toHaveClass("sticky");
   });
 
   it("has no case study heading for a quiz of loose questions", () => {

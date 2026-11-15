@@ -1,3 +1,4 @@
+import { ITEM_TYPE_LABELS, ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 import { CJMM_STEP_LABELS, type CjmmStep } from "@/lib/ngn/types";
 
 /**
@@ -169,6 +170,37 @@ export function groupByCaseStudy<T extends { caseStudy?: ReportCaseStudy | null 
   return groups;
 }
 
+const isItemType = (type: string | null): type is ItemType =>
+  type !== null && (ITEM_TYPES as readonly string[]).includes(type);
+
+/** "Q3": a question's place in the set, for a column too narrow for `questionLabel`. */
+export const questionNumber = (item: Pick<ItemRow, "position">): string => `Q${item.position}`;
+
+/**
+ * What a teacher reads a question by in the report (#565): its place, its item type and its
+ * clinical judgment step, as "Q3 · Extended Multiple Response · Recognize Cues". A part that is
+ * not known is left out. The question's own words go under it (`questionText`, #563), not in it.
+ * The internal `ref` is not part of it either; it stays in the CSV and a tooltip.
+ *
+ * `withStep: false` leaves the step out, for a table whose Step column already names it.
+ */
+export function questionLabel(
+  item: Pick<ItemRow, "position" | "type" | "cjmmStep">,
+  { withStep = true }: { withStep?: boolean } = {},
+): string {
+  return [
+    questionNumber(item),
+    isItemType(item.type) ? ITEM_TYPE_LABELS[item.type] : null,
+    !withStep || item.cjmmStep === null ? null : CJMM_STEP_LABELS[item.cjmmStep],
+  ]
+    .filter((part) => part !== null)
+    .join(" · ");
+}
+
+/** A clinical judgment step as its number and name, "6 · Evaluate Outcomes"; "–" for none. */
+export const stepLabel = (cjmmStep: ItemRow["cjmmStep"]): string =>
+  cjmmStep === null ? "–" : `${cjmmStep} · ${CJMM_STEP_LABELS[cjmmStep]}`;
+
 type ScoreKey = `${string}@${number}`;
 const keyOf = (participantId: string, position: number): ScoreKey => `${participantId}@${position}`;
 
@@ -181,6 +213,44 @@ export function buildSessionReport(input: SessionReportInput): SessionReport {
     students: studentRows(input.participants, itemRows, scores),
     steps: stepRows(itemRows),
   };
+}
+
+/**
+ * Students highest score first (#565), a student with no percent last; equal scores keep the
+ * name order the report already has.
+ */
+export function byScore(students: readonly StudentRow[]): StudentRow[] {
+  return [...students].sort((a, b) => {
+    if (a.percent === null || b.percent === null) {
+      return (a.percent === null ? 1 : 0) - (b.percent === null ? 1 : 0);
+    }
+    return b.percent - a.percent;
+  });
+}
+
+/** How one answer went, as the students view marks it; null when it was not answered. */
+export function markOfScore(score: Score | null): "full" | "partial" | "none" | null {
+  return score === null ? null : markOf(score);
+}
+
+/** The report at a glance, above its tables (#565). */
+export interface ReportSummary {
+  /** The mean of the students' percents, as the Students view prints them; null with nobody. */
+  classAverage: number | null;
+  /** The question with the lowest average %, the first of a tie; null when none was answered. */
+  hardest: ItemRow | null;
+}
+
+export function summarizeReport(report: SessionReport): ReportSummary {
+  const percents = report.students.flatMap((student) =>
+    student.percent === null ? [] : [student.percent],
+  );
+  let hardest: ItemRow | null = null;
+  for (const item of report.items) {
+    if (item.meanPercent === null) continue;
+    if (hardest === null || item.meanPercent < (hardest.meanPercent ?? Infinity)) hardest = item;
+  }
+  return { classAverage: mean(percents), hardest };
 }
 
 /** Answers that belong to someone on the roster at a position in the session; the rest are ignored. */

@@ -26,9 +26,13 @@ describe.each([
 });
 
 describe("Live sessions loading state", () => {
-  it("draws the page's own h1 in the page title's style, so it does not move (#563)", () => {
+  // #565: the page heads itself with `PageHeader`, so the skeleton draws the same title style.
+  it("draws the page's own h1 in the shared title style, so it does not move when the list arrives", () => {
     render(<SessionsLoading />);
-    expect(screen.getByRole("heading", { level: 1 })).toHaveClass(...PAGE_TITLE_CLASSES.split(" "));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveClass(
+      "display-section",
+      "wrap-anywhere",
+    );
   });
 });
 

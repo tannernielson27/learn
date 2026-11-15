@@ -123,18 +123,6 @@ describe("AssignmentReportView, once closed", () => {
   });
 
   // #563: the best attempt said once, as a percent, rather than "1.5 / 2" beside "75%".
-  it("says the best attempt once, as a right-aligned percent", () => {
-    renderView("students");
-    const region = screen.getByRole("region", { name: "Scores by student" });
-    const head = within(region).getByRole("columnheader", { name: "Best score" });
-    expect(head).toHaveClass("text-right");
-    expect(within(region).queryByRole("columnheader", { name: "Percent" })).toBeNull();
-    expect(within(region).queryByRole("columnheader", { name: "Best" })).toBeNull();
-    const ava = within(region).getByRole("row", { name: /^Ava/ });
-    expect(within(ava).queryByText("1.5 / 2")).toBeNull();
-    expect(within(ava).getByText("75%")).toHaveClass("text-right", "whitespace-nowrap");
-    expect(within(region).getByRole("table")).toHaveClass("tabular");
-  });
 
   it("keeps the student's name in a sticky first column of a table that scrolls in its own box", () => {
     renderView("students");
@@ -158,7 +146,7 @@ describe("AssignmentReportView, once closed", () => {
     renderView("items");
     const region = screen.getByRole("region", { name: "Results by question" });
     expect(within(region).getByRole("columnheader", { name: "Correct" })).toBeInTheDocument();
-    const first = within(region).getByRole("row", { name: /^Q1 mc-hf/ });
+    const first = within(region).getByRole("row", { name: /^Q1 · / });
     expect(within(first).getAllByText("100%").length).toBeGreaterThan(0);
   });
 
@@ -336,29 +324,6 @@ describe("AssignmentReportView, a whole quiz with a case study in place (#470)",
     expect(
       screen.getByRole("rowheader", { name: "Case study: Heart failure" }),
     ).toBeInTheDocument();
-  });
-
-  it("names each question by its text where it was read (#563)", () => {
-    render(
-      <AssignmentReportView
-        assignmentId={ASSIGNMENT}
-        classId={CLASS}
-        title="Week 5"
-        closesAt="2026-09-23T17:00:00Z"
-        maxAttempts={2}
-        report={buildAssignmentReport({
-          ...INPUT,
-          items: INPUT.items.map((item) =>
-            item.position === 1 ? { ...item, stem: "Which finding comes **first**?" } : item,
-          ),
-        })}
-        view="students"
-      />,
-    );
-    expect(
-      screen.getByRole("columnheader", { name: "Q1 Which finding comes first?" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Q2 mr-hf" })).toBeInTheDocument();
   });
 
   it("names the case study over its steps' columns by student", () => {

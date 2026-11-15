@@ -8,7 +8,7 @@ import type {
 } from "@/lib/classes/progress";
 import type { CjmmStep } from "@/lib/ngn/types";
 import type { Database } from "./database.types";
-import { readAllPages, type SessionSummary } from "./sessionReport";
+import { readAllPages, type SessionListRow } from "./sessionReport";
 
 type Client = SupabaseClient<Database>;
 
@@ -105,7 +105,7 @@ export const CLASS_SESSION_LIMIT = 100;
 export async function listClassSessions(
   supabase: Client,
   classId: string,
-): Promise<SessionSummary[] | null> {
+): Promise<SessionListRow[] | null> {
   const { data, error } = await supabase
     .from("sessions")
     .select("id, title, status, opened_at, closed_at, participants(id)")

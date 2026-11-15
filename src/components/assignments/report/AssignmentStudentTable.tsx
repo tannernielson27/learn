@@ -1,11 +1,10 @@
 import {
+  CaseStudyHeadRow,
   CELL,
   HEAD,
-  QuestionHeadRows,
   ROW,
   ROW_HEAD,
   ScrollRegion,
-  STICKY_HEAD,
 } from "@/components/live/report/ReportTables";
 import {
   STUDENT_STATUS_LABEL,
@@ -13,6 +12,8 @@ import {
   type AssignmentStudentRow,
 } from "@/lib/assignments/report";
 import { formatPercent, formatPoints } from "@/lib/live/reportFormat";
+
+const STICKY_HEAD = `${HEAD} sticky left-0 bg-surface-1 text-left`;
 
 interface ProgressTableProps {
   /** The scrolling region's accessible name. */
@@ -65,10 +66,7 @@ interface ScoreTableProps extends ProgressTableProps {
   items: readonly AssignmentItemRow[];
 }
 
-/**
- * Once closed: each student's status, best attempt, attempts used, and the best attempt by
- * question. The best attempt is said once, as a percent (#563); its points are in the CSV.
- */
+/** Once closed: each student's status, best attempt, attempts used, and the best attempt by item. */
 export function ScoreTable({
   items,
   students,
@@ -80,15 +78,25 @@ export function ScoreTable({
       <table className="tabular w-full border-collapse text-sm">
         <thead>
           {/* #470: a whole quiz's case studies, each named over its steps' columns. */}
-          <QuestionHeadRows
-            before={[
-              { label: "Student", align: "left", sticky: true },
-              { label: "Status", align: "left" },
-              { label: "Best score", align: "right" },
-              { label: "Attempts used", align: "right" },
-            ]}
-            items={items}
-          />
+          <CaseStudyHeadRow items={items} before={5} after={0} />
+          <tr>
+            <th scope="col" className={STICKY_HEAD}>
+              Student
+            </th>
+            <th scope="col" className={`${HEAD} text-left`}>
+              Status
+            </th>
+            {["Best", "Percent", "Attempts used"].map((head) => (
+              <th key={head} scope="col" className={`${HEAD} text-right`}>
+                {head}
+              </th>
+            ))}
+            {items.map((item) => (
+              <th key={item.position} scope="col" className={`${HEAD} text-right`}>
+                {`Q${item.position} ${item.ref}`}
+              </th>
+            ))}
+          </tr>
         </thead>
         <tbody>
           {students.map((student) => (
@@ -98,6 +106,11 @@ export function ScoreTable({
               </th>
               <td className="px-3 py-2 text-left whitespace-nowrap">
                 {STUDENT_STATUS_LABEL[student.status]}
+              </td>
+              <td className={CELL}>
+                {student.best
+                  ? `${formatPoints(student.best.score)} / ${formatPoints(student.best.maxScore)}`
+                  : formatPoints(null)}
               </td>
               <td className={`${CELL} font-medium`}>
                 {formatPercent(student.best?.percent ?? null)}

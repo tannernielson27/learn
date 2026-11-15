@@ -1,51 +1,38 @@
 import { describe, expect, it } from "vitest";
-import { QUESTION_EXCERPT_LENGTH, questionLabel } from "./questionLabel";
+import { QUESTION_EXCERPT_LENGTH, questionText } from "./questionLabel";
 
-describe("questionLabel", () => {
-  it("names a question by its number and its text", () => {
-    expect(questionLabel(3, "Which finding needs follow-up?")).toEqual({
-      number: "Q3",
+describe("questionText (#563)", () => {
+  it("gives the start of the question and the whole of it", () => {
+    expect(questionText("Which finding needs follow-up?")).toEqual({
       excerpt: "Which finding needs follow-up?",
-      full: "Q3 Which finding needs follow-up?",
+      full: "Which finding needs follow-up?",
     });
   });
 
-  it("reads the markdown stem as plain text on one line", () => {
-    const label = questionLabel(1, "**Which** findings\n\nneed _follow-up_?");
-    expect(label.excerpt).toBe("Which findings need follow-up?");
-    expect(label.full).toBe("Q1 Which findings need follow-up?");
+  it("strips markdown marks and joins lines", () => {
+    expect(questionText("**Which** findings\n\nneed _follow-up_?").full).toBe(
+      "Which findings need follow-up?",
+    );
   });
 
-  it("cuts a long stem to about 60 characters with an ellipsis, keeping all of it in full", () => {
+  it("cuts a long question with an ellipsis and keeps the whole of it for the tooltip", () => {
     const stem =
-      "A client with heart failure gained 2.3 kg (5 lb) in two days and reports shortness of breath at night. Which action comes first?";
-    const label = questionLabel(15, stem);
-    expect(label.excerpt.length).toBeLessThanOrEqual(QUESTION_EXCERPT_LENGTH);
-    expect(label.excerpt.endsWith("…")).toBe(true);
-    expect(stem.startsWith(label.excerpt.slice(0, -1))).toBe(true);
-    expect(label.full).toBe(`Q15 ${stem}`);
+      "A client with heart failure gained two kilograms overnight and reports new orthopnea this morning.";
+    const text = questionText(stem);
+    expect(text.excerpt.endsWith("…")).toBe(true);
+    expect(text.excerpt.length).toBeLessThanOrEqual(QUESTION_EXCERPT_LENGTH);
+    expect(text.full).toBe(stem);
   });
 
-  it("does not cut a stem of exactly the limit", () => {
-    const stem = "x".repeat(QUESTION_EXCERPT_LENGTH);
-    expect(questionLabel(1, stem).excerpt).toBe(stem);
+  it("cuts a single long word rather than leaving nothing", () => {
+    expect(questionText("x".repeat(90)).excerpt.length).toBeGreaterThan(0);
   });
 
-  it("cuts one long word mid-word rather than showing nothing", () => {
-    const word = "pneumonoultramicroscopicsilicovolcanoconiosis".repeat(3);
-    const label = questionLabel(2, word);
-    expect(label.excerpt).toHaveLength(QUESTION_EXCERPT_LENGTH);
-    expect(label.excerpt).toBe(`${word.slice(0, QUESTION_EXCERPT_LENGTH - 1)}…`);
+  it.each([null, undefined, "", "   \n "])("gives nothing for %j", (stem) => {
+    expect(questionText(stem)).toEqual({ excerpt: "", full: "" });
   });
 
-  it.each([[""], ["   \n "], [null], [undefined]])(
-    "falls back to the number alone for an empty stem (%j)",
-    (stem) => {
-      expect(questionLabel(4, stem)).toEqual({ number: "Q4", excerpt: "", full: "Q4" });
-    },
-  );
-
-  it("takes a shorter limit where a caller asks for one", () => {
-    expect(questionLabel(1, "Which finding needs follow-up?", 10).excerpt).toBe("Which fin…");
+  it("takes a shorter limit", () => {
+    expect(questionText("Which finding needs follow-up?", 10).excerpt).toBe("Which fin…");
   });
 });

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { reportPath } from "@/lib/live/reportFormat";
-import type { SessionSummary } from "@/lib/supabase/sessionReport";
+import type { SessionListRow } from "@/lib/supabase/sessionReport";
 import type { SessionStatus } from "@/lib/supabase/sessions";
 import { formatSessionDate } from "./formatDate";
+import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 const STATUS_LABELS: Record<SessionStatus, string> = {
@@ -15,7 +16,7 @@ const STATUS_LABELS: Record<SessionStatus, string> = {
 const participantLabel = (count: number) => (count === 1 ? "1 student" : `${count} students`);
 
 export interface SessionListProps {
-  sessions: readonly SessionSummary[];
+  sessions: readonly SessionListRow[];
 }
 
 /**
@@ -34,26 +35,50 @@ export function SessionList({ sessions }: SessionListProps) {
     );
   }
 
+  return <SessionRows label="Live sessions" sessions={sessions} />;
+}
+
+/**
+ * One session's row: its title, date, roster and status, as a link. An ended one opens its
+ * report; one still open opens its console. Shared with the managed list (#565).
+ */
+export function SessionRowLink({
+  session,
+  className = "",
+}: {
+  session: SessionListRow;
+  className?: string;
+}) {
   return (
-    <ul
-      aria-label="Live sessions"
-      className="flex flex-col divide-y divide-line border-y border-line"
+    <Link
+      href={session.status === "ended" ? reportPath(session.id) : `/live/${session.id}`}
+      className={`tap-target flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-2 py-3 transition-colors duration-fast hover:bg-surface-2 ${className}`.trim()}
     >
+      <span className="font-medium break-words text-ink-1">{session.title}</span>
+      <span className="flex flex-wrap items-center gap-x-3 text-sm text-ink-2">
+        <span>{formatSessionDate(session.closedAt ?? session.openedAt)}</span>
+        <span>{participantLabel(session.participantCount)}</span>
+        {/* A session still open stands out from the ended ones; a running one is live. */}
+        <Badge
+          tone={session.status === "ended" ? "neutral" : "accent"}
+          live={session.status === "running"}
+        >
+          {STATUS_LABELS[session.status]}
+        </Badge>
+      </span>
+    </Link>
+  );
+}
+
+/** The id of a date group's heading on the Live sessions page (#565). */
+export const groupId = (label: string) => `sessions-${label.toLowerCase().replace(/\s+/g, "-")}`;
+
+function SessionRows({ label, sessions }: { label: string; sessions: readonly SessionListRow[] }) {
+  return (
+    <ul aria-label={label} className="flex flex-col divide-y divide-line border-y border-line">
       {sessions.map((session) => (
         <li key={session.id}>
-          <Link
-            href={session.status === "ended" ? reportPath(session.id) : `/live/${session.id}`}
-            className="tap-target flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-2 py-3 transition-colors duration-fast hover:bg-surface-2"
-          >
-            <span className="font-medium text-ink-1">{session.title}</span>
-            <span className="flex flex-wrap gap-x-3 text-sm text-ink-2">
-              <span>{formatSessionDate(session.closedAt ?? session.openedAt)}</span>
-              <span>{participantLabel(session.participantCount)}</span>
-              <span className={session.status === "ended" ? "" : "font-medium text-ink-1"}>
-                {STATUS_LABELS[session.status]}
-              </span>
-            </span>
-          </Link>
+          <SessionRowLink session={session} />
         </li>
       ))}
     </ul>

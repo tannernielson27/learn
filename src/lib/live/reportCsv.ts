@@ -1,5 +1,5 @@
 import { toCsv, type CsvCell } from "./csv";
-import { questionLabel } from "./questionLabel";
+import { questionText } from "./questionLabel";
 import type { ItemRow, SessionReport } from "./report";
 
 /** Two decimal places, as a number, so the spreadsheet can still add it up. */
@@ -41,7 +41,7 @@ export function questionColumns(items: readonly Pick<ItemRow, "position" | "stem
 } {
   return {
     header: items.map((item) => `Q${item.position} question`),
-    cells: items.map((item) => questionLabel(item.position, item.stem).excerpt || null),
+    cells: items.map((item) => questionText(item.stem).excerpt || null),
   };
 }
 

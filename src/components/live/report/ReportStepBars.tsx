@@ -27,7 +27,7 @@ export function ReportStepBars({ steps }: { steps: readonly StepRow[] }) {
   return (
     <StepBars
       steps={reportStepShares(steps)}
-      heading="Mean by clinical judgment step"
+      heading="Average by clinical judgment step"
       className="mb-6 max-w-reading rounded-md border border-line bg-surface-1 p-4 sm:p-6"
     />
   );

@@ -3,30 +3,22 @@ import { plainStem, shorten } from "@/lib/authoring/stemExcerpt";
 /** How much of a question's text a report shows beside its number (#563). */
 export const QUESTION_EXCERPT_LENGTH = 60;
 
-export interface QuestionLabel {
-  /** "Q3": the question's place in the quiz, as the student results list writes it. */
-  number: string;
+export interface QuestionText {
   /** About 60 characters of the question text, ending in an ellipsis when cut; "" when it has none. */
   excerpt: string;
-  /** The number and the whole question text, for a tooltip and the accessible name. */
+  /** The whole question text as one line, for a tooltip and the accessible name; "" when none. */
   full: string;
 }
 
 /**
- * How a teacher's report names a question (#563): its number and the start of its text, the way
- * the student results list does (`QuestionResults`), never the internal `ref` an author never
- * sees. A question whose text could not be read falls back to its number alone.
+ * A question's own words for a teacher's report (#563), shown under its number, type and step
+ * (#565's `questionLabel`), so a teacher can tell two questions of the same type apart. Plain text:
+ * markdown marks stripped, lines joined. A question whose text could not be read gives "".
  */
-export function questionLabel(
-  position: number,
+export function questionText(
   stem: string | null | undefined,
   max = QUESTION_EXCERPT_LENGTH,
-): QuestionLabel {
-  const number = `Q${position}`;
-  const text = plainStem(stem ?? "");
-  return {
-    number,
-    excerpt: shorten(text, max),
-    full: text ? `${number} ${text}` : number,
-  };
+): QuestionText {
+  const full = plainStem(stem ?? "");
+  return { excerpt: shorten(full, max), full };
 }

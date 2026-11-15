@@ -7,6 +7,7 @@ import {
   type ReportResponseInput,
   type SessionReportInput,
 } from "@/lib/live/report";
+import { titlePattern, type SessionStatusFilter } from "@/lib/live/sessionFilters";
 import type { CjmmStep } from "@/lib/ngn/types";
 import type { Database } from "./database.types";
 import type { SessionStatus } from "./sessions";
@@ -23,7 +24,8 @@ type Client = SupabaseClient<Database>;
  * Display names are the only identity read. `participants.profile_id` is not selected.
  */
 
-export interface SessionSummary {
+/** What a row of a session list shows (the Live sessions page, a class's sessions tab). */
+export interface SessionListRow {
   id: string;
   title: string;
   status: SessionStatus;
@@ -32,8 +34,16 @@ export interface SessionSummary {
   participantCount: number;
 }
 
+/** A row of the Live sessions page, which can also be renamed and archived (#565). */
+export interface SessionSummary extends SessionListRow {
+  /** Who ran it: only they may rename or archive it (#565). */
+  hostId: string;
+  /** When it was archived (#565), or null. */
+  archivedAt: string | null;
+}
+
 export interface SessionReportData {
-  session: Omit<SessionSummary, "participantCount">;
+  session: Omit<SessionSummary, "participantCount" | "archivedAt">;
   /**
    * What the report is built from; null until the session has ended, when there is no report yet
    * and nothing past the session row is read (perf-audit #17).
@@ -43,6 +53,16 @@ export interface SessionReportData {
 
 /** How many sessions the list shows. Cross-session history is out of scope (#186). */
 export const RECENT_SESSION_LIMIT = 50;
+
+/** What the Live sessions list narrows by (#565); `sessionFilters.ts` reads them from the URL. */
+export interface ListSessionsOptions {
+  /** Words to find in the title; "" for none. */
+  q?: string;
+  status?: SessionStatusFilter;
+  /** Only this host's sessions; null for everyone's in the org. */
+  hostId?: string | null;
+  limit?: number;
+}
 
 /** PostgREST's `max_rows` in supabase/config.toml; a longer read is taken a page at a time. */
 export const PAGE_SIZE = 1000;
@@ -54,12 +74,27 @@ export const PAGE_SIZE = 1000;
  * table-wide select on `participants`, which authors do not have (only listed columns, so
  * `rejoin_hash` stays unreadable), and PostgREST refuses aggregate functions on this project.
  */
-export async function listRecentSessions(supabase: Client): Promise<SessionSummary[] | null> {
-  const { data, error } = await supabase
+export async function listRecentSessions(
+  supabase: Client,
+  options: ListSessionsOptions = {},
+): Promise<SessionSummary[] | null> {
+  const { q = "", status = "all", hostId = null, limit = RECENT_SESSION_LIMIT } = options;
+  let query = supabase
     .from("sessions")
-    .select("id, title, status, opened_at, closed_at, participants(id)")
+    .select("id, title, status, opened_at, closed_at, host_id, archived_at, participants(id)");
+  if (q !== "") query = query.ilike("title", titlePattern(q));
+  if (status === "ended") query = query.eq("status", "ended");
+  if (status === "open") query = query.neq("status", "ended");
+  // #565: archived sessions have a view of their own and are left out of every other.
+  query =
+    status === "archived" ? query.not("archived_at", "is", null) : query.is("archived_at", null);
+  // Narrows what row level security already allows; it is never the access check.
+  if (hostId !== null) query = query.eq("host_id", hostId);
+  const { data, error } = await query
     .order("opened_at", { ascending: false })
-    .limit(RECENT_SESSION_LIMIT);
+    // Ties broken by id, so a "Show more" never shows a row twice or skips one.
+    .order("id", { ascending: false })
+    .limit(limit);
   if (error || !data) return null;
   return data.map((row) => ({
     id: row.id,
@@ -68,6 +103,8 @@ export async function listRecentSessions(supabase: Client): Promise<SessionSumma
     openedAt: row.opened_at,
     closedAt: row.closed_at,
     participantCount: row.participants.length,
+    hostId: row.host_id,
+    archivedAt: row.archived_at,
   }));
 }
 
@@ -88,6 +125,7 @@ export async function readSessionReport(
     status: session.status,
     openedAt: session.opened_at,
     closedAt: session.closed_at,
+    hostId: session.host_id,
   };
   // Every caller answers "not yet" for a session that has not ended, so its rows are not read.
   if (session.status !== "ended") return { session: header, input: null };
@@ -120,13 +158,13 @@ const UNDEFINED_COLUMN = "42703";
 async function readSessionRow(supabase: Client, sessionId: string) {
   const read = await supabase
     .from("sessions")
-    .select("id, title, status, opened_at, closed_at, item_set, case_study_records")
+    .select("id, title, status, opened_at, closed_at, host_id, item_set, case_study_records")
     .eq("id", sessionId)
     .maybeSingle();
   if (read.error?.code === UNDEFINED_COLUMN) {
     const { data, error } = await supabase
       .from("sessions")
-      .select("id, title, status, opened_at, closed_at, item_set")
+      .select("id, title, status, opened_at, closed_at, host_id, item_set")
       .eq("id", sessionId)
       .maybeSingle();
     if (error) throw new Error(`could not read session: ${error.message}`);

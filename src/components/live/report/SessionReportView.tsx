@@ -1,18 +1,21 @@
-import Link from "next/link";
 import { buttonClasses } from "@/components/ui/Button";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
-import type { SessionReport } from "@/lib/live/report";
+import { TabLinks } from "@/components/ui/TabLinks";
+import { summarizeReport, type SessionReport } from "@/lib/live/report";
 import {
-  REPORT_VIEWS,
+  DEFAULT_STUDENT_VIEW,
   reportCsvPath,
   reportPath,
   SESSIONS_PATH,
   type ReportView,
+  type StudentViewOptions,
 } from "@/lib/live/reportFormat";
 import { formatSessionDate } from "./formatDate";
 import { ReportStepBars } from "./ReportStepBars";
-import { ItemTable, StepTable, StudentTable } from "./ReportTables";
+import { RenameSessionButton } from "./RenameSessionButton";
+import { ReportSummaryStrip } from "./ReportSummaryStrip";
+import { ItemTable, StepTable } from "./ReportTables";
+import { StudentResults } from "./StudentSummaryTable";
 
 const VIEW_LABELS: Record<ReportView, string> = {
   students: "Students",
@@ -20,12 +23,22 @@ const VIEW_LABELS: Record<ReportView, string> = {
   steps: "Clinical judgment steps",
 };
 
+/** Questions first, the view the report opens on (#565). */
+const LIVE_VIEW_ORDER: readonly ReportView[] = ["items", "students", "steps"];
+
+/** The way back from a report, open or ended, to the list it was opened from. */
+export const REPORT_BACK = { href: SESSIONS_PATH, label: "Back to live sessions" } as const;
+
 export interface SessionReportViewProps {
   sessionId: string;
   title: string;
   closedAt: string | null;
   report: SessionReport;
   view: ReportView;
+  /** How the students view is drawn and sorted (#565). */
+  studentOptions?: StudentViewOptions;
+  /** The viewer ran this session, so may rename it (#565). */
+  canRename?: boolean;
 }
 
 /**
@@ -41,68 +54,88 @@ export function SessionReportView({
   closedAt,
   report,
   view,
+  studentOptions = DEFAULT_STUDENT_VIEW,
+  canRename = false,
 }: SessionReportViewProps) {
   return (
     <>
       <PageHeader
+        back={REPORT_BACK}
         title={title}
-        back={{ href: SESSIONS_PATH, label: "Back to live sessions" }}
         lead={
-          <p className="tabular">
+          <p className="text-sm">
             {closedAt ? formatSessionDate(closedAt) : "Ended"} ·{" "}
             {report.students.length === 1 ? "1 student" : `${report.students.length} students`} ·{" "}
             {report.items.length === 1 ? "1 question" : `${report.items.length} questions`}
           </p>
         }
         action={
-          <a href={reportCsvPath(sessionId)} download className={buttonClasses()}>
-            Download CSV
-          </a>
+          <div className="flex flex-wrap gap-2">
+            {canRename ? <RenameSessionButton sessionId={sessionId} title={title} /> : null}
+            <a href={reportCsvPath(sessionId)} download className={buttonClasses()}>
+              Download CSV
+            </a>
+          </div>
         }
       />
 
-      <nav aria-label="Report views" className="mt-6 border-b border-line">
-        <ul className="-mb-px flex gap-1 overflow-x-auto">
-          {REPORT_VIEWS.map((option) => (
-            <li key={option}>
-              <Link
-                href={reportPath(sessionId, option)}
-                aria-current={option === view ? "page" : undefined}
-                className={`tap-target inline-flex items-center border-b-2 px-3 text-sm font-semibold whitespace-nowrap transition-colors duration-fast ${
-                  option === view
-                    ? "border-accent text-accent-ink"
-                    : "border-transparent text-ink-2 hover:text-ink-1"
-                }`}
-              >
-                {VIEW_LABELS[option]}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      {report.students.length > 0 ? (
+        <ReportSummaryStrip
+          sessionId={sessionId}
+          students={report.students.length}
+          questions={report.items.length}
+          summary={summarizeReport(report)}
+        />
+      ) : null}
+
+      <TabLinks
+        label="Report views"
+        className="mt-6"
+        links={LIVE_VIEW_ORDER.map((option) => ({
+          href: reportPath(sessionId, option),
+          label: VIEW_LABELS[option],
+          current: option === view,
+        }))}
+      />
 
       <section aria-label={VIEW_LABELS[view]} className="mt-6">
-        <ReportBody report={report} view={view} />
+        <ReportBody
+          sessionId={sessionId}
+          report={report}
+          view={view}
+          studentOptions={studentOptions}
+        />
       </section>
     </>
   );
 }
 
-function ReportBody({ report, view }: { report: SessionReport; view: ReportView }) {
+function ReportBody({
+  sessionId,
+  report,
+  view,
+  studentOptions,
+}: {
+  sessionId: string;
+  report: SessionReport;
+  view: ReportView;
+  studentOptions: StudentViewOptions;
+}) {
   if (view === "steps") return <StepsBody report={report} />;
   if (report.students.length === 0) {
-    return (
-      <EmptyState
-        level={2}
-        heading="Nobody joined"
-        body="Nobody joined this live session before it ended, so there are no answers to show."
-      />
-    );
+    return <p className="text-ink-2">Nobody joined.</p>;
   }
   if (view === "items") {
     return <ItemTable items={report.items} participantCount={report.students.length} />;
   }
-  return <StudentTable items={report.items} students={report.students} />;
+  return (
+    <StudentResults
+      sessionId={sessionId}
+      items={report.items}
+      students={report.students}
+      options={studentOptions}
+    />
+  );
 }
 
 function StepsBody({ report }: { report: SessionReport }) {

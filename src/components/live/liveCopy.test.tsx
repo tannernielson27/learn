@@ -145,6 +145,8 @@ function wordCount(text: string): number {
 }
 
 const SESSION_ID = "00000000-0000-4000-8000-0000000414aa";
+/** The Live sessions page at its plain address, with no search or filter (#565). */
+const NO_QUERY = { params: Promise.resolve({}), searchParams: Promise.resolve({}) };
 const CODE = "AJ4K7P";
 const NOW = 1_800_000_000_000;
 const ITEM = toKeylessItem(itemSchema.parse(FIXTURES.multiple_choice.canonical)) as ParticipantItem;
@@ -488,7 +490,7 @@ const SCREENS: [string, () => Promise<string>][] = [
         summary,
         { ...summary, id: `${SESSION_ID}b`, title: "Respiratory drill", status: "lobby" },
       ]);
-      return html(await SessionsPage());
+      return html(await SessionsPage(NO_QUERY));
     },
   ],
   ["list: none yet", () => html(<SessionList sessions={[]} />)],
@@ -496,7 +498,7 @@ const SCREENS: [string, () => Promise<string>][] = [
     "list: could not be loaded",
     async () => {
       reads.listRecentSessions.mockResolvedValue(null);
-      return html(await SessionsPage());
+      return html(await SessionsPage(NO_QUERY));
     },
   ],
   // The student's side.
