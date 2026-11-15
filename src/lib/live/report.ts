@@ -24,8 +24,14 @@ export interface ReportItemInput {
   /** Where the item sat in the session, counting from 1. */
   position: number;
   itemId: string;
-  /** The item's own stable id (`content.id`), which an author recognises. */
+  /** The item's own stable id (`content.id`), kept for the CSV's columns. */
   ref: string;
+  /**
+   * The question text (`content.stem.value`, markdown), which names the question on the page and
+   * in the CSV (#563). Absent or null where it was not read; the question is then named by its
+   * number and `ref`, as before.
+   */
+  stem?: string | null;
   type: string | null;
   cjmmStep: CjmmStep | null;
   /** The case study it was a step of (#469), or absent for a loose question. */
@@ -73,6 +79,8 @@ export interface ItemRow {
   position: number;
   itemId: string;
   ref: string;
+  /** The question text (markdown), or null where it was not read. */
+  stem: string | null;
   type: string | null;
   cjmmStep: CjmmStep | null;
   /** The case study it was a step of (#469); null for a loose question. */
@@ -217,6 +225,7 @@ function itemRow(
     position: item.position,
     itemId: item.itemId,
     ref: item.ref,
+    stem: item.stem ?? null,
     type: item.type,
     cjmmStep: item.cjmmStep,
     caseStudy: item.caseStudy ? { ...item.caseStudy } : null,

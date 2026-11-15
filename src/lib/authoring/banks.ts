@@ -14,6 +14,7 @@ import {
 import type { FolderView } from "./folders";
 import { hasMatch, splitHighlight, type Segment } from "./highlight";
 import { sharedWarningCounts, type WarningCountStore } from "./sharedWarningCounts";
+import { stemExcerpt } from "./stemExcerpt";
 import { storedWarningCount } from "./storedWarnings";
 import type { TaggedRow } from "./tagFilter";
 
@@ -371,16 +372,5 @@ export function storedMaxPoints(value: unknown): number | null {
   return typeof value === "number" && Number.isInteger(value) && value >= 1 ? value : null;
 }
 
-export function stemExcerpt(stem: unknown, max = 140): string {
-  const value =
-    stem && typeof stem === "object" && "value" in stem && typeof stem.value === "string"
-      ? stem.value
-      : "";
-  // A link or image shows its text alone; other parentheses are text, like a copy's "(copy)".
-  const plain = value
-    .replace(/!?\[([^\]]*)\]\((?:[^()]|\([^()]*\))*\)/g, "$1")
-    .replace(/[*_`#>[\]!]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  return plain.length > max ? `${plain.slice(0, max - 1).trimEnd()}…` : plain;
-}
+// Kept here for the callers that read it with the bank rows; the one copy is ./stemExcerpt.
+export { stemExcerpt };

@@ -1,4 +1,5 @@
 import { toCsv, type CsvCell } from "./csv";
+import { questionLabel } from "./questionLabel";
 import type { ItemRow, SessionReport } from "./report";
 
 /** Two decimal places, as a number, so the spreadsheet can still add it up. */
@@ -7,7 +8,7 @@ const round2 = (value: number): number => Math.round(value * 100) / 100;
 /**
  * The gradebook export (#186): one row per student, one column per item, then the totals. An item
  * the student did not answer is an empty cell, not a zero, so the file says what happened; the
- * totals already count it as nothing earned.
+ * totals already count it as nothing earned. After them, each question's text (`questionColumns`).
  */
 export function sessionReportCsv(report: SessionReport): string {
   const header: CsvCell[] = [
@@ -17,6 +18,7 @@ export function sessionReportCsv(report: SessionReport): string {
     "Possible",
     "Percent",
   ];
+  const questions = questionColumns(report.items);
   const rows = report.students.map((student): CsvCell[] => [
     student.displayName,
     ...student.scores.map((score) => (score ? round2(score.points) : null)),
@@ -24,7 +26,34 @@ export function sessionReportCsv(report: SessionReport): string {
     round2(student.possible),
     student.percent === null ? null : round2(student.percent),
   ]);
-  return toCsv([header, ...rows]);
+  return toCsv(withQuestions([header, ...rows], questions));
+}
+
+/**
+ * What each question asks, so a teacher can tell the columns apart (#563): one "Q1 question"
+ * column per question, holding the start of its text (as the report page shows it), or empty
+ * where the text was not read. They come after every older column, so a spreadsheet built on the
+ * file's earlier columns and headers reads them where they always were.
+ */
+export function questionColumns(items: readonly Pick<ItemRow, "position" | "stem">[]): {
+  header: CsvCell[];
+  cells: CsvCell[];
+} {
+  return {
+    header: items.map((item) => `Q${item.position} question`),
+    cells: items.map((item) => questionLabel(item.position, item.stem).excerpt || null),
+  };
+}
+
+/** The header row and every student's row, each with the question columns on the end. */
+export function withQuestions(
+  [header, ...rows]: readonly CsvCell[][],
+  questions: ReturnType<typeof questionColumns>,
+): CsvCell[][] {
+  return [
+    [...(header ?? []), ...questions.header],
+    ...rows.map((row) => [...row, ...questions.cells]),
+  ];
 }
 
 /**
