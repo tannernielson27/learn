@@ -1,7 +1,12 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { Button } from "./Button";
-import { PAGE_TITLE_CLASSES, PageHeader } from "./PageHeader";
+import {
+  PAGE_LABEL_CLASSES,
+  PAGE_TITLE_CLASSES,
+  PageHeader,
+  SECTION_HEADING_CLASSES,
+} from "./PageHeader";
 
 describe("PageHeader", () => {
   it("is the page's one h1 in the display-section serif, alone when given only a title", () => {
@@ -56,5 +61,19 @@ describe("PageHeader", () => {
       "id",
       "reports-title",
     );
+  });
+
+  it("names what the title is on a sentence-case line above it", () => {
+    render(<PageHeader title="Mr. Ruiz, day 2" label="Case study" />);
+    const label = screen.getByText("Case study");
+    expect(label).toHaveClass("text-sm", "font-medium", "text-ink-2");
+    expect(label).not.toHaveClass("eyebrow", "uppercase");
+    const heading = screen.getByRole("heading", { level: 1, name: "Mr. Ruiz, day 2" });
+    expect(label.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("shares one section heading style, a step under the title", () => {
+    expect(SECTION_HEADING_CLASSES).toBe("text-lg font-medium text-ink-1");
+    expect(PAGE_LABEL_CLASSES).not.toMatch(/uppercase|tracking/);
   });
 });

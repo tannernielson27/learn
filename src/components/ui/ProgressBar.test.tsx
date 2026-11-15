@@ -20,4 +20,13 @@ describe("ProgressBar", () => {
     rerender(<ProgressBar value={3} max={0} label="Questions" />);
     expect(screen.getByTestId("progress-fill").style.transform).toBe("scaleX(0)");
   });
+
+  it("is drawn only beside a count that says it in words, so it is heard once (#563)", () => {
+    render(<ProgressBar value={4} max={9} decorative />);
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    const fill = screen.getByTestId("progress-fill");
+    expect(fill.parentElement).toHaveAttribute("aria-hidden", "true");
+    expect(fill.parentElement).not.toHaveAttribute("aria-valuetext");
+    expect(fill.style.transform).toBe(`scaleX(${4 / 9})`);
+  });
 });

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PlayItem } from "@/components/authoring/PlayItem";
 import { PageWidth } from "@/components/ui/PageWidth";
@@ -9,11 +8,10 @@ import { ITEM_TYPE_LABELS } from "@/lib/ngn/labels";
 import { toKeylessItem } from "@/lib/ngn/submit";
 import { fromItemRow } from "@/lib/supabase/itemRows";
 import { BackLink } from "@/components/ui/BackLink";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { TextLink } from "@/components/ui/TextLink";
 
 export const metadata: Metadata = { title: "Play question" };
-
-const linkClass =
-  "tap-target inline-flex items-center text-accent-ink underline-offset-4 hover:underline";
 
 export default async function PlayItemPage({ params }: PageProps<"/author/items/[itemId]/play">) {
   const { itemId } = await params;
@@ -38,20 +36,23 @@ export default async function PlayItemPage({ params }: PageProps<"/author/items/
     <>
       <p className="mb-2 flex flex-wrap gap-4 text-sm">
         <BackLink href={`/author/banks/${row.bank_id}`}>Back to quiz</BackLink>
-        <Link href={`/author/items/${row.id}`} className={linkClass}>
+        <TextLink href={`/author/items/${row.id}`} size="sm">
           Edit question
-        </Link>
+        </TextLink>
       </p>
       {stored.ok ? (
         <>
-          <p className="eyebrow mb-1">{ITEM_TYPE_LABELS[stored.value.type]}</p>
-          <h1 className="mb-6 font-read text-3xl text-ink-1">Play question</h1>
+          <PageHeader
+            className="mb-6"
+            label={ITEM_TYPE_LABELS[stored.value.type]}
+            title="Play question"
+          />
           {/* The only item data that reaches the browser: no key, no rationale (ADR 0003). */}
           <PlayItem itemId={row.id} item={toKeylessItem(stored.value)} />
         </>
       ) : (
         <>
-          <h1 className="mb-2 font-read text-3xl text-ink-1">Play question</h1>
+          <PageHeader className="mb-2" title="Play question" />
           <p className="text-ink-2">
             This question has a problem and cannot be played. Open it in the editor to fix it.
           </p>

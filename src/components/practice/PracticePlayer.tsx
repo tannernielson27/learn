@@ -190,13 +190,8 @@ export function PracticePlayer({
         >
           {`${answered} of ${view.total} done`}
         </p>
-        <ProgressBar
-          className="flex-1"
-          value={answered}
-          max={view.total}
-          label="Questions answered"
-          valueText={`${answered} of ${view.total} done`}
-        />
+        {/* Drawn only: the count beside it says it in words, once (#563). */}
+        <ProgressBar className="flex-1" decorative value={answered} max={view.total} />
       </div>
 
       <SetNav

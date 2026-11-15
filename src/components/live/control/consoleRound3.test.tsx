@@ -108,8 +108,12 @@ describe("the console's answer card", () => {
     );
     expect(within(card).queryByRole("heading")).toBeNull();
     expect(card.textContent?.match(/answered/gi)).toHaveLength(1);
-    // The bar keeps its own name for a screen reader.
-    expect(within(card).getByRole("progressbar", { name: "Answered" })).toBeInTheDocument();
+    // The bar is drawn only, so a screen reader hears the count once (#563).
+    expect(within(card).queryByRole("progressbar")).toBeNull();
+    expect(within(card).getByTestId("progress-fill").parentElement).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
   });
 });
 

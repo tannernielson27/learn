@@ -60,10 +60,13 @@ export default async function WorkspacePage({ searchParams }: PageProps<"/author
   return (
     <ReadingWidth>
       {/* The way back to the library is the layout's navigation (#412). */}
-      {/* A small label in sentence case: it says what the name below is (docs/04 §11). */}
-      <p className="mb-1 text-sm font-medium text-ink-2">Workspace</p>
-      {/* The name is a teacher's own words: text, never markup. */}
-      <PageHeader className="mb-8" title={workspace ? workspace.name : "Your workspace"} />
+      {/* The label says what the name below is (docs/04 §11). The name is a teacher's own words:
+          text, never markup. */}
+      <PageHeader
+        className="mb-8"
+        label="Workspace"
+        title={workspace ? workspace.name : "Your workspace"}
+      />
       {workspace ? null : (
         <Notice role="alert" live={false} className="mb-8">
           The workspace could not be loaded. Reload the page to try again.

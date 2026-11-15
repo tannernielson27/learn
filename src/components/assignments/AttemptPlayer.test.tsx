@@ -120,6 +120,36 @@ describe("AttemptPlayer (#208)", () => {
     );
   });
 
+  it("keeps Submit now's name and focus while it sends, and takes no second press (#563)", async () => {
+    let finish: (value: undefined) => void = () => {};
+    const submit = vi.fn(
+      () =>
+        new Promise<{ error: string } | undefined>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const view = setup(payload(), undefined, submit);
+    await renderersLoaded();
+    await view.user.click(screen.getByRole("button", { name: "Submit assignment" }));
+    const now = screen.getByRole("button", { name: "Submit now" });
+    await view.user.click(now);
+    await waitFor(() => expect(now).toHaveAttribute("aria-busy", "true"));
+    expect(now).toHaveAttribute("aria-disabled", "true");
+    expect(now).toHaveAccessibleName("Submit now");
+    expect(now).toHaveFocus();
+    expect(screen.queryByText("Submitting")).toBeNull();
+    await view.user.click(now);
+    expect(submit).toHaveBeenCalledTimes(1);
+    finish(undefined);
+  });
+
+  it("says the count once: the bar beside it is drawn only (#563)", async () => {
+    setup();
+    await renderersLoaded();
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(screen.getByTestId("answered-count")).toHaveTextContent("0 of 2 answered");
+  });
+
   it("does not submit while an answer cannot be saved, and says so", async () => {
     const view = setup(payload(), async () => ({ ok: false, refusal: "failed", final: false }));
     await renderersLoaded();
@@ -258,7 +288,7 @@ describe("AttemptPlayer's frame (#563)", () => {
       within(screen.getByRole("navigation", { name: "Questions" })).getAllByRole("button"),
     ).toHaveLength(2);
     expect(screen.getByTestId("unopened-note")).toHaveTextContent(
-      "Questions 3 to 8 open as you answer the case study.",
+      "Questions 3 to 8 open as you answer the ones before them.",
     );
   });
 
@@ -272,6 +302,8 @@ describe("AttemptPlayer's frame (#563)", () => {
   it("words the line for one question and for several", () => {
     expect(unopenedNote(2, 2)).toBeNull();
     expect(unopenedNote(20, 21)).toBe("Question 21 opens when you answer question 20.");
-    expect(unopenedNote(16, 21)).toBe("Questions 17 to 21 open as you answer the case study.");
+    expect(unopenedNote(16, 21)).toBe(
+      "Questions 17 to 21 open as you answer the ones before them.",
+    );
   });
 });

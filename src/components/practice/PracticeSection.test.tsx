@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { onLoadNotice } from "@/components/ui/testing/onLoadNotice";
 import { PracticeSection, type PracticeSectionProps } from "./PracticeSection";
 
 const C1 = { id: "00000000-0000-4000-8000-0000000000c1", name: "NUR 310" };
@@ -58,7 +59,7 @@ describe("PracticeSection", () => {
 
   it("says the shares could not be loaded, and offers no form", () => {
     renderSection({ shares: null });
-    expect(screen.getByRole("alert")).toHaveTextContent("could not be loaded");
+    expect(onLoadNotice()).toHaveTextContent("could not be loaded");
     expect(screen.queryByRole("combobox")).toBeNull();
   });
 

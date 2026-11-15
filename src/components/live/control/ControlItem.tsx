@@ -96,16 +96,12 @@ export function ControlItem({
               <AnswerCount answered={answersOn.responded} total={answersOn.present} />
             </div>
           )}
+          {/* Drawn only: the count above says it in words, once (#563). */}
           <ProgressBar
             size="lg"
-            label="Answered"
+            decorative
             value={answersOn?.responded ?? 0}
             max={answersOn?.present ?? 0}
-            valueText={
-              answersOn === null
-                ? "Counting"
-                : `${answersOn.responded} of ${answersOn.present} answered`
-            }
           />
           <Countdown timer={state.timer} now={room.serverNow} />
           <p role="status" className="text-sm text-ink-2 empty:hidden">

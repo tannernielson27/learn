@@ -8,6 +8,7 @@ import {
   useId,
   useRef,
   useState,
+  useSyncExternalStore,
   type RefObject,
 } from "react";
 import type { FormEvent } from "react";
@@ -103,6 +104,21 @@ function useSelectedCount(formRef: RefObject<HTMLFormElement | null>): number {
   return count;
 }
 
+const noSubscribe = () => () => {};
+
+/**
+ * False on the server and while the page hydrates, true once the script runs. The bar is drawn
+ * from the server, so without JavaScript the move between folders still works as a plain form;
+ * the script then takes it over and shows it only while a row is checked.
+ */
+function useScripted(): boolean {
+  return useSyncExternalStore(
+    noSubscribe,
+    () => true,
+    () => false,
+  );
+}
+
 function Outcome({ id, state, problem }: { id: string; state: FolderFormState; problem?: string }) {
   const error = problem ?? (state.status === "error" ? state.error : null);
   if (error) {
@@ -150,6 +166,7 @@ export function QuizMoveForm({
   const formRef = useRef<HTMLFormElement>(null);
   const archiving = useArchiveSelected(archive, formRef, archivedHref, hasRows, hidden, hide);
   const selected = useSelectedCount(formRef);
+  const scripted = useScripted();
   const uid = useId();
   const byFolder = folders.length > 0 && moveToFolder !== undefined;
   const byQuiz = quizzes.length > 0 && moveToQuiz !== undefined;
@@ -183,13 +200,9 @@ export function QuizMoveForm({
       items: data.getAll("item").length,
       caseStudies: data.getAll("caseStudy").length,
     };
+    // Move to quiz is drawn only while a row is checked, so there is always one to count; the
+    // server action still refuses an empty selection on its own.
     if (!quiz) return setProblem({ quiz: true, message: "Choose a quiz to move to." });
-    if (counts.items + counts.caseStudies === 0) {
-      return setProblem({
-        quiz: false,
-        message: "Select at least one question or case study to move.",
-      });
-    }
     setProblem(undefined);
     setAsking({ title: `Move ${selectionLabel(counts)} to ${quiz.name}?`, data });
   }
@@ -220,7 +233,11 @@ export function QuizMoveForm({
     ) : null,
     archiving.outcome ? <div key="archive">{archiving.outcome}</div> : null,
   ].filter(Boolean);
-  const open = selected > 0;
+  // Before the script runs (or without it), the move between folders is a plain form the server
+  // draws: a row's checkbox and Move post it, and the server says what happened. Only the folder
+  // move works that way; moving to a quiz and archiving ask first, which needs the script.
+  const unscripted = !scripted && byFolder;
+  const open = selected > 0 || unscripted;
   const shown = open || outcomes.length > 0;
 
   function dismiss() {
@@ -234,18 +251,29 @@ export function QuizMoveForm({
     <form
       ref={formRef}
       id={id}
+      // Posts the move between folders without JavaScript (React's progressive form). With it,
+      // `submit` handles every press first and the action runs only from there.
+      action={byFolder ? folderAction : undefined}
       onSubmit={submit}
       data-selection-bar={shown ? "open" : "closed"}
       className={
         shown
-          ? "sticky bottom-0 z-10 flex flex-col gap-3 rounded-t-md border border-b-0 border-line bg-surface-1 px-4 pt-3 [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]"
+          ? "sticky bottom-0 z-10 flex flex-col gap-3 rounded-t-md border border-b-0 border-line bg-surface-1 px-4 pt-3 [padding-bottom:calc(0.75rem+env(safe-area-inset-bottom))]" +
+            // The server's bar waits for the script where there is one, so it never flashes up
+            // before the page knows nothing is selected.
+            (unscripted && selected === 0 && outcomes.length === 0
+              ? " [@media(scripting:enabled)]:hidden"
+              : "")
           : // No box until there is something to show, so it adds no gap to the column.
             "contents"
       }
     >
       {open ? (
         <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-          <p className="py-2.5 text-sm font-semibold text-ink-1">{selected} selected</p>
+          {/* The count needs the script; without it the checkboxes say what is selected. */}
+          {scripted ? (
+            <p className="py-2.5 text-sm font-semibold text-ink-1">{selected} selected</p>
+          ) : null}
           {byFolder ? (
             <div className="flex min-w-0 flex-wrap items-end gap-2">
               <div className="flex min-w-0 flex-col gap-1">
@@ -276,7 +304,7 @@ export function QuizMoveForm({
               </Button>
             </div>
           ) : null}
-          {byQuiz ? (
+          {byQuiz && scripted ? (
             <div className="flex min-w-0 flex-wrap items-end gap-2">
               <div className="flex min-w-0 flex-col gap-1">
                 <label htmlFor={`${uid}-quiz`} className="text-sm font-medium text-ink-1">
@@ -306,7 +334,7 @@ export function QuizMoveForm({
               </Button>
             </div>
           ) : null}
-          {archiving.button}
+          {scripted ? archiving.button : null}
         </div>
       ) : null}
       {outcomes.length > 0 ? (

@@ -2,7 +2,8 @@ import { CLASSES_PATH } from "@/lib/classes/classes";
 import { practiceWarning, type PracticeExposure } from "@/lib/practice/shares";
 import { AssignmentForm, type AssignmentFormProps } from "./AssignmentForm";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { BackLink } from "@/components/ui/BackLink";
+import { Notice } from "@/components/ui/Notice";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 const COULD_NOT_CHECK = "Could not check whether students can see these answers in practice.";
 
@@ -44,17 +45,19 @@ export function AssignPanel({
 }: AssignPanelProps) {
   return (
     <>
-      <BackLink href={backHref} className="mb-4">
-        {backLabel}
-      </BackLink>
-      <p className="eyebrow mb-1">Assign</p>
-      <h1 className="mb-2 font-read text-3xl break-words text-ink-1">{sourceName}</h1>
-      <p className="mb-6 max-w-prose text-ink-2">Later edits won&apos;t change this assignment.</p>
+      <PageHeader
+        className="mb-6"
+        back={{ href: backHref, label: backLabel }}
+        label="Assign"
+        title={sourceName}
+        lead="Later edits won’t change this assignment."
+      />
       <PracticeNote exposure={exposure} />
       {classes === null ? (
-        <p role="alert" className="text-ink-2">
+        // Drawn with the page, so the alert's look without the live region (docs/04 §11).
+        <Notice role="alert" live={false}>
           Your classes could not be loaded. Reload the page to try again.
-        </p>
+        </Notice>
       ) : classes.length === 0 ? (
         // Right under the Assign page's h1.
         <EmptyState

@@ -71,7 +71,7 @@ test("assignment frame: the count and the list agree, Submit quiet until done", 
     demo.getByRole("navigation", { name: "Questions", exact: true }).getByRole("button"),
   ).toHaveCount(6);
   await expect(demo.getByTestId("unopened-note")).toHaveText(
-    "Questions 7 to 9 open as you answer the case study.",
+    "Questions 7 to 9 open as you answer the ones before them.",
   );
   const submit = demo.getByRole("button", { name: "Submit assignment", exact: true });
   await expect(submit).toBeVisible();

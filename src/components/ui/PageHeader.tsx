@@ -10,11 +10,25 @@ import { BackLink } from "./BackLink";
  */
 export const PAGE_TITLE_CLASSES = "display-section min-w-0 wrap-anywhere text-pretty";
 
+/**
+ * The small line above a title that says what the name below it is: "Workspace", "Case study"
+ * (docs/04 §11, 2026-11-14). Sentence case in the sans, never the public site's tracked capitals.
+ */
+export const PAGE_LABEL_CLASSES = "text-sm font-medium text-ink-2";
+
+/**
+ * A section's h2 inside an app page (#563): Teachers, Roster, Assignments, Your classes. One
+ * style for every page, a step under the title, in the sans so it never competes with it.
+ */
+export const SECTION_HEADING_CLASSES = "text-lg font-medium text-ink-1";
+
 export type PageHeaderLevel = 1 | 2;
 
 export interface PageHeaderProps {
   /** The page's name: "Library", or a quiz's own name. */
   title: ReactNode;
+  /** What the name is, on a line above it: "Case study" over the case study's own title. */
+  label?: ReactNode;
   /** One or two sentences under the title, at reading width. */
   lead?: ReactNode;
   /** The page's main action: one `Button`, or a link wearing `buttonClasses`. */
@@ -38,6 +52,7 @@ export interface PageHeaderProps {
  */
 export function PageHeader({
   title,
+  label,
   lead,
   action,
   back,
@@ -51,6 +66,14 @@ export function PageHeader({
       {back ? <BackLink href={back.href}>{back.label}</BackLink> : null}
       <div className="flex min-w-0 flex-wrap items-end justify-between gap-x-8 gap-y-5">
         <div className="min-w-0 flex-[1_1_20rem]">
+          {label ? (
+            <div
+              data-page-label=""
+              className={`mb-1 flex flex-wrap items-center gap-2 ${PAGE_LABEL_CLASSES}`}
+            >
+              {label}
+            </div>
+          ) : null}
           <Heading id={titleId} className={PAGE_TITLE_CLASSES}>
             {title}
           </Heading>
