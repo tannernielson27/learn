@@ -30,6 +30,12 @@ function threeItems(): string {
 const itemLinks = (page: Page) =>
   page.getByRole("list", { name: "Questions" }).getByRole("link", { name: /^Warnings demo/ });
 const filterBar = (page: Page) => page.getByRole("region", { name: "Filter by tag" });
+/** #563: Type, Status and the tag panel are behind the search row's Filters button. */
+const openFilters = (page: Page) =>
+  page
+    .getByRole("search", { name: "Search questions" })
+    .getByRole("button", { name: /^Filters/ })
+    .click();
 
 test("an author filters the bank to Has warnings, adds a rationale, and the warning clears", async ({
   page,
@@ -55,6 +61,7 @@ test("an author filters the bank to Has warnings, adds a rationale, and the warn
   expect(html).not.toContain("answerKey");
 
   // Has warnings lists only the two items with warnings, and the URL keeps it.
+  await openFilters(page);
   await filterBar(page)
     .getByRole("link", { name: "Has warnings, 2 questions", exact: true })
     .click();

@@ -7,20 +7,15 @@ import { DuplicateButton } from "@/components/authoring/DuplicateButton";
 import { editorFor, storedItemOf } from "@/components/authoring/editorFor";
 import { historyEntries } from "@/components/authoring/historyEntries";
 import { ItemEditorWithHistory } from "@/components/authoring/ItemEditorWithHistory";
-import { GuardedLink } from "@/components/authoring/LeaveGuard";
+import { ItemPageHeader } from "@/components/authoring/ItemPageHeader";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { HISTORY_LIMIT } from "@/lib/authoring/versionHistory";
 import { ITEM_TYPE_LABELS, ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 import { fromItemRow } from "@/lib/supabase/itemRows";
-import { Badge } from "@/components/ui/Badge";
 import { Notice } from "@/components/ui/Notice";
-import { textLinkClasses } from "@/components/ui/TextLink";
-import { BackLinkMark, backLinkClasses } from "@/components/ui/BackLink";
 
 export const metadata: Metadata = { title: "Edit question" };
-
-const STATUS_LABELS = { draft: "Draft", published: "Published", archived: "Archived" } as const;
 
 export default async function EditItemPage({ params }: PageProps<"/author/items/[itemId]">) {
   const { itemId } = await params;
@@ -61,42 +56,35 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
   // Only a valid saved item exports (docs/transfer-format.md).
   const exportable = fromItemRow(row).ok;
   const archived = row.status === "archived";
+  const duplicate = (appearance: "button" | "menu" = "button") => (
+    <DuplicateButton
+      action={duplicateItemAction.bind(null, row.id)}
+      label="Duplicate question"
+      appearance={appearance}
+    />
+  );
 
   return (
     <>
-      <div className="mb-2 flex flex-wrap items-center gap-x-6">
-        <GuardedLink href={`/author/banks/${row.bank_id}`} className={backLinkClasses()}>
-          <BackLinkMark />
-          <span>Back to quiz</span>
-        </GuardedLink>
-        {exportable ? (
-          <a
-            href={`/author/items/${row.id}/export`}
-            download
-            className={textLinkClasses({ size: "sm" })}
-          >
-            Export JSON
-          </a>
-        ) : null}
-      </div>
-      <p className="eyebrow mb-1">{label}</p>
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <h1 className="font-read text-display text-ink-1">Edit question</h1>
-        <Badge tone={row.status === "draft" ? "accent" : "neutral"}>
-          {STATUS_LABELS[row.status]}
-        </Badge>
-        <div className="flex flex-wrap items-center gap-2">
-          <DuplicateButton
-            action={duplicateItemAction.bind(null, row.id)}
-            label="Duplicate question"
-          />
-          {archived ? (
-            <ArchiveButton action={restoreItemAction.bind(null, row.id)} label="Restore question" />
-          ) : (
-            <ArchiveButton action={archiveItemAction.bind(null, row.id)} label="Archive question" />
-          )}
-        </div>
-      </div>
+      <ItemPageHeader
+        bankHref={`/author/banks/${row.bank_id}`}
+        exportHref={exportable ? `/author/items/${row.id}/export` : undefined}
+        typeLabel={label}
+        status={row.status}
+        archivedActions={
+          // Archived offers no editor, so its two actions stand here; otherwise they are the
+          // editor's More menu, beside Publish.
+          archived ? (
+            <>
+              <ArchiveButton
+                action={restoreItemAction.bind(null, row.id)}
+                label="Restore question"
+              />
+              {duplicate()}
+            </>
+          ) : undefined
+        }
+      />
       {archived ? (
         <Notice className="mb-6 max-w-reading">Archived. Restore it to edit.</Notice>
       ) : null}
@@ -108,6 +96,16 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
           truncated={versions.length > HISTORY_LIMIT}
           loadFailed={Boolean(versionsError)}
           published={row.status === "published"}
+          more={
+            <>
+              {duplicate("menu")}
+              <ArchiveButton
+                action={archiveItemAction.bind(null, row.id)}
+                label="Archive question"
+                appearance="menu"
+              />
+            </>
+          }
         />
       ) : (
         <Notice>This format cannot be edited here yet.</Notice>

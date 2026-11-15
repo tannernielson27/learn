@@ -271,6 +271,8 @@ test("class day: a timed live session for a class, on phones and the projector, 
 
   // ...and starts a live session of it for that class.
   await page.goto(`/author/banks/${quizId}`);
+  // #563: pacing and the class are in the Live session options panel beside Start.
+  await page.getByRole("button", { name: "Live session options", exact: true }).click();
   await page
     .getByRole("combobox", { name: "For a class", exact: true })
     .selectOption({ label: className });

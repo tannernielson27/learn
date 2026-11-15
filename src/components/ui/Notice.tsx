@@ -1,5 +1,5 @@
 import { CircleAlert, Info, type LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import { Icon } from "./Icon";
 
 export type NoticeRole = "status" | "alert";
@@ -19,6 +19,10 @@ export interface NoticeProps {
   /** One way to act on it, under the words: a `Button` or a `TextLink`. */
   action?: ReactNode;
   className?: string;
+  /** For a notice that takes focus when it appears: `tabIndex={-1}` and a ref to focus it by. */
+  ref?: Ref<HTMLDivElement>;
+  id?: string;
+  tabIndex?: number;
 }
 
 // Both neutral (PLAN D11): never feedback red or green, which belong to marked answers. A status
@@ -42,9 +46,15 @@ export function Notice({
   icon,
   action,
   className = "",
+  ref,
+  id,
+  tabIndex,
 }: NoticeProps) {
   return (
     <div
+      ref={ref}
+      id={id}
+      tabIndex={tabIndex}
       role={role}
       data-notice={role}
       className={`flex items-start gap-3 rounded-md bg-notice-soft py-3.5 text-base leading-snug text-notice ${ROLE_CLASSES[role]} ${className}`.trim()}

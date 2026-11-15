@@ -55,8 +55,9 @@ const done = (message: string, refusals: string[] = []): ArchiveSelectionState =
 });
 
 describe("QuizMoveForm: archive", () => {
-  it("offers Archive selected even with nowhere to move to", () => {
+  it("offers Archive selected even with nowhere to move to", async () => {
     draw(vi.fn<Archive>());
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Fever" }));
     expect(screen.getByRole("button", { name: "Archive selected" })).toBeInTheDocument();
     expect(screen.queryByRole("combobox")).toBeNull();
   });
@@ -97,13 +98,13 @@ describe("QuizMoveForm: archive", () => {
     expect(archive).not.toHaveBeenCalled();
   });
 
-  it("asks for a selection before opening the confirm", async () => {
+  it("offers Archive selected only once a row is selected (#563)", async () => {
     draw(vi.fn<Archive>());
-    await userEvent.click(screen.getByRole("button", { name: "Archive selected" }));
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Select at least one question or case study to archive.",
-    );
+    expect(screen.queryByRole("button", { name: "Archive selected" })).toBeNull();
+    // A row's own Archive needs no selection, and still asks first.
+    expect(screen.getByRole("button", { name: "Archive Pain" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Pain" }));
+    expect(screen.getByRole("button", { name: "Archive selected" })).toBeInTheDocument();
   });
 
   it("archives one row from its own button, leaving the other checks alone", async () => {

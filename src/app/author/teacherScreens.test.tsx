@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -698,11 +699,170 @@ describe("library folders (#411)", () => {
   });
 });
 
+describe("the library on the shared primitives (#563)", () => {
+  it("has one way to make a quiz: the header's form, in the page's header", async () => {
+    render(await homePage());
+    expect(screen.getByRole("heading", { level: 1, name: "Library" })).toBeInTheDocument();
+    expect(screen.getAllByRole("textbox", { name: "Quiz name" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Create quiz" })).toHaveLength(1);
+    // No second New quiz button or link while there are quizzes to list.
+    expect(screen.queryByRole("link", { name: "New quiz" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "New quiz" })).toBeNull();
+    // The form is the page header's action, not a section under the list.
+    expect(screen.getByRole("heading", { level: 1 }).closest("header")).toContainElement(
+      screen.getByRole("textbox", { name: "Quiz name" }),
+    );
+    expect(screen.getByText("2 quizzes")).toBeInTheDocument();
+  });
+
+  it("points an empty library at that form, and never says a double negative", async () => {
+    empty();
+    render(await homePage());
+    expect(screen.getByRole("heading", { level: 2, name: "No quizzes yet" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "New quiz" })).toHaveAttribute(
+      "href",
+      "#new-bank-heading",
+    );
+    expect(document.getElementById("new-bank-heading")).toHaveTextContent("New quiz");
+    expect(screen.queryByText(/No quizzes not in a folder/)).toBeNull();
+  });
+
+  it("draws no folder rail until a folder exists, with New folder beside the list", async () => {
+    render(await homePage());
+    expect(screen.queryByRole("navigation", { name: "Library folders" })).toBeNull();
+    expect(screen.queryByRole("complementary")).toBeNull();
+    expect(screen.getByText("New folder")).toBeInTheDocument();
+  });
+
+  it("counts the quizzes in no folder once there are folders", async () => {
+    withLibraryFolders();
+    render(await homePage());
+    expect(screen.getByRole("navigation", { name: "Library folders" })).toBeInTheDocument();
+    expect(screen.getByText(/not in a folder$/)).toBeInTheDocument();
+  });
+});
+
+describe("the quiz page on the shared primitives (#563)", () => {
+  const panel = (id: string) => within(document.getElementById(id)!);
+
+  it("titles the quiz on PageHeader, with Start a live session as its one primary", async () => {
+    render(await bankPage());
+    const title = screen.getByRole("heading", { level: 1, name: "Cardiac week" });
+    expect(title).toHaveClass("display-section");
+    const header = title.closest("header")!;
+    const start = within(header).getByRole("button", { name: "Start a live session" });
+    expect(start).toHaveClass("bg-accent");
+    for (const name of ["Share for practice", "Assign"]) {
+      expect(within(header).getByRole("link", { name })).not.toHaveClass("bg-accent");
+    }
+  });
+
+  it("keeps the live session's options in a labelled panel beside Start, at their defaults", async () => {
+    render(await bankPage());
+    const options = screen.getByRole("button", { name: "Live session options" });
+    expect(options).toHaveAttribute("popovertarget", "live-session-options");
+    const live = panel("live-session-options");
+    const group = live.getByRole("group", { name: "Live session options", hidden: true });
+    const pacing = within(group).getByRole("group", { name: "Pacing", hidden: true });
+    expect(
+      within(pacing).getByRole("radio", { name: "Teacher-paced", hidden: true }),
+    ).toBeChecked();
+    expect(
+      within(pacing).getByRole("radio", { name: "Student-paced", hidden: true }),
+    ).not.toBeChecked();
+    const forClass = within(group).getByRole("combobox", { name: "For a class", hidden: true });
+    expect(forClass).toHaveValue("");
+    // Closed or open, the panel's fields are the start form's, so Start sends them.
+    const form = screen.getByRole("button", { name: "Start a live session" }).closest("form")!;
+    expect(form).toContainElement(forClass);
+  });
+
+  it("searches in one row and keeps Type, Status and the tags behind Filters", async () => {
+    render(await bankPage());
+    const search = screen.getByRole("search", { name: "Search questions" });
+    expect(within(search).getByRole("searchbox", { name: "Search questions" })).toBeVisible();
+    expect(within(search).getByRole("button", { name: "Filters" })).toBeInTheDocument();
+    const filters = panel("bank-filters");
+    expect(filters.getByRole("combobox", { name: "Type", hidden: true })).toBeInTheDocument();
+    expect(
+      filters.getByRole("region", { name: "Filter by tag", hidden: true }),
+    ).toBeInTheDocument();
+    // Nothing filtered: no chips, and no moves until a row is selected.
+    expect(screen.queryByRole("region", { name: "Active filters" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Archive selected" })).toBeNull();
+  });
+
+  it("shows the filters in use as chips that take them off, with Clear filters", async () => {
+    render(await bankPage({ step: "2", type: "multiple_choice" }));
+    expect(screen.getByRole("button", { name: "Filters, 2 on" })).toBeInTheDocument();
+    const active = screen.getByRole("region", { name: "Active filters" });
+    expect(
+      within(active).getByRole("link", { name: "Remove filter Step 2: Analyze Cues" }),
+    ).toHaveAttribute("href", `/author/banks/${BANK}?type=multiple_choice`);
+    expect(
+      within(active).getByRole("link", { name: "Remove filter Multiple Choice" }),
+    ).toHaveAttribute("href", `/author/banks/${BANK}?step=2`);
+    expect(within(active).getByRole("link", { name: "Clear filters" })).toHaveAttribute(
+      "href",
+      `/author/banks/${BANK}`,
+    );
+  });
+
+  it("names every way to fill an empty quiz", async () => {
+    state.folders = [];
+    state.items = [];
+    state.itemTotal = 0;
+    state.caseStudies = [];
+    state.taggedRows = [];
+    render(await bankPage());
+    expect(screen.getByRole("heading", { level: 3, name: "No questions yet" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Write the first question" })).toHaveAttribute(
+      "href",
+      `/author/banks/${BANK}/new`,
+    );
+    // AI import is off here, so it is not offered.
+    expect(screen.queryByRole("link", { name: "Import questions with AI" })).toBeNull();
+    expect(
+      screen.getByRole("heading", { level: 3, name: "No case studies yet" }),
+    ).toBeInTheDocument();
+    const caseStudy = screen.getByRole("link", { name: "Start a case study" });
+    expect(caseStudy).toHaveAttribute("href", "#new-case-study");
+    expect(document.getElementById("new-case-study")).toContainElement(
+      screen.getByRole("textbox", { name: "Case study title" }),
+    );
+  });
+
+  it("says a search found nothing in one line, with Clear search", async () => {
+    state.items = [];
+    state.itemTotal = 0;
+    state.caseStudies = [];
+    render(await bankPage({ q: "zzz" }));
+    const line = screen
+      .getAllByRole("status")
+      .find((node) => node.textContent === "No questions here match the search")!;
+    expect(line.closest("[data-empty-state]")).toHaveAttribute("data-empty-state", "no-results");
+    expect(
+      within(line.closest("[data-empty-state]") as HTMLElement).getByRole("link", {
+        name: "Clear search",
+      }),
+    ).toHaveAttribute("href", `/author/banks/${BANK}`);
+    expect(
+      screen.queryByRole("heading", { name: "No questions here match the search" }),
+    ).toBeNull();
+  });
+});
+
+/** #563: the moves and Archive selected are in a bar that opens once a row is selected. */
+async function selectARow() {
+  await userEvent.click(screen.getAllByRole("checkbox", { name: /^Select / })[0]!);
+}
+
 describe("a new quiz offers no folders inside it (#411)", () => {
   it("shows no in-quiz folder controls on a quiz with none", async () => {
     state.folders = [];
     state.moveContext = { quizzes: [], uses: { assignments: 0, liveSessions: 0 } };
     render(await bankPage());
+    await selectARow();
     expect(screen.queryByRole("navigation", { name: "Folders" })).toBeNull();
     expect(screen.queryByRole("textbox", { name: "Folder name" })).toBeNull();
     expect(screen.queryByRole("combobox", { name: "Move selected to" })).toBeNull();
@@ -752,6 +912,7 @@ describe("moving to another quiz, and turning a folder into one (#417)", () => {
   it("offers a move to another quiz on a quiz with no folders inside it", async () => {
     state.folders = [];
     render(await bankPage());
+    await selectARow();
     expect(screen.getByRole("combobox", { name: "Move to another quiz" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Renal week" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Move to quiz" })).toBeInTheDocument();
@@ -761,6 +922,7 @@ describe("moving to another quiz, and turning a folder into one (#417)", () => {
 
   it("offers both moves on a quiz with folders inside it", async () => {
     render(await bankPage());
+    await selectARow();
     expect(screen.getByRole("combobox", { name: "Move selected to" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Move to another quiz" })).toBeInTheDocument();
   });
@@ -786,6 +948,7 @@ describe("moving to another quiz, and turning a folder into one (#417)", () => {
   it("offers neither when what uses this quiz cannot be read", async () => {
     state.moveContext = null;
     render(await bankPage({ folder: FOLDER }));
+    await selectARow();
     expect(screen.queryByRole("combobox", { name: "Move to another quiz" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Turn into a quiz" })).toBeNull();
     // The folder controls from before #417 are still there.

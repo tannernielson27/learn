@@ -46,7 +46,6 @@ export interface AiImportActions {
 
 export interface AiImportUploadProps {
   bankId: string;
-  quizName: string;
   allowance: { remainingUsd: number; remainingPages: number | null } | null;
   initial: BatchView | null;
   actions: AiImportActions;
@@ -72,13 +71,7 @@ const io = (actions: AiImportActions, left: { current: boolean }): DriverIo => (
  * read each part and find each question, and shows how far each file has got. A reload picks up
  * where it stopped, from the batch as stored.
  */
-export function AiImportUpload({
-  bankId,
-  quizName,
-  allowance,
-  initial,
-  actions,
-}: AiImportUploadProps) {
+export function AiImportUpload({ bankId, allowance, initial, actions }: AiImportUploadProps) {
   const router = useRouter();
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -281,14 +274,7 @@ export function AiImportUpload({
 
   if (status === "review") {
     return (
-      <AiImportReady
-        id={id}
-        bankId={bankId}
-        quizName={quizName}
-        batchId={batchId}
-        rows={rows}
-        questions={questions}
-      />
+      <AiImportReady id={id} bankId={bankId} batchId={batchId} rows={rows} questions={questions} />
     );
   }
 

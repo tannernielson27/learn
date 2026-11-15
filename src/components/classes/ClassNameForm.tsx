@@ -13,6 +13,11 @@ export interface ClassNameFormProps {
   /** Prefills the field, for renaming. */
   initialName?: string;
   submitLabel?: string;
+  /**
+   * The field and its button on one row from 640px, for the create form a page header holds as
+   * its main action (#563). Stacked otherwise, as the settings that rename it draw it.
+   */
+  inline?: boolean;
 }
 
 const INITIAL: ClassFormState = { status: "idle" };
@@ -22,6 +27,7 @@ export function ClassNameForm({
   action,
   initialName = "",
   submitLabel = "Create class",
+  inline = false,
 }: ClassNameFormProps) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
   // Controlled, so React's reset after an action never wipes what was typed.
@@ -34,42 +40,72 @@ export function ClassNameForm({
     if (state.status === "error") inputRef.current?.focus();
   }, [state]);
 
+  const label = (
+    <label htmlFor={`${id}-name`} className="text-sm font-medium text-ink-1">
+      Class name
+    </label>
+  );
+  // Busy, not disabled (docs/04 §11): the button keeps its words and focus while it saves.
+  const submit = (
+    <Button type="submit" variant="primary" busy={pending}>
+      {submitLabel}
+    </Button>
+  );
+
+  const field = (
+    <input
+      ref={inputRef}
+      id={`${id}-name`}
+      name="name"
+      type="text"
+      required
+      maxLength={120}
+      autoComplete="off"
+      value={name}
+      onChange={(event) => setName(event.target.value)}
+      aria-invalid={error ? true : undefined}
+      aria-describedby={error ? `${id}-error` : undefined}
+      className={fieldClasses(
+        inline ? "min-w-0 flex-[1_1_10rem] px-3 text-base" : "px-3 text-base",
+      )}
+    />
+  );
+  const messages = (
+    <>
+      {error ? (
+        <FieldError id={`${id}-error`} role="alert">
+          {error}
+        </FieldError>
+      ) : null}
+      {state.status === "saved" ? (
+        <p role="status" className="text-sm text-ink-2">
+          Saved.
+        </p>
+      ) : null}
+    </>
+  );
+
+  if (inline) {
+    return (
+      <form action={formAction} className="flex flex-col gap-2">
+        {label}
+        <div className="flex flex-wrap items-start gap-2">
+          {field}
+          {submit}
+        </div>
+        {messages}
+      </form>
+    );
+  }
+
   return (
     <form action={formAction} className="flex flex-col gap-3 sm:max-w-md">
       <div className="flex flex-col gap-2">
-        <label htmlFor={`${id}-name`} className="text-sm font-medium text-ink-1">
-          Class name
-        </label>
-        <input
-          ref={inputRef}
-          id={`${id}-name`}
-          name="name"
-          type="text"
-          required
-          maxLength={120}
-          autoComplete="off"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? `${id}-error` : undefined}
-          className={fieldClasses("px-3 text-base")}
-        />
-        {error ? (
-          <FieldError id={`${id}-error`} role="alert">
-            {error}
-          </FieldError>
-        ) : null}
-        {state.status === "saved" ? (
-          <p role="status" className="text-sm text-ink-2">
-            Saved.
-          </p>
-        ) : null}
+        {label}
+        {field}
+        {messages}
       </div>
-      <div>
-        <Button type="submit" variant="primary" disabled={pending}>
-          {submitLabel}
-        </Button>
-      </div>
+      <div>{submit}</div>
     </form>
   );
 }

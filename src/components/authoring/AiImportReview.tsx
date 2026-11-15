@@ -182,7 +182,7 @@ export function AiImportReview({
             >
               {importing ? "Importing…" : summary.label}
             </Button>
-            <TextLink href={`/author/banks/${bankId}`}>Back to {quizName}</TextLink>
+            {/* The way back to the quiz is the breadcrumb above, which names it (#563). */}
           </div>
           <div id={`${id}-why`} className="text-sm text-ink-1">
             {blocked ? (

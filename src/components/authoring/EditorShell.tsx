@@ -233,6 +233,10 @@ export function EditorShell<Values, Input extends ScoredInput>({
         done={status.kind === "done" && status.shownWith === valuesJson ? status.message : null}
         error={status.kind === "error" ? status.message : null}
         unpublishId={unpublishId}
+        problems={host.saveOnly ? [] : problems}
+        focusProblem={focusProblem}
+        idPrefix={issueIdPrefix}
+        more={host.more}
         onSave={() =>
           run(onSaveDraft, "Saved.", "The question could not be saved. Try again.", false)
         }
@@ -316,7 +320,7 @@ export function EditorShell<Values, Input extends ScoredInput>({
         />
       </form>
 
-      {/* Below the action bar, which stays at the top from 1024px. */}
+      {/* Below the action bar, which stays at the top from 1024px (on a phone it comes last). */}
       <section
         aria-label="Preview"
         className="min-w-0 rounded-md bg-surface-2 p-4 sm:p-6 lg:sticky lg:top-24 lg:self-start"

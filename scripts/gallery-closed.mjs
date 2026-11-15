@@ -50,6 +50,13 @@ const GALLERY_PATHS = [
   "/gallery/class-page",
   // One student's progress in that class, from the same kind of fixture.
   "/gallery/class-student",
+  // #563: the teacher's library, from a fixture of quiz and folder names with no key in it.
+  "/gallery/library",
+  // #563: the quiz page from a fixture with no key in it, and the question editor's frame, whose
+  // editor holds a gallery fixture's key as the item pages do.
+  "/gallery/quiz-page",
+  "/gallery/quiz-page?state=editor",
+  "/gallery/quiz-page?state=editor-problems",
   "/gallery",
 ];
 

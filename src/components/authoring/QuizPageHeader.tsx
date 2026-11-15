@@ -1,9 +1,17 @@
+import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { PracticeBadge } from "@/components/practice/PracticeBadge";
 import { buttonClasses } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
 import { Notice } from "@/components/ui/Notice";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Popover } from "@/components/ui/Popover";
 import { LiveClassSelect } from "./LiveClassSelect";
 import { StartLiveButton } from "./StartLiveButton";
+
+/** The live session options' panel, and the name of the button that opens it. */
+export const LIVE_OPTIONS_ID = "live-session-options";
+export const LIVE_OPTIONS_LABEL = "Live session options";
 
 export interface QuizPageHeaderProps {
   /** The breadcrumbs, drawn above the heading. */
@@ -25,9 +33,17 @@ export interface QuizPageHeaderProps {
   classes?: readonly { id: string; name: string }[] | null;
 }
 
+const RADIO_ROW =
+  "tap-target inline-flex cursor-pointer items-center gap-2 rounded-md px-1 text-base text-ink-1";
+
 /**
- * The quiz page's head (Quiz mockup): the way back, the quiz's name, and its three ways of being
- * used, with Start a live session as the one primary. Pacing stays one choice away, under them.
+ * The quiz page's head (#563): the way back, the quiz's name on `PageHeader`, and its three ways
+ * of being used, with Start a live session as the one primary.
+ *
+ * How the live session runs (its pacing, and a class) is one press away, in a labelled panel
+ * beside Start: a fieldset with a legend, closed when the page opens, and holding the defaults
+ * (teacher-paced, no class) until the teacher changes them. The panel's controls belong to the
+ * start form while it is closed, so Start always sends them; nothing is remembered between visits.
  */
 export function QuizPageHeader({
   crumbs,
@@ -40,58 +56,87 @@ export function QuizPageHeader({
   liveRefusal,
   classes = null,
 }: QuizPageHeaderProps) {
-  return (
-    <header className="flex flex-col gap-2">
-      {crumbs}
-      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
-        <div className="flex min-w-0 flex-col items-start gap-2">
-          <h1 className="min-w-0 font-read text-display break-words text-ink-1">{heading}</h1>
-          {summary ? <p className="text-ink-2">{summary}</p> : null}
-          <PracticeBadge classNames={sharedWith} />
-        </div>
-        <form action={start} className="flex flex-col items-start gap-2 lg:items-end">
-          <div className="flex flex-wrap gap-2 lg:justify-end">
-            <a href={practiceHref} className={buttonClasses()}>
-              Share for practice
-            </a>
-            {/* #207: the same quiz, given to a class to take at home. */}
-            <Link href={assignHref} className={buttonClasses()}>
-              Assign
-            </Link>
-            <StartLiveButton variant="primary" label="Start a live session" />
-          </div>
-          {/* #185: how the live session is paced. Teacher-paced is the default and comes first. */}
-          <fieldset className="flex flex-wrap items-center gap-x-4">
-            <legend className="sr-only">Pacing</legend>
-            <label className="tap-target inline-flex cursor-pointer items-center gap-2 text-sm text-ink-1">
-              <input
-                type="radio"
-                name="pacing"
-                value="instructor_paced"
-                defaultChecked
-                className="size-5 accent-accent"
-              />
-              Teacher-paced
-            </label>
-            <label className="tap-target inline-flex cursor-pointer items-center gap-2 text-sm text-ink-1">
-              <input
-                type="radio"
-                name="pacing"
-                value="student_paced"
-                className="size-5 accent-accent"
-              />
-              Student-paced
-            </label>
+  const badge = <PracticeBadge classNames={sharedWith} />;
+  const lead =
+    summary || sharedWith.length > 0 ? (
+      <span className="flex flex-wrap items-center gap-x-3 gap-y-2 text-base">
+        {summary ? <span>{summary}</span> : null}
+        {badge}
+      </span>
+    ) : undefined;
+
+  const actions = (
+    <form action={start} className="flex flex-wrap items-center gap-2">
+      <a href={practiceHref} className={buttonClasses()}>
+        Share for practice
+      </a>
+      {/* #207: the same quiz, given to a class to take at home. */}
+      <Link href={assignHref} className={buttonClasses()}>
+        Assign
+      </Link>
+      <span className="flex items-center gap-1">
+        <StartLiveButton variant="primary" label="Start a live session" />
+        <Popover
+          id={LIVE_OPTIONS_ID}
+          accessibleName={LIVE_OPTIONS_LABEL}
+          buttonClassName={buttonClasses({ variant: "ghost", size: "sm" })}
+          label={
+            <>
+              Options
+              <Icon icon={ChevronDown} />
+            </>
+          }
+        >
+          <fieldset className="flex min-w-0 flex-col gap-4">
+            <legend className="mb-3 font-semibold text-ink-1">{LIVE_OPTIONS_LABEL}</legend>
+            {/* #185: how the live session is paced. Teacher-paced is the default and comes first. */}
+            <fieldset className="flex flex-col">
+              <legend className="mb-1 text-sm font-medium text-ink-1">Pacing</legend>
+              <label className={RADIO_ROW}>
+                <input
+                  type="radio"
+                  name="pacing"
+                  value="instructor_paced"
+                  defaultChecked
+                  className="size-5 accent-accent"
+                />
+                Teacher-paced
+              </label>
+              <label className={RADIO_ROW}>
+                <input
+                  type="radio"
+                  name="pacing"
+                  value="student_paced"
+                  className="size-5 accent-accent"
+                />
+                Student-paced
+              </label>
+            </fieldset>
+            {/* ADR 0013: a live session for a class. No class is the default and comes first. */}
+            <LiveClassSelect id="live-class" classes={classes} />
           </fieldset>
-          {/* ADR 0013: a live session for a class. No class is the default and comes first. */}
-          <LiveClassSelect id="live-class" classes={classes} />
-        </form>
-      </div>
+          <button
+            type="button"
+            popoverTarget={LIVE_OPTIONS_ID}
+            popoverTargetAction="hide"
+            className={`${buttonClasses({ size: "sm" })} mt-4`}
+          >
+            Done
+          </button>
+        </Popover>
+      </span>
+    </form>
+  );
+
+  return (
+    <div className="flex flex-col gap-2">
+      {crumbs}
+      <PageHeader title={heading} lead={lead} action={actions} />
       {liveRefusal ? (
         <Notice role="alert" className="mt-2">
           {liveRefusal}
         </Notice>
       ) : null}
-    </header>
+    </div>
   );
 }

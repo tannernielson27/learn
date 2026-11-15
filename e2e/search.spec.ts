@@ -62,6 +62,12 @@ const itemList = (page: Page) => page.getByRole("list", { name: "Questions" });
 // One per item; each item also lists its tags.
 const rows = (page: Page) => itemList(page).locator(":scope > li");
 const searchForm = (page: Page) => page.getByRole("search", { name: "Search questions" });
+/** #563: Type, Status and the tag panel are behind the search row's Filters button. */
+const openFilters = (page: Page) =>
+  page
+    .getByRole("search", { name: "Search questions" })
+    .getByRole("button", { name: /^Filters/ })
+    .click();
 
 async function search(page: Page, words: string) {
   await searchForm(page).getByRole("searchbox", { name: "Search questions" }).fill(words);
@@ -125,11 +131,12 @@ test("an author searches a bank for lactate, then narrows to published Matrix Mu
   await expect(rows(page)).toHaveCount(5);
 
   // Narrow to Matrix Multiple Choice, published.
+  await openFilters(page);
   await searchForm(page)
     .getByRole("combobox", { name: "Type" })
     .selectOption({ label: "Matrix Multiple Choice" });
   await searchForm(page).getByRole("combobox", { name: "Status" }).selectOption("published");
-  await searchForm(page).getByRole("button", { name: "Search" }).click();
+  await searchForm(page).getByRole("button", { name: "Apply filters" }).click();
   await expect(page).toHaveURL(/\?q=lactate&type=matrix_multiple_choice&status=published$/);
   await expect(page.getByRole("status").filter({ hasText: "matches" })).toHaveText(
     "1 question matches: “lactate”, Matrix Multiple Choice, Published.",

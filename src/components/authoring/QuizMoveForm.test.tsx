@@ -41,8 +41,9 @@ describe("QuizMoveForm", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("offers only the move to another quiz on a quiz with no folders inside it", () => {
+  it("offers only the move to another quiz on a quiz with no folders inside it", async () => {
     draw(vi.fn<Move>());
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select question" }));
     expect(screen.getByRole("combobox", { name: "Move to another quiz" })).toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: "Move selected to" })).toBeNull();
   });
@@ -97,19 +98,51 @@ describe("QuizMoveForm", () => {
     expect(screen.getByRole("checkbox", { name: "Select question" })).toBeChecked();
   });
 
-  it("asks for a quiz, then a selection, before asking to confirm", async () => {
+  it("shows the moves only once a row is selected, in a bar that says how many (#563)", async () => {
+    const { container } = draw(vi.fn<Move>());
+    const form = container.querySelector("form")!;
+    expect(form).toHaveAttribute("data-selection-bar", "closed");
+    expect(screen.queryByRole("combobox", { name: "Move to another quiz" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Move to quiz" })).toBeNull();
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select question" }));
+    expect(form).toHaveAttribute("data-selection-bar", "open");
+    expect(form).toHaveTextContent("1 selected");
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select case" }));
+    expect(form).toHaveTextContent("2 selected");
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select question" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select case" }));
+    expect(form).toHaveAttribute("data-selection-bar", "closed");
+    expect(screen.queryByRole("button", { name: "Move to quiz" })).toBeNull();
+  });
+
+  it("asks for a quiz before asking to confirm", async () => {
     draw(vi.fn<Move>());
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select question" }));
     await userEvent.click(screen.getByRole("button", { name: "Move to quiz" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Choose a quiz to move to.");
+    expect(screen.getByRole("combobox", { name: "Move to another quiz" })).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("keeps what a move said until it is dismissed, once the selection is cleared", async () => {
+    draw(vi.fn<Move>(async () => ({ status: "done", message: "Moved." })));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select question" }));
     await userEvent.selectOptions(
       screen.getByRole("combobox", { name: "Move to another quiz" }),
       "Renal week",
     );
     await userEvent.click(screen.getByRole("button", { name: "Move to quiz" }));
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Select at least one question or case study to move.",
-    );
-    expect(screen.queryByRole("dialog")).toBeNull();
+    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Move" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Moved.");
+    // The selection is cleared, so the moves go; what happened stays.
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Move to quiz" })).toBeNull());
+    await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(screen.queryByRole("status")).toBeNull();
   });
 
   it("keeps the selection and says why when the move is refused", async () => {
@@ -130,10 +163,11 @@ describe("QuizMoveForm", () => {
     expect(screen.getByRole("checkbox", { name: "Select question" })).toBeChecked();
   });
 
-  it("keeps the move between this quiz's folders where it has some", () => {
+  it("keeps the move between this quiz's folders where it has some", async () => {
     draw(vi.fn<Move>(), [
       { id: "5d3c3f7e-1a2b-4c3d-8e4f-0a1b2c3d4e01", parentId: null, name: "Cardiac" },
     ]);
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select question" }));
     expect(screen.getByRole("combobox", { name: "Move selected to" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Move" })).toHaveAttribute("type", "submit");
   });

@@ -42,14 +42,15 @@ const TAGS = { 2: "h2", 3: "h3", 4: "h4" } as const;
  * never reads as blank. No icon or illustration, and no motion.
  *
  * - First use: a real heading at the level the page passes, in the serif, and the next step as a
- *   secondary button-link. A sentence under the heading is the exception (#412).
+ *   secondary button-link, with any other ways to start beside it as quieter ones. A sentence
+ *   under the heading is the exception (#412).
  * - No results: one line in the secondary ink and a way to clear what hid everything. It is a
  *   status, so a screen reader hears it when a search empties the list, and it has no heading: the
  *   list's own heading still names the region.
  */
 export function EmptyState(props: EmptyStateProps) {
   if (props.variant === "no-results") return <NoResults {...props} />;
-  const { level, heading, body, action } = props;
+  const { level, heading, body, action, more = [] } = props;
   const Heading = TAGS[level];
   return (
     <div
@@ -59,9 +60,16 @@ export function EmptyState(props: EmptyStateProps) {
       <Heading className="font-read text-xl leading-snug text-ink-1">{heading}</Heading>
       {body ? <p className="max-w-prose text-ink-2">{body}</p> : null}
       {action ? (
-        <Link href={action.href} className={`${buttonClasses({ variant: "secondary" })} mt-4`}>
-          {action.label}
-        </Link>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Link href={action.href} className={buttonClasses({ variant: "secondary" })}>
+            {action.label}
+          </Link>
+          {more.map((step) => (
+            <Link key={step.href} href={step.href} className={buttonClasses({ variant: "ghost" })}>
+              {step.label}
+            </Link>
+          ))}
+        </div>
       ) : null}
     </div>
   );

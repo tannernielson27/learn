@@ -80,9 +80,7 @@ export function ProgressGrid({
                 scope="col"
                 className="min-w-[7.5rem] border-b border-line-strong px-3 py-2 text-left align-bottom font-medium text-ink-2"
               >
-                <span className="block text-xs tracking-wide uppercase">
-                  {KIND_LABELS[activity.kind]}
-                </span>
+                <span className="block text-xs">{KIND_LABELS[activity.kind]}</span>
                 <span className="line-clamp-2 max-w-[10rem] break-words text-ink-1">
                   {activity.title}
                 </span>
