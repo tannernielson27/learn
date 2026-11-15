@@ -623,6 +623,8 @@ test("a student-paced set: phones move at their own pace, the board fills in, on
     await page.getByRole("link", { name: "Back to quiz" }).click();
     await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   }
+  // #563: pacing and the class are in the Live session options panel beside Start.
+  await page.getByRole("button", { name: "Live session options", exact: true }).click();
   await page.getByRole("radio", { name: "Student-paced", exact: true }).check();
   await page.getByRole("button", { name: "Start a live session", exact: true }).click();
   await expect(page).toHaveURL(/\/live\/[0-9a-f-]{36}$/);

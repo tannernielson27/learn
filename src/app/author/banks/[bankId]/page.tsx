@@ -15,6 +15,11 @@ import { FolderBreadcrumbs } from "@/components/authoring/FolderBreadcrumbs";
 import { ItemList } from "@/components/authoring/ItemList";
 import { QuizFolderPanel } from "@/components/authoring/QuizFolderPanel";
 import { QuizPageHeader } from "@/components/authoring/QuizPageHeader";
+import {
+  PRACTICE_HEADING_CLASSES,
+  PRACTICE_ID,
+  QuizPageFrame,
+} from "@/components/authoring/QuizPageFrame";
 import { NEW_CASE_STUDY_ID, QuizSidePanel } from "@/components/authoring/QuizSidePanel";
 import { TextLink } from "@/components/ui/TextLink";
 import { PracticeSection } from "@/components/practice/PracticeSection";
@@ -68,7 +73,6 @@ import { moveToQuizAction, turnFolderIntoQuizAction } from "../../quizMoveAction
 export const metadata: Metadata = { title: "Quiz" };
 
 const MOVE_FORM_ID = "move-to-folder";
-const PRACTICE_ID = "practice";
 
 /** Why a live session could not start, carried back on the query string by startLiveSession. */
 function liveStartMessage(value: string | string[] | undefined): string | undefined {
@@ -189,132 +193,128 @@ export default async function BankPage({
       : null;
 
   return (
-    <div className="flex flex-col gap-8">
-      <QuizPageHeader
-        crumbs={
-          <FolderBreadcrumbs
+    <QuizPageFrame
+      header={
+        <QuizPageHeader
+          crumbs={
+            <FolderBreadcrumbs
+              bankId={bank.id}
+              bankName={bank.name}
+              trail={trail}
+              view={view}
+              libraryTrail={libraryTrail}
+            />
+          }
+          heading={heading}
+          sharedWith={(shares ?? []).map((entry) => entry.name)}
+          summary={summary}
+          start={startLiveSession.bind(null, bank.id)}
+          assignHref={assignmentPath({ kind: "bank", id: bank.id })}
+          practiceHref={`#${PRACTICE_ID}`}
+          liveRefusal={liveRefusal}
+          classes={classes}
+        />
+      }
+      archived={archived}
+      listTools={
+        <>
+          {/* #468: one order for the quiz's questions and case studies, on its own screen. */}
+          {archived ? null : (
+            <TextLink href={`/author/banks/${bank.id}/order`} size="sm">
+              Change order
+            </TextLink>
+          )}
+          <ArchiveViewSwitch bankId={bank.id} view={view} filter={filter} />
+        </>
+      }
+      search={
+        <>
+          <BankSearchForm
             bankId={bank.id}
-            bankName={bank.name}
-            trail={trail}
             view={view}
-            libraryTrail={libraryTrail}
+            filter={filter}
+            activeCount={activeFilterCount(filter)}
+            tags={<TagFilterBar bankId={bank.id} view={view} filter={filter} facets={facets} />}
           />
-        }
-        heading={heading}
-        sharedWith={(shares ?? []).map((entry) => entry.name)}
-        summary={summary}
-        start={startLiveSession.bind(null, bank.id)}
-        assignHref={assignmentPath({ kind: "bank", id: bank.id })}
-        practiceHref={`#${PRACTICE_ID}`}
-        liveRefusal={liveRefusal}
-        classes={classes}
-      />
-
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] xl:gap-10">
-        <div className="flex min-w-0 flex-col gap-10">
-          <section aria-labelledby="items-heading" className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-              <h2 id="items-heading" className="font-read text-title text-ink-1">
-                {archived ? "Archived questions" : "Questions"}
-              </h2>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                {/* #468: one order for the quiz's questions and case studies, on its own screen. */}
-                {archived ? null : (
-                  <TextLink href={`/author/banks/${bank.id}/order`} size="sm">
-                    Change order
-                  </TextLink>
-                )}
-                <ArchiveViewSwitch bankId={bank.id} view={view} filter={filter} />
-              </div>
-            </div>
-            <BankSearchForm
-              bankId={bank.id}
-              view={view}
-              filter={filter}
-              activeCount={activeFilterCount(filter)}
-              tags={<TagFilterBar bankId={bank.id} view={view} filter={filter} facets={facets} />}
-            />
-            <ActiveFilters
-              bankId={bank.id}
-              view={view}
-              filter={filter}
-              matching={facets.matching}
-            />
-            {searching ? (
-              <p role="status" className="text-ink-1">
-                {searchSummary(itemPage.total, search)}
-              </p>
-            ) : null}
-            <ItemList
-              items={items}
-              moveFormId={selectionFormId}
-              archiveFormId={archiveFormId}
-              restoreAction={archived ? (id) => restoreItemAction.bind(null, id) : undefined}
-              empty={bankItemsEmpty(emptyView, emptySteps)}
-            />
-            <Pager
-              page={page}
-              pageCount={itemPage.pageCount}
-              hrefFor={(target) => bankViewHref(bank.id, view, filter, target)}
-            />
-          </section>
-          <section aria-labelledby="case-studies-heading" className="flex flex-col gap-4">
-            <h2 id="case-studies-heading" className="font-read text-title text-ink-1">
-              {archived ? "Archived case studies" : "Case studies"}
-            </h2>
-            {tagFiltered || search.type ? (
-              <p className="text-ink-2">Case studies are hidden while filtering.</p>
-            ) : (
-              <CaseStudyList
-                caseStudies={caseStudies}
-                moveFormId={selectionFormId}
-                archiveFormId={archiveFormId}
-                restoreAction={archived ? (id) => restoreCaseStudyAction.bind(null, id) : undefined}
-                empty={bankCaseStudiesEmpty(emptyView, emptySteps)}
-              />
-            )}
-          </section>
-          {selectionFormId ? (
-            // Last in the column, so the bar it opens into sticks to the window's foot under the
-            // lists and appears without moving a row (#563).
-            <QuizMoveForm
-              key={`move-${folder?.id ?? view.kind}`}
-              id={MOVE_FORM_ID}
-              folders={inQuizFolders ? folders : []}
-              moveToFolder={moveToFolderInBank.bind(null, bank.id)}
-              quizzes={canMoveToQuiz ? otherQuizzes : []}
-              moveToQuiz={moveToQuizAction.bind(null, bank.id)}
-              staysBehind={keptLines}
-              archive={canArchive ? archiveSelectedAction.bind(null, bank.id) : undefined}
-              archivedHref={bankViewHref(bank.id, view, { ...filter, status: "archived" })}
-              hasRows={hasContent}
-            />
+          <ActiveFilters bankId={bank.id} view={view} filter={filter} matching={facets.matching} />
+          {searching ? (
+            <p role="status" className="text-ink-1">
+              {searchSummary(itemPage.total, search)}
+            </p>
           ) : null}
-          <div id={PRACTICE_ID} className="scroll-mt-4">
-            <PracticeSection
-              headingClassName="font-read text-title text-ink-1"
-              intro=""
-              shares={shares}
-              options={classes}
-              list={{
-                label: "Shared for practice",
-                stopActionFor: (classId) => stopSharing.bind(null, bank.id, classId),
-                stopLabelFor: (entry) => `Stop sharing with ${entry.name}`,
-                warningFor: (entry) => stopSharingWarning(entry.name, bank.name),
-                emptyMessage: "Not shared with any class.",
-              }}
-              form={{
-                action: shareBankWithClass.bind(null, bank.id),
-                label: "Class",
-                emptyMessage:
-                  classes && classes.length === 0
-                    ? "Create a class to share this quiz with."
-                    : "Shared with every class.",
-              }}
-            />
-          </div>
-        </div>
-
+        </>
+      }
+      questions={
+        <>
+          <ItemList
+            items={items}
+            moveFormId={selectionFormId}
+            archiveFormId={archiveFormId}
+            restoreAction={archived ? (id) => restoreItemAction.bind(null, id) : undefined}
+            empty={bankItemsEmpty(emptyView, emptySteps)}
+          />
+          <Pager
+            page={page}
+            pageCount={itemPage.pageCount}
+            hrefFor={(target) => bankViewHref(bank.id, view, filter, target)}
+          />
+        </>
+      }
+      caseStudies={
+        tagFiltered || search.type ? (
+          <p className="text-ink-2">Case studies are hidden while filtering.</p>
+        ) : (
+          <CaseStudyList
+            caseStudies={caseStudies}
+            moveFormId={selectionFormId}
+            archiveFormId={archiveFormId}
+            restoreAction={archived ? (id) => restoreCaseStudyAction.bind(null, id) : undefined}
+            empty={bankCaseStudiesEmpty(emptyView, emptySteps)}
+          />
+        )
+      }
+      selection={
+        selectionFormId ? (
+          // Last in the column, so the bar it opens into sticks to the window's foot under the
+          // lists and appears without moving a row (#563).
+          <QuizMoveForm
+            key={`move-${folder?.id ?? view.kind}`}
+            id={MOVE_FORM_ID}
+            folders={inQuizFolders ? folders : []}
+            moveToFolder={moveToFolderInBank.bind(null, bank.id)}
+            quizzes={canMoveToQuiz ? otherQuizzes : []}
+            moveToQuiz={moveToQuizAction.bind(null, bank.id)}
+            staysBehind={keptLines}
+            archive={canArchive ? archiveSelectedAction.bind(null, bank.id) : undefined}
+            archivedHref={bankViewHref(bank.id, view, { ...filter, status: "archived" })}
+            hasRows={hasContent}
+          />
+        ) : null
+      }
+      practice={
+        <PracticeSection
+          headingClassName={PRACTICE_HEADING_CLASSES}
+          intro=""
+          shares={shares}
+          options={classes}
+          list={{
+            label: "Shared for practice",
+            stopActionFor: (classId) => stopSharing.bind(null, bank.id, classId),
+            stopLabelFor: (entry) => `Stop sharing with ${entry.name}`,
+            warningFor: (entry) => stopSharingWarning(entry.name, bank.name),
+            emptyMessage: "Not shared with any class.",
+          }}
+          form={{
+            action: shareBankWithClass.bind(null, bank.id),
+            label: "Class",
+            emptyMessage:
+              classes && classes.length === 0
+                ? "Create a class to share this quiz with."
+                : "Shared with every class.",
+          }}
+        />
+      }
+      side={
         <QuizSidePanel
           newQuestionHref={`/author/banks/${bank.id}/new`}
           newCaseStudy={<CreateCaseStudyForm action={createCaseStudyInBank.bind(null, bank.id)} />}
@@ -361,7 +361,7 @@ export default async function BankPage({
             </>
           }
         />
-      </div>
-    </div>
+      }
+    />
   );
 }

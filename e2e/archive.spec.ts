@@ -52,6 +52,8 @@ test("an author archives an item, finds it in the Archived view, and restores it
   await expect(page.getByRole("textbox", { name: "Question stem", exact: true })).toHaveValue(
     FILED,
   );
+  // #563: Duplicate and Archive are in the editor's More menu, beside Publish.
+  await page.getByRole("button", { name: "More", exact: true }).click();
   await page.getByRole("button", { name: "Archive question", exact: true }).click();
   await expect(page.getByText("Archived. Restore it to edit.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Restore question", exact: true })).toBeVisible();

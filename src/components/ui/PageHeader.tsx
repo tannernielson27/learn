@@ -58,7 +58,8 @@ export function PageHeader({
             <div className="measure mt-3 text-lg leading-relaxed text-ink-2">{lead}</div>
           ) : null}
         </div>
-        {action ? <div className="flex shrink-0 flex-wrap gap-3">{action}</div> : null}
+        {/* Never wider than the row, so an action of several buttons wraps on a phone (#563). */}
+        {action ? <div className="flex max-w-full shrink-0 flex-wrap gap-3">{action}</div> : null}
       </div>
     </header>
   );
