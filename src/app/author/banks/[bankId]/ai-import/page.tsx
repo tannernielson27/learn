@@ -10,6 +10,7 @@ import {
 } from "@/app/author/aiImportActions";
 import { AiImportUpload } from "@/components/authoring/AiImportUpload";
 import { Breadcrumbs } from "@/components/authoring/FolderBreadcrumbs";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { ReadingWidth } from "@/components/authoring/PageWidth";
 import { aiImportEnabled } from "@/lib/aiImport/config";
 import { workspaceEnabled } from "@/lib/aiImport/upload/access";
@@ -58,11 +59,10 @@ export default async function AiImportPage({
   return (
     <ReadingWidth>
       <Breadcrumbs crumbs={[{ label: bank.name, href: `/author/banks/${bank.id}` }]} />
-      <h1 className="mb-6 font-read text-3xl break-words text-ink-1">Import with AI</h1>
+      <PageHeader title="Import with AI" className="mb-6" />
       <AiImportUpload
         key={initial ? `${initial.id}-${initial.status}` : "new"}
         bankId={bank.id}
-        quizName={bank.name}
         allowance={allowance === "unavailable" ? null : allowance}
         initial={initial}
         actions={{

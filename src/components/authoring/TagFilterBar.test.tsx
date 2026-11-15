@@ -62,13 +62,13 @@ describe("TagFilterBar", () => {
     );
   });
 
-  it("says how many questions carry every chosen tag, and clears them in one step", () => {
+  it("leaves what is chosen, and Clear filters, to ActiveFilters outside the panel (#563)", () => {
     const bar = setup({ tags: ["Physiological Adaptation", "sepsis"], step: null });
-    expect(bar).toHaveTextContent("1 question has all of: Physiological Adaptation, sepsis.");
-    expect(within(bar).getByRole("link", { name: "Clear filters" })).toHaveAttribute("href", base);
+    expect(bar).not.toHaveTextContent("have all of");
+    expect(within(bar).queryByRole("link", { name: "Clear filters" })).toBeNull();
   });
 
-  it("keeps a search on every chip and when clearing the tags", () => {
+  it("keeps a search on every chip", () => {
     const searching = {
       tags: ["sepsis"],
       step: null,
@@ -88,15 +88,6 @@ describe("TagFilterBar", () => {
     expect(
       within(bar).getByRole("link", { name: "Remove filter sepsis, 2 questions" }),
     ).toHaveAttribute("href", `${base}?q=lactate&status=published`);
-    expect(within(bar).getByRole("link", { name: "Clear filters" })).toHaveAttribute(
-      "href",
-      `${base}?q=lactate&status=published`,
-    );
-  });
-
-  it("names the step among what the questions have", () => {
-    const bar = setup({ tags: [], step: 1 });
-    expect(bar).toHaveTextContent("2 questions have all of: Step 1: Recognize Cues.");
   });
 
   it("offers Has warnings with its count, kept in the URL with the tags", () => {
@@ -121,7 +112,7 @@ describe("TagFilterBar", () => {
     );
   });
 
-  it("marks Has warnings chosen, names it among the filters, and removes it", () => {
+  it("marks Has warnings chosen, and removes it", () => {
     const warned: TaggedRow[] = [{ tags: [], cjmmStep: null, hasWarnings: true }];
     const filter = { tags: [], step: null, warnings: true as const };
     render(
@@ -133,7 +124,6 @@ describe("TagFilterBar", () => {
       />,
     );
     const bar = screen.getByRole("region", { name: "Filter by tag" });
-    expect(bar).toHaveTextContent("1 question has all of: Has warnings.");
     const chip = within(bar).getByRole("link", { name: "Remove filter Has warnings, 1 question" });
     expect(chip).toHaveAttribute("href", base);
     expect(chip).toHaveAttribute("aria-current", "true");

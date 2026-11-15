@@ -52,14 +52,19 @@ function Refusals({ lines }: { lines: readonly string[] }) {
 
 /**
  * Archive for the quiz page's selection form (#471): the Archive selected button, the confirm
- * that names how many, and what happened. Nothing is archived until the teacher confirms. The
- * outcome takes focus when it arrives, since the rows it is about leave the list.
+ * that names how many, and what happened, each returned on its own so the selection bar can show
+ * the button only while something is selected and the outcome and the confirm at any time (#563).
+ * Nothing is archived until the teacher confirms. The outcome takes focus when it arrives, since
+ * the rows it is about leave the list.
  */
 export function useArchiveSelected(
   action: ArchiveSelectedAction | undefined,
   formRef: RefObject<HTMLFormElement | null>,
   archivedHref: string | undefined,
   hasRows = true,
+  /** Outcomes the teacher dismissed, which stay hidden; and how to dismiss one. */
+  hidden: readonly object[] = [],
+  onHide: (state: object) => void = () => {},
 ) {
   const [state, run, pending] = useActionState(action ?? idle, IDLE);
   const [asking, setAsking] = useState<Asking | null>(null);
@@ -114,57 +119,61 @@ export function useArchiveSelected(
     startTransition(() => run(data));
   }
 
-  const controls = action ? (
-    <div className="flex flex-col gap-2">
-      {hasRows ? (
-        <div>
-          <Button size="sm" onClick={askSelected} disabled={pending}>
-            Archive selected
-          </Button>
-        </div>
-      ) : null}
-      {problem ? (
-        <FieldError role="alert">{problem}</FieldError>
-      ) : state.status === "done" ? (
-        <div ref={outcomeRef} role="status" tabIndex={-1} className="text-sm text-ink-1">
-          <p>
-            {state.message}{" "}
-            {archivedHref ? (
-              <Link href={archivedHref} className="font-medium text-accent-ink underline">
-                Show archived
-              </Link>
-            ) : null}
-          </p>
-          <Refusals lines={state.refusals} />
-        </div>
-      ) : state.status === "error" ? (
-        <div ref={outcomeRef} role="alert" tabIndex={-1} className="text-sm text-ink-1">
-          <FieldError>{state.error}</FieldError>
-          <Refusals lines={state.refusals} />
-        </div>
-      ) : null}
-      <Dialog
-        open={asking !== null}
-        onClose={() => setAsking(null)}
-        title={asking?.title ?? "Archive?"}
-        description={
-          asking?.clears === false ? "You can restore it later." : "You can restore them later."
-        }
-        actions={
-          <>
-            <Button variant="ghost" onClick={() => setAsking(null)}>
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={confirm}>
-              Archive
-            </Button>
-          </>
-        }
-      >
-        {asking?.name ? <p className="break-words text-ink-1">{asking.name}</p> : null}
-      </Dialog>
+  const shown = state.status !== "idle" && !hidden.includes(state);
+  const button =
+    action && hasRows ? (
+      <Button size="sm" onClick={askSelected} busy={pending}>
+        Archive selected
+      </Button>
+    ) : null;
+  const outcome = !action ? null : problem ? (
+    <FieldError role="alert">{problem}</FieldError>
+  ) : shown && state.status === "done" ? (
+    <div ref={outcomeRef} role="status" tabIndex={-1} className="text-sm text-ink-1">
+      <p>
+        {state.message}{" "}
+        {archivedHref ? (
+          <Link href={archivedHref} className="font-medium text-accent-ink underline">
+            Show archived
+          </Link>
+        ) : null}
+      </p>
+      <Refusals lines={state.refusals} />
+    </div>
+  ) : shown && state.status === "error" ? (
+    <div ref={outcomeRef} role="alert" tabIndex={-1} className="text-sm text-ink-1">
+      <FieldError>{state.error}</FieldError>
+      <Refusals lines={state.refusals} />
     </div>
   ) : null;
+  const dialog = action ? (
+    <Dialog
+      open={asking !== null}
+      onClose={() => setAsking(null)}
+      title={asking?.title ?? "Archive?"}
+      description={
+        asking?.clears === false ? "You can restore it later." : "You can restore them later."
+      }
+      actions={
+        <>
+          <Button variant="ghost" onClick={() => setAsking(null)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={confirm}>
+            Archive
+          </Button>
+        </>
+      }
+    >
+      {asking?.name ? <p className="break-words text-ink-1">{asking.name}</p> : null}
+    </Dialog>
+  ) : null;
 
-  return { askOne, controls };
+  /** Takes what was said away: the outcome stays until the teacher has read it. */
+  function dismiss() {
+    setProblem(undefined);
+    if (state.status !== "idle") onHide(state);
+  }
+
+  return { askOne, button, outcome, dialog, dismiss };
 }

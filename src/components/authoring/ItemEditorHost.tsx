@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect } from "react";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
 import type { EhrRecord } from "@/lib/ngn/schemas";
 
 /** Where an editor is open: on its own page, or as a step of a case study. */
@@ -32,6 +32,11 @@ export interface ItemEditorHost {
    * Publish. A staged AI import question (#347) is fixed this way before it is imported.
    */
   saveOnly?: boolean;
+  /**
+   * The rarer actions on the question (Duplicate, Archive), for the editor's More menu beside
+   * Publish (#563). A standalone question's page passes them; a case study's step has none.
+   */
+  more?: ReactNode;
 }
 
 const STANDALONE: ItemEditorHost = { inCaseStudy: false };

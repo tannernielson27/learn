@@ -89,6 +89,8 @@ test("a teacher starts a live session for a class; a signed-in member is linked 
 
   // 1. The teacher starts it for the class from the quiz page.
   await page.goto(`/author/banks/${SAMPLES_BANK}`);
+  // #563: pacing and the class are in the Live session options panel beside Start.
+  await page.getByRole("button", { name: "Live session options", exact: true }).click();
   const forClass = page.getByRole("combobox", { name: "For a class", exact: true });
   await expect(forClass).toHaveValue("");
   await expect(

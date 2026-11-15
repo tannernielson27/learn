@@ -104,6 +104,8 @@ test("an author duplicates an item and the copy opens as a draft marked (copy)",
   );
 
   const originalUrl = page.url();
+  // #563: Duplicate and Archive are in the editor's More menu, beside Publish.
+  await page.getByRole("button", { name: "More", exact: true }).click();
   await page.getByRole("button", { name: "Duplicate question", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Question stem", exact: true })).toHaveValue(
     `(copy) ${itemStem}`,

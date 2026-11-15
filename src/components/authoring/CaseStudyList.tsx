@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
-import { EmptyState, type EmptyStateContent } from "@/components/ui/EmptyState";
-import { NO_CASE_STUDIES_YET } from "@/lib/authoring/bankEmpty";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { NO_CASE_STUDIES_YET, type BankEmptyContent } from "@/lib/authoring/bankEmpty";
 import type { CaseStudySummary } from "@/lib/authoring/banks";
 import { formatEdited } from "@/lib/authoring/format";
 import { ArchiveButton, type ArchiveButtonProps } from "./ArchiveButton";
@@ -11,7 +11,7 @@ import { SelectForMove } from "./SelectForMove";
 export interface CaseStudyListProps {
   caseStudies: readonly CaseStudySummary[];
   /** What an empty list says, under the page's Case studies h2; defaults to the empty quiz's line. */
-  empty?: EmptyStateContent;
+  empty?: BankEmptyContent;
   /** The id of a move form: each case study gets a checkbox that joins it. */
   moveFormId?: string;
   /** In the Archived view: the restore action for a case study, so each row offers Restore. */
@@ -35,6 +35,10 @@ export function CaseStudyList({
   archiveFormId,
 }: CaseStudyListProps) {
   if (caseStudies.length === 0) {
+    // A search or a filter that hid everything says so in a line, with the way to clear it.
+    if (empty.noResults) {
+      return <EmptyState variant="no-results" heading={empty.heading} action={empty.action} />;
+    }
     return <EmptyState level={3} {...empty} />;
   }
   return (

@@ -8,3 +8,12 @@ export function formatEdited(iso: string): string {
 export function itemCountLabel(count: number): string {
   return count === 1 ? "1 question" : `${count} questions`;
 }
+
+/**
+ * A label in sentence case, for a small app label (docs/04 §11, 2026-11-14): "Matrix Multiple
+ * Choice" reads "Matrix multiple choice". Only for labels with no proper noun or acronym in them.
+ */
+export function sentenceCase(label: string): string {
+  if (label === "") return label;
+  return label.charAt(0).toUpperCase() + label.slice(1).toLowerCase();
+}

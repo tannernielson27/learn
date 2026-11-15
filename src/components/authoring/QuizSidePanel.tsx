@@ -17,6 +17,9 @@ export interface QuizSidePanelProps {
   more: ReactNode;
 }
 
+/** Where an empty quiz's "Start a case study" lands: the New case study form. */
+export const NEW_CASE_STUDY_ID = "new-case-study";
+
 const ADD_CLASSES = `${buttonClasses({ block: true })} justify-start`;
 
 /**
@@ -47,7 +50,9 @@ export function QuizSidePanel({
             Import with AI
           </Link>
         ) : null}
-        <div className="border-t border-line pt-3">{newCaseStudy}</div>
+        <div id={NEW_CASE_STUDY_ID} tabIndex={-1} className="scroll-mt-4 border-t border-line pt-3">
+          {newCaseStudy}
+        </div>
       </Card>
       {folders}
       <Card padding="none" className="px-3">

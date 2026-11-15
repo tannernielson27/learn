@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
-import { EmptyState, type EmptyStateContent } from "@/components/ui/EmptyState";
-import { NO_QUESTIONS_YET } from "@/lib/authoring/bankEmpty";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { NO_QUESTIONS_YET, type BankEmptyContent } from "@/lib/authoring/bankEmpty";
 import type { ItemSummary } from "@/lib/authoring/banks";
 import { formatEdited } from "@/lib/authoring/format";
 import { excerptSegments } from "@/lib/authoring/highlight";
@@ -15,7 +15,7 @@ import { SelectForMove } from "./SelectForMove";
 export interface ItemListProps {
   items: readonly ItemSummary[];
   /** What an empty list says, under the page's Questions h2; defaults to the empty quiz's line. */
-  empty?: EmptyStateContent;
+  empty?: BankEmptyContent;
   /** The id of a move form: each item gets a checkbox that joins it. Without one, no selection. */
   moveFormId?: string;
   /** In the Archived view: the restore action for an item, so each row offers Restore. */
@@ -63,6 +63,10 @@ export function ItemList({
   archiveFormId,
 }: ItemListProps) {
   if (items.length === 0) {
+    // A search or a filter that hid everything says so in a line, with the way to clear it.
+    if (empty.noResults) {
+      return <EmptyState variant="no-results" heading={empty.heading} action={empty.action} />;
+    }
     return <EmptyState level={3} {...empty} />;
   }
 

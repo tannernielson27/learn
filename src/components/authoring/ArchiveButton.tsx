@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/Button";
+import { MENU_ROW_CLASSES } from "./DuplicateButton";
 import { FieldError } from "./FieldError";
 
 export type ArchiveState = { status: "idle" } | { status: "error"; error: string };
@@ -11,6 +12,8 @@ export interface ArchiveButtonProps {
   action: (state: ArchiveState) => Promise<ArchiveState>;
   /** The button's text, e.g. "Archive item" or "Restore". */
   label: string;
+  /** `menu`: a row in a More menu (the editor's, #563), the account menu's look; else a button. */
+  appearance?: "button" | "menu";
   /** A fuller name for assistive technology, when the text alone would not say which row. */
   accessibleName?: string;
 }
@@ -21,7 +24,12 @@ const INITIAL: ArchiveState = { status: "idle" };
  * One button for Archive or Restore. The page keeps it in the same place when the status flips, so
  * focus stays on it while its text changes.
  */
-export function ArchiveButton({ action, label, accessibleName }: ArchiveButtonProps) {
+export function ArchiveButton({
+  action,
+  label,
+  accessibleName,
+  appearance = "button",
+}: ArchiveButtonProps) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
   const alertRef = useRef<HTMLParagraphElement>(null);
 
@@ -31,11 +39,22 @@ export function ArchiveButton({ action, label, accessibleName }: ArchiveButtonPr
 
   return (
     <form action={formAction} className="flex flex-col gap-2">
-      <div>
-        <Button type="submit" size="sm" disabled={pending} aria-label={accessibleName}>
+      {appearance === "menu" ? (
+        <button
+          type="submit"
+          disabled={pending}
+          aria-label={accessibleName}
+          className={MENU_ROW_CLASSES}
+        >
           {label}
-        </Button>
-      </div>
+        </button>
+      ) : (
+        <div>
+          <Button type="submit" size="sm" disabled={pending} aria-label={accessibleName}>
+            {label}
+          </Button>
+        </div>
+      )}
       {state.status === "error" ? (
         <FieldError ref={alertRef} role="alert" tabIndex={-1} className="max-w-prose">
           {state.error}

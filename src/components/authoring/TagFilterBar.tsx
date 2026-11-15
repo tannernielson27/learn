@@ -5,11 +5,9 @@ import type { FolderView } from "@/lib/authoring/folders";
 import {
   bankViewHref,
   isFiltering,
-  stepTagLabel,
   toggleStep,
   toggleTag,
   toggleWarnings,
-  withoutTags,
   type TagFacets,
   type TagFilter,
 } from "@/lib/authoring/tagFilter";
@@ -30,7 +28,7 @@ interface Chip {
   href: string;
 }
 
-const itemCount = (count: number) => (count === 1 ? "1 question" : `${count} questions`);
+export const itemCount = (count: number) => (count === 1 ? "1 question" : `${count} questions`);
 
 const chipClass = `tap-target inline-flex items-center gap-2 rounded-sm border px-3 text-sm ${PRESS_CLASSES}`;
 const idleClass = "border-field-border bg-surface-1 text-ink-1 hover:bg-surface-2";
@@ -60,7 +58,7 @@ function ChipGroup({ id, name, chips }: { id: string; name: string; chips: Chip[
   if (chips.length === 0) return null;
   return (
     <div role="group" aria-labelledby={id} className="flex flex-col gap-2">
-      <p id={id} className="text-xs font-medium tracking-wide text-ink-2 uppercase">
+      <p id={id} className="text-sm text-ink-2">
         {name}
       </p>
       <ul className="flex flex-wrap gap-2">
@@ -74,12 +72,13 @@ function ChipGroup({ id, name, chips }: { id: string; name: string; chips: Chip[
   );
 }
 
-const HAS_WARNINGS = "Has warnings";
+export const HAS_WARNINGS = "Has warnings";
 
 /**
  * Filter chips for the bank page: each is a link to the same view with that tag, step or Has
  * warnings added or removed, so the filter lives in the URL, combines with the open folder and
- * works without script.
+ * works without script. It sits in the Filters panel (#563); what is chosen, and Clear filters,
+ * are outside it, in `ActiveFilters`, so they show while the panel is closed.
  */
 export function TagFilterBar({ bankId, view, filter, facets }: TagFilterBarProps) {
   const filtering = isFiltering(filter);
@@ -116,34 +115,14 @@ export function TagFilterBar({ bankId, view, filter, facets }: TagFilterBarProps
           },
         ]
       : [];
-  const chosen = [
-    ...(filter.step === null ? [] : [stepTagLabel(filter.step)]),
-    ...filter.tags,
-    ...(filter.warnings ? [HAS_WARNINGS] : []),
-  ];
-
   return (
     <section
       aria-labelledby="tag-filter-heading"
-      className="flex flex-col gap-4 rounded-sm border border-line p-4"
+      className="flex flex-col gap-4 border-t border-line pt-4"
     >
-      <h3 id="tag-filter-heading" className="text-sm font-medium text-ink-1">
+      <h3 id="tag-filter-heading" className="text-sm font-semibold text-ink-1">
         Filter by tag
       </h3>
-      {filtering ? (
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm">
-          <p className="text-ink-1">
-            {itemCount(facets.matching)} {facets.matching === 1 ? "has" : "have"} all of:{" "}
-            {chosen.join(", ")}.
-          </p>
-          <Link
-            href={bankViewHref(bankId, view, withoutTags(filter))}
-            className="tap-target inline-flex items-center text-accent-ink underline-offset-4 hover:underline"
-          >
-            Clear filters
-          </Link>
-        </div>
-      ) : null}
       <ChipGroup id="tag-filter-steps" name="Clinical judgment step" chips={steps} />
       <ChipGroup
         id="tag-filter-needs"

@@ -69,7 +69,6 @@ describe("AiImportUpload", () => {
     render(
       <AiImportUpload
         bankId={BANK}
-        quizName="Cardiac"
         allowance={{ remainingUsd: 10, remainingPages: null }}
         initial={null}
         actions={act}
@@ -84,15 +83,7 @@ describe("AiImportUpload", () => {
 
   // #349: what the AI will and will not do is in the teacher guide, one link away.
   it("links to the teacher guide's AI import section", () => {
-    render(
-      <AiImportUpload
-        bankId={BANK}
-        quizName="Cardiac"
-        allowance={null}
-        initial={null}
-        actions={actions()}
-      />,
-    );
+    render(<AiImportUpload bankId={BANK} allowance={null} initial={null} actions={actions()} />);
     expect(screen.getByRole("link", { name: "How AI import works" })).toHaveAttribute(
       "href",
       "/help/instructor#ai-import",
@@ -101,15 +92,7 @@ describe("AiImportUpload", () => {
 
   it("uploads, reads each part and finds the questions, then refreshes for review", async () => {
     const act = actions();
-    render(
-      <AiImportUpload
-        bankId={BANK}
-        quizName="Cardiac"
-        allowance={null}
-        initial={null}
-        actions={act}
-      />,
-    );
+    render(<AiImportUpload bankId={BANK} allowance={null} initial={null} actions={act} />);
     await userEvent.upload(screen.getByLabelText("Documents"), file);
     await userEvent.click(
       screen.getByRole("checkbox", { name: /I may use this content in my course/ }),
@@ -140,15 +123,7 @@ describe("AiImportUpload", () => {
       code: "cap_reached",
       message: "Your workspace has reached this month's AI import allowance.",
     });
-    render(
-      <AiImportUpload
-        bankId={BANK}
-        quizName="Cardiac"
-        allowance={null}
-        initial={ready}
-        actions={actions()}
-      />,
-    );
+    render(<AiImportUpload bankId={BANK} allowance={null} initial={ready} actions={actions()} />);
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("reached this month's AI import allowance");
     expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
@@ -169,15 +144,7 @@ describe("AiImportUpload", () => {
       code: "no_files",
       message: "Add at least one file that can be imported.",
     });
-    render(
-      <AiImportUpload
-        bankId={BANK}
-        quizName="Cardiac"
-        allowance={null}
-        initial={null}
-        actions={act}
-      />,
-    );
+    render(<AiImportUpload bankId={BANK} allowance={null} initial={null} actions={act} />);
     await userEvent.upload(screen.getByLabelText("Documents"), file);
     fireEvent.click(screen.getByRole("checkbox"));
     await userEvent.click(screen.getByRole("button", { name: "Upload and read" }));

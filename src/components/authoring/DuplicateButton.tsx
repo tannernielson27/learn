@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, type FormEvent } from "react";
+import { MENU_ITEM_CLASSES } from "@/components/ui/AccountMenu";
 import { Button } from "@/components/ui/Button";
 import { useAskToLeave } from "./LeaveGuard";
 import { FieldError } from "./FieldError";
@@ -12,11 +13,16 @@ export interface DuplicateButtonProps {
   action: (state: DuplicateState) => Promise<DuplicateState>;
   /** The button's name, e.g. "Duplicate item". */
   label: string;
+  /** `menu`: a row in a More menu (the editor's, #563), the account menu's look; else a button. */
+  appearance?: "button" | "menu";
 }
+
+/** A row in a More menu: the account menu's rows, greyed while the copy is made. */
+export const MENU_ROW_CLASSES = `${MENU_ITEM_CLASSES} disabled:cursor-not-allowed disabled:text-ink-2`;
 
 const INITIAL: DuplicateState = { status: "idle" };
 
-export function DuplicateButton({ action, label }: DuplicateButtonProps) {
+export function DuplicateButton({ action, label, appearance = "button" }: DuplicateButtonProps) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
   const alertRef = useRef<HTMLParagraphElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -44,11 +50,17 @@ export function DuplicateButton({ action, label }: DuplicateButtonProps) {
 
   return (
     <form ref={formRef} action={formAction} onSubmit={submit} className="flex flex-col gap-2">
-      <div>
-        <Button type="submit" size="sm" disabled={pending}>
+      {appearance === "menu" ? (
+        <button type="submit" disabled={pending} className={MENU_ROW_CLASSES}>
           {label}
-        </Button>
-      </div>
+        </button>
+      ) : (
+        <div>
+          <Button type="submit" size="sm" disabled={pending}>
+            {label}
+          </Button>
+        </div>
+      )}
       {state.status === "error" ? (
         <FieldError ref={alertRef} role="alert" tabIndex={-1}>
           {state.error}
