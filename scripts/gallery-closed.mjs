@@ -57,6 +57,9 @@ const GALLERY_PATHS = [
   "/gallery/quiz-page",
   "/gallery/quiz-page?state=editor",
   "/gallery/quiz-page?state=editor-problems",
+  // #563: the teacher's reports, from a fixture of question text and points with no key in it.
+  "/gallery/reports",
+  "/gallery/reports?state=session",
   "/gallery",
 ];
 

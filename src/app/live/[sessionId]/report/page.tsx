@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SessionReportView } from "@/components/live/report/SessionReportView";
+import { buttonClasses } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { buildSessionReport } from "@/lib/live/report";
@@ -41,26 +43,16 @@ export default async function SessionReportPage({
         />
       ) : (
         <>
-          <p className="mb-2 text-sm text-ink-2">
-            <Link
-              href={SESSIONS_PATH}
-              className="tap-target inline-flex items-center hover:text-ink-1"
-            >
-              Live sessions
-            </Link>
-          </p>
-          <h1 className="font-read text-3xl break-words text-ink-1">{read.session.title}</h1>
-          <p className="mt-4 text-ink-2">
-            This live session is still open. Its report is ready when it ends.
-          </p>
-          <p className="mt-4">
-            <Link
-              href={`/live/${sessionId}`}
-              className="tap-target inline-flex items-center font-medium text-accent-ink hover:underline"
-            >
-              Open the live session
-            </Link>
-          </p>
+          <PageHeader
+            title={read.session.title}
+            back={{ href: SESSIONS_PATH, label: "Back to live sessions" }}
+            lead={<p>This live session is still open. Its report is ready when it ends.</p>}
+            action={
+              <Link href={`/live/${sessionId}`} className={buttonClasses()}>
+                Open the live session
+              </Link>
+            }
+          />
         </>
       )}
     </main>

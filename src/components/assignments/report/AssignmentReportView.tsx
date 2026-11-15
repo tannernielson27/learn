@@ -3,12 +3,13 @@ import { LocalTime } from "@/components/assignments/LocalTime";
 import { ReportStepBars } from "@/components/live/report/ReportStepBars";
 import { ItemTable, StepTable } from "@/components/live/report/ReportTables";
 import { buttonClasses } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { assignmentReportCsvPath, assignmentReportPath } from "@/lib/assignments/assignments";
 import type { AssignmentReport } from "@/lib/assignments/report";
 import { classPath } from "@/lib/classes/classes";
 import { REPORT_VIEWS, type ReportView } from "@/lib/live/reportFormat";
 import { ProgressTable, ScoreTable } from "./AssignmentStudentTable";
-import { BackLink } from "@/components/ui/BackLink";
 
 const VIEW_LABELS: Record<ReportView, string> = {
   students: "Students",
@@ -46,27 +47,28 @@ export function AssignmentReportView({
   const { counts } = report;
   return (
     <>
-      <p className="mb-2">
-        <BackLink href={classPath(classId)}>Back to class</BackLink>
-      </p>
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
-          <p className="eyebrow mb-2">Assignment report</p>
-          <h1 className="font-read text-display leading-tight break-words text-ink-1">{title}</h1>
-          <p className="mt-1 text-sm text-ink-2">
-            {report.released ? "Closed " : "Closes "}
-            <LocalTime iso={closesAt} />
-          </p>
-          <p className="mt-1 text-sm text-ink-2">
-            {`${counts.submitted} submitted · ${counts.inProgress} in progress · ${counts.notStarted} not started`}
-          </p>
-        </div>
-        {report.released ? (
-          <a href={assignmentReportCsvPath(assignmentId)} download className={buttonClasses()}>
-            Download CSV
-          </a>
-        ) : null}
-      </header>
+      <PageHeader
+        title={title}
+        back={{ href: classPath(classId), label: "Back to class" }}
+        lead={
+          <>
+            <p>
+              {report.released ? "Assignment report, closed " : "Assignment report, closes "}
+              <LocalTime iso={closesAt} />
+            </p>
+            <p className="tabular mt-1 text-base">
+              {`${counts.submitted} submitted · ${counts.inProgress} in progress · ${counts.notStarted} not started`}
+            </p>
+          </>
+        }
+        action={
+          report.released ? (
+            <a href={assignmentReportCsvPath(assignmentId)} download className={buttonClasses()}>
+              Download CSV
+            </a>
+          ) : null
+        }
+      />
 
       <nav aria-label="Report views" className="mt-6 border-b border-line">
         <ul className="-mb-px flex gap-1 overflow-x-auto">
@@ -89,7 +91,7 @@ export function AssignmentReportView({
       </nav>
 
       <section aria-label={VIEW_LABELS[view]} className="mt-6">
-        <ReportBody report={report} view={view} maxAttempts={maxAttempts} />
+        <ReportBody report={report} view={view} maxAttempts={maxAttempts} classId={classId} />
       </section>
     </>
   );
@@ -98,24 +100,61 @@ export function AssignmentReportView({
 /** Said once, where the scores will be: above the progress table, or in place of a view. */
 const NOT_CLOSED = "Scores show after it closes.";
 
+/**
+ * Nothing to show yet (#563): while it is open, nobody has started; once closed, nobody submitted.
+ * Removed students are not counted here; their own group still shows.
+ */
+function nothingYet(report: AssignmentReport): boolean {
+  const { submitted, inProgress } = report.counts;
+  return report.released ? submitted === 0 : submitted + inProgress === 0;
+}
+
+function NoSubmissions({ report }: { report: AssignmentReport }) {
+  return report.released ? (
+    <EmptyState
+      level={2}
+      heading="No submissions"
+      body="Nobody submitted before it closed, so there are no scores to show."
+    />
+  ) : (
+    <EmptyState
+      level={2}
+      heading="No submissions yet"
+      body="Each student shows here once they start. Scores show after it closes."
+    />
+  );
+}
+
 function ReportBody({
   report,
   view,
   maxAttempts,
+  classId,
 }: {
   report: AssignmentReport;
   view: ReportView;
   maxAttempts: number;
+  classId: string;
 }) {
   if (report.students.length === 0 && report.removed.length === 0) {
-    return <p className="text-ink-2">Nobody has joined this class yet.</p>;
+    return (
+      <EmptyState
+        level={2}
+        heading="Nobody has joined this class yet"
+        body="Students who join the class can start this assignment, and their progress shows here."
+        action={{ href: `${classPath(classId)}#invite-heading`, label: "Invite students" }}
+      />
+    );
   }
   if (view === "students") {
+    const empty = report.students.length > 0 && nothingYet(report);
     return (
       <>
-        {report.released ? null : <p className="mb-4 text-sm text-ink-2">{NOT_CLOSED}</p>}
+        {report.released || empty ? null : <p className="mb-4 text-sm text-ink-2">{NOT_CLOSED}</p>}
         {report.students.length === 0 ? (
           <p className="text-ink-2">Nobody is in this class now.</p>
+        ) : empty ? (
+          <NoSubmissions report={report} />
         ) : (
           <StudentTable report={report} students={report.students} maxAttempts={maxAttempts} />
         )}
@@ -128,6 +167,7 @@ function ReportBody({
   if (report.students.length === 0) {
     return <p className="text-ink-2">Nobody is in this class now.</p>;
   }
+  if (nothingYet(report)) return <NoSubmissions report={report} />;
   if (!report.released) {
     return <p className="text-ink-2">{NOT_CLOSED}</p>;
   }

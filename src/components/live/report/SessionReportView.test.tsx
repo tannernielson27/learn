@@ -72,9 +72,36 @@ describe("SessionReportView", () => {
     expect(screen.getByRole("rowheader", { name: "=cmd|' /C calc'!A0" })).toBeInTheDocument();
   });
 
-  it("names each item column by position and item id", () => {
+  // #563: a teacher knows a question by its text, not by the ref an author never sees.
+  it("names each question column by its number and the start of its text", () => {
     renderView("students");
-    expect(screen.getByRole("columnheader", { name: "Q1 mc-vitals" })).toBeInTheDocument();
+    const full =
+      "Q1 Which of the client's vital signs should the nurse report to the provider first?";
+    const head = screen.getByRole("columnheader", { name: full });
+    expect(head).toHaveAttribute("scope", "col");
+    expect(head).toHaveAttribute("title", full);
+    // The eye reads the number over about 60 characters of the text, cut with an ellipsis.
+    const shown = head.querySelector("[aria-hidden='true']");
+    expect(shown).toHaveTextContent(
+      "Q1 Which of the client's vital signs should the nurse report t…",
+    );
+    expect(screen.queryByText(/mc-vitals/)).toBeNull();
+  });
+
+  it("names a question whose text was not read by its number and ref, as before", () => {
+    renderView("students");
+    expect(screen.getByRole("columnheader", { name: "Q4 untagged" })).toHaveAttribute(
+      "title",
+      "Q4 untagged",
+    );
+  });
+
+  it("keeps every column header in one row when no case study was played", () => {
+    renderView("students");
+    const rows = within(screen.getByRole("table")).getAllByRole("row");
+    const head = rows[0] as HTMLElement;
+    expect(head.closest("thead")?.querySelectorAll("tr")).toHaveLength(1);
+    expect(within(head).queryAllByRole("cell")).toEqual([]);
   });
 
   it("shows how each item went", () => {
@@ -114,7 +141,7 @@ describe("SessionReportView", () => {
   it("says so when nobody joined", () => {
     renderView("students", buildSessionReport({ ...REPORT_FIXTURE, participants: [] }));
     expect(screen.queryByRole("table")).toBeNull();
-    expect(screen.getByText("Nobody joined.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Nobody joined" })).toBeInTheDocument();
   });
 });
 
@@ -132,18 +159,34 @@ describe("SessionReportView for a quiz that played a case study in place (#469)"
     const group = within(table).getByRole("rowheader", { name: "Case study: Hip arthroplasty" });
     expect(group).toHaveAttribute("scope", "rowgroup");
     const groupBody = group.closest("tbody") as HTMLElement;
-    expect(
-      within(groupBody)
-        .getAllByRole("rowheader")
-        .map((cell) => cell.textContent),
-    ).toEqual(["Case study: Hip arthroplasty", "Q2 mr-assess", "Q3 bowtie-act"]);
+    const names = within(groupBody).getAllByRole("rowheader");
+    expect(names).toHaveLength(3);
+    expect(names[0]).toHaveAccessibleName("Case study: Hip arthroplasty");
+    expect(names[1]).toHaveAccessibleName("Q2 Select the findings that need follow-up.");
+    expect(names[2]).toHaveAccessibleName(
+      "Q3 Complete the diagram: the condition, two actions, and two parameters to monitor.",
+    );
   });
 
   it("heads the case study's columns with its title in the students view", () => {
     renderView("students", mixed);
     const heading = screen.getByRole("columnheader", { name: "Case study: Hip arthroplasty" });
     expect(heading).toHaveAttribute("colspan", "2");
-    expect(screen.getByRole("columnheader", { name: "Q2 mr-assess" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Q2 Select the findings that need follow-up." }),
+    ).toBeInTheDocument();
+  });
+
+  // #563: no empty band over the other columns; each of them heads both rows.
+  it("spans every other header over both rows, so no header row has an empty cell", () => {
+    renderView("students", mixed);
+    const head = screen.getByRole("table").querySelector("thead") as HTMLElement;
+    expect(head.querySelectorAll("tr")).toHaveLength(2);
+    expect(head.querySelectorAll("td")).toHaveLength(0);
+    for (const name of ["Student", "Total", "Percent", "Q4 untagged"]) {
+      expect(within(head).getByRole("columnheader", { name })).toHaveAttribute("rowspan", "2");
+    }
+    expect(within(head).getByRole("columnheader", { name: "Student" })).toHaveClass("sticky");
   });
 
   it("has no case study heading for a quiz of loose questions", () => {
