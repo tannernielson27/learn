@@ -16,6 +16,7 @@ import { useAutoStopTimer } from "@/components/live/host/useAutoStopTimer";
 import type { HostRoom } from "@/components/live/host/useHostRoom";
 import { notAnswered } from "./notAnswered";
 import { NotAnsweredList } from "./NotAnsweredList";
+import { CONSOLE_LABEL_CLASSES } from "./consoleHeading";
 import { useProgressRead } from "./useProgressRead";
 
 export interface ControlItemProps {
@@ -61,7 +62,7 @@ export function ControlItem({
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:gap-8">
       <div className="flex min-w-0 flex-col gap-4">
-        <p className="eyebrow tabular">{eyebrow}</p>
+        <p className={`${CONSOLE_LABEL_CLASSES} tabular`}>{eyebrow}</p>
         {place === null ? null : (
           <p data-testid="host-case-study" className="text-sm break-words text-ink-2">
             Case study: <span className="text-ink-1">{place.run.title}</span>
@@ -87,16 +88,14 @@ export function ControlItem({
           aria-label="Answers and time"
           className="flex flex-col gap-3.5 rounded-md border border-line bg-surface-1 p-5"
         >
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-base font-semibold text-ink-1">Answered</h2>
-            {answersOn === null ? (
-              <p className="text-sm text-ink-2">Counting</p>
-            ) : (
-              <div aria-live="polite">
-                <AnswerCount answered={answersOn.responded} total={answersOn.present} />
-              </div>
-            )}
-          </div>
+          {/* The count says it once, "3 of 4 answered": no heading above it repeats the word. */}
+          {answersOn === null ? (
+            <p className="text-sm text-ink-2">Counting</p>
+          ) : (
+            <div aria-live="polite">
+              <AnswerCount answered={answersOn.responded} total={answersOn.present} />
+            </div>
+          )}
           <ProgressBar
             size="lg"
             label="Answered"
@@ -112,7 +111,12 @@ export function ControlItem({
           <p role="status" className="text-sm text-ink-2 empty:hidden">
             {autoRevealed ? "Everyone answered. Answer showing." : null}
           </p>
-          <TimerButtons state={state} busy={busy} onCommand={timerCommand} />
+          <TimerButtons
+            state={state}
+            busy={busy}
+            pending={pending === "extend_timer" || pending === "stop_timer" ? pending : null}
+            onCommand={timerCommand}
+          />
         </section>
 
         {collecting ? <NotAnsweredList people={waiting} /> : null}

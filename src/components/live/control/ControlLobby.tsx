@@ -3,6 +3,7 @@ import { Roster } from "@/components/live/Roster";
 import { TimeChoice } from "@/components/live/TimerControls";
 import { isStudentPaced, type LiveSessionState, type RosterEntry } from "@/lib/live";
 import { formatSessionCode } from "@/lib/live/sessionCode";
+import { CONSOLE_HEADING_CLASSES } from "./consoleHeading";
 import { ProjectorNotice } from "./ProjectorNotice";
 
 export interface ControlLobbyProps {
@@ -43,7 +44,7 @@ export function ControlLobby({
           className="flex flex-col gap-6 rounded-md border border-line bg-surface-1 p-5 text-center sm:flex-row sm:items-center sm:p-7 sm:text-left"
         >
           <div className="flex min-w-0 flex-1 flex-col gap-2.5">
-            <h2 id="code-heading" className="eyebrow">
+            <h2 id="code-heading" className={CONSOLE_HEADING_CLASSES}>
               Join code
             </h2>
             <p
