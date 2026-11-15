@@ -28,6 +28,11 @@ export interface NoResultsEmptyStateProps {
   heading: string;
   /** A link that clears the filter or the search: the same page without its query. */
   action?: EmptyStateAction;
+  /**
+   * `false` where a status line that is always on the page already says it (a search field's
+   * count), so the words are not read twice. Leave it on otherwise.
+   */
+  live?: boolean;
   /** Or, for a filter held in the page, a button that clears it. */
   onClear?: () => void;
   /** The button's words; "Clear filters" unless the page says better. */
@@ -106,6 +111,7 @@ export function EmptyState(props: EmptyStateProps) {
 
 function NoResults({
   heading,
+  live = true,
   action,
   onClear,
   clearLabel = "Clear filters",
@@ -115,7 +121,7 @@ function NoResults({
       data-empty-state="no-results"
       className="flex flex-wrap items-center gap-x-4 border-y border-line py-3"
     >
-      <p role="status" className="py-2.5 text-ink-2">
+      <p role={live ? "status" : undefined} className="py-2.5 text-ink-2">
         {heading}
       </p>
       {action ? (

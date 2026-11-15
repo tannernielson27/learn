@@ -39,12 +39,15 @@ export function QuizSearch({ names, children }: QuizSearchProps) {
   return <SearchContext value={{ query, setQuery, names, fieldId }}>{children}</SearchContext>;
 }
 
-/** The search field, with the count of matches read out as it changes. */
+/**
+ * The search field, with the count of matches read out as it changes. Its status line is the one
+ * live region for the search, mounted before anything is typed, so a screen reader hears each
+ * change, "No quizzes match" included (#563): a region that appears already filled may not be read.
+ */
 export function QuizSearchField({ className = "" }: { className?: string }) {
   const { query, setQuery, names, fieldId: id } = use(SearchContext);
   const shown = names.filter((name) => matchesQuizSearch(name, query)).length;
-  // With nothing matching, the list's own no-results line says so (`QuizSearchNoResults`), once.
-  const summary = shown === 0 ? null : quizSearchSummary(shown, names.length, query);
+  const summary = names.length === 0 ? null : quizSearchSummary(shown, names.length, query);
   return (
     <div className={`flex min-w-0 flex-col gap-1 ${className}`.trim()}>
       <label htmlFor={id} className="sr-only">
@@ -65,7 +68,9 @@ export function QuizSearchField({ className = "" }: { className?: string }) {
           className={fieldClasses("h-11 pr-3 pl-10 text-base")}
         />
       </div>
-      <p role="status" className="text-sm text-ink-2 empty:hidden">
+      {/* With nothing matching, the list's no-results line shows the words, so here they are
+          only heard. */}
+      <p role="status" className={shown === 0 ? "sr-only" : "text-sm text-ink-2 empty:hidden"}>
         {summary}
       </p>
     </div>
@@ -80,7 +85,8 @@ export function QuizSearchRow({ name, children }: { name: string; children: Reac
 
 /**
  * Where the rows were, once a search hides every one of them (#563): the no-results empty state,
- * saying what was typed, and a button that clears it and puts focus back in the field.
+ * saying what was typed, and a button that clears it and puts focus back in the field. It is not
+ * a live region: the field's status line has already said it.
  */
 export function QuizSearchNoResults() {
   const { query, setQuery, names, fieldId } = use(SearchContext);
@@ -91,6 +97,7 @@ export function QuizSearchNoResults() {
   return (
     <EmptyState
       variant="no-results"
+      live={false}
       heading={summary}
       clearLabel="Clear search"
       onClear={() => {
