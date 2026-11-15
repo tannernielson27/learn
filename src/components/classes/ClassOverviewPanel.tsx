@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/Badge";
 import { LocalTime } from "@/components/assignments/LocalTime";
 import { TextLink } from "@/components/ui/TextLink";
 import { assignmentReportPath, STATE_LABEL } from "@/lib/assignments/assignments";
@@ -79,15 +80,8 @@ export function ClassOverviewPanel({
                 <span className="min-w-0 font-medium break-words text-ink-1">
                   {focus.assignment.title}
                 </span>
-                <span
-                  className={`rounded-sm border px-2 text-sm ${
-                    focus.state === "open"
-                      ? "border-accent text-accent-ink"
-                      : "border-line text-ink-2"
-                  }`}
-                >
-                  {STATE_LABEL[focus.state]}
-                </span>
+                {/* Neutral, as every status is (#563): blue is for what can be pressed. */}
+                <Badge>{STATE_LABEL[focus.state]}</Badge>
               </div>
               <p className="text-sm text-ink-2">
                 {focus.state === "open" ? "Closes " : "Opens "}

@@ -698,6 +698,49 @@ describe("library folders (#411)", () => {
   });
 });
 
+describe("the library on the shared primitives (#563)", () => {
+  it("has one way to make a quiz: the header's form, in the page's header", async () => {
+    render(await homePage());
+    expect(screen.getByRole("heading", { level: 1, name: "Library" })).toBeInTheDocument();
+    expect(screen.getAllByRole("textbox", { name: "Quiz name" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Create quiz" })).toHaveLength(1);
+    // No second New quiz button or link while there are quizzes to list.
+    expect(screen.queryByRole("link", { name: "New quiz" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "New quiz" })).toBeNull();
+    // The form is the page header's action, not a section under the list.
+    expect(screen.getByRole("heading", { level: 1 }).closest("header")).toContainElement(
+      screen.getByRole("textbox", { name: "Quiz name" }),
+    );
+    expect(screen.getByText("2 quizzes")).toBeInTheDocument();
+  });
+
+  it("points an empty library at that form, and never says a double negative", async () => {
+    empty();
+    render(await homePage());
+    expect(screen.getByRole("heading", { level: 2, name: "No quizzes yet" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "New quiz" })).toHaveAttribute(
+      "href",
+      "#new-bank-heading",
+    );
+    expect(document.getElementById("new-bank-heading")).toHaveTextContent("New quiz");
+    expect(screen.queryByText(/No quizzes not in a folder/)).toBeNull();
+  });
+
+  it("draws no folder rail until a folder exists, with New folder beside the list", async () => {
+    render(await homePage());
+    expect(screen.queryByRole("navigation", { name: "Library folders" })).toBeNull();
+    expect(screen.queryByRole("complementary")).toBeNull();
+    expect(screen.getByText("New folder")).toBeInTheDocument();
+  });
+
+  it("counts the quizzes in no folder once there are folders", async () => {
+    withLibraryFolders();
+    render(await homePage());
+    expect(screen.getByRole("navigation", { name: "Library folders" })).toBeInTheDocument();
+    expect(screen.getByText(/not in a folder$/)).toBeInTheDocument();
+  });
+});
+
 describe("a new quiz offers no folders inside it (#411)", () => {
   it("shows no in-quiz folder controls on a quiz with none", async () => {
     state.folders = [];
