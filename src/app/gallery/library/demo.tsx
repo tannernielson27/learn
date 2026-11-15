@@ -20,8 +20,7 @@ import { libraryRail, libraryViewHref } from "@/lib/authoring/libraryFolders";
 import { checklistSteps } from "@/lib/onboarding/checklist";
 
 /** What the gallery draws: a library before its first folder, an empty one, and with folders. */
-export const LIBRARY_DEMO_STATES = ["start", "empty", "folders", "folder", "all-filed"] as const;
-export type LibraryDemoState = (typeof LIBRARY_DEMO_STATES)[number];
+export type LibraryDemoState = "start" | "empty" | "folders" | "folder" | "all-filed";
 
 const NOT_HERE = "Not in the gallery.";
 const notHere = async (): Promise<FolderFormState> => ({ status: "error", error: NOT_HERE });

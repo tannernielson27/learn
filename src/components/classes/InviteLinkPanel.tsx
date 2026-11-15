@@ -71,7 +71,7 @@ export function ClassCodeBlock({ code, labelAs: Label = "h3" }: ClassCodeBlockPr
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:contents">
         <p
           data-testid="class-code"
-          className="font-mono text-2xl tracking-[0.08em] break-all text-ink-1"
+          className="font-mono text-xl break-all text-ink-1 sm:text-2xl sm:tracking-[0.08em]"
         >
           {formatClassCode(code)}
         </p>

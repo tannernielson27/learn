@@ -1,4 +1,13 @@
-import { LIBRARY_DEMO_STATES, LibraryDemo, type LibraryDemoState } from "./demo";
+import { LibraryDemo, type LibraryDemoState } from "./demo";
+
+// Here, not in the client demo: a "use client" module's values reach the server as references.
+const LIBRARY_DEMO_STATES: readonly LibraryDemoState[] = [
+  "start",
+  "empty",
+  "folders",
+  "folder",
+  "all-filed",
+];
 
 function parseState(value: string | string[] | undefined): LibraryDemoState {
   return LIBRARY_DEMO_STATES.find((state) => state === value) ?? "start";
