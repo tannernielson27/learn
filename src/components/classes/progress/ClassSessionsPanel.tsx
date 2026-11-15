@@ -2,13 +2,13 @@ import { SessionList } from "@/components/live/report/SessionList";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Notice } from "@/components/ui/Notice";
 import { classStartPath } from "@/lib/classes/classes";
-import type { SessionSummary } from "@/lib/supabase/sessionReport";
+import type { SessionListRow } from "@/lib/supabase/sessionReport";
 import { PROGRESS_EMPTY_BODY } from "./ClassProgressPanel";
 
 export interface ClassSessionsPanelProps {
   classId: string;
   /** Newest first; null when they could not be read. */
-  sessions: readonly SessionSummary[] | null;
+  sessions: readonly SessionListRow[] | null;
 }
 
 const HEADING = "text-lg font-medium text-ink-1";

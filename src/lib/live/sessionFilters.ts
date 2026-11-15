@@ -9,7 +9,7 @@
  */
 import { SESSIONS_PATH } from "./reportFormat";
 
-export const SESSION_STATUS_FILTERS = ["all", "ended", "open"] as const;
+export const SESSION_STATUS_FILTERS = ["all", "ended", "open", "archived"] as const;
 export type SessionStatusFilter = (typeof SESSION_STATUS_FILTERS)[number];
 
 export const SESSION_WHO_FILTERS = ["all", "mine"] as const;

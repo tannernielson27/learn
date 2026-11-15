@@ -1,6 +1,6 @@
 import type { StudentStatus } from "@/lib/assignments/report";
 import type { CjmmStep } from "@/lib/ngn/types";
-import type { SessionSummary } from "@/lib/supabase/sessionReport";
+import type { SessionListRow } from "@/lib/supabase/sessionReport";
 import { CLASS_PAGE_FIXTURE_ASSIGNMENTS, CLASS_PAGE_FIXTURE_ROSTER } from "./classPageFixture";
 import type { ClassProgressInput, ProgressRowInput, ProgressStepInput } from "./progress";
 
@@ -187,7 +187,7 @@ export const PROGRESS_FIXTURE: ClassProgressInput = {
 export const PROGRESS_FIXTURE_EMPTY: ClassProgressInput = { rows: [], steps: [] };
 
 /** The fixture's live sessions as the Live sessions tab lists them, newest first. */
-export const PROGRESS_FIXTURE_SESSION_LIST: SessionSummary[] = PROGRESS_FIXTURE_SESSIONS.map(
+export const PROGRESS_FIXTURE_SESSION_LIST: SessionListRow[] = PROGRESS_FIXTURE_SESSIONS.map(
   (session, index) => ({
     id: session.id,
     title: session.title,

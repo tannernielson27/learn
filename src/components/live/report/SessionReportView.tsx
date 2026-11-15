@@ -12,6 +12,7 @@ import {
 } from "@/lib/live/reportFormat";
 import { formatSessionDate } from "./formatDate";
 import { ReportStepBars } from "./ReportStepBars";
+import { RenameSessionButton } from "./RenameSessionButton";
 import { ReportSummaryStrip } from "./ReportSummaryStrip";
 import { ItemTable, StepTable } from "./ReportTables";
 import { StudentResults } from "./StudentSummaryTable";
@@ -36,6 +37,8 @@ export interface SessionReportViewProps {
   view: ReportView;
   /** How the students view is drawn and sorted (#565). */
   studentOptions?: StudentViewOptions;
+  /** The viewer ran this session, so may rename it (#565). */
+  canRename?: boolean;
 }
 
 /**
@@ -52,6 +55,7 @@ export function SessionReportView({
   report,
   view,
   studentOptions = DEFAULT_STUDENT_VIEW,
+  canRename = false,
 }: SessionReportViewProps) {
   return (
     <>
@@ -66,9 +70,12 @@ export function SessionReportView({
           </p>
         }
         action={
-          <a href={reportCsvPath(sessionId)} download className={buttonClasses()}>
-            Download CSV
-          </a>
+          <div className="flex flex-wrap gap-2">
+            {canRename ? <RenameSessionButton sessionId={sessionId} title={title} /> : null}
+            <a href={reportCsvPath(sessionId)} download className={buttonClasses()}>
+              Download CSV
+            </a>
+          </div>
         }
       />
 

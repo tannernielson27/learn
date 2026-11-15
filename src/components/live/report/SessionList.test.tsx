@@ -1,9 +1,9 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { SessionSummary } from "@/lib/supabase/sessionReport";
+import type { SessionListRow } from "@/lib/supabase/sessionReport";
 import { SessionList } from "./SessionList";
 
-const ended: SessionSummary = {
+const ended: SessionListRow = {
   id: "00000000-0000-4000-8000-0000000000a1",
   title: "Cardiac week 3",
   status: "ended",
@@ -12,7 +12,7 @@ const ended: SessionSummary = {
   participantCount: 24,
 };
 
-const running: SessionSummary = {
+const running: SessionListRow = {
   ...ended,
   id: "00000000-0000-4000-8000-0000000000a2",
   title: "Respiratory drill",

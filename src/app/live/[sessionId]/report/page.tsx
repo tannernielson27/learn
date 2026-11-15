@@ -33,7 +33,7 @@ export default async function SessionReportPage({
   const view = parseReportView(query.view, LIVE_REPORT_DEFAULT_VIEW);
   const studentOptions = parseStudentViewOptions(query);
 
-  const { supabase } = await requireAuthor(reportPath(sessionId, view));
+  const { supabase, userId } = await requireAuthor(reportPath(sessionId, view));
   const read = await readSessionReport(supabase, sessionId);
   if (!read) notFound();
 
@@ -47,6 +47,7 @@ export default async function SessionReportPage({
           report={buildSessionReport(read.input)}
           view={view}
           studentOptions={studentOptions}
+          canRename={read.session.hostId === userId}
         />
       ) : (
         <>

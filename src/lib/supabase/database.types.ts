@@ -1678,6 +1678,7 @@ export type Database = {
       };
       sessions: {
         Row: {
+          archived_at: string | null;
           bank_id: string | null;
           case_study_id: string | null;
           case_study_records: Json | null;
@@ -1702,6 +1703,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          archived_at?: string | null;
           bank_id?: string | null;
           case_study_id?: string | null;
           case_study_records?: Json | null;
@@ -1726,6 +1728,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          archived_at?: string | null;
           bank_id?: string | null;
           case_study_id?: string | null;
           case_study_records?: Json | null;
