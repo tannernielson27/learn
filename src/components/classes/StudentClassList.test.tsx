@@ -45,6 +45,18 @@ describe("StudentClassList", () => {
     expect(within(second!).queryByText("Ada Lovelace’s workspace")).not.toBeInTheDocument();
   });
 
+  it("leaves the workspace off for a student whose classes are all in one workspace (#563)", () => {
+    render(
+      <StudentClassList
+        classes={[entry("a", "NUR 310", "LeaRN"), entry("b", "NUR 320", "LeaRN")]}
+      />,
+    );
+    const [first, second] = screen.getAllByRole("listitem");
+    expect(first).toHaveTextContent(/^NUR 310$/);
+    expect(second).toHaveTextContent(/^NUR 320$/);
+    expect(screen.queryByText("LeaRN")).not.toBeInTheDocument();
+  });
+
   it("shows the class alone when its workspace is not known", () => {
     render(<StudentClassList classes={[entry("a", "NUR 310", null)]} />);
     const item = screen.getByRole("listitem");

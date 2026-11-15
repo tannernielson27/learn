@@ -12,6 +12,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { practiseMissedFromRunAction } from "../missed/actions";
 import { startPracticeOverAction } from "./actions";
 import { BackLink } from "@/components/ui/BackLink";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export const metadata: Metadata = { title: "Practice" };
 
@@ -38,17 +39,21 @@ export default async function PracticePage({ params }: PageProps<"/learn/practic
 
   return (
     <PageWidth width="wide">
-      <p className="mb-2">
-        <BackLink href={STUDENT_HOME}>Your classes</BackLink>
-      </p>
-      <p className="eyebrow mb-2">Practice</p>
       {page.kind === "failed" ? (
-        <Notice role="alert">This practice did not load. Reload the page.</Notice>
+        <>
+          <p className="mb-4">
+            <BackLink href={STUDENT_HOME}>Back to your classes</BackLink>
+          </p>
+          <Notice role="alert">This practice did not load. Reload the page.</Notice>
+        </>
       ) : (
         <>
-          <h1 className="mb-6 font-read text-display leading-tight break-words text-ink-1">
-            {page.view.bankName}
-          </h1>
+          <PageHeader
+            className="mb-6"
+            back={{ href: STUDENT_HOME, label: "Back to your classes" }}
+            title={page.view.bankName}
+            lead={<p className="text-base">Practice</p>}
+          />
           <PracticePlayer
             key={page.view.runId}
             view={page.view}

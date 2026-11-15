@@ -91,13 +91,14 @@ test("History shows a closed assignment's best score, and nothing of one still o
   await openSignInLink(student, await latestSignInLink(request, email, since));
   await expect(student).toHaveURL(/\/learn$/);
 
-  // Nothing has closed yet: the empty states.
-  // #266: the steps' empty state heading; the bytes check below looks for it too.
-  const noSteps = "No answers yet";
-  await expect(student.getByRole("heading", { name: noSteps, exact: true })).toBeVisible();
+  // Nothing has closed yet: #563, one first-use state, and no results or steps section at all.
+  // The bytes check below looks for the steps' heading too.
+  const stepsHeading = "Your clinical judgment steps";
   await expect(
-    student.getByRole("heading", { name: "No closed assignments yet", exact: true }),
+    student.getByRole("heading", { name: "Nothing here yet", exact: true }),
   ).toBeVisible();
+  await expect(student.getByRole("region", { name: "Results", exact: true })).toHaveCount(0);
+  await expect(student.getByRole("region", { name: stepsHeading, exact: true })).toHaveCount(0);
 
   // One closing shortly with two attempts, one open for a day with one; the clock starts now.
   const [klass] = await selectAsAdmin<{ org_id: string }>(
@@ -165,10 +166,10 @@ test("History shows a closed assignment's best score, and nothing of one still o
   expect(before).not.toContain("Best score");
   expect(before).not.toContain(`Results for ${closingTitle}`);
   expect(before).not.toContain(`Results for ${openTitle}`);
-  // #239: no step has a mark of either assignment while both are open.
-  expect(before).toContain(noSteps);
+  // #239: no step has a mark of either assignment while both are open. #563: a steps section
+  // with no answer in it collapses away, so neither its heading nor its list is on the wire.
+  expect(before).not.toContain(stepsHeading);
   expect(before).not.toContain("Not enough answers yet");
-  // The ranked list itself, not the section heading, which is there either way.
   expect(before).not.toContain(`aria-label="Your clinical judgment steps"`);
 
   // After the close (and its two seconds of grace).

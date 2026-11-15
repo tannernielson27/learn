@@ -15,9 +15,11 @@ import { myClasses } from "@/lib/supabase/classInvites";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { practiseMissedFromAssignmentAction } from "@/app/learn/practice/missed/actions";
 import { BackLink } from "@/components/ui/BackLink";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export const metadata: Metadata = { title: "Results" };
 
+/** The results' title on `PageHeader`, as the assignment's own page sets it (#563). */
 function Header({
   assignment,
   closed,
@@ -28,19 +30,16 @@ function Header({
   timeZone: string;
 }) {
   return (
-    <>
-      <p className="mb-2">
-        <BackLink href={STUDENT_HOME}>Your classes</BackLink>
-      </p>
-      <p className="eyebrow mb-2">Results</p>
-      <h1 className="font-read text-display leading-tight break-words text-ink-1">
-        {assignment.title}
-      </h1>
-      <p className="mt-2 text-sm text-ink-2">
-        {closed ? "Closed " : "Closes "}
-        <ClassTime iso={assignment.closesAt} timeZone={timeZone} />
-      </p>
-    </>
+    <PageHeader
+      back={{ href: STUDENT_HOME, label: "Back to your classes" }}
+      title={assignment.title}
+      lead={
+        <p className="text-base">
+          {closed ? "Results · Closed " : "Results · Closes "}
+          <ClassTime iso={assignment.closesAt} timeZone={timeZone} />
+        </p>
+      }
+    />
   );
 }
 

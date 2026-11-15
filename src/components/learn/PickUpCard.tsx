@@ -70,7 +70,8 @@ export function PickUpCard({ pick, classes, progress }: PickUpCardProps) {
       aria-labelledby={HEADING_ID}
       className="flex flex-col gap-3 rounded-md border border-line-field bg-surface-1 p-4 sm:p-5"
     >
-      <h2 id={HEADING_ID} className="eyebrow">
+      {/* A small label in sentence case, not the public site's eyebrow (docs/04 §11, 2026-11-14). */}
+      <h2 id={HEADING_ID} className="text-sm font-semibold text-ink-2">
         {HEADINGS[pick.kind]}
       </h2>
       <p id={TITLE_ID} className="text-lg leading-snug font-semibold break-words text-ink-1">

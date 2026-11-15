@@ -13,6 +13,8 @@ export type JoinCodeState = { status: "idle" } | { status: "error"; error: strin
 export interface JoinCodeFormProps {
   /** The landing page's Server Function (`openJoinCode`); a test passes its own. */
   action?: (state: JoinCodeState, formData: FormData) => Promise<JoinCodeState>;
+  /** The line over the field. The landing page's says that no account is needed. */
+  note?: string;
 }
 
 const INITIAL: JoinCodeState = { status: "idle" };
@@ -24,8 +26,12 @@ const INITIAL: JoinCodeState = { status: "idle" };
  * without JavaScript; with it, a refusal comes back under the field without leaving the page.
  *
  * It never takes focus on its own: the landing page is read first, by a teacher as often as not.
+ * The student home (#563) puts the same form first, with its own `note`.
  */
-export function JoinCodeForm({ action = openJoinCode }: JoinCodeFormProps) {
+export function JoinCodeForm({
+  action = openJoinCode,
+  note = "In class now? No account needed.",
+}: JoinCodeFormProps) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
   const id = useId();
   const fieldRef = useRef<HTMLInputElement>(null);
@@ -41,7 +47,7 @@ export function JoinCodeForm({ action = openJoinCode }: JoinCodeFormProps) {
   return (
     <form action={formAction} aria-label="Join a live session" className="flex flex-col gap-3">
       <p id={noteId} className="font-semibold text-ink-1">
-        In class now? No account needed.
+        {note}
       </p>
       <div className="flex flex-col gap-1.5">
         <label htmlFor={`${id}-code`} className="text-sm font-medium text-ink-2">
