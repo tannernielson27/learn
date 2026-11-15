@@ -149,6 +149,8 @@ test("a teacher starts a live session for a class; a signed-in member is linked 
   await page.getByRole("button", { name: "End live session", exact: true }).click();
   await page.getByRole("button", { name: "End live session", exact: true }).click();
   await page.getByRole("link", { name: "Open the report", exact: true }).click();
+  // #565: the report opens on its questions; the names are in the students view.
+  await page.getByRole("link", { name: "Students", exact: true }).click();
   await expect(page.getByText(memberName, { exact: true }).first()).toBeVisible();
   await expect(page.getByText(guestName, { exact: true }).first()).toBeVisible();
 

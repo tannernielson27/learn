@@ -35,11 +35,40 @@ export function SessionList({ sessions }: SessionListProps) {
     );
   }
 
+  return <SessionRows label="Live sessions" sessions={sessions} />;
+}
+
+/**
+ * The Live sessions page's list in date groups (#565): "This week", then a group per month, each
+ * under its own heading so a long history reads as a few short lists.
+ */
+export function GroupedSessionList({
+  groups,
+}: {
+  groups: readonly { label: string; sessions: readonly SessionSummary[] }[];
+}) {
   return (
-    <ul
-      aria-label="Live sessions"
-      className="flex flex-col divide-y divide-line border-y border-line"
-    >
+    <div className="flex flex-col gap-8">
+      {groups.map((group) => (
+        <section key={group.label} aria-labelledby={groupId(group.label)}>
+          <h2
+            id={groupId(group.label)}
+            className="mb-2 text-sm font-medium tracking-wide text-ink-2 uppercase"
+          >
+            {group.label}
+          </h2>
+          <SessionRows label={group.label} sessions={group.sessions} />
+        </section>
+      ))}
+    </div>
+  );
+}
+
+const groupId = (label: string) => `sessions-${label.toLowerCase().replace(/\s+/g, "-")}`;
+
+function SessionRows({ label, sessions }: { label: string; sessions: readonly SessionSummary[] }) {
+  return (
+    <ul aria-label={label} className="flex flex-col divide-y divide-line border-y border-line">
       {sessions.map((session) => (
         <li key={session.id}>
           <Link

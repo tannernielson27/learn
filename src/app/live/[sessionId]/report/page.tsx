@@ -6,7 +6,12 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { buildSessionReport } from "@/lib/live/report";
-import { parseReportView, reportPath } from "@/lib/live/reportFormat";
+import {
+  LIVE_REPORT_DEFAULT_VIEW,
+  parseReportView,
+  parseStudentViewOptions,
+  reportPath,
+} from "@/lib/live/reportFormat";
 import { readSessionReport } from "@/lib/supabase/sessionReport";
 
 export const metadata: Metadata = { title: "Live session report" };
@@ -24,7 +29,9 @@ export default async function SessionReportPage({
 }: PageProps<"/live/[sessionId]/report">) {
   const { sessionId } = await params;
   if (!isUuid(sessionId)) notFound();
-  const view = parseReportView((await searchParams).view);
+  const query = await searchParams;
+  const view = parseReportView(query.view, LIVE_REPORT_DEFAULT_VIEW);
+  const studentOptions = parseStudentViewOptions(query);
 
   const { supabase } = await requireAuthor(reportPath(sessionId, view));
   const read = await readSessionReport(supabase, sessionId);
@@ -39,6 +46,7 @@ export default async function SessionReportPage({
           closedAt={read.session.closedAt}
           report={buildSessionReport(read.input)}
           view={view}
+          studentOptions={studentOptions}
         />
       ) : (
         <>

@@ -8,7 +8,7 @@ import {
   type StepRow,
   type StudentRow,
 } from "@/lib/live/report";
-import { formatPercent, formatPoints } from "@/lib/live/reportFormat";
+import { formatPercent, formatPoints, questionAnchor } from "@/lib/live/reportFormat";
 
 export const HEAD =
   "border-b border-line-strong px-3 py-2 font-medium text-ink-2 whitespace-nowrap";
@@ -221,7 +221,8 @@ function ItemTableRow({
   correctColumn: boolean;
 }) {
   return (
-    <tr className={ROW}>
+    // The summary's "Hardest question" links here (#565).
+    <tr id={questionAnchor(item.position)} className={`${ROW} scroll-mt-20 target:bg-accent-soft`}>
       {/* The question's own id is for the author who wrote it: a tooltip here, a column in the CSV. */}
       <th scope="row" title={`Question id: ${item.ref}`} className={ROW_HEAD}>
         {questionLabel(item, { withStep: false })}
