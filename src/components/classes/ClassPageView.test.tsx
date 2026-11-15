@@ -16,6 +16,7 @@ import { CLASS_TABS, classTabReads, type ClassTab } from "@/lib/classes/classTab
 import { buildClassProgress } from "@/lib/classes/progress";
 import { findRetiredTerms } from "@/lib/copy/retiredTerms";
 import { ClassPageView, type ClassPageViewProps } from "./ClassPageView";
+import { onLoadNotice, onLoadNotices } from "@/components/ui/testing/onLoadNotice";
 
 const PROGRESS = buildClassProgress(PROGRESS_FIXTURE);
 const URL_TEXT = "https://learn.example/c/Gx7_q2LmVb9TzR4wKc1NpHs8YdQe3UaJ";
@@ -67,6 +68,7 @@ describe("ClassPageView", () => {
         sessions: reads.has("sessions") ? PROGRESS_FIXTURE_SESSION_LIST : null,
       });
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(onLoadNotices()).toHaveLength(0);
       expect(screen.queryByText(/could not be loaded/i)).not.toBeInTheDocument();
       expect(screen.getByText("4 students")).toBeVisible();
     },
@@ -158,7 +160,7 @@ describe("ClassPageView", () => {
 
   it("keeps the roster's error on Students", () => {
     renderTab("students", { roster: null });
-    expect(screen.getByRole("alert")).toHaveTextContent("The roster could not be loaded.");
+    expect(onLoadNotice()).toHaveTextContent("The roster could not be loaded.");
   });
 
   it("puts the assignments and the practice shares on Assignments", () => {
@@ -178,7 +180,7 @@ describe("ClassPageView", () => {
 
   it("keeps the assignments' error on Assignments", () => {
     renderTab("assignments", { assignments: null });
-    expect(screen.getByRole("alert")).toHaveTextContent("The assignments could not be loaded.");
+    expect(onLoadNotice()).toHaveTextContent("The assignments could not be loaded.");
   });
 
   it("puts the name, the time zone and replacing the link on Settings", () => {
@@ -203,7 +205,7 @@ describe("ClassPageView", () => {
 
   it("keeps the progress's error on Progress", () => {
     renderTab("progress", { progress: null });
-    expect(screen.getByRole("alert")).toHaveTextContent("The progress could not be loaded.");
+    expect(onLoadNotice()).toHaveTextContent("The progress could not be loaded.");
   });
 
   it("lists the class's live sessions on Live sessions, each opening its report", () => {
@@ -232,6 +234,6 @@ describe("ClassPageView", () => {
 
   it("keeps the live sessions' error on Live sessions", () => {
     renderTab("sessions", { sessions: null });
-    expect(screen.getByRole("alert")).toHaveTextContent("The live sessions could not be loaded.");
+    expect(onLoadNotice()).toHaveTextContent("The live sessions could not be loaded.");
   });
 });

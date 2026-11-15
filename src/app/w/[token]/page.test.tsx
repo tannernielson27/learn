@@ -46,6 +46,7 @@ vi.mock("@/lib/supabase/service", () => ({
 vi.mock("@/lib/classes/viewer", () => ({ readViewer: async () => mocks.viewer.current }));
 
 import WorkspaceInvitePage, { dynamic, metadata } from "./page";
+import { onLoadNotice } from "@/components/ui/testing/onLoadNotice";
 
 const PENDING = {
   state: "pending",
@@ -178,7 +179,7 @@ describe("/w/[token]: a link that leads nowhere", () => {
     reply = { data: null, error: { code: "08006" } };
     vi.spyOn(console, "error").mockImplementation(() => {});
     await renderPage();
-    expect(screen.getByRole("alert")).toHaveTextContent(INVITE_UNAVAILABLE);
+    expect(onLoadNotice()).toHaveTextContent(INVITE_UNAVAILABLE);
     expect(screen.queryByRole("heading", { name: INVITE_NOT_VALID_HEADING })).toBeNull();
   });
 });

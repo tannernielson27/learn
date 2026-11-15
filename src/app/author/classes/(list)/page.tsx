@@ -41,7 +41,7 @@ export default async function ClassesPage() {
       <div className="flex flex-col gap-8">
         <PageHeader title="Classes" action={newClass} />
         {classes === null ? (
-          <Notice role="alert">
+          <Notice role="alert" live={false}>
             The class list could not be loaded. Reload the page to try again.
           </Notice>
         ) : (

@@ -26,7 +26,7 @@ export function ClassSessionsPanel({ classId, sessions }: ClassSessionsPanelProp
         Live sessions
       </h2>
       {sessions === null ? (
-        <Notice role="alert">
+        <Notice role="alert" live={false}>
           The live sessions could not be loaded. Reload the page to try again.
         </Notice>
       ) : sessions.length === 0 ? (

@@ -5,6 +5,7 @@ import {
   READ_ONLY_FOR_FOUNDER,
   READ_ONLY_HEADING,
 } from "@/lib/billing/billingCopy";
+import { onLoadNotice } from "@/components/ui/testing/onLoadNotice";
 
 /**
  * The read-only page (#521), where a refused write lands: one sentence, Billing for the person
@@ -47,7 +48,7 @@ describe("the read-only page", () => {
     state.readOnly = { readOnly: true, canManage: true };
     render(await ReadOnlyPage(props("/author/banks/b1")));
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(READ_ONLY_HEADING);
-    expect(screen.getByRole("alert").textContent).toBe(READ_ONLY_FOR_FOUNDER);
+    expect(onLoadNotice().textContent).toBe(READ_ONLY_FOR_FOUNDER);
     expect(screen.getByRole("link", { name: "Go to Billing" }).getAttribute("href")).toBe(
       "/author/workspace",
     );
@@ -59,7 +60,7 @@ describe("the read-only page", () => {
   it("tells another teacher to ask, with no link to Billing", async () => {
     state.readOnly = { readOnly: true, canManage: false };
     render(await ReadOnlyPage(props()));
-    expect(screen.getByRole("alert").textContent).toBe(READ_ONLY_FOR_COLLEAGUE);
+    expect(onLoadNotice().textContent).toBe(READ_ONLY_FOR_COLLEAGUE);
     expect(screen.queryByRole("link", { name: "Go to Billing" })).toBeNull();
     expect(screen.getByRole("link", { name: "Go back" }).getAttribute("href")).toBe("/author");
   });

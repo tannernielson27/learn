@@ -49,7 +49,7 @@ export function ClassProgressPanel({ classId, progress, sort }: ClassProgressPan
         <h2 id="progress-heading" className={`mb-3 ${HEADING}`}>
           Progress
         </h2>
-        <Notice role="alert">
+        <Notice role="alert" live={false}>
           The progress could not be loaded. Reload the page to try again.
         </Notice>
       </section>

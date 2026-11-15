@@ -1,5 +1,6 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { onLoadNotice, onLoadNotices } from "@/components/ui/testing/onLoadNotice";
 
 /**
  * The workspace page, rendered with the real author check over a faked Supabase client. What is
@@ -220,7 +221,7 @@ describe("a self-registered workspace", () => {
     members = { data: null, error: { code: "57014" } };
     tables.org_invites = { data: null, error: { code: "57014" } };
     await renderPage();
-    const alerts = screen.getAllByRole("alert").map((alert) => alert.textContent);
+    const alerts = onLoadNotices().map((alert) => alert.textContent);
     expect(alerts).toContain("The teachers could not be loaded. Reload the page to try again.");
     expect(alerts).toContain("The invitations could not be loaded. Reload the page to try again.");
     expect(screen.getByRole("textbox", { name: "Colleague's email address" })).toBeVisible();
@@ -316,7 +317,7 @@ describe("a workspace that cannot be read", () => {
     tables.orgs = { data: null, error: { code: "57014" } };
     await renderPage();
     expect(screen.getByRole("heading", { level: 1, name: "Your workspace" })).toBeVisible();
-    expect(screen.getByRole("alert")).toHaveTextContent("The workspace could not be loaded.");
+    expect(onLoadNotice()).toHaveTextContent("The workspace could not be loaded.");
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   });
 });

@@ -45,7 +45,11 @@ export default async function StudentAssignmentPage({
 
   if (view.kind === "missing") notFound();
   if (view.kind === "failed") {
-    return <Notice role="alert">This assignment did not load. Reload the page.</Notice>;
+    return (
+      <Notice role="alert" live={false}>
+        This assignment did not load. Reload the page.
+      </Notice>
+    );
   }
   // #242: the close is said in the class's zone, as on the student home and in the reminder email.
   const timeZone = zoneOfClass(classes, view.assignment.classId);

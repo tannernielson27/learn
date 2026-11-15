@@ -29,7 +29,9 @@ export function ClassLiveStartForm({
 }: ClassLiveStartFormProps) {
   if (quizzes === null) {
     return (
-      <Notice role="alert">Your quizzes could not be loaded. Reload the page to try again.</Notice>
+      <Notice role="alert" live={false}>
+        Your quizzes could not be loaded. Reload the page to try again.
+      </Notice>
     );
   }
   if (quizzes.length === 0) {

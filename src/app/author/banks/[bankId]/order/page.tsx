@@ -35,7 +35,9 @@ export default async function QuizOrderPage({ params }: PageProps<"/author/banks
       </p>
       <h1 className="mb-6 font-read text-3xl text-ink-1">Change order</h1>
       {!read.ok ? (
-        <Notice role="alert">{read.error}</Notice>
+        <Notice role="alert" live={false}>
+          {read.error}
+        </Notice>
       ) : read.entries.length < 2 ? (
         <p className="text-ink-2">
           {read.entries.length === 0 ? "Nothing to order yet." : "Add another question to reorder."}

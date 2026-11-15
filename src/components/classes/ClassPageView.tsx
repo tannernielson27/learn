@@ -106,7 +106,7 @@ export function ClassPageView({
           Roster
         </h2>
         {roster === null ? (
-          <Notice role="alert">
+          <Notice role="alert" live={false}>
             The roster could not be loaded. Reload the page to try again.
           </Notice>
         ) : (
@@ -136,7 +136,7 @@ export function ClassPageView({
             Assignments
           </h2>
           {assignments === null ? (
-            <Notice role="alert">
+            <Notice role="alert" live={false}>
               The assignments could not be loaded. Reload the page to try again.
             </Notice>
           ) : (

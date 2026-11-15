@@ -65,7 +65,7 @@ export default async function WorkspacePage({ searchParams }: PageProps<"/author
       {/* The name is a teacher's own words: text, never markup. */}
       <PageHeader className="mb-8" title={workspace ? workspace.name : "Your workspace"} />
       {workspace ? null : (
-        <Notice role="alert" className="mb-8">
+        <Notice role="alert" live={false} className="mb-8">
           The workspace could not be loaded. Reload the page to try again.
         </Notice>
       )}
@@ -81,7 +81,7 @@ export default async function WorkspacePage({ searchParams }: PageProps<"/author
           ) : null}
         </div>
         {members === null ? (
-          <Notice role="alert">
+          <Notice role="alert" live={false}>
             The teachers could not be loaded. Reload the page to try again.
           </Notice>
         ) : (
@@ -112,7 +112,7 @@ export default async function WorkspacePage({ searchParams }: PageProps<"/author
               Pending invitations
             </h2>
             {invites === null ? (
-              <Notice role="alert">
+              <Notice role="alert" live={false}>
                 The invitations could not be loaded. Reload the page to try again.
               </Notice>
             ) : (
