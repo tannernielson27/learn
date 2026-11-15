@@ -9,6 +9,17 @@ import { StatusLinks } from "./StatusLinks";
  * kind (the heading in the page title's style, then one sentence), then the way home. Static copy
  * and links only, so a 404 has nothing of a page's data to carry. `/gallery/states` draws these.
  */
+/**
+ * The words, passed as props on purpose. A `notFound()` inside a segment (the gallery's, say) is
+ * drawn in the browser from the server's payload, so only what this server file hands
+ * `ErrorState` is in the response bytes: leaning on its client-side defaults left the 404 with
+ * no heading at all. `e2e/errorPages.spec.ts` reads those bytes.
+ */
+const NOT_FOUND_COPY = {
+  headline: "This page does not exist.",
+  detail: "The link may be old, or the address mistyped.",
+} as const;
+
 export interface NotFoundViewProps {
   /** False draws the root page's frame as a `div`, for the gallery, whose layout holds the main. */
   landmark?: boolean;
@@ -18,7 +29,7 @@ export interface NotFoundViewProps {
 export function RootNotFoundView({ landmark }: NotFoundViewProps) {
   return (
     <StatusFrame landmark={landmark}>
-      <ErrorState kind="not-found">
+      <ErrorState kind="not-found" {...NOT_FOUND_COPY}>
         <StatusLinks />
       </ErrorState>
     </StatusFrame>
@@ -29,7 +40,7 @@ export function RootNotFoundView({ landmark }: NotFoundViewProps) {
 export function AuthorNotFoundView() {
   return (
     <ReadingWidth>
-      <ErrorState kind="not-found">
+      <ErrorState kind="not-found" {...NOT_FOUND_COPY}>
         <WayBack to="library" />
       </ErrorState>
     </ReadingWidth>
@@ -39,7 +50,7 @@ export function AuthorNotFoundView() {
 /** A student's page that is not there, or not theirs: inside the student's `AppShell`. */
 export function LearnNotFoundView() {
   return (
-    <ErrorState kind="not-found">
+    <ErrorState kind="not-found" {...NOT_FOUND_COPY}>
       <WayBack to="student-home" />
     </ErrorState>
   );
