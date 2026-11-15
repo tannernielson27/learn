@@ -5,6 +5,7 @@ import { assignmentReportPath, STATE_LABEL } from "@/lib/assignments/assignments
 import type { ClassOverview } from "@/lib/classes/classOverview";
 import { classTabPath } from "@/lib/classes/classTabs";
 import { InviteQrCode } from "./InviteLinkPanel";
+import { SECTION_HEADING_CLASSES } from "@/components/ui/PageHeader";
 
 export interface ClassOverviewPanelProps {
   classId: string;
@@ -13,7 +14,7 @@ export interface ClassOverviewPanelProps {
   overview: ClassOverview;
 }
 
-const HEADING = "text-lg font-medium text-ink-1";
+const HEADING = SECTION_HEADING_CLASSES;
 /** An en dash: the mark for a number that could not be read. */
 const UNKNOWN = "–";
 const NOT_LOADED = "Could not be loaded. Reload the page to try again.";
@@ -75,7 +76,7 @@ export function ClassOverviewPanel({
             {focus?.state === "scheduled" ? "Next to open" : "Open now"}
           </h2>
           {focus ? (
-            <div className="flex flex-col gap-2 border-y border-line px-2 py-4">
+            <div className="flex flex-col gap-2 border-y border-line py-4">
               <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <span className="min-w-0 font-medium break-words text-ink-1">
                   {focus.assignment.title}
@@ -126,7 +127,7 @@ export function ClassOverviewPanel({
               {recentJoins.map((entry) => (
                 <li
                   key={entry.profileId}
-                  className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-2 py-3"
+                  className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3"
                 >
                   <span className="min-w-0 truncate text-ink-1">
                     {entry.displayName ?? entry.email}

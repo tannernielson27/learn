@@ -12,6 +12,7 @@ import {
   HOME_FIXTURE_STEPS,
 } from "@/lib/learn/studentHomeFixture";
 import { StudentHome, STUDENT_JOIN_NOTE, type StudentHomeProps } from "./StudentHome";
+import { SECTION_HEADING_CLASSES } from "@/components/ui/PageHeader";
 
 vi.mock("@/app/join/codeActions", () => ({ openJoinCode: vi.fn() }));
 
@@ -94,6 +95,10 @@ describe("StudentHome (#563)", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "Pick up where you left off" }),
     ).not.toHaveClass("eyebrow");
+    // One section heading style with the teacher's pages (#563).
+    expect(screen.getByRole("heading", { level: 2, name: "Assignments" })).toHaveClass(
+      ...SECTION_HEADING_CLASSES.split(" "),
+    );
   });
 
   it("collapses the empty sections and keeps the ones with rows", () => {

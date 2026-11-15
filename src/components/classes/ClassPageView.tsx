@@ -23,6 +23,7 @@ import type { ConfirmSubmitProps } from "./ConfirmSubmit";
 import { ReplaceInviteLink } from "./InviteLinkPanel";
 import { ClassProgressPanel } from "./progress/ClassProgressPanel";
 import { ClassSessionsPanel } from "./progress/ClassSessionsPanel";
+import { SECTION_HEADING_CLASSES } from "@/components/ui/PageHeader";
 
 /** The Server Functions the class page's forms call, each already bound to this class. */
 export interface ClassPageActions {
@@ -60,7 +61,7 @@ export interface ClassPageViewProps {
   actions: ClassPageActions;
 }
 
-const HEADING = "text-lg font-medium text-ink-1";
+const HEADING = SECTION_HEADING_CLASSES;
 
 /**
  * One class (#205): a header with its name, its size, its class code (#356) and its invite link,

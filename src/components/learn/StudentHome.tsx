@@ -8,7 +8,7 @@ import { JoinCodeForm, type JoinCodeFormProps } from "@/components/landing/JoinC
 import { PracticeBankList } from "@/components/practice/PracticeBankList";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Notice } from "@/components/ui/Notice";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader, SECTION_HEADING_CLASSES } from "@/components/ui/PageHeader";
 import type { AttemptProgress } from "@/lib/assignments/assignments";
 import type { HistoryRow } from "@/lib/assignments/history";
 import { pickUp } from "@/lib/assignments/pickUp";
@@ -43,7 +43,8 @@ function DidNotLoad({ children }: { children: ReactNode }) {
   return <Notice>{children}</Notice>;
 }
 
-const H2 = "mb-3 text-lg font-semibold text-ink-1";
+// The section heading every app page shares (#563), with the room this page leaves under it.
+const H2 = `mb-3 ${SECTION_HEADING_CLASSES}`;
 
 /** The student's line over the join code field: they are signed in, so no word about accounts. */
 export const STUDENT_JOIN_NOTE = "In class now? Enter the join code on the screen.";

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ReadingWidth } from "@/components/authoring/PageWidth";
 import { Notice } from "@/components/ui/Notice";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader, SECTION_HEADING_CLASSES } from "@/components/ui/PageHeader";
 import { BillingSection } from "@/components/workspace/BillingSection";
 import { InviteColleagueForm } from "@/components/workspace/InviteColleagueForm";
 import { MemberList } from "@/components/workspace/MemberList";
@@ -76,7 +76,7 @@ export default async function WorkspacePage({ searchParams }: PageProps<"/author
       <section aria-labelledby="members-heading" className="mb-10">
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4">
           {/* Focusable from script only: removing a colleague sends focus here. */}
-          <h2 id="members-heading" tabIndex={-1} className="text-lg font-medium text-ink-1">
+          <h2 id="members-heading" tabIndex={-1} className={SECTION_HEADING_CLASSES}>
             Teachers
           </h2>
           {canInvite && members ? (
@@ -103,7 +103,7 @@ export default async function WorkspacePage({ searchParams }: PageProps<"/author
       {canInvite ? (
         <>
           <section aria-labelledby="invite-heading" className="mb-10">
-            <h2 id="invite-heading" className="mb-4 text-lg font-medium text-ink-1">
+            <h2 id="invite-heading" className={`mb-4 ${SECTION_HEADING_CLASSES}`}>
               Invite a colleague
             </h2>
             <InviteColleagueForm action={inviteColleague} />
@@ -111,7 +111,7 @@ export default async function WorkspacePage({ searchParams }: PageProps<"/author
 
           <section aria-labelledby="pending-heading">
             {/* Focusable from script only: a confirmed revoke or resend sends focus here. */}
-            <h2 id="pending-heading" tabIndex={-1} className="mb-3 text-lg font-medium text-ink-1">
+            <h2 id="pending-heading" tabIndex={-1} className={`mb-3 ${SECTION_HEADING_CLASSES}`}>
               Pending invitations
             </h2>
             {invites === null ? (
@@ -131,7 +131,7 @@ export default async function WorkspacePage({ searchParams }: PageProps<"/author
         </>
       ) : workspace ? (
         <section aria-labelledby="invite-heading">
-          <h2 id="invite-heading" className="mb-2 text-lg font-medium text-ink-1">
+          <h2 id="invite-heading" className={`mb-2 ${SECTION_HEADING_CLASSES}`}>
             Invite a colleague
           </h2>
           <p className="max-w-prose text-ink-2">
