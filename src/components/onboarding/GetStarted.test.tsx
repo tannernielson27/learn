@@ -63,10 +63,16 @@ describe("GetStarted", () => {
     );
   });
 
-  it("draws a done step as done: no import button, no link to do it again (#563)", () => {
+  it("draws a done step as done: no link to do it again (#563)", () => {
     setup({ ...EMPTY, banks: [{ id: "b", name: "Cardiac" }], hasClass: true });
     const quizStep = stepRow("Create a quiz");
-    expect(within(quizStep).queryByRole("button")).toBeNull();
+    // A quiz of the teacher's own marks it done, but this is still the one place to bring in the
+    // sample (#577 review), so its import stays; nothing else does.
+    expect(
+      within(quizStep)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(["Import the sample quiz"]);
     expect(within(quizStep).queryByRole("link")).toBeNull();
     expect(within(quizStep).queryByText("One of every question type.")).toBeNull();
     expect(within(stepRow("Create a class")).queryByRole("link")).toBeNull();

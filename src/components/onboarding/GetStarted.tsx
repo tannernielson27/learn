@@ -77,14 +77,18 @@ function StepActions({
   step: ChecklistStep;
   importSample: GetStartedProps["importSample"];
 }) {
-  // Done is done (#563): no button and no link to do it again. The one exception is the sample
-  // quiz, once imported: the way to open it, rather than a second copy.
+  // Done is done (#563): no link to do it again. The sample quiz is the exception: once imported,
+  // the way to open it; not yet imported (any quiz of the teacher's own marks this step done),
+  // still the one place to bring it in (#577 review).
   if (step.done) {
-    return step.sampleBankId ? (
-      <Link href={`/author/banks/${step.sampleBankId}`} className={LINK}>
-        Open the sample quiz
-      </Link>
-    ) : null;
+    if (step.sampleBankId) {
+      return (
+        <Link href={`/author/banks/${step.sampleBankId}`} className={LINK}>
+          Open the sample quiz
+        </Link>
+      );
+    }
+    return step.id === "bank" ? <ImportSampleForm action={importSample} /> : null;
   }
   if (step.id !== "bank") {
     return step.href ? (
