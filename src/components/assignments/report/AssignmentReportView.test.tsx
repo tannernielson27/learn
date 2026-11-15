@@ -123,6 +123,15 @@ describe("AssignmentReportView, once closed", () => {
   });
 
   // #563: the best attempt said once, as a percent, rather than "1.5 / 2" beside "75%".
+  it("says the best attempt once, as a percent under Best", () => {
+    renderView("students");
+    const region = screen.getByRole("region", { name: "Scores by student" });
+    expect(within(region).getByRole("columnheader", { name: "Best" })).toBeInTheDocument();
+    expect(within(region).queryByRole("columnheader", { name: "Percent" })).toBeNull();
+    const ava = within(region).getByRole("row", { name: /^Ava/ });
+    expect(within(ava).getByText("75%")).toBeInTheDocument();
+    expect(ava.textContent).not.toMatch(/\d \/ \d/);
+  });
 
   it("keeps the student's name in a sticky first column of a table that scrolls in its own box", () => {
     renderView("students");

@@ -201,7 +201,7 @@ The public pages are the landing page, `/pricing`, terms and privacy. They share
 
 ## 11. How the direction carries into the app
 
-These are rules for future work (round 3 of #563, the signed-in app). They describe no page on main today.
+These rules describe the signed-in app as round 3 of #563 shipped it (PRs #575 to #586, and the consistency pass after them). New app screens follow them.
 
 - **Wordmark.** `AppShell` takes `Wordmark` in place of `WORDMARK_CLASSES`.
 - **Titles.** The library, a quiz and other top-level page titles use `.display-section`. `.display-hero` stays on the public site.
@@ -228,6 +228,9 @@ These are rules for future work (round 3 of #563, the signed-in app). They descr
 - **The teacher's email lives in the avatar menu**, not in the bar.
 - **Eyebrows are quieter in the app.** The all-caps, tracked `.eyebrow` stays on the public site. In the app a small label stays only where it adds information, in normal (sentence) case.
 - **Busy, not disabled.** A button that is working keeps its label and its width and stays focusable (`busy`); its mark fills once and never loops. `disabled` is for a control that cannot be used yet.
+- **A notice drawn with the page is not live.** A `Notice` that is part of the page when it loads, such as "could not be loaded", passes `live={false}`: the alert's look without the live region. One that appears after a press stays live.
+- **A not-found view passes its words as props.** A `notFound()` inside a segment is drawn from the payload, so the server component hands the not-found view its copy as props rather than the view reading it on its own.
+- **Labels and section headings.** A page's label line (`PageHeader`'s `label`, `PAGE_LABEL_CLASSES`) and its section h2s (`SECTION_HEADING_CLASSES`) are shared, in sentence case; mono is for numbers only.
 
 ## 12. Quality bar for every UI PR
 
