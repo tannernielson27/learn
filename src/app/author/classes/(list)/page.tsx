@@ -9,6 +9,9 @@ import { CLASSES_PATH } from "@/lib/classes/classes";
 import { listClasses } from "@/lib/supabase/classes";
 import { createClass } from "../actions";
 
+/** The New class name field, where "New class" in the empty list lands and puts the cursor. */
+const NEW_CLASS_FIELD_ID = "new-class-name";
+
 export const metadata: Metadata = { title: "Classes" };
 
 /**
@@ -28,11 +31,11 @@ export default async function ClassesPage() {
       aria-labelledby="new-class-heading"
       className="w-[min(26rem,calc(100vw-2*var(--shell-gutter,1rem)))]"
     >
-      {/* The label names the field; the heading names the region and is where the link lands. */}
+      {/* The label names the field and is where the link lands; the heading names the region. */}
       <h2 id="new-class-heading" className="sr-only">
         New class
       </h2>
-      <ClassNameForm action={createClass} inline />
+      <ClassNameForm action={createClass} nameId={NEW_CLASS_FIELD_ID} inline />
     </section>
   );
 
@@ -47,7 +50,7 @@ export default async function ClassesPage() {
         ) : (
           <ClassList
             classes={classes}
-            emptyAction={{ href: "#new-class-heading", label: "New class" }}
+            emptyAction={{ href: `#${NEW_CLASS_FIELD_ID}`, label: "New class" }}
           />
         )}
       </div>

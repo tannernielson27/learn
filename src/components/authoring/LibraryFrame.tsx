@@ -8,6 +8,8 @@ import { QuizSearch, QuizSearchField } from "./QuizSearch";
 
 /** Where the library's one way to make a quiz is: Get started and an empty list link here. */
 export const NEW_QUIZ_HEADING_ID = "new-bank-heading";
+/** The New quiz name field, where "New quiz" in an empty list lands and puts the cursor (#563). */
+export const NEW_QUIZ_FIELD_ID = "new-quiz-name";
 
 export interface LibraryFrameProps {
   /** "Library", or the open folder's name. */
@@ -61,11 +63,16 @@ export function LibraryFrame({
       aria-labelledby={NEW_QUIZ_HEADING_ID}
       className="w-[min(26rem,calc(100vw-2*var(--shell-gutter,1rem)))]"
     >
-      {/* The label names the field; the heading names the region and is where links land. */}
+      {/* The label names the field and is where links land; the heading names the region. */}
       <h2 id={NEW_QUIZ_HEADING_ID} className="sr-only">
         New quiz
       </h2>
-      <CreateBankForm key={`new-quiz-${createKey}`} action={createQuiz} inline />
+      <CreateBankForm
+        key={`new-quiz-${createKey}`}
+        action={createQuiz}
+        nameId={NEW_QUIZ_FIELD_ID}
+        inline
+      />
     </section>
   );
   const toolbarControls = rail ? null : folderControls;

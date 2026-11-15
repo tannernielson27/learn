@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { textLinkClasses } from "@/components/ui/TextLink";
 import type { ChecklistStep } from "@/lib/onboarding/checklist";
 import { ImportSampleForm, type ImportSampleFormProps } from "./ImportSampleForm";
 
@@ -11,8 +12,8 @@ export interface GetStartedProps {
 /** The checklist's heading, which the teacher welcome moves focus to when it closes (#364). */
 export const GET_STARTED_HEADING_ID = "get-started-heading";
 
-const LINK =
-  "tap-target inline-flex items-center text-sm font-medium text-accent-ink underline-offset-2 hover:underline";
+// The shared text link (#563); the import button wears it too, so the steps' ways in match.
+const LINK = textLinkClasses({ size: "sm" });
 
 /**
  * The first-run checklist at the top of the author home (#265): three steps, each done or not

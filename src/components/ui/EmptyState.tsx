@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import type { EmptyStateAction, EmptyStateContent } from "@/lib/emptyState";
 import { buttonClasses } from "./Button";
@@ -38,6 +39,34 @@ export type EmptyStateProps = FirstUseEmptyStateProps | NoResultsEmptyStateProps
 const TAGS = { 2: "h2", 3: "h3", 4: "h4" } as const;
 
 /**
+ * The next step's link. One to a place on this page (`#new-quiz-name`) is a plain anchor, so the
+ * browser does what it does for any fragment: it scrolls to the field and focuses it, ready to
+ * type (#563). The router's own hash handling only scrolls. Anywhere else, the router's `Link`.
+ */
+function StepLink({
+  href,
+  className,
+  children,
+}: {
+  href: string;
+  className: string;
+  children: ReactNode;
+}) {
+  if (href.startsWith("#")) {
+    return (
+      <a href={href} className={className}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link href={href} className={className}>
+      {children}
+    </Link>
+  );
+}
+
+/**
  * An empty list (#266, #563). It sits in the same ruled frame a filled list does, so the region
  * never reads as blank. No icon or illustration, and no motion.
  *
@@ -61,9 +90,9 @@ export function EmptyState(props: EmptyStateProps) {
       {body ? <p className="max-w-prose text-ink-2">{body}</p> : null}
       {action ? (
         <div className="mt-4 flex flex-wrap gap-3">
-          <Link href={action.href} className={buttonClasses({ variant: "secondary" })}>
+          <StepLink href={action.href} className={buttonClasses({ variant: "secondary" })}>
             {action.label}
-          </Link>
+          </StepLink>
           {more.map((step) => (
             <Link key={step.href} href={step.href} className={buttonClasses({ variant: "ghost" })}>
               {step.label}

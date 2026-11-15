@@ -7,7 +7,7 @@ import { BankList } from "@/components/authoring/BankList";
 import { libraryCrumbs } from "@/components/authoring/FolderBreadcrumbs";
 import { LibraryFolderControls } from "@/components/authoring/LibraryFolderControls";
 import { MoveToFolderForm } from "@/components/authoring/MoveToFolderForm";
-import { LibraryFrame, NEW_QUIZ_HEADING_ID } from "@/components/authoring/LibraryFrame";
+import { LibraryFrame, NEW_QUIZ_FIELD_ID } from "@/components/authoring/LibraryFrame";
 import { GET_STARTED_HEADING_ID, GetStarted } from "@/components/onboarding/GetStarted";
 import { TeacherWelcome } from "@/components/onboarding/TeacherWelcome";
 import { isEmailUnconfirmed } from "@/lib/auth/emailConfirmation";
@@ -53,7 +53,8 @@ import { hideGetStarted, importSample, markOnboarded } from "./onboardingActions
 export const metadata: Metadata = { title: "Library" };
 
 const MOVE_FORM_ID = "move-quizzes";
-const NEW_QUIZ_ANCHOR = `#${NEW_QUIZ_HEADING_ID}`;
+// The New quiz name field itself, so the link puts the cursor in it (#563).
+const NEW_QUIZ_ANCHOR = `#${NEW_QUIZ_FIELD_ID}`;
 
 /**
  * Every quiz, for the Get started checklist: the open view lists only some of them once anything

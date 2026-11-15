@@ -18,6 +18,11 @@ export interface ClassNameFormProps {
    * its main action (#563). Stacked otherwise, as the settings that rename it draw it.
    */
   inline?: boolean;
+  /**
+   * The name field's own id, for a link elsewhere on the page that lands on it ("New quiz" in an
+   * empty list, #563): the browser scrolls to it and puts the cursor in it.
+   */
+  nameId?: string;
 }
 
 const INITIAL: ClassFormState = { status: "idle" };
@@ -28,12 +33,14 @@ export function ClassNameForm({
   initialName = "",
   submitLabel = "Create class",
   inline = false,
+  nameId,
 }: ClassNameFormProps) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
   // Controlled, so React's reset after an action never wipes what was typed.
   const [name, setName] = useState(initialName);
   const inputRef = useRef<HTMLInputElement>(null);
   const id = useId();
+  const fieldId = nameId ?? `${id}-name`;
   const error = state.status === "error" ? state.error : null;
 
   useEffect(() => {
@@ -41,7 +48,7 @@ export function ClassNameForm({
   }, [state]);
 
   const label = (
-    <label htmlFor={`${id}-name`} className="text-sm font-medium text-ink-1">
+    <label htmlFor={fieldId} className="text-sm font-medium text-ink-1">
       Class name
     </label>
   );
@@ -55,7 +62,7 @@ export function ClassNameForm({
   const field = (
     <input
       ref={inputRef}
-      id={`${id}-name`}
+      id={fieldId}
       name="name"
       type="text"
       required
@@ -65,8 +72,11 @@ export function ClassNameForm({
       onChange={(event) => setName(event.target.value)}
       aria-invalid={error ? true : undefined}
       aria-describedby={error ? `${id}-error` : undefined}
+      // Clear of the app's top bar when a link scrolls to it.
       className={fieldClasses(
-        inline ? "min-w-0 flex-[1_1_10rem] px-3 text-base" : "px-3 text-base",
+        inline
+          ? "min-w-0 flex-[1_1_10rem] scroll-mt-24 px-3 text-base"
+          : "scroll-mt-24 px-3 text-base",
       )}
     />
   );
