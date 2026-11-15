@@ -127,7 +127,7 @@ describe("AssignmentReportView, once closed", () => {
     renderView("items");
     const region = screen.getByRole("region", { name: "Results by question" });
     expect(within(region).getByRole("columnheader", { name: "Correct" })).toBeInTheDocument();
-    const first = within(region).getByRole("row", { name: /^Q1 mc-hf/ });
+    const first = within(region).getByRole("row", { name: /^Q1 · / });
     expect(within(first).getAllByText("100%").length).toBeGreaterThan(0);
   });
 

@@ -1,3 +1,4 @@
+import { ITEM_TYPE_LABELS, ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 import { CJMM_STEP_LABELS, type CjmmStep } from "@/lib/ngn/types";
 
 /**
@@ -160,6 +161,37 @@ export function groupByCaseStudy<T extends { caseStudy?: ReportCaseStudy | null 
   }
   return groups;
 }
+
+const isItemType = (type: string | null): type is ItemType =>
+  type !== null && (ITEM_TYPES as readonly string[]).includes(type);
+
+/** "Q3": a question's place in the set, for a column too narrow for `questionLabel`. */
+export const questionNumber = (item: Pick<ItemRow, "position">): string => `Q${item.position}`;
+
+/**
+ * What a teacher reads a question by in the report (#565): its place, its item type and its
+ * clinical judgment step, as "Q3 · Extended Multiple Response · Recognize Cues". A part that is
+ * not known is left out. Never the question's own words: the report loads no stems, by design.
+ * The internal `ref` is not part of it either; it stays in the CSV and a tooltip.
+ *
+ * `withStep: false` leaves the step out, for a table whose Step column already names it.
+ */
+export function questionLabel(
+  item: Pick<ItemRow, "position" | "type" | "cjmmStep">,
+  { withStep = true }: { withStep?: boolean } = {},
+): string {
+  return [
+    questionNumber(item),
+    isItemType(item.type) ? ITEM_TYPE_LABELS[item.type] : null,
+    !withStep || item.cjmmStep === null ? null : CJMM_STEP_LABELS[item.cjmmStep],
+  ]
+    .filter((part) => part !== null)
+    .join(" · ");
+}
+
+/** A clinical judgment step as its number and name, "6 · Evaluate Outcomes"; "–" for none. */
+export const stepLabel = (cjmmStep: ItemRow["cjmmStep"]): string =>
+  cjmmStep === null ? "–" : `${cjmmStep} · ${CJMM_STEP_LABELS[cjmmStep]}`;
 
 type ScoreKey = `${string}@${number}`;
 const keyOf = (participantId: string, position: number): ScoreKey => `${participantId}@${position}`;

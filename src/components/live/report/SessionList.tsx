@@ -3,6 +3,7 @@ import { reportPath } from "@/lib/live/reportFormat";
 import type { SessionSummary } from "@/lib/supabase/sessionReport";
 import type { SessionStatus } from "@/lib/supabase/sessions";
 import { formatSessionDate } from "./formatDate";
+import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 const STATUS_LABELS: Record<SessionStatus, string> = {
@@ -46,12 +47,16 @@ export function SessionList({ sessions }: SessionListProps) {
             className="tap-target flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-2 py-3 transition-colors duration-fast hover:bg-surface-2"
           >
             <span className="font-medium text-ink-1">{session.title}</span>
-            <span className="flex flex-wrap gap-x-3 text-sm text-ink-2">
+            <span className="flex flex-wrap items-center gap-x-3 text-sm text-ink-2">
               <span>{formatSessionDate(session.closedAt ?? session.openedAt)}</span>
               <span>{participantLabel(session.participantCount)}</span>
-              <span className={session.status === "ended" ? "" : "font-medium text-ink-1"}>
+              {/* A session still open stands out from the ended ones; a running one is live. */}
+              <Badge
+                tone={session.status === "ended" ? "neutral" : "accent"}
+                live={session.status === "running"}
+              >
                 {STATUS_LABELS[session.status]}
-              </span>
+              </Badge>
             </span>
           </Link>
         </li>
