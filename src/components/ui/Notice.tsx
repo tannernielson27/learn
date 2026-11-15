@@ -14,6 +14,12 @@ export interface NoticeProps {
    * payment that failed. The two look different as well as sound different (#563).
    */
   role?: NoticeRole;
+  /**
+   * `false` keeps the look of `role` without the live region: for a notice that is part of the
+   * page when it loads, such as the Billing state, so a screen reader is not interrupted on every
+   * visit. Leave it on for a notice that appears after something happens.
+   */
+  live?: boolean;
   /** Another Lucide icon in place of the role's own mark: `WifiOff` for a dropped connection. */
   icon?: LucideIcon;
   /** One way to act on it, under the words: a `Button` or a `TextLink`. */
@@ -43,6 +49,7 @@ export function Notice({
   title,
   children,
   role = "status",
+  live = true,
   icon,
   action,
   className = "",
@@ -55,7 +62,7 @@ export function Notice({
       ref={ref}
       id={id}
       tabIndex={tabIndex}
-      role={role}
+      role={live ? role : undefined}
       data-notice={role}
       className={`flex items-start gap-3 rounded-md bg-notice-soft py-3.5 text-base leading-snug text-notice ${ROLE_CLASSES[role]} ${className}`.trim()}
     >

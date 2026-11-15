@@ -2,6 +2,7 @@ import { WifiOff } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Icon } from "@/components/ui/Icon";
 import { countPresent, type RosterEntry } from "@/lib/live";
+import { CONSOLE_HEADING_CLASSES } from "@/components/live/control/consoleHeading";
 
 export interface RosterProps {
   roster: readonly RosterEntry[];
@@ -29,7 +30,7 @@ export function Roster({ roster }: RosterProps) {
       className="flex min-h-0 flex-col overflow-hidden rounded-md border border-line bg-surface-1"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-5 pt-5 pb-3">
-        <h2 id="roster-heading" className="font-read text-2xl text-ink-1">
+        <h2 id="roster-heading" className={CONSOLE_HEADING_CLASSES}>
           In this session
         </h2>
         <p data-testid="present-count" aria-live="polite" className="tabular text-sm text-ink-2">

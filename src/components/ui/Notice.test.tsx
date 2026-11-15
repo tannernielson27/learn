@@ -62,4 +62,17 @@ describe("Notice status and alert (#563)", () => {
     expect(status.querySelector(".font-semibold")).toBeNull();
     expect(status.querySelector(".mt-2")).toBeNull();
   });
+
+  it("keeps the alert look without the live role when live is false", () => {
+    const { container } = render(
+      <Notice role="alert" live={false} title="A payment did not go through.">
+        Update the card in Billing.
+      </Notice>,
+    );
+    const notice = container.querySelector("[data-notice]");
+    expect(notice).toHaveAttribute("data-notice", "alert");
+    expect(notice).not.toHaveAttribute("role");
+    expect(notice).toHaveClass("border-l-4");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
 });

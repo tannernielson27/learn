@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { SessionProgress } from "@/lib/live";
 import { pollWhileVisible } from "./pollWhileVisible";
 import { keepSame } from "./sameData";
+import { CONSOLE_HEADING_CLASSES } from "@/components/live/control/consoleHeading";
 
 export interface ProgressBoardProps {
   /** Asks the console's transport who has answered what (`progress()`). */
@@ -59,7 +60,7 @@ export function ProgressBoard({ ask, itemCount, active, intervalMs }: ProgressBo
 
   return (
     <section aria-labelledby="progress-heading">
-      <h2 id="progress-heading" className="font-read text-xl text-ink-1">
+      <h2 id="progress-heading" className={CONSOLE_HEADING_CLASSES}>
         Progress
       </h2>
       {rows.length === 0 ? (

@@ -4,6 +4,7 @@ import { chartRows } from "@/components/live/stage/stageItem";
 import { Button } from "@/components/ui/Button";
 import { ResultsChart } from "@/components/ui/ResultsChart";
 import type { Distribution } from "@/lib/live/results";
+import { CONSOLE_HEADING_CLASSES } from "@/components/live/control/consoleHeading";
 import { DistributionView } from "./DistributionView";
 import { Footnotes, blankLine } from "./parts";
 import { useHiddenResults } from "./useHiddenResults";
@@ -53,7 +54,7 @@ export function HostResults({
   return (
     <section aria-labelledby="results-heading" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="results-heading" className="text-base font-semibold text-ink-1">
+        <h2 id="results-heading" className={CONSOLE_HEADING_CLASSES}>
           Results
         </h2>
         <Button size="sm" aria-controls="results-body" onClick={() => setHidden(!hidden)}>

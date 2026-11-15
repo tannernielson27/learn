@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { canGoTo, type ItemAggregate, type LiveSessionState } from "@/lib/live";
+import { CONSOLE_HEADING_CLASSES } from "@/components/live/control/consoleHeading";
 
 export interface ItemStripProps {
   state: LiveSessionState;
@@ -83,7 +84,7 @@ export function ItemStrip({ state, tally, busy, onGoto }: ItemStripProps) {
 
   return (
     <nav aria-labelledby="items-heading">
-      <h2 id="items-heading" className="text-base font-semibold text-ink-1">
+      <h2 id="items-heading" className={CONSOLE_HEADING_CLASSES}>
         Questions
       </h2>
       <ol className="mt-3 flex flex-wrap gap-2">

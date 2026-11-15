@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ChevronLeft, Monitor, WifiOff } from "lucide-react";
 import type { ReactNode } from "react";
 import { HostRecord } from "@/components/live/HostRecord";
-import type { HostRoom } from "@/components/live/host/useHostRoom";
+import { OFFLINE, type HostRoom } from "@/components/live/host/useHostRoom";
 import { ProgressBoard } from "@/components/live/ProgressBoard";
 import { Roster } from "@/components/live/Roster";
 import { Badge } from "@/components/ui/Badge";
@@ -20,6 +20,7 @@ import type { EhrRecord } from "@/lib/ngn/schemas";
 import { ControlBar, questions } from "./ControlBar";
 import { ControlItem } from "./ControlItem";
 import { ControlLobby } from "./ControlLobby";
+import { CONSOLE_LABEL_CLASSES } from "./consoleHeading";
 
 export interface ControlViewProps {
   sessionId: string;
@@ -99,8 +100,8 @@ export function ControlView(props: ControlViewProps) {
         <p aria-hidden="true" className="font-read text-2xl break-words text-ink-1 sm:hidden">
           {title}
         </p>
-        {connection === "connected" ? null : <Notice icon={WifiOff} title="Reconnecting" />}
-        {error === null ? null : (
+        <ConnectionNotice connection={connection} />
+        {error === null || (connection === "offline" && error === OFFLINE) ? null : (
           <Notice role="alert" title="That did not go through">
             {error}
           </Notice>
@@ -123,6 +124,22 @@ export function ControlView(props: ControlViewProps) {
         />
       )}
     </div>
+  );
+}
+
+/**
+ * Whether this screen can hear the room, when it cannot (docs/04 §1: system messages are
+ * neutral). Reconnecting is a status: the channel retries by itself and moves still go through.
+ * Offline is an alert: the channel never came up, so the console stops hearing the room until it
+ * is reloaded, and the notice says so in the room's own words (`OFFLINE`).
+ */
+function ConnectionNotice({ connection }: { connection: HostRoom["connection"] }) {
+  if (connection === "connected") return null;
+  if (connection === "reconnecting") return <Notice icon={WifiOff} title="Reconnecting" />;
+  return (
+    <Notice role="alert" icon={WifiOff} title="Offline">
+      {OFFLINE}
+    </Notice>
   );
 }
 
@@ -168,7 +185,9 @@ function Phase(props: ControlViewProps) {
     return (
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:gap-8">
         <div className="flex min-w-0 flex-col gap-6">
-          <p className="eyebrow">Student-paced{state.reveal ? " · Answers showing" : null}</p>
+          <p className={CONSOLE_LABEL_CLASSES}>
+            Student-paced{state.reveal ? " · Answers showing" : null}
+          </p>
           <ProgressBoard
             ask={room.askProgress}
             itemCount={state.itemCount}

@@ -70,29 +70,45 @@ export function TimeChoice({ state, busy, onChoose, className = "" }: TimeChoice
 
 export interface TimerButtonsProps {
   state: LiveSessionState;
+  /** True while any move is in flight, so nothing is pressed twice. */
   busy: boolean;
+  /** Which timer button's press is in flight, if either: that one shows it is working. */
+  pending?: TimerCommand | null;
   onCommand: (command: TimerCommand) => void;
 }
 
+const TIMER_BUTTONS: readonly { command: TimerCommand; label: string }[] = [
+  { command: "extend_timer", label: "Add 15 seconds" },
+  { command: "stop_timer", label: "Stop timer" },
+];
+
 /**
  * "Add 15 seconds" and "Stop timer", for the question showing (WCAG 2.2.1: extending is one tap
- * away). Greyed out by the same reducer that would refuse them.
+ * away). Disabled, in the disabled look, only when the same reducer that would refuse them says
+ * so: an item with no clock. While a move is in flight they stay as they are, enabled secondary
+ * buttons that take no second press (docs/04 §11, "Busy, not disabled"), and the one pressed
+ * shows it is working, so the pair never flickers grey under the teacher's thumb.
  */
-export function TimerButtons({ state, busy, onCommand }: TimerButtonsProps) {
+export function TimerButtons({ state, busy, pending = null, onCommand }: TimerButtonsProps) {
   return (
     <div className="grid grid-cols-2 gap-2">
-      <Button
-        disabled={busy || !canRunHostCommand(state, "extend_timer")}
-        onClick={() => onCommand("extend_timer")}
-      >
-        Add 15 seconds
-      </Button>
-      <Button
-        disabled={busy || !canRunHostCommand(state, "stop_timer")}
-        onClick={() => onCommand("stop_timer")}
-      >
-        Stop timer
-      </Button>
+      {TIMER_BUTTONS.map(({ command, label }) => {
+        const held = busy && pending !== command;
+        return (
+          <Button
+            key={command}
+            variant="secondary"
+            disabled={!canRunHostCommand(state, command)}
+            busy={pending === command}
+            {...(held ? { "aria-disabled": true } : {})}
+            onClick={() => {
+              if (!busy) onCommand(command);
+            }}
+          >
+            {label}
+          </Button>
+        );
+      })}
     </div>
   );
 }

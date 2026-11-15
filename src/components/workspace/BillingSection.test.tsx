@@ -90,7 +90,10 @@ describe("BillingSection", () => {
       { status: "error", error: "Too many tries. Wait a few minutes, then try again." },
     );
     await user.click(screen.getByRole("button", { name: "Start your free trial" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Too many tries.");
+    // The refusal is the only live alert: the state above it is not a live region.
+    expect(await screen.findByText(/^Too many tries\./)).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("Too many tries.");
+    expect(screen.getByRole("button", { name: "Start your free trial" })).toBeEnabled();
     expect(checkoutAction).toHaveBeenCalledTimes(1);
     expect(portalAction).not.toHaveBeenCalled();
   });
@@ -104,11 +107,95 @@ describe("BillingSection", () => {
 
   it("thanks the teacher after a confirmed Checkout, once the trial shows", () => {
     setup("trial", { confirmed: true });
-    expect(screen.getByRole("status")).toHaveTextContent("Thank you. Your free trial has started.");
+    expect(section().querySelector("[data-notice]")).toHaveTextContent(
+      "Thank you. Your free trial has started.",
+    );
   });
 
   it("does not thank anyone when the page shows no subscription", () => {
     setup("start-trial", { confirmed: true });
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(section()).not.toHaveTextContent("Thank you");
+  });
+
+  describe("one notice per state, and one main action (#563)", () => {
+    const notice = () => section().querySelector("[data-notice]");
+    const fill = (name: string) =>
+      screen.getByRole("button", { name }).className.split(/\s+/).includes("bg-accent");
+
+    it("a failed payment is an alert, with Manage billing as the main action", () => {
+      setup("payment-failed");
+      expect(notice()).toHaveAttribute("data-notice", "alert");
+      expect(notice()).toHaveTextContent("A payment did not go through.");
+      expect(fill("Manage billing")).toBe(true);
+    });
+
+    it("a workspace with no subscription is an alert, with the trial as the main action", () => {
+      setup("start-trial");
+      expect(notice()).toHaveAttribute("data-notice", "alert");
+      expect(fill("Start your free trial")).toBe(true);
+    });
+
+    it("Subscribe is the main action once a trial was had", () => {
+      setup("subscribe");
+      expect(fill("Subscribe")).toBe(true);
+    });
+
+    it.each(["trial", "trial-cancelled", "active", "ending"] as const)(
+      "%s is a calm status, with Manage billing as a secondary button",
+      (name) => {
+        setup(name);
+        expect(notice()).toHaveAttribute("data-notice", "status");
+        expect(screen.queryByRole("alert")).toBeNull();
+        expect(fill("Manage billing")).toBe(false);
+      },
+    );
+
+    it("free access is a status with no button", () => {
+      setup("free");
+      expect(notice()).toHaveAttribute("data-notice", "status");
+      expect(screen.queryByRole("button")).toBeNull();
+    });
+
+    it.each(["payment-failed", "start-trial", "trial", "free"] as const)(
+      "%s is on the page when it loads, so it is not a live region",
+      (name) => {
+        setup(name);
+        expect(notice()).not.toHaveAttribute("role");
+        expect(screen.queryByRole("alert")).toBeNull();
+        expect(screen.queryByRole("status")).toBeNull();
+      },
+    );
+
+    it("the first sentence is the notice's title", () => {
+      setup("payment-failed");
+      expect(screen.getByText("A payment did not go through.")).toHaveClass("font-semibold");
+    });
+
+    it("dates read as the rest of billing does, in Mountain time", () => {
+      setup("trial");
+      expect(section()).toHaveTextContent(/ends on \d{1,2} [A-Z][a-z]+ \d{4}\./);
+    });
+
+    it("stays busy, not disabled, with its label, while Stripe opens", async () => {
+      const fixture = BILLING_FIXTURES.active;
+      let finish: (state: BillingActionState) => void = () => {};
+      const portalAction = vi.fn(
+        () => new Promise<BillingActionState>((resolve) => (finish = resolve)),
+      );
+      render(
+        <BillingSection
+          access={fixture.access}
+          configured
+          trialAvailable={false}
+          checkoutAction={vi.fn()}
+          portalAction={portalAction}
+        />,
+      );
+      await userEvent.setup().click(screen.getByRole("button", { name: "Manage billing" }));
+      const button = screen.getByRole("button", { name: "Manage billing" });
+      expect(button).toHaveAttribute("aria-busy", "true");
+      expect(button).not.toBeDisabled();
+      finish({ status: "idle" });
+    });
   });
 });

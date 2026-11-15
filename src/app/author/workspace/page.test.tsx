@@ -425,7 +425,7 @@ describe("the Billing section (#519)", () => {
       trial_end: "2026-11-03T15:00:00Z",
     });
     await renderPage({ billing: "started" });
-    expect(within(billingSection()).getByRole("status")).toHaveTextContent(
+    expect(billingSection().querySelector("[data-notice]")).toHaveTextContent(
       "Thank you. Your free trial has started.",
     );
     expect(billingSection()).toHaveTextContent("Your free trial ends on 3 November 2026.");

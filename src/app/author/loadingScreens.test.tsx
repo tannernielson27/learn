@@ -47,7 +47,8 @@ describe("Workspace loading state", () => {
   it("names the h1 for screen readers only, over a bar the name's height", () => {
     const { container } = render(<WorkspaceLoading />);
     const h1 = screen.getByRole("heading", { level: 1 });
-    expect(h1).toHaveClass("h-[2.7rem]");
+    // The title's line box: PageHeader's `.display-section` at `--text-section`, 1.1 high.
+    expect(h1).toHaveClass("h-[1.1em]", "text-section");
     expect(h1.querySelector(".sr-only")).toHaveTextContent("Workspace");
     expect(h1.querySelector("[aria-hidden='true']")).toHaveClass("bg-surface-2");
     // Nothing else on the screen is words a sighted reader sees.

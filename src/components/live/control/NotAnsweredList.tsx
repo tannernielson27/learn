@@ -2,6 +2,7 @@ import { WifiOff } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Icon } from "@/components/ui/Icon";
 import type { RosterEntry } from "@/lib/live";
+import { CONSOLE_HEADING_CLASSES } from "./consoleHeading";
 
 /** How many names the card lists before it says "and N more". */
 export const NOT_ANSWERED_SHOWN = 8;
@@ -27,7 +28,7 @@ export function NotAnsweredList({ people }: NotAnsweredListProps) {
     >
       <h2
         id="not-answered-heading"
-        className="flex items-baseline gap-2 border-b border-line px-5 py-3.5 text-base font-semibold text-ink-1"
+        className={`flex items-baseline gap-2 border-b border-line px-5 py-3.5 ${CONSOLE_HEADING_CLASSES}`}
       >
         Not answered yet
         {people === null ? null : (
