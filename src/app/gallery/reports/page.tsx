@@ -1,4 +1,5 @@
 import { AssignmentReportView } from "@/components/assignments/report/AssignmentReportView";
+import { ManagedSessionList } from "@/components/live/report/ManagedSessionList";
 import { SessionList } from "@/components/live/report/SessionList";
 import { SessionReportView } from "@/components/live/report/SessionReportView";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -20,6 +21,7 @@ const STATES = [
   "session",
   "session-items",
   "sessions-empty",
+  "sessions",
 ] as const;
 type ReportsGalleryState = (typeof STATES)[number];
 
@@ -30,6 +32,7 @@ function parseState(value: string | string[] | undefined): ReportsGalleryState {
 const ASSIGNMENT_ID = "00000000-0000-4000-8000-000000000563";
 const CLASS_ID = "00000000-0000-4000-8000-0000000005c3";
 const SESSION_ID = "00000000-0000-4000-8000-0000000005e3";
+const GALLERY_HOST = "00000000-0000-4000-8000-0000000005a1";
 
 function Demo({ state }: { state: ReportsGalleryState }) {
   if (state === "sessions-empty") {
@@ -38,6 +41,36 @@ function Demo({ state }: { state: ReportsGalleryState }) {
       <div className="flex flex-col gap-10">
         <PageHeader title="Live sessions" lead="Newest first, with each report." />
         <SessionList sessions={[]} />
+      </div>
+    );
+  }
+  if (state === "sessions") {
+    // The Live sessions list with its row menus (#563). Pressing Rename or Archive here reaches
+    // no database: the gallery has none, so it says the change did not go through.
+    return (
+      <div className="flex flex-col gap-10">
+        <PageHeader title="Live sessions" lead="Newest first, with each report." />
+        <ManagedSessionList
+          viewerId={GALLERY_HOST}
+          archivedView={false}
+          groups={[
+            {
+              label: "This week",
+              sessions: [
+                {
+                  id: SESSION_ID,
+                  title: REPORT_GALLERY_TITLE,
+                  status: "ended",
+                  openedAt: "2026-11-12T16:00:00Z",
+                  closedAt: REPORT_GALLERY_CLOSED_AT,
+                  participantCount: 8,
+                  hostId: GALLERY_HOST,
+                  archivedAt: null,
+                },
+              ],
+            },
+          ]}
+        />
       </div>
     );
   }
@@ -74,8 +107,8 @@ function Demo({ state }: { state: ReportsGalleryState }) {
  * The teacher's reports drawn from `reportGalleryFixture.ts`, with no database behind them, so the
  * screenshot suite and the #563 review can see them. `?state=` picks one: `assignment` (closed,
  * the students table, wide enough to scroll), `assignment-items`, `assignment-open` (progress
- * only), `assignment-empty` (nobody has started), `session`, `session-items` and `sessions-empty`
- * (the Live sessions list with none). The view links lead to the real pages' addresses.
+ * only), `assignment-empty` (nobody has started), `session`, `session-items`, `sessions-empty`
+ * (the Live sessions list with none) and `sessions` (one session with its row menu). The view links lead to the real pages' addresses.
  *
  * Opened by URL, not from the gallery nav, as `/gallery/library` is: a nav entry would change the
  * sidebar in every full-page gallery baseline.

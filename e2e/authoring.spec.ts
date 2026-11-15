@@ -38,9 +38,9 @@ test("an author creates a bank, starts an item by type, and finds the draft in t
   );
   await expectNoAxeViolations(page);
 
-  await page.getByRole("button", { name: "Extended Multiple Response" }).click();
+  await page.getByRole("button", { name: "Extended multiple response" }).click();
   await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
-  // Exact: the preview's question region is headed "Extended Multiple Response question" (#60).
+  // Exact: the preview's question region is headed "Extended multiple response question" (#60).
   // The page's own label is in sentence case (#563, docs/04 §11).
   await expect(page.getByText("Extended multiple response", { exact: true })).toBeVisible();
 
@@ -64,7 +64,7 @@ test("an author writes a multiple choice item beside its preview, saves a draft,
     .fill(`Editor ${testInfo.project.name} ${Date.now()}`);
   await page.getByRole("button", { name: "Create quiz" }).click();
   await page.getByRole("link", { name: "New question" }).click();
-  await page.getByRole("button", { name: "Multiple Choice", exact: true }).click();
+  await page.getByRole("button", { name: "Multiple choice", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
 
   const problems = page.getByRole("region", { name: "Problems to fix" });
@@ -159,7 +159,7 @@ test("an author writes a select-all-that-apply item, marks three answers, and pu
     .fill(`SATA ${testInfo.project.name} ${Date.now()}`);
   await page.getByRole("button", { name: "Create quiz" }).click();
   await page.getByRole("link", { name: "New question" }).click();
-  await page.getByRole("button", { name: "Extended Multiple Response", exact: true }).click();
+  await page.getByRole("button", { name: "Extended multiple response", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
 
   const problems = page.getByRole("region", { name: "Problems to fix" });
@@ -219,7 +219,7 @@ test("an author writes a matrix item, marks one column per row, and publishes", 
     .fill(`Matrix ${testInfo.project.name} ${Date.now()}`);
   await page.getByRole("button", { name: "Create quiz" }).click();
   await page.getByRole("link", { name: "New question" }).click();
-  await page.getByRole("button", { name: "Matrix Multiple Choice", exact: true }).click();
+  await page.getByRole("button", { name: "Matrix multiple choice", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
 
   const problems = page.getByRole("region", { name: "Problems to fix" });
@@ -278,7 +278,7 @@ test("an author writes a highlight item, marks phrases, publishes, and plays it"
     .fill(`Highlight ${testInfo.project.name} ${Date.now()}`);
   await page.getByRole("button", { name: "Create quiz" }).click();
   await page.getByRole("link", { name: "New question" }).click();
-  await page.getByRole("button", { name: "Highlight Text", exact: true }).click();
+  await page.getByRole("button", { name: "Highlight text", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
 
   const problems = page.getByRole("region", { name: "Problems to fix" });
@@ -342,7 +342,7 @@ test("an author writes a drag-and-drop rationale item from a word bank, publishe
     .fill(`Drag ${testInfo.project.name} ${Date.now()}`);
   await page.getByRole("button", { name: "Create quiz" }).click();
   await page.getByRole("link", { name: "New question" }).click();
-  await page.getByRole("button", { name: "Drag-and-Drop Rationale", exact: true }).click();
+  await page.getByRole("button", { name: "Drag-and-drop rationale", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
 
   const problems = page.getByRole("region", { name: "Problems to fix" });
@@ -607,7 +607,7 @@ test("an author gives a matrix item a record at two times, publishes it, and pla
     .fill(`Trend ${testInfo.project.name} ${Date.now()}`);
   await page.getByRole("button", { name: "Create quiz" }).click();
   await page.getByRole("link", { name: "New question" }).click();
-  await page.getByRole("button", { name: "Matrix Multiple Choice", exact: true }).click();
+  await page.getByRole("button", { name: "Matrix multiple choice", exact: true }).click();
   await expect(page).toHaveURL(/\/author\/items\/[0-9a-f-]{36}$/);
 
   const textbox = (name: string) => page.getByRole("textbox", { name, exact: true });
@@ -717,7 +717,7 @@ test("an author starts case study steps by type, edits them in place, and is ask
   await expect(
     page.getByRole("heading", { level: 2, name: "Step 1 of 6: Recognize Cues" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Multiple Choice", exact: true }).click();
+  await page.getByRole("button", { name: "Multiple choice", exact: true }).click();
   const stem = page.getByRole("textbox", { name: "Question stem" });
   await expect(stem).toBeVisible();
   await expect(rail.getByRole("button", { name: /^Step 1/ })).toContainText("Draft");
@@ -751,7 +751,7 @@ test("an author starts case study steps by type, edits them in place, and is ask
   ).toBeVisible();
   await expectNoAxeViolations(page);
   await page.getByRole("button", { name: "Choose another format" }).click();
-  await page.getByRole("button", { name: "Ordered Response", exact: true }).click();
+  await page.getByRole("button", { name: "Ordered response", exact: true }).click();
   await expect(page.getByRole("button", { name: "Change format" })).toBeVisible();
   await expect(stem).toHaveValue("");
   await page.screenshot({

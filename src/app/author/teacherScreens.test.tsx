@@ -719,9 +719,13 @@ describe("the library on the shared primitives (#563)", () => {
     empty();
     render(await homePage());
     expect(screen.getByRole("heading", { level: 2, name: "No quizzes yet" })).toBeInTheDocument();
+    // It lands on the New quiz name field itself, so the cursor is ready in it (#563).
     expect(screen.getByRole("link", { name: "New quiz" })).toHaveAttribute(
       "href",
-      "#new-bank-heading",
+      "#new-quiz-name",
+    );
+    expect(document.getElementById("new-quiz-name")).toBe(
+      screen.getByRole("textbox", { name: "Quiz name" }),
     );
     expect(document.getElementById("new-bank-heading")).toHaveTextContent("New quiz");
     expect(screen.queryByText(/No quizzes not in a folder/)).toBeNull();
@@ -800,7 +804,7 @@ describe("the quiz page on the shared primitives (#563)", () => {
       within(active).getByRole("link", { name: "Remove filter Step 2: Analyze Cues" }),
     ).toHaveAttribute("href", `/author/banks/${BANK}?type=multiple_choice`);
     expect(
-      within(active).getByRole("link", { name: "Remove filter Multiple Choice" }),
+      within(active).getByRole("link", { name: "Remove filter Multiple choice" }),
     ).toHaveAttribute("href", `/author/banks/${BANK}?step=2`);
     expect(within(active).getByRole("link", { name: "Clear filters" })).toHaveAttribute(
       "href",

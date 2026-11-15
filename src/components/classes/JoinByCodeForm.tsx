@@ -1,10 +1,9 @@
 "use client";
 
-import { CircleAlert } from "lucide-react";
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { fieldClasses } from "@/components/ui/fieldClasses";
-import { Icon } from "@/components/ui/Icon";
+import { FieldError } from "@/components/ui/FieldError";
 import { TextLink } from "@/components/ui/TextLink";
 import { ALREADY_INSTRUCTOR } from "./JoinClassButton";
 
@@ -77,10 +76,9 @@ export function JoinByCodeForm({ action, initialCode = "" }: JoinByCodeFormProps
       </div>
       {error ? (
         // Ink with an alert icon, as every field's error: red is for marked answers (PLAN D11).
-        <p id={errorId} role="alert" className="flex items-start gap-2 text-sm text-ink-1">
-          <Icon icon={CircleAlert} className="mt-0.5" />
-          <span>{error}</span>
-        </p>
+        <FieldError id={errorId} role="alert">
+          {error}
+        </FieldError>
       ) : null}
       <div>
         <Button type="submit" variant="primary" disabled={pending} aria-disabled={pending}>

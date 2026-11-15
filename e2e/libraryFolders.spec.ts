@@ -60,7 +60,7 @@ test("a teacher makes a folder, moves two quizzes into it, and starts a live ses
   // A new quiz offers no folders inside it (#411).
   await expect(page.getByRole("navigation", { name: "Folders", exact: true })).toHaveCount(0);
   await page.getByRole("link", { name: "New question", exact: true }).click();
-  await page.getByRole("button", { name: "Multiple Choice", exact: true }).click();
+  await page.getByRole("button", { name: "Multiple choice", exact: true }).click();
   await fillMultipleChoice(
     page,
     "Which finding is expected?",

@@ -4,7 +4,7 @@ import { BankList } from "@/components/authoring/BankList";
 import { libraryCrumbs } from "@/components/authoring/FolderBreadcrumbs";
 import type { FolderFormState } from "@/components/authoring/FolderNameForm";
 import { LibraryFolderControls } from "@/components/authoring/LibraryFolderControls";
-import { LibraryFrame, NEW_QUIZ_HEADING_ID } from "@/components/authoring/LibraryFrame";
+import { LibraryFrame, NEW_QUIZ_FIELD_ID } from "@/components/authoring/LibraryFrame";
 import { MoveToFolderForm } from "@/components/authoring/MoveToFolderForm";
 import { GetStarted } from "@/components/onboarding/GetStarted";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -103,7 +103,7 @@ export function LibraryDemo({ state }: { state: LibraryDemoState }) {
           banks={quizzes}
           sharedWith={SHARED}
           emptyHeading={folder ? "No quizzes in this folder" : undefined}
-          emptyAction={{ href: `#${NEW_QUIZ_HEADING_ID}`, label: "New quiz" }}
+          emptyAction={{ href: `#${NEW_QUIZ_FIELD_ID}`, label: "New quiz" }}
           moveFormId={canMove ? "move-quizzes" : undefined}
           start={() => nothing}
           searchable

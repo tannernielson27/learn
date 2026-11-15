@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Notice } from "@/components/ui/Notice";
 import { Popover } from "@/components/ui/Popover";
 import type { EditorIssue } from "@/lib/authoring/issueMessages";
+import { textLinkClasses } from "@/components/ui/TextLink";
 
 /** How many problems the summary beside Publish lists; the rest are in the list under the fields. */
 export const SUMMARY_LIMIT = 3;
@@ -41,8 +42,9 @@ export interface EditorActionsProps {
 
 const problemCount = (count: number) => (count === 1 ? "1 problem" : `${count} problems`);
 
-const SUMMARY_ITEM_CLASSES =
-  "tap-target text-left text-sm font-medium text-accent-ink underline-offset-4 hover:underline";
+// A button that takes the author to a field: the shared text link's look (#563), its words kept
+// to the start where a long one wraps.
+const SUMMARY_ITEM_CLASSES = `${textLinkClasses({ size: "sm" })} text-left`;
 
 /**
  * Save draft, Publish and More (#563). Publish is the one primary and Save draft the secondary;

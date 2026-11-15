@@ -43,7 +43,7 @@ test("a fresh instructor and their first student see what to do next on every em
   await expectEmptyState(page, 2, "No quizzes yet");
   await expect(page.getByRole("link", { name: "New quiz", exact: true })).toHaveAttribute(
     "href",
-    "#new-bank-heading",
+    "#new-quiz-name",
   );
   await expectNoAxeViolations(page);
   await shoot(page, project, "author-home-empty");
@@ -63,10 +63,12 @@ test("a fresh instructor and their first student see what to do next on every em
   await page.goto("/author/classes");
   await expectEmptyState(page, 2, "No classes yet");
   const createClass = page.getByRole("link", { name: "New class", exact: true });
-  await expect(createClass).toHaveAttribute("href", "#new-class-heading");
+  await expect(createClass).toHaveAttribute("href", "#new-class-name");
   await createClass.focus();
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/#new-class-heading$/);
+  await expect(page).toHaveURL(/#new-class-name$/);
+  // It lands on the name field itself, ready to type (#563).
+  await expect(page.getByRole("textbox", { name: "Class name", exact: true })).toBeFocused();
   await expectNoAxeViolations(page);
   await shoot(page, project, "classes-empty");
 

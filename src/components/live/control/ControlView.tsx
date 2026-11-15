@@ -1,16 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft, Monitor, WifiOff } from "lucide-react";
+import { Monitor, WifiOff } from "lucide-react";
 import type { ReactNode } from "react";
 import { HostRecord } from "@/components/live/HostRecord";
 import { OFFLINE, type HostRoom } from "@/components/live/host/useHostRoom";
 import { ProgressBoard } from "@/components/live/ProgressBoard";
 import { Roster } from "@/components/live/Roster";
+import { BackLink } from "@/components/ui/BackLink";
 import { Badge } from "@/components/ui/Badge";
 import { ConnectionStatus } from "@/components/ui/ConnectionStatus";
 import { Icon } from "@/components/ui/Icon";
 import { Notice } from "@/components/ui/Notice";
+import { PAGE_TITLE_CLASSES } from "@/components/ui/PageHeader";
 import { textLinkClasses } from "@/components/ui/TextLink";
 import type { LiveSessionState } from "@/lib/live";
 import type { CaseStudyRun } from "@/lib/live/caseStudyRuns";
@@ -67,10 +69,9 @@ export function ControlView(props: ControlViewProps) {
       <header className="border-b border-line bg-surface-1">
         <div className="mx-auto flex min-h-14 w-full max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2 sm:px-8">
           <div className="flex min-w-0 items-center gap-3">
-            <Link href="/author" className={`${textLinkClasses()} shrink-0`}>
-              <Icon icon={ChevronLeft} />
+            <BackLink href="/author" className="shrink-0">
               Library
-            </Link>
+            </BackLink>
             <span aria-hidden="true" className="h-6 w-px bg-line max-sm:hidden" />
             <h1 className="min-w-0 truncate font-semibold text-ink-1 max-sm:sr-only">{title}</h1>
             <Badge live={state.status === "running"}>{STATUS_BADGE[state.status]}</Badge>
@@ -101,7 +102,9 @@ export function ControlView(props: ControlViewProps) {
           {title}
         </p>
         <ConnectionNotice connection={connection} />
-        {error === null || (connection === "offline" && error === OFFLINE) ? null : (
+        {/* The room's own OFFLINE words already stand in the connection notice, and while it
+            reconnects they no longer apply: only once it is connected again would they clear. */}
+        {error === null || (connection !== "connected" && error === OFFLINE) ? null : (
           <Notice role="alert" title="That did not go through">
             {error}
           </Notice>
@@ -166,7 +169,8 @@ function Phase(props: ControlViewProps) {
   if (view.phase === "ended") {
     return (
       <section aria-labelledby="ended-heading" className="flex max-w-2xl flex-col gap-4">
-        <h2 id="ended-heading" className="font-read text-3xl text-ink-1">
+        {/* A sentence, not a name, so it keeps its period (docs/04 §11 "Titles"). */}
+        <h2 id="ended-heading" className={PAGE_TITLE_CLASSES}>
           This live session has ended.
         </h2>
         <p className="text-ink-2">

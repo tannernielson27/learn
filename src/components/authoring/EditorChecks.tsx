@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/Card";
 import type { EditorIssue } from "@/lib/authoring/issueMessages";
 import { issueMessageId } from "./issueIds";
+import { textLinkClasses } from "@/components/ui/TextLink";
 
 export interface EditorChecksProps {
   /** What stops publishing, each a button that takes the author to its field. */
@@ -13,8 +14,9 @@ export interface EditorChecksProps {
   focusProblem: (field: string) => void;
 }
 
-const ITEM_CLASSES =
-  "tap-target text-left text-sm font-medium text-accent-ink underline-offset-4 hover:underline";
+// A button that takes the author to a field: the shared text link's look (#563), its words kept
+// to the start where a long one wraps.
+const ITEM_CLASSES = `${textLinkClasses({ size: "sm" })} text-left`;
 
 /** Problems to fix and Worth a second look, under the editor's fields (EditorShell). */
 export function EditorChecks({

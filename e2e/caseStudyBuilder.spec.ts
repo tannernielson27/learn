@@ -90,7 +90,7 @@ test("an author builds a complete case study from an empty bank, previews it, an
   const steps: { name: RegExp; type: string; fill: () => Promise<void> }[] = [
     {
       name: /^Step 1 of 6: Recognize Cues/,
-      type: "Multiple Choice",
+      type: "Multiple choice",
       fill: () =>
         fillMultipleChoice(page, "Which finding needs attention first?", [
           "Heart rate 112",
@@ -101,7 +101,7 @@ test("an author builds a complete case study from an empty bank, previews it, an
     },
     {
       name: /^Step 2 of 6: Analyze Cues/,
-      type: "Extended Multiple Response",
+      type: "Extended multiple response",
       fill: () =>
         fillMultipleResponse(
           page,
@@ -118,7 +118,7 @@ test("an author builds a complete case study from an empty bank, previews it, an
     },
     {
       name: /^Step 3 of 6: Prioritize Hypotheses/,
-      type: "Matrix Multiple Choice",
+      type: "Matrix multiple choice",
       fill: () =>
         fillMatrixMultipleChoice(
           page,
@@ -132,7 +132,7 @@ test("an author builds a complete case study from an empty bank, previews it, an
     },
     {
       name: /^Step 4 of 6: Generate Solutions/,
-      type: "Ordered Response",
+      type: "Ordered response",
       fill: () =>
         fillOrderedResponse(page, "Put the nurse's first actions in order.", [
           "Raise the head of the bed",
@@ -143,7 +143,7 @@ test("an author builds a complete case study from an empty bank, previews it, an
     },
     {
       name: /^Step 5 of 6: Take Action/,
-      type: "Multiple Choice",
+      type: "Multiple choice",
       fill: () =>
         fillMultipleChoice(page, "Which prescription should the nurse carry out first?", [
           "Give the prescribed diuretic",
@@ -154,7 +154,7 @@ test("an author builds a complete case study from an empty bank, previews it, an
     },
     {
       name: /^Step 6 of 6: Evaluate Outcomes/,
-      type: "Matrix Multiple Choice",
+      type: "Matrix multiple choice",
       fill: () =>
         fillMatrixMultipleChoice(
           page,

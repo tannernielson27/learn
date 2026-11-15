@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   startTransition,
   useActionState,
@@ -11,13 +10,14 @@ import {
 } from "react";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
+import { Notice } from "@/components/ui/Notice";
+import { TextLink } from "@/components/ui/TextLink";
 import {
   ARCHIVE_ONE,
   archiveConfirmTitle,
   parseArchiveOne,
   type ArchiveSelectionState,
 } from "@/lib/authoring/archiveSelection";
-import { FieldError } from "./FieldError";
 
 export type ArchiveSelectedAction = (
   state: ArchiveSelectionState,
@@ -35,7 +35,6 @@ interface Asking {
 
 const IDLE: ArchiveSelectionState = { status: "idle" };
 const idle: ArchiveSelectedAction = async (state) => state;
-const NOTHING_SELECTED = "Select at least one question or case study to archive.";
 
 function Refusals({ lines }: { lines: readonly string[] }) {
   if (lines.length === 0) return null;
@@ -68,7 +67,6 @@ export function useArchiveSelected(
 ) {
   const [state, run, pending] = useActionState(action ?? idle, IDLE);
   const [asking, setAsking] = useState<Asking | null>(null);
-  const [problem, setProblem] = useState<string | undefined>(undefined);
   const clears = useRef(false);
   const outcomeRef = useRef<HTMLDivElement>(null);
 
@@ -89,7 +87,6 @@ export function useArchiveSelected(
     data.set(ARCHIVE_ONE, submitter.value);
     const counts =
       one.kind === "item" ? { items: 1, caseStudies: 0 } : { items: 0, caseStudies: 1 };
-    setProblem(undefined);
     setAsking({
       title: archiveConfirmTitle(counts),
       name: submitter.dataset.archiveName,
@@ -106,8 +103,8 @@ export function useArchiveSelected(
       items: data.getAll("item").length,
       caseStudies: data.getAll("caseStudy").length,
     };
-    if (counts.items + counts.caseStudies === 0) return setProblem(NOTHING_SELECTED);
-    setProblem(undefined);
+    // Archive selected is drawn only while a row is checked, so there is always one to count;
+    // the server action still refuses an empty selection on its own.
     setAsking({ title: archiveConfirmTitle(counts), data, clears: true });
   }
 
@@ -126,25 +123,23 @@ export function useArchiveSelected(
         Archive selected
       </Button>
     ) : null;
-  const outcome = !action ? null : problem ? (
-    <FieldError role="alert">{problem}</FieldError>
-  ) : shown && state.status === "done" ? (
+  const outcome = !action ? null : shown && state.status === "done" ? (
     <div ref={outcomeRef} role="status" tabIndex={-1} className="text-sm text-ink-1">
       <p>
         {state.message}{" "}
         {archivedHref ? (
-          <Link href={archivedHref} className="font-medium text-accent-ink underline">
+          <TextLink kind="inline" href={archivedHref}>
             Show archived
-          </Link>
+          </TextLink>
         ) : null}
       </p>
       <Refusals lines={state.refusals} />
     </div>
   ) : shown && state.status === "error" ? (
-    <div ref={outcomeRef} role="alert" tabIndex={-1} className="text-sm text-ink-1">
-      <FieldError>{state.error}</FieldError>
+    <Notice ref={outcomeRef} role="alert" tabIndex={-1}>
+      <p>{state.error}</p>
       <Refusals lines={state.refusals} />
-    </div>
+    </Notice>
   ) : null;
   const dialog = action ? (
     <Dialog
@@ -171,7 +166,6 @@ export function useArchiveSelected(
 
   /** Takes what was said away: the outcome stays until the teacher has read it. */
   function dismiss() {
-    setProblem(undefined);
     if (state.status !== "idle") onHide(state);
   }
 

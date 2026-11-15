@@ -23,7 +23,7 @@ async function expectNoAxeViolations(page: Page) {
 
 const STEM = "Which findings require immediate follow-up?";
 /**
- * Five, not four. The Extended Multiple Response editor opens with five blank option fields and
+ * Five, not four. The Extended multiple response editor opens with five blank option fields and
  * every label is required, so filling fewer leaves the item invalid and `publishOpenItem`
  * refuses — the thing that failed CI on #128, one option further along.
  */
@@ -99,7 +99,7 @@ test("three phones answer a live SATA, and the reveal shows the key on all of th
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
   await page.getByRole("link", { name: "New question" }).click();
-  await page.getByRole("button", { name: "Extended Multiple Response", exact: true }).click();
+  await page.getByRole("button", { name: "Extended multiple response", exact: true }).click();
   await fillMultipleResponse(page, STEM, OPTIONS, CORRECT);
   await publishOpenItem(page);
   await page.getByRole("link", { name: "Back to quiz" }).click();
@@ -335,7 +335,7 @@ test("a timed item counts down on the phone, and closes Submit after zero", asyn
   await page.getByRole("button", { name: "Create quiz" }).click();
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
   await page.getByRole("link", { name: "New question" }).click();
-  await page.getByRole("button", { name: "Extended Multiple Response", exact: true }).click();
+  await page.getByRole("button", { name: "Extended multiple response", exact: true }).click();
   await fillMultipleResponse(page, STEM, OPTIONS, CORRECT);
   await publishOpenItem(page);
   await page.getByRole("link", { name: "Back to quiz" }).click();
@@ -430,7 +430,7 @@ test("the host skips to an item and goes back, and the phone keeps its answer", 
   // `start_session` orders the set by when each item was made, so this one is item 1.
   for (const stem of [STEM, SECOND_STEM]) {
     await page.getByRole("link", { name: "New question" }).click();
-    await page.getByRole("button", { name: "Extended Multiple Response", exact: true }).click();
+    await page.getByRole("button", { name: "Extended multiple response", exact: true }).click();
     await fillMultipleResponse(page, stem, OPTIONS, CORRECT);
     await publishOpenItem(page);
     await page.getByRole("link", { name: "Back to quiz" }).click();
@@ -632,7 +632,7 @@ test("a student-paced set: phones move at their own pace, the board fills in, on
   // `start_session` orders the set by when each item was made, so STEM is item 1.
   for (const stem of [STEM, SECOND_STEM]) {
     await page.getByRole("link", { name: "New question" }).click();
-    await page.getByRole("button", { name: "Extended Multiple Response", exact: true }).click();
+    await page.getByRole("button", { name: "Extended multiple response", exact: true }).click();
     await fillMultipleResponse(page, stem, OPTIONS, CORRECT);
     await publishOpenItem(page);
     await page.getByRole("link", { name: "Back to quiz" }).click();

@@ -4,6 +4,7 @@ import { Notice } from "@/components/ui/Notice";
 import { classStartPath } from "@/lib/classes/classes";
 import type { SessionListRow } from "@/lib/supabase/sessionReport";
 import { PROGRESS_EMPTY_BODY } from "./ClassProgressPanel";
+import { SECTION_HEADING_CLASSES } from "@/components/ui/PageHeader";
 
 export interface ClassSessionsPanelProps {
   classId: string;
@@ -11,7 +12,7 @@ export interface ClassSessionsPanelProps {
   sessions: readonly SessionListRow[] | null;
 }
 
-const HEADING = "text-lg font-medium text-ink-1";
+const HEADING = SECTION_HEADING_CLASSES;
 
 /**
  * The class's live sessions (the class page's Live sessions tab), as the Live sessions page lists
@@ -26,7 +27,7 @@ export function ClassSessionsPanel({ classId, sessions }: ClassSessionsPanelProp
         Live sessions
       </h2>
       {sessions === null ? (
-        <Notice role="alert">
+        <Notice role="alert" live={false}>
           The live sessions could not be loaded. Reload the page to try again.
         </Notice>
       ) : sessions.length === 0 ? (

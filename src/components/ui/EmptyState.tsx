@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import type { EmptyStateAction, EmptyStateContent } from "@/lib/emptyState";
 import { buttonClasses } from "./Button";
@@ -27,6 +28,11 @@ export interface NoResultsEmptyStateProps {
   heading: string;
   /** A link that clears the filter or the search: the same page without its query. */
   action?: EmptyStateAction;
+  /**
+   * `false` where a status line that is always on the page already says it (a search field's
+   * count), so the words are not read twice. Leave it on otherwise.
+   */
+  live?: boolean;
   /** Or, for a filter held in the page, a button that clears it. */
   onClear?: () => void;
   /** The button's words; "Clear filters" unless the page says better. */
@@ -36,6 +42,34 @@ export interface NoResultsEmptyStateProps {
 export type EmptyStateProps = FirstUseEmptyStateProps | NoResultsEmptyStateProps;
 
 const TAGS = { 2: "h2", 3: "h3", 4: "h4" } as const;
+
+/**
+ * The next step's link. One to a place on this page (`#new-quiz-name`) is a plain anchor, so the
+ * browser does what it does for any fragment: it scrolls to the field and focuses it, ready to
+ * type (#563). The router's own hash handling only scrolls. Anywhere else, the router's `Link`.
+ */
+function StepLink({
+  href,
+  className,
+  children,
+}: {
+  href: string;
+  className: string;
+  children: ReactNode;
+}) {
+  if (href.startsWith("#")) {
+    return (
+      <a href={href} className={className}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link href={href} className={className}>
+      {children}
+    </Link>
+  );
+}
 
 /**
  * An empty list (#266, #563). It sits in the same ruled frame a filled list does, so the region
@@ -61,9 +95,9 @@ export function EmptyState(props: EmptyStateProps) {
       {body ? <p className="max-w-prose text-ink-2">{body}</p> : null}
       {action ? (
         <div className="mt-4 flex flex-wrap gap-3">
-          <Link href={action.href} className={buttonClasses({ variant: "secondary" })}>
+          <StepLink href={action.href} className={buttonClasses({ variant: "secondary" })}>
             {action.label}
-          </Link>
+          </StepLink>
           {more.map((step) => (
             <Link key={step.href} href={step.href} className={buttonClasses({ variant: "ghost" })}>
               {step.label}
@@ -77,6 +111,7 @@ export function EmptyState(props: EmptyStateProps) {
 
 function NoResults({
   heading,
+  live = true,
   action,
   onClear,
   clearLabel = "Clear filters",
@@ -86,7 +121,7 @@ function NoResults({
       data-empty-state="no-results"
       className="flex flex-wrap items-center gap-x-4 border-y border-line py-3"
     >
-      <p role="status" className="py-2.5 text-ink-2">
+      <p role={live ? "status" : undefined} className="py-2.5 text-ink-2">
         {heading}
       </p>
       {action ? (

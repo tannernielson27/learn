@@ -407,7 +407,7 @@ describe("where a teacher writes, the glossary's words are used (#413)", () => {
 
   it("a step's question, asked to change its format", async () => {
     render(
-      <StepItemPanel caseStudyId={CASE} position={2 as CjmmStep} typeLabel="Matrix Multiple Choice">
+      <StepItemPanel caseStudyId={CASE} position={2 as CjmmStep} typeLabel="Matrix multiple choice">
         <p>Editor</p>
       </StepItemPanel>,
     );

@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Notice } from "@/components/ui/Notice";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { textLinkClasses } from "@/components/ui/TextLink";
 import { caseStudyBlockers, stepsReadyLabel } from "@/lib/authoring/caseStudyReadiness";
 import { ehrFormFromStored, previewRecord } from "@/lib/authoring/forms/ehr";
@@ -125,10 +126,17 @@ export default async function CaseStudyPage({
   const bankHref = `/author/banks/${row.bank_id}`;
   const header = (
     <>
-      <p className="eyebrow mb-1">Case study</p>
+      <PageHeader
+        className="mb-4"
+        label={
+          <>
+            <span>Case study</span>
+            <Badge>{STATUS_LABELS[row.status]}</Badge>
+          </>
+        }
+        title={row.title}
+      />
       <div className="mb-6 flex flex-wrap items-baseline gap-3">
-        <h1 className="font-read text-3xl text-ink-1">{row.title}</h1>
-        <Badge>{STATUS_LABELS[row.status]}</Badge>
         {/* Only a case study with its patient record and six finished steps exports. */}
         {preview.ok ? (
           <a

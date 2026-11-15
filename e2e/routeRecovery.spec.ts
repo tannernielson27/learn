@@ -44,7 +44,7 @@ test("a student whose room fails to render rejoins it, as the same participant, 
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
   await page.getByRole("link", { name: "New question", exact: true }).click();
-  await page.getByRole("button", { name: "Multiple Choice", exact: true }).click();
+  await page.getByRole("button", { name: "Multiple choice", exact: true }).click();
   await fillMultipleChoice(
     page,
     STEM,

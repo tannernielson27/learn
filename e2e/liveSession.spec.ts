@@ -34,7 +34,7 @@ test("an instructor starts a session from a bank, sees a six-character code, and
   ).toBeVisible();
 
   await page.getByRole("link", { name: "New question" }).click();
-  await page.getByRole("button", { name: "Multiple Choice", exact: true }).click();
+  await page.getByRole("button", { name: "Multiple choice", exact: true }).click();
   // A new item starts with four blank option fields and every label is required, so filling only
   // two leaves the item invalid on options C and D. publishOpenItem asserts the editor lists no
   // problems, so all four have to be filled.

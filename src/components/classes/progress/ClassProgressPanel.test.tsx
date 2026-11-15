@@ -5,6 +5,7 @@ import { PROGRESS_FIXTURE, PROGRESS_FIXTURE_EMPTY } from "@/lib/classes/classPro
 import { buildClassProgress, type ProgressSort } from "@/lib/classes/progress";
 import { findRetiredTerms } from "@/lib/copy/retiredTerms";
 import { ClassProgressPanel } from "./ClassProgressPanel";
+import { onLoadNotice } from "@/components/ui/testing/onLoadNotice";
 
 const CLASS = CLASS_PAGE_FIXTURE_CLASS.id;
 const PROGRESS = buildClassProgress(PROGRESS_FIXTURE);
@@ -178,7 +179,7 @@ describe("ClassProgressPanel", () => {
 
   it("says the progress could not be loaded rather than showing an empty class", () => {
     render(<ClassProgressPanel classId={CLASS} progress={null} sort="name" />);
-    expect(screen.getByRole("alert")).toHaveTextContent(
+    expect(onLoadNotice()).toHaveTextContent(
       "The progress could not be loaded. Reload the page to try again.",
     );
   });

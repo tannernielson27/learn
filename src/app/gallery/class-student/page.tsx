@@ -28,6 +28,7 @@ export default function ClassStudentGallery() {
         <StudentProgressView
           classId={CLASS_PAGE_FIXTURE_CLASS.id}
           className={CLASS_PAGE_FIXTURE_CLASS.name}
+          timeZone={CLASS_PAGE_FIXTURE_CLASS.timeZone}
           progress={progress}
         />
       </div>

@@ -108,8 +108,12 @@ describe("the console's answer card", () => {
     );
     expect(within(card).queryByRole("heading")).toBeNull();
     expect(card.textContent?.match(/answered/gi)).toHaveLength(1);
-    // The bar keeps its own name for a screen reader.
-    expect(within(card).getByRole("progressbar", { name: "Answered" })).toBeInTheDocument();
+    // The bar is drawn only, so a screen reader hears the count once (#563).
+    expect(within(card).queryByRole("progressbar")).toBeNull();
+    expect(within(card).getByTestId("progress-fill").parentElement).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
   });
 });
 
@@ -150,5 +154,16 @@ describe("the console's connection notice", () => {
     expect(alert).toHaveTextContent("Live updates stopped. Reload to catch up.");
     expect(screen.getAllByRole("alert")).toHaveLength(1);
     expect(screen.queryByText("That did not go through")).toBeNull();
+  });
+
+  it("hides the OFFLINE words as a second notice while the channel reconnects (#563)", async () => {
+    const fake = setup((host) => ({ ...host, open: () => Promise.reject(new Error("down")) }));
+    await screen.findByRole("alert");
+    act(() => fake.room.setHostConnection("reconnecting"));
+    await waitFor(() =>
+      expect(document.querySelector('[data-notice="status"]')).toHaveTextContent("Reconnecting"),
+    );
+    expect(screen.queryByText("That did not go through")).toBeNull();
+    expect(screen.queryByText("Live updates stopped. Reload to catch up.")).toBeNull();
   });
 });

@@ -122,7 +122,8 @@ export function QuestionShell({
         </div>
       ) : null}
 
-      {sample ? <p className="eyebrow mb-2">Sample</p> : null}
+      {/* Sentence case, untracked (#563): the eyebrow's mono and size, not its capitals. */}
+      {sample ? <p className="mb-2 font-mono text-xs text-ink-2">Sample</p> : null}
       <RichTextView text={stem} className="stem" />
       {instructions ? <p className="instructions mt-2">{instructions}</p> : null}
 

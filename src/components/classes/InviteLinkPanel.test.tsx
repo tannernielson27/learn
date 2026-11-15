@@ -34,6 +34,15 @@ describe("the invite parts", () => {
     expect(screen.getByRole("button", { name: "Replace the link" })).toBeInTheDocument();
   });
 
+  it("lays itself out and wraps the whole link, with no grid of its parent's (#563)", () => {
+    const { container } = renderPanel();
+    expect(container.querySelector('[class*="contents"]')).toBeNull();
+    const box = screen.getByRole("textbox", { name: "Invite link" });
+    expect(box.tagName).toBe("TEXTAREA");
+    expect(box).toHaveClass("break-all", "w-full", "font-mono");
+    expect(screen.getByRole("button", { name: "Copy invite link" })).toHaveClass("tap-target");
+  });
+
   it("shows the class code beside the link as two groups of four", () => {
     renderPanel();
     expect(screen.getByRole("heading", { name: "Class code" })).toBeInTheDocument();

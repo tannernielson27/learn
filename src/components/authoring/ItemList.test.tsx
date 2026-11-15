@@ -37,7 +37,7 @@ describe("ItemList", () => {
     render(<ItemList items={items} />);
     const first = screen.getByRole("link", { name: /Which findings need follow-up\?/ });
     expect(first).toHaveAttribute("href", "/author/items/i1");
-    expect(within(first).getByText("Extended Multiple Response")).toBeInTheDocument();
+    expect(within(first).getByText("Extended multiple response")).toBeInTheDocument();
     expect(within(first).getByText("Draft")).toBeInTheDocument();
     expect(within(first).getByText("Edited Sep 12, 2026")).toBeInTheDocument();
   });
@@ -69,7 +69,7 @@ describe("ItemList", () => {
     render(<ItemList items={items} />);
     // Anchored: the published item's Play link is named "Play Untitled question".
     const second = screen.getByRole("link", { name: /^Untitled question/ });
-    expect(within(second).getByText("Matrix Multiple Choice")).toBeInTheDocument();
+    expect(within(second).getByText("Matrix multiple choice")).toBeInTheDocument();
     expect(within(second).getByText("Published")).toBeInTheDocument();
   });
 

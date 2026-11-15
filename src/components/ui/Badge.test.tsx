@@ -18,7 +18,8 @@ describe("Badge", () => {
     expect(screen.getByText("New")).toHaveClass("bg-accent-soft", "text-accent-ink");
     const dot = container.querySelector("[data-live-dot]")!;
     expect(dot).toHaveAttribute("aria-hidden", "true");
-    expect(dot).toHaveClass("bg-correct");
+    expect(dot).toHaveClass("bg-accent");
+    expect(dot).not.toHaveClass("bg-correct");
     expect(screen.getByText("Live")).toContainElement(dot as HTMLElement);
   });
 });

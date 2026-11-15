@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ReadingWidth } from "@/components/authoring/PageWidth";
 import { QuizOrderEditor } from "@/components/authoring/QuizOrderEditor";
 import { Notice } from "@/components/ui/Notice";
-import { TextLink } from "@/components/ui/TextLink";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { isUuid } from "@/lib/authoring/ids";
 import { listQuizEntries } from "@/lib/authoring/quizOrderData";
 import { requireAuthor } from "@/lib/authoring/session";
@@ -28,14 +28,16 @@ export default async function QuizOrderPage({ params }: PageProps<"/author/banks
 
   return (
     <ReadingWidth>
-      <p className="mb-2">
-        <TextLink href={`/author/banks/${bank.id}`} size="sm">
-          {bank.name}
-        </TextLink>
-      </p>
-      <h1 className="mb-6 font-read text-3xl text-ink-1">Change order</h1>
+      {/* The way up is the quiz, by its own name. */}
+      <PageHeader
+        className="mb-6"
+        back={{ href: `/author/banks/${bank.id}`, label: bank.name }}
+        title="Change order"
+      />
       {!read.ok ? (
-        <Notice role="alert">{read.error}</Notice>
+        <Notice role="alert" live={false}>
+          {read.error}
+        </Notice>
       ) : read.entries.length < 2 ? (
         <p className="text-ink-2">
           {read.entries.length === 0 ? "Nothing to order yet." : "Add another question to reorder."}

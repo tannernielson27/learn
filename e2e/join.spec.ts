@@ -44,7 +44,7 @@ test("a student scans the code, types a name, and comes back to the same place o
   await expect(page.getByRole("heading", { level: 1, name: bankName })).toBeVisible();
 
   await page.getByRole("link", { name: "New question" }).click();
-  await page.getByRole("button", { name: "Multiple Choice", exact: true }).click();
+  await page.getByRole("button", { name: "Multiple choice", exact: true }).click();
   // Four blank option fields, every label required: filling fewer leaves the item invalid and
   // publishOpenItem refuses (the thing that failed CI on #128).
   await fillMultipleChoice(

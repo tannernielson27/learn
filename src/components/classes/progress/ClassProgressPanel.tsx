@@ -17,6 +17,7 @@ import {
 import { classTabPath } from "@/lib/classes/classTabs";
 import { formatPercent } from "@/lib/live/reportFormat";
 import { ProgressGrid } from "./ProgressGrid";
+import { SECTION_HEADING_CLASSES } from "@/components/ui/PageHeader";
 
 export interface ClassProgressPanelProps {
   classId: string;
@@ -25,7 +26,7 @@ export interface ClassProgressPanelProps {
   sort: ProgressSort;
 }
 
-const HEADING = "text-lg font-medium text-ink-1";
+const HEADING = SECTION_HEADING_CLASSES;
 const SUBHEADING = "text-base font-bold text-ink-1";
 
 /** "3 live sessions" */
@@ -49,7 +50,7 @@ export function ClassProgressPanel({ classId, progress, sort }: ClassProgressPan
         <h2 id="progress-heading" className={`mb-3 ${HEADING}`}>
           Progress
         </h2>
-        <Notice role="alert">
+        <Notice role="alert" live={false}>
           The progress could not be loaded. Reload the page to try again.
         </Notice>
       </section>

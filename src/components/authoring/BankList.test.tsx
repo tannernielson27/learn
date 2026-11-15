@@ -105,12 +105,18 @@ describe("BankList", () => {
       </QuizSearch>,
     );
     const field = screen.getByRole("searchbox", { name: "Search quizzes" });
+    // One status region, on the page before anything is typed, so its change is heard (#563).
+    const region = screen.getByRole("status");
+    expect(region).toBeEmptyDOMElement();
     fireEvent.change(field, { target: { value: "renal" } });
     expect(screen.queryAllByRole("listitem")).toHaveLength(0);
-    // One status, in the no-results state where the rows were; the empty list leaves no frame.
-    const said = screen.getAllByRole("status").map((status) => status.textContent);
-    expect(said.filter(Boolean)).toEqual(["No quizzes here match “renal”."]);
-    expect(document.querySelector('[data-empty-state="no-results"]')).not.toBeNull();
+    expect(screen.getAllByRole("status")).toEqual([region]);
+    expect(region).toHaveTextContent("No quizzes here match “renal”.");
+    // The no-results line shows the words where the rows were, and is not a second region.
+    const empty = document.querySelector('[data-empty-state="no-results"]');
+    expect(empty).toHaveTextContent("No quizzes here match “renal”.");
+    expect(empty?.querySelector("[role]")).toBeNull();
+    expect(region).toHaveClass("sr-only");
     fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
     expect(field).toHaveValue("");
     expect(field).toHaveFocus();

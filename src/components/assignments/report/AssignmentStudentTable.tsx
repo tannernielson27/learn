@@ -78,7 +78,7 @@ export function ScoreTable({
       <table className="tabular w-full border-collapse text-sm">
         <thead>
           {/* #470: a whole quiz's case studies, each named over its steps' columns. */}
-          <CaseStudyHeadRow items={items} before={5} after={0} />
+          <CaseStudyHeadRow items={items} before={4} after={0} />
           <tr>
             <th scope="col" className={STICKY_HEAD}>
               Student
@@ -86,7 +86,8 @@ export function ScoreTable({
             <th scope="col" className={`${HEAD} text-left`}>
               Status
             </th>
-            {["Best", "Percent", "Attempts used"].map((head) => (
+            {/* The best attempt said once, as a percent (#563); the CSV keeps its points too. */}
+            {["Best", "Attempts used"].map((head) => (
               <th key={head} scope="col" className={`${HEAD} text-right`}>
                 {head}
               </th>
@@ -106,11 +107,6 @@ export function ScoreTable({
               </th>
               <td className="px-3 py-2 text-left whitespace-nowrap">
                 {STUDENT_STATUS_LABEL[student.status]}
-              </td>
-              <td className={CELL}>
-                {student.best
-                  ? `${formatPoints(student.best.score)} / ${formatPoints(student.best.maxScore)}`
-                  : formatPoints(null)}
               </td>
               <td className={`${CELL} font-medium`}>
                 {formatPercent(student.best?.percent ?? null)}

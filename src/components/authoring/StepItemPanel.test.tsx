@@ -25,7 +25,7 @@ describe("StepTypeChooser", () => {
   it("starts the step with the chosen type, then refreshes the case study", async () => {
     startStepItem.mockResolvedValue({ error: "" });
     render(<StepTypeChooser caseStudyId={CASE_ID} position={3} />);
-    await userEvent.setup().click(screen.getByRole("button", { name: "Multiple Choice" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Multiple choice" }));
     expect(startStepItem).toHaveBeenCalledWith(CASE_ID, 3, "multiple_choice");
     expect(refresh).toHaveBeenCalled();
   });
@@ -39,14 +39,14 @@ describe("StepTypeChooser", () => {
         <StepTypeChooser caseStudyId={CASE_ID} position={3} />
       </ItemEditorHostContext.Provider>,
     );
-    await userEvent.setup().click(screen.getByRole("button", { name: "Multiple Choice" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Multiple choice" }));
     expect(onStepStarted).toHaveBeenCalledTimes(1);
   });
 
   it("says why the step could not be started", async () => {
     startStepItem.mockResolvedValue({ error: "That item is in another bank." });
     render(<StepTypeChooser caseStudyId={CASE_ID} position={3} />);
-    await userEvent.setup().click(screen.getByRole("button", { name: "Multiple Choice" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Multiple choice" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("That item is in another bank.");
     expect(refresh).not.toHaveBeenCalled();
   });
@@ -55,7 +55,7 @@ describe("StepTypeChooser", () => {
 describe("StepItemPanel", () => {
   function setup() {
     render(
-      <StepItemPanel caseStudyId={CASE_ID} position={2} typeLabel="Matrix Multiple Choice">
+      <StepItemPanel caseStudyId={CASE_ID} position={2} typeLabel="Matrix multiple choice">
         <p>The step item editor</p>
       </StepItemPanel>,
     );
@@ -64,7 +64,7 @@ describe("StepItemPanel", () => {
 
   it("shows the step's item type and its editor", () => {
     setup();
-    expect(screen.getByText("Matrix Multiple Choice")).toBeInTheDocument();
+    expect(screen.getByText("Matrix multiple choice")).toBeInTheDocument();
     expect(screen.getByText("The step item editor")).toBeInTheDocument();
   });
 
@@ -119,7 +119,7 @@ describe("StepItemPanel and the step's editor", () => {
         <StepItemPanel
           caseStudyId={CASE_ID}
           position={2}
-          typeLabel="Multiple Choice"
+          typeLabel="Multiple choice"
           published={published}
         >
           <Probe />

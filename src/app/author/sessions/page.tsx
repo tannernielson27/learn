@@ -42,7 +42,7 @@ export default async function SessionsPage({ searchParams }: PageProps<"/author/
     <ReadingWidth>
       <PageHeader title="Live sessions" className="mb-6" />
       {rows === null ? (
-        <Notice role="alert">
+        <Notice role="alert" live={false}>
           Live sessions could not be loaded. Reload the page to try again.
         </Notice>
       ) : rows.length === 0 && !filtered ? (

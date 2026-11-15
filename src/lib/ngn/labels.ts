@@ -23,19 +23,19 @@ export const ITEM_TYPES = [
 export type ItemType = (typeof ITEM_TYPES)[number];
 
 export const ITEM_TYPE_LABELS: Record<ItemType, string> = {
-  multiple_choice: "Multiple Choice",
-  multiple_response: "Extended Multiple Response",
-  multiple_response_grouping: "Multiple Response Grouping",
-  matrix_multiple_choice: "Matrix Multiple Choice",
-  matrix_multiple_response: "Matrix Multiple Response",
-  dropdown_cloze: "Drop-Down Cloze",
-  dropdown_rationale: "Drop-Down Rationale",
-  dropdown_table: "Drop-Down Table",
-  highlight_text: "Highlight Text",
-  highlight_table: "Highlight Table",
-  dragdrop_cloze: "Drag-and-Drop Cloze",
-  dragdrop_rationale: "Drag-and-Drop Rationale",
-  ordered_response: "Ordered Response",
+  multiple_choice: "Multiple choice",
+  multiple_response: "Extended multiple response",
+  multiple_response_grouping: "Multiple response grouping",
+  matrix_multiple_choice: "Matrix multiple choice",
+  matrix_multiple_response: "Matrix multiple response",
+  dropdown_cloze: "Drop-down cloze",
+  dropdown_rationale: "Drop-down rationale",
+  dropdown_table: "Drop-down table",
+  highlight_text: "Highlight text",
+  highlight_table: "Highlight table",
+  dragdrop_cloze: "Drag-and-drop cloze",
+  dragdrop_rationale: "Drag-and-drop rationale",
+  ordered_response: "Ordered response",
   bowtie: "Bowtie",
 };
 

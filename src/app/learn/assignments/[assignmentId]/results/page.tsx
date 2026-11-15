@@ -64,7 +64,11 @@ export default async function StudentResultsPage({
 
   if (view.kind === "missing") notFound();
   if (view.kind === "failed") {
-    return <Notice role="alert">These results did not load. Reload the page.</Notice>;
+    return (
+      <Notice role="alert" live={false}>
+        These results did not load. Reload the page.
+      </Notice>
+    );
   }
   // #242: the close is said in the class's zone; a student no longer in the class gets the default.
   const classId = view.assignment.classId;

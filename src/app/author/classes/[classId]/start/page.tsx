@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { startClassLiveSession } from "@/app/live/actions";
 import { ClassLiveStartForm } from "@/components/classes/progress/ClassLiveStartForm";
@@ -34,20 +34,11 @@ export default async function ClassLiveStartPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <p className="text-sm text-ink-2">
-        <Link
-          href={classTabPath(detail.id, "sessions")}
-          className="tap-target inline-flex items-center hover:text-ink-1"
-        >
-          {`${detail.name}: Live sessions`}
-        </Link>
-      </p>
-      <header className="flex flex-col gap-2">
-        <p className="eyebrow">Class</p>
-        <h1 className="font-read text-display leading-tight break-words text-ink-1">
-          Start a live session
-        </h1>
-      </header>
+      <PageHeader
+        back={{ href: classTabPath(detail.id, "sessions"), label: `${detail.name}: Live sessions` }}
+        label="Class"
+        title="Start a live session"
+      />
       <ClassLiveStartForm
         className={detail.name}
         quizzes={quizzes}

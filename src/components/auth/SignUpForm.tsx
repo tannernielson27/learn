@@ -206,7 +206,7 @@ export function SignUpForm({
       {exists ? (
         <FormError id={errorId}>
           This email already has an account.{" "}
-          <Link href={signInHref} className="font-medium text-accent-ink underline">
+          <Link href={signInHref} className={textLinkClasses({ kind: "inline" })}>
             Sign in
           </Link>
         </FormError>

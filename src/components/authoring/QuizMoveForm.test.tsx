@@ -172,3 +172,56 @@ describe("QuizMoveForm", () => {
     expect(screen.getByRole("button", { name: "Move" })).toHaveAttribute("type", "submit");
   });
 });
+
+describe("QuizMoveForm without JavaScript (#563)", () => {
+  const FOLDERS = [{ id: RENAL, parentId: null, name: "Cardiac" }];
+
+  it("draws the move between folders from the server, as a form that posts on its own", async () => {
+    const { renderToString } = await import("react-dom/server");
+    const html = renderToString(
+      <QuizMoveForm
+        id={FORM}
+        folders={FOLDERS}
+        moveToFolder={vi.fn<Move>(async () => ({ status: "idle" }))}
+        quizzes={[{ id: RENAL, name: "Renal week" }]}
+        moveToQuiz={vi.fn<Move>()}
+        staysBehind={KEPT}
+        archive={vi.fn(async (state) => state)}
+      />,
+    );
+    const page = document.createElement("div");
+    page.innerHTML = html;
+    const form = page.querySelector("form")!;
+    expect(form).toHaveAttribute("data-selection-bar", "open");
+    // Hidden only where a script will take the bar over, so it never flashes up there.
+    expect(form.className).toContain("[@media(scripting:enabled)]:hidden");
+    expect(within(page).getByRole("combobox", { name: "Move selected to" })).toHaveAttribute(
+      "name",
+      "folder",
+    );
+    expect(within(page).getByRole("button", { name: "Move" })).toHaveAttribute("type", "submit");
+    // What needs the script to ask first, and the count, are not offered without it.
+    expect(within(page).queryByRole("combobox", { name: "Move to another quiz" })).toBeNull();
+    expect(within(page).queryByRole("button", { name: "Archive selected" })).toBeNull();
+    expect(page.textContent).not.toMatch(/\d+ selected/);
+  });
+
+  it("hands the bar to the script once it runs: hidden until a row is checked", async () => {
+    render(
+      <>
+        <QuizMoveForm
+          id={FORM}
+          folders={FOLDERS}
+          moveToFolder={vi.fn<Move>(async () => ({ status: "idle" }))}
+          quizzes={[]}
+          staysBehind={KEPT}
+        />
+        <input type="checkbox" form={FORM} name="item" value={ITEM} aria-label="Select question" />
+      </>,
+    );
+    expect(screen.queryByRole("combobox", { name: "Move selected to" })).toBeNull();
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select question" }));
+    expect(screen.getByRole("combobox", { name: "Move selected to" })).toBeInTheDocument();
+    expect(screen.getByText("1 selected")).toBeInTheDocument();
+  });
+});

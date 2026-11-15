@@ -87,7 +87,7 @@ export function ChoiceBars({ label, choices, total, revealed }: ChoiceBarsProps)
 export function ResultGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="border-t border-line pt-4 first:border-t-0 first:pt-0">
-      <h3 className="mb-3 text-sm font-medium tracking-wide text-ink-2 uppercase">{title}</h3>
+      <h3 className="mb-3 text-sm font-medium text-ink-2">{title}</h3>
       {children}
     </section>
   );

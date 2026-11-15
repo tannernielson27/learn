@@ -89,7 +89,9 @@ export default async function WorkspaceInvitePage({ params }: PageProps<"/w/[tok
           <FocusHeading id="workspace-invite-paused" className={HEADING}>
             This invitation cannot be opened just now
           </FocusHeading>
-          <Notice role="alert">{INVITE_UNAVAILABLE}</Notice>
+          <Notice role="alert" live={false}>
+            {INVITE_UNAVAILABLE}
+          </Notice>
         </section>
       </Shell>
     );

@@ -223,7 +223,7 @@ describe("retypeChoices", () => {
     const choices = retypeChoices(entry({ type: "multiple_choice" }));
     expect(choices).toHaveLength(13);
     expect(choices.some((choice) => choice.value === "multiple_choice")).toBe(false);
-    expect(choices[0]).toEqual({ value: "multiple_response", label: "Extended Multiple Response" });
+    expect(choices[0]).toEqual({ value: "multiple_response", label: "Extended multiple response" });
     expect(retypeChoices(entry({ kind: "case_study", type: null }))).toEqual([]);
     expect(retypeChoices(entry({ status: "not_importable", type: null }))).toHaveLength(14);
   });

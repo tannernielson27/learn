@@ -63,7 +63,9 @@ export default async function ClassInvitePage({ params }: PageProps<"/c/[token]"
             <FocusHeading id="invite-paused-heading" className={`${AUTH_HEADING} outline-none`}>
               {PAUSED_HEADING}
             </FocusHeading>
-            <Notice role="alert">{invite.status === "rate_limited" ? LIMITED : UNAVAILABLE}</Notice>
+            <Notice role="alert" live={false}>
+              {invite.status === "rate_limited" ? LIMITED : UNAVAILABLE}
+            </Notice>
           </section>
         )}
       </Shell>

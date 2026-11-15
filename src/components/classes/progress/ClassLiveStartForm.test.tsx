@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { findRetiredTerms } from "@/lib/copy/retiredTerms";
 import { ClassLiveStartForm } from "./ClassLiveStartForm";
+import { onLoadNotice } from "@/components/ui/testing/onLoadNotice";
 
 const QUIZZES = [
   { id: "00000000-0000-4000-8000-0000000000d1", name: "Cardiac week", itemCount: 12 },
@@ -61,6 +62,6 @@ describe("ClassLiveStartForm", () => {
 
   it("says the quizzes could not be loaded", () => {
     render(<ClassLiveStartForm className="NUR 310" quizzes={null} action={action} />);
-    expect(screen.getByRole("alert")).toHaveTextContent("Your quizzes could not be loaded.");
+    expect(onLoadNotice()).toHaveTextContent("Your quizzes could not be loaded.");
   });
 });

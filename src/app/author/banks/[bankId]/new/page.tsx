@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { NewItemChooser } from "@/components/authoring/NewItemChooser";
 import { ReadingWidth } from "@/components/authoring/PageWidth";
-import { TextLink } from "@/components/ui/TextLink";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { isUuid } from "@/lib/authoring/ids";
 import { requireAuthor } from "@/lib/authoring/session";
 import { createItem } from "../../../actions";
@@ -23,12 +23,12 @@ export default async function NewItemPage({ params }: PageProps<"/author/banks/[
 
   return (
     <ReadingWidth>
-      <p className="mb-2">
-        <TextLink href={`/author/banks/${bank.id}`} size="sm">
-          {bank.name}
-        </TextLink>
-      </p>
-      <h1 className="mb-6 font-read text-3xl text-ink-1">New question</h1>
+      {/* The way up is the quiz, by its own name. */}
+      <PageHeader
+        className="mb-6"
+        back={{ href: `/author/banks/${bank.id}`, label: bank.name }}
+        title="New question"
+      />
       <NewItemChooser create={createItem.bind(null, bank.id)} />
     </ReadingWidth>
   );

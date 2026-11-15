@@ -7,6 +7,7 @@ import { ItemPlayer } from "@/components/question/ItemPlayer";
 import { ActionBar } from "@/components/question/ActionBar";
 import { SetNav } from "@/components/question/SetNav";
 import { Button } from "@/components/ui/Button";
+import { Notice } from "@/components/ui/Notice";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 // Module by module, never a barrel: this is a screen a student loads, and the scoring engine must
 // not reach its bundle (ADR 0003, `noClientScoring.test.ts`). Types from server modules only.
@@ -73,7 +74,7 @@ export function unopenedNote(reached: number, total: number): string | null {
   const first = reached + 1;
   return first === total
     ? `Question ${total} opens when you answer question ${reached}.`
-    : `Questions ${first} to ${total} open as you answer the case study.`;
+    : `Questions ${first} to ${total} open as you answer the ones before them.`;
 }
 
 /**
@@ -257,13 +258,8 @@ export function AttemptPlayer({
         >
           {`${answered} of ${total} answered`}
         </p>
-        <ProgressBar
-          className="flex-1"
-          value={answered}
-          max={total}
-          label="Questions answered"
-          valueText={`${answered} of ${total} answered`}
-        />
+        {/* Drawn only: the count beside it says it in words, once (#563). */}
+        <ProgressBar className="flex-1" decorative value={answered} max={total} />
       </div>
 
       <SetNav
@@ -325,13 +321,9 @@ export function AttemptPlayer({
                 {`${answered} of ${total} answered. You cannot change answers after you submit.`}
               </p>
               <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="primary"
-                  aria-disabled={submitting ? true : undefined}
-                  className="aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
-                  onClick={() => void submitNow()}
-                >
-                  {submitting ? "Submitting" : "Submit now"}
+                {/* Busy keeps the label and the focus while the attempt is sent (#563). */}
+                <Button variant="primary" busy={submitting} onClick={() => void submitNow()}>
+                  Submit now
                 </Button>
                 <Button
                   variant="secondary"
@@ -360,11 +352,7 @@ export function AttemptPlayer({
               </Button>
             </div>
           )}
-          {error ? (
-            <p role="alert" className="text-sm text-ink-1">
-              {error}
-            </p>
-          ) : null}
+          {error ? <Notice role="alert">{error}</Notice> : null}
         </div>
       </ActionBar>
       {/* Room for the phone's fixed bar, which the last thing on the page must clear. */}

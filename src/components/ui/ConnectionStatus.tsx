@@ -7,7 +7,7 @@ export interface ConnectionStatusProps {
 }
 
 const LOOK: Record<LiveConnection, { word: string; dot: string }> = {
-  connected: { word: "Connected", dot: "bg-correct" },
+  connected: { word: "Connected", dot: "bg-accent" },
   reconnecting: { word: "Reconnecting", dot: "bg-flag" },
   offline: { word: "Offline", dot: "bg-flag" },
 };

@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { Notice } from "@/components/ui/Notice";
+import { TextLink } from "@/components/ui/TextLink";
 import type { ShareEntry } from "@/lib/supabase/practiceShares";
 import { PracticeShareForm, type PracticeShareFormProps } from "./PracticeShareForm";
 import { PracticeShareList, type PracticeShareListProps } from "./PracticeShareList";
@@ -46,17 +47,15 @@ export function PracticeSection({
       </h2>
       <p className="max-w-prose text-ink-2">
         {intro ? `${intro} ` : null}
-        <Link
-          href="/help/instructor#practice"
-          className="text-accent-ink underline underline-offset-4 hover:no-underline"
-        >
+        <TextLink kind="inline" href="/help/instructor#practice">
           How practice works
-        </Link>
+        </TextLink>
       </p>
       {shares === null ? (
-        <p role="alert" className="text-ink-2">
+        // Drawn with the page, so the alert's look without the live region (docs/04 §11).
+        <Notice role="alert" live={false}>
           The practice shares could not be loaded. Reload the page to try again.
-        </p>
+        </Notice>
       ) : (
         <PracticeShareList entries={shares} {...list} focusAfterStop={HEADING_ID} />
       )}

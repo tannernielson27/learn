@@ -15,7 +15,7 @@ export interface QuizEntry {
   id: string;
   /** The question's stem excerpt, or the case study's title. */
   label: string;
-  /** The question's format ("Multiple Choice"), or "Case study". */
+  /** The question's format ("Multiple choice"), or "Case study". */
   format: string;
   /** "Draft" or "Published". Archived entries are not in the order. */
   status: string;

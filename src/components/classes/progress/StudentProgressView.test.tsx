@@ -4,6 +4,7 @@ import { CLASS_PAGE_FIXTURE_CLASS } from "@/lib/classes/classPageFixture";
 import { PROGRESS_FIXTURE, PROGRESS_FIXTURE_REMOVED } from "@/lib/classes/classProgressFixture";
 import { buildClassProgress } from "@/lib/classes/progress";
 import { studentProgress } from "@/lib/classes/studentProgress";
+import { formatInZone } from "@/lib/classes/timeZone";
 import { findRetiredTerms } from "@/lib/copy/retiredTerms";
 import { StudentProgressView } from "./StudentProgressView";
 
@@ -18,6 +19,7 @@ function renderStudent(profileId = KAI) {
     <StudentProgressView
       classId={CLASS}
       className={CLASS_PAGE_FIXTURE_CLASS.name}
+      timeZone={CLASS_PAGE_FIXTURE_CLASS.timeZone}
       progress={progress}
     />,
   );
@@ -82,6 +84,27 @@ describe("StudentProgressView", () => {
         name: "Open the assignment report: Week 6: Fluid and electrolytes",
       }),
     ).toHaveAttribute("href", "/author/assignments/00000000-0000-4000-8000-0000000000b1/report");
+  });
+
+  it("says when an assignment closes in the class's zone, and keeps mono for numbers (#563)", () => {
+    const progress = studentProgress(PROGRESS, KAI)!;
+    renderStudent();
+    const assignment = progress.timeline.find((row) => row.activity.kind === "assignment")!;
+    const lines = Array.from(document.querySelectorAll("p")).filter((line) =>
+      line.textContent?.startsWith("Closes "),
+    );
+    expect(lines[0]!.querySelector("time")).toHaveAttribute(
+      "datetime",
+      assignment.activity.occurredAt,
+    );
+    expect(lines.map((line) => line.textContent)).toContain(
+      `Closes ${formatInZone(assignment.activity.occurredAt, CLASS_PAGE_FIXTURE_CLASS.timeZone)}`,
+    );
+    const results = screen.getAllByTestId("timeline-result");
+    for (const result of results) {
+      const number = /\d/.test(result.textContent ?? "");
+      expect(result.classList.contains("font-mono")).toBe(number);
+    }
   });
 
   it("says so for a student taken off the class", () => {

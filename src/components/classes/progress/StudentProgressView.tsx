@@ -1,8 +1,9 @@
-import Link from "next/link";
+import { ClassTime } from "@/components/assignments/ClassTime";
 import { formatSessionDate } from "@/components/live/report/formatDate";
 import { StepBars } from "@/components/review/StepBars";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { PageHeader, SECTION_HEADING_CLASSES } from "@/components/ui/PageHeader";
+import { TextLink } from "@/components/ui/TextLink";
 import type { StepShare } from "@/lib/assignments/resultsSummary";
 import { attendanceText, cellText, type StudentStep } from "@/lib/classes/progress";
 import { progressTabPath } from "@/lib/classes/progress";
@@ -12,10 +13,12 @@ import { formatPercent } from "@/lib/live/reportFormat";
 export interface StudentProgressViewProps {
   classId: string;
   className: string;
+  /** The class's IANA zone (#242), for an assignment's closing time. */
+  timeZone: string;
   progress: StudentProgress;
 }
 
-const HEADING = "text-lg font-medium text-ink-1";
+const HEADING = SECTION_HEADING_CLASSES;
 
 const KIND_LABELS = { session: "Live session", assignment: "Assignment" } as const;
 
@@ -50,7 +53,12 @@ function Stat({ label, value }: { label: string; value: string }) {
  * assignment newest first, each with its result in words and a link to its report. Nothing here
  * is about any other student.
  */
-export function StudentProgressView({ classId, className, progress }: StudentProgressViewProps) {
+export function StudentProgressView({
+  classId,
+  className,
+  timeZone,
+  progress,
+}: StudentProgressViewProps) {
   const { student, timeline, steps, sessionsEnded } = progress;
   const shares = studentStepShares(steps);
   return (
@@ -120,30 +128,36 @@ export function StudentProgressView({ classId, className, progress }: StudentPro
             {timeline.map(({ activity, cell, href, linkLabel }) => (
               <li
                 key={activity.id}
-                className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-2 py-3"
+                className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 py-3"
               >
                 <div className="min-w-0">
                   <p className="text-sm text-ink-2">{KIND_LABELS[activity.kind]}</p>
                   <p className="font-medium break-words text-ink-1">{activity.title}</p>
                   <p className="text-sm text-ink-2">
-                    {activity.kind === "assignment" ? "Closes " : ""}
-                    {formatSessionDate(activity.occurredAt)}
+                    {/* A due time in the class's own zone, as the class page and the student see
+                        it (#242); a live session keeps its date. */}
+                    {activity.kind === "assignment" ? (
+                      <>
+                        Closes <ClassTime iso={activity.occurredAt} timeZone={timeZone} />
+                      </>
+                    ) : (
+                      formatSessionDate(activity.occurredAt)
+                    )}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                   <span
                     data-testid="timeline-result"
-                    className={`font-mono ${cell.percent === null ? "text-ink-2" : "font-semibold text-ink-1"}`}
+                    // Mono for a number only: a status word ("Absent") reads in the sans (#563).
+                    className={
+                      cell.percent === null ? "text-ink-2" : "font-mono font-semibold text-ink-1"
+                    }
                   >
                     {cellText(cell)}
                   </span>
-                  <Link
-                    href={href}
-                    aria-label={`${linkLabel}: ${activity.title}`}
-                    className="tap-target inline-flex items-center text-sm font-medium text-accent-ink hover:underline"
-                  >
+                  <TextLink href={href} size="sm" aria-label={`${linkLabel}: ${activity.title}`}>
                     {linkLabel}
-                  </Link>
+                  </TextLink>
                 </div>
               </li>
             ))}

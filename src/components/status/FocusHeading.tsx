@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { PAGE_TITLE_CLASSES } from "@/components/ui/PageHeader";
 
 export interface FocusHeadingProps {
   children: ReactNode;
@@ -8,7 +9,8 @@ export interface FocusHeadingProps {
   className?: string;
 }
 
-const BASE = "font-read text-3xl break-words text-ink-1 outline-none";
+// The page title's own classes (#563, docs/04 §11), without a focus ring: it is not a control.
+const BASE = `${PAGE_TITLE_CLASSES} outline-none`;
 
 /**
  * The h1 of a page that exists to say something went wrong: a missing page, a failed render, a

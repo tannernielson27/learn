@@ -17,7 +17,7 @@ describe("searchSummary", () => {
     );
     expect(
       searchSummary(1, { query: "lactate", type: "matrix_multiple_choice", status: "published" }),
-    ).toBe("1 question matches: “lactate”, Matrix Multiple Choice, Published.");
+    ).toBe("1 question matches: “lactate”, Matrix multiple choice, Published.");
     expect(searchSummary(0, { query: "", type: null, status: "draft" })).toBe(
       "0 questions match: Draft.",
     );

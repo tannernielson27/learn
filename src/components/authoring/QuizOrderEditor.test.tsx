@@ -9,7 +9,7 @@ const ENTRIES: QuizEntry[] = [
     kind: "item",
     id: "i1",
     label: "Chest pain first",
-    format: "Multiple Choice",
+    format: "Multiple choice",
     status: "Published",
   },
   { kind: "case_study", id: "c1", label: "Sepsis", format: "Case study", status: "Draft" },
@@ -35,7 +35,7 @@ describe("QuizOrderEditor", () => {
   it("lists every entry in the saved order, with its number, format and status", () => {
     setup();
     expect(rows()).toEqual([
-      "1Chest pain firstMultiple ChoicePublished",
+      "1Chest pain firstMultiple choicePublished",
       "2SepsisCase studyDraft",
       "3Fluids lastBowtiePublished",
     ]);

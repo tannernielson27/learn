@@ -276,7 +276,7 @@ describe("summarizeReport (#565)", () => {
 describe("questionLabel (#565)", () => {
   it("names a question by its number, item type and clinical judgment step", () => {
     expect(questionLabel({ position: 3, type: "multiple_response", cjmmStep: 1 })).toBe(
-      "Q3 · Extended Multiple Response · Recognize Cues",
+      "Q3 · Extended multiple response · Recognize Cues",
     );
     expect(questionLabel({ position: 1, type: "bowtie", cjmmStep: 5 })).toBe(
       "Q1 · Bowtie · Take Action",
@@ -285,7 +285,7 @@ describe("questionLabel (#565)", () => {
 
   it("leaves out a part it does not know", () => {
     expect(questionLabel({ position: 4, type: "dropdown_cloze", cjmmStep: null })).toBe(
-      "Q4 · Drop-Down Cloze",
+      "Q4 · Drop-down cloze",
     );
     expect(questionLabel({ position: 2, type: null, cjmmStep: 6 })).toBe("Q2 · Evaluate Outcomes");
     expect(questionLabel({ position: 5, type: "not_a_type", cjmmStep: null })).toBe("Q5");
@@ -294,7 +294,7 @@ describe("questionLabel (#565)", () => {
   it("leaves the step out for a table that has a Step column", () => {
     expect(
       questionLabel({ position: 3, type: "multiple_response", cjmmStep: 1 }, { withStep: false }),
-    ).toBe("Q3 · Extended Multiple Response");
+    ).toBe("Q3 · Extended multiple response");
   });
 
   it("names a step by its number and name, or a dash for none", () => {
@@ -307,7 +307,7 @@ describe("questionLabel (#565)", () => {
     const [first] = report.items;
     expect(first).toBeDefined();
     if (first === undefined) return;
-    expect(questionLabel(first)).toBe("Q1 · Multiple Choice · Recognize Cues");
+    expect(questionLabel(first)).toBe("Q1 · Multiple choice · Recognize Cues");
     expect(questionLabel(first)).not.toContain(first.ref);
   });
 

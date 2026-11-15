@@ -20,30 +20,31 @@ export interface InviteLinkFieldProps {
 }
 
 /**
- * The invite link in a read-only box, and a button that copies it. In the class header (#563) its
- * label, box and button are three cells of the header's grid from 640px (`sm:contents`), so the
- * box takes the row's width and shows the whole link instead of a cut-off one.
+ * The invite link in a read-only box, and a button that copies it (#563). The box wraps the link
+ * anywhere in the mono, so the whole link shows at 375px and at 1280px rather than a cut-off one;
+ * it grows to the lines the link needs where the browser can size a field to its content, and
+ * holds two lines elsewhere. The copy button sits beside the label, a 44px target clear of the
+ * edge. It lays itself out, so it reads the same in any column.
  */
 export function InviteLinkField({ url }: InviteLinkFieldProps) {
   return (
-    <div className="flex flex-col gap-2 sm:contents">
-      <label htmlFor="invite-link" className="text-sm font-medium text-ink-1">
-        Invite link
-      </label>
-      {/* Beside each other on a phone, to keep the class page's header short. */}
-      <div className="flex flex-wrap items-start gap-3 sm:contents">
-        <input
-          id="invite-link"
-          type="text"
-          readOnly
-          value={url}
-          // Read only, so the quieter surface; the field's 3:1 edge still marks the box (WCAG 1.4.11).
-          className="tap-target min-w-0 flex-[1_1_9rem] rounded-sm border border-line-field bg-surface-2 px-3 font-mono text-sm text-ink-2 sm:w-full"
-        />
-        <div className="sm:justify-self-start">
-          <CopyLinkButton url={url} />
-        </div>
+    <div className="flex min-w-0 flex-col gap-2">
+      {/* The copy button beside the label, not under the box, so the class page's header stays
+          short on a phone and its tabs keep to the first screen. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <label htmlFor="invite-link" className="text-sm font-medium text-ink-1">
+          Invite link
+        </label>
+        <CopyLinkButton url={url} />
       </div>
+      <textarea
+        id="invite-link"
+        readOnly
+        rows={2}
+        value={url}
+        // Read only, so the quieter surface; the field's 3:1 edge still marks the box (WCAG 1.4.11).
+        className="block min-h-11 w-full resize-none scroll-mt-24 rounded-sm border border-line-field bg-surface-2 px-3 py-2.5 font-mono text-sm leading-snug break-all text-ink-2 [field-sizing:content]"
+      />
     </div>
   );
 }
@@ -59,29 +60,26 @@ export interface ClassCodeBlockProps {
 }
 
 /**
- * The class code, large enough to read off the board, and a button that copies it. Like the
- * invite link, three cells of the class header's grid from 640px; set in the mono at the body's
- * scale up, not the display size, so it no longer outweighs the class's name (#563).
+ * The class code, large enough to read off the board, and a button that copies it, beside it
+ * where there is room and under it where there is not. It lays itself out (#563); set in the mono
+ * at the body's scale up, not the display size, so it never outweighs the class's name.
  */
 export function ClassCodeBlock({ code, labelAs: Label = "h3" }: ClassCodeBlockProps) {
   return (
-    <div className="flex flex-col gap-2 sm:contents">
+    <div className="flex min-w-0 flex-col gap-2">
       <Label className="text-sm font-medium text-ink-1">Class code</Label>
-      {/* On a phone the code and its button share a row. */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:contents">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <p
           data-testid="class-code"
           className="font-mono text-xl break-all text-ink-1 sm:text-2xl sm:tracking-[0.08em]"
         >
           {formatClassCode(code)}
         </p>
-        <div className="sm:justify-self-start">
-          <CopyTextButton
-            text={normalizeClassCode(code)}
-            label="Copy class code"
-            failedMessage="Could not copy. Write the code down from the page instead."
-          />
-        </div>
+        <CopyTextButton
+          text={normalizeClassCode(code)}
+          label="Copy class code"
+          failedMessage="Could not copy. Write the code down from the page instead."
+        />
       </div>
     </div>
   );

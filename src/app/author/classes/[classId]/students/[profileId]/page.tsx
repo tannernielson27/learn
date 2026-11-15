@@ -37,5 +37,12 @@ export default async function ClassStudentPage({
   const progress = studentProgress(buildClassProgress(await progressRead), profileId);
   if (!progress) notFound();
 
-  return <StudentProgressView classId={detail.id} className={detail.name} progress={progress} />;
+  return (
+    <StudentProgressView
+      classId={detail.id}
+      className={detail.name}
+      timeZone={detail.timeZone}
+      progress={progress}
+    />
+  );
 }

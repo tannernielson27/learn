@@ -11,6 +11,8 @@ describe("FocusHeading", () => {
     expect(heading).toHaveFocus();
     // Focusable from script, never a stop in the tab order.
     expect(heading).toHaveAttribute("tabindex", "-1");
+    // The page title's own type (#563), with no focus ring.
+    expect(heading).toHaveClass("display-section", "outline-none");
   });
 });
 

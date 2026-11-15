@@ -130,16 +130,16 @@ test("an author searches a bank for lactate, then narrows to published Matrix Mu
   await page.goto(`${bankUrl}?q=lactate`);
   await expect(rows(page)).toHaveCount(5);
 
-  // Narrow to Matrix Multiple Choice, published.
+  // Narrow to Matrix multiple choice, published.
   await openFilters(page);
   await searchForm(page)
     .getByRole("combobox", { name: "Type" })
-    .selectOption({ label: "Matrix Multiple Choice" });
+    .selectOption({ label: "Matrix multiple choice" });
   await searchForm(page).getByRole("combobox", { name: "Status" }).selectOption("published");
   await searchForm(page).getByRole("button", { name: "Apply filters" }).click();
   await expect(page).toHaveURL(/\?q=lactate&type=matrix_multiple_choice&status=published$/);
   await expect(page.getByRole("status").filter({ hasText: "matches" })).toHaveText(
-    "1 question matches: “lactate”, Matrix Multiple Choice, Published.",
+    "1 question matches: “lactate”, Matrix multiple choice, Published.",
   );
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page)).toContainText([RISING]);

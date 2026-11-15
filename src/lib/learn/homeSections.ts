@@ -4,8 +4,10 @@
  * A part with something in it keeps its heading. A part that is empty collapses away, so a student
  * never reads a stack of "No … yet" rows. A part that did not load (`null`) stays, so its "did not
  * load" message is seen. When a student is in a class and every part loaded empty, the home shows
- * one first-use empty state in their place, which says what will appear and how to join a live
- * session. A student with no class sees the class code first instead (#362), not this.
+ * one first-use empty state in their place, which says what will appear there: assignments and
+ * practice quizzes from their teacher. Joining a live session is the join code field's own line
+ * at the top of the page (`STUDENT_JOIN_NOTE`), not the empty state's. A student with no class
+ * sees the class code first instead (#362), not this.
  */
 
 /** One part of the home: the rows it holds, or null when its read failed. */

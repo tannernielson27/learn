@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   STATUS_LABELS,
   type ReviewReason,
@@ -115,11 +116,16 @@ export function AiImportEntryEditor({
           <span>Back to the review</span>
         </GuardedLink>
       </p>
-      <p className="eyebrow mb-1">{ITEM_TYPE_LABELS[editor.type]}</p>
-      <div className="mb-4 flex flex-wrap items-baseline gap-3">
-        <h1 className="font-read text-3xl break-words text-ink-1">Edit {heading}</h1>
-        <Badge data-testid="entry-status">{STATUS_LABELS[status]}</Badge>
-      </div>
+      <PageHeader
+        className="mb-4"
+        label={
+          <>
+            <span>{ITEM_TYPE_LABELS[editor.type]}</span>
+            <Badge data-testid="entry-status">{STATUS_LABELS[status]}</Badge>
+          </>
+        }
+        title={`Edit ${heading}`}
+      />
       <div className="mb-6 flex max-w-prose flex-col gap-3">
         {reasons.length > 0 ? (
           <ul

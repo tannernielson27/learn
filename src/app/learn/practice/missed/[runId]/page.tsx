@@ -53,7 +53,9 @@ export default async function MissedPracticePage({
           <p className="mb-4">
             <BackLink href={STUDENT_HOME}>Back to your classes</BackLink>
           </p>
-          <Notice role="alert">This practice did not load. Reload the page.</Notice>
+          <Notice role="alert" live={false}>
+            This practice did not load. Reload the page.
+          </Notice>
         </>
       ) : (
         <>
