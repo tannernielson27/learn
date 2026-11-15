@@ -2,9 +2,8 @@
 
 import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
-import { ReadingWidth } from "@/components/authoring/PageWidth";
+import { CaseStudyErrorView } from "@/components/status/RouteErrorViews";
 import { errorDigest } from "@/components/status/errorDigest";
-import { ErrorState } from "@/components/ui/ErrorState";
 
 /**
  * The case study builder — steps, the EHR editor and the preview with its tabs and step
@@ -13,15 +12,5 @@ import { ErrorState } from "@/components/ui/ErrorState";
  */
 export default function CaseStudyError({ error, retry }: ErrorInfo) {
   useReportError(error);
-  return (
-    <ReadingWidth>
-      <ErrorState
-        kind="load"
-        headline="The case study builder stopped working."
-        detail="Saved steps are safe. Unsaved changes may be lost."
-        onRetry={retry}
-        digest={errorDigest(error)}
-      />
-    </ReadingWidth>
-  );
+  return <CaseStudyErrorView retry={retry} digest={errorDigest(error)} />;
 }

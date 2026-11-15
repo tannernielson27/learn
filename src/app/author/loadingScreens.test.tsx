@@ -16,6 +16,12 @@ describe.each([
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
+  // #563: a loading page never loops (docs/04 §5, §11 "Loading").
+  it("holds still: no block pulses", () => {
+    const { container } = render(<Loading />);
+    expect(container.querySelector(".animate-pulse")).toBeNull();
+  });
+
   // e2e/teacherNav.spec.ts runs axe while this screen can still be up: `page-has-heading-one`.
   it("keeps the page's one h1, named for the page and outside any aria-hidden block", () => {
     render(<Loading />);

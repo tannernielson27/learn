@@ -2,9 +2,8 @@
 
 import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
-import { SessionsLink } from "@/components/recovery/SessionsLink";
+import { ReportErrorView } from "@/components/status/RouteErrorViews";
 import { errorDigest } from "@/components/status/errorDigest";
-import { ErrorState } from "@/components/ui/ErrorState";
 
 /**
  * A session's report, when reading or drawing it fails. Without its own boundary the console's
@@ -13,17 +12,5 @@ import { ErrorState } from "@/components/ui/ErrorState";
  */
 export default function ReportError({ error, retry }: ErrorInfo) {
   useReportError(error);
-  return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
-      <ErrorState
-        kind="load"
-        headline="The report couldn't be loaded."
-        detail="The answers are saved."
-        onRetry={retry}
-        digest={errorDigest(error)}
-      >
-        <SessionsLink />
-      </ErrorState>
-    </main>
-  );
+  return <ReportErrorView retry={retry} digest={errorDigest(error)} />;
 }

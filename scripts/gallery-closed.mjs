@@ -68,6 +68,8 @@ const GALLERY_PATHS = [
   "/gallery/student?state=home",
   "/gallery/student?state=workspaces",
   "/gallery/student?state=assignment",
+  // #563: every route's loading, error and not-found screen. Static copy, no fixture and no key.
+  "/gallery/states",
   "/gallery",
 ];
 

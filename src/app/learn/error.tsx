@@ -2,10 +2,8 @@
 
 import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
+import { LearnErrorView } from "@/components/status/RouteErrorViews";
 import { errorDigest } from "@/components/status/errorDigest";
-import { ErrorState } from "@/components/ui/ErrorState";
-import { TextLink } from "@/components/ui/TextLink";
-import { STUDENT_HOME } from "@/lib/classes/classes";
 
 /**
  * Any student page that fails to render: the home, an assignment, its results, practice. It sits
@@ -18,21 +16,5 @@ import { STUDENT_HOME } from "@/lib/classes/classes";
  */
 export default function LearnError({ error, retry }: ErrorInfo) {
   useReportError(error);
-  const digest = errorDigest(error);
-  return (
-    <ErrorState
-      kind="load"
-      headline="This page could not be shown."
-      detail={
-        digest
-          ? "Still broken? Share this reference:"
-          : // Without a reference, the line that says what to do keeps the alert from standing empty.
-            "Try again to load it."
-      }
-      onRetry={retry}
-      digest={digest}
-    >
-      <TextLink href={STUDENT_HOME}>Back to your classes</TextLink>
-    </ErrorState>
-  );
+  return <LearnErrorView retry={retry} digest={errorDigest(error)} />;
 }

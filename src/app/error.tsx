@@ -2,10 +2,8 @@
 
 import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
+import { RootErrorView } from "@/components/status/RouteErrorViews";
 import { errorDigest } from "@/components/status/errorDigest";
-import { StatusFrame } from "@/components/status/StatusFrame";
-import { StatusLinks } from "@/components/status/StatusLinks";
-import { ErrorState } from "@/components/ui/ErrorState";
 
 /**
  * Any page with no closer boundary of its own (#267): the student home, the invite and join
@@ -15,23 +13,5 @@ import { ErrorState } from "@/components/ui/ErrorState";
  */
 export default function RootError({ error, retry }: ErrorInfo) {
   useReportError(error);
-  const digest = errorDigest(error);
-  return (
-    <StatusFrame>
-      <ErrorState
-        kind="load"
-        headline="LeaRN could not show this page."
-        detail={
-          digest
-            ? "Still broken? Share this reference:"
-            : // Without a reference, the line that says what to do keeps the alert from standing empty.
-              "Try again to load it."
-        }
-        onRetry={retry}
-        digest={digest}
-      >
-        <StatusLinks />
-      </ErrorState>
-    </StatusFrame>
-  );
+  return <RootErrorView retry={retry} digest={errorDigest(error)} />;
 }

@@ -32,8 +32,12 @@ export default function ClassesLoading() {
               key={row}
               className="flex min-h-11 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-2 py-3"
             >
-              <SkeletonLine lineClassName="h-[1.6rem] w-1/2 sm:w-2/5" className="h-4 w-full" />
-              <SkeletonLine lineClassName="h-5 w-20" className="h-3.5 w-full" />
+              <SkeletonLine
+                still
+                lineClassName="h-[1.6rem] w-1/2 sm:w-2/5"
+                className="h-4 w-full"
+              />
+              <SkeletonLine still lineClassName="h-5 w-20" className="h-3.5 w-full" />
             </div>
           ))}
         </div>
