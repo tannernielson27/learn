@@ -293,7 +293,7 @@ export function ErrorStates() {
           <ErrorState
             kind="load"
             level={3}
-            headline="The report couldn't be loaded."
+            headline="The report could not be shown."
             detail="The answers are saved."
             onRetry={() => {}}
             digest="2861533018"

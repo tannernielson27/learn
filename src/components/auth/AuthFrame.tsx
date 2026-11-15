@@ -9,17 +9,27 @@ import { Wordmark } from "@/components/site/Wordmark";
  * #563: the public site's editorial look (docs/design/landing-563/A.md, "How it carries"). The
  * site's wordmark over a single column on paper, a near-black rule opening the column the way it
  * opens a section on the landing page, and the heading in `.display-section`. No drawing.
+ *
+ * `landmark={false}` draws the same frame as a `div`, for the gallery (`/gallery/states`), whose
+ * own layout already holds the page's one main.
  */
-export function AuthFrame({ children }: { children: ReactNode }) {
+export function AuthFrame({
+  children,
+  landmark = true,
+}: {
+  children: ReactNode;
+  landmark?: boolean;
+}) {
+  const Main = landmark ? "main" : "div";
   return (
-    <main className="flex flex-1 justify-center px-4 pt-10 pb-12 sm:items-center sm:px-6 sm:py-14">
+    <Main className="flex flex-1 justify-center px-4 pt-10 pb-12 sm:items-center sm:px-6 sm:py-14">
       <div className="w-full max-w-md">
         <p className="mb-8 sm:mb-10">
           <Wordmark />
         </p>
         <div className="border-t border-rule-strong pt-6">{children}</div>
       </div>
-    </main>
+    </Main>
   );
 }
 

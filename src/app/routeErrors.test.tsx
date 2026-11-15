@@ -137,6 +137,24 @@ describe("route error boundaries", () => {
     expect((reported as Error & { digest?: string }).digest).toBe("4031337");
   });
 
+  // #563: every boundary offers one way back besides Try again, to the right home.
+  it.each<[string, ComponentType<ErrorInfo>, string, string]>([
+    ["the student room", PlayError, "Back to the join page", "/join"],
+    ["the host console", HostError, "Back to live sessions", "/author/sessions"],
+    ["a live session's report", ReportError, "Back to live sessions", "/author/sessions"],
+    ["authoring", AuthorError, "Back to the library", "/author"],
+    ["the case study builder", CaseStudyError, "Back to the library", "/author"],
+    ["an item or case study being played", PlayItemError, "Back to the library", "/author"],
+    ["a student page", LearnError, "Back to your classes", "/learn"],
+    ["any other page (the root boundary)", RootError, "Go to the home page", "/"],
+  ])("%s offers one way back: %s", (_, Boundary, name, href) => {
+    renderInSegment(Boundary);
+
+    expect(screen.getByRole("link", { name })).toHaveAttribute("href", href);
+    // The heading is the page title's one style, as on every other page (docs/04 §11).
+    expect(screen.getByRole("heading", { level: 1 })).toHaveClass("display-section");
+  });
+
   it("the student room says the student keeps their place", () => {
     renderInSegment(PlayError);
 
@@ -159,7 +177,7 @@ describe("route error boundaries", () => {
     renderInSegment(ReportError);
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      "The report couldn't be loaded.",
+      "The report could not be shown.",
     );
     expect(screen.getByRole("alert")).toHaveTextContent("The answers are saved.");
     expect(screen.getByRole("link", { name: "Back to live sessions" })).toHaveAttribute(

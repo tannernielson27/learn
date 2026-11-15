@@ -2,9 +2,8 @@
 
 import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
-import { SessionsLink } from "@/components/recovery/SessionsLink";
+import { HostErrorView } from "@/components/status/RouteErrorViews";
 import { errorDigest } from "@/components/status/errorDigest";
-import { ErrorState } from "@/components/ui/ErrorState";
 
 /**
  * The host console, when something in it fails to render (#164). The session lives in the
@@ -15,17 +14,5 @@ import { ErrorState } from "@/components/ui/ErrorState";
  */
 export default function HostError({ error, retry }: ErrorInfo) {
   useReportError(error);
-  return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
-      <ErrorState
-        kind="load"
-        headline="This page stopped working."
-        detail="Students are still in."
-        onRetry={retry}
-        digest={errorDigest(error)}
-      >
-        <SessionsLink />
-      </ErrorState>
-    </main>
-  );
+  return <HostErrorView retry={retry} digest={errorDigest(error)} />;
 }
