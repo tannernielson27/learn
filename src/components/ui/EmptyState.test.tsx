@@ -57,6 +57,22 @@ describe("EmptyState", () => {
     expect(screen.getByRole("link", { name: "Create a quiz" })).toHaveClass("tap-target");
     expect(screen.queryByRole("status")).toBeNull();
   });
+
+  it("offers the other ways to start beside the next step, quieter than it", () => {
+    render(
+      <EmptyState
+        level={3}
+        heading="No questions yet"
+        action={{ href: "/new", label: "Write the first question" }}
+        more={[{ href: "/ai", label: "Import questions with AI" }]}
+      />,
+    );
+    const first = screen.getByRole("link", { name: "Write the first question" });
+    const other = screen.getByRole("link", { name: "Import questions with AI" });
+    expect(other).toHaveAttribute("href", "/ai");
+    expect(first).toHaveClass("border-field-border");
+    expect(other).toHaveClass("bg-transparent");
+  });
 });
 
 describe("EmptyState no results (#563)", () => {

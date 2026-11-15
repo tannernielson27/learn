@@ -10,4 +10,6 @@ export interface EmptyStateContent {
   /** One more sentence, only where the heading and the action do not say enough. */
   readonly body?: string;
   readonly action?: EmptyStateAction;
+  /** Other ways to take the first step, beside the action, where there is more than one (#563). */
+  readonly more?: readonly EmptyStateAction[];
 }

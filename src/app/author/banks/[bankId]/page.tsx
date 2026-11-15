@@ -5,6 +5,7 @@ import {
   restoreCaseStudyAction,
   restoreItemAction,
 } from "@/app/author/archiveActions";
+import { ActiveFilters, activeFilterCount } from "@/components/authoring/ActiveFilters";
 import { ArchiveViewSwitch } from "@/components/authoring/ArchiveViewSwitch";
 import { BankSearchForm } from "@/components/authoring/BankSearchForm";
 import { CaseStudyList } from "@/components/authoring/CaseStudyList";
@@ -14,7 +15,7 @@ import { FolderBreadcrumbs } from "@/components/authoring/FolderBreadcrumbs";
 import { ItemList } from "@/components/authoring/ItemList";
 import { QuizFolderPanel } from "@/components/authoring/QuizFolderPanel";
 import { QuizPageHeader } from "@/components/authoring/QuizPageHeader";
-import { QuizSidePanel } from "@/components/authoring/QuizSidePanel";
+import { NEW_CASE_STUDY_ID, QuizSidePanel } from "@/components/authoring/QuizSidePanel";
 import { TextLink } from "@/components/ui/TextLink";
 import { PracticeSection } from "@/components/practice/PracticeSection";
 import { QuizMoveForm } from "@/components/authoring/QuizMoveForm";
@@ -25,7 +26,7 @@ import { shareBankWithClass, stopSharing } from "@/app/author/practice/actions";
 import { aiImportEnabled } from "@/lib/aiImport/config";
 import { workspaceEnabled } from "@/lib/aiImport/upload/access";
 import { assignmentPath } from "@/lib/assignments/assignments";
-import { bankCaseStudiesEmpty, bankItemsEmpty } from "@/lib/authoring/bankEmpty";
+import { bankCaseStudiesEmpty, bankItemsEmpty, emptyQuizSteps } from "@/lib/authoring/bankEmpty";
 import {
   isSearching,
   parseItemSearch,
@@ -170,6 +171,12 @@ export default async function BankPage({
   // #266: what each list says when it is empty, most specific reason first.
   const emptyView = { bankId: bank.id, view, filter, page };
   const liveRefusal = liveStartMessage(query.live);
+  // #563: an empty quiz's lists name every way to fill it: write, import with AI, a case study.
+  const emptySteps = emptyQuizSteps({
+    bankId: bank.id,
+    aiImport,
+    caseStudyHref: `#${NEW_CASE_STUDY_ID}`,
+  });
 
   const summary =
     view.kind === "all" && !searching && !tagFiltered && !archived
@@ -220,33 +227,30 @@ export default async function BankPage({
                 <ArchiveViewSwitch bankId={bank.id} view={view} filter={filter} />
               </div>
             </div>
-            <BankSearchForm bankId={bank.id} view={view} filter={filter} />
-            <TagFilterBar bankId={bank.id} view={view} filter={filter} facets={facets} />
+            <BankSearchForm
+              bankId={bank.id}
+              view={view}
+              filter={filter}
+              activeCount={activeFilterCount(filter)}
+              tags={<TagFilterBar bankId={bank.id} view={view} filter={filter} facets={facets} />}
+            />
+            <ActiveFilters
+              bankId={bank.id}
+              view={view}
+              filter={filter}
+              matching={facets.matching}
+            />
             {searching ? (
               <p role="status" className="text-ink-1">
                 {searchSummary(itemPage.total, search)}
               </p>
-            ) : null}
-            {selectionFormId ? (
-              <QuizMoveForm
-                key={`move-${folder?.id ?? view.kind}`}
-                id={MOVE_FORM_ID}
-                folders={inQuizFolders ? folders : []}
-                moveToFolder={moveToFolderInBank.bind(null, bank.id)}
-                quizzes={canMoveToQuiz ? otherQuizzes : []}
-                moveToQuiz={moveToQuizAction.bind(null, bank.id)}
-                staysBehind={keptLines}
-                archive={canArchive ? archiveSelectedAction.bind(null, bank.id) : undefined}
-                archivedHref={bankViewHref(bank.id, view, { ...filter, status: "archived" })}
-                hasRows={hasContent}
-              />
             ) : null}
             <ItemList
               items={items}
               moveFormId={selectionFormId}
               archiveFormId={archiveFormId}
               restoreAction={archived ? (id) => restoreItemAction.bind(null, id) : undefined}
-              empty={bankItemsEmpty(emptyView)}
+              empty={bankItemsEmpty(emptyView, emptySteps)}
             />
             <Pager
               page={page}
@@ -266,10 +270,26 @@ export default async function BankPage({
                 moveFormId={selectionFormId}
                 archiveFormId={archiveFormId}
                 restoreAction={archived ? (id) => restoreCaseStudyAction.bind(null, id) : undefined}
-                empty={bankCaseStudiesEmpty(emptyView)}
+                empty={bankCaseStudiesEmpty(emptyView, emptySteps)}
               />
             )}
           </section>
+          {selectionFormId ? (
+            // Last in the column, so the bar it opens into sticks to the window's foot under the
+            // lists and appears without moving a row (#563).
+            <QuizMoveForm
+              key={`move-${folder?.id ?? view.kind}`}
+              id={MOVE_FORM_ID}
+              folders={inQuizFolders ? folders : []}
+              moveToFolder={moveToFolderInBank.bind(null, bank.id)}
+              quizzes={canMoveToQuiz ? otherQuizzes : []}
+              moveToQuiz={moveToQuizAction.bind(null, bank.id)}
+              staysBehind={keptLines}
+              archive={canArchive ? archiveSelectedAction.bind(null, bank.id) : undefined}
+              archivedHref={bankViewHref(bank.id, view, { ...filter, status: "archived" })}
+              hasRows={hasContent}
+            />
+          ) : null}
           <div id={PRACTICE_ID} className="scroll-mt-4">
             <PracticeSection
               headingClassName="font-read text-title text-ink-1"

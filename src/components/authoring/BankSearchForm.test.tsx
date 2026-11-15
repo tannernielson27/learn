@@ -1,7 +1,10 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { NO_BANK_FILTER } from "@/lib/authoring/bankSearch";
-import { BankSearchForm } from "./BankSearchForm";
+import { BankSearchForm, FILTERS_ID } from "./BankSearchForm";
+
+/** The Filters panel: a closed popover, which the DOM still holds but marks hidden. */
+const filters = () => within(document.getElementById(FILTERS_ID)!);
 
 const BANK = "6fa459ea-ee8a-4ca4-894e-db77e160355e";
 const FOLDER = "0b7a2c1d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
@@ -17,19 +20,29 @@ describe("BankSearchForm", () => {
       "name",
       "q",
     );
-    const type = within(form).getByRole("combobox", { name: "Type" });
-    expect(type).toHaveAttribute("name", "type");
-    expect(within(type).getByRole("option", { name: "Any type" })).toHaveValue("");
-    expect(within(type).getByRole("option", { name: "Matrix Multiple Choice" })).toHaveValue(
-      "matrix_multiple_choice",
+    // #563: Type and Status are behind Filters, inside the same form, so Search sends them.
+    expect(within(form).getByRole("button", { name: "Filters" })).toHaveAttribute(
+      "popovertarget",
+      FILTERS_ID,
     );
-    const status = within(form).getByRole("combobox", { name: "Status" });
+    expect(form).toContainElement(document.getElementById(FILTERS_ID));
+    const type = filters().getByRole("combobox", { name: "Type", hidden: true });
+    expect(type).toHaveAttribute("name", "type");
+    expect(within(type).getByRole("option", { name: "Any type", hidden: true })).toHaveValue("");
+    expect(
+      within(type).getByRole("option", { name: "Matrix Multiple Choice", hidden: true }),
+    ).toHaveValue("matrix_multiple_choice");
+    const status = filters().getByRole("combobox", { name: "Status", hidden: true });
     expect(
       within(status)
-        .getAllByRole("option")
+        .getAllByRole("option", { hidden: true })
         .map((option) => option.textContent),
     ).toEqual(["Any status", "Draft", "Published", "Archived"]);
     expect(within(form).getByRole("button", { name: "Search" })).toHaveAttribute("type", "submit");
+    expect(filters().getByRole("button", { name: "Apply filters", hidden: true })).toHaveAttribute(
+      "type",
+      "submit",
+    );
     expect(within(form).queryByRole("link", { name: "Clear search" })).not.toBeInTheDocument();
   });
 
@@ -58,11 +71,32 @@ describe("BankSearchForm", () => {
       ["step", "2"],
     ]);
     expect(screen.getByRole("searchbox", { name: "Search questions" })).toHaveValue("lactate");
-    expect(screen.getByRole("combobox", { name: "Type" })).toHaveValue("bowtie");
-    expect(screen.getByRole("combobox", { name: "Status" })).toHaveValue("draft");
+    expect(filters().getByRole("combobox", { name: "Type", hidden: true })).toHaveValue("bowtie");
+    expect(filters().getByRole("combobox", { name: "Status", hidden: true })).toHaveValue("draft");
     expect(screen.getByRole("link", { name: "Clear search" })).toHaveAttribute(
       "href",
       `${base}?folder=${FOLDER}&tag=Physiological+Adaptation&tag=sepsis&step=2`,
+    );
+  });
+
+  it("says how many filters are on, and holds the tag panel inside Filters", () => {
+    render(
+      <BankSearchForm
+        bankId={BANK}
+        view={{ kind: "all" }}
+        filter={NO_BANK_FILTER}
+        activeCount={2}
+        tags={<p>Tag panel</p>}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Filters, 2 on" })).toBeInTheDocument();
+    expect(filters().getByText("Tag panel")).toBeInTheDocument();
+  });
+
+  it("names the search field's hint and keeps one compact row", () => {
+    render(<BankSearchForm bankId={BANK} view={{ kind: "all" }} filter={NO_BANK_FILTER} />);
+    expect(screen.getByRole("searchbox", { name: "Search questions" })).toHaveAccessibleDescription(
+      "Quotes find a phrase; a minus leaves a word out.",
     );
   });
 

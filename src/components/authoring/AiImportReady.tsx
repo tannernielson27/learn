@@ -1,28 +1,22 @@
 import Link from "next/link";
 import { buttonClasses } from "@/components/ui/Button";
-import { TextLink } from "@/components/ui/TextLink";
 import { AiImportFileRows, type FileRow } from "./AiImportFileRows";
 
 export interface AiImportReadyProps {
   /** For the heading's id. */
   id: string;
   bankId: string;
-  quizName: string;
   batchId: string | null;
   rows: readonly FileRow[];
   /** Questions found across the files. */
   questions: number;
 }
 
-/** The upload page once every file has been read (#345): the files, the count and the way on. */
-export function AiImportReady({
-  id,
-  bankId,
-  quizName,
-  batchId,
-  rows,
-  questions,
-}: AiImportReadyProps) {
+/**
+ * The upload page once every file has been read (#345): the files, the count and the way on. The
+ * way back to the quiz is the page's breadcrumb, which names it once (#563).
+ */
+export function AiImportReady({ id, bankId, batchId, rows, questions }: AiImportReadyProps) {
   return (
     <section aria-labelledby={`${id}-review`} className="flex flex-col gap-4 sm:max-w-2xl">
       <AiImportFileRows rows={rows} busy={false} />
@@ -41,7 +35,6 @@ export function AiImportReady({
             Review the questions
           </Link>
         ) : null}
-        <TextLink href={`/author/banks/${bankId}`}>Back to {quizName}</TextLink>
       </div>
     </section>
   );

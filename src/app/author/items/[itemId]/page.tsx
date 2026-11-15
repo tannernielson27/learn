@@ -17,6 +17,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Notice } from "@/components/ui/Notice";
 import { textLinkClasses } from "@/components/ui/TextLink";
 import { BackLinkMark, backLinkClasses } from "@/components/ui/BackLink";
+import { PAGE_TITLE_CLASSES } from "@/components/ui/PageHeader";
+import { sentenceCase } from "@/lib/authoring/format";
 
 export const metadata: Metadata = { title: "Edit question" };
 
@@ -61,6 +63,13 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
   // Only a valid saved item exports (docs/transfer-format.md).
   const exportable = fromItemRow(row).ok;
   const archived = row.status === "archived";
+  const duplicate = (appearance: "button" | "menu" = "button") => (
+    <DuplicateButton
+      action={duplicateItemAction.bind(null, row.id)}
+      label="Duplicate question"
+      appearance={appearance}
+    />
+  );
 
   return (
     <>
@@ -79,24 +88,24 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
           </a>
         ) : null}
       </div>
-      <p className="eyebrow mb-1">{label}</p>
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <h1 className="font-read text-display text-ink-1">Edit question</h1>
-        <Badge tone={row.status === "draft" ? "accent" : "neutral"}>
-          {STATUS_LABELS[row.status]}
-        </Badge>
-        <div className="flex flex-wrap items-center gap-2">
-          <DuplicateButton
-            action={duplicateItemAction.bind(null, row.id)}
-            label="Duplicate question"
-          />
-          {archived ? (
+      <header className="mb-6 flex flex-col gap-2">
+        <h1 className={PAGE_TITLE_CLASSES}>Edit question</h1>
+        {/* #563: the type in the metadata line, in sentence case, not a tracked capital eyebrow. */}
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-ink-2">
+          <span>{sentenceCase(label)}</span>
+          <Badge tone={row.status === "draft" ? "accent" : "neutral"}>
+            {STATUS_LABELS[row.status]}
+          </Badge>
+        </p>
+        {/* Archived offers no editor, so its two actions stand here; otherwise they are the
+            editor's More menu, beside Publish. */}
+        {archived ? (
+          <div className="mt-2 flex flex-wrap items-start gap-2">
             <ArchiveButton action={restoreItemAction.bind(null, row.id)} label="Restore question" />
-          ) : (
-            <ArchiveButton action={archiveItemAction.bind(null, row.id)} label="Archive question" />
-          )}
-        </div>
-      </div>
+            {duplicate()}
+          </div>
+        ) : null}
+      </header>
       {archived ? (
         <Notice className="mb-6 max-w-reading">Archived. Restore it to edit.</Notice>
       ) : null}
@@ -108,6 +117,16 @@ export default async function EditItemPage({ params }: PageProps<"/author/items/
           truncated={versions.length > HISTORY_LIMIT}
           loadFailed={Boolean(versionsError)}
           published={row.status === "published"}
+          more={
+            <>
+              {duplicate("menu")}
+              <ArchiveButton
+                action={archiveItemAction.bind(null, row.id)}
+                label="Archive question"
+                appearance="menu"
+              />
+            </>
+          }
         />
       ) : (
         <Notice>This format cannot be edited here yet.</Notice>
