@@ -2,6 +2,7 @@ import Link from "next/link";
 import { formatSessionDate } from "@/components/live/report/formatDate";
 import { StepBars } from "@/components/review/StepBars";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/ui/PageHeader";
 import type { StepShare } from "@/lib/assignments/resultsSummary";
 import { attendanceText, cellText, type StudentStep } from "@/lib/classes/progress";
 import { progressTabPath } from "@/lib/classes/progress";
@@ -54,29 +55,25 @@ export function StudentProgressView({ classId, className, progress }: StudentPro
   const shares = studentStepShares(steps);
   return (
     <div className="flex flex-col gap-8">
-      <p className="text-sm text-ink-2">
-        <Link
-          href={progressTabPath(classId)}
-          className="tap-target inline-flex items-center hover:text-ink-1"
-        >
-          {`${className}: Progress`}
-        </Link>
-      </p>
-      <header className="flex flex-col gap-2">
-        <p className="eyebrow">Student</p>
-        <h1 className="font-read text-display leading-tight break-words text-ink-1">
-          {student.name}
-        </h1>
-        {student.name === student.email ? null : (
-          <p className="break-words text-ink-2">{student.email}</p>
-        )}
-        {student.membership === "removed" ? (
-          <p className="max-w-prose text-ink-2">
-            Taken off this class. What they did is kept here, and counts in none of the class&apos;s
-            figures.
-          </p>
-        ) : null}
-      </header>
+      <PageHeader
+        back={{ href: progressTabPath(classId), label: `${className}: Progress` }}
+        title={student.name}
+        lead={
+          student.name === student.email && student.membership !== "removed" ? undefined : (
+            <>
+              {student.name === student.email ? null : (
+                <p className="break-words">{student.email}</p>
+              )}
+              {student.membership === "removed" ? (
+                <p className="mt-2 text-base">
+                  Taken off this class. What they did is kept here, and counts in none of the
+                  class&apos;s figures.
+                </p>
+              ) : null}
+            </>
+          )
+        }
+      />
 
       <dl className="grid max-w-reading divide-y divide-line border-y border-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         <Stat label="Overall" value={formatPercent(student.overallPercent)} />
@@ -126,9 +123,7 @@ export function StudentProgressView({ classId, className, progress }: StudentPro
                 className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-2 py-3"
               >
                 <div className="min-w-0">
-                  <p className="text-xs tracking-wide text-ink-2 uppercase">
-                    {KIND_LABELS[activity.kind]}
-                  </p>
+                  <p className="text-sm text-ink-2">{KIND_LABELS[activity.kind]}</p>
                   <p className="font-medium break-words text-ink-1">{activity.title}</p>
                   <p className="text-sm text-ink-2">
                     {activity.kind === "assignment" ? "Closes " : ""}

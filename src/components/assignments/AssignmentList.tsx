@@ -11,6 +11,7 @@ import type { AssignmentSummary } from "@/lib/supabase/assignments";
 import { AssignmentForm, type AssignmentFormProps } from "./AssignmentForm";
 import { LazyDetails } from "./LazyDetails";
 import { LocalTime } from "./LocalTime";
+import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 export interface AssignmentListProps {
@@ -29,10 +30,12 @@ export interface AssignmentListProps {
   focusAfterDelete?: string;
 }
 
+// Every state is a neutral badge (#563): clinical blue is kept for what can be pressed (docs/04
+// §10), and the word says the state. A closed one steps back into the secondary ink.
 const STATE_CLASS: Readonly<Record<AssignmentState, string>> = {
-  scheduled: "border-line text-ink-2",
-  open: "border-accent text-accent-ink",
-  closed: "border-line bg-surface-2 text-ink-2",
+  scheduled: "",
+  open: "",
+  closed: "text-ink-2",
 };
 
 /** A class's assignments for its author: each one's state, window and attempts, and its edits. */
@@ -94,9 +97,7 @@ function AssignmentRow({
     <li className="flex flex-col gap-3 px-2 py-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <span className="min-w-0 font-medium break-words text-ink-1">{entry.title}</span>
-        <span className={`rounded-sm border px-2 text-sm ${STATE_CLASS[state]}`}>
-          {STATE_LABEL[state]}
-        </span>
+        <Badge className={STATE_CLASS[state]}>{STATE_LABEL[state]}</Badge>
       </div>
       <div className="flex flex-col gap-1 text-sm text-ink-2 sm:flex-row sm:flex-wrap sm:gap-x-6">
         <dl className="flex flex-col gap-1 sm:flex-row sm:gap-x-6">

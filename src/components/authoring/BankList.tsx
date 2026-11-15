@@ -3,7 +3,7 @@ import { PracticeBadge } from "@/components/practice/PracticeBadge";
 import type { BankSummary } from "@/lib/authoring/banks";
 import { formatEdited, itemCountLabel } from "@/lib/authoring/format";
 import { EmptyState, type EmptyStateAction } from "@/components/ui/EmptyState";
-import { QuizSearchRow } from "./QuizSearch";
+import { QuizSearchNoResults, QuizSearchRow } from "./QuizSearch";
 import { SelectForMove } from "./SelectForMove";
 import { StartLiveButton } from "./StartLiveButton";
 
@@ -49,10 +49,11 @@ export function BankList({
     return <EmptyState level={2} heading={emptyHeading} action={emptyAction} />;
   }
 
-  return (
+  const list = (
+    // `empty:hidden`: a search that hides every row leaves no empty frame behind.
     <ul
       aria-label="Quizzes"
-      className="flex flex-col gap-3 sm:gap-0 sm:divide-y sm:divide-line sm:rounded-md sm:border sm:border-line sm:bg-surface-1"
+      className="flex flex-col gap-3 empty:hidden sm:gap-0 sm:divide-y sm:divide-line sm:rounded-md sm:border sm:border-line sm:bg-surface-1"
     >
       {banks.map((bank) => {
         const folder = folderNames?.get(bank.id);
@@ -105,5 +106,13 @@ export function BankList({
         );
       })}
     </ul>
+  );
+  return searchable ? (
+    <>
+      {list}
+      <QuizSearchNoResults />
+    </>
+  ) : (
+    list
   );
 }
