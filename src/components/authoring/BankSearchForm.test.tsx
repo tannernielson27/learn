@@ -106,4 +106,21 @@ describe("BankSearchForm", () => {
     );
     expect(container.querySelector('input[name="folder"]')).toHaveAttribute("value", "unfiled");
   });
+
+  // #578 review: Has warnings is a link, not a field, so Search must carry it or drop the filter.
+  it("keeps Has warnings on through a search", () => {
+    const { container, unmount } = render(
+      <BankSearchForm
+        bankId={BANK}
+        view={{ kind: "all" }}
+        filter={{ ...NO_BANK_FILTER, warnings: true }}
+      />,
+    );
+    expect(container.querySelector('input[name="warnings"]')).toHaveAttribute("value", "1");
+    unmount();
+    const off = render(
+      <BankSearchForm bankId={BANK} view={{ kind: "all" }} filter={NO_BANK_FILTER} />,
+    );
+    expect(off.container.querySelector('input[name="warnings"]')).toBeNull();
+  });
 });

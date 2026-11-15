@@ -62,6 +62,8 @@ export function BankSearchForm({
         <input key={tag} type="hidden" name="tag" value={tag} />
       ))}
       {filter.step !== null ? <input type="hidden" name="step" value={filter.step} /> : null}
+      {/* Has warnings is a link in the tag panel, not a field: carry it, or Search drops it (#578). */}
+      {filter.warnings ? <input type="hidden" name="warnings" value="1" /> : null}
 
       <div className="flex flex-wrap items-center gap-2">
         {/* The button beside it names the field's job as well (WCAG G167); the label is read. */}

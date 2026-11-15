@@ -45,11 +45,16 @@ const filterBar = (page: Page) => page.getByRole("region", { name: "Filter by ta
 // What is filtered, as chips that take a filter off, outside the Filters panel (#563).
 const activeFilters = (page: Page) => page.getByRole("region", { name: "Active filters" });
 /** #563: Type, Status and the tag panel are behind the search row's Filters button. */
-const openFilters = (page: Page) =>
-  page
+// The panel is the browser's own popover, so it can stay open across a soft navigation (a tag
+// link); a second click would shut it. Open it only when it is shut (#578 review).
+const openFilters = async (page: Page) => {
+  if (await page.locator("#bank-filters").isVisible()) return;
+  await page
     .getByRole("search", { name: "Search questions" })
     .getByRole("button", { name: /^Filters/ })
     .click();
+  await expect(page.locator("#bank-filters")).toBeVisible();
+};
 
 test("an author tags items, then filters the bank to Physiological Adaptation plus sepsis", async ({
   page,
