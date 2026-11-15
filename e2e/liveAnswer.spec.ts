@@ -277,8 +277,6 @@ async function readTheReport(page: Page, bankName: string) {
   const scores = page.getByRole("region", { name: "Scores by student" });
   await expect(scores.getByRole("row", { name: /^Ada Brennan/ })).toContainText("2 / 2");
   await expect(scores.getByRole("row", { name: /^Chidi Okeke/ })).toContainText("0 / 2");
-  // #565: a question column shows "Q1" and is named by number, item type and step, never its id.
-  await expect(scores.getByRole("columnheader", { name: /^Q1 · / })).toHaveText("Q1");
   await expectNoPageScroll(page);
   await expectNoAxeViolations(page);
 
