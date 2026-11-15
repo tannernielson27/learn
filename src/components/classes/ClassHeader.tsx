@@ -22,7 +22,8 @@ export interface ClassHeaderProps {
  * front of a room, the class code and the invite link, each one tap from the clipboard.
  *
  * The two ways in are quiet: no card, one line above them, the code in the mono at a reading size,
- * and from 640px side by side, the link taking the row's width. The link wraps in its box, so the
+ * and from 1024px side by side, the link taking the row's width (stacked below that, so the link
+ * never gets a sliver of a column). The link wraps in its box, so the
  * whole of it shows at any width (#563).
  */
 export function ClassHeader({ name, studentCount, url, code, startHref }: ClassHeaderProps) {
@@ -41,7 +42,7 @@ export function ClassHeader({ name, studentCount, url, code, startHref }: ClassH
         }
       />
       {/* Two blocks that lay themselves out: the code at its own width, the link taking the rest. */}
-      <div className="grid max-w-3xl gap-5 border-t border-line pt-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-x-10">
+      <div className="grid max-w-3xl gap-5 border-t border-line pt-4 lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-x-10">
         <ClassCodeBlock code={code} labelAs="p" />
         <InviteLinkField url={url} />
       </div>

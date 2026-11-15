@@ -23,15 +23,20 @@ export interface InviteLinkFieldProps {
  * The invite link in a read-only box, and a button that copies it (#563). The box wraps the link
  * anywhere in the mono, so the whole link shows at 375px and at 1280px rather than a cut-off one;
  * it grows to the lines the link needs where the browser can size a field to its content, and
- * holds two lines elsewhere. The copy button sits under it, a 44px target clear of the edge. It
- * lays itself out, so it reads the same in any column.
+ * holds two lines elsewhere. The copy button sits beside the label, a 44px target clear of the
+ * edge. It lays itself out, so it reads the same in any column.
  */
 export function InviteLinkField({ url }: InviteLinkFieldProps) {
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      <label htmlFor="invite-link" className="text-sm font-medium text-ink-1">
-        Invite link
-      </label>
+      {/* The copy button beside the label, not under the box, so the class page's header stays
+          short on a phone and its tabs keep to the first screen. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <label htmlFor="invite-link" className="text-sm font-medium text-ink-1">
+          Invite link
+        </label>
+        <CopyLinkButton url={url} />
+      </div>
       <textarea
         id="invite-link"
         readOnly
@@ -40,7 +45,6 @@ export function InviteLinkField({ url }: InviteLinkFieldProps) {
         // Read only, so the quieter surface; the field's 3:1 edge still marks the box (WCAG 1.4.11).
         className="block min-h-11 w-full resize-none scroll-mt-24 rounded-sm border border-line-field bg-surface-2 px-3 py-2.5 font-mono text-sm leading-snug break-all text-ink-2 [field-sizing:content]"
       />
-      <CopyLinkButton url={url} />
     </div>
   );
 }
