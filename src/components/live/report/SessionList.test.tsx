@@ -31,7 +31,8 @@ describe("SessionList", () => {
     );
     expect(item).toHaveTextContent("Sep 22, 2026");
     expect(item).toHaveTextContent("24 students");
-    expect(item).toHaveTextContent("Ended");
+    expect(within(item).getByText("Ended")).toHaveClass("rounded-full");
+    expect(item.querySelector("[data-live-dot]")).toBeNull();
   });
 
   it("links a session still open back to its console, since there is no report yet", () => {
@@ -42,7 +43,9 @@ describe("SessionList", () => {
       `/live/${running.id}`,
     );
     expect(item).toHaveTextContent("1 student");
-    expect(item).toHaveTextContent("Running");
+    // A badge, with the live dot beside the word for a session still running.
+    expect(within(item).getByText("Running")).toHaveClass("rounded-full");
+    expect(item.querySelector("[data-live-dot]")).not.toBeNull();
   });
 
   it("says so when there are no sessions yet", () => {

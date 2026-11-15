@@ -1,5 +1,6 @@
-import Link from "next/link";
 import { buttonClasses } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { TabLinks } from "@/components/ui/TabLinks";
 import type { SessionReport } from "@/lib/live/report";
 import {
   REPORT_VIEWS,
@@ -17,6 +18,9 @@ const VIEW_LABELS: Record<ReportView, string> = {
   items: "Questions",
   steps: "Clinical judgment steps",
 };
+
+/** The way back from a report, open or ended, to the list it was opened from. */
+export const REPORT_BACK = { href: SESSIONS_PATH, label: "Back to live sessions" } as const;
 
 export interface SessionReportViewProps {
   sessionId: string;
@@ -42,44 +46,32 @@ export function SessionReportView({
 }: SessionReportViewProps) {
   return (
     <>
-      <p className="mb-2 text-sm text-ink-2">
-        <Link href={SESSIONS_PATH} className="tap-target inline-flex items-center hover:text-ink-1">
-          Live sessions
-        </Link>
-      </p>
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="font-read text-display leading-tight break-words text-ink-1">{title}</h1>
-          <p className="mt-1 text-sm text-ink-2">
+      <PageHeader
+        back={REPORT_BACK}
+        title={title}
+        lead={
+          <p className="text-sm">
             {closedAt ? formatSessionDate(closedAt) : "Ended"} ·{" "}
             {report.students.length === 1 ? "1 student" : `${report.students.length} students`} ·{" "}
             {report.items.length === 1 ? "1 question" : `${report.items.length} questions`}
           </p>
-        </div>
-        <a href={reportCsvPath(sessionId)} download className={buttonClasses()}>
-          Download CSV
-        </a>
-      </header>
+        }
+        action={
+          <a href={reportCsvPath(sessionId)} download className={buttonClasses()}>
+            Download CSV
+          </a>
+        }
+      />
 
-      <nav aria-label="Report views" className="mt-6 border-b border-line">
-        <ul className="-mb-px flex gap-1 overflow-x-auto">
-          {REPORT_VIEWS.map((option) => (
-            <li key={option}>
-              <Link
-                href={reportPath(sessionId, option)}
-                aria-current={option === view ? "page" : undefined}
-                className={`tap-target inline-flex items-center border-b-2 px-3 text-sm font-semibold whitespace-nowrap transition-colors duration-fast ${
-                  option === view
-                    ? "border-accent text-accent-ink"
-                    : "border-transparent text-ink-2 hover:text-ink-1"
-                }`}
-              >
-                {VIEW_LABELS[option]}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <TabLinks
+        label="Report views"
+        className="mt-6"
+        links={REPORT_VIEWS.map((option) => ({
+          href: reportPath(sessionId, option),
+          label: VIEW_LABELS[option],
+          current: option === view,
+        }))}
+      />
 
       <section aria-label={VIEW_LABELS[view]} className="mt-6">
         <ReportBody report={report} view={view} />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { tabClasses } from "./tabClasses";
 import { useMediaQuery } from "./useMediaQuery";
 
 export interface TabItem {
@@ -175,11 +176,7 @@ export function Tabs({
                 tabIndex={isSelected ? 0 : -1}
                 aria-describedby={tab.badge ? `${baseId}-badge-${tab.id}` : undefined}
                 onClick={() => select(tab.id)}
-                className={`tap-target -mb-px inline-flex shrink-0 snap-start items-center gap-2 whitespace-nowrap border-b-2 px-3 text-sm font-medium transition-[color,border-color] duration-fast ease-out-expo ${
-                  isSelected
-                    ? "border-accent text-accent-ink"
-                    : "border-transparent text-ink-2 hover:text-ink-1"
-                }`}
+                className={tabClasses(isSelected)}
               >
                 {tab.label}
                 {tab.badge ? (

@@ -3,6 +3,9 @@ import {
   buildSessionReport,
   groupByCaseStudy,
   inCaseStudies,
+  questionLabel,
+  questionNumber,
+  stepLabel,
   type ReportItemInput,
   type SessionReportInput,
 } from "./report";
@@ -228,5 +231,48 @@ describe("a session that played a case study in place (#469)", () => {
       { caseStudyId: "c-1", title: "Hip", firstPosition: 3, stepCount: 2 },
     ]);
     expect(groupByCaseStudy(twice).map((group) => group.items.length)).toEqual([2, 2]);
+  });
+});
+
+describe("questionLabel (#565)", () => {
+  it("names a question by its number, item type and clinical judgment step", () => {
+    expect(questionLabel({ position: 3, type: "multiple_response", cjmmStep: 1 })).toBe(
+      "Q3 · Extended Multiple Response · Recognize Cues",
+    );
+    expect(questionLabel({ position: 1, type: "bowtie", cjmmStep: 5 })).toBe(
+      "Q1 · Bowtie · Take Action",
+    );
+  });
+
+  it("leaves out a part it does not know", () => {
+    expect(questionLabel({ position: 4, type: "dropdown_cloze", cjmmStep: null })).toBe(
+      "Q4 · Drop-Down Cloze",
+    );
+    expect(questionLabel({ position: 2, type: null, cjmmStep: 6 })).toBe("Q2 · Evaluate Outcomes");
+    expect(questionLabel({ position: 5, type: "not_a_type", cjmmStep: null })).toBe("Q5");
+  });
+
+  it("leaves the step out for a table that has a Step column", () => {
+    expect(
+      questionLabel({ position: 3, type: "multiple_response", cjmmStep: 1 }, { withStep: false }),
+    ).toBe("Q3 · Extended Multiple Response");
+  });
+
+  it("names a step by its number and name, or a dash for none", () => {
+    expect(stepLabel(6)).toBe("6 · Evaluate Outcomes");
+    expect(stepLabel(1)).toBe("1 · Recognize Cues");
+    expect(stepLabel(null)).toBe("–");
+  });
+
+  it("never uses the internal ref, which stays in the CSV", () => {
+    const [first] = report.items;
+    expect(first).toBeDefined();
+    if (first === undefined) return;
+    expect(questionLabel(first)).toBe("Q1 · Multiple Choice · Recognize Cues");
+    expect(questionLabel(first)).not.toContain(first.ref);
+  });
+
+  it("gives the bare number for a narrow column", () => {
+    expect(questionNumber({ position: 12 })).toBe("Q12");
   });
 });

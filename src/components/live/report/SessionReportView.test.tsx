@@ -23,6 +23,10 @@ describe("SessionReportView", () => {
     renderView("students");
     expect(screen.getByRole("heading", { level: 1, name: "Cardiac week 3" })).toBeInTheDocument();
     expect(screen.getByText(/Sep 22, 2026/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back to live sessions" })).toHaveAttribute(
+      "href",
+      "/author/sessions",
+    );
   });
 
   it("switches views with links that keep the view in the address", () => {
@@ -72,9 +76,20 @@ describe("SessionReportView", () => {
     expect(screen.getByRole("rowheader", { name: "=cmd|' /C calc'!A0" })).toBeInTheDocument();
   });
 
-  it("names each item column by position and item id", () => {
+  it("shows each item column as its number, and names it by number, type and step", () => {
     renderView("students");
-    expect(screen.getByRole("columnheader", { name: "Q1 mc-vitals" })).toBeInTheDocument();
+    const head = screen.getByRole("columnheader", {
+      name: "Q1 · Multiple Choice · Recognize Cues",
+    });
+    expect(head).toHaveTextContent(/^Q1$/);
+    expect(head).toHaveAttribute("title", "Q1 · Multiple Choice · Recognize Cues");
+    // The internal id is for the CSV and a tooltip, never the column name.
+    expect(screen.queryByRole("columnheader", { name: /mc-vitals/ })).toBeNull();
+  });
+
+  it("says in one line what each table shows", () => {
+    renderView("students");
+    expect(screen.getByText(/Points each student earned on each question/)).toBeInTheDocument();
   });
 
   it("shows how each item went", () => {
@@ -83,7 +98,36 @@ describe("SessionReportView", () => {
     const cells = within(row)
       .getAllByRole("cell")
       .map((cell) => cell.textContent);
-    expect(cells).toEqual(["Step 1", "2 of 4", "2.5 / 3", "83%", "1", "1", "0"]);
+    expect(cells).toEqual(["1 · Recognize Cues", "2", "2.5 / 3", "83%", "1", "1", "0"]);
+  });
+
+  it("heads the questions view in plain words", () => {
+    renderView("items");
+    const table = screen.getByRole("table");
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .map((cell) => cell.textContent),
+    ).toEqual([
+      "Question",
+      "Step",
+      "Answered (of 4)",
+      "Average",
+      "Average %",
+      "All right",
+      "Some right",
+      "None right",
+    ]);
+    expect(screen.getByText(/How the class did on each question/)).toBeInTheDocument();
+  });
+
+  it("names each question by number and type, with its step in its own column and its id only in a tooltip", () => {
+    renderView("items");
+    const head = screen.getByRole("rowheader", {
+      name: "Q2 · Extended Multiple Response",
+    });
+    expect(head).toHaveAttribute("title", "Question id: mr-assess");
+    expect(screen.getByRole("rowheader", { name: "Q4 · Drop-Down Cloze" })).toBeInTheDocument();
   });
 
   it("shows the class at each tagged CJMM step", () => {
@@ -93,6 +137,7 @@ describe("SessionReportView", () => {
       .getAllByRole("cell")
       .map((cell) => cell.textContent);
     expect(cells).toEqual(["2", "5", "75%"]);
+    expect(screen.getByRole("columnheader", { name: "Average %" })).toBeInTheDocument();
     expect(screen.queryByRole("row", { name: /Analyze Cues/ })).toBeNull();
     expect(screen.getByText(/1 question without a step is left out/)).toBeInTheDocument();
   });
@@ -136,14 +181,18 @@ describe("SessionReportView for a quiz that played a case study in place (#469)"
       within(groupBody)
         .getAllByRole("rowheader")
         .map((cell) => cell.textContent),
-    ).toEqual(["Case study: Hip arthroplasty", "Q2 mr-assess", "Q3 bowtie-act"]);
+    ).toEqual(["Case study: Hip arthroplasty", "Q2 · Extended Multiple Response", "Q3 · Bowtie"]);
   });
 
   it("heads the case study's columns with its title in the students view", () => {
     renderView("students", mixed);
     const heading = screen.getByRole("columnheader", { name: "Case study: Hip arthroplasty" });
     expect(heading).toHaveAttribute("colspan", "2");
-    expect(screen.getByRole("columnheader", { name: "Q2 mr-assess" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", {
+        name: "Q2 · Extended Multiple Response · Recognize Cues",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("has no case study heading for a quiz of loose questions", () => {

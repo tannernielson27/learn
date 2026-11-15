@@ -1,10 +1,20 @@
 import type { ReactNode } from "react";
-import { groupByCaseStudy, type ItemRow, type StepRow, type StudentRow } from "@/lib/live/report";
+import {
+  groupByCaseStudy,
+  questionLabel,
+  stepLabel,
+  questionNumber,
+  type ItemRow,
+  type StepRow,
+  type StudentRow,
+} from "@/lib/live/report";
 import { formatPercent, formatPoints } from "@/lib/live/reportFormat";
 
 export const HEAD =
   "border-b border-line-strong px-3 py-2 font-medium text-ink-2 whitespace-nowrap";
 export const CELL = "px-3 py-2 text-right whitespace-nowrap";
+/** The Step column is words ("3 · Prioritize Hypotheses"), so it reads left and may wrap. */
+const STEP_CELL = "px-3 py-2 text-left";
 /** The first column stays put while the rest scroll under it, so a row keeps its name at 375px. */
 export const ROW_HEAD = "sticky left-0 bg-surface-1 px-3 py-2 text-left font-medium text-ink-1";
 export const ROW = "border-b border-line last:border-b-0";
@@ -13,6 +23,11 @@ export const GROUP_HEAD =
   "border-b border-line bg-surface-2 px-3 py-2 text-left font-medium break-words text-ink-1";
 
 const caseStudyHeading = (title: string) => `Case study: ${title}`;
+
+/** The one line above a table that says what it shows, in plain words (#565). */
+export function TableCaption({ children }: { children: ReactNode }) {
+  return <p className="mb-2 text-sm text-ink-2">{children}</p>;
+}
 
 /**
  * A row over a table's question columns naming each case study a quiz played in place over its
@@ -78,47 +93,62 @@ export function StudentTable({
   students: readonly StudentRow[];
 }) {
   return (
-    <ScrollRegion label="Scores by student">
-      <table className="tabular w-full border-collapse text-sm">
-        <thead>
-          <CaseStudyHeadRow items={items} before={1} after={2} />
-          <tr>
-            <th scope="col" className={`${HEAD} sticky left-0 bg-surface-1 text-left`}>
-              Student
-            </th>
-            {items.map((item) => (
-              <th key={item.position} scope="col" className={`${HEAD} text-right`}>
-                {`Q${item.position} ${item.ref}`}
+    <>
+      <TableCaption>
+        Points each student earned on each question. A dash means they did not answer it.
+      </TableCaption>
+      <ScrollRegion label="Scores by student">
+        <table className="tabular w-full border-collapse text-sm">
+          <thead>
+            <CaseStudyHeadRow items={items} before={1} after={2} />
+            <tr>
+              <th scope="col" className={`${HEAD} sticky left-0 bg-surface-1 text-left`}>
+                Student
               </th>
-            ))}
-            <th scope="col" className={`${HEAD} text-right`}>
-              Total
-            </th>
-            <th scope="col" className={`${HEAD} text-right`}>
-              Percent
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {students.map((student) => (
-            <tr key={student.participantId} className={ROW}>
-              <th scope="row" className={ROW_HEAD}>
-                {student.displayName}
+              {items.map((item) => {
+                // A column per question is narrow: "Q3" to see, the whole label to hear and hover.
+                const label = questionLabel(item);
+                return (
+                  <th
+                    key={item.position}
+                    scope="col"
+                    title={label}
+                    aria-label={label}
+                    className={`${HEAD} text-right`}
+                  >
+                    {questionNumber(item)}
+                  </th>
+                );
+              })}
+              <th scope="col" className={`${HEAD} text-right`}>
+                Total
               </th>
-              {student.scores.map((score, index) => (
-                <td key={index} className={`${CELL} ${score ? "text-ink-1" : "text-ink-2"}`}>
-                  {formatPoints(score?.points ?? null)}
-                </td>
-              ))}
-              <td
-                className={CELL}
-              >{`${formatPoints(student.points)} / ${formatPoints(student.possible)}`}</td>
-              <td className={`${CELL} font-medium`}>{formatPercent(student.percent)}</td>
+              <th scope="col" className={`${HEAD} text-right`}>
+                Percent
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollRegion>
+          </thead>
+          <tbody>
+            {students.map((student) => (
+              <tr key={student.participantId} className={ROW}>
+                <th scope="row" className={ROW_HEAD}>
+                  {student.displayName}
+                </th>
+                {student.scores.map((score, index) => (
+                  <td key={index} className={`${CELL} ${score ? "text-ink-1" : "text-ink-2"}`}>
+                    {formatPoints(score?.points ?? null)}
+                  </td>
+                ))}
+                <td
+                  className={CELL}
+                >{`${formatPoints(student.points)} / ${formatPoints(student.possible)}`}</td>
+                <td className={`${CELL} font-medium`}>{formatPercent(student.percent)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </ScrollRegion>
+    </>
   );
 }
 
@@ -132,65 +162,72 @@ export function ItemTable({
   /** The share of answers fully correct, after Answered (#211's assignment report). */
   correctColumn?: boolean;
 }) {
+  // How many could have answered is the same for every row, so it is said once, in the header.
+  const answered = `Answered (of ${participantCount})`;
+  const counts = ["All right", "Some right", "None right"];
   const heads = correctColumn
-    ? ["Step", "Answered", "Correct", "Mean", "Mean %", "Full", "Partial", "None"]
-    : ["Step", "Answered", "Mean", "Mean %", "Full", "Partial", "None"];
+    ? ["Step", answered, "Correct", "Average", "Average %", ...counts]
+    : ["Step", answered, "Average", "Average %", ...counts];
   return (
-    <ScrollRegion label="Results by question">
-      <table className="tabular w-full border-collapse text-sm">
-        <thead>
-          <tr>
-            <th scope="col" className={`${HEAD} sticky left-0 bg-surface-1 text-left`}>
-              Question
-            </th>
-            {heads.map((head) => (
-              <th key={head} scope="col" className={`${HEAD} text-right`}>
-                {head}
+    <>
+      <TableCaption>
+        How the class did on each question: how many answered, the average score, and how many got
+        all, some or none of it right.
+      </TableCaption>
+      <ScrollRegion label="Results by question">
+        <table className="tabular w-full border-collapse text-sm">
+          <thead>
+            <tr>
+              <th scope="col" className={`${HEAD} sticky left-0 bg-surface-1 text-left`}>
+                Question
               </th>
-            ))}
-          </tr>
-        </thead>
-        {/* #469: each case study a quiz played in place heads a group of its own steps. */}
-        {groupByCaseStudy(items).map((group) => (
-          <tbody key={group.items[0]?.position}>
-            {group.caseStudy === null ? null : (
-              <tr>
-                <th scope="rowgroup" colSpan={heads.length + 1} className={GROUP_HEAD}>
-                  {caseStudyHeading(group.caseStudy.title)}
+              {heads.map((head) => (
+                <th
+                  key={head}
+                  scope="col"
+                  className={`${HEAD} ${head === "Step" ? "text-left" : "text-right"}`}
+                >
+                  {head}
                 </th>
-              </tr>
-            )}
-            {group.items.map((item) => (
-              <ItemTableRow
-                key={item.position}
-                item={item}
-                participantCount={participantCount}
-                correctColumn={correctColumn}
-              />
-            ))}
-          </tbody>
-        ))}
-      </table>
-    </ScrollRegion>
+              ))}
+            </tr>
+          </thead>
+          {/* #469: each case study a quiz played in place heads a group of its own steps. */}
+          {groupByCaseStudy(items).map((group) => (
+            <tbody key={group.items[0]?.position}>
+              {group.caseStudy === null ? null : (
+                <tr>
+                  <th scope="rowgroup" colSpan={heads.length + 1} className={GROUP_HEAD}>
+                    {caseStudyHeading(group.caseStudy.title)}
+                  </th>
+                </tr>
+              )}
+              {group.items.map((item) => (
+                <ItemTableRow key={item.position} item={item} correctColumn={correctColumn} />
+              ))}
+            </tbody>
+          ))}
+        </table>
+      </ScrollRegion>
+    </>
   );
 }
 
 function ItemTableRow({
   item,
-  participantCount,
   correctColumn,
 }: {
   item: ItemRow & { percentCorrect?: number | null };
-  participantCount: number;
   correctColumn: boolean;
 }) {
   return (
     <tr className={ROW}>
-      <th scope="row" className={ROW_HEAD}>
-        {`Q${item.position} ${item.ref}`}
+      {/* The question's own id is for the author who wrote it: a tooltip here, a column in the CSV. */}
+      <th scope="row" title={`Question id: ${item.ref}`} className={ROW_HEAD}>
+        {questionLabel(item, { withStep: false })}
       </th>
-      <td className={CELL}>{item.cjmmStep === null ? "–" : `Step ${item.cjmmStep}`}</td>
-      <td className={CELL}>{`${item.responded} of ${participantCount}`}</td>
+      <td className={STEP_CELL}>{stepLabel(item.cjmmStep)}</td>
+      <td className={CELL}>{item.responded}</td>
       {correctColumn ? (
         <td className={CELL}>{formatPercent(item.percentCorrect ?? null)}</td>
       ) : null}
@@ -209,33 +246,38 @@ function ItemTableRow({
 
 export function StepTable({ steps }: { steps: readonly StepRow[] }) {
   return (
-    <ScrollRegion label="Results by clinical judgment step">
-      <table className="tabular w-full border-collapse text-sm">
-        <thead>
-          <tr>
-            <th scope="col" className={`${HEAD} sticky left-0 bg-surface-1 text-left`}>
-              Clinical judgment step
-            </th>
-            {["Questions", "Answers", "Mean %"].map((head) => (
-              <th key={head} scope="col" className={`${HEAD} text-right`}>
-                {head}
+    <>
+      <TableCaption>
+        The class&apos;s average on the questions tagged with each clinical judgment step.
+      </TableCaption>
+      <ScrollRegion label="Results by clinical judgment step">
+        <table className="tabular w-full border-collapse text-sm">
+          <thead>
+            <tr>
+              <th scope="col" className={`${HEAD} sticky left-0 bg-surface-1 text-left`}>
+                Clinical judgment step
               </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {steps.map((step) => (
-            <tr key={step.step} className={ROW}>
-              <th scope="row" className={ROW_HEAD}>
-                {`Step ${step.step}: ${step.label}`}
-              </th>
-              <td className={CELL}>{step.itemCount}</td>
-              <td className={CELL}>{step.responded}</td>
-              <td className={`${CELL} font-medium`}>{formatPercent(step.meanPercent)}</td>
+              {["Questions", "Answers", "Average %"].map((head) => (
+                <th key={head} scope="col" className={`${HEAD} text-right`}>
+                  {head}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollRegion>
+          </thead>
+          <tbody>
+            {steps.map((step) => (
+              <tr key={step.step} className={ROW}>
+                <th scope="row" className={ROW_HEAD}>
+                  {`Step ${step.step}: ${step.label}`}
+                </th>
+                <td className={CELL}>{step.itemCount}</td>
+                <td className={CELL}>{step.responded}</td>
+                <td className={`${CELL} font-medium`}>{formatPercent(step.meanPercent)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </ScrollRegion>
+    </>
   );
 }
