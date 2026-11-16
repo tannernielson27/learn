@@ -8,7 +8,7 @@ export interface Sender {
 
 export interface EmailConfig {
   apiKey: string;
-  /** Exactly as configured, e.g. `LeaRN <learn@info.tannernielson.com>`. */
+  /** Exactly as configured, e.g. `LeaRN <noreply@learnursing.app>`. */
   from: string;
   sender: Sender;
 }
@@ -50,7 +50,7 @@ const configSchema = z.object({
     .trim()
     .min(1, { error: `${FROM_VAR} is not set. ${SEE}` })
     .refine((value) => parseSender(value) !== undefined, {
-      error: `${FROM_VAR} must be an address, optionally with a name: LeaRN <learn@info.tannernielson.com>.`,
+      error: `${FROM_VAR} must be an address, optionally with a name: LeaRN <noreply@learnursing.app>.`,
     }),
 });
 

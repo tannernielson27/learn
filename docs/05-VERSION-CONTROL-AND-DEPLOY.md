@@ -388,7 +388,23 @@ Existing accounts were not changed by #204: the demo account and every current i
 A class invite never demotes anyone. An instructor who opens one is told they already are one; an account with no role that joins becomes a student, and `make_instructor` then refuses it (remove it from its classes and set the role by hand if that was a mistake). To see a class's roster from the SQL editor: `select u.email, c.name from public.class_members m join public.classes c on c.id = m.class_id join auth.users u on u.id = m.profile_id order by c.name, u.email;`
 Removing a student from a roster is recorded in `private.class_removals`, so the invite link they still hold will not let them back in. To let a removed student rejoin, delete their row in the SQL editor, then send them the link again: `delete from private.class_removals where profile_id = (select id from auth.users where lower(email) = lower('student@example.com'));`
 
-### 7.7 Email through Resend from info.tannernielson.com (#206)
+### 7.7 Email through Resend from learnursing.app (#206)
+
+> **Status 2026-11-16:** sending moved from `info.tannernielson.com` to `learnursing.app`. Both Supabase projects send Auth mail as `LeaRN <noreply@learnursing.app>`, tested with a delivered recovery email from each. Vercel `EMAIL_FROM` is set for Production and Preview and takes effect on the next deploy. Keep the old Resend domain until a production deploy has sent app mail from the new sender, then delete it and the `learn-production` key, which only sends from the old domain.
+
+**Mail for people is separate from mail for the app.** Zoho Mail hosts the mailboxes (`tanner@`, plus the groups `support@` and `info@`, which accept mail from anyone). Resend sends the app's mail as `noreply@`, which has no mailbox. DNS lives at Vercel (the domain's nameservers), and these records are what make both work. Leave them alone when editing DNS:
+
+| Name                | Type  | Value                                                  | For                    |
+| ------------------- | ----- | ------------------------------------------------------ | ---------------------- |
+| `@`                 | MX    | `mx.zoho.com` 10, `mx2.zoho.com` 20, `mx3.zoho.com` 50 | Zoho inbound           |
+| `@`                 | TXT   | `v=spf1 include:zohomail.com ~all`                     | SPF for Zoho           |
+| `@`                 | TXT   | `zoho-verification=...`                                | Zoho domain ownership  |
+| `zmail._domainkey`  | TXT   | Zoho's DKIM key                                        | Zoho DKIM              |
+| `resend._domainkey` | TXT   | Resend's DKIM key                                      | Resend DKIM            |
+| `send`, `rsend`     | CNAME | `send.forge.rmta.net`, `rsend.forge.rmta.net`          | Resend SPF and bounces |
+| `_dmarc`            | TXT   | `v=DMARC1; p=none; rua=mailto:tanner@learnursing.app`  | DMARC, report only     |
+
+Move DMARC to `p=quarantine` once a few weeks of reports show only Zoho and Resend sending.
 
 Two senders, one Resend account. **Supabase Auth** sends the magic links itself, over Resend's SMTP, using `supabase/templates/magic_link.html`. **The app** sends its own transactional mail (reminders, #212, and the welcome email, #360) through `src/lib/email`, which calls Resend's HTTP API with `RESEND_API_KEY` and `EMAIL_FROM`. Locally, neither touches Resend: Auth mail and app mail both land in the local stack's Mailpit at `http://127.0.0.1:55324` (a local production build, as e2e runs, sends app mail there only when `SUPABASE_MAILBOX_URL` is set; `playwright.config.ts` sets it with `E2E_AUTH=1`).
 
@@ -400,9 +416,9 @@ Do these in order, in **both** Supabase projects (production and `vauokqoyvewtzu
 
 > **Status 2026-09-26 (go-live audit):** step 6 is half done: Production has `RESEND_API_KEY` and `EMAIL_FROM`, while Preview has `EMAIL_FROM` only. Steps 1–5 and 7 happen in the dashboards and were not verified. None of this counts for the production project, which does not exist yet.
 
-1. **[ ] Resend domain verified.** Resend → Domains → `info.tannernielson.com` shows **Verified** (the SPF, DKIM and MX records it lists are at the DNS host for `tannernielson.com`). Nothing else works until this does. Then Resend → API Keys → **Create API key**, permission **Sending access**, domain `info.tannernielson.com`. Make one key per environment (`learn-production`, `learn-preview`) so either can be revoked alone. Each key is shown once.
+1. **[x] Resend domain verified.** Resend → Domains → `learnursing.app` shows **Verified** (records in the table above, at Vercel DNS). Nothing else works until this does. Then Resend → API Keys → **Create API key**, permission **Sending access**. A key limited to one domain cannot send from any other, so a key limited to the old domain breaks sending the moment the sender changes. Each key is shown once.
 2. **[ ] Supabase custom SMTP.** Supabase → Authentication → Emails → **SMTP Settings** → Enable custom SMTP:
-   - Sender email: `learn@info.tannernielson.com` · Sender name: `LeaRN`
+   - Sender email: `noreply@learnursing.app` · Sender name: `LeaRN`
    - Host: `smtp.resend.com` · Port: `465`
    - Username: `resend` · Password: that environment's Resend API key from step 1
      Save. (Source: <https://resend.com/docs/send-with-supabase-smtp>.)
@@ -428,10 +444,10 @@ Do these in order, in **both** Supabase projects (production and `vauokqoyvewtzu
      A redirect that is not on the list is **not refused**: Supabase silently swaps in the bare Site URL, and the template's `{{ .RedirectTo }}&token_hash=...` then becomes a link that goes nowhere. That is how every class invite broke in #304 while sign-in kept working.
      Adding a custom domain changes the canonical origin: update `SITE_URL`, the Site URL and the Redirect URLs together, then redeploy.
 6. **[ ] Vercel environment variables.** Vercel → project → Settings → Environment Variables, all server-only (no `NEXT_PUBLIC_`):
-   - **Production** scope: `RESEND_API_KEY` = the `learn-production` key; `EMAIL_FROM` = `LeaRN <learn@info.tannernielson.com>`; `SITE_URL` = the production origin, `https://` and no path (today `https://learn-nine-alpha.vercel.app`).
+   - **Production** scope: `RESEND_API_KEY` = the `learn-production` key; `EMAIL_FROM` = `LeaRN <noreply@learnursing.app>`; `SITE_URL` = the production origin, `https://` and no path (today `https://learn-nine-alpha.vercel.app`).
    - **Preview** scope: `RESEND_API_KEY` = the `learn-preview` key; `EMAIL_FROM` = the same sender. No `SITE_URL`: a preview's links use its own address.
      Redeploy each (env vars apply to a new build only). The reminder job (#212, §7.8) and the welcome email (#360) send app email, and a missing `RESEND_API_KEY` or `EMAIL_FROM` breaks no page; without them the job sends nothing and keeps every reminder for its next run, logging an error that names `RESEND_API_KEY`, and a new student still joins but gets no welcome email (`[welcome] sending the welcome email failed`, kind `config`) until the key is set and they press "Send the email again". Without `SITE_URL`, production falls back to Vercel's production domain, which is right only until a domain is added; `/api/health` counts it as missing (#304).
-7. **[ ] Check it.** On the production URL, ask for a link to an instructor address you own: it arrives from `LeaRN <learn@info.tannernielson.com>` with the LeaRN template, and signs you in. Then open a class's invite link in a private window and ask for a link to a second address you own: its link must start with `<SITE_URL>/auth/confirm?next=`, and it signs you in as a student. Then, on the same invite link in another private window, join with a third address you own and a password: it arrives as "Welcome to LeaRN: confirm your email address", its button's link starts with `<SITE_URL>/auth/confirm?next=%2Flearn`, and opening it removes the "Confirm your email address" banner. Resend → Emails lists them as delivered.
+7. **[ ] Check it.** On the production URL, ask for a link to an instructor address you own: it arrives from `LeaRN <noreply@learnursing.app>` with the LeaRN template, and signs you in. Then open a class's invite link in a private window and ask for a link to a second address you own: its link must start with `<SITE_URL>/auth/confirm?next=`, and it signs you in as a student. Then, on the same invite link in another private window, join with a third address you own and a password: it arrives as "Welcome to LeaRN: confirm your email address", its button's link starts with `<SITE_URL>/auth/confirm?next=%2Flearn`, and opening it removes the "Confirm your email address" banner. Resend → Emails lists them as delivered.
 
 The app mailer never logs a recipient's address, a message body or the key, and its errors carry only the HTTP status and Resend's error name. Build each message's idempotency key from what it is about (`reminder:<assignmentId>:<userId>:<kind>`), never from the address; Resend drops a repeat of the same key for 24 hours. The welcome email's key is `welcome:<userId>:<random>`, fresh per send, because a resend is meant to arrive.
 

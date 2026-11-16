@@ -1,4 +1,4 @@
-// #206: `src/lib/email` reads RESEND_API_KEY, which can send mail as info.tannernielson.com. It
+// #206: `src/lib/email` reads RESEND_API_KEY, which can send mail as learnursing.app. It
 // must never reach a browser bundle. The repo has no `server-only` package; like #149's signing
 // key (`noClientSigningKey.test.ts`), this is held by walking the real import graph from every
 // Client Component in the app.
