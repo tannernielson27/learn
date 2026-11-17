@@ -240,6 +240,13 @@ web3 = 30
 subject = "Sign in to LeaRN"
 content_path = "./supabase/templates/magic_link.html"
 
+# The app never asks for a recovery email, but Supabase's public /recover endpoint can send one.
+# This version resets nothing and links only to the sign-in page. Generated from
+# src/lib/email/templates/passwordReset.ts; paste it into each hosted project under Reset password.
+[auth.email.template.recovery]
+subject = "Reset your LeaRN password"
+content_path = "./supabase/templates/recovery.html"
+
 [auth.email]
 # Allow/disallow new user signups via email to your project.
 # Leave this on. Despite its name it is the email provider's own switch (the CLI passes it to Auth
