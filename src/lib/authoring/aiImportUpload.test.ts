@@ -94,6 +94,19 @@ describe("messageFor", () => {
       expect(message).not.toMatch(/\p{Extended_Pictographic}|_/u);
     }
   });
+
+  it("says nothing was charged only where nothing was (#590)", () => {
+    // A call Claude never answered bills nothing. One that ran and failed was billed.
+    const charged = Object.entries(AI_IMPORT_MESSAGES).filter(([, message]) =>
+      /nothing (more )?was charged/i.test(message),
+    );
+    expect(charged.map(([code]) => code).sort()).toEqual(["cap_reached", "claude_failed"]);
+    for (const code of ["claude_timeout", "claude_refused", "too_long", "part_too_large"]) {
+      expect(messageFor(code)).not.toBe(AI_IMPORT_MESSAGES.unavailable);
+      expect(messageFor(code)).not.toMatch(/Claude is unavailable/);
+    }
+    expect(messageFor("part_too_large")).toMatch(/split the file/i);
+  });
 });
 
 describe("describeFile and fileProgress", () => {

@@ -393,6 +393,33 @@ Edge cases the owner's samples showed, each covered by an acceptance criterion o
 
 #339's corpus covers keys glued, spaced, in matrix cells, as `✅ Answer` lines, as Word highlighting and at the back; an unmarked question after an injected instruction; a two-column PDF and a scanned page; a growing six-step case study with a standalone bowtie; an open prompt, a matching exercise, a calculation and instructor notes. Not yet in it: a trend item, a typo in a chart time, an embedded image, the same document as .pdf and .docx, and a damaged PDF text layer. Add them as #342–#344 need them (`test/ai-import/README.md`, "Adding a case").
 
+### After the 2026-11-17 audit: making AI import work on real documents
+
+The audit read the whole feature after the owner's 9-page Word test bank stuck on 2026-10-22. That import failed in the segment pass (`stop_reason=max_tokens` at 8,000 tokens), every retry failed the same way and was billed, and the upload page had no way out. Six issues came of it, in build order:
+
+| Issue                                                       | Story                                                                                  | Gates         | Status      |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------- | ----------- |
+| [#590](https://github.com/tannernielson27/learn/issues/590) | fix(ai-import): the segment pass cannot overflow, and a failed part says what happened | security      | In review   |
+| [#591](https://github.com/tannernielson27/learn/issues/591) | fix(authoring): no dead ends on the AI import upload page                              | security, e2e | Not started |
+| [#592](https://github.com/tannernielson27/learn/issues/592) | fix(ai-import): answer keys survive Word formatting and long documents                 | none          | Not started |
+| [#593](https://github.com/tannernielson27/learn/issues/593) | feat(authoring): an AI import review you can check and finish, case studies included   | security, e2e | Not started |
+| [#594](https://github.com/tannernielson27/learn/issues/594) | test(ai-import): real-size documents in the golden corpus                              | none          | Not started |
+| [#595](https://github.com/tannernielson27/learn/issues/595) | feat(ai-import): reading continues with the tab closed (ADR first)                     | none          | Deferred    |
+
+Owner decisions, 2026-11-17: a key marked only by bold, underline or font colour is accepted with a "check this key" reason (#592); case studies in review get "add the key per step" and "split into separate questions" first, not the full builder (#593); background reading is decided after #590–#593 are in use (#595).
+
+Notes from #590 for the stories after it (`src/lib/aiImport/segmentChunk.ts`, `segmentSplit.ts`, `upload/http.ts`):
+
+- **The limits:** `SEGMENT_MAX_TOKENS` is 16,000 and the segment request asks for no thinking (`thinking: "minimal"` on a `StructuredRequest`, sent as `between_tools`: Sonnet 5.5 answers `disabled` with a 400). A segment call may run 130 s (`SEGMENT_TIMEOUT_MS`); every other AI import call keeps 90 s. The extract pass still thinks and still has 8,000 tokens: a chart-heavy case study can overflow there, and now says `too_long` when it does.
+- **Time:** a parse request's calls are all cut to end inside `SEGMENT_BUDGET_MS` (270 s of the route's 300), so the function is not killed with a reservation open. In `callStructured`, a failure is tried again only if it came back within `RETRY_WINDOW_MS` (45 s): that holds for the extract and retype calls too, whose worst case was three slow tries.
+- **A chunk that overflows** is read again as two halves at once (`SEGMENT_SPLIT_DEPTH = 1`), each under its own reservation with no pages, both reserved before either is sent; `joinParts` returns the chunk's one segment, so nothing downstream knows. Text is cut before a numbered question nearest the middle (`splitText`); a PDF by pages around a shared page (`splitPages`). A half that still overflows answers `part_too_large`, which is recorded as the chunk's last try (`settleChunk`'s `final`), so "Try again" answers `spent` without paying again.
+- **Money:** one parse request may now make three calls, and the teacher's 60 parse requests an hour count requests, not calls, so the pace one account can spend at is about four times what it was; the monthly cap still bounds the total, as every call is reserved first (security review, accepted). A cap reached between a chunk's call and its halves answers `cap_reached` with `charged`, and the try is counted, not given back.
+- **Known limits:** the second half of a text chunk does not hold a case study's title, so its steps may come back ungrouped; a case study has few questions and is unlikely to overflow. In `merge.ts`, `foldChunk` compares a chunk's questions only with the last one before it, so when two or more questions start on the page two PDF chunks share, they are staged twice (and flagged as duplicates at the end); `joinParts` does not have this fault, and #592 should carry its rule to `mergeSegments`. The same file's text rule can also merge the questions either side of a chunk boundary when they open with the same eight words.
+- **#591:** `part_too_large` and `spent` both tell the teacher to remove the file, which the page cannot yet do. The new codes `claude_timeout`, `too_long` and `claude_refused` are worth an automatic retry in the driver; `part_too_large` is not. A chunk's `last_error` now reads `claude_failed:<reason>`, and both routes log `[ai-import] a segment call failed` or `an extract call failed` with the reason.
+- **#592:** a half of a text chunk is cut where `chunkText` would not cut, so a question can cross it; the join relies on the model's `cutOff` and `continued` flags exactly as chunk boundaries do. Fixing the chunk join in `unitPayload` fixes nothing here: the extract pass still reads the whole chunk.
+- **#594:** the 60-question document should overflow 8,000 tokens on `main` before #590 and fit in one call after it; a second, denser one should need the split.
+- **Not verified live:** the local `ANTHROPIC_API_KEY` answered 401 on 2026-11-17, so the stuck document and `pnpm eval:ai-import` have not been run against this change. Do both before merging.
+
 ## S13: Registration + onboarding (milestone 15)
 
 Demo 14: a stranger signs up as a teacher, makes a class, and a stranger signs up as their student and joins by code, with no help from the owner.

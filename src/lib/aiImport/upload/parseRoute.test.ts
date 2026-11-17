@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RouteAuthor } from "@/lib/authoring/session";
 import type { SegmentChunkResult } from "../segmentChunk";
+import { MAX_CHUNK_ATTEMPTS } from "./chunks";
 import { parseChunkResponse, type ParseRouteDeps } from "./parseRoute";
 import {
   BATCH,
@@ -158,6 +159,22 @@ describe("POST /api/ai-import/parse", () => {
     expect(released?.[0]).toMatchObject({ status: "pending" });
   });
 
+  it("counts the try when the cap was reached after a call of the chunk was billed", async () => {
+    const { deps, service } = setup({
+      result: {
+        ok: false,
+        code: "cap_reached",
+        remainingUsd: 0.05,
+        remainingPages: null,
+        charged: true,
+      },
+    });
+    const response = await parseChunkResponse(post(BODY), deps);
+    expect(response.status).toBe(402);
+    const [, recorded] = service.stepsOn("ai_import_chunks", "update");
+    expect(recorded?.[0]).toEqual({ status: "failed", last_error: "cap_reached" });
+  });
+
   it("answers 502 when Claude fails and records the chunk failed with a code only", async () => {
     const { deps, service } = setup({
       result: { ok: false, code: "claude_failed", reason: "overloaded" },
@@ -166,7 +183,44 @@ describe("POST /api/ai-import/parse", () => {
     expect(response.status).toBe(502);
     expect((await response.json()).message).toMatch(/nothing was charged/);
     const [, failed] = service.stepsOn("ai_import_chunks", "update");
-    expect(failed?.[0]).toEqual({ status: "failed", last_error: "claude_failed" });
+    // Which failure it was is kept, so a stuck import can be read from its rows.
+    expect(failed?.[0]).toEqual({ status: "failed", last_error: "claude_failed:overloaded" });
+    expect(errorSpy).toHaveBeenCalledWith("[ai-import] a segment call failed", {
+      reason: "overloaded",
+    });
+  });
+
+  it.each([
+    ["timeout", 504, "claude_timeout"],
+    ["refusal", 422, "claude_refused"],
+    ["max_tokens", 422, "too_long"],
+    ["invalid_json", 502, "bad_answer"],
+    ["no_answer", 502, "bad_answer"],
+  ] as const)(
+    "a call that ran and failed (%s) says so, and never that nothing was charged",
+    async (reason, status, code) => {
+      const { deps } = setup({ result: { ok: false, code: "claude_failed", reason } });
+      const response = await parseChunkResponse(post(BODY), deps);
+      expect(response.status).toBe(status);
+      const body = await response.json();
+      expect(body.code).toBe(code);
+      expect(body.message).not.toMatch(/unavailable|nothing (more )?was charged/i);
+    },
+  );
+
+  it("answers 422 for a part too large to read even in pieces, and makes it the chunk's last try", async () => {
+    const { deps, service } = setup({ result: { ok: false, code: "part_too_large" } });
+    const response = await parseChunkResponse(post(BODY), deps);
+    expect(response.status).toBe(422);
+    const body = await response.json();
+    expect(body.code).toBe("part_too_large");
+    expect(body.message).toMatch(/split the file/i);
+    const [, failed] = service.stepsOn("ai_import_chunks", "update");
+    expect(failed?.[0]).toEqual({
+      status: "failed",
+      last_error: "part_too_large",
+      attempts: MAX_CHUNK_ATTEMPTS,
+    });
   });
 
   it("answers 409 busy while another request holds the chunk, without calling Claude", async () => {

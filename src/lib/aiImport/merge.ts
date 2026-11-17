@@ -31,7 +31,8 @@ const DEDUP_WORDS = 8;
 
 type Working = Omit<MergedQuestion, "position">;
 
-const sameOpening = (a: SegmentQuestion, b: SegmentQuestion) =>
+/** Whether two reads open with the same words: the test for one question read twice. */
+export const sameOpening = (a: SegmentQuestion, b: SegmentQuestion) =>
   openingKey(a.excerpt, DEDUP_WORDS) === openingKey(b.excerpt, DEDUP_WORDS);
 
 /** The page two neighbouring PDF chunks share, if they share one. */
@@ -66,9 +67,9 @@ function isOverlapDuplicate(
 
 /** The type of whichever read was surer of one; with neither typed, the question has no NGN type. */
 function typing(
-  first: Working,
-  second: Working,
-): Pick<Working, "type" | "confidence"> & {
+  first: SegmentQuestion,
+  second: SegmentQuestion,
+): Pick<SegmentQuestion, "type" | "confidence"> & {
   notNgn: string | null;
 } {
   const typed = [first, second].filter((read) => read.type !== null);
@@ -83,7 +84,11 @@ function typing(
   return { type: surest.type, confidence: surest.confidence, notNgn: null };
 }
 
-function combine(first: Working, second: Working, keepOpeningOf: Working): Working {
+/**
+ * Two reads of one question as one, with the opening of `keepOpeningOf` (one of the two). Also
+ * how the halves of a chunk read in two are joined (#590, `segmentSplit.ts`).
+ */
+export function combineReads<T extends SegmentQuestion>(first: T, second: T, keepOpeningOf: T): T {
   const { type, confidence, notNgn } = typing(first, second);
   return {
     ...keepOpeningOf,
@@ -100,6 +105,12 @@ function combine(first: Working, second: Working, keepOpeningOf: Working): Worki
       notInSource: keepOpeningOf.flags.notInSource,
       ownChart: first.flags.ownChart || second.flags.ownChart,
     },
+  };
+}
+
+function combine(first: Working, second: Working, keepOpeningOf: Working): Working {
+  return {
+    ...combineReads(first, second, keepOpeningOf),
     chunks: [...new Set([...first.chunks, ...second.chunks])].sort((x, y) => x - y),
     answers: [],
   };

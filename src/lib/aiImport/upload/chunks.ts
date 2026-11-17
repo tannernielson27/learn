@@ -68,7 +68,8 @@ export async function claimChunk(
 
 type Outcome =
   | { status: "done"; usage: Usage }
-  | { status: "failed"; code: string }
+  /** `final`: trying again will give the same, so this is recorded as the chunk's last try. */
+  | { status: "failed"; code: string; final?: boolean }
   /** Nothing was sent: the try is given back, as if it had not been claimed. */
   | { status: "released" };
 
@@ -89,7 +90,11 @@ export async function settleChunk(
           last_error: null,
         }
       : outcome.status === "failed"
-        ? { status: "failed", last_error: outcome.code.slice(0, 500) }
+        ? {
+            status: "failed",
+            last_error: outcome.code.slice(0, 500),
+            ...(outcome.final ? { attempts: MAX_CHUNK_ATTEMPTS } : {}),
+          }
         : { status: "pending", attempts: attempts - 1 };
   const { error } = await service
     .from("ai_import_chunks")

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { SEGMENT_MAX_TOKENS } from "./config";
 import { DOCX_MARKUP } from "./files/docx";
 import {
   SEGMENT_RULES,
@@ -77,6 +78,14 @@ describe("segmentRequest", () => {
     const b = segmentRequest({ type: "pdf", bytes: new Uint8Array() }, "pdf", PDF_CHUNK);
     expect(a.system).toBe(b.system);
     expect(a.schema).toEqual(b.schema);
+  });
+
+  it("asks for room for a dense chunk, and for none of it to go on thinking (#590)", () => {
+    const request = segmentRequest({ type: "text", text: SOURCE }, "md", TEXT_CHUNK);
+    expect(request.maxTokens).toBe(SEGMENT_MAX_TOKENS);
+    // The stuck import of 2026-10-22 needed more than 8,000.
+    expect(SEGMENT_MAX_TOKENS).toBeGreaterThanOrEqual(16_000);
+    expect(request.thinking).toBe("minimal");
   });
 
   it("builds a schema structured outputs accept, with no key fields", () => {

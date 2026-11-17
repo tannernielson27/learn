@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { NO_USAGE } from "./config";
+import { NO_USAGE, SEGMENT_MAX_TOKENS } from "./config";
 import {
   estimateCallCost,
   estimateSegmentCost,
@@ -144,9 +144,10 @@ describe("settleUsage", () => {
 describe("estimateSegmentCost", () => {
   it("reserves a PDF chunk by its pages and a text chunk by its length", () => {
     const pdf = estimateSegmentCost({ type: "pdf", bytes: new Uint8Array() }, 8);
-    expect(pdf).toBeCloseTo(((3000 + 8 * 3200) * 2.5 + 8000 * 10) / 1e6, 6);
+    // The whole of the segment pass's output limit is reserved, whatever it is set to (#590).
+    expect(pdf).toBeCloseTo(((3000 + 8 * 3200) * 2.5 + SEGMENT_MAX_TOKENS * 10) / 1e6, 6);
     const text = estimateSegmentCost({ type: "text", text: "x".repeat(30_000) }, 10);
-    expect(text).toBeCloseTo(((3000 + 10_000) * 2.5 + 8000 * 10) / 1e6, 6);
+    expect(text).toBeCloseTo(((3000 + 10_000) * 2.5 + SEGMENT_MAX_TOKENS * 10) / 1e6, 6);
   });
 
   it("stays well inside what one reservation may be", () => {

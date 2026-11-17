@@ -577,6 +577,27 @@ public.ai_import_object_deletes;` shows how many are waiting.
 are measured by hand with `pnpm eval:ai-import`), and the `learn-ai-import-sweep` job on hosted
 (pgTAP runs `sweep_ai_imports` directly).
 
+**#590, 2026-11-17: a chunk read in halves.** A parse request whose segment answer overflows now
+makes up to three Claude calls (the chunk, then two halves), each at up to 16,000 output tokens.
+Reviewed by `security-reviewer`; nothing critical or high.
+
+- **The cap still holds.** Every call is reserved before it is sent (`segmentChunk.ts`: the chunk
+  first, then both halves before either goes out), with the workspace taken from the session, and
+  settled once with its own usage. A refused reservation sends nothing. The split is one level
+  deep, a constant.
+- **Accepted: the pace is higher.** The 60 parse requests a teacher may make in an hour count
+  requests, not calls, so one account can spend about four times as fast as before (about $35 an
+  hour against about $8, if every chunk overflows). The monthly cap bounds the total.
+- **A document made to overflow** costs one try, not five: `part_too_large` is recorded as the
+  chunk's last attempt, and the attempt count is on the chunk's row, which the client cannot
+  reset. A new batch is bounded by the batch limit, the parse limit and the cap.
+- **Time.** Every call of a parse request is cut to end inside 270 s of the route's 300, and a
+  failure that was slow to arrive is not retried, so a function is not killed with a reservation
+  open more easily than before.
+- **Nothing new is exposed.** The new log lines, `last_error` values and responses carry a fixed
+  code and nothing else. Each half goes through `documentBlock` on its own, so a split cannot
+  break the `<document>` wrapper.
+
 ## Still open
 
 - **#178**: drop the open select policy on `live.session_public_state`. It is blocked on the owner

@@ -179,6 +179,8 @@ export function segmentRequest(
     schema: segmentJsonSchema(),
     content,
     maxTokens: SEGMENT_MAX_TOKENS,
+    // This pass copies and lists; all of its room is for the list (#590).
+    thinking: "minimal",
   };
 }
 

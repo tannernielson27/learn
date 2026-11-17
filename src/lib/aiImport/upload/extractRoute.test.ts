@@ -212,12 +212,27 @@ describe("POST /api/ai-import/extract", () => {
       402,
     ],
     [{ ok: false, code: "claude_failed", reason: "overloaded" } as ExtractUnitResult, 502],
+    [{ ok: false, code: "claude_failed", reason: "timeout" } as ExtractUnitResult, 504],
+    [{ ok: false, code: "claude_failed", reason: "max_tokens" } as ExtractUnitResult, 422],
+    [{ ok: false, code: "claude_failed", reason: "refusal" } as ExtractUnitResult, 422],
     [{ ok: false, code: "incomplete" } as ExtractUnitResult, 409],
     [{ ok: false, code: "unavailable" } as ExtractUnitResult, 503],
     [{ ok: false, code: "disabled" } as ExtractUnitResult, 404],
   ])("maps %o to %i", async (result, status) => {
     const { deps } = setup({ result });
     expect((await extractUnitResponse(post(BODY), deps)).status).toBe(status);
+  });
+
+  it("names an answer that ran out of room, and logs which failure it was", async () => {
+    const { deps } = setup({
+      result: { ok: false, code: "claude_failed", reason: "max_tokens" } as ExtractUnitResult,
+    });
+    const body = await (await extractUnitResponse(post(BODY), deps)).json();
+    expect(body.code).toBe("too_long");
+    expect(body.message).not.toMatch(/unavailable|nothing (more )?was charged/i);
+    expect(errorSpy).toHaveBeenCalledWith("[ai-import] an extract call failed", {
+      reason: "max_tokens",
+    });
   });
 
   it("answers 409 incomplete while a chunk has no segments", async () => {

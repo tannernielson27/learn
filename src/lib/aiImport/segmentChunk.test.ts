@@ -1,7 +1,9 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { MessagesClient } from "./claude";
+import { SEGMENT_BUDGET_MS, SEGMENT_SPLIT_DEPTH, SEGMENT_TIMEOUT_MS } from "./config";
 import type { PreparedFile } from "./files/prepare";
+import { buildPdf } from "./files/testing/fixtures";
 import { estimatePages } from "./files/text";
 import { estimateSegmentCost, type UsageRpc } from "./ledger";
 import { mergeSegments } from "./merge";
@@ -382,6 +384,280 @@ describe("segmentChunk's checks", () => {
       position: 0,
     });
     expect(result).toEqual({ ok: false, code: "unavailable" });
+    expect(ledger.settles).toHaveLength(1);
+  });
+});
+
+describe("a chunk whose answer runs out of room (#590)", () => {
+  /** Ten numbered questions, each a stem and two options in blocks of their own. */
+  const dense = Array.from({ length: 10 }, (_, i) =>
+    [`${i + 1}. Which finding matters most for client ${i + 1}?`, "A. One", "B. Two"].join("\n\n"),
+  ).join("\n\n");
+  const prepared = preparedText([dense]);
+  const full = () => reply('{"questions": [', { stop: "max_tokens", input: 6_000, output: 16_000 });
+
+  /** The numbered questions a request's document holds, as a faithful model lists them. */
+  function listed(body: Anthropic.MessageCreateParamsNonStreaming) {
+    const text = (body.messages[0].content as { type: string; text?: string }[])
+      .map((block) => block.text ?? "")
+      .find((value) => value.startsWith("<document>"));
+    const questions = [...(text ?? "").matchAll(/^(\d+)\. (Which finding[^\n]+)$/gm)].map(
+      (match) => ({
+        excerpt: match[2],
+        number: match[1],
+        type: "multiple_choice",
+        confidence: 0.9,
+        instructorNote: false,
+        reliesOnImage: false,
+        cutOff: false,
+        continued: false,
+      }),
+    );
+    return { text: text ?? "", questions };
+  }
+
+  it("reads the chunk again as two halves and returns one segment, each call reserved and settled", async () => {
+    const create = vi.fn(async (body: Anthropic.MessageCreateParamsNonStreaming) => {
+      const { questions } = listed(body);
+      // The whole chunk overflows; a half fits.
+      if (questions.length > 5) return full();
+      return reply(JSON.stringify({ questions, answers: [] }), { input: 3_000, output: 700 });
+    });
+    const ledger = fakeLedger();
+    const d = deps(prepared, { messages: { create } }, ledger);
+
+    const result = await segmentChunk(d, { ...REF, position: 0 });
+    if (!result.ok) throw new Error(result.code);
+    expect(create).toHaveBeenCalledTimes(3);
+    expect(result.segment.position).toBe(0);
+    expect(result.segment.questions.map((q) => [q.chunk, q.index, q.number])).toEqual(
+      Array.from({ length: 10 }, (_, i) => [0, i, String(i + 1)]),
+    );
+    expect(result.segment.questions.every((q) => !q.flags.notInSource)).toBe(true);
+
+    // Three calls, three reservations, each settled once with what its own call billed.
+    expect(ledger.reserves).toHaveLength(3);
+    expect(ledger.settles).toHaveLength(3);
+    expect(ledger.settles.map((s) => s.p_output_tokens).sort()).toEqual([16_000, 700, 700].sort());
+    expect(ledger.state.reservedUsd).toBeCloseTo(0, 9);
+    // The chunk's pages are charged once, by the first reservation.
+    expect(ledger.reserves.map((r) => r.p_pages)).toEqual([estimatePages(dense.length), 0, 0]);
+    expect(ledger.state.usedPages).toBe(estimatePages(dense.length));
+    // What is reported is everything the chunk cost, the overflowed call included.
+    expect(result.usage.outputTokens).toBe(16_000 + 700 + 700);
+    expect(result.costUsd).toBeCloseTo(ledger.state.usedUsd, 6);
+    expect(d.storeSegment).toHaveBeenCalledWith(expect.anything(), 0, result.segment);
+  });
+
+  it("gives up with its own code when the smallest pieces still overflow, charging no pages", async () => {
+    const create = vi.fn(async () => full());
+    const ledger = fakeLedger();
+    const d = deps(prepared, { messages: { create } }, ledger);
+    const result = await segmentChunk(d, { ...REF, position: 0 });
+    expect(result).toEqual({ ok: false, code: "part_too_large" });
+    // The chunk, then each level of halves the depth allows, and no further.
+    expect(create).toHaveBeenCalledTimes(2 ** (SEGMENT_SPLIT_DEPTH + 1) - 1);
+    expect(ledger.settles).toHaveLength(ledger.reserves.length);
+    expect(ledger.settles.every((s) => s.p_pages === 0 && s.p_output_tokens === 16_000)).toBe(true);
+    expect(ledger.state.usedPages).toBe(0);
+    expect(ledger.state.usedUsd).toBeGreaterThan(0);
+    expect(ledger.state.reservedUsd).toBeCloseTo(0, 9);
+    expect(d.storeSegment).not.toHaveBeenCalled();
+  });
+
+  it("answers part_too_large for text that cannot be cut", async () => {
+    const lump = preparedText(["x".repeat(4_000)]);
+    const create = vi.fn(async () => full());
+    const ledger = fakeLedger();
+    const result = await segmentChunk(deps(lump, { messages: { create } }, ledger), {
+      ...REF,
+      position: 0,
+    });
+    expect(result).toEqual({ ok: false, code: "part_too_large" });
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(ledger.settles).toHaveLength(1);
+  });
+
+  it("stops at the cap between the halves, with the pages uncharged and everything settled", async () => {
+    const create = vi.fn(async (body: Anthropic.MessageCreateParamsNonStreaming) => {
+      const { questions } = listed(body);
+      return questions.length > 5 ? full() : reply(JSON.stringify({ questions, answers: [] }));
+    });
+    // Room for the first reservation, which is held while the halves are read, but not for theirs.
+    const whole = estimateSegmentCost({ type: "text", text: dense }, estimatePages(dense.length));
+    const ledger = fakeLedger(whole * 1.6);
+    const result = await segmentChunk(deps(prepared, { messages: { create } }, ledger), {
+      ...REF,
+      position: 0,
+    });
+    // The overflowed call was billed, so the refusal says the try was used.
+    expect(result).toMatchObject({ ok: false, code: "cap_reached", charged: true });
+    // The first half was refused before anything was sent for either.
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(ledger.reserves).toHaveLength(2);
+    expect(ledger.settles).toHaveLength(1);
+    expect(ledger.state.usedPages).toBe(0);
+    expect(ledger.state.reservedUsd).toBeCloseTo(0, 9);
+  });
+
+  it("sends neither half when the cap has room for only one, and gives that one's reservation back", async () => {
+    const create = vi.fn(async (body: Anthropic.MessageCreateParamsNonStreaming) => {
+      const { questions } = listed(body);
+      return questions.length > 5 ? full() : reply(JSON.stringify({ questions, answers: [] }));
+    });
+    const whole = estimateSegmentCost({ type: "text", text: dense }, estimatePages(dense.length));
+    // The chunk's reservation and one half's fit; the second half's does not.
+    const ledger = fakeLedger(whole * 2.5);
+    const result = await segmentChunk(deps(prepared, { messages: { create } }, ledger), {
+      ...REF,
+      position: 0,
+    });
+    expect(result).toMatchObject({ ok: false, code: "cap_reached", charged: true });
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(ledger.reserves).toHaveLength(3);
+    // The granted half is settled at nothing, and the chunk's own at what its call billed.
+    expect(ledger.settles.map((s) => s.p_output_tokens).sort()).toEqual([0, 16_000]);
+    expect(ledger.state.reservedUsd).toBeCloseTo(0, 9);
+  });
+
+  it("a cap reached before anything was sent is not marked as charged", async () => {
+    const create = vi.fn(async () => full());
+    const result = await segmentChunk(deps(prepared, { messages: { create } }, fakeLedger(0.01)), {
+      ...REF,
+      position: 0,
+    });
+    expect(result).toMatchObject({ ok: false, code: "cap_reached" });
+    expect(result).not.toHaveProperty("charged");
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("a half that will never fit decides the failure, whatever the other half did", async () => {
+    const overloaded = Object.assign(new Error("Overloaded"), { status: 529 });
+    const create = vi.fn(async (body: Anthropic.MessageCreateParamsNonStreaming) => {
+      const { text, questions } = listed(body);
+      if (questions.length > 5) return full();
+      // The first half fails for the moment; the second overflows for good.
+      if (text.includes("1. Which")) throw overloaded;
+      return full();
+    });
+    const result = await segmentChunk(deps(prepared, { messages: { create } }), {
+      ...REF,
+      position: 0,
+    });
+    expect(result).toEqual({ ok: false, code: "part_too_large" });
+  });
+
+  it("cuts the halves' calls to what is left of the request's time", async () => {
+    let clock = 0;
+    const timeouts: number[] = [];
+    const create = vi.fn(
+      async (body: Anthropic.MessageCreateParamsNonStreaming, options?: { timeout?: number }) => {
+        const { questions } = listed(body);
+        timeouts.push(options?.timeout ?? -1);
+        if (questions.length > 5) {
+          // The chunk's own call took 200 s to overflow.
+          clock += 200_000;
+          return full();
+        }
+        return reply(JSON.stringify({ questions, answers: [] }));
+      },
+    );
+    const d = deps(prepared, { messages: { create } }, fakeLedger(), { now: () => clock });
+    const result = await segmentChunk(d, { ...REF, position: 0 });
+    expect(result.ok).toBe(true);
+    expect(timeouts[0]).toBe(SEGMENT_TIMEOUT_MS);
+    expect(timeouts.slice(1)).toEqual([SEGMENT_BUDGET_MS - 200_000, SEGMENT_BUDGET_MS - 200_000]);
+  });
+
+  it("fails the halves as timeouts, unsent and settled, when no time is left for them", async () => {
+    let clock = 0;
+    const create = vi.fn(async () => {
+      clock += SEGMENT_BUDGET_MS;
+      return full();
+    });
+    const ledger = fakeLedger();
+    const d = deps(prepared, { messages: { create } }, ledger, { now: () => clock });
+    const result = await segmentChunk(d, { ...REF, position: 0 });
+    expect(result).toEqual({ ok: false, code: "claude_failed", reason: "timeout" });
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(ledger.settles).toHaveLength(3);
+    expect(ledger.state.reservedUsd).toBeCloseTo(0, 9);
+  });
+
+  it("fails the chunk when a half's call fails, as any call does", async () => {
+    const overloaded = Object.assign(new Error("Overloaded"), { status: 529 });
+    const create = vi.fn(async (body: Anthropic.MessageCreateParamsNonStreaming) => {
+      const { text, questions } = listed(body);
+      if (questions.length > 5) return full();
+      if (text.includes("6. Which")) throw overloaded;
+      return reply(JSON.stringify({ questions, answers: [] }));
+    });
+    const ledger = fakeLedger();
+    const result = await segmentChunk(deps(prepared, { messages: { create } }, ledger), {
+      ...REF,
+      position: 0,
+    });
+    expect(result).toEqual({ ok: false, code: "claude_failed", reason: "overloaded" });
+    expect(ledger.state.usedPages).toBe(0);
+    expect(ledger.state.reservedUsd).toBeCloseTo(0, 9);
+  });
+
+  it("halves a PDF chunk by its pages, around a shared page", async () => {
+    const bytes = await buildPdf(5);
+    const pdf: PreparedFile = {
+      ...prepared,
+      kind: "pdf",
+      pages: 5,
+      chunks: [{ position: 0, pageFrom: 1, pageTo: 5, text: null }],
+    };
+    const asked: string[] = [];
+    const create = vi.fn(async (body: Anthropic.MessageCreateParamsNonStreaming) => {
+      const said = (body.messages[0].content as { type: string; text?: string }[])
+        .map((block) => block.text ?? "")
+        .join(" ");
+      const pages = /pages (\d+) to (\d+)/.exec(said);
+      asked.push(`${pages?.[1]}-${pages?.[2]}`);
+      if (asked.length === 1) return full();
+      const first = Number(pages?.[1]);
+      return reply(
+        JSON.stringify({
+          questions: [
+            {
+              excerpt: `A question that starts on page ${first} of the file`,
+              page: 1,
+              type: "multiple_choice",
+              confidence: 0.9,
+              instructorNote: false,
+              reliesOnImage: false,
+              cutOff: false,
+              continued: false,
+            },
+          ],
+          answers: [],
+        }),
+      );
+    });
+    const ledger = fakeLedger();
+    const d = deps(pdf, { messages: { create } }, ledger, {
+      loadFile: vi.fn(async () => ({ ok: true as const, bytes, prepared: pdf })),
+    });
+    const result = await segmentChunk(d, { ...REF, position: 0 });
+    if (!result.ok) throw new Error(result.code);
+    expect(asked.sort()).toEqual(["1-3", "1-5", "3-5"]);
+    expect(result.segment).toMatchObject({ pageFrom: 1, pageTo: 5 });
+    expect(result.segment.questions.map((q) => q.page)).toEqual([1, 3]);
+    // Five pages, charged once.
+    expect(ledger.state.usedPages).toBe(5);
+  });
+
+  it("never throws out of a reservation: an answer that cannot be read at all is a bad answer", async () => {
+    const create = vi.fn(async () => reply("null"));
+    const ledger = fakeLedger();
+    const result = await segmentChunk(deps(prepared, { messages: { create } }, ledger), {
+      ...REF,
+      position: 0,
+    });
+    expect(result).toEqual({ ok: false, code: "bad_answer" });
     expect(ledger.settles).toHaveLength(1);
   });
 });
