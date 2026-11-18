@@ -598,6 +598,32 @@ Reviewed by `security-reviewer`; nothing critical or high.
   code and nothing else. Each half goes through `documentBlock` on its own, so a split cannot
   break the `<document>` wrapper.
 
+**#591, 2026-11-17: removing a file mid-read, discard from the upload page, the quiz page's
+list.** No new route, table, function or policy; no migration.
+
+- **`removeAiImportFile` on a batch that is reading** (`removeUpload` → `removeReadingFile`). The
+  same gate as before: a teacher, AI import on, the workspace from the session, the batch read in
+  that workspace. The file is looked up among that batch's rows, so a file id of another batch or
+  workspace is `not_found` and nothing is written. It then writes with the service client, each
+  statement filtered by workspace and batch: the file marked refused, its chunks deleted, the
+  entries at its own place deleted (`position` from `place × 1000` up to the next thousand), and
+  its object removed. The row is kept so no other file's place moves. Tests:
+  `removeFile.test.ts`, `actions.test.ts`.
+- **A removal cannot leave a question behind.** A request that was already reading the file may
+  stage a question after the removal; `finishBatch` clears every removed file's place again
+  before the batch moves to review, and refuses a batch with no file left.
+- **Discard on the upload page** is the existing `discardAiImportBatch`, unchanged: its own check
+  of the caller, the teacher's session for the delete, statuses `uploading`, `parsing`, `review`
+  and `failed`.
+- **The quiz page's list** (`readOpenImports`) reads with the teacher's own session, filtered by
+  the session's workspace and the quiz in the address: batch ids, statuses and a count of
+  entries. No entry is selected.
+- **The driver's new tries** are the browser asking again; each is admitted, limited and reserved
+  as any other request. A chunk still has five tries on its row, which the client cannot reset.
+- **Accepted, unchanged: a failed extract unit holds its claim for 6 minutes.** The shared
+  limiter has no way to give a hit back, and adding one needs a migration, which this story did
+  not have. The page now says a file is waiting and for about how long.
+
 ## Still open
 
 - **#178**: drop the open select policy on `live.session_public_state`. It is blocked on the owner

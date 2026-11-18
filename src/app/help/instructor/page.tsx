@@ -156,7 +156,7 @@ export default function InstructorGuide() {
             <Ui>Upload and read</Ui>.
           </li>
           <li>
-            Wait while it reads. You can leave and come back. Then press{" "}
+            Keep the tab open while it reads. If a file cannot be read, remove it. Then press{" "}
             <Ui>Review the questions</Ui>.
           </li>
         </Steps>

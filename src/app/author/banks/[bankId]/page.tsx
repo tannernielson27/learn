@@ -29,7 +29,9 @@ import { TagFilterBar } from "@/components/authoring/TagFilterBar";
 import { startLiveSession } from "@/app/live/actions";
 import { shareBankWithClass, stopSharing } from "@/app/author/practice/actions";
 import { aiImportEnabled } from "@/lib/aiImport/config";
-import { workspaceEnabled } from "@/lib/aiImport/upload/access";
+import { workspaceEnabled, type Client as AiImportClient } from "@/lib/aiImport/upload/access";
+import { readOpenImports } from "@/lib/aiImport/upload/openImports";
+import { describeOpenImport } from "@/lib/authoring/aiImportUpload";
 import { assignmentPath } from "@/lib/assignments/assignments";
 import { bankCaseStudiesEmpty, bankItemsEmpty, emptyQuizSteps } from "@/lib/authoring/bankEmpty";
 import {
@@ -110,6 +112,12 @@ export default async function BankPage({
     ? workspaceEnabled(author).then((on) => on === true)
     : Promise.resolve(false);
   aiImportOn.catch(() => undefined);
+  // #591: an import left unfinished or in review is listed with the way back to it. Read with
+  // the teacher's own session, for this quiz only; statuses and counts, never a question.
+  const openImportsRead = aiImportOn.then((on) =>
+    on ? readOpenImports(supabase as unknown as AiImportClient, author.orgId, bankId) : [],
+  );
+  openImportsRead.catch(() => undefined);
   // perf-audit #13: the quiz row, its folders and the reads that do not depend on the view all
   // start together. Each is a read of this quiz under RLS, so for a quiz this author cannot see
   // they find nothing; the row is still awaited first, so that quiz is a 404 as before.
@@ -148,6 +156,7 @@ export default async function BankPage({
     ]);
   const { items } = itemPage;
   const aiImport = await aiImportOn.catch(() => false);
+  const openImports = await openImportsRead.catch(() => []);
   const facets = tagFacets(taggedRows, filter);
   const trail = view.kind === "folder" ? folderTrail(folders, view.id) : [];
   // A folder id that is not one of this bank's folders reads as not found.
@@ -319,6 +328,7 @@ export default async function BankPage({
           newQuestionHref={`/author/banks/${bank.id}/new`}
           newCaseStudy={<CreateCaseStudyForm action={createCaseStudyInBank.bind(null, bank.id)} />}
           aiImportHref={aiImport ? `/author/banks/${bank.id}/ai-import` : undefined}
+          openImports={openImports.map((open) => describeOpenImport(bank.id, open))}
           folders={
             inQuizFolders ? (
               <QuizFolderPanel

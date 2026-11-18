@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useId, useRef, useState } from "react";
 import { Button, PRESS_CLASSES } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Dialog } from "@/components/ui/Dialog";
 import { TextLink } from "@/components/ui/TextLink";
 import {
   REVIEW_FILTERS,
@@ -19,6 +18,7 @@ import {
 } from "@/lib/authoring/aiImportReview";
 import type { AiImportFailure } from "@/lib/authoring/aiImportUpload";
 import type { ItemType } from "@/lib/ngn/schemas";
+import { AiImportDiscard, UNEXPECTED } from "./AiImportDiscard";
 import { AiImportReviewEntry, type EntryChange } from "./AiImportReviewEntry";
 import { FieldError } from "./FieldError";
 import { postJson } from "./aiImportRequests";
@@ -42,8 +42,6 @@ export interface AiImportReviewActions {
   /** #348: the batch, its staged questions and its uploaded files deleted. */
   discard?: (input: { batchId: string }) => Promise<{ ok: true } | AiImportFailure>;
 }
-
-const UNEXPECTED = "That did not work. Try again.";
 
 export interface AiImportReviewProps {
   bankId: string;
@@ -202,7 +200,7 @@ export function AiImportReview({
             </div>
           </div>
           {actions.discard ? (
-            <DiscardImport batchId={batchId} bankId={bankId} discard={actions.discard} />
+            <AiImportDiscard batchId={batchId} bankId={bankId} discard={actions.discard} />
           ) : null}
         </Card>
       </section>
@@ -250,86 +248,5 @@ export function AiImportReview({
         ))
       )}
     </div>
-  );
-}
-
-interface DiscardImportProps {
-  batchId: string;
-  bankId: string;
-  discard: NonNullable<AiImportReviewActions["discard"]>;
-}
-
-/**
- * "Discard this import" (#348). Pressing it changes nothing: a dialog says what goes, and its own
- * button is the one that acts. Success goes back to the quiz; a refusal keeps the dialog open.
- */
-function DiscardImport({ batchId, bankId, discard }: DiscardImportProps) {
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const inFlight = useRef(false);
-  const messageId = useId();
-
-  const close = () => {
-    if (inFlight.current) return;
-    setMessage(null);
-    setOpen(false);
-  };
-
-  const confirm = async () => {
-    if (inFlight.current) return;
-    inFlight.current = true;
-    setBusy(true);
-    try {
-      const result = await discard({ batchId });
-      if (result.ok) {
-        router.push(`/author/banks/${bankId}`);
-        return;
-      }
-      setMessage(result.message);
-    } catch {
-      setMessage(UNEXPECTED);
-    } finally {
-      inFlight.current = false;
-      setBusy(false);
-    }
-  };
-
-  return (
-    <>
-      <div>
-        <Button size="sm" onClick={() => setOpen(true)}>
-          Discard this import
-        </Button>
-      </div>
-      <Dialog
-        open={open}
-        onClose={close}
-        title="Discard this import?"
-        description="Every question found in these files is deleted, and so are the uploaded files."
-        actions={
-          <>
-            <Button variant="ghost" onClick={close}>
-              Keep reviewing
-            </Button>
-            {/* aria-disabled, not disabled: a disabled button drops focus mid-request. */}
-            <Button
-              variant="primary"
-              aria-disabled={busy || undefined}
-              aria-describedby={message ? messageId : undefined}
-              onClick={confirm}
-            >
-              {busy ? "Discarding…" : "Discard"}
-            </Button>
-          </>
-        }
-      >
-        {/* Always rendered: a region that appears with its text already in it is often not read. */}
-        <div id={messageId} aria-live="polite">
-          {message ? <FieldError>{message}</FieldError> : null}
-        </div>
-      </Dialog>
-    </>
   );
 }

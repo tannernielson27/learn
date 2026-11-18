@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { REMOVED_REASON } from "../files/reasons";
 import { openBatchId, readAllowance, readBatchView } from "./state";
 import { BANK, BATCH, ORG, fakeClient } from "./testing/fakeSupabase";
 
@@ -72,6 +73,33 @@ describe("readBatchView", () => {
       expect(service.stepsOn(table, "eq")).toContainEqual(["org_id", ORG]);
     }
     expect(service.stepsOn("ai_import_batches", "eq")).toContainEqual(["bank_id", BANK]);
+  });
+
+  // #591: a removed file keeps its row, so the files after it keep their place.
+  it("leaves out a removed file and still counts the next file's questions at its own place", async () => {
+    const service = fakeClient({
+      ai_import_batches: [{ data: { id: BATCH, status: "parsing" } }],
+      ai_import_files: [
+        {
+          data: [
+            {
+              id: F1,
+              original_name: "removed.md",
+              status: "rejected",
+              rejected_reason: REMOVED_REASON,
+              pages: 2,
+            },
+            { id: F2, original_name: "kept.md", status: "ready", rejected_reason: null, pages: 1 },
+          ],
+        },
+      ],
+      ai_import_chunks: [{ data: [{ file_id: F2, position: 0, status: "done" }] }],
+      ai_import_entries: [{ data: [{ position: 1000 }, { position: 1001 }] }],
+    });
+    const view = await readBatchView(service.client, ORG, BATCH);
+    expect(view).toMatchObject({
+      files: [{ id: F2, name: "kept.md", status: "ready", questions: 2 }],
+    });
   });
 
   it("answers null for a batch it cannot find, and unavailable on an error", async () => {

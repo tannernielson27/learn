@@ -12,7 +12,7 @@ export interface FileRow {
   /** From 0 to 1. */
   progress: number;
   tone: "working" | "done" | "refused";
-  /** Offered while the import is still taking files. */
+  /** Offered while the import is taking files, and on a file that failed while it was read. */
   removable: boolean;
 }
 

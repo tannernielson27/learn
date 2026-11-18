@@ -19,6 +19,7 @@ import {
   type BatchView,
   type TrackedFile,
 } from "@/lib/authoring/aiImportUpload";
+import { AiImportDiscard } from "./AiImportDiscard";
 import { AiImportDropZone } from "./AiImportDropZone";
 import { AiImportFileRows, type FileRow } from "./AiImportFileRows";
 import { AiImportReady } from "./AiImportReady";
@@ -42,6 +43,8 @@ export interface AiImportActions {
   remove: (batchId: string, fileId: string) => Result<object>;
   begin: (batchId: string) => Result<{ batch: BatchView }>;
   finish: (batchId: string) => Result<object>;
+  /** #591: the import, its staged questions and its uploaded files deleted. */
+  discard: (input: { batchId: string }) => Result<object>;
 }
 
 export interface AiImportUploadProps {
@@ -65,19 +68,49 @@ const io = (actions: AiImportActions, left: { current: boolean }): DriverIo => (
   sleep,
 });
 
+/** A file the teacher has just chosen, before the server knows of it. */
+const localFile = (key: string, name: string): TrackedFile => ({
+  key,
+  fileId: null,
+  name,
+  status: "pending",
+  reason: null,
+  pages: null,
+  chunks: [],
+  units: null,
+  questions: 0,
+  note: "Uploading.",
+  failed: null,
+  held: null,
+});
+
+/**
+ * Whether a file can be taken out now. Any file while the import is still taking files; once it
+ * is reading (#591), a file that failed or was refused, so the rest can go on to review.
+ */
+function canRemove(file: TrackedFile, status: BatchStatus): boolean {
+  if (status === "uploading") return true;
+  return status === "parsing" && (file.failed !== null || file.status === "rejected");
+}
+
 /**
  * Upload documents for AI import and watch each one read (#345). The files go straight from the
  * browser to private Storage under the teacher's own session; the page then asks the server to
  * read each part and find each question, and shows how far each file has got. A reload picks up
  * where it stopped, from the batch as stored.
+ *
+ * The page is never a dead end (#591): a file that cannot be read can be removed and the rest
+ * reviewed, and the whole import can be discarded at any stage.
  */
 export function AiImportUpload({ bankId, allowance, initial, actions }: AiImportUploadProps) {
   const router = useRouter();
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  const left = useRef(false);
   const [batchId, setBatchId] = useState<string | null>(initial?.id ?? null);
   const [status, setStatus] = useState<BatchStatus>(initial?.status ?? "uploading");
   const [files, setFiles] = useState<TrackedFile[]>(() => (initial?.files ?? []).map(trackFile));
+  const [chosen, setChosen] = useState<File[]>([]);
   const [rights, setRights] = useState(false);
   const [busy, setBusy] = useState(false);
   const [alert, setAlert] = useState<string[]>([]);
@@ -107,7 +140,8 @@ export function AiImportUpload({ bankId, allowance, initial, actions }: AiImport
         ),
       unitsProgress: (fileId, done, total, staged) =>
         patch(fileId, { units: { done, total }, questions: (base.get(fileId) ?? 0) + staged }),
-      fileFailed: (fileId, message) => patch(fileId, { failed: message }),
+      fileFailed: (fileId, message) => patch(fileId, { failed: message, held: null }),
+      fileHeld: (fileId, held) => patch(fileId, { held }),
       overLimit: (count) =>
         setNote(
           `${count} more ${count === 1 ? "question was" : "questions were"} left out: an import holds at most ${AI_IMPORT_MAX_QUESTIONS}.`,
@@ -121,7 +155,10 @@ export function AiImportUpload({ bankId, allowance, initial, actions }: AiImport
     } else if (result.status === "stopped") {
       setAlert([result.failure.message]);
     } else {
-      setAlert([result.failure?.message ?? "Some files could not be read. Try again."]);
+      setAlert([
+        result.failure?.message ??
+          "Some files could not be read. Try again, or remove them to review the rest.",
+      ]);
     }
   }
 
@@ -134,7 +171,6 @@ export function AiImportUpload({ bankId, allowance, initial, actions }: AiImport
     await read(begun.batch);
   }
 
-  const left = useRef(false);
   useEffect(() => {
     // Set again on mount, as development mounts every component twice.
     left.current = false;
@@ -142,6 +178,14 @@ export function AiImportUpload({ bankId, allowance, initial, actions }: AiImport
       left.current = true;
     };
   }, []);
+
+  // Nothing is uploaded or read once the tab is gone, so closing it mid-way asks first (#591).
+  useEffect(() => {
+    if (!busy) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [busy]);
 
   // A reload while files were being read carries on reading them.
   const resumed = useRef(false);
@@ -155,22 +199,7 @@ export function AiImportUpload({ bankId, allowance, initial, actions }: AiImport
 
   async function uploadOne(current: string, file: File) {
     const key = `local-${file.name}-${Math.random()}`;
-    setFiles((list) => [
-      ...list,
-      {
-        key,
-        fileId: null,
-        name: file.name,
-        status: "pending",
-        reason: null,
-        pages: null,
-        chunks: [],
-        units: null,
-        questions: 0,
-        note: "Uploading.",
-        failed: null,
-      },
-    ]);
+    setFiles((list) => [...list, localFile(key, file.name)]);
     const registered = await actions.register(current, file.name);
     if (!registered.ok) {
       patch(key, { status: "local", reason: registered.message, note: null });
@@ -193,14 +222,14 @@ export function AiImportUpload({ bankId, allowance, initial, actions }: AiImport
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
-    const chosen = Array.from(inputRef.current?.files ?? []);
+    const picked = Array.from(inputRef.current?.files ?? []);
     const hasReady = files.some((file) => file.status === "ready");
     const problems = [
       ...(rights || batchId ? [] : [messageFor("rights")]),
-      ...(chosen.length === 0 && hasReady
+      ...(picked.length === 0 && hasReady
         ? []
         : checkChosenFiles(
-            chosen,
+            picked,
             AI_IMPORT_MAX_FILES - files.filter((f) => f.status !== "local").length,
           )),
     ];
@@ -233,8 +262,9 @@ export function AiImportUpload({ bankId, allowance, initial, actions }: AiImport
           patch(file.key, { status: "rejected", reason: checked.reason });
         }
       }
-      for (const file of chosen) await uploadOne(current, file);
+      for (const file of picked) await uploadOne(current, file);
       if (inputRef.current) inputRef.current.value = "";
+      setChosen([]);
       await begin(current);
     } finally {
       setBusy(false);
@@ -247,10 +277,25 @@ export function AiImportUpload({ bankId, allowance, initial, actions }: AiImport
       return;
     }
     setBusy(true);
-    const removed = await actions.remove(batchId, row.fileId);
-    setBusy(false);
-    if (removed.ok) setFiles((list) => list.filter((file) => file.key !== row.key));
-    else setAlert([removed.message]);
+    try {
+      const removed = await actions.remove(batchId, row.fileId);
+      if (!removed.ok) {
+        setAlert([removed.message]);
+        return;
+      }
+      const rest = files.filter((file) => file.key !== row.key);
+      setFiles(rest);
+      setAlert([]);
+      if (status !== "parsing") return;
+      if (!rest.some((file) => file.status === "ready")) {
+        setAlert([messageFor("nothing_left")]);
+        return;
+      }
+      // The files that are left go on to review, unless another of them still needs the teacher.
+      if (!rest.some((file) => file.failed !== null)) await begin(batchId);
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function retry() {
@@ -267,68 +312,100 @@ export function AiImportUpload({ bankId, allowance, initial, actions }: AiImport
     key: file.key,
     fileId: file.fileId,
     name: file.name,
-    removable: status === "uploading" && file.status !== "ready",
+    removable: canRemove(file, status),
     ...describeFile(file, status),
   }));
   const questions = files.reduce((sum, file) => sum + file.questions, 0);
+  const discard = batchId ? (
+    <AiImportDiscard
+      batchId={batchId}
+      bankId={bankId}
+      keepLabel="Keep this import"
+      discard={async (input) => {
+        const result = await actions.discard(input);
+        // The import is gone: whatever is still being read stops asking for it.
+        if (result.ok) left.current = true;
+        return result;
+      }}
+    />
+  ) : null;
 
   if (status === "review") {
     return (
-      <AiImportReady id={id} bankId={bankId} batchId={batchId} rows={rows} questions={questions} />
+      <AiImportReady
+        id={id}
+        bankId={bankId}
+        batchId={batchId}
+        rows={rows}
+        questions={questions}
+        discard={discard}
+      />
     );
   }
 
   const reading = status === "parsing";
   return (
-    <form onSubmit={submit} className="flex flex-col gap-6 sm:max-w-2xl" aria-busy={busy}>
-      {allowance ? (
-        <p className="text-sm text-ink-2">
-          {allowanceLine(allowance.remainingUsd, allowance.remainingPages)}
-        </p>
-      ) : null}
-      {reading ? null : (
-        <>
-          <AiImportDropZone inputRef={inputRef} id={`${id}-files`} busy={busy} />
-          {batchId ? null : (
-            <label className="tap-target flex items-start gap-3 py-2 text-sm text-ink-1">
-              <input
-                type="checkbox"
-                checked={rights}
-                onChange={(event) => setRights(event.target.checked)}
-                className="mt-0.5 size-5 shrink-0 accent-accent"
-              />
-              <span>{RIGHTS_LABEL}</span>
-            </label>
-          )}
-        </>
-      )}
-      <AiImportFileRows rows={rows} busy={busy} onRemove={remove} />
-      {note ? <p className="text-sm text-ink-2">{note}</p> : null}
-      {alert.length > 0 ? (
-        <Notice role="alert">
-          <ul className="flex list-disc flex-col gap-1 pl-5">
-            {alert.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-        </Notice>
-      ) : null}
-      <div className="flex flex-wrap items-center gap-3">
-        {reading ? (
-          <Button type="button" variant="secondary" disabled={busy} onClick={retry}>
-            Try again
-          </Button>
-        ) : (
-          <Button type="submit" variant="primary" disabled={busy}>
-            Upload and read
-          </Button>
-        )}
-        {busy ? (
-          <p role="status" className="text-sm text-ink-2">
-            {reading ? "Reading your files. You can leave this page and come back." : "Uploading."}
+    <div className="flex flex-col gap-4 sm:max-w-2xl">
+      <form onSubmit={submit} className="flex flex-col gap-6" aria-busy={busy}>
+        {allowance ? (
+          <p className="text-sm text-ink-2">
+            {allowanceLine(allowance.remainingUsd, allowance.remainingPages)}
           </p>
         ) : null}
-      </div>
-    </form>
+        {reading ? null : (
+          <>
+            <AiImportDropZone
+              inputRef={inputRef}
+              id={`${id}-files`}
+              busy={busy}
+              chosen={chosen}
+              onChoose={setChosen}
+            />
+            {batchId ? null : (
+              <label className="tap-target flex items-start gap-3 py-2 text-sm text-ink-1">
+                <input
+                  type="checkbox"
+                  checked={rights}
+                  onChange={(event) => setRights(event.target.checked)}
+                  className="mt-0.5 size-5 shrink-0 accent-accent"
+                />
+                <span>{RIGHTS_LABEL}</span>
+              </label>
+            )}
+          </>
+        )}
+        <AiImportFileRows rows={rows} busy={busy} onRemove={remove} />
+        {note ? <p className="text-sm text-ink-2">{note}</p> : null}
+        {alert.length > 0 ? (
+          <Notice role="alert">
+            <ul className="flex list-disc flex-col gap-1 pl-5">
+              {alert.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </Notice>
+        ) : null}
+        <div className="flex flex-wrap items-center gap-3">
+          {reading ? (
+            <Button type="button" variant="secondary" disabled={busy} onClick={retry}>
+              Try again
+            </Button>
+          ) : (
+            <Button type="submit" variant="primary" disabled={busy}>
+              Upload and read
+            </Button>
+          )}
+          {busy ? (
+            <p role="status" className="text-sm text-ink-2">
+              {reading
+                ? "Reading your files. Keep this tab open until it finishes."
+                : "Uploading. Keep this tab open."}
+            </p>
+          ) : null}
+        </div>
+      </form>
+      {/* Outside the form: the dialog's buttons are no part of what the form sends. */}
+      {discard}
+    </div>
   );
 }

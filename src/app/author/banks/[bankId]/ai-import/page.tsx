@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import {
   beginAiImportReading,
   checkAiImportFile,
+  discardAiImportBatch,
   finishAiImport,
   registerAiImportFile,
   removeAiImportFile,
@@ -72,6 +73,7 @@ export default async function AiImportPage({
           remove: removeAiImportFile,
           begin: beginAiImportReading,
           finish: finishAiImport,
+          discard: discardAiImportBatch,
         }}
       />
     </ReadingWidth>

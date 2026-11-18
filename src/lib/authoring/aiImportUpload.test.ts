@@ -9,10 +9,13 @@ import {
   AI_IMPORT_MAX_QUESTIONS,
   AI_IMPORT_MESSAGES,
   AI_IMPORT_UPLOAD_BUCKET,
+  HOLD_STAGES,
   allowanceLine,
   checkChosenFiles,
   describeFile,
+  describeOpenImport,
   fileProgress,
+  fileSizeLabel,
   messageFor,
   runPool,
   trackFile,
@@ -153,6 +156,48 @@ describe("describeFile and fileProgress", () => {
   it("weighs reading and extracting", () => {
     expect(fileProgress({ status: "pending", chunks: [] }, null)).toBe(0);
     expect(fileProgress({ status: "ready", chunks: [] }, { done: 1, total: 2 })).toBe(0.2);
+  });
+
+  // #591: a wait of minutes is said, with about how long, and so is a new try.
+  it("says a file is waiting or being tried again, and a failure over either", () => {
+    expect(describeFile(ready({ held: "waiting" }), "parsing")).toEqual({
+      stage: "Waiting to read part of this file. This can take up to 6 minutes.",
+      tone: "working",
+      progress: 0.3,
+    });
+    expect(describeFile(ready({ held: "retrying" }), "parsing").stage).toBe(HOLD_STAGES.retrying);
+    expect(describeFile(ready({ held: "waiting", failed: "No." }), "parsing").stage).toBe("No.");
+  });
+});
+
+describe("fileSizeLabel", () => {
+  it("names a size in the largest unit that reads well", () => {
+    expect(fileSizeLabel(28)).toBe("28 bytes");
+    expect(fileSizeLabel(340 * 1024)).toBe("340 KB");
+    expect(fileSizeLabel(1.25 * 1024 * 1024)).toBe("1.3 MB");
+  });
+});
+
+describe("describeOpenImport", () => {
+  it("links an import in review to its review, with the count in the link", () => {
+    expect(describeOpenImport("q1", { id: "b1", status: "review", questions: 12 })).toEqual({
+      text: "An import is waiting for review.",
+      action: "Review 12 questions",
+      href: "/author/banks/q1/ai-import/b1",
+    });
+    expect(describeOpenImport("q1", { id: "b1", status: "review", questions: 1 }).action).toBe(
+      "Review 1 question",
+    );
+  });
+
+  it("links an import still uploading or reading back to the upload page", () => {
+    for (const status of ["uploading", "parsing"] as const) {
+      expect(describeOpenImport("q1", { id: "b2", status, questions: 3 })).toEqual({
+        text: "An import is not finished.",
+        action: "Continue the import",
+        href: "/author/banks/q1/ai-import?batch=b2",
+      });
+    }
   });
 });
 

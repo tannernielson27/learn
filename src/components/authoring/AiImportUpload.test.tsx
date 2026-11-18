@@ -5,7 +5,8 @@ import type { BatchView } from "@/lib/authoring/aiImportUpload";
 import { AiImportUpload, type AiImportActions } from "./AiImportUpload";
 
 const replace = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace, push }) }));
 const requests = vi.hoisted(() => ({ postJson: vi.fn(), uploadToStorage: vi.fn() }));
 vi.mock("./aiImportRequests", () => requests);
 
@@ -45,11 +46,35 @@ function actions(): AiImportActions {
     remove: vi.fn(async () => ({ ok: true as const })),
     begin: vi.fn(async () => ({ ok: true as const, batch: ready })),
     finish: vi.fn(async () => ({ ok: true as const })),
+    discard: vi.fn(async () => ({ ok: true as const })),
   };
+}
+
+/** Two files being read: the second is the one a test makes fail. */
+const twoFiles: BatchView = {
+  ...ready,
+  files: [ready.files[0]!, { ...ready.files[0]!, id: "f2", name: "Renal.md" }],
+};
+
+const spent = {
+  ok: false,
+  code: "spent",
+  message: "This part failed too many times. Remove the file, or discard this import.",
+};
+
+/** Every part of `f2` fails for good; everything else is read. */
+function failSecondFile() {
+  requests.postJson.mockImplementation(async (url: string, body: { fileId: string }) => {
+    if (body.fileId === "f2") return spent;
+    return url.endsWith("/parse")
+      ? { ok: true, questions: 1, already: false }
+      : { ok: true, units: 1, staged: 1, alreadyStaged: 0, overLimit: 0 };
+  });
 }
 
 beforeEach(() => {
   replace.mockReset();
+  push.mockReset();
   requests.uploadToStorage.mockReset().mockResolvedValue(true);
   requests.postJson
     .mockReset()
@@ -153,5 +178,132 @@ describe("AiImportUpload", () => {
     await userEvent.click(screen.getByRole("button", { name: "Remove Cardiac.md" }));
     expect(act.remove).toHaveBeenCalledWith("b1", "f1");
     await waitFor(() => expect(screen.queryByText("Cardiac.md")).toBeNull());
+  });
+
+  // #591: what was chosen or dropped is listed before anything is sent.
+  it("lists the chosen files with their sizes before the upload", async () => {
+    render(<AiImportUpload bankId={BANK} allowance={null} initial={null} actions={actions()} />);
+    expect(screen.queryByRole("list", { name: "Chosen files" })).toBeNull();
+    await userEvent.upload(screen.getByLabelText("Documents"), file);
+    const chosen = screen.getByRole("list", { name: "Chosen files" });
+    expect(within(chosen).getByText("Cardiac.md")).toBeTruthy();
+    expect(within(chosen).getByText(`${file.size} bytes`)).toBeTruthy();
+    // Nothing is discarded before an import exists.
+    expect(screen.queryByRole("button", { name: "Discard this import" })).toBeNull();
+  });
+
+  it("lists files dropped on the zone, which the input itself does not show", () => {
+    render(<AiImportUpload bankId={BANK} allowance={null} initial={null} actions={actions()} />);
+    const input = screen.getByLabelText("Documents");
+    // jsdom's input takes only a FileList it made itself; a plain property stands in for it.
+    Object.defineProperty(input, "files", { configurable: true, writable: true, value: null });
+    fireEvent.drop(input.parentElement!, { dataTransfer: { files: [file] } });
+    const chosen = screen.getByRole("list", { name: "Chosen files" });
+    expect(within(chosen).getByText("Cardiac.md")).toBeTruthy();
+    // The drop reaches the form through the input, as a choice in the picker does.
+    expect((input as HTMLInputElement).files).toEqual([file]);
+  });
+
+  it("says the tab must stay open while it reads, and asks before the tab is closed", async () => {
+    let release: (value: unknown) => void = () => {};
+    requests.postJson.mockImplementation(() => new Promise((resolve) => (release = resolve)));
+    render(<AiImportUpload bankId={BANK} allowance={null} initial={ready} actions={actions()} />);
+    const status = await screen.findByRole("status");
+    expect(status.textContent).toBe("Reading your files. Keep this tab open until it finishes.");
+    const closing = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(closing);
+    expect(closing.defaultPrevented).toBe(true);
+
+    release({ ok: false, code: "cap_reached", message: "The allowance is used." });
+    await screen.findByRole("alert");
+    // Nothing is in flight any more, so the tab closes without a question.
+    const later = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(later);
+    expect(later.defaultPrevented).toBe(false);
+  });
+
+  it("says a file is waiting while a claim holds one of its parts", async () => {
+    requests.postJson.mockResolvedValue({ ok: false, code: "busy", message: "Still reading." });
+    render(<AiImportUpload bankId={BANK} allowance={null} initial={ready} actions={actions()} />);
+    expect(
+      await screen.findByText("Waiting to read part of this file. This can take up to 6 minutes."),
+    ).toBeTruthy();
+  });
+
+  it("removes a file that failed while reading, and takes the rest on to review", async () => {
+    failSecondFile();
+    const act = actions();
+    // After the removal the server answers the batch without the removed file.
+    vi.mocked(act.begin).mockResolvedValue({ ok: true, batch: ready });
+    render(<AiImportUpload bankId={BANK} allowance={null} initial={twoFiles} actions={act} />);
+
+    expect(await screen.findByText(spent.message)).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toContain("remove them to review the rest");
+    // One failed file holds the finish back, and only that file can be removed.
+    expect(act.finish).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Remove Cardiac.md" })).toBeNull();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Remove Renal.md" }));
+    expect(act.remove).toHaveBeenCalledWith("b1", "f2");
+    expect(await screen.findByRole("heading", { name: "Ready for review" })).toBeTruthy();
+    expect(act.begin).toHaveBeenCalledWith("b1");
+    expect(act.finish).toHaveBeenCalledWith("b1");
+    expect(screen.queryByText("Renal.md")).toBeNull();
+  });
+
+  it("keeps a file the server would not remove, and says why", async () => {
+    failSecondFile();
+    const act = actions();
+    vi.mocked(act.remove).mockResolvedValue({
+      ok: false,
+      code: "unavailable",
+      message: "Something went wrong on our side. Try again in a minute.",
+    });
+    render(<AiImportUpload bankId={BANK} allowance={null} initial={twoFiles} actions={act} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Remove Renal.md" }));
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toContain("Something went wrong on our side"),
+    );
+    expect(screen.getByText("Renal.md")).toBeTruthy();
+    expect(act.begin).not.toHaveBeenCalled();
+  });
+
+  it("says to discard when the last file is removed", async () => {
+    requests.postJson.mockResolvedValue(spent);
+    const act = actions();
+    render(<AiImportUpload bankId={BANK} allowance={null} initial={ready} actions={act} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Remove Cardiac.md" }));
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toContain("No files are left in this import"),
+    );
+    expect(act.begin).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Discard this import" })).toBeTruthy();
+  });
+
+  it("discards the import from the upload page after confirming, and returns to the quiz", async () => {
+    requests.postJson.mockResolvedValue(spent);
+    const act = actions();
+    render(<AiImportUpload bankId={BANK} allowance={null} initial={ready} actions={act} />);
+    await screen.findByText(spent.message);
+    await userEvent.click(screen.getByRole("button", { name: "Discard this import" }));
+    // Pressing it changes nothing: the dialog's own button is the one that acts.
+    expect(act.discard).not.toHaveBeenCalled();
+    const dialog = screen.getByRole("dialog", { name: "Discard this import?" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Discard" }));
+    expect(act.discard).toHaveBeenCalledWith({ batchId: "b1" });
+    await waitFor(() => expect(push).toHaveBeenCalledWith(`/author/banks/${BANK}`));
+  });
+
+  it("offers discard on an import that is ready for review", () => {
+    render(
+      <AiImportUpload
+        bankId={BANK}
+        allowance={null}
+        initial={{ ...ready, status: "review" }}
+        actions={actions()}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "Ready for review" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Discard this import" })).toBeTruthy();
   });
 });
