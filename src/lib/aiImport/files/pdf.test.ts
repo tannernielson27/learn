@@ -69,6 +69,15 @@ describe("inspectPdf", () => {
     expect(await inspectPdf(pdf)).toEqual({ ok: true, pages: 3 });
   });
 
+  it("calls a damaged encrypted PDF damaged, not password-protected", async () => {
+    const pdf = Buffer.from(await buildPermissionsPdf(1));
+    // Without its file identifier the document cannot be decrypted with any password.
+    const at = pdf.lastIndexOf("/ID");
+    expect(at).toBeGreaterThan(0);
+    pdf.write("/IX", at, "latin1");
+    expect(await inspectPdf(new Uint8Array(pdf))).toMatchObject({ ok: false, code: "corrupt" });
+  });
+
   it("refuses an encrypted PDF whose object streams could decode past the limit", async () => {
     const pdf = await buildPermissionsPdf(1);
     // An object stream of 100 KB: deflate could expand it to 100 MB once it is decrypted.

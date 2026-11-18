@@ -211,6 +211,26 @@ describe("docxToMarkdown formatting that marks keys (#592)", () => {
     expect(result.ok && result.textChars).toBe("Shown. Also shown.".length);
   });
 
+  it("drops text hidden by its character or paragraph style, unless the run shows it", () => {
+    const stylesXml = styles([
+      { id: "Hidden", type: "character", body: "<w:rPr><w:vanish/></w:rPr>" },
+      { id: "HiddenToo", type: "character", body: '<w:basedOn w:val="Hidden"/>' },
+      { id: "KeyPara", type: "paragraph", body: "<w:rPr><w:vanish/></w:rPr>" },
+    ]);
+    const shown =
+      '<w:r><w:rPr><w:rStyle w:val="Hidden"/><w:vanish w:val="0"/></w:rPr><w:t> Shown again.</w:t></w:r>';
+    const md = markdownOf(
+      para(
+        run("Seen."),
+        run(" Answer: B", { style: "Hidden" }),
+        run(" Key: C", { style: "HiddenToo" }),
+        shown,
+      ) + paraWith('<w:pStyle w:val="KeyPara"/>', "Answer key: 1 B"),
+      { styles: stylesXml },
+    );
+    expect(md).toBe("Seen. Shown again.");
+  });
+
   it("reads bold from a character style and a paragraph style, through what each is based on", () => {
     const stylesXml = styles([
       { id: "Strong", type: "character", body: "<w:rPr><w:b/></w:rPr>" },

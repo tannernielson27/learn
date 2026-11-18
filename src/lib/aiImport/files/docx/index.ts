@@ -26,8 +26,9 @@ export type DocxMarkdown =
  * How the markdown marks Word formatting, for the prompt that reads it (#342, #592). Every mark
  * the converter writes is named here, and `sourceText.ts` ignores every one of them when it
  * checks what the model copied. The last two lines say when formatting is the document's answer
- * mark: an author who makes the right option bold or red has marked it, and the draft carries
- * that mark as a `*`. `keyEvidence.ts` then checks that the document really shows such a mark.
+ * mark: an author who makes some of the options bold or red has marked them, and the draft
+ * carries that mark as a `*`. They are written to say no more than `choiceMarks.ts` accepts:
+ * the model is told what the guard will believe, and nothing wider.
  */
 export const DOCX_MARKUP = [
   "This document was converted from Word. Its formatting is marked like this:",
@@ -40,8 +41,8 @@ export const DOCX_MARKUP = [
   "list numbers and letters are written as Word shows them;",
   "[text box] ... [/text box] holds the text of a floating text box;",
   "[image] is a picture that could not be read, and [symbol] a character that could not be.",
-  "An author may mark the right answer with formatting alone: one option, list item or table cell that is highlighted, shaded, coloured, bold or underlined when the others beside it are not. That is the document's own answer mark: keep it by writing * on that choice in the draft.",
-  "Formatting on a question, a heading or a label, or on every choice alike, marks no answer.",
+  "When some of a question's choices (options, list items, table rows or cells) are bold, underlined, coloured, shaded or highlighted as a whole and its other choices are not, that formatting is the document's answer mark: write * on those choices in the draft.",
+  "Emphasis in a stem, a label, a heading or a table header is never an answer mark, and neither is formatting that every choice shares.",
 ].join("\n");
 
 function optionalPart(parts: Map<string, Uint8Array>, name: string): Document | null {

@@ -73,9 +73,9 @@ const stated = (el: Element | undefined, inherited: boolean): boolean =>
   el ? toggle(el) : inherited;
 
 /**
- * A run's format: its own properties, over its character style's bold, over the paragraph's
- * (`base`). Only bold is read from styles; a style's colour or underline says what kind of text
- * it is (a heading, a link), which is not what marks one option out.
+ * A run's format: its own properties, over its character style's, over the paragraph's
+ * (`base`). Only bold and hidden are read from styles; a style's colour or underline says what
+ * kind of text it is (a heading, a link), which is not what marks one option out.
  */
 export function runFormat(
   rPr: Element | undefined,
@@ -89,17 +89,17 @@ export function runFormat(
       ? named
       : fill(child(rPr, "shd"));
   const styleId = attr(child(rPr, "rStyle"), "val");
-  const styleBold = styleId ? (styles.get(styleId)?.bold ?? null) : null;
+  const style = styleId ? styles.get(styleId) : undefined;
   const fonts = child(rPr, "rFonts");
   return {
-    bold: stated(child(rPr, "b"), styleBold ?? base.bold),
+    bold: stated(child(rPr, "b"), style?.bold ?? base.bold),
     italic: stated(child(rPr, "i"), base.italic),
     underline: stated(child(rPr, "u"), base.underline),
     strike: stated(child(rPr, "strike"), false) || stated(child(rPr, "dstrike"), false),
     highlight,
     colour: fontColour(child(rPr, "color")),
     vertical: vertical(child(rPr, "vertAlign")),
-    hidden: stated(child(rPr, "vanish"), false),
+    hidden: stated(child(rPr, "vanish"), style?.hidden ?? base.hidden),
     symbolFont: symbolFontKey(attr(fonts, "ascii")) ?? symbolFontKey(attr(fonts, "hAnsi")),
   };
 }

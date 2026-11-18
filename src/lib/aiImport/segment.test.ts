@@ -203,9 +203,14 @@ describe("readSegment", () => {
     ]) {
       expect(legend).toContain(mark);
     }
-    // The owner's decision: formatting that sets one choice apart is the document's own mark.
-    expect(legend).toMatch(/when the others beside it are not/);
-    expect(legend).toMatch(/on every choice alike, marks no answer/);
+    // The owner's decision, in the words the guard holds to (`choiceMarks.ts`): a mark on some
+    // of a question's choices and not the others, never a stem, a label, a heading or a header.
+    expect(legend).toContain(
+      "When some of a question's choices (options, list items, table rows or cells) are bold, underlined, coloured, shaded or highlighted as a whole and its other choices are not, that formatting is the document's answer mark: write * on those choices in the draft.",
+    );
+    expect(legend).toContain(
+      "Emphasis in a stem, a label, a heading or a table header is never an answer mark, and neither is formatting that every choice shares.",
+    );
     const md = segmentRequest({ type: "text", text: "a" }, "md", TEXT_CHUNK);
     expect(JSON.stringify(md.content)).not.toContain("converted from Word");
   });

@@ -154,6 +154,8 @@ export interface StyleInfo {
    * (#592). "Strong" and a home-made "Correct answer" style mark a key this way.
    */
   bold: boolean | null;
+  /** Hidden text (`w:vanish`) from the style, found the same way; null when none says. */
+  hidden: boolean | null;
 }
 
 interface RawStyle extends StyleInfo {
@@ -163,11 +165,15 @@ interface RawStyle extends StyleInfo {
 /** A chain of `basedOn` longer than this is a loop, or nothing Word would write. */
 const MAX_STYLE_CHAIN = 20;
 
-/** The style's own bold, or the first one a style it is based on states. */
-function inheritedBold(id: string, raw: ReadonlyMap<string, RawStyle>): boolean | null {
+/** The style's own value of a toggle, or the first one a style it is based on states. */
+function inherited(
+  id: string,
+  raw: ReadonlyMap<string, RawStyle>,
+  property: "bold" | "hidden",
+): boolean | null {
   let current = raw.get(id);
   for (let depth = 0; current && depth < MAX_STYLE_CHAIN; depth += 1) {
-    if (current.bold !== null) return current.bold;
+    if (current[property] !== null) return current[property];
     current = current.basedOn ? raw.get(current.basedOn) : undefined;
   }
   return null;
@@ -183,11 +189,13 @@ export function readStyles(doc: Document | null): Map<string, StyleInfo> {
     const name = (attr(child(el, "name"), "val") ?? "").toLowerCase();
     const numPr = child(child(el, "pPr"), "numPr");
     const bold = child(child(el, "rPr"), "b");
+    const vanish = child(child(el, "rPr"), "vanish");
     raw.set(id, {
       heading: headingFromName(name),
       numId: attr(child(numPr, "numId"), "val"),
       ilvl: intAttr(child(numPr, "ilvl"), "val") ?? 0,
       bold: bold ? toggle(bold) : null,
+      hidden: vanish ? toggle(vanish) : null,
       basedOn: attr(child(el, "basedOn"), "val"),
     });
   }
@@ -198,7 +206,8 @@ export function readStyles(doc: Document | null): Map<string, StyleInfo> {
         heading: style.heading,
         numId: style.numId,
         ilvl: style.ilvl,
-        bold: inheritedBold(id, raw),
+        bold: inherited(id, raw, "bold"),
+        hidden: inherited(id, raw, "hidden"),
       },
     ]),
   );

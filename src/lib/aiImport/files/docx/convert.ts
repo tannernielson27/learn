@@ -134,7 +134,11 @@ export class Converter {
 
     const heading = headingLevel(styleId, this.styles);
     // A heading's style is bold because it is a heading, and `#` already says so.
-    const base: Format = { ...PLAIN, bold: heading === null && style?.bold === true };
+    const base: Format = {
+      ...PLAIN,
+      bold: heading === null && style?.bold === true,
+      hidden: style?.hidden === true,
+    };
     const pieces: Piece[] = [];
     const boxes: string[] = [];
     for (const el of elements(p)) this.inline(el, base, pieces, boxes, depth);

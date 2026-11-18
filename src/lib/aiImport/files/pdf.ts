@@ -53,8 +53,17 @@ class PdfTooComplex extends Error {}
 class PdfNeedsPassword extends Error {}
 
 /**
+ * What the library says when the empty password does not open a document, or the document is
+ * locked in a way it cannot open at all (a certificate, a cipher it does not have). It throws
+ * these as plain errors, so they are told from a damaged file by their words.
+ */
+const NOT_OPENED =
+  /^(?:NEEDS PASSWORD|Password incorrect|unknown encryption method|unsupported encryption algorithm)$/;
+
+/**
  * An encrypted PDF opened as a reader opens it when asked for no password. The decrypted object
- * streams are bounded first, as `guardPdfStreams` bounds a plain PDF's.
+ * streams are bounded first, as `guardPdfStreams` bounds a plain PDF's. Any other failure is a
+ * damaged file, and is left to say so.
  */
 async function loadWithEmptyPassword(bytes: Uint8Array): Promise<PDFDocument> {
   if (guardEncryptedPdfStreams(bytes) !== "ok") {
@@ -62,9 +71,9 @@ async function loadWithEmptyPassword(bytes: Uint8Array): Promise<PDFDocument> {
   }
   try {
     return await PDFDocument.load(bytes, { ...LOAD_OPTIONS, password: "" });
-  } catch {
-    // A wrong password, or a cipher the library does not know: either way it cannot be read.
-    throw new PdfNeedsPassword();
+  } catch (error) {
+    if (error instanceof Error && NOT_OPENED.test(error.message)) throw new PdfNeedsPassword();
+    throw error;
   }
 }
 
