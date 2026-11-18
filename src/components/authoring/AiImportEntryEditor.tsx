@@ -13,6 +13,7 @@ import {
 import type { AiImportFailure } from "@/lib/authoring/aiImportUpload";
 import { ITEM_TYPE_LABELS } from "@/lib/ngn/labels";
 import type { EhrRecord } from "@/lib/ngn/schemas";
+import { CJMM_STEP_LABELS, type CjmmStep } from "@/lib/ngn/types";
 import { AiImportSource } from "./AiImportSource";
 import type { SaveResult } from "./EditorShell";
 import { ItemEditorHostContext, type ItemEditorHost } from "./ItemEditorHost";
@@ -216,6 +217,13 @@ export function AiImportEntryEditor({
             </Button>
           </div>
         </div>
+      ) : null}
+      {caseStep ? (
+        // The step by its number and name (docs/glossary.md). The editor's own headings sit one
+        // level under it, as they do in the case study builder.
+        <h2 className="mb-4 font-read text-xl text-ink-1">
+          Step {caseStep.step} of 6: {CJMM_STEP_LABELS[caseStep.step as CjmmStep]}
+        </h2>
       ) : null}
       <ItemEditorHostContext.Provider value={host}>
         <ItemEditorSwitch editor={editor} onSaveDraft={saveFix} onPublish={notPublished} />

@@ -197,7 +197,7 @@ export default function InstructorGuide() {
             A case study lists each step that has no answer. Press <Ui>Add the key to step 3</Ui>,
             mark it and save; the case study is Ready once every step has its answer. If its patient
             record could not be read, <Ui>Split into separate questions</Ui> keeps its six questions
-            without the record.
+            on their own.
           </p>
         </Topic>
         <Topic id="ai-import-finish" title="Import or discard">

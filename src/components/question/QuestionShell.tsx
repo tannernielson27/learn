@@ -34,6 +34,8 @@ export interface QuestionShellProps {
   /** The scoring rule's sentence in the caller's words; the full explanation when left out. */
   scoringExplanation?: string;
   rationale?: RichText;
+  /** Names the rationale shown on its own, where a page holds more than one (#593). */
+  rationaleLabel?: string;
   /** Demo content written for this repo, labelled so it is never taken for a real item. */
   sample?: boolean;
   /** The region's name. Two players on one page need different names, e.g. "Version 1 question". */
@@ -67,6 +69,7 @@ export function QuestionShell({
   scoreNote,
   scoringExplanation,
   rationale,
+  rationaleLabel,
   sample = false,
   label = "Question",
   showSubmit = true,
@@ -143,7 +146,7 @@ export function QuestionShell({
       ) : mode === "feedback" && rationale ? (
         // A key with no score: shown to someone who did not answer (#181). The rationale is the
         // same text the score panel carries, standing on its own because there are no marks.
-        <RationalePanel rationale={rationale} />
+        <RationalePanel rationale={rationale} label={rationaleLabel} />
       ) : null}
 
       {mode === "answer" && showSubmit ? (

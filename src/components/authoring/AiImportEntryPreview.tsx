@@ -42,6 +42,8 @@ function KeyedItem({ item, label }: { item: Item; label: string }) {
       submit={refuse}
       showSubmit={false}
       label={label}
+      // A review lists many keyed questions, and each rationale is a landmark: named apart.
+      rationaleLabel={`Rationale, ${label}`}
     />
   );
 }

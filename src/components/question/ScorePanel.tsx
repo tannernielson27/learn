@@ -99,11 +99,19 @@ export function ScorePanel({
   );
 }
 
-/** The rationale on its own, for a key revealed with no answer to score (#181). */
-export function RationalePanel({ rationale }: { rationale: RichText }) {
+/**
+ * The rationale on its own, for a key revealed with no answer to score (#181). It is a landmark
+ * named by its heading. A page that shows several at once (the AI import review, #593) gives each
+ * a `label` of its own, since landmarks of one kind must not share a name.
+ */
+export function RationalePanel({ rationale, label }: { rationale: RichText; label?: string }) {
   const headingId = useId();
   return (
-    <aside aria-labelledby={headingId} className={PANEL}>
+    <aside
+      aria-label={label}
+      aria-labelledby={label === undefined ? headingId : undefined}
+      className={PANEL}
+    >
       <h2 id={headingId} className="eyebrow">
         Rationale
       </h2>
