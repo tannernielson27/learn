@@ -132,6 +132,8 @@ describe("clearRemovedFiles", () => {
     expect(await clearRemovedFiles(service.client, { orgId: ORG, batchId: BATCH })).toEqual({
       ok: true,
       ready: 1,
+      // The places a reader must leave out: the removed file's, not the refused one's.
+      removed: new Set([1]),
     });
     expect(service.stepsOn("ai_import_chunks", "eq")).toContainEqual(["file_id", F2]);
     expect(service.stepsOn("ai_import_entries", "gte")).toEqual([["position", 1000]]);
@@ -143,6 +145,7 @@ describe("clearRemovedFiles", () => {
     expect(await clearRemovedFiles(none.client, { orgId: ORG, batchId: BATCH })).toEqual({
       ok: true,
       ready: 3,
+      removed: new Set(),
     });
     const broken = fakeClient({
       ai_import_files: [{ data: [row(F1, "rejected", REMOVED_REASON)] }],

@@ -5,8 +5,8 @@ import type {
   FileStatus,
   FileView,
 } from "@/lib/authoring/aiImportUpload";
-import { POSITIONS_PER_FILE } from "../extractUnit";
 import { isRemovedFile } from "../files/reasons";
+import { placeOf } from "../places";
 import type { Client } from "./access";
 
 /**
@@ -100,9 +100,9 @@ export async function readBatchView(
         .filter((chunk) => chunk.file_id === file.id)
         .map((chunk) => ({ position: chunk.position, status: chunk.status as ChunkStatus })),
       // Entries sit at `file order * 1000 + place in the file` (#343), in the same file order.
-      questions: (entries.data ?? []).filter(
-        (entry) => Math.floor(entry.position / POSITIONS_PER_FILE) === place,
-      ).length,
+      // A question staged late at a removed file's place belongs to no file listed here, so it
+      // is in no count.
+      questions: (entries.data ?? []).filter((entry) => placeOf(entry.position) === place).length,
     }));
   return { id: batch.data.id, status: batch.data.status as BatchStatus, files: fileViews };
 }

@@ -609,17 +609,34 @@ list.** No new route, table, function or policy; no migration.
   entries at its own place deleted (`position` from `place × 1000` up to the next thousand), and
   its object removed. The row is kept so no other file's place moves. Tests:
   `removeFile.test.ts`, `actions.test.ts`.
-- **A removal cannot leave a question behind.** A request that was already reading the file may
-  stage a question after the removal; `finishBatch` clears every removed file's place again
-  before the batch moves to review, and refuses a batch with no file left.
+- **A question staged after the removal is never shown or imported** (review, MEDIUM, fixed). A
+  request that was already reading the file may stage a question after the removal, at any
+  moment up to the route's 300 s, so after `finishBatch`'s clear too. No delete can be timed to
+  catch that, so every reader leaves out a removed file's places (`src/lib/aiImport/places.ts`):
+  the review read, the duplicate pass, the upload page's counts and the quiz page's count.
+  `importBatch` deletes those places with the service client just before it calls
+  `import_ai_batch`, after the batch was read as the caller's own, filtered by workspace and
+  batch; an entry that lands after that delete is left out of what is handed in, and the
+  function takes exactly the kept entries, so it refuses. The staging insert reads the file's
+  status again first, which narrows the window. Tests: `read.test.ts`,
+  `commit/actions.test.ts`, `openImports.test.ts`, `duplicates.test.ts`, `places.test.ts`.
+  Still reachable by a crafted request: a stray entry's id can be dropped, restored, retyped or
+  saved by the workspace's own teacher, which changes nothing that is imported.
+- **`REMOVED_REASON` is a stored value.** A removed file is recognised by that exact sentence in
+  `rejected_reason`, because no migration could add a column; the constant says it must never
+  change. `rejected_reason` is written only by the server.
 - **Discard on the upload page** is the existing `discardAiImportBatch`, unchanged: its own check
   of the caller, the teacher's session for the delete, statuses `uploading`, `parsing`, `review`
   and `failed`.
 - **The quiz page's list** (`readOpenImports`) reads with the teacher's own session, filtered by
-  the session's workspace and the quiz in the address: batch ids, statuses and a count of
-  entries. No entry is selected.
+  the session's workspace and the quiz in the address: batch ids and statuses, and for imports
+  in review their files' statuses and their entries' positions, counted on the server. No
+  question is selected and only a count reaches the page.
 - **The driver's new tries** are the browser asking again; each is admitted, limited and reserved
-  as any other request. A chunk still has five tries on its row, which the client cannot reset.
+  as any other request. A chunk still has five tries on its row, which the client cannot reset;
+  one click now spends up to three of them. A part pausing before a new try looks again when it
+  wakes and sends nothing once the cap or the hourly limit has stopped the run (review, MEDIUM,
+  fixed).
 - **Accepted, unchanged: a failed extract unit holds its claim for 6 minutes.** The shared
   limiter has no way to give a hit back, and adding one needs a migration, which this story did
   not have. The page now says a file is waiting and for about how long.

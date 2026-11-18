@@ -123,6 +123,12 @@ export async function driveBatch(
       if (answer.ok || !WORTH_RETRYING.has(answer.code ?? "") || halted(fileId)) break;
       hold(fileId, "retrying", 1);
       await io.sleep(pause);
+      // Looked at again after the pause: another part may have stopped everything meanwhile (the
+      // cap, the hourly limit) or failed this file, and then nothing more is sent for it.
+      if (halted(fileId)) {
+        hold(fileId, "retrying", -1);
+        break;
+      }
       const again = await untilFree(fileId, ask);
       hold(fileId, "retrying", -1);
       answer = again.answer;

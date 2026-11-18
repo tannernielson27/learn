@@ -218,7 +218,13 @@ export async function finishBatch(
   if (unread.error) return failure("unavailable");
   if ((unread.count ?? 0) > 0) return failure("incomplete");
 
-  const finished = await finishExtraction(service, { orgId: author.orgId, batchId });
+  // The clear above cannot catch a question staged after it by a request still reading a removed
+  // file, so the removed places are also left out of everything read from here on (`places.ts`).
+  const finished = await finishExtraction(
+    service,
+    { orgId: author.orgId, batchId },
+    cleared.removed,
+  );
   if (!finished.ok) return failure(finished.code);
   const { error } = await service
     .from("ai_import_batches")

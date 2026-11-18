@@ -229,6 +229,63 @@ describe("driveBatch", () => {
     expect(io.sleep).not.toHaveBeenCalled();
   });
 
+  // A part pausing before its new try must look again when it wakes: another part may have
+  // reached the cap or the hourly limit meanwhile, and then nothing more is sent.
+  it("sends no new try when everything stopped while a part was pausing", async () => {
+    const { io, events } = harness();
+    const wake: (() => void)[] = [];
+    vi.mocked(io.sleep).mockImplementation(
+      () => new Promise<void>((resolve) => void wake.push(resolve)),
+    );
+    let answerOther: (answer: ParseAnswer) => void = () => {};
+    vi.mocked(io.parse).mockImplementation((_batch, fileId) =>
+      fileId === "f1"
+        ? Promise.resolve(failure("unavailable"))
+        : new Promise<ParseAnswer>((resolve) => (answerOther = resolve)),
+    );
+    const driving = driveBatch(twoFiles, io, events);
+    // Both parts of the first file have failed once and are pausing before their second try.
+    await vi.waitFor(() => expect(wake).toHaveLength(2));
+    answerOther(failure("rate_limited"));
+    // The other file's answer is heard before either pause ends.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    wake.forEach((resolve) => resolve());
+
+    expect(await driving).toEqual({ status: "stopped", failure: failure("rate_limited") });
+    const firstFile = vi.mocked(io.parse).mock.calls.filter((call) => call[1] === "f1");
+    expect(firstFile).toHaveLength(2);
+    expect(io.sleep).toHaveBeenCalledTimes(2);
+    // Nothing is left marked as being tried again.
+    expect(events.fileHeld).toHaveBeenLastCalledWith("f1", null);
+    expect(io.extract).not.toHaveBeenCalled();
+    expect(io.finish).not.toHaveBeenCalled();
+  });
+
+  it("sends no new try for a file that another of its parts has failed meanwhile", async () => {
+    const { io, events } = harness();
+    const wake: (() => void)[] = [];
+    vi.mocked(io.sleep).mockImplementation(
+      () => new Promise<void>((resolve) => void wake.push(resolve)),
+    );
+    // Part 1 fails in a way worth another try; part 2 fails for good while part 1 is pausing.
+    let answerSecond: (answer: ParseAnswer) => void = () => {};
+    vi.mocked(io.parse).mockImplementation((_batch, _file, position) =>
+      position === 1
+        ? Promise.resolve(failure("unavailable"))
+        : new Promise<ParseAnswer>((resolve) => (answerSecond = resolve)),
+    );
+    const driving = driveBatch(batch, io, events);
+    await vi.waitFor(() => expect(wake).toHaveLength(1));
+    answerSecond(failure("spent"));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    wake.forEach((resolve) => resolve());
+
+    expect(await driving).toEqual({ status: "partial" });
+    expect(vi.mocked(io.parse).mock.calls.map((call) => call[2])).toEqual([1, 2]);
+    expect(events.fileFailed).toHaveBeenCalledTimes(1);
+    expect(events.fileFailed).toHaveBeenCalledWith("f1", messageFor("spent"));
+  });
+
   it("passes on a refused finish", async () => {
     const { io, events } = harness();
     vi.mocked(io.finish).mockResolvedValueOnce(failure("incomplete"));

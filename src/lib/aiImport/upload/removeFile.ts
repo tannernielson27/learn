@@ -1,5 +1,5 @@
-import { POSITIONS_PER_FILE } from "../extractUnit";
 import { REMOVED_REASON, isRemovedFile } from "../files/reasons";
+import { POSITIONS_PER_FILE } from "../places";
 import { AI_IMPORT_BUCKET, type FileRef } from "../files/store";
 import type { Client } from "./access";
 
@@ -115,22 +115,28 @@ export async function removeReadingFile(service: Client, ref: FileRef): Promise<
   return { ok: true };
 }
 
+export type ClearedFiles =
+  | { ok: true; /** Files still part of the import. */ ready: number; removed: ReadonlySet<number> }
+  | { ok: false; code: "unavailable" };
+
 /**
- * Before a batch moves to review: clears every removed file once more, and counts the files that
- * are left. A request that was already reading a file when it was removed may have staged a
- * question after the removal; this is where that question goes, so none reaches review.
+ * Clears every removed file once more, and answers the files that are left and the places that
+ * were removed. Run before a batch moves to review and again just before it is imported: a
+ * request that was already reading a file when it was removed may stage a question afterwards,
+ * and this is where that question goes. It cannot catch one that lands later still, so callers
+ * also leave the `removed` places out of what they read (`places.ts`).
  */
-export async function clearRemovedFiles(
-  service: Client,
-  ref: BatchRef,
-): Promise<{ ok: true; ready: number } | { ok: false; code: "unavailable" }> {
+export async function clearRemovedFiles(service: Client, ref: BatchRef): Promise<ClearedFiles> {
   const files = await placedFiles(service, ref);
   if (files === "unavailable") return { ok: false, code: "unavailable" };
+  const gone = files.filter((file) => file.removed);
   const cleared = await Promise.all(
-    files
-      .filter((file) => file.removed)
-      .map((file) => clearFile(service, { ...ref, fileId: file.id }, file.place)),
+    gone.map((file) => clearFile(service, { ...ref, fileId: file.id }, file.place)),
   );
   if (cleared.includes(false)) return { ok: false, code: "unavailable" };
-  return { ok: true, ready: files.filter((file) => file.status === "ready").length };
+  return {
+    ok: true,
+    ready: files.filter((file) => file.status === "ready").length,
+    removed: new Set(gone.map((file) => file.place)),
+  };
 }

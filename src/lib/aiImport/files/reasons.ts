@@ -29,6 +29,12 @@ export type RejectionCode = keyof typeof REJECTIONS;
  * What `rejected_reason` holds for a file the teacher removed while the import was reading
  * (#591). The row stays, refused, so the files after it keep their place and their questions keep
  * theirs; nothing shows it again.
+ *
+ * This value is stored in rows and compared by exact equality (`isRemovedFile`), so it must never
+ * change: a reworded sentence would make every file removed before the change read as a refused
+ * one again, shown on the page with its place read from. It is a sentence in a text column only
+ * because #591 could add no migration. #593, or any later migration, can give removal a real
+ * column (or a `removed` status) and backfill it from this value.
  */
 export const REMOVED_REASON = "Removed from this import.";
 

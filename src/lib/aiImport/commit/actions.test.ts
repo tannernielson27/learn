@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RouteAuthor } from "@/lib/authoring/session";
 import { FIXTURES } from "@/lib/ngn/fixtures";
+import { REMOVED_REASON } from "../files/reasons";
 import type { Client } from "../upload/access";
 import {
   BATCH,
@@ -28,8 +29,15 @@ const entry = (over: Record<string, unknown> = {}) => ({
 });
 const reviewBatch: Reply = { data: { status: "review", bank_id: BANK } };
 
-function service(queue: Reply[] = [{ data: [{ storage_path: PATH }] }, { data: null }]) {
-  const fake = fakeClient({ ai_import_object_deletes: queue });
+/**
+ * The service client: the queue of objects to remove, and what an import reads and deletes to
+ * clear removed files (#591). With no `files`, the batch has none removed, so nothing is deleted.
+ */
+function service(
+  queue: Reply[] = [{ data: [{ storage_path: PATH }] }, { data: null }],
+  files: Record<string, Reply[]> = { ai_import_files: [{ data: [] }] },
+) {
+  const fake = fakeClient({ ai_import_object_deletes: queue, ...files });
   const remove = vi.fn(async () => ({ data: [], error: null }));
   const client = {
     ...fake.client,
@@ -85,6 +93,86 @@ describe("importBatch", () => {
       ["org_id", ORG],
       ["org_id", ORG],
     ]);
+  });
+
+  // #591: a request still reading a removed file can stage a question after every earlier delete.
+  describe("with a file the teacher removed", () => {
+    const FILE_GONE = "00000000-0000-4000-8000-0000000000f1";
+    const FILE_KEPT = "00000000-0000-4000-8000-0000000000f2";
+    const fileRow = (id: string, removed: boolean) => ({
+      id,
+      status: removed ? "rejected" : "ready",
+      rejected_reason: removed ? REMOVED_REASON : null,
+      storage_path: `${ORG}/${BATCH}/${id}`,
+    });
+    /** The first file was removed, so places 0 to 999 are no part of the import. */
+    const withRemoved = (): Record<string, Reply[]> => ({
+      ai_import_files: [{ data: [fileRow(FILE_GONE, true), fileRow(FILE_KEPT, false)] }],
+      ai_import_chunks: [{}],
+      ai_import_entries: [{}],
+    });
+
+    it("deletes what sits at the removed file's place before it reads the entries", async () => {
+      const { author } = teacher(true, {
+        ai_import_batches: [reviewBatch],
+        ai_import_entries: [{ data: [entry({ position: 1000 })] }],
+      });
+      const rpc = withRpc(author, { data: { ok: true, questions: 1, case_studies: 0 } });
+      const store = service(undefined, withRemoved());
+      expect(await importBatch(deps(author, store), { batchId: BATCH })).toMatchObject({
+        ok: true,
+        questions: 1,
+      });
+      // With the service client, in the session's workspace and this batch only.
+      expect(store.fake.stepsOn("ai_import_entries", "delete")).toHaveLength(1);
+      expect(store.fake.stepsOn("ai_import_entries", "eq")).toEqual([
+        ["batch_id", BATCH],
+        ["org_id", ORG],
+      ]);
+      expect(store.fake.stepsOn("ai_import_entries", "gte")).toEqual([["position", 0]]);
+      expect(store.fake.stepsOn("ai_import_entries", "lt")).toEqual([["position", 1000]]);
+      expect(rpc).toHaveBeenCalledTimes(1);
+    });
+
+    it("never hands in an entry that landed at that place after the delete", async () => {
+      const stray = entry({ id: "stray", position: 12 });
+      const { author } = teacher(true, {
+        ai_import_batches: [reviewBatch],
+        // Read after the delete: the stray landed in between, with a real question beside it.
+        ai_import_entries: [{ data: [stray, entry({ position: 1000 })] }],
+      });
+      const rpc = withRpc(author, { data: { ok: false, reason: "entry_changed" } });
+      const result = await importBatch(deps(author, service(undefined, withRemoved())), {
+        batchId: BATCH,
+      });
+      const [, args] = rpc.mock.calls[0] as unknown as [string, { p_entries: { id: string }[] }];
+      expect(args.p_entries.map((given) => given.id)).toEqual([ENTRY]);
+      // The database takes exactly the kept entries, so with the stray still there it refuses.
+      expect(result).toMatchObject({ ok: false, code: "entry_changed" });
+    });
+
+    it("imports nothing when only a stray is left", async () => {
+      const { author } = teacher(true, {
+        ai_import_batches: [reviewBatch],
+        ai_import_entries: [{ data: [entry({ id: "stray", position: 12 })] }],
+      });
+      const rpc = withRpc(author, {});
+      expect(
+        await importBatch(deps(author, service(undefined, withRemoved())), { batchId: BATCH }),
+      ).toMatchObject({ ok: false, code: "nothing_to_import" });
+      expect(rpc).not.toHaveBeenCalled();
+    });
+
+    it("answers unavailable, importing nothing, when the places cannot be cleared", async () => {
+      const { author } = teacher(true, { ai_import_batches: [reviewBatch] });
+      const rpc = withRpc(author, {});
+      const store = service(undefined, { ai_import_files: [{ error: { code: "XX000" } }] });
+      expect(await importBatch(deps(author, store), { batchId: BATCH })).toMatchObject({
+        ok: false,
+        code: "unavailable",
+      });
+      expect(rpc).not.toHaveBeenCalled();
+    });
   });
 
   it("refuses a kept entry that needs an answer before calling the database", async () => {

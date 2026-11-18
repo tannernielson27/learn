@@ -289,6 +289,13 @@ describe("removing a file while the import is reading", () => {
       [{ status: "review" }],
     ]);
     expect(finishing.service.left()).toEqual([]);
+    // The duplicate pass is told the removed file's place, so a question staged there after the
+    // clear is not compared with the questions that go to review.
+    expect(finishExtraction).toHaveBeenCalledWith(
+      finishing.service.client,
+      { orgId: ORG, batchId: BATCH },
+      new Set([1]),
+    );
   });
 
   it("does not find another workspace's import, and removes nothing", async () => {
@@ -351,7 +358,11 @@ describe("finishBatch", () => {
       ai_import_chunks: [{ count: 0 }],
     });
     expect(await finishBatch(d, BATCH)).toEqual({ ok: true });
-    expect(finishExtraction).toHaveBeenCalledWith(service.client, { orgId: ORG, batchId: BATCH });
+    expect(finishExtraction).toHaveBeenCalledWith(
+      service.client,
+      { orgId: ORG, batchId: BATCH },
+      new Set(),
+    );
     expect(service.stepsOn("ai_import_batches", "update")).toEqual([[{ status: "review" }]]);
   });
 

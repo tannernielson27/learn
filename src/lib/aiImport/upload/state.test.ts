@@ -94,7 +94,9 @@ describe("readBatchView", () => {
         },
       ],
       ai_import_chunks: [{ data: [{ file_id: F2, position: 0, status: "done" }] }],
-      ai_import_entries: [{ data: [{ position: 1000 }, { position: 1001 }] }],
+      // Position 5 was staged at the removed file's place by a request that was still reading
+      // it: it belongs to no file that is listed, so it is in no count.
+      ai_import_entries: [{ data: [{ position: 5 }, { position: 1000 }, { position: 1001 }] }],
     });
     const view = await readBatchView(service.client, ORG, BATCH);
     expect(view).toMatchObject({
