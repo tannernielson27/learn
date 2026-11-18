@@ -63,6 +63,77 @@ describe("formatting on some of a list's choices", () => {
     expect(keyEvidence(lines("* <u>Hypokalemia</u>", "* weakness", "* cramps"))).toBe("none");
   });
 
+  // Bullets are options only right under the question: a list of values looks the same.
+  describe("bullets", () => {
+    const bullets = ["- Rice", "- **Yogurt**", "- Juice"];
+
+    it.each([
+      ["a stem that ends in a question mark", stem],
+      ["a quoted question", 'The client asks, "Which food is best?"'],
+      ["select all that apply", "The nurse plans care. Select all that apply."],
+      ["a number to select", "Select the 2 foods the nurse should offer."],
+      ["a number word to select", "Select two foods to offer"],
+      ["a numbered stem", `3. ${stem}`],
+    ])("counts a bold bullet under %s", (_, lead) => {
+      expect(keyEvidence(lines(lead, "", ...bullets))).toBe("formatting");
+    });
+
+    it("counts the first bullet too, under the question", () => {
+      expect(keyEvidence(lines(stem, "- **Rice**", "- Yogurt", "- Juice"))).toBe("formatting");
+      expect(keyEvidence(lines(stem, "- {shaded #FFFF00} Rice", "- Yogurt"))).toBe("marked");
+    });
+
+    it.each([
+      ["no line at all", []],
+      ["a label", ["Vital signs:"]],
+      ["a plain sentence", ["The nurse reviews the chart."]],
+      ["a heading", ["## Assessment"]],
+      ["a table", ["| Lab | Value |", "| --- | --- |", "| K | 4.0 |"]],
+      ["a question two lines up", [stem, "Review the list below."]],
+    ])("does not count a bold bullet under %s", (_, before) => {
+      expect(keyEvidence(lines(...before, ...bullets))).toBe("none");
+    });
+
+    it.each([
+      ["a bold vital sign", ["- BP 90/60", "- **HR 130**", "- RR 20"]],
+      ["a bold term", ["- Term one", "- **Term two**", "- Term three"]],
+      ["a shaded note", ["- one", "- {shaded #FFFF00} two", "- three"]],
+    ])("does not count %s in a list no question leads into", (_, list) => {
+      expect(keyEvidence(lines(...list))).toBe("none");
+      expect(keyEvidence(lines("Vital signs:", ...list))).toBe("none");
+    });
+  });
+
+  // An ordering question's key is an order, never one marked step.
+  describe("steps to put in order", () => {
+    it.each([
+      ["Place the steps in order:"],
+      ["Place the steps in the correct order."],
+      ["What is the correct sequence of actions?"],
+      ["Arrange the nursing actions."],
+      ["Rank the clients from first to last?"],
+    ])("does not count one bold step under: %s", (lead) => {
+      expect(keyEvidence(lines(lead, "1. Assess", "2. **Call**", "3. Document", "4. Sit"))).toBe(
+        "none",
+      );
+      expect(keyEvidence(lines(lead, "A. Assess", "B. **Call**", "C. Document", "D. Sit"))).toBe(
+        "none",
+      );
+      expect(keyEvidence(lines(lead, "- Assess", "- **Call**", "- Document"))).toBe("none");
+    });
+
+    it.each([
+      ["Which provider's order should the nurse question?"],
+      ["Which finding suggests a bleeding disorder?"],
+      ["Which action is the priority?"],
+      ["What should the nurse do in order to prevent a fall?"],
+    ])("still counts a bold option under: %s", (lead) => {
+      expect(keyEvidence(lines(lead, "1. Assess", "2. **Call**", "3. Document", "4. Sit"))).toBe(
+        "formatting",
+      );
+    });
+  });
+
   // A rationale, a note or a label beside plain items is not a choice.
   it.each([
     [
@@ -227,19 +298,55 @@ describe("formatting on some of a table's choices", () => {
     ).toBe("marked");
   });
 
-  it("believes one bold line among the lines of a cell, but not its bold first line", () => {
+  it("believes one bold line among the lettered lines of a cell, and no unlettered line", () => {
     const cell = (text: string) =>
       lines("| Order | Action |", "| --- | --- |", `| Digoxin | ${text} |`);
     expect(
-      keyEvidence(
-        cell("Give with an antacid<br>**Hold if the pulse is below 60**<br>Double a dose"),
-      ),
-    ).toBe("formatting");
-    expect(
       keyEvidence(cell("a. **Hold if the pulse is below 60**<br>b. Give with an antacid")),
     ).toBe("formatting");
-    // A bold first line with no letter is the cell's own title.
+    // Lines with no letters may be values, and a bold first line is the cell's own title.
+    expect(keyEvidence(cell("BP 90/60<br>**HR 130**<br>RR 20"))).toBe("none");
     expect(keyEvidence(cell("**Digoxin 0.125 mg**<br>by mouth<br>daily"))).toBe("none");
+  });
+
+  // An abnormal value in red or bold is in every chart, and a chart is not a set of choices.
+  it.each([
+    ["a lab value in red", "==6.1=={color #C00000}"],
+    ["a lab value in bold", "**6.1**"],
+    ["an underlined lab value", "<u>6.1</u>"],
+  ])("does not count %s", (_, value) => {
+    const region = lines("| Lab | Value |", "|---|---|", `| K | ${value} |`, "| Na | 138 |");
+    expect(keyEvidence(region)).toBe("none");
+  });
+
+  it("does not count a bold value in a vitals table, and still counts a shaded one", () => {
+    const vitals = (value: string) =>
+      lines(
+        "| Time | BP | HR |",
+        "| --- | --- | --- |",
+        `| 0800 | 118/76 | ${value} |`,
+        "| 0900 | 90/60 | 88 |",
+      );
+    expect(keyEvidence(vitals("**130**"))).toBe("none");
+    // A highlighted or shaded cell was evidence before #592, and is still.
+    expect(keyEvidence(vitals("{shaded #FFFF00} 130"))).toBe("marked");
+    expect(keyEvidence(vitals("==130=={yellow}"))).toBe("marked");
+  });
+
+  it("believes one bold cell per row under answer headings, in any case", () => {
+    const matrix = (first: string, second: string, third = "Unrelated") =>
+      lines(
+        `| Intervention | ${first} | ${second} | ${third} |`,
+        "| --- | --- | --- | --- |",
+        "| Oxygen | **yes** | | |",
+        "| Fluids | | **yes** | |",
+      );
+    expect(keyEvidence(matrix("Effective", "Ineffective"))).toBe("formatting");
+    expect(keyEvidence(matrix("INDICATED", "contraindicated", "Non-essential"))).toBe("formatting");
+    expect(keyEvidence(matrix("**Anticipated**", "**Unanticipated**", "Notes"))).toBe("formatting");
+    // One answer word is not a matrix, and neither are two columns of data.
+    expect(keyEvidence(matrix("Expected", "Dose", "Route"))).toBe("none");
+    expect(keyEvidence(matrix("0800", "0900", "1000"))).toBe("none");
   });
 
   it("reads an escaped bar as part of its cell", () => {

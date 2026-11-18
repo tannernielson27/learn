@@ -7,13 +7,13 @@ import { hasStruck, markupSpans, openingKey, withoutStruck } from "./sourceText"
  * A draft that comes back keyed is only believed when the part of the source the question sits
  * in shows something a key could have been copied from: a check mark, a lone `*`, a highlight, a
  * shaded cell or option, an `X` cell, an "Answer:" or "Key:" line, or an answer section printed
- * elsewhere. Since #592 an option, list item or table cell set apart only by bold, underline or
- * font colour counts too (`choiceMarks.ts`), as weaker evidence: the key is believed and the
- * teacher is asked to check it. When the source shows none of these, the model wrote the key
- * itself, and the draft is not converted.
+ * elsewhere. Since #592 some of a question's choices set apart only by bold, underline or font
+ * colour count too (`choiceMarks.ts` says what a choice is), as weaker evidence: the key is
+ * believed and the teacher is asked to check it. When the source shows none of these, the model
+ * wrote the key itself, and the draft is not converted.
  *
- * It is a net, not a proof: italics (`*word*`) and a stem that says "correct:" count as marks,
- * and so does a chart value printed in red, so a key invented beside them passes here and is
+ * It is a net, not a proof: italics (`*word*`), a stem that says "correct:" and a highlighted
+ * or shaded value in a chart count as marks, so a key invented beside them passes here and is
  * left to the reviewer, as every key is. A PDF has no text here at all; its keys are marked for
  * the reviewer instead (`check_key`).
  */

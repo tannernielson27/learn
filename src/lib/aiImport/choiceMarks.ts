@@ -19,13 +19,19 @@ import { MARKS, SHADE, readLine, type MarkedLine } from "./lineMarks";
  * - **A mark counts** only in a group of two or more choices, when at least one of them and not
  *   all of them carry it across the whole choice: all of an item's words, or every cell of a
  *   table row. One word made bold inside a choice ("the **first** action") is emphasis.
- * - In a bulleted list, where no letter or number tells a heading from an option, a mark on the
- *   first item alone is taken for a heading over the rest.
- * - **In a table**, the header row never counts. Beside whole rows, one marked cell counts when
- *   it is not in the first column (the row's own label) and another row's cell in its column is
- *   not marked: the matrix case. An empty shaded cell is only ever a mark, so it counts even
- *   when every row shades the same column. Shading that alternates down four or more rows is
- *   banding.
+ * - **Bullets** have no letter or number to say they are options: a list of vital signs or of
+ *   terms looks the same. A bulleted group counts only when the line before it is the question
+ *   itself: it ends in `?`, or says "select all that apply" or "select 3".
+ * - **No group counts under a line that asks for an order** ("place the steps in order",
+ *   "arrange", "rank"): the key of such a question is an order, never one marked step.
+ * - **In a table**, the header row never counts. A body row counts when every cell of it
+ *   carries the mark. One marked cell counts when it is not in the first column (the row's own
+ *   label) and another row's cell in its column is not marked: the matrix case. For bold,
+ *   underline and colour that holds only when the header names answer columns (Expected /
+ *   Unexpected, Indicated / Contraindicated...), since an abnormal value printed in red is in
+ *   every chart. Shading on one cell needs no such header, and an empty shaded cell is only ever
+ *   a mark, so it counts even when every row shades the same column. Shading that alternates
+ *   down four or more rows is banding.
  *
  * Shading is a strong mark, as a highlight is. Bold, underline and font colour are weaker: the
  * key is believed, and the entry asks the teacher to check it.
@@ -45,19 +51,64 @@ const isChoice = (line: MarkedLine): boolean =>
 
 const has = (line: MarkedLine, mark: number): boolean => (line.whole & mark) !== 0;
 
+/** A line that asks the question: it ends in `?`, or tells the student how many to select. */
+const ASKS =
+  /\?["'”’)\]]*$|\bselect all that apply\b|\bselect\s+(?:the\s+)?(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\b/i;
+
+/**
+ * A line that asks for an order. Whole phrases only: "the provider's order" and "disorder" ask
+ * for none, and "in order to" is not "in order".
+ */
+const ASKS_ORDER =
+  /\bin (?:the )?(?:correct |proper |right )?order\b(?! to\b)|\bsequenc(?:e|ing)\b|\barrange\b|\brank(?:ing)?\b/i;
+
+/**
+ * Column headings that are answers, not data: a table that has two of them is a matrix, and a
+ * cell under one is a choice. Matched on a header cell's whole text, in any case.
+ */
+const ANSWER_HEADINGS = new Set([
+  "effective",
+  "ineffective",
+  "unrelated",
+  "indicated",
+  "contraindicated",
+  "non-essential",
+  "nonessential",
+  "anticipated",
+  "unanticipated",
+  "yes",
+  "no",
+  "true",
+  "false",
+  "correct",
+  "incorrect",
+  "expected",
+  "unexpected",
+  "appropriate",
+  "inappropriate",
+  "improving",
+  "worsening",
+  "declining",
+  "unchanged",
+  "emergent",
+  "urgent",
+  "nonurgent",
+  "non-urgent",
+]);
+
 /**
  * The marks that set some choices of one group apart. `ordered` says the group is lettered or
- * numbered, so its first item is a choice like the rest.
+ * numbered; `lead` is the line just before it, or null when there is none.
  */
-function groupMarks(choices: readonly MarkedLine[], ordered: boolean): number {
+function groupMarks(choices: readonly MarkedLine[], ordered: boolean, lead: string | null): number {
   if (choices.length < 2) return 0;
+  if (lead !== null && ASKS_ORDER.test(lead)) return 0;
+  // "- BP 90/60", "- **HR 130**": bullets are options only right under the question.
+  if (!ordered && (lead === null || !ASKS.test(lead))) return 0;
   let found = 0;
   for (const mark of MARKS) {
-    const marked = choices.filter((choice) => has(choice, mark));
-    if (marked.length === 0 || marked.length === choices.length) continue;
-    // "- **Term**" over plain bullets is a heading for them, not the first of the options.
-    if (!ordered && marked.length === 1 && marked[0] === choices[0]) continue;
-    found |= mark;
+    const marked = choices.filter((choice) => has(choice, mark)).length;
+    if (marked > 0 && marked < choices.length) found |= mark;
   }
   return found;
 }
@@ -67,18 +118,28 @@ class ListReader {
   found = 0;
   private group: MarkedLine[] = [];
   private list: string | null = null;
+  /** The words of the line before the group being read, and of the line read last. */
+  private lead: string | null = null;
+  private previous: string | null = null;
 
   /** Ends the group being read, counting what its marks show. */
   close(): void {
     const ordered = this.group.every((choice) => choice.ordinal !== null);
-    this.found |= groupMarks(this.group, ordered);
+    this.found |= groupMarks(this.group, ordered, this.lead);
     this.group = [];
     this.list = null;
+  }
+
+  /** Ends the group at something that is not a line of text, such as a table. */
+  interrupt(): void {
+    this.close();
+    this.previous = null;
   }
 
   add(line: MarkedLine): void {
     if (line.list === null || !isChoice(line)) {
       this.close();
+      this.previous = line.text;
       return;
     }
     const last = this.group.at(-1);
@@ -87,9 +148,13 @@ class ListReader {
       last.ordinal !== null &&
       line.ordinal !== null &&
       line.ordinal <= last.ordinal;
-    if (line.list !== this.list || restarted) this.close();
+    if (line.list !== this.list || restarted) {
+      this.close();
+      this.lead = this.previous;
+    }
     this.list = line.list;
     this.group = [...this.group, line];
+    this.previous = line.text;
   }
 }
 
@@ -102,7 +167,10 @@ function cellsOf(line: string): string[] {
   return cells.slice(1, cells.at(-1)?.trim() === "" ? -1 : cells.length);
 }
 
-/** The marks on one line among the several lines of a cell (`<br>` between them). */
+/**
+ * The marks on one line among the several lines of a cell (`<br>` between them). No line leads
+ * into them, so only lettered or numbered lines can count.
+ */
 function cellLineMarks(cell: string): number {
   const reader = new ListReader();
   // Trimmed: the space after the cell's `|` is not an indent.
@@ -128,8 +196,10 @@ function isBanding(rows: readonly boolean[]): boolean {
 /**
  * The marks that set a choice apart in one table's body rows (its header row left out): on a
  * whole row among the rows, on one cell among the cells of its column, or on one line of a cell.
+ * `answerColumns` says the header names answers, which bold, underline and colour on one cell
+ * need before they count.
  */
-function tableMarks(body: readonly string[][], width: number): number {
+function tableMarks(body: readonly string[][], width: number, answerColumns: boolean): number {
   const grid = body.map((row) => row.map((cell) => readLine(cell.replace(BREAK, " "))));
   const counted = (cell: MarkedLine) => cell.text !== "" || has(cell, SHADE);
   const rowMarked = (row: readonly MarkedLine[], mark: number) =>
@@ -153,6 +223,8 @@ function tableMarks(body: readonly string[][], width: number): number {
       if (c === 0) return;
       for (const mark of MARKS) {
         if (!has(cell, mark) || rowMarked(row, mark)) continue;
+        // A value printed in red or bold in a chart is not an answer.
+        if (mark !== SHADE && !answerColumns) continue;
         const others = grid.filter((_, at) => at !== r).map((other) => other[c]);
         const setApart = others.some((other) => other === undefined || !has(other, mark));
         // An empty shaded cell holds nothing to emphasise: it can only be a mark.
@@ -173,7 +245,11 @@ function tableLineMarks(lines: readonly string[]): number {
   const separator = all.findIndex(isSeparatorRow);
   const rows = all.filter((cells) => !isSeparatorRow(cells));
   const width = Math.max(0, ...rows.map((row) => row.length));
-  return tableMarks(rows.slice(Math.max(0, separator)), width);
+  const header = rows.slice(0, Math.max(0, separator)).flat();
+  const answers = header.filter((cell) =>
+    ANSWER_HEADINGS.has(readLine(cell.replace(BREAK, " ")).text.toLowerCase()),
+  );
+  return tableMarks(rows.slice(Math.max(0, separator)), width, answers.length >= 2);
 }
 
 /** The marks that set a choice apart anywhere in `region`. */
@@ -188,7 +264,7 @@ function regionMarks(region: string): number {
       continue;
     }
     if (isTableRow(raw)) {
-      lists.close();
+      lists.interrupt();
       if (inTable) tables[tables.length - 1] = [...tables[tables.length - 1], raw];
       else tables.push([raw]);
       inTable = true;

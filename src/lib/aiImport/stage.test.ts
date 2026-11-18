@@ -145,8 +145,8 @@ describe("stageQuestion", () => {
       ["underline", `${stem}\n\nA. <u>Assess</u>\nB. Document\nC. Call\nD. Wait\n`],
       ["font colour", `${stem}\n\nA. ==Assess=={color #C00000}\nB. Document\nC. Call\nD. Wait\n`],
       [
-        "bold in a table cell",
-        `${stem}\n\n| Action | Do it first |\n| --- | --- |\n| Assess | **Yes** |\n| Wait | No |\n`,
+        "bold in a matrix cell",
+        `${stem}\n\n| Action | Indicated | Contraindicated |\n| --- | --- | --- |\n| Assess | **yes** | |\n| Wait | | **yes** |\n`,
       ],
     ])("stages a %s-only key as ready, with the reason to check it", (_, region) => {
       const staged = checkOf(region);
