@@ -238,7 +238,7 @@ describe("AiImportEntryEditor: fixing several in a row (#593)", () => {
     await user.click(screen.getByText("Show the document's words"));
     expect(screen.getByText("Marked in bold").tagName).toBe("STRONG");
     expect(screen.getByTestId("source-pages")).toHaveTextContent(
-      "Opening words only. Check the rest on page 2 of Malnutrition.pdf.",
+      "Opening words only. This question was read from page 2 of Malnutrition.pdf.",
     );
   });
 

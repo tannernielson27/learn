@@ -34,6 +34,8 @@ export interface ReviewEntryView {
    * a batch read before that.
    */
   sourceExcerpt: string;
+  /** The list was sent only the start of a long source; the entry's edit page has all of it. */
+  sourceCut?: boolean;
   /** For a PDF: the pages of the file it was read from. Null for a text source. */
   sourcePages?: { from: number; to: number } | null;
   /** The learn.v1 item or case study, with its key (a teacher of the workspace only); or null. */

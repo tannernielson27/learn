@@ -254,6 +254,30 @@ describe("drop the ones that need attention (#593)", () => {
     expect(screen.queryByTestId("review-notice")).toBeNull();
   });
 
+  it("shows what was dropped before a failure, and reads the batch again", async () => {
+    const dropAll = vi
+      .fn<NonNullable<AiImportReviewActions["dropAll"]>>()
+      .mockResolvedValueOnce({
+        ok: false,
+        code: "unavailable",
+        message: "Dropped 1, then it stopped working. Try again for the rest.",
+        dropped: [{ id: "answer", version: 5 }],
+      })
+      .mockRejectedValueOnce(new Error("Failed to fetch"));
+    const { user } = setup({ act: actions({ dropAll }) });
+    await user.click(screen.getByTestId("drop-all-button"));
+    await user.click(screen.getByTestId("drop-all-confirm"));
+    const dialog = screen.getByRole("dialog", { name: /that needs? attention\?/ });
+    expect(await within(dialog).findByText(/^Dropped 1, then it stopped working/)).toBeTruthy();
+    // The card that was dropped says so at once, and the page asks the server for the rest.
+    expect(within(card("Question 2")).getByTestId("entry-status").textContent).toBe("Dropped");
+    expect(screen.getByRole("button", { name: "Dropped (2)" })).toBeTruthy();
+    expect(refresh).toHaveBeenCalledTimes(1);
+    // A request that never arrived may still have been carried out: read the batch again.
+    await user.click(screen.getByTestId("drop-all-confirm"));
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(2));
+  });
+
   it("is not offered when nothing needs attention, or when the page has no such action", () => {
     setup({ entries: [ENTRIES[0]!], act: actions({ dropAll: vi.fn() }) });
     expect(screen.queryByTestId("drop-all-button")).toBeNull();
@@ -396,6 +420,33 @@ describe("the source beside a question (#593)", () => {
     expect(within(region).getByText("A highlight is the document's own.")).toBeTruthy();
   });
 
+  it("says when the list holds only the start of a long source, and links to all of it", async () => {
+    const { user } = setup({
+      entries: [
+        entry({ id: "q", sourceExcerpt: "The first lines.", sourceCut: true }),
+        entry({ id: "open", position: 1, type: null, status: "not_importable", sourceCut: true }),
+        entry({ id: "whole", position: 2 }),
+      ],
+      filter: "ready",
+    });
+    await user.click(within(card("Question 1")).getByRole("button", { name: "Show source" }));
+    const region = screen.getByRole("region", { name: "Question 1, source" });
+    expect(within(region).getByTestId("source-cut").textContent).toContain("Cut short here.");
+    expect(
+      within(region).getByRole("link", { name: "See all of it on the edit page" }),
+    ).toHaveAttribute("href", `${BASE}/q?show=ready`);
+    // A whole source says nothing; one with no edit page is cut without a link.
+    await user.click(screen.getByRole("button", { name: "All (3)" }));
+    for (const heading of ["Question 2", "Question 3"]) {
+      await user.click(within(card(heading)).getByRole("button", { name: "Show source" }));
+    }
+    const open = screen.getByRole("region", { name: "Question 2, source" });
+    expect(within(open).getByTestId("source-cut")).toBeTruthy();
+    expect(within(open).queryByRole("link")).toBeNull();
+    const whole = screen.getByRole("region", { name: "Question 3, source" });
+    expect(within(whole).queryByTestId("source-cut")).toBeNull();
+  });
+
   it("says a PDF's source is the opening words, and where to look for the rest", async () => {
     const { user } = setup({
       entries: [
@@ -404,7 +455,8 @@ describe("the source beside a question (#593)", () => {
     });
     await user.click(screen.getByRole("button", { name: "Show source" }));
     expect(screen.getByTestId("source-pages").textContent).toBe(
-      "Opening words only. Check the rest on pages 3 to 10 of Cardiac.pdf.",
+      // The pages are the part of the file it was read from, not the question's own span.
+      "Opening words only. This question was read from pages 3 to 10 of Cardiac.pdf.",
     );
   });
 });

@@ -65,6 +65,8 @@ export const RATE_LIMIT_BUCKETS = [
   // #345: batch starts per teacher, and one claim per extract unit (`src/lib/aiImport/upload`).
   "ai_import_batch",
   "ai_import_unit",
+  // #593: changes on the review screen, per teacher (`src/lib/aiImport/review/limit.ts`).
+  "ai_import_review",
 ] as const;
 
 export type RateLimitBucket = (typeof RATE_LIMIT_BUCKETS)[number];

@@ -7,6 +7,7 @@ import {
 import { ITEM_TYPES } from "@/lib/ngn/labels";
 import type { ItemType } from "@/lib/ngn/schemas";
 import { removedPlaces, withoutRemoved } from "../places";
+import { cutEnd } from "../textCut";
 import type { Client } from "../upload/access";
 
 /**
@@ -94,7 +95,30 @@ export function chunkPages(
   );
 }
 
-export function toEntryView(row: EntryRow, pages: ChunkPages = new Map()): ReviewEntryView {
+/**
+ * How much of a question's source the review list sends. A source can be 20,000 characters, and
+ * the list holds up to 150 questions and is sent again after every change: whole, that is about
+ * 3 MB each time. This much shows a question with its options and answer line; a longer one is
+ * cut here and shown whole on its edit page.
+ */
+export const LIST_SOURCE_LIMIT = 4_000;
+
+/** `text` in at most `limit` characters, ending on a whole line where one ends near the limit. */
+export function listSource(text: string, limit: number): { text: string; cut: boolean } {
+  if (text.length <= limit) return { text, cut: false };
+  const head = cutEnd(text, limit);
+  const line = head.lastIndexOf("\n");
+  return { text: (line >= limit * 0.75 ? head.slice(0, line) : head).trimEnd(), cut: true };
+}
+
+export function toEntryView(
+  row: EntryRow,
+  pages: ChunkPages = new Map(),
+  /** The most source to send; everything by default (the edit page, and callers that send none). */
+  sourceLimit = Infinity,
+): ReviewEntryView {
+  // A case study is six questions and has no edit page of its own, so it is sent whole.
+  const source = listSource(row.source_excerpt, row.kind === "case_study" ? Infinity : sourceLimit);
   return {
     id: row.id,
     version: row.version,
@@ -105,7 +129,8 @@ export function toEntryView(row: EntryRow, pages: ChunkPages = new Map()): Revie
       ? (row.status as ReviewStatus)
       : "needs_fix",
     reasons: readStoredReasons(row.reasons ?? []),
-    sourceExcerpt: row.source_excerpt,
+    sourceExcerpt: source.text,
+    ...(source.cut ? { sourceCut: true } : {}),
     sourcePages: (row.chunk_id ? pages.get(row.chunk_id) : undefined) ?? null,
     item: row.item ?? null,
     group: row.group_key ? { title: row.group_key, step: row.step } : null,
@@ -153,12 +178,13 @@ export async function readReviewBatch(
   }
   if (!batch.data) return null;
   const shown = withoutRemoved((entries.data ?? []) as EntryRow[], removedPlaces(files.data ?? []));
+  const pages = chunkPages(chunks.data ?? []);
   return {
     id: batch.data.id,
     status: batch.data.status as BatchStatus,
     bankId: batch.data.bank_id,
     fileNames: (files.data ?? []).map((file) => file.original_name),
-    entries: shown.map((row) => toEntryView(row, chunkPages(chunks.data ?? []))),
+    entries: shown.map((row) => toEntryView(row, pages, LIST_SOURCE_LIMIT)),
     answers: answersOf(batch.data.source),
   };
 }

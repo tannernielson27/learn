@@ -16,6 +16,7 @@ import {
   type EntryActionInput,
   type ReviewActionDeps,
 } from "@/lib/aiImport/review/actions";
+import { takeReviewAction } from "@/lib/aiImport/review/limit";
 import { splitCaseStudy } from "@/lib/aiImport/review/split";
 import { discardBatch, importBatch, type CommitDeps } from "@/lib/aiImport/commit/actions";
 import { requireWriter } from "@/lib/authoring/writer";
@@ -70,6 +71,8 @@ async function reviewDeps(): Promise<ReviewActionDeps> {
   return {
     author: async () => ({ status: "ok", ...session }),
     service: createSupabaseServiceClient,
+    // Each change is counted per teacher before anything is read (#593).
+    allow: (userId) => takeReviewAction(userId),
   };
 }
 
@@ -90,7 +93,11 @@ export async function dropAiImportEntries(input: unknown) {
 export async function splitAiImportCaseStudy(input: unknown) {
   const session = await requireWriter("/author");
   return splitCaseStudy(
-    { author: async () => ({ status: "ok", ...session }), service: createSupabaseServiceClient },
+    {
+      author: async () => ({ status: "ok", ...session }),
+      service: createSupabaseServiceClient,
+      allow: (userId) => takeReviewAction(userId),
+    },
     input,
   );
 }

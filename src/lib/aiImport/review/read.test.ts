@@ -1,7 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { REMOVED_REASON } from "../files/reasons";
 import { BANK, BATCH, ORG, fakeClient } from "../upload/testing/fakeSupabase";
-import { answersOf, readReviewBatch, toEntryView, type EntryRow } from "./read";
+import {
+  LIST_SOURCE_LIMIT,
+  answersOf,
+  chunkPages,
+  listSource,
+  readReviewBatch,
+  toEntryView,
+  type EntryRow,
+} from "./read";
 
 const row = (over: Partial<EntryRow> = {}): EntryRow => ({
   id: "e1",
@@ -158,5 +166,90 @@ describe("readReviewBatch", () => {
       ai_import_chunks: [{ data: [] }],
     });
     expect(await readReviewBatch(broken.client, ORG, BATCH, BANK)).toBe("unavailable");
+  });
+});
+
+describe("how much source the review list sends (#593 review)", () => {
+  const long = Array.from({ length: 400 }, (_, n) => `Line ${n} of a long question.`).join("\n");
+
+  it("sends a short source whole, and says nothing was cut", () => {
+    expect(listSource("Which food first?\nA. Tea\nB. Yogurt *", 4_000)).toEqual({
+      text: "Which food first?\nA. Tea\nB. Yogurt *",
+      cut: false,
+    });
+  });
+
+  it("cuts a long one on a whole line, and on a whole character", () => {
+    const cut = listSource(long, LIST_SOURCE_LIMIT);
+    expect(cut.cut).toBe(true);
+    expect(cut.text.length).toBeLessThanOrEqual(LIST_SOURCE_LIMIT);
+    expect(cut.text.endsWith("of a long question.")).toBe(true);
+    // No line break near the limit: cut where it falls, never inside a character.
+    const faces = listSource("😀".repeat(5_000), 4_001);
+    expect(faces.cut).toBe(true);
+    expect(() => encodeURIComponent(faces.text)).not.toThrow();
+  });
+
+  it("caps a question's source on the list and tells the page; a case study is sent whole", async () => {
+    const client = fakeClient({
+      ai_import_batches: [{ data: { id: BATCH, status: "review", bank_id: BANK } }],
+      ai_import_files: [{ data: [{ original_name: "one.md" }] }],
+      ai_import_entries: [
+        {
+          data: [
+            row({ id: "long", source_excerpt: long }),
+            row({ id: "short", position: 1004 }),
+            row({
+              id: "case",
+              position: 1005,
+              kind: "case_study",
+              type: null,
+              source_excerpt: long,
+            }),
+          ],
+        },
+      ],
+      ai_import_chunks: [{ data: [] }],
+    });
+    const batch = await readReviewBatch(client.client, ORG, BATCH, BANK);
+    if (!batch || batch === "unavailable") throw new Error("no batch");
+    const [first, second, third] = batch.entries;
+    expect(first!.sourceExcerpt.length).toBeLessThanOrEqual(LIST_SOURCE_LIMIT);
+    expect(first!.sourceCut).toBe(true);
+    expect(second).not.toHaveProperty("sourceCut");
+    // Six questions' worth, with no edit page of its own to show the rest on.
+    expect(third!.sourceExcerpt).toBe(long);
+    // Elsewhere (the edit page) the same row is read whole.
+    expect(toEntryView(row({ source_excerpt: long }) as EntryRow).sourceExcerpt).toBe(long);
+  });
+
+  it("reads each PDF chunk's pages once for the batch, and gives each entry its own", async () => {
+    const client = fakeClient({
+      ai_import_batches: [{ data: { id: BATCH, status: "review", bank_id: BANK } }],
+      ai_import_files: [{ data: [{ original_name: "one.pdf" }] }],
+      ai_import_entries: [
+        {
+          data: [
+            row({ id: "a", chunk_id: "c1" }),
+            row({ id: "b", position: 1004, chunk_id: "c2" }),
+          ],
+        },
+      ],
+      ai_import_chunks: [
+        {
+          data: [
+            { id: "c1", page_from: 1, page_to: 8 },
+            { id: "c2", page_from: null, page_to: null },
+          ],
+        },
+      ],
+    });
+    const batch = await readReviewBatch(client.client, ORG, BATCH, BANK);
+    if (!batch || batch === "unavailable") throw new Error("no batch");
+    expect(batch.entries.map((entry) => entry.sourcePages)).toEqual([{ from: 1, to: 8 }, null]);
+    expect(chunkPages([{ id: "c1", page_from: 1, page_to: 8 }]).get("c1")).toEqual({
+      from: 1,
+      to: 8,
+    });
   });
 });

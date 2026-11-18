@@ -1,16 +1,14 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type APIRequestContext, type Browser, type Page } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { sampleCaseStudy } from "../src/lib/ngn/fixtures";
+import { expectTurnedAway, signedInStudent } from "./aiImportVisitors";
 import { wireText } from "./bytes";
-import { latestSignInLink, openSignInLink } from "./mailbox";
 import {
-  createAccountWithoutRole,
   insertAsAdmin,
   selectAsAdmin,
   signInAsInstructorInEmptyOrg,
-  uniqueEmail,
   updateAsAdmin,
 } from "./signIn";
 
@@ -151,30 +149,6 @@ test("a teacher reviews an import: four statuses, a drop and a change of type", 
   await page.screenshot({ path: `${shots}/ai-import-review-changed.png`, fullPage: true });
 });
 
-/** A student account signed in through the emailed link, in a browser of its own. */
-async function signedInStudent(
-  browser: Browser,
-  request: APIRequestContext,
-  label: string,
-  orgId: string,
-) {
-  const email = uniqueEmail(label);
-  const userId = await createAccountWithoutRole(request, email);
-  // A student of the batch's own workspace: the nearest a student gets to its keys.
-  await updateAsAdmin(request, "profiles", `id=eq.${userId}`, { org_id: orgId, role: "student" });
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  await page.goto("/sign-in");
-  const since = new Date();
-  await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
-  await page
-    .getByRole("button", { name: "Sign in with an emailed link instead", exact: true })
-    .click();
-  await page.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
-  await openSignInLink(page, await latestSignInLink(request, email, since));
-  return { context, page };
-}
-
 test("the review page and its change of type reach nobody outside the batch's workspace", async ({
   page,
   request,
@@ -292,6 +266,16 @@ test("the review page and its change of type reach nobody outside the batch's wo
   });
   expect(studentRetype.status()).toBe(403);
   await student.context.close();
+
+  // Nobody signed in: sent to sign in, with none of it.
+  const stranger = await browser.newContext();
+  await expectTurnedAway(
+    stranger,
+    pages.map(({ path }) => path),
+    secrets,
+    "a signed-out visitor",
+  );
+  await stranger.close();
 
   // Nothing above changed the entry.
   const [after] = await selectAsAdmin<{ version: number; type: string }>(

@@ -3,6 +3,7 @@ import { messageFor, type AiImportFailure } from "@/lib/authoring/aiImportUpload
 import { restoredStatus, type ReviewStatus } from "@/lib/authoring/aiImportReview";
 import { refreshBatchDuplicates } from "../duplicates";
 import { aiImportAccess, type AccessDeps, type Client } from "../upload/access";
+import { reviewAllowance, type ReviewLimitDeps } from "./limit";
 import { ENTRY_COLUMNS, toEntryView, type EntryRow } from "./read";
 
 /**
@@ -21,7 +22,7 @@ import { ENTRY_COLUMNS, toEntryView, type EntryRow } from "./read";
  * checked, and nothing from the request.
  */
 
-export interface ReviewActionDeps extends AccessDeps {
+export interface ReviewActionDeps extends AccessDeps, ReviewLimitDeps {
   /** For the duplicate flags only. Without it they are left as they were. */
   service?: () => Client;
 }
@@ -122,6 +123,8 @@ async function setStatus(
   const parsed = inputSchema.safeParse(raw);
   if (!parsed.success) return refuse("malformed");
   const input = parsed.data;
+  const allowed = await reviewAllowance(deps, access.author.userId);
+  if (allowed !== "ok") return refuse(allowed);
   const { supabase, orgId } = access.author;
   const client = supabase as unknown as Client;
 
@@ -197,9 +200,15 @@ export type BulkDropResult =
       /** Other entries whose duplicate flag changed, as a single drop reports them. */
       changed?: ChangedVersion[];
     }
-  | AiImportFailure;
+  // A write that fails part of the way through says what it had already dropped, so the page
+  // does not go on showing those cards at versions that no longer stand.
+  | (AiImportFailure & { dropped?: ChangedVersion[]; changed?: ChangedVersion[] });
 
-/** How many entries one update names; a longer filter would not fit in a request line. */
+/**
+ * How many entries one update names. A full batch in one request line would be about 9,000
+ * characters, past the 8,000 a proxy in front of the Data API commonly allows, so the list is
+ * sent in parts.
+ */
 const BULK_CHUNK = 30;
 
 const NEEDS_ATTENTION: ReviewStatus[] = ["needs_answer", "needs_fix"];
@@ -217,6 +226,8 @@ export async function dropEntries(deps: ReviewActionDeps, raw: unknown): Promise
   const parsed = bulkSchema.safeParse(raw);
   if (!parsed.success) return refuse("malformed");
   const { batchId, entries } = parsed.data;
+  const allowed = await reviewAllowance(deps, access.author.userId);
+  if (allowed !== "ok") return refuse(allowed);
   const { supabase, orgId } = access.author;
   const client = supabase as unknown as Client;
 
@@ -234,6 +245,7 @@ export async function dropEntries(deps: ReviewActionDeps, raw: unknown): Promise
   if (batch.data.status !== "review") return refuse("not_review");
 
   const dropped: { id: string; version: number }[] = [];
+  let failed = false;
   for (let start = 0; start < entries.length; start += BULK_CHUNK) {
     // Each id is a UUID and each version a whole number (checked above), so the filter holds
     // nothing a caller wrote freely.
@@ -251,8 +263,8 @@ export async function dropEntries(deps: ReviewActionDeps, raw: unknown): Promise
       .select("id, version");
     if (error) {
       logged("dropping entries", error);
-      // What was dropped before the failure stays dropped; the page reloads and shows it.
-      return refuse("unavailable");
+      failed = true;
+      break;
     }
     dropped.push(...((data ?? []) as { id: string; version: number }[]));
   }
@@ -261,10 +273,16 @@ export async function dropEntries(deps: ReviewActionDeps, raw: unknown): Promise
     versions,
     dropped.map((row) => row.id),
   );
-  return {
-    ok: true,
-    dropped,
-    left: entries.length - dropped.length,
-    ...(changed.length > 0 ? { changed } : {}),
-  };
+  const moved = { dropped, ...(changed.length > 0 ? { changed } : {}) };
+  if (failed) {
+    // An earlier part's entries stay dropped, and the answer names them with the failure.
+    return {
+      ...refuse("unavailable"),
+      ...(dropped.length > 0
+        ? { message: `Dropped ${dropped.length}, then it stopped working. Try again for the rest.` }
+        : {}),
+      ...moved,
+    };
+  }
+  return { ok: true, ...moved, left: entries.length - dropped.length };
 }

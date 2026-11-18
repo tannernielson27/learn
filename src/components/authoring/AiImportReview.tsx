@@ -72,6 +72,17 @@ type Override = { version: number; status?: ReviewStatus };
 const movedOn = (changed: readonly { id: string; version: number }[] = []) =>
   Object.fromEntries(changed.map((row) => [row.id, { version: row.version }]));
 
+/** What a bulk drop changed: the entries it dropped, and those another version moved on. */
+const droppedNow = (
+  dropped: readonly { id: string; version: number }[] = [],
+  changed: readonly { id: string; version: number }[] = [],
+): Record<string, Override> => ({
+  ...movedOn(changed),
+  ...Object.fromEntries(
+    dropped.map((row) => [row.id, { version: row.version, status: "dropped" as const }]),
+  ),
+});
+
 const FAILED: AiImportFailure = { ok: false, code: "unavailable", message: UNEXPECTED };
 
 /**
@@ -223,14 +234,13 @@ export function AiImportReview({
           setImported(importedSentence(outcome.questions, outcome.caseStudies, quizName));
           router.refresh();
         }}
+        onDropFailed={(outcome) => {
+          // Part of it may have gone through: show what did, and read the batch again.
+          setOverrides((now) => ({ ...now, ...droppedNow(outcome?.dropped, outcome?.changed) }));
+          router.refresh();
+        }}
         onDroppedAll={({ dropped, left, changed }) => {
-          setOverrides((now) => ({
-            ...now,
-            ...movedOn(changed),
-            ...Object.fromEntries(
-              dropped.map((row) => [row.id, { version: row.version, status: "dropped" as const }]),
-            ),
-          }));
+          setOverrides((now) => ({ ...now, ...droppedNow(dropped, changed) }));
           const kept =
             left > 0
               ? ` ${left} changed in another tab and ${left === 1 ? "was" : "were"} left.`

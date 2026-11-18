@@ -7,6 +7,7 @@ import { placeOf, removedPlaces } from "../places";
 import { cutEnd } from "../textCut";
 import { aiImportAccess, type AccessDeps, type Client } from "../upload/access";
 import { placeSteps, splitSteps, type SplitStep } from "./caseStudy";
+import { reviewAllowance, type ReviewLimitDeps } from "./limit";
 import { ENTRY_COLUMNS, type EntryRow } from "./read";
 
 /**
@@ -38,7 +39,7 @@ import { ENTRY_COLUMNS, type EntryRow } from "./read";
  * here, from the stored entry.
  */
 
-export interface SplitDeps extends AccessDeps {
+export interface SplitDeps extends AccessDeps, ReviewLimitDeps {
   service: () => Client;
 }
 
@@ -165,6 +166,8 @@ export async function splitCaseStudy(deps: SplitDeps, raw: unknown): Promise<Spl
   const parsed = inputSchema.safeParse(raw);
   if (!parsed.success) return refuse("malformed");
   const input = parsed.data;
+  const allowed = await reviewAllowance(deps, access.author.userId);
+  if (allowed !== "ok") return refuse(allowed);
   const { supabase, orgId } = access.author;
 
   const read = await readForSplit(supabase as unknown as Client, orgId, input);

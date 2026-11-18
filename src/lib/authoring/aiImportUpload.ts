@@ -85,6 +85,7 @@ export const AI_IMPORT_MESSAGES = {
   disabled: "AI import is not turned on for your workspace.",
   rights: "Confirm you may use this content and that it has no real patient information.",
   rate_limited: "You have sent a lot of requests this hour. Wait a while, then try again.",
+  review_limited: "That is a lot of changes at once. Wait a minute, then try again.",
   cap_reached:
     "Your workspace has reached this month's AI import allowance. Nothing more was charged.",
   claude_failed:

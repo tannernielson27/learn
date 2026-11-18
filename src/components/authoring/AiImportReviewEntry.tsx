@@ -172,6 +172,8 @@ export function AiImportReviewEntry({
                   text={entry.sourceExcerpt}
                   pages={entry.sourcePages}
                   fileName={fileName}
+                  cut={entry.sourceCut}
+                  moreHref={editable ? editHref : undefined}
                 />
               </Card>
             </section>

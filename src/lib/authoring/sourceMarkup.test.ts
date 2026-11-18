@@ -86,3 +86,47 @@ describe("pagesLabel", () => {
     expect(pagesLabel({ from: 3, to: 10 })).toBe("pages 3 to 10");
   });
 });
+
+describe("parseSource on text it cannot trust (#593 review)", () => {
+  it("reads a long line of unclosed marks in one pass", () => {
+    // Each of these made the first version look to the end of the line again for every mark.
+    for (const mark of ["<u>", "**x", "==x", "~~x~", "<U>"]) {
+      const line = mark.repeat(60_000);
+      const started = performance.now();
+      const nodes = parseSource(line);
+      const took = performance.now() - started;
+      expect(nodes.map((node) => node.kind).includes("underline")).toBe(false);
+      // Generous: the quadratic reading took many seconds at this length.
+      expect(took).toBeLessThan(1_500);
+    }
+  });
+
+  it("stops at a depth, and leaves what is deeper as text", () => {
+    const deep = "**<u>".repeat(20) + "x" + "</u>**".repeat(20);
+    const depthOf = (nodes: ReturnType<typeof parseSource>): number =>
+      Math.max(0, ...nodes.map((node) => ("children" in node ? 1 + depthOf(node.children) : 0)));
+    expect(depthOf(parseSource(deep))).toBeLessThanOrEqual(6);
+  });
+
+  it("reads each line by itself, so a mark never runs over a line break", () => {
+    expect(parseSource("**bold\nstill** plain")).toEqual([
+      { kind: "text", text: "**bold\nstill** plain" },
+    ]);
+    expect(parseSource("**one**\n<U>two</U>")).toEqual([
+      { kind: "bold", children: [{ kind: "text", text: "one" }] },
+      { kind: "text", text: "\n" },
+      { kind: "underline", children: [{ kind: "text", text: "two" }] },
+    ]);
+  });
+
+  it("keeps a mark that only looks like one as text, and reads the next real one", () => {
+    expect(parseSource("a == b ==c=={yellow}")).toEqual([
+      { kind: "text", text: "a == b " },
+      { kind: "highlight", children: [{ kind: "text", text: "c" }] },
+    ]);
+    expect(parseSource("~~a~b and **** and ~~gone~~")).toEqual([
+      { kind: "text", text: "~~a~b and **** and " },
+      { kind: "struck", children: [{ kind: "text", text: "gone" }] },
+    ]);
+  });
+});

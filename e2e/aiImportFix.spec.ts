@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { fromMatrixMultipleChoiceDraft } from "../src/lib/ngn/draft";
 import { sampleCaseStudy } from "../src/lib/ngn/fixtures";
+import { expectTurnedAway, signedInStudent } from "./aiImportVisitors";
 import { wireText } from "./bytes";
 import {
   insertAsAdmin,
@@ -130,7 +131,7 @@ test("a teacher marks the key on an unmarked matrix and it becomes Ready", async
   await page.screenshot({ path: `${shots}/ai-import-fix-ready.png`, fullPage: true });
 });
 
-test("another workspace's teacher cannot open a staged question's editor", async ({
+test("a staged question's source and key reach nobody but its own workspace's teachers", async ({
   page,
   request,
   browser,
@@ -138,23 +139,73 @@ test("another workspace's teacher cannot open a staged question's editor", async
   test.slow();
   const label = `fxb-${testInfo.project.name}`;
   const { orgId, bankId } = await teacherWithQuiz(page, request, label);
-  const { batchId, entryId } = await stagedMatrix(request, orgId, bankId);
-  const editPath = `/author/banks/${bankId}/ai-import/${batchId}/${entryId}`;
-  const marker = "Muscle wasting at the temples";
+  const stamp = Date.now();
+  // Two things to look for, each in one place only. The first is in the stored part of the
+  // document and nowhere in the question; the second is the key itself, as it is written: the
+  // id of the right option, which no page shows a student before a reveal.
+  const sourceOnly = `only-in-the-source-${stamp}`;
+  const key = `"correctOptionId":"opt_key_${stamp}"`;
+  const batch = await insertAsAdmin<{ id: string }>(request, "ai_import_batches", {
+    org_id: orgId,
+    bank_id: bankId,
+    status: "review",
+  });
+  const entry = await insertAsAdmin<{ id: string }>(request, "ai_import_entries", {
+    batch_id: batch.id,
+    org_id: orgId,
+    position: 0,
+    kind: "item",
+    type: "multiple_choice",
+    status: "ready",
+    reasons: [],
+    source_excerpt: `Which food should the nurse suggest first?\nA. Tea\n**B. Yogurt**\nAnswer: B (${sourceOnly})`,
+    item: {
+      id: "e2e_keyed",
+      type: "multiple_choice",
+      stem: { kind: "markdown", value: "Which food should the nurse suggest first?" },
+      content: {
+        options: [
+          { id: "opt_a", label: "Tea" },
+          { id: `opt_key_${stamp}`, label: "Yogurt" },
+          { id: "opt_c", label: "Toast" },
+          { id: "opt_d", label: "Broth" },
+        ],
+      },
+      answerKey: { correctOptionId: `opt_key_${stamp}` },
+      scoring: { model: "zero_one", maxPoints: 1 },
+      rationale: {},
+    },
+  });
+  const reviewPath = `/author/banks/${bankId}/ai-import/${batch.id}`;
+  const paths = [reviewPath, `${reviewPath}/${entry.id}`];
+  const secrets = [sourceOnly, key];
 
-  // Control: the batch's own teacher is handed the question, so the grep below can match.
-  const own = await page.context().request.get(editPath);
-  expect(own.status()).toBe(200);
-  expect(wireText(await own.text())).toContain(marker);
+  // Control: the batch's own teacher is sent both, on both pages, so each grep below can match.
+  for (const path of paths) {
+    const own = await page.context().request.get(path);
+    expect(own.status(), path).toBe(200);
+    const bytes = wireText(await own.text());
+    for (const secret of secrets) expect(bytes, `${path} holds ${secret}`).toContain(secret);
+  }
 
+  // A teacher of another workspace, with AI import on: not found.
   const outsider = await browser.newContext();
   const outsiderPage = await outsider.newPage();
   const otherOrg = await signInAsInstructorInEmptyOrg(outsiderPage, request, `${label}-other`);
   await updateAsAdmin(request, "orgs", `id=eq.${otherOrg}`, { ai_import_enabled: true });
-  const outsiderGet = await outsider.request.get(editPath);
-  expect(outsiderGet.status()).toBe(404);
-  expect(wireText(await outsiderGet.text())).not.toContain(marker);
+  for (const path of paths) expect((await outsider.request.get(path)).status(), path).toBe(404);
+  await expectTurnedAway(outsider, paths, secrets, "another workspace's teacher");
   await outsider.close();
+
+  // A student of the same workspace: sent away from every author page.
+  const student = await signedInStudent(browser, request, `${label}-student`, orgId);
+  await expectTurnedAway(student.context, paths, secrets, "a student");
+  await student.context.close();
+
+  // Nobody signed in: sent to sign in.
+  const stranger = await browser.newContext();
+  await expectTurnedAway(stranger, paths, secrets, "a signed-out visitor");
+  await stranger.close();
 });
 
 /** A batch in review holding `count` unmarked matrices, in order, each needing an answer. */

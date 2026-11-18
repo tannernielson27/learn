@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { TextLink } from "@/components/ui/TextLink";
 import {
   pagesLabel,
   parseSource,
@@ -13,6 +14,10 @@ export interface AiImportSourceProps {
   pages?: { from: number; to: number } | null;
   /** The file's name, said with the pages. */
   fileName?: string | null;
+  /** Only the start of a long source was sent (the review list); the panel says so. */
+  cut?: boolean;
+  /** Where the whole source is shown: the question's edit page. */
+  moreHref?: string;
 }
 
 function draw(nodes: readonly SourceNode[], path = "n"): ReactNode[] {
@@ -57,9 +62,16 @@ function draw(nodes: readonly SourceNode[], path = "n"): ReactNode[] {
  * mark is a React element, and nothing from the document is ever set as HTML.
  *
  * A PDF has no text on the server, so only the opening words were kept. The panel says so, and
- * names the pages to look at in the teacher's own file.
+ * names the pages the question was read from: a part of the file of about eight pages, which
+ * holds the question, not the pages the question itself covers.
  */
-export function AiImportSource({ text, pages = null, fileName = null }: AiImportSourceProps) {
+export function AiImportSource({
+  text,
+  pages = null,
+  fileName = null,
+  cut = false,
+  moreHref,
+}: AiImportSourceProps) {
   const nodes = parseSource(text);
   const legend = sourceLegend(nodes);
   return (
@@ -73,10 +85,20 @@ export function AiImportSource({ text, pages = null, fileName = null }: AiImport
           The document&apos;s text for this question was not kept.
         </p>
       )}
+      {cut ? (
+        <p className="text-sm text-ink-2" data-testid="source-cut">
+          Cut short here.{" "}
+          {moreHref ? (
+            <TextLink href={moreHref} size="sm">
+              See all of it on the edit page
+            </TextLink>
+          ) : null}
+        </p>
+      ) : null}
       {legend ? <p className="text-sm text-ink-2">{legend}</p> : null}
       {pages ? (
         <p className="text-sm text-ink-2" data-testid="source-pages">
-          Opening words only. Check the rest on {pagesLabel(pages)}
+          Opening words only. This question was read from {pagesLabel(pages)}
           {fileName ? ` of ${fileName}` : " of your PDF"}.
         </p>
       ) : null}

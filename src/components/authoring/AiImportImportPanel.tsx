@@ -25,7 +25,10 @@ export type DropAllOutcome =
       left: number;
       changed?: { id: string; version: number }[];
     }
-  | AiImportFailure;
+  | (AiImportFailure & {
+      dropped?: { id: string; version: number }[];
+      changed?: { id: string; version: number }[];
+    });
 
 export interface DropAllInput {
   batchId: string;
@@ -45,6 +48,11 @@ export interface AiImportImportPanelProps {
   dropAll?: (input: DropAllInput) => Promise<DropAllOutcome>;
   onImported: (outcome: { questions: number; caseStudies: number }) => void;
   onDroppedAll: (outcome: Extract<DropAllOutcome, { ok: true }>) => void;
+  /**
+   * The bulk drop was refused or failed. Some entries may have been dropped before it stopped,
+   * so the page takes what the answer names and reads the batch again.
+   */
+  onDropFailed?: (outcome?: Extract<DropAllOutcome, { ok: false }>) => void;
 }
 
 type Asking = "import" | "drop" | null;
@@ -68,6 +76,7 @@ export function AiImportImportPanel({
   dropAll,
   onImported,
   onDroppedAll,
+  onDropFailed,
 }: AiImportImportPanelProps) {
   const id = useId();
   const [asking, setAsking] = useState<Asking>(null);
@@ -85,9 +94,10 @@ export function AiImportImportPanel({
   };
 
   /** One request at a time; a refusal or a failure stays in the dialog that asked. */
-  async function confirm<T extends { ok: true }>(
-    request: () => Promise<T | AiImportFailure>,
-    done: (result: T) => void,
+  async function confirm<R extends { ok: true } | AiImportFailure>(
+    request: () => Promise<R>,
+    done: (result: Extract<R, { ok: true }>) => void,
+    failed?: (result?: Extract<R, { ok: false }>) => void,
   ) {
     if (inFlight.current) return;
     inFlight.current = true;
@@ -97,12 +107,14 @@ export function AiImportImportPanel({
       const result = await request();
       if (result.ok) {
         setAsking(null);
-        done(result);
+        done(result as Extract<R, { ok: true }>);
       } else {
         setError(result.message);
+        failed?.(result as Extract<R, { ok: false }>);
       }
     } catch {
       setError(UNEXPECTED);
+      failed?.();
     } finally {
       inFlight.current = false;
       setBusy(false);
@@ -115,7 +127,7 @@ export function AiImportImportPanel({
   const runDrop = () => {
     if (!dropAll) return;
     const shown = waiting.map((entry) => ({ entryId: entry.id, version: entry.version }));
-    void confirm(() => dropAll({ batchId, entries: shown }), onDroppedAll);
+    void confirm(() => dropAll({ batchId, entries: shown }), onDroppedAll, onDropFailed);
   };
 
   return (

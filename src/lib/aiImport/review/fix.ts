@@ -17,6 +17,7 @@ import { convertDraft, formatReason, MAX_REASONS, readReason } from "../stage";
 import { aiImportAccess, type AccessDeps, type Client } from "../upload/access";
 import { readEntry } from "./actions";
 import { draftWithSaved, withStepSaved } from "./caseStudy";
+import { reviewAllowance, type ReviewLimitDeps } from "./limit";
 import { ENTRY_COLUMNS, type EntryRow } from "./read";
 
 /**
@@ -37,7 +38,7 @@ import { ENTRY_COLUMNS, type EntryRow } from "./read";
  * the whole passes its schema. Nothing else of the case study can be changed from here.
  */
 
-export interface FixDeps extends AccessDeps {
+export interface FixDeps extends AccessDeps, ReviewLimitDeps {
   service: () => Client;
 }
 
@@ -161,6 +162,8 @@ export async function saveEntryFix(deps: FixDeps, raw: unknown): Promise<FixResu
   if (!parsed.success) return refuse("malformed");
   const input = parsed.data;
   if (!withinItemSizeLimit(input.values)) return refuse("too_large");
+  const allowed = await reviewAllowance(deps, access.author.userId);
+  if (allowed !== "ok") return refuse(allowed);
   const { supabase, orgId } = access.author;
 
   // A step's save notes on the draft that the teacher saved it, so the draft is read with it.

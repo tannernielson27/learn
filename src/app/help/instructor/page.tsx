@@ -178,9 +178,9 @@ export default function InstructorGuide() {
           </List>
           <p>
             <Ui>Show source</Ui> puts the question&apos;s part of the document beside it, with its
-            bold, underline and highlight. A PDF shows the opening words and the pages to check.{" "}
-            <Ui>Drop</Ui> leaves a question out. <Ui>Change type</Ui> reads it again as another
-            format, which uses some of the monthly allowance.
+            bold, underline and highlight. A PDF shows the opening words and the pages it was read
+            from. <Ui>Drop</Ui> leaves a question out. <Ui>Change type</Ui> reads it again as
+            another format, which uses some of the monthly allowance.
           </p>
           <HelpFigure
             figure={HELP_FIGURES.aiImportReview}
