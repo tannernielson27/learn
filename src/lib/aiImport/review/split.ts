@@ -4,6 +4,7 @@ import type { Json } from "@/lib/supabase/database.types";
 import { MAX_ENTRIES_PER_BATCH } from "../config";
 import { refreshBatchDuplicates } from "../duplicates";
 import { placeOf, removedPlaces } from "../places";
+import { cutEnd } from "../textCut";
 import { aiImportAccess, type AccessDeps, type Client } from "../upload/access";
 import { placeSteps, splitSteps, type SplitStep } from "./caseStudy";
 import { ENTRY_COLUMNS, type EntryRow } from "./read";
@@ -18,9 +19,20 @@ import { ENTRY_COLUMNS, type EntryRow } from "./read";
  * everything about its batch read with the teacher's own session (RLS), a case study that has not
  * been dropped, at the version the page showed, in a batch in review, with room under the batch's
  * 150 entries. A teacher's session may not insert an entry, so the write is the service client's,
- * after the batch is read again: steps 2 to 6 are inserted first, then the case study's own row
- * becomes step 1 where it is still at that version. If that last write finds the row changed, the
- * five new rows are taken out again and nothing has happened.
+ * after the batch is read again.
+ *
+ * The three writes cannot be one transaction without a database function, and this story has no
+ * migration. So they are ordered to be safe wherever they stop: nothing a teacher did not keep
+ * can be imported, and no question is lost.
+ *
+ * - (a) Steps 2 to 6 are inserted **dropped**, with their real reasons. A dropped entry is never
+ *   imported. Stopping here leaves the case study as it was and five dropped rows.
+ * - (b) The case study's own row becomes step 1, where it is still at the shown version. If it
+ *   is not (or the write fails), the five rows are deleted again; if that fails too, they stay
+ *   under Dropped, harmless and in view.
+ * - (c) Steps 2 to 6 are set to their own statuses. If this fails, step 1 stands and the others
+ *   are under Dropped, where Restore gives each the same status: the answer says so
+ *   (`split_partial`), in words.
  *
  * Nothing in the request is trusted beyond its three ids and the version: every question is built
  * here, from the stored entry.
@@ -142,7 +154,7 @@ const columnsOf = (step: SplitStep, title: string) => ({
   reasons: step.reasons,
   draft: jsonOf(step.draft),
   item: jsonOf(step.item),
-  group_key: title.slice(0, 80) || null,
+  group_key: cutEnd(title, 80) || null,
   step: step.step,
 });
 
@@ -191,12 +203,16 @@ export async function splitCaseStudy(deps: SplitDeps, raw: unknown): Promise<Spl
     return refuse("unavailable");
   }
   if (open.data?.status !== "review") return refuse("not_review");
+  const ref = { orgId, batchId: input.batchId };
 
+  // (a) Steps 2 to 6 go in dropped: nothing dropped is ever imported, so until the case study
+  // itself has become step 1 they cannot be imported beside it.
   const inserted = await service
     .from("ai_import_entries")
     .insert(
       rest.map((step, index) => ({
         ...columnsOf(step, title),
+        status: "dropped",
         batch_id: input.batchId,
         org_id: orgId,
         chunk_id: row.chunk_id ?? null,
@@ -211,6 +227,7 @@ export async function splitCaseStudy(deps: SplitDeps, raw: unknown): Promise<Spl
   }
   const newIds = ((inserted.data ?? []) as { id: string }[]).map((r) => r.id);
 
+  // (b) The case study's own row becomes step 1, only where it is still at the shown version.
   const lead = await service
     .from("ai_import_entries")
     .update(columnsOf(first, title))
@@ -220,7 +237,8 @@ export async function splitCaseStudy(deps: SplitDeps, raw: unknown): Promise<Spl
     .eq("version", input.version)
     .select("version");
   if (lead.error || (lead.data ?? []).length === 0) {
-    // The case study changed (or the write failed) after its steps went in: take them out again.
+    // The case study stands as it was. Its five dropped copies are taken out again; if that
+    // fails too they stay under Dropped, where they are seen and not imported.
     const undone = await service
       .from("ai_import_entries")
       .delete()
@@ -229,10 +247,48 @@ export async function splitCaseStudy(deps: SplitDeps, raw: unknown): Promise<Spl
       .in("id", newIds);
     if (undone.error) logged("undoing a split", undone.error);
     if (lead.error) logged("splitting a case study", lead.error);
+    await refreshBatchDuplicates(service, ref);
     return refuse(lead.error ? "unavailable" : "entry_changed");
   }
 
+  // (c) Steps 2 to 6 take the status each has on its own: one write for each status among them.
+  const stuck = await releaseSteps(service, ref, rest, newIds);
   // Six questions now stand where one case study did; a failed flag pass leaves them unflagged.
-  await refreshBatchDuplicates(service, { orgId, batchId: input.batchId });
+  await refreshBatchDuplicates(service, ref);
+  if (stuck > 0) {
+    return {
+      ok: false,
+      code: "split_partial",
+      message: `The case study was split, but ${stuck} of its questions ${stuck === 1 ? "is" : "are"} under Dropped. Restore ${stuck === 1 ? "it" : "them"}.`,
+    };
+  }
   return { ok: true, questions: steps.length };
+}
+
+/**
+ * Sets the inserted steps to their own statuses, and answers how many could not be: those stay
+ * dropped, with the reasons a restore works their status out from (`restoredStatus`, which is
+ * also what gave each step its status here).
+ */
+async function releaseSteps(
+  service: Client,
+  ref: { orgId: string; batchId: string },
+  steps: readonly SplitStep[],
+  ids: readonly string[],
+): Promise<number> {
+  let stuck = 0;
+  for (const status of new Set(steps.map((step) => step.status))) {
+    const mine = ids.filter((_, index) => steps[index]?.status === status);
+    const { data, error } = await service
+      .from("ai_import_entries")
+      .update({ status })
+      .eq("batch_id", ref.batchId)
+      .eq("org_id", ref.orgId)
+      .eq("status", "dropped")
+      .in("id", mine)
+      .select("id");
+    if (error) logged("finishing a split", error);
+    stuck += mine.length - (error ? 0 : (data ?? []).length);
+  }
+  return stuck;
 }

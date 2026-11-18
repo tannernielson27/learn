@@ -5,7 +5,7 @@ import { toCaseStudyDraft } from "@/lib/ngn/draft";
 import { sampleCaseStudy } from "@/lib/ngn/fixtures";
 import { caseStudySchema, itemSchema } from "@/lib/ngn/schemas";
 import { planCommit } from "../commit/plan";
-import { placeSteps, splitSteps, withStepSaved } from "./caseStudy";
+import { draftWithSaved, placeSteps, splitSteps, withStepSaved } from "./caseStudy";
 
 // The fictional sample case study (post-operative pulmonary embolism), as staging holds one.
 const whole = caseStudySchema.parse(sampleCaseStudy);
@@ -283,5 +283,48 @@ describe("placeSteps", () => {
   it("never leaves the file's thousand, and refuses when it has no five places left", () => {
     expect(placeSteps(1996, new Set([1996]))).toBeNull();
     expect(placeSteps(1994, new Set([1994]))).toEqual([1995, 1996, 1997, 1998, 1999]);
+  });
+});
+
+describe("what a teacher saved is theirs (#593 review)", () => {
+  const title = "Pulmonary embolism";
+
+  it("notes each saved step on the draft, once, whatever the draft was", () => {
+    expect(draftWithSaved({ title, steps: [] }, 4)).toEqual({ title, steps: [], saved: [4] });
+    expect(draftWithSaved({ saved: [4, 2] }, 4)).toEqual({ saved: [2, 4] });
+    expect(draftWithSaved({ saved: [4, "x"] }, 1)).toEqual({ saved: [1, 4] });
+    expect(draftWithSaved(null, 3)).toEqual({ saved: [3] });
+    expect(draftWithSaved(["not", "a", "draft"], 3)).toEqual({ saved: [3] });
+  });
+
+  it("does not ask the teacher to check again a key they marked and saved themselves", () => {
+    // Read from a PDF, so every key was unchecked; the teacher then keyed and saved step 4.
+    const draft = draftWithSaved({ unchecked: Array(6).fill(true) }, 4);
+    const steps = splitSteps({
+      item: staged([]),
+      draft,
+      reasons: ["check_key: Step 4: The key was read from bold, underlined or coloured text."],
+      title,
+      pdf: true,
+    });
+    const checked = steps!.map((step) => step.reasons.some((r) => r.startsWith("check_key: ")));
+    expect(checked).toEqual([true, true, true, false, true, true]);
+  });
+
+  it("names a step the whole case study's schema refuses as a step, so it can be opened", () => {
+    // Every step is keyed, but step 3 carries another step's place: only the whole says so.
+    const item = {
+      ...staged([]),
+      items: whole.items.map((step, index) => (index === 2 ? { ...step, cjmmStep: 1 } : step)),
+    };
+    const saved = withStepSaved({ item, reasons: [] }, 4, whole.items[3]!);
+    expect(saved?.status).toBe("needs_fix");
+    expect(saved?.reasons).toContain("needs_fix: Step 3: This step is not complete yet.");
+    expect(
+      stepsNeedingAttention({ item: saved!.item, reasons: readStoredReasons(saved!.reasons) }),
+    ).toEqual([{ step: 3, why: "check" }]);
+    // Opening that step and saving it puts its place right, and the case study is ready.
+    const again = withStepSaved(saved!, 3, whole.items[2]!);
+    expect(again?.status).toBe("ready");
   });
 });

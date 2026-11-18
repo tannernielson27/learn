@@ -191,6 +191,9 @@ describe("saveEntryFix", () => {
     const { deps, session, service } = setup();
     const result = await saveEntryFix(deps, input());
     expect(result).toEqual({ ok: true, version: 4, status: "ready" });
+    // A single question's save neither reads nor writes the model's draft.
+    expect(String(session.stepsOn("ai_import_entries", "select")[0]?.[0])).not.toContain("draft");
+    expect(service.stepsOn("ai_import_entries", "update")[0]?.[0]).not.toHaveProperty("draft");
 
     // Read with the teacher's own session; written with the service client, named in full.
     expect(session.stepsOn("ai_import_entries", "update")).toEqual([]);
@@ -364,8 +367,8 @@ describe("saveEntryFix on a case study's step (#593, add the key per step)", () 
   };
 
   it("puts the keyed step back, and a case study with one unkeyed step becomes ready", async () => {
-    const { deps, service } = setup({
-      entries: [caseRow()],
+    const { deps, service, session } = setup({
+      entries: [caseRow({ draft: { title: "Pulmonary embolism" } })],
       serviceEntries: [{ data: [{ version: 4, status: "ready" }] }, { data: [] }],
     });
     const result = await saveEntryFix(deps, input({ step: 4, values: stepForm() }));
@@ -373,6 +376,10 @@ describe("saveEntryFix on a case study's step (#593, add the key per step)", () 
     const [[patch]] = service.stepsOn("ai_import_entries", "update") as [[Record<string, unknown>]];
     expect(patch.status).toBe("ready");
     expect(patch.reasons).not.toContain(NEEDS_ANSWER);
+    // The draft is read for a step's save, and notes that the teacher saved step 4: a later
+    // split does not ask them to check their own key again.
+    expect(patch.draft).toEqual({ title: "Pulmonary embolism", saved: [4] });
+    expect(String(session.stepsOn("ai_import_entries", "select")[0]?.[0])).toMatch(/, draft$/);
     const saved = caseStudySchema.parse(patch.item);
     expect(saved.items[3]).toMatchObject({
       id: whole.items[3]!.id,

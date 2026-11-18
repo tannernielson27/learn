@@ -360,3 +360,147 @@ describe("refreshBatchDuplicates (#593)", () => {
     expect(JSON.stringify(errorSpy.mock.calls)).not.toContain("Which food");
   });
 });
+
+describe("refreshBatchDuplicates: what the review found (#593)", () => {
+  const ref = { orgId: "org-1", batchId: "batch-1" };
+  const IN_BATCH = "duplicate: The same question is earlier in this import. Keep one of them.";
+  const row = (id: string, position: number, over: Record<string, unknown> = {}) => ({
+    id,
+    version: 3,
+    position,
+    status: "ready",
+    reasons: [],
+    ...over,
+  });
+
+  it("writes only where the entry is still at the version it read, and skips one that moved on", async () => {
+    const client = fakeClient({
+      ai_import_entries: [
+        {
+          data: [
+            row("a", 0, { status: "dropped", stem: "Which food first?" }),
+            row("b", 1, { version: 7, reasons: [IN_BATCH], stem: "Which food first?" }),
+            row("c", 2, { version: 9, reasons: [IN_BATCH], stem: "Which drink first?" }),
+          ],
+        },
+        // A save landed on "c" between the read and this write: only "b" is answered.
+        { data: [{ id: "b", version: 8 }] },
+      ],
+      ai_import_files: [{ data: [] }],
+    });
+    const result = await refreshBatchDuplicates(client.client, ref);
+    expect(result).toEqual({ ok: true, versions: new Map([["b", 8]]) });
+    // One statement for the two entries that end with the same reasons, each at its version.
+    expect(client.stepsOn("ai_import_entries", "update")).toEqual([[{ reasons: [] }]]);
+    expect(client.stepsOn("ai_import_entries", "or")).toEqual([
+      ["and(id.eq.b,version.eq.7),and(id.eq.c,version.eq.9)"],
+    ]);
+    expect(String(client.stepsOn("ai_import_entries", "select")[0]?.[0])).toContain("version");
+  });
+
+  it("takes a flag away when the copy is gone, for entries with no stem of their own", async () => {
+    const opening = "Discuss with a partner how you would teach this client about the diet";
+    const client = fakeClient({
+      ai_import_entries: [
+        {
+          data: [
+            // The earlier copies were dropped. What is left: a question with no NGN type, a
+            // question whose draft has no stem, and a case study staged before #593.
+            row("open-first", 0, { status: "dropped" }),
+            row("open", 1, { reasons: [IN_BATCH] }),
+            row("draftless", 2, { reasons: [IN_BATCH], stem: null, draftStem: "" }),
+            row("old-case", 3, { reasons: [IN_BATCH, "note: kept"] }),
+            // Two that are still the same question: the later one keeps its flag.
+            row("twin-a", 4, {}),
+            row("twin-b", 5, { reasons: [IN_BATCH] }),
+          ],
+        },
+        // Their sources are read, for them only.
+        {
+          data: [
+            { id: "open", source_excerpt: `${opening} and why.\n- A\n- B` },
+            {
+              id: "draftless",
+              source_excerpt: "Which finding should the nurse report first today?",
+            },
+            { id: "old-case", source_excerpt: "A 74-year-old woman, post-operative day 1." },
+            { id: "twin-a", source_excerpt: "Match each drug with its class and its antidote." },
+            {
+              id: "twin-b",
+              source_excerpt: "**Match each drug** with its class and its antidote.",
+            },
+          ],
+        },
+        {
+          data: [
+            { id: "open", version: 4 },
+            { id: "draftless", version: 4 },
+          ],
+        },
+        { data: [{ id: "old-case", version: 4 }] },
+      ],
+      ai_import_files: [{ data: [] }],
+    });
+    const result = await refreshBatchDuplicates(client.client, ref);
+    expect(result).toMatchObject({ ok: true });
+    expect(client.stepsOn("ai_import_entries", "in")).toEqual([
+      ["id", ["open", "draftless", "old-case", "twin-a", "twin-b"]],
+    ]);
+    expect(client.stepsOn("ai_import_entries", "update")).toEqual([
+      [{ reasons: [] }],
+      [{ reasons: ["note: kept"] }],
+    ]);
+    // "twin-b" is not written: it is still a copy of "twin-a".
+    expect(JSON.stringify(client.stepsOn("ai_import_entries", "or"))).not.toContain("twin");
+  });
+
+  it("names at most thirty entries in one write", async () => {
+    const many = Array.from({ length: 31 }, (_, index) =>
+      row(`e${index}`, index + 1, { reasons: [IN_BATCH], stem: `Question number ${index}?` }),
+    );
+    const client = fakeClient({
+      ai_import_entries: [{ data: many }, { data: [] }, { data: [] }],
+      ai_import_files: [{ data: [] }],
+    });
+    await refreshBatchDuplicates(client.client, ref);
+    expect(client.stepsOn("ai_import_entries", "or")).toHaveLength(2);
+  });
+
+  it("says so when the sources cannot be read", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const client = fakeClient({
+      ai_import_entries: [{ data: [row("open", 1)] }, { error: { code: "XX000" } }],
+      ai_import_files: [{ data: [] }],
+    });
+    expect(await refreshBatchDuplicates(client.client, ref)).toEqual({
+      ok: false,
+      code: "unavailable",
+    });
+  });
+});
+
+describe("rowOf cuts on whole characters (#593 review)", () => {
+  it("never stores half a character at the end of a source or a group's title", () => {
+    const faces = "😀".repeat(12_000);
+    const row = rowOf(
+      {
+        kind: "item",
+        position: 0,
+        chunk: 0,
+        status: "needs_fix",
+        type: "multiple_choice",
+        reasons: [],
+        draft: null,
+        item: null,
+        sourceExcerpt: `x${faces}`,
+        opening: "x",
+        group: { title: `${"t".repeat(79)}😀`, step: 1 },
+      },
+      0,
+      new Map(),
+    );
+    expect(row.source_excerpt.length).toBeLessThanOrEqual(20_000);
+    expect(() => encodeURIComponent(row.source_excerpt)).not.toThrow();
+    expect(row.group_key).toBe("t".repeat(79));
+  });
+});

@@ -190,9 +190,17 @@ describe("restoreEntry", () => {
 
 describe("the duplicate flags after a drop or a restore (#593)", () => {
   const stems = [
-    { id: "first", position: 0, status: "dropped", reasons: [], stem: "Which food first?" },
+    {
+      id: "first",
+      version: 2,
+      position: 0,
+      status: "dropped",
+      reasons: [],
+      stem: "Which food first?",
+    },
     {
       id: "later",
+      version: 7,
       position: 2,
       status: "ready",
       reasons: ["duplicate: The same question is earlier in this import. Keep one of them."],
@@ -226,9 +234,10 @@ describe("the duplicate flags after a drop or a restore (#593)", () => {
       expect.arrayContaining([
         ["batch_id", BATCH],
         ["org_id", ORG],
-        ["id", "later"],
       ]),
     );
+    // Written only where the entry is still at the version the pass read.
+    expect(service.stepsOn("ai_import_entries", "or")).toEqual([["and(id.eq.later,version.eq.7)"]]);
     // Only stems are read for it, never a whole question with its key.
     const selected = String(service.stepsOn("ai_import_entries", "select")[0]?.[0]);
     expect(selected).toContain("stem:item->stem->>value");

@@ -177,6 +177,13 @@ export function AiImportReview({
   const split = async (entry: ReviewEntryView): Promise<{ ok: true } | AiImportFailure> => {
     if (!actions.split) return FAILED;
     const result = await actions.split({ batchId, entryId: entry.id, version: entry.version });
+    if (!result.ok && result.code === "split_partial") {
+      // The case study is split, but some of its questions are still under Dropped: the card is
+      // gone either way, so the line under the filters says what to do.
+      say(result.message);
+      router.refresh();
+      return { ok: true };
+    }
     if (!result.ok) return result;
     say(`${headingOf(entry)} is now ${result.questions} separate questions.`);
     router.refresh();

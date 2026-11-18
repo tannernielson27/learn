@@ -78,11 +78,13 @@ export async function readEntry(
   client: Client,
   orgId: string,
   input: Pick<EntryActionInput, "batchId" | "entryId">,
+  /** A caller that needs the model's draft as well asks for it; nothing else does. */
+  columns: string = ENTRY_COLUMNS,
 ): Promise<{ row: EntryRow; batchStatus: string } | "not_found" | "unavailable"> {
   const [entry, batch] = await Promise.all([
     client
       .from("ai_import_entries")
-      .select(ENTRY_COLUMNS)
+      .select(columns)
       .eq("id", input.entryId)
       .eq("batch_id", input.batchId)
       .eq("org_id", orgId)
@@ -100,7 +102,7 @@ export async function readEntry(
     return "unavailable";
   }
   if (!entry.data || !batch.data) return "not_found";
-  return { row: entry.data as EntryRow, batchStatus: batch.data.status };
+  return { row: entry.data as unknown as EntryRow, batchStatus: batch.data.status };
 }
 
 /**

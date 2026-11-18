@@ -11,6 +11,7 @@ import {
   teacher,
   type Reply,
 } from "../upload/testing/fakeSupabase";
+import { readStoredReasons, restoredStatus } from "@/lib/authoring/aiImportReview";
 import { splitCaseStudy, type SplitDeps } from "./split";
 
 const ENTRY = "00000000-0000-4000-8000-0000000000e1";
@@ -53,6 +54,15 @@ const places = (positions: number[]): Reply => ({
 });
 const NEW_IDS = ["n2", "n3", "n4", "n5", "n6"];
 
+const INSERTED: Reply = { data: NEW_IDS.map((id) => ({ id })) };
+const LEAD: Reply = { data: [{ version: 4 }] };
+// Step 4 has no key; the other four inserted steps are ready.
+const READY: Reply = { data: ["n2", "n3", "n5", "n6"].map((id) => ({ id })) };
+const UNANSWERED: Reply = { data: [{ id: "n4" }] };
+// The duplicate pass reads the batch's stems and finds nothing to change.
+const NO_STEMS: Reply = { data: [] };
+const FAILS: Reply = { error: { code: "XX000" } };
+
 function setup(
   options: {
     entry?: Reply;
@@ -61,7 +71,10 @@ function setup(
     files?: Reply;
     chunk?: Reply;
     serviceBatches?: Reply[];
-    /** The insert, the case study's own row, then (when that fails) the undo. */
+    /**
+     * In order: (a) the insert, (b) the case study's own row, then either the undo or (c) one
+     * write for each status among steps 2 to 6, and last the duplicate pass's read.
+     */
     serviceEntries?: Reply[];
     enabled?: boolean;
     env?: Record<string, string>;
@@ -82,12 +95,7 @@ function setup(
   });
   const service = fakeClient({
     ai_import_batches: options.serviceBatches ?? [inReview],
-    ai_import_entries: options.serviceEntries ?? [
-      { data: NEW_IDS.map((id) => ({ id })) },
-      { data: [{ version: 4 }] },
-      // The duplicate pass reads the batch's stems and finds nothing to change.
-      { data: [] },
-    ],
+    ai_import_entries: options.serviceEntries ?? [INSERTED, LEAD, READY, UNANSWERED, NO_STEMS],
     ai_import_files: [{ data: [] }],
   });
   const deps: SplitDeps = {
@@ -142,18 +150,24 @@ describe("splitCaseStudy (#593)", () => {
         `note: Split from the case study "${TITLE}". The patient record was not attached.`,
       );
     }
-    expect(inserted.map((r) => r.status)).toEqual([
-      "ready",
-      "ready",
-      "needs_answer",
-      "ready",
-      "ready",
-    ]);
+    // (a) They go in dropped, so nothing can import them beside the case study meanwhile.
+    expect(inserted.map((r) => r.status)).toEqual(Array(5).fill("dropped"));
     expect(itemSchema.safeParse(inserted[0]!.item).success).toBe(true);
 
-    // Then the case study's own row becomes step 1, only where it is still at the shown version.
-    const [[lead]] = service.stepsOn("ai_import_entries", "update") as [[Record<string, unknown>]];
+    // (b) Then the case study's own row becomes step 1, only where it is still at the shown
+    // version, and (c) the five take their own statuses, one write for each status.
+    const [[lead], [ready], [unanswered]] = service.stepsOn("ai_import_entries", "update") as [
+      [Record<string, unknown>],
+      [unknown],
+      [unknown],
+    ];
     expect(lead).toMatchObject({ kind: "item", type: "highlight_text", status: "ready", step: 1 });
+    expect([ready, unanswered]).toEqual([{ status: "ready" }, { status: "needs_answer" }]);
+    expect(service.stepsOn("ai_import_entries", "in")).toEqual([
+      ["id", ["n2", "n3", "n5", "n6"]],
+      ["id", ["n4"]],
+    ]);
+    expect(service.left()).toEqual([]);
     expect(service.stepsOn("ai_import_entries", "eq")).toEqual(
       expect.arrayContaining([
         ["id", ENTRY],
@@ -168,14 +182,65 @@ describe("splitCaseStudy (#593)", () => {
     ]);
   });
 
-  it("takes the new questions out again when the case study changed under it", async () => {
+  it("stops after (a) with nothing written but what failed", async () => {
+    const { deps, service } = setup({ serviceEntries: [FAILS] });
+    expect(await splitCaseStudy(deps, input())).toMatchObject({ code: "unavailable" });
+    expect(service.stepsOn("ai_import_entries", "update")).toEqual([]);
+  });
+
+  it("takes the dropped steps out again when the case study changed under it at (b)", async () => {
     const { deps, service } = setup({
-      serviceEntries: [{ data: NEW_IDS.map((id) => ({ id })) }, { data: [] }, { data: null }],
+      serviceEntries: [INSERTED, { data: [] }, { data: null }, NO_STEMS],
     });
     expect(await splitCaseStudy(deps, input())).toMatchObject({ code: "entry_changed" });
     expect(service.stepsOn("ai_import_entries", "delete")).toHaveLength(1);
     expect(service.stepsOn("ai_import_entries", "in")).toEqual([["id", NEW_IDS]]);
-    expect(service.left()).toEqual([["ai_import_files", [{ data: [] }]]]);
+    // The flags are worked out again on this path too.
+    expect(service.left()).toEqual([]);
+  });
+
+  it("leaves only dropped rows when the undo fails as well", async () => {
+    const { deps, service } = setup({ serviceEntries: [INSERTED, { data: [] }, FAILS, NO_STEMS] });
+    expect(await splitCaseStudy(deps, input())).toMatchObject({ code: "entry_changed" });
+    const [[inserted]] = service.stepsOn("ai_import_entries", "insert") as [[{ status: string }[]]];
+    // Whatever is left of the split is dropped: seen under Dropped, and never imported.
+    expect(inserted.every((r) => r.status === "dropped")).toBe(true);
+    expect(service.stepsOn("ai_import_entries", "update")).toHaveLength(1);
+    expect(errorSpy).toHaveBeenCalledWith("[ai-import] undoing a split failed", { code: "XX000" });
+  });
+
+  it("says in words what is under Dropped when (c) fails for some steps", async () => {
+    const { deps, service } = setup({
+      serviceEntries: [INSERTED, LEAD, FAILS, UNANSWERED, NO_STEMS],
+    });
+    expect(await splitCaseStudy(deps, input())).toEqual({
+      ok: false,
+      code: "split_partial",
+      message: "The case study was split, but 4 of its questions are under Dropped. Restore them.",
+    });
+    // Each still has the reasons a restore works its status out from.
+    const [[inserted]] = service.stepsOn("ai_import_entries", "insert") as [
+      [{ reasons: string[]; item: unknown; type: string }[]],
+    ];
+    expect(
+      restoredStatus({
+        kind: "item",
+        type: inserted[2]!.type,
+        item: inserted[2]!.item,
+        reasons: readStoredReasons(inserted[2]!.reasons),
+      }),
+    ).toBe("needs_answer");
+    expect(service.left()).toEqual([]);
+  });
+
+  it("counts a step whose write matched no row, and says one as one", async () => {
+    const { deps } = setup({
+      serviceEntries: [INSERTED, LEAD, READY, { data: [] }, NO_STEMS],
+    });
+    expect(await splitCaseStudy(deps, input())).toMatchObject({
+      code: "split_partial",
+      message: "The case study was split, but 1 of its questions is under Dropped. Restore it.",
+    });
   });
 
   it("refuses in words a split that would pass the batch's 150 entries", async () => {
@@ -271,13 +336,7 @@ describe("splitCaseStudy (#593)", () => {
     expect(await splitCaseStudy(recheckFails.deps, input())).toMatchObject({ code: "unavailable" });
     const insertFails = setup({ serviceEntries: [{ error: { code: "23505" } }] });
     expect(await splitCaseStudy(insertFails.deps, input())).toMatchObject({ code: "unavailable" });
-    const leadFails = setup({
-      serviceEntries: [
-        { data: NEW_IDS.map((id) => ({ id })) },
-        { error: { code: "XX000" } },
-        { error: { code: "XX000" } },
-      ],
-    });
+    const leadFails = setup({ serviceEntries: [INSERTED, FAILS, FAILS, NO_STEMS] });
     expect(await splitCaseStudy(leadFails.deps, input())).toMatchObject({ code: "unavailable" });
     expect(errorSpy).toHaveBeenCalled();
     // Codes only: never the case study's words or a key.

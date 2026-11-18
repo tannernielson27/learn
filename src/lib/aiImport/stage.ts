@@ -20,6 +20,7 @@ import { LOW_CONFIDENCE } from "./config";
 import type { DraftProblem, ExtractedDraft } from "./extract";
 import { keyEvidence } from "./keyEvidence";
 import type { MergedQuestion } from "./merge";
+import { cutEnd, cutMiddle, shareBudget } from "./textCut";
 
 /**
  * Questions become staged entries (#343, ADR 0008 Pipeline steps 6-7). Pure.
@@ -72,7 +73,7 @@ const MAX_REASON_LENGTH = 500;
 
 /** How a reason is stored: `code: message`. */
 export const formatReason = (reason: EntryReason): string =>
-  `${reason.code}: ${reason.message}`.slice(0, MAX_REASON_LENGTH);
+  cutEnd(`${reason.code}: ${reason.message}`, MAX_REASON_LENGTH);
 
 const REASON_CODES: readonly EntryReasonCode[] = [
   "not_ngn",
@@ -299,7 +300,33 @@ export function sourceOf(region: string | null, opening: string): string {
   if (whole === "") return opening;
   return whole.length <= MAX_SOURCE
     ? whole
-    : whole.slice(0, MAX_SOURCE - CUT_SHORT.length).trimEnd() + CUT_SHORT;
+    : cutEnd(whole, MAX_SOURCE - CUT_SHORT.length).trimEnd() + CUT_SHORT;
+}
+
+const CUT_MIDDLE = "\n[…]\n";
+
+/**
+ * A case study's source: its steps' parts of the document, one after another as the document has
+ * them. When they do not all fit the column, the room is shared between the steps and a long
+ * step loses its middle, never its end: each step's key is marked on its options or in an answer
+ * line at the end of its part, and that is what the teacher checks. A step whose part could not
+ * be found is named, so the teacher does not take five steps for six.
+ */
+export function caseSourceOf(regions: readonly (string | null)[], opening: string): string {
+  const found = regions.map((region) => (region?.trim() ? region : null));
+  if (found.every((region) => region === null)) return opening;
+  const parts = found.map(
+    (region, index) =>
+      region ?? `\n[Step ${index + 1}: this step's part of the document was not found.]\n`,
+  );
+  const budget = shareBudget(
+    parts.map((part) => part.length),
+    MAX_SOURCE,
+  );
+  return parts
+    .map((part, index) => cutMiddle(part, budget[index]!, CUT_MIDDLE))
+    .join("")
+    .trim();
 }
 
 /**
@@ -353,7 +380,8 @@ export const fixReason = (problem: DraftProblem): EntryReason => ({
 export function caseIssueReasons(issues: readonly { path: PropertyKey[] }[]): EntryReason[] {
   const lines = issues.map(({ path }) => {
     if (path[0] === "items" && typeof path[1] === "number") {
-      return `Step ${path[1] + 1} is not complete yet.`;
+      // "Step 3: …", as every reason about a step is written, so the step can be opened.
+      return `Step ${path[1] + 1}: This step is not complete yet.`;
     }
     return path[0] === "ehr"
       ? "The patient record is not complete yet."
@@ -571,8 +599,10 @@ function stageAssembledCase(
       keys: beliefs,
       unchecked: drafted.map((step) => keyUnchecked(step.question, input.source)),
     },
-    // The steps' parts of the document, one after another as the document has them.
-    sourceExcerpt: sourceOf(drafted.map((step) => step.region ?? "").join(""), lead.excerpt),
+    sourceExcerpt: caseSourceOf(
+      drafted.map((step) => step.region),
+      lead.excerpt,
+    ),
     opening: lead.excerpt,
     group: { title: input.title, step: null },
   };

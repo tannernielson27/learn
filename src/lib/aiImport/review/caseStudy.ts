@@ -120,6 +120,20 @@ export function withStepSaved(
   return { item, status, reasons };
 }
 
+/**
+ * The entry's draft with `step` noted as saved by the teacher. A split does not ask the teacher
+ * to check again a key they marked and saved themselves (`splitSteps`), and nothing else on the
+ * entry says which steps those are.
+ */
+export function draftWithSaved(draft: unknown, step: number): Record<string, unknown> {
+  const base =
+    typeof draft === "object" && draft !== null && !Array.isArray(draft)
+      ? (draft as Record<string, unknown>)
+      : {};
+  const before = (listOf(base, "saved") ?? []).filter((n) => typeof n === "number");
+  return { ...base, saved: [...new Set([...before, step])].sort() };
+}
+
 export interface SplitStep {
   /** From 1; the first takes the case study's own row. */
   step: number;
@@ -238,6 +252,8 @@ export function splitSteps(row: {
     return typeof stored === "boolean" ? stored : caseCheck || row.pdf;
   };
 
+  const saved = listOf(row.draft, "saved") ?? [];
+
   const steps: SplitStep[] = [];
   for (let step = 1; step <= 6; step += 1) {
     const draft = drafts?.[step - 1] ?? null;
@@ -247,17 +263,24 @@ export function splitSteps(row: {
       : stepFromDraft(draft, belief, uncheckedAt(step));
     if (!built) return null;
     const carried = reasons
-      .filter((reason) => reason.step === step && CARRIED_CODES.includes(reason.code))
+      .filter(
+        (reason) =>
+          reason.step === step &&
+          CARRIED_CODES.includes(reason.code) &&
+          !(reason.code === "check_key" && saved.includes(step)),
+      )
       .map((reason) => formatReason({ code: reason.code, message: reason.message } as EntryReason));
     // A step taken from the case study's item was never asked these two when it was staged.
+    // One the teacher has saved is not asked at all: its key is theirs now.
     const keyedFromItem =
       fromItem !== null && built.reasons.every((r) => r.code !== "needs_answer");
-    const checks = keyedFromItem
-      ? [
-          ...(uncheckedAt(step) ? [CHECK_KEY] : []),
-          ...(belief === "formatting" ? [CHECK_FORMAT_KEY] : []),
-        ]
-      : [];
+    const checks =
+      keyedFromItem && !saved.includes(step)
+        ? [
+            ...(uncheckedAt(step) ? [CHECK_KEY] : []),
+            ...(belief === "formatting" ? [CHECK_FORMAT_KEY] : []),
+          ]
+        : [];
     const stored = [
       ...new Set([...built.reasons, ...checks].map(formatReason).concat(carried, note)),
     ].slice(0, MAX_REASONS);

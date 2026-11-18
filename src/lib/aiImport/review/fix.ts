@@ -16,8 +16,8 @@ import { refreshBatchDuplicates } from "../duplicates";
 import { convertDraft, formatReason, MAX_REASONS, readReason } from "../stage";
 import { aiImportAccess, type AccessDeps, type Client } from "../upload/access";
 import { readEntry } from "./actions";
-import { withStepSaved } from "./caseStudy";
-import type { EntryRow } from "./read";
+import { draftWithSaved, withStepSaved } from "./caseStudy";
+import { ENTRY_COLUMNS, type EntryRow } from "./read";
 
 /**
  * Fix a staged question with its type's own editor (#347). The editor opens on what was staged
@@ -163,7 +163,13 @@ export async function saveEntryFix(deps: FixDeps, raw: unknown): Promise<FixResu
   if (!withinItemSizeLimit(input.values)) return refuse("too_large");
   const { supabase, orgId } = access.author;
 
-  const read = await readEntry(supabase as unknown as Client, orgId, input);
+  // A step's save notes on the draft that the teacher saved it, so the draft is read with it.
+  const read = await readEntry(
+    supabase as unknown as Client,
+    orgId,
+    input,
+    input.step === undefined ? ENTRY_COLUMNS : `${ENTRY_COLUMNS}, draft`,
+  );
   if (read === "unavailable" || read === "not_found") return refuse(read);
   if (read.batchStatus !== "review") return refuse("not_review");
   const { row } = read;
@@ -191,7 +197,19 @@ export async function saveEntryFix(deps: FixDeps, raw: unknown): Promise<FixResu
   if (!open) return refuse("not_review");
   const { data, error } = await service
     .from("ai_import_entries")
-    .update({ item: JSON.parse(JSON.stringify(fixed.item)) as Json, status, reasons })
+    .update({
+      item: JSON.parse(JSON.stringify(fixed.item)) as Json,
+      status,
+      reasons,
+      ...(input.step === undefined
+        ? {}
+        : {
+            draft: draftWithSaved(
+              (row as EntryRow & { draft?: unknown }).draft,
+              input.step,
+            ) as Json,
+          }),
+    })
     .eq("id", input.entryId)
     .eq("batch_id", input.batchId)
     .eq("org_id", orgId)

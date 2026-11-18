@@ -9,6 +9,7 @@ import {
   formatReason,
   needsRepair,
   readReason,
+  caseSourceOf,
   sourceOf,
   stageCaseStudy,
   stageQuestion,
@@ -307,7 +308,7 @@ describe("reasons in plain words (#593)", () => {
         { path: ["title"] },
       ]).map((reason) => reason.message),
     ).toEqual([
-      "Step 3 is not complete yet.",
+      "Step 3: This step is not complete yet.",
       "The patient record is not complete yet.",
       "The case study is not complete yet.",
     ]);
@@ -336,5 +337,55 @@ describe("reasons in plain words (#593)", () => {
     expect(reasons[0]).toBe(
       "The patient record could not be read, so the case study has none yet.",
     );
+  });
+});
+
+describe("a case study's source (#593)", () => {
+  const step = (n: number, body = "") => `Step ${n} stem?\n${body}A. One\nB. Two *\n\n`;
+
+  it("is the steps' parts one after another when they fit", () => {
+    const regions = [1, 2, 3, 4, 5, 6].map((n) => step(n));
+    expect(caseSourceOf(regions, "Opening")).toBe(regions.join("").trim());
+  });
+
+  it("names a step whose part of the document was not found", () => {
+    const source = caseSourceOf([step(1), null, step(3), "  ", step(5), step(6)], "Opening");
+    expect(source).toContain("[Step 2: this step's part of the document was not found.]");
+    expect(source).toContain("[Step 4: this step's part of the document was not found.]");
+    expect(source.indexOf("Step 1 stem")).toBeLessThan(source.indexOf("[Step 2:"));
+    expect(source.indexOf("[Step 2:")).toBeLessThan(source.indexOf("Step 3 stem"));
+  });
+
+  it("is the opening when no step's part was found", () => {
+    expect(caseSourceOf([null, null, "", null, null, null], "Opening words")).toBe("Opening words");
+  });
+
+  it("shares the room, so every step keeps its opening and its key lines", () => {
+    // Step 1 alone would fill the column; cut as one string, steps 5 and 6 were lost whole.
+    const regions = [step(1, "long ".repeat(5000)), ...[2, 3, 4, 5].map((n) => step(n))];
+    const source = caseSourceOf([...regions, step(6, "long ".repeat(3000))], "Opening");
+    expect(source.length).toBeLessThanOrEqual(20_000);
+    for (const n of [1, 2, 3, 4, 5, 6]) expect(source).toContain(`Step ${n} stem?`);
+    // Each step's marked option is still there, the long steps' included.
+    expect(source.match(/B\. Two \*/g)).toHaveLength(6);
+    expect(source).toContain("[…]");
+  });
+
+  it("never cuts a character in half, in a case study or a single question", () => {
+    const faces = "😀".repeat(15_000); // 30,000 units, every cut lands inside a pair somewhere
+    const one = sourceOf(`x${faces}`, "Opening");
+    const six = caseSourceOf([`a${faces}`, `b${faces}`, "c", "d", "e", `f${faces}`], "Opening");
+    for (const text of [one, six]) {
+      expect(text.length).toBeLessThanOrEqual(20_000);
+      expect(() => encodeURIComponent(text)).not.toThrow();
+    }
+    // The control: the plain slice this replaced does leave half a character.
+    expect(() => encodeURIComponent(`x${faces}`.slice(0, 19_996))).toThrow();
+  });
+
+  it("cuts a reason on a whole character too", () => {
+    const stored = formatReason({ code: "note", message: `${"n".repeat(493)}😀 and more` });
+    expect(stored.length).toBeLessThanOrEqual(500);
+    expect(() => encodeURIComponent(stored)).not.toThrow();
   });
 });

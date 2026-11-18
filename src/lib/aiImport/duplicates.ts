@@ -195,9 +195,15 @@ export async function markDuplicates(
 
 /**
  * Works out the batch's own duplicate flags again (#593), on the service-role client, since a
- * teacher's session may not write `reasons`. Only the stems are read, never a whole item. Each
- * rewritten entry's version goes up by one; the new versions come back by id, so a caller that
- * has just written one of them can answer with the version that now stands.
+ * teacher's session may not write `reasons`. Stems are read, never a whole item; an entry with
+ * no stem (a question with no NGN type, a case study staged before #593) is told apart by the
+ * opening of its source, read for those entries only.
+ *
+ * Each write names the version it read: a save or a change of type that lands in between has
+ * newer reasons, and an entry that has moved on is left to the next pass, never written back.
+ * Entries that end with the same reasons share one statement. Each rewritten entry's version
+ * goes up by one; the new versions come back by id, so a caller that has just written one of
+ * them can answer with the version that now stands.
  */
 export async function refreshBatchDuplicates(
   service: Client,
@@ -207,7 +213,7 @@ export async function refreshBatchDuplicates(
     service
       .from("ai_import_entries")
       .select(
-        "id, position, status, reasons, stem:item->stem->>value, draftStem:draft->>stem, opening:draft->>opening",
+        "id, version, position, status, reasons, stem:item->stem->>value, draftStem:draft->>stem, opening:draft->>opening",
       )
       .eq("batch_id", ref.batchId)
       .eq("org_id", ref.orgId),
@@ -224,50 +230,109 @@ export async function refreshBatchDuplicates(
     logged("reading a batch's stems", error);
     return { ok: false, code: "unavailable" };
   }
-  type Row = {
-    id: string;
-    position: number;
-    status: string;
-    reasons: string[] | null;
-    stem: unknown;
-    draftStem: unknown;
-    opening: unknown;
-  };
-  const text = (value: unknown) => (typeof value === "string" && value !== "" ? value : null);
-  const rows = withoutRemoved(
-    (entries.data ?? []) as unknown as Row[],
+  const kept = withoutRemoved(
+    (entries.data ?? []) as unknown as StemRow[],
     removedPlaces(files.data ?? []),
+  ).filter((row) => row.status !== "dropped");
+  const openings = await sourceOpenings(
+    service,
+    ref,
+    kept.filter((row) => stemOf(row) === null).map((row) => row.id),
   );
+  if (openings === "unavailable") return { ok: false, code: "unavailable" };
+
   const changes = batchDuplicateReasons(
-    rows
-      .filter((row) => row.status !== "dropped")
-      .map((row) => ({
-        id: row.id,
-        position: row.position,
-        // As `entryStem` has it; an entry with neither is compared by its part of the document,
-        // which is not read here, so it keeps the flag it has.
-        stem:
-          text(row.stem) ??
-          text(row.draftStem) ??
-          (text(row.opening) === null ? null : openingKey(row.opening as string)),
-        reasons: row.reasons ?? [],
-      })),
+    kept.map((row) => ({
+      id: row.id,
+      position: row.position,
+      stem: stemOf(row) ?? openings.get(row.id) ?? null,
+      reasons: row.reasons ?? [],
+    })),
   );
+  const shown = new Map(kept.map((row) => [row.id, row.version]));
   const versions = new Map<string, number>();
-  for (const [id, reasons] of changes) {
-    const { data, error: writeError } = await service
-      .from("ai_import_entries")
-      .update({ reasons })
-      .eq("id", id)
-      .eq("batch_id", ref.batchId)
-      .eq("org_id", ref.orgId)
-      .select("id, version");
-    if (writeError) {
-      logged("flagging a duplicate", writeError);
-      return { ok: false, code: "unavailable" };
+  for (const [reasons, ids] of sameReasons(changes)) {
+    for (let start = 0; start < ids.length; start += WRITE_CHUNK) {
+      const { data, error: writeError } = await service
+        .from("ai_import_entries")
+        .update({ reasons })
+        .eq("batch_id", ref.batchId)
+        .eq("org_id", ref.orgId)
+        // Ids and versions as the database gave them: a UUID and a whole number each.
+        .or(
+          ids
+            .slice(start, start + WRITE_CHUNK)
+            .map((id) => `and(id.eq.${id},version.eq.${shown.get(id)})`)
+            .join(","),
+        )
+        .select("id, version");
+      if (writeError) {
+        logged("flagging a duplicate", writeError);
+        return { ok: false, code: "unavailable" };
+      }
+      // An entry not answered here changed since the read, and keeps what it has.
+      for (const written of (data ?? []) as { id: string; version: number }[]) {
+        versions.set(written.id, written.version);
+      }
     }
-    const [written] = data ?? [];
-    if (written) versions.set(written.id, written.version);
   }
   return { ok: true, versions };
+}
+
+interface StemRow {
+  id: string;
+  version: number;
+  position: number;
+  status: string;
+  reasons: string[] | null;
+  stem: unknown;
+  draftStem: unknown;
+  opening: unknown;
+}
+
+/** How many entries one write names; a longer filter would not fit in a request line. */
+const WRITE_CHUNK = 30;
+
+const text = (value: unknown) => (typeof value === "string" && value !== "" ? value : null);
+
+/** What `entryStem` compares by, from the columns read here; null when the source must say. */
+function stemOf(row: StemRow): string | null {
+  const opening = text(row.opening);
+  return text(row.stem) ?? text(row.draftStem) ?? (opening === null ? null : openingKey(opening));
+}
+
+/** The opening words of each entry's source, by id, for entries that have no stem to compare. */
+async function sourceOpenings(
+  service: Client,
+  ref: { orgId: string; batchId: string },
+  ids: readonly string[],
+): Promise<Map<string, string> | "unavailable"> {
+  if (ids.length === 0) return new Map();
+  const { data, error } = await service
+    .from("ai_import_entries")
+    .select("id, source_excerpt")
+    .eq("batch_id", ref.batchId)
+    .eq("org_id", ref.orgId)
+    .in("id", [...ids]);
+  if (error) {
+    logged("reading a batch's sources", error);
+    return "unavailable";
+  }
+  return new Map(
+    ((data ?? []) as { id: string; source_excerpt: string | null }[]).flatMap((row) => {
+      const opening = openingKey(row.source_excerpt ?? "");
+      return opening === "" ? [] : [[row.id, opening] as const];
+    }),
+  );
+}
+
+/** The entries to rewrite, grouped by what their reasons become: one statement for each group. */
+function sameReasons(changes: ReadonlyMap<string, string[]>): [string[], string[]][] {
+  const groups = new Map<string, { reasons: string[]; ids: string[] }>();
+  for (const [id, reasons] of changes) {
+    const key = JSON.stringify(reasons);
+    const group = groups.get(key) ?? { reasons, ids: [] };
+    groups.set(key, { reasons: group.reasons, ids: [...group.ids, id] });
+  }
+  return [...groups.values()].map((group) => [group.reasons, group.ids]);
 }
