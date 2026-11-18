@@ -10,11 +10,13 @@ import {
   type ActionDeps,
 } from "@/lib/aiImport/upload/actions";
 import {
+  dropEntries,
   dropEntry,
   restoreEntry,
   type EntryActionInput,
   type ReviewActionDeps,
 } from "@/lib/aiImport/review/actions";
+import { splitCaseStudy } from "@/lib/aiImport/review/split";
 import { discardBatch, importBatch, type CommitDeps } from "@/lib/aiImport/commit/actions";
 import { requireWriter } from "@/lib/authoring/writer";
 import { sharedRateLimitStore } from "@/lib/rateLimit/postgresStore";
@@ -59,10 +61,16 @@ export async function finishAiImport(batchId: string) {
   return finishBatch(await guardedDeps(), batchId);
 }
 
-/** Review (#346): the same checks, then the teacher's own session and a version check. */
+/**
+ * Review (#346): the same checks, then the teacher's own session and a version check. The service
+ * client is there for the duplicate flags only (#593), which a teacher's session may not write.
+ */
 async function reviewDeps(): Promise<ReviewActionDeps> {
   const session = await requireWriter("/author");
-  return { author: async () => ({ status: "ok", ...session }) };
+  return {
+    author: async () => ({ status: "ok", ...session }),
+    service: createSupabaseServiceClient,
+  };
 }
 
 export async function dropAiImportEntry(input: EntryActionInput) {
@@ -71,6 +79,20 @@ export async function dropAiImportEntry(input: EntryActionInput) {
 
 export async function restoreAiImportEntry(input: EntryActionInput) {
   return restoreEntry(await reviewDeps(), input);
+}
+
+/** #593: every entry the page listed as needing an answer or a fix, dropped in one request. */
+export async function dropAiImportEntries(input: unknown) {
+  return dropEntries(await reviewDeps(), input);
+}
+
+/** #593: a staged case study replaced by six separate questions. */
+export async function splitAiImportCaseStudy(input: unknown) {
+  const session = await requireWriter("/author");
+  return splitCaseStudy(
+    { author: async () => ({ status: "ok", ...session }), service: createSupabaseServiceClient },
+    input,
+  );
 }
 
 /**

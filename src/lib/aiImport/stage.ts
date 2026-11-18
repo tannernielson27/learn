@@ -114,7 +114,13 @@ export interface StagedEntry {
   draft: unknown;
   /** Valid (`ready`), with an empty key (`needs_answer`), or null. */
   item: Item | ItemInput | CaseStudy | Record<string, unknown> | null;
+  /**
+   * What the review shows beside it (#593, `sourceOf`): the question's whole part of a text
+   * source, or its opening words when that part is not known (a PDF).
+   */
   sourceExcerpt: string;
+  /** The segment pass's opening words, about thirty: how the question was found in the source. */
+  opening: string;
   group: { title: string; step: number | null } | null;
 }
 
@@ -124,6 +130,8 @@ export type Converted =
       ok: true;
       draft: ItemDraft;
       item: ItemInput;
+      /** What the converter itself said is wrong, in its own sentences (never a schema's). */
+      fixes: DraftProblem[];
       /** A valid item, when the draft converted with a key and passes `itemSchema`. */
       valid: Item | null;
       keyed: boolean;
@@ -161,6 +169,7 @@ export function convertDraft(raw: unknown): Converted {
     ok: true,
     draft: parsed.data,
     item: conversion.item as ItemInput,
+    fixes,
     valid,
     keyed,
     reasons: conversion.reasons,
@@ -232,37 +241,66 @@ function flagReasons(question: MergedQuestion): { status: EntryStatus; reasons: 
   if (question.type !== null && question.confidence < LOW_CONFIDENCE) {
     reasons.push({
       code: "low_confidence",
-      message: `The question type is a guess (${question.confidence.toFixed(2)}). Change it if it is wrong.`,
+      message: "The AI was not sure of this question's type. Change it if it is wrong.",
     });
   }
   return { status, reasons };
 }
 
-const NO_DRAFT: EntryReason = {
+export const NO_DRAFT: EntryReason = {
   code: "needs_fix",
   message: "The AI's draft of this question could not be read. Fix it, or drop it.",
 };
 
-const UNMARKED_KEY: EntryReason = {
+export const UNMARKED_KEY: EntryReason = {
   code: "unmarked_key",
   message:
     "The AI marked an answer this part of the document does not show, so the question was not converted. Check the key against the document.",
 };
 
-const CHECK_KEY: EntryReason = {
+export const CHECK_KEY: EntryReason = {
   code: "check_key",
   message: "The key was read from a PDF, which could not be checked against its text. Check it.",
 };
 
 /** The same code as a PDF's key: either way the teacher confirms the key before trusting it. */
-const CHECK_FORMAT_KEY: EntryReason = {
+export const CHECK_FORMAT_KEY: EntryReason = {
   code: "check_key",
   message:
     "The key was read from bold, underlined or coloured text, which may not mark an answer. Check it.",
 };
 
-const NEEDS_ANSWER =
+export const NEEDS_ANSWER =
   "The source marks no answer. Add the key before this question can be imported.";
+
+/** Staging refused the question's item for a reason only a schema names; the editor lists them. */
+export const NOT_BUILT: EntryReason = {
+  code: "needs_fix",
+  message:
+    "Part of this question could not be built from the document. Open it to see what is missing.",
+};
+
+const RECORD_NOT_BUILT: EntryReason = {
+  code: "needs_fix",
+  message: "The question's patient record is not complete yet. Open the question to finish it.",
+};
+
+/** `ai_import_entries.source_excerpt` holds at most 20,000 characters. */
+const MAX_SOURCE = 20_000;
+const CUT_SHORT = "\n[…]";
+
+/**
+ * What the review shows beside a question (#593): its whole part of a text source, options,
+ * marks and answer line included, so the teacher can check the key against it. A PDF has no text
+ * here, and a question that could not be found has no part, so those keep the opening words.
+ */
+export function sourceOf(region: string | null, opening: string): string {
+  const whole = region?.trim() ?? "";
+  if (whole === "") return opening;
+  return whole.length <= MAX_SOURCE
+    ? whole
+    : whole.slice(0, MAX_SOURCE - CUT_SHORT.length).trimEnd() + CUT_SHORT;
+}
 
 /**
  * Whether a key the model gave is one the source shows. A PDF's cannot be checked, and an answer
@@ -270,7 +308,7 @@ const NEEDS_ANSWER =
  * the text decides: a mark made to say "this is the answer" (`shown`), formatting alone
  * (`formatting`), or nothing (`none`).
  */
-type KeyBelief = "shown" | "formatting" | "none";
+export type KeyBelief = "shown" | "formatting" | "none";
 
 function keyBelief(
   question: MergedQuestion,
@@ -295,10 +333,34 @@ const noteReasons = (notes: readonly AssemblyNote[] = []): EntryReason[] =>
       : { code: "note", message: note.message },
   );
 
-const problemReason = (problem: DraftProblem, prefix = ""): EntryReason => ({
+/** "Step 3: " for something in a case study's third step (`steps.2` in the draft); else nothing. */
+export const stepPrefix = (path: readonly (string | number)[] = []): string =>
+  path[0] === "steps" && typeof path[1] === "number" ? `Step ${path[1] + 1}: ` : "";
+
+/**
+ * One of the converter's own sentences as a reason (#593). Its path says where in the draft, which
+ * a teacher never sees: only a case study's step is named, numbered from 1 as the preview does.
+ */
+export const fixReason = (problem: DraftProblem): EntryReason => ({
   code: "needs_fix",
-  message: `${prefix}${problem.path.length ? `${problem.path.join(".")}: ` : ""}${problem.message}`,
+  message: `${stepPrefix(problem.path)}${problem.message}`,
 });
+
+/**
+ * A case study that fails its schema, in sentences: which step, or the patient record. A schema's
+ * own message ("Invalid input: expected string") is written for a developer and is never shown.
+ */
+export function caseIssueReasons(issues: readonly { path: PropertyKey[] }[]): EntryReason[] {
+  const lines = issues.map(({ path }) => {
+    if (path[0] === "items" && typeof path[1] === "number") {
+      return `Step ${path[1] + 1} is not complete yet.`;
+    }
+    return path[0] === "ehr"
+      ? "The patient record is not complete yet."
+      : "The case study is not complete yet.";
+  });
+  return [...new Set(lines)].slice(0, 5).map((message) => ({ code: "needs_fix", message }));
+}
 
 const draftReasons = (reasons: readonly DraftReason[], code: DraftReason["code"]) =>
   reasons.filter((reason) => reason.code === code);
@@ -307,7 +369,7 @@ const draftReasons = (reasons: readonly DraftReason[], code: DraftReason["code"]
 function withChart(
   converted: Extract<Converted, { ok: true }>,
   chart: unknown,
-): { item: ItemInput; valid: Item | null; fixes: DraftProblem[]; notes: AssemblyNote[] } {
+): { item: ItemInput; valid: Item | null; fixes: EntryReason[]; notes: AssemblyNote[] } {
   if (chart === undefined) {
     return { item: converted.item, valid: converted.valid, fixes: [], notes: [] };
   }
@@ -317,22 +379,16 @@ function withChart(
       id: converted.item.id,
     },
   );
-  const fixes = draftReasons(assembled.reasons, "needs_fix").map((reason) => ({
-    path: reason.path ?? [],
-    message: reason.message,
-  }));
+  const fixes = draftReasons(assembled.reasons, "needs_fix").map((reason) =>
+    fixReason({ path: reason.path ?? [], message: reason.message }),
+  );
   if (fixes.length > 0 || converted.valid === null) {
     return { item: assembled.item, valid: null, fixes, notes: assembled.notes };
   }
   const checked = itemSchema.safeParse(assembled.item);
   return checked.success
     ? { item: assembled.item, valid: checked.data, fixes: [], notes: assembled.notes }
-    : {
-        item: assembled.item,
-        valid: null,
-        fixes: issuesOf(checked.error.issues),
-        notes: assembled.notes,
-      };
+    : { item: assembled.item, valid: null, fixes: [RECORD_NOT_BUILT], notes: assembled.notes };
 }
 
 /** Builds one question's staged entry. */
@@ -343,7 +399,8 @@ export function stageQuestion(input: StageInput): StagedEntry {
     position: question.position,
     chunk: question.chunks[0] ?? question.chunk,
     draft: input.extracted?.draft ?? null,
-    sourceExcerpt: question.excerpt,
+    sourceExcerpt: sourceOf(input.region, question.excerpt),
+    opening: question.excerpt,
     group: question.group
       ? { title: question.group.title, step: input.step ?? question.group.step }
       : null,
@@ -358,7 +415,7 @@ export function stageQuestion(input: StageInput): StagedEntry {
       reasons: [
         {
           code: "not_ngn",
-          message: question.flags.notNgn || "This question has no NGN item type.",
+          message: question.flags.notNgn || "This is not a question type LeaRN can import.",
         },
         ...assembly,
       ],
@@ -393,14 +450,14 @@ export function stageQuestion(input: StageInput): StagedEntry {
     return finish("needs_fix", null, [UNMARKED_KEY]);
   }
   if (converted.problems.length > 0) {
-    const fixes = converted.problems.slice(0, 5).map((problem) => problemReason(problem));
-    return finish("needs_fix", null, [...fixes, ...scoring]);
+    const fixes = converted.fixes.slice(0, 5).map(fixReason);
+    const unbuilt = converted.problems.length > converted.fixes.length ? [NOT_BUILT] : [];
+    return finish("needs_fix", null, [...fixes, ...unbuilt, ...scoring]);
   }
   const charted = withChart(converted, input.chart);
   const chartNotes = noteReasons(charted.notes);
   if (charted.fixes.length > 0) {
-    const fixes = charted.fixes.slice(0, 5).map((problem) => problemReason(problem));
-    return finish("needs_fix", null, [...fixes, ...scoring, ...chartNotes]);
+    return finish("needs_fix", null, [...charted.fixes.slice(0, 5), ...scoring, ...chartNotes]);
   }
   if (!converted.keyed || charted.valid === null) {
     const message = draftReasons(converted.reasons, "needs_answer")[0]?.message ?? NEEDS_ANSWER;
@@ -497,17 +554,26 @@ function stageAssembledCase(
   });
   const flagged = drafted.some((step) => flagReasons(step.question).status === "needs_fix");
   const notes = noteReasons(assembled.notes);
+  const beliefs = drafted.map((step) => keyBelief(step.question, input.source, step.region));
   const base = {
     kind: "case_study" as const,
     position: lead.position,
     chunk: lead.chunks[0] ?? lead.chunk,
     type: null,
+    // Beside the model's own output, what #593's split needs to stage each step by itself as
+    // `stageQuestion` would have: whether the source shows each step's key, and whether that was
+    // checked. `opening` is what the duplicate pass tells one case study from another by.
     draft: {
       title: input.title,
       charts: input.charts ?? null,
       steps: drafted.map((step) => step.extracted?.draft ?? null),
+      opening: lead.excerpt,
+      keys: beliefs,
+      unchecked: drafted.map((step) => keyUnchecked(step.question, input.source)),
     },
-    sourceExcerpt: lead.excerpt,
+    // The steps' parts of the document, one after another as the document has them.
+    sourceExcerpt: sourceOf(drafted.map((step) => step.region ?? "").join(""), lead.excerpt),
+    opening: lead.excerpt,
     group: { title: input.title, step: null },
   };
   const finish = (status: EntryStatus, item: StagedEntry["item"], reasons: EntryReason[]) => ({
@@ -517,17 +583,14 @@ function stageAssembledCase(
     reasons: [...reasons, ...stepFlags, ...notes].slice(0, MAX_REASONS),
   });
 
-  const beliefs = drafted.map((step) => keyBelief(step.question, input.source, step.region));
-  const invented = drafted.findIndex(
-    (step, index) => step.converted.keyed && beliefs[index] === "none",
+  const invented = drafted.flatMap((step, index): EntryReason[] =>
+    step.converted.keyed && beliefs[index] === "none"
+      ? [{ ...UNMARKED_KEY, message: prefix(index) + UNMARKED_KEY.message }]
+      : [],
   );
-  if (invented >= 0) {
-    return finish("needs_fix", null, [
-      { ...UNMARKED_KEY, message: prefix(invented) + UNMARKED_KEY.message },
-    ]);
-  }
+  if (invented.length > 0) return finish("needs_fix", null, invented);
   const fixes = draftReasons(assembled.reasons, "needs_fix").map((reason) =>
-    problemReason({ path: reason.path ?? [], message: reason.message }),
+    fixReason({ path: reason.path ?? [], message: reason.message }),
   );
   const scoring = draftReasons(assembled.reasons, "scoring_conflict").map(
     (reason): EntryReason => ({ code: "scoring_conflict", message: reason.message }),
@@ -535,7 +598,7 @@ function stageAssembledCase(
   if (fixes.length > 0) return finish("needs_fix", null, [...fixes.slice(0, 5), ...scoring]);
   const unanswered = draftReasons(assembled.reasons, "needs_answer").map((reason): EntryReason => ({
     code: "needs_answer",
-    message: `${reason.path?.length ? `${reason.path.join(".")}: ` : ""}${reason.message}`,
+    message: `${stepPrefix(reason.path)}${reason.message}`,
   }));
   if (unanswered.length > 0) {
     return finish("needs_answer", assembled.caseStudy as Record<string, unknown>, [
@@ -545,10 +608,7 @@ function stageAssembledCase(
   }
   const checked = caseStudySchema.safeParse(assembled.caseStudy);
   if (!checked.success) {
-    const issues = issuesOf(checked.error.issues)
-      .slice(0, 5)
-      .map((p) => problemReason(p));
-    return finish("needs_fix", null, [...issues, ...scoring]);
+    return finish("needs_fix", null, [...caseIssueReasons(checked.error.issues), ...scoring]);
   }
   const check = [
     ...(drafted.some((step) => keyUnchecked(step.question, input.source)) ? [CHECK_KEY] : []),

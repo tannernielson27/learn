@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   answerNotes,
+  editHref,
+  importConfirmation,
   importedSentence,
   REVIEW_FILTERS,
   filterCounts,
@@ -8,7 +10,10 @@ import {
   importSummary,
   isDuplicate,
   matchesFilter,
+  needsAttention,
+  parseReviewFilter,
   readStoredReasons,
+  reviewHref,
   restoredStatus,
   retypeChoices,
   type ReviewEntryView,
@@ -257,5 +262,70 @@ describe("importedSentence", () => {
     );
     expect(importedSentence(1, 0, "Cardiac")).toBe("1 question was added to Cardiac as a draft.");
     expect(importedSentence(0, 2, "Renal")).toBe("2 case studies were added to Renal as drafts.");
+  });
+});
+
+describe("the review's place in the address (#593)", () => {
+  const base = "/author/banks/b/ai-import/batch";
+
+  it("reads the filter from the address, and falls back to all", () => {
+    expect(parseReviewFilter("needs_fix")).toBe("needs_fix");
+    expect(parseReviewFilter("duplicate")).toBe("duplicate");
+    for (const other of [undefined, "", "nonsense", ["needs_fix"], 3]) {
+      expect(parseReviewFilter(other)).toBe("all");
+    }
+  });
+
+  it("writes the filter and the card to return to", () => {
+    expect(reviewHref(base, "all")).toBe(base);
+    expect(reviewHref(base, "needs_answer")).toBe(`${base}?show=needs_answer`);
+    expect(reviewHref(base, "needs_fix", "e9")).toBe(`${base}?show=needs_fix#entry-e9`);
+    expect(reviewHref(base, "all", "e9")).toBe(`${base}#entry-e9`);
+  });
+
+  it("carries the filter, and a case study's step, to an entry's editor", () => {
+    expect(editHref(base, "e9", "all")).toBe(`${base}/e9`);
+    expect(editHref(base, "e9", "needs_answer")).toBe(`${base}/e9?show=needs_answer`);
+    expect(editHref(base, "e9", "all", 4)).toBe(`${base}/e9?step=4`);
+    expect(editHref(base, "e9", "needs_fix", 4)).toBe(`${base}/e9?step=4&show=needs_fix`);
+  });
+});
+
+describe("needsAttention", () => {
+  it("is what blocks the import: an answer or a fix still needed", () => {
+    expect(
+      (["ready", "needs_answer", "needs_fix", "not_importable", "dropped"] as const).map((status) =>
+        needsAttention({ status }),
+      ),
+    ).toEqual([false, true, true, false, false]);
+  });
+});
+
+describe("importConfirmation (#593)", () => {
+  it("says what goes into which quiz, what is left out, and that the files are deleted", () => {
+    expect(
+      importConfirmation(
+        [
+          entry({ id: "a" }),
+          entry({ id: "b" }),
+          entry({ id: "c", kind: "case_study", type: null }),
+          entry({ id: "d", status: "dropped" }),
+          entry({ id: "e", status: "dropped" }),
+          entry({ id: "f", status: "not_importable", type: null }),
+        ],
+        "Cardiac",
+      ),
+    ).toEqual([
+      "2 questions and 1 case study will be added to Cardiac as drafts.",
+      "Left out: 2 dropped and 1 not importable.",
+      "The uploaded files are then deleted.",
+    ]);
+  });
+
+  it("says nothing about what was left out when nothing was", () => {
+    expect(importConfirmation([entry()], "Cardiac")).toEqual([
+      "1 question will be added to Cardiac as a draft.",
+      "The uploaded files are then deleted.",
+    ]);
   });
 });

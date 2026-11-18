@@ -270,6 +270,8 @@ describe("recordFromCharts", () => {
       }),
     ]);
     expect(reasons[0].message).toContain('"99"');
+    // #593: said as a teacher would say it, by step and with no "chart".
+    expect(reasons[0].message).toMatch(/^At step 2 the patient record shows "99" for HR/);
   });
 
   it("hides a tab again when a later chart leaves it out, and names a tab's time", () => {
@@ -398,9 +400,9 @@ describe("fromCaseStudyDraft", () => {
     ]);
     expect(caseStudy.ehr.patientHeader).toEqual({});
     expect(caseStudySchema.safeParse(caseStudy).success).toBe(false);
-    expect(
-      fromCaseStudyDraft({ ...base, patient: { ...base.patient, age: "130" } }).reasons[0].path,
-    ).toEqual(["patient", "age"]);
+    const noAge = fromCaseStudyDraft({ ...base, patient: { ...base.patient, age: "130" } });
+    expect(noAge.reasons[0].path).toEqual(["patient", "age"]);
+    expect(noAge.reasons[0].message).toBe("The source gives no age for the patient record.");
   });
 
   it("flags a case that is not six steps, and converts no step past the sixth", () => {
@@ -410,6 +412,11 @@ describe("fromCaseStudyDraft", () => {
       steps: steps.slice(0, 5),
     });
     expect(short.reasons.map((reason) => reason.path)).toEqual([["charts"], ["steps"]]);
+    // #593: in the interface's words, a patient record, not "charts".
+    expect(short.reasons.map((reason) => reason.message)).toEqual([
+      "The source shows the patient record at 5 steps; a case study has 6.",
+      "The source has 5 steps; a case study has 6.",
+    ]);
     const long = fromCaseStudyDraft({ ...base, steps: [...steps, steps[0]] });
     expect(long.reasons[0].message).toContain("Those past the sixth were left out.");
     expect(long.caseStudy.items).toHaveLength(6);

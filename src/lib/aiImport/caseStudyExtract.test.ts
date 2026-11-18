@@ -153,6 +153,17 @@ describe("extractCaseStudy", () => {
     expect(caseStudySchema.safeParse(entry.item).success).toBe(true);
     expect((entry.draft as { steps: unknown[] }).steps).toHaveLength(6);
     expect(entry.reasons.map((r) => r.code)).toContain("source_error");
+    // #593: the source shown is the six steps' whole part of the document, not thirty words of
+    // step 1; the opening is kept apart, where the duplicate pass and the split look for it.
+    expect(entry.opening).toBe(steps[0].excerpt);
+    expect(entry.sourceExcerpt.length).toBeGreaterThan(entry.opening.length * 4);
+    for (const step of steps)
+      expect(entry.sourceExcerpt).toContain(regions.get(step.position)!.trim().slice(0, 40));
+    expect(entry.draft).toMatchObject({
+      opening: steps[0].excerpt,
+      keys: ["shown", "shown", "shown", "shown", "shown", "shown"],
+      unchecked: [false, false, false, false, false, false],
+    });
   });
 
   it("stages a group of three as three questions, each with #344's note and its place", async () => {
@@ -166,7 +177,7 @@ describe("extractCaseStudy", () => {
     ]);
     for (const entry of entries) {
       expect(
-        entry.reasons.some((r) => r.code === "note" && /a case study has 6/.test(r.message)),
+        entry.reasons.some((r) => r.code === "note" && /A case study has 6/.test(r.message)),
       ).toBe(true);
     }
   });
@@ -181,7 +192,7 @@ describe("extractCaseStudy", () => {
       regions,
     );
     expect(entry).toMatchObject({ kind: "case_study", status: "needs_fix", item: null });
-    expect(entry.reasons[0].message).toMatch(/chart could not be read/);
+    expect(entry.reasons[0].message).toMatch(/patient record could not be read/);
   });
 
   it("refuses a key no step's part of the document shows", async () => {
@@ -196,6 +207,15 @@ describe("extractCaseStudy", () => {
     expect(entry).toMatchObject({ status: "needs_fix", item: null });
     expect(entry.reasons[0]).toMatchObject({ code: "unmarked_key" });
     expect(entry.reasons[0].message).toMatch(/^Step 1: /);
+    // #593: every step whose key the document does not show is named, each from 1, and the
+    // draft says so for the split.
+    const unshown = entry.reasons.filter((reason) => reason.code === "unmarked_key");
+    expect(unshown.map((reason) => reason.message.slice(0, 8))).toEqual(
+      [1, 2, 3, 4, 5, 6].map((step) => `Step ${step}: `),
+    );
+    expect((entry.draft as { keys: string[] }).keys).toEqual(Array(6).fill("none"));
+    // With no part of the document found, the opening is all there is to show.
+    expect(entry.sourceExcerpt).toBe(entry.opening);
   });
 
   // #592: a step keyed only by bold is kept, and the case study says which step to check.
@@ -271,6 +291,6 @@ describe("a standalone question with its own chart", () => {
     const { call } = replay(["chart"]);
     const [entry] = await extractQuestions(call, trend, document, regionsOf(questions, text));
     expect(entry).toMatchObject({ status: "needs_fix", item: null });
-    expect(entry.reasons[0].message).toMatch(/chart could not be read/);
+    expect(entry.reasons[0].message).toMatch(/patient record could not be read/);
   });
 });

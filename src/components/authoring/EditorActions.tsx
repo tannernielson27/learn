@@ -36,6 +36,8 @@ export interface EditorActionsProps {
   /** The rarer actions (Duplicate, Archive), behind More; none on a host that offers none. */
   more?: ReactNode;
   onSave: () => void;
+  /** A Save-only host's second button: save, then go on (`ItemEditorHost.saveAndGo`). */
+  saveAndGo?: { label: string; run: () => void };
   onSaveDraft: () => void;
   onPublish: () => void;
 }
@@ -71,6 +73,7 @@ export function EditorActions({
   idPrefix = "editor",
   more,
   onSave,
+  saveAndGo,
   onSaveDraft,
   onPublish,
 }: EditorActionsProps) {
@@ -105,9 +108,16 @@ export function EditorActions({
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         {saveOnly ? (
-          <Button type="button" variant="primary" disabled={busy} onClick={onSave}>
-            Save
-          </Button>
+          <>
+            <Button type="button" variant="primary" disabled={busy} onClick={onSave}>
+              Save
+            </Button>
+            {saveAndGo ? (
+              <Button type="button" variant="secondary" disabled={busy} onClick={saveAndGo.run}>
+                {saveAndGo.label}
+              </Button>
+            ) : null}
+          </>
         ) : (
           <>
             <Button

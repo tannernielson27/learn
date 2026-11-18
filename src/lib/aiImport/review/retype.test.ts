@@ -147,7 +147,7 @@ describe("retypeEntry", () => {
     expect(writes[0]!.version).toBe(2);
     expect(writes[0]!.patch.type).toBe("multiple_response");
     // Read as the new type, the four options are too few for it: a fix the teacher makes (#347).
-    expect(writes[0]!.patch.reasons[0]).toMatch(/^needs_fix: content.options/);
+    expect(writes[0]!.patch.reasons[0]).toMatch(/^needs_fix: Part of this question could not be/);
     // The batch's duplicate flag is kept; the old reading's reasons are not.
     expect(writes[0]!.patch.reasons).toContain("duplicate: The same as question 4.");
     expect(writes[0]!.patch.reasons).not.toContain("check_key: Check it.");

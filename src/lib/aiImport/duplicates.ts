@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
-import { withoutRemoved } from "./places";
-import { normalizePassage } from "./sourceText";
+import { removedPlaces, withoutRemoved } from "./places";
+import { normalizePassage, openingKey } from "./sourceText";
 import { formatReason, readReason, type EntryReason } from "./stage";
 
 /**
@@ -13,6 +13,11 @@ import { formatReason, readReason, type EntryReason } from "./stage";
  *
  * Run once a batch's units are all extracted (#345), and again whenever that is not certain: it
  * replaces the `duplicate` reasons it wrote before, so running it twice changes nothing.
+ *
+ * During review the flags within the batch are worked out again after each drop, restore, save
+ * and split (#593, `refreshBatchDuplicates`): dropping the earlier copy used to leave the later one
+ * flagged, and an edited stem kept its flag. The comparison with the workspace's quizzes stays as
+ * it was computed, since nothing a teacher does in review changes the quizzes.
  */
 
 type Client = SupabaseClient<Database>;
@@ -78,9 +83,50 @@ const stringAt = (value: unknown, ...path: string[]): string | null => {
   return typeof node === "string" ? node : null;
 };
 
-/** The stem an entry is compared by. */
+/**
+ * The stem an entry is compared by. One with no stem (a case study, a question with no NGN type)
+ * is told apart by its opening words, as the pipeline itself tells questions apart
+ * (`openingKey`). Since #593 `source_excerpt` holds the question's whole part of a text document
+ * and only the opening for a PDF, and both begin with the same words, so the same question in a
+ * .pdf and a .docx still matches. A case study keeps its first step's opening on its draft.
+ */
 export function entryStem(row: { item: unknown; draft: unknown; source_excerpt: string }): string {
-  return stringAt(row.item, "stem", "value") ?? stringAt(row.draft, "stem") ?? row.source_excerpt;
+  return (
+    stringAt(row.item, "stem", "value") ??
+    stringAt(row.draft, "stem") ??
+    openingKey(stringAt(row.draft, "opening") ?? row.source_excerpt)
+  );
+}
+
+export interface BatchCopy {
+  id: string;
+  position: number;
+  /** Null when the entry has no stem to compare; it is then left exactly as it is. */
+  stem: string | null;
+  reasons: string[];
+}
+
+const IN_BATCH_STORED = formatReason(IN_BATCH);
+
+/**
+ * The reasons each kept entry should have once the flags within the batch are worked out again,
+ * by id, for the entries whose reasons change. Every other reason keeps its place, the flag for
+ * the workspace's quizzes included.
+ */
+export function batchDuplicateReasons(entries: readonly BatchCopy[]): Map<string, string[]> {
+  const seen = new Set<string>();
+  const changes = new Map<string, string[]>();
+  for (const entry of [...entries].sort((a, b) => a.position - b.position)) {
+    const hash = entry.stem === null ? null : stemHash(entry.stem);
+    if (hash === null) continue;
+    const kept = entry.reasons.filter((reason) => reason !== IN_BATCH_STORED);
+    const next = (seen.has(hash) ? [...kept, IN_BATCH_STORED] : kept).slice(0, 20);
+    seen.add(hash);
+    if (next.length !== entry.reasons.length || next.some((r, i) => r !== entry.reasons[i])) {
+      changes.set(entry.id, next);
+    }
+  }
+  return changes;
 }
 
 /** At most this many of the workspace's questions are compared; a larger library is cut off. */
@@ -145,4 +191,83 @@ export async function markDuplicates(
     }
   }
   return { ok: true, changed: changes.size };
+}
+
+/**
+ * Works out the batch's own duplicate flags again (#593), on the service-role client, since a
+ * teacher's session may not write `reasons`. Only the stems are read, never a whole item. Each
+ * rewritten entry's version goes up by one; the new versions come back by id, so a caller that
+ * has just written one of them can answer with the version that now stands.
+ */
+export async function refreshBatchDuplicates(
+  service: Client,
+  ref: { orgId: string; batchId: string },
+): Promise<{ ok: true; versions: Map<string, number> } | { ok: false; code: "unavailable" }> {
+  const [entries, files] = await Promise.all([
+    service
+      .from("ai_import_entries")
+      .select(
+        "id, position, status, reasons, stem:item->stem->>value, draftStem:draft->>stem, opening:draft->>opening",
+      )
+      .eq("batch_id", ref.batchId)
+      .eq("org_id", ref.orgId),
+    service
+      .from("ai_import_files")
+      .select("status, rejected_reason")
+      .eq("batch_id", ref.batchId)
+      .eq("org_id", ref.orgId)
+      .order("created_at")
+      .order("id"),
+  ]);
+  const error = entries.error ?? files.error;
+  if (error) {
+    logged("reading a batch's stems", error);
+    return { ok: false, code: "unavailable" };
+  }
+  type Row = {
+    id: string;
+    position: number;
+    status: string;
+    reasons: string[] | null;
+    stem: unknown;
+    draftStem: unknown;
+    opening: unknown;
+  };
+  const text = (value: unknown) => (typeof value === "string" && value !== "" ? value : null);
+  const rows = withoutRemoved(
+    (entries.data ?? []) as unknown as Row[],
+    removedPlaces(files.data ?? []),
+  );
+  const changes = batchDuplicateReasons(
+    rows
+      .filter((row) => row.status !== "dropped")
+      .map((row) => ({
+        id: row.id,
+        position: row.position,
+        // As `entryStem` has it; an entry with neither is compared by its part of the document,
+        // which is not read here, so it keeps the flag it has.
+        stem:
+          text(row.stem) ??
+          text(row.draftStem) ??
+          (text(row.opening) === null ? null : openingKey(row.opening as string)),
+        reasons: row.reasons ?? [],
+      })),
+  );
+  const versions = new Map<string, number>();
+  for (const [id, reasons] of changes) {
+    const { data, error: writeError } = await service
+      .from("ai_import_entries")
+      .update({ reasons })
+      .eq("id", id)
+      .eq("batch_id", ref.batchId)
+      .eq("org_id", ref.orgId)
+      .select("id, version");
+    if (writeError) {
+      logged("flagging a duplicate", writeError);
+      return { ok: false, code: "unavailable" };
+    }
+    const [written] = data ?? [];
+    if (written) versions.set(written.id, written.version);
+  }
+  return { ok: true, versions };
 }

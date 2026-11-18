@@ -1,21 +1,23 @@
 import { z } from "zod";
 import { inputFromForm } from "@/lib/authoring/forms/codecs";
+import { caseSteps, stepType } from "@/lib/authoring/aiImportCaseStudy";
 import {
   readStoredReasons,
   restoredStatus,
-  type ReviewReason,
   type ReviewStatus,
 } from "@/lib/authoring/aiImportReview";
-import { messageFor, type AiImportFailure, type BatchStatus } from "@/lib/authoring/aiImportUpload";
+import { messageFor, type AiImportFailure } from "@/lib/authoring/aiImportUpload";
 import { withinItemSizeLimit } from "@/lib/authoring/payloadSize";
 import { ITEM_TYPES, type ItemType } from "@/lib/ngn/labels";
 import { itemQualityWarnings } from "@/lib/ngn/quality";
 import { itemSchema, type Item } from "@/lib/ngn/schemas";
 import type { Json } from "@/lib/supabase/database.types";
+import { refreshBatchDuplicates } from "../duplicates";
 import { convertDraft, formatReason, MAX_REASONS, readReason } from "../stage";
 import { aiImportAccess, type AccessDeps, type Client } from "../upload/access";
 import { readEntry } from "./actions";
-import { ENTRY_COLUMNS, toEntryView, type EntryRow } from "./read";
+import { withStepSaved } from "./caseStudy";
+import type { EntryRow } from "./read";
 
 /**
  * Fix a staged question with its type's own editor (#347). The editor opens on what was staged
@@ -28,6 +30,11 @@ import { ENTRY_COLUMNS, toEntryView, type EntryRow } from "./read";
  * NGN type that has not been dropped, at the version the page showed, in a batch in review. The
  * reasons change too, which only the service client may write, so the batch is read again just
  * before the write, and the write names the workspace, the batch, the entry and the version.
+ *
+ * A case study's step is saved the same way (#593, "add the key per step"): the request names the
+ * step, the form must be a whole, valid question of that step's own stored type, and it is put
+ * back into the case study (`withStepSaved`), which becomes ready once every step is keyed and
+ * the whole passes its schema. Nothing else of the case study can be changed from here.
  */
 
 export interface FixDeps extends AccessDeps {
@@ -37,8 +44,7 @@ export interface FixDeps extends AccessDeps {
 export type FixResult = { ok: true; version: number; status: ReviewStatus } | AiImportFailure;
 
 const FIX_MESSAGES = {
-  not_editable:
-    "Only a single question with an NGN type that has not been dropped can be edited here.",
+  not_editable: "Only a question that has not been dropped can be edited here.",
   not_complete:
     "This question is not complete yet. Fix the problems listed under the question, then save.",
   too_large: "This question is too large to save. Shorten the longest text, or split it in two.",
@@ -59,10 +65,12 @@ const inputSchema = z.object({
   batchId: z.uuid(),
   entryId: z.uuid(),
   version: z.number().int().min(1).max(2_147_483_647),
+  /** A case study's step, from 1; absent for a single question. */
+  step: z.number().int().min(1).max(6).optional(),
   values: z.record(z.string(), z.unknown()),
 });
 
-const isItemType = (type: string | null): type is ItemType =>
+export const isItemType = (type: string | null): type is ItemType =>
   type !== null && (ITEM_TYPES as readonly string[]).includes(type);
 
 /**
@@ -123,6 +131,26 @@ async function batchInReview(service: Client, orgId: string, batchId: string) {
   return data?.status === "review";
 }
 
+/** The type the form must be: the question's own, or the named step's as it is stored. */
+function editedType(row: EntryRow, step: number | undefined): ItemType | null {
+  if (step === undefined) return row.kind === "item" && isItemType(row.type) ? row.type : null;
+  if (row.kind !== "case_study") return null;
+  const question = caseSteps(row.item)?.[step - 1];
+  return question ? stepType(question) : null;
+}
+
+/** What a saved question's entry becomes. */
+function fixedQuestion(row: EntryRow, type: ItemType, item: Item) {
+  const reasons = reasonsAfterFix(row.reasons ?? [], item);
+  const status = restoredStatus({
+    kind: "item",
+    type,
+    item,
+    reasons: readStoredReasons(reasons),
+  });
+  return { item: item as unknown, status, reasons };
+}
+
 export async function saveEntryFix(deps: FixDeps, raw: unknown): Promise<FixResult> {
   const access = await aiImportAccess(deps);
   if (access.status === "signed_out") return refuse("signed_out");
@@ -139,20 +167,20 @@ export async function saveEntryFix(deps: FixDeps, raw: unknown): Promise<FixResu
   if (read === "unavailable" || read === "not_found") return refuse(read);
   if (read.batchStatus !== "review") return refuse("not_review");
   const { row } = read;
-  if (row.kind !== "item" || row.status === "dropped" || !isItemType(row.type)) {
-    return refuse("not_editable");
-  }
+  const type = row.status === "dropped" ? null : editedType(row, input.step);
+  if (type === null) return refuse("not_editable");
   if (row.version !== input.version) return refuse("entry_changed");
 
-  const item = itemFromForm(row.type, input.values);
+  const item = itemFromForm(type, input.values);
   if ("ok" in item) return item;
-  const reasons = reasonsAfterFix(row.reasons ?? [], item);
-  const status = restoredStatus({
-    kind: "item",
-    type: row.type,
-    item,
-    reasons: readStoredReasons(reasons),
-  });
+  const fixed =
+    input.step === undefined
+      ? fixedQuestion(row, type, item)
+      : withStepSaved({ item: row.item, reasons: row.reasons ?? [] }, input.step, item);
+  if (!fixed) return refuse("not_editable");
+  // A case study is stored whole, so the whole is measured, as the import measures it.
+  if (!withinItemSizeLimit(fixed.item)) return refuse("too_large");
+  const { status, reasons } = fixed;
 
   // The service client is not held to the edit policy's "only while in review", so the batch is
   // read again here. A window of milliseconds remains before the write, as for Change type (#346);
@@ -163,7 +191,7 @@ export async function saveEntryFix(deps: FixDeps, raw: unknown): Promise<FixResu
   if (!open) return refuse("not_review");
   const { data, error } = await service
     .from("ai_import_entries")
-    .update({ item: JSON.parse(JSON.stringify(item)) as Json, status, reasons })
+    .update({ item: JSON.parse(JSON.stringify(fixed.item)) as Json, status, reasons })
     .eq("id", input.entryId)
     .eq("batch_id", input.batchId)
     .eq("org_id", orgId)
@@ -176,80 +204,9 @@ export async function saveEntryFix(deps: FixDeps, raw: unknown): Promise<FixResu
   const [written] = data ?? [];
   // No row: another tab moved the version on since the read.
   if (!written) return refuse("entry_changed");
-  return { ok: true, version: written.version, status: written.status as ReviewStatus };
-}
-
-/** What the edit page needs of one staged question: never the draft itself, only the start. */
-export interface FixEntry {
-  id: string;
-  version: number;
-  type: ItemType;
-  status: ReviewStatus;
-  reasons: ReviewReason[];
-  sourceExcerpt: string;
-  /** Its number on the review screen: its place in source order across the import, from 1. */
-  number: number;
-  /** The stored item JSON the editor opens on (`editorStart`). */
-  start: unknown;
-}
-
-/**
- * One question of a batch of this workspace and quiz, for its edit page; null when there is no
- * such batch, and no entry when it is not one a teacher can edit here. Read with the teacher's own
- * session (RLS) and filtered by the session's workspace. The draft opens the editor and goes no
- * further.
- */
-export async function readFixEntry(
-  client: Client,
-  orgId: string,
-  ids: { bankId: string; batchId: string; entryId: string },
-): Promise<{ batchStatus: BatchStatus; entry: FixEntry | null } | null | "unavailable"> {
-  const [batch, entry, order] = await Promise.all([
-    client
-      .from("ai_import_batches")
-      .select("status")
-      .eq("id", ids.batchId)
-      .eq("org_id", orgId)
-      .eq("bank_id", ids.bankId)
-      .maybeSingle(),
-    client
-      .from("ai_import_entries")
-      .select(`${ENTRY_COLUMNS}, draft`)
-      .eq("id", ids.entryId)
-      .eq("batch_id", ids.batchId)
-      .eq("org_id", orgId)
-      .maybeSingle(),
-    client
-      .from("ai_import_entries")
-      .select("id")
-      .eq("batch_id", ids.batchId)
-      .eq("org_id", orgId)
-      .order("position"),
-  ]);
-  const error = batch.error ?? entry.error ?? order.error;
-  if (error) {
-    logged("reading an entry to fix", error);
-    return "unavailable";
-  }
-  if (!batch.data) return null;
-  const batchStatus = batch.data.status as BatchStatus;
-  const row = entry.data as (EntryRow & { draft: unknown }) | null;
-  if (!row || row.kind !== "item" || row.status === "dropped" || !isItemType(row.type)) {
-    return { batchStatus, entry: null };
-  }
-  const view = toEntryView(row);
-  const place = ((order.data ?? []) as { id: string }[]).findIndex((other) => other.id === row.id);
-  return {
-    batchStatus,
-    entry: {
-      id: row.id,
-      version: row.version,
-      type: row.type,
-      status: view.status,
-      reasons: view.reasons,
-      sourceExcerpt: row.source_excerpt,
-      number: place + 1,
-      start: editorStart({ item: row.item, draft: row.draft, reasons: row.reasons ?? [] }),
-    },
-  };
+  // #593: an edited stem may no longer match another question's, or may now match one. If this
+  // entry's own flag changed it was written again, and the version the editor needs moved on.
+  const flags = await refreshBatchDuplicates(service, { orgId, batchId: input.batchId });
+  const version = (flags.ok ? flags.versions.get(input.entryId) : undefined) ?? written.version;
+  return { ok: true, version, status: written.status as ReviewStatus };
 }

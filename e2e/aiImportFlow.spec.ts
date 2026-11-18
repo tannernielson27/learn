@@ -102,8 +102,9 @@ test("a teacher imports a document with AI, fixes a question, and publishes it",
   expect(count).toBeGreaterThanOrEqual(2);
   await expectNoAxeViolations(page);
 
-  // Import.
+  // Import, after the confirmation that says what goes into the quiz (#593).
   await importButton.click();
+  await page.getByTestId("import-confirm").click();
   await expect(
     page.getByText(`${count} questions were added to ${quizName} as drafts.`),
   ).toBeVisible({ timeout: 30_000 });

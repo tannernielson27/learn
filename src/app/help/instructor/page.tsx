@@ -177,9 +177,10 @@ export default function InstructorGuide() {
             </li>
           </List>
           <p>
-            <Ui>Show source</Ui> puts the document&apos;s words beside the question. <Ui>Drop</Ui>{" "}
-            leaves a question out. <Ui>Change type</Ui> reads it again as another format, which uses
-            some of the monthly allowance.
+            <Ui>Show source</Ui> puts the question&apos;s part of the document beside it, with its
+            bold, underline and highlight. A PDF shows the opening words and the pages to check.{" "}
+            <Ui>Drop</Ui> leaves a question out. <Ui>Change type</Ui> reads it again as another
+            format, which uses some of the monthly allowance.
           </p>
           <HelpFigure
             figure={HELP_FIGURES.aiImportReview}
@@ -189,16 +190,23 @@ export default function InstructorGuide() {
         <Topic id="ai-import-fix" title="Add a missing answer">
           <p>
             Press <Ui>Edit</Ui> on the question, mark the answer and press <Ui>Save</Ui>. It is then
-            Ready. A case study cannot be edited here: import it and edit it in the quiz, or drop
-            it.
+            Ready. <Ui>Save and go to the next one</Ui> opens the next question that needs
+            attention.
+          </p>
+          <p>
+            A case study lists each step that has no answer. Press <Ui>Add the key to step 3</Ui>,
+            mark it and save; the case study is Ready once every step has its answer. If its patient
+            record could not be read, <Ui>Split into separate questions</Ui> keeps its six questions
+            without the record.
           </p>
         </Topic>
         <Topic id="ai-import-finish" title="Import or discard">
           <p>
-            Once nothing needs an answer or a fix, <Ui>Import</Ui> adds every kept question to the
-            quiz as a draft, all at once. Write a rationale and publish each as usual.{" "}
-            <Ui>Discard this import</Ui> keeps nothing. Either way the uploaded files are deleted.
-            An import left for 7 days is deleted.
+            Once nothing needs an answer or a fix, <Ui>Import</Ui> says what will be added and, once
+            you confirm, adds every kept question to the quiz as a draft, all at once.{" "}
+            <Ui>Drop the 3 that need attention</Ui> drops whatever still holds it back. Write a
+            rationale and publish each as usual. <Ui>Discard this import</Ui> keeps nothing. Either
+            way the uploaded files are deleted. An import left for 7 days is deleted.
           </p>
         </Topic>
         <Topic id="ai-import-limits" title="Limits">

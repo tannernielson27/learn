@@ -1,11 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  batchDuplicateReasons,
   duplicateReasons,
   entryStem,
   markDuplicates,
+  refreshBatchDuplicates,
   stemHash,
   type EntryForDuplicates,
 } from "./duplicates";
+import { REMOVED_REASON } from "./files/reasons";
+import { fakeClient, type Reply } from "./upload/testing/fakeSupabase";
 import { extractQuestions, regionsOf } from "./extractQuestions";
 import { POSITIONS_PER_FILE, rowOf } from "./extractUnit";
 import { mergeSegments } from "./merge";
@@ -111,12 +115,21 @@ describe("duplicateReasons", () => {
 });
 
 describe("entryStem", () => {
-  it("reads the item's stem, else the draft's, else the excerpt", () => {
+  it("reads the item's stem, else the draft's, else the opening words", () => {
     expect(
       entryStem({ item: { stem: { value: "I" } }, draft: { stem: "D" }, source_excerpt: "E" }),
     ).toBe("I");
     expect(entryStem({ item: null, draft: { stem: "D" }, source_excerpt: "E" })).toBe("D");
-    expect(entryStem({ item: null, draft: "x", source_excerpt: "E" })).toBe("E");
+    expect(entryStem({ item: null, draft: "x", source_excerpt: "E" })).toBe("e");
+    // #593: a case study keeps its first step's opening on its draft, and a question's whole part
+    // of a document begins with the words its PDF copy's opening has.
+    expect(
+      entryStem({ item: null, draft: { opening: "A client, 29." }, source_excerpt: "Whole part" }),
+    ).toBe("a client 29");
+    const opening = "Discuss with a partner how you would teach this client about the diet";
+    expect(
+      entryStem({ item: null, draft: null, source_excerpt: `**${opening}** and why.\n- A\n- B` }),
+    ).toBe(entryStem({ item: null, draft: null, source_excerpt: opening }));
   });
 });
 
@@ -215,5 +228,135 @@ describe("markDuplicates", () => {
       });
     }
     expect(JSON.stringify(error.mock.calls)).not.toContain("Seen before");
+  });
+});
+
+describe("batchDuplicateReasons (#593)", () => {
+  const IN_BATCH = "duplicate: The same question is earlier in this import. Keep one of them.";
+  const IN_WORKSPACE = "duplicate: This question is already in one of your workspace's quizzes.";
+  const copy = (id: string, position: number, stem: string | null, reasons: string[] = []) => ({
+    id,
+    position,
+    stem,
+    reasons,
+  });
+
+  it("clears the later copy's flag once the earlier copy is no longer kept", () => {
+    // The caller hands in kept entries only: the earlier copy was dropped.
+    const changes = batchDuplicateReasons([copy("later", 5, "Which food first?", [IN_BATCH])]);
+    expect(changes).toEqual(new Map([["later", []]]));
+  });
+
+  it("flags a question whose edited stem now matches an earlier one, and only that one", () => {
+    const changes = batchDuplicateReasons([
+      copy("first", 0, "Which food first?", ["warning: keep"]),
+      copy("edited", 3, "Which **food** first?", ["warning: keep"]),
+      copy("other", 4, "Which drink first?"),
+    ]);
+    expect(changes).toEqual(new Map([["edited", ["warning: keep", IN_BATCH]]]));
+  });
+
+  it("leaves the workspace's flag, and an entry with no stem, exactly as they are", () => {
+    const changes = batchDuplicateReasons([
+      copy("known", 0, "Which food first?", [IN_WORKSPACE]),
+      copy("again", 1, "Which food first?", [IN_WORKSPACE, IN_BATCH]),
+      copy("open", 2, null, [IN_BATCH]),
+      copy("blank", 3, " ** ", [IN_BATCH]),
+    ]);
+    expect(changes.size).toBe(0);
+  });
+});
+
+describe("refreshBatchDuplicates (#593)", () => {
+  const ref = { orgId: "org-1", batchId: "batch-1" };
+  const IN_BATCH = "duplicate: The same question is earlier in this import. Keep one of them.";
+
+  function service(entries: unknown[], writes: Reply[] = [], files: unknown[] = []) {
+    return fakeClient({
+      ai_import_entries: [{ data: entries }, ...writes],
+      ai_import_files: [{ data: files }],
+    });
+  }
+
+  it("reads stems only, leaves dropped entries out, and answers each rewritten entry's version", async () => {
+    const client = service(
+      [
+        { id: "a", position: 0, status: "dropped", reasons: [], stem: "Which food first?" },
+        { id: "b", position: 1, status: "ready", reasons: [IN_BATCH], stem: "Which food first?" },
+        { id: "c", position: 2, status: "ready", reasons: [], draftStem: "Which food first?" },
+        {
+          id: "d",
+          position: 3,
+          status: "ready",
+          reasons: [],
+          opening: "Which food first? A. Milk",
+        },
+      ],
+      [{ data: [{ id: "b", version: 4 }] }, { data: [{ id: "c", version: 9 }] }],
+    );
+    const result = await refreshBatchDuplicates(client.client, ref);
+    expect(result).toEqual({
+      ok: true,
+      versions: new Map([
+        ["b", 4],
+        ["c", 9],
+      ]),
+    });
+    // "b" is now the first kept copy; "c" is the later one. "d" is a case study told apart by
+    // its opening words, which are not the same twelve.
+    expect(client.stepsOn("ai_import_entries", "update")).toEqual([
+      [{ reasons: [] }],
+      [{ reasons: [IN_BATCH] }],
+    ]);
+    const selected = String(client.stepsOn("ai_import_entries", "select")[0]?.[0]);
+    expect(selected).not.toContain("source_excerpt");
+    expect(selected).not.toMatch(/(^|, )(item|draft)(,|$)/);
+    for (const table of ["ai_import_entries", "ai_import_files"]) {
+      expect(client.stepsOn(table, "eq")).toContainEqual(["org_id", "org-1"]);
+      expect(client.stepsOn(table, "eq")).toContainEqual(["batch_id", "batch-1"]);
+    }
+  });
+
+  it("leaves out an entry at a removed file's place", async () => {
+    const client = service(
+      [
+        { id: "stray", position: 0, status: "ready", reasons: [], stem: "Which food first?" },
+        {
+          id: "kept",
+          position: 1000,
+          status: "ready",
+          reasons: [IN_BATCH],
+          stem: "Which food first?",
+        },
+      ],
+      [{ data: [{ id: "kept", version: 2 }] }],
+      [
+        { status: "rejected", rejected_reason: REMOVED_REASON },
+        { status: "ready", rejected_reason: null },
+      ],
+    );
+    await refreshBatchDuplicates(client.client, ref);
+    expect(client.stepsOn("ai_import_entries", "update")).toEqual([[{ reasons: [] }]]);
+  });
+
+  it("says so when a read or a write fails, with a code only", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const readFails = fakeClient({
+      ai_import_entries: [{ error: { code: "XX000" } }],
+      ai_import_files: [{ data: [] }],
+    });
+    expect(await refreshBatchDuplicates(readFails.client, ref)).toEqual({
+      ok: false,
+      code: "unavailable",
+    });
+    const writeFails = service(
+      [{ id: "b", position: 1, status: "ready", reasons: [IN_BATCH], stem: "Which food first?" }],
+      [{ error: { code: "XX000" } }],
+    );
+    expect(await refreshBatchDuplicates(writeFails.client, ref)).toEqual({
+      ok: false,
+      code: "unavailable",
+    });
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain("Which food");
   });
 });

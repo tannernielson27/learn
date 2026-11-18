@@ -200,7 +200,7 @@ function mergeTable(
       }
       state.reasons.push(
         needsFix(
-          `Step ${step}'s chart shows "${now}" for ${cells[0] || "a row"} under "${headings[index]}", where an earlier step showed "${before}". The earlier value is kept.`,
+          `At step ${step} the patient record shows "${now}" for ${cells[0] || "a row"} under "${headings[index]}", where an earlier step showed "${before}". The earlier value is kept.`,
           path,
         ),
       );

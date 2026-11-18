@@ -129,7 +129,8 @@ describe("extractQuestions on the recorded course activity", () => {
     );
     const [choice] = await extractQuestions(call, [questions[1]], document(), regions);
     expect(choice).toMatchObject({ status: "needs_fix", item: null, draft: broken });
-    expect(choice.reasons[0].message).toMatch(/^answer: /);
+    // #593: the converter's own sentence, with no draft path in front of it.
+    expect(choice.reasons[0].message).toMatch(/^The key in the source /);
   });
 
   it("keeps the first draft when the repair call fails, and when the answer leaves a question out", async () => {

@@ -31,6 +31,7 @@ describe("toEntryView", () => {
       draft: { secret: 1 },
     } as EntryRow);
     expect(view).toEqual({
+      sourcePages: null,
       id: "e1",
       version: 2,
       position: 1003,
@@ -62,6 +63,7 @@ describe("readReviewBatch", () => {
       ai_import_batches: [{ data: { id: BATCH, status: "review", bank_id: BANK } }],
       ai_import_files: [{ data: [{ original_name: "one.md" }, { original_name: "two.pdf" }] }],
       ai_import_entries: [{ data: [row()] }],
+      ai_import_chunks: [{ data: [] }],
     });
     const batch = await readReviewBatch(client.client, ORG, BATCH, BANK);
     expect(batch).toMatchObject({
@@ -95,6 +97,7 @@ describe("readReviewBatch", () => {
       ],
       ai_import_files: [{ data: [{ original_name: "one.docx" }] }],
       ai_import_entries: [{ data: [row()] }],
+      ai_import_chunks: [{ data: [] }],
     });
     const batch = await readReviewBatch(client.client, ORG, BATCH, BANK);
     expect(batch).toMatchObject({ answers: { unmatched: 3, dropped: 1 } });
@@ -130,6 +133,7 @@ describe("readReviewBatch", () => {
       ai_import_entries: [
         { data: [row({ id: "stray", position: 4 }), row({ id: "kept", position: 1003 })] },
       ],
+      ai_import_chunks: [{ data: [] }],
     });
     const batch = await readReviewBatch(client.client, ORG, BATCH, BANK);
     expect(batch).toMatchObject({
@@ -144,12 +148,14 @@ describe("readReviewBatch", () => {
       ai_import_batches: [{ data: null }],
       ai_import_files: [{ data: [] }],
       ai_import_entries: [{ data: [] }],
+      ai_import_chunks: [{ data: [] }],
     });
     expect(await readReviewBatch(none.client, ORG, BATCH, BANK)).toBeNull();
     const broken = fakeClient({
       ai_import_batches: [{ data: null }],
       ai_import_files: [{ error: { code: "XX000" } }],
       ai_import_entries: [{ data: [] }],
+      ai_import_chunks: [{ data: [] }],
     });
     expect(await readReviewBatch(broken.client, ORG, BATCH, BANK)).toBe("unavailable");
   });

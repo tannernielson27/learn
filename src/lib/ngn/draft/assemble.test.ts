@@ -147,6 +147,11 @@ describe("assembleCaseStudy", () => {
     if (entry.kind !== "case_study") return;
     expect(entry.caseStudy.items).toHaveLength(6);
     expect(entry.reasons[0]).toMatchObject({ code: "needs_fix", path: ["charts"] });
+    // #593: the interface's word is "patient record" (docs/glossary.md), never "chart".
+    expect(entry.reasons[0].message).toBe(
+      "The patient record could not be read, so the case study has none yet.",
+    );
+    expect(entry.reasons.map((reason) => reason.message).join(" ")).not.toMatch(/chart/i);
     expect(entry.reasons.every((reason) => reason.code === "needs_fix")).toBe(true);
     expect(caseStudySchema.safeParse(entry.caseStudy).success).toBe(false);
   });
@@ -167,6 +172,13 @@ describe("assembleCaseStudy", () => {
         "chart_not_attached",
       ]);
       expect(entry.notes[0].message).toContain(`${count} questions`);
+      // #593: said in a teacher's words: nothing is "staged", and there is no "chart".
+      expect(entry.notes[0].message).toMatch(
+        /A case study has 6, so each question is imported on its own\.$/,
+      );
+      expect(entry.notes[1].message).toBe(
+        "The patient record printed with these questions was not attached to any of them.",
+      );
       expect(itemSchema.safeParse(entry.item).success).toBe(true);
     });
   });
@@ -320,7 +332,11 @@ describe("assembleQuestion", () => {
     const entry = assembleQuestion({ draft: bowtie, chart: { chart: "nope" } }, { id: "imp_9" });
     expect(entry.item).not.toHaveProperty("ehr");
     expect(entry.reasons).toEqual([
-      expect.objectContaining({ code: "needs_fix", path: ["chart"] }),
+      expect.objectContaining({
+        code: "needs_fix",
+        path: ["chart"],
+        message: "The question's patient record could not be read, so it has none yet.",
+      }),
     ]);
   });
 

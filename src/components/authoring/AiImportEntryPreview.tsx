@@ -2,9 +2,10 @@
 
 import { Component, useSyncExternalStore, type ReactNode } from "react";
 import { ItemPlayer } from "@/components/question/ItemPlayer";
+import { caseSteps } from "@/lib/authoring/aiImportCaseStudy";
 import { recordAtStep } from "@/lib/ngn/chartReveal";
 import { keyResponse } from "@/lib/ngn/presentation";
-import { caseStudySchema, itemSchema, type Item } from "@/lib/ngn/schemas";
+import { ehrRecordSchema, itemSchema, type Item } from "@/lib/ngn/schemas";
 import { toKeylessItem, type Reveal, type SubmitHandler } from "@/lib/ngn/submit";
 import { CJMM_STEP_LABELS, type CjmmStep } from "@/lib/ngn/types";
 import { EhrPreview } from "./EhrPreview";
@@ -17,6 +18,9 @@ import { EhrPreview } from "./EhrPreview";
  * yet is shown as a student would answer it, with no key.
  * Anything else cannot be drawn until it is fixed (#347). This is a teacher's own workspace's
  * key, on an author route (ADR 0003): nothing here is sent to a student.
+ *
+ * A case study is drawn step by step (#593), so one step with no key no longer hides the other
+ * five: each step that is whole opens on its key, and one that is not says "No key yet".
  */
 
 const refuse: SubmitHandler = async () => {
@@ -68,23 +72,24 @@ export function AiImportEntryPreview({ kind, item, label }: AiImportEntryPreview
   }
 
   if (kind === "case_study") {
-    const parsed = caseStudySchema.safeParse(item);
-    if (!parsed.success) {
-      return <p className="text-sm text-ink-2">Can&apos;t preview yet.</p>;
-    }
-    const caseStudy = parsed.data;
+    const steps = caseSteps(item);
+    if (!steps) return <p className="text-sm text-ink-2">Can&apos;t preview yet.</p>;
+    // The record is drawn only when it is whole; a step is still shown without it.
+    const record = ehrRecordSchema.safeParse((item as { ehr?: unknown }).ehr);
     return (
       <div className="flex flex-col gap-3">
-        {caseStudy.items.map((step, index) => {
+        {steps.map((step, index) => {
           const number = (index + 1) as CjmmStep;
+          const keyed = itemSchema.safeParse(step).success;
           return (
-            <details key={step.id} className="rounded-sm border border-line bg-surface-1">
+            <details key={number} className="rounded-sm border border-line bg-surface-1">
               <summary className="tap-target cursor-pointer px-3 py-2 text-sm font-medium text-ink-1">
                 Step {number} of 6: {CJMM_STEP_LABELS[number]}
+                {keyed ? null : <span className="font-normal text-ink-2"> · No key yet</span>}
               </summary>
               <div className="flex flex-col gap-4 border-t border-line p-3">
-                <EhrPreview record={recordAtStep(caseStudy.ehr, number)} />
-                <KeyedItem item={step} label={`${label}, step ${number}`} />
+                {record.success ? <EhrPreview record={recordAtStep(record.data, number)} /> : null}
+                <QuestionPreview item={step} label={`${label}, step ${number}`} />
               </div>
             </details>
           );
@@ -93,6 +98,11 @@ export function AiImportEntryPreview({ kind, item, label }: AiImportEntryPreview
     );
   }
 
+  return <QuestionPreview item={item} label={label} />;
+}
+
+/** One question: on its key when it is whole, as a student would answer it when it has none. */
+function QuestionPreview({ item, label }: { item: unknown; label: string }) {
   const parsed = itemSchema.safeParse(item);
   if (parsed.success) return <KeyedItem item={parsed.data} label={label} />;
   if (!drawable(item)) {

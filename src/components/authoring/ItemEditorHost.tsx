@@ -33,6 +33,11 @@ export interface ItemEditorHost {
    */
   saveOnly?: boolean;
   /**
+   * A second button beside a Save-only editor's Save (#593): it saves, and once the save has
+   * succeeded it goes on, to the next staged question that needs attention.
+   */
+  saveAndGo?: { label: string; go: () => void };
+  /**
    * The rarer actions on the question (Duplicate, Archive), for the editor's More menu beside
    * Publish (#563). A standalone question's page passes them; a case study's step has none.
    */

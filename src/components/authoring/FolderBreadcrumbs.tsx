@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { textLinkClasses } from "@/components/ui/TextLink";
+import { GuardedLink } from "./LeaveGuard";
 import { NOT_IN_A_FOLDER, type FolderRow, type FolderView } from "@/lib/authoring/folders";
 
 export interface FolderBreadcrumbsProps {
@@ -56,8 +57,19 @@ function crumbsFor({
   return crumbs;
 }
 
-/** A trail of links up to the library; the last crumb, the current page, is not a link. */
-export function Breadcrumbs({ crumbs }: { crumbs: readonly Crumb[] }) {
+/**
+ * A trail of links up to the library; the last crumb, the current page, is not a link. On a page
+ * that may hold unsaved work, `guarded` makes each link ask the page's leave guard first (#593:
+ * the AI import editor's crumbs used to discard a changed form without a word).
+ */
+export function Breadcrumbs({
+  crumbs,
+  guarded = false,
+}: {
+  crumbs: readonly Crumb[];
+  guarded?: boolean;
+}) {
+  const CrumbLink = guarded ? GuardedLink : Link;
   return (
     <nav aria-label="Breadcrumb" className="mb-2 text-sm">
       <ol className="flex flex-wrap items-center gap-x-2">
@@ -70,9 +82,9 @@ export function Breadcrumbs({ crumbs }: { crumbs: readonly Crumb[] }) {
             ) : null}
             {crumb.href ? (
               // A 44px target, though the line reads small (WCAG 2.5.8).
-              <Link href={crumb.href} className={textLinkClasses({ size: "sm" })}>
+              <CrumbLink href={crumb.href} className={textLinkClasses({ size: "sm" })}>
                 {crumb.label}
-              </Link>
+              </CrumbLink>
             ) : (
               <span aria-current="page" className="break-words text-ink-2">
                 {crumb.label}

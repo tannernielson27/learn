@@ -15,6 +15,9 @@ import type { Client } from "../upload/access";
  * read AI import entries") decides as well as the filters on the session's workspace. Never the
  * model's draft, which the screen does not need.
  *
+ * Each entry's source (#593) is its whole part of a text document. A PDF has no text here, so its
+ * entry keeps the opening words and says which pages it was read from, which its chunk gives.
+ *
  * A file the teacher removed (#591) keeps its name in `fileNames`, so every other file keeps its
  * place; an entry at its place is left out. Such an entry can only be one a request staged after
  * the removal, and the import deletes it (`importBatch`).
@@ -69,12 +72,29 @@ export interface EntryRow {
   item: unknown;
   group_key: string | null;
   step: number | null;
+  /** The first chunk it was read from; null once that chunk is gone. */
+  chunk_id?: string | null;
 }
 
 export const ENTRY_COLUMNS =
-  "id, version, position, kind, type, status, reasons, source_excerpt, item, group_key, step";
+  "id, version, position, kind, type, status, reasons, source_excerpt, item, group_key, step, chunk_id";
 
-export function toEntryView(row: EntryRow): ReviewEntryView {
+/** The pages a PDF's chunk covers, by chunk id. A text file's chunk has none and is left out. */
+export type ChunkPages = ReadonlyMap<string, { from: number; to: number }>;
+
+export function chunkPages(
+  chunks: readonly { id: string; page_from: number | null; page_to: number | null }[],
+): ChunkPages {
+  return new Map(
+    chunks.flatMap((chunk) =>
+      chunk.page_from !== null && chunk.page_to !== null
+        ? [[chunk.id, { from: chunk.page_from, to: chunk.page_to }] as const]
+        : [],
+    ),
+  );
+}
+
+export function toEntryView(row: EntryRow, pages: ChunkPages = new Map()): ReviewEntryView {
   return {
     id: row.id,
     version: row.version,
@@ -86,6 +106,7 @@ export function toEntryView(row: EntryRow): ReviewEntryView {
       : "needs_fix",
     reasons: readStoredReasons(row.reasons ?? []),
     sourceExcerpt: row.source_excerpt,
+    sourcePages: (row.chunk_id ? pages.get(row.chunk_id) : undefined) ?? null,
     item: row.item ?? null,
     group: row.group_key ? { title: row.group_key, step: row.step } : null,
   };
@@ -98,7 +119,7 @@ export async function readReviewBatch(
   batchId: string,
   bankId: string,
 ): Promise<ReviewBatch | null | "unavailable"> {
-  const [batch, files, entries] = await Promise.all([
+  const [batch, files, entries, chunks] = await Promise.all([
     client
       .from("ai_import_batches")
       .select("id, status, bank_id, source")
@@ -119,8 +140,13 @@ export async function readReviewBatch(
       .eq("batch_id", batchId)
       .eq("org_id", orgId)
       .order("position"),
+    client
+      .from("ai_import_chunks")
+      .select("id, page_from, page_to")
+      .eq("batch_id", batchId)
+      .eq("org_id", orgId),
   ]);
-  const error = batch.error ?? files.error ?? entries.error;
+  const error = batch.error ?? files.error ?? entries.error ?? chunks.error;
   if (error) {
     logged("reading a batch for review", error);
     return "unavailable";
@@ -132,7 +158,7 @@ export async function readReviewBatch(
     status: batch.data.status as BatchStatus,
     bankId: batch.data.bank_id,
     fileNames: (files.data ?? []).map((file) => file.original_name),
-    entries: shown.map(toEntryView),
+    entries: shown.map((row) => toEntryView(row, chunkPages(chunks.data ?? []))),
     answers: answersOf(batch.data.source),
   };
 }

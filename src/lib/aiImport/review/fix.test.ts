@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { matrixFormFromStored, type MatrixFormValues } from "@/lib/authoring/forms/matrix";
 import { fromMatrixMultipleChoiceDraft, type MatrixMultipleChoiceDraft } from "@/lib/ngn/draft";
-import { itemSchema } from "@/lib/ngn/schemas";
+import { multipleResponseFormFromStored } from "@/lib/authoring/forms/multipleResponse";
+import { sampleCaseStudy } from "@/lib/ngn/fixtures";
+import { caseStudySchema, itemSchema } from "@/lib/ngn/schemas";
 import {
-  BANK,
   BATCH,
   OFF,
   ON,
@@ -12,7 +13,7 @@ import {
   teacher,
   type Reply,
 } from "../upload/testing/fakeSupabase";
-import { editorStart, readFixEntry, reasonsAfterFix, saveEntryFix, type FixDeps } from "./fix";
+import { editorStart, reasonsAfterFix, saveEntryFix, type FixDeps } from "./fix";
 
 const ENTRY = "00000000-0000-4000-8000-0000000000e1";
 
@@ -72,6 +73,9 @@ function setup(
     batches?: Reply[];
     serviceBatches?: Reply[];
     serviceEntries?: Reply[];
+    /** What the duplicate pass reads, and what its writes answer. */
+    stems?: unknown[];
+    flagged?: Reply[];
     enabled?: boolean;
     env?: Record<string, string>;
   } = {},
@@ -82,7 +86,13 @@ function setup(
   });
   const service = fakeClient({
     ai_import_batches: options.serviceBatches ?? [inReview],
-    ai_import_entries: options.serviceEntries ?? [{ data: [{ version: 4, status: "ready" }] }],
+    // The write, then the duplicate pass's read of the batch's stems (#593).
+    ai_import_entries: options.serviceEntries ?? [
+      { data: [{ version: 4, status: "ready" }] },
+      { data: options.stems ?? [] },
+      ...(options.flagged ?? []),
+    ],
+    ai_import_files: [{ data: [] }],
   });
   const deps: FixDeps = {
     author: async () => author,
@@ -189,11 +199,14 @@ describe("saveEntryFix", () => {
     expect(itemSchema.safeParse(patch.item).success).toBe(true);
     expect(patch.reasons).toContain("duplicate: The same question as Question 1.");
     expect((patch.reasons as string[]).some((r) => r.startsWith("needs_answer"))).toBe(false);
+    // The write names the entry in full; the duplicate pass after it reads the batch (#593).
     expect(service.stepsOn("ai_import_entries", "eq")).toEqual([
       ["id", ENTRY],
       ["batch_id", BATCH],
       ["org_id", ORG],
       ["version", 3],
+      ["batch_id", BATCH],
+      ["org_id", ORG],
     ]);
     expect(service.stepsOn("ai_import_batches", "eq")).toEqual([
       ["id", BATCH],
@@ -319,72 +332,110 @@ describe("saveEntryFix", () => {
   });
 });
 
-describe("readFixEntry", () => {
-  const OTHER = "00000000-0000-4000-8000-0000000000e2";
-  const ids = { bankId: BANK, batchId: BATCH, entryId: ENTRY };
-  const read = (entry: Reply, batch: Reply = inReview, order?: Reply) => {
-    const client = fakeClient({
-      ai_import_batches: [batch],
-      ai_import_entries: [entry, order ?? { data: [{ id: OTHER }, { id: ENTRY }] }],
+describe("saveEntryFix on a case study's step (#593, add the key per step)", () => {
+  // The fictional sample case study with step 4's key taken out, as an unmarked step is staged.
+  const whole = caseStudySchema.parse(sampleCaseStudy);
+  const staged = {
+    ...whole,
+    items: whole.items.map((item, index) => {
+      if (index !== 3) return item;
+      return Object.fromEntries(Object.entries(item).filter(([key]) => key !== "answerKey"));
+    }),
+  };
+  const NEEDS_ANSWER =
+    "needs_answer: Step 4: The source marks no answer. Add the key before this question can be imported.";
+  const caseRow = (over: Record<string, unknown> = {}) =>
+    row({
+      kind: "case_study",
+      type: null,
+      reasons: [NEEDS_ANSWER],
+      item: staged,
+      group_key: "Pulmonary embolism",
+      ...over,
     });
-    return { client, result: readFixEntry(client.client, ORG, ids) };
+  const KEY = ["o_o2", "o_ct", "o_antico", "o_hob"];
+  /** The multiple response editor's form for step 4, opened on what was staged, then marked. */
+  const stepForm = (marked: readonly string[] = KEY) => {
+    const form = multipleResponseFormFromStored(staged.items[3], ENTRY);
+    return {
+      ...form,
+      options: form.options.map((option) => ({ ...option, correct: marked.includes(option.id) })),
+    };
   };
 
-  it("reads the question, its number and what the editor opens on, for this workspace and quiz", async () => {
-    const { client, result } = read(row({ draft }));
-    expect(await result).toEqual({
-      batchStatus: "review",
-      entry: {
-        id: ENTRY,
-        version: 3,
-        type: "matrix_multiple_choice",
-        status: "needs_answer",
-        reasons: [
-          {
-            code: "needs_answer",
-            message:
-              "The source marks no answer. Add the key before this question can be imported.",
-          },
-          { code: "duplicate", message: "The same question as Question 1." },
-        ],
-        sourceExcerpt: "For each finding...",
-        number: 2,
-        start: keyless,
-      },
+  it("puts the keyed step back, and a case study with one unkeyed step becomes ready", async () => {
+    const { deps, service } = setup({
+      entries: [caseRow()],
+      serviceEntries: [{ data: [{ version: 4, status: "ready" }] }, { data: [] }],
     });
-    expect(client.stepsOn("ai_import_batches", "eq")).toEqual([
-      ["id", BATCH],
-      ["org_id", ORG],
-      ["bank_id", BANK],
-    ]);
-    expect(
-      client.stepsOn("ai_import_entries", "eq").filter(([column]) => column === "org_id"),
-    ).toHaveLength(2);
-  });
-
-  it("opens an unconverted question on its draft, without a key the document does not show", async () => {
-    const { result } = read(
-      row({
-        item: null,
-        draft: keyedDraft,
-        status: "needs_fix",
-        reasons: ["unmarked_key: The AI marked an answer."],
-      }),
+    const result = await saveEntryFix(deps, input({ step: 4, values: stepForm() }));
+    expect(result).toEqual({ ok: true, version: 4, status: "ready" });
+    const [[patch]] = service.stepsOn("ai_import_entries", "update") as [[Record<string, unknown>]];
+    expect(patch.status).toBe("ready");
+    expect(patch.reasons).not.toContain(NEEDS_ANSWER);
+    const saved = caseStudySchema.parse(patch.item);
+    expect(saved.items[3]).toMatchObject({
+      id: whole.items[3]!.id,
+      cjmmStep: 4,
+      answerKey: { correctOptionIds: ["o_o2", "o_ct", "o_antico", "o_hob"] },
+    });
+    // The other five steps are exactly as they were staged.
+    expect(saved.items.filter((_, index) => index !== 3)).toEqual(
+      whole.items.filter((_, index) => index !== 3),
     );
-    const entry = (await result) as { entry: { start: Record<string, unknown> } };
-    expect(entry.entry.start).not.toHaveProperty("answerKey");
+    expect(service.stepsOn("ai_import_entries", "eq")).toEqual(
+      expect.arrayContaining([
+        ["id", ENTRY],
+        ["org_id", ORG],
+        ["version", 3],
+      ]),
+    );
   });
 
-  it("has no entry for one that cannot be edited here", async () => {
-    for (const over of [{ status: "dropped" }, { kind: "case_study" }, { type: null }]) {
-      expect(await read(row(over)).result).toEqual({ batchStatus: "review", entry: null });
+  it("refuses a step that is not complete, and writes nothing", async () => {
+    const { deps, service } = setup({ entries: [caseRow()] });
+    expect(await saveEntryFix(deps, input({ step: 4, values: stepForm([]) }))).toMatchObject({
+      code: "not_complete",
+    });
+    expect(service.from).not.toHaveBeenCalled();
+  });
+
+  it("reads the form as the step's own stored type, never one the request names", async () => {
+    const { deps, service } = setup({ entries: [caseRow()] });
+    // The matrix form is not step 4's form: it is refused, not saved as a matrix.
+    expect(await saveEntryFix(deps, input({ step: 4 }))).toMatchObject({ ok: false });
+    expect(service.from).not.toHaveBeenCalled();
+  });
+
+  it("has no step to save on a question, a dropped case study or one with no step questions", async () => {
+    const question = setup();
+    expect(await saveEntryFix(question.deps, input({ step: 2 }))).toMatchObject({
+      code: "not_editable",
+    });
+    for (const over of [{ status: "dropped" }, { item: null }]) {
+      const { deps } = setup({ entries: [caseRow(over)] });
+      expect(await saveEntryFix(deps, input({ step: 4, values: stepForm() }))).toMatchObject({
+        code: "not_editable",
+      });
     }
-    expect(await read({ data: null }).result).toEqual({ batchStatus: "review", entry: null });
+    // Without a step, a case study is still not a question.
+    const whole6 = setup({ entries: [caseRow()] });
+    expect(await saveEntryFix(whole6.deps, input())).toMatchObject({ code: "not_editable" });
+    for (const step of [0, 7, 1.5, "4"]) {
+      expect(await saveEntryFix(setup().deps, input({ step }))).toMatchObject({
+        code: "malformed",
+      });
+    }
   });
 
-  it("is null for a batch of another workspace or quiz, and says so when a read fails", async () => {
-    expect(await read(row(), { data: null }).result).toBeNull();
-    expect(await read(row(), { error: { code: "XX000" } }).result).toBe("unavailable");
-    expect(await read(row(), inReview, { error: { code: "XX000" } }).result).toBe("unavailable");
+  it("answers with the version the duplicate pass left the entry at", async () => {
+    const { deps } = setup({
+      stems: [
+        { id: "first", position: 0, status: "ready", reasons: [], stem: "Which food first?" },
+        { id: ENTRY, position: 2, status: "ready", reasons: [], stem: "Which food first?" },
+      ],
+      flagged: [{ data: [{ id: ENTRY, version: 5 }] }],
+    });
+    expect(await saveEntryFix(deps, input())).toEqual({ ok: true, version: 5, status: "ready" });
   });
 });
