@@ -642,45 +642,75 @@ list.** No new route, table, function or policy; no migration.
   not have. The page now says a file is waiting and for about how long.
 
 **#593, 2026-11-17: finishing a review, case studies included.** No new route, table, function
-or policy; no migration. Two new Server Functions and two changed ones. Checked by the builder
-against this audit's lists; a `security-reviewer` pass is still to be done before merge.
+or policy; no migration. Two new Server Functions and two changed ones. Read by a code reviewer
+and a security reviewer on PR #601 (no critical; one high and several medium, fixed in the same
+PR and noted below).
 
 - **What a staged entry's source now holds.** `ai_import_entries.source_excerpt` is the
-  question's whole part of a text document (`sourceOf` in `stage.ts`), so it can hold the
-  document's answer line and its marks, where it held about thirty opening words. It is read
-  exactly where it was: the review page and the entry's edit page, both author routes, with the
-  teacher's own session (RLS) and the session's workspace. It is drawn as text through React
-  elements (`AiImportSource`, `sourceMarkup.ts`), never as HTML. The e2e grep
-  (`e2e/aiImportReview.spec.ts`) now searches the review page, a question's edit page and a case
-  study step's edit page for the source, a rationale and a `correctOptionId`, with the batch's
-  own teacher as the control, for a teacher of another workspace (404) and a student of the
-  same workspace (sent away from `/author`).
+  question's whole part of a text document (`sourceOf`, `caseSourceOf` in `stage.ts`), so it can
+  hold the document's answer line and its marks, where it held about thirty opening words. It is
+  read exactly where it was: the review page and the entry's edit page, both author routes, with
+  the teacher's own session (RLS) and the session's workspace. It is drawn as text through React
+  elements (`AiImportSource`, `sourceMarkup.ts`), never as HTML. The review list sends at most
+  4,000 characters of it for each question (review, MEDIUM, fixed: whole, a full batch was about
+  3 MB on every refresh); the edit page sends all of it.
+- **The greps.** `e2e/aiImportFix.spec.ts` and `e2e/aiImportReview.spec.ts` search the review
+  page, a question's edit page and a case study step's edit page for a marker that only the
+  stored source holds and for a real key (`"correctOptionId":"…"`), with the batch's own teacher
+  as the control on each page, then as a teacher of another workspace (404), a student of the
+  same workspace and a signed-out visitor (both sent away from `/author`) (review, LOW, fixed:
+  the first version searched for an option's label as one outsider only).
 - **`splitAiImportCaseStudy`** (`review/split.ts`). `aiImportAccess`, then ids and a version from
   a strict schema and nothing else from the request: every question is built on the server from
   the stored entry. All reads use the teacher's session, filtered by workspace and batch. A
-  teacher's session may not insert an entry, so the write is the service client's, after the
-  batch's status is read again: five inserts named by workspace and batch, then the case study's
-  own row updated where it is still at the shown version. If that finds no row, the five are
-  deleted again by id, workspace and batch. It refuses a batch not in review, an entry at a
-  removed file's place, a split past 150 entries, and a file with no five free places, before
-  anything is written. Extract only holds: a step whose key the document does not show is split
-  with no item (`splitSteps`). Tests: `split.test.ts`, `caseStudy.test.ts`.
+  teacher's session may not insert an entry, so the writes are the service client's, each
+  filtered by workspace and batch, after the batch's status is read again. It refuses a batch
+  not in review, an entry at a removed file's place, a split past 150 entries, and a file with
+  no five free places, before anything is written. Extract only holds: a step whose key the
+  document does not show is split with no item (`splitSteps`).
+- **The split's three writes, and what each stop leaves** (review, HIGH, fixed: the first version
+  inserted five live questions before changing the case study, so a stop in between left both
+  importable). There is no transaction without a database function. (a) Steps 2 to 6 are
+  inserted `dropped`, with their real reasons. (b) The case study's row becomes step 1 where it
+  is still at the shown version. (c) The five are set to their own statuses. A stop after (a):
+  the case study as it was, and five dropped rows, which no import takes; when (b) finds the
+  case study changed they are deleted, and a failed delete leaves them under Dropped. A stop
+  after (b): step 1 and the other steps under Dropped, with the answer `split_partial` saying
+  to restore them. At no point can an import take a case study together with its own steps, and
+  no step's content is lost. Tests: `split.test.ts` (a failure after each write, and the undo
+  itself failing), `caseStudy.test.ts`.
 - **`saveAiImportEntryFix` with a step.** The same gate and write as before. The form is read as
   the stored step's own type, never one the request names; the step keeps its stored id and its
   place sets its clinical judgment step; a record sent with it is left out. The whole case study
-  is measured against the item size bound before the write. Tests: `fix.test.ts`.
+  is measured against the item size bound before the write. The draft gains a `saved` list of
+  step numbers, written by the server only. Tests: `fix.test.ts`.
 - **`dropAiImportEntries`.** `aiImportAccess`; up to 150 pairs of a UUID and a whole number, each
   checked by schema before it is put into a filter; the batch read in the session's workspace
   and in review; the update is the teacher's own session's, filtered by workspace, batch, a
-  status that still needs attention and the shown version of each entry. Tests:
-  `actions.test.ts` (a crafted id is `malformed`).
-- **Duplicate flags after a drop, restore, save or split** (`refreshBatchDuplicates`). The
-  service client, because a teacher's session may not write `reasons`. It is told the session's
-  workspace and a batch the caller was just checked against, reads stems and positions only
-  (never an item or a draft whole), and writes `reasons` alone, by id, workspace and batch.
-  These writes are not version-checked: they change only the `duplicate` reason, and each moves
-  the entry's version on, which the page is told. Accepted: an import that runs at the same
-  moment waits on its row locks and then refuses as `entry_changed`, as for any late edit.
+  status that still needs attention and the shown version of each entry, in parts of 30. A part
+  that fails stops the rest, and the answer names what was already dropped (review, MEDIUM,
+  fixed). Tests: `actions.test.ts` (a crafted id is `malformed`), `limit.test.ts`.
+- **A limit on review changes** (review, MEDIUM, fixed). Each of drop, restore, bulk drop, split
+  and save ends with a service-role pass over the batch, so a scripted loop was cheap to send
+  and heavy to serve. They now share one count for each teacher, 120 a minute, in the shared
+  store's new bucket `ai_import_review` (`review/limit.ts`), taken after the caller and the
+  request's shape are checked and before anything is read; it fails closed. The database's
+  function accepts any bucket of its shape, so no migration was needed. Change type keeps its
+  own limits and claim. Tests: `limit.test.ts`.
+- **Duplicate flags after a drop, restore, save, split or change of type**
+  (`refreshBatchDuplicates`). The service client, because a teacher's session may not write
+  `reasons`. It is told the session's workspace and a batch the caller was just checked
+  against. It reads stems, versions and positions (never an item or a draft whole), and the
+  source of entries that have no stem, for those entries only. It writes `reasons` alone, by
+  workspace and batch, and only where the entry is still at the version it read (review,
+  MEDIUM, fixed: the first version could write an older `reasons` over a save that landed in
+  between); entries that end with the same reasons share one statement. Accepted: an import
+  that runs at the same moment waits on its row locks and then refuses as `entry_changed`, as
+  for any late edit.
+- **Text the server did not write.** A document's text is cut on whole characters everywhere
+  (`textCut.ts`): a cut inside a surrogate pair is refused by Postgres and failed the entry's
+  insert (review, MEDIUM, fixed). The marks in it are read in one pass a line (review, LOW,
+  fixed: a line of thousands of unclosed `<u>` took quadratic time in the browser).
 - **Logs.** Each new failure logs `[ai-import] <step> failed` with a database code and nothing
   else; `split.test.ts` and `duplicates.test.ts` check that no question text or key is in them.
 - **Not changed:** who may import. The new confirmation is in the browser only;
