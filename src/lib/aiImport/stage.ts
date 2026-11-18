@@ -18,7 +18,7 @@ import {
 } from "@/lib/ngn/schemas";
 import { LOW_CONFIDENCE } from "./config";
 import type { DraftProblem, ExtractedDraft } from "./extract";
-import { showsKey } from "./keyEvidence";
+import { keyEvidence } from "./keyEvidence";
 import type { MergedQuestion } from "./merge";
 
 /**
@@ -37,7 +37,9 @@ import type { MergedQuestion } from "./merge";
  * - `not_importable`: no NGN type (an open prompt, a calculation, matching, recall).
  *
  * Extract only: a draft that comes back keyed from a text source whose part of the document shows
- * no answer at all is not converted (`unmarked_key`); the model wrote that key.
+ * no answer at all is not converted (`unmarked_key`); the model wrote that key. A key the source
+ * marks only by making a choice bold, underlined or coloured is kept (#592, owner decision
+ * 2026-11-17), and the entry says to check it (`check_key`), as a key read from a PDF does.
  */
 
 export type EntryStatus = "ready" | "needs_answer" | "needs_fix" | "not_importable";
@@ -252,13 +254,34 @@ const CHECK_KEY: EntryReason = {
   message: "The key was read from a PDF, which could not be checked against its text. Check it.",
 };
 
+/** The same code as a PDF's key: either way the teacher confirms the key before trusting it. */
+const CHECK_FORMAT_KEY: EntryReason = {
+  code: "check_key",
+  message:
+    "The key was read from bold, underlined or coloured text, which may not mark an answer. Check it.",
+};
+
 const NEEDS_ANSWER =
   "The source marks no answer. Add the key before this question can be imported.";
 
-function keyBelieved(question: MergedQuestion, source: "text" | "pdf", region: string | null) {
-  if (source === "pdf") return true;
-  if (question.answers.length > 0) return true;
-  return region !== null && showsKey(region);
+/**
+ * Whether a key the model gave is one the source shows. A PDF's cannot be checked, and an answer
+ * section printed elsewhere was checked when it was read. Otherwise the question's own part of
+ * the text decides: a mark made to say "this is the answer" (`shown`), formatting alone
+ * (`formatting`), or nothing (`none`).
+ */
+type KeyBelief = "shown" | "formatting" | "none";
+
+function keyBelief(
+  question: MergedQuestion,
+  source: "text" | "pdf",
+  region: string | null,
+): KeyBelief {
+  if (source === "pdf") return "shown";
+  if (question.answers.length > 0) return "shown";
+  if (region === null) return "none";
+  const evidence = keyEvidence(region);
+  return evidence === "marked" ? "shown" : evidence;
 }
 
 const keyUnchecked = (question: MergedQuestion, source: "text" | "pdf") =>
@@ -365,7 +388,8 @@ export function stageQuestion(input: StageInput): StagedEntry {
   const scoring: EntryReason[] = draftReasons(converted.reasons, "scoring_conflict").map(
     (reason) => ({ code: "scoring_conflict", message: reason.message }),
   );
-  if (converted.keyed && !keyBelieved(question, input.source, input.region)) {
+  const belief = keyBelief(question, input.source, input.region);
+  if (converted.keyed && belief === "none") {
     return finish("needs_fix", null, [UNMARKED_KEY]);
   }
   if (converted.problems.length > 0) {
@@ -386,7 +410,10 @@ export function stageQuestion(input: StageInput): StagedEntry {
       ...chartNotes,
     ]);
   }
-  const check = keyUnchecked(question, input.source) ? [CHECK_KEY] : [];
+  const check = [
+    ...(keyUnchecked(question, input.source) ? [CHECK_KEY] : []),
+    ...(belief === "formatting" ? [CHECK_FORMAT_KEY] : []),
+  ];
   const warnings = itemQualityWarnings(charted.valid).map((warning): EntryReason => ({
     code: "warning",
     message: warning.message,
@@ -490,8 +517,9 @@ function stageAssembledCase(
     reasons: [...reasons, ...stepFlags, ...notes].slice(0, MAX_REASONS),
   });
 
+  const beliefs = drafted.map((step) => keyBelief(step.question, input.source, step.region));
   const invented = drafted.findIndex(
-    (step) => step.converted.keyed && !keyBelieved(step.question, input.source, step.region),
+    (step, index) => step.converted.keyed && beliefs[index] === "none",
   );
   if (invented >= 0) {
     return finish("needs_fix", null, [
@@ -522,9 +550,14 @@ function stageAssembledCase(
       .map((p) => problemReason(p));
     return finish("needs_fix", null, [...issues, ...scoring]);
   }
-  const check = drafted.some((step) => keyUnchecked(step.question, input.source))
-    ? [CHECK_KEY]
-    : [];
+  const check = [
+    ...(drafted.some((step) => keyUnchecked(step.question, input.source)) ? [CHECK_KEY] : []),
+    ...drafted.flatMap((step, index): EntryReason[] =>
+      step.converted.keyed && beliefs[index] === "formatting"
+        ? [{ ...CHECK_FORMAT_KEY, message: prefix(index) + CHECK_FORMAT_KEY.message }]
+        : [],
+    ),
+  ];
   const warnings = checked.data.items.flatMap((item, index) =>
     itemQualityWarnings(item).map((warning): EntryReason => ({
       code: "warning",

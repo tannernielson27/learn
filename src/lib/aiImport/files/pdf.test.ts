@@ -1,9 +1,15 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { PDFDocument } from "@cantoo/pdf-lib";
+import {
+  EncryptedPDFError,
+  PDFArray,
+  PDFDocument,
+  PDFRawStream,
+  decodePDFRawStream,
+} from "@cantoo/pdf-lib";
 import { describe, expect, it } from "vitest";
 import { extractPdfPages, inspectPdf, planPageChunks } from "./pdf";
-import { buildEncryptedPdf, buildPdf, utf8 } from "./testing/fixtures";
+import { buildEncryptedPdf, buildPdf, buildPermissionsPdf, utf8 } from "./testing/fixtures";
 
 const corpus = (name: string): Uint8Array =>
   new Uint8Array(readFileSync(join(process.cwd(), "test", "ai-import", "corpus", name)));
@@ -55,6 +61,32 @@ describe("inspectPdf", () => {
     });
   });
 
+  // #592: a PDF that only restricts copying is encrypted, but opens with no password.
+  it("counts the pages of a PDF that has only a permissions password", async () => {
+    const pdf = await buildPermissionsPdf(3);
+    // The fixture really is encrypted: the library refuses it when it is given no password.
+    await expect(PDFDocument.load(pdf)).rejects.toThrow(EncryptedPDFError);
+    expect(await inspectPdf(pdf)).toEqual({ ok: true, pages: 3 });
+  });
+
+  it("refuses an encrypted PDF whose object streams could decode past the limit", async () => {
+    const pdf = await buildPermissionsPdf(1);
+    // An object stream of 100 KB: deflate could expand it to 100 MB once it is decrypted.
+    const bomb = Buffer.concat([
+      Buffer.from(pdf.subarray(0, 9)),
+      Buffer.from(
+        "\n9999 0 obj\n<< /Type /ObjStm /Filter /FlateDecode /Length 100000 >>\nstream\n",
+      ),
+      Buffer.alloc(100_000, 0x41),
+      Buffer.from("\nendstream\nendobj\n"),
+      Buffer.from(pdf.subarray(9)),
+    ]);
+    expect(await inspectPdf(new Uint8Array(bomb))).toMatchObject({
+      ok: false,
+      code: "too_complex",
+    });
+  });
+
   it("refuses a damaged PDF", async () => {
     expect(await inspectPdf(utf8("%PDF-1.7\nnot really a pdf"))).toMatchObject({
       ok: false,
@@ -80,6 +112,23 @@ describe("extractPdfPages", () => {
     expect(read.getPages().map((page) => page.getWidth())).toEqual([
       208, 209, 210, 211, 212, 213, 214, 215,
     ]);
+  });
+
+  // #592: Claude cannot read an encrypted document, so a chunk must come out plain.
+  it("cuts plain, readable chunks from a PDF with only a permissions password", async () => {
+    const source = await buildPermissionsPdf(4);
+    const chunk = await extractPdfPages(source, 2, 3);
+    expect(Buffer.from(chunk).toString("latin1")).not.toContain("/Encrypt");
+    // Loads with no password and no `ignoreEncryption`, as a reader with no key would.
+    const read = await PDFDocument.load(chunk);
+    expect(read.isEncrypted).toBe(false);
+    expect(read.getPages().map((page) => page.getWidth())).toEqual([202, 203]);
+    // The page's own content decodes to drawing operators, so it was decrypted, not copied as noise.
+    const contents = read.getPage(0).node.Contents();
+    const stream = contents instanceof PDFArray ? contents.lookup(0, PDFRawStream) : contents;
+    if (!(stream instanceof PDFRawStream)) throw new Error("the page has no content stream");
+    const decoded = Buffer.from(decodePDFRawStream(stream).decode()).toString("latin1");
+    expect(decoded).toMatch(/\bBT\b[\s\S]*\bTj\b/);
   });
 
   it("refuses a range outside the document", async () => {

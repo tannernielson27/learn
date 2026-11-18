@@ -1,4 +1,5 @@
-import { MAX_FILE_BYTES } from "./limits";
+import { PACKAGE_RELS, mainPartName } from "./docx/package";
+import { DOCX_MAX_RELS_BYTES, MAX_FILE_BYTES } from "./limits";
 import { reject, type Rejection } from "./reasons";
 import { partText, readZip } from "./zip";
 
@@ -13,7 +14,6 @@ export type FileKind = "pdf" | "docx" | "md" | "txt";
 export type Sniffed = { ok: true; kind: FileKind } | Rejection;
 
 const CONTENT_TYPES = "[Content_Types].xml";
-const DOCUMENT_PART = "word/document.xml";
 const DOCX_MAIN =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml";
 const MACRO_MAIN = "application/vnd.ms-word.document.macroEnabled.main+xml";
@@ -42,16 +42,19 @@ function isPdf(bytes: Uint8Array): boolean {
 }
 
 function sniffZip(bytes: Uint8Array): Sniffed {
-  const zip = readZip(bytes, { [CONTENT_TYPES]: CONTENT_TYPES_MAX });
+  const zip = readZip(bytes, {
+    [CONTENT_TYPES]: CONTENT_TYPES_MAX,
+    [PACKAGE_RELS]: DOCX_MAX_RELS_BYTES,
+  });
   if (!zip.ok) return reject(zip.code === "too_complex" ? "too_complex" : "corrupt");
   const lower = zip.names.map((name) => name.toLowerCase());
   if (lower.some((name) => name.endsWith("vbaproject.bin"))) return reject("macro_enabled");
   const types = partText(zip.parts, CONTENT_TYPES);
   if (types === null) return reject("unsupported");
   if (types.includes(MACRO_MAIN)) return reject("macro_enabled");
-  if (!types.includes(DOCX_MAIN) || !zip.names.includes(DOCUMENT_PART)) {
-    return reject("unsupported");
-  }
+  // The main document is wherever the package's relationships say (#592), not one fixed name.
+  const main = mainPartName(partText(zip.parts, PACKAGE_RELS), zip.names);
+  if (!types.includes(DOCX_MAIN) || main === null) return reject("unsupported");
   return { ok: true, kind: "docx" };
 }
 

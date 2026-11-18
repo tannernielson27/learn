@@ -168,6 +168,22 @@ export function importedSentence(questions: number, caseStudies: number, quizNam
   return `${parts.join(" and ")} ${one ? "was" : "were"} added to ${quizName} as ${one ? "a draft" : "drafts"}.`;
 }
 
+/**
+ * What to tell the teacher about answers that reached no question (#592): one plain sentence
+ * each, and none when there is nothing to say.
+ */
+export function answerNotes(answers: { unmatched: number; dropped: number }): string[] {
+  const one = answers.dropped === 1;
+  return [
+    answers.unmatched > 0
+      ? `${plural(answers.unmatched, "answer", "answers")} in the document could not be matched to a question. Check the questions that need an answer.`
+      : null,
+    answers.dropped > 0
+      ? `${plural(answers.dropped, "answer", "answers")} the AI reported ${one ? "was" : "were"} not found in the document, so ${one ? "it was" : "they were"} left out.`
+      : null,
+  ].filter((note): note is string => note !== null);
+}
+
 export interface FileGroup {
   name: string;
   entries: ReviewEntryView[];

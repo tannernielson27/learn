@@ -21,9 +21,9 @@ import {
 import { planExtraction } from "./extract";
 import { extractCaseStudy, extractQuestions, regionsOf, type UnitCall } from "./extractQuestions";
 import { extractPdfPages } from "./files/pdf";
-import type { ChunkPayload, PreparedFile } from "./files/prepare";
+import type { ChunkPayload, PreparedChunk, PreparedFile } from "./files/prepare";
 import { loadCheckedFile, type FileFailure, type FileRef } from "./files/store";
-import { estimatePages } from "./files/text";
+import { estimatePages, joinTextParts } from "./files/text";
 import { estimateCallCost, reserveUsage, settleUsage, type UsageRpc } from "./ledger";
 import { mergeSegments, type MergedQuestion } from "./merge";
 import { takeExtractCall, type ParseAllowance } from "./parseLimit";
@@ -177,6 +177,17 @@ export function reservedCall(
   };
 }
 
+/** Text chunks as one text, each joined to the one before by what was cut from between them. */
+function joinedText(chunks: readonly PreparedChunk[]): string {
+  return joinTextParts(
+    chunks.map((chunk) => ({
+      position: chunk.position,
+      text: chunk.text ?? "",
+      gapBefore: chunk.gapBefore,
+    })),
+  );
+}
+
 /** What Claude reads for questions read from `chunks`: their text joined, or their pages. */
 export async function unitPayload(
   bytes: Uint8Array,
@@ -186,7 +197,8 @@ export async function unitPayload(
   const parts = prepared.chunks.filter((chunk) => chunks.includes(chunk.position));
   if (parts.length === 0) throw new Error("the unit has no chunk");
   if (parts.every((chunk) => chunk.text !== null)) {
-    const text = parts.map((chunk) => chunk.text).join("");
+    // #592: joined with nothing, a question across two chunks read "...oxygenThe nurse...".
+    const text = joinedText(parts);
     return { payload: { type: "text", text }, pages: estimatePages(text.length) };
   }
   const from = Math.min(...parts.map((chunk) => chunk.pageFrom ?? Infinity));
@@ -226,9 +238,14 @@ export function rowOf(
   };
 }
 
+/**
+ * A text file as it was before it was cut into chunks, for finding each question's part of it;
+ * null for a PDF. The chunks are joined by what was cut from between them (#592), so a question
+ * that opens a chunk still has the blank line before it and is found there.
+ */
 export function wholeText(prepared: PreparedFile): string | null {
   if (prepared.kind === "pdf") return null;
-  return prepared.chunks.map((chunk) => chunk.text ?? "").join("");
+  return joinedText(prepared.chunks);
 }
 
 interface Planned {

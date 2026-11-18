@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { batchSource, finishExtraction, recordBatchSource } from "./finish";
+import { answerCounts, batchSource, finishExtraction, recordBatchSource } from "./finish";
 import { readSegment } from "./segment";
 
 afterEach(() => vi.restoreAllMocks());
@@ -95,9 +95,60 @@ describe("recordBatchSource and finishExtraction", () => {
     expect(updates).toEqual([
       {
         table: "ai_import_batches",
-        values: { source: { author: "Pine Hollow faculty", objectives: [], references: [] } },
+        values: {
+          source: {
+            author: "Pine Hollow faculty",
+            objectives: [],
+            references: [],
+            unmatchedAnswers: 0,
+            droppedAnswers: 0,
+          },
+        },
       },
     ]);
+  });
+
+  // #592: neither count was shown anywhere, so an answer section could vanish without a word.
+  it("counts the answers that reached no question, across the batch's files", async () => {
+    const question = (excerpt: string, number: string) => ({
+      excerpt,
+      number,
+      type: "multiple_choice",
+      confidence: 0.9,
+      instructorNote: false,
+      reliesOnImage: false,
+      cutOff: false,
+      continued: false,
+    });
+    const text =
+      "1. Which action first?\n\n2. Which finding next?\n\nAnswer key\n1. B\n7. C\nKey: D";
+    const first = readSegment(
+      {
+        questions: [question("Which action first?", "1"), question("Which finding next?", "2")],
+        answers: [
+          { number: "1", kind: "answer", text: "1. B" },
+          // No question 7, and "Key" names none: both are left unmatched.
+          { number: "7", kind: "answer", text: "7. C" },
+          { number: "Key", kind: "answer", text: "Key: D" },
+          // Not in the document at all: dropped when the chunk was read.
+          { number: "2", kind: "answer", text: "2. A, made up" },
+        ],
+      },
+      { position: 0, of: 1, pageFrom: null, pageTo: null },
+      { type: "text", text },
+    );
+    expect(answerCounts([first])).toEqual({ unmatchedAnswers: 2, droppedAnswers: 1 });
+
+    const { service, updates } = fakeService({
+      chunks: {
+        f1: [{ id: "c1", position: 0, segments: first }],
+        f2: [{ id: "c2", position: 0, segments: { ...first, droppedAnswers: 3 } }],
+      },
+    });
+    expect(await recordBatchSource(service, REF)).toBe("ok");
+    expect(updates[0].values).toMatchObject({
+      source: { objectives: [], references: [], unmatchedAnswers: 4, droppedAnswers: 4 },
+    });
   });
 
   it("waits for a file whose chunks are not all segmented", async () => {

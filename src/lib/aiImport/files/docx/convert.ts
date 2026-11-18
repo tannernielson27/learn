@@ -1,35 +1,25 @@
 import { DOCX_MAX_DEPTH } from "../limits";
+import { PLAIN, fill, renderPieces, runFormat, type Format, type Piece } from "./format";
 import { headingLevel, type Numbering, type StyleInfo } from "./numbering";
-import { attr, child, elements, toggle, type Element } from "./xml";
+import { symbolFor, symbolText } from "./symbols";
+import { attr, child, elements, type Element } from "./xml";
 
 /**
  * WordprocessingML to the markdown Claude reads (#341, ADR 0008 Pipeline step 2). Keys hide in
- * formatting, so formatting is kept as markup (see `DOCX_MARKUP`): bold, italic, underline,
- * highlight with its colour, table cells with their shading, list numbers as Word shows them,
- * text boxes, and the final view of tracked changes. Comments are dropped and each picture
- * becomes `[image]`. Text is copied as it is, `*` keys included; nothing is escaped but a `|`
- * inside a table cell.
+ * formatting, so formatting is kept as markup (see `DOCX_MARKUP` and `format.ts`): bold, italic,
+ * underline, strikethrough, highlight and font colour, raised and lowered text, table cells and
+ * paragraphs with their shading, list numbers as Word shows them, text boxes, and the final view
+ * of tracked changes. Comments and hidden text are dropped and each picture becomes `[image]`.
+ * Text is copied as it is, `*` keys included; nothing is escaped but a `|` inside a table cell.
  */
 
 /** Thrown when the XML nests deeper than `DOCX_MAX_DEPTH`. */
 export class TooDeep extends Error {}
 
-interface Format {
-  bold: boolean;
-  italic: boolean;
-  underline: boolean;
-  /** A highlight colour name (`yellow`), or a run shading fill (`#FFFF00`). */
-  highlight: string | null;
-}
-
-type Piece = { kind: "text"; text: string; format: Format } | { kind: "image" };
-
 interface Block {
   text: string;
   list: boolean;
 }
-
-const PLAIN: Format = { bold: false, italic: false, underline: false, highlight: null };
 
 /** Elements that hold nothing a reader sees, or text that is not in the final view. */
 const SKIPPED = new Set([
@@ -65,95 +55,6 @@ const SKIPPED = new Set([
 ]);
 
 const GRAPHICS = new Set(["drawing", "pict", "object"]);
-
-/** Common Wingdings and Symbol characters used to mark keys. */
-const SYMBOLS: Record<string, string> = {
-  F0FC: "✓",
-  F0FB: "✗",
-  F0FD: "☒",
-  F0FE: "☑",
-  F0A8: "☐",
-  F06F: "☐",
-  F0B7: "•",
-  F0D6: "✓",
-};
-
-const COLOUR_NAME = /^[A-Za-z]{1,20}$/;
-const HEX = /^[0-9A-Fa-f]{6}$/;
-
-function fill(shd: Element | undefined): string | null {
-  const value = attr(shd, "fill");
-  if (!value || !HEX.test(value) || value.toUpperCase() === "FFFFFF") return null;
-  return `#${value.toUpperCase()}`;
-}
-
-function runFormat(rPr: Element | undefined): Format {
-  if (!rPr) return PLAIN;
-  const named = attr(child(rPr, "highlight"), "val");
-  const highlight =
-    named && named.toLowerCase() !== "none" && COLOUR_NAME.test(named)
-      ? named
-      : fill(child(rPr, "shd"));
-  return {
-    bold: toggle(child(rPr, "b")),
-    italic: toggle(child(rPr, "i")),
-    underline: toggle(child(rPr, "u")),
-    highlight,
-  };
-}
-
-/** Wraps `text` in markers, leaving its outer whitespace outside them. */
-function wrap(text: string, open: string, close: string): string {
-  const match = /^(\s*)([\s\S]*?)(\s*)$/.exec(text) as RegExpExecArray;
-  const [, lead, core, trail] = match;
-  return core ? `${lead}${open}${core}${close}${trail}` : text;
-}
-
-function renderInner(pieces: { text: string; format: Format }[]): string {
-  let out = "";
-  let i = 0;
-  while (i < pieces.length) {
-    const { format } = pieces[i];
-    let text = "";
-    while (
-      i < pieces.length &&
-      pieces[i].format.bold === format.bold &&
-      pieces[i].format.italic === format.italic &&
-      pieces[i].format.underline === format.underline
-    ) {
-      text += pieces[i].text;
-      i += 1;
-    }
-    if (format.underline) text = wrap(text, "<u>", "</u>");
-    if (format.italic) text = wrap(text, "*", "*");
-    if (format.bold) text = wrap(text, "**", "**");
-    out += text;
-  }
-  return out;
-}
-
-function renderPieces(pieces: Piece[]): string {
-  let out = "";
-  let i = 0;
-  while (i < pieces.length) {
-    const piece = pieces[i];
-    if (piece.kind === "image") {
-      out += "[image]";
-      i += 1;
-      continue;
-    }
-    const group: { text: string; format: Format }[] = [];
-    while (i < pieces.length) {
-      const next = pieces[i];
-      if (next.kind !== "text" || next.format.highlight !== piece.format.highlight) break;
-      group.push(next);
-      i += 1;
-    }
-    const inner = renderInner(group);
-    out += piece.format.highlight ? wrap(inner, "==", `=={${piece.format.highlight}}`) : inner;
-  }
-  return out;
-}
 
 function chooseBranch(alternate: Element): Element | undefined {
   return child(alternate, "Choice") ?? child(alternate, "Fallback");
@@ -231,13 +132,18 @@ export class Converter {
     const ilvlText = attr(child(numPr, "ilvl"), "val");
     const ilvl = ilvlText && /^\d$/.test(ilvlText) ? Number(ilvlText) : (style?.ilvl ?? 0);
 
+    const heading = headingLevel(styleId, this.styles);
+    // A heading's style is bold because it is a heading, and `#` already says so.
+    const base: Format = { ...PLAIN, bold: heading === null && style?.bold === true };
     const pieces: Piece[] = [];
     const boxes: string[] = [];
-    for (const el of elements(p)) this.inline(el, PLAIN, pieces, boxes, depth);
+    for (const el of elements(p)) this.inline(el, base, pieces, boxes, depth);
 
-    const text = renderPieces(pieces).trim();
+    const body = renderPieces(pieces).trim();
+    // Paragraph shading is written as a shaded cell is: it can mark one option of a list.
+    const shading = fill(child(pPr, "shd"));
+    const text = body && shading ? `{shaded ${shading}} ${body}` : body;
     const label = numId ? this.numbering.next(numId, ilvl) : null;
-    const heading = headingLevel(styleId, this.styles);
     const out: Block[] = [];
     if (text) {
       if (label) out.push({ text: `${"  ".repeat(ilvl)}${label} ${text}`, list: true });
@@ -248,8 +154,9 @@ export class Converter {
     return out;
   }
 
+  /** Adds text a reader sees. Hidden text (`w:vanish`) is not part of the document they read. */
   private text(text: string, format: Format, pieces: Piece[]): void {
-    if (!text) return;
+    if (!text || format.hidden) return;
     this.textChars += text.length;
     pieces.push({ kind: "text", text, format });
   }
@@ -260,13 +167,15 @@ export class Converter {
     if (SKIPPED.has(name)) return;
     switch (name) {
       case "r": {
-        const runFmt = runFormat(child(el, "rPr"));
+        const runFmt = runFormat(child(el, "rPr"), format, this.styles);
         for (const part of elements(el)) this.inline(part, runFmt, pieces, boxes, inner);
         return;
       }
-      case "t":
-        this.text(el.textContent ?? "", format, pieces);
+      case "t": {
+        const raw = el.textContent ?? "";
+        this.text(format.symbolFont ? symbolText(format.symbolFont, raw) : raw, format, pieces);
         return;
+      }
       case "tab":
       case "ptab":
         this.text("\t", format, pieces);
@@ -280,11 +189,9 @@ export class Converter {
         return;
       case "softHyphen":
         return;
-      case "sym": {
-        const code = (attr(el, "char") ?? "").toUpperCase();
-        this.text(SYMBOLS[code] ?? "[symbol]", format, pieces);
+      case "sym":
+        this.text(symbolFor(attr(el, "font"), attr(el, "char")), format, pieces);
         return;
-      }
       case "AlternateContent": {
         const branch = chooseBranch(el);
         if (branch) {

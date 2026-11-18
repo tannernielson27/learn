@@ -35,6 +35,8 @@ export const DOCX_MAX_ENTRIES = 5000;
 export const DOCX_MAX_DOCUMENT_XML_BYTES = 8 * 1024 * 1024;
 /** Any other part the converter reads (numbering, styles, content types). */
 export const DOCX_MAX_PART_BYTES = 8 * 1024 * 1024;
+/** `_rels/.rels`, which names the main document. A real one is a few hundred bytes. */
+export const DOCX_MAX_RELS_BYTES = 512 * 1024;
 /** All the parts it reads together. */
 export const DOCX_MAX_TOTAL_BYTES = 16 * 1024 * 1024;
 /** Uncompressed over compressed for one part. Real Word XML compresses about 10 to 1. */

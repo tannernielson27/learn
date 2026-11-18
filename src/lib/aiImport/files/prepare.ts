@@ -4,7 +4,7 @@ import { CHARS_PER_PAGE, MAX_BATCH_PAGES } from "./limits";
 import { extractPdfPages, inspectPdf, planPageChunks } from "./pdf";
 import { reject, type Rejection } from "./reasons";
 import { sniffFile, type FileKind } from "./sniff";
-import { chunkText, decodeText, estimatePages } from "./text";
+import { chunkSpans, decodeText, estimatePages } from "./text";
 
 /**
  * Checks one uploaded file and plans what Claude reads of it (#341, ADR 0008 Pipeline step 2).
@@ -22,6 +22,12 @@ export interface PreparedChunk {
   pageTo: number | null;
   /** A text chunk's markdown or text; null for a PDF chunk, whose pages are cut on demand. */
   text: string | null;
+  /**
+   * For a text chunk, what was cut from between the chunk before and this one: a blank line, a
+   * line end, or nothing (#592). Chunks are joined again with it (`joinTextParts`). It is worked
+   * out from the file each time, like the chunk's text, so nothing stored depends on it.
+   */
+  gapBefore?: string;
 }
 
 export interface PreparedFile {
@@ -44,11 +50,13 @@ export type ChunkPayload = { type: "pdf"; bytes: Uint8Array } | { type: "text"; 
 const sha256 = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
 
 function textChunks(text: string): PreparedChunk[] {
-  return chunkText(text).map((chunk, position) => ({
+  const spans = chunkSpans(text);
+  return spans.map((span, position) => ({
     position,
     pageFrom: null,
     pageTo: null,
-    text: chunk,
+    text: text.slice(span.start, span.end),
+    gapBefore: position === 0 ? "" : text.slice(spans[position - 1].end, span.start),
   }));
 }
 

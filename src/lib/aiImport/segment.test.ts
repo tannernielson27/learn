@@ -157,6 +157,59 @@ describe("readSegment", () => {
     expect(segment.droppedAnswers).toBe(1);
   });
 
+  // #592: copied without the converter's tags, these were "not in the document" and dropped.
+  it("checks excerpts and answer sections against .docx markdown, markup aside", () => {
+    const docx = [
+      "1. The nurse notes the <u>first</u> sign of ==fluid overload=={yellow} in a client.",
+      "A. ==Restrict fluids=={color #C00000}\nB. Give ~~two~~ three litres",
+      "| {shaded #D9D9D9} Question | {shaded #D9D9D9} Answer |\n| --- | --- |\n| 1 | A. Restrict fluids<br>Rationale: the weight is up 2 kg |",
+    ].join("\n\n");
+    const segment = readSegment(
+      {
+        questions: [
+          question({ excerpt: "The nurse notes the first sign of fluid overload in a client." }),
+        ],
+        answers: [
+          {
+            number: "1",
+            kind: "answer_and_rationale",
+            text: "A. Restrict fluids Rationale: the weight is up 2 kg",
+          },
+          { number: "1", kind: "answer", text: "B. Give four litres" },
+        ],
+      },
+      TEXT_CHUNK,
+      { type: "text", text: docx },
+    );
+    expect(segment.questions[0].flags.notInSource).toBe(false);
+    expect(segment.answers.map((answer) => answer.kind)).toEqual(["answer_and_rationale"]);
+    expect(segment.droppedAnswers).toBe(1);
+  });
+
+  it("tells Claude about every mark the converter writes, for a .docx only", () => {
+    const docx = segmentRequest({ type: "text", text: "a" }, "docx", TEXT_CHUNK);
+    const legend = docx.content[0]?.type === "text" ? docx.content[0].text : "";
+    for (const mark of [
+      "**bold**",
+      "<u>underlined</u>",
+      "~~struck through~~",
+      "=={colour}",
+      "=={color #RRGGBB}",
+      "{shaded #RRGGBB}",
+      "10³",
+      "^(text)",
+      "[image]",
+      "[symbol]",
+    ]) {
+      expect(legend).toContain(mark);
+    }
+    // The owner's decision: formatting that sets one choice apart is the document's own mark.
+    expect(legend).toMatch(/when the others beside it are not/);
+    expect(legend).toMatch(/on every choice alike, marks no answer/);
+    const md = segmentRequest({ type: "text", text: "a" }, "md", TEXT_CHUNK);
+    expect(JSON.stringify(md.content)).not.toContain("converted from Word");
+  });
+
   it("reads a not-NGN question, a case study step and its flags", () => {
     const segment = readSegment(
       {

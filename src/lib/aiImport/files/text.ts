@@ -62,38 +62,61 @@ function trimSpan(text: string, { start, end }: Span): Span {
   return { start: s, end: e };
 }
 
+/** The lines of `block`, as spans of the text. */
+function lines(text: string, block: Span): Span[] {
+  const spans: Span[] = [];
+  let start = block.start;
+  while (start <= block.end) {
+    const next = text.indexOf("\n", start);
+    const end = next === -1 || next > block.end ? block.end : next;
+    spans.push({ start, end });
+    start = end + 1;
+  }
+  return spans;
+}
+
 /** One block longer than `max`, cut at its lines, and a line longer than `max` anywhere. */
-function cutLong(block: string, max: number): string[] {
-  const pieces: string[] = [];
-  let current = "";
-  for (const line of block.split("\n")) {
-    if (line.length > max) {
+function cutLong(text: string, block: Span, max: number): Span[] {
+  const pieces: Span[] = [];
+  let current: Span | null = null;
+  for (const line of lines(text, block)) {
+    if (line.end - line.start > max) {
       if (current) pieces.push(current);
-      current = "";
-      for (let i = 0; i < line.length; i += max) pieces.push(line.slice(i, i + max));
+      current = null;
+      for (let at = line.start; at < line.end; at += max) {
+        pieces.push({ start: at, end: Math.min(at + max, line.end) });
+      }
       continue;
     }
-    const joined = current ? `${current}\n${line}` : line;
-    if (joined.length > max) {
+    // An empty line starts no piece: it falls between two, as the blank line between chunks does.
+    const fresh = line.end > line.start ? line : null;
+    if (current === null) {
+      current = fresh;
+    } else if (line.end - current.start > max) {
       pieces.push(current);
-      current = line;
+      current = fresh;
     } else {
-      current = joined;
+      current = { start: current.start, end: line.end };
     }
   }
   if (current) pieces.push(current);
   return pieces;
 }
 
-export function chunkText(
+/**
+ * Where each chunk of `text` starts and ends. The chunks do not touch: the blank line, line end
+ * or leading space between two of them belongs to neither, and `text.slice(a.end, b.start)` is
+ * what was cut away between chunk `a` and the next, `b` (#592).
+ */
+export function chunkSpans(
   text: string,
   target: number = TEXT_CHUNK_TARGET_CHARS,
   max: number = TEXT_CHUNK_MAX_CHARS,
-): string[] {
-  const chunks: string[] = [];
+): Span[] {
+  const chunks: Span[] = [];
   let open: Span | null = null;
   const flush = () => {
-    if (open) chunks.push(text.slice(open.start, open.end));
+    if (open) chunks.push(open);
     open = null;
   };
 
@@ -101,7 +124,7 @@ export function chunkText(
     const length = unit.end - unit.start;
     if (length > max) {
       flush();
-      chunks.push(...cutLong(text.slice(unit.start, unit.end), max));
+      chunks.push(...cutLong(text, unit, max));
       continue;
     }
     if (open === null) {
@@ -120,4 +143,39 @@ export function chunkText(
   }
   flush();
   return chunks;
+}
+
+/** The chunks of `text`, each a slice of it exactly as it was. */
+export function chunkText(
+  text: string,
+  target: number = TEXT_CHUNK_TARGET_CHARS,
+  max: number = TEXT_CHUNK_MAX_CHARS,
+): string[] {
+  return chunkSpans(text, target, max).map((span) => text.slice(span.start, span.end));
+}
+
+/** A chunk of text with the text that was cut away just before it. */
+export interface TextPart {
+  position: number;
+  text: string;
+  /** What stood between the chunk before and this one; absent for a chunk made another way. */
+  gapBefore?: string;
+}
+
+/**
+ * Chunks of one text put back together (#592). Neighbouring chunks are joined by exactly what
+ * was cut from between them, so the join reads as the document does: a question that crosses a
+ * chunk boundary keeps the line break between its last option and the next stem, and a table
+ * keeps its rows apart. Chunks that are not neighbours get a blank line, so their words never
+ * run together.
+ */
+export function joinTextParts(parts: readonly TextPart[]): string {
+  return parts
+    .map((part, index) => {
+      if (index === 0) return part.text;
+      const neighbours = parts[index - 1].position === part.position - 1;
+      const gap = neighbours ? (part.gapBefore ?? "") : part.gapBefore || "\n\n";
+      return `${gap}${part.text}`;
+    })
+    .join("");
 }

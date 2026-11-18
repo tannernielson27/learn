@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { unzipSync, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { MAX_FILE_BYTES } from "./limits";
 import { sniffFile } from "./sniff";
@@ -29,6 +30,19 @@ describe("sniffFile", () => {
       ok: true,
       kind: "docx",
     });
+  });
+
+  // #592: other tools, and Word after a repair, name the main part something else.
+  it("reads a .docx whose main document is word/document2.xml", () => {
+    const docx = buildDocx({ body: para("Hello"), mainPart: "word/document2.xml" });
+    expect(sniffFile(docx, "quiz.docx")).toEqual({ ok: true, kind: "docx" });
+  });
+
+  it("refuses a Word package whose main document is not in the zip", () => {
+    const docx = buildDocx({ body: para("Hello"), mainPart: "word/document2.xml" });
+    const types = unzipSync(docx)["[Content_Types].xml"];
+    const empty = zipSync({ "[Content_Types].xml": types, "word/other.xml": utf8("<x/>") });
+    expect(sniffFile(empty, "quiz.docx")).toMatchObject({ ok: false, code: "unsupported" });
   });
 
   it("refuses a macro-enabled .docm, by its content type or its VBA part", () => {

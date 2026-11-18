@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  answerNotes,
   importedSentence,
   REVIEW_FILTERS,
   filterCounts,
@@ -226,6 +227,26 @@ describe("retypeChoices", () => {
     expect(choices[0]).toEqual({ value: "multiple_response", label: "Extended multiple response" });
     expect(retypeChoices(entry({ kind: "case_study", type: null }))).toEqual([]);
     expect(retypeChoices(entry({ status: "not_importable", type: null }))).toHaveLength(14);
+  });
+});
+
+// #592: what the review page says about answers that reached no question.
+describe("answerNotes", () => {
+  it("says nothing when every answer reached a question", () => {
+    expect(answerNotes({ unmatched: 0, dropped: 0 })).toEqual([]);
+  });
+
+  it("gives one plain sentence for each count, singular and plural", () => {
+    expect(answerNotes({ unmatched: 3, dropped: 0 })).toEqual([
+      "3 answers in the document could not be matched to a question. Check the questions that need an answer.",
+    ]);
+    expect(answerNotes({ unmatched: 1, dropped: 1 })).toEqual([
+      "1 answer in the document could not be matched to a question. Check the questions that need an answer.",
+      "1 answer the AI reported was not found in the document, so it was left out.",
+    ]);
+    expect(answerNotes({ unmatched: 0, dropped: 2 })).toEqual([
+      "2 answers the AI reported were not found in the document, so they were left out.",
+    ]);
   });
 });
 
