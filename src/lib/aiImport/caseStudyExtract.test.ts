@@ -198,6 +198,21 @@ describe("extractCaseStudy", () => {
     expect(entry.reasons[0].message).toMatch(/^Step 1: /);
   });
 
+  // #592: a step keyed only by bold is kept, and the case study says which step to check.
+  it("keeps a step whose key is marked only by bold, and names the step to check", async () => {
+    const { call } = replay();
+    const steps = unitOf(cases[0].title);
+    const bold = new Map(regions);
+    bold.set(steps[1].position, "Which finding?\n\nA. One\n**B. Two**\nC. Three\n");
+    const [entry] = await extractCaseStudy(call, cases[0].title, steps, document, bold);
+    expect(entry).toMatchObject({ kind: "case_study", status: "ready" });
+    const checks = entry.reasons.filter((reason) => reason.code === "check_key");
+    expect(checks).toHaveLength(1);
+    expect(checks[0].message).toMatch(
+      /^Step 2: The key was read from bold, underlined or coloured/,
+    );
+  });
+
   it("stages a step with no NGN type, and a step whose draft failed, on their own", async () => {
     const extra = {
       excerpt: "Discuss with a partner how you would explain the transfusion to the family.",

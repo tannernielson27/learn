@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { REMOVED_REASON } from "../files/reasons";
 import { BANK, BATCH, ORG, fakeClient } from "../upload/testing/fakeSupabase";
-import { readReviewBatch, toEntryView, type EntryRow } from "./read";
+import { answersOf, readReviewBatch, toEntryView, type EntryRow } from "./read";
 
 const row = (over: Partial<EntryRow> = {}): EntryRow => ({
   id: "e1",
@@ -70,6 +70,7 @@ describe("readReviewBatch", () => {
       bankId: BANK,
       fileNames: ["one.md", "two.pdf"],
       entries: [{ id: "e1" }],
+      answers: { unmatched: 0, dropped: 0 },
     });
     for (const table of ["ai_import_batches", "ai_import_files", "ai_import_entries"]) {
       expect(client.stepsOn(table, "eq")).toContainEqual(["org_id", ORG]);
@@ -77,6 +78,41 @@ describe("readReviewBatch", () => {
     expect(client.stepsOn("ai_import_batches", "eq")).toContainEqual(["bank_id", BANK]);
     // The draft is never selected.
     expect(String(client.stepsOn("ai_import_entries", "select")[0]?.[0])).not.toContain("draft");
+  });
+
+  // #592: the counts `finishExtraction` wrote beside the batch's source matter.
+  it("reads how many answers reached no question", async () => {
+    const client = fakeClient({
+      ai_import_batches: [
+        {
+          data: {
+            id: BATCH,
+            status: "review",
+            bank_id: BANK,
+            source: { objectives: [], references: [], unmatchedAnswers: 3, droppedAnswers: 1 },
+          },
+        },
+      ],
+      ai_import_files: [{ data: [{ original_name: "one.docx" }] }],
+      ai_import_entries: [{ data: [row()] }],
+    });
+    const batch = await readReviewBatch(client.client, ORG, BATCH, BANK);
+    expect(batch).toMatchObject({ answers: { unmatched: 3, dropped: 1 } });
+    expect(String(client.stepsOn("ai_import_batches", "select")[0]?.[0])).toContain("source");
+  });
+
+  it("reads no count from a batch finished before #592, or from anything that is not one", () => {
+    expect(answersOf(null)).toEqual({ unmatched: 0, dropped: 0 });
+    expect(answersOf({ objectives: [], references: [] })).toEqual({ unmatched: 0, dropped: 0 });
+    expect(answersOf({ unmatchedAnswers: "3", droppedAnswers: -2 })).toEqual({
+      unmatched: 0,
+      dropped: 0,
+    });
+    expect(answersOf({ unmatchedAnswers: 2.5, droppedAnswers: 4 })).toEqual({
+      unmatched: 0,
+      dropped: 4,
+    });
+    expect(answersOf("text")).toEqual({ unmatched: 0, dropped: 0 });
   });
 
   // #591: a request still reading a removed file can stage a question after every delete.

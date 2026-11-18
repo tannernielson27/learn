@@ -26,6 +26,19 @@ export interface ReviewBatch {
   bankId: string | null;
   fileNames: string[];
   entries: ReviewEntryView[];
+  /** #592: answer sections that reached no question, counted when reading finished. */
+  answers: { unmatched: number; dropped: number };
+}
+
+/** A count stored on the batch; 0 for anything that is not a whole number of answers. */
+const countOf = (value: unknown): number =>
+  typeof value === "number" && Number.isInteger(value) && value > 0 ? value : 0;
+
+/** The answer counts in `ai_import_batches.source`, which older batches do not have. */
+export function answersOf(source: unknown): ReviewBatch["answers"] {
+  const stored = typeof source === "object" && source !== null ? source : {};
+  const { unmatchedAnswers, droppedAnswers } = stored as Record<string, unknown>;
+  return { unmatched: countOf(unmatchedAnswers), dropped: countOf(droppedAnswers) };
 }
 
 const logged = (step: string, error: { code?: string } | null) => {
@@ -88,7 +101,7 @@ export async function readReviewBatch(
   const [batch, files, entries] = await Promise.all([
     client
       .from("ai_import_batches")
-      .select("id, status, bank_id")
+      .select("id, status, bank_id, source")
       .eq("id", batchId)
       .eq("org_id", orgId)
       .eq("bank_id", bankId)
@@ -120,5 +133,6 @@ export async function readReviewBatch(
     bankId: batch.data.bank_id,
     fileNames: (files.data ?? []).map((file) => file.original_name),
     entries: shown.map(toEntryView),
+    answers: answersOf(batch.data.source),
   };
 }

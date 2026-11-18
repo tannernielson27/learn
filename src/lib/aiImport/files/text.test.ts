@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { chunkText, decodeText, estimatePages } from "./text";
+import { chunkSpans, chunkText, decodeText, estimatePages, joinTextParts } from "./text";
 import { utf8 } from "./testing/fixtures";
 
 describe("decodeText", () => {
@@ -74,5 +74,58 @@ describe("chunkText", () => {
 
   it("returns no chunks for blank text", () => {
     expect(chunkText(" \n\n \n")).toEqual([]);
+  });
+});
+
+// #592: the chunks were joined again with nothing, so words and table rows ran together.
+describe("chunkSpans and joinTextParts", () => {
+  /** The chunks of `text` with what was cut before each, as `prepareFile` builds them. */
+  function parts(text: string, target: number, max: number) {
+    const spans = chunkSpans(text, target, max);
+    return spans.map((span, position) => ({
+      position,
+      text: text.slice(span.start, span.end),
+      gapBefore: position === 0 ? "" : text.slice(spans[position - 1].end, span.start),
+    }));
+  }
+
+  it("gives the same chunks as chunkText, as places in the text", () => {
+    const text = Array.from({ length: 30 }, (_, i) => `Block ${i} ${"w".repeat(200)}`).join("\n\n");
+    expect(parts(text, 1000, 2000).map((part) => part.text)).toEqual(chunkText(text, 1000, 2000));
+  });
+
+  it("joins chunks cut at blank lines of any size back into the text", () => {
+    const text = ` \n${Array.from({ length: 40 }, (_, i) => `Question ${i}\nA. One\nB. Two`).join("\n \n\n\n")}\n\n`;
+    const cut = parts(text, 120, 400);
+    expect(cut.length).toBeGreaterThan(5);
+    expect(joinTextParts(cut)).toBe(text.trim());
+  });
+
+  it("keeps the rows of a long table on their own lines", () => {
+    const table = Array.from({ length: 60 }, (_, i) => `| row ${i} | ${"v".repeat(40)} |`).join(
+      "\n",
+    );
+    const cut = parts(table, 500, 1000);
+    expect(cut.length).toBeGreaterThan(2);
+    expect(cut.map((part) => part.text).join("")).toContain("||");
+    expect(joinTextParts(cut)).toBe(table);
+  });
+
+  it("joins a line cut in the middle with nothing, and a heading with its blank line", () => {
+    const solid = "y".repeat(5000);
+    expect(joinTextParts(parts(solid, 1000, 2000))).toBe(solid);
+    const mixed = `# Title\n\n${"p".repeat(900)}\n\n${"q".repeat(2500)}\n${"r".repeat(300)}\n\n## Next\n\nlast`;
+    expect(joinTextParts(parts(mixed, 1000, 2000))).toBe(mixed);
+  });
+
+  it("puts a blank line between chunks that are not neighbours, or have no recorded gap", () => {
+    expect(
+      joinTextParts([
+        { position: 0, text: "first" },
+        { position: 2, text: "third", gapBefore: "\n" },
+        { position: 5, text: "sixth" },
+        { position: 6, text: " seventh" },
+      ]),
+    ).toBe("first\nthird\n\nsixth seventh");
   });
 });

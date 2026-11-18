@@ -2,7 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { assembleImport, type AssembledImport } from "@/lib/ngn/draft";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import { markDuplicates } from "./duplicates";
-import { mergeSource, type SegmentSource } from "./segment";
+import { mergeSegments } from "./merge";
+import { mergeSource, type ChunkSegment, type SegmentSource } from "./segment";
 import { loadFileSegments } from "./segmentStore";
 
 /**
@@ -10,6 +11,12 @@ import { loadFileSegments } from "./segmentStore";
  * to review. It flags duplicates (`markDuplicates`) and records what the documents say about
  * themselves (author, objectives, references) on `ai_import_batches.source`, through #344's
  * `assembleImport`, which keeps it off every question. Running it twice gives the same result.
+ *
+ * It also counts the answer sections that reached no question (#592), on the same column: ones
+ * that matched no question or more than one (`mergeSegments`), and ones the model reported that
+ * the document does not hold (`readSegment`). Neither was shown anywhere, so a teacher could not
+ * tell why a question with its answer "at the back" came out needing one. The column's check
+ * asks only for an object with its two lists, so the counts sit beside them with no migration.
  */
 
 type Client = SupabaseClient<Database>;
@@ -25,6 +32,24 @@ export function batchSource(files: readonly SegmentSource[]): AssembledImport["s
       references: unique(files.flatMap((file) => file.references)),
     },
   }).source;
+}
+
+/** Answer sections that reached no question, across a batch's files. */
+export interface AnswerCounts {
+  /** Printed in the document, but matching no question's number, or more than one. */
+  unmatchedAnswers: number;
+  /** Reported by the model, but not found in the document's text, so left out. */
+  droppedAnswers: number;
+}
+
+export type BatchSource = AssembledImport["source"] & AnswerCounts;
+
+/** One file's counts, from all its chunks' segments. */
+export function answerCounts(segments: readonly ChunkSegment[]): AnswerCounts {
+  return {
+    unmatchedAnswers: mergeSegments(segments).unlinkedAnswers.length,
+    droppedAnswers: segments.reduce((sum, segment) => sum + segment.droppedAnswers, 0),
+  };
 }
 
 const logged = (step: string, error: { code?: string } | null) => {
@@ -49,14 +74,21 @@ export async function recordBatchSource(
     return "unavailable";
   }
   const sources: SegmentSource[] = [];
+  const counts: AnswerCounts[] = [];
   for (const file of files.data ?? []) {
     const loaded = await loadFileSegments(service, { ...ref, fileId: file.id });
     if (!loaded.ok) return loaded.code === "unavailable" ? "unavailable" : "incomplete";
     sources.push(mergeSource(loaded.segments));
+    counts.push(answerCounts(loaded.segments));
   }
+  const source: BatchSource = {
+    ...batchSource(sources),
+    unmatchedAnswers: counts.reduce((sum, file) => sum + file.unmatchedAnswers, 0),
+    droppedAnswers: counts.reduce((sum, file) => sum + file.droppedAnswers, 0),
+  };
   const { error } = await service
     .from("ai_import_batches")
-    .update({ source: batchSource(sources) as unknown as Json })
+    .update({ source: source as unknown as Json })
     .eq("id", ref.batchId)
     .eq("org_id", ref.orgId);
   if (error) {

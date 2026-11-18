@@ -1,8 +1,8 @@
 import { zlibSync } from "fflate";
 import { beforeAll, describe, expect, it } from "vitest";
 import { inspectPdf } from "./pdf";
-import { guardPdfStreams } from "./pdfGuard";
-import { buildPdf, utf8 } from "./testing/fixtures";
+import { guardEncryptedPdfStreams, guardPdfStreams } from "./pdfGuard";
+import { buildPdf, buildPermissionsPdf, utf8 } from "./testing/fixtures";
 
 /** A PDF whose one object stream decodes to `decoded` bytes of zeros. */
 function objectStreamPdf(decoded: number, filter = "/FlateDecode"): Uint8Array {
@@ -50,5 +50,35 @@ describe("guardPdfStreams", { timeout: 30_000 }, () => {
 
   it("makes inspectPdf refuse the bomb before loading it", async () => {
     expect(await inspectPdf(bomb)).toMatchObject({ ok: false, code: "too_complex" });
+  });
+});
+
+// #592: an encrypted PDF's object streams cannot be decoded to be counted, only measured.
+describe("guardEncryptedPdfStreams", () => {
+  /** An object stream of `size` bytes that do not inflate, as encrypted data does not. */
+  function encryptedObjectStream(size: number, filter = "/FlateDecode"): Uint8Array {
+    return utf8(
+      `%PDF-1.7\n1 0 obj\n<< /Type /ObjStm /Filter ${filter} /Length ${size} >>\nstream\n${"A".repeat(size)}\nendstream\nendobj\n`,
+    );
+  }
+
+  it("passes object streams too small to decode past the budget at deflate's best", async () => {
+    expect(guardEncryptedPdfStreams(await buildPermissionsPdf(30))).toBe("ok");
+    expect(guardEncryptedPdfStreams(encryptedObjectStream(50_000))).toBe("ok");
+  });
+
+  it("refuses object streams that could decode past it, which the plain scan cannot see", () => {
+    const pdf = encryptedObjectStream(100_000);
+    expect(guardPdfStreams(pdf)).toBe("ok");
+    expect(guardEncryptedPdfStreams(pdf)).toBe("too_complex");
+    expect(guardEncryptedPdfStreams(encryptedObjectStream(10), 5_000)).toBe("too_complex");
+  });
+
+  it("refuses a filter it does not count, and passes a stream stored as it is", () => {
+    expect(guardEncryptedPdfStreams(encryptedObjectStream(10, "/LZWDecode"))).toBe("too_complex");
+    const stored = utf8(
+      `%PDF-1.7\n1 0 obj\n<< /Type /ObjStm /Length 200000 >>\nstream\n${"A".repeat(200_000)}\nendstream\nendobj\n`,
+    );
+    expect(guardEncryptedPdfStreams(stored)).toBe("ok");
   });
 });

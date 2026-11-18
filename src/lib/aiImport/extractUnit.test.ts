@@ -9,10 +9,12 @@ import {
   extractUnit,
   extractUnitDeps,
   unitPayload,
+  wholeText,
   type ExtractUnitDeps,
   type StagedRow,
 } from "./extractUnit";
 import { prepareFile, type PreparedFile } from "./files/prepare";
+import { locateOpenings, questionRegions, showsKey } from "./keyEvidence";
 import type { UsageRpc } from "./ledger";
 import { readSegment, type ChunkSegment } from "./segment";
 import { reply } from "./testing/messages";
@@ -471,6 +473,71 @@ describe("unitPayload", () => {
       pages: 1,
     });
     await expect(unitPayload(new Uint8Array(), prepared, [5])).rejects.toThrow(/no chunk/);
+  });
+
+  // #592: the chunker drops what it cuts at, and the chunks were joined again with nothing.
+  describe("a long text file cut by the real chunker", () => {
+    const stem = (n: number) =>
+      `The nurse on unit ${n} reviews fictional client ${n}. Which action is the priority?`;
+    // Each question is one block, so every chunk opens with a stem and ends with an option.
+    const question = (n: number) =>
+      [
+        stem(n),
+        "Fictional filler for the test corpus. ".repeat(8).trim(),
+        `| Finding | Client ${n} |\n| --- | --- |\n| Pulse | ${60 + n} |\n| Respirations | ${12 + (n % 9)} |`,
+        "A. Document the finding\nB. Notify the provider *\nC. Reassess in one hour\nD. Administer oxygen",
+      ].join("\n");
+    const text = Array.from({ length: 110 }, (_, i) => question(i + 1)).join("\n\n");
+
+    async function prepared() {
+      const file = await prepareFile(new TextEncoder().encode(text), "bank.md");
+      if (!file.ok) throw new Error(file.code);
+      return file;
+    }
+
+    it("joins every chunk back into the file as it was", async () => {
+      const file = await prepared();
+      expect(file.chunks.length).toBeGreaterThanOrEqual(3);
+      expect(wholeText(file)).toBe(text);
+      // The old join: the same chunks with nothing between them.
+      expect(file.chunks.map((chunk) => chunk.text).join("")).not.toBe(text);
+    });
+
+    it("sends two neighbouring chunks with the blank line between them", async () => {
+      const file = await prepared();
+      const [first, second] = file.chunks;
+      const { payload } = await unitPayload(new Uint8Array(), file, [0, 1]);
+      if (payload.type !== "text") throw new Error("not text");
+      expect(payload.text).toBe(`${first.text}\n\n${second.text}`);
+      expect(text.startsWith(payload.text)).toBe(true);
+      // What the old join sent: the last option and the next stem as one line.
+      expect(payload.text).not.toContain("Administer oxygenThe nurse");
+    });
+
+    it("keeps chunks that are not neighbours apart", async () => {
+      const file = await prepared();
+      const { payload } = await unitPayload(new Uint8Array(), file, [0, 2]);
+      expect(payload).toMatchObject({
+        type: "text",
+        text: `${file.chunks[0].text}\n\n${file.chunks[2].text}`,
+      });
+    });
+
+    it("finds the question that opens the second chunk, and its key", async () => {
+      const file = await prepared();
+      const second = file.chunks[1].text ?? "";
+      const n = Number(/^The nurse on unit (\d+) /.exec(second)?.[1]);
+      expect(n).toBeGreaterThan(1);
+      const excerpts = [stem(n - 1), stem(n), stem(n + 1)];
+      const regions = questionRegions(wholeText(file) ?? "", excerpts);
+      expect(regions[1]?.startsWith(stem(n))).toBe(true);
+      expect(regions[1]).toContain(`| Pulse | ${60 + n} |`);
+      expect(regions[1]).not.toContain(stem(n + 1));
+      expect(showsKey(regions[1] ?? "")).toBe(true);
+      // Joined with nothing, its first word ran into the chunk before and it was not found.
+      const glued = file.chunks.map((chunk) => chunk.text).join("");
+      expect(locateOpenings(glued, [stem(n)])).toEqual([-1]);
+    });
   });
 
   it("cuts a PDF question's pages across its chunks", async () => {

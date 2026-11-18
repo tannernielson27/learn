@@ -34,20 +34,53 @@ interface RunOptions {
   underline?: boolean;
   highlight?: string;
   shading?: string;
+  /** Font colour, as Word stores it: `C00000`, or `auto`. */
+  colour?: string;
+  strike?: boolean;
+  doubleStrike?: boolean;
+  vertical?: "superscript" | "subscript";
+  /** `w:vanish`: hidden text. */
+  hidden?: boolean;
+  /** A character style's id (`Strong`). */
+  style?: string;
+  /** The run's font (`Symbol`, `Wingdings`). */
+  font?: string;
 }
 
 /** One run of text with its formatting. */
 export function run(text: string, options: RunOptions = {}): string {
   const props = [
+    options.style ? `<w:rStyle w:val="${options.style}"/>` : "",
+    options.font ? `<w:rFonts w:ascii="${options.font}" w:hAnsi="${options.font}"/>` : "",
     options.bold ? "<w:b/>" : "",
     options.italic ? "<w:i/>" : "",
+    options.strike ? "<w:strike/>" : "",
+    options.doubleStrike ? "<w:dstrike/>" : "",
+    options.hidden ? "<w:vanish/>" : "",
+    options.colour ? `<w:color w:val="${options.colour}"/>` : "",
     options.underline ? '<w:u w:val="single"/>' : "",
     options.highlight ? `<w:highlight w:val="${options.highlight}"/>` : "",
     options.shading ? `<w:shd w:val="clear" w:color="auto" w:fill="${options.shading}"/>` : "",
+    options.vertical ? `<w:vertAlign w:val="${options.vertical}"/>` : "",
   ].join("");
   const rPr = props ? `<w:rPr>${props}</w:rPr>` : "";
   return `<w:r>${rPr}<w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r>`;
 }
+
+/** A character from Insert > Symbol: `<w:sym>` with its font and its code (`F0B3`). */
+export const symbol = (font: string, char: string): string =>
+  `<w:r><w:sym w:font="${font}" w:char="${char}"/></w:r>`;
+
+/** A styles part: each style's id, its type, and the `<w:style>` contents after its name. */
+export const styles = (
+  entries: { id: string; type: "paragraph" | "character"; name?: string; body?: string }[],
+): string =>
+  `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="${W_NS}">${entries
+    .map(
+      (entry) =>
+        `<w:style w:type="${entry.type}" w:styleId="${entry.id}"><w:name w:val="${entry.name ?? entry.id}"/>${entry.body ?? ""}</w:style>`,
+    )
+    .join("")}</w:styles>`;
 
 /** A paragraph; a plain string is an unformatted run. */
 export function para(...runs: string[]): string {
@@ -103,12 +136,15 @@ interface DocxOptions {
   /** Overrides the whole `word/document.xml`, for malformed XML. */
   documentXml?: string;
   level?: 0 | 9;
+  /** The main document's entry name, when it is not `word/document.xml` (#592). */
+  mainPart?: string;
 }
 
 /** A minimal WordprocessingML package. */
 export function buildDocx(options: DocxOptions): Uint8Array {
+  const mainPart = options.mainPart ?? "word/document.xml";
   const overrides = [
-    `<Override PartName="/word/document.xml" ContentType="${options.mainType ?? DOCX_MAIN}"/>`,
+    `<Override PartName="/${mainPart}" ContentType="${options.mainType ?? DOCX_MAIN}"/>`,
   ];
   const files: Zippable = {
     "[Content_Types].xml": strToU8(
@@ -120,9 +156,11 @@ export function buildDocx(options: DocxOptions): Uint8Array {
         "</Types>",
     ),
     "_rels/.rels": strToU8(
-      '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>',
+      '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="' +
+        mainPart +
+        '"/></Relationships>',
     ),
-    "word/document.xml": strToU8(options.documentXml ?? document(options.body)),
+    [mainPart]: strToU8(options.documentXml ?? document(options.body)),
   };
   if (options.numbering) files["word/numbering.xml"] = strToU8(options.numbering);
   if (options.styles) files["word/styles.xml"] = strToU8(options.styles);
@@ -156,6 +194,20 @@ export async function buildEncryptedPdf(): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   pdf.addPage([300, 300]);
   pdf.encrypt({ userPassword: "fictional", ownerPassword: "fictional-owner" });
+  return pdf.save();
+}
+
+/**
+ * A PDF that opens with no password but carries an owner password and permissions (no copying,
+ * no editing), as publishers' and scanners' PDFs often do (#592). Its content is still encrypted.
+ */
+export async function buildPermissionsPdf(pages = 3): Promise<Uint8Array> {
+  const pdf = await PDFDocument.load(await buildPdf(pages));
+  pdf.encrypt({
+    userPassword: "",
+    ownerPassword: "fictional-owner",
+    permissions: { copying: false, modifying: false },
+  });
   return pdf.save();
 }
 

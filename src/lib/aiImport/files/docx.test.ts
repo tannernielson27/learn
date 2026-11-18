@@ -12,6 +12,8 @@ import {
   para,
   paraWith,
   run,
+  styles,
+  symbol,
   table,
   textBox,
 } from "./testing/fixtures";
@@ -129,6 +131,202 @@ describe("docxToMarkdown formatting", () => {
       '<w:r><w:t>one</w:t><w:br/><w:t>two</w:t><w:tab/><w:t>three</w:t><w:noBreakHyphen/><w:sym w:font="Wingdings" w:char="F0FC"/></w:r>',
     );
     expect(markdownOf(body)).toBe("one\ntwo\tthree-✓");
+  });
+});
+
+// #592: a key marked in red, struck-out text and 10³ all reached Claude as plain words.
+describe("docxToMarkdown formatting that marks keys (#592)", () => {
+  it("marks font colour with its hex, and leaves black, grey and automatic text alone", () => {
+    const md = markdownOf(
+      para(run("B. "), run("Assess the airway", { colour: "C00000" }), run(" first")),
+    );
+    expect(md).toBe("B. ==Assess the airway=={color #C00000} first");
+    for (const colour of ["auto", "000000", "404040", "FFFFFF", "7F7F7F"]) {
+      expect(markdownOf(para(run("body text", { colour })))).toBe("body text");
+    }
+  });
+
+  it("writes highlight and colour on the same text as one stretch", () => {
+    const md = markdownOf(
+      para(
+        run("red on yellow", { colour: "ff0000", highlight: "yellow", bold: true }),
+        run(" yellow", { highlight: "yellow" }),
+      ),
+    );
+    expect(md).toBe("==**red on yellow**=={yellow, color #FF0000} ==yellow=={yellow}");
+  });
+
+  it("marks strikethrough, single and double, so struck text does not read as live", () => {
+    const md = markdownOf(
+      para(
+        run("Give "),
+        run("two", { strike: true }),
+        run(" three tablets "),
+        run("daily", { doubleStrike: true, bold: true }),
+      ),
+    );
+    expect(md).toBe("Give ~~two~~ three tablets ~~**daily**~~");
+    const off = '<w:r><w:rPr><w:strike w:val="0"/></w:rPr><w:t>kept</w:t></w:r>';
+    expect(markdownOf(para(off))).toBe("kept");
+  });
+
+  it("keeps raised and lowered text apart from the text beside it", () => {
+    const md = markdownOf(
+      para(
+        run("WBC 12 x 10"),
+        run("3", { vertical: "superscript" }),
+        run("/mm"),
+        run("3", { vertical: "superscript" }),
+        run(", SpO"),
+        run("2", { vertical: "subscript" }),
+        run(" 91%, Ca"),
+        run("2+", { vertical: "superscript" }),
+      ),
+    );
+    expect(md).toBe("WBC 12 x 10³/mm³, SpO₂ 91%, Ca²⁺");
+    expect(md).not.toContain("103");
+  });
+
+  it("leaves an ordinal as a word, and brackets raised text Unicode cannot write", () => {
+    const md = markdownOf(
+      para(
+        run("the 1"),
+        run("st", { vertical: "superscript" }),
+        run(" dose, note"),
+        run("a,b", { vertical: "superscript" }),
+        run(" and V"),
+        run("max", { vertical: "subscript" }),
+      ),
+    );
+    expect(md).toBe("the 1st dose, note^(a,b) and V_(max)");
+  });
+
+  it("drops hidden text, and does not count it", () => {
+    const result = docxToMarkdown(
+      buildDocx({
+        body: para(run("Shown. "), run("Answer: B", { hidden: true }), run("Also shown.")),
+      }),
+    );
+    expect(result).toMatchObject({ ok: true, markdown: "Shown. Also shown." });
+    expect(result.ok && result.textChars).toBe("Shown. Also shown.".length);
+  });
+
+  it("drops text hidden by its character or paragraph style, unless the run shows it", () => {
+    const stylesXml = styles([
+      { id: "Hidden", type: "character", body: "<w:rPr><w:vanish/></w:rPr>" },
+      { id: "HiddenToo", type: "character", body: '<w:basedOn w:val="Hidden"/>' },
+      { id: "KeyPara", type: "paragraph", body: "<w:rPr><w:vanish/></w:rPr>" },
+    ]);
+    const shown =
+      '<w:r><w:rPr><w:rStyle w:val="Hidden"/><w:vanish w:val="0"/></w:rPr><w:t> Shown again.</w:t></w:r>';
+    const md = markdownOf(
+      para(
+        run("Seen."),
+        run(" Answer: B", { style: "Hidden" }),
+        run(" Key: C", { style: "HiddenToo" }),
+        shown,
+      ) + paraWith('<w:pStyle w:val="KeyPara"/>', "Answer key: 1 B"),
+      { styles: stylesXml },
+    );
+    expect(md).toBe("Seen. Shown again.");
+  });
+
+  it("reads bold from a character style and a paragraph style, through what each is based on", () => {
+    const stylesXml = styles([
+      { id: "Strong", type: "character", body: "<w:rPr><w:b/></w:rPr>" },
+      { id: "KeyChar", type: "character", body: '<w:basedOn w:val="Strong"/>' },
+      { id: "Answer", type: "paragraph", body: "<w:rPr><w:b/></w:rPr>" },
+      { id: "AnswerTwo", type: "paragraph", body: '<w:basedOn w:val="Answer"/>' },
+      { id: "Loop", type: "character", body: '<w:basedOn w:val="Loop"/>' },
+    ]);
+    const md = markdownOf(
+      para(run("A. "), run("Strong option", { style: "Strong" })) +
+        para(run("B. "), run("Based on strong", { style: "KeyChar" })) +
+        paraWith('<w:pStyle w:val="Answer"/>', "C. Whole paragraph") +
+        paraWith('<w:pStyle w:val="AnswerTwo"/>', "D. Based on it") +
+        para(run("E. "), run("No bold here", { style: "Loop" })),
+      { styles: stylesXml },
+    );
+    expect(md.split("\n\n")).toEqual([
+      "A. **Strong option**",
+      "B. **Based on strong**",
+      "**C. Whole paragraph**",
+      "**D. Based on it**",
+      "E. No bold here",
+    ]);
+  });
+
+  it("lets a run switch a style's bold off, and does not bold a heading twice", () => {
+    const stylesXml = styles([
+      { id: "Answer", type: "paragraph", body: "<w:rPr><w:b/></w:rPr>" },
+      { id: "Heading1", type: "paragraph", name: "heading 1", body: "<w:rPr><w:b/></w:rPr>" },
+    ]);
+    const plain = '<w:r><w:rPr><w:b w:val="0"/></w:rPr><w:t>not this</w:t></w:r>';
+    const md = markdownOf(
+      paraWith('<w:pStyle w:val="Answer"/>', run("Bold, "), plain) +
+        paraWith('<w:pStyle w:val="Heading1"/>', "Section A"),
+      { styles: stylesXml },
+    );
+    expect(md).toBe("**Bold,** not this\n\n# Section A");
+  });
+
+  it("keeps paragraph shading as a shaded cell is kept, after a list number", () => {
+    const abstract =
+      '<w:abstractNum w:abstractNumId="0"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="upperLetter"/><w:lvlText w:val="%1."/></w:lvl></w:abstractNum>';
+    const item = (text: string, shade = "") =>
+      paraWith(`<w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>${shade}`, text);
+    const md = markdownOf(
+      item("Rice") +
+        item("Yogurt", '<w:shd w:val="clear" w:color="auto" w:fill="ffff00"/>') +
+        paraWith('<w:shd w:val="clear" w:fill="FFFFFF"/>', "White is no shading"),
+      {
+        numbering: numbering(abstract, '<w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num>'),
+      },
+    );
+    expect(md).toBe("A. Rice\nB. {shaded #FFFF00} Yogurt\n\nWhite is no shading");
+  });
+
+  it("reads a symbol by its font: Symbol's comparisons and units, Wingdings' marks", () => {
+    const md = markdownOf(
+      para(
+        run("Temp "),
+        symbol("Symbol", "F0B3"),
+        run(" 38"),
+        symbol("Symbol", "F0B0"),
+        run("C, K "),
+        symbol("Symbol", "F0A3"),
+        run(" 3.5, "),
+        symbol("Symbol", "F0B1"),
+        run(" 2, 5 "),
+        symbol("Symbol", "F06D"),
+        run("g "),
+        symbol("Symbol", "F0AE"),
+        run(" "),
+        symbol("Wingdings", "F0FC"),
+        symbol("Wingdings 2", "F050"),
+        symbol("Wingdings", "F0E0"),
+      ),
+    );
+    expect(md).toBe("Temp ≥ 38°C, K ≤ 3.5, ± 2, 5 μg → ✓✓→");
+  });
+
+  it("reads a real character from an ordinary font, and says [symbol] for one it cannot", () => {
+    const md = markdownOf(
+      para(
+        symbol("MS Gothic", "2612"),
+        symbol("Segoe UI Symbol", "2265"),
+        symbol("Webdings", "F061"),
+        symbol("Symbol", "zz"),
+      ),
+    );
+    expect(md).toBe("☒≥[symbol][symbol]");
+  });
+
+  it("reads text typed in a symbol font as what the font shows", () => {
+    const md = markdownOf(
+      para(run("ü", { font: "Wingdings" }), run(" 5 "), run("m", { font: "Symbol" }), run("g")),
+    );
+    expect(md).toBe("✓ 5 μg");
   });
 });
 
@@ -251,6 +449,53 @@ describe("docxToMarkdown tracked changes, comments and fields", () => {
         "<w:tr><w:tc><w:p><w:r><w:t>kept</w:t></w:r></w:p></w:tc></w:tr></w:tbl>",
     );
     expect(md).toBe("| Head |\n| --- |\n| kept |");
+  });
+});
+
+// #592: a package whose main part is not `word/document.xml` was refused as "not a Word file".
+describe("docxToMarkdown main document part (#592)", () => {
+  const stylesXml = styles([
+    { id: "Kop1", type: "paragraph", name: "heading 1" },
+    { id: "Strong", type: "character", body: "<w:rPr><w:b/></w:rPr>" },
+  ]);
+
+  it("finds the main part through the package's relationships, and its styles beside it", () => {
+    const body =
+      paraWith('<w:pStyle w:val="Kop1"/>', "Quiz") + para(run("Key", { style: "Strong" }));
+    const bytes = buildDocx({
+      body,
+      mainPart: "word/document2.xml",
+      extra: { "word/styles.xml": stylesXml },
+    });
+    expect(docxToMarkdown(bytes)).toMatchObject({ ok: true, markdown: "# Quiz\n\n**Key**" });
+  });
+
+  it("reads a main part in another folder, written with a leading slash", () => {
+    const rels =
+      '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId2" Type="http://purl.oclc.org/ooxml/officeDocument/relationships/extendedProperties" Target="docProps/app.xml"/><Relationship Id="rId1" Type="http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument" Target="/doc/main.xml"/></Relationships>';
+    const bytes = zipSync({
+      "_rels/.rels": new TextEncoder().encode(rels),
+      "doc/main.xml": new TextEncoder().encode(document(para("Strict package"))),
+    });
+    expect(docxToMarkdown(bytes)).toMatchObject({ ok: true, markdown: "Strict package" });
+  });
+
+  it("falls back to word/document.xml when the relationships name nothing it can use", () => {
+    const main = new TextEncoder().encode(document(para("Usual place")));
+    const relsOf = (target: string, mode = "") =>
+      new TextEncoder().encode(
+        `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="${target}"${mode}/></Relationships>`,
+      );
+    for (const rels of [
+      relsOf("word/missing.xml"),
+      relsOf("../word/document.xml"),
+      relsOf("https://example.invalid/document.xml", ' TargetMode="External"'),
+      new TextEncoder().encode("<Relationships><Relationship"),
+      new TextEncoder().encode('<!DOCTYPE x [<!ENTITY a "b">]><Relationships/>'),
+    ]) {
+      const bytes = zipSync({ "_rels/.rels": rels, "word/document.xml": main });
+      expect(docxToMarkdown(bytes)).toMatchObject({ ok: true, markdown: "Usual place" });
+    }
   });
 });
 

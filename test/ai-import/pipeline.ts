@@ -14,7 +14,7 @@ import {
   type UnitCall,
   type UnitDocument,
 } from "@/lib/aiImport/extractQuestions";
-import { unitPayload } from "@/lib/aiImport/extractUnit";
+import { unitPayload, wholeText } from "@/lib/aiImport/extractUnit";
 import { chunkPayload, prepareFile, type PreparedFile } from "@/lib/aiImport/files/prepare";
 import { mergeSegments, type MergedQuestion } from "@/lib/aiImport/merge";
 import { readSegment, segmentRequest } from "@/lib/aiImport/segment";
@@ -177,8 +177,8 @@ export async function runPipeline(
   };
 
   const merged = await segmentFile(call, bytes, prepared);
-  const sourceText =
-    prepared.kind === "pdf" ? null : prepared.chunks.map((chunk) => chunk.text ?? "").join("");
+  // The product's own join (#592): the chunks with what was cut from between them.
+  const sourceText = wholeText(prepared);
   const regions = regionsOf(merged, sourceText);
 
   const questions: RecordedQuestion[] = [];

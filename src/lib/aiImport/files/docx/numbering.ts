@@ -1,4 +1,4 @@
-import { attr, child, elements, type Document, type Element } from "./xml";
+import { attr, child, elements, toggle, type Document, type Element } from "./xml";
 
 /**
  * List numbers and heading levels (#341). Word stores a list item as a reference into
@@ -141,29 +141,76 @@ export class Numbering {
   }
 }
 
-/** Heading levels by paragraph style id, from styles.xml, plus each style's own list. */
+/**
+ * What the converter reads of a style in styles.xml, paragraph or character: its heading level,
+ * its own list, and whether it makes its text bold.
+ */
 export interface StyleInfo {
   heading: number | null;
   numId: string | null;
   ilvl: number;
+  /**
+   * Bold from the style or the nearest style it is based on that says; null when none does
+   * (#592). "Strong" and a home-made "Correct answer" style mark a key this way.
+   */
+  bold: boolean | null;
+  /** Hidden text (`w:vanish`) from the style, found the same way; null when none says. */
+  hidden: boolean | null;
+}
+
+interface RawStyle extends StyleInfo {
+  basedOn: string | null;
+}
+
+/** A chain of `basedOn` longer than this is a loop, or nothing Word would write. */
+const MAX_STYLE_CHAIN = 20;
+
+/** The style's own value of a toggle, or the first one a style it is based on states. */
+function inherited(
+  id: string,
+  raw: ReadonlyMap<string, RawStyle>,
+  property: "bold" | "hidden",
+): boolean | null {
+  let current = raw.get(id);
+  for (let depth = 0; current && depth < MAX_STYLE_CHAIN; depth += 1) {
+    if (current[property] !== null) return current[property];
+    current = current.basedOn ? raw.get(current.basedOn) : undefined;
+  }
+  return null;
 }
 
 export function readStyles(doc: Document | null): Map<string, StyleInfo> {
-  const styles = new Map<string, StyleInfo>();
-  if (!doc?.documentElement) return styles;
+  const raw = new Map<string, RawStyle>();
+  if (!doc?.documentElement) return new Map();
   for (const el of elements(doc.documentElement)) {
     if (el.localName !== "style") continue;
     const id = attr(el, "styleId");
     if (!id) continue;
     const name = (attr(child(el, "name"), "val") ?? "").toLowerCase();
     const numPr = child(child(el, "pPr"), "numPr");
-    styles.set(id, {
+    const bold = child(child(el, "rPr"), "b");
+    const vanish = child(child(el, "rPr"), "vanish");
+    raw.set(id, {
       heading: headingFromName(name),
       numId: attr(child(numPr, "numId"), "val"),
       ilvl: intAttr(child(numPr, "ilvl"), "val") ?? 0,
+      bold: bold ? toggle(bold) : null,
+      hidden: vanish ? toggle(vanish) : null,
+      basedOn: attr(child(el, "basedOn"), "val"),
     });
   }
-  return styles;
+  return new Map(
+    [...raw].map(([id, style]) => [
+      id,
+      {
+        heading: style.heading,
+        numId: style.numId,
+        ilvl: style.ilvl,
+        bold: inherited(id, raw, "bold"),
+        hidden: inherited(id, raw, "hidden"),
+      },
+    ]),
+  );
 }
 
 function headingFromName(name: string): number | null {

@@ -1,12 +1,17 @@
 import { EncryptedPDFError, PDFDocument } from "@cantoo/pdf-lib";
 import { MAX_BATCH_PAGES, PDF_CHUNK_OVERLAP, PDF_CHUNK_PAGES } from "./limits";
-import { guardPdfStreams } from "./pdfGuard";
+import { guardEncryptedPdfStreams, guardPdfStreams } from "./pdfGuard";
 import { reject, type Rejection } from "./reasons";
 
 /**
  * PDFs (#341): count the pages, refuse a password-protected or damaged one, and cut it into
  * chunks of about 8 pages with one page of overlap, each sent to Claude as a PDF of its own so
  * scans, colour and layout survive (ADR 0008, Pipeline step 2).
+ *
+ * A PDF that only restricts copying or editing (#592) is encrypted too, with an owner password,
+ * but it opens in any reader with no password at all. It is read the same way: decrypted with
+ * the empty password. Only a PDF that needs a password to open is refused. The chunks cut from
+ * it are new, plain PDFs, so Claude can read them.
  *
  * The library is @cantoo/pdf-lib, the maintained fork of pdf-lib (which has had no release since
  * 2021): pure JavaScript, no native code and no network, and it can copy pages between documents.
@@ -44,10 +49,43 @@ export function planPageChunks(
 
 class PdfTooComplex extends Error {}
 
+/** The PDF is encrypted and the empty password does not open it. */
+class PdfNeedsPassword extends Error {}
+
+/**
+ * What the library says when the empty password does not open a document, or the document is
+ * locked in a way it cannot open at all (a certificate, a cipher it does not have). It throws
+ * these as plain errors, so they are told from a damaged file by their words.
+ */
+const NOT_OPENED =
+  /^(?:NEEDS PASSWORD|Password incorrect|unknown encryption method|unsupported encryption algorithm)$/;
+
+/**
+ * An encrypted PDF opened as a reader opens it when asked for no password. The decrypted object
+ * streams are bounded first, as `guardPdfStreams` bounds a plain PDF's. Any other failure is a
+ * damaged file, and is left to say so.
+ */
+async function loadWithEmptyPassword(bytes: Uint8Array): Promise<PDFDocument> {
+  if (guardEncryptedPdfStreams(bytes) !== "ok") {
+    throw new PdfTooComplex("PDF streams may decode too large");
+  }
+  try {
+    return await PDFDocument.load(bytes, { ...LOAD_OPTIONS, password: "" });
+  } catch (error) {
+    if (error instanceof Error && NOT_OPENED.test(error.message)) throw new PdfNeedsPassword();
+    throw error;
+  }
+}
+
 /** Loads a PDF only after `guardPdfStreams` has bounded what loading it decodes. */
 async function load(bytes: Uint8Array): Promise<PDFDocument> {
   if (guardPdfStreams(bytes) !== "ok") throw new PdfTooComplex("PDF streams decode too large");
-  return PDFDocument.load(bytes, LOAD_OPTIONS);
+  try {
+    return await PDFDocument.load(bytes, LOAD_OPTIONS);
+  } catch (error) {
+    if (error instanceof EncryptedPDFError) return loadWithEmptyPassword(bytes);
+    throw error;
+  }
 }
 
 /** The page count, or why the PDF is refused. */
@@ -58,7 +96,7 @@ export async function inspectPdf(bytes: Uint8Array): Promise<PdfInspection> {
     pages = pdf.getPageCount();
   } catch (error) {
     if (error instanceof PdfTooComplex) return reject("too_complex");
-    if (error instanceof EncryptedPDFError) return reject("encrypted");
+    if (error instanceof PdfNeedsPassword) return reject("encrypted");
     return reject("corrupt");
   }
   if (!Number.isInteger(pages) || pages < 1) return reject("corrupt");

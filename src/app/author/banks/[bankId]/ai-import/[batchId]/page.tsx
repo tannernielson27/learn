@@ -6,9 +6,10 @@ import {
   importAiImportBatch,
   restoreAiImportEntry,
 } from "@/app/author/aiImportActions";
-import { importedSentence } from "@/lib/authoring/aiImportReview";
+import { answerNotes, importedSentence } from "@/lib/authoring/aiImportReview";
 import { AiImportReview } from "@/components/authoring/AiImportReview";
 import { Breadcrumbs } from "@/components/authoring/FolderBreadcrumbs";
+import { Notice } from "@/components/ui/Notice";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ReadingWidth } from "@/components/authoring/PageWidth";
 import { Card } from "@/components/ui/Card";
@@ -94,6 +95,16 @@ export default async function AiImportReviewPage({
         ]}
       />
       <PageHeader title="Review AI import" className="mb-6" />
+      {answerNotes(batch.answers).length > 0 ? (
+        // #592: part of the page as it loads, so it is not announced as a new message.
+        <Notice live={false} className="mb-6 sm:max-w-2xl">
+          <ul className="flex flex-col gap-1" data-testid="answer-notes">
+            {answerNotes(batch.answers).map((note) => (
+              <li key={note}>{note}</li>
+            ))}
+          </ul>
+        </Notice>
+      ) : null}
       <AiImportReview
         bankId={bank.id}
         quizName={bank.name}

@@ -127,6 +127,76 @@ describe("stageQuestion", () => {
     expect(stageQuestion(input(choice, { region: null })).reasons[0].code).toBe("unmarked_key");
   });
 
+  // #592, owner decision 2026-11-17: a key marked only by formatting is kept, with a check.
+  describe("a key the document marks only with formatting", () => {
+    const stem = "Which action first?";
+    const checkOf = (region: string) => {
+      const entry = stageQuestion(input(choice, { region }));
+      return {
+        status: entry.status,
+        keyed: entry.item !== null,
+        checks: entry.reasons.filter((reason) => reason.code === "check_key"),
+        codes: entry.reasons.map((reason) => reason.code),
+      };
+    };
+
+    it.each([
+      ["bold", `${stem}\n\n**A. Assess**\nB. Document\nC. Call\nD. Wait\n`],
+      ["underline", `${stem}\n\nA. <u>Assess</u>\nB. Document\nC. Call\nD. Wait\n`],
+      ["font colour", `${stem}\n\nA. ==Assess=={color #C00000}\nB. Document\nC. Call\nD. Wait\n`],
+      [
+        "bold in a matrix cell",
+        `${stem}\n\n| Action | Indicated | Contraindicated |\n| --- | --- | --- |\n| Assess | **yes** | |\n| Wait | | **yes** |\n`,
+      ],
+    ])("stages a %s-only key as ready, with the reason to check it", (_, region) => {
+      const staged = checkOf(region);
+      expect(staged).toMatchObject({ status: "ready", keyed: true });
+      expect(staged.checks).toEqual([
+        {
+          code: "check_key",
+          message:
+            "The key was read from bold, underlined or coloured text, which may not mark an answer. Check it.",
+        },
+      ]);
+    });
+
+    it.each([
+      ["bold in the stem", `**${stem}**\n\nA. Assess\nB. Document\nC. Call\nD. Wait\n`],
+      ["a bold heading", `${stem}\n\nA. Assess\nB. Document\n\n## **Unit 2**\n`],
+      ["a bold label", `${stem}\n\nA. Assess\nB. Document\n\n**Question 2**\n`],
+      ["bold on every option's letter", `${stem}\n\n**A.** Assess\n**B.** Document\n**C.** Call\n`],
+      [
+        "a table's bold header row",
+        `${stem}\n\n| **Action** | **First** |\n| --- | --- |\n| Assess | |\n`,
+      ],
+      [
+        "a grey header row",
+        `${stem}\n\n| {shaded #D9D9D9} Action | {shaded #D9D9D9} First |\n| --- | --- |\n| Assess | |\n`,
+      ],
+    ])("refuses a key when the only formatting is %s", (_, region) => {
+      const staged = checkOf(region);
+      expect(staged).toMatchObject({ status: "needs_fix", keyed: false });
+      expect(staged.codes).toEqual(["unmarked_key"]);
+    });
+
+    it("asks for no check when the document also prints a real mark", () => {
+      const staged = checkOf(`${stem}\n\n**A. Assess** *\nB. Document\nC. Call\nD. Wait\n`);
+      expect(staged).toMatchObject({ status: "ready", checks: [] });
+    });
+
+    it("leaves an unkeyed draft needing an answer, formatting or not", () => {
+      const unkeyed = {
+        ...choice,
+        options: choice.options.map((o) => ({ text: o.text.replace(" *", "") })),
+      };
+      const entry = stageQuestion(
+        input(unkeyed, { region: `${stem}\n\n**A. Assess**\nB. Document\nC. Call\nD. Wait\n` }),
+      );
+      expect(entry.status).toBe("needs_answer");
+      expect(entry.reasons.map((reason) => reason.code)).not.toContain("check_key");
+    });
+  });
+
   it("keeps a stated scoring rule the type cannot use as a reason", () => {
     const entry = stageQuestion(input({ ...choice, statedScoring: "Scoring Rule: +/-" }));
     expect(entry.status).toBe("ready");

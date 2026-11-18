@@ -5,12 +5,17 @@ import { normalizePassage, openingKey } from "./sourceText";
  * One file's chunks, merged (#342, ADR 0008 Pipeline step 4). Pure.
  *
  * 1. **Overlap duplicates.** PDF chunks share a page. A question that starts on the shared page is
- *    reported by both chunks; it is kept once, from the chunk that saw it whole.
+ *    reported by both chunks; it is kept once, from the chunk that saw it whole. Every question
+ *    of the later chunk on that page is looked for among the earlier chunk's on it (#592; the
+ *    rule `segmentSplit.ts` has for the halves of one chunk). Text chunks share nothing, so no
+ *    two questions of a text file are ever taken for one read twice: "A nurse is caring for a
+ *    client who has..." opens many questions.
  * 2. **Split questions.** A question cut off at the end of one chunk (`cutOff`) and continued at the
  *    start of the next (`continued`) is joined into one, which keeps the first chunk's opening.
  * 3. **Answers printed elsewhere** attach to the question with the same number (and case study,
  *    when the answer names one), wherever in the file either is. An answer that matches no
- *    question, or more than one, is left unlinked for the reviewer, never guessed.
+ *    question, or more than one, is left unlinked, never guessed: `finish.ts` counts them for
+ *    the review page.
  */
 
 export interface MergedQuestion extends SegmentQuestion {
@@ -39,30 +44,6 @@ export const sameOpening = (a: SegmentQuestion, b: SegmentQuestion) =>
 function sharedPage(a: ChunkSegment, b: ChunkSegment): number | null {
   if (a.pageTo === null || b.pageFrom === null) return null;
   return a.pageTo === b.pageFrom ? a.pageTo : null;
-}
-
-/**
- * Whether `later` (from chunk b) is `earlier` (from chunk a) read twice. For PDFs both must start on
- * the shared page. Text chunks do not overlap, but a model may still repeat the last question of
- * one chunk at the start of the next; only that boundary pair is compared.
- */
-function isOverlapDuplicate(
-  earlier: Working,
-  later: Working,
-  a: ChunkSegment,
-  b: ChunkSegment,
-): boolean {
-  if (later.continued || !sameOpening(earlier, later)) return false;
-  const page = sharedPage(a, b);
-  if (page !== null) return earlier.page === page && later.page === page;
-  const lastOfA = a.questions.at(-1);
-  const firstOfB = b.questions[0];
-  return (
-    a.pageTo === null &&
-    lastOfA?.index === earlier.index &&
-    lastOfA.chunk === earlier.chunks.at(-1) &&
-    firstOfB?.index === later.index
-  );
 }
 
 /** The type of whichever read was surer of one; with neither typed, the question has no NGN type. */
@@ -122,31 +103,43 @@ const working = (question: SegmentQuestion): Working => ({
   answers: [],
 });
 
-/** Folds chunk `b`'s questions onto what came before it. */
+/**
+ * Folds chunk `b`'s questions onto what came before it. Only neighbours are compared: with a
+ * chunk missing between them, nothing is joined.
+ */
 function foldChunk(merged: Working[], a: ChunkSegment | undefined, b: ChunkSegment): Working[] {
   const result = [...merged];
+  const neighbour = a !== undefined && a.position === b.position - 1 ? a : null;
+  const shared = neighbour ? sharedPage(neighbour, b) : null;
+  // Read from `a` and not yet joined to anything of `b`.
+  const onlyFromA = (question: Working) => question.chunks.at(-1) === neighbour?.position;
   for (const question of b.questions.map(working)) {
     const previous = result.at(-1);
-    // Only neighbours are compared: with a chunk missing between them, nothing is joined.
-    const fromPrevious =
-      a !== undefined && a.position === b.position - 1 && previous?.chunks.at(-1) === a.position;
-    if (previous && fromPrevious && isOverlapDuplicate(previous, question, a, b)) {
-      // The later read saw more of it when the earlier one was cut off.
-      const keep = previous.cutOff && !question.cutOff ? question : previous;
-      result[result.length - 1] = {
-        ...combine(previous, question, keep),
-        index: previous.index,
-        chunk: previous.chunk,
-        cutOff: keep.cutOff,
-        continued: previous.continued,
-      };
-      continue;
-    }
-    if (previous && fromPrevious && previous.cutOff && question.continued) {
+    if (previous && onlyFromA(previous) && previous.cutOff && question.continued) {
       result[result.length - 1] = {
         ...combine(previous, question, previous),
         cutOff: question.cutOff,
         continued: previous.continued,
+      };
+      continue;
+    }
+    const twin =
+      shared !== null && question.page === shared && !question.continued
+        ? result.findIndex(
+            (earlier) =>
+              onlyFromA(earlier) && earlier.page === shared && sameOpening(earlier, question),
+          )
+        : -1;
+    if (twin >= 0) {
+      const earlier = result[twin];
+      // The later read saw more of it when the earlier one was cut off.
+      const keep = earlier.cutOff && !question.cutOff ? question : earlier;
+      result[twin] = {
+        ...combine(earlier, question, keep),
+        index: earlier.index,
+        chunk: earlier.chunk,
+        cutOff: keep.cutOff,
+        continued: earlier.continued,
       };
       continue;
     }

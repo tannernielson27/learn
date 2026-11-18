@@ -192,16 +192,73 @@ describe("mergeSegments", () => {
     expect(merged.questions).toHaveLength(2);
   });
 
-  it("drops a text chunk's repeat of the question it ended on", () => {
+  // #592: this test used to expect the first question of a text chunk to be dropped as a repeat
+  // of the last question of the chunk before. Text chunks share no text, so that rule only ever
+  // merged two real questions that open alike; a true repeat is flagged by the duplicate pass.
+  it("keeps two questions either side of a text chunk boundary that open with the same words", () => {
+    const opening = "A nurse is caring for a client who has heart failure.";
     const merged = mergeSegments([
-      chunk(0, [q(0, 0, "One"), q(0, 1, "Boundary question text")]),
-      chunk(1, [q(1, 0, "Boundary question text"), q(1, 1, "Boundary question text")]),
+      chunk(0, [q(0, 0, "One"), q(0, 1, `${opening} Which finding is expected?`, { number: "2" })]),
+      chunk(1, [
+        q(1, 0, `${opening} Which action is the priority?`, { number: "3" }),
+        q(1, 1, "Another question"),
+      ]),
     ]);
-    expect(merged.questions.map((x) => x.excerpt)).toEqual([
-      "One",
-      "Boundary question text",
-      "Boundary question text",
+    expect(merged.questions.map((x) => [x.number, x.chunks])).toEqual([
+      [null, [0]],
+      ["2", [0]],
+      ["3", [1]],
+      [null, [1]],
     ]);
+  });
+
+  // #592: only the last question before the boundary was compared, so the others were staged twice.
+  it("keeps each of several questions that start on a shared PDF page once", () => {
+    const merged = mergeSegments([
+      chunk(
+        0,
+        [
+          q(0, 0, "Earlier question on page seven", { page: 7 }),
+          q(0, 1, "First question on the shared page", { page: 8, number: "5" }),
+          q(0, 2, "Second question on the shared page", { page: 8, number: "6" }),
+          q(0, 3, "Third question on the shared page, cut by the page end", {
+            page: 8,
+            number: "7",
+            cutOff: true,
+          }),
+        ],
+        [],
+        [1, 8],
+      ),
+      chunk(
+        1,
+        [
+          q(1, 0, "First question on the shared page", { page: 8 }),
+          q(1, 1, "Second question on the shared page", { page: 8 }),
+          q(1, 2, "Third question on the shared page, cut by the page end", { page: 8 }),
+          q(1, 3, "A question on page nine", { page: 9 }),
+        ],
+        [],
+        [8, 15],
+      ),
+    ]);
+    expect(merged.questions.map((x) => [x.position, x.number, x.chunks, x.cutOff])).toEqual([
+      [0, null, [0], false],
+      [1, "5", [0, 1], false],
+      [2, "6", [0, 1], false],
+      [3, "7", [0, 1], false],
+      [4, null, [1], false],
+    ]);
+  });
+
+  it("pairs two shared-page questions that open alike one to one, and never across three chunks", () => {
+    const same = "Which finding requires follow-up by the nurse today?";
+    const merged = mergeSegments([
+      chunk(0, [q(0, 0, same, { page: 8 }), q(0, 1, same, { page: 8 })], [], [1, 8]),
+      chunk(1, [q(1, 0, same, { page: 8 }), q(1, 1, same, { page: 8 })], [], [8, 15]),
+      chunk(2, [q(2, 0, same, { page: 15 })], [], [15, 20]),
+    ]);
+    expect(merged.questions.map((x) => x.chunks)).toEqual([[0, 1], [0, 1], [2]]);
   });
 
   it("links answers by case study when two questions share a number, and never guesses", () => {
