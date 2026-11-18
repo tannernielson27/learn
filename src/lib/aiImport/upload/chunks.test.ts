@@ -66,6 +66,18 @@ describe("settleChunk", () => {
     expect(eqs).toContainEqual(["attempts", 2]);
   });
 
+  it("records a failure that will not change as the last try, so it is not paid for again", async () => {
+    const service = fakeClient({ ai_import_chunks: [{ data: null }] });
+    await settleChunk(service.client, REF, 0, 1, {
+      status: "failed",
+      code: "part_too_large",
+      final: true,
+    });
+    expect(service.stepsOn("ai_import_chunks", "update")).toEqual([
+      [{ status: "failed", last_error: "part_too_large", attempts: MAX_CHUNK_ATTEMPTS }],
+    ]);
+  });
+
   it("logs a failed write by its code", async () => {
     const service = fakeClient({ ai_import_chunks: [{ error: { code: "57014" } }] });
     await settleChunk(service.client, REF, 0, 1, { status: "failed", code: "bad_answer" });

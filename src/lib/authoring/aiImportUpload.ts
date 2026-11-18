@@ -84,8 +84,14 @@ export const AI_IMPORT_MESSAGES = {
     "Your workspace has reached this month's AI import allowance. Nothing more was charged.",
   claude_failed:
     "Claude is unavailable right now. Try again later; nothing was charged for the part that failed.",
-  bad_answer:
-    "Claude's answer for part of this file could not be read. Try again; nothing more was charged for it.",
+  bad_answer: "Claude's answer for part of this file could not be read. Try again.",
+  claude_timeout: "Claude took too long to read part of this file. Try again.",
+  claude_refused:
+    "Claude declined to read part of this file. Check that it holds exam questions, then try again.",
+  too_long:
+    "Part of this file was too long for Claude to finish. Try again; if it fails again, split the file into smaller files.",
+  part_too_large:
+    "Part of this file holds more than can be read at once. Split the file into smaller files and upload them again.",
   unavailable: "Something went wrong on our side. Try again in a minute.",
   busy: "Another tab, or an earlier visit, is still reading this part.",
   spent: "This part failed too many times. Remove the file or start a new import.",

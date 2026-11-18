@@ -2,8 +2,10 @@ import Anthropic from "@anthropic-ai/sdk";
 import {
   AI_IMPORT_MODEL,
   MAX_ATTEMPTS,
+  MIN_ATTEMPT_MS,
   NO_USAGE,
   REQUEST_TIMEOUT_MS,
+  RETRY_WINDOW_MS,
   RETRY_BASE_MS,
   RETRY_MAX_MS,
   addUsage,
@@ -30,7 +32,10 @@ import { fakeClaudeClient } from "./fakeClaude";
 /** The one SDK method AI import uses, so tests and the fake client can stand in for the API. */
 export interface MessagesClient {
   messages: {
-    create(body: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message>;
+    create(
+      body: Anthropic.MessageCreateParamsNonStreaming,
+      options?: { timeout?: number },
+    ): Promise<Anthropic.Message>;
   };
 }
 
@@ -72,12 +77,25 @@ export interface StructuredRequest {
   schema: JsonSchema;
   content: Anthropic.ContentBlockParam[];
   maxTokens: number;
+  /**
+   * `minimal` asks for no thinking before the answer, for a pass that copies and lists (#590):
+   * thinking tokens count against `maxTokens`. Left out, the model thinks as it chooses.
+   */
+  thinking?: "minimal";
 }
 
 export interface CallOptions {
   model?: string;
   sleep?: (ms: number) => Promise<void>;
   random?: () => number;
+  /**
+   * When every try must have ended, in epoch milliseconds: each try's timeout is cut to what is
+   * left, and none starts with less than `MIN_ATTEMPT_MS` to go (it fails as a timeout, unsent).
+   */
+  deadline?: number;
+  now?: () => number;
+  /** How long one try may run; `REQUEST_TIMEOUT_MS` unless a pass needs longer. */
+  timeoutMs?: number;
 }
 
 export interface StructuredAnswer {
@@ -128,7 +146,7 @@ export function classifyError(error: unknown): Classified {
   }
   if (status !== null) return { code: "rejected", retryable: false, status, retryAfterMs: null };
   if (shaped.name === "APIConnectionTimeoutError") {
-    // A request that ran out its 90 s once will not fit another try in the function's time.
+    // A request that ran out its time once will not fit another try in the function's time.
     return { code: "timeout", retryable: false, status: null, retryAfterMs: null };
   }
   if (shaped.name === "APIConnectionError") {
@@ -175,19 +193,30 @@ export async function callStructured(
     system: [{ type: "text", text: request.system, cache_control: { type: "ephemeral" } }],
     output_config: { format: { type: "json_schema", schema: request.schema } },
     messages: [{ role: "user", content: request.content }],
+    // Sonnet 5.5 answers `disabled` with a 400; `between_tools` is its lowest setting, and with
+    // no tools in the request it means no thinking at all.
+    ...(request.thinking === "minimal" ? { thinking: { type: "between_tools" as const } } : {}),
   };
 
+  const now = options.now ?? Date.now;
+  const perTry = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
+  const started = now();
   let usage = NO_USAGE;
   for (let attempt = 1; ; attempt += 1) {
+    const left = options.deadline === undefined ? Infinity : options.deadline - now();
+    if (left < MIN_ATTEMPT_MS) throw new ClaudeCallError("timeout", usage, attempt - 1);
     let response: Anthropic.Message;
     try {
-      response = await client.messages.create(body);
+      response = await client.messages.create(body, { timeout: Math.min(perTry, left) });
     } catch (error) {
       const failure = classifyError(error);
-      if (!failure.retryable || attempt >= MAX_ATTEMPTS) {
+      const wait = backoffMs(attempt, failure.retryAfterMs, random);
+      // A failure that was slow to arrive is not tried again: see `RETRY_WINDOW_MS`.
+      const young = now() - started + wait <= RETRY_WINDOW_MS;
+      if (!failure.retryable || attempt >= MAX_ATTEMPTS || !young) {
         throw new ClaudeCallError(failure.code, usage, attempt, failure.status);
       }
-      await sleep(backoffMs(attempt, failure.retryAfterMs, random));
+      await sleep(wait);
       continue;
     }
     usage = addUsage(usage, usageOf(response));

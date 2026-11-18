@@ -6,7 +6,7 @@ import { POSITIONS_PER_FILE } from "../extractUnit";
 import type { FileRef } from "../files/store";
 import { mergeSegments } from "../merge";
 import type { Client } from "./access";
-import { admit, answer, fail, type RouteDeps } from "./http";
+import { admit, answer, claudeFailure, fail, type RouteDeps } from "./http";
 
 /**
  * `POST /api/ai-import/extract` (#345): one extract unit of one file, once every chunk of the file
@@ -80,7 +80,9 @@ export function refusal(result: Extract<ExtractUnitResult, { ok: false }>): Resp
     case "cap_reached":
       return fail(402, "cap_reached", { remainingUsd: result.remainingUsd });
     case "claude_failed":
-      return fail(502, "claude_failed");
+      // The reason and nothing else: an import that sticks can then be read from the logs (#590).
+      console.error("[ai-import] an extract call failed", { reason: result.reason });
+      return claudeFailure(result.reason);
     case "not_found":
       return fail(404, "not_found");
     case "incomplete":

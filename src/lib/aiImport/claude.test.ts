@@ -9,7 +9,7 @@ import {
   type MessagesClient,
   type StructuredRequest,
 } from "./claude";
-import { MAX_ATTEMPTS, RETRY_MAX_MS } from "./config";
+import { MAX_ATTEMPTS, REQUEST_TIMEOUT_MS, RETRY_MAX_MS, RETRY_WINDOW_MS } from "./config";
 import { reply } from "./testing/messages";
 
 const REQUEST: StructuredRequest = {
@@ -54,6 +54,16 @@ describe("callStructured", () => {
     });
     expect(body).not.toHaveProperty("tools");
     expect(body).not.toHaveProperty("tool_choice");
+    // Thinking is the model's own unless a pass asks for less.
+    expect(body).not.toHaveProperty("thinking");
+  });
+
+  it("asks for the least thinking Sonnet 5.5 allows when a pass wants its whole answer as output", async () => {
+    const { client, create } = scripted(reply("{}"));
+    await callStructured(client, { ...REQUEST, thinking: "minimal" }, noWait);
+    const body = create.mock.calls[0][0] as unknown as Record<string, unknown>;
+    // Not "disabled": Sonnet 5.5 answers that with a 400 (#590).
+    expect(body.thinking).toEqual({ type: "between_tools" });
   });
 
   it("tries a 529 again after a backoff, and counts only what was billed", async () => {
@@ -73,6 +83,61 @@ describe("callStructured", () => {
     expect(error).toBeInstanceOf(ClaudeCallError);
     expect(error).toMatchObject({ code: "overloaded", attempts: 3, status: 529 });
     expect((error as ClaudeCallError).usage.inputTokens).toBe(0);
+  });
+
+  it("retries only a failure that came back fast: a slow one would not fit the function's time", async () => {
+    let clock = 0;
+    const create = vi.fn(async (): Promise<Anthropic.Message> => {
+      // A 5xx that took 100 s to arrive.
+      clock += 100_000;
+      throw Object.assign(new Error("Bad gateway"), { status: 502 });
+    });
+    const error = await callStructured({ messages: { create } }, REQUEST, {
+      ...noWait,
+      now: () => clock,
+    }).catch((e: unknown) => e);
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(error).toMatchObject({ code: "server", attempts: 1 });
+    expect(RETRY_WINDOW_MS).toBeLessThan(100_000);
+  });
+
+  it("cuts each try to what is left before the deadline, and starts none that could not finish", async () => {
+    let clock = 1_000;
+    const timeouts: (number | undefined)[] = [];
+    const create = vi.fn(
+      async (
+        _body: Anthropic.MessageCreateParamsNonStreaming,
+        options?: { timeout?: number },
+      ): Promise<Anthropic.Message> => {
+        timeouts.push(options?.timeout);
+        clock += 5_000;
+        throw overloaded();
+      },
+    );
+    const client: MessagesClient = { messages: { create } };
+
+    // Plenty of time: the usual timeout. Then 60 s left: no more than that.
+    await callStructured(client, REQUEST, { ...noWait, now: () => clock }).catch(() => {});
+    expect(timeouts[0]).toBe(REQUEST_TIMEOUT_MS);
+    timeouts.length = 0;
+    create.mockClear();
+    const deadline = clock + 60_000;
+    await callStructured(client, REQUEST, { ...noWait, now: () => clock, deadline }).catch(
+      () => {},
+    );
+    expect(timeouts[0]).toBe(60_000);
+    expect(timeouts.every((timeout) => (timeout ?? Infinity) <= 60_000)).toBe(true);
+
+    // Too little left to be worth a call: nothing is sent, and it reads as a timeout.
+    create.mockClear();
+    const late = await callStructured(client, REQUEST, {
+      ...noWait,
+      now: () => clock,
+      deadline: clock + 1_000,
+    }).catch((e: unknown) => e);
+    expect(create).not.toHaveBeenCalled();
+    expect(late).toMatchObject({ code: "timeout", attempts: 0 });
+    expect((late as ClaudeCallError).usage.outputTokens).toBe(0);
   });
 
   it("does not try a rejected request again", async () => {

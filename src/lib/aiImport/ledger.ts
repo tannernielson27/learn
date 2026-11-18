@@ -15,8 +15,9 @@ import type { ChunkPayload } from "./files/prepare";
  *
  * The order for every Claude call: `reserveUsage` first (nothing is sent if it refuses), then the
  * call, then `settleUsage` once with what Claude really billed, zeros when it billed nothing. A
- * reservation is taken once per chunk, however many times the call is retried, so a retry never
- * charges the pages twice. A reservation left unsettled (a function killed mid-call) keeps
+ * reservation is taken once per call, however many times that call is retried, and a chunk's
+ * pages ride on its first reservation only (its halves, when it is read in two, reserve none:
+ * #590), so neither a retry nor a split charges the pages twice. A reservation left unsettled (a function killed mid-call) keeps
  * counting until the month ends: that only makes the cap stricter.
  */
 

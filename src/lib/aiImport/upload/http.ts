@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { messageFor, type BatchStatus } from "@/lib/authoring/aiImportUpload";
+import type { ClaudeFailureCode } from "../claude";
 import { aiImportAccess, readBatch, type AccessDeps, type BatchRow, type Client } from "./access";
 
 /** Shared by the parse and extract routes (#345). JSON only, never cached. */
@@ -18,6 +19,28 @@ export function fail(status: number, code: string, extra: Record<string, unknown
 
 export function answer(body: Record<string, unknown>): Response {
   return NextResponse.json({ ok: true, ...body }, { headers: NO_STORE });
+}
+
+/**
+ * The answer for a Claude call that failed (#590), by what happened to it. `claude_failed` says
+ * Claude is unavailable and nothing was charged, which is true only of a call Claude never
+ * answered (a 429, a 529, a 5xx, a dropped connection, no key). A call that ran and then timed
+ * out, was cut off, was declined or came back unreadable says that instead.
+ */
+export function claudeFailure(reason: ClaudeFailureCode): Response {
+  switch (reason) {
+    case "timeout":
+      return fail(504, "claude_timeout");
+    case "max_tokens":
+      return fail(422, "too_long");
+    case "refusal":
+      return fail(422, "claude_refused");
+    case "invalid_json":
+    case "no_answer":
+      return fail(502, "bad_answer");
+    default:
+      return fail(502, "claude_failed");
+  }
 }
 
 export interface RouteDeps extends AccessDeps {

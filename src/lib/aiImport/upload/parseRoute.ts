@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { SegmentChunkRequest, SegmentChunkResult } from "../segmentChunk";
 import type { Client } from "./access";
 import { claimChunk, settleChunk, type ChunkClaim } from "./chunks";
-import { admit, answer, fail, type RouteDeps } from "./http";
+import { admit, answer, claudeFailure, fail, type RouteDeps } from "./http";
 
 /**
  * `POST /api/ai-import/parse` (#345): one chunk through the segment pass, as the page asks for it
@@ -37,9 +37,11 @@ function refusal(result: Refusal): Response {
     case "cap_reached":
       return fail(402, "cap_reached", { remainingUsd: result.remainingUsd });
     case "claude_failed":
-      return fail(502, "claude_failed");
+      return claudeFailure(result.reason);
     case "bad_answer":
       return fail(502, "bad_answer");
+    case "part_too_large":
+      return fail(422, "part_too_large");
     case "not_found":
       return fail(404, "not_found");
     case "not_uploaded":
@@ -49,6 +51,24 @@ function refusal(result: Refusal): Response {
     default:
       return fail(503, "unavailable");
   }
+}
+
+/**
+ * How a refused try is recorded on the chunk. Which Claude failure it was is kept and logged, the
+ * code and nothing else, so an import that sticks can be read from its rows and the logs (the one
+ * of 2026-10-22 needed a probe to learn it was `max_tokens`, #590).
+ */
+function outcomeOf(result: Refusal): Parameters<typeof settleChunk>[4] {
+  // The cap reached between a chunk's call and its halves: that call was billed, so the try counts.
+  const charged = result.code === "cap_reached" && result.charged === true;
+  if (RELEASED.has(result.code) && !charged) return { status: "released" };
+  if (result.code === "claude_failed") {
+    console.error("[ai-import] a segment call failed", { reason: result.reason });
+    return { status: "failed", code: `claude_failed:${result.reason}` };
+  }
+  // The same chunk overflows the same way every time: no more tries are paid for.
+  if (result.code === "part_too_large") return { status: "failed", code: result.code, final: true };
+  return { status: "failed", code: result.code };
 }
 
 function claimRefusal(claim: Extract<ChunkClaim, { ok: false }>): Response {
@@ -92,12 +112,6 @@ export async function parseChunkResponse(
     });
     return answer({ questions: result.segment.questions.length, already: false });
   }
-  await settleChunk(
-    admitted.service,
-    ref,
-    position,
-    claim.attempts,
-    RELEASED.has(result.code) ? { status: "released" } : { status: "failed", code: result.code },
-  );
+  await settleChunk(admitted.service, ref, position, claim.attempts, outcomeOf(result));
   return refusal(result);
 }
