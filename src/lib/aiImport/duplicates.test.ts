@@ -199,6 +199,13 @@ describe("markDuplicates", () => {
     ]);
   });
 
+  // #591: both entries sit at the first file's place; with that file removed, neither counts.
+  it("leaves out entries at a removed file's place", async () => {
+    const { service, updates } = fakeService();
+    expect(await markDuplicates(service, ref, new Set([0]))).toEqual({ ok: true, changed: 0 });
+    expect(updates).toEqual([]);
+  });
+
   it("answers unavailable when a read or a write fails, logging only a code", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     for (const options of [{ entriesError: true }, { itemsError: true }, { updateError: true }]) {

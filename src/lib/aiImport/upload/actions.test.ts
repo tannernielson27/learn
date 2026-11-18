@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RouteAuthor } from "@/lib/authoring/session";
 import { createMemoryRateLimitStore } from "@/lib/rateLimit/testing/memoryStore";
+import { REMOVED_REASON } from "../files/reasons";
 import {
   AI_IMPORT_BATCH_LIMIT,
   beginParsing,
@@ -247,24 +248,121 @@ describe("beginParsing", () => {
   });
 });
 
+const FAILED = "00000000-0000-4000-8000-0000000000f2";
+
+const fileRow = (id: string, status = "ready", reason: string | null = null) => ({
+  id,
+  status,
+  rejected_reason: reason,
+  storage_path: `${ORG}/${BATCH}/${id}`,
+});
+
+// #591: a file that cannot be read is removed, and the rest of the import goes on to review.
+describe("removing a file while the import is reading", () => {
+  it("removes a failed file, after which finishBatch moves the import to review", async () => {
+    finishExtraction.mockResolvedValue({ ok: true, duplicates: 0 });
+    const removing = deps(teacher().author, {
+      ai_import_batches: [batchRow("parsing")],
+      ai_import_files: [{ data: [fileRow(FILE), fileRow(FAILED)] }, {}],
+      ai_import_chunks: [{}],
+      ai_import_entries: [{}],
+    });
+    expect(await removeUpload(removing.deps, BATCH, FAILED)).toEqual({ ok: true });
+    // The row is kept as removed, so the other file's questions stay filed under it.
+    expect(removing.service.stepsOn("ai_import_files", "delete")).toEqual([]);
+    expect(removing.service.stepsOn("ai_import_files", "update")).toEqual([
+      [{ status: "rejected", rejected_reason: REMOVED_REASON }],
+    ]);
+    expect(removing.service.stepsOn("ai_import_chunks", "eq")).toContainEqual(["file_id", FAILED]);
+    expect(removing.service.stepsOn("ai_import_entries", "gte")).toEqual([["position", 1000]]);
+    expect(removing.service.remove).toHaveBeenCalledWith([`${ORG}/${BATCH}/${FAILED}`]);
+
+    // The failed file's unread chunks are gone with it, so nothing holds the finish back.
+    const finishing = deps(teacher().author, {
+      ai_import_batches: [batchRow("parsing"), { data: null }],
+      ai_import_files: [{ data: [fileRow(FILE), fileRow(FAILED, "rejected", REMOVED_REASON)] }],
+      ai_import_chunks: [{}, { count: 0 }],
+      ai_import_entries: [{}],
+    });
+    expect(await finishBatch(finishing.deps, BATCH)).toEqual({ ok: true });
+    expect(finishing.service.stepsOn("ai_import_batches", "update")).toEqual([
+      [{ status: "review" }],
+    ]);
+    expect(finishing.service.left()).toEqual([]);
+    // The duplicate pass is told the removed file's place, so a question staged there after the
+    // clear is not compared with the questions that go to review.
+    expect(finishExtraction).toHaveBeenCalledWith(
+      finishing.service.client,
+      { orgId: ORG, batchId: BATCH },
+      new Set([1]),
+    );
+  });
+
+  it("does not find another workspace's import, and removes nothing", async () => {
+    const { deps: d, service } = deps(teacher().author, { ai_import_batches: [{ data: null }] });
+    expect(await removeUpload(d, BATCH, FAILED)).toMatchObject({ ok: false, code: "not_found" });
+    expect(service.stepsOn("ai_import_batches", "eq")).toContainEqual(["org_id", ORG]);
+    expect(service.from).toHaveBeenCalledTimes(1);
+    expect(service.remove).not.toHaveBeenCalled();
+  });
+
+  it("does not find a file of another import", async () => {
+    const { deps: d, service } = deps(teacher().author, {
+      ai_import_batches: [batchRow("parsing")],
+      ai_import_files: [{ data: [fileRow(FILE)] }],
+    });
+    expect(await removeUpload(d, BATCH, FAILED)).toMatchObject({ ok: false, code: "not_found" });
+    expect(service.stepsOn("ai_import_files", "update")).toEqual([]);
+  });
+
+  it("refuses once the import is in review", async () => {
+    const { deps: d, service } = deps(teacher().author, {
+      ai_import_batches: [batchRow("review"), { data: { status: "review" } }],
+      ai_import_files: [{ data: { id: FILE, status: "ready", storage_path: "p" } }],
+    });
+    expect(await removeUpload(d, BATCH, FILE)).toMatchObject({ ok: false, code: "batch_closed" });
+    expect(service.remove).not.toHaveBeenCalled();
+  });
+});
+
 describe("finishBatch", () => {
+  const oneReady: Reply = { data: [fileRow(FILE)] };
+
   it("refuses while a chunk is unread", async () => {
     const { deps: d } = deps(teacher().author, {
       ai_import_batches: [batchRow("parsing")],
+      ai_import_files: [oneReady],
       ai_import_chunks: [{ count: 1 }],
     });
     expect(await finishBatch(d, BATCH)).toMatchObject({ code: "incomplete" });
     expect(finishExtraction).not.toHaveBeenCalled();
   });
 
+  it("refuses when every file has been removed", async () => {
+    const { deps: d, service } = deps(teacher().author, {
+      ai_import_batches: [batchRow("parsing")],
+      ai_import_files: [{ data: [fileRow(FILE, "rejected", REMOVED_REASON)] }],
+      ai_import_chunks: [{}],
+      ai_import_entries: [{}],
+    });
+    expect(await finishBatch(d, BATCH)).toMatchObject({ ok: false, code: "nothing_left" });
+    expect(finishExtraction).not.toHaveBeenCalled();
+    expect(service.stepsOn("ai_import_batches", "update")).toEqual([]);
+  });
+
   it("finishes the extraction in the caller's workspace, then moves the batch to review", async () => {
     finishExtraction.mockResolvedValue({ ok: true, duplicates: 0 });
     const { deps: d, service } = deps(teacher().author, {
       ai_import_batches: [batchRow("parsing"), { data: null }],
+      ai_import_files: [oneReady],
       ai_import_chunks: [{ count: 0 }],
     });
     expect(await finishBatch(d, BATCH)).toEqual({ ok: true });
-    expect(finishExtraction).toHaveBeenCalledWith(service.client, { orgId: ORG, batchId: BATCH });
+    expect(finishExtraction).toHaveBeenCalledWith(
+      service.client,
+      { orgId: ORG, batchId: BATCH },
+      new Set(),
+    );
     expect(service.stepsOn("ai_import_batches", "update")).toEqual([[{ status: "review" }]]);
   });
 

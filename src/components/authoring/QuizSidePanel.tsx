@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
+import { TextLink } from "@/components/ui/TextLink";
 
 export interface QuizSidePanelProps {
   newQuestionHref: string;
@@ -11,6 +12,11 @@ export interface QuizSidePanelProps {
   newCaseStudy: ReactNode;
   /** Import with AI, only where AI import is on for the deployment and the workspace (#345). */
   aiImportHref?: string;
+  /**
+   * The quiz's imports that are not finished (#591): one left in review, or one whose files were
+   * not all read, each with the way back to it.
+   */
+  openImports?: readonly { text: string; action: string; href: string }[];
   /** The folders inside the quiz, for a quiz that still has some (#411). */
   folders?: ReactNode;
   /** Rename quiz, behind More. */
@@ -33,6 +39,7 @@ export function QuizSidePanel({
   newQuestionHref,
   newCaseStudy,
   aiImportHref,
+  openImports = [],
   folders,
   more,
 }: QuizSidePanelProps) {
@@ -49,6 +56,18 @@ export function QuizSidePanel({
             <Icon icon={Sparkles} />
             Import with AI
           </Link>
+        ) : null}
+        {openImports.length > 0 ? (
+          <ul aria-label="Imports not finished" className="flex flex-col gap-1">
+            {openImports.map((open) => (
+              <li key={open.href} className="flex flex-wrap items-center justify-between gap-x-3">
+                <span className="text-sm text-ink-1">{open.text}</span>
+                <TextLink href={open.href} size="sm">
+                  {open.action}
+                </TextLink>
+              </li>
+            ))}
+          </ul>
         ) : null}
         <div id={NEW_CASE_STUDY_ID} tabIndex={-1} className="scroll-mt-4 border-t border-line pt-3">
           {newCaseStudy}

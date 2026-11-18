@@ -3,15 +3,18 @@ import { messageFor, type AiImportFailure } from "@/lib/authoring/aiImportUpload
 import type { AuthorSession } from "@/lib/authoring/session";
 import type { Json } from "@/lib/supabase/database.types";
 import { AI_IMPORT_BUCKET } from "../files/store";
+import { withoutRemoved } from "../places";
 import { aiImportAccess, type AccessDeps, type Client } from "../upload/access";
+import { clearRemovedFiles } from "../upload/removeFile";
 import { COMMIT_ENTRY_COLUMNS, planCommit, type CommitEntryRow } from "./plan";
 
 /**
  * Import a reviewed batch into its quiz, or discard it (#348). Each Server Function checks the
  * caller itself (a teacher, AI import on, the workspace from the session). The reads, the import
  * call and the discard run with the teacher's own session, so RLS and `import_ai_batch`'s own
- * checks apply as well. The service client is used for one thing only, after that: removing the
- * batch's uploaded files from Storage, filtered by the session's workspace.
+ * checks apply as well. The service client is used for two things only, each filtered by the
+ * session's workspace: clearing the places of files the teacher removed, just before an import
+ * (#591, below), and removing the batch's uploaded files from Storage after it.
  *
  * Owner decision, 2026-10-15: the questions land in the quiz the import was started from
  * (`ai_import_batches.bank_id`); no new quiz is made.
@@ -118,6 +121,15 @@ export async function importBatch(deps: CommitDeps, raw: unknown): Promise<Impor
   if (batch.status !== "review") return refuse("not_review");
   if (!batch.bankId) return refuse("quiz_gone");
 
+  // #591: a request that was still reading a file when the teacher removed it can stage a
+  // question long after the removal. Whatever sits at a removed file's place is deleted here,
+  // after the batch was read as the caller's own (a teacher's session may not delete an entry,
+  // so this is the service client). One that lands after this delete is left out of what is
+  // handed in below, and `import_ai_batch` then refuses the import, since it takes exactly the
+  // kept entries: a question from a removed file is never imported.
+  const cleared = await clearRemovedFiles(deps.service(), { orgId: author.orgId, batchId });
+  if (!cleared.ok) return refuse(cleared.code);
+
   const { data: rows, error } = await client
     .from("ai_import_entries")
     .select(COMMIT_ENTRY_COLUMNS)
@@ -128,7 +140,7 @@ export async function importBatch(deps: CommitDeps, raw: unknown): Promise<Impor
     logged("reading entries to import", error);
     return refuse("unavailable");
   }
-  const plan = planCommit((rows ?? []) as CommitEntryRow[]);
+  const plan = planCommit(withoutRemoved((rows ?? []) as CommitEntryRow[], cleared.removed));
   if (!plan.ok) return refuse(plan.code);
 
   const { data, error: importError } = await client.rpc("import_ai_batch", {

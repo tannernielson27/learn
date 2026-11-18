@@ -6,6 +6,7 @@ import {
 } from "@/lib/authoring/aiImportReview";
 import { ITEM_TYPES } from "@/lib/ngn/labels";
 import type { ItemType } from "@/lib/ngn/schemas";
+import { removedPlaces, withoutRemoved } from "../places";
 import type { Client } from "../upload/access";
 
 /**
@@ -13,6 +14,10 @@ import type { Client } from "../upload/access";
  * staged entry with its item, key included. Read with the teacher's own session, so RLS ("authors
  * read AI import entries") decides as well as the filters on the session's workspace. Never the
  * model's draft, which the screen does not need.
+ *
+ * A file the teacher removed (#591) keeps its name in `fileNames`, so every other file keeps its
+ * place; an entry at its place is left out. Such an entry can only be one a request staged after
+ * the removal, and the import deletes it (`importBatch`).
  */
 
 export interface ReviewBatch {
@@ -90,7 +95,7 @@ export async function readReviewBatch(
       .maybeSingle(),
     client
       .from("ai_import_files")
-      .select("original_name")
+      .select("original_name, status, rejected_reason")
       .eq("batch_id", batchId)
       .eq("org_id", orgId)
       .order("created_at")
@@ -108,11 +113,12 @@ export async function readReviewBatch(
     return "unavailable";
   }
   if (!batch.data) return null;
+  const shown = withoutRemoved((entries.data ?? []) as EntryRow[], removedPlaces(files.data ?? []));
   return {
     id: batch.data.id,
     status: batch.data.status as BatchStatus,
     bankId: batch.data.bank_id,
     fileNames: (files.data ?? []).map((file) => file.original_name),
-    entries: ((entries.data ?? []) as EntryRow[]).map(toEntryView),
+    entries: shown.map(toEntryView),
   };
 }

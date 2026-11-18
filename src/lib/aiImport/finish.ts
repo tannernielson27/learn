@@ -66,14 +66,19 @@ export async function recordBatchSource(
   return "ok";
 }
 
-/** Duplicates flagged and the source matter recorded: the batch is ready for review. */
+/**
+ * Duplicates flagged and the source matter recorded: the batch is ready for review. A file the
+ * teacher removed (#591) gives neither: the source matter is read from ready files only, and the
+ * duplicate pass leaves out the `removed` places.
+ */
 export async function finishExtraction(
   service: Client,
   ref: { orgId: string; batchId: string },
+  removed: ReadonlySet<number> = new Set(),
 ): Promise<{ ok: true; duplicates: number } | { ok: false; code: "incomplete" | "unavailable" }> {
   const source = await recordBatchSource(service, ref);
   if (source !== "ok") return { ok: false, code: source };
-  const duplicates = await markDuplicates(service, ref);
+  const duplicates = await markDuplicates(service, ref, removed);
   if (!duplicates.ok) return duplicates;
   return { ok: true, duplicates: duplicates.changed };
 }

@@ -298,6 +298,14 @@ describe("extractUnit's checks", () => {
     }
   });
 
+  it("answers not found when the file was removed while the unit was read (#591)", async () => {
+    const { wired } = deps({ insertEntries: async () => "not_found" as const });
+    expect(await extractUnit(wired, { ...REQUEST, unit: 0 })).toEqual({
+      ok: false,
+      code: "not_found",
+    });
+  });
+
   it("stops at the cap before the call, staging nothing", async () => {
     const { wired, create, inserted } = deps({ usage: ledger("cap_reached") });
     expect(await extractUnit(wired, { ...REQUEST, unit: 1 })).toEqual({
@@ -487,7 +495,7 @@ describe("extractUnitDeps", () => {
     const calls: { table: string; method: string; args: unknown[] }[] = [];
     const from = (table: string) => {
       const builder: Record<string, unknown> = {};
-      for (const method of ["select", "eq", "order", "upsert"]) {
+      for (const method of ["select", "eq", "order", "upsert", "maybeSingle"]) {
         builder[method] = (...args: unknown[]) => {
           calls.push({ table, method, args });
           return builder;
@@ -519,7 +527,10 @@ describe("extractUnitDeps", () => {
   });
 
   it("inserts each row once, ignoring a place already staged", async () => {
-    const { client, calls } = service({ ai_import_entries: { data: null, error: null } });
+    const { client, calls } = service({
+      ai_import_files: { data: { status: "ready" }, error: null },
+      ai_import_entries: { data: null, error: null },
+    });
     const row = { position: 3 } as StagedRow;
     expect(await extractUnitDeps(client).insertEntries(ref, [row])).toBe("ok");
     expect(calls.at(-1)).toEqual({
@@ -530,6 +541,28 @@ describe("extractUnitDeps", () => {
         { onConflict: "batch_id,position", ignoreDuplicates: true },
       ],
     });
+  });
+
+  // #591: the teacher may remove the file while a unit of it is still being read.
+  it("stages nothing from a file that is no longer ready when the unit comes back", async () => {
+    const row = { position: 3 } as StagedRow;
+    for (const data of [{ status: "rejected" }, null]) {
+      const { client, calls } = service({
+        ai_import_files: { data, error: null },
+        ai_import_entries: { data: null, error: null },
+      });
+      expect(await extractUnitDeps(client).insertEntries(ref, [row])).toBe("not_found");
+      expect(calls.some((call) => call.method === "upsert")).toBe(false);
+      // The file is looked for in the session's workspace and this batch only.
+      const filters = calls.filter((call) => call.table === "ai_import_files");
+      expect(filters.map((call) => call.args)).toEqual(
+        expect.arrayContaining([
+          ["id", "file-2"],
+          ["batch_id", "batch-1"],
+          ["org_id", "org-1"],
+        ]),
+      );
+    }
   });
 
   it("answers unavailable on a database error, logging only its code", async () => {

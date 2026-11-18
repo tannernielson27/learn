@@ -23,6 +23,8 @@ const STEPS = [
   "eq",
   "neq",
   "in",
+  "gte",
+  "lt",
   "or",
   "order",
   "limit",
@@ -30,7 +32,11 @@ const STEPS = [
   "maybeSingle",
 ];
 
-export function fakeClient(tables: Record<string, Reply[]>) {
+export function fakeClient(
+  tables: Record<string, Reply[]>,
+  /** What removing objects from Storage answers; it succeeds unless a test says otherwise. */
+  storage: { remove?: Reply } = {},
+) {
   const calls: [string, string, unknown[]][] = [];
   const queues = Object.fromEntries(Object.entries(tables).map(([k, v]) => [k, [...v]]));
   const from = vi.fn((table: string) => {
@@ -47,11 +53,16 @@ export function fakeClient(tables: Record<string, Reply[]>) {
       Promise.resolve({ error: null, ...reply }).then(resolve, reject);
     return builder;
   });
-  const client = { from } as unknown as Client;
+  const remove = vi.fn<(paths: string[]) => Promise<Reply>>(async () => ({
+    data: [],
+    error: null,
+    ...storage.remove,
+  }));
+  const client = { from, storage: { from: () => ({ remove }) } } as unknown as Client;
   const stepsOn = (table: string, step: string) =>
     calls.filter(([t, s]) => t === table && s === step).map(([, , args]) => args);
   const left = () => Object.entries(queues).filter(([, replies]) => replies.length > 0);
-  return { client, from, calls, stepsOn, left };
+  return { client, from, remove, calls, stepsOn, left };
 }
 
 export const ORG = "00000000-0000-4000-8000-0000000000a1";

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { REMOVED_REASON } from "../files/reasons";
 import { BANK, BATCH, ORG, fakeClient } from "../upload/testing/fakeSupabase";
 import { readReviewBatch, toEntryView, type EntryRow } from "./read";
 
@@ -76,6 +77,30 @@ describe("readReviewBatch", () => {
     expect(client.stepsOn("ai_import_batches", "eq")).toContainEqual(["bank_id", BANK]);
     // The draft is never selected.
     expect(String(client.stepsOn("ai_import_entries", "select")[0]?.[0])).not.toContain("draft");
+  });
+
+  // #591: a request still reading a removed file can stage a question after every delete.
+  it("does not show an entry that landed at a removed file's place", async () => {
+    const client = fakeClient({
+      ai_import_batches: [{ data: { id: BATCH, status: "review", bank_id: BANK } }],
+      ai_import_files: [
+        {
+          data: [
+            { original_name: "removed.md", status: "rejected", rejected_reason: REMOVED_REASON },
+            { original_name: "kept.md", status: "ready", rejected_reason: null },
+          ],
+        },
+      ],
+      ai_import_entries: [
+        { data: [row({ id: "stray", position: 4 }), row({ id: "kept", position: 1003 })] },
+      ],
+    });
+    const batch = await readReviewBatch(client.client, ORG, BATCH, BANK);
+    expect(batch).toMatchObject({
+      // The removed file keeps its name here, so the kept file is still the second.
+      fileNames: ["removed.md", "kept.md"],
+      entries: [{ id: "kept", position: 1003 }],
+    });
   });
 
   it("is null for a batch it cannot see, and unavailable when a read fails", async () => {

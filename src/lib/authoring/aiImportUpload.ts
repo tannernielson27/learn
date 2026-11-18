@@ -27,6 +27,11 @@ export const PARALLEL_REQUESTS = 3;
 export const BUSY_RETRY_MS = 15_000;
 /** How many times to wait for it: about eight minutes, past the server's six-minute claim. */
 export const BUSY_RETRIES = 32;
+/**
+ * The pause before each new try at a part that failed in a way that may not repeat (#591): two
+ * more tries, the second after a longer pause, before the file is marked failed.
+ */
+export const RETRY_PAUSES_MS = [5_000, 20_000] as const;
 
 /** About what one document costs to read (#333: a case study and its standalone, $0.25). */
 const COST_PER_DOCUMENT_USD = 0.25;
@@ -94,7 +99,7 @@ export const AI_IMPORT_MESSAGES = {
     "Part of this file holds more than can be read at once. Split the file into smaller files and upload them again.",
   unavailable: "Something went wrong on our side. Try again in a minute.",
   busy: "Another tab, or an earlier visit, is still reading this part.",
-  spent: "This part failed too many times. Remove the file or start a new import.",
+  spent: "This part failed too many times. Remove the file, or discard this import.",
   not_parsing: "This import is not reading files now.",
   batch_closed: "This import is no longer taking files. Start a new import to add more.",
   too_many_open:
@@ -105,6 +110,7 @@ export const AI_IMPORT_MESSAGES = {
   changed: "The file changed after it was checked. Remove it and add it again.",
   in_progress: "This file is being checked. Wait a moment.",
   incomplete: "Some parts of the files have not been read yet.",
+  nothing_left: "No files are left in this import. Discard it and start again.",
   upload_failed: "The file could not be uploaded. Check your connection and try again.",
   entry_changed:
     "This question changed in another tab or window. Reload the page to see it as it is now.",
@@ -206,10 +212,32 @@ export interface TrackedFile {
   note: string | null;
   /** Why reading or extracting it failed this time. */
   failed: string | null;
+  /** Why nothing is moving on it for now, while it is read. */
+  held: FileHold | null;
 }
 
+/**
+ * Why a file being read shows no progress for a while (#591): `waiting` for a part another tab,
+ * an earlier visit or a failed try still holds, or `retrying` a part after a failure.
+ */
+export type FileHold = "waiting" | "retrying";
+
+/** A part is held for at most six minutes on the server (`UNIT_CLAIM_MS`, `CHUNK_STALE_MS`). */
+export const HOLD_STAGES: Record<FileHold, string> = {
+  waiting: "Waiting to read part of this file. This can take up to 6 minutes.",
+  retrying: "Part of this file failed. Trying it again.",
+};
+
 export function trackFile(file: FileView): TrackedFile {
-  return { ...file, key: file.id, fileId: file.id, units: null, note: null, failed: null };
+  return {
+    ...file,
+    key: file.id,
+    fileId: file.id,
+    units: null,
+    note: null,
+    failed: null,
+    held: null,
+  };
 }
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
@@ -231,6 +259,7 @@ export function describeFile(file: TrackedFile, batchStatus: BatchStatus): FileD
   }
   const progress = fileProgress(file, file.units);
   if (file.failed) return { stage: file.failed, tone: "refused", progress };
+  if (file.held) return { stage: HOLD_STAGES[file.held], tone: "working", progress };
   const questions = plural(file.questions, "question", "questions");
   if (batchStatus === "review" || (file.units && file.units.done >= file.units.total)) {
     return { stage: `Done: ${questions} found.`, tone: "done", progress: 1 };
@@ -251,6 +280,41 @@ export function describeFile(file: TrackedFile, batchStatus: BatchStatus): FileD
     stage: `Reading: ${read} of ${plural(file.chunks.length, "part", "parts")} read.`,
     tone: "working",
     progress,
+  };
+}
+
+/** A chosen file's size as the page lists it: "340 KB", "1.2 MB". */
+export function fileSizeLabel(bytes: number): string {
+  if (bytes < 1024) return `${bytes} bytes`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** An import of a quiz that is not finished: still taking or reading files, or in review. */
+export interface OpenImport {
+  id: string;
+  status: Extract<BatchStatus, "uploading" | "parsing" | "review">;
+  /** Questions found so far: what waits in review. */
+  questions: number;
+}
+
+/** The line and link the quiz page shows for an import that is not finished (#591). */
+export function describeOpenImport(
+  bankId: string,
+  open: OpenImport,
+): { text: string; action: string; href: string } {
+  if (open.status === "review") {
+    return {
+      text: "An import is waiting for review.",
+      // The count is in the link, so two imports in review are two differently named links.
+      action: `Review ${plural(open.questions, "question", "questions")}`,
+      href: `/author/banks/${bankId}/ai-import/${open.id}`,
+    };
+  }
+  return {
+    text: "An import is not finished.",
+    action: "Continue the import",
+    href: `/author/banks/${bankId}/ai-import?batch=${open.id}`,
   };
 }
 

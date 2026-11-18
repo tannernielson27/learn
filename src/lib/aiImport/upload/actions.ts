@@ -5,6 +5,7 @@ import { checkUploadedFile, registerFile, removeFile, type FileRef } from "../fi
 import { finishExtraction } from "../finish";
 import { aiImportAccess, readBatch, type AccessDeps, type BatchRow, type Client } from "./access";
 import type { AuthorSession } from "@/lib/authoring/session";
+import { clearRemovedFiles, removeReadingFile } from "./removeFile";
 import { readBatchView } from "./state";
 
 /**
@@ -135,6 +136,11 @@ export async function checkUpload(
   return { ok: true, status: "ready", pages: checked.pages, chunks: checked.chunks };
 }
 
+/**
+ * Takes a file out of the import. While files are still being added its row is deleted; once the
+ * import is reading (#591) the row is kept as removed and what it brought is deleted, so a file
+ * that cannot be read does not hold the rest back (`removeReadingFile` says why the row stays).
+ */
 export async function removeUpload(
   deps: ActionDeps,
   batchId: string,
@@ -143,6 +149,10 @@ export async function removeUpload(
   const gated = await gate(deps, batchId);
   if ("ok" in gated) return gated;
   if (!isUuid(fileId)) return failure("not_found");
+  if (gated.batch.status === "parsing") {
+    const taken = await removeReadingFile(gated.service, fileRef(gated, batchId, fileId));
+    return taken.ok ? taken : failure(taken.code);
+  }
   const removed = await removeFile(gated.service, fileRef(gated, batchId, fileId));
   if (removed.ok) return removed;
   return "reason" in removed ? failure(removed.code, removed.reason) : failure(removed.code);
@@ -182,7 +192,8 @@ export async function beginParsing(
 /**
  * After the page has extracted every unit of every file: duplicates flagged and the source matter
  * recorded (`finishExtraction`), then the batch moves to review. Refused while any chunk is
- * unread. Running it again on a batch in review changes nothing.
+ * unread, or when every file has been removed. A removed file has no chunks, so it holds nothing
+ * back (#591). Running it again on a batch in review changes nothing.
  */
 export async function finishBatch(
   deps: ActionDeps,
@@ -194,6 +205,10 @@ export async function finishBatch(
   if (gated.batch.status === "review") return { ok: true };
   if (gated.batch.status !== "parsing") return failure("not_parsing");
 
+  const cleared = await clearRemovedFiles(service, { orgId: author.orgId, batchId });
+  if (!cleared.ok) return failure(cleared.code);
+  if (cleared.ready === 0) return failure("nothing_left");
+
   const unread = await service
     .from("ai_import_chunks")
     .select("id", { count: "exact", head: true })
@@ -203,7 +218,13 @@ export async function finishBatch(
   if (unread.error) return failure("unavailable");
   if ((unread.count ?? 0) > 0) return failure("incomplete");
 
-  const finished = await finishExtraction(service, { orgId: author.orgId, batchId });
+  // The clear above cannot catch a question staged after it by a request still reading a removed
+  // file, so the removed places are also left out of everything read from here on (`places.ts`).
+  const finished = await finishExtraction(
+    service,
+    { orgId: author.orgId, batchId },
+    cleared.removed,
+  );
   if (!finished.ok) return failure(finished.code);
   const { error } = await service
     .from("ai_import_batches")

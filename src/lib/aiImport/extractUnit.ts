@@ -27,6 +27,7 @@ import { estimatePages } from "./files/text";
 import { estimateCallCost, reserveUsage, settleUsage, type UsageRpc } from "./ledger";
 import { mergeSegments, type MergedQuestion } from "./merge";
 import { takeExtractCall, type ParseAllowance } from "./parseLimit";
+import { POSITIONS_PER_FILE } from "./places";
 import { loadFileSegments, type FileSegmentsResult } from "./segmentStore";
 import { formatReason, type StagedEntry } from "./stage";
 
@@ -54,8 +55,8 @@ import { formatReason, type StagedEntry } from "./stage";
 
 type Client = SupabaseClient<Database>;
 
-/** A file's questions are placed `file order * 1000 + position in the file`. */
-export const POSITIONS_PER_FILE = 1000;
+// Kept here for the modules that have always imported it from this one; it lives in `places.ts`.
+export { POSITIONS_PER_FILE };
 
 export interface StagedRow {
   chunk_id: string | null;
@@ -85,7 +86,8 @@ export interface ExtractUnitDeps {
   stagedPlaces: (
     ref: FileRef,
   ) => Promise<{ count: number; positions: Set<number> } | "unavailable">;
-  insertEntries: (ref: FileRef, rows: StagedRow[]) => Promise<"ok" | "unavailable">;
+  /** `not_found`: the file is no longer part of the import, so nothing was staged from it. */
+  insertEntries: (ref: FileRef, rows: StagedRow[]) => Promise<"ok" | "unavailable" | "not_found">;
   sleep?: (ms: number) => Promise<void>;
   random?: () => number;
 }
@@ -350,7 +352,8 @@ export async function extractUnit(
   // A split case study group may stage more entries than there is room for.
   const kept = entries.slice(0, room);
   const rows = kept.map((entry) => rowOf(entry, base, planned.chunkIds));
-  if ((await deps.insertEntries(ref, rows)) !== "ok") return { ok: false, code: "unavailable" };
+  const inserted = await deps.insertEntries(ref, rows);
+  if (inserted !== "ok") return { ok: false, code: inserted };
   return done(kept, usage, entries.length - kept.length);
 }
 
@@ -398,6 +401,21 @@ export function extractUnitDeps(service: Client): ExtractUnitDeps {
       return { count: positions.size, positions };
     },
     insertEntries: async (ref, rows) => {
+      // #591: a unit can take a minute, and the teacher may have removed the file meanwhile. The
+      // file is read again here so that almost nothing is staged from a removed file; what still
+      // slips between this read and the insert is left out by every reader (`places.ts`).
+      const file = await service
+        .from("ai_import_files")
+        .select("status")
+        .eq("id", ref.fileId)
+        .eq("batch_id", ref.batchId)
+        .eq("org_id", ref.orgId)
+        .maybeSingle();
+      if (file.error) {
+        logged("reading a file before staging", file.error);
+        return "unavailable";
+      }
+      if (file.data?.status !== "ready") return "not_found";
       const { error } = await service.from("ai_import_entries").upsert(
         rows.map((row) => ({ ...row, batch_id: ref.batchId, org_id: ref.orgId })),
         { onConflict: "batch_id,position", ignoreDuplicates: true },

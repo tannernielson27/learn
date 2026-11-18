@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import { withoutRemoved } from "./places";
 import { normalizePassage } from "./sourceText";
 import { formatReason, readReason, type EntryReason } from "./stage";
 
@@ -89,10 +90,15 @@ const logged = (step: string, error: { code?: string } | null) => {
   console.error(`[ai-import] ${step} failed`, { code: error?.code ?? null });
 };
 
-/** Flags a batch's duplicates, on the service-role client. Returns how many entries changed. */
+/**
+ * Flags a batch's duplicates, on the service-role client. Returns how many entries changed.
+ * `removed` holds the places of files the teacher removed (#591): an entry staged late at one of
+ * them is not part of the import, so it neither is flagged nor makes another question a duplicate.
+ */
 export async function markDuplicates(
   service: Client,
   ref: { orgId: string; batchId: string },
+  removed: ReadonlySet<number> = new Set(),
 ): Promise<{ ok: true; changed: number } | { ok: false; code: "unavailable" }> {
   const entries = await service
     .from("ai_import_entries")
@@ -116,7 +122,7 @@ export async function markDuplicates(
     .map((row) => (row as { stem: unknown }).stem)
     .filter((stem): stem is string => typeof stem === "string");
   const changes = duplicateReasons(
-    (entries.data ?? [])
+    withoutRemoved(entries.data ?? [], removed)
       .filter((row) => row.status !== "dropped")
       .map((row) => ({
         id: row.id,

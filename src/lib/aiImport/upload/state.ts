@@ -5,7 +5,8 @@ import type {
   FileStatus,
   FileView,
 } from "@/lib/authoring/aiImportUpload";
-import { POSITIONS_PER_FILE } from "../extractUnit";
+import { isRemovedFile } from "../files/reasons";
+import { placeOf } from "../places";
 import type { Client } from "./access";
 
 /**
@@ -18,7 +19,11 @@ const logged = (step: string, error: { code?: string } | null) => {
   console.error(`[ai-import] ${step} failed`, { code: error?.code ?? null });
 };
 
-/** The batch the page should open: the newest one of this quiz still uploading or reading. */
+/**
+ * The batch the upload page should open: the newest one of this quiz still uploading or reading.
+ * An import in review is not reopened here, so a teacher can start another while one waits; the
+ * quiz page lists it instead (`readOpenImports`).
+ */
 export async function openBatchId(
   service: Client,
   orgId: string,
@@ -80,20 +85,25 @@ export async function readBatchView(
   }
   if (!batch.data) return null;
 
-  const fileViews: FileView[] = (files.data ?? []).map((file, place) => ({
-    id: file.id,
-    name: file.original_name,
-    status: file.status as FileStatus,
-    reason: file.rejected_reason,
-    pages: file.pages,
-    chunks: (chunks.data ?? [])
-      .filter((chunk) => chunk.file_id === file.id)
-      .map((chunk) => ({ position: chunk.position, status: chunk.status as ChunkStatus })),
-    // Entries sit at `file order * 1000 + place in the file` (#343), in the same file order.
-    questions: (entries.data ?? []).filter(
-      (entry) => Math.floor(entry.position / POSITIONS_PER_FILE) === place,
-    ).length,
-  }));
+  const fileViews: FileView[] = (files.data ?? [])
+    // Each file's place is counted before a removed file is left out (#591): its row stays so
+    // that the files after it, and their questions, keep the place they had.
+    .map((file, place) => ({ file, place }))
+    .filter(({ file }) => !isRemovedFile(file))
+    .map(({ file, place }) => ({
+      id: file.id,
+      name: file.original_name,
+      status: file.status as FileStatus,
+      reason: file.rejected_reason,
+      pages: file.pages,
+      chunks: (chunks.data ?? [])
+        .filter((chunk) => chunk.file_id === file.id)
+        .map((chunk) => ({ position: chunk.position, status: chunk.status as ChunkStatus })),
+      // Entries sit at `file order * 1000 + place in the file` (#343), in the same file order.
+      // A question staged late at a removed file's place belongs to no file listed here, so it
+      // is in no count.
+      questions: (entries.data ?? []).filter((entry) => placeOf(entry.position) === place).length,
+    }));
   return { id: batch.data.id, status: batch.data.status as BatchStatus, files: fileViews };
 }
 
