@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { caseStudySchema, itemSchema } from "@/lib/ngn/schemas";
-import type { StructuredRequest } from "./claude";
+import { ClaudeCallError, type StructuredRequest } from "./claude";
 import { NO_USAGE } from "./config";
 import { planExtraction } from "./extract";
 import { extractCaseStudy, extractQuestions, regionsOf, type UnitCall } from "./extractQuestions";
@@ -84,21 +84,30 @@ const quotedIn = (tag: string, request: StructuredRequest) => {
   return JSON.parse(new RegExp(`<${tag}>\\n([\\s\\S]*?)\\n</${tag}>`).exec(ask)?.[1] ?? "{}");
 };
 
-/** Answers each request from the recording; `fail` names purposes that throw. */
-function replay(fail: string[] = []) {
+/**
+ * Answers each request from the recording; `fail` names purposes that throw, and `failStep` makes
+ * only that step's chart call throw.
+ */
+function replay(fail: string[] = [], failStep?: number, refuse?: Error) {
   const purposes: string[] = [];
+  const requests: StructuredRequest[] = [];
   const call: UnitCall = vi.fn(async (request, purpose) => {
     purposes.push(purpose);
-    if (fail.includes(purpose)) throw new Error(`${purpose} failed`);
+    requests.push(request);
+    if (fail.includes(purpose)) throw new ClaudeCallError("max_tokens", NO_USAGE, 1);
     const properties = (request.schema as { properties: Record<string, unknown> }).properties;
     let value: unknown;
-    if ("charts" in properties) {
-      const { title } = quotedIn("case_study", request) as { title: string };
-      const { patient, charts } = cases.find((draft) => draft.title === title)!;
-      value = { title, patient, charts };
-    } else if ("chart" in properties) {
+    if ("chart" in properties) {
       const { opens } = quotedIn("question", request) as { opens: string };
       value = recording.questions.find((q) => q.opening === opens)?.chart;
+    } else if ("patient" in properties) {
+      const { title } = quotedIn("case_study", request) as { title: string };
+      const { patient } = cases.find((draft) => draft.title === title)!;
+      value = { title, patient };
+    } else if ("tabs" in properties) {
+      const { title, step } = quotedIn("case_study", request) as { title: string; step: number };
+      if (step === failStep) throw refuse ?? new ClaudeCallError("max_tokens", NO_USAGE, 1);
+      value = (cases.find((draft) => draft.title === title)!.charts as unknown[])[step - 1];
     } else {
       const asked = quotedIn("questions", request) as { field: string; opens: string }[];
       value = Object.fromEntries(
@@ -110,7 +119,7 @@ function replay(fail: string[] = []) {
     }
     return { value, usage: NO_USAGE, attempts: 1 };
   });
-  return { call, purposes };
+  return { call, purposes, requests };
 }
 
 const document = {
@@ -136,11 +145,19 @@ describe("extractCaseStudy", () => {
     ]);
   });
 
-  it("stages six steps as one case study, reading its charts in one more call", async () => {
-    const { call, purposes } = replay();
+  it("stages six steps as one case study, reading its record a step per call", async () => {
+    const { call, purposes, requests } = replay();
     const steps = unitOf(cases[0].title);
     const entries = await extractCaseStudy(call, cases[0].title, steps, document, regions);
-    expect(purposes.sort()).toEqual(["chart", "extract", "extract", "extract"]);
+    // #604: one call for the title and patient header, and one per step's chart. A single call
+    // for all six charts ran past the answer limit on a real-size case study.
+    expect(purposes.sort()).toEqual([...Array(7).fill("chart"), "extract", "extract", "extract"]);
+    const asked = requests
+      .filter((request) => "tabs" in (request.schema as { properties: object }).properties)
+      .map((request) => quotedIn("case_study", request) as { step: number; of: number });
+    expect(asked.map(({ step, of }) => [step, of]).sort()).toEqual(
+      [1, 2, 3, 4, 5, 6].map((step) => [step, 6]),
+    );
     expect(entries).toHaveLength(1);
     const [entry] = entries;
     expect(entry).toMatchObject({
@@ -167,9 +184,12 @@ describe("extractCaseStudy", () => {
   });
 
   it("stages a group of three as three questions, each with #344's note and its place", async () => {
-    const { call } = replay();
+    const { call, purposes } = replay();
     const steps = unitOf(cases[1].title);
     const entries = await extractCaseStudy(call, cases[1].title, steps, document, regions);
+    // A group that is not six is never one case study: its record only says whether one was
+    // printed, so the header and the first step's chart are enough (#604).
+    expect(purposes.filter((purpose) => purpose === "chart")).toHaveLength(2);
     expect(entries.map((e) => [e.kind, e.group?.step, e.status])).toEqual([
       ["item", 1, "ready"],
       ["item", 2, "ready"],
@@ -191,6 +211,56 @@ describe("extractCaseStudy", () => {
       document,
       regions,
     );
+    expect(entry).toMatchObject({ kind: "case_study", status: "needs_fix", item: null });
+    expect(entry.reasons[0].message).toMatch(/patient record could not be read/);
+  });
+
+  it("reads six charts for six typed steps, when the group also has an open prompt", async () => {
+    const extra = {
+      excerpt: "Discuss with a partner how you would explain the insulin drip to the family.",
+      type: "not_ngn",
+      notNgnReason: "An open discussion prompt.",
+      caseStudy: { title: cases[0].title },
+      confidence: 0.9,
+      instructorNote: false,
+      reliesOnImage: false,
+      cutOff: false,
+      continued: false,
+    };
+    const all = merged([extra]);
+    const unit = planExtraction(all).find((u) => u.caseStudy === cases[0].title)!;
+    const steps = all.filter((q) => unit.positions.includes(q.position));
+    expect(steps).toHaveLength(7);
+    const { call, purposes } = replay();
+    const entries = await extractCaseStudy(
+      call,
+      cases[0].title,
+      steps,
+      document,
+      regionsOf(all, text),
+    );
+    expect(purposes.filter((purpose) => purpose === "chart")).toHaveLength(7);
+    expect(entries.map((e) => [e.kind, e.status])).toContainEqual(["case_study", "ready"]);
+  });
+
+  it("lets a refusal under the cap through, instead of calling the record unreadable", async () => {
+    const refused = new Error("the reservation was refused");
+    const { call } = replay([], 5, refused);
+    await expect(
+      extractCaseStudy(call, cases[0].title, unitOf(cases[0].title), document, regions),
+    ).rejects.toBe(refused);
+  });
+
+  it("treats one step's failed chart call as a record that could not be read", async () => {
+    const { call } = replay([], 4);
+    const [entry] = await extractCaseStudy(
+      call,
+      cases[0].title,
+      unitOf(cases[0].title),
+      document,
+      regions,
+    );
+    // Never a record with a step missing: the teacher is told it could not be read.
     expect(entry).toMatchObject({ kind: "case_study", status: "needs_fix", item: null });
     expect(entry.reasons[0].message).toMatch(/patient record could not be read/);
   });

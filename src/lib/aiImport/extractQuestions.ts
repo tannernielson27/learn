@@ -1,7 +1,9 @@
-import type { StructuredAnswer, StructuredRequest } from "./claude";
+import { CASE_STUDY_STEP_COUNT } from "@/lib/ngn/schemas";
+import { ClaudeCallError, type StructuredAnswer, type StructuredRequest } from "./claude";
 import { EXTRACT_PER_CALL } from "./config";
 import {
-  caseStudyChartsRequest,
+  caseStudyHeaderRequest,
+  caseStudyStepChartRequest,
   extractRequest,
   readExtraction,
   repairRequest,
@@ -130,13 +132,49 @@ async function draftAll(
   );
 }
 
-/** The answer of a chart call, or undefined when it failed. */
+/**
+ * The answer of a chart call, or undefined when the Claude call failed. Anything else, a
+ * reservation the cap refused above all, goes on to the caller as a draft call's does (#604): a
+ * record the teacher is told "could not be read" must be one Claude did not read, not one the
+ * workspace had no room left for.
+ */
 async function chartOf(call: UnitCall, request: StructuredRequest): Promise<unknown> {
   try {
     return (await call(request, "chart")).value;
-  } catch {
-    return undefined;
+  } catch (error) {
+    if (error instanceof ClaudeCallError) return undefined;
+    throw error;
   }
+}
+
+/**
+ * A case study's record, read in parallel calls (#604): the title and patient header in one, and
+ * each step's chart in one more, put together as the one answer `stageCaseStudy` takes. All six
+ * charts in a single answer ran past `EXTRACT_MAX_TOKENS` on a real-size case study. Any call
+ * failing leaves the record unread (undefined), never a record with a step missing.
+ *
+ * `steps` is the group's typed steps, the ones the assembly can make a case study of. Only six
+ * can be one; any other count is imported question by question, and its record only says whether
+ * one was printed (#344's note), so the first step's chart is all that is read for it.
+ */
+async function caseStudyRecord(
+  call: UnitCall,
+  title: string,
+  steps: number,
+  document: UnitDocument,
+): Promise<unknown> {
+  const read = steps === CASE_STUDY_STEP_COUNT ? steps : 1;
+  const [header, ...charts] = await Promise.all([
+    chartOf(call, caseStudyHeaderRequest(title, document.payload, document.kind)),
+    ...Array.from({ length: read }, (_, index) =>
+      chartOf(
+        call,
+        caseStudyStepChartRequest(title, index + 1, steps, document.payload, document.kind),
+      ),
+    ),
+  ]);
+  if (header === undefined || charts.some((chart) => chart === undefined)) return undefined;
+  return { ...(typeof header === "object" && header !== null ? header : {}), charts };
 }
 
 /**
@@ -193,7 +231,7 @@ export async function extractCaseStudy(
   const [drafted, charts] = await Promise.all([
     typed.length > 0 ? draftAll(call, typed, document) : Promise.resolve([]),
     typed.length > 0
-      ? chartOf(call, caseStudyChartsRequest(title, document.payload, document.kind))
+      ? caseStudyRecord(call, title, typed.length, document)
       : Promise.resolve(undefined),
   ]);
   const byPosition = new Map(drafted.map((entry) => [entry.question.position, entry]));

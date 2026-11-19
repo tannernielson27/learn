@@ -27,8 +27,9 @@ import { normalizeLine } from "./text";
 
 /**
  * A case study draft (#338): its title, the patient header, the chart as the source shows it with
- * each step, and each step's question. #344 fills the first three in one call and each step in
- * its own, then converts the whole with `fromCaseStudyDraft`. Step numbers and the clinical
+ * each step, and each step's question. The import reads the title and header in one call, each
+ * step's chart in one more (#604), and each step's question in its own, then converts the whole
+ * with `fromCaseStudyDraft`. Step numbers and the clinical
  * judgment step come from the position, never from the model.
  */
 
@@ -65,9 +66,24 @@ export const caseStudyDraftSchema = caseStudyChartsDraftSchema.extend({
 });
 export type CaseStudyDraft = z.infer<typeof caseStudyDraftSchema>;
 
-/** The JSON Schema for the case study call: title, patient header and charts, no questions. */
-export const caseStudyChartsJsonSchema = (): JsonSchema =>
-  forStructuredOutput(z.toJSONSchema(caseStudyChartsDraftSchema)) as JsonSchema;
+/**
+ * #604: the record is read in calls of their own, never all six charts in one answer, which ran
+ * past the answer limit on a real-size case study. One call gives the title and patient header;
+ * one per step gives that step's chart. Together they make a `CaseStudyChartsDraft`.
+ */
+export const caseStudyHeaderDraftSchema = caseStudyChartsDraftSchema.pick({
+  title: true,
+  patient: true,
+});
+export type CaseStudyHeaderDraft = z.infer<typeof caseStudyHeaderDraftSchema>;
+
+/** The JSON Schema for the case study's header call: its title and patient header. */
+export const caseStudyHeaderJsonSchema = (): JsonSchema =>
+  forStructuredOutput(z.toJSONSchema(caseStudyHeaderDraftSchema)) as JsonSchema;
+
+/** The JSON Schema for one step's chart call. */
+export const caseStudyStepChartJsonSchema = (): JsonSchema =>
+  forStructuredOutput(z.toJSONSchema(chartDraftSchema)) as JsonSchema;
 
 export interface CaseStudyDraftContext {
   /** The case study's id; step N's item is `<id>_step_N`. */

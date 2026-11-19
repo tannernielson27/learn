@@ -194,9 +194,16 @@ function extractAnswer(script: Script, body: Body): Record<string, unknown> {
 function answerTo(script: Script, body: Body): { kind: ModelCall["kind"]; value: unknown } {
   const properties = propertiesOf(body);
   if ("questions" in properties) return { kind: "segment", value: segmentAnswer(script, body) };
-  if ("charts" in properties) {
-    if (!script.caseStudy) throw new Error("asked for the charts of a case study it has none of");
-    return { kind: "charts", value: script.caseStudy };
+  // #604: the header in one call, each step's chart in one more.
+  if ("patient" in properties || "tabs" in properties) {
+    const study = script.caseStudy;
+    if (!study) throw new Error("asked for the record of a case study it has none of");
+    if ("patient" in properties) {
+      return { kind: "charts", value: { title: study.title, patient: study.patient } };
+    }
+    const asked = /<case_study>\n([\s\S]*?)\n<\/case_study>/.exec(askOf(body))?.[1] ?? "{}";
+    const { step } = JSON.parse(asked) as { step: number };
+    return { kind: "charts", value: (study.charts as unknown[])[step - 1] };
   }
   return { kind: "extract", value: extractAnswer(script, body) };
 }
