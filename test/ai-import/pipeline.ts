@@ -15,18 +15,19 @@ import {
   type UnitDocument,
 } from "@/lib/aiImport/extractQuestions";
 import { unitPayload, wholeText } from "@/lib/aiImport/extractUnit";
-import { chunkPayload, prepareFile, type PreparedFile } from "@/lib/aiImport/files/prepare";
+import { prepareFile } from "@/lib/aiImport/files/prepare";
 import { mergeSegments, type MergedQuestion } from "@/lib/aiImport/merge";
-import { readSegment, segmentRequest } from "@/lib/aiImport/segment";
 import type { StagedEntry } from "@/lib/aiImport/stage";
 import { NOT_IMPORTABLE, type RecordedQuestion, type Recording } from "./files";
+import { segmentPass, type CorpusFile } from "./productImport";
 
 /**
  * The eval's import pipeline (#339), on the product's own code since #343, so the eval measures
- * what ships: `prepareFile` cuts the chunks the product sends, the segment pass reads each,
- * `mergeSegments` joins them, `planExtraction` makes the product's units, and each unit runs as
- * the server runs it (`extractQuestions`, or `extractCaseStudy` with #344's assembly), charts
- * included. Each call's answer is written down as a recording for the scorer.
+ * what ships: `prepareFile` cuts the chunks the product sends, the server's `segmentChunk` reads
+ * each (in halves when its answer runs out of room, #590), `mergeSegments` joins them,
+ * `planExtraction` makes the product's units, and each unit runs as the server runs it
+ * (`extractQuestions`, or `extractCaseStudy` with #344's assembly), charts included. Each call's
+ * answer is written down as a recording for the scorer.
  *
  * Only `pnpm eval:ai-import` runs it against the API. Tests drive it with a fake client.
  */
@@ -51,26 +52,33 @@ export interface PipelineOptions {
 const message = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
-/** One file's chunks, segmented and merged, as the product does it. */
+/**
+ * One file's chunks, each through the server's own request (`segmentChunk`), then merged. A
+ * chunk whose answer runs out of room is read again in halves there (#590), so a document that
+ * needs that is scored like any other, and not lost to the first `max_tokens` (#594).
+ *
+ * `spent` hears what each chunk's calls billed. A chunk that fails fails the document, with the
+ * code the teacher's browser would get; its calls are not in the document's cost.
+ */
 async function segmentFile(
-  call: UnitCall,
-  bytes: Uint8Array,
-  prepared: PreparedFile,
+  client: MessagesClient,
+  file: CorpusFile,
+  options: PipelineOptions,
+  spent: (usage: Usage) => void,
 ): Promise<MergedQuestion[]> {
-  const segments = [];
-  for (const chunk of prepared.chunks) {
-    const payload = await chunkPayload(bytes, prepared, chunk.position);
-    const ref = {
-      position: chunk.position,
-      of: prepared.chunks.length,
-      pageFrom: chunk.pageFrom,
-      pageTo: chunk.pageTo,
-    };
-    const answer = await call(segmentRequest(payload, prepared.kind, ref), "extract");
-    segments.push(readSegment(answer.value, ref, payload));
-  }
+  const { results, segments } = await segmentPass(file, client, { sleep: options.sleep });
+  results.forEach((result, position) => {
+    if (result.ok) return spent(result.usage);
+    const reason = result.code === "claude_failed" ? `: ${result.reason}` : "";
+    throw new Error(`the segment pass failed on part ${position + 1} (${result.code}${reason})`);
+  });
   return mergeSegments(segments).questions;
 }
+
+/** The client, asked for `model` whatever the request names: the server always names its own. */
+const onModel = (client: MessagesClient, model: string): MessagesClient => ({
+  messages: { create: (body, options) => client.messages.create({ ...body, model }, options) },
+});
 
 /** The opening a chart request names, read back from its question block. */
 function chartOpening(call: Parameters<UnitCall>[0]): string | undefined {
@@ -176,7 +184,14 @@ export async function runPipeline(
     }
   };
 
-  const merged = await segmentFile(call, bytes, prepared);
+  const merged = await segmentFile(
+    onModel(client, model),
+    { name: document.name, bytes, prepared },
+    options,
+    (spent) => {
+      usage = addUsage(usage, spent);
+    },
+  );
   // The product's own join (#592): the chunks with what was cut from between them.
   const sourceText = wholeText(prepared);
   const regions = regionsOf(merged, sourceText);

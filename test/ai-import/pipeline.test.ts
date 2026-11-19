@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { EXTRACT_RULES } from "@/lib/aiImport/extract";
 import { SEGMENT_RULES } from "@/lib/aiImport/segment";
+import { faithfulModel, numberedScript } from "./faithfulModel";
 import { CORPUS_DIR, loadExpected, loadRecordings, NOT_IMPORTABLE, type Recording } from "./files";
 import { costOf, EVAL_MODEL, runPipeline, type MessagesClient } from "./pipeline";
 import { buildReport, formatReport, isPerfect, scoreDocument } from "./score";
@@ -221,6 +222,30 @@ describe("runPipeline", () => {
         },
       },
     ]);
+  });
+
+  it("reads a chunk whose segment answer runs out of room in halves, as the server does", async () => {
+    // #594: the eval measures what ships, and what ships reads such a chunk again in two (#590).
+    const name = "08-sixty-question-bank.docx";
+    const model = faithfulModel(numberedScript(recordings.get(name)!), { roomFor: 40 });
+    const recording = await runPipeline(
+      model.client,
+      { name, bytes: bytesOf(name) },
+      { sleep: noWait },
+    );
+    expect(model.faults).toEqual([]);
+    const segmentCalls = model.calls.filter((call) => call.kind === "segment");
+    expect(segmentCalls.map((call) => call.overflowed)).toEqual([true, false, false]);
+    expect(recording.questions).toHaveLength(60);
+    const report = buildReport([
+      scoreDocument(
+        expected.find((doc) => doc.document === name)!,
+        recording,
+      ),
+    ]);
+    expect(isPerfect(report), formatReport(report)).toBe(true);
+    // The call that was cut off was billed, and is counted: 16,000 tokens of answer and more.
+    expect(recording.usage.outputTokens).toBeGreaterThan(16_000);
   });
 
   it("fails the document when the segment pass returns something else", async () => {

@@ -20,8 +20,9 @@ export default defineConfig({
     name: "ai-import-eval",
     environment: "node",
     include: ["test/ai-import/live.eval.ts"],
-    // A document is a few calls of up to a minute each; the whole corpus takes some minutes.
-    testTimeout: 60 * 60_000,
+    // A small document is a few calls of up to a minute each. The real-size ones (#594) are
+    // about 130 extract calls, one unit after another, and the owner's samples come after them.
+    testTimeout: 120 * 60_000,
     env: { AI_IMPORT_EVAL: "1", ...(apiKey ? { ANTHROPIC_API_KEY: apiKey } : {}) },
   },
 });
