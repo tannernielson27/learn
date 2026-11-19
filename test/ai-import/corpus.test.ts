@@ -20,6 +20,8 @@ import { signatureOf } from "./signature";
  */
 
 const DOCUMENT_TYPES = new Set([".md", ".docx", ".pdf"]);
+/** Recordings written for the corpus, as a faithful model answers: each must score 100%. */
+const WRITTEN = new Set(["hand-written", "generated"]);
 // The notice's opening words; a PDF string escapes the parentheses that follow them.
 const NOTICE = "Fictional content written for the LeaRN test corpus";
 
@@ -102,10 +104,11 @@ describe("the recorded responses", () => {
   });
 
   it.each(expected.map((doc) => doc.document))(
-    "%s: a hand-written recording scores 100%%",
+    "%s: a recording written for the corpus scores 100%%",
     (name) => {
       const recording = recordings.get(name);
-      if (recording?.source !== "hand-written") return;
+      // Written by hand or by `corpus/generate` (#594); a live run's is held to the snapshot.
+      if (recording === undefined || !WRITTEN.has(recording.source)) return;
       const score = scoreDocument(
         expected.find((doc) => doc.document === name)!,
         recording,
@@ -114,6 +117,32 @@ describe("the recorded responses", () => {
       expect(isPerfect(single), formatReport(single)).toBe(true);
     },
   );
+
+  it("a key invented for a question the real-size documents leave unmarked still fails", () => {
+    // #594: the formatting document's last three questions carry bold and red that mark no
+    // answer. A recording that keys one of them must be counted as an invented key.
+    const name = "10-keyed-by-formatting.docx";
+    const doc = expected.find((entry) => entry.document === name)!;
+    const recording = recordings.get(name)!;
+    const unmarked = doc.questions.flatMap((question, index) =>
+      question.status === "needs_answer" ? [index] : [],
+    );
+    expect(unmarked).toHaveLength(3);
+    for (const index of unmarked) {
+      const questions = recording.questions.map((question, at) => {
+        if (at !== index) return question;
+        const draft = question.draft as { options: { text: string }[] };
+        const [first, ...rest] = draft.options;
+        return {
+          ...question,
+          draft: { ...draft, options: [{ text: `${first.text} *` }, ...rest] },
+        };
+      });
+      const report = buildReport([scoreDocument(doc, { ...recording, questions })]);
+      expect(report.inventedKeys).toBe(1);
+      expect(isPerfect(report)).toBe(false);
+    }
+  });
 
   it("score as recorded (update with `pnpm vitest -u` when a recording is replaced)", () => {
     expect(formatReport(report)).toMatchSnapshot();

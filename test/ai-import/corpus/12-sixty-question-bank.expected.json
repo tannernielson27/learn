@@ -1,0 +1,2407 @@
+{
+  "document": "12-sixty-question-bank.pdf",
+  "covers": ["real-size-bank", "pdf-shared-page"],
+  "questions": [
+    {
+      "label": "1.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q1",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has heart failure. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Blood pressure of 118/76 mm Hg while sitting in a chair"
+            },
+            {
+              "id": "opt_b",
+              "label": "Weight gain of 2 kg (4.4 lb) since yesterday morning"
+            },
+            {
+              "id": "opt_c",
+              "label": "Respiratory rate of 16/min with even, quiet breaths"
+            },
+            {
+              "id": "opt_d",
+              "label": "Alert and oriented to person, place and time"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "2.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q2",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has crackles in both lung bases and new shortness of breath while lying flat. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Ask the client about food preferences for the next meal"
+            },
+            {
+              "id": "opt_b",
+              "label": "Update the plan of care at the end of the shift"
+            },
+            {
+              "id": "opt_c",
+              "label": "Weigh the client before breakfast tomorrow"
+            },
+            {
+              "id": "opt_d",
+              "label": "Raise the head of the bed to a high Fowler's position"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_d"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "3.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q3",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has type 1 diabetes mellitus. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Urine output of 60 mL/h of clear yellow urine"
+            },
+            {
+              "id": "opt_b",
+              "label": "Bowel sounds heard in all four quadrants"
+            },
+            {
+              "id": "opt_c",
+              "label": "Heart rate of 76/min with a regular rhythm"
+            },
+            {
+              "id": "opt_d",
+              "label": "Blood glucose of 52 mg/dL before breakfast"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_d"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "4.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q4",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a blood glucose of 48 mg/dL and is awake, shaky and sweating. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Ask a family member to bring the client's glasses from home"
+            },
+            {
+              "id": "opt_b",
+              "label": "Give 15 g of a fast-acting carbohydrate by mouth"
+            },
+            {
+              "id": "opt_c",
+              "label": "Document the finding in the client's record"
+            },
+            {
+              "id": "opt_d",
+              "label": "Schedule a follow-up appointment for next week"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "5.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q5",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has chronic obstructive pulmonary disease. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Skin that is warm, dry and pink"
+            },
+            {
+              "id": "opt_b",
+              "label": "Oxygen saturation of 84% while resting in bed"
+            },
+            {
+              "id": "opt_c",
+              "label": "Oxygen saturation of 97% while breathing room air"
+            },
+            {
+              "id": "opt_d",
+              "label": "Capillary refill of 2 seconds in the fingers and toes"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "6.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q6",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has an oxygen saturation of 85% and is breathing fast while slumped in bed. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Offer the client a warm blanket and dim the lights"
+            },
+            {
+              "id": "opt_b",
+              "label": "Teach the client about a heart-healthy diet"
+            },
+            {
+              "id": "opt_c",
+              "label": "Give the client a pamphlet about support groups"
+            },
+            {
+              "id": "opt_d",
+              "label": "Help the client sit upright and lean forward on the overbed table"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_d"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "7.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q7",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a new tracheostomy. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Temperature of 37.0 °C (98.6 °F) by mouth"
+            },
+            {
+              "id": "opt_b",
+              "label": "Pain rated 2 on a scale of 0 to 10 after repositioning"
+            },
+            {
+              "id": "opt_c",
+              "label": "Steady bright red bleeding from around the tracheostomy tube"
+            },
+            {
+              "id": "opt_d",
+              "label": "Clear breath sounds in both lungs"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_c"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "8.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q8",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has gurgling breath sounds and visible secretions in the tracheostomy tube. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Suction the tracheostomy tube"
+            },
+            {
+              "id": "opt_b",
+              "label": "Reassess the client in 4 hours"
+            },
+            {
+              "id": "opt_c",
+              "label": "Restock the supplies in the client's room"
+            },
+            {
+              "id": "opt_d",
+              "label": "Review the discharge instructions with the client"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_a"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "9.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q9",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a chest tube. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Drainage of 250 mL of bright red blood in the last hour"
+            },
+            {
+              "id": "opt_b",
+              "label": "Alert and oriented to person, place and time"
+            },
+            {
+              "id": "opt_c",
+              "label": "Blood pressure of 118/76 mm Hg while sitting in a chair"
+            },
+            {
+              "id": "opt_d",
+              "label": "Respiratory rate of 16/min with even, quiet breaths"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_a"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "10.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q10",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a disconnected chest tube after turning in bed. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Weigh the client before breakfast tomorrow"
+            },
+            {
+              "id": "opt_b",
+              "label": "Ask the client about food preferences for the next meal"
+            },
+            {
+              "id": "opt_c",
+              "label": "Place the end of the chest tube in a container of sterile water"
+            },
+            {
+              "id": "opt_d",
+              "label": "Update the plan of care at the end of the shift"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_c"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "11.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q11",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a hip fracture. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Heart rate of 76/min with a regular rhythm"
+            },
+            {
+              "id": "opt_b",
+              "label": "Urine output of 60 mL/h of clear yellow urine"
+            },
+            {
+              "id": "opt_c",
+              "label": "Foot on the affected side that is cool, pale and numb"
+            },
+            {
+              "id": "opt_d",
+              "label": "Bowel sounds heard in all four quadrants"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_c"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "12.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q12",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has sudden chest pain and shortness of breath 2 days after hip surgery. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Apply oxygen and raise the head of the bed"
+            },
+            {
+              "id": "opt_b",
+              "label": "Schedule a follow-up appointment for next week"
+            },
+            {
+              "id": "opt_c",
+              "label": "Ask a family member to bring the client's glasses from home"
+            },
+            {
+              "id": "opt_d",
+              "label": "Document the finding in the client's record"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_a"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "13.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q13",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has an acute ischemic stroke. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Capillary refill of 2 seconds in the fingers and toes"
+            },
+            {
+              "id": "opt_b",
+              "label": "Skin that is warm, dry and pink"
+            },
+            {
+              "id": "opt_c",
+              "label": "Oxygen saturation of 97% while breathing room air"
+            },
+            {
+              "id": "opt_d",
+              "label": "New severe headache with vomiting"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_d"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "14.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q14",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has new facial drooping and slurred speech that started 20 minutes ago. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Give the client a pamphlet about support groups"
+            },
+            {
+              "id": "opt_b",
+              "label": "Call the rapid response team and note the time the symptoms started"
+            },
+            {
+              "id": "opt_c",
+              "label": "Offer the client a warm blanket and dim the lights"
+            },
+            {
+              "id": "opt_d",
+              "label": "Teach the client about a heart-healthy diet"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "15.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q15",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a seizure disorder. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Clear breath sounds in both lungs"
+            },
+            {
+              "id": "opt_b",
+              "label": "Seizure activity that lasts longer than 5 minutes"
+            },
+            {
+              "id": "opt_c",
+              "label": "Temperature of 37.0 °C (98.6 °F) by mouth"
+            },
+            {
+              "id": "opt_d",
+              "label": "Pain rated 2 on a scale of 0 to 10 after repositioning"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "16.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q16",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a generalized tonic-clonic seizure while lying in bed. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Review the discharge instructions with the client"
+            },
+            {
+              "id": "opt_b",
+              "label": "Reassess the client in 4 hours"
+            },
+            {
+              "id": "opt_c",
+              "label": "Restock the supplies in the client's room"
+            },
+            {
+              "id": "opt_d",
+              "label": "Turn the client onto one side"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_d"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "17.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q17",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has acute pancreatitis. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Respiratory rate of 16/min with even, quiet breaths"
+            },
+            {
+              "id": "opt_b",
+              "label": "Alert and oriented to person, place and time"
+            },
+            {
+              "id": "opt_c",
+              "label": "Blood pressure of 118/76 mm Hg while sitting in a chair"
+            },
+            {
+              "id": "opt_d",
+              "label": "Muscle twitching and tingling around the mouth"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_d"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "18.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q18",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has severe abdominal pain rated 9 on a scale of 0 to 10 from acute pancreatitis. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Update the plan of care at the end of the shift"
+            },
+            {
+              "id": "opt_b",
+              "label": "Give the prescribed IV hydromorphone"
+            },
+            {
+              "id": "opt_c",
+              "label": "Weigh the client before breakfast tomorrow"
+            },
+            {
+              "id": "opt_d",
+              "label": "Ask the client about food preferences for the next meal"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "19.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q19",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has cirrhosis of the liver. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "New confusion and a flapping tremor of the hands"
+            },
+            {
+              "id": "opt_b",
+              "label": "Bowel sounds heard in all four quadrants"
+            },
+            {
+              "id": "opt_c",
+              "label": "Heart rate of 76/min with a regular rhythm"
+            },
+            {
+              "id": "opt_d",
+              "label": "Urine output of 60 mL/h of clear yellow urine"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_a"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "20.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q20",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has vomiting of bright red blood and a history of esophageal varices. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Document the finding in the client's record"
+            },
+            {
+              "id": "opt_b",
+              "label": "Schedule a follow-up appointment for next week"
+            },
+            {
+              "id": "opt_c",
+              "label": "Turn the client onto one side and keep the airway clear"
+            },
+            {
+              "id": "opt_d",
+              "label": "Ask a family member to bring the client's glasses from home"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_c"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "21.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q21",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has chronic kidney disease. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Oxygen saturation of 97% while breathing room air"
+            },
+            {
+              "id": "opt_b",
+              "label": "Capillary refill of 2 seconds in the fingers and toes"
+            },
+            {
+              "id": "opt_c",
+              "label": "Potassium level of 6.4 mEq/L"
+            },
+            {
+              "id": "opt_d",
+              "label": "Skin that is warm, dry and pink"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_c"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "22.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q22",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a potassium level of 6.8 mEq/L and tall, peaked T waves on the cardiac monitor. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Notify the provider and prepare to give the prescribed IV calcium gluconate"
+            },
+            {
+              "id": "opt_b",
+              "label": "Teach the client about a heart-healthy diet"
+            },
+            {
+              "id": "opt_c",
+              "label": "Give the client a pamphlet about support groups"
+            },
+            {
+              "id": "opt_d",
+              "label": "Offer the client a warm blanket and dim the lights"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_a"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "23.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q23",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has an arteriovenous fistula. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "No thrill felt and no bruit heard over the fistula"
+            },
+            {
+              "id": "opt_b",
+              "label": "Pain rated 2 on a scale of 0 to 10 after repositioning"
+            },
+            {
+              "id": "opt_c",
+              "label": "Clear breath sounds in both lungs"
+            },
+            {
+              "id": "opt_d",
+              "label": "Temperature of 37.0 °C (98.6 °F) by mouth"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_a"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "24.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q24",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a blood pressure of 82/48 mm Hg and dizziness 1 hour after hemodialysis. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Restock the supplies in the client's room"
+            },
+            {
+              "id": "opt_b",
+              "label": "Review the discharge instructions with the client"
+            },
+            {
+              "id": "opt_c",
+              "label": "Lower the head of the bed and raise the client's legs"
+            },
+            {
+              "id": "opt_d",
+              "label": "Reassess the client in 4 hours"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_c"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "25.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q25",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a urinary tract infection. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Blood pressure of 118/76 mm Hg while sitting in a chair"
+            },
+            {
+              "id": "opt_b",
+              "label": "Temperature of 39.2 °C (102.6 °F) with shaking chills"
+            },
+            {
+              "id": "opt_c",
+              "label": "Respiratory rate of 16/min with even, quiet breaths"
+            },
+            {
+              "id": "opt_d",
+              "label": "Alert and oriented to person, place and time"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "26.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q26",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a temperature of 39.4 °C (102.9 °F), a heart rate of 124/min and new confusion. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Ask the client about food preferences for the next meal"
+            },
+            {
+              "id": "opt_b",
+              "label": "Update the plan of care at the end of the shift"
+            },
+            {
+              "id": "opt_c",
+              "label": "Weigh the client before breakfast tomorrow"
+            },
+            {
+              "id": "opt_d",
+              "label": "Notify the provider and obtain the prescribed blood cultures"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_d"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "27.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q27",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has pneumonia. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Urine output of 60 mL/h of clear yellow urine"
+            },
+            {
+              "id": "opt_b",
+              "label": "Bowel sounds heard in all four quadrants"
+            },
+            {
+              "id": "opt_c",
+              "label": "Heart rate of 76/min with a regular rhythm"
+            },
+            {
+              "id": "opt_d",
+              "label": "Respiratory rate of 32/min with use of the neck muscles to breathe"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_d"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "28.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q28",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has thick secretions, a weak cough and an oxygen saturation of 88%. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Ask a family member to bring the client's glasses from home"
+            },
+            {
+              "id": "opt_b",
+              "label": "Raise the head of the bed and help the client cough and deep breathe"
+            },
+            {
+              "id": "opt_c",
+              "label": "Document the finding in the client's record"
+            },
+            {
+              "id": "opt_d",
+              "label": "Schedule a follow-up appointment for next week"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "29.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q29",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a pulmonary embolism. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Skin that is warm, dry and pink"
+            },
+            {
+              "id": "opt_b",
+              "label": "Blood in the urine and bleeding from the gums"
+            },
+            {
+              "id": "opt_c",
+              "label": "Oxygen saturation of 97% while breathing room air"
+            },
+            {
+              "id": "opt_d",
+              "label": "Capillary refill of 2 seconds in the fingers and toes"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "30.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q30",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has an activated partial thromboplastin time (aPTT) of 140 seconds during a heparin infusion. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Offer the client a warm blanket and dim the lights"
+            },
+            {
+              "id": "opt_b",
+              "label": "Teach the client about a heart-healthy diet"
+            },
+            {
+              "id": "opt_c",
+              "label": "Give the client a pamphlet about support groups"
+            },
+            {
+              "id": "opt_d",
+              "label": "Stop the heparin infusion and notify the provider"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_d"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "31.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q31",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has atrial fibrillation. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Temperature of 37.0 °C (98.6 °F) by mouth"
+            },
+            {
+              "id": "opt_b",
+              "label": "Pain rated 2 on a scale of 0 to 10 after repositioning"
+            },
+            {
+              "id": "opt_c",
+              "label": "International normalized ratio (INR) of 5.2"
+            },
+            {
+              "id": "opt_d",
+              "label": "Clear breath sounds in both lungs"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_c"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "32.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q32",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has an irregular heart rate of 152/min and reports feeling lightheaded. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Check the blood pressure and attach the cardiac monitor"
+            },
+            {
+              "id": "opt_b",
+              "label": "Reassess the client in 4 hours"
+            },
+            {
+              "id": "opt_c",
+              "label": "Restock the supplies in the client's room"
+            },
+            {
+              "id": "opt_d",
+              "label": "Review the discharge instructions with the client"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_a"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "33.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q33",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has stable angina. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Chest pain that is not relieved by rest and three doses of nitroglycerin"
+            },
+            {
+              "id": "opt_b",
+              "label": "Alert and oriented to person, place and time"
+            },
+            {
+              "id": "opt_c",
+              "label": "Blood pressure of 118/76 mm Hg while sitting in a chair"
+            },
+            {
+              "id": "opt_d",
+              "label": "Respiratory rate of 16/min with even, quiet breaths"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_a"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "34.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q34",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has crushing chest pain that spreads to the left arm and jaw. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Weigh the client before breakfast tomorrow"
+            },
+            {
+              "id": "opt_b",
+              "label": "Ask the client about food preferences for the next meal"
+            },
+            {
+              "id": "opt_c",
+              "label": "Stop the client's activity and obtain a 12-lead ECG"
+            },
+            {
+              "id": "opt_d",
+              "label": "Update the plan of care at the end of the shift"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_c"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "35.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q35",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has hypertension. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Heart rate of 76/min with a regular rhythm"
+            },
+            {
+              "id": "opt_b",
+              "label": "Urine output of 60 mL/h of clear yellow urine"
+            },
+            {
+              "id": "opt_c",
+              "label": "Swelling of the lips and tongue"
+            },
+            {
+              "id": "opt_d",
+              "label": "Bowel sounds heard in all four quadrants"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_c"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "36.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q36",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has swelling of the tongue and a hoarse voice 1 hour after a first dose of lisinopril. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Assess the airway and call the rapid response team"
+            },
+            {
+              "id": "opt_b",
+              "label": "Schedule a follow-up appointment for next week"
+            },
+            {
+              "id": "opt_c",
+              "label": "Ask a family member to bring the client's glasses from home"
+            },
+            {
+              "id": "opt_d",
+              "label": "Document the finding in the client's record"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_a"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "37.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q37",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a deep vein thrombosis. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Capillary refill of 2 seconds in the fingers and toes"
+            },
+            {
+              "id": "opt_b",
+              "label": "Skin that is warm, dry and pink"
+            },
+            {
+              "id": "opt_c",
+              "label": "Oxygen saturation of 97% while breathing room air"
+            },
+            {
+              "id": "opt_d",
+              "label": "Sudden shortness of breath and chest pain on breathing in"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_d"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "38.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q38",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a swollen, warm and painful left calf after a long flight. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Give the client a pamphlet about support groups"
+            },
+            {
+              "id": "opt_b",
+              "label": "Tell the client not to rub the leg and notify the provider"
+            },
+            {
+              "id": "opt_c",
+              "label": "Offer the client a warm blanket and dim the lights"
+            },
+            {
+              "id": "opt_d",
+              "label": "Teach the client about a heart-healthy diet"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "39.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q39",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has peptic ulcer disease. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Clear breath sounds in both lungs"
+            },
+            {
+              "id": "opt_b",
+              "label": "Black, tarry stools"
+            },
+            {
+              "id": "opt_c",
+              "label": "Temperature of 37.0 °C (98.6 °F) by mouth"
+            },
+            {
+              "id": "opt_d",
+              "label": "Pain rated 2 on a scale of 0 to 10 after repositioning"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "40.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q40",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a rigid, board-like abdomen and sudden severe pain in the upper abdomen. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Review the discharge instructions with the client"
+            },
+            {
+              "id": "opt_b",
+              "label": "Reassess the client in 4 hours"
+            },
+            {
+              "id": "opt_c",
+              "label": "Restock the supplies in the client's room"
+            },
+            {
+              "id": "opt_d",
+              "label": "Keep the client on nothing by mouth and notify the provider"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_d"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "41.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q41",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a small bowel obstruction. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Respiratory rate of 16/min with even, quiet breaths"
+            },
+            {
+              "id": "opt_b",
+              "label": "Alert and oriented to person, place and time"
+            },
+            {
+              "id": "opt_c",
+              "label": "Blood pressure of 118/76 mm Hg while sitting in a chair"
+            },
+            {
+              "id": "opt_d",
+              "label": "Abdomen that is rigid and more distended than 4 hours ago"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_d"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "42.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q42",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a nasogastric tube that has stopped draining and a distended abdomen with new nausea. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Update the plan of care at the end of the shift"
+            },
+            {
+              "id": "opt_b",
+              "label": "Check the placement and patency of the nasogastric tube"
+            },
+            {
+              "id": "opt_c",
+              "label": "Weigh the client before breakfast tomorrow"
+            },
+            {
+              "id": "opt_d",
+              "label": "Ask the client about food preferences for the next meal"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "43.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q43",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a new colostomy. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Stoma that is dark purple and dry"
+            },
+            {
+              "id": "opt_b",
+              "label": "Bowel sounds heard in all four quadrants"
+            },
+            {
+              "id": "opt_c",
+              "label": "Heart rate of 76/min with a regular rhythm"
+            },
+            {
+              "id": "opt_d",
+              "label": "Urine output of 60 mL/h of clear yellow urine"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_a"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "44.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q44",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a colostomy pouch that is leaking stool onto the surrounding skin. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Document the finding in the client's record"
+            },
+            {
+              "id": "opt_b",
+              "label": "Schedule a follow-up appointment for next week"
+            },
+            {
+              "id": "opt_c",
+              "label": "Remove the pouch and clean the skin around the stoma"
+            },
+            {
+              "id": "opt_d",
+              "label": "Ask a family member to bring the client's glasses from home"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_c"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "45.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q45",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has hypothyroidism. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Oxygen saturation of 97% while breathing room air"
+            },
+            {
+              "id": "opt_b",
+              "label": "Capillary refill of 2 seconds in the fingers and toes"
+            },
+            {
+              "id": "opt_c",
+              "label": "Heart rate of 46/min with a temperature of 35.2 °C (95.4 °F)"
+            },
+            {
+              "id": "opt_d",
+              "label": "Skin that is warm, dry and pink"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_c"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "46.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q46",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a heart rate of 132/min, tremors and palpitations after taking extra doses of levothyroxine. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Withhold the next dose of levothyroxine and notify the provider"
+            },
+            {
+              "id": "opt_b",
+              "label": "Teach the client about a heart-healthy diet"
+            },
+            {
+              "id": "opt_c",
+              "label": "Give the client a pamphlet about support groups"
+            },
+            {
+              "id": "opt_d",
+              "label": "Offer the client a warm blanket and dim the lights"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_a"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "47.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q47",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has Addison's disease. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Blood pressure of 84/50 mm Hg with new weakness and vomiting"
+            },
+            {
+              "id": "opt_b",
+              "label": "Pain rated 2 on a scale of 0 to 10 after repositioning"
+            },
+            {
+              "id": "opt_c",
+              "label": "Clear breath sounds in both lungs"
+            },
+            {
+              "id": "opt_d",
+              "label": "Temperature of 37.0 °C (98.6 °F) by mouth"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_a"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "48.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q48",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has severe weakness, vomiting and a blood pressure of 78/44 mm Hg after missing doses of hydrocortisone. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Restock the supplies in the client's room"
+            },
+            {
+              "id": "opt_b",
+              "label": "Review the discharge instructions with the client"
+            },
+            {
+              "id": "opt_c",
+              "label": "Notify the provider and prepare to give the prescribed IV hydrocortisone"
+            },
+            {
+              "id": "opt_d",
+              "label": "Reassess the client in 4 hours"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_c"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "49.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q49",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has sickle cell disease. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Blood pressure of 118/76 mm Hg while sitting in a chair"
+            },
+            {
+              "id": "opt_b",
+              "label": "Sudden chest pain with a new cough and fever"
+            },
+            {
+              "id": "opt_c",
+              "label": "Respiratory rate of 16/min with even, quiet breaths"
+            },
+            {
+              "id": "opt_d",
+              "label": "Alert and oriented to person, place and time"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "50.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q50",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has severe joint pain rated 10 on a scale of 0 to 10 during a sickle cell crisis. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Ask the client about food preferences for the next meal"
+            },
+            {
+              "id": "opt_b",
+              "label": "Update the plan of care at the end of the shift"
+            },
+            {
+              "id": "opt_c",
+              "label": "Weigh the client before breakfast tomorrow"
+            },
+            {
+              "id": "opt_d",
+              "label": "Give the prescribed IV morphine"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_d"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "51.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q51",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has iron deficiency anemia. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Urine output of 60 mL/h of clear yellow urine"
+            },
+            {
+              "id": "opt_b",
+              "label": "Bowel sounds heard in all four quadrants"
+            },
+            {
+              "id": "opt_c",
+              "label": "Heart rate of 76/min with a regular rhythm"
+            },
+            {
+              "id": "opt_d",
+              "label": "Shortness of breath and a heart rate of 128/min while resting"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_d"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "52.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q52",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has itching, flushing and back pain 10 minutes after a blood transfusion was started. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Ask a family member to bring the client's glasses from home"
+            },
+            {
+              "id": "opt_b",
+              "label": "Stop the transfusion"
+            },
+            {
+              "id": "opt_c",
+              "label": "Document the finding in the client's record"
+            },
+            {
+              "id": "opt_d",
+              "label": "Schedule a follow-up appointment for next week"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "53.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q53",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has neutropenia. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Skin that is warm, dry and pink"
+            },
+            {
+              "id": "opt_b",
+              "label": "Temperature of 38.3 °C (100.9 °F)"
+            },
+            {
+              "id": "opt_c",
+              "label": "Oxygen saturation of 97% while breathing room air"
+            },
+            {
+              "id": "opt_d",
+              "label": "Capillary refill of 2 seconds in the fingers and toes"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "54.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q54",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a new fever and chills 8 days after chemotherapy. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Offer the client a warm blanket and dim the lights"
+            },
+            {
+              "id": "opt_b",
+              "label": "Teach the client about a heart-healthy diet"
+            },
+            {
+              "id": "opt_c",
+              "label": "Give the client a pamphlet about support groups"
+            },
+            {
+              "id": "opt_d",
+              "label": "Obtain the prescribed blood cultures and start the antibiotic within 1 hour"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_d"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "55.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q55",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a pressure injury. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Temperature of 37.0 °C (98.6 °F) by mouth"
+            },
+            {
+              "id": "opt_b",
+              "label": "Pain rated 2 on a scale of 0 to 10 after repositioning"
+            },
+            {
+              "id": "opt_c",
+              "label": "Foul-smelling green drainage from the wound"
+            },
+            {
+              "id": "opt_d",
+              "label": "Clear breath sounds in both lungs"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_c"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "56.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q56",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a surgical wound that has opened with a loop of bowel showing. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Cover the wound with sterile gauze moistened with sterile saline"
+            },
+            {
+              "id": "opt_b",
+              "label": "Reassess the client in 4 hours"
+            },
+            {
+              "id": "opt_c",
+              "label": "Restock the supplies in the client's room"
+            },
+            {
+              "id": "opt_d",
+              "label": "Review the discharge instructions with the client"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_a"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "57.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q57",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a long leg cast. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Pain that gets worse when the toes are moved and is not relieved by opioids"
+            },
+            {
+              "id": "opt_b",
+              "label": "Alert and oriented to person, place and time"
+            },
+            {
+              "id": "opt_c",
+              "label": "Blood pressure of 118/76 mm Hg while sitting in a chair"
+            },
+            {
+              "id": "opt_d",
+              "label": "Respiratory rate of 16/min with even, quiet breaths"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_a"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "58.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q58",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a cast on the forearm with fingers that are cold, pale and numb. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Weigh the client before breakfast tomorrow"
+            },
+            {
+              "id": "opt_b",
+              "label": "Ask the client about food preferences for the next meal"
+            },
+            {
+              "id": "opt_c",
+              "label": "Notify the provider at once and keep the arm at the level of the heart"
+            },
+            {
+              "id": "opt_d",
+              "label": "Update the plan of care at the end of the shift"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_c"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "59.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q59",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has myasthenia gravis. Which finding should the nurse report to the provider?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Heart rate of 76/min with a regular rhythm"
+            },
+            {
+              "id": "opt_b",
+              "label": "Urine output of 60 mL/h of clear yellow urine"
+            },
+            {
+              "id": "opt_c",
+              "label": "Difficulty swallowing and a weak cough"
+            },
+            {
+              "id": "opt_d",
+              "label": "Bowel sounds heard in all four quadrants"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_c"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "60.",
+      "status": "ready",
+      "item": {
+        "id": "bank12_q60",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has increasing muscle weakness and shallow breathing at a rate of 30/min. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Assess the client's airway and breathing effort"
+            },
+            {
+              "id": "opt_b",
+              "label": "Schedule a follow-up appointment for next week"
+            },
+            {
+              "id": "opt_c",
+              "label": "Ask a family member to bring the client's glasses from home"
+            },
+            {
+              "id": "opt_d",
+              "label": "Document the finding in the client's record"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_a"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    }
+  ],
+  "caseStudies": []
+}

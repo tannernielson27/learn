@@ -1,0 +1,686 @@
+{
+  "document": "11-case-study-across-chunks.md",
+  "covers": ["case-study", "case-study-across-chunks"],
+  "questions": [],
+  "caseStudies": [
+    {
+      "label": "Unfolding Case Study: Diabetic Ketoacidosis",
+      "caseStudy": {
+        "id": "case11",
+        "title": "Unfolding Case Study: Diabetic Ketoacidosis",
+        "ehr": {
+          "patientHeader": {
+            "name": "Maya Ortega",
+            "age": 19,
+            "sex": "female",
+            "setting": "Emergency department"
+          },
+          "timePoints": [
+            {
+              "id": "tp_1",
+              "label": "0900"
+            },
+            {
+              "id": "tp_2",
+              "label": "0930",
+              "fromStep": 2
+            },
+            {
+              "id": "tp_3",
+              "label": "1000",
+              "fromStep": 4
+            },
+            {
+              "id": "tp_4",
+              "label": "1100",
+              "fromStep": 5
+            },
+            {
+              "id": "tp_5",
+              "label": "1200",
+              "fromStep": 5
+            },
+            {
+              "id": "tp_6",
+              "label": "1400",
+              "fromStep": 6
+            }
+          ],
+          "tabs": [
+            {
+              "id": "tab_1",
+              "kind": "history_physical",
+              "title": "History and Physical",
+              "blocks": [
+                {
+                  "kind": "markdown",
+                  "value": "Chief concern: The client is brought to the emergency department by a roommate after 2 days of nausea, vomiting and abdominal pain. The roommate says the client has been drinking water all day, urinating often and breathing fast since last night."
+                },
+                {
+                  "kind": "markdown",
+                  "value": "History: Type 1 diabetes mellitus diagnosed at age 11. Uses an insulin pump. The pump's infusion set came out 2 days ago during a hiking trip and was not replaced, because the client felt too sick to eat. No other medical conditions. No surgeries. No known allergies. Does not smoke or drink alcohol."
+                },
+                {
+                  "kind": "markdown",
+                  "value": "Medications at home: Insulin lispro by pump, with a basal rate of 0.8 units/h and a bolus with each meal. Carries glucose tablets. Takes no other medicines or supplements."
+                },
+                {
+                  "kind": "markdown",
+                  "value": "Physical examination: Drowsy, but answers questions when spoken to. Lips and tongue are dry, and the skin on the forearm stays tented when pinched. Breathing is deep and fast, and the breath smells fruity. Lungs are clear. Heart rate is fast and regular. Abdomen is soft and tender all over, with no guarding. Capillary refill is 4 seconds."
+                }
+              ]
+            },
+            {
+              "id": "tab_2",
+              "kind": "nurses_notes",
+              "title": "Nurses' Notes",
+              "blocks": [
+                {
+                  "kind": "markdown",
+                  "value": "Day 1, 0900: Client arrives by private car with a roommate. Drowsy, oriented to person and place. Reports nausea, thirst and abdominal pain rated 6 on a scale of 0 to 10. Fingerstick glucose reads HI. Placed on the cardiac monitor. Two large-bore IV catheters started."
+                },
+                {
+                  "kind": "markdown",
+                  "value": "Day 1, 0930: Laboratory samples sent. Urine dipstick shows large ketones and large glucose. Client vomited 150 mL of green fluid. Respirations are deep and fast.",
+                  "fromStep": 2
+                },
+                {
+                  "kind": "markdown",
+                  "value": "Day 1, 0945: Provider at the bedside. Prescriptions received and read back.",
+                  "fromStep": 3
+                },
+                {
+                  "kind": "markdown",
+                  "value": "Day 1, 1000: First liter of 0.9% sodium chloride started as a bolus through the IV in the left forearm. Client asks for water to drink.",
+                  "fromStep": 4
+                },
+                {
+                  "kind": "markdown",
+                  "value": "Day 1, 1100: First liter of 0.9% sodium chloride finished. Regular insulin infusion started at 0.1 units/kg/h after the potassium result was reviewed with the provider. Potassium chloride added to the IV fluid as prescribed.",
+                  "fromStep": 5
+                },
+                {
+                  "kind": "markdown",
+                  "value": "Day 1, 1200: Client is more alert and is oriented to person, place and time. Urine output 60 mL in the last hour. No vomiting since 0930.",
+                  "fromStep": 5
+                },
+                {
+                  "kind": "markdown",
+                  "value": "Day 1, 1400: Client is awake and talking with the roommate. Reports hunger and no nausea. Breathing is quiet and regular.",
+                  "fromStep": 6
+                },
+                {
+                  "kind": "markdown",
+                  "value": "Day 1, 1500: Diabetes educator paged at the client's request to review insulin pump site changes and sick-day rules.",
+                  "fromStep": 6
+                }
+              ]
+            },
+            {
+              "id": "tab_3",
+              "kind": "vital_signs",
+              "title": "Vital Signs",
+              "blocks": [
+                {
+                  "kind": "table",
+                  "columns": ["", "0900", "0930", "1000", "1100", "1200", "1400"],
+                  "rows": [
+                    [
+                      "Temperature",
+                      "37.4 °C",
+                      "37.4 °C",
+                      "37.2 °C",
+                      "37.1 °C",
+                      "37.0 °C",
+                      "37.0 °C"
+                    ],
+                    ["Heart rate", "128/min", "132/min", "124/min", "112/min", "104/min", "92/min"],
+                    [
+                      "Respiratory rate",
+                      "30/min",
+                      "32/min",
+                      "30/min",
+                      "26/min",
+                      "22/min",
+                      "18/min"
+                    ],
+                    [
+                      "Blood pressure",
+                      "94/58 mm Hg",
+                      "90/54 mm Hg",
+                      "98/60 mm Hg",
+                      "106/64 mm Hg",
+                      "110/68 mm Hg",
+                      "116/72 mm Hg"
+                    ],
+                    [
+                      "SpO2",
+                      "98% room air",
+                      "98% room air",
+                      "99% room air",
+                      "99% room air",
+                      "99% room air",
+                      "99% room air"
+                    ],
+                    [
+                      "Fingerstick glucose",
+                      "HI",
+                      "HI",
+                      "512 mg/dL",
+                      "438 mg/dL",
+                      "362 mg/dL",
+                      "248 mg/dL"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "tab_4",
+              "kind": "lab_results",
+              "title": "Laboratory Results",
+              "blocks": [
+                {
+                  "kind": "vitals",
+                  "rows": [
+                    {
+                      "label": "Glucose",
+                      "value": "586",
+                      "unit": "mg/dL",
+                      "flag": "H"
+                    },
+                    {
+                      "label": "Sodium",
+                      "value": "131",
+                      "unit": "mEq/L",
+                      "flag": "L"
+                    },
+                    {
+                      "label": "Potassium",
+                      "value": "5.4",
+                      "unit": "mEq/L",
+                      "flag": "H"
+                    },
+                    {
+                      "label": "Chloride",
+                      "value": "96",
+                      "unit": "mEq/L",
+                      "flag": "L"
+                    },
+                    {
+                      "label": "Bicarbonate",
+                      "value": "9",
+                      "unit": "mEq/L",
+                      "flag": "L"
+                    },
+                    {
+                      "label": "Blood urea nitrogen",
+                      "value": "32",
+                      "unit": "mg/dL",
+                      "flag": "H"
+                    },
+                    {
+                      "label": "Creatinine",
+                      "value": "1.5",
+                      "unit": "mg/dL",
+                      "flag": "H"
+                    },
+                    {
+                      "label": "Anion gap",
+                      "value": "26",
+                      "unit": "mEq/L",
+                      "flag": "H"
+                    }
+                  ],
+                  "fromStep": 2
+                },
+                {
+                  "kind": "vitals",
+                  "rows": [
+                    {
+                      "label": "Arterial pH",
+                      "value": "7.14",
+                      "flag": "L"
+                    },
+                    {
+                      "label": "PaCO2",
+                      "value": "22",
+                      "unit": "mm Hg",
+                      "flag": "L"
+                    },
+                    {
+                      "label": "Beta-hydroxybutyrate",
+                      "value": "6.8",
+                      "unit": "mmol/L",
+                      "flag": "H"
+                    },
+                    {
+                      "label": "White blood cells",
+                      "value": "14,200",
+                      "unit": "/mm3",
+                      "flag": "H"
+                    }
+                  ],
+                  "fromStep": 3
+                },
+                {
+                  "kind": "vitals",
+                  "rows": [
+                    {
+                      "label": "Potassium, repeat at 1100",
+                      "value": "4.1",
+                      "unit": "mEq/L"
+                    },
+                    {
+                      "label": "Glucose, repeat at 1200",
+                      "value": "362",
+                      "unit": "mg/dL",
+                      "flag": "H"
+                    },
+                    {
+                      "label": "Bicarbonate, repeat at 1200",
+                      "value": "13",
+                      "unit": "mEq/L",
+                      "flag": "L"
+                    }
+                  ],
+                  "fromStep": 5
+                },
+                {
+                  "kind": "vitals",
+                  "rows": [
+                    {
+                      "label": "Potassium, repeat at 1400",
+                      "value": "3.6",
+                      "unit": "mEq/L"
+                    },
+                    {
+                      "label": "Glucose, repeat at 1400",
+                      "value": "248",
+                      "unit": "mg/dL",
+                      "flag": "H"
+                    },
+                    {
+                      "label": "Bicarbonate, repeat at 1400",
+                      "value": "18",
+                      "unit": "mEq/L",
+                      "flag": "L"
+                    },
+                    {
+                      "label": "Arterial pH, repeat at 1400",
+                      "value": "7.31",
+                      "flag": "L"
+                    },
+                    {
+                      "label": "Creatinine, repeat at 1400",
+                      "value": "1.6",
+                      "unit": "mg/dL",
+                      "flag": "H"
+                    }
+                  ],
+                  "fromStep": 6
+                }
+              ],
+              "stepAccess": ["locked", "open", "open", "open", "open", "open"]
+            },
+            {
+              "id": "tab_5",
+              "kind": "orders",
+              "title": "Provider Orders",
+              "blocks": [
+                {
+                  "kind": "markdown",
+                  "value": "0945: 0.9% sodium chloride 1,000 mL IV over 1 hour, then 500 mL/h.",
+                  "fromStep": 3
+                },
+                {
+                  "kind": "markdown",
+                  "value": "0945: Regular insulin IV infusion at 0.1 units/kg/h, to start after the potassium result is reviewed.",
+                  "fromStep": 3
+                },
+                {
+                  "kind": "markdown",
+                  "value": "0945: Fingerstick glucose every hour. Serum potassium every 2 hours.",
+                  "fromStep": 3
+                },
+                {
+                  "kind": "markdown",
+                  "value": "0945: Nothing by mouth except ice chips. Strict intake and output.",
+                  "fromStep": 3
+                },
+                {
+                  "kind": "markdown",
+                  "value": "1100: Add potassium chloride 20 mEq to each liter of IV fluid.",
+                  "fromStep": 5
+                },
+                {
+                  "kind": "markdown",
+                  "value": "1400: Change the IV fluid to 5% dextrose in 0.45% sodium chloride when the glucose is below 250 mg/dL.",
+                  "fromStep": 6
+                },
+                {
+                  "kind": "markdown",
+                  "value": "1400: Give subcutaneous insulin 2 hours before the insulin infusion is stopped.",
+                  "fromStep": 6
+                }
+              ]
+            }
+          ]
+        },
+        "items": [
+          {
+            "id": "case11_step_1",
+            "cjmmStep": 1,
+            "stem": {
+              "kind": "markdown",
+              "value": "The nurse reviews the client's record. Which findings require immediate follow-up? Select all that apply."
+            },
+            "rationale": {},
+            "type": "multiple_response",
+            "content": {
+              "variant": "sata",
+              "options": [
+                {
+                  "id": "opt_a",
+                  "label": "Fingerstick glucose that reads HI"
+                },
+                {
+                  "id": "opt_b",
+                  "label": "Respiratory rate 30/min with deep breaths"
+                },
+                {
+                  "id": "opt_c",
+                  "label": "Heart rate 128/min"
+                },
+                {
+                  "id": "opt_d",
+                  "label": "Blood pressure 94/58 mm Hg"
+                },
+                {
+                  "id": "opt_e",
+                  "label": "SpO2 98% on room air"
+                },
+                {
+                  "id": "opt_f",
+                  "label": "Temperature 37.4 °C"
+                }
+              ]
+            },
+            "answerKey": {
+              "correctOptionIds": ["opt_a", "opt_b", "opt_c", "opt_d"]
+            },
+            "scoring": {
+              "model": "plus_minus",
+              "maxPoints": 4
+            }
+          },
+          {
+            "id": "case11_step_2",
+            "cjmmStep": 2,
+            "stem": {
+              "kind": "markdown",
+              "value": "Which condition is the client most likely experiencing?"
+            },
+            "rationale": {},
+            "type": "multiple_choice",
+            "content": {
+              "options": [
+                {
+                  "id": "opt_a",
+                  "label": "Hypoglycemia"
+                },
+                {
+                  "id": "opt_b",
+                  "label": "Diabetic ketoacidosis"
+                },
+                {
+                  "id": "opt_c",
+                  "label": "Hyperosmolar hyperglycemic state"
+                },
+                {
+                  "id": "opt_d",
+                  "label": "Viral gastroenteritis"
+                }
+              ]
+            },
+            "answerKey": {
+              "correctOptionId": "opt_b"
+            },
+            "scoring": {
+              "model": "zero_one",
+              "maxPoints": 1
+            }
+          },
+          {
+            "id": "case11_step_3",
+            "cjmmStep": 3,
+            "stem": {
+              "kind": "markdown",
+              "value": "Which problem should the nurse address first?"
+            },
+            "rationale": {},
+            "type": "multiple_choice",
+            "content": {
+              "options": [
+                {
+                  "id": "opt_a",
+                  "label": "Knowledge deficit about insulin pump site changes"
+                },
+                {
+                  "id": "opt_b",
+                  "label": "Abdominal pain rated 6 on a scale of 0 to 10"
+                },
+                {
+                  "id": "opt_c",
+                  "label": "Fluid volume deficit"
+                },
+                {
+                  "id": "opt_d",
+                  "label": "Risk for skin breakdown"
+                }
+              ]
+            },
+            "answerKey": {
+              "correctOptionId": "opt_c"
+            },
+            "scoring": {
+              "model": "zero_one",
+              "maxPoints": 1
+            }
+          },
+          {
+            "id": "case11_step_4",
+            "cjmmStep": 4,
+            "stem": {
+              "kind": "markdown",
+              "value": "For each prescription, indicate whether it is indicated or not indicated for the client at this time."
+            },
+            "rationale": {},
+            "content": {
+              "rows": [
+                {
+                  "id": "row_1",
+                  "label": "Give 0.9% sodium chloride 1,000 mL IV over 1 hour"
+                },
+                {
+                  "id": "row_2",
+                  "label": "Start the regular insulin infusion before the potassium result is known"
+                },
+                {
+                  "id": "row_3",
+                  "label": "Check the fingerstick glucose every hour"
+                },
+                {
+                  "id": "row_4",
+                  "label": "Give sodium bicarbonate by IV push"
+                },
+                {
+                  "id": "row_5",
+                  "label": "Keep the client on nothing by mouth except ice chips"
+                }
+              ],
+              "columns": [
+                {
+                  "id": "col_1",
+                  "label": "Indicated"
+                },
+                {
+                  "id": "col_2",
+                  "label": "Not indicated"
+                }
+              ]
+            },
+            "type": "matrix_multiple_choice",
+            "answerKey": {
+              "rows": [
+                {
+                  "rowId": "row_1",
+                  "correctColumnId": "col_1"
+                },
+                {
+                  "rowId": "row_2",
+                  "correctColumnId": "col_2"
+                },
+                {
+                  "rowId": "row_3",
+                  "correctColumnId": "col_1"
+                },
+                {
+                  "rowId": "row_4",
+                  "correctColumnId": "col_2"
+                },
+                {
+                  "rowId": "row_5",
+                  "correctColumnId": "col_1"
+                }
+              ]
+            },
+            "scoring": {
+              "model": "zero_one",
+              "maxPoints": 5
+            }
+          },
+          {
+            "id": "case11_step_5",
+            "cjmmStep": 5,
+            "stem": {
+              "kind": "markdown",
+              "value": "Which 3 actions should the nurse take at this time?"
+            },
+            "rationale": {},
+            "type": "multiple_response",
+            "content": {
+              "variant": "select_n",
+              "n": 3,
+              "options": [
+                {
+                  "id": "opt_a",
+                  "label": "Check the fingerstick glucose every hour"
+                },
+                {
+                  "id": "opt_b",
+                  "label": "Stop the insulin infusion because the glucose is falling"
+                },
+                {
+                  "id": "opt_c",
+                  "label": "Keep the client on the cardiac monitor"
+                },
+                {
+                  "id": "opt_d",
+                  "label": "Give the client orange juice to drink"
+                },
+                {
+                  "id": "opt_e",
+                  "label": "Add potassium chloride to the IV fluid as prescribed"
+                },
+                {
+                  "id": "opt_f",
+                  "label": "Remove one of the two IV catheters"
+                }
+              ]
+            },
+            "answerKey": {
+              "correctOptionIds": ["opt_a", "opt_c", "opt_e"]
+            },
+            "scoring": {
+              "model": "plus_minus",
+              "maxPoints": 3
+            }
+          },
+          {
+            "id": "case11_step_6",
+            "cjmmStep": 6,
+            "stem": {
+              "kind": "markdown",
+              "value": "For each finding, indicate whether it shows that the client's condition has improved or has not improved."
+            },
+            "rationale": {},
+            "content": {
+              "rows": [
+                {
+                  "id": "row_1",
+                  "label": "Glucose 248 mg/dL"
+                },
+                {
+                  "id": "row_2",
+                  "label": "Arterial pH 7.31"
+                },
+                {
+                  "id": "row_3",
+                  "label": "Heart rate 92/min"
+                },
+                {
+                  "id": "row_4",
+                  "label": "Creatinine 1.6 mg/dL"
+                },
+                {
+                  "id": "row_5",
+                  "label": "Oriented to person, place and time"
+                }
+              ],
+              "columns": [
+                {
+                  "id": "col_1",
+                  "label": "Improved"
+                },
+                {
+                  "id": "col_2",
+                  "label": "Not improved"
+                }
+              ]
+            },
+            "type": "matrix_multiple_choice",
+            "answerKey": {
+              "rows": [
+                {
+                  "rowId": "row_1",
+                  "correctColumnId": "col_1"
+                },
+                {
+                  "rowId": "row_2",
+                  "correctColumnId": "col_1"
+                },
+                {
+                  "rowId": "row_3",
+                  "correctColumnId": "col_1"
+                },
+                {
+                  "rowId": "row_4",
+                  "correctColumnId": "col_2"
+                },
+                {
+                  "rowId": "row_5",
+                  "correctColumnId": "col_1"
+                }
+              ]
+            },
+            "scoring": {
+              "model": "zero_one",
+              "maxPoints": 5
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

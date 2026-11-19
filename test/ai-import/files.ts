@@ -65,7 +65,10 @@ export type RecordedQuestion = z.infer<typeof recordedQuestion>;
 
 export const recordingSchema = z.object({
   document: z.string().min(1),
-  /** `hand-written` until a live run replaces it; otherwise the model that answered. */
+  /**
+   * `hand-written`, or `generated` for a document `corpus/generate` writes (#594), until a live
+   * run replaces it; otherwise the model that answered.
+   */
   source: z.string().min(1),
   recordedAt: z.string().optional(),
   questions: z.array(recordedQuestion),
@@ -95,6 +98,14 @@ export const CORPUS_CASES = [
   "time-typo",
   "standalone-trend",
   "short-case-group",
+  // The real-size documents (#594): what a teacher uploads, not a page written to show one case.
+  "real-size-bank",
+  "same-opening-stems",
+  "multi-chunk-text",
+  "formatting-key",
+  "formatting-not-a-key",
+  "case-study-across-chunks",
+  "pdf-shared-page",
 ] as const;
 
 const readJson = (path: string): unknown => JSON.parse(readFileSync(path, "utf8"));
