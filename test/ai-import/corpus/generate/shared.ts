@@ -31,8 +31,19 @@ export interface RecordingFile {
 /** The ids the converter gives options: `opt_a` for the first. */
 const optionId = (place: number): string => `opt_${String.fromCharCode(97 + place)}`;
 
+/**
+ * A stem without the table printed above its question (#605): what the document says of the
+ * question itself, and so what a model listing questions quotes and a search of its text finds.
+ */
+export const questionText = (stem: string): string =>
+  stem
+    .split(/\n{2,}/)
+    .filter((paragraph) => !paragraph.trimStart().startsWith("|"))
+    .join("\n\n");
+
 /** A question's opening as the segment pass copies it: about its first thirty words. */
-export const openingOf = (stem: string): string => stem.split(/\s+/).slice(0, 30).join(" ");
+export const openingOf = (stem: string): string =>
+  questionText(stem).split(/\s+/).slice(0, 30).join(" ");
 
 /**
  * The learn.v1 item a printed question should import as, written out here and not made with the

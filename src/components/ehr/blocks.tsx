@@ -38,37 +38,53 @@ function NoteBlock({ value }: { value: string }) {
   );
 }
 
+const isBlank = (text: string | undefined) => !text?.trim();
+
 /**
- * A charted grid. The first cell of every row heads it; when its column header is blank the corner
- * stays a plain cell, because an empty `th` fails the axe empty-table-header rule.
+ * A charted grid. The first cell of every row heads it. A blank header or row head stays a plain
+ * cell, because an empty `th` fails the axe empty-table-header rule.
+ *
+ * `inText` is a table in a question's text (#605): sized to the text around it, which the
+ * projector fits by its font size, and with no sticky first column, whose chart surface colour
+ * would not be the background the text sits on.
  */
-function TableBlock({ columns, rows }: Extract<EhrBlock, { kind: "table" }>) {
+export function TableBlock({
+  columns,
+  rows,
+  inText = false,
+}: Extract<EhrBlock, { kind: "table" }> & { inText?: boolean }) {
   const [corner, ...headers] = columns;
-  const cornerIsBlank = !corner?.trim();
+  const pinned = inText ? "" : "sticky left-0 bg-surface-1 ";
   return (
     <div className="overflow-x-auto">
-      <table className="tabular w-full border-collapse text-left text-sm">
+      <table
+        className={`tabular w-full border-collapse text-left ${inText ? "text-[0.875em]" : "text-sm"}`}
+      >
         <thead>
           <tr>
-            {cornerIsBlank ? (
-              <td className="sticky left-0 border-b border-line-strong bg-surface-1 pb-2" />
+            {isBlank(corner) ? (
+              <td className={`${pinned}border-b border-line-strong pb-2`} />
             ) : (
               <th
                 scope="col"
-                className="sticky left-0 border-b border-line-strong bg-surface-1 pr-4 pb-2 font-medium"
+                className={`${pinned}border-b border-line-strong pr-4 pb-2 font-medium`}
               >
                 {corner}
               </th>
             )}
-            {headers.map((header, index) => (
-              <th
-                key={index}
-                scope="col"
-                className="border-b border-line-strong pr-4 pb-2 font-medium text-ink-2"
-              >
-                {header}
-              </th>
-            ))}
+            {headers.map((header, index) =>
+              isBlank(header) ? (
+                <td key={index} className="border-b border-line-strong pr-4 pb-2" />
+              ) : (
+                <th
+                  key={index}
+                  scope="col"
+                  className="border-b border-line-strong pr-4 pb-2 font-medium text-ink-2"
+                >
+                  {header}
+                </th>
+              ),
+            )}
           </tr>
         </thead>
         <tbody>
@@ -76,12 +92,16 @@ function TableBlock({ columns, rows }: Extract<EhrBlock, { kind: "table" }>) {
             const [head, ...cells] = row;
             return (
               <tr key={rowIndex} className="border-b border-line last:border-b-0">
-                <th
-                  scope="row"
-                  className="sticky left-0 bg-surface-1 py-2 pr-4 align-top font-normal whitespace-nowrap"
-                >
-                  {head}
-                </th>
+                {isBlank(head) ? (
+                  <td className={`${pinned}py-2 pr-4 align-top`} />
+                ) : (
+                  <th
+                    scope="row"
+                    className={`${pinned}py-2 pr-4 align-top font-normal whitespace-nowrap`}
+                  >
+                    {head}
+                  </th>
+                )}
                 {cells.map((cell, cellIndex) => (
                   <td key={cellIndex} className="py-2 pr-4 align-top font-mono">
                     {cell}

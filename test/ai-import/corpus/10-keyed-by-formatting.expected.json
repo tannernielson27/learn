@@ -409,7 +409,7 @@
         "id": "format10_q11",
         "stem": {
           "kind": "markdown",
-          "value": "A nurse reviews the laboratory results above for a client who takes digoxin and furosemide. Which action should the nurse take first?"
+          "value": "| Test | Result | Reference range |\n| --- | --- | --- |\n| Potassium | 3.0 mEq/L | 3.5 to 5.0 mEq/L |\n| Sodium | 138 mEq/L | 135 to 145 mEq/L |\n| Digoxin level | 1.4 ng/mL | 0.8 to 2.0 ng/mL |\n\nA nurse reviews the laboratory results above for a client who takes digoxin and furosemide. Which action should the nurse take first?"
         },
         "rationale": {},
         "type": "multiple_choice",

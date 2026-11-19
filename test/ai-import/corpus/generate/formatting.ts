@@ -31,6 +31,11 @@ interface FormattedQuestion extends BankQuestion {
   mark: Mark;
   /** A word of the stem printed in bold: emphasis, not an answer. */
   boldWord?: string;
+  /**
+   * A table printed just above the question, which it refers to ("the laboratory results
+   * above"). The draft carries it at the head of the stem as a pipe table (#605).
+   */
+  table?: readonly (readonly string[])[];
 }
 
 const question = (
@@ -134,6 +139,14 @@ const RED_KEYED: FormattedQuestion[] = [
   ),
 ];
 
+/** The laboratory table printed above the last question, as plain text. */
+const LAB_ROWS = [
+  ["Test", "Result", "Reference range"],
+  ["Potassium", "3.0 mEq/L", "3.5 to 5.0 mEq/L"],
+  ["Sodium", "138 mEq/L", "135 to 145 mEq/L"],
+  ["Digoxin level", "1.4 ng/mL", "0.8 to 2.0 ng/mL"],
+] as const;
+
 /**
  * Part C: formatting that is not a key. A bold word in a stem; bold on every option; and, in the
  * part of the document before the last question, a laboratory table with one value in red. The
@@ -163,25 +176,28 @@ const UNKEYED: FormattedQuestion[] = [
     '"I wear gloves when I may touch blood or body fluids."',
     "all_bold",
   ),
-  question(
-    "A nurse reviews the laboratory results above for a client who takes digoxin and furosemide. Which action should the nurse take first?",
-    [
-      "Give the morning dose of digoxin",
+  {
+    ...question(
+      "A nurse reviews the laboratory results above for a client who takes digoxin and furosemide. Which action should the nurse take first?",
+      [
+        "Give the morning dose of digoxin",
+        "Notify the provider of the potassium level",
+        "Encourage the client to drink more water",
+        "Repeat the laboratory tests tomorrow",
+      ],
       "Notify the provider of the potassium level",
-      "Encourage the client to drink more water",
-      "Repeat the laboratory tests tomorrow",
-    ],
-    "Notify the provider of the potassium level",
-    "none",
-  ),
+      "none",
+    ),
+    table: LAB_ROWS,
+  },
 ];
 
-const LAB_TABLE = table([
-  ["Test", "Result", "Reference range"],
-  ["Potassium", { text: para(run("3.0 mEq/L", { colour: RED })) }, "3.5 to 5.0 mEq/L"],
-  ["Sodium", "138 mEq/L", "135 to 145 mEq/L"],
-  ["Digoxin level", "1.4 ng/mL", "0.8 to 2.0 ng/mL"],
-]);
+/** The table in the document: the low potassium in red, which marks no answer. */
+const LAB_TABLE = table(
+  LAB_ROWS.map((row, r) =>
+    row.map((cell, c) => (r === 1 && c === 1 ? { text: para(run(cell, { colour: RED })) } : cell)),
+  ),
+);
 
 export const formattingQuestions = (): FormattedQuestion[] => [
   ...BOLD_KEYED,
@@ -192,6 +208,16 @@ export const formattingQuestions = (): FormattedQuestion[] => [
 /** The stem as the document's markdown has it: a bold word between `**`. */
 const markdownStem = ({ stem, boldWord }: FormattedQuestion): string =>
   boldWord ? stem.replace(` ${boldWord} `, ` **${boldWord}** `) : stem;
+
+/** A table as a draft writes it: a pipe table, header first. */
+const pipeTable = (rows: readonly (readonly string[])[]): string =>
+  [rows[0], rows[0].map(() => "---"), ...rows.slice(1)]
+    .map((row) => `| ${row.join(" | ")} |`)
+    .join("\n");
+
+/** The stem a draft should have: the table the question refers to first, when it has one. */
+const draftStem = (item: FormattedQuestion): string =>
+  item.table ? `${pipeTable(item.table)}\n\n${markdownStem(item)}` : markdownStem(item);
 
 function stemParagraph(item: FormattedQuestion, number: number): string {
   if (!item.boldWord) return para(`${number}. ${item.stem}`);
@@ -240,7 +266,7 @@ export function formattingDocx(): CorpusDocument {
   const keyed = (item: FormattedQuestion) => item.mark !== "none" && item.mark !== "all_bold";
   const printed = (item: FormattedQuestion): BankQuestion => ({
     ...item,
-    stem: markdownStem(item),
+    stem: draftStem(item),
   });
   return {
     name: FORMATTING_DOCX,
