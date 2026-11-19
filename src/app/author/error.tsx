@@ -11,6 +11,6 @@ import { errorDigest } from "@/components/status/errorDigest";
  * for the page again, which is also what reloads anything saved since.
  */
 export default function AuthorError({ error, retry }: ErrorInfo) {
-  useReportError(error);
-  return <AuthorErrorView retry={retry} digest={errorDigest(error)} />;
+  const eventId = useReportError(error);
+  return <AuthorErrorView retry={retry} digest={errorDigest(error)} eventId={eventId} />;
 }

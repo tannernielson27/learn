@@ -54,6 +54,18 @@ describe("createResendMailer", () => {
     });
   });
 
+  it("sends a reply-to as Resend's reply_to when there is one", async () => {
+    const fetchImpl = respond(200, { id: "x" });
+    await createResendMailer(CONFIG, fetchImpl).send({
+      ...MESSAGE,
+      replyTo: "teacher@example.com",
+    });
+    const body = JSON.parse(String(vi.mocked(fetchImpl).mock.calls[0][1]?.body)) as {
+      reply_to?: string[];
+    };
+    expect(body.reply_to).toEqual(["teacher@example.com"]);
+  });
+
   it("does not change the message it was given", async () => {
     const message = Object.freeze({ ...MESSAGE });
     await createResendMailer(CONFIG, respond(200, { id: "x" })).send(message);

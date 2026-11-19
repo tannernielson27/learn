@@ -18,7 +18,7 @@ export interface ResendConfig {
 export function createResendMailer(config: ResendConfig, fetchImpl: typeof fetch = fetch): Mailer {
   return {
     async send(message: EmailMessage): Promise<SentEmail> {
-      const { to, subject, text, html, idempotencyKey } = validateMessage(message);
+      const { to, replyTo, subject, text, html, idempotencyKey } = validateMessage(message);
       const reply = await postJson(
         fetchImpl,
         "Resend",
@@ -28,7 +28,14 @@ export function createResendMailer(config: ResendConfig, fetchImpl: typeof fetch
           "Content-Type": "application/json",
           "Idempotency-Key": idempotencyKey,
         },
-        { from: config.from, to: [to], subject, text, html },
+        {
+          from: config.from,
+          to: [to],
+          ...(replyTo ? { reply_to: [replyTo] } : {}),
+          subject,
+          text,
+          html,
+        },
       );
       return { id: requireId("Resend", reply, "id") };
     },

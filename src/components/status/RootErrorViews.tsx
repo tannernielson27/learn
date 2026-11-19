@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+import { EmailSupport } from "@/components/support/EmailSupport";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { StatusFrame } from "./StatusFrame";
 import { StatusLinks } from "./StatusLinks";
@@ -14,6 +16,8 @@ export interface RouteErrorViewProps {
   retry: () => void;
   /** The error's digest, shown as a reference; absent for an error thrown in the browser. */
   digest?: string;
+  /** Sentry's id for the error once reported, for "Tell us about a problem" to attach to (#568). */
+  eventId?: string;
   /**
    * False draws a page that would be its own main as a `div`, for the gallery, whose layout holds
    * the one main. Views drawn inside a layout's `AppShell` have no main of their own.
@@ -24,7 +28,8 @@ export interface RouteErrorViewProps {
 /** The line under a headline that has nothing else to say: the reference, or what to do. */
 export function referenceLine(digest: string | undefined): string {
   return digest
-    ? "Still broken? Share the reference below."
+    ? // The ways to tell us, and what the reference is for, sit under the buttons (#568).
+      "Still broken? Tell us about it!"
     : // Without a reference, the line that says what to do keeps the alert from standing empty.
       "Try again to load it.";
 }
@@ -33,7 +38,19 @@ export function referenceLine(digest: string | undefined): string {
  * Any page with no closer boundary: the public pages, sign-in, join, invites. No `AppShell` frames
  * these, so the status frame brings the wordmark, and the ways out are home and sign in.
  */
-export function RootErrorView({ retry, digest, landmark }: RouteErrorViewProps) {
+export function RootErrorView({
+  retry,
+  digest,
+  landmark,
+  problem,
+}: RouteErrorViewProps & {
+  /**
+   * The ways to tell us (`ProblemReportLink`: the form if signed in, and the address), handed in by
+   * `app/error.tsx` so this file, which the global error page shares, never imports the dialog.
+   * Without it, the address alone.
+   */
+  problem?: ReactNode;
+}) {
   return (
     <StatusFrame landmark={landmark}>
       <ErrorState
@@ -44,6 +61,7 @@ export function RootErrorView({ retry, digest, landmark }: RouteErrorViewProps) 
         digest={digest}
       >
         <StatusLinks />
+        {problem ?? <EmailSupport reference={digest} />}
       </ErrorState>
     </StatusFrame>
   );
@@ -64,6 +82,8 @@ export function GlobalErrorView({ retry, digest, landmark }: RouteErrorViewProps
         digest={digest}
       >
         <StatusLinks />
+        {/* Only the address here: this page loads nothing it can do without (#568). */}
+        <EmailSupport reference={digest} />
       </ErrorState>
     </StatusFrame>
   );

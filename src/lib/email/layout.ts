@@ -50,7 +50,11 @@ export interface EmailLayout {
   readonly heading: EmailText;
   /** Above the button. */
   readonly paragraphs: readonly EmailText[];
-  readonly action: EmailAction;
+  /**
+   * The button, and its link visible underneath. Every email to a user has one; a message to the
+   * team (a problem a user sent, #568) has nothing to press and leaves it out.
+   */
+  readonly action?: EmailAction;
   /** A one-time code under the visible link, for signing in without it (#306). */
   readonly code?: { readonly label: string; readonly value: EmailText };
   /** Smaller print under the button and the visible link. */
@@ -146,8 +150,7 @@ export function renderEmailBody(layout: EmailLayout): string {
     `<p style="margin: 0 0 24px; font-size: 14px; font-weight: 700; letter-spacing: 0.02em; color: ${C.accent}">LeaRN</p>`,
     `<h1 style="margin: 0 0 12px; font-size: 22px; line-height: 1.3; font-weight: 700; color: ${C.ink}">${markup(layout.heading)}</h1>`,
     ...paragraphs,
-    button(layout.action),
-    visibleLink(layout.action),
+    ...(layout.action ? [button(layout.action), visibleLink(layout.action)] : []),
     ...(layout.code ? [codeBlock(layout.code)] : []),
     ...notes,
     "</td></tr>",

@@ -46,7 +46,16 @@ describe("validateMessage", () => {
     ["an idempotency key with a line break", { idempotencyKey: "reminder:a\r\nX-Evil: 1" }],
     ["an idempotency key with a space", { idempotencyKey: "reminder a" }],
     ["an address list instead of one address", { to: "a@b.co, c@d.co" }],
+    ["a reply-to that is not an address", { replyTo: "not an address" }],
+    ["a reply-to list", { replyTo: "a@b.co, c@d.co" }],
   ])("refuses %s", (_name, change) => {
     invalid({ ...MESSAGE, ...change });
+  });
+
+  it("normalises a reply-to like the recipient, and leaves it out when absent", () => {
+    expect(validateMessage({ ...MESSAGE, replyTo: " Teacher@Example.com " }).replyTo).toBe(
+      "teacher@example.com",
+    );
+    expect(validateMessage(MESSAGE)).not.toHaveProperty("replyTo");
   });
 });

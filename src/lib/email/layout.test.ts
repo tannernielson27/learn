@@ -61,6 +61,14 @@ describe("renderEmailDocument", () => {
     expect(html).toContain("Or copy this link into your browser:");
   });
 
+  it("leaves out the button and the visible link when there is no action", () => {
+    const bare = renderEmailDocument({ ...layout, action: undefined });
+    expect(bare).not.toContain("<a ");
+    expect(bare).not.toContain("Or copy this link into your browser:");
+    expect(bare).toContain("It is due Thursday at 17:00 MDT.");
+    expect(bare).toContain("A note under the button.");
+  });
+
   it("shows a one-time code under the link when there is one, escaped, in a large mono face", () => {
     const withCode = renderEmailBody({
       ...layout,

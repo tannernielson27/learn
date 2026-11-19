@@ -10,6 +10,7 @@ import { Field } from "@/components/ui/Field";
 import { Notice } from "@/components/ui/Notice";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SkeletonPage } from "@/components/ui/Skeleton";
+import { Textarea } from "@/components/ui/Textarea";
 import { TextLink } from "@/components/ui/TextLink";
 
 const VARIANTS: readonly ButtonVariant[] = ["primary", "secondary", "ghost"];
@@ -136,6 +137,38 @@ export function FieldStates() {
           error="Enter an email address, like name@school.edu."
         />
         <Field label="Join code" appearance="code" defaultValue="V96RN" error="Check the code." />
+      </div>
+    </Section>
+  );
+}
+
+/** #568: the box for a few lines of writing, on the same field states as `Field`. */
+export function TextareaStates() {
+  return (
+    <Section
+      title="Textarea"
+      lead="A few lines of writing, with the same edges, focus and error as a field. It grows taller when dragged, never wider."
+    >
+      <div className="grid max-w-xl gap-6">
+        <Textarea label="Empty" rows={3} />
+        <Textarea
+          label="Filled"
+          rows={3}
+          defaultValue={"The live session froze on question 3.\nI pressed Next twice."}
+        />
+        <Textarea
+          label="Focus-visible"
+          rows={3}
+          textareaClassName="border-accent outline-2 outline-offset-2 outline-accent"
+        />
+        <Textarea label="Disabled" rows={3} disabled defaultValue="Sent." />
+        <Textarea
+          label="What happened?"
+          rows={3}
+          hint="We will include the reference 1234567890."
+          defaultValue="broken"
+          error="Tell us a little more: at least 10 characters."
+        />
       </div>
     </Section>
   );

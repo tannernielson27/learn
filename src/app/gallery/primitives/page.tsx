@@ -20,6 +20,7 @@ import {
   LoadingStates,
   NoticeStates,
   PageHeaderStates,
+  TextareaStates,
 } from "./states-demo";
 
 const CHART = [
@@ -46,6 +47,7 @@ export default function PrimitivesPage() {
 
       <ButtonLadder />
       <FieldStates />
+      <TextareaStates />
       <NoticeStates />
       <PageHeaderStates />
       <EmptyStates />

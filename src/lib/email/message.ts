@@ -5,8 +5,11 @@ const SUBJECT_MAX = 200;
 // Resend's documented limit for Idempotency-Key.
 const IDEMPOTENCY_KEY_MAX = 256;
 
+const address = () => z.string().trim().toLowerCase().max(254).pipe(z.email());
+
 const messageSchema = z.object({
-  to: z.string().trim().toLowerCase().max(254).pipe(z.email()),
+  to: address(),
+  replyTo: address().optional(),
   subject: z
     .string()
     .trim()

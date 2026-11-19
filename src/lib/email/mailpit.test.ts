@@ -36,6 +36,20 @@ describe("createMailpitMailer", () => {
     });
   });
 
+  it("sends a reply-to as Mailpit's ReplyTo when there is one", async () => {
+    const fetchImpl = vi.fn(
+      async () => new Response(JSON.stringify({ ID: "abc" }), { status: 200 }),
+    ) as typeof fetch;
+    await createMailpitMailer(
+      { baseUrl: "http://127.0.0.1:55324", sender: SENDER },
+      fetchImpl,
+    ).send({ ...MESSAGE, replyTo: "teacher@learn.test" });
+    const body = JSON.parse(String(vi.mocked(fetchImpl).mock.calls[0][1]?.body)) as {
+      ReplyTo?: object;
+    };
+    expect(body.ReplyTo).toEqual([{ Email: "teacher@learn.test" }]);
+  });
+
   it("omits the sender name when there is none", async () => {
     const fetchImpl = vi.fn(
       async () => new Response(JSON.stringify({ ID: "abc" }), { status: 200 }),

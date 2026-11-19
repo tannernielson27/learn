@@ -45,6 +45,8 @@ const GALLERY_PATHS = [
   "/gallery/sentry-check",
   // #268: the email preview. No key in it either, and not in the nav; 404 on production all the same.
   "/gallery/email",
+  // #568: "Tell us about a problem" in each state, with fake actions. No key in it; 404 all the same.
+  "/gallery/support",
   // #349: the AI import review screen for the teacher guide's figure. Its staged questions carry
   // an `answerKey` field (empty), so it is probed like the item pages.
   "/gallery/ai-import",
