@@ -1,0 +1,940 @@
+{
+  "document": "11-case-study-across-chunks.md",
+  "source": "generated",
+  "questions": [],
+  "caseStudies": [
+    {
+      "draft": {
+        "title": "Unfolding Case Study: Diabetic Ketoacidosis",
+        "patient": {
+          "name": "Maya Ortega",
+          "age": "19",
+          "sex": "female",
+          "setting": "Emergency department"
+        },
+        "charts": [
+          {
+            "tabs": [
+              {
+                "title": "History and Physical",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Chief concern: The client is brought to the emergency department by a roommate after 2 days of nausea, vomiting and abdominal pain. The roommate says the client has been drinking water all day, urinating often and breathing fast since last night.\n\nHistory: Type 1 diabetes mellitus diagnosed at age 11. Uses an insulin pump. The pump's infusion set came out 2 days ago during a hiking trip and was not replaced, because the client felt too sick to eat. No other medical conditions. No surgeries. No known allergies. Does not smoke or drink alcohol.\n\nMedications at home: Insulin lispro by pump, with a basal rate of 0.8 units/h and a bolus with each meal. Carries glucose tablets. Takes no other medicines or supplements.\n\nPhysical examination: Drowsy, but answers questions when spoken to. Lips and tongue are dry, and the skin on the forearm stays tented when pinched. Breathing is deep and fast, and the breath smells fruity. Lungs are clear. Heart rate is fast and regular. Abdomen is soft and tender all over, with no guarding. Capillary refill is 4 seconds."
+                  }
+                ]
+              },
+              {
+                "title": "Nurses' Notes",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Day 1, 0900: Client arrives by private car with a roommate. Drowsy, oriented to person and place. Reports nausea, thirst and abdominal pain rated 6 on a scale of 0 to 10. Fingerstick glucose reads HI. Placed on the cardiac monitor. Two large-bore IV catheters started."
+                  }
+                ]
+              },
+              {
+                "title": "Vital Signs",
+                "sections": [
+                  {
+                    "kind": "table",
+                    "columns": ["", "0900"],
+                    "rows": [
+                      ["Temperature", "37.4 °C"],
+                      ["Heart rate", "128/min"],
+                      ["Respiratory rate", "30/min"],
+                      ["Blood pressure", "94/58 mm Hg"],
+                      ["SpO2", "98% room air"],
+                      ["Fingerstick glucose", "HI"]
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Laboratory Results",
+                "sections": []
+              }
+            ]
+          },
+          {
+            "tabs": [
+              {
+                "title": "History and Physical",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Chief concern: The client is brought to the emergency department by a roommate after 2 days of nausea, vomiting and abdominal pain. The roommate says the client has been drinking water all day, urinating often and breathing fast since last night.\n\nHistory: Type 1 diabetes mellitus diagnosed at age 11. Uses an insulin pump. The pump's infusion set came out 2 days ago during a hiking trip and was not replaced, because the client felt too sick to eat. No other medical conditions. No surgeries. No known allergies. Does not smoke or drink alcohol.\n\nMedications at home: Insulin lispro by pump, with a basal rate of 0.8 units/h and a bolus with each meal. Carries glucose tablets. Takes no other medicines or supplements.\n\nPhysical examination: Drowsy, but answers questions when spoken to. Lips and tongue are dry, and the skin on the forearm stays tented when pinched. Breathing is deep and fast, and the breath smells fruity. Lungs are clear. Heart rate is fast and regular. Abdomen is soft and tender all over, with no guarding. Capillary refill is 4 seconds."
+                  }
+                ]
+              },
+              {
+                "title": "Nurses' Notes",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Day 1, 0900: Client arrives by private car with a roommate. Drowsy, oriented to person and place. Reports nausea, thirst and abdominal pain rated 6 on a scale of 0 to 10. Fingerstick glucose reads HI. Placed on the cardiac monitor. Two large-bore IV catheters started.\n\nDay 1, 0930: Laboratory samples sent. Urine dipstick shows large ketones and large glucose. Client vomited 150 mL of green fluid. Respirations are deep and fast."
+                  }
+                ]
+              },
+              {
+                "title": "Vital Signs",
+                "sections": [
+                  {
+                    "kind": "table",
+                    "columns": ["", "0900", "0930"],
+                    "rows": [
+                      ["Temperature", "37.4 °C", "37.4 °C"],
+                      ["Heart rate", "128/min", "132/min"],
+                      ["Respiratory rate", "30/min", "32/min"],
+                      ["Blood pressure", "94/58 mm Hg", "90/54 mm Hg"],
+                      ["SpO2", "98% room air", "98% room air"],
+                      ["Fingerstick glucose", "HI", "HI"]
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Laboratory Results",
+                "sections": [
+                  {
+                    "kind": "values",
+                    "rows": [
+                      {
+                        "label": "Glucose",
+                        "value": "586",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Sodium",
+                        "value": "131",
+                        "unit": "mEq/L",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Potassium",
+                        "value": "5.4",
+                        "unit": "mEq/L",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Chloride",
+                        "value": "96",
+                        "unit": "mEq/L",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Bicarbonate",
+                        "value": "9",
+                        "unit": "mEq/L",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Blood urea nitrogen",
+                        "value": "32",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Creatinine",
+                        "value": "1.5",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Anion gap",
+                        "value": "26",
+                        "unit": "mEq/L",
+                        "flag": "H"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "tabs": [
+              {
+                "title": "History and Physical",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Chief concern: The client is brought to the emergency department by a roommate after 2 days of nausea, vomiting and abdominal pain. The roommate says the client has been drinking water all day, urinating often and breathing fast since last night.\n\nHistory: Type 1 diabetes mellitus diagnosed at age 11. Uses an insulin pump. The pump's infusion set came out 2 days ago during a hiking trip and was not replaced, because the client felt too sick to eat. No other medical conditions. No surgeries. No known allergies. Does not smoke or drink alcohol.\n\nMedications at home: Insulin lispro by pump, with a basal rate of 0.8 units/h and a bolus with each meal. Carries glucose tablets. Takes no other medicines or supplements.\n\nPhysical examination: Drowsy, but answers questions when spoken to. Lips and tongue are dry, and the skin on the forearm stays tented when pinched. Breathing is deep and fast, and the breath smells fruity. Lungs are clear. Heart rate is fast and regular. Abdomen is soft and tender all over, with no guarding. Capillary refill is 4 seconds."
+                  }
+                ]
+              },
+              {
+                "title": "Nurses' Notes",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Day 1, 0900: Client arrives by private car with a roommate. Drowsy, oriented to person and place. Reports nausea, thirst and abdominal pain rated 6 on a scale of 0 to 10. Fingerstick glucose reads HI. Placed on the cardiac monitor. Two large-bore IV catheters started.\n\nDay 1, 0930: Laboratory samples sent. Urine dipstick shows large ketones and large glucose. Client vomited 150 mL of green fluid. Respirations are deep and fast.\n\nDay 1, 0945: Provider at the bedside. Prescriptions received and read back."
+                  }
+                ]
+              },
+              {
+                "title": "Vital Signs",
+                "sections": [
+                  {
+                    "kind": "table",
+                    "columns": ["", "0900", "0930"],
+                    "rows": [
+                      ["Temperature", "37.4 °C", "37.4 °C"],
+                      ["Heart rate", "128/min", "132/min"],
+                      ["Respiratory rate", "30/min", "32/min"],
+                      ["Blood pressure", "94/58 mm Hg", "90/54 mm Hg"],
+                      ["SpO2", "98% room air", "98% room air"],
+                      ["Fingerstick glucose", "HI", "HI"]
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Laboratory Results",
+                "sections": [
+                  {
+                    "kind": "values",
+                    "rows": [
+                      {
+                        "label": "Glucose",
+                        "value": "586",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Sodium",
+                        "value": "131",
+                        "unit": "mEq/L",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Potassium",
+                        "value": "5.4",
+                        "unit": "mEq/L",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Chloride",
+                        "value": "96",
+                        "unit": "mEq/L",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Bicarbonate",
+                        "value": "9",
+                        "unit": "mEq/L",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Blood urea nitrogen",
+                        "value": "32",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Creatinine",
+                        "value": "1.5",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Anion gap",
+                        "value": "26",
+                        "unit": "mEq/L",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Arterial pH",
+                        "value": "7.14",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "PaCO2",
+                        "value": "22",
+                        "unit": "mm Hg",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Beta-hydroxybutyrate",
+                        "value": "6.8",
+                        "unit": "mmol/L",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "White blood cells",
+                        "value": "14,200",
+                        "unit": "/mm3",
+                        "flag": "H"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Provider Orders",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "0945: 0.9% sodium chloride 1,000 mL IV over 1 hour, then 500 mL/h.\n\n0945: Regular insulin IV infusion at 0.1 units/kg/h, to start after the potassium result is reviewed.\n\n0945: Fingerstick glucose every hour. Serum potassium every 2 hours.\n\n0945: Nothing by mouth except ice chips. Strict intake and output."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "tabs": [
+              {
+                "title": "History and Physical",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Chief concern: The client is brought to the emergency department by a roommate after 2 days of nausea, vomiting and abdominal pain. The roommate says the client has been drinking water all day, urinating often and breathing fast since last night.\n\nHistory: Type 1 diabetes mellitus diagnosed at age 11. Uses an insulin pump. The pump's infusion set came out 2 days ago during a hiking trip and was not replaced, because the client felt too sick to eat. No other medical conditions. No surgeries. No known allergies. Does not smoke or drink alcohol.\n\nMedications at home: Insulin lispro by pump, with a basal rate of 0.8 units/h and a bolus with each meal. Carries glucose tablets. Takes no other medicines or supplements.\n\nPhysical examination: Drowsy, but answers questions when spoken to. Lips and tongue are dry, and the skin on the forearm stays tented when pinched. Breathing is deep and fast, and the breath smells fruity. Lungs are clear. Heart rate is fast and regular. Abdomen is soft and tender all over, with no guarding. Capillary refill is 4 seconds."
+                  }
+                ]
+              },
+              {
+                "title": "Nurses' Notes",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Day 1, 0900: Client arrives by private car with a roommate. Drowsy, oriented to person and place. Reports nausea, thirst and abdominal pain rated 6 on a scale of 0 to 10. Fingerstick glucose reads HI. Placed on the cardiac monitor. Two large-bore IV catheters started.\n\nDay 1, 0930: Laboratory samples sent. Urine dipstick shows large ketones and large glucose. Client vomited 150 mL of green fluid. Respirations are deep and fast.\n\nDay 1, 0945: Provider at the bedside. Prescriptions received and read back.\n\nDay 1, 1000: First liter of 0.9% sodium chloride started as a bolus through the IV in the left forearm. Client asks for water to drink."
+                  }
+                ]
+              },
+              {
+                "title": "Vital Signs",
+                "sections": [
+                  {
+                    "kind": "table",
+                    "columns": ["", "0900", "0930", "1000"],
+                    "rows": [
+                      ["Temperature", "37.4 °C", "37.4 °C", "37.2 °C"],
+                      ["Heart rate", "128/min", "132/min", "124/min"],
+                      ["Respiratory rate", "30/min", "32/min", "30/min"],
+                      ["Blood pressure", "94/58 mm Hg", "90/54 mm Hg", "98/60 mm Hg"],
+                      ["SpO2", "98% room air", "98% room air", "99% room air"],
+                      ["Fingerstick glucose", "HI", "HI", "512 mg/dL"]
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Laboratory Results",
+                "sections": [
+                  {
+                    "kind": "values",
+                    "rows": [
+                      {
+                        "label": "Glucose",
+                        "value": "586",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Sodium",
+                        "value": "131",
+                        "unit": "mEq/L",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Potassium",
+                        "value": "5.4",
+                        "unit": "mEq/L",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Chloride",
+                        "value": "96",
+                        "unit": "mEq/L",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Bicarbonate",
+                        "value": "9",
+                        "unit": "mEq/L",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Blood urea nitrogen",
+                        "value": "32",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Creatinine",
+                        "value": "1.5",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Anion gap",
+                        "value": "26",
+                        "unit": "mEq/L",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Arterial pH",
+                        "value": "7.14",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "PaCO2",
+                        "value": "22",
+                        "unit": "mm Hg",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Beta-hydroxybutyrate",
+                        "value": "6.8",
+                        "unit": "mmol/L",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "White blood cells",
+                        "value": "14,200",
+                        "unit": "/mm3",
+                        "flag": "H"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Provider Orders",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "0945: 0.9% sodium chloride 1,000 mL IV over 1 hour, then 500 mL/h.\n\n0945: Regular insulin IV infusion at 0.1 units/kg/h, to start after the potassium result is reviewed.\n\n0945: Fingerstick glucose every hour. Serum potassium every 2 hours.\n\n0945: Nothing by mouth except ice chips. Strict intake and output."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "tabs": [
+              {
+                "title": "History and Physical",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Chief concern: The client is brought to the emergency department by a roommate after 2 days of nausea, vomiting and abdominal pain. The roommate says the client has been drinking water all day, urinating often and breathing fast since last night.\n\nHistory: Type 1 diabetes mellitus diagnosed at age 11. Uses an insulin pump. The pump's infusion set came out 2 days ago during a hiking trip and was not replaced, because the client felt too sick to eat. No other medical conditions. No surgeries. No known allergies. Does not smoke or drink alcohol.\n\nMedications at home: Insulin lispro by pump, with a basal rate of 0.8 units/h and a bolus with each meal. Carries glucose tablets. Takes no other medicines or supplements.\n\nPhysical examination: Drowsy, but answers questions when spoken to. Lips and tongue are dry, and the skin on the forearm stays tented when pinched. Breathing is deep and fast, and the breath smells fruity. Lungs are clear. Heart rate is fast and regular. Abdomen is soft and tender all over, with no guarding. Capillary refill is 4 seconds."
+                  }
+                ]
+              },
+              {
+                "title": "Nurses' Notes",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Day 1, 0900: Client arrives by private car with a roommate. Drowsy, oriented to person and place. Reports nausea, thirst and abdominal pain rated 6 on a scale of 0 to 10. Fingerstick glucose reads HI. Placed on the cardiac monitor. Two large-bore IV catheters started.\n\nDay 1, 0930: Laboratory samples sent. Urine dipstick shows large ketones and large glucose. Client vomited 150 mL of green fluid. Respirations are deep and fast.\n\nDay 1, 0945: Provider at the bedside. Prescriptions received and read back.\n\nDay 1, 1000: First liter of 0.9% sodium chloride started as a bolus through the IV in the left forearm. Client asks for water to drink.\n\nDay 1, 1100: First liter of 0.9% sodium chloride finished. Regular insulin infusion started at 0.1 units/kg/h after the potassium result was reviewed with the provider. Potassium chloride added to the IV fluid as prescribed.\n\nDay 1, 1200: Client is more alert and is oriented to person, place and time. Urine output 60 mL in the last hour. No vomiting since 0930."
+                  }
+                ]
+              },
+              {
+                "title": "Vital Signs",
+                "sections": [
+                  {
+                    "kind": "table",
+                    "columns": ["", "0900", "0930", "1000", "1100", "1200"],
+                    "rows": [
+                      ["Temperature", "37.4 °C", "37.4 °C", "37.2 °C", "37.1 °C", "37.0 °C"],
+                      ["Heart rate", "128/min", "132/min", "124/min", "112/min", "104/min"],
+                      ["Respiratory rate", "30/min", "32/min", "30/min", "26/min", "22/min"],
+                      [
+                        "Blood pressure",
+                        "94/58 mm Hg",
+                        "90/54 mm Hg",
+                        "98/60 mm Hg",
+                        "106/64 mm Hg",
+                        "110/68 mm Hg"
+                      ],
+                      [
+                        "SpO2",
+                        "98% room air",
+                        "98% room air",
+                        "99% room air",
+                        "99% room air",
+                        "99% room air"
+                      ],
+                      ["Fingerstick glucose", "HI", "HI", "512 mg/dL", "438 mg/dL", "362 mg/dL"]
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Laboratory Results",
+                "sections": [
+                  {
+                    "kind": "values",
+                    "rows": [
+                      {
+                        "label": "Glucose",
+                        "value": "586",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Sodium",
+                        "value": "131",
+                        "unit": "mEq/L",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Potassium",
+                        "value": "5.4",
+                        "unit": "mEq/L",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Chloride",
+                        "value": "96",
+                        "unit": "mEq/L",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Bicarbonate",
+                        "value": "9",
+                        "unit": "mEq/L",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Blood urea nitrogen",
+                        "value": "32",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Creatinine",
+                        "value": "1.5",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Anion gap",
+                        "value": "26",
+                        "unit": "mEq/L",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Arterial pH",
+                        "value": "7.14",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "PaCO2",
+                        "value": "22",
+                        "unit": "mm Hg",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Beta-hydroxybutyrate",
+                        "value": "6.8",
+                        "unit": "mmol/L",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "White blood cells",
+                        "value": "14,200",
+                        "unit": "/mm3",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Potassium, repeat at 1100",
+                        "value": "4.1",
+                        "unit": "mEq/L"
+                      },
+                      {
+                        "label": "Glucose, repeat at 1200",
+                        "value": "362",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Bicarbonate, repeat at 1200",
+                        "value": "13",
+                        "unit": "mEq/L",
+                        "flag": "L"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Provider Orders",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "0945: 0.9% sodium chloride 1,000 mL IV over 1 hour, then 500 mL/h.\n\n0945: Regular insulin IV infusion at 0.1 units/kg/h, to start after the potassium result is reviewed.\n\n0945: Fingerstick glucose every hour. Serum potassium every 2 hours.\n\n0945: Nothing by mouth except ice chips. Strict intake and output.\n\n1100: Add potassium chloride 20 mEq to each liter of IV fluid."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "tabs": [
+              {
+                "title": "History and Physical",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Chief concern: The client is brought to the emergency department by a roommate after 2 days of nausea, vomiting and abdominal pain. The roommate says the client has been drinking water all day, urinating often and breathing fast since last night.\n\nHistory: Type 1 diabetes mellitus diagnosed at age 11. Uses an insulin pump. The pump's infusion set came out 2 days ago during a hiking trip and was not replaced, because the client felt too sick to eat. No other medical conditions. No surgeries. No known allergies. Does not smoke or drink alcohol.\n\nMedications at home: Insulin lispro by pump, with a basal rate of 0.8 units/h and a bolus with each meal. Carries glucose tablets. Takes no other medicines or supplements.\n\nPhysical examination: Drowsy, but answers questions when spoken to. Lips and tongue are dry, and the skin on the forearm stays tented when pinched. Breathing is deep and fast, and the breath smells fruity. Lungs are clear. Heart rate is fast and regular. Abdomen is soft and tender all over, with no guarding. Capillary refill is 4 seconds."
+                  }
+                ]
+              },
+              {
+                "title": "Nurses' Notes",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "Day 1, 0900: Client arrives by private car with a roommate. Drowsy, oriented to person and place. Reports nausea, thirst and abdominal pain rated 6 on a scale of 0 to 10. Fingerstick glucose reads HI. Placed on the cardiac monitor. Two large-bore IV catheters started.\n\nDay 1, 0930: Laboratory samples sent. Urine dipstick shows large ketones and large glucose. Client vomited 150 mL of green fluid. Respirations are deep and fast.\n\nDay 1, 0945: Provider at the bedside. Prescriptions received and read back.\n\nDay 1, 1000: First liter of 0.9% sodium chloride started as a bolus through the IV in the left forearm. Client asks for water to drink.\n\nDay 1, 1100: First liter of 0.9% sodium chloride finished. Regular insulin infusion started at 0.1 units/kg/h after the potassium result was reviewed with the provider. Potassium chloride added to the IV fluid as prescribed.\n\nDay 1, 1200: Client is more alert and is oriented to person, place and time. Urine output 60 mL in the last hour. No vomiting since 0930.\n\nDay 1, 1400: Client is awake and talking with the roommate. Reports hunger and no nausea. Breathing is quiet and regular.\n\nDay 1, 1500: Diabetes educator paged at the client's request to review insulin pump site changes and sick-day rules."
+                  }
+                ]
+              },
+              {
+                "title": "Vital Signs",
+                "sections": [
+                  {
+                    "kind": "table",
+                    "columns": ["", "0900", "0930", "1000", "1100", "1200", "1400"],
+                    "rows": [
+                      [
+                        "Temperature",
+                        "37.4 °C",
+                        "37.4 °C",
+                        "37.2 °C",
+                        "37.1 °C",
+                        "37.0 °C",
+                        "37.0 °C"
+                      ],
+                      [
+                        "Heart rate",
+                        "128/min",
+                        "132/min",
+                        "124/min",
+                        "112/min",
+                        "104/min",
+                        "92/min"
+                      ],
+                      [
+                        "Respiratory rate",
+                        "30/min",
+                        "32/min",
+                        "30/min",
+                        "26/min",
+                        "22/min",
+                        "18/min"
+                      ],
+                      [
+                        "Blood pressure",
+                        "94/58 mm Hg",
+                        "90/54 mm Hg",
+                        "98/60 mm Hg",
+                        "106/64 mm Hg",
+                        "110/68 mm Hg",
+                        "116/72 mm Hg"
+                      ],
+                      [
+                        "SpO2",
+                        "98% room air",
+                        "98% room air",
+                        "99% room air",
+                        "99% room air",
+                        "99% room air",
+                        "99% room air"
+                      ],
+                      [
+                        "Fingerstick glucose",
+                        "HI",
+                        "HI",
+                        "512 mg/dL",
+                        "438 mg/dL",
+                        "362 mg/dL",
+                        "248 mg/dL"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Laboratory Results",
+                "sections": [
+                  {
+                    "kind": "values",
+                    "rows": [
+                      {
+                        "label": "Glucose",
+                        "value": "586",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Sodium",
+                        "value": "131",
+                        "unit": "mEq/L",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Potassium",
+                        "value": "5.4",
+                        "unit": "mEq/L",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Chloride",
+                        "value": "96",
+                        "unit": "mEq/L",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Bicarbonate",
+                        "value": "9",
+                        "unit": "mEq/L",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Blood urea nitrogen",
+                        "value": "32",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Creatinine",
+                        "value": "1.5",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Anion gap",
+                        "value": "26",
+                        "unit": "mEq/L",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Arterial pH",
+                        "value": "7.14",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "PaCO2",
+                        "value": "22",
+                        "unit": "mm Hg",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Beta-hydroxybutyrate",
+                        "value": "6.8",
+                        "unit": "mmol/L",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "White blood cells",
+                        "value": "14,200",
+                        "unit": "/mm3",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Potassium, repeat at 1100",
+                        "value": "4.1",
+                        "unit": "mEq/L"
+                      },
+                      {
+                        "label": "Glucose, repeat at 1200",
+                        "value": "362",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Bicarbonate, repeat at 1200",
+                        "value": "13",
+                        "unit": "mEq/L",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Potassium, repeat at 1400",
+                        "value": "3.6",
+                        "unit": "mEq/L"
+                      },
+                      {
+                        "label": "Glucose, repeat at 1400",
+                        "value": "248",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      },
+                      {
+                        "label": "Bicarbonate, repeat at 1400",
+                        "value": "18",
+                        "unit": "mEq/L",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Arterial pH, repeat at 1400",
+                        "value": "7.31",
+                        "flag": "L"
+                      },
+                      {
+                        "label": "Creatinine, repeat at 1400",
+                        "value": "1.6",
+                        "unit": "mg/dL",
+                        "flag": "H"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "title": "Provider Orders",
+                "sections": [
+                  {
+                    "kind": "text",
+                    "text": "0945: 0.9% sodium chloride 1,000 mL IV over 1 hour, then 500 mL/h.\n\n0945: Regular insulin IV infusion at 0.1 units/kg/h, to start after the potassium result is reviewed.\n\n0945: Fingerstick glucose every hour. Serum potassium every 2 hours.\n\n0945: Nothing by mouth except ice chips. Strict intake and output.\n\n1100: Add potassium chloride 20 mEq to each liter of IV fluid.\n\n1400: Change the IV fluid to 5% dextrose in 0.45% sodium chloride when the glucose is below 250 mg/dL.\n\n1400: Give subcutaneous insulin 2 hours before the insulin infusion is stopped."
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "steps": [
+          {
+            "type": "multiple_response",
+            "stem": "The nurse reviews the client's record. Which findings require immediate follow-up? Select all that apply.",
+            "options": [
+              {
+                "text": "Fingerstick glucose that reads HI *"
+              },
+              {
+                "text": "Respiratory rate 30/min with deep breaths *"
+              },
+              {
+                "text": "Heart rate 128/min *"
+              },
+              {
+                "text": "Blood pressure 94/58 mm Hg *"
+              },
+              {
+                "text": "SpO2 98% on room air"
+              },
+              {
+                "text": "Temperature 37.4 °C"
+              }
+            ]
+          },
+          {
+            "type": "multiple_choice",
+            "stem": "Which condition is the client most likely experiencing?",
+            "options": [
+              {
+                "text": "Hypoglycemia"
+              },
+              {
+                "text": "Diabetic ketoacidosis *"
+              },
+              {
+                "text": "Hyperosmolar hyperglycemic state"
+              },
+              {
+                "text": "Viral gastroenteritis"
+              }
+            ]
+          },
+          {
+            "type": "multiple_choice",
+            "stem": "Which problem should the nurse address first?",
+            "options": [
+              {
+                "text": "Knowledge deficit about insulin pump site changes"
+              },
+              {
+                "text": "Abdominal pain rated 6 on a scale of 0 to 10"
+              },
+              {
+                "text": "Fluid volume deficit *"
+              },
+              {
+                "text": "Risk for skin breakdown"
+              }
+            ]
+          },
+          {
+            "type": "matrix_multiple_choice",
+            "stem": "For each prescription, indicate whether it is indicated or not indicated for the client at this time.",
+            "columns": ["Indicated", "Not indicated"],
+            "rows": [
+              {
+                "text": "Give 0.9% sodium chloride 1,000 mL IV over 1 hour",
+                "cells": ["*", ""]
+              },
+              {
+                "text": "Start the regular insulin infusion before the potassium result is known",
+                "cells": ["", "*"]
+              },
+              {
+                "text": "Check the fingerstick glucose every hour",
+                "cells": ["*", ""]
+              },
+              {
+                "text": "Give sodium bicarbonate by IV push",
+                "cells": ["", "*"]
+              },
+              {
+                "text": "Keep the client on nothing by mouth except ice chips",
+                "cells": ["*", ""]
+              }
+            ]
+          },
+          {
+            "type": "multiple_response",
+            "stem": "Which 3 actions should the nurse take at this time?",
+            "options": [
+              {
+                "text": "Check the fingerstick glucose every hour *"
+              },
+              {
+                "text": "Stop the insulin infusion because the glucose is falling"
+              },
+              {
+                "text": "Keep the client on the cardiac monitor *"
+              },
+              {
+                "text": "Give the client orange juice to drink"
+              },
+              {
+                "text": "Add potassium chloride to the IV fluid as prescribed *"
+              },
+              {
+                "text": "Remove one of the two IV catheters"
+              }
+            ]
+          },
+          {
+            "type": "matrix_multiple_choice",
+            "stem": "For each finding, indicate whether it shows that the client's condition has improved or has not improved.",
+            "columns": ["Improved", "Not improved"],
+            "rows": [
+              {
+                "text": "Glucose 248 mg/dL",
+                "cells": ["*", ""]
+              },
+              {
+                "text": "Arterial pH 7.31",
+                "cells": ["*", ""]
+              },
+              {
+                "text": "Heart rate 92/min",
+                "cells": ["*", ""]
+              },
+              {
+                "text": "Creatinine 1.6 mg/dL",
+                "cells": ["", "*"]
+              },
+              {
+                "text": "Oriented to person, place and time",
+                "cells": ["*", ""]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -15,18 +15,19 @@ import {
   type UnitDocument,
 } from "@/lib/aiImport/extractQuestions";
 import { unitPayload, wholeText } from "@/lib/aiImport/extractUnit";
-import { chunkPayload, prepareFile, type PreparedFile } from "@/lib/aiImport/files/prepare";
+import { prepareFile } from "@/lib/aiImport/files/prepare";
 import { mergeSegments, type MergedQuestion } from "@/lib/aiImport/merge";
-import { readSegment, segmentRequest } from "@/lib/aiImport/segment";
 import type { StagedEntry } from "@/lib/aiImport/stage";
 import { NOT_IMPORTABLE, type RecordedQuestion, type Recording } from "./files";
+import { segmentPass, type CorpusFile, type Ledger } from "./productImport";
 
 /**
  * The eval's import pipeline (#339), on the product's own code since #343, so the eval measures
- * what ships: `prepareFile` cuts the chunks the product sends, the segment pass reads each,
- * `mergeSegments` joins them, `planExtraction` makes the product's units, and each unit runs as
- * the server runs it (`extractQuestions`, or `extractCaseStudy` with #344's assembly), charts
- * included. Each call's answer is written down as a recording for the scorer.
+ * what ships: `prepareFile` cuts the chunks the product sends, the server's `segmentChunk` reads
+ * each (in halves when its answer runs out of room, #590), `mergeSegments` joins them,
+ * `planExtraction` makes the product's units, and each unit runs as the server runs it
+ * (`extractQuestions`, or `extractCaseStudy` with #344's assembly), charts included. Each call's
+ * answer is written down as a recording for the scorer.
  *
  * Only `pnpm eval:ai-import` runs it against the API. Tests drive it with a fake client.
  */
@@ -51,26 +52,64 @@ export interface PipelineOptions {
 const message = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
-/** One file's chunks, segmented and merged, as the product does it. */
-async function segmentFile(
-  call: UnitCall,
-  bytes: Uint8Array,
-  prepared: PreparedFile,
-): Promise<MergedQuestion[]> {
-  const segments = [];
-  for (const chunk of prepared.chunks) {
-    const payload = await chunkPayload(bytes, prepared, chunk.position);
-    const ref = {
-      position: chunk.position,
-      of: prepared.chunks.length,
-      pageFrom: chunk.pageFrom,
-      pageTo: chunk.pageTo,
-    };
-    const answer = await call(segmentRequest(payload, prepared.kind, ref), "extract");
-    segments.push(readSegment(answer.value, ref, payload));
+/** What some calls cost, as a recording says it. */
+export type Spend = NonNullable<Recording["usage"]>;
+
+export const NO_SPEND: Spend = Object.freeze({ inputTokens: 0, outputTokens: 0, costUsd: 0 });
+
+/** A document the pipeline could not read, with what its calls cost before it failed. */
+export class PipelineError extends Error {
+  constructor(
+    message: string,
+    readonly usage: Spend,
+  ) {
+    super(message);
+    this.name = "PipelineError";
   }
-  return mergeSegments(segments).questions;
 }
+
+/** What the ledger was told its calls billed, each settled once. */
+const settledSpend = (ledger: Ledger): Spend =>
+  ledger.settles.reduce<Spend>(
+    (sum, settle) => ({
+      inputTokens: sum.inputTokens + Number(settle.p_input_tokens ?? 0),
+      outputTokens: sum.outputTokens + Number(settle.p_output_tokens ?? 0),
+      costUsd: sum.costUsd + Number(settle.p_cost_usd ?? 0),
+    }),
+    NO_SPEND,
+  );
+
+/**
+ * One file's chunks, each through the server's own request (`segmentChunk`), then merged. A
+ * chunk whose answer runs out of room is read again in halves there (#590), so a document that
+ * needs that is scored like any other, and not lost to the first `max_tokens` (#594).
+ *
+ * A chunk that fails fails the document, with the code the teacher's browser would get. What the
+ * pass cost is read from the ledger, where every call is settled with what it billed, a failed
+ * one too: a document that fails still says what it cost.
+ */
+async function segmentFile(
+  client: MessagesClient,
+  file: CorpusFile,
+  options: PipelineOptions,
+): Promise<{ questions: MergedQuestion[]; spend: Spend }> {
+  const { results, segments, ledger } = await segmentPass(file, client, { sleep: options.sleep });
+  const spend = settledSpend(ledger);
+  results.forEach((result, position) => {
+    if (result.ok) return;
+    const reason = result.code === "claude_failed" ? `: ${result.reason}` : "";
+    throw new PipelineError(
+      `the segment pass failed on part ${position + 1} (${result.code}${reason})`,
+      spend,
+    );
+  });
+  return { questions: mergeSegments(segments).questions, spend };
+}
+
+/** The client, asked for `model` whatever the request names: the server always names its own. */
+const onModel = (client: MessagesClient, model: string): MessagesClient => ({
+  messages: { create: (body, options) => client.messages.create({ ...body, model }, options) },
+});
 
 /** The opening a chart request names, read back from its question block. */
 function chartOpening(call: Parameters<UnitCall>[0]): string | undefined {
@@ -176,7 +215,11 @@ export async function runPipeline(
     }
   };
 
-  const merged = await segmentFile(call, bytes, prepared);
+  const { questions: merged, spend: segmentSpend } = await segmentFile(
+    onModel(client, model),
+    { name: document.name, bytes, prepared },
+    options,
+  );
   // The product's own join (#592): the chunks with what was cut from between them.
   const sourceText = wholeText(prepared);
   const regions = regionsOf(merged, sourceText);
@@ -218,10 +261,15 @@ export async function runPipeline(
     recordedAt: (options.now ?? (() => new Date()))().toISOString(),
     questions,
     caseStudies,
+    // The segment pass as the ledger settled it, and the extract pass as its calls reported it.
     usage: {
-      inputTokens: usage.inputTokens + usage.cacheWriteTokens + usage.cacheReadTokens,
-      outputTokens: usage.outputTokens,
-      costUsd: Number(costOf(usage).toFixed(4)),
+      inputTokens:
+        segmentSpend.inputTokens +
+        usage.inputTokens +
+        usage.cacheWriteTokens +
+        usage.cacheReadTokens,
+      outputTokens: segmentSpend.outputTokens + usage.outputTokens,
+      costUsd: Number((segmentSpend.costUsd + costOf(usage)).toFixed(4)),
     },
   };
 }

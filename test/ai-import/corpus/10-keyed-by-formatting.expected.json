@@ -1,0 +1,447 @@
+{
+  "document": "10-keyed-by-formatting.docx",
+  "covers": ["formatting-key", "formatting-not-a-key", "unmarked-key"],
+  "questions": [
+    {
+      "label": "1.",
+      "status": "ready",
+      "item": {
+        "id": "format10_q1",
+        "stem": {
+          "kind": "markdown",
+          "value": "Which action should the nurse take first when a fire starts in a client's room?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Close the doors to the nearby rooms"
+            },
+            {
+              "id": "opt_b",
+              "label": "Move the client out of the room"
+            },
+            {
+              "id": "opt_c",
+              "label": "Pull the nearest fire alarm"
+            },
+            {
+              "id": "opt_d",
+              "label": "Use a fire extinguisher on the flames"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "2.",
+      "status": "ready",
+      "item": {
+        "id": "format10_q2",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who has a Clostridioides difficile infection. Which action should the nurse take before leaving the room?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Use an alcohol-based hand rub"
+            },
+            {
+              "id": "opt_b",
+              "label": "Put on a clean pair of gloves"
+            },
+            {
+              "id": "opt_c",
+              "label": "Wash the hands with soap and water"
+            },
+            {
+              "id": "opt_d",
+              "label": "Rinse the hands with water only"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_c"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "3.",
+      "status": "ready",
+      "item": {
+        "id": "format10_q3",
+        "stem": {
+          "kind": "markdown",
+          "value": "Which client should the nurse place in a negative-pressure room?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "A client who has active pulmonary tuberculosis"
+            },
+            {
+              "id": "opt_b",
+              "label": "A client who has influenza"
+            },
+            {
+              "id": "opt_c",
+              "label": "A client who has a wound infected with MRSA"
+            },
+            {
+              "id": "opt_d",
+              "label": "A client who has a urinary tract infection"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_a"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "4.",
+      "status": "ready",
+      "item": {
+        "id": "format10_q4",
+        "stem": {
+          "kind": "markdown",
+          "value": "Which pair of identifiers should the nurse use to identify a client before giving a medication?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Room number and bed number"
+            },
+            {
+              "id": "opt_b",
+              "label": "Diagnosis and room number"
+            },
+            {
+              "id": "opt_c",
+              "label": "First name and bed number"
+            },
+            {
+              "id": "opt_d",
+              "label": "Full name and date of birth"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_d"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "5.",
+      "status": "ready",
+      "item": {
+        "id": "format10_q5",
+        "stem": {
+          "kind": "markdown",
+          "value": "Which food should the nurse remove from the meal tray of a client who is on a low-sodium diet?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Fresh apple slices"
+            },
+            {
+              "id": "opt_b",
+              "label": "Canned chicken noodle soup"
+            },
+            {
+              "id": "opt_c",
+              "label": "Steamed white rice"
+            },
+            {
+              "id": "opt_d",
+              "label": "Unsalted crackers"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_b"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "6.",
+      "status": "ready",
+      "item": {
+        "id": "format10_q6",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse is caring for a client who is at risk for falls. Which action should the nurse take?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Keep the bed in its highest position"
+            },
+            {
+              "id": "opt_b",
+              "label": "Leave the room lights off at night"
+            },
+            {
+              "id": "opt_c",
+              "label": "Raise all four side rails"
+            },
+            {
+              "id": "opt_d",
+              "label": "Keep the call light within the client's reach"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_d"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "7.",
+      "status": "ready",
+      "item": {
+        "id": "format10_q7",
+        "stem": {
+          "kind": "markdown",
+          "value": "Which piece of protective equipment should the nurse remove first after caring for a client who is on contact precautions?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Gloves"
+            },
+            {
+              "id": "opt_b",
+              "label": "Gown"
+            },
+            {
+              "id": "opt_c",
+              "label": "Mask"
+            },
+            {
+              "id": "opt_d",
+              "label": "Goggles"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_a"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "8.",
+      "status": "ready",
+      "item": {
+        "id": "format10_q8",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse finds that another nurse gave a client the wrong medication. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Complete an incident report"
+            },
+            {
+              "id": "opt_b",
+              "label": "Notify the nurse manager"
+            },
+            {
+              "id": "opt_c",
+              "label": "Assess the client"
+            },
+            {
+              "id": "opt_d",
+              "label": "Call the pharmacy"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": "opt_c"
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "9.",
+      "status": "needs_answer",
+      "item": {
+        "id": "format10_q9",
+        "stem": {
+          "kind": "markdown",
+          "value": "Which action should the nurse take **first** for a client who has a latex allergy and needs a urinary catheter?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Notify the provider of the allergy"
+            },
+            {
+              "id": "opt_b",
+              "label": "Obtain a latex-free catheter kit"
+            },
+            {
+              "id": "opt_c",
+              "label": "Place an allergy band on the client's wrist"
+            },
+            {
+              "id": "opt_d",
+              "label": "Ask the client about past reactions to latex"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": ""
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "10.",
+      "status": "needs_answer",
+      "item": {
+        "id": "format10_q10",
+        "stem": {
+          "kind": "markdown",
+          "value": "Which statement by a new nurse shows an understanding of standard precautions?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "\"I wear gloves when I may touch blood or body fluids.\""
+            },
+            {
+              "id": "opt_b",
+              "label": "\"I use them only for clients who have an infection.\""
+            },
+            {
+              "id": "opt_c",
+              "label": "\"I do not need to clean my hands after I take off gloves.\""
+            },
+            {
+              "id": "opt_d",
+              "label": "\"I recap used needles before I throw them away.\""
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": ""
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    },
+    {
+      "label": "11.",
+      "status": "needs_answer",
+      "item": {
+        "id": "format10_q11",
+        "stem": {
+          "kind": "markdown",
+          "value": "A nurse reviews the laboratory results above for a client who takes digoxin and furosemide. Which action should the nurse take first?"
+        },
+        "rationale": {},
+        "type": "multiple_choice",
+        "content": {
+          "options": [
+            {
+              "id": "opt_a",
+              "label": "Give the morning dose of digoxin"
+            },
+            {
+              "id": "opt_b",
+              "label": "Notify the provider of the potassium level"
+            },
+            {
+              "id": "opt_c",
+              "label": "Encourage the client to drink more water"
+            },
+            {
+              "id": "opt_d",
+              "label": "Repeat the laboratory tests tomorrow"
+            }
+          ]
+        },
+        "answerKey": {
+          "correctOptionId": ""
+        },
+        "scoring": {
+          "model": "zero_one",
+          "maxPoints": 1
+        }
+      }
+    }
+  ],
+  "caseStudies": []
+}

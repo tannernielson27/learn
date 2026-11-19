@@ -11,7 +11,7 @@ import {
   type ExpectedDocument,
   type Recording,
 } from "./files";
-import { runPipeline } from "./pipeline";
+import { NO_SPEND, PipelineError, runPipeline } from "./pipeline";
 import { buildReport, formatReport, scoreDocument, type DocumentScore } from "./score";
 
 /**
@@ -31,6 +31,8 @@ const ROOT = resolve(AI_IMPORT_DIR, "../..");
 const OUT_DIR = join(AI_IMPORT_DIR, "out");
 const SAMPLES_DIR = join(ROOT, ".ai-import-samples");
 const SAMPLE_TYPES = new Set([".pdf", ".docx", ".md", ".txt"]);
+/** The `source` of the stand-in recording for a document the pipeline could not read. */
+const FAILED = "failed";
 
 const write = (path: string, value: unknown) => {
   mkdirSync(join(path, ".."), { recursive: true });
@@ -55,15 +57,29 @@ describe.skipIf(!ENABLED)("AI import eval (live API)", () => {
     const only = process.env.AI_IMPORT_EVAL_ONLY;
     let cost = 0;
 
+    // A document that fails is named, scored as nothing read, and fails the run at the end, so
+    // the documents after it are still read. What its calls cost before it failed is counted.
+    const failed: string[] = [];
+    const read = async (name: string, bytes: Buffer): ReturnType<typeof runPipeline> => {
+      try {
+        return await runPipeline(client, { name, bytes });
+      } catch (error) {
+        failed.push(`${name}: ${error instanceof Error ? error.message : String(error)}`);
+        const usage = error instanceof PipelineError ? error.usage : NO_SPEND;
+        return { document: name, source: FAILED, questions: [], caseStudies: [], usage };
+      }
+    };
+    /** Kept for a document that was read; a failed one leaves an earlier run's file alone. */
+    const keep = (path: string, recording: Recording) => {
+      if (recording.source !== FAILED) write(path, recording);
+    };
+
     const corpus = loadExpected().filter((doc) => !only || doc.document.includes(only));
     const scores: DocumentScore[] = [];
     for (const doc of corpus) {
-      const recording = await runPipeline(client, {
-        name: doc.document,
-        bytes: readFileSync(join(CORPUS_DIR, doc.document)),
-      });
+      const recording = await read(doc.document, readFileSync(join(CORPUS_DIR, doc.document)));
       cost += recording.usage.costUsd;
-      write(join(OUT_DIR, "recordings", doc.document.replace(/\.[a-z]+$/i, ".json")), recording);
+      keep(join(OUT_DIR, "recordings", doc.document.replace(/\.[a-z]+$/i, ".json")), recording);
       scores.push(scoreDocument(doc, recording));
     }
     const report = formatReport(buildReport(scores));
@@ -78,12 +94,9 @@ describe.skipIf(!ENABLED)("AI import eval (live API)", () => {
         SAMPLE_TYPES.has(extname(name).toLowerCase()),
       );
       for (const name of files) {
-        const recording = await runPipeline(client, {
-          name,
-          bytes: readFileSync(join(SAMPLES_DIR, name)),
-        });
+        const recording = await read(name, readFileSync(join(SAMPLES_DIR, name)));
         cost += recording.usage.costUsd;
-        write(join(sampleOut, `${name}.json`), recording);
+        keep(join(sampleOut, `${name}.json`), recording);
         // An owner may write `<file>.expected.json` beside a sample; it is scored like the corpus.
         const expectedPath = join(SAMPLES_DIR, `${name}.expected.json`);
         if (existsSync(expectedPath)) {
@@ -108,6 +121,10 @@ describe.skipIf(!ENABLED)("AI import eval (live API)", () => {
     console.log(
       `\nEstimated cost of this run: $${cost.toFixed(3)} (${NOT_IMPORTABLE} questions cost no extract call).`,
     );
+    if (failed.length > 0) {
+      console.log(`\nDocuments that failed:\n${failed.map((line) => `- ${line}`).join("\n")}`);
+    }
     expect(corpus.length).toBeGreaterThan(0);
+    expect(failed).toEqual([]);
   });
 });

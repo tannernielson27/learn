@@ -1,0 +1,1387 @@
+{
+  "document": "08-sixty-question-bank.docx",
+  "source": "generated",
+  "questions": [
+    {
+      "opening": "A nurse is caring for a client who has heart failure. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has heart failure. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Blood pressure of 118/76 mm Hg while sitting in a chair"
+          },
+          {
+            "text": "Weight gain of 2 kg (4.4 lb) since yesterday morning"
+          },
+          {
+            "text": "Respiratory rate of 16/min with even, quiet breaths"
+          },
+          {
+            "text": "Alert and oriented to person, place and time"
+          }
+        ],
+        "answer": "Answer: B"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has crackles in both lung bases and new shortness of breath while lying flat. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has crackles in both lung bases and new shortness of breath while lying flat. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Ask the client about food preferences for the next meal"
+          },
+          {
+            "text": "Update the plan of care at the end of the shift"
+          },
+          {
+            "text": "Weigh the client before breakfast tomorrow"
+          },
+          {
+            "text": "Raise the head of the bed to a high Fowler's position"
+          }
+        ],
+        "answer": "Answer: D"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has type 1 diabetes mellitus. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has type 1 diabetes mellitus. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Urine output of 60 mL/h of clear yellow urine"
+          },
+          {
+            "text": "Bowel sounds heard in all four quadrants"
+          },
+          {
+            "text": "Heart rate of 76/min with a regular rhythm"
+          },
+          {
+            "text": "Blood glucose of 52 mg/dL before breakfast"
+          }
+        ],
+        "answer": "Answer: D"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a blood glucose of 48 mg/dL and is awake, shaky and sweating. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a blood glucose of 48 mg/dL and is awake, shaky and sweating. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Ask a family member to bring the client's glasses from home"
+          },
+          {
+            "text": "Give 15 g of a fast-acting carbohydrate by mouth"
+          },
+          {
+            "text": "Document the finding in the client's record"
+          },
+          {
+            "text": "Schedule a follow-up appointment for next week"
+          }
+        ],
+        "answer": "Answer: B"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has chronic obstructive pulmonary disease. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has chronic obstructive pulmonary disease. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Skin that is warm, dry and pink"
+          },
+          {
+            "text": "Oxygen saturation of 84% while resting in bed"
+          },
+          {
+            "text": "Oxygen saturation of 97% while breathing room air"
+          },
+          {
+            "text": "Capillary refill of 2 seconds in the fingers and toes"
+          }
+        ],
+        "answer": "Answer: B"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has an oxygen saturation of 85% and is breathing fast while slumped in bed. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has an oxygen saturation of 85% and is breathing fast while slumped in bed. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Offer the client a warm blanket and dim the lights"
+          },
+          {
+            "text": "Teach the client about a heart-healthy diet"
+          },
+          {
+            "text": "Give the client a pamphlet about support groups"
+          },
+          {
+            "text": "Help the client sit upright and lean forward on the overbed table"
+          }
+        ],
+        "answer": "Answer: D"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a new tracheostomy. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a new tracheostomy. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Temperature of 37.0 °C (98.6 °F) by mouth"
+          },
+          {
+            "text": "Pain rated 2 on a scale of 0 to 10 after repositioning"
+          },
+          {
+            "text": "Steady bright red bleeding from around the tracheostomy tube"
+          },
+          {
+            "text": "Clear breath sounds in both lungs"
+          }
+        ],
+        "answer": "Answer: C"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has gurgling breath sounds and visible secretions in the tracheostomy tube. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has gurgling breath sounds and visible secretions in the tracheostomy tube. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Suction the tracheostomy tube"
+          },
+          {
+            "text": "Reassess the client in 4 hours"
+          },
+          {
+            "text": "Restock the supplies in the client's room"
+          },
+          {
+            "text": "Review the discharge instructions with the client"
+          }
+        ],
+        "answer": "Answer: A"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a chest tube. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a chest tube. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Drainage of 250 mL of bright red blood in the last hour"
+          },
+          {
+            "text": "Alert and oriented to person, place and time"
+          },
+          {
+            "text": "Blood pressure of 118/76 mm Hg while sitting in a chair"
+          },
+          {
+            "text": "Respiratory rate of 16/min with even, quiet breaths"
+          }
+        ],
+        "answer": "Answer: A"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a disconnected chest tube after turning in bed. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a disconnected chest tube after turning in bed. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Weigh the client before breakfast tomorrow"
+          },
+          {
+            "text": "Ask the client about food preferences for the next meal"
+          },
+          {
+            "text": "Place the end of the chest tube in a container of sterile water"
+          },
+          {
+            "text": "Update the plan of care at the end of the shift"
+          }
+        ],
+        "answer": "Answer: C"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a hip fracture. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a hip fracture. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Heart rate of 76/min with a regular rhythm"
+          },
+          {
+            "text": "Urine output of 60 mL/h of clear yellow urine"
+          },
+          {
+            "text": "Foot on the affected side that is cool, pale and numb"
+          },
+          {
+            "text": "Bowel sounds heard in all four quadrants"
+          }
+        ],
+        "answer": "Answer: C"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has sudden chest pain and shortness of breath 2 days after hip surgery. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has sudden chest pain and shortness of breath 2 days after hip surgery. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Apply oxygen and raise the head of the bed"
+          },
+          {
+            "text": "Schedule a follow-up appointment for next week"
+          },
+          {
+            "text": "Ask a family member to bring the client's glasses from home"
+          },
+          {
+            "text": "Document the finding in the client's record"
+          }
+        ],
+        "answer": "Answer: A"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has an acute ischemic stroke. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has an acute ischemic stroke. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Capillary refill of 2 seconds in the fingers and toes"
+          },
+          {
+            "text": "Skin that is warm, dry and pink"
+          },
+          {
+            "text": "Oxygen saturation of 97% while breathing room air"
+          },
+          {
+            "text": "New severe headache with vomiting"
+          }
+        ],
+        "answer": "Answer: D"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has new facial drooping and slurred speech that started 20 minutes ago. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has new facial drooping and slurred speech that started 20 minutes ago. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Give the client a pamphlet about support groups"
+          },
+          {
+            "text": "Call the rapid response team and note the time the symptoms started"
+          },
+          {
+            "text": "Offer the client a warm blanket and dim the lights"
+          },
+          {
+            "text": "Teach the client about a heart-healthy diet"
+          }
+        ],
+        "answer": "Answer: B"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a seizure disorder. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a seizure disorder. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Clear breath sounds in both lungs"
+          },
+          {
+            "text": "Seizure activity that lasts longer than 5 minutes"
+          },
+          {
+            "text": "Temperature of 37.0 °C (98.6 °F) by mouth"
+          },
+          {
+            "text": "Pain rated 2 on a scale of 0 to 10 after repositioning"
+          }
+        ],
+        "answer": "Answer: B"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a generalized tonic-clonic seizure while lying in bed. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a generalized tonic-clonic seizure while lying in bed. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Review the discharge instructions with the client"
+          },
+          {
+            "text": "Reassess the client in 4 hours"
+          },
+          {
+            "text": "Restock the supplies in the client's room"
+          },
+          {
+            "text": "Turn the client onto one side"
+          }
+        ],
+        "answer": "Answer: D"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has acute pancreatitis. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has acute pancreatitis. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Respiratory rate of 16/min with even, quiet breaths"
+          },
+          {
+            "text": "Alert and oriented to person, place and time"
+          },
+          {
+            "text": "Blood pressure of 118/76 mm Hg while sitting in a chair"
+          },
+          {
+            "text": "Muscle twitching and tingling around the mouth"
+          }
+        ],
+        "answer": "Answer: D"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has severe abdominal pain rated 9 on a scale of 0 to 10 from acute pancreatitis. Which action should the nurse take",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has severe abdominal pain rated 9 on a scale of 0 to 10 from acute pancreatitis. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Update the plan of care at the end of the shift"
+          },
+          {
+            "text": "Give the prescribed IV hydromorphone"
+          },
+          {
+            "text": "Weigh the client before breakfast tomorrow"
+          },
+          {
+            "text": "Ask the client about food preferences for the next meal"
+          }
+        ],
+        "answer": "Answer: B"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has cirrhosis of the liver. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has cirrhosis of the liver. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "New confusion and a flapping tremor of the hands"
+          },
+          {
+            "text": "Bowel sounds heard in all four quadrants"
+          },
+          {
+            "text": "Heart rate of 76/min with a regular rhythm"
+          },
+          {
+            "text": "Urine output of 60 mL/h of clear yellow urine"
+          }
+        ],
+        "answer": "Answer: A"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has vomiting of bright red blood and a history of esophageal varices. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has vomiting of bright red blood and a history of esophageal varices. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Document the finding in the client's record"
+          },
+          {
+            "text": "Schedule a follow-up appointment for next week"
+          },
+          {
+            "text": "Turn the client onto one side and keep the airway clear"
+          },
+          {
+            "text": "Ask a family member to bring the client's glasses from home"
+          }
+        ],
+        "answer": "Answer: C"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has chronic kidney disease. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has chronic kidney disease. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Oxygen saturation of 97% while breathing room air"
+          },
+          {
+            "text": "Capillary refill of 2 seconds in the fingers and toes"
+          },
+          {
+            "text": "Potassium level of 6.4 mEq/L"
+          },
+          {
+            "text": "Skin that is warm, dry and pink"
+          }
+        ],
+        "answer": "Answer: C"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a potassium level of 6.8 mEq/L and tall, peaked T waves on the cardiac monitor. Which action should the nurse take",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a potassium level of 6.8 mEq/L and tall, peaked T waves on the cardiac monitor. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Notify the provider and prepare to give the prescribed IV calcium gluconate"
+          },
+          {
+            "text": "Teach the client about a heart-healthy diet"
+          },
+          {
+            "text": "Give the client a pamphlet about support groups"
+          },
+          {
+            "text": "Offer the client a warm blanket and dim the lights"
+          }
+        ],
+        "answer": "Answer: A"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has an arteriovenous fistula. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has an arteriovenous fistula. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "No thrill felt and no bruit heard over the fistula"
+          },
+          {
+            "text": "Pain rated 2 on a scale of 0 to 10 after repositioning"
+          },
+          {
+            "text": "Clear breath sounds in both lungs"
+          },
+          {
+            "text": "Temperature of 37.0 °C (98.6 °F) by mouth"
+          }
+        ],
+        "answer": "Answer: A"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a blood pressure of 82/48 mm Hg and dizziness 1 hour after hemodialysis. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a blood pressure of 82/48 mm Hg and dizziness 1 hour after hemodialysis. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Restock the supplies in the client's room"
+          },
+          {
+            "text": "Review the discharge instructions with the client"
+          },
+          {
+            "text": "Lower the head of the bed and raise the client's legs"
+          },
+          {
+            "text": "Reassess the client in 4 hours"
+          }
+        ],
+        "answer": "Answer: C"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a urinary tract infection. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a urinary tract infection. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Blood pressure of 118/76 mm Hg while sitting in a chair"
+          },
+          {
+            "text": "Temperature of 39.2 °C (102.6 °F) with shaking chills"
+          },
+          {
+            "text": "Respiratory rate of 16/min with even, quiet breaths"
+          },
+          {
+            "text": "Alert and oriented to person, place and time"
+          }
+        ],
+        "answer": "Answer: B"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a temperature of 39.4 °C (102.9 °F), a heart rate of 124/min and new confusion. Which action should the nurse take",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a temperature of 39.4 °C (102.9 °F), a heart rate of 124/min and new confusion. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Ask the client about food preferences for the next meal"
+          },
+          {
+            "text": "Update the plan of care at the end of the shift"
+          },
+          {
+            "text": "Weigh the client before breakfast tomorrow"
+          },
+          {
+            "text": "Notify the provider and obtain the prescribed blood cultures"
+          }
+        ],
+        "answer": "Answer: D"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has pneumonia. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has pneumonia. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Urine output of 60 mL/h of clear yellow urine"
+          },
+          {
+            "text": "Bowel sounds heard in all four quadrants"
+          },
+          {
+            "text": "Heart rate of 76/min with a regular rhythm"
+          },
+          {
+            "text": "Respiratory rate of 32/min with use of the neck muscles to breathe"
+          }
+        ],
+        "answer": "Answer: D"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has thick secretions, a weak cough and an oxygen saturation of 88%. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has thick secretions, a weak cough and an oxygen saturation of 88%. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Ask a family member to bring the client's glasses from home"
+          },
+          {
+            "text": "Raise the head of the bed and help the client cough and deep breathe"
+          },
+          {
+            "text": "Document the finding in the client's record"
+          },
+          {
+            "text": "Schedule a follow-up appointment for next week"
+          }
+        ],
+        "answer": "Answer: B"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a pulmonary embolism. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a pulmonary embolism. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Skin that is warm, dry and pink"
+          },
+          {
+            "text": "Blood in the urine and bleeding from the gums"
+          },
+          {
+            "text": "Oxygen saturation of 97% while breathing room air"
+          },
+          {
+            "text": "Capillary refill of 2 seconds in the fingers and toes"
+          }
+        ],
+        "answer": "Answer: B"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has an activated partial thromboplastin time (aPTT) of 140 seconds during a heparin infusion. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has an activated partial thromboplastin time (aPTT) of 140 seconds during a heparin infusion. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Offer the client a warm blanket and dim the lights"
+          },
+          {
+            "text": "Teach the client about a heart-healthy diet"
+          },
+          {
+            "text": "Give the client a pamphlet about support groups"
+          },
+          {
+            "text": "Stop the heparin infusion and notify the provider"
+          }
+        ],
+        "answer": "Answer: D"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has atrial fibrillation. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has atrial fibrillation. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Temperature of 37.0 °C (98.6 °F) by mouth"
+          },
+          {
+            "text": "Pain rated 2 on a scale of 0 to 10 after repositioning"
+          },
+          {
+            "text": "International normalized ratio (INR) of 5.2"
+          },
+          {
+            "text": "Clear breath sounds in both lungs"
+          }
+        ],
+        "answer": "Answer: C"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has an irregular heart rate of 152/min and reports feeling lightheaded. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has an irregular heart rate of 152/min and reports feeling lightheaded. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Check the blood pressure and attach the cardiac monitor"
+          },
+          {
+            "text": "Reassess the client in 4 hours"
+          },
+          {
+            "text": "Restock the supplies in the client's room"
+          },
+          {
+            "text": "Review the discharge instructions with the client"
+          }
+        ],
+        "answer": "Answer: A"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has stable angina. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has stable angina. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Chest pain that is not relieved by rest and three doses of nitroglycerin"
+          },
+          {
+            "text": "Alert and oriented to person, place and time"
+          },
+          {
+            "text": "Blood pressure of 118/76 mm Hg while sitting in a chair"
+          },
+          {
+            "text": "Respiratory rate of 16/min with even, quiet breaths"
+          }
+        ],
+        "answer": "Answer: A"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has crushing chest pain that spreads to the left arm and jaw. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has crushing chest pain that spreads to the left arm and jaw. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Weigh the client before breakfast tomorrow"
+          },
+          {
+            "text": "Ask the client about food preferences for the next meal"
+          },
+          {
+            "text": "Stop the client's activity and obtain a 12-lead ECG"
+          },
+          {
+            "text": "Update the plan of care at the end of the shift"
+          }
+        ],
+        "answer": "Answer: C"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has hypertension. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has hypertension. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Heart rate of 76/min with a regular rhythm"
+          },
+          {
+            "text": "Urine output of 60 mL/h of clear yellow urine"
+          },
+          {
+            "text": "Swelling of the lips and tongue"
+          },
+          {
+            "text": "Bowel sounds heard in all four quadrants"
+          }
+        ],
+        "answer": "Answer: C"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has swelling of the tongue and a hoarse voice 1 hour after a first dose of lisinopril. Which action should the nurse",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has swelling of the tongue and a hoarse voice 1 hour after a first dose of lisinopril. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Assess the airway and call the rapid response team"
+          },
+          {
+            "text": "Schedule a follow-up appointment for next week"
+          },
+          {
+            "text": "Ask a family member to bring the client's glasses from home"
+          },
+          {
+            "text": "Document the finding in the client's record"
+          }
+        ],
+        "answer": "Answer: A"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a deep vein thrombosis. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a deep vein thrombosis. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Capillary refill of 2 seconds in the fingers and toes"
+          },
+          {
+            "text": "Skin that is warm, dry and pink"
+          },
+          {
+            "text": "Oxygen saturation of 97% while breathing room air"
+          },
+          {
+            "text": "Sudden shortness of breath and chest pain on breathing in"
+          }
+        ],
+        "answer": "Answer: D"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a swollen, warm and painful left calf after a long flight. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a swollen, warm and painful left calf after a long flight. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Give the client a pamphlet about support groups"
+          },
+          {
+            "text": "Tell the client not to rub the leg and notify the provider"
+          },
+          {
+            "text": "Offer the client a warm blanket and dim the lights"
+          },
+          {
+            "text": "Teach the client about a heart-healthy diet"
+          }
+        ],
+        "answer": "Answer: B"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has peptic ulcer disease. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has peptic ulcer disease. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Clear breath sounds in both lungs"
+          },
+          {
+            "text": "Black, tarry stools"
+          },
+          {
+            "text": "Temperature of 37.0 °C (98.6 °F) by mouth"
+          },
+          {
+            "text": "Pain rated 2 on a scale of 0 to 10 after repositioning"
+          }
+        ],
+        "answer": "Answer: B"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a rigid, board-like abdomen and sudden severe pain in the upper abdomen. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a rigid, board-like abdomen and sudden severe pain in the upper abdomen. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Review the discharge instructions with the client"
+          },
+          {
+            "text": "Reassess the client in 4 hours"
+          },
+          {
+            "text": "Restock the supplies in the client's room"
+          },
+          {
+            "text": "Keep the client on nothing by mouth and notify the provider"
+          }
+        ],
+        "answer": "Answer: D"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a small bowel obstruction. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a small bowel obstruction. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Respiratory rate of 16/min with even, quiet breaths"
+          },
+          {
+            "text": "Alert and oriented to person, place and time"
+          },
+          {
+            "text": "Blood pressure of 118/76 mm Hg while sitting in a chair"
+          },
+          {
+            "text": "Abdomen that is rigid and more distended than 4 hours ago"
+          }
+        ],
+        "answer": "Answer: D"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a nasogastric tube that has stopped draining and a distended abdomen with new nausea. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a nasogastric tube that has stopped draining and a distended abdomen with new nausea. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Update the plan of care at the end of the shift"
+          },
+          {
+            "text": "Check the placement and patency of the nasogastric tube"
+          },
+          {
+            "text": "Weigh the client before breakfast tomorrow"
+          },
+          {
+            "text": "Ask the client about food preferences for the next meal"
+          }
+        ],
+        "answer": "Answer: B"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a new colostomy. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a new colostomy. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Stoma that is dark purple and dry"
+          },
+          {
+            "text": "Bowel sounds heard in all four quadrants"
+          },
+          {
+            "text": "Heart rate of 76/min with a regular rhythm"
+          },
+          {
+            "text": "Urine output of 60 mL/h of clear yellow urine"
+          }
+        ],
+        "answer": "Answer: A"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a colostomy pouch that is leaking stool onto the surrounding skin. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a colostomy pouch that is leaking stool onto the surrounding skin. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Document the finding in the client's record"
+          },
+          {
+            "text": "Schedule a follow-up appointment for next week"
+          },
+          {
+            "text": "Remove the pouch and clean the skin around the stoma"
+          },
+          {
+            "text": "Ask a family member to bring the client's glasses from home"
+          }
+        ],
+        "answer": "Answer: C"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has hypothyroidism. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has hypothyroidism. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Oxygen saturation of 97% while breathing room air"
+          },
+          {
+            "text": "Capillary refill of 2 seconds in the fingers and toes"
+          },
+          {
+            "text": "Heart rate of 46/min with a temperature of 35.2 °C (95.4 °F)"
+          },
+          {
+            "text": "Skin that is warm, dry and pink"
+          }
+        ],
+        "answer": "Answer: C"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a heart rate of 132/min, tremors and palpitations after taking extra doses of levothyroxine. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a heart rate of 132/min, tremors and palpitations after taking extra doses of levothyroxine. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Withhold the next dose of levothyroxine and notify the provider"
+          },
+          {
+            "text": "Teach the client about a heart-healthy diet"
+          },
+          {
+            "text": "Give the client a pamphlet about support groups"
+          },
+          {
+            "text": "Offer the client a warm blanket and dim the lights"
+          }
+        ],
+        "answer": "Answer: A"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has Addison's disease. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has Addison's disease. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Blood pressure of 84/50 mm Hg with new weakness and vomiting"
+          },
+          {
+            "text": "Pain rated 2 on a scale of 0 to 10 after repositioning"
+          },
+          {
+            "text": "Clear breath sounds in both lungs"
+          },
+          {
+            "text": "Temperature of 37.0 °C (98.6 °F) by mouth"
+          }
+        ],
+        "answer": "Answer: A"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has severe weakness, vomiting and a blood pressure of 78/44 mm Hg after missing doses of hydrocortisone. Which action should the nurse",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has severe weakness, vomiting and a blood pressure of 78/44 mm Hg after missing doses of hydrocortisone. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Restock the supplies in the client's room"
+          },
+          {
+            "text": "Review the discharge instructions with the client"
+          },
+          {
+            "text": "Notify the provider and prepare to give the prescribed IV hydrocortisone"
+          },
+          {
+            "text": "Reassess the client in 4 hours"
+          }
+        ],
+        "answer": "Answer: C"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has sickle cell disease. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has sickle cell disease. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Blood pressure of 118/76 mm Hg while sitting in a chair"
+          },
+          {
+            "text": "Sudden chest pain with a new cough and fever"
+          },
+          {
+            "text": "Respiratory rate of 16/min with even, quiet breaths"
+          },
+          {
+            "text": "Alert and oriented to person, place and time"
+          }
+        ],
+        "answer": "Answer: B"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has severe joint pain rated 10 on a scale of 0 to 10 during a sickle cell crisis. Which action should the",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has severe joint pain rated 10 on a scale of 0 to 10 during a sickle cell crisis. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Ask the client about food preferences for the next meal"
+          },
+          {
+            "text": "Update the plan of care at the end of the shift"
+          },
+          {
+            "text": "Weigh the client before breakfast tomorrow"
+          },
+          {
+            "text": "Give the prescribed IV morphine"
+          }
+        ],
+        "answer": "Answer: D"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has iron deficiency anemia. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has iron deficiency anemia. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Urine output of 60 mL/h of clear yellow urine"
+          },
+          {
+            "text": "Bowel sounds heard in all four quadrants"
+          },
+          {
+            "text": "Heart rate of 76/min with a regular rhythm"
+          },
+          {
+            "text": "Shortness of breath and a heart rate of 128/min while resting"
+          }
+        ],
+        "answer": "Answer: D"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has itching, flushing and back pain 10 minutes after a blood transfusion was started. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has itching, flushing and back pain 10 minutes after a blood transfusion was started. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Ask a family member to bring the client's glasses from home"
+          },
+          {
+            "text": "Stop the transfusion"
+          },
+          {
+            "text": "Document the finding in the client's record"
+          },
+          {
+            "text": "Schedule a follow-up appointment for next week"
+          }
+        ],
+        "answer": "Answer: B"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has neutropenia. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has neutropenia. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Skin that is warm, dry and pink"
+          },
+          {
+            "text": "Temperature of 38.3 °C (100.9 °F)"
+          },
+          {
+            "text": "Oxygen saturation of 97% while breathing room air"
+          },
+          {
+            "text": "Capillary refill of 2 seconds in the fingers and toes"
+          }
+        ],
+        "answer": "Answer: B"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a new fever and chills 8 days after chemotherapy. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a new fever and chills 8 days after chemotherapy. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Offer the client a warm blanket and dim the lights"
+          },
+          {
+            "text": "Teach the client about a heart-healthy diet"
+          },
+          {
+            "text": "Give the client a pamphlet about support groups"
+          },
+          {
+            "text": "Obtain the prescribed blood cultures and start the antibiotic within 1 hour"
+          }
+        ],
+        "answer": "Answer: D"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a pressure injury. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a pressure injury. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Temperature of 37.0 °C (98.6 °F) by mouth"
+          },
+          {
+            "text": "Pain rated 2 on a scale of 0 to 10 after repositioning"
+          },
+          {
+            "text": "Foul-smelling green drainage from the wound"
+          },
+          {
+            "text": "Clear breath sounds in both lungs"
+          }
+        ],
+        "answer": "Answer: C"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a surgical wound that has opened with a loop of bowel showing. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a surgical wound that has opened with a loop of bowel showing. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Cover the wound with sterile gauze moistened with sterile saline"
+          },
+          {
+            "text": "Reassess the client in 4 hours"
+          },
+          {
+            "text": "Restock the supplies in the client's room"
+          },
+          {
+            "text": "Review the discharge instructions with the client"
+          }
+        ],
+        "answer": "Answer: A"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a long leg cast. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a long leg cast. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Pain that gets worse when the toes are moved and is not relieved by opioids"
+          },
+          {
+            "text": "Alert and oriented to person, place and time"
+          },
+          {
+            "text": "Blood pressure of 118/76 mm Hg while sitting in a chair"
+          },
+          {
+            "text": "Respiratory rate of 16/min with even, quiet breaths"
+          }
+        ],
+        "answer": "Answer: A"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has a cast on the forearm with fingers that are cold, pale and numb. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has a cast on the forearm with fingers that are cold, pale and numb. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Weigh the client before breakfast tomorrow"
+          },
+          {
+            "text": "Ask the client about food preferences for the next meal"
+          },
+          {
+            "text": "Notify the provider at once and keep the arm at the level of the heart"
+          },
+          {
+            "text": "Update the plan of care at the end of the shift"
+          }
+        ],
+        "answer": "Answer: C"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has myasthenia gravis. Which finding should the nurse report to the provider?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has myasthenia gravis. Which finding should the nurse report to the provider?",
+        "options": [
+          {
+            "text": "Heart rate of 76/min with a regular rhythm"
+          },
+          {
+            "text": "Urine output of 60 mL/h of clear yellow urine"
+          },
+          {
+            "text": "Difficulty swallowing and a weak cough"
+          },
+          {
+            "text": "Bowel sounds heard in all four quadrants"
+          }
+        ],
+        "answer": "Answer: C"
+      }
+    },
+    {
+      "opening": "A nurse is caring for a client who has increasing muscle weakness and shallow breathing at a rate of 30/min. Which action should the nurse take first?",
+      "type": "multiple_choice",
+      "draft": {
+        "type": "multiple_choice",
+        "stem": "A nurse is caring for a client who has increasing muscle weakness and shallow breathing at a rate of 30/min. Which action should the nurse take first?",
+        "options": [
+          {
+            "text": "Assess the client's airway and breathing effort"
+          },
+          {
+            "text": "Schedule a follow-up appointment for next week"
+          },
+          {
+            "text": "Ask a family member to bring the client's glasses from home"
+          },
+          {
+            "text": "Document the finding in the client's record"
+          }
+        ],
+        "answer": "Answer: A"
+      }
+    }
+  ],
+  "caseStudies": []
+}
