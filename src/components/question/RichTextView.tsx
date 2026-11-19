@@ -15,7 +15,7 @@ export function RichTextView({ text, className = "" }: { text: RichText; classNa
         if (block.kind === "table") {
           return (
             <div key={i} className={spacing || undefined}>
-              <TableBlock kind="table" columns={block.columns} rows={block.rows} />
+              <TableBlock kind="table" columns={block.columns} rows={block.rows} inText />
             </div>
           );
         }

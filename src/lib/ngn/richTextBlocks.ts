@@ -20,23 +20,34 @@ function cellsOf(line: string): string[] {
   return row.split("|").map((cell) => cell.replaceAll(ESCAPED, "|").trim());
 }
 
-/** A table when the first line is a header, the second its rule, and at least one row follows. */
-function tableOf(paragraph: string): RichTextBlock | null {
+/**
+ * A table when the first line is a header, the second its rule, and at least one row follows; the
+ * table ends at the first line with no `|`, and what follows it is a paragraph of its own, so a
+ * question written right under its table with no blank line still reads as text.
+ */
+function blocksOf(paragraph: string): RichTextBlock[] {
   const lines = paragraph.split("\n");
-  if (lines.length < 3 || !lines.every((line) => line.includes("|"))) return null;
-  const columns = cellsOf(lines[0]);
-  const rule = cellsOf(lines[1]);
-  if (rule.length !== columns.length || !rule.every((cell) => RULE_CELL.test(cell))) return null;
-  const rows = lines.slice(2).map((line) => {
+  const end = lines.findIndex((line) => !line.includes("|"));
+  const tableLines = end === -1 ? lines : lines.slice(0, end);
+  const plain: RichTextBlock[] = [{ kind: "paragraph", text: paragraph }];
+  if (tableLines.length < 3) return plain;
+  const columns = cellsOf(tableLines[0]);
+  const rule = cellsOf(tableLines[1]);
+  if (rule.length !== columns.length || !rule.every((cell) => RULE_CELL.test(cell))) return plain;
+  const rows = tableLines.slice(2).map((line) => {
     const cells = cellsOf(line).slice(0, columns.length);
     return [...cells, ...Array<string>(columns.length - cells.length).fill("")];
   });
-  return { kind: "table", columns, rows };
+  const rest = end === -1 ? "" : lines.slice(end).join("\n");
+  return [
+    { kind: "table", columns, rows },
+    ...(rest.trim() === "" ? [] : [{ kind: "paragraph" as const, text: rest }]),
+  ];
 }
 
 export function richTextBlocks(value: string): RichTextBlock[] {
   return value
     .split(/\n{2,}/)
     .filter((paragraph) => paragraph.trim() !== "")
-    .map((paragraph) => tableOf(paragraph) ?? { kind: "paragraph", text: paragraph });
+    .flatMap(blocksOf);
 }

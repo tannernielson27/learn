@@ -56,6 +56,13 @@ describe("richTextBlocks", () => {
     ]);
   });
 
+  it("parts a table from the question written right under it, with no blank line", () => {
+    expect(richTextBlocks("| A | B |\n| --- | --- |\n| 1 | 2 |\nWhich is higher?")).toEqual([
+      { kind: "table", columns: ["A", "B"], rows: [["1", "2"]] },
+      { kind: "paragraph", text: "Which is higher?" },
+    ]);
+  });
+
   it("leaves text that only looks like a table as a paragraph", () => {
     for (const text of [
       "| A | B |\nno rule here",

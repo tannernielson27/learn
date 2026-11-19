@@ -29,4 +29,22 @@ describe("RichTextView", () => {
     expect(screen.queryByText(/\|/)).not.toBeInTheDocument();
     expect(screen.getByText("Which action should the nurse take first?")).toBeInTheDocument();
   });
+
+  // In a stem the table follows the text around it: sized to it (the projector fits a stem by its
+  // font size), with no sticky column painted in the chart's surface colour.
+  it("sizes the table to the text it sits in, with no sticky column", () => {
+    render(<RichTextView text={text("| A | B |\n| --- | --- |\n| 1 | 2 |")} />);
+    const table = screen.getByRole("table");
+    expect(table.className).not.toMatch(/\btext-sm\b/);
+    expect(table.innerHTML).not.toMatch(/sticky|bg-surface-1/);
+  });
+
+  it("never draws an empty header: a blank header cell or row head is a plain cell", () => {
+    render(<RichTextView text={text("| Test | | Ref |\n| --- | --- | --- |\n|  | 3.0 | 3.5 |")} />);
+    expect(screen.getAllByRole("columnheader").map((th) => th.textContent)).toEqual([
+      "Test",
+      "Ref",
+    ]);
+    expect(screen.queryAllByRole("rowheader")).toEqual([]);
+  });
 });
