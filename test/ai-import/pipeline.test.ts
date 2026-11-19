@@ -85,10 +85,20 @@ function replaying(recording: Recording, overrides: { extract?: () => Anthropic.
             answers: [],
           });
         }
-        if ("charts" in properties) {
+        // #604: a case study's header, then each step's chart, each in a call of its own.
+        if ("patient" in properties && !("chart" in properties)) {
           const { title: asked } = quotedIn("case_study", askOf(body)) as { title: string };
-          const { title, patient, charts } = cases.find((draft) => draft.title === asked)!;
-          return answer({ title, patient, charts });
+          const { title, patient } = cases.find((draft) => draft.title === asked)!;
+          return answer({ title, patient });
+        }
+        if ("tabs" in properties) {
+          const { title: asked, step } = quotedIn("case_study", askOf(body)) as {
+            title: string;
+            step: number;
+          };
+          return answer(
+            (cases.find((draft) => draft.title === asked)!.charts as unknown[])[step - 1],
+          );
         }
         if ("chart" in properties) {
           const { opens } = quotedIn("question", askOf(body)) as { opens: string };
@@ -152,12 +162,14 @@ describe("runPipeline", () => {
       expect([SEGMENT_RULES, EXTRACT_RULES]).toContain(system[0].text);
     }
     // One segment call (one chunk), the extracts two at a time, one call per question with a
-    // chart of its own, and per case study group its steps two at a time and its charts.
+    // chart of its own, and per case study group its steps two at a time, its header, and one
+    // chart call per step (#604).
     const drafted = recording.questions.filter((q) => q.type !== NOT_IMPORTABLE);
     const charted = drafted.filter((q) => q.chart !== undefined).length;
-    const groups = recording.caseStudies.map(
-      (entry) => Math.ceil((entry.draft as CaseDraft).steps.length / 2) + 1,
-    );
+    const groups = recording.caseStudies.map((entry) => {
+      const steps = (entry.draft as CaseDraft).steps.length;
+      return Math.ceil(steps / 2) + 1 + steps;
+    });
     expect(calls).toHaveLength(
       1 + Math.ceil(drafted.length / 2) + charted + groups.reduce((a, b) => a + b, 0),
     );
@@ -182,10 +194,12 @@ describe("runPipeline", () => {
   it("records a case study whose chart call fails with its steps and no chart", async () => {
     const name = "06-case-study-and-bowtie.md";
     const { client } = replaying(recordings.get(name)!);
+    // One step's chart answer cut off (#604): the record is not read, never read with a gap.
     const failing: MessagesClient = {
       messages: {
         create: async (body) => {
-          if ("charts" in (schemaOf(body).properties ?? {})) {
+          const properties = schemaOf(body).properties ?? {};
+          if ("tabs" in properties && /"step":3/.test(askOf(body).replace(/\s/g, ""))) {
             return { ...answer({}), content: [] } as unknown as Anthropic.Message;
           }
           return client.messages.create(body);

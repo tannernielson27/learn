@@ -517,7 +517,7 @@ export interface StageStep {
 export interface StageCaseStudyInput {
   title: string;
   steps: readonly StageStep[];
-  /** The output of the `caseStudyChartsJsonSchema()` call; undefined when it failed. */
+  /** The header and per-step chart answers as one object (#604); undefined when any failed. */
   charts: unknown;
   source: "text" | "pdf";
 }

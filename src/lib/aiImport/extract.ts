@@ -2,7 +2,8 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import {
   DRAFTS,
-  caseStudyChartsJsonSchema,
+  caseStudyHeaderJsonSchema,
+  caseStudyStepChartJsonSchema,
   forStructuredOutput,
   standaloneChartJsonSchema,
   type DraftType,
@@ -228,17 +229,36 @@ export function repairRequest(
   return request(extractJsonSchema(typesOf([question])), payload, kind, ask);
 }
 
-/** The request for a case study's title, patient header and its chart as each step shows it. */
-export function caseStudyChartsRequest(
+/** The request for a case study's title and patient header (#604: its charts come per step). */
+export function caseStudyHeaderRequest(
   title: string,
   payload: ChunkPayload,
   kind: FileKind,
 ): StructuredRequest {
   const ask = [
-    "Copy the case study named below: its title, the patient header, and its chart as the document shows it with each step, in order.",
+    "Copy the title and the patient header of the case study named below.",
     `<case_study>\n${quoted({ title })}\n</case_study>`,
   ].join("\n\n");
-  return request(caseStudyChartsJsonSchema(), payload, kind, ask);
+  return request(caseStudyHeaderJsonSchema(), payload, kind, ask);
+}
+
+/**
+ * The request for one step's chart, as the document shows it with that step (#604). Every tab is
+ * copied, including what it repeats from the step before: the charts are merged into one record
+ * afterwards, and a tab left out of a step would read as one that step hides.
+ */
+export function caseStudyStepChartRequest(
+  title: string,
+  step: number,
+  of: number,
+  payload: ChunkPayload,
+  kind: FileKind,
+): StructuredRequest {
+  const ask = [
+    `Copy the chart of the case study named below as the document shows it with step ${step} of ${of}: every tab, including what it repeats from the step before. Only that step's chart.`,
+    `<case_study>\n${quoted({ title, step, of })}\n</case_study>`,
+  ].join("\n\n");
+  return request(caseStudyStepChartJsonSchema(), payload, kind, ask);
 }
 
 /** The request for the chart printed with one standalone question (a bowtie's, a trend's). */

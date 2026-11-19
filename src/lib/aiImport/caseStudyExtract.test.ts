@@ -84,21 +84,30 @@ const quotedIn = (tag: string, request: StructuredRequest) => {
   return JSON.parse(new RegExp(`<${tag}>\\n([\\s\\S]*?)\\n</${tag}>`).exec(ask)?.[1] ?? "{}");
 };
 
-/** Answers each request from the recording; `fail` names purposes that throw. */
-function replay(fail: string[] = []) {
+/**
+ * Answers each request from the recording; `fail` names purposes that throw, and `failStep` makes
+ * only that step's chart call throw.
+ */
+function replay(fail: string[] = [], failStep?: number) {
   const purposes: string[] = [];
+  const requests: StructuredRequest[] = [];
   const call: UnitCall = vi.fn(async (request, purpose) => {
     purposes.push(purpose);
+    requests.push(request);
     if (fail.includes(purpose)) throw new Error(`${purpose} failed`);
     const properties = (request.schema as { properties: Record<string, unknown> }).properties;
     let value: unknown;
-    if ("charts" in properties) {
-      const { title } = quotedIn("case_study", request) as { title: string };
-      const { patient, charts } = cases.find((draft) => draft.title === title)!;
-      value = { title, patient, charts };
-    } else if ("chart" in properties) {
+    if ("chart" in properties) {
       const { opens } = quotedIn("question", request) as { opens: string };
       value = recording.questions.find((q) => q.opening === opens)?.chart;
+    } else if ("patient" in properties) {
+      const { title } = quotedIn("case_study", request) as { title: string };
+      const { patient } = cases.find((draft) => draft.title === title)!;
+      value = { title, patient };
+    } else if ("tabs" in properties) {
+      const { title, step } = quotedIn("case_study", request) as { title: string; step: number };
+      if (step === failStep) throw new Error(`step ${step} chart failed`);
+      value = (cases.find((draft) => draft.title === title)!.charts as unknown[])[step - 1];
     } else {
       const asked = quotedIn("questions", request) as { field: string; opens: string }[];
       value = Object.fromEntries(
@@ -110,7 +119,7 @@ function replay(fail: string[] = []) {
     }
     return { value, usage: NO_USAGE, attempts: 1 };
   });
-  return { call, purposes };
+  return { call, purposes, requests };
 }
 
 const document = {
@@ -136,11 +145,19 @@ describe("extractCaseStudy", () => {
     ]);
   });
 
-  it("stages six steps as one case study, reading its charts in one more call", async () => {
-    const { call, purposes } = replay();
+  it("stages six steps as one case study, reading its record a step per call", async () => {
+    const { call, purposes, requests } = replay();
     const steps = unitOf(cases[0].title);
     const entries = await extractCaseStudy(call, cases[0].title, steps, document, regions);
-    expect(purposes.sort()).toEqual(["chart", "extract", "extract", "extract"]);
+    // #604: one call for the title and patient header, and one per step's chart. A single call
+    // for all six charts ran past the answer limit on a real-size case study.
+    expect(purposes.sort()).toEqual([...Array(7).fill("chart"), "extract", "extract", "extract"]);
+    const asked = requests
+      .filter((request) => "tabs" in (request.schema as { properties: object }).properties)
+      .map((request) => quotedIn("case_study", request) as { step: number; of: number });
+    expect(asked.map(({ step, of }) => [step, of]).sort()).toEqual(
+      [1, 2, 3, 4, 5, 6].map((step) => [step, 6]),
+    );
     expect(entries).toHaveLength(1);
     const [entry] = entries;
     expect(entry).toMatchObject({
@@ -191,6 +208,20 @@ describe("extractCaseStudy", () => {
       document,
       regions,
     );
+    expect(entry).toMatchObject({ kind: "case_study", status: "needs_fix", item: null });
+    expect(entry.reasons[0].message).toMatch(/patient record could not be read/);
+  });
+
+  it("treats one step's failed chart call as a record that could not be read", async () => {
+    const { call } = replay([], 4);
+    const [entry] = await extractCaseStudy(
+      call,
+      cases[0].title,
+      unitOf(cases[0].title),
+      document,
+      regions,
+    );
+    // Never a record with a step missing: the teacher is told it could not be read.
     expect(entry).toMatchObject({ kind: "case_study", status: "needs_fix", item: null });
     expect(entry.reasons[0].message).toMatch(/patient record could not be read/);
   });

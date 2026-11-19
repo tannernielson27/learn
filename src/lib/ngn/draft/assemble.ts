@@ -19,9 +19,9 @@ import { normalizeLine } from "./text";
  * validate-and-repair pass, then hands each segment-pass group here:
  *
  * - a case study group (the segment pass gave its questions a case study title): the output of the
- *   call made with `caseStudyChartsJsonSchema()`, and each step's draft in source order. Six steps
- *   make one case study; any other count is staged as standalone questions with a note, as a
- *   course activity with fewer parts is (the Malnutrition sample).
+ *   header and per-step chart calls (#604) as one `CaseStudyChartsDraft`, and each step's draft
+ *   in source order. Six steps make one case study; any other count is staged as standalone
+ *   questions with a note, as a course activity with fewer parts is (the Malnutrition sample).
  * - a standalone question: its draft and, for a standalone bowtie or trend with its own chart, the
  *   output of the call made with `standaloneChartJsonSchema()`. That chart becomes the item's own
  *   record (one time point, or one per time its flow sheet shows), never the case study's.
@@ -245,7 +245,7 @@ export type AssembledEntry = AssembledItem | AssembledCaseStudy;
 export interface CaseStudyGroup {
   /** The title the segment pass grouped the questions under. */
   title: string;
-  /** The output of the call made with `caseStudyChartsJsonSchema()`, as returned. */
+  /** The header and per-step chart answers (#604) as one `CaseStudyChartsDraft`, unchecked. */
   charts: unknown;
   /**
    * Each question's draft, in the source's order, after #343's repair attempt. A question whose

@@ -1,7 +1,8 @@
 import type { StructuredAnswer, StructuredRequest } from "./claude";
 import { EXTRACT_PER_CALL } from "./config";
 import {
-  caseStudyChartsRequest,
+  caseStudyHeaderRequest,
+  caseStudyStepChartRequest,
   extractRequest,
   readExtraction,
   repairRequest,
@@ -140,6 +141,31 @@ async function chartOf(call: UnitCall, request: StructuredRequest): Promise<unkn
 }
 
 /**
+ * A case study's record, read in parallel calls (#604): the title and patient header in one, and
+ * each of `steps` steps' charts in one more, put together as the one answer `stageCaseStudy`
+ * takes. All six charts in a single answer ran past `EXTRACT_MAX_TOKENS` on a real-size case
+ * study. Any call failing leaves the record unread (undefined), never a record with a step missing.
+ */
+async function caseStudyRecord(
+  call: UnitCall,
+  title: string,
+  steps: number,
+  document: UnitDocument,
+): Promise<unknown> {
+  const [header, ...charts] = await Promise.all([
+    chartOf(call, caseStudyHeaderRequest(title, document.payload, document.kind)),
+    ...Array.from({ length: steps }, (_, index) =>
+      chartOf(
+        call,
+        caseStudyStepChartRequest(title, index + 1, steps, document.payload, document.kind),
+      ),
+    ),
+  ]);
+  if (header === undefined || charts.some((chart) => chart === undefined)) return undefined;
+  return { ...(typeof header === "object" && header !== null ? header : {}), charts };
+}
+
+/**
  * Stages `questions` (one standalone unit), in order. A question the segment pass saw with its own
  * chart has it read in a call of its own. `regions` comes from `regionsOf` over the whole file,
  * so a question's part of the text ends where the next one starts.
@@ -193,7 +219,7 @@ export async function extractCaseStudy(
   const [drafted, charts] = await Promise.all([
     typed.length > 0 ? draftAll(call, typed, document) : Promise.resolve([]),
     typed.length > 0
-      ? chartOf(call, caseStudyChartsRequest(title, document.payload, document.kind))
+      ? caseStudyRecord(call, title, questions.length, document)
       : Promise.resolve(undefined),
   ]);
   const byPosition = new Map(drafted.map((entry) => [entry.question.position, entry]));
