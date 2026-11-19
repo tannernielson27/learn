@@ -1,6 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { MessagesClient } from "@/lib/aiImport/claude";
 import { reply } from "@/lib/aiImport/testing/messages";
+import { questionText } from "./corpus/generate/shared";
 import type { Recording } from "./files";
 
 /**
@@ -51,7 +52,7 @@ export function numberedScript(
     ...rest,
     questions: recording.questions.map((question, index) => ({
       opening: question.opening,
-      stem: (question.draft as { stem: string }).stem,
+      stem: questionText((question.draft as { stem: string }).stem),
       number: String(index + 1),
       type: question.type,
       draft: question.draft,

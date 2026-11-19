@@ -42,7 +42,7 @@ function NoteBlock({ value }: { value: string }) {
  * A charted grid. The first cell of every row heads it; when its column header is blank the corner
  * stays a plain cell, because an empty `th` fails the axe empty-table-header rule.
  */
-function TableBlock({ columns, rows }: Extract<EhrBlock, { kind: "table" }>) {
+export function TableBlock({ columns, rows }: Extract<EhrBlock, { kind: "table" }>) {
   const [corner, ...headers] = columns;
   const cornerIsBlank = !corner?.trim();
   return (
