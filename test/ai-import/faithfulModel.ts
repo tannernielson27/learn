@@ -109,10 +109,32 @@ const propertiesOf = (body: Body): Record<string, unknown> =>
   (body.output_config?.format?.schema as { properties?: Record<string, unknown> } | undefined)
     ?.properties ?? {};
 
+/** A cut this deep into a stem, from either end, is a cut through the question. */
+const EDGE_CHARS = 20;
+
+/**
+ * A question whose stem the edge of `text` runs through: the part ends inside it, or opens
+ * inside it. A real model marks such a question `cutOff` or `continued`; this one marks neither,
+ * so it says so and answers nothing, and a test that meets it fails as the model's limit, not as
+ * a question the product lost.
+ */
+function cutByEdge(script: Script, text: string): ScriptedQuestion | undefined {
+  const [start, end] = [text.trimStart(), text.trimEnd()];
+  return script.questions.find(({ stem }) => {
+    if (text.includes(stem)) return false;
+    for (let at = EDGE_CHARS; at <= stem.length - EDGE_CHARS; at += 1) {
+      if (end.endsWith(stem.slice(0, at)) || start.startsWith(stem.slice(at))) return true;
+    }
+    return false;
+  });
+}
+
 /** The questions in the part a segment request carries, with each one's page within that part. */
 function inPart(script: Script, body: Body): { question: ScriptedQuestion; page?: number }[] {
   const text = documentOf(body);
   if (text !== null) {
+    const cut = cutByEdge(script, text);
+    if (cut) throw new Error(`the part's edge runs through a question: ${cut.opening}`);
     return script.questions
       .filter((question) => text.includes(question.stem))
       .map((question) => ({ question }));
@@ -184,6 +206,12 @@ const countOf = (value: unknown): number => {
 };
 
 export function faithfulModel(script: Script, options: FaithfulOptions = {}): FaithfulModel {
+  // A part is searched for each whole stem, so one stem inside another would be listed twice.
+  const stems = script.questions.map((question) => question.stem);
+  const inside = stems.find((stem, at) =>
+    stems.some((other, o) => o !== at && other.includes(stem)),
+  );
+  if (inside !== undefined) throw new Error(`one stem is part of another: ${inside}`);
   const calls: ModelCall[] = [];
   const faults: string[] = [];
   const create = async (body: Body): Promise<Anthropic.Message> => {

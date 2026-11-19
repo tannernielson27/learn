@@ -252,9 +252,14 @@ describe("runPipeline", () => {
     const client: MessagesClient = {
       messages: { create: async () => answer({ questions: [{ opening: 1 }] }) },
     };
+    // The call was billed all the same, and the failure says so: a live run prints what it cost.
     await expect(
       runPipeline(client, { name: "x.md", bytes: Buffer.from("# x\n\nSome text.") }),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({
+      name: "PipelineError",
+      message: "the segment pass failed on part 1 (bad_answer)",
+      usage: { inputTokens: 5500, outputTokens: 200 },
+    });
   });
 
   it("refuses a file the product would refuse", async () => {
