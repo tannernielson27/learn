@@ -151,13 +151,13 @@ async function runUnit(
   regions: ReadonlyMap<number, string | null>,
 ): Promise<UnitRecord> {
   const charts = new Map<string, unknown>();
-  let caseCharts: unknown;
+  // A case study's header and step charts (#604) are several calls; a standalone question's chart
+  // call is the one that names its question, and only those are kept here.
   const watched: UnitCall = async (request, purpose) => {
     const answer = await call(request, purpose);
     if (purpose === "chart") {
       const opening = chartOpening(request);
       if (opening !== undefined) charts.set(opening, answer.value);
-      else caseCharts = answer.value;
     }
     return answer;
   };
@@ -176,6 +176,8 @@ async function runUnit(
     : entries
         .filter((entry) => entry.status !== "not_importable" && entry.draft !== null)
         .map((entry) => entry.draft);
+  // The record as the product put it together from its calls; a split group has none.
+  const caseCharts = whole ? (whole.draft as { charts: unknown }).charts : undefined;
   return {
     questions: entries
       .filter((entry) => entry.status === "not_importable")

@@ -196,7 +196,7 @@ describe("real-size documents through the import, with a scripted model", () => 
     expect(imported.segments.map((segment) => segment.questions.length)).toEqual([5, 1]);
     expect(imported.units).toBe(1);
     expect(model.calls.map((call) => call.kind).sort()).toEqual(
-      ["segment", "segment", "extract", "extract", "extract", "charts"].sort(),
+      ["segment", "segment", "extract", "extract", "extract", ...Array(7).fill("charts")].sort(),
     );
     // The unit reads both chunks as one text: the first step and the last are both in it.
     const stems = caseStudyStems();

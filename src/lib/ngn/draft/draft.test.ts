@@ -3,7 +3,8 @@ import { FIXTURES } from "../fixtures";
 import { NGN_REGISTRY } from "../registry";
 import { ITEM_SCHEMAS, ITEM_TYPES, itemSchema, type Item } from "../schemas";
 import {
-  caseStudyChartsJsonSchema,
+  caseStudyHeaderJsonSchema,
+  caseStudyStepChartJsonSchema,
   DEFAULT_DRAFT_ITEM_ID,
   DRAFT_TYPES,
   draftJsonSchema,
@@ -161,7 +162,8 @@ describe("draftJsonSchema", () => {
       type,
       () => draftJsonSchema(type as DraftType),
     ]),
-    ["case study charts", caseStudyChartsJsonSchema],
+    ["case study header", caseStudyHeaderJsonSchema],
+    ["case study step chart", caseStudyStepChartJsonSchema],
   ];
 
   it.each(schemas)("%s: fits Claude's structured outputs and asks for no ids", (_name, build) => {
