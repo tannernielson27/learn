@@ -197,8 +197,13 @@ function dragdropParts(item: ItemInputOf<"dragdrop_cloze" | "dragdrop_rationale"
   };
 }
 
-/** The signature of an item, valid or not: a converted draft with no key gives an empty key. */
+/**
+ * The signature of an item, valid or not: a converted draft with no key gives an empty key. Its
+ * stem is what a student reads above the answers, the stem and then the instructions (#606): a
+ * draft that puts "Select all that apply." in either place reads the same.
+ */
 export function signatureOf(item: ItemInput): ItemSignature {
   const parts = (PARTS[item.type] as (item: ItemInput) => Parts)(item);
-  return { type: item.type, stem: comparable(item.stem.value), ...parts };
+  const read = [item.stem.value, item.instructions ?? ""].join(" ");
+  return { type: item.type, stem: comparable(read), ...parts };
 }

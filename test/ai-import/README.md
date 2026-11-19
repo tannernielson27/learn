@@ -19,6 +19,8 @@ The five real-size documents (08 to 12, #594) are most of a run: 257 questions, 
 
 A document that fails is named at the end and fails the run; the others are still read and scored, what the failed one's segment calls cost is in the printed total, and its recording from an earlier run is left as it was. The segment pass runs under the server's own limits (130 s a call, 270 s for a chunk and its halves, three tries), so a chunk that the server would give up on fails here too.
 
+The scores fail the run too (#606, `blockingFailures` in `score.ts`): a question not found or typed wrong, a wrong key, a draft that is not valid, an invented key, a wrong or missing case study record, and an entry the source does not have. They are listed under "What fails the run". Wording alone does not fail it: a stem or option the model phrased differently is in the table and the failures, since a live model words things a little differently from run to run.
+
 Live output is kept local, in `out/` here and in `.ai-import-samples/out/eval/` for the samples. A sample with no expected file is reported as counts only. To score a sample, write `<file>.expected.json` beside it in `.ai-import-samples/`, in the format below.
 
 ## What the table means
@@ -27,7 +29,7 @@ One row per item type, plus `not_importable`, then all together. Each question c
 
 - **Type right:** the pipeline typed it as the source intends, or put a question with no NGN type in the not-importable bucket. The type is read from the converted item, so a drop-down cloze with a stated rationale rule counts as `dropdown_rationale`.
 - **Key exact:** the key matches exactly, compared as text (`row → column`, the keyed phrases, the order). For a question the source leaves unmarked, it passes only when the pipeline returns no key at all. Any key there counts as **invented** and is listed in its own line; that must always be 0.
-- **Stem** and **Options:** the text matches word for word after whitespace and quotes are normalized, including the order of options, rows and the cloze sentence.
+- **Stem** and **Options:** the text matches word for word after whitespace and quotes are normalized, including the order of options, rows and the cloze sentence. The stem is what a student reads above the answers, the stem and then the instructions, so "Select all that apply." scores the same in either field (#606).
 - **Valid:** the draft converts with no `needs_fix` reason, and a keyed question passes `itemSchema`.
 - **Charts:** a case study's patient header and chart as each of the six steps shows it match (via `chartsOf`, so `fromStep` and `stepAccess` count), and so does a standalone bowtie's or trend's own record. Each step is also scored as a question. Case studies go through the product's assembly (`assembleCaseStudy`, #344), so a group that is not six steps is scored as the standalone questions it is staged as.
 - **Entries the source does not have:** questions or case studies the pipeline returned that match nothing in the document, such as a heading it made up.

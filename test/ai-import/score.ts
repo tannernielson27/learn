@@ -480,6 +480,43 @@ export function isPerfect(report: EvalReport): boolean {
   );
 }
 
+/**
+ * What fails a live run (#606), one line each: a question not found or typed wrong, a wrong key, a
+ * draft that is not valid, a key invented for an unmarked question, a case study whose record is
+ * wrong, and an entry the source does not have. Wording alone (a stem or an option the model
+ * phrased differently) is in the report but does not fail the run: a live model's wording varies
+ * from run to run, and a teacher fixes it in review. Before this, only a document that threw failed
+ * the run, so one that read 0 of 6 passed.
+ */
+export function blockingFailures(report: EvalReport): string[] {
+  return report.documents.flatMap((document) => {
+    const where = (label: string) => `${document.document} › ${label}`;
+    const questions = document.questions
+      .filter(
+        (result) =>
+          !result.found ||
+          !result.type ||
+          result.key === false ||
+          result.valid === false ||
+          result.inventedKey,
+      )
+      .map((result) => {
+        const why = result.notes.join("; ") || "not found";
+        const checks = result.found
+          ? [!result.type && "type", result.key === false && "key"].filter(Boolean)
+          : [];
+        return `${where(result.label)}: ${[...checks, why].join("; ")}`;
+      });
+    const cases = document.caseStudies
+      .filter((result) => !result.found || !result.chart)
+      .map((result) => `${where(result.label)}: ${result.notes.join("; ") || "not found"}`);
+    const extras = document.extras.map(
+      (opening) => `${document.document}: an entry the source does not have ("${opening}")`,
+    );
+    return [...questions, ...cases, ...extras];
+  });
+}
+
 const cell = ({ passed, of }: Tally): string =>
   of === 0 ? "n/a" : `${passed}/${of} (${Math.round((100 * passed) / of)}%)`;
 

@@ -12,7 +12,13 @@ import {
   type Recording,
 } from "./files";
 import { NO_SPEND, PipelineError, runPipeline } from "./pipeline";
-import { buildReport, formatReport, scoreDocument, type DocumentScore } from "./score";
+import {
+  blockingFailures,
+  buildReport,
+  formatReport,
+  scoreDocument,
+  type DocumentScore,
+} from "./score";
 
 /**
  * `pnpm eval:ai-import` (#339): runs the import pipeline against the real API on the golden
@@ -82,7 +88,11 @@ describe.skipIf(!ENABLED)("AI import eval (live API)", () => {
       keep(join(OUT_DIR, "recordings", doc.document.replace(/\.[a-z]+$/i, ".json")), recording);
       scores.push(scoreDocument(doc, recording));
     }
-    const report = formatReport(buildReport(scores));
+    const corpusReport = buildReport(scores);
+    // #606: a wrong key, a lost question or a broken record fails the run, not only a document
+    // that threw. Wording alone is reported and does not.
+    const blocking = blockingFailures(corpusReport);
+    const report = formatReport(corpusReport);
     write(join(OUT_DIR, "report.md"), report);
     console.log(`\nGolden corpus (${corpus.length} documents)\n\n${report}`);
 
@@ -125,6 +135,10 @@ describe.skipIf(!ENABLED)("AI import eval (live API)", () => {
       console.log(`\nDocuments that failed:\n${failed.map((line) => `- ${line}`).join("\n")}`);
     }
     expect(corpus.length).toBeGreaterThan(0);
+    if (blocking.length > 0) {
+      console.log(`\nWhat fails the run:\n${blocking.map((line) => `- ${line}`).join("\n")}`);
+    }
     expect(failed).toEqual([]);
+    expect(blocking).toEqual([]);
   });
 });
