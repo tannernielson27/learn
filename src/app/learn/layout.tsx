@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SignedInAs } from "@/components/auth/SignedInAs";
 import { LearnContentWidth } from "@/components/learn/LearnContentWidth";
+import { ProblemReportLink } from "@/components/support/ProblemReportLink";
 import { AccountMenu, MENU_ITEM_CLASSES } from "@/components/ui/AccountMenu";
 import { AppShell } from "@/components/ui/AppShell";
 import { ACCOUNT_PATH } from "@/lib/auth/accountPaths";
@@ -40,6 +41,8 @@ export default async function StudentLayout({ children }: LayoutProps<"/learn">)
                 <Link href="/help" className={MENU_ITEM_CLASSES}>
                   Help
                 </Link>
+                {/* #568 */}
+                <ProblemReportLink audience="signed-in" appearance="menu" />
               </>
             }
           />

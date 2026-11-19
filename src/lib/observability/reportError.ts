@@ -15,7 +15,7 @@ import { sentryDsn, sentryEnvironment } from "./options";
 
 type SentryClient = {
   startClientSentry: (dsn: string, environment: string) => void;
-  captureException: (error: unknown) => unknown;
+  captureException: (error: unknown) => string;
 };
 type Load = () => Promise<SentryClient>;
 
@@ -41,19 +41,23 @@ export function startClientReporting(
     .catch(ignoreReportingFailure);
 }
 
-/** Reports an error a route boundary caught. Does nothing, and loads nothing, without a DSN. */
+/**
+ * Reports an error a route boundary caught, and resolves to Sentry's id for it, so "Tell us about a
+ * problem" can attach what the person writes to this error (#568). Does nothing, and loads nothing,
+ * without a DSN; resolves to undefined when reporting failed.
+ */
 export function reportClientError(
   error: unknown,
   dsnValue: string | undefined = process.env.NEXT_PUBLIC_SENTRY_DSN,
   vercelEnv: string | undefined = process.env.NEXT_PUBLIC_VERCEL_ENV,
   load: Load = loadSentryClient,
-): Promise<void> | undefined {
+): Promise<string | undefined> | undefined {
   const dsn = sentryDsn(dsnValue);
   if (!dsn) return undefined;
   return load()
     .then((sentry) => {
       sentry.startClientSentry(dsn, sentryEnvironment(vercelEnv));
-      sentry.captureException(error);
+      return sentry.captureException(error);
     })
     .catch(ignoreReportingFailure);
 }

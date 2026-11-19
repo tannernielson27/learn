@@ -15,6 +15,6 @@ import { errorDigest } from "@/components/status/errorDigest";
  * a 404.
  */
 export default function LearnError({ error, retry }: ErrorInfo) {
-  useReportError(error);
-  return <LearnErrorView retry={retry} digest={errorDigest(error)} />;
+  const eventId = useReportError(error);
+  return <LearnErrorView retry={retry} digest={errorDigest(error)} eventId={eventId} />;
 }

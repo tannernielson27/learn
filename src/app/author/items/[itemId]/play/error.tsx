@@ -12,6 +12,6 @@ import { errorDigest } from "@/components/status/errorDigest";
  * so the honest thing to say is that Try again starts it over.
  */
 export default function PlayItemError({ error, retry }: ErrorInfo) {
-  useReportError(error);
-  return <PlayItemErrorView retry={retry} digest={errorDigest(error)} />;
+  const eventId = useReportError(error);
+  return <PlayItemErrorView retry={retry} digest={errorDigest(error)} eventId={eventId} />;
 }

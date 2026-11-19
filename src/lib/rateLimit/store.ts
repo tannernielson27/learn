@@ -67,6 +67,10 @@ export const RATE_LIMIT_BUCKETS = [
   "ai_import_unit",
   // #593: changes on the review screen, per teacher (`src/lib/aiImport/review/limit.ts`).
   "ai_import_review",
+  // #568: "Tell us about a problem", per account and one ceiling for the whole deployment
+  // (`src/lib/support/problemReportLimit.ts`).
+  "problem_report",
+  "problem_report_total",
 ] as const;
 
 export type RateLimitBucket = (typeof RATE_LIMIT_BUCKETS)[number];

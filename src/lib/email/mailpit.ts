@@ -24,7 +24,7 @@ export function createMailpitMailer(
     : { Email: config.sender.email };
   return {
     async send(message: EmailMessage): Promise<SentEmail> {
-      const { to, subject, text, html, idempotencyKey } = validateMessage(message);
+      const { to, replyTo, subject, text, html, idempotencyKey } = validateMessage(message);
       const reply = await postJson(
         fetchImpl,
         "Mailpit",
@@ -33,6 +33,7 @@ export function createMailpitMailer(
         {
           From: from,
           To: [{ Email: to }],
+          ...(replyTo ? { ReplyTo: [{ Email: replyTo }] } : {}),
           Subject: subject,
           Text: text,
           HTML: html,

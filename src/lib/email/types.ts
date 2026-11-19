@@ -5,6 +5,11 @@ export interface EmailMessage {
   readonly text: string;
   readonly html: string;
   /**
+   * Where a reply goes, when it should not go to `EMAIL_FROM` (a no-reply address). Set only for
+   * mail to the team, never to a student: a problem a user sends us is answered by replying (#568).
+   */
+  readonly replyTo?: string;
+  /**
    * The same key sends at most once. Resend keeps it for 24 hours, so a retried reminder job
    * does not mail anyone twice. Build it from what the message is about, never from the address:
    * `reminder:<assignmentId>:<userId>:<kind>`.

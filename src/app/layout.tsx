@@ -1,7 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
+import { ProblemReportProvider } from "@/components/support/ProblemReportProvider";
 import { THEME_BOOT_SCRIPT } from "@/components/theme/themeStore";
+import { canSendProblemReport, submitProblemReport } from "./help/actions";
 import "./globals.css";
+
+/** "Tell us about a problem" (#568), for every page and error screen below. */
+const PROBLEM_ACTIONS = { send: submitProblemReport, check: canSendProblemReport };
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
 const sourceSerif = Source_Serif_4({
@@ -38,7 +43,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             (node_modules/next/dist/docs/01-app/02-guides/preventing-flash-before-hydration.md). */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
       </head>
-      <body className="flex min-h-full flex-col bg-surface-0 text-ink-1">{children}</body>
+      <body className="flex min-h-full flex-col bg-surface-0 text-ink-1">
+        <ProblemReportProvider actions={PROBLEM_ACTIONS}>{children}</ProblemReportProvider>
+      </body>
     </html>
   );
 }

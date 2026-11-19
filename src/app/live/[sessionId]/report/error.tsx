@@ -11,6 +11,6 @@ import { errorDigest } from "@/components/status/errorDigest";
  * the database, so nothing is lost; Try again reads them again.
  */
 export default function ReportError({ error, retry }: ErrorInfo) {
-  useReportError(error);
-  return <ReportErrorView retry={retry} digest={errorDigest(error)} />;
+  const eventId = useReportError(error);
+  return <ReportErrorView retry={retry} digest={errorDigest(error)} eventId={eventId} />;
 }

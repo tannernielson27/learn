@@ -12,6 +12,7 @@ import {
   RootErrorView,
   type RouteErrorViewProps,
 } from "@/components/status/RouteErrorViews";
+import { ProblemReportLink } from "@/components/support/ProblemReportLink";
 import type { ComponentType } from "react";
 import type { ErrorStateId } from "./states";
 
@@ -35,6 +36,17 @@ const DIGEST = "2861533018";
  * Try again does nothing here. The views are client components, so this is one too.
  */
 export function ErrorDemo({ state }: { state: ErrorStateId }) {
+  if (state === "error-root") {
+    // As `app/error.tsx` draws it, with "Tell us about a problem" handed in (#568).
+    return (
+      <RootErrorView
+        retry={() => {}}
+        digest={DIGEST}
+        landmark={false}
+        problem={<ProblemReportLink audience="unknown" reference={DIGEST} />}
+      />
+    );
+  }
   const View = VIEWS[state];
   return <View retry={() => {}} digest={DIGEST} landmark={false} />;
 }

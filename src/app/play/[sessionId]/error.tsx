@@ -28,6 +28,6 @@ import { errorDigest } from "@/components/status/errorDigest";
  * sent. The copy promises only the place.
  */
 export default function PlayError({ error, retry }: ErrorInfo) {
-  useReportError(error);
-  return <RoomErrorView retry={retry} digest={errorDigest(error)} />;
+  const eventId = useReportError(error);
+  return <RoomErrorView retry={retry} digest={errorDigest(error)} eventId={eventId} />;
 }

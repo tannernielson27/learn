@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { sectionNumber } from "@/components/help/HelpGuide";
+import { ProblemReportLink } from "@/components/support/ProblemReportLink";
 import { TextLink } from "@/components/ui/TextLink";
 
 export const metadata: Metadata = { title: "Help" };
@@ -97,6 +98,26 @@ export default function HelpIndex() {
             </dd>
           </div>
         </dl>
+      </section>
+
+      {/* #568. The page reads no session, so the form asks who is signed in when it opens. */}
+      <section
+        aria-labelledby="problem"
+        className="grid gap-6 border-t border-rule-strong pt-6 lg:grid-cols-12 lg:gap-10"
+      >
+        <div className="lg:col-span-4">
+          <h2 id="problem" className="font-read text-2xl leading-tight text-ink-1 sm:text-3xl">
+            Something not working?
+          </h2>
+        </div>
+        <div className="flex flex-col items-start gap-3 lg:col-span-8">
+          <p className="measure leading-relaxed text-ink-1">
+            Tell us what you were doing and what went wrong, and we will look into it. Signed in,
+            you can send it from here; anyone can email us.
+          </p>
+          {/* The form once the server says someone is signed in, and the address for everyone. */}
+          <ProblemReportLink audience="unknown" />
+        </div>
       </section>
     </article>
   );

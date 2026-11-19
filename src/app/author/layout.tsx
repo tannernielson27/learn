@@ -2,6 +2,7 @@ import { SignedInAs } from "@/components/auth/SignedInAs";
 import { BillingBanner } from "@/components/billing/BillingBanner";
 import { GuardedLink, LeaveGuardProvider } from "@/components/authoring/LeaveGuard";
 import { TeacherNav } from "@/components/authoring/TeacherNav";
+import { ProblemReportLink } from "@/components/support/ProblemReportLink";
 import { WordmarkMark, wordmarkClasses } from "@/components/site/Wordmark";
 import { AccountMenu, MENU_ITEM_CLASSES } from "@/components/ui/AccountMenu";
 import { AppShell } from "@/components/ui/AppShell";
@@ -57,6 +58,8 @@ export default async function AuthorLayout({ children }: LayoutProps<"/author">)
                   <GuardedLink href="/help" className={MENU_ITEM_CLASSES}>
                     Help
                   </GuardedLink>
+                  {/* #568: opens a dialog over the page, so it leaves no unsaved work behind. */}
+                  <ProblemReportLink audience="signed-in" appearance="menu" />
                 </>
               }
             />

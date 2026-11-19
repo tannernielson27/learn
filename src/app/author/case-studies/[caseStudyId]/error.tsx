@@ -11,6 +11,6 @@ import { errorDigest } from "@/components/status/errorDigest";
  * can say what was lost: steps are saved one at a time, so an unsaved one is the risk.
  */
 export default function CaseStudyError({ error, retry }: ErrorInfo) {
-  useReportError(error);
-  return <CaseStudyErrorView retry={retry} digest={errorDigest(error)} />;
+  const eventId = useReportError(error);
+  return <CaseStudyErrorView retry={retry} digest={errorDigest(error)} eventId={eventId} />;
 }

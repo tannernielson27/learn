@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { ReadingWidth } from "@/components/authoring/PageWidth";
 import { WayBack } from "@/components/recovery/WayBack";
+import { ProblemReportLink } from "@/components/support/ProblemReportLink";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { type RouteErrorViewProps, referenceLine } from "./RootErrorViews";
 
@@ -29,7 +30,7 @@ function LiveFrame({
 }
 
 /** Any teacher page under /author. Inside the teacher's `AppShell`, so the nav stays. */
-export function AuthorErrorView({ retry, digest }: RouteErrorViewProps) {
+export function AuthorErrorView({ retry, digest, eventId }: RouteErrorViewProps) {
   return (
     <ReadingWidth>
       <ErrorState
@@ -40,13 +41,14 @@ export function AuthorErrorView({ retry, digest }: RouteErrorViewProps) {
         digest={digest}
       >
         <WayBack to="library" />
+        <ProblemReportLink audience="signed-in" reference={digest} eventId={eventId} />
       </ErrorState>
     </ReadingWidth>
   );
 }
 
 /** The case study builder: steps save one at a time, so an unsaved one is what is at risk. */
-export function CaseStudyErrorView({ retry, digest }: RouteErrorViewProps) {
+export function CaseStudyErrorView({ retry, digest, eventId }: RouteErrorViewProps) {
   return (
     <ReadingWidth>
       <ErrorState
@@ -57,13 +59,14 @@ export function CaseStudyErrorView({ retry, digest }: RouteErrorViewProps) {
         digest={digest}
       >
         <WayBack to="library" />
+        <ProblemReportLink audience="signed-in" reference={digest} eventId={eventId} />
       </ErrorState>
     </ReadingWidth>
   );
 }
 
 /** A question or a case study a teacher is playing through. */
-export function PlayItemErrorView({ retry, digest }: RouteErrorViewProps) {
+export function PlayItemErrorView({ retry, digest, eventId }: RouteErrorViewProps) {
   return (
     <ReadingWidth>
       <ErrorState
@@ -74,6 +77,7 @@ export function PlayItemErrorView({ retry, digest }: RouteErrorViewProps) {
         digest={digest}
       >
         <WayBack to="library" />
+        <ProblemReportLink audience="signed-in" reference={digest} eventId={eventId} />
       </ErrorState>
     </ReadingWidth>
   );
@@ -83,7 +87,7 @@ export function PlayItemErrorView({ retry, digest }: RouteErrorViewProps) {
  * The host console. The session lives in the database, so the students' screens do not change
  * while it is down; it does not say the session is running, since an ended one fails the same way.
  */
-export function HostErrorView({ retry, digest, landmark }: RouteErrorViewProps) {
+export function HostErrorView({ retry, digest, eventId, landmark }: RouteErrorViewProps) {
   return (
     <LiveFrame width="console" landmark={landmark}>
       <ErrorState
@@ -94,13 +98,14 @@ export function HostErrorView({ retry, digest, landmark }: RouteErrorViewProps) 
         digest={digest}
       >
         <WayBack to="sessions" />
+        <ProblemReportLink audience="signed-in" reference={digest} eventId={eventId} />
       </ErrorState>
     </LiveFrame>
   );
 }
 
 /** A live session's report. The answers are rows in the database, so nothing is lost. */
-export function ReportErrorView({ retry, digest, landmark }: RouteErrorViewProps) {
+export function ReportErrorView({ retry, digest, eventId, landmark }: RouteErrorViewProps) {
   return (
     <LiveFrame width="console" landmark={landmark}>
       <ErrorState
@@ -111,6 +116,7 @@ export function ReportErrorView({ retry, digest, landmark }: RouteErrorViewProps
         digest={digest}
       >
         <WayBack to="sessions" />
+        <ProblemReportLink audience="signed-in" reference={digest} eventId={eventId} />
       </ErrorState>
     </LiveFrame>
   );
@@ -132,13 +138,15 @@ export function RoomErrorView({ retry, digest, landmark }: RouteErrorViewProps) 
         digest={digest}
       >
         <WayBack to="join" />
+        {/* A guest has no account to send from, so only the address (#568). */}
+        <ProblemReportLink audience="nobody" reference={digest} />
       </ErrorState>
     </LiveFrame>
   );
 }
 
 /** Any student page under /learn. Inside the student's `AppShell`, so the account menu stays. */
-export function LearnErrorView({ retry, digest }: RouteErrorViewProps) {
+export function LearnErrorView({ retry, digest, eventId }: RouteErrorViewProps) {
   return (
     <ErrorState
       kind="load"
@@ -148,6 +156,7 @@ export function LearnErrorView({ retry, digest }: RouteErrorViewProps) {
       digest={digest}
     >
       <WayBack to="student-home" />
+      <ProblemReportLink audience="signed-in" reference={digest} eventId={eventId} />
     </ErrorState>
   );
 }

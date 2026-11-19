@@ -6,7 +6,10 @@ import { reportClientError, startClientReporting } from "./reportError";
 const DSN = "https://public@o0.ingest.sentry.io/0";
 
 function fakeSentry() {
-  const sentry = { startClientSentry: vi.fn(), captureException: vi.fn() };
+  const sentry = {
+    startClientSentry: vi.fn(),
+    captureException: vi.fn(() => "0123456789abcdef0123456789abcdef"),
+  };
   return { sentry, load: vi.fn(async () => sentry) };
 }
 
@@ -45,6 +48,13 @@ describe("reportClientError", () => {
     await reportClientError(error, DSN, "production", load);
     expect(sentry.startClientSentry).toHaveBeenCalledWith(DSN, "production");
     expect(sentry.captureException).toHaveBeenCalledWith(error);
+  });
+
+  it("resolves to the event id, so a problem report can attach to it", async () => {
+    const { load } = fakeSentry();
+    await expect(reportClientError(new Error("x"), DSN, "production", load)).resolves.toBe(
+      "0123456789abcdef0123456789abcdef",
+    );
   });
 
   it("names the environment development when Vercel does not say", async () => {

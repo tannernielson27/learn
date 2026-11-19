@@ -13,6 +13,6 @@ import { errorDigest } from "@/components/status/errorDigest";
  * server and mounts the console fresh, which reopens its channel.
  */
 export default function HostError({ error, retry }: ErrorInfo) {
-  useReportError(error);
-  return <HostErrorView retry={retry} digest={errorDigest(error)} />;
+  const eventId = useReportError(error);
+  return <HostErrorView retry={retry} digest={errorDigest(error)} eventId={eventId} />;
 }

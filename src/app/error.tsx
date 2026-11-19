@@ -4,6 +4,7 @@ import type { ErrorInfo } from "next/error";
 import { useReportError } from "@/components/observability/useReportError";
 import { RootErrorView } from "@/components/status/RootErrorViews";
 import { errorDigest } from "@/components/status/errorDigest";
+import { ProblemReportLink } from "@/components/support/ProblemReportLink";
 
 /**
  * Any page with no closer boundary of its own (#267): the student home, the invite and join
@@ -12,6 +13,14 @@ import { errorDigest } from "@/components/status/errorDigest";
  * digest, which matches that log line (Sprint 11 kickoff decision 4).
  */
 export default function RootError({ error, retry }: ErrorInfo) {
-  useReportError(error);
-  return <RootErrorView retry={retry} digest={errorDigest(error)} />;
+  const eventId = useReportError(error);
+  const digest = errorDigest(error);
+  return (
+    <RootErrorView
+      retry={retry}
+      digest={digest}
+      // Public pages read no session, so the form asks whether someone is signed in (#568).
+      problem={<ProblemReportLink audience="unknown" reference={digest} eventId={eventId} />}
+    />
+  );
 }
