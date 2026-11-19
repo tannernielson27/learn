@@ -39,8 +39,10 @@ describe("serverSentryOptions", () => {
     expect(options.includeLocalVariables).toBe(false);
   });
 
-  it("samples at most a tenth of requests for tracing", () => {
-    expect(TRACES_SAMPLE_RATE).toBe(0.1);
+  // Any sampled request on Vercel took ~20 s to first byte (2026-11-19: 12 of 60 page loads on
+  // production at 0.1, 0 of 60 on a preview at 0). Errors are still reported without tracing.
+  it("traces no requests", () => {
+    expect(TRACES_SAMPLE_RATE).toBe(0);
     expect(options.tracesSampleRate).toBe(TRACES_SAMPLE_RATE);
   });
 
