@@ -28,6 +28,7 @@ import {
   type Recording,
 } from "./files";
 import {
+  blockingFailures,
   buildReport,
   formatReport,
   isPerfect,
@@ -196,6 +197,27 @@ describe("scoreDocument", () => {
       stem: false,
       options: false,
     });
+  });
+
+  // #606: the text a student reads is the stem and then the instructions (QuestionShell), so a
+  // draft that puts "Select all that apply." in either place reads the same.
+  it("reads the stem and the instructions as one text, wherever the instruction sits", () => {
+    const instruction = "Choose one answer.";
+    const expectedWith = expectedDoc({
+      questions: expectedDoc().questions.map((question) =>
+        "item" in question && question.label === "multiple_choice"
+          ? {
+              ...question,
+              item: { ...question.item, stem: { ...mcItem.stem, value: `${mcItem.stem.value} ${instruction}` } },
+            }
+          : question,
+      ),
+    });
+    const moved = { ...mcDraft, instructions: instruction };
+    const score = scoreDocument(expectedWith, recording(withMultipleChoice(moved)));
+    expect(resultFor(score.questions, "multiple_choice").stem).toBe(true);
+    const dropped = scoreDocument(expectedWith, recording(withMultipleChoice(mcDraft)));
+    expect(resultFor(dropped.questions, "multiple_choice").stem).toBe(false);
   });
 
   it("catches a wrong type", () => {
@@ -416,6 +438,31 @@ describe("a standalone question's own record", () => {
 
     const notFound = scoreDocument(expected, recording([]));
     expect(notFound.caseStudies[0]).toMatchObject({ found: false, notes: ["not found"] });
+  });
+});
+
+// #606: what fails a live run. A document scoring 0 passed it, because only a thrown error did.
+describe("blockingFailures", () => {
+  it("passes a perfect run", () => {
+    const report = buildReport([scoreDocument(expectedDoc(), recording(perfectQuestions()))]);
+    expect(blockingFailures(report)).toEqual([]);
+  });
+
+  it("fails a wrong key, a missed question and a broken case study, naming each", () => {
+    const wrongKey = scoreDocument(expectedDoc(), recording(withMultipleChoice(markedOnly([3]))));
+    const nothing = scoreDocument(expectedDoc(), undefined);
+    const lines = blockingFailures(buildReport([wrongKey, nothing]));
+    expect(lines.some((line) => line.startsWith(`${DOC} › multiple_choice: key`))).toBe(true);
+    expect(lines.some((line) => /not found/.test(line))).toBe(true);
+  });
+
+  it("does not fail on wording alone: a stem or an option worded differently is reported", () => {
+    const draft = { ...mcDraft, stem: `${mcDraft.stem} Explain.` };
+    const report = buildReport([
+      scoreDocument(expectedDoc(), recording(withMultipleChoice(draft))),
+    ]);
+    expect(isPerfect(report)).toBe(false);
+    expect(blockingFailures(report)).toEqual([]);
   });
 });
 
