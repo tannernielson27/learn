@@ -197,7 +197,7 @@ export function EditorShell<Values, Input extends ScoredInput>({
     doneMessage: string,
     failMessage: string,
     nowPublished: boolean,
-  ) {
+  ): Promise<boolean> {
     setStatus({ kind: "busy" });
     const current = readValues();
     let result: SaveResult;
@@ -207,7 +207,7 @@ export function EditorShell<Values, Input extends ScoredInput>({
       // A request that fails outright (a dropped connection) rejects instead of returning a
       // result; without this the editor would stay busy with both buttons disabled.
       setStatus({ kind: "error", message: failMessage });
-      return;
+      return false;
     }
     if (result.ok) {
       setSavedSnapshot(JSON.stringify(current));
@@ -220,6 +220,7 @@ export function EditorShell<Values, Input extends ScoredInput>({
     } else {
       setStatus({ kind: "error", message: result.error ?? failMessage });
     }
+    return result.ok;
   }
 
   return (
@@ -239,6 +240,21 @@ export function EditorShell<Values, Input extends ScoredInput>({
         more={host.more}
         onSave={() =>
           run(onSaveDraft, "Saved.", "The question could not be saved. Try again.", false)
+        }
+        saveAndGo={
+          host.saveAndGo && {
+            label: host.saveAndGo.label,
+            // Only a save that succeeded goes on; a refusal stays here with its reason.
+            run: async () => {
+              const saved = await run(
+                onSaveDraft,
+                "Saved.",
+                "The question could not be saved. Try again.",
+                false,
+              );
+              if (saved) host.saveAndGo?.go();
+            },
+          }
         }
         onSaveDraft={() =>
           run(

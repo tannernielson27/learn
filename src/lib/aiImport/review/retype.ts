@@ -2,6 +2,7 @@ import type { Json } from "@/lib/supabase/database.types";
 import type { ItemType } from "@/lib/ngn/schemas";
 import { ClaudeCallError, type MessagesClient } from "../claude";
 import { NO_USAGE, addUsage, aiImportEnabled, costOf, type Usage } from "../config";
+import { refreshBatchDuplicates } from "../duplicates";
 import { extractQuestions, regionsOf } from "../extractQuestions";
 import {
   POSITIONS_PER_FILE,
@@ -66,6 +67,11 @@ export interface RetypeDeps extends Pick<
     version: number,
     patch: RetypePatch,
   ) => Promise<{ version: number } | "changed" | "unavailable">;
+  /**
+   * #593: the batch's duplicate flags again, since the question's stem may have changed with its
+   * new reading. Answers the version each rewritten entry now has; never fails the change.
+   */
+  refreshDuplicates?: (orgId: string, batchId: string) => Promise<ReadonlyMap<string, number>>;
 }
 
 export type RetypePatch = Pick<StagedRow, "type" | "status" | "reasons" | "draft" | "item">;
@@ -199,7 +205,15 @@ export async function retypeEntry(deps: RetypeDeps, request: RetypeRequest): Pro
   );
   if (written === "unavailable") return { ok: false, code: "unavailable" };
   if (written === "changed") return { ok: false, code: "entry_changed" };
-  return { ok: true, version: written.version, status: row.status, usage, costUsd: costOf(usage) };
+  const moved = await deps.refreshDuplicates?.(request.orgId, request.batchId);
+  return {
+    ok: true,
+    // If this entry's own flag changed it was written once more, and its version moved on.
+    version: moved?.get(request.entryId) ?? written.version,
+    status: row.status,
+    usage,
+    costUsd: costOf(usage),
+  };
 }
 
 const logged = (step: string, error: { code?: string } | null) => {
@@ -272,6 +286,10 @@ export function retypeDeps(service: Client): RetypeDeps {
       }
       const [written] = data ?? [];
       return written ? { version: written.version } : "changed";
+    },
+    refreshDuplicates: async (orgId, batchId) => {
+      const refreshed = await refreshBatchDuplicates(service, { orgId, batchId });
+      return refreshed.ok ? refreshed.versions : new Map();
     },
   };
 }

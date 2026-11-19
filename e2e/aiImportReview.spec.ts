@@ -1,15 +1,14 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type APIRequestContext, type Browser, type Page } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { sampleCaseStudy } from "../src/lib/ngn/fixtures";
+import { expectTurnedAway, signedInStudent } from "./aiImportVisitors";
 import { wireText } from "./bytes";
-import { latestSignInLink, openSignInLink } from "./mailbox";
 import {
-  createAccountWithoutRole,
   insertAsAdmin,
   selectAsAdmin,
   signInAsInstructorInEmptyOrg,
-  uniqueEmail,
   updateAsAdmin,
 } from "./signIn";
 
@@ -150,30 +149,6 @@ test("a teacher reviews an import: four statuses, a drop and a change of type", 
   await page.screenshot({ path: `${shots}/ai-import-review-changed.png`, fullPage: true });
 });
 
-/** A student account signed in through the emailed link, in a browser of its own. */
-async function signedInStudent(
-  browser: Browser,
-  request: APIRequestContext,
-  label: string,
-  orgId: string,
-) {
-  const email = uniqueEmail(label);
-  const userId = await createAccountWithoutRole(request, email);
-  // A student of the batch's own workspace: the nearest a student gets to its keys.
-  await updateAsAdmin(request, "profiles", `id=eq.${userId}`, { org_id: orgId, role: "student" });
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  await page.goto("/sign-in");
-  const since = new Date();
-  await page.getByRole("textbox", { name: "Email address", exact: true }).fill(email);
-  await page
-    .getByRole("button", { name: "Sign in with an emailed link instead", exact: true })
-    .click();
-  await page.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
-  await openSignInLink(page, await latestSignInLink(request, email, since));
-  return { context, page };
-}
-
 test("the review page and its change of type reach nobody outside the batch's workspace", async ({
   page,
   request,
@@ -182,7 +157,12 @@ test("the review page and its change of type reach nobody outside the batch's wo
   test.slow();
   const label = `rvb-${testInfo.project.name}`;
   const { orgId, bankId } = await teacherWithQuiz(page, request, label);
-  const marker = `review-marker-${Date.now()}`;
+  const stamp = Date.now();
+  const marker = `review-marker-${stamp}`;
+  // #593: the source panel now holds the question's whole part of the document, answer line
+  // included, and the page holds each question's key. All three are searched for below.
+  const keyMarker = `key-rationale-${stamp}`;
+  const KEY = '"correctOptionId":"opt_b"';
   const batch = await insertAsAdmin<{ id: string }>(request, "ai_import_batches", {
     org_id: orgId,
     bank_id: bankId,
@@ -194,25 +174,78 @@ test("the review page and its change of type reach nobody outside the batch's wo
     position: 0,
     kind: "item",
     type: "multiple_choice",
-    status: "needs_fix",
-    reasons: ["needs_fix: Fictional test entry."],
-    source_excerpt: marker,
+    status: "ready",
+    reasons: [],
+    source_excerpt: `Which food first?\nA. Tea\n**B. Yogurt**\nAnswer: B ${marker}`,
+    item: {
+      id: "e2e_keyed",
+      type: "multiple_choice",
+      stem: { kind: "markdown", value: "Which food should the nurse suggest first?" },
+      content: {
+        options: [
+          { id: "opt_a", label: "Tea" },
+          { id: "opt_b", label: "Yogurt" },
+          { id: "opt_c", label: "Toast" },
+          { id: "opt_d", label: "Broth" },
+        ],
+      },
+      answerKey: { correctOptionId: "opt_b" },
+      scoring: { model: "zero_one", maxPoints: 1 },
+      rationale: { general: { kind: "markdown", value: keyMarker } },
+    },
+  });
+  // A case study whose fourth step has no key yet: its step opens in the editor (#593).
+  const caseMarker = `case-rationale-${stamp}`;
+  const caseEntry = await insertAsAdmin<{ id: string }>(request, "ai_import_entries", {
+    batch_id: batch.id,
+    org_id: orgId,
+    position: 1,
+    kind: "case_study",
+    type: null,
+    status: "needs_answer",
+    reasons: ["needs_answer: Step 4: The source marks no answer."],
+    source_excerpt: `A 74-year-old woman. ${marker}`,
+    group_key: "Pulmonary embolism",
+    item: {
+      ...sampleCaseStudy,
+      items: sampleCaseStudy.items.map((item, index) => {
+        if (index !== 3) return item;
+        const rest = Object.fromEntries(
+          Object.entries(item).filter(([key]) => key !== "answerKey"),
+        );
+        return { ...rest, rationale: { general: { kind: "markdown", value: caseMarker } } };
+      }),
+    },
   });
   const reviewPath = `/author/banks/${bankId}/ai-import/${batch.id}`;
+  // Every page that reads a staged entry: the review, a question's editor, a case study step's.
+  const pages = [
+    { path: reviewPath, holds: [marker, keyMarker, KEY] },
+    { path: `${reviewPath}/${entry.id}`, holds: [marker, keyMarker] },
+    { path: `${reviewPath}/${caseEntry.id}?step=4`, holds: [marker, caseMarker] },
+  ];
 
-  // Control: the batch's own teacher is handed the excerpt, so the grep below can match.
-  const own = await page.context().request.get(reviewPath);
-  expect(own.status()).toBe(200);
-  expect(wireText(await own.text())).toContain(marker);
+  // Control: the batch's own teacher is handed the source and the keys, so the greps below can
+  // match.
+  for (const { path, holds } of pages) {
+    const own = await page.context().request.get(path);
+    expect(own.status(), path).toBe(200);
+    const bytes = wireText(await own.text());
+    for (const text of holds) expect(bytes, `${path} holds ${text}`).toContain(text);
+  }
+  const secrets = [marker, keyMarker, caseMarker, KEY];
 
   // A teacher of another workspace, with AI import on: not found, and none of it.
   const outsider = await browser.newContext();
   const outsiderPage = await outsider.newPage();
   const otherOrg = await signInAsInstructorInEmptyOrg(outsiderPage, request, `${label}-other`);
   await updateAsAdmin(request, "orgs", `id=eq.${otherOrg}`, { ai_import_enabled: true });
-  const outsiderGet = await outsider.request.get(reviewPath);
-  expect(outsiderGet.status()).toBe(404);
-  expect(wireText(await outsiderGet.text())).not.toContain(marker);
+  for (const { path } of pages) {
+    const got = await outsider.request.get(path);
+    expect(got.status(), path).toBe(404);
+    const bytes = wireText(await got.text());
+    for (const text of secrets) expect(bytes, `${path} leaks ${text}`).not.toContain(text);
+  }
   const outsiderRetype = await outsider.request.post("/api/ai-import/retype", {
     data: { batchId: batch.id, entryId: entry.id, version: 1, type: "bowtie" },
   });
@@ -222,14 +255,27 @@ test("the review page and its change of type reach nobody outside the batch's wo
 
   // A student is sent to the student home, as from every author page, with none of it.
   const student = await signedInStudent(browser, request, `${label}-student`, orgId);
-  const studentGet = await student.context.request.get(reviewPath);
-  expect(new URL(studentGet.url()).pathname).not.toMatch(/^\/author/);
-  expect(wireText(await studentGet.text())).not.toContain(marker);
+  for (const { path } of pages) {
+    const studentGet = await student.context.request.get(path);
+    expect(new URL(studentGet.url()).pathname, path).not.toMatch(/^\/author/);
+    const bytes = wireText(await studentGet.text());
+    for (const text of secrets) expect(bytes, `${path} leaks ${text}`).not.toContain(text);
+  }
   const studentRetype = await student.context.request.post("/api/ai-import/retype", {
     data: { batchId: batch.id, entryId: entry.id, version: 1, type: "bowtie" },
   });
   expect(studentRetype.status()).toBe(403);
   await student.context.close();
+
+  // Nobody signed in: sent to sign in, with none of it.
+  const stranger = await browser.newContext();
+  await expectTurnedAway(
+    stranger,
+    pages.map(({ path }) => path),
+    secrets,
+    "a signed-out visitor",
+  );
+  await stranger.close();
 
   // Nothing above changed the entry.
   const [after] = await selectAsAdmin<{ version: number; type: string }>(

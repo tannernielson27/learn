@@ -58,6 +58,11 @@ export interface ItemPlayerProps {
    */
   label?: string;
   /**
+   * Names the rationale panel of a key shown with no score, for a page that shows several keyed
+   * questions at once (#593). Without it the panel is named "Rationale", as on every other page.
+   */
+  rationaleLabel?: string;
+  /**
    * False for an assignment (#208), whose answers are saved as they change and submitted as a set:
    * the player draws no Submit bar of its own and `submit` is never called.
    */
@@ -109,6 +114,7 @@ export function ItemPlayer({
   initialKey,
   onResponseChange,
   label,
+  rationaleLabel,
   showSubmit = true,
   busyLabel,
   scoringExplanations,
@@ -241,6 +247,7 @@ export function ItemPlayer({
       // Only once revealed: the shell shows a rationale on its own for a key with no score (#181),
       // and a gallery item opened in feedback with nothing scored must not count as that.
       rationale={revealed ? rationale : undefined}
+      rationaleLabel={rationaleLabel}
       sample={item.tags.includes(SAMPLE_TAG)}
       // #60: named by the item's format ("Bowtie question"), not a bare "Question", so the region
       // says something in a landmark list. A caller with two players on a page passes its own.

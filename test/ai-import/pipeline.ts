@@ -92,12 +92,12 @@ interface UnitRecord {
 const recorded = (entry: StagedEntry, chart: unknown): RecordedQuestion =>
   entry.status === "not_importable"
     ? {
-        opening: entry.sourceExcerpt,
+        opening: entry.opening,
         type: NOT_IMPORTABLE,
         reason: entry.reasons[0]?.message ?? "",
       }
     : {
-        opening: entry.sourceExcerpt,
+        opening: entry.opening,
         type: entry.type ?? NOT_IMPORTABLE,
         ...(entry.draft !== null ? { draft: entry.draft } : {}),
         ...(chart !== undefined ? { chart } : {}),
@@ -125,7 +125,7 @@ async function runUnit(
   if (unit.caseStudy === null) {
     const entries = await extractQuestions(watched, questions, document, regions);
     return {
-      questions: entries.map((entry) => recorded(entry, charts.get(entry.sourceExcerpt))),
+      questions: entries.map((entry) => recorded(entry, charts.get(entry.opening))),
       caseStudies: [],
     };
   }

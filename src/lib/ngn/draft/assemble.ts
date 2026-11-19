@@ -280,13 +280,14 @@ function splitGroup(
   const notes: AssemblyNote[] = [
     {
       code: "not_a_case_study",
-      message: `This came from "${groupKey}", which has ${count} questions; a case study has ${CASE_STUDY_STEP_COUNT}, so each question is staged on its own.`,
+      message: `This came from "${groupKey}", which has ${count} questions. A case study has ${CASE_STUDY_STEP_COUNT}, so each question is imported on its own.`,
     },
     ...(hasChart(charts)
       ? [
           {
             code: "chart_not_attached" as const,
-            message: "The chart printed with these questions was not attached to any of them.",
+            message:
+              "The patient record printed with these questions was not attached to any of them.",
           },
         ]
       : []),
@@ -335,7 +336,11 @@ export function assembleCaseStudy(
   );
   const unread: DraftReason[] = parsed.success
     ? []
-    : [needsFix("The chart could not be read, so the case study has none yet.", ["charts"])];
+    : [
+        needsFix("The patient record could not be read, so the case study has none yet.", [
+          "charts",
+        ]),
+      ];
   return [
     {
       kind: "case_study",
@@ -364,7 +369,7 @@ export function assembleQuestion(
       item,
       reasons: [
         ...converted.reasons,
-        needsFix("The question's chart could not be read, so it has none yet.", ["chart"]),
+        needsFix("The question's patient record could not be read, so it has none yet.", ["chart"]),
       ],
       notes: [],
     };

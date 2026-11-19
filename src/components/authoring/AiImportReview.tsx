@@ -1,27 +1,35 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useRef, useState } from "react";
-import { Button, PRESS_CLASSES } from "@/components/ui/Button";
+import { useEffect, useId, useRef, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { TextLink } from "@/components/ui/TextLink";
 import {
-  REVIEW_FILTERS,
+  editHref,
   filterCounts,
   groupByFile,
-  importSummary,
   importedSentence,
   matchesFilter,
+  reviewHref,
   type ReviewEntryView,
   type ReviewFilter,
   type ReviewStatus,
 } from "@/lib/authoring/aiImportReview";
 import type { AiImportFailure } from "@/lib/authoring/aiImportUpload";
+import { ITEM_TYPE_LABELS } from "@/lib/ngn/labels";
 import type { ItemType } from "@/lib/ngn/schemas";
-import { AiImportDiscard, UNEXPECTED } from "./AiImportDiscard";
+import { UNEXPECTED } from "./AiImportDiscard";
+import {
+  AiImportImportPanel,
+  type DropAllInput,
+  type DropAllOutcome,
+  type ImportOutcome,
+} from "./AiImportImportPanel";
 import { AiImportReviewEntry, type EntryChange } from "./AiImportReviewEntry";
-import { FieldError } from "./FieldError";
+import { AiImportReviewFilters } from "./AiImportReviewFilters";
 import { postJson } from "./aiImportRequests";
+
+export type { ImportOutcome } from "./AiImportImportPanel";
 
 /** What a drop or a restore is told: the entry, and the version the page showed. */
 export interface EntryRef {
@@ -29,9 +37,6 @@ export interface EntryRef {
   entryId: string;
   version: number;
 }
-
-/** What an import answers: how many questions and case studies went into the quiz. */
-export type ImportOutcome = { ok: true; questions: number; caseStudies: number } | AiImportFailure;
 
 /** The Server Functions the page hands in (`src/app/author/aiImportActions.ts`). */
 export interface AiImportReviewActions {
@@ -41,6 +46,10 @@ export interface AiImportReviewActions {
   importBatch?: (input: { batchId: string }) => Promise<ImportOutcome>;
   /** #348: the batch, its staged questions and its uploaded files deleted. */
   discard?: (input: { batchId: string }) => Promise<{ ok: true } | AiImportFailure>;
+  /** #593: every entry that needs an answer or a fix dropped at once. */
+  dropAll?: (input: DropAllInput) => Promise<DropAllOutcome>;
+  /** #593: a case study replaced by six separate questions. */
+  split?: (input: EntryRef) => Promise<{ ok: true; questions: number } | AiImportFailure>;
 }
 
 export interface AiImportReviewProps {
@@ -50,15 +59,41 @@ export interface AiImportReviewProps {
   fileNames: string[];
   entries: ReviewEntryView[];
   actions: AiImportReviewActions;
+  /** The filter named in the address (`?show=`), so a reload or Back keeps it (#593). */
+  initialFilter?: ReviewFilter;
+  /** #592: sentences about answers that reached no question. */
+  notes?: string[];
 }
 
-type Override = { version: number; status: ReviewStatus };
+/** What the screen knows of an entry ahead of the server's next answer. */
+type Override = { version: number; status?: ReviewStatus };
+
+/** Each entry another change moved on a version, so its next change names the right one. */
+const movedOn = (changed: readonly { id: string; version: number }[] = []) =>
+  Object.fromEntries(changed.map((row) => [row.id, { version: row.version }]));
+
+/** What a bulk drop changed: the entries it dropped, and those another version moved on. */
+const droppedNow = (
+  dropped: readonly { id: string; version: number }[] = [],
+  changed: readonly { id: string; version: number }[] = [],
+): Record<string, Override> => ({
+  ...movedOn(changed),
+  ...Object.fromEntries(
+    dropped.map((row) => [row.id, { version: row.version, status: "dropped" as const }]),
+  ),
+});
+
+const FAILED: AiImportFailure = { ok: false, code: "unavailable", message: UNEXPECTED };
 
 /**
  * Review an AI import batch (#346): every staged question under its file in source order,
  * filtered by status, each drawn by the real players with its key, its reasons and its source.
  * The teacher drops or restores a question, or has one read again as another type. Each change
  * names the version it was shown, so two tabs cannot overwrite each other.
+ *
+ * Since #593 the filter lives in the address, and a card that leaves the filter (dropped under
+ * "Needs a fix", say) hands its confirmation to the line above the list, which takes the focus
+ * the card had: neither is lost with the card.
  */
 export function AiImportReview({
   bankId,
@@ -67,23 +102,30 @@ export function AiImportReview({
   fileNames,
   entries: served,
   actions,
+  initialFilter = "all",
+  notes = [],
 }: AiImportReviewProps) {
   const id = useId();
   const router = useRouter();
-  const [importing, setImporting] = useState(false);
+  const base = `/author/banks/${bankId}/ai-import/${batchId}`;
   const [imported, setImported] = useState<string | null>(null);
-  const [importError, setImportError] = useState<string | null>(null);
-  const importInFlight = useRef(false);
-  const [filter, setFilter] = useState<ReviewFilter>("all");
+  const [filter, setFilter] = useState<ReviewFilter>(initialFilter);
+  // What a card that left the filter would have said, and a count so the same words focus again.
+  const [gone, setGone] = useState<{ text: string; times: number } | null>(null);
+  const goneRef = useRef<HTMLParagraphElement>(null);
   // A drop or restore shows at once; a newer version from the server (a refresh) wins.
   const [overrides, setOverrides] = useState<Record<string, Override>>({});
   const entries = served.map((entry) => {
     const override = overrides[entry.id];
-    return override && override.version > entry.version ? { ...entry, ...override } : entry;
+    if (!override || override.version <= entry.version) return entry;
+    return { ...entry, version: override.version, status: override.status ?? entry.status };
   });
 
+  useEffect(() => {
+    if (gone) goneRef.current?.focus();
+  }, [gone]);
+
   const counts = filterCounts(entries);
-  const summary = importSummary(entries);
   const shown = entries.filter((entry) => matchesFilter(entry, filter));
   const groups = groupByFile(shown, fileNames);
   // Numbered across the whole import in source order, so every heading is its own.
@@ -97,16 +139,33 @@ export function AiImportReview({
       ? `Case study: ${entry.group?.title ?? "Untitled"}`
       : `Question ${numbers.get(entry.id) ?? ""}`.trim();
 
+  const say = (text: string) => setGone((now) => ({ text, times: (now?.times ?? 0) + 1 }));
+
+  const chooseFilter = (next: ReviewFilter) => {
+    setFilter(next);
+    setGone(null);
+    // The address follows the filter without a navigation, so Back and a reload keep it.
+    window.history.replaceState(null, "", reviewHref(base, next));
+  };
+
   const change =
-    (act: (input: EntryRef) => EntryChange) =>
+    (act: (input: EntryRef) => EntryChange, done: (heading: string) => string) =>
     async (entry: ReviewEntryView): EntryChange => {
-      const result = await act({ batchId, entryId: entry.id, version: entry.version });
-      if (result.ok) {
-        setOverrides((now) => ({
-          ...now,
-          [entry.id]: { version: result.version, status: result.status },
-        }));
+      // #593: a rejected request is an answer too, so the card can say it and be used again.
+      const result = await act({ batchId, entryId: entry.id, version: entry.version }).catch(
+        () => FAILED,
+      );
+      if (!result.ok) return result;
+      setOverrides((now) => ({
+        ...now,
+        ...movedOn(result.changed),
+        [entry.id]: { version: result.version, status: result.status },
+      }));
+      if (!matchesFilter({ ...entry, status: result.status }, filter)) {
+        say(done(headingOf(entry)));
       }
+      // The duplicate flags may have changed on other cards (#593); read them again.
+      router.refresh();
       return result;
     };
 
@@ -117,34 +176,31 @@ export function AiImportReview({
     const result = await postJson<{ ok: true; version: number; status: ReviewStatus }>(
       "/api/ai-import/retype",
       { batchId, entryId: entry.id, version: entry.version, type },
-    );
-    if (result.ok) router.refresh();
-    return result.ok ? { ok: true } : result;
-  };
-
-  const runImport = async () => {
-    const importBatch = actions.importBatch;
-    if (!importBatch || importInFlight.current) return;
-    importInFlight.current = true;
-    setImporting(true);
-    setImportError(null);
-    try {
-      const result = await importBatch({ batchId });
-      if (result.ok) {
-        setImported(importedSentence(result.questions, result.caseStudies, quizName));
-        router.refresh();
-      } else {
-        setImportError(result.message);
-      }
-    } catch {
-      setImportError(UNEXPECTED);
-    } finally {
-      importInFlight.current = false;
-      setImporting(false);
+    ).catch(() => FAILED);
+    if (!result.ok) return result;
+    if (!matchesFilter({ ...entry, status: result.status }, filter)) {
+      say(`${headingOf(entry)} was read again as ${ITEM_TYPE_LABELS[type]}.`);
     }
+    router.refresh();
+    return { ok: true };
   };
 
-  const blocked = summary.blockers.length > 0;
+  const split = async (entry: ReviewEntryView): Promise<{ ok: true } | AiImportFailure> => {
+    if (!actions.split) return FAILED;
+    const result = await actions.split({ batchId, entryId: entry.id, version: entry.version });
+    if (!result.ok && result.code === "split_partial") {
+      // The case study is split, but some of its questions are still under Dropped: the card is
+      // gone either way, so the line under the filters says what to do.
+      say(result.message);
+      router.refresh();
+      return { ok: true };
+    }
+    if (!result.ok) return result;
+    say(`${headingOf(entry)} is now ${result.questions} separate questions.`);
+    router.refresh();
+    return { ok: true };
+  };
+
   if (imported) {
     return (
       <section aria-labelledby={`${id}-done`} className="sm:max-w-2xl">
@@ -156,76 +212,51 @@ export function AiImportReview({
             {imported}
           </p>
           <TextLink href={`/author/banks/${bankId}`}>Open {quizName}</TextLink>
+          <TextLink href={`/author/banks/${bankId}?status=draft`}>
+            Show its draft questions
+          </TextLink>
         </Card>
       </section>
     );
   }
   return (
     <div className="flex flex-col gap-8">
-      <section aria-labelledby={`${id}-import`} className="sm:max-w-2xl">
-        <Card className="flex flex-col gap-3">
-          <h2 id={`${id}-import`} className="font-read text-2xl text-ink-1">
-            Review the questions
-          </h2>
-          <p className="text-sm text-ink-2">Nothing has been added to {quizName} yet.</p>
-          <div className="flex flex-wrap items-center gap-3">
-            {/* aria-disabled while importing, not disabled: a disabled button drops focus. */}
-            <Button
-              variant="primary"
-              disabled={blocked || !actions.importBatch}
-              aria-disabled={importing || undefined}
-              aria-describedby={`${id}-why`}
-              onClick={runImport}
-              data-testid="import-button"
-            >
-              {importing ? "Importing…" : summary.label}
-            </Button>
-            {/* The way back to the quiz is the breadcrumb above, which names it (#563). */}
-          </div>
-          <div id={`${id}-why`} className="text-sm text-ink-1">
-            {blocked ? (
-              <ul className="flex list-disc flex-col gap-1 pl-5">
-                {summary.blockers.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-            ) : actions.importBatch ? null : (
-              <p className="text-ink-2">
-                Importing is not available yet. Your review is kept until then.
-              </p>
-            )}
-            {/* Always rendered: a region that appears with its text already in it is often not read. */}
-            <div aria-live="polite">
-              {importError ? <FieldError>{importError}</FieldError> : null}
-            </div>
-          </div>
-          {actions.discard ? (
-            <AiImportDiscard batchId={batchId} bankId={bankId} discard={actions.discard} />
-          ) : null}
-        </Card>
-      </section>
+      <AiImportImportPanel
+        bankId={bankId}
+        quizName={quizName}
+        batchId={batchId}
+        entries={entries}
+        notes={notes}
+        importBatch={actions.importBatch}
+        discard={actions.discard}
+        dropAll={actions.dropAll}
+        onImported={(outcome) => {
+          setImported(importedSentence(outcome.questions, outcome.caseStudies, quizName));
+          router.refresh();
+        }}
+        onDropFailed={(outcome) => {
+          // Part of it may have gone through: show what did, and read the batch again.
+          setOverrides((now) => ({ ...now, ...droppedNow(outcome?.dropped, outcome?.changed) }));
+          router.refresh();
+        }}
+        onDroppedAll={({ dropped, left, changed }) => {
+          setOverrides((now) => ({ ...now, ...droppedNow(dropped, changed) }));
+          const kept =
+            left > 0
+              ? ` ${left} changed in another tab and ${left === 1 ? "was" : "were"} left.`
+              : "";
+          say(`Dropped ${dropped.length}.${kept}`);
+          router.refresh();
+        }}
+      />
 
-      <div role="group" aria-label="Show" className="flex flex-wrap gap-2">
-        {REVIEW_FILTERS.map((option) => {
-          const active = filter === option.value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              aria-pressed={active}
-              onClick={() => setFilter(option.value)}
-              // At rest, a secondary button's 3:1 edge (WCAG 1.4.11); pressed, the selected fill.
-              className={`tap-target rounded-md border px-3 text-sm font-semibold ${PRESS_CLASSES} ${
-                active
-                  ? "border-accent bg-accent-soft text-ink-1"
-                  : "border-field-border bg-surface-1 text-ink-1 hover:bg-surface-2"
-              }`}
-            >
-              {option.label} <span className="text-ink-2">({counts[option.value]})</span>
-            </button>
-          );
-        })}
-      </div>
+      <AiImportReviewFilters
+        filter={filter}
+        counts={counts}
+        onChoose={chooseFilter}
+        notice={gone?.text ?? null}
+        noticeRef={goneRef}
+      />
 
       {groups.length === 0 ? (
         <p className="text-ink-2">No questions match this filter.</p>
@@ -238,9 +269,18 @@ export function AiImportReview({
                 key={entry.id}
                 entry={entry}
                 heading={headingOf(entry)}
-                editHref={`/author/banks/${bankId}/ai-import/${batchId}/${entry.id}`}
-                onDrop={change(actions.drop)}
-                onRestore={change(actions.restore)}
+                fileName={group.name}
+                editHref={editHref(base, entry.id, filter)}
+                stepHref={(step) => editHref(base, entry.id, filter, step)}
+                onSplit={actions.split ? split : undefined}
+                onDrop={change(
+                  actions.drop,
+                  (heading) => `Dropped. ${heading} will not be imported.`,
+                )}
+                onRestore={change(
+                  actions.restore,
+                  (heading) => `Restored. ${heading} is back in the import.`,
+                )}
                 onRetype={retype}
               />
             ))}

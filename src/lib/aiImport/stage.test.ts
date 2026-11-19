@@ -2,11 +2,18 @@ import { describe, expect, it } from "vitest";
 import type { MergedQuestion } from "./merge";
 import {
   MAX_REASONS,
+  NOT_BUILT,
+  caseIssueReasons,
   convertDraft,
+  fixReason,
   formatReason,
   needsRepair,
   readReason,
+  caseSourceOf,
+  sourceOf,
+  stageCaseStudy,
   stageQuestion,
+  stepPrefix,
   type StageInput,
 } from "./stage";
 
@@ -105,7 +112,10 @@ describe("stageQuestion", () => {
       "cut_off",
       "low_confidence",
     ]);
-    expect(entry.reasons[3].message).toContain("0.55");
+    // #593: no score, which meant nothing to a teacher.
+    expect(entry.reasons[3].message).toBe(
+      "The AI was not sure of this question's type. Change it if it is wrong.",
+    );
   });
 
   it("believes a key printed elsewhere, and asks for a check when it came from a PDF page", () => {
@@ -224,7 +234,7 @@ describe("stageQuestion", () => {
       }),
     );
     expect(entry.reasons).toEqual([
-      { code: "not_ngn", message: "This question has no NGN item type." },
+      { code: "not_ngn", message: "This is not a question type LeaRN can import." },
     ]);
   });
 
@@ -244,5 +254,138 @@ describe("formatReason and readReason", () => {
     expect(readReason("no colon")).toBeNull();
     expect(readReason("other: x")).toBeNull();
     expect(formatReason({ code: "warning", message: "x".repeat(600) })).toHaveLength(500);
+  });
+});
+
+describe("the source shown beside a question (#593)", () => {
+  it("is the question's whole part of a text document, options and marks included", () => {
+    const entry = stageQuestion(input(choice));
+    expect(entry.sourceExcerpt).toBe("Which action first?\n\nA. Assess *\nB. Document");
+    expect(entry.opening).toBe("Which action first?");
+  });
+
+  it("is the opening words for a PDF, and for a question that was not found", () => {
+    const pdf = stageQuestion(input(choice, { source: "pdf", region: null }));
+    expect(pdf.sourceExcerpt).toBe("Which action first?");
+    expect(sourceOf("   ", "Opening")).toBe("Opening");
+  });
+
+  it("is cut to what the column holds, and says it was cut", () => {
+    const long = sourceOf("x".repeat(30_000), "Opening");
+    expect(long.length).toBeLessThanOrEqual(20_000);
+    expect(long.endsWith("\n[…]")).toBe(true);
+    expect(sourceOf("x".repeat(20_000), "Opening")).toHaveLength(20_000);
+  });
+});
+
+describe("reasons in plain words (#593)", () => {
+  it("names a case study's step from 1, and no other part of a draft's path", () => {
+    expect(stepPrefix(["steps", 2, "options", 1])).toBe("Step 3: ");
+    expect(stepPrefix(["patient", "age"])).toBe("");
+    expect(stepPrefix()).toBe("");
+    expect(fixReason({ path: ["steps", 0], message: "The sentence has no blanks." })).toEqual({
+      code: "needs_fix",
+      message: "Step 1: The sentence has no blanks.",
+    });
+    expect(fixReason({ path: ["answer"], message: "The key names no option." }).message).toBe(
+      "The key names no option.",
+    );
+  });
+
+  it("never shows a schema's own message for a question that could not be built", () => {
+    const entry = stageQuestion(input({ ...choice, options: [{ text: "Only *" }] }));
+    expect(entry.status).toBe("needs_fix");
+    expect(entry.reasons).toEqual([NOT_BUILT]);
+    expect(entry.reasons[0].message).not.toMatch(/expected|invalid|content\./i);
+  });
+
+  it("says which step or the patient record a case study's schema refused, each once", () => {
+    expect(
+      caseIssueReasons([
+        { path: ["items", 2, "answerKey"] },
+        { path: ["items", 2, "content", "options"] },
+        { path: ["ehr", "patientHeader", "age"] },
+        { path: ["title"] },
+      ]).map((reason) => reason.message),
+    ).toEqual([
+      "Step 3: This step is not complete yet.",
+      "The patient record is not complete yet.",
+      "The case study is not complete yet.",
+    ]);
+  });
+
+  it("says a case study's patient record could not be read, with no draft path", () => {
+    const unmarked = {
+      ...choice,
+      options: choice.options.map(({ text }) => ({ text: text.replace(" *", "") })),
+    };
+    const steps = Array.from({ length: 6 }, (_, index) => {
+      const draft = index === 2 ? unmarked : choice;
+      return {
+        question: question({ position: index, excerpt: `Step question ${index + 1}?` }),
+        extracted: { draft, sourceErrors: [] },
+        converted: convertDraft(draft),
+        region: "Which action first?\nA. Assess *\n",
+      };
+    });
+    const [entry] = stageCaseStudy({ title: "A case", steps, charts: undefined, source: "text" });
+    expect(entry.kind).toBe("case_study");
+    const reasons = entry.reasons.map((reason) => reason.message);
+    // The patient record could not be read here, so the case study needs a fix; no reason names
+    // a draft path such as "steps.2" or says "chart".
+    expect(reasons.join("\n")).not.toMatch(/steps\.\d|chart/i);
+    expect(reasons[0]).toBe(
+      "The patient record could not be read, so the case study has none yet.",
+    );
+  });
+});
+
+describe("a case study's source (#593)", () => {
+  const step = (n: number, body = "") => `Step ${n} stem?\n${body}A. One\nB. Two *\n\n`;
+
+  it("is the steps' parts one after another when they fit", () => {
+    const regions = [1, 2, 3, 4, 5, 6].map((n) => step(n));
+    expect(caseSourceOf(regions, "Opening")).toBe(regions.join("").trim());
+  });
+
+  it("names a step whose part of the document was not found", () => {
+    const source = caseSourceOf([step(1), null, step(3), "  ", step(5), step(6)], "Opening");
+    expect(source).toContain("[Step 2: this step's part of the document was not found.]");
+    expect(source).toContain("[Step 4: this step's part of the document was not found.]");
+    expect(source.indexOf("Step 1 stem")).toBeLessThan(source.indexOf("[Step 2:"));
+    expect(source.indexOf("[Step 2:")).toBeLessThan(source.indexOf("Step 3 stem"));
+  });
+
+  it("is the opening when no step's part was found", () => {
+    expect(caseSourceOf([null, null, "", null, null, null], "Opening words")).toBe("Opening words");
+  });
+
+  it("shares the room, so every step keeps its opening and its key lines", () => {
+    // Step 1 alone would fill the column; cut as one string, steps 5 and 6 were lost whole.
+    const regions = [step(1, "long ".repeat(5000)), ...[2, 3, 4, 5].map((n) => step(n))];
+    const source = caseSourceOf([...regions, step(6, "long ".repeat(3000))], "Opening");
+    expect(source.length).toBeLessThanOrEqual(20_000);
+    for (const n of [1, 2, 3, 4, 5, 6]) expect(source).toContain(`Step ${n} stem?`);
+    // Each step's marked option is still there, the long steps' included.
+    expect(source.match(/B\. Two \*/g)).toHaveLength(6);
+    expect(source).toContain("[…]");
+  });
+
+  it("never cuts a character in half, in a case study or a single question", () => {
+    const faces = "😀".repeat(15_000); // 30,000 units, every cut lands inside a pair somewhere
+    const one = sourceOf(`x${faces}`, "Opening");
+    const six = caseSourceOf([`a${faces}`, `b${faces}`, "c", "d", "e", `f${faces}`], "Opening");
+    for (const text of [one, six]) {
+      expect(text.length).toBeLessThanOrEqual(20_000);
+      expect(() => encodeURIComponent(text)).not.toThrow();
+    }
+    // The control: the plain slice this replaced does leave half a character.
+    expect(() => encodeURIComponent(`x${faces}`.slice(0, 19_996))).toThrow();
+  });
+
+  it("cuts a reason on a whole character too", () => {
+    const stored = formatReason({ code: "note", message: `${"n".repeat(493)}😀 and more` });
+    expect(stored.length).toBeLessThanOrEqual(500);
+    expect(() => encodeURIComponent(stored)).not.toThrow();
   });
 });

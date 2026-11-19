@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { saveEntryFix } from "@/lib/aiImport/review/fix";
+import { takeReviewAction } from "@/lib/aiImport/review/limit";
 import { requireWriter } from "@/lib/authoring/writer";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -12,7 +13,11 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 export async function saveAiImportEntryFix(input: unknown) {
   const session = await requireWriter("/author");
   const result = await saveEntryFix(
-    { author: async () => ({ status: "ok", ...session }), service: createSupabaseServiceClient },
+    {
+      author: async () => ({ status: "ok", ...session }),
+      service: createSupabaseServiceClient,
+      allow: (userId) => takeReviewAction(userId),
+    },
     input,
   );
   if (result.ok) revalidatePath("/author/banks/[bankId]/ai-import/[batchId]", "page");

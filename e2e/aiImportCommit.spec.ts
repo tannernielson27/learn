@@ -91,7 +91,12 @@ test("a teacher imports a reviewed batch into the quiz, and its files are delete
   await expect(importButton).toHaveText("Import 1 question");
   await expect(importButton).toBeEnabled();
   await expectNoAxeViolations(page);
+  // #593: Import asks first, saying what goes into which quiz.
   await importButton.click();
+  const confirm = page.getByRole("dialog", { name: `Import into ${quizName}?` });
+  await expect(confirm).toContainText(`1 question will be added to ${quizName} as a draft.`);
+  await expectNoAxeViolations(page);
+  await confirm.getByRole("button", { name: "Import", exact: true }).click();
   await expect(page.getByText(`1 question was added to ${quizName} as a draft.`)).toBeVisible({
     timeout: 30_000,
   });

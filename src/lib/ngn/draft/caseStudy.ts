@@ -100,7 +100,7 @@ export function patientHeaderOf(patient: PatientDraft): {
   const text = (value: string | undefined) => (value === undefined ? "" : normalizeLine(value));
   const age = /\d{1,3}/.exec(text(patient.age));
   if (!age || Number(age[0]) > 120) {
-    reasons.push(needsFix("The source gives no age the chart can use.", ["patient", "age"]));
+    reasons.push(needsFix("The source gives no age for the patient record.", ["patient", "age"]));
   }
   const sexText = text(patient.sex);
   const sex =
@@ -124,12 +124,18 @@ export function patientHeaderOf(patient: PatientDraft): {
   return { header, reasons };
 }
 
-const countReason = (what: string, count: number, path: string): DraftReason[] =>
+/** What the source has `count` of, in the interface's words (docs/glossary.md), by draft field. */
+const COUNTED = {
+  charts: (count: number) => `The source shows the patient record at ${count} steps`,
+  steps: (count: number) => `The source has ${count} steps`,
+} as const;
+
+const countReason = (count: number, path: keyof typeof COUNTED): DraftReason[] =>
   count === CASE_STUDY_STEP_COUNT
     ? []
     : [
         needsFix(
-          `The source has ${count} ${what}; a case study has ${CASE_STUDY_STEP_COUNT}.${count > CASE_STUDY_STEP_COUNT ? " Those past the sixth were left out." : ""}`,
+          `${COUNTED[path](count)}; a case study has ${CASE_STUDY_STEP_COUNT}.${count > CASE_STUDY_STEP_COUNT ? " Those past the sixth were left out." : ""}`,
           [path],
         ),
       ];
@@ -159,8 +165,8 @@ export function fromCaseStudyDraft(
       items: steps.map(({ item }) => item),
     },
     reasons: [
-      ...countReason("charts", draft.charts.length, "charts"),
-      ...countReason("steps", draft.steps.length, "steps"),
+      ...countReason(draft.charts.length, "charts"),
+      ...countReason(draft.steps.length, "steps"),
       ...patient.reasons,
       ...chart.reasons,
       ...stepReasons,

@@ -30,6 +30,7 @@ import { takeExtractCall, type ParseAllowance } from "./parseLimit";
 import { POSITIONS_PER_FILE } from "./places";
 import { loadFileSegments, type FileSegmentsResult } from "./segmentStore";
 import { formatReason, type StagedEntry } from "./stage";
+import { cutEnd } from "./textCut";
 
 /**
  * One extract unit (#343): the request #345's browser makes once every chunk of a file has its
@@ -230,10 +231,11 @@ export function rowOf(
     type: entry.type,
     status: entry.status,
     reasons: entry.reasons.map(formatReason),
-    source_excerpt: entry.sourceExcerpt.slice(0, 20_000),
+    // Cut on a whole character: half of one is refused by the database (`textCut.ts`).
+    source_excerpt: cutEnd(entry.sourceExcerpt, 20_000),
     draft,
     item: (entry.item as Json | null) ?? null,
-    group_key: entry.group ? entry.group.title.slice(0, 80) || null : null,
+    group_key: entry.group ? cutEnd(entry.group.title, 80) || null : null,
     step: entry.group?.step ?? null,
   };
 }

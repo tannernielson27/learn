@@ -16,7 +16,10 @@ describe("AiImportEntryPreview (#346)", () => {
     expect(screen.getByText("Step 2 of 6: Analyze Cues")).toBeTruthy();
     await userEvent.click(screen.getByText("Step 1 of 6: Recognize Cues"));
     await renderersLoaded();
-    expect(within(steps[0]!).getByRole("complementary", { name: "Rationale" })).toBeTruthy();
+    // #593: each rationale on the page is a landmark with a name of its own.
+    expect(
+      within(steps[0]!).getByRole("complementary", { name: "Rationale, Case study, step 1" }),
+    ).toBeTruthy();
   });
 
   it("says a question that could not be built cannot be shown", () => {

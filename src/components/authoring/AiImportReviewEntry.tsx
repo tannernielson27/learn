@@ -15,11 +15,21 @@ import {
 import type { AiImportFailure } from "@/lib/authoring/aiImportUpload";
 import { ITEM_TYPE_LABELS } from "@/lib/ngn/labels";
 import type { ItemType } from "@/lib/ngn/schemas";
+import { AiImportCaseStudyActions } from "./AiImportCaseStudyActions";
+import { UNEXPECTED } from "./AiImportDiscard";
 import { AiImportEntryPreview } from "./AiImportEntryPreview";
+import { AiImportSource } from "./AiImportSource";
 import { FieldError } from "./FieldError";
 
 export type EntryChange = Promise<
-  { ok: true; version: number; status: ReviewStatus } | AiImportFailure
+  | {
+      ok: true;
+      version: number;
+      status: ReviewStatus;
+      /** Other entries the change moved on a version (their duplicate flag changed). */
+      changed?: { id: string; version: number }[];
+    }
+  | AiImportFailure
 >;
 
 export interface AiImportReviewEntryProps {
@@ -28,6 +38,11 @@ export interface AiImportReviewEntryProps {
   heading: string;
   /** The entry's edit page (#347); offered for a single question with a type, not dropped. */
   editHref?: string;
+  /** #593: a case study step's edit page, and the split. Without both, a case study has neither. */
+  stepHref?: (step: number) => string;
+  onSplit?: (entry: ReviewEntryView) => Promise<{ ok: true } | AiImportFailure>;
+  /** The file the entry came from, named beside a PDF's pages. */
+  fileName?: string;
   onDrop: (entry: ReviewEntryView) => EntryChange;
   onRestore: (entry: ReviewEntryView) => EntryChange;
   /** Reads the question again as `type`; resolves once the page has the new reading. */
@@ -54,6 +69,9 @@ export function AiImportReviewEntry({
   entry,
   heading,
   editHref,
+  stepHref,
+  onSplit,
+  fileName,
   onDrop,
   onRestore,
   onRetype,
@@ -65,7 +83,7 @@ export function AiImportReviewEntry({
   const choices = retypeChoices(entry);
   const [type, setType] = useState<ItemType | "">("");
   const dropped = entry.status === "dropped";
-  // A case study has its own builder, and a question with no NGN type has no editor.
+  // A case study is finished step by step below; a question with no NGN type has no editor.
   const editable = editHref && entry.kind === "item" && entry.type !== null && !dropped;
 
   async function run(
@@ -79,7 +97,14 @@ export function AiImportReviewEntry({
         ? { kind: "status", text: "Reading the question again. This can take a minute." }
         : null,
     );
-    const result = await work();
+    // #593: a request that fails outright rejects. Without this the card stayed disabled until
+    // the page was reloaded, with nothing said.
+    let result: { ok: boolean } | AiImportFailure;
+    try {
+      result = await work();
+    } catch {
+      result = { ok: false, code: "unavailable", message: UNEXPECTED };
+    }
     setPending(null);
     if (result.ok && kind === "retype") setType("");
     setNote(
@@ -98,8 +123,10 @@ export function AiImportReviewEntry({
 
   return (
     <article
+      // The card's own address: Back from its editor returns here (`reviewHref`).
+      id={`entry-${entry.id}`}
       aria-labelledby={`${id}-heading`}
-      className={`flex flex-col gap-4 border-l-4 bg-surface-1 py-4 pr-3 pl-4 ${TONE[entry.status]}`}
+      className={`flex scroll-mt-4 flex-col gap-4 border-l-4 bg-surface-1 py-4 pr-3 pl-4 ${TONE[entry.status]}`}
     >
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h3 id={`${id}-heading`} className="font-read text-xl break-words text-ink-1">
@@ -141,9 +168,13 @@ export function AiImportReviewEntry({
             <section id={`${id}-source`} aria-label={`${heading}, source`} className="min-w-0">
               <Card padding="sm">
                 <p className="eyebrow mb-2">From the document</p>
-                <p className="font-read text-base break-words whitespace-pre-wrap text-ink-1">
-                  {entry.sourceExcerpt || "The document's text for this question was not kept."}
-                </p>
+                <AiImportSource
+                  text={entry.sourceExcerpt}
+                  pages={entry.sourcePages}
+                  fileName={fileName}
+                  cut={entry.sourceCut}
+                  moreHref={editable ? editHref : undefined}
+                />
               </Card>
             </section>
           ) : null}
@@ -192,6 +223,16 @@ export function AiImportReviewEntry({
           </Button>
         )}
       </div>
+
+      {entry.kind === "case_study" && !dropped && stepHref && onSplit ? (
+        <AiImportCaseStudyActions
+          entry={entry}
+          heading={heading}
+          stepHref={stepHref}
+          onSplit={onSplit}
+          disabled={pending !== null}
+        />
+      ) : null}
 
       {choices.length > 0 && !dropped ? (
         <form

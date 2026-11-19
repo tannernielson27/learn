@@ -124,6 +124,24 @@ function deps(
 }
 
 describe("retypeEntry", () => {
+  // #593 review: a new reading may have a new stem, so the batch's duplicate flags follow it.
+  it("works the duplicate flags out again, and answers the version that leaves the entry at", async () => {
+    const refreshDuplicates = vi.fn(async () => new Map([["entry-1", 9]]));
+    const { wired, writes } = deps({ refreshDuplicates });
+    const result = await retypeEntry(wired, REQUEST);
+    expect(writes).toHaveLength(1);
+    expect(refreshDuplicates).toHaveBeenCalledWith("org-1", "batch-1");
+    expect(result).toMatchObject({ ok: true, version: 9 });
+    // Nothing is refreshed for a change that was refused.
+    const refused = vi.fn(async () => new Map<string, number>());
+    const changed = deps({
+      refreshDuplicates: refused,
+      writeEntry: vi.fn(async () => "changed" as const),
+    });
+    expect(await retypeEntry(changed.wired, REQUEST)).toMatchObject({ code: "entry_changed" });
+    expect(refused).not.toHaveBeenCalled();
+  });
+
   it("reads the one question again as the chosen type, under a reservation, at the version shown", async () => {
     const { wired, create, usage, writes } = deps();
     const result = await retypeEntry(wired, REQUEST);
@@ -147,7 +165,7 @@ describe("retypeEntry", () => {
     expect(writes[0]!.version).toBe(2);
     expect(writes[0]!.patch.type).toBe("multiple_response");
     // Read as the new type, the four options are too few for it: a fix the teacher makes (#347).
-    expect(writes[0]!.patch.reasons[0]).toMatch(/^needs_fix: content.options/);
+    expect(writes[0]!.patch.reasons[0]).toMatch(/^needs_fix: Part of this question could not be/);
     // The batch's duplicate flag is kept; the old reading's reasons are not.
     expect(writes[0]!.patch.reasons).toContain("duplicate: The same as question 4.");
     expect(writes[0]!.patch.reasons).not.toContain("check_key: Check it.");

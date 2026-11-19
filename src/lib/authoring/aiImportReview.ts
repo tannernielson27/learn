@@ -29,7 +29,15 @@ export interface ReviewEntryView {
   type: ItemType | null;
   status: ReviewStatus;
   reasons: ReviewReason[];
+  /**
+   * The question's whole part of a text document (#593), or its opening words for a PDF and for
+   * a batch read before that.
+   */
   sourceExcerpt: string;
+  /** The list was sent only the start of a long source; the entry's edit page has all of it. */
+  sourceCut?: boolean;
+  /** For a PDF: the pages of the file it was read from. Null for a text source. */
+  sourcePages?: { from: number; to: number } | null;
   /** The learn.v1 item or case study, with its key (a teacher of the workspace only); or null. */
   item: unknown;
   group: { title: string; step: number | null } | null;
@@ -72,6 +80,39 @@ const hasReason = (reasons: readonly ReviewReason[], codes: readonly string[]) =
 /** Flagged by `finishExtraction` as the same question as another; the teacher drops one. */
 export const isDuplicate = (entry: Pick<ReviewEntryView, "reasons">): boolean =>
   hasReason(entry.reasons, ["duplicate"]);
+
+/** The filter named in the address (`?show=`), or "all" for anything that is not one (#593). */
+export function parseReviewFilter(value: unknown): ReviewFilter {
+  const found = REVIEW_FILTERS.find((option) => option.value === value);
+  return found ? found.value : "all";
+}
+
+/**
+ * The review screen's address with its filter and, when given, the card to return to. Kept in
+ * the address so Back from a question's editor lands on the same card under the same filter.
+ */
+export function reviewHref(base: string, filter: ReviewFilter, entryId?: string): string {
+  const query = filter === "all" ? "" : `?show=${filter}`;
+  return `${base}${query}${entryId ? `#entry-${entryId}` : ""}`;
+}
+
+/** An entry's edit page, carrying the filter so its way back keeps it; `step` for a case study's. */
+export function editHref(
+  base: string,
+  entryId: string,
+  filter: ReviewFilter,
+  step?: number,
+): string {
+  const params = [
+    ...(step !== undefined ? [`step=${step}`] : []),
+    ...(filter !== "all" ? [`show=${filter}`] : []),
+  ];
+  return `${base}/${entryId}${params.length ? `?${params.join("&")}` : ""}`;
+}
+
+/** Needs an answer or a fix: what blocks the import until it is fixed or dropped. */
+export const needsAttention = (entry: Pick<ReviewEntryView, "status">): boolean =>
+  entry.status === "needs_answer" || entry.status === "needs_fix";
 
 export function matchesFilter(entry: ReviewEntryView, filter: ReviewFilter): boolean {
   if (filter === "all") return true;
@@ -156,6 +197,35 @@ export function importSummary(entries: readonly ReviewEntryView[]): ImportSummar
   );
   if (kept.length === 0) blockers.push("Nothing is left to import. Restore a question first.");
   return { questions, caseStudies, label: `Import ${parts.join(" and ")}`, blockers };
+}
+
+/**
+ * What the confirmation before an import says (#593): what goes into the quiz, and what was left
+ * out, each in one sentence.
+ */
+export function importConfirmation(
+  entries: readonly ReviewEntryView[],
+  quizName: string,
+): string[] {
+  const summary = importSummary(entries);
+  const parts = [
+    summary.questions > 0 || summary.caseStudies === 0
+      ? plural(summary.questions, "question", "questions")
+      : null,
+    summary.caseStudies > 0 ? plural(summary.caseStudies, "case study", "case studies") : null,
+  ].filter((part): part is string => part !== null);
+  const one = summary.questions + summary.caseStudies === 1;
+  const dropped = entries.filter((entry) => entry.status === "dropped").length;
+  const unusable = entries.filter((entry) => entry.status === "not_importable").length;
+  const left = [
+    dropped > 0 ? `${dropped} dropped` : null,
+    unusable > 0 ? `${unusable} not importable` : null,
+  ].filter((part): part is string => part !== null);
+  return [
+    `${parts.join(" and ")} will be added to ${quizName} as ${one ? "a draft" : "drafts"}.`,
+    ...(left.length > 0 ? [`Left out: ${left.join(" and ")}.`] : []),
+    "The uploaded files are then deleted.",
+  ];
 }
 
 /** After an import (#348): what went into the quiz, in one sentence. */

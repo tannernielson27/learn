@@ -181,13 +181,20 @@ describe("AiImportReview (#346)", () => {
     expect(screen.getByTestId("import-button").textContent).toBe("Import 4 questions");
   });
 
-  it("imports in one click once nothing blocks it, then says what went into the quiz", async () => {
+  it("imports once the teacher confirms, then says what went into the quiz", async () => {
     const act = actions();
     act.importBatch = vi.fn(async () => ({ ok: true as const, questions: 3, caseStudies: 1 }));
     const { user } = setup([ENTRIES[0]!], act);
     const button = screen.getByTestId("import-button") as HTMLButtonElement;
     expect(button.disabled).toBe(false);
     await user.click(button);
+    // #593: pressing Import changes nothing; the dialog says what will happen and asks.
+    expect(act.importBatch).not.toHaveBeenCalled();
+    const dialog = screen.getByRole("dialog", { name: "Import into Cardiac?" });
+    expect(dialog).toHaveAccessibleDescription(
+      "1 question will be added to Cardiac as a draft. The uploaded files are then deleted.",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Import" }));
     expect(act.importBatch).toHaveBeenCalledWith({ batchId: BATCH });
     expect(screen.getByRole("status").textContent).toBe(
       "3 questions and 1 case study were added to Cardiac as drafts.",
@@ -195,6 +202,11 @@ describe("AiImportReview (#346)", () => {
     expect(screen.getByRole("link", { name: "Open Cardiac" })).toHaveAttribute(
       "href",
       `/author/banks/${BANK}`,
+    );
+    // #593: the imported questions are drafts, and the quiz's own filter lists them.
+    expect(screen.getByRole("link", { name: "Show its draft questions" })).toHaveAttribute(
+      "href",
+      `/author/banks/${BANK}?status=draft`,
     );
     expect(refresh).toHaveBeenCalled();
   });
@@ -208,7 +220,9 @@ describe("AiImportReview (#346)", () => {
     }));
     const { user } = setup([ENTRIES[0]!], act);
     await user.click(screen.getByTestId("import-button"));
-    expect(await screen.findByText(/changed in another tab/)).toBeTruthy();
+    await user.click(screen.getByTestId("import-confirm"));
+    const dialog = screen.getByRole("dialog", { name: "Import into Cardiac?" });
+    expect(await within(dialog).findByText(/changed in another tab/)).toBeTruthy();
     expect(screen.getByTestId("import-button").textContent).toBe("Import 1 question");
     expect(refresh).not.toHaveBeenCalled();
   });
@@ -218,6 +232,7 @@ describe("AiImportReview (#346)", () => {
     act.importBatch = vi.fn();
     const { user } = setup(ENTRIES, act);
     await user.click(screen.getByTestId("import-button"));
+    expect(screen.queryByRole("dialog", { name: "Import into Cardiac?" })).toBeNull();
     expect(act.importBatch).not.toHaveBeenCalled();
   });
 

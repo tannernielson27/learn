@@ -2,14 +2,15 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import {
   discardAiImportBatch,
+  dropAiImportEntries,
   dropAiImportEntry,
   importAiImportBatch,
   restoreAiImportEntry,
+  splitAiImportCaseStudy,
 } from "@/app/author/aiImportActions";
-import { answerNotes, importedSentence } from "@/lib/authoring/aiImportReview";
+import { answerNotes, importedSentence, parseReviewFilter } from "@/lib/authoring/aiImportReview";
 import { AiImportReview } from "@/components/authoring/AiImportReview";
 import { Breadcrumbs } from "@/components/authoring/FolderBreadcrumbs";
-import { Notice } from "@/components/ui/Notice";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ReadingWidth } from "@/components/authoring/PageWidth";
 import { Card } from "@/components/ui/Card";
@@ -28,11 +29,16 @@ export const metadata: Metadata = { title: "Review AI import" };
  * with the teacher's own session (RLS) and filtered by the session's workspace and the quiz in
  * the address. Another workspace's batch, another quiz's, or AI import off: not found. A batch
  * still reading goes back to the upload page, which carries on with it.
+ *
+ * `?show=` names the status filter (#593), so a reload, or Back from a question's editor, opens
+ * the list as the teacher left it.
  */
 export default async function AiImportReviewPage({
   params,
+  searchParams,
 }: PageProps<"/author/banks/[bankId]/ai-import/[batchId]">) {
   const { bankId, batchId } = await params;
+  const { show } = await searchParams;
   if (!isUuid(bankId) || !isUuid(batchId)) notFound();
   const author = await requireAuthor(`/author/banks/${bankId}/ai-import/${batchId}`);
   if (!aiImportEnabled() || (await workspaceEnabled(author)) !== true) notFound();
@@ -78,6 +84,10 @@ export default async function AiImportReviewPage({
               The uploaded files have been deleted.
             </p>
             <TextLink href={`/author/banks/${bank.id}`}>Open {bank.name}</TextLink>
+            {/* #593: the imported questions are drafts, so the quiz's own filter finds them. */}
+            <TextLink href={`/author/banks/${bank.id}?status=draft`}>
+              Show its draft questions
+            </TextLink>
           </Card>
         </section>
       </ReadingWidth>
@@ -95,27 +105,22 @@ export default async function AiImportReviewPage({
         ]}
       />
       <PageHeader title="Review AI import" className="mb-6" />
-      {answerNotes(batch.answers).length > 0 ? (
-        // #592: part of the page as it loads, so it is not announced as a new message.
-        <Notice live={false} className="mb-6 sm:max-w-2xl">
-          <ul className="flex flex-col gap-1" data-testid="answer-notes">
-            {answerNotes(batch.answers).map((note) => (
-              <li key={note}>{note}</li>
-            ))}
-          </ul>
-        </Notice>
-      ) : null}
       <AiImportReview
         bankId={bank.id}
         quizName={bank.name}
         batchId={batch.id}
         fileNames={batch.fileNames}
         entries={batch.entries}
+        initialFilter={parseReviewFilter(show)}
+        // #592: answers that reached no question, said beside what blocks the import.
+        notes={answerNotes(batch.answers)}
         actions={{
           drop: dropAiImportEntry,
           restore: restoreAiImportEntry,
           importBatch: importAiImportBatch,
           discard: discardAiImportBatch,
+          dropAll: dropAiImportEntries,
+          split: splitAiImportCaseStudy,
         }}
       />
     </>

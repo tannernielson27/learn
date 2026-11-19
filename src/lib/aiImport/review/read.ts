@@ -7,6 +7,7 @@ import {
 import { ITEM_TYPES } from "@/lib/ngn/labels";
 import type { ItemType } from "@/lib/ngn/schemas";
 import { removedPlaces, withoutRemoved } from "../places";
+import { cutEnd } from "../textCut";
 import type { Client } from "../upload/access";
 
 /**
@@ -14,6 +15,9 @@ import type { Client } from "../upload/access";
  * staged entry with its item, key included. Read with the teacher's own session, so RLS ("authors
  * read AI import entries") decides as well as the filters on the session's workspace. Never the
  * model's draft, which the screen does not need.
+ *
+ * Each entry's source (#593) is its whole part of a text document. A PDF has no text here, so its
+ * entry keeps the opening words and says which pages it was read from, which its chunk gives.
  *
  * A file the teacher removed (#591) keeps its name in `fileNames`, so every other file keeps its
  * place; an entry at its place is left out. Such an entry can only be one a request staged after
@@ -69,12 +73,52 @@ export interface EntryRow {
   item: unknown;
   group_key: string | null;
   step: number | null;
+  /** The first chunk it was read from; null once that chunk is gone. */
+  chunk_id?: string | null;
 }
 
 export const ENTRY_COLUMNS =
-  "id, version, position, kind, type, status, reasons, source_excerpt, item, group_key, step";
+  "id, version, position, kind, type, status, reasons, source_excerpt, item, group_key, step, chunk_id";
 
-export function toEntryView(row: EntryRow): ReviewEntryView {
+/** The pages a PDF's chunk covers, by chunk id. A text file's chunk has none and is left out. */
+export type ChunkPages = ReadonlyMap<string, { from: number; to: number }>;
+
+export function chunkPages(
+  chunks: readonly { id: string; page_from: number | null; page_to: number | null }[],
+): ChunkPages {
+  return new Map(
+    chunks.flatMap((chunk) =>
+      chunk.page_from !== null && chunk.page_to !== null
+        ? [[chunk.id, { from: chunk.page_from, to: chunk.page_to }] as const]
+        : [],
+    ),
+  );
+}
+
+/**
+ * How much of a question's source the review list sends. A source can be 20,000 characters, and
+ * the list holds up to 150 questions and is sent again after every change: whole, that is about
+ * 3 MB each time. This much shows a question with its options and answer line; a longer one is
+ * cut here and shown whole on its edit page.
+ */
+export const LIST_SOURCE_LIMIT = 4_000;
+
+/** `text` in at most `limit` characters, ending on a whole line where one ends near the limit. */
+export function listSource(text: string, limit: number): { text: string; cut: boolean } {
+  if (text.length <= limit) return { text, cut: false };
+  const head = cutEnd(text, limit);
+  const line = head.lastIndexOf("\n");
+  return { text: (line >= limit * 0.75 ? head.slice(0, line) : head).trimEnd(), cut: true };
+}
+
+export function toEntryView(
+  row: EntryRow,
+  pages: ChunkPages = new Map(),
+  /** The most source to send; everything by default (the edit page, and callers that send none). */
+  sourceLimit = Infinity,
+): ReviewEntryView {
+  // A case study is six questions and has no edit page of its own, so it is sent whole.
+  const source = listSource(row.source_excerpt, row.kind === "case_study" ? Infinity : sourceLimit);
   return {
     id: row.id,
     version: row.version,
@@ -85,7 +129,9 @@ export function toEntryView(row: EntryRow): ReviewEntryView {
       ? (row.status as ReviewStatus)
       : "needs_fix",
     reasons: readStoredReasons(row.reasons ?? []),
-    sourceExcerpt: row.source_excerpt,
+    sourceExcerpt: source.text,
+    ...(source.cut ? { sourceCut: true } : {}),
+    sourcePages: (row.chunk_id ? pages.get(row.chunk_id) : undefined) ?? null,
     item: row.item ?? null,
     group: row.group_key ? { title: row.group_key, step: row.step } : null,
   };
@@ -98,7 +144,7 @@ export async function readReviewBatch(
   batchId: string,
   bankId: string,
 ): Promise<ReviewBatch | null | "unavailable"> {
-  const [batch, files, entries] = await Promise.all([
+  const [batch, files, entries, chunks] = await Promise.all([
     client
       .from("ai_import_batches")
       .select("id, status, bank_id, source")
@@ -119,20 +165,26 @@ export async function readReviewBatch(
       .eq("batch_id", batchId)
       .eq("org_id", orgId)
       .order("position"),
+    client
+      .from("ai_import_chunks")
+      .select("id, page_from, page_to")
+      .eq("batch_id", batchId)
+      .eq("org_id", orgId),
   ]);
-  const error = batch.error ?? files.error ?? entries.error;
+  const error = batch.error ?? files.error ?? entries.error ?? chunks.error;
   if (error) {
     logged("reading a batch for review", error);
     return "unavailable";
   }
   if (!batch.data) return null;
   const shown = withoutRemoved((entries.data ?? []) as EntryRow[], removedPlaces(files.data ?? []));
+  const pages = chunkPages(chunks.data ?? []);
   return {
     id: batch.data.id,
     status: batch.data.status as BatchStatus,
     bankId: batch.data.bank_id,
     fileNames: (files.data ?? []).map((file) => file.original_name),
-    entries: shown.map(toEntryView),
+    entries: shown.map((row) => toEntryView(row, pages, LIST_SOURCE_LIMIT)),
     answers: answersOf(batch.data.source),
   };
 }

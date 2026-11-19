@@ -12,6 +12,9 @@ import {
 } from "@/lib/authoring/aiImportReview";
 import type { AiImportFailure } from "@/lib/authoring/aiImportUpload";
 import { ITEM_TYPE_LABELS } from "@/lib/ngn/labels";
+import type { EhrRecord } from "@/lib/ngn/schemas";
+import { CJMM_STEP_LABELS, type CjmmStep } from "@/lib/ngn/types";
+import { AiImportSource } from "./AiImportSource";
 import type { SaveResult } from "./EditorShell";
 import { ItemEditorHostContext, type ItemEditorHost } from "./ItemEditorHost";
 import { ItemEditorSwitch, type ItemEditorLoaderProps } from "./ItemEditorSwitch";
@@ -23,6 +26,8 @@ export interface EntryFixInput {
   batchId: string;
   entryId: string;
   version: number;
+  /** A case study's step, from 1 (#593); absent for a single question. */
+  step?: number;
   values: unknown;
 }
 
@@ -38,7 +43,15 @@ export interface AiImportEntryEditorProps {
   status: ReviewStatus;
   reasons: ReviewReason[];
   sourceExcerpt: string;
+  /** For a PDF: the pages the question was read from, and the file's name. */
+  sourcePages?: { from: number; to: number } | null;
+  fileName?: string | null;
+  /** The review screen, at this question's card and under the filter the teacher came from. */
   reviewHref: string;
+  /** #593: the next question or step that needs attention; null when this is the last. */
+  nextHref?: string | null;
+  /** #593: set when the question is one step of a case study, with its patient record if whole. */
+  caseStep?: { step: number; record: EhrRecord | null };
   editor: ItemEditorLoaderProps;
   /** The Server Function the page hands in (`src/app/author/aiImportFixActions.ts`). */
   save: (input: EntryFixInput) => Promise<EntryFixResult>;
@@ -48,6 +61,13 @@ const SAVED: Partial<Record<ReviewStatus, string>> = {
   ready: "Saved. This question is ready to import.",
   needs_answer: "Saved. It still needs an answer.",
   needs_fix: "Saved. It still needs a fix.",
+};
+
+/** After a step is saved, the status is the whole case study's. */
+const SAVED_STEP: Partial<Record<ReviewStatus, string>> = {
+  ready: "Saved. The case study is ready to import.",
+  needs_answer: "Saved. Another step still needs its key.",
+  needs_fix: "Saved. The case study still needs a fix.",
 };
 
 /** Staged questions are imported as drafts (#348); nothing is published from here. */
@@ -60,6 +80,10 @@ const notPublished = async (): Promise<SaveResult> => ({
  * Fix a staged AI import question with its type's own editor (#347): the same form, problems and
  * preview as the question page, with one Save that writes back to the staged entry. A save names
  * the version it last saw, so another tab's change is refused rather than overwritten.
+ *
+ * Since #593 a second button saves and goes straight to the next question that needs attention,
+ * the way back keeps the review's filter and place, and a case study's step opens here too, with
+ * the case study's patient record beside it.
  */
 export function AiImportEntryEditor({
   batchId,
@@ -69,7 +93,11 @@ export function AiImportEntryEditor({
   status,
   reasons,
   sourceExcerpt,
+  sourcePages = null,
+  fileName = null,
   reviewHref,
+  nextHref = null,
+  caseStep,
   editor,
   save,
 }: AiImportEntryEditorProps) {
@@ -81,8 +109,18 @@ export function AiImportEntryEditor({
   const [dirty, setDirty] = useState(false);
   const [leaving, setLeaving] = useState<string | null>(null);
   const host = useMemo<ItemEditorHost>(
-    () => ({ inCaseStudy: false, saveOnly: true, onDirtyChange: setDirty }),
-    [],
+    () => ({
+      // A step has no record of its own: the case study's is shown beside it.
+      inCaseStudy: caseStep !== undefined,
+      record: caseStep?.record,
+      saveOnly: true,
+      onDirtyChange: setDirty,
+      saveAndGo: {
+        label: nextHref ? "Save and go to the next one" : "Save and go back to the review",
+        go: () => router.push(nextHref ?? reviewHref),
+      },
+    }),
+    [caseStep, nextHref, reviewHref, router],
   );
 
   const guardLeave = useCallback<LeaveGuard>(
@@ -100,12 +138,18 @@ export function AiImportEntryEditor({
   }, [leaving]);
 
   async function saveFix(values: unknown): Promise<SaveResult> {
-    const result = await save({ batchId, entryId, version: latest, values });
+    const result = await save({
+      batchId,
+      entryId,
+      version: latest,
+      ...(caseStep ? { step: caseStep.step } : {}),
+      values,
+    });
     if (!result.ok) return { ok: false, error: result.message };
     setSaved(result.version);
     // The status and what is left to check come from the server, worked out again.
     router.refresh();
-    return { ok: true, message: SAVED[result.status] ?? "Saved." };
+    return { ok: true, message: (caseStep ? SAVED_STEP : SAVED)[result.status] ?? "Saved." };
   }
 
   return (
@@ -141,9 +185,9 @@ export function AiImportEntryEditor({
           <summary className="tap-target cursor-pointer px-3 py-2 text-sm font-medium text-ink-1">
             Show the document&apos;s words
           </summary>
-          <p className="border-t border-line p-3 font-read text-base break-words whitespace-pre-wrap text-ink-1">
-            {sourceExcerpt || "The document's text for this question was not kept."}
-          </p>
+          <div className="border-t border-line p-3">
+            <AiImportSource text={sourceExcerpt} pages={sourcePages} fileName={fileName} />
+          </div>
         </details>
       </div>
       {leaving ? (
@@ -173,6 +217,13 @@ export function AiImportEntryEditor({
             </Button>
           </div>
         </div>
+      ) : null}
+      {caseStep ? (
+        // The step by its number and name (docs/glossary.md). The editor's own headings sit one
+        // level under it, as they do in the case study builder.
+        <h2 className="mb-4 font-read text-xl text-ink-1">
+          Step {caseStep.step} of 6: {CJMM_STEP_LABELS[caseStep.step as CjmmStep]}
+        </h2>
       ) : null}
       <ItemEditorHostContext.Provider value={host}>
         <ItemEditorSwitch editor={editor} onSaveDraft={saveFix} onPublish={notPublished} />
