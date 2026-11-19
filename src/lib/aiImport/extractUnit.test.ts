@@ -212,7 +212,8 @@ describe("extractUnit on a case study group", () => {
     });
     const result = await extractUnit(wired, { ...REQUEST, unit: 1 });
     expect(result).toMatchObject({ ok: true, units: 2, overLimit: 0 });
-    expect(create).toHaveBeenCalledTimes(2);
+    // The drafts, then the header and the first step's chart: two steps are no case study (#604).
+    expect(create).toHaveBeenCalledTimes(3);
     expect(inserted.map((row) => [row.kind, row.status, row.group_key, row.step])).toEqual([
       ["item", "needs_answer", "Patient 1", 1],
       ["item", "ready", "Patient 1", 2],
