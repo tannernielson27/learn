@@ -163,12 +163,12 @@ describe("runPipeline", () => {
     }
     // One segment call (one chunk), the extracts two at a time, one call per question with a
     // chart of its own, and per case study group its steps two at a time, its header, and one
-    // chart call per step (#604).
+    // chart call per step, or only the first step's when the group is not six (#604).
     const drafted = recording.questions.filter((q) => q.type !== NOT_IMPORTABLE);
     const charted = drafted.filter((q) => q.chart !== undefined).length;
     const groups = recording.caseStudies.map((entry) => {
       const steps = (entry.draft as CaseDraft).steps.length;
-      return Math.ceil(steps / 2) + 1 + steps;
+      return Math.ceil(steps / 2) + 1 + (steps === 6 ? steps : 1);
     });
     expect(calls).toHaveLength(
       1 + Math.ceil(drafted.length / 2) + charted + groups.reduce((a, b) => a + b, 0),
