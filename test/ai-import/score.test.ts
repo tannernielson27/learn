@@ -208,7 +208,10 @@ describe("scoreDocument", () => {
         "item" in question && question.label === "multiple_choice"
           ? {
               ...question,
-              item: { ...question.item, stem: { ...mcItem.stem, value: `${mcItem.stem.value} ${instruction}` } },
+              item: {
+                ...question.item,
+                stem: { ...mcItem.stem, value: `${mcItem.stem.value} ${instruction}` },
+              },
             }
           : question,
       ),
