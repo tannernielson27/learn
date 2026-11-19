@@ -4,8 +4,13 @@
  */
 import { scrubBreadcrumb, scrubEvent } from "./scrub";
 
-/** The issue's ceiling for tracing, on the server only. The free tier's span quota is the limit. */
-export const TRACES_SAMPLE_RATE = 0.1;
+/**
+ * Tracing is off. At 0.1, about one page load in five on Vercel waited ~20 s for its first byte,
+ * the proxy's plain 404 included; at 0 the same build had no stall in 60 loads (2026-11-19).
+ * Errors are reported either way. What in a sampled request waits is not known: find that before
+ * raising this again, and time page loads on a preview when you do.
+ */
+export const TRACES_SAMPLE_RATE = 0;
 
 /**
  * Integrations the browser never runs. Tracing is left off to keep the student's phone light, and
