@@ -4,15 +4,19 @@ import { sampleEhr } from "@/lib/ngn/fixtures";
 import { CaseStudyLayout } from "./CaseStudyLayout";
 
 describe("CaseStudyLayout (#184)", () => {
-  it("puts the patient record beside the room for a case-study session", () => {
+  it("puts the patient record beside the room for a case-study session", async () => {
     render(
       <CaseStudyLayout record={sampleEhr}>
         <p>Step 1 of 6</p>
       </CaseStudyLayout>,
     );
 
+    // The room is there at once; the panel is its own chunk, which a client-only render awaits.
+    expect(screen.getByText("Step 1 of 6")).toBeInTheDocument();
     // The two-pane record and the phone's chip are both rendered; CSS shows one of them.
-    expect(screen.getByRole("complementary", { name: "Patient record" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("complementary", { name: "Patient record" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Patient record" })).toBeInTheDocument();
     expect(screen.getAllByText(/Orthopedic unit/).length).toBeGreaterThan(0);
     expect(screen.getByText("Step 1 of 6")).toBeInTheDocument();
