@@ -85,14 +85,18 @@ describe("checkTarget", () => {
   });
 
   it("refuses production's project by its ref, even when production's health says otherwise", () => {
-    const verdict = checkTarget({
-      ...LOAD,
-      supabaseUrl: "https://vauokqoyvewtzubqajgh.supabase.co",
-      targetProject: "vauokqoyvewtzubqajgh",
-      productionProject: "zyxwvutsrqponmlkjihg",
-    });
-    expect(verdict).toMatchObject({ ok: false });
-    expect(verdict.ok ? "" : verdict.reason).toMatch(/production's Supabase project/);
+    // learn-prod since the split (#515), and the project production used before it, which still
+    // holds real people's data until it is scrubbed (docs/05 §7.3a step 10).
+    for (const ref of ["xptnbfrrqpzsdhuxilcr", "vauokqoyvewtzubqajgh"]) {
+      const verdict = checkTarget({
+        ...LOAD,
+        supabaseUrl: `https://${ref}.supabase.co`,
+        targetProject: ref,
+        productionProject: "zyxwvutsrqponmlkjihg",
+      });
+      expect(verdict).toMatchObject({ ok: false });
+      expect(verdict.ok ? "" : verdict.reason).toMatch(/production's Supabase project/);
+    }
   });
 
   it("refuses every address production answers on", () => {
