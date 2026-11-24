@@ -292,6 +292,154 @@ describe("mergeSegments", () => {
   });
 });
 
+describe("mergeSegments: a case study step that opens the next part", () => {
+  const DKA = "Unfolding Case Study: Diabetic Ketoacidosis";
+  const steps = (count: number, more: (step: number) => Partial<SegmentQuestion> = () => ({})) =>
+    Array.from({ length: count }, (_, i) =>
+      q(0, i, `Step ${i + 1} opening`, {
+        number: `Question ${i + 1} of 6`,
+        group: { title: DKA, step: i + 1 },
+        ...more(i + 1),
+      }),
+    );
+  const groups = (merged: ReturnType<typeof mergeSegments>) =>
+    merged.questions.map((x) => (x.group ? `${x.group.title}#${x.group.step}` : null));
+
+  // Prod, 2026-11-20: part 2 of corpus document 11 opened with "Question 6 of 6" and its segment
+  // read gave it no case study, so the case had five steps and its record was dropped.
+  it("joins an untitled question that opens the next part to the short case study before it", () => {
+    const merged = mergeSegments([
+      chunk(0, steps(5)),
+      chunk(1, [q(1, 0, "For each finding, indicate whether", { number: "Question 6 of 6" })]),
+    ]);
+    expect(groups(merged).at(-1)).toBe(`${DKA}#6`);
+  });
+
+  it("joins one with no number, and one whose number continues the steps' own numbering", () => {
+    const unnumbered = mergeSegments([chunk(0, steps(5)), chunk(1, [q(1, 0, "For each finding")])]);
+    expect(groups(unnumbered).at(-1)).toBe(`${DKA}#6`);
+    // Steps numbered with the quiz (13 to 17), no step numbers printed.
+    const quizNumbered = mergeSegments([
+      chunk(
+        0,
+        steps(5, (s) => ({ number: String(12 + s), group: { title: DKA, step: null } })),
+      ),
+      chunk(1, [q(1, 0, "For each finding", { number: "18." })]),
+    ]);
+    expect(groups(quizNumbered).at(-1)).toBe(`${DKA}#null`);
+  });
+
+  it("joins a run of them until the case study has six steps, and no further", () => {
+    const merged = mergeSegments([
+      chunk(0, steps(4)),
+      chunk(1, [q(1, 0, "Fifth"), q(1, 1, "Sixth"), q(1, 2, "A standalone question")]),
+    ]);
+    expect(groups(merged).slice(4)).toEqual([`${DKA}#5`, `${DKA}#6`, null]);
+  });
+
+  it("leaves it alone when the case study is whole, or the question sits in the same part", () => {
+    const whole = mergeSegments([chunk(0, steps(6)), chunk(1, [q(1, 0, "Standalone")])]);
+    expect(groups(whole).at(-1)).toBeNull();
+    const samePart = mergeSegments([chunk(0, [...steps(5), q(0, 5, "Standalone")])]);
+    expect(groups(samePart).at(-1)).toBeNull();
+  });
+
+  it("leaves it alone when its printed number is not the next step", () => {
+    const merged = mergeSegments([
+      chunk(0, steps(5)),
+      chunk(1, [q(1, 0, "Standalone", { number: "12" })]),
+    ]);
+    expect(groups(merged).at(-1)).toBeNull();
+  });
+
+  it("leaves it alone across a missing part, or after a part that ends with a standalone question", () => {
+    const gap = mergeSegments([chunk(0, steps(5)), chunk(2, [q(2, 0, "Standalone")])]);
+    expect(groups(gap).at(-1)).toBeNull();
+    const standaloneLast = mergeSegments([
+      chunk(0, [...steps(5), q(0, 5, "Standalone one")]),
+      chunk(1, [q(1, 0, "Standalone two")]),
+    ]);
+    expect(groups(standaloneLast).slice(5)).toEqual([null, null]);
+  });
+
+  it("leaves an unnumbered question alone when no step says the case study has six", () => {
+    const merged = mergeSegments([
+      chunk(
+        0,
+        steps(5, () => ({ number: null })),
+      ),
+      chunk(1, [q(1, 0, "A standalone question in a quiz that numbers nothing")]),
+    ]);
+    expect(groups(merged).at(-1)).toBeNull();
+  });
+
+  it("leaves alone a question with no NGN type, one the part opens partway through, and a step read again", () => {
+    const untyped = mergeSegments([
+      chunk(0, steps(5)),
+      chunk(1, [q(1, 0, "Discuss with a partner", { type: null })]),
+    ]);
+    expect(groups(untyped).at(-1)).toBeNull();
+    // Step 5 runs past its part: what opens the next part may be the rest of it.
+    const cut = mergeSegments([
+      chunk(
+        0,
+        steps(5, (s) => ({ cutOff: s === 5 })),
+      ),
+      chunk(1, [q(1, 0, "Which findings show", { number: "Question 6 of 6" })]),
+    ]);
+    expect(groups(cut).at(-1)).toBeNull();
+    const continued = mergeSegments([
+      chunk(0, steps(5)),
+      chunk(1, [q(1, 0, "and the rest of it", { continued: true })]),
+    ]);
+    expect(groups(continued).at(-1)).toBeNull();
+    // A shared PDF page: step 5 read again untitled, its opening past the dedup's eight words.
+    const reread = mergeSegments([chunk(0, steps(5)), chunk(1, [q(1, 0, "Step 5 opening")])]);
+    expect(groups(reread).at(-1)).toBeNull();
+  });
+
+  it("numbers the joined step after the case study's highest, whatever order the steps came in", () => {
+    const merged = mergeSegments([
+      chunk(
+        0,
+        steps(5, (s) => ({ group: { title: DKA, step: [1, 2, 3, 5, 4][s - 1] } })),
+      ),
+      chunk(1, [q(1, 0, "For each finding", { number: "Question 6 of 6" })]),
+    ]);
+    expect(groups(merged).at(-1)).toBe(`${DKA}#6`);
+  });
+
+  it("joins under the title as the case study printed it, clears the question's own chart, and lets its answer link", () => {
+    const merged = mergeSegments([
+      chunk(0, [
+        q(0, 0, "Ectopic step", {
+          number: "Question 1 of 6",
+          group: { title: "Ectopic", step: 1 },
+        }),
+        ...steps(5),
+      ]),
+      chunk(
+        1,
+        [
+          q(1, 0, "For each finding", {
+            number: "Question 6 of 6",
+            flags: { ...q(1, 0, "x").flags, ownChart: true },
+          }),
+        ],
+        [
+          a(1, "6", "Improved, Improved", {
+            caseStudy: "unfolding case study:  diabetic ketoacidosis",
+          }),
+        ],
+      ),
+    ]);
+    const joined = merged.questions.at(-1);
+    expect(joined?.group).toEqual({ title: DKA, step: 6 });
+    expect(joined?.flags.ownChart).toBe(false);
+    expect(joined?.answers.map((x) => x.text)).toEqual(["Improved, Improved"]);
+  });
+});
+
 describe("questionNumberKey", () => {
   it.each([
     ["4", "4"],

@@ -13,7 +13,7 @@ import { EXTRACT_MAX_TOKENS, EXTRACT_PER_CALL } from "./config";
 import { DOCX_MARKUP } from "./files/docx";
 import type { ChunkPayload } from "./files/prepare";
 import type { FileKind } from "./files/sniff";
-import type { MergedQuestion } from "./merge";
+import { caseStudyKey as groupKey, type MergedQuestion } from "./merge";
 import { documentBlock } from "./segment";
 
 /**
@@ -66,8 +66,6 @@ export interface CaseStudyGroup {
   title: string;
   positions: number[];
 }
-
-const groupKey = (title: string) => title.trim().toLowerCase().replace(/\s+/g, " ");
 
 export function caseStudyGroups(questions: readonly MergedQuestion[]): CaseStudyGroup[] {
   const groups = new Map<string, CaseStudyGroup>();
