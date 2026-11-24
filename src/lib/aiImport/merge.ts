@@ -1,3 +1,4 @@
+import { CASE_STUDY_STEP_COUNT } from "@/lib/ngn/schemas";
 import type { ChunkSegment, SegmentAnswer, SegmentQuestion } from "./segment";
 import { normalizePassage, openingKey } from "./sourceText";
 
@@ -16,6 +17,13 @@ import { normalizePassage, openingKey } from "./sourceText";
  *    when the answer names one), wherever in the file either is. An answer that matches no
  *    question, or more than one, is left unlinked, never guessed: `finish.ts` counts them for
  *    the review page.
+ * 4. **A case study step that opens the next part.** Each chunk is read on its own, so a chunk
+ *    that opens with a case study's last step can miss the title printed above it and report a
+ *    standalone question (corpus document 11 on prod, 2026-11-20: five steps, record dropped). An
+ *    untitled question that opens the next chunk joins the case study the previous chunk ended
+ *    with, while that case study is short of its six steps and the document says the question is
+ *    the next step: its printed number is, or, with none printed, the step before says "of 6".
+ *    Questions after it in its chunk join on the same terms, up to six.
  */
 
 export interface MergedQuestion extends SegmentQuestion {
@@ -192,12 +200,127 @@ function attachAnswers(
   };
 }
 
+/** One case study, however its title is spaced or capitalised: how its steps are grouped. */
+export const caseStudyKey = (title: string): string =>
+  title.trim().toLowerCase().replace(/\s+/g, " ");
+
+const numeric = (key: string | null): number | null =>
+  key !== null && /^\d+$/.test(key) ? Number(key) : null;
+
+/** "Question 5 of 6": a step that says the case study has six. */
+const SAYS_SIX = new RegExp(`\\bof\\s+${CASE_STUDY_STEP_COUNT}\\b`, "i");
+
+/**
+ * Whether the document says `question` is the step after `previous`. A printed number must be the
+ * next step ("Question 6 of 6" after step 5) or the next in the steps' own numbering ("18." after
+ * "17."). With no number printed, a step of the case study must say how many there are
+ * ("Question 5 of 6"): a quiz that numbers nothing gives no reason to take a standalone question
+ * for a step.
+ */
+function saysNextStep(previous: Working, question: Working, known: CaseSoFar): boolean {
+  const key = questionNumberKey(question.number);
+  if (key === null) return known.members.some((member) => SAYS_SIX.test(member.number ?? ""));
+  const before = numeric(questionNumberKey(previous.number));
+  return (
+    (known.lastStep !== null && key === String(known.lastStep + 1)) ||
+    (before !== null && key === String(before + 1))
+  );
+}
+
+interface CaseSoFar {
+  size: number;
+  /** The highest step number printed, if any was. */
+  lastStep: number | null;
+  members: Working[];
+}
+
+function casesOf(merged: readonly Working[]): Map<string, CaseSoFar> {
+  const cases = new Map<string, CaseSoFar>();
+  for (const question of merged) {
+    if (question.group === null) continue;
+    const key = caseStudyKey(question.group.title);
+    const known = cases.get(key) ?? { size: 0, lastStep: null, members: [] };
+    const step = question.group.step;
+    cases.set(key, {
+      size: known.size + 1,
+      lastStep: step === null ? known.lastStep : Math.max(step, known.lastStep ?? 0),
+      members: [...known.members, question],
+    });
+  }
+  return cases;
+}
+
+/**
+ * Whether `question` may be taken for a step of the case study `previous` belongs to, apart from
+ * where it sits. A part that opens partway through a question is the split-question rule's; a
+ * question with no NGN type is no step; a second read of a step already there (a shared PDF page
+ * whose openings differed past `sameOpening`'s words) is not a new one.
+ */
+function canJoin(previous: Working, question: Working, known: CaseSoFar): boolean {
+  return (
+    question.group === null &&
+    question.type !== null &&
+    !question.continued &&
+    !previous.cutOff &&
+    known.size < CASE_STUDY_STEP_COUNT &&
+    !known.members.some((member) => sameOpening(member, question)) &&
+    saysNextStep(previous, question, known)
+  );
+}
+
+/** Rule 4 of the file comment. */
+function joinOpeningSteps(merged: readonly Working[]): Working[] {
+  const cases = casesOf(merged);
+  const result: Working[] = [];
+  let joining: string | null = null;
+  for (const question of merged) {
+    const previous = result.at(-1);
+    const group = previous?.group ?? null;
+    const key = group === null ? null : caseStudyKey(group.title);
+    const known = key === null ? undefined : cases.get(key);
+    const last = previous?.chunks.at(-1);
+    const opensPart = last !== undefined && question.chunks[0] === last + 1;
+    const inRun = joining !== null && joining === key && question.chunks[0] === last;
+    if (
+      previous === undefined ||
+      group === null ||
+      key === null ||
+      known === undefined ||
+      !(opensPart || inRun) ||
+      !canJoin(previous, question, known)
+    ) {
+      joining = null;
+      result.push(question);
+      continue;
+    }
+    const step =
+      known.lastStep === null || known.lastStep >= CASE_STUDY_STEP_COUNT
+        ? null
+        : known.lastStep + 1;
+    joining = key;
+    // A case study step's chart is the case study's, never its own.
+    const joined: Working = {
+      ...question,
+      group: { title: group.title, step },
+      flags: { ...question.flags, ownChart: false },
+    };
+    cases.set(key, {
+      size: known.size + 1,
+      lastStep: step ?? known.lastStep,
+      members: [...known.members, joined],
+    });
+    result.push(joined);
+  }
+  return result;
+}
+
 export function mergeSegments(chunks: readonly ChunkSegment[]): MergedSegments {
   const ordered = [...chunks].sort((a, b) => a.position - b.position);
-  let merged: Working[] = [];
+  let folded: Working[] = [];
   ordered.forEach((chunk, i) => {
-    merged = foldChunk(merged, ordered[i - 1], chunk);
+    folded = foldChunk(folded, ordered[i - 1], chunk);
   });
+  const merged = joinOpeningSteps(folded);
   const positioned = merged.map((question, position) => ({ ...question, position }));
   const { questions, unlinked } = attachAnswers(
     positioned,
