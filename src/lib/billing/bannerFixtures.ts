@@ -74,6 +74,26 @@ const FIXTURES = {
     access: { hasAccess: false, canManage: false, state: { kind: "none", status: null } },
     hadGrant: true,
   },
+  "not-subscribed": {
+    label: "Never had a subscription, billing enforced",
+    access: { hasAccess: false, canManage: true, state: { kind: "none", status: null } },
+    hadGrant: false,
+  },
+  "not-subscribed-colleague": {
+    label: "Never had a subscription, billing enforced, a colleague's view",
+    access: { hasAccess: false, canManage: false, state: { kind: "none", status: null } },
+    hadGrant: false,
+  },
+  "subscription-ended": {
+    label: "Subscription has ended, billing enforced",
+    access: { hasAccess: false, canManage: true, state: { kind: "none", status: "canceled" } },
+    hadGrant: false,
+  },
+  "subscription-ended-colleague": {
+    label: "Subscription has ended, billing enforced, a colleague's view",
+    access: { hasAccess: false, canManage: false, state: { kind: "none", status: "canceled" } },
+    hadGrant: false,
+  },
 } as const satisfies Record<string, BannerFixture>;
 
 export type BannerFixtureName = keyof typeof FIXTURES;
@@ -90,6 +110,7 @@ export function bannerFixture(name: BannerFixtureName): BillingBanner {
   const options: BillingBannerOptions = {
     now: BANNER_FIXTURE_NOW,
     configured: true,
+    enforced: true,
     hadGrant: fixture.hadGrant,
   };
   const banner = billingBanner(fixture.access, options);

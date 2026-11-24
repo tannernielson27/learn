@@ -3,11 +3,12 @@
  * none. Pure: no React, no Next, no Supabase, no Stripe, and `now` is passed in so the windows are
  * the same in a test as on a server.
  *
- * Four things are said, and only these: a free trial ends within 3 days, a payment did not go
- * through, a subscription that will not renew ends within 7 days, and free access has ended with
- * nothing in its place. Everything else (free access, a subscription that renews, a trial with
- * time left, a deployment without Stripe) has no banner. Students never reach this: only the
- * author layout calls it.
+ * Six things are said, and only these: a free trial ends within 3 days, a payment did not go
+ * through, a subscription that will not renew ends within 7 days, free access has ended with
+ * nothing in its place, and, only while billing is enforced, a workspace that has never had a
+ * subscription or whose subscription has ended is read-only. Everything else (free access, a
+ * subscription that renews, a trial with time left, a deployment without Stripe) has no banner.
+ * Students never reach this: only the author layout calls it.
  *
  * The windows count calendar days in Mountain time, the zone `formatBillingDate` words the date
  * in, so "ends on 6 November" appears on the same morning for every teacher. The words follow
@@ -23,7 +24,12 @@ export const TRIAL_BANNER_DAYS = 3;
 export const ENDING_BANNER_DAYS = 7;
 
 export type BillingBannerKind =
-  "trial_ending" | "payment_failed" | "subscription_ending" | "access_ended";
+  | "trial_ending"
+  | "payment_failed"
+  | "subscription_ending"
+  | "access_ended"
+  | "not_subscribed"
+  | "subscription_ended";
 
 export interface BillingBannerLink {
   href: string;
@@ -46,6 +52,7 @@ const BILLING_HREF = "/author/workspace#billing-heading";
 export const BILLING_BANNER_LINK = {
   manage: { href: BILLING_HREF, label: "Manage billing" },
   start: { href: BILLING_HREF, label: "Start a free trial or subscribe" },
+  subscribe: { href: BILLING_HREF, label: "Subscribe" },
 } as const satisfies Record<string, BillingBannerLink>;
 
 export const BILLING_BANNER_ASK = "The person who started your workspace manages billing.";
@@ -54,6 +61,11 @@ export interface BillingBannerOptions {
   now: Date;
   /** Stripe is set up on this deployment. Without it there is never a banner. */
   configured: boolean;
+  /**
+   * `BILLING_ENFORCED` is on here. A workspace with no access is read-only only then, so only then
+   * is it told so.
+   */
+  enforced: boolean;
   /**
    * The workspace once had free access that has since been revoked or has expired. Read only when
    * the workspace has no access (`access_grants` rows the teacher may read).
@@ -84,6 +96,43 @@ function soon(iso: string | null, now: Date, days: number): string | null {
   const end = new Date(iso);
   if (Number.isNaN(end.getTime()) || end.getTime() <= now.getTime()) return null;
   return mountainDaysUntil(end, now) <= days ? formatBillingDate(iso) : null;
+}
+
+type MakeBanner = (
+  kind: BillingBannerKind,
+  message: string,
+  link: BillingBannerLink,
+  founderNote?: string | null,
+) => BillingBanner;
+
+/**
+ * A workspace with no access: free access that ended is said whether or not billing is enforced;
+ * the rest only while it is, since only then does no access mean read-only. `status` is Stripe's
+ * last word on a subscription that has ended, or null when there was never one.
+ */
+function noAccessBanner(
+  access: WorkspaceAccess,
+  status: string | null,
+  options: BillingBannerOptions,
+  banner: MakeBanner,
+): BillingBanner | null {
+  if (access.hasAccess) return null;
+  if (options.hadGrant) {
+    return banner("access_ended", "Your free access has ended.", BILLING_BANNER_LINK.start);
+  }
+  if (!options.enforced) return null;
+  return status === null
+    ? banner(
+        "not_subscribed",
+        "Your workspace is read-only until it has a subscription.",
+        BILLING_BANNER_LINK.start,
+      )
+    : banner(
+        "subscription_ended",
+        "Your subscription has ended.",
+        BILLING_BANNER_LINK.subscribe,
+        "Your workspace is read-only until you subscribe again.",
+      );
 }
 
 export function billingBanner(
@@ -128,9 +177,7 @@ export function billingBanner(
         : null;
     }
     case "none":
-      return !access.hasAccess && options.hadGrant
-        ? banner("access_ended", "Your free access has ended.", BILLING_BANNER_LINK.start)
-        : null;
+      return noAccessBanner(access, state.status, options, banner);
     case "free":
       return null;
   }

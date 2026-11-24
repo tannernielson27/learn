@@ -4,6 +4,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import { readHadGrant, readWorkspaceAccess } from "@/lib/supabase/workspaceAccess";
 import type { WorkspaceAccess } from "./access";
 import { billingBanner, type BillingBanner } from "./banner";
+import { billingEnforced } from "./enforcement";
 import { readStripeConfig } from "./stripeConfig";
 
 type Client = SupabaseClient<Database>;
@@ -31,5 +32,10 @@ export async function readBillingBanner(
     access !== null && !access.hasAccess && access.state.kind === "none"
       ? await readHadGrant(client)
       : false;
-  return billingBanner(access, { now, configured: true, hadGrant });
+  return billingBanner(access, {
+    now,
+    configured: true,
+    enforced: billingEnforced(process.env),
+    hadGrant,
+  });
 }

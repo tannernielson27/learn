@@ -5,13 +5,16 @@ import { textLinkClasses } from "@/components/ui/TextLink";
 import type { BillingBanner as BillingBannerData, BillingBannerKind } from "@/lib/billing/banner";
 
 /**
- * A failed payment and ended free access stop work (or will, once billing is enforced): they take
- * the alert's look, the strong rule down the leading edge and the alert mark, as `Notice role="alert"`
- * does (#563). An ending trial or subscription is a heads-up and stays calm.
+ * A failed payment, ended free access, no subscription yet and an ended subscription stop work (or
+ * will, once billing is enforced): they take the alert's look, the strong rule down the leading
+ * edge and the alert mark, as `Notice role="alert"` does (#563). An ending trial or subscription is
+ * a heads-up and stays calm.
  */
 export const BANNER_ALERT_KINDS: ReadonlySet<BillingBannerKind> = new Set([
   "payment_failed",
   "access_ended",
+  "not_subscribed",
+  "subscription_ended",
 ]);
 
 /**
