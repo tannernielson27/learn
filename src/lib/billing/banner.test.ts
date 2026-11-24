@@ -20,7 +20,7 @@ const trial = (endsAt: string | null, convertsToPaid = true) =>
 const ending = (periodEndsAt: string | null) =>
   ({ kind: "active", periodEndsAt, renews: false }) as const;
 
-const base = { now: NOW, configured: true, hadGrant: false };
+const base = { now: NOW, configured: true, enforced: true, hadGrant: false };
 
 describe("mountainDaysUntil", () => {
   it("counts calendar days in Mountain time, not 24-hour spans", () => {
@@ -70,9 +70,70 @@ describe("billingBanner: nothing to say", () => {
     expect(billingBanner(founder(trial("2026-11-03T16:00:00Z")), base)).toBeNull();
   });
 
-  it("is null for a workspace that never had a subscription or free access", () => {
-    expect(billingBanner(founder({ kind: "none", status: null }, false), base)).toBeNull();
-    expect(billingBanner(founder({ kind: "none", status: "canceled" }, false), base)).toBeNull();
+  it("is null for a workspace with no access while billing is not enforced", () => {
+    const unenforced = { ...base, enforced: false };
+    expect(billingBanner(founder({ kind: "none", status: null }, false), unenforced)).toBeNull();
+    expect(
+      billingBanner(founder({ kind: "none", status: "canceled" }, false), unenforced),
+    ).toBeNull();
+  });
+});
+
+describe("billingBanner: the workspace has never had a subscription", () => {
+  const never = { kind: "none", status: null } as const;
+
+  it("tells the founder it is read-only and offers a free trial or a subscription", () => {
+    expect(billingBanner(founder(never, false), base)).toEqual({
+      kind: "not_subscribed",
+      message: "Your workspace is read-only until it has a subscription.",
+      link: BILLING_BANNER_LINK.start,
+      note: null,
+    });
+  });
+
+  it("tells another teacher who manages billing, with no link", () => {
+    expect(billingBanner(colleague(never, false), base)).toEqual({
+      kind: "not_subscribed",
+      message: "Your workspace is read-only until it has a subscription.",
+      link: null,
+      note: "The person who started your workspace manages billing.",
+    });
+  });
+
+  it("is null while the workspace still has access some other way", () => {
+    expect(billingBanner(founder(never, true), base)).toBeNull();
+  });
+});
+
+describe("billingBanner: the subscription has ended", () => {
+  it.each(["canceled", "unpaid", "paused", "incomplete_expired"])(
+    "tells the founder after %s, and offers to subscribe",
+    (status) => {
+      expect(billingBanner(founder({ kind: "none", status }, false), base)).toEqual({
+        kind: "subscription_ended",
+        message: "Your subscription has ended.",
+        link: BILLING_BANNER_LINK.subscribe,
+        note: "Your workspace is read-only until you subscribe again.",
+      });
+    },
+  );
+
+  it("tells another teacher who manages billing, with no link", () => {
+    expect(billingBanner(colleague({ kind: "none", status: "canceled" }, false), base)).toEqual({
+      kind: "subscription_ended",
+      message: "Your subscription has ended.",
+      link: null,
+      note: "The person who started your workspace manages billing.",
+    });
+  });
+
+  it("says free access ended instead when the workspace had it", () => {
+    expect(
+      billingBanner(founder({ kind: "none", status: "canceled" }, false), {
+        ...base,
+        hadGrant: true,
+      })?.kind,
+    ).toBe("access_ended");
   });
 });
 
@@ -204,6 +265,9 @@ describe("billingBanner: wording", () => {
       billingBanner(colleague({ kind: "payment_failed", periodEndsAt: null }), base),
       billingBanner(founder(ending("2026-11-05T17:00:00Z")), base),
       billingBanner(founder({ kind: "none", status: null }, false), { ...base, hadGrant: true }),
+      billingBanner(founder({ kind: "none", status: null }, false), base),
+      billingBanner(colleague({ kind: "none", status: "canceled" }, false), base),
+      billingBanner(founder({ kind: "none", status: "canceled" }, false), base),
     ];
     const words = JSON.stringify(all);
     expect(words).not.toMatch(
@@ -211,5 +275,6 @@ describe("billingBanner: wording", () => {
     );
     expect(BILLING_BANNER_LINK.manage.href).toBe("/author/workspace#billing-heading");
     expect(BILLING_BANNER_LINK.start.href).toBe("/author/workspace#billing-heading");
+    expect(BILLING_BANNER_LINK.subscribe.href).toBe("/author/workspace#billing-heading");
   });
 });

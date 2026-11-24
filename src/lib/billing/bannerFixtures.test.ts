@@ -15,7 +15,14 @@ describe("banner fixtures", () => {
   it("covers every kind, for both the founder and another teacher", () => {
     const banners = BANNER_FIXTURE_NAMES.map(bannerFixture);
     expect(new Set(banners.map((b) => b.kind))).toEqual(
-      new Set(["trial_ending", "payment_failed", "subscription_ending", "access_ended"]),
+      new Set([
+        "trial_ending",
+        "payment_failed",
+        "subscription_ending",
+        "access_ended",
+        "not_subscribed",
+        "subscription_ended",
+      ]),
     );
     expect(banners.some((b) => b.link === null)).toBe(true);
   });

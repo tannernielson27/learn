@@ -12,6 +12,14 @@ const STATES = [
   ["subscription-ending", "Your subscription ends on 8 November 2026.", "Manage billing"],
   ["access-ended", "Your free access has ended.", "Start a free trial or subscribe"],
   ["access-ended-colleague", "The person who started your workspace manages billing.", null],
+  [
+    "not-subscribed",
+    "Your workspace is read-only until it has a subscription.",
+    "Start a free trial or subscribe",
+  ],
+  ["not-subscribed-colleague", "The person who started your workspace manages billing.", null],
+  ["subscription-ended", "Your subscription has ended.", "Subscribe"],
+  ["subscription-ended-colleague", "The person who started your workspace manages billing.", null],
 ] as const;
 
 for (const [state, text, link] of STATES) {
