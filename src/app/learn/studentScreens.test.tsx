@@ -145,7 +145,11 @@ vi.mock("@/lib/assignments/attemptStore", () => ({
   resultsStore: () => ({}),
   assignmentReportStore: () => ({}),
 }));
-vi.mock("@/lib/practice/store", () => ({ practicePageStore: () => ({}) }));
+vi.mock("@/lib/practice/store", () => ({
+  practicePageStore: () => ({}),
+  // #627: the home fills the review list; nothing to add here.
+  reviewListStore: () => ({ fill: async () => 0 }),
+}));
 vi.mock("@/lib/supabase/liveResults", () => ({ readMyLiveResults: async () => state.live }));
 vi.mock("@/lib/learn/liveResultsStore", () => ({ liveResultsStore: () => ({}) }));
 vi.mock("@/lib/learn/liveResultPage", () => ({ loadLiveResultPage: async () => state.livePage }));

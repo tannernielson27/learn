@@ -75,6 +75,11 @@ language sql as $$
   select public.record_practice_response(student, (select id from ids where name = run_name),
                                          item, '{}', earned, 1, '{}');
 $$;
+-- The fixture writes below run as nobody, as a migration does: no authoring charge, no author.
+create function pg_temp.act_as_nobody() returns void
+language sql as $$
+  select set_config('request.jwt.claims', '', true);
+$$;
 grant execute on function pg_temp.review(uuid, uuid[]) to service_role;
 grant execute on function pg_temp.answer(uuid, text, uuid, numeric) to service_role;
 
@@ -525,7 +530,7 @@ reset role;
 -- Filling the list from assignments
 -- ---------------------------------------------------------------------------
 
-select pg_temp.act_as('00000000-0000-0000-0000-0000006270a1');
+select pg_temp.act_as_nobody();
 insert into public.assignments (id, org_id, class_id, bank_id, title, opens_at, closes_at, max_attempts)
   select '00000000-0000-0000-0000-0000006270b1', org_id, '00000000-0000-0000-0000-0000006270c1',
          '00000000-0000-0000-0000-0000006270e0', 'Week 9', now() - interval '1 hour',
@@ -645,7 +650,10 @@ update public.review_entries
    set due_at = now() - interval '1 minute'
  where student_id = '00000000-0000-0000-0000-0000006270d1'
    and item_id = '00000000-0000-0000-0000-0000006270f6';
-update public.items set status = 'archived' where id = '00000000-0000-0000-0000-0000006270f6';
+select pg_temp.act_as_nobody();
+-- Archived as the app archives (20260919160000): the status it had is kept to restore.
+update public.items set status = 'archived', archived_from = 'published'
+ where id = '00000000-0000-0000-0000-0000006270f6';
 
 set local role service_role;
 select ok(
@@ -668,7 +676,8 @@ select is(
 );
 reset role;
 
-update public.items set status = 'published' where id = '00000000-0000-0000-0000-0000006270f6';
+update public.items set status = 'published', archived_from = null
+ where id = '00000000-0000-0000-0000-0000006270f6';
 set local role service_role;
 select results_eq(
   $$ select item_id from public.review_due_items('00000000-0000-0000-0000-0000006270d1') $$,
