@@ -28,7 +28,7 @@ import { Pager } from "@/components/authoring/Pager";
 import { TagFilterBar } from "@/components/authoring/TagFilterBar";
 import { startLiveSession } from "@/app/live/actions";
 import { shareBankWithClass, stopSharing } from "@/app/author/practice/actions";
-import { aiImportEnabled } from "@/lib/aiImport/config";
+import { aiImportEnabled } from "@/lib/ai/config";
 import { workspaceEnabled, type Client as AiImportClient } from "@/lib/aiImport/upload/access";
 import { readOpenImports } from "@/lib/aiImport/upload/openImports";
 import { describeOpenImport } from "@/lib/authoring/aiImportUpload";

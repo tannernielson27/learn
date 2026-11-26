@@ -2,8 +2,8 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { MessagesClient } from "./claude";
-import { ClaudeCallError } from "./claude";
+import type { MessagesClient } from "@/lib/ai/claude";
+import { ClaudeCallError } from "@/lib/ai/claude";
 import {
   POSITIONS_PER_FILE,
   extractUnit,
@@ -15,9 +15,9 @@ import {
 } from "./extractUnit";
 import { prepareFile, type PreparedFile } from "./files/prepare";
 import { locateOpenings, questionRegions, showsKey } from "./keyEvidence";
-import type { UsageRpc } from "./ledger";
+import type { UsageRpc } from "@/lib/ai/ledger";
 import { readSegment, type ChunkSegment } from "./segment";
-import { reply } from "./testing/messages";
+import { reply } from "@/lib/ai/testing/messages";
 import {
   COURSE_ACTIVITY,
   activityExtraction,

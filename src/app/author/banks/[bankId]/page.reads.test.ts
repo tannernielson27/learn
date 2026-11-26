@@ -35,7 +35,7 @@ const supabase = {
 vi.mock("@/lib/authoring/session", () => ({
   requireAuthor: () => rt.trip("auth", { supabase, orgId: "org", userId: "u", email: "" }),
 }));
-vi.mock("@/lib/aiImport/config", () => ({ aiImportEnabled: () => false }));
+vi.mock("@/lib/ai/config", () => ({ aiImportEnabled: () => false }));
 vi.mock("@/lib/aiImport/upload/access", () => ({ workspaceEnabled: async () => false }));
 vi.mock("@/lib/authoring/folderData", () => ({
   listFolders: () => rt.trip("folders", () => folders),

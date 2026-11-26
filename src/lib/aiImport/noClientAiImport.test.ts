@@ -1,5 +1,5 @@
-// #342: `src/lib/aiImport` reads ANTHROPIC_API_KEY, which spends the owner's money. It must never
-// reach a browser bundle. As for the mailer (`noClientEmail.test.ts`), this walks the real import
+// #342: `src/lib/aiImport` calls Claude on the owner's money. It must never reach a browser bundle.
+// Since #621 the key itself is read in `src/lib/ai`, which has its own guard (`noClientAi.test.ts`). As for the mailer (`noClientEmail.test.ts`), this walks the real import
 // graph from every Client Component in the app.
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -43,21 +43,23 @@ describe("AI import stays on the server", () => {
     },
   );
 
-  it("would catch it: a Client Component that imports the Claude client is flagged", () => {
+  it("would catch it: a Client Component that imports an import pass is flagged", () => {
     const planted = path.join(scratch, "Planted.tsx");
     writeFileSync(
       planted,
-      '"use client";\nimport { createClaudeClient } from "@/lib/aiImport/claude";\nexport const c = createClaudeClient;\n',
+      '"use client";\nimport { segmentChunk } from "@/lib/aiImport/segmentChunk";\nexport const c = segmentChunk;\n',
     );
     const found = leaks(planted);
-    expect(found.some((line) => line.endsWith(path.join("aiImport", "claude.ts")))).toBe(true);
+    expect(found.some((line) => line.endsWith(path.join("aiImport", "segmentChunk.ts")))).toBe(
+      true,
+    );
   });
 
-  it("reads the key in one place, and never as a public variable", () => {
+  it("never reads the key itself (src/lib/ai does), and never as a public variable", () => {
     const readers = sourcesUnder(AI_IMPORT_DIR).filter((file) =>
       readFileSync(file, "utf8").includes("ANTHROPIC_API_KEY"),
     );
-    expect(readers.map((file) => path.basename(file)).sort()).toEqual(["claude.ts", "config.ts"]);
+    expect(readers).toEqual([]);
     for (const file of sourcesUnder(AI_IMPORT_DIR)) {
       expect(readFileSync(file, "utf8")).not.toMatch(/NEXT_PUBLIC_[A-Z_]*ANTHROPIC/);
     }

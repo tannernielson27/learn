@@ -1,14 +1,15 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { MessagesClient } from "./claude";
+import type { MessagesClient } from "@/lib/ai/claude";
 import { SEGMENT_BUDGET_MS, SEGMENT_SPLIT_DEPTH, SEGMENT_TIMEOUT_MS } from "./config";
 import type { PreparedFile } from "./files/prepare";
 import { buildPdf } from "./files/testing/fixtures";
 import { estimatePages } from "./files/text";
-import { estimateSegmentCost, type UsageRpc } from "./ledger";
+import { type UsageRpc } from "@/lib/ai/ledger";
+import { estimateSegmentCost } from "./chunkCost";
 import { mergeSegments } from "./merge";
 import { segmentChunk, segmentChunkDeps, type SegmentChunkDeps } from "./segmentChunk";
-import { reply } from "./testing/messages";
+import { reply } from "@/lib/ai/testing/messages";
 import { answersAtTheBack, injectedInstruction, preparedText } from "./testing/segmentRecordings";
 
 const ENV = { ANTHROPIC_API_KEY: "sk-ant-test" };

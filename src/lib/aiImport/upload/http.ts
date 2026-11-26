@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { messageFor, type BatchStatus } from "@/lib/authoring/aiImportUpload";
-import type { ClaudeFailureCode } from "../claude";
+import type { ClaudeFailureCode } from "@/lib/ai/claude";
 import { aiImportAccess, readBatch, type AccessDeps, type BatchRow, type Client } from "./access";
 
 /** Shared by the parse and extract routes (#345). JSON only, never cached. */

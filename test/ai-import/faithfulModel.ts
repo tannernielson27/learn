@@ -1,6 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import type { MessagesClient } from "@/lib/aiImport/claude";
-import { reply } from "@/lib/aiImport/testing/messages";
+import type { MessagesClient } from "@/lib/ai/claude";
+import { reply } from "@/lib/ai/testing/messages";
 import { questionText } from "./corpus/generate/shared";
 import type { Recording } from "./files";
 

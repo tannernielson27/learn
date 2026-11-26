@@ -1,11 +1,5 @@
-import { ClaudeCallError, callStructured, type MessagesClient } from "@/lib/aiImport/claude";
-import {
-  AI_IMPORT_MODEL,
-  NO_USAGE,
-  PRICE_PER_MILLION,
-  addUsage,
-  type Usage,
-} from "@/lib/aiImport/config";
+import { ClaudeCallError, callStructured, type MessagesClient } from "@/lib/ai/claude";
+import { CLAUDE_MODEL, NO_USAGE, PRICE_PER_MILLION, addUsage, type Usage } from "@/lib/ai/config";
 import { planExtraction, type ExtractUnit } from "@/lib/aiImport/extract";
 import {
   extractCaseStudy,
@@ -32,7 +26,7 @@ import { segmentPass, type CorpusFile, type Ledger } from "./productImport";
  * Only `pnpm eval:ai-import` runs it against the API. Tests drive it with a fake client.
  */
 
-export const EVAL_MODEL = AI_IMPORT_MODEL;
+export const EVAL_MODEL = CLAUDE_MODEL;
 export type { MessagesClient };
 
 export const costOf = (usage: Usage): number =>

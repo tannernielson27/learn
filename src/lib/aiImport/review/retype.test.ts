@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { MessagesClient } from "../claude";
-import { ClaudeCallError } from "../claude";
-import type { UsageRpc } from "../ledger";
+import type { MessagesClient } from "@/lib/ai/claude";
+import { ClaudeCallError } from "@/lib/ai/claude";
+import type { UsageRpc } from "@/lib/ai/ledger";
 import { readSegment, type ChunkSegment } from "../segment";
-import { reply } from "../testing/messages";
+import { reply } from "@/lib/ai/testing/messages";
 import {
   COURSE_ACTIVITY,
   activitySegment,

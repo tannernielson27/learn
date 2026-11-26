@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import {
-  AI_IMPORT_MODEL,
+  CLAUDE_MODEL,
   MAX_ATTEMPTS,
   MIN_ATTEMPT_MS,
   NO_USAGE,
@@ -10,7 +10,7 @@ import {
   RETRY_MAX_MS,
   addUsage,
   fakeClaudeWanted,
-  type AiImportEnv,
+  type AiEnv,
   type Usage,
 } from "./config";
 import { fakeClaudeClient } from "./fakeClaude";
@@ -188,7 +188,7 @@ export async function callStructured(
   const sleep = options.sleep ?? realSleep;
   const random = options.random ?? Math.random;
   const body: Anthropic.MessageCreateParamsNonStreaming = {
-    model: options.model ?? AI_IMPORT_MODEL,
+    model: options.model ?? CLAUDE_MODEL,
     max_tokens: request.maxTokens,
     system: [{ type: "text", text: request.system, cache_control: { type: "ephemeral" } }],
     output_config: { format: { type: "json_schema", schema: request.schema } },
@@ -229,7 +229,7 @@ export async function callStructured(
  * real one otherwise. Throws `not_configured` when there is no key, or when production asks for
  * the fake: a test switch must never answer a real teacher.
  */
-export function createClaudeClient(env: AiImportEnv = process.env): MessagesClient {
+export function createClaudeClient(env: AiEnv = process.env): MessagesClient {
   if (fakeClaudeWanted(env)) return fakeClaudeClient();
   if (env.AI_IMPORT_FAKE === "1") throw new ClaudeCallError("not_configured");
   const apiKey = env.ANTHROPIC_API_KEY?.trim();

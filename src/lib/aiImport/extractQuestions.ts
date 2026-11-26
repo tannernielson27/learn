@@ -1,5 +1,5 @@
 import { CASE_STUDY_STEP_COUNT } from "@/lib/ngn/schemas";
-import { ClaudeCallError, type StructuredAnswer, type StructuredRequest } from "./claude";
+import { ClaudeCallError, type StructuredAnswer, type StructuredRequest } from "@/lib/ai/claude";
 import { EXTRACT_PER_CALL } from "./config";
 import {
   caseStudyHeaderRequest,

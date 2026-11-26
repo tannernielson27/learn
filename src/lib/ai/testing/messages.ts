@@ -1,5 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { AI_IMPORT_MODEL } from "../config";
+import { CLAUDE_MODEL } from "../config";
 
 /** A Messages API answer, as the SDK returns it, for tests. */
 export function reply(
@@ -10,7 +10,7 @@ export function reply(
     id: "msg",
     type: "message",
     role: "assistant",
-    model: AI_IMPORT_MODEL,
+    model: CLAUDE_MODEL,
     content: [{ type: "text", text, citations: null }],
     stop_reason: options.stop ?? "end_turn",
     stop_sequence: null,

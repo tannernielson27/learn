@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { MessagesClient } from "@/lib/aiImport/claude";
+import type { MessagesClient } from "@/lib/ai/claude";
 import { extractUnit, type ExtractUnitDeps, type StagedRow } from "@/lib/aiImport/extractUnit";
 import { prepareFile, type PreparedFile } from "@/lib/aiImport/files/prepare";
-import type { UsageRpc } from "@/lib/aiImport/ledger";
+import type { UsageRpc } from "@/lib/ai/ledger";
 import type { ChunkSegment } from "@/lib/aiImport/segment";
 import {
   segmentChunk,

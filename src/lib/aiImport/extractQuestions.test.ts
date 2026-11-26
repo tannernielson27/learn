@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { ClaudeCallError, type StructuredRequest } from "./claude";
-import { NO_USAGE } from "./config";
+import { ClaudeCallError, type StructuredRequest } from "@/lib/ai/claude";
+import { NO_USAGE } from "@/lib/ai/config";
 import { extractQuestions, regionsOf, type UnitCall } from "./extractQuestions";
 import { mergeSegments, type MergedQuestion } from "./merge";
 import { readSegment } from "./segment";

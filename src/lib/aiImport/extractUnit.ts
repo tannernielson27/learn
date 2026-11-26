@@ -7,24 +7,24 @@ import {
   type ClaudeFailureCode,
   type MessagesClient,
   type StructuredAnswer,
-} from "./claude";
+} from "@/lib/ai/claude";
 import {
-  EXTRACT_MAX_TOKENS,
-  MAX_ENTRIES_PER_BATCH,
   NO_USAGE,
   addUsage,
   aiImportEnabled,
   costOf,
-  type AiImportEnv,
+  type AiEnv,
   type Usage,
-} from "./config";
+} from "@/lib/ai/config";
+import { EXTRACT_MAX_TOKENS, MAX_ENTRIES_PER_BATCH } from "./config";
 import { planExtraction } from "./extract";
 import { extractCaseStudy, extractQuestions, regionsOf, type UnitCall } from "./extractQuestions";
 import { extractPdfPages } from "./files/pdf";
 import type { ChunkPayload, PreparedChunk, PreparedFile } from "./files/prepare";
 import { loadCheckedFile, type FileFailure, type FileRef } from "./files/store";
 import { estimatePages, joinTextParts } from "./files/text";
-import { estimateCallCost, reserveUsage, settleUsage, type UsageRpc } from "./ledger";
+import { reserveUsage, settleUsage, type UsageRpc } from "@/lib/ai/ledger";
+import { estimateCallCost } from "./chunkCost";
 import { mergeSegments, type MergedQuestion } from "./merge";
 import { takeExtractCall, type ParseAllowance } from "./parseLimit";
 import { POSITIONS_PER_FILE } from "./places";
@@ -74,7 +74,7 @@ export interface StagedRow {
 }
 
 export interface ExtractUnitDeps {
-  env?: AiImportEnv;
+  env?: AiEnv;
   /** Built only once every check before the call has passed. */
   client: () => MessagesClient;
   usageRpc: UsageRpc;

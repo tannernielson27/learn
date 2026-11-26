@@ -1,7 +1,7 @@
 import type { Json } from "@/lib/supabase/database.types";
 import type { ItemType } from "@/lib/ngn/schemas";
-import { ClaudeCallError, type MessagesClient } from "../claude";
-import { NO_USAGE, addUsage, aiImportEnabled, costOf, type Usage } from "../config";
+import { ClaudeCallError, type MessagesClient } from "@/lib/ai/claude";
+import { NO_USAGE, addUsage, aiImportEnabled, costOf, type Usage } from "@/lib/ai/config";
 import { refreshBatchDuplicates } from "../duplicates";
 import { extractQuestions, regionsOf } from "../extractQuestions";
 import {

@@ -1,7 +1,8 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { DRAFT_TYPES, forStructuredOutput, isDraftType, type DraftType } from "@/lib/ngn/draft";
-import type { JsonSchema, StructuredRequest } from "./claude";
+import type { JsonSchema, StructuredRequest } from "@/lib/ai/claude";
+import { documentTextBlock } from "@/lib/ai/document";
 import { SEGMENT_MAX_TOKENS } from "./config";
 import { DOCX_MARKUP } from "./files/docx";
 import type { ChunkPayload } from "./files/prepare";
@@ -136,10 +137,6 @@ export interface ChunkRef {
   pageTo: number | null;
 }
 
-/** A closing tag inside the document would let its text pose as the end of the data. */
-const escapeDocument = (text: string) =>
-  text.replace(/<\/?document/gi, (tag) => `&lt;${tag.slice(1)}`);
-
 /** The document as Claude reads it: a PDF as a document, text inside `<document>` tags. */
 export function documentBlock(payload: ChunkPayload): Anthropic.ContentBlockParam {
   if (payload.type === "pdf") {
@@ -152,7 +149,7 @@ export function documentBlock(payload: ChunkPayload): Anthropic.ContentBlockPara
       },
     };
   }
-  return { type: "text", text: `<document>\n${escapeDocument(payload.text)}\n</document>` };
+  return documentTextBlock(payload.text);
 }
 
 function where(chunk: ChunkRef): string {

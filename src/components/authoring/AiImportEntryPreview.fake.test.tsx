@@ -1,9 +1,9 @@
 import { cleanup, render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { renderersLoaded } from "@/components/question/testing/renderers";
-import { callStructured } from "@/lib/aiImport/claude";
+import { callStructured } from "@/lib/ai/claude";
 import { extractQuestions, regionsOf } from "@/lib/aiImport/extractQuestions";
-import { fakeClaudeClient } from "@/lib/aiImport/fakeClaude";
+import { fakeClaudeClient } from "@/lib/ai/fakeClaude";
 import { mergeSegments } from "@/lib/aiImport/merge";
 import { readSegment, segmentRequest } from "@/lib/aiImport/segment";
 import { corpusText } from "@/lib/aiImport/testing/segmentRecordings";

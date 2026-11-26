@@ -4,7 +4,7 @@ import { saveAiImportEntryFix } from "@/app/author/aiImportFixActions";
 import { AiImportEntryEditor } from "@/components/authoring/AiImportEntryEditor";
 import { editorFor } from "@/components/authoring/editorFor";
 import { Breadcrumbs } from "@/components/authoring/FolderBreadcrumbs";
-import { aiImportEnabled } from "@/lib/aiImport/config";
+import { aiImportEnabled } from "@/lib/ai/config";
 import { readFixEntry } from "@/lib/aiImport/review/fixRead";
 import type { Client } from "@/lib/aiImport/upload/access";
 import { workspaceEnabled } from "@/lib/aiImport/upload/access";

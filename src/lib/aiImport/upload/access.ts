@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AuthorSession, RouteAuthor } from "@/lib/authoring/session";
 import type { BatchStatus } from "@/lib/authoring/aiImportUpload";
 import type { Database } from "@/lib/supabase/database.types";
-import { aiImportEnabled, type AiImportEnv } from "../config";
+import { aiImportEnabled, type AiEnv } from "@/lib/ai/config";
 
 /**
  * Who may use AI import's upload page and its requests (#345). Every Server Function and route
@@ -23,7 +23,7 @@ export type AiImportAccess =
 
 export interface AccessDeps {
   author: () => Promise<RouteAuthor>;
-  env?: AiImportEnv;
+  env?: AiEnv;
 }
 
 /** Whether the workspace has AI import on, read under the teacher's own RLS. */

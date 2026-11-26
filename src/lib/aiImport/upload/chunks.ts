@@ -1,4 +1,4 @@
-import { totalInputTokens, type Usage } from "../config";
+import { totalInputTokens, type Usage } from "@/lib/ai/config";
 import type { FileRef } from "../files/store";
 import type { Client } from "./access";
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { NO_USAGE } from "./config";
+import { NO_USAGE } from "@/lib/ai/config";
 import { extractQuestions, regionsOf, type UnitCall } from "./extractQuestions";
 import { chunkPayload, prepareFile } from "./files/prepare";
 import { buildDocx, para, run } from "./files/testing/fixtures";

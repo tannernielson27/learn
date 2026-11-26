@@ -8,7 +8,7 @@ import {
   standaloneChartJsonSchema,
   type DraftType,
 } from "@/lib/ngn/draft";
-import type { JsonSchema, StructuredRequest } from "./claude";
+import type { JsonSchema, StructuredRequest } from "@/lib/ai/claude";
 import { EXTRACT_MAX_TOKENS, EXTRACT_PER_CALL } from "./config";
 import { DOCX_MARKUP } from "./files/docx";
 import type { ChunkPayload } from "./files/prepare";

@@ -13,7 +13,7 @@ import { AiImportUpload } from "@/components/authoring/AiImportUpload";
 import { Breadcrumbs } from "@/components/authoring/FolderBreadcrumbs";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ReadingWidth } from "@/components/authoring/PageWidth";
-import { aiImportEnabled } from "@/lib/aiImport/config";
+import { aiImportEnabled } from "@/lib/ai/config";
 import { workspaceEnabled } from "@/lib/aiImport/upload/access";
 import { openBatchId, readAllowance, readBatchView } from "@/lib/aiImport/upload/state";
 import { isUuid } from "@/lib/authoring/ids";

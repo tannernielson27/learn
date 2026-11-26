@@ -6,24 +6,23 @@ import {
   createClaudeClient,
   type ClaudeFailureCode,
   type MessagesClient,
-} from "./claude";
+} from "@/lib/ai/claude";
 import {
   NO_USAGE,
-  SEGMENT_BUDGET_MS,
-  SEGMENT_SPLIT_DEPTH,
-  SEGMENT_TIMEOUT_MS,
   addUsage,
   aiImportEnabled,
   costOf,
-  type AiImportEnv,
+  type AiEnv,
   type Usage,
-} from "./config";
+} from "@/lib/ai/config";
+import { SEGMENT_BUDGET_MS, SEGMENT_SPLIT_DEPTH, SEGMENT_TIMEOUT_MS } from "./config";
 import { extractPdfPages } from "./files/pdf";
 import { chunkPayload, type ChunkPayload } from "./files/prepare";
 import type { FileKind } from "./files/sniff";
 import { loadCheckedFile, type FileFailure, type FileRef } from "./files/store";
 import { estimatePages } from "./files/text";
-import { estimateSegmentCost, reserveUsage, settleUsage, type UsageRpc } from "./ledger";
+import { reserveUsage, settleUsage, type UsageRpc } from "@/lib/ai/ledger";
+import { estimateSegmentCost } from "./chunkCost";
 import { takeParseCall, type ParseAllowance } from "./parseLimit";
 import {
   SegmentShapeError,
@@ -60,7 +59,7 @@ import { storeChunkSegment, type SegmentStore } from "./segmentStore";
  */
 
 export interface SegmentChunkDeps {
-  env?: AiImportEnv;
+  env?: AiEnv;
   /** Built only once every check before the call has passed. */
   client: () => MessagesClient;
   usageRpc: UsageRpc;

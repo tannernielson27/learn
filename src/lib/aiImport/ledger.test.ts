@@ -1,12 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { NO_USAGE, SEGMENT_MAX_TOKENS } from "./config";
-import {
-  estimateCallCost,
-  estimateSegmentCost,
-  reserveUsage,
-  settleUsage,
-  type UsageRpc,
-} from "./ledger";
+import { NO_USAGE } from "@/lib/ai/config";
+import { SEGMENT_MAX_TOKENS } from "./config";
+import { reserveUsage, settleUsage, type UsageRpc } from "@/lib/ai/ledger";
+import { estimateCallCost, estimateSegmentCost } from "./chunkCost";
 
 const REQUEST = { orgId: "org-1", batchId: "batch-1", pages: 8, costUsd: 0.15 };
 

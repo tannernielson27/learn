@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { callStructured } from "./claude";
-import { fakeClaudeClient } from "./fakeClaude";
+import { callStructured } from "@/lib/ai/claude";
+import { fakeClaudeClient } from "@/lib/ai/fakeClaude";
 import { extractRequest } from "./extract";
 import { mergeSegments } from "./merge";
 import { readSegment, segmentRequest } from "./segment";

@@ -15,7 +15,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { ReadingWidth } from "@/components/authoring/PageWidth";
 import { Card } from "@/components/ui/Card";
 import { TextLink } from "@/components/ui/TextLink";
-import { aiImportEnabled } from "@/lib/aiImport/config";
+import { aiImportEnabled } from "@/lib/ai/config";
 import { readReviewBatch } from "@/lib/aiImport/review/read";
 import type { Client } from "@/lib/aiImport/upload/access";
 import { workspaceEnabled } from "@/lib/aiImport/upload/access";

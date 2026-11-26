@@ -1,9 +1,9 @@
 // #342: a Sentry event from a failed parse carries no document text (ADR 0008, "Safety").
 import { describe, expect, it } from "vitest";
 import { scrubBreadcrumb, scrubEvent } from "@/lib/observability/scrub";
-import { ClaudeCallError, callStructured, type MessagesClient } from "./claude";
+import { ClaudeCallError, callStructured, type MessagesClient } from "@/lib/ai/claude";
 import { readSegment, segmentRequest } from "./segment";
-import { reply } from "./testing/messages";
+import { reply } from "@/lib/ai/testing/messages";
 
 const DOCUMENT = "Ms. Harriet Vandermolen, 67, reports crushing chest pain radiating to the jaw.";
 const CHUNK = { position: 0, of: 1, pageFrom: null, pageTo: null };
