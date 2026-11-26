@@ -18,7 +18,8 @@
  *   assignment; answerer keys are opaque and only mean something inside their use. If a reader
  *   hands over two marks for the same answerer, question and use, one is kept, by a rule that does
  *   not depend on their order: a current-key mark before an earlier-key one, then the higher share,
- *   then the larger maxPoints. The others are counted in `duplicateAnswers`.
+ *   then the larger maxPoints, then the response and then the whole mark (as `sortedJson`, the
+ *   smaller first). The others are counted in `duplicateAnswers`.
  * - **How hard**: the mean share over the question's answers, each counting once. Partial credit
  *   counts as partial. Higher is easier.
  * - **Split**: full marks (share 1), no marks (share 0), and partial marks (everything between).
@@ -236,18 +237,43 @@ interface Settled<M extends QuestionMark> {
   duplicates: number;
 }
 
-/** Which of two marks for the same answerer, question and use is kept: negative keeps `a`. */
-function preferred<M extends QuestionMark>(
-  a: Counted<M> & { isCurrent: boolean },
-  b: Counted<M> & { isCurrent: boolean },
-): number {
+/**
+ * JSON with every object's keys sorted, recursively; arrays keep their order. Equal for values that
+ * differ only in property order, so two responses can be ordered without depending on how they were
+ * built. `undefined` properties are dropped.
+ */
+function sortedJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map((entry) => sortedJson(entry)).join(",")}]`;
+  if (typeof value === "object" && value !== null) {
+    const entries = Object.entries(value)
+      .filter(([, entry]) => entry !== undefined)
+      .sort(([a], [b]) => compareStrings(a, b))
+      .map(([key, entry]) => `${JSON.stringify(key)}:${sortedJson(entry)}`);
+    return `{${entries.join(",")}}`;
+  }
+  return value === undefined ? "undefined" : JSON.stringify(value);
+}
+
+type Candidate<M extends QuestionMark> = Counted<M> & { isCurrent: boolean; order: string };
+
+/**
+ * Which of two marks for the same answerer, question and use is kept: negative keeps `a`. After
+ * key, share and maxPoints, the smaller response (as `sortedJson`) and then the smaller whole mark
+ * is kept, so the order the marks came in never decides.
+ */
+function preferred<M extends QuestionMark>(a: Candidate<M>, b: Candidate<M>): number {
   if (a.isCurrent !== b.isCurrent) return a.isCurrent ? -1 : 1;
-  return b.share - a.share || b.mark.maxPoints - a.mark.maxPoints;
+  return (
+    b.share - a.share ||
+    b.mark.maxPoints - a.mark.maxPoints ||
+    compareStrings(a.order, b.order) ||
+    compareStrings(sortedJson(a.mark), sortedJson(b.mark))
+  );
 }
 
 function settle<M extends QuestionMark>(item: Item, marks: readonly M[]): Settled<M> {
   let unusable = 0;
-  const groups = new Map<string, (Counted<M> & { isCurrent: boolean })[]>();
+  const groups = new Map<string, Candidate<M>[]>();
   for (const mark of marks) {
     if (mark.itemId !== item.id) continue;
     if (!isRealScore(mark)) {
@@ -259,6 +285,7 @@ function settle<M extends QuestionMark>(item: Item, marks: readonly M[]): Settle
       mark,
       share: mark.points / mark.maxPoints,
       isCurrent: scoredWithCurrentKey(item, mark.reveal),
+      order: sortedJson("response" in mark ? mark.response : undefined),
     };
     const group = groups.get(key);
     if (group) group.push(entry);
@@ -323,7 +350,10 @@ type Totals = Map<string, Map<string, Map<string, { points: number; maxPoints: n
 
 function totalsOf(settled: ReadonlyMap<string, Settled<QuestionMark>>): Totals {
   const totals: Totals = new Map();
-  for (const [itemId, { current }] of settled) {
+  // Sorted by question id, so each answerer's rest-of-activity sum is added in one fixed order
+  // whatever order the quiz lists its questions in.
+  const byId = [...settled].sort(([a], [b]) => compareStrings(a, b));
+  for (const [itemId, { current }] of byId) {
     for (const { mark } of current) {
       const use = activityOf(mark);
       const byAnswerer = totals.get(use) ?? new Map();

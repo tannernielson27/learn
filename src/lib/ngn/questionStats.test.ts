@@ -345,6 +345,31 @@ describe("buildQuestionStats: defined values at the edges", () => {
   });
 });
 
+describe("buildQuestionStats: the order of the quiz's questions", () => {
+  it("gives exactly the same separation whatever order the questions come in", () => {
+    // Non-integer points on three other questions, so the rest-of-activity sum depends on the
+    // order it is added in unless that order is fixed.
+    const others = [mc, cloze, ddr];
+    const fractions = [0.1, 0.2, 0.3, 0.7];
+    const marks = Array.from({ length: MIN_ANSWERS_FOR_FIGURES }, (_, i) => [
+      mark(mr, `s${i}`, i % 4),
+      ...others.map((item, k) => mark(item, `s${i}`, fractions[(i + k) % 4] * (1 + (i % 3) / 10))),
+    ]).flat();
+    const items = [mr, ...others];
+    const reference = statsOf(buildQuestionStats({ items, marks }), mr).separation;
+    expect(reference.state).toBe("measured");
+    for (const shuffled of [
+      [ddr, cloze, mc, mr],
+      [cloze, mr, ddr, mc],
+      [mc, ddr, mr, cloze],
+      [ddr, mc, cloze, mr],
+    ]) {
+      const separation = statsOf(buildQuestionStats({ items: shuffled, marks }), mr).separation;
+      expect(separation).toEqual(reference);
+    }
+  });
+});
+
 describe("buildQuestionStats: one answer per answerer per question per use", () => {
   it("keeps the current-key answer, then the higher share, whichever order they came in", () => {
     const twice = [mark(mr, "a2", 0, "live_a", "live"), mark(mr, "a2", 3, "live_a", "live")];
@@ -620,6 +645,25 @@ describe("choices and wrong_answer_ahead", () => {
     const rows = [...answers(20, ["opt_a"]), ...answers(3, ["opt_c"])];
     const [stats] = buildQuestionStats({ items: [mr], marks, answers: { [mr.id]: rows } });
     expect(stats.choices).toMatchObject({ state: "counted", answers: 20, duplicateAnswers: 3 });
+  });
+
+  it("keeps the same one of two equal-scored duplicates with different responses, in any order", () => {
+    // A tie (10 keyed sets, 10 opt_c), plus a second answer from s0, scored the same, for opt_c.
+    // Keeping that one would put opt_c (11) ahead of opt_d (9); the order must not decide which.
+    const rows = [
+      ...answers(10, ["opt_a", "opt_b", "opt_d"]),
+      ...answers(10, ["opt_c"], 10),
+      ...answers(1, ["opt_c"]),
+    ];
+    const forward = buildQuestionStats({ items: [mr], marks, answers: { [mr.id]: rows } });
+    const reversed = buildQuestionStats({
+      items: [mr],
+      marks,
+      answers: { [mr.id]: [...rows].reverse() },
+    });
+    expect(reversed).toEqual(forward);
+    expect(forward[0].choices).toMatchObject({ answers: 20, duplicateAnswers: 1 });
+    expect(forward[0].flags).toEqual({ state: "checked", raised: [] });
   });
 
   it("wrongAnswerAhead reads every distribution kind that counts options, and not order", () => {
