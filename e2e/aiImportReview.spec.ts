@@ -13,7 +13,7 @@ import {
 } from "./signIn";
 
 // #346: the review screen for an AI import batch. Needs the local Supabase stack (with Storage)
-// and a build with AI_IMPORT_FAKE=1 (src/lib/aiImport/fakeClaude.ts): no live API call is made.
+// and a build with AI_IMPORT_FAKE=1 (src/lib/ai/fakeClaude.ts): no live API call is made.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
 
 const CORPUS = path.resolve("test", "ai-import", "corpus");

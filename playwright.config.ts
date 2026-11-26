@@ -70,7 +70,7 @@ export default defineConfig({
         command: "pnpm build && pnpm start --port 3100",
         // #360: with the local stack, the app's own mail (the welcome email) goes to its Mailpit,
         // where e2e/mailbox.ts reads it. A production build sends to Mailpit only when told to.
-        // #345: AI import answers from the fake client (src/lib/aiImport/fakeClaude.ts), so no
+        // #345: AI import answers from the fake client (src/lib/ai/fakeClaude.ts), so no
         // e2e run ever calls Claude. The fake is refused on a production deployment.
         env:
           process.env.E2E_AUTH === "1"

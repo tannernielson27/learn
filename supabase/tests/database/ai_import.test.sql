@@ -210,16 +210,16 @@ select is_empty(
 );
 
 select ok(
-  not has_function_privilege('anon', 'public.reserve_ai_usage(uuid, integer, numeric, uuid)',
-                             'execute')
+  not has_function_privilege('anon',
+    'public.reserve_ai_usage(uuid, integer, numeric, uuid, text)', 'execute')
   and not has_function_privilege('authenticated',
-                                 'public.reserve_ai_usage(uuid, integer, numeric, uuid)', 'execute')
+    'public.reserve_ai_usage(uuid, integer, numeric, uuid, text)', 'execute')
   and not has_function_privilege('anon',
     'public.settle_ai_usage(uuid, integer, integer, integer, numeric)', 'execute')
   and not has_function_privilege('authenticated',
     'public.settle_ai_usage(uuid, integer, integer, integer, numeric)', 'execute')
   and has_function_privilege('service_role',
-                             'public.reserve_ai_usage(uuid, integer, numeric, uuid)', 'execute')
+    'public.reserve_ai_usage(uuid, integer, numeric, uuid, text)', 'execute')
   and has_function_privilege('service_role',
     'public.settle_ai_usage(uuid, integer, integer, integer, numeric)', 'execute'),
   'only the server (service_role) can reserve or settle usage'

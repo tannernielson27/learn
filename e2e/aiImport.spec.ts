@@ -10,7 +10,7 @@ import {
 } from "./signIn";
 
 // Needs the local Supabase stack (with Storage) and a build with AI_IMPORT_FAKE=1, which swaps
-// Claude for the fake client (src/lib/aiImport/fakeClaude.ts): no live API call is ever made.
+// Claude for the fake client (src/lib/ai/fakeClaude.ts): no live API call is ever made.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
 
 // Playwright runs from the repo root, and the e2e files are not ES modules (no import.meta).

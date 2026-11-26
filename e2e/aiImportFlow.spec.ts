@@ -8,7 +8,7 @@ import { selectAsAdmin, signInAsInstructorInEmptyOrg, updateAsAdmin } from "./si
 // #349: the whole AI import walk through the interface, as a teacher does it: upload, review,
 // add a missing answer, drop the rest, import, and publish what came in. Nothing is written to
 // the database behind the page's back. Needs the local Supabase stack (with Storage) and a build
-// with AI_IMPORT_FAKE=1 (src/lib/aiImport/fakeClaude.ts): no live API call is made.
+// with AI_IMPORT_FAKE=1 (src/lib/ai/fakeClaude.ts): no live API call is made.
 test.skip(process.env.E2E_AUTH !== "1", "set E2E_AUTH=1 with the local Supabase stack running");
 
 const CORPUS = path.resolve("test", "ai-import", "corpus");
