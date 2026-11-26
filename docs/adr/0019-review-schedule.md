@@ -47,6 +47,8 @@ The rules live in `src/lib/ngn/reviewSchedule.ts`, a pure module with no clock o
 - **(f) Ties are broken by question id.** Equal due times are ordered by `questionId`, compared by code unit (not locale), so the same list always gives the same pick in any order. Two rows with the same id and due time (which #627's one row per question rules out) keep the list's order; the sort is stable.
 - **A limit below one takes none**, and a fractional limit rounds down.
 - **A time that is not a finite number is refused** with a `RangeError` rather than stored.
+- **A malformed stored state is refused too.** A waiting state whose gap is not one of `REVIEW_GAPS_DAYS`, or whose due time is not finite, and a retired state whose time is not finite, throw a `RangeError` naming the bad value wherever a stored state is read (`nextReviewState`, `isDue`, `dueForReview`), rather than dropping to the 1 day gap or never falling due; `dueForReview` throws for the whole sitting rather than skipping the bad row, so a broken row (#627) fails loudly.
+- **Answers are applied in the order given.** `nextReviewState` takes one answer at a time and does not sort; a caller replaying stored answers (#627) must replay them in `answeredAt` order.
 
 ### Out
 

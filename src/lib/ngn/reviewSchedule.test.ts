@@ -336,6 +336,59 @@ describe("dueForReview: what comes back in a sitting (#626)", () => {
   });
 });
 
+describe("a malformed stored state fails loudly (#626, #627)", () => {
+  const badGaps = [2 as ReviewGap, 14.0001 as ReviewGap, 0 as ReviewGap, Number.NaN as ReviewGap];
+  const badTimes = [Number.NaN, Infinity, -Infinity];
+
+  it("refuses a waiting state whose gap is not one of the fixed gaps, naming it", () => {
+    for (const gap of badGaps) {
+      const state = waiting(gap, T);
+      for (const answer of [inReview(FULL), inReview(NONE), elsewhere(FULL), elsewhere(NONE)]) {
+        expect(() => nextReviewState(state, answer)).toThrow(RangeError);
+      }
+      expect(() => nextReviewState(state, elsewhere({ points: 0, maxPoints: 0 }))).toThrow(
+        RangeError,
+      );
+      expect(() => isDue(state, T)).toThrow(RangeError);
+      expect(() => dueForReview([{ questionId: "q", state }], T)).toThrow(RangeError);
+    }
+    expect(() => isDue(waiting(2 as ReviewGap, T), T)).toThrow(/gapDays.*\b2\b/);
+    expect(() => isDue(waiting(14.0001 as ReviewGap, T), T)).toThrow(/14\.0001/);
+  });
+
+  it("refuses a waiting state whose due time is not finite, naming it", () => {
+    for (const dueAt of badTimes) {
+      const state = waiting(1, dueAt);
+      expect(() => nextReviewState(state, inReview(FULL))).toThrow(RangeError);
+      expect(() => nextReviewState(state, elsewhere(FULL))).toThrow(RangeError);
+      expect(() => nextReviewState(state, elsewhere(NONE))).toThrow(RangeError);
+      expect(() => isDue(state, T)).toThrow(RangeError);
+      expect(() => dueForReview([{ questionId: "q", state }], T)).toThrow(RangeError);
+    }
+    expect(() => isDue(waiting(1, Number.NaN), T)).toThrow(/dueAt.*NaN/);
+  });
+
+  it("refuses a retired state whose time is not finite, naming it", () => {
+    for (const retiredAt of badTimes) {
+      const state = retired(retiredAt);
+      expect(() => nextReviewState(state, inReview(FULL))).toThrow(RangeError);
+      expect(() => nextReviewState(state, elsewhere(NONE))).toThrow(RangeError);
+      expect(() => isDue(state, T)).toThrow(RangeError);
+      expect(() => dueForReview([{ questionId: "q", state }], T)).toThrow(RangeError);
+    }
+    expect(() => isDue(retired(Infinity), T)).toThrow(/retiredAt.*Infinity/);
+  });
+
+  it("throws for a whole sitting rather than skipping one bad row", () => {
+    const rows: ReviewEntry[] = [
+      { questionId: "q-1", state: waiting(1, T - 1) },
+      { questionId: "q-2", state: waiting(3 as ReviewGap, Number.NaN) },
+    ];
+    expect(() => dueForReview(rows, T)).toThrow(RangeError);
+    expect(() => dueForReview(rows, T, 0)).toThrow(RangeError);
+  });
+});
+
 describe("no clock of its own", () => {
   const source = readFileSync(path.resolve(import.meta.dirname, "reviewSchedule.ts"), "utf8");
 

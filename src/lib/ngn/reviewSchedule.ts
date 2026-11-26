@@ -81,14 +81,41 @@ const waitingFrom = (gapDays: ReviewGap, answeredAt: number): ReviewState => ({
   dueAt: answeredAt + gapDays * DAY_MS,
 });
 
-/** Whether a question is due at `now` (epoch ms): waiting, and its due time has come. */
+/**
+ * Refuses a stored state that type-checks but cannot be right: a gap that is not one of
+ * `REVIEW_GAPS_DAYS`, or a time that is not finite. Read from a row (#627), such a state would
+ * otherwise drop silently to the 1 day gap, or never fall due.
+ */
+function assertWellFormed(state: ReviewState): void {
+  if (state.kind === "retired") {
+    if (!Number.isFinite(state.retiredAt)) {
+      throw new RangeError(`retiredAt must be a finite epoch time, got ${state.retiredAt}`);
+    }
+    return;
+  }
+  if (!REVIEW_GAPS_DAYS.includes(state.gapDays)) {
+    throw new RangeError(
+      `gapDays must be one of ${REVIEW_GAPS_DAYS.join(", ")}, got ${state.gapDays}`,
+    );
+  }
+  if (!Number.isFinite(state.dueAt)) {
+    throw new RangeError(`dueAt must be a finite epoch time, got ${state.dueAt}`);
+  }
+}
+
+/**
+ * Whether a question is due at `now` (epoch ms): waiting, and its due time has come. A malformed
+ * state throws a `RangeError`.
+ */
 export function isDue(state: ReviewState, now: number): boolean {
+  assertWellFormed(state);
   return state.kind === "waiting" && state.dueAt <= now;
 }
 
 /**
  * The state after one answer. `current` is the stored state, `null` for a question never in
- * review; the result is `null` only when it was `null` and stays out.
+ * review; the result is `null` only when it was `null` and stays out. A malformed `current` (a
+ * gap not in `REVIEW_GAPS_DAYS`, a time that is not finite) throws a `RangeError`.
  */
 export function nextReviewState(
   current: ReviewState | null,
@@ -98,12 +125,14 @@ export function nextReviewState(
   if (!Number.isFinite(answeredAt)) {
     throw new RangeError(`answeredAt must be a finite epoch time, got ${answeredAt}`);
   }
+  if (current !== null) assertWellFormed(current);
   if (!isRealMark(mark)) return current;
 
   if (!isFullMarks(mark)) return waitingFrom(1, answeredAt);
 
-  const counts = answer.where === "review" && current !== null && isDue(current, answeredAt);
-  if (!counts || current.kind !== "waiting") return current;
+  if (answer.where !== "review" || current?.kind !== "waiting" || current.dueAt > answeredAt) {
+    return current;
+  }
 
   const next = REVIEW_GAPS_DAYS[REVIEW_GAPS_DAYS.indexOf(current.gapDays) + 1];
   return next === undefined
@@ -122,6 +151,7 @@ function byDue<T extends ReviewEntry>(a: [T, number], b: [T, number]): number {
 /**
  * What a sitting at `now` (epoch ms) takes: the due questions, earliest due first, at most `limit`
  * (a fraction rounds down, below one takes none). A fresh array; the list handed in is untouched.
+ * One malformed entry throws a `RangeError` for the whole sitting rather than being skipped.
  */
 export function dueForReview<T extends ReviewEntry>(
   entries: readonly T[],
@@ -131,7 +161,7 @@ export function dueForReview<T extends ReviewEntry>(
   const take = Math.max(0, Math.floor(limit));
   return entries
     .flatMap((entry): [T, number][] =>
-      entry.state.kind === "waiting" && isDue(entry.state, now) ? [[entry, entry.state.dueAt]] : [],
+      isDue(entry.state, now) && entry.state.kind === "waiting" ? [[entry, entry.state.dueAt]] : [],
     )
     .sort(byDue)
     .slice(0, take)
