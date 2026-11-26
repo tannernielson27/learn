@@ -2,6 +2,7 @@
 
 - **Status:** Proposed, 2026-10-01 (Sprint 12 kickoff); brought up to date 2026-10-14, after Sprints 13 and 14. "Cost and accuracy" holds #333's measurements.
 - **Deciders:** product owner (S12 kickoff decisions), Claude (planner)
+- **See also:** [ADR 0018](0018-ai-drafting.md), AI drafting behind teacher review (2026-11-25). "Extract only" below covers AI import; drafting a rationale or a variant is governed by ADR 0018.
 
 ## Context
 
@@ -34,6 +35,8 @@ The constraints: a Vercel Hobby function per request, the 1 MB Server Action bod
 9. **Import:** one call writes every accepted entry and case study as new drafts in one transaction, all or nothing, into the quiz the import was started from (owner decision, 2026-10-15; the kickoff's default of a new quiz, "AI import – <date>", was dropped and no choice is offered). The stored files are then deleted. Batches abandoned in review are deleted after 7 days. Built in #348: `public.import_ai_batch`.
 
 ### Extract only
+
+This section covers AI import. Drafting a rationale or a variant, behind the teacher's review, is governed by [ADR 0018](0018-ai-drafting.md); import itself does not change.
 
 The model copies; it never invents. A missing key is `needs_answer` and can only be filled in by the teacher. A missing rationale is the existing publish blocker. A stated scoring rule is kept when the spec allows it for the type, and flagged when it does not. Errors in the source are kept word for word, with a "possible source error" note for the reviewer. Instructor notes, author blocks, objectives, references, QR codes and links are not question content.
 
