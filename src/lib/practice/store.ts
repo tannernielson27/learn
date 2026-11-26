@@ -16,9 +16,15 @@ import {
   startMissedFromAssignment,
   startMissedFromRun,
 } from "@/lib/supabase/practiceMissed";
+import {
+  fillReviewFromAssignments,
+  readDueReviewItems,
+  startReviewRun,
+} from "@/lib/supabase/review";
 import type { PracticeAnswerStore } from "./answerRoute";
 import type { MissedStore } from "./missed";
 import type { PracticePageStore } from "./page";
+import type { ReviewListStore } from "./review";
 
 type Client = SupabaseClient<Database>;
 
@@ -68,5 +74,17 @@ export function missedPageStore(service: Client) {
   return {
     header: (student: string, runId: string) => readMissedRun(service, student, runId),
     ...practicePageStore(service),
+  };
+}
+
+/**
+ * The student's review list (#627), as the service role for the student the server verified. The
+ * database re-checks every named question against that student's own due rows.
+ */
+export function reviewListStore(service: Client): ReviewListStore {
+  return {
+    fill: (student) => fillReviewFromAssignments(service, student),
+    due: (student) => readDueReviewItems(service, student),
+    start: (student, ids) => startReviewRun(service, student, ids),
   };
 }

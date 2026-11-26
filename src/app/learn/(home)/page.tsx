@@ -7,6 +7,8 @@ import { loadStudentRecord } from "@/lib/assignments/history";
 import { isEmailUnconfirmed } from "@/lib/auth/emailConfirmation";
 import { buildLiveHistory } from "@/lib/learn/liveHistory";
 import { requireStudent } from "@/lib/classes/viewer";
+import { fillReviewList } from "@/lib/practice/review";
+import { reviewListStore } from "@/lib/practice/store";
 import { listOpenAssignments } from "@/lib/supabase/assignments";
 import { listMyAttemptProgress } from "@/lib/supabase/attempts";
 import { myClasses } from "@/lib/supabase/classInvites";
@@ -32,9 +34,14 @@ export const metadata: Metadata = { title: "Your classes" };
  * then the lists that have something in them. Its loading screen is `loading.tsx` beside it, in
  * the `(home)` group so that it wraps this page alone: above the players it would turn their 404s
  * into 200s.
+ *
+ * #627: the load also fills the student's review list from their released assignments, beside the
+ * other reads rather than after them. It shows nothing yet (the Review card is #628), adds each
+ * question once however often the home loads, and a failure is logged and the home carries on.
  */
 export default async function StudentHomePage() {
   const { supabase, userId, email } = await requireStudent();
+  const service = createSupabaseServiceClient();
   const now = new Date();
   // #208: how this student's attempts stand at each open assignment; a failed read just leaves the
   // counts off. perf-audit #15: read as soon as the open assignments are in, beside the history.
@@ -53,10 +60,12 @@ export default async function StudentHomePage() {
       myClasses(supabase),
       openRead,
       readMyPracticeBanks(supabase),
-      loadStudentRecord(historyStore(supabase, createSupabaseServiceClient()), userId),
+      loadStudentRecord(historyStore(supabase, service), userId),
       // Ended sessions only, and only the student's own linked participant rows.
       readMyLiveResults(supabase),
       progressRead,
+      // #627: never rejects; a failure is logged inside and the home carries on.
+      fillReviewList(reviewListStore(service), userId),
     ]);
   return (
     <>

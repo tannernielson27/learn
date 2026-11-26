@@ -1449,34 +1449,37 @@ export type Database = {
       };
       practice_runs: {
         Row: {
-          bank_id: string;
+          bank_id: string | null;
           frozen: boolean;
           id: string;
           org_id: string;
           seed: string;
           source_assignment: string | null;
+          source_review: boolean | null;
           source_run: string | null;
           started_at: string;
           student_id: string;
         };
         Insert: {
-          bank_id: string;
+          bank_id?: string | null;
           frozen?: boolean;
           id?: string;
           org_id: string;
           seed?: string;
           source_assignment?: string | null;
+          source_review?: boolean | null;
           source_run?: string | null;
           started_at?: string;
           student_id: string;
         };
         Update: {
-          bank_id?: string;
+          bank_id?: string | null;
           frozen?: boolean;
           id?: string;
           org_id?: string;
           seed?: string;
           source_assignment?: string | null;
+          source_review?: boolean | null;
           source_run?: string | null;
           started_at?: string;
           student_id?: string;
@@ -1553,6 +1556,61 @@ export type Database = {
             columns: ["org_id"];
             isOneToOne: false;
             referencedRelation: "orgs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      review_entries: {
+        Row: {
+          due_at: string | null;
+          entered_at: string;
+          gap_days: number | null;
+          item_id: string;
+          last_answered_at: string;
+          org_id: string;
+          retired_at: string | null;
+          student_id: string;
+        };
+        Insert: {
+          due_at?: string | null;
+          entered_at?: string;
+          gap_days?: number | null;
+          item_id: string;
+          last_answered_at: string;
+          org_id: string;
+          retired_at?: string | null;
+          student_id: string;
+        };
+        Update: {
+          due_at?: string | null;
+          entered_at?: string;
+          gap_days?: number | null;
+          item_id?: string;
+          last_answered_at?: string;
+          org_id?: string;
+          retired_at?: string | null;
+          student_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "review_entries_item_org_fkey";
+            columns: ["item_id", "org_id"];
+            isOneToOne: false;
+            referencedRelation: "items";
+            referencedColumns: ["id", "org_id"];
+          },
+          {
+            foreignKeyName: "review_entries_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "orgs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "review_entries_student_id_fkey";
+            columns: ["student_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
@@ -2079,6 +2137,7 @@ export type Database = {
         Args: { error_kind: string; retry_in_seconds?: number; target: string };
         Returns: string;
       };
+      fill_review_from_assignments: { Args: { student: string }; Returns: number };
       hit_rate_limit: {
         Args: {
           bucket_name: string;
@@ -2320,6 +2379,13 @@ export type Database = {
           cjmm_step: number;
           max_points: number;
           points: number;
+        }[];
+      };
+      my_review_due: {
+        Args: never;
+        Returns: {
+          due: number;
+          next_due_at: string;
         }[];
       };
       my_step_marks: {
@@ -2567,6 +2633,15 @@ export type Database = {
           session_title: string;
         }[];
       };
+      review_due_items: {
+        Args: { student: string };
+        Returns: {
+          due_at: string;
+          gap_days: number;
+          item_id: string;
+          org_id: string;
+        }[];
+      };
       revoke_beta_pass: {
         Args: { p_email: string };
         Returns: {
@@ -2619,6 +2694,13 @@ export type Database = {
       };
       start_missed_practice_from_run: {
         Args: { source: string; student: string; target_items: string[] };
+        Returns: {
+          outcome: string;
+          run_id: string;
+        }[];
+      };
+      start_review_run: {
+        Args: { student: string; target_items: string[] };
         Returns: {
           outcome: string;
           run_id: string;

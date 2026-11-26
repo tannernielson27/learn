@@ -46,6 +46,10 @@ vi.mock("@/lib/supabase/attempts", () => ({
 }));
 vi.mock("@/lib/supabase/practice", () => ({ readMyPracticeBanks: () => rt.trip("practice", []) }));
 vi.mock("@/lib/supabase/liveResults", () => ({ readMyLiveResults: () => rt.trip("live", []) }));
+vi.mock("@/lib/practice/store", () => ({ reviewListStore: () => ({}) }));
+vi.mock("@/lib/practice/review", () => ({
+  fillReviewList: () => rt.trip("reviewFill", undefined),
+}));
 vi.mock("@/app/sign-in/actions", () => ({ resendConfirmation: vi.fn() }));
 vi.mock("@/app/learn/actions", () => ({ joinClassWithCode: vi.fn() }));
 
@@ -63,6 +67,9 @@ describe("the student home's round trips (perf-audit #15)", () => {
     expect(rt.waveOf("openAssignments")).toBe(2);
     expect(rt.waveOf("attemptProgress")).toBe(3);
     expect(rt.waveOf("history")).toBe(3);
+    // #627: the review list is filled beside the first reads, never after them.
+    expect(rt.waveOf("reviewFill")).toBe(2);
+    expect(rt.log.filter((entry) => entry.name === "reviewFill")).toHaveLength(1);
     // auth, then the first reads, then the history and the counts side by side.
     expect(result.waves).toBe(3);
   });
