@@ -2433,6 +2433,33 @@ export type Database = {
           step: number;
         }[];
       };
+      question_answers: {
+        Args: { target_item: string };
+        Returns: {
+          answerer: string;
+          item_id: string;
+          max_points: number;
+          points: number;
+          response: Json;
+          reveal: Json;
+          use_id: string;
+          use_kind: string;
+          used_at: string;
+        }[];
+      };
+      quiz_question_marks: {
+        Args: { target_bank: string };
+        Returns: {
+          answerer: string;
+          item_id: string;
+          max_points: number;
+          points: number;
+          scored_key: Json;
+          use_id: string;
+          use_kind: string;
+          used_at: string;
+        }[];
+      };
       record_attempt_submission: {
         Args: {
           automatic?: boolean;
