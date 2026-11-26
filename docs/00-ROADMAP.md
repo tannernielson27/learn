@@ -182,7 +182,7 @@ The accounts, roles, roster and invite link shipped early, in Sprint 9.
 
 Parked:
 
-- Adaptive practice, spaced repetition, LMS/LTI, billing, mobile apps. (Billing was taken up on 2026-10-27 as S15: ADR 0016, docs/open-issues.md S15.)
+- Adaptive practice, spaced repetition, LMS/LTI, billing, mobile apps. (Billing was taken up on 2026-10-27 as S15: ADR 0016, docs/open-issues.md S15. Spaced repetition was taken up in its simplest form on 2026-11-25 as S16: #626, ADR 0019, fixed gaps of 1, 3, 7 and 14 days. Adaptive practice and adaptive gaps stay parked.)
 
 ## 6. Milestone summary
 
