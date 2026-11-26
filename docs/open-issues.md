@@ -2,7 +2,7 @@
 
 A running log of every open issue, grouped by milestone. Update it when an issue is filed, started, merged or closed.
 
-Last updated: 2026-10-27 (S15 billing filed: #514 to #523; ADR 0016).
+Last updated: 2026-11-25 (S16 filed: #615 to #629; ADR 0018 and 0019 proposed).
 
 Status values: **To do**, **In progress** (branch open), **In review** (PR open), **Blocked** (waiting on something named).
 
@@ -588,6 +588,54 @@ Owner decisions, 2026-10-27, all final:
 5. **Every self-registered workspace that exists when billing ships is grandfathered** until revoked. The shared LeaRN workspace is exempt.
 6. **The production Supabase split happens before live Stripe keys**, and no Stripe key goes into Vercel Preview until then.
 7. **The production domain becomes `learnursing.app`.**
+
+## S16: Insight, AI drafting and review (milestone 18)
+
+Demo: a teacher opens a quiz that classes have used, filters to "Needs a look" and reads which wrong answer pulled most students; a student who missed a question yesterday finds it waiting on the student home under Review.
+
+Four strands from the 2026-11-25 research: question statistics (#615 to #617), class trends (#618, #619), AI drafting behind teacher review (#620 to #625) and a review list that brings missed questions back (#626 to #629). The pure modules and the two ADRs come first and need no migration. ADR 0018 records AI drafting (#620); ADR 0019 records the review schedule (#626). Issue titles keep the words they were filed with; the interface follows docs/glossary.md.
+
+| #                                                           | Title                                                                                     | Gates             | Status                                                                                         |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------- |
+| [#615](https://github.com/tannernielson27/learn/issues/615) | feat(ngn): question statistics from scored answers                                        | none              | In review (`feat/615-question-stats`); no migration                                            |
+| [#616](https://github.com/tannernielson27/learn/issues/616) | feat(db): read a quiz's scored answers for question statistics                            | security, db      | To do; needs #615; migration                                                                   |
+| [#617](https://github.com/tannernielson27/learn/issues/617) | feat(authoring): see how each question performed and which ones need a look               | security, e2e     | To do; needs #615 and #616                                                                     |
+| [#618](https://github.com/tannernielson27/learn/issues/618) | feat(db): a class's results over time by clinical judgment step and client needs category | security, db      | To do; migration                                                                               |
+| [#619](https://github.com/tannernielson27/learn/issues/619) | feat(classes): see a class improve over time by step and client needs category            | e2e               | To do; needs #618                                                                              |
+| [#620](https://github.com/tannernielson27/learn/issues/620) | docs(ai): an ADR for AI drafting behind teacher review                                    | none              | In review (`docs/620-ai-drafting-adr`); ADR 0018; owner approves the terms and privacy wording |
+| [#621](https://github.com/tannernielson27/learn/issues/621) | feat(ai): one Claude call path and one monthly cap for import and drafting                | security, db      | To do; needs #620; migration                                                                   |
+| [#622](https://github.com/tannernielson27/learn/issues/622) | feat(authoring): suggest a rationale with AI in the question editor                       | security, e2e     | To do; needs #620 and #621                                                                     |
+| [#623](https://github.com/tannernielson27/learn/issues/623) | feat(authoring): write a variant of a question with AI                                    | security, db, e2e | To do; needs #620 and #621; migration                                                          |
+| [#624](https://github.com/tannernielson27/learn/issues/624) | test(ai): an eval for AI drafts before the flag goes on                                   | none              | To do; needs #622 and #623; its bar gates `AI_DRAFT_ENABLED` in production                     |
+| [#625](https://github.com/tannernielson27/learn/issues/625) | feat(authoring): draft a six-step case study with AI from a teacher's notes (parked)      | none              | Parked by the owner, 2026-11-25; do not build                                                  |
+| [#626](https://github.com/tannernielson27/learn/issues/626) | feat(ngn): the review schedule, when a missed question comes back                         | none              | In review (`feat/626-review-schedule`); ADR 0019; no migration                                 |
+| [#627](https://github.com/tannernielson27/learn/issues/627) | feat(db): a student's review list from practice and assignments                           | security, db      | To do; needs #626; migration                                                                   |
+| [#628](https://github.com/tannernielson27/learn/issues/628) | feat(student): a Review card on the student home that brings missed questions back        | security, e2e     | To do; needs #626 and #627                                                                     |
+| [#629](https://github.com/tannernielson27/learn/issues/629) | feat(student): questions missed in a class live session join the review list              | security, db, e2e | To do; needs #627 and #628; a migration only if the pick-up needs one                          |
+
+Suggested order: #615, #620 and #626 first; they are a pure module, an ADR and a pure module with its ADR, with no migration, and can run alongside each other. Then, only when the owner says to continue: #616 then #617; #618 then #619; #621, then #622 and #623, then #624; #627, then #628, then #629. #625 is parked.
+
+Parallelization: #616, #618, #621, #623 and #627 each add a migration, and #629 may; never build two at once, number each at merge, and the owner runs `supabase db push` before the code that needs it deploys (docs/05). #622 and #623 both change the question editor, the publish check (`src/lib/authoring/publishCheck.ts`, `src/lib/ngn/quality.ts`) and `src/app/author/items/[itemId]/actions.ts`; build them one at a time. #617 also changes the question page (`src/app/author/items/[itemId]/page.tsx`) and the quiz page, so keep it apart from #622 and #623. #621 moves the Claude client out of `src/lib/aiImport/` into `src/lib/ai/`; build no AI import fix while it is open. The session and assignment report layout (#565) is out of #617 and #619.
+
+Owner decisions, 2026-11-25:
+
+1. **The AI may draft a rationale** for a question the teacher has already keyed.
+2. **The AI may draft a variant** of an existing question.
+3. **Nothing the AI drafts reaches a student until the teacher accepts it and publishes it**, and a variant cannot be published until the teacher confirms its answer key.
+4. **Drafting a whole case study is parked** (#625).
+5. **AI import does not change**: it still copies and never writes a key or a rationale.
+
+This amends the 2026-10-01 "extract only" rule (S12, ADR 0008) for drafting only.
+
+Defaults set while filing. These are not owner decisions yet; each issue states its default and asks the owner to say if any should change.
+
+1. Separation is measured against the rest of the same activity (#615).
+2. No separation figure and no flag before 20 answers (#615).
+3. A changed answer key restarts a question's figures; changed text does not (#615).
+4. Statistics use a student's first submitted attempt, while grades keep the best attempt; guests count (#616).
+5. One monthly AI cap per workspace covers import and drafting; `AI_DRAFT_ENABLED` stays off in production until the drafting eval passes (#620, #621, #624).
+6. Variants come first for the eight selection and drop-down types; a variant's key must be confirmed before it can be published (#623).
+7. Review gaps of 1, 3, 7 and 14 days; partial credit is a miss; ten at a sitting; on by default; the list is filled when the student home loads, with no new scheduled job (#626 to #628).
 
 ## No milestone
 
