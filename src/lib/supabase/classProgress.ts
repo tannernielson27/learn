@@ -6,6 +6,7 @@ import type {
   ProgressRowInput,
   ProgressStepInput,
 } from "@/lib/classes/progress";
+import { type ClientNeed, isClientNeed } from "@/lib/ngn/tags";
 import type { CjmmStep } from "@/lib/ngn/types";
 import type { Database } from "./database.types";
 import { readAllPages, type SessionListRow } from "./sessionReport";
@@ -92,6 +93,107 @@ export async function readClassProgress(
     rows: rows.flatMap((row) => toRow(row) ?? []),
     steps: steps.flatMap((row) => toStep(row) ?? []),
   };
+}
+
+// ---------------------------------------------------------------------------
+// The class's results over time (#618)
+// ---------------------------------------------------------------------------
+
+/** `class_progress_trend`'s group_key for a question with no client needs tag. */
+export const NO_CATEGORY_KEY = "none";
+
+/** A clinical judgment step, or a client needs category; a null category is "No category". */
+export type TrendGroup =
+  { kind: "step"; step: CjmmStep } | { kind: "category"; category: ClientNeed | null };
+
+/** The class's figure for one group in one ended live session or closed assignment. */
+export interface ClassTrendRow {
+  kind: ActivityKind;
+  activityId: string;
+  title: string;
+  /** A live session's start; an assignment's close. */
+  occurredAt: string;
+  group: TrendGroup;
+  /** Members with a scored answer in the group in this activity. */
+  students: number;
+  answers: number;
+  /** The mean of those members' own percents, each member once; 0-100. */
+  percent: number | null;
+}
+
+/** The class's all-term figure for one client needs category, from the same answers. */
+export interface ClassTermCategoryRow {
+  category: ClientNeed | null;
+  students: number;
+  answers: number;
+  percent: number | null;
+}
+
+export interface ClassProgressTrend {
+  /** Oldest activity first, as the function orders them. */
+  rows: ClassTrendRow[];
+  term: ClassTermCategoryRow[];
+}
+
+type TrendRowGenerated = Database["public"]["Functions"]["class_progress_trend"]["Returns"][number];
+/** The generated types do not know a term row has no activity. */
+type TrendRowRead = { [K in keyof TrendRowGenerated]: TrendRowGenerated[K] | null };
+
+function toCategory(key: string | null): { category: ClientNeed | null } | null {
+  if (key === NO_CATEGORY_KEY) return { category: null };
+  return key !== null && isClientNeed(key) ? { category: key } : null;
+}
+
+function toGroup(row: TrendRowRead): TrendGroup | null {
+  if (row.group_kind === "step") {
+    const step = Number(row.group_key);
+    return row.group_key !== null && isCjmmStep(step) ? { kind: "step", step } : null;
+  }
+  if (row.group_kind === "category") {
+    const held = toCategory(row.group_key);
+    return held && { kind: "category", ...held };
+  }
+  return null;
+}
+
+/**
+ * How the class has done on each clinical judgment step and client needs category, activity by
+ * activity, and its all-term figure per category. Runs as the signed-in teacher; anyone else gets
+ * no rows. Throws when a read fails part way. A row it does not understand is dropped.
+ */
+export async function readClassProgressTrend(
+  supabase: Client,
+  classId: string,
+): Promise<ClassProgressTrend> {
+  const read: TrendRowRead[] = await readAllPages(
+    (from, to) => supabase.rpc("class_progress_trend", { target_class: classId }).range(from, to),
+    "class progress trend",
+  );
+  const trend: ClassProgressTrend = { rows: [], term: [] };
+  for (const row of read) {
+    const counts = {
+      students: row.students ?? 0,
+      answers: row.answers ?? 0,
+      percent: numberOrNull(row.percent),
+    };
+    if (row.activity_kind === "term") {
+      const held = row.group_kind === "category" ? toCategory(row.group_key) : null;
+      if (held) trend.term.push({ ...held, ...counts });
+      continue;
+    }
+    if (row.activity_kind !== "session" && row.activity_kind !== "assignment") continue;
+    const group = toGroup(row);
+    if (!group || row.activity_id === null || row.occurred_at === null) continue;
+    trend.rows.push({
+      kind: row.activity_kind,
+      activityId: row.activity_id,
+      title: row.title ?? "",
+      occurredAt: row.occurred_at,
+      group,
+      ...counts,
+    });
+  }
+  return trend;
 }
 
 /** How many of a class's live sessions the tab lists, newest first. */

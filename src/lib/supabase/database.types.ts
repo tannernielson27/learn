@@ -1963,6 +1963,20 @@ export type Database = {
           step: number;
         }[];
       };
+      class_progress_trend: {
+        Args: { target_class: string };
+        Returns: {
+          activity_id: string;
+          activity_kind: string;
+          answers: number;
+          group_key: string;
+          group_kind: string;
+          occurred_at: string;
+          percent: number;
+          students: number;
+          title: string;
+        }[];
+      };
       class_roster: {
         Args: { target_class: string };
         Returns: {

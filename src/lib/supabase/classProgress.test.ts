@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { listClassSessions, readClassProgress } from "./classProgress";
+import {
+  listClassSessions,
+  NO_CATEGORY_KEY,
+  readClassProgress,
+  readClassProgressTrend,
+} from "./classProgress";
 
 type Reply = { data?: unknown; error?: { code?: string; message?: string } | null };
 type Client = Parameters<typeof readClassProgress>[0];
@@ -156,6 +161,155 @@ describe("readClassProgress", () => {
     });
     await expect(readClassProgress(fake.client, CLASS_ID)).rejects.toThrow(
       "could not read class progress: boom",
+    );
+  });
+});
+
+const ASSIGNMENT = "00000000-0000-4000-8000-0000000000f1";
+
+const trendRow = (over: Record<string, unknown> = {}) => ({
+  activity_kind: "session",
+  activity_id: SESSION,
+  title: "Cardiac",
+  occurred_at: "2026-10-13T15:00:00Z",
+  group_kind: "step",
+  group_key: "3",
+  students: 4,
+  answers: 9,
+  percent: "62.50",
+  ...over,
+});
+
+describe("readClassProgressTrend", () => {
+  it("reads class_progress_trend as the teacher and maps each kind of row", async () => {
+    const fake = fakeRpc({
+      class_progress_trend: [
+        {
+          data: [
+            trendRow(),
+            trendRow({
+              activity_kind: "assignment",
+              activity_id: ASSIGNMENT,
+              title: "Week 1",
+              occurred_at: "2026-10-20T23:59:00Z",
+              group_kind: "category",
+              group_key: "Management of Care",
+              students: 3,
+              answers: 3,
+              percent: 100,
+            }),
+            trendRow({ group_kind: "category", group_key: NO_CATEGORY_KEY, percent: null }),
+            trendRow({
+              activity_kind: "term",
+              activity_id: null,
+              title: null,
+              occurred_at: null,
+              group_kind: "category",
+              group_key: "Physiological Adaptation",
+              students: 5,
+              answers: 20,
+              percent: "48.25",
+            }),
+          ],
+          error: null,
+        },
+      ],
+    });
+    const read = await readClassProgressTrend(fake.client, CLASS_ID);
+    expect(fake.rpc).toHaveBeenCalledWith("class_progress_trend", { target_class: CLASS_ID });
+    expect(read.rows).toEqual([
+      {
+        kind: "session",
+        activityId: SESSION,
+        title: "Cardiac",
+        occurredAt: "2026-10-13T15:00:00Z",
+        group: { kind: "step", step: 3 },
+        students: 4,
+        answers: 9,
+        percent: 62.5,
+      },
+      {
+        kind: "assignment",
+        activityId: ASSIGNMENT,
+        title: "Week 1",
+        occurredAt: "2026-10-20T23:59:00Z",
+        group: { kind: "category", category: "Management of Care" },
+        students: 3,
+        answers: 3,
+        percent: 100,
+      },
+      {
+        kind: "session",
+        activityId: SESSION,
+        title: "Cardiac",
+        occurredAt: "2026-10-13T15:00:00Z",
+        // 'No category' is a null category, never the code value or display text.
+        group: { kind: "category", category: null },
+        students: 4,
+        answers: 9,
+        percent: null,
+      },
+    ]);
+    expect(read.term).toEqual([
+      { category: "Physiological Adaptation", students: 5, answers: 20, percent: 48.25 },
+    ]);
+  });
+
+  it("drops a row it does not understand rather than guessing", async () => {
+    const fake = fakeRpc({
+      class_progress_trend: [
+        {
+          data: [
+            trendRow({ activity_kind: "practice" }),
+            trendRow({ group_key: "7" }),
+            trendRow({ group_key: "2.5" }),
+            trendRow({ group_kind: "topic", group_key: "sepsis" }),
+            trendRow({ group_kind: "category", group_key: "sepsis" }),
+            // The 2026 test plan's name is not a stored tag (#618 leaves the rename out).
+            trendRow({
+              group_kind: "category",
+              group_key: "Safety and Infection Prevention and Control",
+            }),
+            trendRow({ activity_id: null }),
+            trendRow({ occurred_at: null }),
+            // An all-term row is a category's only; a step has its bars already.
+            trendRow({ activity_kind: "term", activity_id: null, occurred_at: null }),
+            trendRow({ group_kind: "category", group_key: "Safety and Infection Control" }),
+          ],
+          error: null,
+        },
+      ],
+    });
+    const read = await readClassProgressTrend(fake.client, CLASS_ID);
+    expect(read.rows.map((row) => row.group)).toEqual([
+      { kind: "category", category: "Safety and Infection Control" },
+    ]);
+    expect(read.term).toEqual([]);
+  });
+
+  it("reads a page at a time, in the function's own order", async () => {
+    const full = Array.from({ length: 1000 }, () => trendRow());
+    const fake = fakeRpc({
+      class_progress_trend: [
+        { data: full, error: null },
+        { data: [trendRow({ group_key: "4" })], error: null },
+      ],
+    });
+    const read = await readClassProgressTrend(fake.client, CLASS_ID);
+    expect(read.rows).toHaveLength(1001);
+    expect(read.rows.at(-1)?.group).toEqual({ kind: "step", step: 4 });
+    expect(fake.ranges).toEqual([
+      ["class_progress_trend", 0, 999],
+      ["class_progress_trend", 1000, 1999],
+    ]);
+  });
+
+  it("throws when a read fails, so a half-read trend is never shown", async () => {
+    const fake = fakeRpc({
+      class_progress_trend: [{ data: null, error: { message: "boom" } }],
+    });
+    await expect(readClassProgressTrend(fake.client, CLASS_ID)).rejects.toThrow(
+      "could not read class progress trend: boom",
     );
   });
 });
