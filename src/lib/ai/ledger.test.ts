@@ -98,9 +98,9 @@ describe("estimateRequestCost", () => {
     const schemaChars = JSON.stringify(DRAFT_REQUEST.schema).length;
     const chars = 3_000 + schemaChars + 3_012 + 1_500;
     const inputTokens = 200 + Math.ceil(chars / 3);
-    expect(estimateRequestCost(DRAFT_REQUEST)).toBeCloseTo(
-      (inputTokens * 2.5 + 2_000 * 10) / 1e6,
-      6,
+    // Rounded up to the ledger's six places, as a chunk's estimate is.
+    expect(estimateRequestCost(DRAFT_REQUEST)).toBe(
+      Math.ceil(inputTokens * 2.5 + 2_000 * 10) / 1e6,
     );
   });
 

@@ -1,5 +1,6 @@
 import type { Database } from "@/lib/supabase/database.types";
-import { costOf, totalInputTokens, type Usage } from "./config";
+import type { StructuredRequest } from "./claude";
+import { PRICE_PER_MILLION, costOf, totalInputTokens, type Usage } from "./config";
 
 /**
  * The usage ledger and the monthly cap, from the server (#342 on #340's functions; shared by
@@ -13,7 +14,14 @@ import { costOf, totalInputTokens, type Usage } from "./config";
  * pages ride on its first reservation only (its halves, when it is read in two, reserve none:
  * #590), so neither a retry nor a split charges the pages twice. A reservation left unsettled (a function killed mid-call) keeps
  * counting until the month ends: that only makes the cap stricter.
+ *
+ * Import and drafting draw on one cap (ADR 0018 decision 1): `public.ai_usage` keeps one row per
+ * workspace and month, and each reservation records its `kind` beside it.
  */
+
+/** What a reservation is for (`private.ai_usage_reservations.kind`). */
+export const AI_USAGE_KINDS = ["import", "draft_rationale", "draft_variant"] as const;
+export type AiUsageKind = (typeof AI_USAGE_KINDS)[number];
 
 type Functions = Database["public"]["Functions"];
 
@@ -34,6 +42,31 @@ export type Reservation =
 export const CHARS_PER_TOKEN = 3;
 /** Cents of headroom so the ledger's six places never round a reservation under the real cost. */
 export const MIN_RESERVATION_USD = 0.01;
+/** The request's own framing around its text: roles, tags, the cache marker. */
+const REQUEST_OVERHEAD_TOKENS = 200;
+
+/**
+ * What a call that sends no document chunk is reserved at (#621): a drafting call, whose input is
+ * its rules, its schema and the question's own text. As for a chunk, the input is priced as if
+ * none of it came from the cache and all of it were written to it, and the whole of `maxTokens` as
+ * output; settling gives the rest back. A PDF or an image has no length to count here, so a
+ * request that holds one is refused: a document chunk is estimated by import's
+ * `estimateCallCost`.
+ */
+export function estimateRequestCost(request: StructuredRequest): number {
+  let chars = request.system.length + JSON.stringify(request.schema).length;
+  for (const block of request.content) {
+    if (block.type !== "text") {
+      throw new Error(`estimateRequestCost counts text only, not a ${block.type} block`);
+    }
+    chars += block.text.length;
+  }
+  const inputTokens = REQUEST_OVERHEAD_TOKENS + Math.ceil(chars / CHARS_PER_TOKEN);
+  const input = inputTokens * PRICE_PER_MILLION.cacheWrite;
+  const output = request.maxTokens * PRICE_PER_MILLION.output;
+  return Math.max(MIN_RESERVATION_USD, Math.ceil(input + output) / 1e6);
+}
+
 const logged = (step: string, error: unknown) => {
   // The code and nothing else.
   const code = (error as { code?: unknown } | null)?.code;
@@ -53,6 +86,8 @@ export async function reserveUsage(
     batchId?: string;
     pages: number;
     costUsd: number;
+    /** Left out, the database records `import`, as every call before #621 did. */
+    kind?: AiUsageKind;
   },
 ): Promise<Reservation> {
   let answer: { data: Functions["reserve_ai_usage"]["Returns"] | null; error: unknown };
@@ -62,6 +97,7 @@ export async function reserveUsage(
       ...(request.batchId === undefined ? {} : { p_batch: request.batchId }),
       p_pages: request.pages,
       p_cost_usd: request.costUsd,
+      ...(request.kind === undefined ? {} : { p_kind: request.kind }),
     });
   } catch (error) {
     logged("reserving AI usage", error);

@@ -2512,6 +2512,7 @@ export type Database = {
         Args: {
           p_batch?: string;
           p_cost_usd: number;
+          p_kind?: string;
           p_org: string;
           p_pages: number;
         };

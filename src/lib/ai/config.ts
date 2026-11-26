@@ -68,6 +68,7 @@ export const totalInputTokens = (usage: Usage): number =>
 export interface AiEnv {
   readonly ANTHROPIC_API_KEY?: string;
   readonly AI_IMPORT_ENABLED?: string;
+  readonly AI_DRAFT_ENABLED?: string;
   readonly AI_IMPORT_FAKE?: string;
   readonly VERCEL_ENV?: string;
   readonly [name: string]: string | undefined;
@@ -75,6 +76,7 @@ export interface AiEnv {
 
 const flag = (value: string | undefined) => value?.trim().toLowerCase();
 const OFF = new Set(["false", "0", "off", "no"]);
+const ON = new Set(["true", "1", "on", "yes"]);
 
 /** A key to call Claude with, or the fake client outside production. */
 const canCall = (env: AiEnv) => fakeClaudeWanted(env) || Boolean(env.ANTHROPIC_API_KEY?.trim());
@@ -86,6 +88,19 @@ const canCall = (env: AiEnv) => fakeClaudeWanted(env) || Boolean(env.ANTHROPIC_A
  */
 export function aiImportEnabled(env: AiEnv = process.env): boolean {
   if (OFF.has(flag(env.AI_IMPORT_ENABLED) ?? "")) return false;
+  return canCall(env);
+}
+
+/**
+ * Whether AI drafting may call Claude (ADR 0018 decision 3): off unless `AI_DRAFT_ENABLED` is
+ * `true` (or `1`, `on`, `yes`), so drafting ships dark; then it needs a key, or the fake client
+ * outside production, as import does. It does not follow `AI_IMPORT_ENABLED`: turning import off
+ * never turns drafting on, and turning drafting on never needs import's flag. The workspace's
+ * switch (`orgs.ai_import_enabled`) and the one monthly cap are still checked by
+ * `reserve_ai_usage`.
+ */
+export function aiDraftEnabled(env: AiEnv = process.env): boolean {
+  if (!ON.has(flag(env.AI_DRAFT_ENABLED) ?? "")) return false;
   return canCall(env);
 }
 

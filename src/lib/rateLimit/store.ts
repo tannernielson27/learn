@@ -67,6 +67,10 @@ export const RATE_LIMIT_BUCKETS = [
   "ai_import_unit",
   // #593: changes on the review screen, per teacher (`src/lib/aiImport/review/limit.ts`).
   "ai_import_review",
+  // #621 (ADR 0018 decision 5): AI drafting's Claude calls, per teacher, failing closed
+  // (`src/lib/ai/draftLimit.ts`).
+  "ai_draft_rationale",
+  "ai_draft_variant",
 ] as const;
 
 export type RateLimitBucket = (typeof RATE_LIMIT_BUCKETS)[number];

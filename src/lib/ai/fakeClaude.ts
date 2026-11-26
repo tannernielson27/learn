@@ -9,6 +9,10 @@ import type { MessagesClient } from "./claude";
  * For a segment request it reports each numbered heading ("## 3." or "## Question 3") of a text
  * chunk as a multiple choice question whose excerpt is the first line after the heading, so an
  * end-to-end run finds the questions a fixture document has. A PDF chunk has none.
+ *
+ * For a drafting request (#621, ADR 0018 decision 12) it answers with a fixed draft. A drafting
+ * request is told apart by its schema: its top-level answer property is named for its kind,
+ * `draft_rationale` or `draft_variant`, as its reservation's `kind` is.
  */
 
 const HEADING = /^#{1,6}[ \t]+(?:question[ \t]+)?(\d+)\.?[ \t]*$/gim;
@@ -116,16 +120,64 @@ function fakeExtract(body: Anthropic.MessageCreateParamsNonStreaming) {
   );
 }
 
-const isExtract = (body: Anthropic.MessageCreateParamsNonStreaming) => {
+const answerFields = (body: Anthropic.MessageCreateParamsNonStreaming): object => {
   const schema = body.output_config?.format as { schema?: { properties?: object } } | undefined;
-  return Object.hasOwn(schema?.schema?.properties ?? {}, "question_1");
+  return schema?.schema?.properties ?? {};
 };
+
+const isExtract = (body: Anthropic.MessageCreateParamsNonStreaming) =>
+  Object.hasOwn(answerFields(body), "question_1");
+
+/**
+ * The suggested rationale every drafting request for one gets: a general rationale for the key
+ * as the teacher set it, and no note (a note is the model saying it cannot explain the key).
+ */
+export const FAKE_DRAFT_RATIONALE = Object.freeze({
+  general:
+    "Fake drafted rationale: the keyed answer addresses the most urgent finding first. Written by the test client, not by Claude.",
+  note: null,
+});
+
+/**
+ * The variant every drafting request for one gets: a multiple choice question in AI import's
+ * loose draft shape, with its own key and rationale, which converts to a valid item.
+ */
+export const FAKE_DRAFT_VARIANT = Object.freeze({
+  draft: Object.freeze({
+    type: "multiple_choice",
+    stem: "A client 2 hours after surgery has a heart rate of 124/min and a blood pressure of 88/52 mm Hg. Which action should the nurse take first?",
+    options: Object.freeze([
+      Object.freeze({ text: "Document the vital signs and recheck them in an hour" }),
+      Object.freeze({
+        text: "Assess the surgical dressing for bleeding",
+        rationale: "Tachycardia with low blood pressure after surgery points to bleeding first.",
+      }),
+      Object.freeze({ text: "Offer the client oral fluids" }),
+      Object.freeze({ text: "Reposition the client on the left side" }),
+    ]),
+    answer: "Answer: B",
+    rationale: "Fake drafted variant, written by the test client, not by Claude.",
+  }),
+  note: null,
+});
+
+/** A copy, so a caller that changes its answer cannot change the next one. */
+const fresh = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
+function answerFor(body: Anthropic.MessageCreateParamsNonStreaming): unknown {
+  const fields = answerFields(body);
+  if (Object.hasOwn(fields, "draft_rationale")) {
+    return { draft_rationale: fresh(FAKE_DRAFT_RATIONALE) };
+  }
+  if (Object.hasOwn(fields, "draft_variant")) return { draft_variant: fresh(FAKE_DRAFT_VARIANT) };
+  return isExtract(body) ? fakeExtract(body) : fakeSegment(documentText(body));
+}
 
 export function fakeClaudeClient(): MessagesClient {
   return {
     messages: {
       async create(body) {
-        return message(isExtract(body) ? fakeExtract(body) : fakeSegment(documentText(body)));
+        return message(answerFor(body));
       },
     },
   };
